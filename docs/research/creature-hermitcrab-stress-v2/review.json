@@ -1,0 +1,44 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R3 complex articulated exoskeleton stress; global R6 performance/save matrix pending",
+  "species": {
+    "hermitcrab": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct final baseline/candidate, native full-cycle motion, water and icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "0227facd30b3e23c9596653e6da7209b45698fc8ab4ef781647b3a66bdc460b2",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "hermitcrab.png",
+          "sha256": "55a6e2e2e51876e02954b7889ff38c5d8696ab2f4cf6a5798939dcabac739b87"
+        },
+        "motion": {
+          "path": "native_approved_hermitcrab.png",
+          "sha256": "82219f06d6ef21ca38d12c5dd2859adf6aaf8e65fa0b5de2c1c4948b4e273f1e"
+        },
+        "runtime": {
+          "path": "runtime_hermitcrab/frame_002.png",
+          "sha256": "c4c242a43d34a7c736fd3765c4865695c3b898cec46d76cf607f26ccc7647cdb"
+        },
+        "ui": {
+          "path": "ui.png",
+          "sha256": "4ed701ef20e6f4f6978affc79e54e79847306736f8ff1692940d76ba8e7d6f07"
+        },
+        "asset_capabilities": {
+          "path": "die_capability.png",
+          "sha256": "ffbccc307b6c7ea29bab347af751aeeb2f9317e97fa960547c758b3a4d31ff12"
+        }
+      },
+      "notes": "45 functional authored joints versus baseline 67 palette entries, of which 37 weighted and 29 animated weighted. Six 3-joint walking chains, four shell-carrying legs, two unequal articulated pincers, eye stalks, antennae. Own stepped whorl shell and ochre cuticle. Full idle/walk/die retained; death is asset capability outside runtime locomotion states. Rigid weights appropriate for exoskeleton. Latest revision shortens pincers and restores dominant shell mass."
+    }
+  }
+}

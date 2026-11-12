@@ -1,0 +1,25 @@
+{
+  "captured_at_utc": "2026-11-11T00:57:30.977547+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_crystal_v2\\models",
+  "files_sha256": {
+    "creatures\\mese_monster\\creature.json": "b580c5254ca55214abe87361697cd16b1c3ba89689dd741fbe1baf0e3e62636b",
+    "creatures\\mese_monster\\LICENSE.txt": "86f3dd813a29614b4a0bfbddc18fba9e009edd9e2e7c28de179b655ae89b4e16",
+    "creatures\\mese_monster\\manifest.json": "dfe839a7e07b584ea5834040503bcbe0ac8b112748d19000a8cd887d68ab0279",
+    "creatures\\mese_monster\\model.bin": "c609324ce1508a7d4f51d17fdeab430219045ff5c5214451df28ba31ba48cbed",
+    "creatures\\mese_monster\\model.gltf": "e40fcd17b0f43a4866cf3e730dfd9a53e223b9298d0be6d345811abbe9044fa3",
+    "creatures\\mese_monster\\textures\\body.png": "aa9e9b0d91effd3de3966697cbc6b1fdb9412984858dd4e9d88177526902d780",
+    "creatures\\mese_monster\\textures\\icon.png": "04f497870078888aa420aaaee7847b186ae2b6d2f55cd4e14112a655754c086e"
+  },
+  "qa_models_override": true,
+  "exe_sha256": "bf9a9055a62206179288ef4108d39e850f15b8c4d43ecb5d5bd6c6a46616c490",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "revised_mese_monster",
+  "qa_camera": "close",
+  "qa_water_placement": false,
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

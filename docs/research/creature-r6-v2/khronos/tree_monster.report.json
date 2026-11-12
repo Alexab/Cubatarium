@@ -1,0 +1,2566 @@
+{
+  "uri": "model.gltf",
+  "mimeType": "model/gltf+json",
+  "validatorVersion": "2.0.0-dev.3.10",
+  "validatedAt": "2026-11-11T02:07:16.898Z",
+  "issues": {
+    "numErrors": 0,
+    "numWarnings": 420,
+    "numInfos": 1,
+    "numHints": 0,
+    "messages": [
+      {
+        "code": "UNUSED_OBJECT",
+        "message": "This object may be unused.",
+        "severity": 2,
+        "pointer": "/meshes/0/primitives/0/attributes/TEXCOORD_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 5 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 17 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 21 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 33 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 37 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 49 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 53 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 81 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 85 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 89 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 93 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 289 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 293 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 297 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 301 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 304 (component index 0) is used with zero weight but has non-zero value (3).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 308 (component index 0) is used with zero weight but has non-zero value (3).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 312 (component index 0) is used with zero weight but has non-zero value (3).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 316 (component index 0) is used with zero weight but has non-zero value (3).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 320 (component index 0) is used with zero weight but has non-zero value (3).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 325 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 328 (component index 0) is used with zero weight but has non-zero value (3).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 333 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 337 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 340 (component index 0) is used with zero weight but has non-zero value (3).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 345 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 348 (component index 0) is used with zero weight but has non-zero value (3).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 352 (component index 0) is used with zero weight but has non-zero value (3).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 356 (component index 0) is used with zero weight but has non-zero value (3).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 361 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 365 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 369 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 373 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 376 (component index 0) is used with zero weight but has non-zero value (3).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 380 (component index 0) is used with zero weight but has non-zero value (3).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 384 (component index 0) is used with zero weight but has non-zero value (3).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 388 (component index 0) is used with zero weight but has non-zero value (3).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 392 (component index 0) is used with zero weight but has non-zero value (3).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 396 (component index 0) is used with zero weight but has non-zero value (3).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 401 (component index 1) is used with zero weight but has non-zero value (4).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 405 (component index 1) is used with zero weight but has non-zero value (4).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 409 (component index 1) is used with zero weight but has non-zero value (4).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 413 (component index 1) is used with zero weight but has non-zero value (4).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 417 (component index 1) is used with zero weight but has non-zero value (4).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 420 (component index 0) is used with zero weight but has non-zero value (3).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 425 (component index 1) is used with zero weight but has non-zero value (4).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 428 (component index 0) is used with zero weight but has non-zero value (3).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 432 (component index 0) is used with zero weight but has non-zero value (3).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 437 (component index 1) is used with zero weight but has non-zero value (4).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 440 (component index 0) is used with zero weight but has non-zero value (3).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 445 (component index 1) is used with zero weight but has non-zero value (4).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 449 (component index 1) is used with zero weight but has non-zero value (4).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 453 (component index 1) is used with zero weight but has non-zero value (4).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 456 (component index 0) is used with zero weight but has non-zero value (3).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 460 (component index 0) is used with zero weight but has non-zero value (3).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 464 (component index 0) is used with zero weight but has non-zero value (3).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 468 (component index 0) is used with zero weight but has non-zero value (3).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 473 (component index 1) is used with zero weight but has non-zero value (4).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 477 (component index 1) is used with zero weight but has non-zero value (4).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 480 (component index 0) is used with zero weight but has non-zero value (4).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 484 (component index 0) is used with zero weight but has non-zero value (4).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 488 (component index 0) is used with zero weight but has non-zero value (4).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 492 (component index 0) is used with zero weight but has non-zero value (4).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 497 (component index 1) is used with zero weight but has non-zero value (5).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 501 (component index 1) is used with zero weight but has non-zero value (5).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 505 (component index 1) is used with zero weight but has non-zero value (5).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 509 (component index 1) is used with zero weight but has non-zero value (5).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 513 (component index 1) is used with zero weight but has non-zero value (5).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 516 (component index 0) is used with zero weight but has non-zero value (4).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 521 (component index 1) is used with zero weight but has non-zero value (5).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 524 (component index 0) is used with zero weight but has non-zero value (4).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 528 (component index 0) is used with zero weight but has non-zero value (4).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 533 (component index 1) is used with zero weight but has non-zero value (5).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 536 (component index 0) is used with zero weight but has non-zero value (4).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 541 (component index 1) is used with zero weight but has non-zero value (5).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 545 (component index 1) is used with zero weight but has non-zero value (5).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 549 (component index 1) is used with zero weight but has non-zero value (5).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 552 (component index 0) is used with zero weight but has non-zero value (4).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 556 (component index 0) is used with zero weight but has non-zero value (4).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 560 (component index 0) is used with zero weight but has non-zero value (4).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 564 (component index 0) is used with zero weight but has non-zero value (4).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 569 (component index 1) is used with zero weight but has non-zero value (5).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 573 (component index 1) is used with zero weight but has non-zero value (5).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 672 (component index 0) is used with zero weight but has non-zero value (6).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 676 (component index 0) is used with zero weight but has non-zero value (6).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 681 (component index 1) is used with zero weight but has non-zero value (7).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 685 (component index 1) is used with zero weight but has non-zero value (7).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 688 (component index 0) is used with zero weight but has non-zero value (6).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 692 (component index 0) is used with zero weight but has non-zero value (6).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 697 (component index 1) is used with zero weight but has non-zero value (7).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 701 (component index 1) is used with zero weight but has non-zero value (7).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 704 (component index 0) is used with zero weight but has non-zero value (6).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 708 (component index 0) is used with zero weight but has non-zero value (6).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 713 (component index 1) is used with zero weight but has non-zero value (7).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 717 (component index 1) is used with zero weight but has non-zero value (7).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 720 (component index 0) is used with zero weight but has non-zero value (6).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 724 (component index 0) is used with zero weight but has non-zero value (6).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 729 (component index 1) is used with zero weight but has non-zero value (7).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 733 (component index 1) is used with zero weight but has non-zero value (7).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 737 (component index 1) is used with zero weight but has non-zero value (7).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 741 (component index 1) is used with zero weight but has non-zero value (7).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 745 (component index 1) is used with zero weight but has non-zero value (7).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 749 (component index 1) is used with zero weight but has non-zero value (7).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 752 (component index 0) is used with zero weight but has non-zero value (6).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 756 (component index 0) is used with zero weight but has non-zero value (6).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 760 (component index 0) is used with zero weight but has non-zero value (6).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 764 (component index 0) is used with zero weight but has non-zero value (6).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 776 (component index 0) is used with zero weight but has non-zero value (6).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 780 (component index 0) is used with zero weight but has non-zero value (6).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 792 (component index 0) is used with zero weight but has non-zero value (6).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 796 (component index 0) is used with zero weight but has non-zero value (6).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 808 (component index 0) is used with zero weight but has non-zero value (6).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 812 (component index 0) is used with zero weight but has non-zero value (6).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 824 (component index 0) is used with zero weight but has non-zero value (6).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 828 (component index 0) is used with zero weight but has non-zero value (6).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 832 (component index 0) is used with zero weight but has non-zero value (6).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 836 (component index 0) is used with zero weight but has non-zero value (6).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 840 (component index 0) is used with zero weight but has non-zero value (6).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 844 (component index 0) is used with zero weight but has non-zero value (6).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 864 (component index 0) is used with zero weight but has non-zero value (7).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 868 (component index 0) is used with zero weight but has non-zero value (7).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 873 (component index 1) is used with zero weight but has non-zero value (8).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 877 (component index 1) is used with zero weight but has non-zero value (8).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 880 (component index 0) is used with zero weight but has non-zero value (7).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 884 (component index 0) is used with zero weight but has non-zero value (7).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 889 (component index 1) is used with zero weight but has non-zero value (8).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 893 (component index 1) is used with zero weight but has non-zero value (8).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 896 (component index 0) is used with zero weight but has non-zero value (7).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 900 (component index 0) is used with zero weight but has non-zero value (7).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 905 (component index 1) is used with zero weight but has non-zero value (8).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 909 (component index 1) is used with zero weight but has non-zero value (8).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 912 (component index 0) is used with zero weight but has non-zero value (7).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 916 (component index 0) is used with zero weight but has non-zero value (7).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 921 (component index 1) is used with zero weight but has non-zero value (8).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 925 (component index 1) is used with zero weight but has non-zero value (8).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 929 (component index 1) is used with zero weight but has non-zero value (8).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 933 (component index 1) is used with zero weight but has non-zero value (8).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 937 (component index 1) is used with zero weight but has non-zero value (8).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 941 (component index 1) is used with zero weight but has non-zero value (8).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 944 (component index 0) is used with zero weight but has non-zero value (7).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 948 (component index 0) is used with zero weight but has non-zero value (7).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 952 (component index 0) is used with zero weight but has non-zero value (7).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 956 (component index 0) is used with zero weight but has non-zero value (7).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1249 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1253 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1257 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1261 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1264 (component index 0) is used with zero weight but has non-zero value (9).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1268 (component index 0) is used with zero weight but has non-zero value (9).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1272 (component index 0) is used with zero weight but has non-zero value (9).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1276 (component index 0) is used with zero weight but has non-zero value (9).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1280 (component index 0) is used with zero weight but has non-zero value (9).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1285 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1288 (component index 0) is used with zero weight but has non-zero value (9).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1293 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1297 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1300 (component index 0) is used with zero weight but has non-zero value (9).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1305 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1308 (component index 0) is used with zero weight but has non-zero value (9).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1312 (component index 0) is used with zero weight but has non-zero value (9).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1316 (component index 0) is used with zero weight but has non-zero value (9).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1321 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1325 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1329 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1333 (component index 1) is used with zero weight but has non-zero value (1).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1336 (component index 0) is used with zero weight but has non-zero value (9).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1340 (component index 0) is used with zero weight but has non-zero value (9).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1344 (component index 0) is used with zero weight but has non-zero value (9).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1348 (component index 0) is used with zero weight but has non-zero value (9).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1352 (component index 0) is used with zero weight but has non-zero value (9).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1356 (component index 0) is used with zero weight but has non-zero value (9).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1361 (component index 1) is used with zero weight but has non-zero value (10).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1365 (component index 1) is used with zero weight but has non-zero value (10).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1369 (component index 1) is used with zero weight but has non-zero value (10).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1373 (component index 1) is used with zero weight but has non-zero value (10).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1377 (component index 1) is used with zero weight but has non-zero value (10).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1380 (component index 0) is used with zero weight but has non-zero value (9).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1385 (component index 1) is used with zero weight but has non-zero value (10).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1388 (component index 0) is used with zero weight but has non-zero value (9).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1392 (component index 0) is used with zero weight but has non-zero value (9).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1397 (component index 1) is used with zero weight but has non-zero value (10).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1400 (component index 0) is used with zero weight but has non-zero value (9).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1405 (component index 1) is used with zero weight but has non-zero value (10).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1409 (component index 1) is used with zero weight but has non-zero value (10).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1413 (component index 1) is used with zero weight but has non-zero value (10).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1416 (component index 0) is used with zero weight but has non-zero value (9).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1420 (component index 0) is used with zero weight but has non-zero value (9).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1424 (component index 0) is used with zero weight but has non-zero value (9).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1428 (component index 0) is used with zero weight but has non-zero value (9).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1433 (component index 1) is used with zero weight but has non-zero value (10).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1437 (component index 1) is used with zero weight but has non-zero value (10).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1440 (component index 0) is used with zero weight but has non-zero value (10).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1444 (component index 0) is used with zero weight but has non-zero value (10).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1448 (component index 0) is used with zero weight but has non-zero value (10).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1452 (component index 0) is used with zero weight but has non-zero value (10).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1457 (component index 1) is used with zero weight but has non-zero value (11).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1461 (component index 1) is used with zero weight but has non-zero value (11).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1465 (component index 1) is used with zero weight but has non-zero value (11).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1469 (component index 1) is used with zero weight but has non-zero value (11).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1473 (component index 1) is used with zero weight but has non-zero value (11).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1476 (component index 0) is used with zero weight but has non-zero value (10).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1481 (component index 1) is used with zero weight but has non-zero value (11).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1484 (component index 0) is used with zero weight but has non-zero value (10).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1488 (component index 0) is used with zero weight but has non-zero value (10).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1493 (component index 1) is used with zero weight but has non-zero value (11).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1496 (component index 0) is used with zero weight but has non-zero value (10).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1501 (component index 1) is used with zero weight but has non-zero value (11).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1505 (component index 1) is used with zero weight but has non-zero value (11).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1509 (component index 1) is used with zero weight but has non-zero value (11).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1512 (component index 0) is used with zero weight but has non-zero value (10).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1516 (component index 0) is used with zero weight but has non-zero value (10).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1520 (component index 0) is used with zero weight but has non-zero value (10).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1524 (component index 0) is used with zero weight but has non-zero value (10).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1529 (component index 1) is used with zero weight but has non-zero value (11).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1533 (component index 1) is used with zero weight but has non-zero value (11).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1632 (component index 0) is used with zero weight but has non-zero value (12).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1636 (component index 0) is used with zero weight but has non-zero value (12).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1641 (component index 1) is used with zero weight but has non-zero value (13).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1645 (component index 1) is used with zero weight but has non-zero value (13).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1648 (component index 0) is used with zero weight but has non-zero value (12).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1652 (component index 0) is used with zero weight but has non-zero value (12).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1657 (component index 1) is used with zero weight but has non-zero value (13).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1661 (component index 1) is used with zero weight but has non-zero value (13).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1664 (component index 0) is used with zero weight but has non-zero value (12).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1668 (component index 0) is used with zero weight but has non-zero value (12).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1673 (component index 1) is used with zero weight but has non-zero value (13).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1677 (component index 1) is used with zero weight but has non-zero value (13).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1680 (component index 0) is used with zero weight but has non-zero value (12).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1684 (component index 0) is used with zero weight but has non-zero value (12).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1689 (component index 1) is used with zero weight but has non-zero value (13).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1693 (component index 1) is used with zero weight but has non-zero value (13).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1697 (component index 1) is used with zero weight but has non-zero value (13).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1701 (component index 1) is used with zero weight but has non-zero value (13).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1705 (component index 1) is used with zero weight but has non-zero value (13).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1709 (component index 1) is used with zero weight but has non-zero value (13).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1712 (component index 0) is used with zero weight but has non-zero value (12).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1716 (component index 0) is used with zero weight but has non-zero value (12).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1720 (component index 0) is used with zero weight but has non-zero value (12).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1724 (component index 0) is used with zero weight but has non-zero value (12).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1736 (component index 0) is used with zero weight but has non-zero value (12).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1740 (component index 0) is used with zero weight but has non-zero value (12).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1752 (component index 0) is used with zero weight but has non-zero value (12).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1756 (component index 0) is used with zero weight but has non-zero value (12).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1768 (component index 0) is used with zero weight but has non-zero value (12).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1772 (component index 0) is used with zero weight but has non-zero value (12).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1784 (component index 0) is used with zero weight but has non-zero value (12).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1788 (component index 0) is used with zero weight but has non-zero value (12).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1792 (component index 0) is used with zero weight but has non-zero value (12).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1796 (component index 0) is used with zero weight but has non-zero value (12).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1800 (component index 0) is used with zero weight but has non-zero value (12).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1804 (component index 0) is used with zero weight but has non-zero value (12).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1824 (component index 0) is used with zero weight but has non-zero value (13).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1828 (component index 0) is used with zero weight but has non-zero value (13).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1833 (component index 1) is used with zero weight but has non-zero value (14).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1837 (component index 1) is used with zero weight but has non-zero value (14).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1840 (component index 0) is used with zero weight but has non-zero value (13).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1844 (component index 0) is used with zero weight but has non-zero value (13).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1849 (component index 1) is used with zero weight but has non-zero value (14).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1853 (component index 1) is used with zero weight but has non-zero value (14).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1856 (component index 0) is used with zero weight but has non-zero value (13).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1860 (component index 0) is used with zero weight but has non-zero value (13).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1865 (component index 1) is used with zero weight but has non-zero value (14).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1869 (component index 1) is used with zero weight but has non-zero value (14).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1872 (component index 0) is used with zero weight but has non-zero value (13).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1876 (component index 0) is used with zero weight but has non-zero value (13).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1881 (component index 1) is used with zero weight but has non-zero value (14).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1885 (component index 1) is used with zero weight but has non-zero value (14).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1889 (component index 1) is used with zero weight but has non-zero value (14).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1893 (component index 1) is used with zero weight but has non-zero value (14).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1897 (component index 1) is used with zero weight but has non-zero value (14).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1901 (component index 1) is used with zero weight but has non-zero value (14).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1904 (component index 0) is used with zero weight but has non-zero value (13).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1908 (component index 0) is used with zero weight but has non-zero value (13).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1912 (component index 0) is used with zero weight but has non-zero value (13).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 1916 (component index 0) is used with zero weight but has non-zero value (13).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2208 (component index 0) is used with zero weight but has non-zero value (15).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2212 (component index 0) is used with zero weight but has non-zero value (15).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2216 (component index 0) is used with zero weight but has non-zero value (15).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2220 (component index 0) is used with zero weight but has non-zero value (15).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2225 (component index 1) is used with zero weight but has non-zero value (16).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2229 (component index 1) is used with zero weight but has non-zero value (16).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2233 (component index 1) is used with zero weight but has non-zero value (16).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2237 (component index 1) is used with zero weight but has non-zero value (16).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2241 (component index 1) is used with zero weight but has non-zero value (16).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2244 (component index 0) is used with zero weight but has non-zero value (15).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2249 (component index 1) is used with zero weight but has non-zero value (16).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2252 (component index 0) is used with zero weight but has non-zero value (15).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2256 (component index 0) is used with zero weight but has non-zero value (15).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2261 (component index 1) is used with zero weight but has non-zero value (16).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2264 (component index 0) is used with zero weight but has non-zero value (15).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2269 (component index 1) is used with zero weight but has non-zero value (16).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2273 (component index 1) is used with zero weight but has non-zero value (16).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2277 (component index 1) is used with zero weight but has non-zero value (16).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2280 (component index 0) is used with zero weight but has non-zero value (15).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2284 (component index 0) is used with zero weight but has non-zero value (15).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2288 (component index 0) is used with zero weight but has non-zero value (15).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2292 (component index 0) is used with zero weight but has non-zero value (15).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2297 (component index 1) is used with zero weight but has non-zero value (16).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2301 (component index 1) is used with zero weight but has non-zero value (16).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2400 (component index 0) is used with zero weight but has non-zero value (17).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2404 (component index 0) is used with zero weight but has non-zero value (17).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2408 (component index 0) is used with zero weight but has non-zero value (17).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2412 (component index 0) is used with zero weight but has non-zero value (17).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2417 (component index 1) is used with zero weight but has non-zero value (18).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2421 (component index 1) is used with zero weight but has non-zero value (18).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2425 (component index 1) is used with zero weight but has non-zero value (18).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2429 (component index 1) is used with zero weight but has non-zero value (18).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2433 (component index 1) is used with zero weight but has non-zero value (18).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2436 (component index 0) is used with zero weight but has non-zero value (17).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2441 (component index 1) is used with zero weight but has non-zero value (18).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2444 (component index 0) is used with zero weight but has non-zero value (17).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2448 (component index 0) is used with zero weight but has non-zero value (17).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2453 (component index 1) is used with zero weight but has non-zero value (18).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2456 (component index 0) is used with zero weight but has non-zero value (17).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2461 (component index 1) is used with zero weight but has non-zero value (18).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2465 (component index 1) is used with zero weight but has non-zero value (18).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2469 (component index 1) is used with zero weight but has non-zero value (18).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2472 (component index 0) is used with zero weight but has non-zero value (17).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2476 (component index 0) is used with zero weight but has non-zero value (17).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2480 (component index 0) is used with zero weight but has non-zero value (17).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2484 (component index 0) is used with zero weight but has non-zero value (17).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2489 (component index 1) is used with zero weight but has non-zero value (18).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2493 (component index 1) is used with zero weight but has non-zero value (18).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2592 (component index 0) is used with zero weight but has non-zero value (19).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2596 (component index 0) is used with zero weight but has non-zero value (19).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2600 (component index 0) is used with zero weight but has non-zero value (19).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2604 (component index 0) is used with zero weight but has non-zero value (19).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2609 (component index 1) is used with zero weight but has non-zero value (20).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2613 (component index 1) is used with zero weight but has non-zero value (20).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2617 (component index 1) is used with zero weight but has non-zero value (20).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2621 (component index 1) is used with zero weight but has non-zero value (20).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2625 (component index 1) is used with zero weight but has non-zero value (20).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2628 (component index 0) is used with zero weight but has non-zero value (19).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2633 (component index 1) is used with zero weight but has non-zero value (20).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2636 (component index 0) is used with zero weight but has non-zero value (19).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2640 (component index 0) is used with zero weight but has non-zero value (19).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2645 (component index 1) is used with zero weight but has non-zero value (20).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2648 (component index 0) is used with zero weight but has non-zero value (19).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2653 (component index 1) is used with zero weight but has non-zero value (20).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2657 (component index 1) is used with zero weight but has non-zero value (20).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2661 (component index 1) is used with zero weight but has non-zero value (20).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2664 (component index 0) is used with zero weight but has non-zero value (19).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2668 (component index 0) is used with zero weight but has non-zero value (19).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2672 (component index 0) is used with zero weight but has non-zero value (19).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2676 (component index 0) is used with zero weight but has non-zero value (19).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2681 (component index 1) is used with zero weight but has non-zero value (20).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2685 (component index 1) is used with zero weight but has non-zero value (20).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2784 (component index 0) is used with zero weight but has non-zero value (21).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2788 (component index 0) is used with zero weight but has non-zero value (21).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2792 (component index 0) is used with zero weight but has non-zero value (21).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2796 (component index 0) is used with zero weight but has non-zero value (21).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2801 (component index 1) is used with zero weight but has non-zero value (22).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2805 (component index 1) is used with zero weight but has non-zero value (22).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2809 (component index 1) is used with zero weight but has non-zero value (22).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2813 (component index 1) is used with zero weight but has non-zero value (22).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2817 (component index 1) is used with zero weight but has non-zero value (22).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2820 (component index 0) is used with zero weight but has non-zero value (21).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2825 (component index 1) is used with zero weight but has non-zero value (22).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2828 (component index 0) is used with zero weight but has non-zero value (21).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2832 (component index 0) is used with zero weight but has non-zero value (21).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2837 (component index 1) is used with zero weight but has non-zero value (22).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2840 (component index 0) is used with zero weight but has non-zero value (21).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2845 (component index 1) is used with zero weight but has non-zero value (22).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2849 (component index 1) is used with zero weight but has non-zero value (22).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2853 (component index 1) is used with zero weight but has non-zero value (22).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2856 (component index 0) is used with zero weight but has non-zero value (21).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2860 (component index 0) is used with zero weight but has non-zero value (21).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2864 (component index 0) is used with zero weight but has non-zero value (21).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2868 (component index 0) is used with zero weight but has non-zero value (21).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2873 (component index 1) is used with zero weight but has non-zero value (22).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2877 (component index 1) is used with zero weight but has non-zero value (22).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2976 (component index 0) is used with zero weight but has non-zero value (23).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2980 (component index 0) is used with zero weight but has non-zero value (23).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2984 (component index 0) is used with zero weight but has non-zero value (23).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2988 (component index 0) is used with zero weight but has non-zero value (23).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2993 (component index 1) is used with zero weight but has non-zero value (24).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 2997 (component index 1) is used with zero weight but has non-zero value (24).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3001 (component index 1) is used with zero weight but has non-zero value (24).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3005 (component index 1) is used with zero weight but has non-zero value (24).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3009 (component index 1) is used with zero weight but has non-zero value (24).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3012 (component index 0) is used with zero weight but has non-zero value (23).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3017 (component index 1) is used with zero weight but has non-zero value (24).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3020 (component index 0) is used with zero weight but has non-zero value (23).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3024 (component index 0) is used with zero weight but has non-zero value (23).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3029 (component index 1) is used with zero weight but has non-zero value (24).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3032 (component index 0) is used with zero weight but has non-zero value (23).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3037 (component index 1) is used with zero weight but has non-zero value (24).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3041 (component index 1) is used with zero weight but has non-zero value (24).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3045 (component index 1) is used with zero weight but has non-zero value (24).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3048 (component index 0) is used with zero weight but has non-zero value (23).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3052 (component index 0) is used with zero weight but has non-zero value (23).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3056 (component index 0) is used with zero weight but has non-zero value (23).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3060 (component index 0) is used with zero weight but has non-zero value (23).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3065 (component index 1) is used with zero weight but has non-zero value (24).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3069 (component index 1) is used with zero weight but has non-zero value (24).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3168 (component index 0) is used with zero weight but has non-zero value (25).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3172 (component index 0) is used with zero weight but has non-zero value (25).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3176 (component index 0) is used with zero weight but has non-zero value (25).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3180 (component index 0) is used with zero weight but has non-zero value (25).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3185 (component index 1) is used with zero weight but has non-zero value (26).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3189 (component index 1) is used with zero weight but has non-zero value (26).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3193 (component index 1) is used with zero weight but has non-zero value (26).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3197 (component index 1) is used with zero weight but has non-zero value (26).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3201 (component index 1) is used with zero weight but has non-zero value (26).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3204 (component index 0) is used with zero weight but has non-zero value (25).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3209 (component index 1) is used with zero weight but has non-zero value (26).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3212 (component index 0) is used with zero weight but has non-zero value (25).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3216 (component index 0) is used with zero weight but has non-zero value (25).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3221 (component index 1) is used with zero weight but has non-zero value (26).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3224 (component index 0) is used with zero weight but has non-zero value (25).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3229 (component index 1) is used with zero weight but has non-zero value (26).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3233 (component index 1) is used with zero weight but has non-zero value (26).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3237 (component index 1) is used with zero weight but has non-zero value (26).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3240 (component index 0) is used with zero weight but has non-zero value (25).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3244 (component index 0) is used with zero weight but has non-zero value (25).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3248 (component index 0) is used with zero weight but has non-zero value (25).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3252 (component index 0) is used with zero weight but has non-zero value (25).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3257 (component index 1) is used with zero weight but has non-zero value (26).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      },
+      {
+        "code": "ACCESSOR_JOINTS_USED_ZERO_WEIGHT",
+        "message": "Joints accessor element at index 3261 (component index 1) is used with zero weight but has non-zero value (26).",
+        "severity": 1,
+        "pointer": "/meshes/0/primitives/0/attributes/JOINTS_0"
+      }
+    ],
+    "truncated": false
+  },
+  "info": {
+    "version": "2.0",
+    "generator": "cubatarium-creaturegen",
+    "resources": [
+      {
+        "pointer": "/buffers/0",
+        "mimeType": "application/gltf-buffer",
+        "storage": "external",
+        "uri": "model.bin",
+        "byteLength": 405280
+      }
+    ],
+    "animationCount": 4,
+    "materialCount": 1,
+    "hasMorphTargets": false,
+    "hasSkins": true,
+    "hasTextures": false,
+    "hasDefaultScene": true,
+    "drawCallCount": 1,
+    "totalVertexCount": 840,
+    "totalTriangleCount": 420,
+    "maxUVs": 1,
+    "maxInfluences": 4,
+    "maxAttributes": 4
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "captured_at_utc": "2026-11-10T22:25:44.909463+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_marine_invertebrates_v2\\models",
+  "files_sha256": {
+    "creatures\\crab\\creature.json": "c6a29f9d474f65e1cc610b7c7f236da4c6ba8cbb8afc5e5cab7cbef50a425a43",
+    "creatures\\crab\\LICENSE.txt": "a1dafe03b501080c9bcbaf36969ed591726ec00e64d3907bf3ee16b7e17c0030",
+    "creatures\\crab\\manifest.json": "d2ce6a8781b7452521fee43aa53e5fb0fb0e50f491545e6a6ffde4f0b8bbcc9d",
+    "creatures\\crab\\model.bin": "3deb9b68f07926dafa3f2e2a5ff9f151c6247d8829c9bd4d2fa62e95b9068261",
+    "creatures\\crab\\model.gltf": "a0dbb8b2a5c98d10cdaf32188787e3f5f9ebe6010c5fee9c9a29457e9317dc38",
+    "creatures\\crab\\textures\\body.png": "0be3590802a20ce59bbf128719128bb4b7d06cba3b9858f94ec9e0b3101b8dd9",
+    "creatures\\crab\\textures\\icon.png": "1cb3947f1a6d0c694980fae6eb4ff23311c7521faa40a35c0476114a7f3a3aeb",
+    "creatures\\lobster\\creature.json": "57daa5fccdde3217ea517446a47f940970a27fb0c9c7776f3114c69065aedbf1",
+    "creatures\\lobster\\LICENSE.txt": "c497d1aa69427ca3e450de2dd15970f56a9b9a8ef22c6616bd816af65ac0cee6",
+    "creatures\\lobster\\manifest.json": "cf6c81b629e8b92bee07a606c2d484c0a03fdde32762b3d89305187634b13d5b",
+    "creatures\\lobster\\model.bin": "0825a1e6b9f3397614e0e4d5d788664efdaf0a27d9e47dbf908d97ddd457bf9b",
+    "creatures\\lobster\\model.gltf": "64c9e62b09ef4972255cc01380009c2f47ecffed2f0617dc8caf7d5bf172a168",
+    "creatures\\lobster\\textures\\body.png": "dea26457e1f5413a1da2649ccf24da54adb50f6b16561c66f2912eebe8b3871e",
+    "creatures\\lobster\\textures\\icon.png": "86ca59e0b25d03670d2cef49c9160533c848a99a535ec75b55b5c2a2f9560c17",
+    "creatures\\octopus\\creature.json": "956a41c26e447395689388f1b49981080d5a88817b3206fa0db1cd0c57334e33",
+    "creatures\\octopus\\LICENSE.txt": "86f3dd813a29614b4a0bfbddc18fba9e009edd9e2e7c28de179b655ae89b4e16",
+    "creatures\\octopus\\manifest.json": "6a523187c17fa23c0ced1f302514364c30e82375cf2a3af87538ddbddbb7873c",
+    "creatures\\octopus\\model.bin": "d9d20b905a1b0ab325b2638e9b24a11e2b6d047c4cf47b3d60074b2e95cf8e03",
+    "creatures\\octopus\\model.gltf": "885af350a3d62439218c660eb6ba9f6c736e1b19f25c6593cbfc0c307aa03ce9",
+    "creatures\\octopus\\textures\\body.png": "30188233eec8915153214de3c3a12761c2c1b94d09b1c9f63125eac472b7e28a",
+    "creatures\\octopus\\textures\\icon.png": "726dc31d0b54df741de150c49406830a0bb7ba3a12990f3b7dd7337a5225fefd"
+  },
+  "qa_models_override": true,
+  "exe_sha256": "3fa0c8e11332b7fd0c1e7a651d73f3c827b0ae7eba26267ab8cb75dcdb590f09",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "water_grid",
+  "qa_camera": "grid",
+  "qa_water_placement": true,
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

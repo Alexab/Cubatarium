@@ -1,0 +1,22 @@
+{
+  "schema": "creature-skin-ownership-evidence-audit.v1",
+  "passed": true,
+  "scope": "Bundled 56x5x2 actual draw texture IDs and foreign-skin pose/mesh hashes; not full texture-map/FP/save/pack acceptance",
+  "context": "docs\\research\\creature-r6-v2\\appearance-cache\\context_mapping_final_catalog.json",
+  "native_probe": "docs\\research\\creature-r6-v2\\appearance-cache\\native_mapping_final\\appearance_skin_probe.json",
+  "context_sha256": "c1502f1ec03ec404692991638401e0695ea3a052d3596bf8c568704d0c690d7a",
+  "probe_sha256": "062e5a6c3fd9ca84bc59e5d5a55ee3958fb0f2d1f8923d4f338f5dbe3cea2217",
+  "exe_sha256": "4e76f9220ab4fea5cb40e5fd101aff6ac607f3377b990291187487a44e821968",
+  "current_runtime_inputs_verified": true,
+  "cases": 560,
+  "compatible_cases": 10,
+  "foreign_cases": 550,
+  "raw_and_resolved_only_selection_identical": true,
+  "skin_atlas_sources_sha256": {
+    "skin/human_adventurer/diffuse": "9c23cb22062a65d9233ad465f41ab11490138efe44e3dccc0c9e9535b65618b8",
+    "skin/human_guard/diffuse": "e77ea8dca8156ca79cf7046723a5198e91762992f3340ba52f2d4e72a2e49002",
+    "skin/sheep_wool_black/diffuse": "edccdb33cdfb8a432257b0bfea096112bc5b09ad0acb43e8c3e7f6a20928b175",
+    "skin/sheep_wool_golden/diffuse": "02333733d2609d36ad95ee591686cbc1f42a93539cabfad61aa428ed4b2d8ac7",
+    "skin/wolf_snow/diffuse": "8d852f4354b8ad8773554d5b074db556ba972fc278b5b295a71e9741312ddeba"
+  }
+}

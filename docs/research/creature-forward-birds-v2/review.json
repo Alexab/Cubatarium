@@ -1,0 +1,270 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R5 two bird species plus corrected facing/stance of five prior mammals; R6 full runtime compatibility, routes/performance/reproducibility remain pending",
+  "metrics_path": "metrics.json",
+  "species": {
+    "rat": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct full native view/motion sheets, icons, equal-scale anatomy comparisons, final world images and explicit orientation/stance review; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "02cb5b653e18328c063a4f54cf32557d07e431bc31aff348af0b504d4444d6ab",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "rat.png",
+          "sha256": "48109073ae7a0cd4ced28777933ea5269793e94913e75bf895fbea9afffeb9af"
+        },
+        "motion": {
+          "path": "native_approved_rat.png",
+          "sha256": "2b5059ac89085619bf1cbfee3425c5ac1966634a1a063c3f8a631db19601ef4f"
+        },
+        "runtime": {
+          "path": "runtime_close_rat/frame_001.png",
+          "sha256": "e41b54f64edf2d8caa4f58c9b7df25462cc7d1e03467be5d06cc56469e9bb035"
+        },
+        "ui": {
+          "path": "native_candidate/rat_12.png",
+          "sha256": "b456c69f0f1cde32aad938e9a71b37eb239e9aefbfc729f928c4f6642d0ad3ed"
+        }
+      },
+      "notes": "Re-review after correcting authored -Z front to entity +Z through yaw=180 and reversing walk/run time order so planted feet retract. Mesh positions, UVs, weights, skin nodes and PNG bytes are unchanged, proved in forward_axis_correction.json. Gameplay bounds, speeds and habitat unchanged. Authored forward axis is now required; tests check facing and stance direction, not just absence of sinking. Performance gates disabled; not a performance pass."
+    },
+    "kitten": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct full native view/motion sheets, icons, equal-scale anatomy comparisons, final world images and explicit orientation/stance review; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "c0b5621c64046f60022e1d64719b86609ed042afcbd5a8e71a1131a07be7a85b",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "kitten.png",
+          "sha256": "a69fe09fd5cf0e711de40607943e28666a060d42c217f89045b360f942f3ec64"
+        },
+        "motion": {
+          "path": "native_approved_kitten.png",
+          "sha256": "64b4cc15b1f732612734378c56780b21b9fffe6b3bbe607b8c944a435eeffbad"
+        },
+        "runtime": {
+          "path": "runtime_close_kitten/frame_001.png",
+          "sha256": "8f3e3e9d2d043487ea94160f3504d128016fecfb3475aedacd1036718d80a25c"
+        },
+        "ui": {
+          "path": "native_candidate/kitten_12.png",
+          "sha256": "4affc2cbc197b60fd8c8421611b2cbb21ee3955771cb5221b2a5ad22a704106b"
+        }
+      },
+      "notes": "Re-review after correcting authored -Z front to entity +Z through yaw=180 and reversing walk/run time order so planted feet retract. Mesh positions, UVs, weights, skin nodes and PNG bytes are unchanged, proved in forward_axis_correction.json. Gameplay bounds, speeds and habitat unchanged. Authored forward axis is now required; tests check facing and stance direction, not just absence of sinking. Performance gates disabled; not a performance pass."
+    },
+    "hedgehog": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct full native view/motion sheets, icons, equal-scale anatomy comparisons, final world images and explicit orientation/stance review; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "f4aaae450cad4dde50f87a87917c7546c70ba0adc5e0cbf24e1bef32fa3c2f57",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "hedgehog.png",
+          "sha256": "f04aa89af45d0c46f1a5a1fc2d89e79bd082d63a2d66b4687f5a1bdf8a8e68ee"
+        },
+        "motion": {
+          "path": "native_approved_hedgehog.png",
+          "sha256": "a5799cab16435f1e9f8e4d7955d6d34f034f24f18fb42104c498946430fd9dda"
+        },
+        "runtime": {
+          "path": "runtime_close_hedgehog/frame_001.png",
+          "sha256": "0d99fae0511601ceff178fd8c82ce6e044b1e759a26c835abed6004475a00a0c"
+        },
+        "ui": {
+          "path": "native_candidate/hedgehog_12.png",
+          "sha256": "b862e8a6a3341a0e9781522aa68bfbb7459cfc7139e00a19a16c6ea9eb3479a6"
+        }
+      },
+      "notes": "Re-review after correcting authored -Z front to entity +Z through yaw=180 and reversing walk/run time order so planted feet retract. Mesh positions, UVs, weights, skin nodes and PNG bytes are unchanged, proved in forward_axis_correction.json. Gameplay bounds, speeds and habitat unchanged. Authored forward axis is now required; tests check facing and stance direction, not just absence of sinking. Performance gates disabled; not a performance pass."
+    },
+    "panda": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct full native view/motion sheets, icons, equal-scale anatomy comparisons, final world images and explicit orientation/stance review; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "377afb7800348d5c4b887ffbbe8eb6da24e56ebf934f237fbdc31a8f04766ab8",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "panda.png",
+          "sha256": "f88375f0220e839252247ff9718f3580030fe7e6d8e409c6d583bea73f1dcf74"
+        },
+        "motion": {
+          "path": "native_approved_panda.png",
+          "sha256": "055cab605afac4f1e062ed692a6b265abe35591d1f15aab639bdefa82593bee4"
+        },
+        "runtime": {
+          "path": "runtime_close_panda/frame_001.png",
+          "sha256": "434dc11e81ef70bc8c4a49d231ad1b0d4850a9756b9980990960ae8105a705e7"
+        },
+        "ui": {
+          "path": "native_candidate/panda_12.png",
+          "sha256": "ac0619e8f8059c1d1637af87529aeb38d1906d6d0ac1fa6f0c4bbeb4df4f1f20"
+        }
+      },
+      "notes": "Re-review after correcting authored -Z front to entity +Z through yaw=180 and reversing walk/run time order so planted feet retract. Mesh positions, UVs, weights, skin nodes and PNG bytes are unchanged, proved in forward_axis_correction.json. Gameplay bounds, speeds and habitat unchanged. Authored forward axis is now required; tests check facing and stance direction, not just absence of sinking. Performance gates disabled; not a performance pass."
+    },
+    "warthog": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct full native view/motion sheets, icons, equal-scale anatomy comparisons, final world images and explicit orientation/stance review; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "ce093d91624ce216406cae68da830672a23742becb23acd9fb4f413f3f4fd5a4",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "warthog.png",
+          "sha256": "10f6a7cefb8e8211d0941be1e8ee477af2951467ae106d238c3d768481d370a4"
+        },
+        "motion": {
+          "path": "native_approved_warthog.png",
+          "sha256": "2ff5012f9f3c203efdaf59dd9d6a0a308410729fff58f5e8c5a0df0d95a374ed"
+        },
+        "runtime": {
+          "path": "runtime_close_warthog/frame_002.png",
+          "sha256": "fd07d1272fba4f3170675542662402b894dd64918b5a79e8225d32bd3f9a0b5e"
+        },
+        "ui": {
+          "path": "native_candidate/warthog_12.png",
+          "sha256": "83e4ece8fb273d1a0e963e033bbabdfc9f4d4173d527fba814ce228a2595a5f3"
+        },
+        "death_asset": {
+          "path": "warthog_die_asset.png",
+          "sha256": "0a9c1092350d7a58fdec022e43fe0d2c8556c31937cf01cd0c28bb282c37e566"
+        }
+      },
+      "notes": "Re-review after correcting authored -Z front to entity +Z through yaw=180 and reversing walk/run time order so planted feet retract. Mesh positions, UVs, weights, skin nodes and PNG bytes are unchanged, proved in forward_axis_correction.json. Gameplay bounds, speeds and habitat unchanged. Authored forward axis is now required; tests check facing and stance direction, not just absence of sinking. Performance gates disabled; not a performance pass."
+    },
+    "penguin": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct full native view/motion sheets, icons, equal-scale anatomy comparisons, final world images and explicit orientation/stance review; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "8a591e7e3f81e87510c373a5315d63a43110f3161f2304598f6d401c165b5012",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "penguin.png",
+          "sha256": "734993de175482e8b726cfef8a215e19d93a3699a9007453a1b9b8d16eae14e6"
+        },
+        "motion": {
+          "path": "native_approved_penguin.png",
+          "sha256": "a852e9e7276763e2ec944f0ce15d7f4d9f7be83619b6d097e8868d2c4acdd2b7"
+        },
+        "runtime": {
+          "path": "runtime_close_penguin/frame_001.png",
+          "sha256": "084782d82a90fbd337694cc3d2815c743758b8f7256404d6dc913db375ec08b3"
+        },
+        "ui": {
+          "path": "native_candidate/penguin_12.png",
+          "sha256": "00b81ca950c49849b93de241e7bb685cbf1581e748a8222a6c44589c1041c1c6"
+        },
+        "swim_motion": {
+          "path": "native_swim_penguin.png",
+          "sha256": "ed0ed92a2b1d7b6e4ecca04a29febe4320555073495c163c87df4caaa4afb853"
+        },
+        "water": {
+          "path": "runtime_penguin_water/frame_001.png",
+          "sha256": "7b95c68f4af7c07e02d6c090be413dac21fd421cdcd58be216838b8cb8bdb15e"
+        },
+        "production_runtime": {
+          "path": "runtime_production/frame_002.png",
+          "sha256": "fef6639e9ee4cddfb82c4dceff5d75cb697d9af2e7dc8a7645ffde5fa56c95df"
+        }
+      },
+      "notes": "Twelve functional joints, familiar upright dark back/pale chest, gold feet/beak and short flippers. Own pixels and authored land waddle plus horizontal swim with counter-rotated head. The legacy fly clip name remains mapped to Swim; can_fly stays false. Separate eight-phase native Swim sheet inspected; actual water world frame shows upright Tread/idle loading, not a claim of an observed continuous swimming route. Gameplay bounds, speeds and habitat unchanged. Authored forward axis is now required; tests check facing and stance direction, not just absence of sinking. Performance gates disabled; not a performance pass. Final normal bin/models Release launch, without asset-root override, inspected. All 29 native frames per species are pixel-identical to reviewed QA frames; production_preview_parity.json and context_production_release.json record evidence after icon cache v3 update."
+    },
+    "owl": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct full native view/motion sheets, icons, equal-scale anatomy comparisons, final world images and explicit orientation/stance review; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "c526dd636d35d40137e62465ab06aeb7b49472735e575d9459c772001a6dee01",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "owl.png",
+          "sha256": "64a0e034652021ebb9b9c0d01102bf0e5238419ce1020afc41b541510551f848"
+        },
+        "motion": {
+          "path": "native_approved_owl.png",
+          "sha256": "1bd31ac3dfc552c8c8296e9093dce6ab84f24bc50bcef23c246c4c44a9664459"
+        },
+        "runtime": {
+          "path": "runtime_close_owl/frame_001.png",
+          "sha256": "b81c8cd9f43285ac9d16d2fef851d93fbf5fd5f93cd3eb354efdf77d46c0437a"
+        },
+        "ui": {
+          "path": "native_candidate/owl_12.png",
+          "sha256": "776e4f29867bd0bf0d37a4579a187c2230eaccb3cb08cbeeafc153bc0d0650d1"
+        },
+        "glide_motion": {
+          "path": "native_glide_owl.png",
+          "sha256": "0a08cf1ee283c68618ecd18d784583b186270e42b7a0c1f1e771b144ece09079"
+        },
+        "production_runtime": {
+          "path": "runtime_production/frame_002.png",
+          "sha256": "fef6639e9ee4cddfb82c4dceff5d75cb697d9af2e7dc8a7645ffde5fa56c95df"
+        }
+      },
+      "notes": "Fourteen functional joints, tall perched silhouette, facial discs, hooked beak, ear tufts and separate talons. Two-segment weighted wings have separate fly and glide clips with explicit runtime state mappings. The original idle/walk capabilities are retained. Native full-cycle fly and glide inspected without cropped wingtips; original collider bounds were insufficient for preview camera fitting. Gameplay bounds, speeds and habitat unchanged. Authored forward axis is now required; tests check facing and stance direction, not just absence of sinking. Performance gates disabled; not a performance pass. Final normal bin/models Release launch, without asset-root override, inspected. All 29 native frames per species are pixel-identical to reviewed QA frames; production_preview_parity.json and context_production_release.json record evidence after icon cache v3 update."
+    }
+  },
+  "production_validation": "Penguin/owl only; 58/58 pixel-identical frames, ordinary bin/models, no QA asset-root override. This does not complete global R6."
+}

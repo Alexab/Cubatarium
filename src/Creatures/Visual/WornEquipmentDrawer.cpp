@@ -6,6 +6,7 @@
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonTypes.h"
 #include "Creatures/Visual/CreatureDrawRequest.h"
 #include "Creatures/Visual/CreatureDrawQueue.h"
+#include "Creatures/Visual/CreatureEquipmentFit.h"
 #include "Creatures/Visual/Gltf/CreatureGltfLoader.h"
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
 #include "Game/Inventory/InventoryTypes.h"
@@ -22,6 +23,7 @@
 #include <array>
 #include <cctype>
 #include <filesystem>
+#include <iostream>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -51,6 +53,9 @@ struct WearLocal
   glm::vec3 offset{0.f};
   glm::vec3 eulerDeg{0.f};
   float scale{1.f};
+  bool boneVolume{false};
+  bool hasFitBounds{false};
+  glm::vec3 fitLow{0.f},fitHigh{0.f};
 };
 
 WearLocal DefaultWear(size_t slot)
@@ -85,6 +90,22 @@ WearLocal LoadWear(const std::string &itemId, size_t slot)
   try
   {
     const nlohmann::json j = nlohmann::json::parse(text);
+    w.boneVolume=j.value("fit_mode",std::string())=="bone_volume";
+    if (j.contains("fit_bounds"))
+    {
+      const auto &b=j["fit_bounds"];
+      if (b.contains("low") && b.contains("high") && b["low"].size()==3 && b["high"].size()==3)
+      {
+        for (size_t axis=0;axis<3;++axis)
+        {
+          w.fitLow[axis]=b["low"][axis].get<float>();
+          w.fitHigh[axis]=b["high"][axis].get<float>();
+        }
+        w.hasFitBounds=glm::all(glm::greaterThan(w.fitHigh,w.fitLow)) &&
+            glm::all(glm::lessThan(glm::abs(w.fitLow),glm::vec3(1e6f))) &&
+            glm::all(glm::lessThan(glm::abs(w.fitHigh),glm::vec3(1e6f)));
+      }
+    }
     if (j.contains("bones") && j["bones"].is_array())
     {
       w.bones.clear();
@@ -113,12 +134,46 @@ WearLocal LoadWear(const std::string &itemId, size_t slot)
   return w;
 }
 
-std::string ResolveGltfRel(const std::string &itemId)
+std::string ResolveWornGltfRel(const std::string &itemId, IUPlatformPaths &paths)
+{
+  static std::mutex mutex;
+  static std::unordered_map<std::string, std::string> cache;
+  static uint64_t revision = 0;
+  std::lock_guard<std::mutex> lock(mutex);
+  SyncItemModelCache(cache, revision);
+  const auto found = cache.find(itemId);
+  if (found != cache.end()) return found->second;
+  std::string result, text;
+  if (paths.ReadAssetText("models/items/" + itemId + "/wear.json", text))
+  {
+    try
+    {
+      const auto j = nlohmann::json::parse(text);
+      const std::filesystem::path model(j.value("model", std::string()));
+      // A worn variant is an explicit sibling asset, never a root/path override.
+      if (!model.empty() && model == model.filename() && model.extension() == ".gltf")
+      {
+        const auto rel = (std::filesystem::path("models/items") / itemId / model).generic_string();
+        if (paths.AssetExists(rel)) result = rel;
+      }
+    }
+    catch (...) {}
+  }
+  cache[itemId] = result;
+  return result;
+}
+
+std::string ResolveGltfRel(const std::string &itemId, bool worn = false)
 {
   IUPlatformPaths *paths = IUPlatformPaths::TryGet();
   if (!paths || itemId.empty())
   {
     return {};
+  }
+  if (worn)
+  {
+    const auto rel = ResolveWornGltfRel(itemId, *paths);
+    if (!rel.empty()) return rel;
   }
   auto endsWithIgnoreCase = [](const std::string &s, const char *suf)
   {
@@ -163,10 +218,10 @@ std::string ResolveGltfRel(const std::string &itemId)
   return {};
 }
 
-std::filesystem::path ResolveGltfAbs(const std::string &itemId)
+std::filesystem::path ResolveGltfAbs(const std::string &itemId, bool worn = false)
 {
   IUPlatformPaths *paths = IUPlatformPaths::TryGet();
-  const std::string rel = ResolveGltfRel(itemId);
+  const std::string rel = ResolveGltfRel(itemId, worn);
   if (!paths || rel.empty())
   {
     return {};
@@ -346,7 +401,7 @@ void DrawMeshImmediateOrQueue(CreatureDrawQueue *queue, UShaderProgram *shader,
   }
 }
 
-std::shared_ptr<CreatureGltfMeshAsset> LoadItemGltf(const std::string &itemId)
+std::shared_ptr<CreatureGltfMeshAsset> LoadItemGltf(const std::string &itemId, bool worn = false)
 {
   static std::mutex mu;
   static std::unordered_map<std::string, std::shared_ptr<CreatureGltfMeshAsset>>
@@ -354,12 +409,13 @@ std::shared_ptr<CreatureGltfMeshAsset> LoadItemGltf(const std::string &itemId)
   static uint64_t cacheRevision = 0;
   std::lock_guard<std::mutex> lock(mu);
   SyncItemModelCache(cache, cacheRevision);
-  const auto it = cache.find(itemId);
+  const std::string key = itemId + (worn ? "|worn" : "|held");
+  const auto it = cache.find(key);
   if (it != cache.end())
   {
     return it->second;
   }
-  const std::string rel = ResolveGltfRel(itemId);
+  const std::string rel = ResolveGltfRel(itemId, worn);
   if (rel.empty())
   {
     return nullptr;
@@ -373,7 +429,7 @@ std::shared_ptr<CreatureGltfMeshAsset> LoadItemGltf(const std::string &itemId)
   auto asset = CreatureGltfLoader::LoadFromFile(abs);
   if (asset)
   {
-    cache[itemId] = asset;
+    cache[key] = asset;
   }
   return asset;
 }
@@ -459,6 +515,7 @@ struct WornItemLocal
 {
   WearLocal wear;
   glm::mat4 fit{1.f};
+  glm::vec3 itemLow{0.f},itemHigh{0.f};
 };
 
 // wear.json parsing and the mesh-extent fit walk are per-item constants:
@@ -480,9 +537,21 @@ const WornItemLocal &CachedWornItemLocal(const std::string &itemId, size_t slot)
   }
   auto entry = std::make_shared<WornItemLocal>();
   entry->wear = LoadWear(itemId, slot);
-  if (const auto asset = LoadItemGltf(itemId))
+  if (const auto asset = LoadItemGltf(itemId, true))
   {
     entry->fit = FitGltfToBone(*asset, slot == 0 ? 0.55f : 0.7f);
+    entry->itemLow=glm::vec3(1e9f);entry->itemHigh=glm::vec3(-1e9f);
+    for(const auto &primitive:asset->primitives)for(const auto index:primitive.mesh.indices)
+    {
+      const size_t i=static_cast<size_t>(index)*5;
+      const auto &v=primitive.mesh.interleavedPosUv;const glm::vec3 p(v[i],v[i+1],v[i+2]);
+      entry->itemLow=glm::min(entry->itemLow,p);entry->itemHigh=glm::max(entry->itemHigh,p);
+    }
+  }
+  if(entry->wear.hasFitBounds)
+  {
+    entry->itemLow=entry->wear.fitLow;
+    entry->itemHigh=entry->wear.fitHigh;
   }
   cache[key] = entry;
   return *entry;
@@ -491,20 +560,20 @@ const WornItemLocal &CachedWornItemLocal(const std::string &itemId, size_t slot)
 void SubmitItemOnBones(CreatureDrawQueue *queue, UShaderProgram *shader,
                        const std::string &itemId, size_t slot,
                        const glm::mat4 &viewProj, const glm::mat4 &bodyMat,
-                       const BoneMatrixLookupFn &bones, bool immediate)
+                       const BoneMatrixLookupFn &bones, bool immediate,
+                       const BoneBoundsLookupFn &bounds)
 {
   if (itemId.empty())
   {
     return;
   }
-  auto asset = LoadItemGltf(itemId);
+  auto asset = LoadItemGltf(itemId, true);
   if (!asset || asset->primitives.empty())
   {
     return;
   }
   const WornItemLocal &worn = CachedWornItemLocal(itemId, slot);
-  const glm::mat4 local = WearLocalMatrix(worn.wear) * worn.fit;
-  const std::filesystem::path gltfAbs = ResolveGltfAbs(itemId);
+  const std::filesystem::path gltfAbs = ResolveGltfAbs(itemId, true);
   const GLuint fallbackTex = SolidColorTex(itemId);
 
   for (const std::string &boneName : worn.wear.bones)
@@ -514,6 +583,10 @@ void SubmitItemOnBones(CreatureDrawQueue *queue, UShaderProgram *shader,
     {
       continue;
     }
+    glm::mat4 fit=worn.fit;glm::vec3 low,high;
+    if(worn.wear.boneVolume && bounds && bounds(boneName,low,high))
+      fit=FitCreatureWearToRegion(worn.itemLow,worn.itemHigh,CreatureWearRegion(slot,low,high));
+    const glm::mat4 local=WearLocalMatrix(worn.wear)*fit;
     const glm::mat4 mvp = viewProj * bodyMat * boneMat * local;
     for (const GltfPrimitiveCpu &prim : asset->primitives)
     {
@@ -631,12 +704,58 @@ const PartsMeshesFit &CachedPartsMeshes(const std::string &itemId)
   return *slot;
 }
 
+struct WieldGripLocal
+{
+  bool enabled{false};
+  glm::mat4 rotation{1.f},fit{1.f};
+};
+
+const WieldGripLocal &CachedWieldGrip(const std::string &itemId,const CreatureGltfMeshAsset &asset)
+{
+  static std::mutex mutex;
+  static std::unordered_map<std::string,std::shared_ptr<WieldGripLocal>> cache;
+  static uint64_t revision=0;
+  std::lock_guard<std::mutex> lock(mutex);SyncItemModelCache(cache,revision);
+  if(const auto found=cache.find(itemId);found!=cache.end())return *found->second;
+  auto entry=std::make_shared<WieldGripLocal>();
+  std::string text;auto *paths=IUPlatformPaths::TryGet();
+  if(paths && paths->ReadAssetText("models/items/"+itemId+"/wield_grip.json",text))
+  {
+    try
+    {
+      const auto json=nlohmann::json::parse(text);
+      if(json.value("fit",std::string())=="authored_origin")
+      {
+        const auto origin=json.at("origin");const auto euler=json.at("euler_deg");
+        const glm::vec3 gripOrigin(origin.at(0).get<float>(),origin.at(1).get<float>(),origin.at(2).get<float>());
+        WearLocal orientation;orientation.eulerDeg=glm::vec3(euler.at(0).get<float>(),euler.at(1).get<float>(),euler.at(2).get<float>());
+        entry->rotation=WearLocalMatrix(orientation);
+        glm::vec3 low(1e9f),high(-1e9f);
+        for(const auto &primitive:asset.primitives)for(size_t i=0;i+4<primitive.mesh.interleavedPosUv.size();i+=5)
+        {
+          const auto &v=primitive.mesh.interleavedPosUv;const glm::vec3 p(v[i],v[i+1],v[i+2]);
+          low=glm::min(low,p);high=glm::max(high,p);
+        }
+        const glm::vec3 size=high-low;const float span=std::max({size.x,size.y,size.z});
+        if(span>1e-5f)
+        {
+          entry->fit=glm::scale(glm::mat4(1.f),glm::vec3(.7f/span))*glm::translate(glm::mat4(1.f),-gripOrigin);
+          entry->enabled=true;
+        }
+      }
+    }
+    catch(const std::exception &error){std::cerr<<"Invalid wield grip "<<itemId<<": "<<error.what()<<'\n';}
+  }
+  cache[itemId]=entry;return *entry;
+}
+
 void SubmitItemOnSingleBone(CreatureDrawQueue *queue, UShaderProgram *shader,
                             const std::string &itemId,
                             const std::string &boneName, float extraScale,
                             const float offset[3], const float euler[3],
                             const glm::mat4 &viewProj, const glm::mat4 &bodyMat,
-                            const BoneMatrixLookupFn &bones, bool immediate)
+                            const BoneMatrixLookupFn &bones, bool immediate,
+                            const BoneBoundsLookupFn &bounds)
 {
   if (itemId.empty() || boneName.empty())
   {
@@ -647,7 +766,7 @@ void SubmitItemOnSingleBone(CreatureDrawQueue *queue, UShaderProgram *shader,
   wear.offset = glm::vec3(offset[0], offset[1], offset[2]);
   wear.eulerDeg = glm::vec3(euler[0], euler[1], euler[2]);
   wear.scale = extraScale;
-  const glm::mat4 wearLocal = WearLocalMatrix(wear);
+  glm::mat4 wearLocal = WearLocalMatrix(wear);
   const GLuint fallbackTex = SolidColorTex(itemId);
 
   glm::mat4 boneMat(1.f);
@@ -659,8 +778,16 @@ void SubmitItemOnSingleBone(CreatureDrawQueue *queue, UShaderProgram *shader,
   auto asset = LoadItemGltf(itemId);
   if (asset && !asset->primitives.empty())
   {
-    const glm::mat4 fit = FitGltfToBone(*asset, 0.7f);
-    const glm::mat4 local = wearLocal * fit;
+    glm::mat4 local;
+    glm::vec3 low,high;
+    const auto &grip=CachedWieldGrip(itemId,*asset);
+    if(grip.enabled && bounds && bounds(boneName,low,high))
+      local=glm::translate(glm::mat4(1.f),CreaturePalmGripPosition(low,high))*wearLocal*grip.rotation*grip.fit;
+    else
+    {
+      wear.offset.y+=.05f;
+      local=WearLocalMatrix(wear)*FitGltfToBone(*asset,.7f);
+    }
     const std::filesystem::path gltfAbs = ResolveGltfAbs(itemId);
     const glm::mat4 mvp = viewProj * bodyMat * boneMat * local;
     for (const GltfPrimitiveCpu &prim : asset->primitives)
@@ -688,6 +815,7 @@ void SubmitItemOnSingleBone(CreatureDrawQueue *queue, UShaderProgram *shader,
   // frame's flush, and rebuilding per call (with a JSON read from disk every
   // frame) left the queue of an earlier wielder of the same item dangling.
   const PartsMeshesFit &partsFit = CachedPartsMeshes(itemId);
+  wear.offset.y+=.05f;wearLocal=WearLocalMatrix(wear);
   const glm::mat4 mvp = viewProj * bodyMat * boneMat * wearLocal * partsFit.fit;
   for (const auto &mesh : partsFit.meshes)
   {
@@ -745,7 +873,8 @@ void WornEquipmentDrawer::SubmitFromCreature(CreatureDrawQueue &queue,
                                              const UCreature &creature,
                                              const glm::mat4 &viewProj,
                                              const glm::mat4 &bodyMat,
-                                             const BoneMatrixLookupFn &bones)
+                                             const BoneMatrixLookupFn &bones,
+                                             const BoneBoundsLookupFn &bounds)
 {
   std::array<WornArmorPreviewSlot, 6> slots{};
   for (size_t i = 0; i < 6; ++i)
@@ -759,14 +888,15 @@ void WornEquipmentDrawer::SubmitFromCreature(CreatureDrawQueue &queue,
   for (size_t i = 0; i < slots.size(); ++i)
   {
     SubmitItemOnBones(&queue, nullptr, slots[i].ItemId, i, viewProj, bodyMat,
-                      bones, false);
+                      bones, false, bounds);
   }
 }
 
 void WornEquipmentDrawer::SubmitWieldedFromCreature(
     CreatureDrawQueue &queue, const UCreature &creature,
     const UItemDefinitionStorage *items, const glm::mat4 &viewProj,
-    const glm::mat4 &bodyMat, const BoneMatrixLookupFn &bones)
+    const glm::mat4 &bodyMat, const BoneMatrixLookupFn &bones,
+    const BoneBoundsLookupFn &bounds)
 {
   if (g_HidePossessedWield && creature.IsPossessed())
   {
@@ -786,14 +916,15 @@ void WornEquipmentDrawer::SubmitWieldedFromCreature(
     offId = off.Id;
   }
   SubmitWieldedPreview(&queue, nullptr, mainId, offId, items, viewProj, bodyMat,
-                       bones, false);
+                       bones, false, bounds);
 }
 
 void WornEquipmentDrawer::SubmitWieldedPreview(
     CreatureDrawQueue *queue, UShaderProgram *shader, const std::string &mainItemId,
     const std::string &offhandItemId, const UItemDefinitionStorage *items,
     const glm::mat4 &viewProj, const glm::mat4 &bodyMat,
-    const BoneMatrixLookupFn &bones, bool immediate)
+    const BoneMatrixLookupFn &bones, bool immediate,
+    const BoneBoundsLookupFn &bounds)
 {
   float scale = 1.25f;
   float offset[3] = {0, 0, 0};
@@ -801,17 +932,14 @@ void WornEquipmentDrawer::SubmitWieldedPreview(
   if (!mainItemId.empty())
   {
     ResolveWieldParams(items, mainItemId, scale, offset, euler);
-    // Hands armor may also occupy *Item; nudge tool slightly outward.
-    offset[1] += 0.05f;
     SubmitItemOnSingleBone(queue, shader, mainItemId, "rightItem", scale,
-                           offset, euler, viewProj, bodyMat, bones, immediate);
+                           offset, euler, viewProj, bodyMat, bones, immediate, bounds);
   }
   if (!offhandItemId.empty())
   {
     ResolveWieldParams(items, offhandItemId, scale, offset, euler);
-    offset[1] += 0.05f;
     SubmitItemOnSingleBone(queue, shader, offhandItemId, "leftItem", scale,
-                           offset, euler, viewProj, bodyMat, bones, immediate);
+                           offset, euler, viewProj, bodyMat, bones, immediate, bounds);
   }
 }
 
@@ -819,12 +947,12 @@ void WornEquipmentDrawer::SubmitWieldedPreview(
 void WornEquipmentDrawer::DrawImmediate(
     const std::array<WornArmorPreviewSlot, 6> &slots, const glm::mat4 &viewProj,
     const glm::mat4 &bodyMat, const BoneMatrixLookupFn &bones,
-    UShaderProgram *shader)
+    UShaderProgram *shader, const BoneBoundsLookupFn &bounds)
 {
   for (size_t i = 0; i < slots.size(); ++i)
   {
     SubmitItemOnBones(nullptr, shader, slots[i].ItemId, i, viewProj, bodyMat,
-                      bones, true);
+                      bones, true, bounds);
   }
 }
 

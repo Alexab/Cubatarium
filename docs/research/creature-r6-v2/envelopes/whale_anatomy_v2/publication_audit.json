@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "species": "whale",
+  "scope": "One normal-pipeline geometry-only R5 revision, full61 sampled GPU regression and isolated FP/entity persistence; not complete R6",
+  "exe_sha256": "235ce58dd65546f38164020295ff403bf48c2816b14bb16cd96228faee030483",
+  "candidate_to_production_rgba_exact": 89,
+  "body_rgba_exact": 5201,
+  "changed_resource_frames": 89,
+  "fp_rgba_exact": 936,
+  "ledger_fresh": 61,
+  "animation_sampler_arrays_exact": 36,
+  "review_sha256": "4cdec6784fc4d7dbe550fe6e7f6fe3c7f8e7867f83f2e2c2278efc7237ed94be",
+  "snapshot_sha256": "ce028e0c8f52b6084ca399b05e6e074a03b5c0b254377852c4fd31988cec1c01",
+  "input_reports_sha256": {
+    "body_parity.json": "4bca9a9bf47c1316e91904fc13ed2a7e2bf6434cfc05a2dc6ef8284fb89b3e0b",
+    "fp_audit.json": "6919caae0a560fbdd672b9d9497e25de8375c32b81c2b237ca2a8061b4264204",
+    "audit_production_final.json": "347738f8d4c3e3466b1d0b429534a230f00e05a4962bbf52efac30cff1ea1fa1"
+  }
+}

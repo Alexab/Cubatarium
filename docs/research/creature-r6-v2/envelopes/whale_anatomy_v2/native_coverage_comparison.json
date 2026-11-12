@@ -1,0 +1,32 @@
+{
+  "scope": "Shared-scale native alpha projection area, not volume/art/physics acceptance",
+  "views": {
+    "front": {
+      "pixels": {
+        "original": 2220,
+        "before": 2728,
+        "current": 3042
+      },
+      "before_original_ratio": 1.228828828828829,
+      "candidate_original_ratio": 1.3702702702702703
+    },
+    "side": {
+      "pixels": {
+        "original": 6090,
+        "before": 5319,
+        "current": 5994
+      },
+      "before_original_ratio": 0.8733990147783252,
+      "candidate_original_ratio": 0.9842364532019704
+    },
+    "oblique": {
+      "pixels": {
+        "original": 5366,
+        "before": 5624,
+        "current": 6053
+      },
+      "before_original_ratio": 1.0480805068952666,
+      "candidate_original_ratio": 1.1280283265001863
+    }
+  }
+}

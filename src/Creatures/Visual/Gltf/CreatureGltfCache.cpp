@@ -19,6 +19,7 @@ void CreatureGltfCache::SetCreaturesRoot(const std::string &root)
   creaturesRoot = root;
   entries.clear();
   failedKeys.clear();
+  revision.fetch_add(1,std::memory_order_release);
 }
 
 void CreatureGltfCache::Clear()
@@ -26,78 +27,53 @@ void CreatureGltfCache::Clear()
   std::lock_guard<std::mutex> lock(mutex);
   entries.clear();
   failedKeys.clear();
+  revision.fetch_add(1,std::memory_order_release);
 }
 
 std::shared_ptr<CreatureGltfMeshAsset>
 CreatureGltfCache::LoadFromPath(const std::filesystem::path &path)
 {
-  const std::string key = path.string();
-  {
-    std::lock_guard<std::mutex> lock(mutex);
-    if (failedKeys.count(key) != 0)
-    {
-      return nullptr;
-    }
-    if (const auto it = entries.find(key); it != entries.end())
-    {
-      if (auto asset = it->second.lock())
-      {
-        return asset;
-      }
-      entries.erase(it);
-    }
-  }
-  auto asset = CreatureGltfLoader::LoadFromFile(path.string());
-  if (!asset)
-  {
-    std::lock_guard<std::mutex> lock(mutex);
-    failedKeys.insert(key);
-    return nullptr;
-  }
-  std::lock_guard<std::mutex> lock(mutex);
-  entries[key] = asset;
-  return asset;
+  return Load({},std::filesystem::absolute(path).string());
 }
 
 std::shared_ptr<CreatureGltfMeshAsset>
 CreatureGltfCache::Load(const std::string &speciesId,
-                        const std::string &modelFile)
+                        const std::string &modelFile,
+                        const std::string &sourceDirectory)
 {
-  const std::string key = speciesId + "|" + modelFile;
+  for (;;)
   {
-    std::lock_guard<std::mutex> lock(mutex);
-    if (failedKeys.count(key) != 0)
+    std::filesystem::path path;
+    std::string key;
+    uint64_t generation=0;
     {
+      std::lock_guard<std::mutex> lock(mutex);
+      path=((sourceDirectory.empty()?std::filesystem::path(creaturesRoot)/speciesId:
+                                      std::filesystem::path(sourceDirectory))/modelFile).lexically_normal();
+      key=path.generic_string();
+      generation=revision.load(std::memory_order_relaxed);
+      if (failedKeys.count(key)) return nullptr;
+      if (const auto it=entries.find(key);it!=entries.end())
+      {
+        if (auto asset=it->second.lock()) return asset;
+        entries.erase(it);
+      }
+    }
+    auto asset=CreatureGltfLoader::LoadFromFile(path.string());
+    std::lock_guard<std::mutex> lock(mutex);
+    // Clear/root replacement while I/O ran must not republish old content.
+    if (generation!=revision.load(std::memory_order_relaxed)) continue;
+    if (!asset)
+    {
+      failedKeys.insert(key);
+      std::cerr<<"CreatureGltfCache: failed to load "<<path.string()<<std::endl;
       return nullptr;
     }
-    if (const auto it = entries.find(key); it != entries.end())
-    {
-      if (auto asset = it->second.lock())
-      {
-        return asset;
-      }
-      // Evict the dead weak_ptr key so the map cannot grow without bound.
-      entries.erase(it);
-    }
+    if (const auto it=entries.find(key);it!=entries.end())
+      if (auto shared=it->second.lock()) return shared;
+    entries[key]=asset;
+    return asset;
   }
-
-  const std::filesystem::path path =
-      std::filesystem::path(creaturesRoot) / speciesId / modelFile;
-  auto asset = CreatureGltfLoader::LoadFromFile(path.string());
-  if (!asset)
-  {
-    // Logged once per key: the negative cache above stops the retries that
-    // used to spam this per frame.
-    std::cerr << "CreatureGltfCache: failed to load " << path.string()
-              << std::endl;
-    std::lock_guard<std::mutex> lock(mutex);
-    failedKeys.insert(key);
-    return nullptr;
-  }
-
-  std::lock_guard<std::mutex> lock(mutex);
-  entries[key] = asset;
-  return asset;
 }
 
 } // namespace cutum

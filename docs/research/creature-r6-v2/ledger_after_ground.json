@@ -1,0 +1,1402 @@
+{
+  "schema": "creature-r6-ledger.v1",
+  "scope": "evidence integrity and source freshness, not final artistic/runtime acceptance",
+  "summary": {
+    "expected_species": 56,
+    "expected_skins": 5,
+    "exact_valid_r5_reviews": 61,
+    "published_payload_matches_staged": 61,
+    "bin_payload_matches_staged": 61,
+    "current_generator_source_inputs": 7,
+    "manifest_species_count": 56,
+    "manifest_skin_count": 0,
+    "contracts_states": {
+      "accepted": 56
+    },
+    "unexpected_live_species": []
+  },
+  "resources": [
+    {
+      "id": "badger",
+      "kind": "species",
+      "base_species": "badger",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "795d96f9ef14d6d639c3c5526fd489d93d309982712a5a24e9dbdd25dca4d6d8",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\badger\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "bee",
+      "kind": "species",
+      "base_species": "bee",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "3fda7e1ca7dfd1c19d149ecf856dbc44e53ac58fd0d62d932de5850035919863",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-bone-small-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "bot",
+      "kind": "species",
+      "base_species": "bot",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "154560b8ceea0a9531764bf3e27f6ac5691d81a5c29f1b2f07d6fafd3a86f042",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-bone-humanoids-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "bunny",
+      "kind": "species",
+      "base_species": "bunny",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "b184e4f515a18d28fa4b215307fbb7c0078a31e53ef4deca2958d7daae7eedde",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-bone-small-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "butterfly",
+      "kind": "species",
+      "base_species": "butterfly",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "39784ff5d252c9c1b18c9ac479e0e1b30f481ea827bdf835736232b44ebff841",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-gltf-side-uv-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "chicken",
+      "kind": "species",
+      "base_species": "chicken",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "65056761808ea63b9515cdfe400a7e4d3992a386ba82615b4977392876d17f11",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-bone-small-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "cow",
+      "kind": "species",
+      "base_species": "cow",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "cc27c901e5956660717dd94e84bbc8d98fe117c2a49b743b01c5f197ef809858",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-fidelity-pilots-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/__main__.py",
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/export_rigid.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/qa_bundle.py",
+        "tools/creaturegen/quality.py",
+        "tools/creaturegen/surface_materials.py",
+        "tools/creaturegen/texturegen.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "crab",
+      "kind": "species",
+      "base_species": "crab",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "4b6a61efe6f5d6b41a132a75f30fe27f3290a167c62313ff84445c368a3dac92",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-marine-invertebrates-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "dirt_monster",
+      "kind": "species",
+      "base_species": "dirt_monster",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "3d35684f87cfe6020895b33c80c589f0bf4088a07e9bbc390e131a54161de8c8",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-elemental-bipeds-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "dolphin",
+      "kind": "species",
+      "base_species": "dolphin",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "f4c61b39ac80abcd36eb8605483ab9785305ec11ebec72f0c944649b24219943",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-bone-aquatic-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "dungeon_master",
+      "kind": "species",
+      "base_species": "dungeon_master",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "342bb2c6a71d3a6d7772366f8a3755f59aeb96d4dd96868d4c8c77401dfd898c",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-guardians-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "fire_spirit",
+      "kind": "species",
+      "base_species": "fire_spirit",
+      "backend": "rigid_voxels",
+      "bundle_sha256": "6c7f562d37a64195414575d12bcd59f721014e2e11171527a11739a76d231a84",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-aquatic-aerial-pilots-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "fox",
+      "kind": "species",
+      "base_species": "fox",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "eb5b12e3533a3bfb70fb5b553020876bdeb61cd6ab99dfdbf1ffdaad3cb9f256",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-bone-coats-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "golem",
+      "kind": "species",
+      "base_species": "golem",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "7f5b772c9fefe1872fa3f3b76e5908bc4ac3a86229d607eb9960c02947c56d03",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-arboreal-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "hedgehog",
+      "kind": "species",
+      "base_species": "hedgehog",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "4f8f7f210ab89909ae05e1cd2c3a2d89690f2dd165694034c0ee0cf0e09db9e6",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\ground\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "hermitcrab",
+      "kind": "species",
+      "base_species": "hermitcrab",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "38faac15eda77ee8f5377127a1d248550b162744fc35af463a9b0c9b64114842",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-gltf-side-uv-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "human",
+      "kind": "species",
+      "base_species": "human",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "dfb30d4771b88fbcba47696f8158534c7a1faca117679fab681c6f986ba25198",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-humanoid-pilots-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "kitten",
+      "kind": "species",
+      "base_species": "kitten",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "d4c0bfbc881f88ea785978ce7a6e60b35e274258a8e92b9f9641cd950591976d",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\ground\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "land_guard",
+      "kind": "species",
+      "base_species": "land_guard",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "bb48e338ceffc977bc7e0572d22aa3155b9e257002815f48483be980f3e3c8dd",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-guardians-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "lava_flan",
+      "kind": "species",
+      "base_species": "lava_flan",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "c3dfbf0e296a646633c319c3b3deaf52b17f3891da02d4e6fd3f2a2dcf14df2a",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-crystal-lava-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/motion.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "lobster",
+      "kind": "species",
+      "base_species": "lobster",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "9453fef106c0fb8f7add5d7134621c20924aa723e713329b0f3309b86113a1b9",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-marine-invertebrates-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "manatee",
+      "kind": "species",
+      "base_species": "manatee",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "baf8ac8292b052ad596ea686caafa150c436541e727023bf957aaf4f8ad8fa73",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-marine-mammals-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "mese_monster",
+      "kind": "species",
+      "base_species": "mese_monster",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "9fd48a9615fb66b44e0e89c4d4ea4007487d5a168821e1b98c9bbad16735543a",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-crystal-lava-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/motion.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "octopus",
+      "kind": "species",
+      "base_species": "octopus",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "abbc76522eea61084f2c215637afb895fc376ff61980a57b75b053c893342578",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-marine-invertebrates-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "oerkki",
+      "kind": "species",
+      "base_species": "oerkki",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "afc5f9d523d5eda2d40cb7aeb4a2c609e3b11d49f53dc7ecea277c4d75411b01",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-warriors-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "ogre",
+      "kind": "species",
+      "base_species": "ogre",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "8f8f3af7403f64821337974ecabf0d5e4dc3988d478d64319ef5fd9a442dfaed",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-warriors-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "orc",
+      "kind": "species",
+      "base_species": "orc",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "8dd89cae004c861cec94cdbed2460f403911df8e5b89050d1a93d9f4f75a20fd",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-warriors-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "owl",
+      "kind": "species",
+      "base_species": "owl",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "d948b95f5edefd99c3471bfd83156815d14f7b86675058da1fda930ba3dd010e",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-gltf-side-uv-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "panda",
+      "kind": "species",
+      "base_species": "panda",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "175511d2f24873d7a7803ff5f9cace1f4fc38b339c6235078243bb7be951ddf8",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\ground\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "penguin",
+      "kind": "species",
+      "base_species": "penguin",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "9d96d5eb1e67a4cab8cda87c4d912f0c58db011c4390a7903166da1a8ecb027f",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\ground\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "pig",
+      "kind": "species",
+      "base_species": "pig",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "30271074966f3f080205e238cb27403a87aca951e484995ec0cbed155536d9b4",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-bone-coats-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "puffin",
+      "kind": "species",
+      "base_species": "puffin",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "3393de8ea9940f7d5c63e776bcf5bb8bac1158c67d16f4501d6f1deb30517265",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-gltf-side-uv-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "rat",
+      "kind": "species",
+      "base_species": "rat",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "949ee83fcab4ea9297fa479fd86e3a08277e4a78ebad08dfce545baf331fd216",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\ground\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "rigid_demo_flyer",
+      "kind": "species",
+      "base_species": "rigid_demo_flyer",
+      "backend": "rigid_voxels",
+      "bundle_sha256": "a812aef11b316e74d50aed1425a3cf803a0cebebe851e26513bb0db0cc5da576",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-aquatic-aerial-pilots-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "rigid_demo_swimmer",
+      "kind": "species",
+      "base_species": "rigid_demo_swimmer",
+      "backend": "rigid_voxels",
+      "bundle_sha256": "4ed0ffe5eecf3225ca6e389605ca250380fc0d63b92cf1592829419d469499e1",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-aquatic-aerial-pilots-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "rigid_demo_walker",
+      "kind": "species",
+      "base_species": "rigid_demo_walker",
+      "backend": "rigid_voxels",
+      "bundle_sha256": "95e773a4ae7ef0bfb0921a675459c848b743bcf5784d86b7e06a273b889c7288",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-fidelity-pilots-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/__main__.py",
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/export_rigid.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/qa_bundle.py",
+        "tools/creaturegen/quality.py",
+        "tools/creaturegen/surface_materials.py",
+        "tools/creaturegen/texturegen.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "sand_monster",
+      "kind": "species",
+      "base_species": "sand_monster",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "4f39847c08107a167c2a338a080a24b00d0f6d2f16fb681dc3192ecf6ceff71d",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-elemental-bipeds-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "seahorse",
+      "kind": "species",
+      "base_species": "seahorse",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "ed464974782010ab80a214c64bf136d1eb2f5dc8f15eb0780aee209c339b187c",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-aquatic-fish-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "seal",
+      "kind": "species",
+      "base_species": "seal",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "d3e5cebb3ed223acd30eba56f02fbfd92bb2508949c886f444ccdbd8f88dc1e6",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-marine-mammals-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "shark",
+      "kind": "species",
+      "base_species": "shark",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "79c3482568ac524547b261855668d1afb7273a309bb8baa45aaba94fd232f385",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-aquatic-fish-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "sheep",
+      "kind": "species",
+      "base_species": "sheep",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "b41774f922296c0d3492e6286553db85efbe639972e338c45d19dd88bbf2d20c",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-bone-coats-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "skeleton",
+      "kind": "species",
+      "base_species": "skeleton",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "427ec1aa833d6d579838ae45664e8e1af72d8b4a41abb9368eb3e2f856daab7a",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-bone-humanoids-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "spider",
+      "kind": "species",
+      "base_species": "spider",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "0b51bff526d01a157d0512b4b9bc6dca53c1ff325bca153e8fc858fa02fff7e4",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-bone-spider-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "squid",
+      "kind": "species",
+      "base_species": "squid",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "7921f1119914aec1ae9cf415a46ad42cc80b631de5811ccdb05cbcc97d1c3b92",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-bone-aquatic-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "stingray",
+      "kind": "species",
+      "base_species": "stingray",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "46ddc9bb992c9c85f510bbaf28415a8ed74387cdb18960c07c22e7dfcb8daeae",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-gltf-side-uv-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "stone_monster",
+      "kind": "species",
+      "base_species": "stone_monster",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "035acd1786ea7944468634538a8d64c5ad181bff9e7fd0302e8c364be0683b2e",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-elemental-bipeds-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "tortoise",
+      "kind": "species",
+      "base_species": "tortoise",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "c14bddaee46236aa5fc04d3e985289f436825884bf80d18ee76a0ca810d9bdd2",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-bone-tortoise-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "tree_monster",
+      "kind": "species",
+      "base_species": "tree_monster",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "5ccd77b3c6ad3aba1b5de4f212fee51a237602cf286c696912d70574351206f5",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-arboreal-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "treeman",
+      "kind": "species",
+      "base_species": "treeman",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "54a6257200ca18314c7f21bf58a55f4521787002ca9ed59aa1cfee63b4bcb8dc",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-arboreal-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "trout",
+      "kind": "species",
+      "base_species": "trout",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "3017e72629909e76bd483893c6274a8bb56325fbe9e2459c66b182f6aa6e526a",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-bone-aquatic-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "warthog",
+      "kind": "species",
+      "base_species": "warthog",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "5093a7a9e930517c724541e2f603419985b0f95bc087083ed6418cdb3902ddc1",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\ground\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "wasp",
+      "kind": "species",
+      "base_species": "wasp",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "619280a223e5b7be2f5d185bd7c55cbd2d48389a20c68fb036023a2cd2cf3fc6",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-gltf-side-uv-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "water_dragon",
+      "kind": "species",
+      "base_species": "water_dragon",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "2df847e513dc0e200777972d4b267fd98b03895e509f3dfa4a998a550f4eae84",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-large-aquatic-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "whale",
+      "kind": "species",
+      "base_species": "whale",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "9db5356b5c366481d2c67860d489ecf1485df5d20ea3180ff78a16338afdba03",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-large-aquatic-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "wolf",
+      "kind": "species",
+      "base_species": "wolf",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "d721d6f7bca9689b468a38373f75d07a83fc8dce1e4cf643b97666090d08efef",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-bone-coats-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "zombie",
+      "kind": "species",
+      "base_species": "zombie",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "93d715300043947381747a72b72b42f2d3f5ab9142aa5198e195ab0676f73daf",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-humanoid-pilots-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": "accepted",
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "human_adventurer",
+      "kind": "skins",
+      "base_species": "human",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "c3474e16ad630f42cdc9d0f6adb5bac1beaf2994c059bc366d2ed25ba7474837",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-humanoid-pilots-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": null,
+      "contract_state": null,
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "human_guard",
+      "kind": "skins",
+      "base_species": "human",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "fa01a16c31604672eb009dfc5f39ff142ea49df3b6b7a7ab1d3f52b77c27625c",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-humanoid-pilots-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": null,
+      "contract_state": null,
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "sheep_wool_black",
+      "kind": "skins",
+      "base_species": "sheep",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "d1e20e7d08c6de8696b2b8f402efadbe48aa20c34d7d4f634336195c786e01bd",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-bone-coats-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": null,
+      "contract_state": null,
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "sheep_wool_golden",
+      "kind": "skins",
+      "base_species": "sheep",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "8b883ec980000ee79b2e64b52b241fde8ea97a4e8d06390ac8d627be27d5d87b",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-bone-coats-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": null,
+      "contract_state": null,
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "wolf_snow",
+      "kind": "skins",
+      "base_species": "wolf",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "267d2907790a5e33c7fc98b2513e1ccb16dffe05367a6a306c6cec1d25177799",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-bone-coats-v2\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": false,
+      "stale_source_inputs": [
+        "tools/creaturegen/anatomy.py",
+        "tools/creaturegen/export_gltf.py",
+        "tools/creaturegen/motion.py",
+        "tools/creaturegen/pipeline.py",
+        "tools/creaturegen/surface_materials.py"
+      ],
+      "manifest_state": null,
+      "contract_state": null,
+      "r6_final_acceptance": "unproven"
+    }
+  ]
+}

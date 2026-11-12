@@ -1,0 +1,51 @@
+{
+  "passed": true,
+  "scope": "Isolated candidate data invariants and native input consistency; not art/contact/performance acceptance",
+  "animation_sampler_arrays_exact": 36,
+  "nodes_skin_ibm_definition_joint_indices_weights_exact": true,
+  "before_geometry": {
+    "triangles": 192,
+    "min_triangle_area": 0.000937502714805305,
+    "constant_uv_triangles": 64,
+    "model_texel_density_p05": 0.0,
+    "model_texel_density_median": 12.09486313629527
+  },
+  "candidate_geometry": {
+    "triangles": 192,
+    "min_triangle_area": 0.000937502714805305,
+    "constant_uv_triangles": 64,
+    "model_texel_density_p05": 0.0,
+    "model_texel_density_median": 12.09486313629527
+  },
+  "sheets": [
+    {
+      "path": "threeway_idle.png",
+      "sha256": "092fe75a6b065e04ee8ddad7872f43314ad46f3ec01a50512220ed896c78a9a6"
+    },
+    {
+      "path": "threeway_walk.png",
+      "sha256": "c814ddc653cfef53c1735143a122b5fc9b6ff9e71d01fc778e6b3f22d8aacf8a"
+    },
+    {
+      "path": "threeway_run.png",
+      "sha256": "7d250854a9757c7706fed4e48732e51836d6fa4db0fda221ca831bbeb3bb309c"
+    }
+  ],
+  "payload_sha256": {
+    "creature.json": "f2e00818f8b4e73448a32775ac4397f5eb218e56eed9a81dc79e4c7107071f04",
+    "LICENSE.txt": "01844995f23bf6e1f6a4b30d4601677af96537ae630b466077348719b36a7437",
+    "model.bin": "c9e5daae0d6cc358e480ea1118f6a6d4761b7f0a3ab67badaf6187b966954a6d",
+    "model.gltf": "e5246c82528e41020bc385853102affafa0c6ff49926d8dd9d9eda6e7f120259",
+    "textures\\body.png": "90b4c7c20c108472157c7817da9f1274156312fd1b9e1968682c8aa176fc3129",
+    "textures\\icon.png": "c0418c8776a27e4d97c53642d544f7697e497d7291b1e9d6e85ee8730ce6c5b2"
+  },
+  "sampled_native_cpu_transitions": {
+    "cases": 100,
+    "frames": 1100,
+    "supported_frames": 1056,
+    "supported_min_y": 2.15042382478714e-06,
+    "supported_route_scope": "sampled",
+    "sha256": "c8ed7c3c77f563957282d14e5889163e7845c5667fc6f78db9d51536be08985d",
+    "scope": "Sampled retained UpdatePose; not terrain/stride or GPU fade acceptance"
+  }
+}

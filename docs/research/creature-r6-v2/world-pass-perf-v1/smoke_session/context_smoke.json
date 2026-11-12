@@ -1,0 +1,53 @@
+{
+  "captured_at_utc": "2026-11-12T02:19:19.517962+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\bin\\models",
+  "files_sha256": {
+    "creatures\\orc\\creature.json": "3329adaa5cb77249339a24184d4517c552c678a5980ea43191044db7355b0d97",
+    "creatures\\orc\\LICENSE.txt": "47ebeb227cb5dfff7649abcd8694e0d8a45f011398bc5d392d60894ce0e7a091",
+    "creatures\\orc\\model.bin": "8a32da77530569fc14229f79d59005fe6e23cfb00011872f632bf30498087c89",
+    "creatures\\orc\\model.gltf": "d36eb28e6410e5619102de571c33b398c0d39075dbb9c1cdca288fa5dba909c0",
+    "creatures\\orc\\textures\\body.png": "0b55e70c0630f8786e7bfa0af5fcb7380cf33b730939dbcade53c7ca6e7caee2",
+    "creatures\\orc\\textures\\icon.png": "a3bb5a3284312cebdf8182892f79b420fee0823b82e51acb43134ccb5f555997"
+  },
+  "qa_models_override": false,
+  "exe_sha256": "d7698449a5413c3b94467594f828f9291981a38686160f32f77aeb24e1d2c551",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "smoke",
+  "qa_camera": "close",
+  "native_matrix": false,
+  "native_equipment_matrix": false,
+  "native_equipment_texture_probe": false,
+  "native_resource_cache_probe": false,
+  "native_resource_reload_probe": false,
+  "native_fp_matrix": false,
+  "native_save_probe": false,
+  "native_envelope_variant": null,
+  "native_transition_probe": false,
+  "native_fluid_transition_probe": false,
+  "world_motion": "land_walk_pause",
+  "world_motion_expected_fluid_state": "Swim",
+  "world_seconds": 12.0,
+  "world_capture_interval_seconds": 60.0,
+  "native_posed_culling_probe": false,
+  "envelope_profile_sha256": null,
+  "fp_shaders_sha256": {},
+  "equipment_material": "copper",
+  "world_gear_fixture": false,
+  "equipment_files_sha256": {},
+  "world_species": [
+    "orc"
+  ],
+  "preview_species": [
+    "orc"
+  ],
+  "qa_water_placement": false,
+  "qa_lava_fixture": false,
+  "world": "World_254",
+  "qa_primary_state": null,
+  "pass_timing": true,
+  "performance_gate": "disabled"
+}

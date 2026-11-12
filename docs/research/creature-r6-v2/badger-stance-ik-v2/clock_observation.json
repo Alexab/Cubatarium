@@ -1,0 +1,18 @@
+{
+  "scope": "Adjacent steady Walk submitted clock differences; records/hashes in world_support.json",
+  "versions": {
+    "live": {
+      "samples": 502,
+      "clip_rate_p50": 0.17599999976528724
+    },
+    "hip": {
+      "samples": 478,
+      "clip_rate_p50": 0.17599992432040737
+    },
+    "current": {
+      "samples": 468,
+      "clip_rate_p50": 0.17600003963854277
+    }
+  },
+  "current_nominal_world_speed_at_measured_rate": 0.48400010900599266
+}

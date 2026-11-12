@@ -1,0 +1,17 @@
+{
+  "reviewer": "Codex direct native comparison and rig audit",
+  "decision": "rejected",
+  "published": false,
+  "r6_state": "pending",
+  "reason": "Rejected: the extended thin fingers read as forks. Wider raised stance is useful, but initial Y scaling also changes foot lift; do not publish.",
+  "artifacts": [
+    {
+      "path": "threeway_idle.png",
+      "sha256": "2ab032c5b233846391f45a7d47042c7b255aa448a77ffc7d9f4e977ff4b61422"
+    },
+    {
+      "path": "threeway_action.png",
+      "sha256": "b7806c5988ff900199c77ec97e746be8877e508a0b356129a57466984acbf774"
+    }
+  ]
+}

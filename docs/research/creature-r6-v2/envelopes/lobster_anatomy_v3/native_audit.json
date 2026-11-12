@@ -1,0 +1,562 @@
+{
+  "schema": "creature-native-envelope-evidence-audit.v1",
+  "evidence_consistent": true,
+  "scope": "Actual preview draws at shared world scale; actual CPU submitted vertex bounds and GPU culling-edge witnesses, not contact/terrain/all-backend acceptance",
+  "art_acceptance": "pending",
+  "contact_acceptance": "pending",
+  "exe_sha256": "a0872e87a1551dbe7ac0cff1346b58176743d18eba13817cb7779473415df68f",
+  "native_main_images": 126,
+  "sheet_background": "neutral_light",
+  "max_offline_native_bounds_error_blocks": 7.861370632800124e-06,
+  "profile_sha256": "b6445919d81e100c59bf15fd810c319146ee903b5bd7d9b7565890c08af731dc",
+  "offline_metrics_sha256": "ffc91242cef2fec957402eee1ac0689e411c1cdd9dd5316a20488dd0c7fce977",
+  "confirmed_false_culls": {
+    "baseline": 1,
+    "current": 1
+  },
+  "visual_envelope_required": true,
+  "recovered_false_culls": {
+    "baseline": 1,
+    "current": 1
+  },
+  "sheets": [
+    {
+      "id": "lobster",
+      "kind": "motion",
+      "file": "sheets/lobster_motion.png",
+      "sha256": "7950d200c09543bd8ec08383e010d905fb30ba722e5e184c293ed866e31788a8"
+    },
+    {
+      "id": "lobster",
+      "kind": "front_side",
+      "file": "sheets/lobster_views.png",
+      "sha256": "61f3549ab2a1b5f2cb471f71734edcea69cd6bae5cbdcfe2492be12a171a53c5"
+    }
+  ],
+  "culling_witnesses": [
+    {
+      "id": "lobster",
+      "variant": "baseline",
+      "confirmed_false_cull": true,
+      "new_visual_culling_rejects": false,
+      "alpha_pixels": 1020,
+      "file": "native_original/envelopes/lobster_edge.png",
+      "sha256": "57a47e09f7a0fa78486dc1a9ea71e3b8b2a622af464fb8008313e6a837b4b546"
+    },
+    {
+      "id": "lobster",
+      "variant": "current",
+      "confirmed_false_cull": true,
+      "new_visual_culling_rejects": false,
+      "alpha_pixels": 793,
+      "file": "native_current/envelopes/lobster_edge.png",
+      "sha256": "29ad8fe6f5c3cc4e421e2816e8b26d8bc85eb1189724418f734c87fd54c0bf68"
+    }
+  ],
+  "native_frames": [
+    {
+      "file": "native_original/envelopes/lobster_0.png",
+      "sha256": "210f8aa732f6e386aa24155d9a3cd7d71430c255bb1c242f6dbeeaea2ca1afe0"
+    },
+    {
+      "file": "native_original/envelopes/lobster_1.png",
+      "sha256": "d264420e2f4f187fd0ede0704481234fb1e08aa4f6204c61389429bf8226b3f7"
+    },
+    {
+      "file": "native_original/envelopes/lobster_2.png",
+      "sha256": "240d2ef1518f9f779367a970d7963d5f716661a8686f9009d6fdcb6c4ffca294"
+    },
+    {
+      "file": "native_original/envelopes/lobster_3.png",
+      "sha256": "0c7ad7e5a4cc1e38e31cba2b046313446f4b975a11b663564da622f8eeb53666"
+    },
+    {
+      "file": "native_original/envelopes/lobster_4.png",
+      "sha256": "afd4bea89af6797f46183142c5f9927a3533134982f40fa00684c89fbca738ea"
+    },
+    {
+      "file": "native_original/envelopes/lobster_5.png",
+      "sha256": "4ea14b440d2c68efc7a9158755afa98ac6e8f8ce414a63443b194cd1c039bb0c"
+    },
+    {
+      "file": "native_original/envelopes/lobster_6.png",
+      "sha256": "fc644602c0644d2458c3f077f91cca300d6885ae79b904d4605ee05756b4c324"
+    },
+    {
+      "file": "native_original/envelopes/lobster_7.png",
+      "sha256": "767221824c7ce71fa41e4b61e7dc85da828d5e3c4a56efeb894e10e7d4a84ee2"
+    },
+    {
+      "file": "native_original/envelopes/lobster_8.png",
+      "sha256": "6db6ceb81c3ca68975205fdc0b792209faa436f71bdbd7a0a0cc01e36f37431d"
+    },
+    {
+      "file": "native_original/envelopes/lobster_9.png",
+      "sha256": "6a01b76cf3e139dbe15b2c9f82228f5ce6cc2d137bef0c737e28a175f3b04ed4"
+    },
+    {
+      "file": "native_original/envelopes/lobster_10.png",
+      "sha256": "9f179cbcd5736d5c4d0b5136e78eadc3093baa65ecc097cddafd841458312783"
+    },
+    {
+      "file": "native_original/envelopes/lobster_11.png",
+      "sha256": "824e9d18be65ddbcca2bd7b51e875a7f8c68ca902ee417371b67cbd75cd77e3b"
+    },
+    {
+      "file": "native_original/envelopes/lobster_12.png",
+      "sha256": "2c0bd21bc5e3cf68b20f240cd2bf0f9b1a260f4cde40efeeddfa9f3cb0a5e0fc"
+    },
+    {
+      "file": "native_original/envelopes/lobster_13.png",
+      "sha256": "3d8baa676c17e5d10f57edbcf6575fdb297caccae770efbd619eae7d09e4fe61"
+    },
+    {
+      "file": "native_original/envelopes/lobster_14.png",
+      "sha256": "53bc84b14bfd956834c699edc4c451609236f6cb76ed620ad9811c453500053e"
+    },
+    {
+      "file": "native_original/envelopes/lobster_15.png",
+      "sha256": "548cb9ae369efc89cbdb50d76fa4b8e124b3367599928fc77a2b0dbbe435dd88"
+    },
+    {
+      "file": "native_original/envelopes/lobster_16.png",
+      "sha256": "4764b9a95052ebf41e629d0db580326d11072beb746f981bc35821f3c8ba482a"
+    },
+    {
+      "file": "native_original/envelopes/lobster_17.png",
+      "sha256": "221a46b44cd351e7caa82b7d89157533bda3b6c7539624ad19e516001513e402"
+    },
+    {
+      "file": "native_original/envelopes/lobster_18.png",
+      "sha256": "ac13bacb86b4af0f78952be44f79cbde9bf19315841f94bdae6471f5c15dba14"
+    },
+    {
+      "file": "native_original/envelopes/lobster_19.png",
+      "sha256": "78e40b99244c7dff25529b2d41805aeca6a212ae374fee061772ebb434ba749b"
+    },
+    {
+      "file": "native_original/envelopes/lobster_20.png",
+      "sha256": "9b1ff11f143f20cb363f758fee4b777e9fbf495ccd71cc5728b81e1a75df53fc"
+    },
+    {
+      "file": "native_original/envelopes/lobster_21.png",
+      "sha256": "85b66f7d76cfb51d91b49735bb798dd62ea78268321c5e7d4d7d3070c5e98316"
+    },
+    {
+      "file": "native_original/envelopes/lobster_22.png",
+      "sha256": "3bd3122968c19bf90e6fe30564228e6ae5ebe9b3eb9411207ed4cb2b5789a3a9"
+    },
+    {
+      "file": "native_original/envelopes/lobster_23.png",
+      "sha256": "5df713f051df308816ec4e74b2304c36b5a6dac40308d749b9655573734c0d5a"
+    },
+    {
+      "file": "native_original/envelopes/lobster_24.png",
+      "sha256": "4403fe38b3c2b966060bc0890cea1046ed1f3b8ff827d47e40ecc55c88bd3f17"
+    },
+    {
+      "file": "native_original/envelopes/lobster_25.png",
+      "sha256": "315db97dfe182006fdccf6f397533b19004267787bf6ebe11ff550682f425948"
+    },
+    {
+      "file": "native_original/envelopes/lobster_26.png",
+      "sha256": "31c2c0bb09fb3f1fab9da21337553d29190242cb31e764512cd180f1a25b096e"
+    },
+    {
+      "file": "native_original/envelopes/lobster_27.png",
+      "sha256": "30e047ca35101356d64fd3abe63178ca7fc441d8256794c3df5a9cd182435063"
+    },
+    {
+      "file": "native_original/envelopes/lobster_28.png",
+      "sha256": "e1c08558584db5990a94818a1963e5b03de28817b49bca81be1a230af5cd90a1"
+    },
+    {
+      "file": "native_original/envelopes/lobster_29.png",
+      "sha256": "38715db074b09cf3d1c39c6f3bcb1d2c9d423d8e7e33e0ac2c89c307cce74b54"
+    },
+    {
+      "file": "native_original/envelopes/lobster_30.png",
+      "sha256": "0112c393aa77d2f7a863855198f6caf65af5726fbeb8663765491511aaf00e63"
+    },
+    {
+      "file": "native_original/envelopes/lobster_31.png",
+      "sha256": "25583cc0da177a0e85275c0388d392a9a27ad5f8d95500e6565e7872a3b05998"
+    },
+    {
+      "file": "native_original/envelopes/lobster_32.png",
+      "sha256": "d31c87a58687249e24d064f3f62fd747e53583fa443579a5a1c83a26bfa675ea"
+    },
+    {
+      "file": "native_original/envelopes/lobster_33.png",
+      "sha256": "86161c401abf2773f00806435556e03a2f312a0f0dace687894d87eed00cda0b"
+    },
+    {
+      "file": "native_original/envelopes/lobster_34.png",
+      "sha256": "5ca285f103037cd2aa352f3a94c1b96365316c8511ff154e49334bbcb3f6dee8"
+    },
+    {
+      "file": "native_original/envelopes/lobster_35.png",
+      "sha256": "739dfcd032be2a2d5671f854e6bdb76592a00afa24258978349060b45d309d26"
+    },
+    {
+      "file": "native_original/envelopes/lobster_36.png",
+      "sha256": "2970d832bfc57e66178ad823debe1a737cbbc128936fd0fb6ee0bb743b0b2d4a"
+    },
+    {
+      "file": "native_original/envelopes/lobster_37.png",
+      "sha256": "f4155480c058274bb87e5968434578573cca843bf21b3fb64361abc1afbf7a4a"
+    },
+    {
+      "file": "native_original/envelopes/lobster_38.png",
+      "sha256": "118a81d8ac14a305b9bbfa6bccac690fba47b3b13966090d118d6052ed065038"
+    },
+    {
+      "file": "native_original/envelopes/lobster_39.png",
+      "sha256": "376f2525de249acd80e22fc052b274dfe718f6d871fa59902a9250adf4a71fa7"
+    },
+    {
+      "file": "native_original/envelopes/lobster_40.png",
+      "sha256": "5080422b359a58ef519c224f87da847c411015f4923444d50c659a8cb84de080"
+    },
+    {
+      "file": "native_original/envelopes/lobster_41.png",
+      "sha256": "fc60f36b569894a6791a12a9a46c867d5a9c3bd41f758385e99dd8a5f809f666"
+    },
+    {
+      "file": "native_original/envelopes/lobster_42.png",
+      "sha256": "093100a4122622488af4d98823311f324fee155d11215ccbdf0c35cef404ca59"
+    },
+    {
+      "file": "native_original/envelopes/lobster_43.png",
+      "sha256": "c3bd14a742972b51d5a2fc30fd51d3b49526c3743082e8965483230eb6e27cfd"
+    },
+    {
+      "file": "native_original/envelopes/lobster_44.png",
+      "sha256": "fdbaf72b9b829d0d6a4247cdb1e097b58bc5a9017192f82f846be53fc28d0580"
+    },
+    {
+      "file": "native_original/envelopes/lobster_45.png",
+      "sha256": "6a712e75b10f57ca5c15a884be5f35fc82f14414d3433757326bb9e8ab8d44c6"
+    },
+    {
+      "file": "native_original/envelopes/lobster_46.png",
+      "sha256": "087d05df18221c1b58410ce05c4f49b7daac6b6b9b585762294113ba65407db9"
+    },
+    {
+      "file": "native_original/envelopes/lobster_47.png",
+      "sha256": "d559307b7f0c33041cb0e573b00f7eed4c167c8e598e6305a33501284fdeaea6"
+    },
+    {
+      "file": "native_original/envelopes/lobster_48.png",
+      "sha256": "19511df960d11e1a3ae5cbe7479b7d84a80549bc886b1083d58d375aadedb279"
+    },
+    {
+      "file": "native_original/envelopes/lobster_49.png",
+      "sha256": "181debf83687ff266b9fad4f60c7bdb08b45fb87f22d15409a597debfb2ee0ec"
+    },
+    {
+      "file": "native_original/envelopes/lobster_50.png",
+      "sha256": "797b1c40e2f5c483d7728b2965821c328226eb3d7d3a098a1f6d37eb7673564a"
+    },
+    {
+      "file": "native_original/envelopes/lobster_51.png",
+      "sha256": "35314a2b3e5614eebc34f7076c9fa2fec737a51ae30412b1468eeae63f7b59bf"
+    },
+    {
+      "file": "native_original/envelopes/lobster_52.png",
+      "sha256": "2ae46a72c73ff95dfab4b14b08fd4d337c78fd1ee7424e01ca69eb3d35c2713c"
+    },
+    {
+      "file": "native_original/envelopes/lobster_53.png",
+      "sha256": "9e00b836f77078223cba9560938354bf2b115067ced59901e227f7fd6ecf7bac"
+    },
+    {
+      "file": "native_original/envelopes/lobster_54.png",
+      "sha256": "62e620f21532f8a1f11c1c752e672ce64e809828a1c617fb1daa5a41db2c1eb5"
+    },
+    {
+      "file": "native_original/envelopes/lobster_55.png",
+      "sha256": "a4f29a0cccc7edca4d411ef34ad89ad742baa28a9a0ad398894632af93624f6d"
+    },
+    {
+      "file": "native_original/envelopes/lobster_56.png",
+      "sha256": "358b4a0d327e286f329f0d9d41b30b847f01b9d4a70167cbfdeb7477382c937b"
+    },
+    {
+      "file": "native_original/envelopes/lobster_57.png",
+      "sha256": "40154cc33f22a54bfad3a3d1ec55e0626990e65c78d13864226864d18e513481"
+    },
+    {
+      "file": "native_original/envelopes/lobster_58.png",
+      "sha256": "75d14da293fd4f56c151dc923548a5acce239869f607c987e4cd86ea33e04143"
+    },
+    {
+      "file": "native_original/envelopes/lobster_59.png",
+      "sha256": "af552f88ffcd009e3e80ef525b5fe959fffa3c2e5dc2444b31fd2c38e95e2814"
+    },
+    {
+      "file": "native_original/envelopes/lobster_60.png",
+      "sha256": "aab791500f7632e4a7b8aed405590b6c22973acc9ec3a43e75a0da48e9311758"
+    },
+    {
+      "file": "native_original/envelopes/lobster_61.png",
+      "sha256": "d61badf1f9f2b89664fc49dd1ea13a8e6f2757840f9327fd6e236366aec4c3ea"
+    },
+    {
+      "file": "native_original/envelopes/lobster_62.png",
+      "sha256": "b2ee0299f97d46ac1a6a3cfcc5e712367c973736b99f0cbbabe2b0e3ee2bd335"
+    },
+    {
+      "file": "native_current/envelopes/lobster_0.png",
+      "sha256": "1b04a3739718f5bbc6aff80ec5b540f67d4ee56cc17ec6fb9bfc38087725c52c"
+    },
+    {
+      "file": "native_current/envelopes/lobster_1.png",
+      "sha256": "e0eb39601605f91b75a7f6fe0898bf2b6124b752a10147c91535d227cb72bc1a"
+    },
+    {
+      "file": "native_current/envelopes/lobster_2.png",
+      "sha256": "f033cb47ea1a65fb069174bde7ff09da401e666bfc0d25e7a43bf5019a4525f4"
+    },
+    {
+      "file": "native_current/envelopes/lobster_3.png",
+      "sha256": "416e41a1d8032b3a03b84deb2217480c60cabd1f37a6617be0b3e04f6fa3cb79"
+    },
+    {
+      "file": "native_current/envelopes/lobster_4.png",
+      "sha256": "c221f1d3c9355177bed3264d530b9733ef3e6f5fb46ad231c7a8aff76bb34fac"
+    },
+    {
+      "file": "native_current/envelopes/lobster_5.png",
+      "sha256": "fea0af3524b8b31fa088d1234d791de6defd40f9d0c0582c19834397cc1b5162"
+    },
+    {
+      "file": "native_current/envelopes/lobster_6.png",
+      "sha256": "3c3a7b71016e4cef7dc7422c74452b5cd6a683d112146674acf75b982c8f53ec"
+    },
+    {
+      "file": "native_current/envelopes/lobster_7.png",
+      "sha256": "298e1c2129a48a4578a9ffb34bb6b36ad0151376ef81220cadd57f2a760561db"
+    },
+    {
+      "file": "native_current/envelopes/lobster_8.png",
+      "sha256": "289f904df77bc0e2a98ad84d000bdb0845646f45d472332aa3d50d22c98972e4"
+    },
+    {
+      "file": "native_current/envelopes/lobster_9.png",
+      "sha256": "1eb111a7e64e6fe9d15498f2b4c3ca3b3a3f132be7077f9f81bb2898ec8de478"
+    },
+    {
+      "file": "native_current/envelopes/lobster_10.png",
+      "sha256": "eed08795ae97617f0f7289bf475b65119e1eb7b41a3cbc8463666fd9ddfff378"
+    },
+    {
+      "file": "native_current/envelopes/lobster_11.png",
+      "sha256": "9636a234591c3d11ee853c78242d105e77e335527de71ba67337a5eded61866b"
+    },
+    {
+      "file": "native_current/envelopes/lobster_12.png",
+      "sha256": "4aac835c95dd88fe5c954933153df5eebf22cdc320ffde360de39ae35baa1942"
+    },
+    {
+      "file": "native_current/envelopes/lobster_13.png",
+      "sha256": "71e96db4475fe77170dbb57f008a55c5f157dcb333c406402f71caf8824333de"
+    },
+    {
+      "file": "native_current/envelopes/lobster_14.png",
+      "sha256": "1aab37fea9163d2b7073111ff9536f42e99f1e153256baf1f94e3df2607369dc"
+    },
+    {
+      "file": "native_current/envelopes/lobster_15.png",
+      "sha256": "a2c221d9c6ecd11ad0542899fe1d62ed11ee5ef35188b7e61451a7a26c321635"
+    },
+    {
+      "file": "native_current/envelopes/lobster_16.png",
+      "sha256": "3f3356117a4355cd5ef9010f9a38a2bbb42c4a1bba432c1413c2c24ae3f968d9"
+    },
+    {
+      "file": "native_current/envelopes/lobster_17.png",
+      "sha256": "bbcc42c083172302a7cf9e0e83701da4210061b980d8727d0d076cc045810985"
+    },
+    {
+      "file": "native_current/envelopes/lobster_18.png",
+      "sha256": "150683111067455e8cafd55fd3819d55578dcfbf22758286a0d2ba4551081b33"
+    },
+    {
+      "file": "native_current/envelopes/lobster_19.png",
+      "sha256": "2ad707f1afea4fa25d27702a13f83f150eeab783e18647c9134275de48357831"
+    },
+    {
+      "file": "native_current/envelopes/lobster_20.png",
+      "sha256": "93e6757aa857a7a6badf94d6d4290b7ee6fec34baddd80168108338354f0265c"
+    },
+    {
+      "file": "native_current/envelopes/lobster_21.png",
+      "sha256": "de5435aedb8e186c26d344621e9556b5fa28fe7e05eb8591be8c1958f54e3ab0"
+    },
+    {
+      "file": "native_current/envelopes/lobster_22.png",
+      "sha256": "459d031c57889024eac757c0f0aa01b4d1a56f537fd0aa665a17d7c601cadbfe"
+    },
+    {
+      "file": "native_current/envelopes/lobster_23.png",
+      "sha256": "45c0378a7284c4ec02a92c79bc6aa0ffa7a470d269812c2c83b2c4fb1c94c458"
+    },
+    {
+      "file": "native_current/envelopes/lobster_24.png",
+      "sha256": "3b444a2dbd63e2237511a8065d263518b89af87ada2474ffcd910072eda800a4"
+    },
+    {
+      "file": "native_current/envelopes/lobster_25.png",
+      "sha256": "174685f4ee42eb7c322c15b92b0d75a1162df7b4c1e02ca6f2233d3fc5c8ea96"
+    },
+    {
+      "file": "native_current/envelopes/lobster_26.png",
+      "sha256": "8e85adf2a02627967755552501729be052d2953b457b80043c5908e84b3a97af"
+    },
+    {
+      "file": "native_current/envelopes/lobster_27.png",
+      "sha256": "409fad56304b675feafa6496530845f6abd444027cb279cdf3f2349fb878b67d"
+    },
+    {
+      "file": "native_current/envelopes/lobster_28.png",
+      "sha256": "242f09376bb157b2a8ee9a9e2aed8e05048dcc6a480fc743f2a2d45eec5e441c"
+    },
+    {
+      "file": "native_current/envelopes/lobster_29.png",
+      "sha256": "8b68dc18291399ef2cbd9f0a124637c5cdf98f974b3e08c292a044ed9927a312"
+    },
+    {
+      "file": "native_current/envelopes/lobster_30.png",
+      "sha256": "268bed9b30e3de92e29b50166c5bbbc0fc2f886bd8df8838a29d12954f6ced90"
+    },
+    {
+      "file": "native_current/envelopes/lobster_31.png",
+      "sha256": "41245411e7f70c6e1ba812073fd5fdd220139c9c732f4f6268f6fb72659b461a"
+    },
+    {
+      "file": "native_current/envelopes/lobster_32.png",
+      "sha256": "ebb55eb87be57e3c9767a65a80127d8e38252d09529a5e70ca41c0adb7a0b910"
+    },
+    {
+      "file": "native_current/envelopes/lobster_33.png",
+      "sha256": "d58249418d9058f85da9d25673baff42e441414ccb645474f51873978423bfea"
+    },
+    {
+      "file": "native_current/envelopes/lobster_34.png",
+      "sha256": "380e29bb4bddc4a1335a31c94dfec34d958ebb7a7e3baf399e45d66a6502b6f9"
+    },
+    {
+      "file": "native_current/envelopes/lobster_35.png",
+      "sha256": "6caef9bd0a1cfc13ea18e04de22eb56030f76b5a5d2a5d1560de14bbe54ef541"
+    },
+    {
+      "file": "native_current/envelopes/lobster_36.png",
+      "sha256": "ead502207f8247fff420b10ef21894fd85c7e12c679a3147cdc514928f7e2a67"
+    },
+    {
+      "file": "native_current/envelopes/lobster_37.png",
+      "sha256": "4e173cd80547ffc36bafe680fe35c31888ee3f35a8cc6d91cc2c5ba6bd597078"
+    },
+    {
+      "file": "native_current/envelopes/lobster_38.png",
+      "sha256": "f1dac09182feed416c7c7ab12e28a06ce5d4113aed1ed78df869ec4f4dec57f7"
+    },
+    {
+      "file": "native_current/envelopes/lobster_39.png",
+      "sha256": "a4ad17ace95cec9680ea9cf01a2a2c28bcd52b9bc9327fff92449f90da0467d9"
+    },
+    {
+      "file": "native_current/envelopes/lobster_40.png",
+      "sha256": "e57b71513ce00a0e26c4cf97142e3af0623be9885746c7e6cbae74e84a55b282"
+    },
+    {
+      "file": "native_current/envelopes/lobster_41.png",
+      "sha256": "d63b00fc2d4a6913e4a8b6c98472918ab85304813a23c711809e938ee92888d3"
+    },
+    {
+      "file": "native_current/envelopes/lobster_42.png",
+      "sha256": "b2e5626bad20136364f8c61c6f651ec71a6101d4e7b7715ecdf33530699dcaa9"
+    },
+    {
+      "file": "native_current/envelopes/lobster_43.png",
+      "sha256": "55cad0f9872d66565cb5f7491c9fb2307fc3961ea4ce93115f4ec680b7437fce"
+    },
+    {
+      "file": "native_current/envelopes/lobster_44.png",
+      "sha256": "a28d28dd4f4f4a4d689014a1667111c7649ac78b78c568690bf75e6759c7b42f"
+    },
+    {
+      "file": "native_current/envelopes/lobster_45.png",
+      "sha256": "4ecada22f99cea8c6e39ed6574b68bd079ca1be8d28a39fa58fcac61e040a06b"
+    },
+    {
+      "file": "native_current/envelopes/lobster_46.png",
+      "sha256": "23ce78593da4c51c2f0c160c309fc4ac3afc53f9bcae89cea0f209493d1cfd36"
+    },
+    {
+      "file": "native_current/envelopes/lobster_47.png",
+      "sha256": "df944b3a951d96b915f4ccc5f6180c7621949bad71c0a92b18adafb6d76f05fe"
+    },
+    {
+      "file": "native_current/envelopes/lobster_48.png",
+      "sha256": "f36677ef485c881a0066a821119bba3fb44c92a7f1541c75e44282f6237d9ff3"
+    },
+    {
+      "file": "native_current/envelopes/lobster_49.png",
+      "sha256": "2139e29f34fdd179710e84bbc8603cbfa2e0704865fd220e0447bab2d1622f10"
+    },
+    {
+      "file": "native_current/envelopes/lobster_50.png",
+      "sha256": "ffbaf4f69cfc254c5b53111d1986f71e987d6381fbad340119f6236692dfce5a"
+    },
+    {
+      "file": "native_current/envelopes/lobster_51.png",
+      "sha256": "c05c345f438df5848d4533c7b4007a18e70f107687fc0cb28c05e574b95d6391"
+    },
+    {
+      "file": "native_current/envelopes/lobster_52.png",
+      "sha256": "e258df4f478837cba21a4964e7bdc6cd0330102db740fd34c6ef8e2b45ac8858"
+    },
+    {
+      "file": "native_current/envelopes/lobster_53.png",
+      "sha256": "5ac7a59275e5d178a77337061a832411955eb42c070fb71cd4b93d0e0ad56525"
+    },
+    {
+      "file": "native_current/envelopes/lobster_54.png",
+      "sha256": "f36677ef485c881a0066a821119bba3fb44c92a7f1541c75e44282f6237d9ff3"
+    },
+    {
+      "file": "native_current/envelopes/lobster_55.png",
+      "sha256": "2139e29f34fdd179710e84bbc8603cbfa2e0704865fd220e0447bab2d1622f10"
+    },
+    {
+      "file": "native_current/envelopes/lobster_56.png",
+      "sha256": "ffbaf4f69cfc254c5b53111d1986f71e987d6381fbad340119f6236692dfce5a"
+    },
+    {
+      "file": "native_current/envelopes/lobster_57.png",
+      "sha256": "27d424a583b574a413794fe9d0deaeddb9e53b9b8764efde4a1f1541fdc7a718"
+    },
+    {
+      "file": "native_current/envelopes/lobster_58.png",
+      "sha256": "c7b0cb3a3c5cd19e4fceff4395b0298d91005451b536abb0f6c6c9348d8345d7"
+    },
+    {
+      "file": "native_current/envelopes/lobster_59.png",
+      "sha256": "1d970aedef5aa1fa34cab8501028cfe99eee0f5a2ab97576e005f9061f586ece"
+    },
+    {
+      "file": "native_current/envelopes/lobster_60.png",
+      "sha256": "a4123c49de4265a42b52b987176c05913d8df5eea6209d65c783eb49e6b78442"
+    },
+    {
+      "file": "native_current/envelopes/lobster_61.png",
+      "sha256": "271a0b9505576b8dbe1c332f3cd6579deb99c51625c2bbb8bc842f8a5cc25437"
+    },
+    {
+      "file": "native_current/envelopes/lobster_62.png",
+      "sha256": "867cc62b3a17f63d7aa5bc15138ff43d5cf4a09ec53b7ce6c0799db32e901f6a"
+    }
+  ]
+}

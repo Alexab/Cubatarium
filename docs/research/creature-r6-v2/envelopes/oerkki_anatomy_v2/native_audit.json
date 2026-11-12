@@ -1,0 +1,553 @@
+{
+  "schema": "creature-native-envelope-evidence-audit.v1",
+  "evidence_consistent": true,
+  "scope": "Actual preview draws at shared world scale; actual CPU submitted vertex bounds and GPU culling-edge witnesses, not contact/terrain/all-backend acceptance",
+  "art_acceptance": "pending",
+  "contact_acceptance": "pending",
+  "exe_sha256": "a0872e87a1551dbe7ac0cff1346b58176743d18eba13817cb7779473415df68f",
+  "native_main_images": 126,
+  "sheet_background": "neutral_light",
+  "max_offline_native_bounds_error_blocks": 9.774806392304214e-06,
+  "profile_sha256": "52fba7cd7e8df6ed1ca6a874d48e674fda88ce27054458bbbc33a84c647370d0",
+  "offline_metrics_sha256": "884abc6826ffb0b3369601ba4512255b76d42d421e93f6ef3d9e6b4cfd00983b",
+  "confirmed_false_culls": {
+    "baseline": 0,
+    "current": 1
+  },
+  "visual_envelope_required": true,
+  "recovered_false_culls": {
+    "baseline": 0,
+    "current": 1
+  },
+  "sheets": [
+    {
+      "id": "oerkki",
+      "kind": "motion",
+      "file": "sheets/oerkki_motion.png",
+      "sha256": "705f3a19326e07cda71e2862f2b88562832c97a27c2ed5344d23c9f4781f1fdf"
+    },
+    {
+      "id": "oerkki",
+      "kind": "front_side",
+      "file": "sheets/oerkki_views.png",
+      "sha256": "ef34752a9ee2f7a0283d8eca9acd03870a5f8fc875fcd9ea6f2abd20351c7a75"
+    }
+  ],
+  "culling_witnesses": [
+    {
+      "id": "oerkki",
+      "variant": "current",
+      "confirmed_false_cull": true,
+      "new_visual_culling_rejects": false,
+      "alpha_pixels": 184,
+      "file": "native_current/envelopes/oerkki_edge.png",
+      "sha256": "4c7171003852eb6cd43f853a839b542197a4bac035a93a76c64a04399ea7403c"
+    }
+  ],
+  "native_frames": [
+    {
+      "file": "native_original/envelopes/oerkki_0.png",
+      "sha256": "24f3cbf34ceeb12456097f4acdd6c84263c1f47d98b94e0b695e3201c2e2d431"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_1.png",
+      "sha256": "6f320597ec14c6b0848e5ed023311ec6883c2b05579401cddcc55220d5e9b030"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_2.png",
+      "sha256": "343ec141bf339f56a4d096b07f57615ddd68810464a3503203209820f84e8d97"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_3.png",
+      "sha256": "24f3cbf34ceeb12456097f4acdd6c84263c1f47d98b94e0b695e3201c2e2d431"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_4.png",
+      "sha256": "6f320597ec14c6b0848e5ed023311ec6883c2b05579401cddcc55220d5e9b030"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_5.png",
+      "sha256": "343ec141bf339f56a4d096b07f57615ddd68810464a3503203209820f84e8d97"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_6.png",
+      "sha256": "24f3cbf34ceeb12456097f4acdd6c84263c1f47d98b94e0b695e3201c2e2d431"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_7.png",
+      "sha256": "6f320597ec14c6b0848e5ed023311ec6883c2b05579401cddcc55220d5e9b030"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_8.png",
+      "sha256": "343ec141bf339f56a4d096b07f57615ddd68810464a3503203209820f84e8d97"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_9.png",
+      "sha256": "24f3cbf34ceeb12456097f4acdd6c84263c1f47d98b94e0b695e3201c2e2d431"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_10.png",
+      "sha256": "6f320597ec14c6b0848e5ed023311ec6883c2b05579401cddcc55220d5e9b030"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_11.png",
+      "sha256": "343ec141bf339f56a4d096b07f57615ddd68810464a3503203209820f84e8d97"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_12.png",
+      "sha256": "24f3cbf34ceeb12456097f4acdd6c84263c1f47d98b94e0b695e3201c2e2d431"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_13.png",
+      "sha256": "6f320597ec14c6b0848e5ed023311ec6883c2b05579401cddcc55220d5e9b030"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_14.png",
+      "sha256": "343ec141bf339f56a4d096b07f57615ddd68810464a3503203209820f84e8d97"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_15.png",
+      "sha256": "24f3cbf34ceeb12456097f4acdd6c84263c1f47d98b94e0b695e3201c2e2d431"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_16.png",
+      "sha256": "6f320597ec14c6b0848e5ed023311ec6883c2b05579401cddcc55220d5e9b030"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_17.png",
+      "sha256": "343ec141bf339f56a4d096b07f57615ddd68810464a3503203209820f84e8d97"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_18.png",
+      "sha256": "24f3cbf34ceeb12456097f4acdd6c84263c1f47d98b94e0b695e3201c2e2d431"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_19.png",
+      "sha256": "6f320597ec14c6b0848e5ed023311ec6883c2b05579401cddcc55220d5e9b030"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_20.png",
+      "sha256": "343ec141bf339f56a4d096b07f57615ddd68810464a3503203209820f84e8d97"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_21.png",
+      "sha256": "24f3cbf34ceeb12456097f4acdd6c84263c1f47d98b94e0b695e3201c2e2d431"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_22.png",
+      "sha256": "6f320597ec14c6b0848e5ed023311ec6883c2b05579401cddcc55220d5e9b030"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_23.png",
+      "sha256": "343ec141bf339f56a4d096b07f57615ddd68810464a3503203209820f84e8d97"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_24.png",
+      "sha256": "24f3cbf34ceeb12456097f4acdd6c84263c1f47d98b94e0b695e3201c2e2d431"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_25.png",
+      "sha256": "6f320597ec14c6b0848e5ed023311ec6883c2b05579401cddcc55220d5e9b030"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_26.png",
+      "sha256": "343ec141bf339f56a4d096b07f57615ddd68810464a3503203209820f84e8d97"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_27.png",
+      "sha256": "24f3cbf34ceeb12456097f4acdd6c84263c1f47d98b94e0b695e3201c2e2d431"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_28.png",
+      "sha256": "6f320597ec14c6b0848e5ed023311ec6883c2b05579401cddcc55220d5e9b030"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_29.png",
+      "sha256": "343ec141bf339f56a4d096b07f57615ddd68810464a3503203209820f84e8d97"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_30.png",
+      "sha256": "24f3cbf34ceeb12456097f4acdd6c84263c1f47d98b94e0b695e3201c2e2d431"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_31.png",
+      "sha256": "6f320597ec14c6b0848e5ed023311ec6883c2b05579401cddcc55220d5e9b030"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_32.png",
+      "sha256": "343ec141bf339f56a4d096b07f57615ddd68810464a3503203209820f84e8d97"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_33.png",
+      "sha256": "24f3cbf34ceeb12456097f4acdd6c84263c1f47d98b94e0b695e3201c2e2d431"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_34.png",
+      "sha256": "6f320597ec14c6b0848e5ed023311ec6883c2b05579401cddcc55220d5e9b030"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_35.png",
+      "sha256": "343ec141bf339f56a4d096b07f57615ddd68810464a3503203209820f84e8d97"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_36.png",
+      "sha256": "24f3cbf34ceeb12456097f4acdd6c84263c1f47d98b94e0b695e3201c2e2d431"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_37.png",
+      "sha256": "6f320597ec14c6b0848e5ed023311ec6883c2b05579401cddcc55220d5e9b030"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_38.png",
+      "sha256": "343ec141bf339f56a4d096b07f57615ddd68810464a3503203209820f84e8d97"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_39.png",
+      "sha256": "24f3cbf34ceeb12456097f4acdd6c84263c1f47d98b94e0b695e3201c2e2d431"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_40.png",
+      "sha256": "6f320597ec14c6b0848e5ed023311ec6883c2b05579401cddcc55220d5e9b030"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_41.png",
+      "sha256": "343ec141bf339f56a4d096b07f57615ddd68810464a3503203209820f84e8d97"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_42.png",
+      "sha256": "24f3cbf34ceeb12456097f4acdd6c84263c1f47d98b94e0b695e3201c2e2d431"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_43.png",
+      "sha256": "6f320597ec14c6b0848e5ed023311ec6883c2b05579401cddcc55220d5e9b030"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_44.png",
+      "sha256": "343ec141bf339f56a4d096b07f57615ddd68810464a3503203209820f84e8d97"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_45.png",
+      "sha256": "24f3cbf34ceeb12456097f4acdd6c84263c1f47d98b94e0b695e3201c2e2d431"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_46.png",
+      "sha256": "6f320597ec14c6b0848e5ed023311ec6883c2b05579401cddcc55220d5e9b030"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_47.png",
+      "sha256": "343ec141bf339f56a4d096b07f57615ddd68810464a3503203209820f84e8d97"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_48.png",
+      "sha256": "24f3cbf34ceeb12456097f4acdd6c84263c1f47d98b94e0b695e3201c2e2d431"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_49.png",
+      "sha256": "6f320597ec14c6b0848e5ed023311ec6883c2b05579401cddcc55220d5e9b030"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_50.png",
+      "sha256": "343ec141bf339f56a4d096b07f57615ddd68810464a3503203209820f84e8d97"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_51.png",
+      "sha256": "24f3cbf34ceeb12456097f4acdd6c84263c1f47d98b94e0b695e3201c2e2d431"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_52.png",
+      "sha256": "6f320597ec14c6b0848e5ed023311ec6883c2b05579401cddcc55220d5e9b030"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_53.png",
+      "sha256": "343ec141bf339f56a4d096b07f57615ddd68810464a3503203209820f84e8d97"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_54.png",
+      "sha256": "24f3cbf34ceeb12456097f4acdd6c84263c1f47d98b94e0b695e3201c2e2d431"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_55.png",
+      "sha256": "6f320597ec14c6b0848e5ed023311ec6883c2b05579401cddcc55220d5e9b030"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_56.png",
+      "sha256": "343ec141bf339f56a4d096b07f57615ddd68810464a3503203209820f84e8d97"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_57.png",
+      "sha256": "24f3cbf34ceeb12456097f4acdd6c84263c1f47d98b94e0b695e3201c2e2d431"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_58.png",
+      "sha256": "6f320597ec14c6b0848e5ed023311ec6883c2b05579401cddcc55220d5e9b030"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_59.png",
+      "sha256": "343ec141bf339f56a4d096b07f57615ddd68810464a3503203209820f84e8d97"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_60.png",
+      "sha256": "24f3cbf34ceeb12456097f4acdd6c84263c1f47d98b94e0b695e3201c2e2d431"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_61.png",
+      "sha256": "6f320597ec14c6b0848e5ed023311ec6883c2b05579401cddcc55220d5e9b030"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_62.png",
+      "sha256": "343ec141bf339f56a4d096b07f57615ddd68810464a3503203209820f84e8d97"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_0.png",
+      "sha256": "585e44acb9215fd2a0fca66fc373b9347e42e540d63d066a304a8c6e907152ba"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_1.png",
+      "sha256": "5be834ae75fd37c656e5160541c1a0e248c10caa223bf442860741ca2666f8cf"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_2.png",
+      "sha256": "8a48fc7cee734f5a648bda0727e20d3ef85607143e740cd778f2b602524ea425"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_3.png",
+      "sha256": "29fafe3969a12a8b4fae7ecd76c507d82ffd08480ff8ea9f4c2fb12997af6c14"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_4.png",
+      "sha256": "8fc5dce4d8183af3e80832fe3e94cc4ee3c41cef9e86e9ce8aee81b9fa8b6112"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_5.png",
+      "sha256": "5d260661ed6fffec88670184bf1f9afa0d61f891b59587dc4a956ba78ccdf8b0"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_6.png",
+      "sha256": "170e8188af752eb7adcbe165f10b427f3da9d37999056ff014b8d74f5c13362c"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_7.png",
+      "sha256": "24ac005c62c8949438461978b642e4c40b8d2e1fecb2140be3a0f0b75fa4ffa3"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_8.png",
+      "sha256": "2d61f1a4774d8de19c1a130c045bc7de5430eaa2d7e37f64c65f7bdbf6cf6d0d"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_9.png",
+      "sha256": "4a915515bf5cc33f2e985fd82450e0f1f990383c6809d3686093125bc09064f9"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_10.png",
+      "sha256": "d729663cb5d9522a6011e5c95746e34716d3317db7aaaf131a58e75bc50dbea0"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_11.png",
+      "sha256": "fb184bd222bde6b5a46c1bf8d4e24202ae03200395cb55e47e35e2a19e277553"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_12.png",
+      "sha256": "328c968948a89f1d30cd6352b2d38ab98671a2fdf88914937892752c96a01936"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_13.png",
+      "sha256": "b1e80caa6192d3be38219e41d0aa484907acd49b179e95bcedc03fbb2f6f8942"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_14.png",
+      "sha256": "b7581ebae02bb9c8e2205a15e792e828ea490e7ac0bde3164be52420bb4b4e25"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_15.png",
+      "sha256": "9020fef0dbf538e2f61578b1c57aa043f0fc3e77d44c3de9937c6aa6c72e937b"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_16.png",
+      "sha256": "a0d37d02b52f5ca62058b750b0a221348732a00356da3ca00938d2ff3fe24033"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_17.png",
+      "sha256": "67b05aa921c5d22e85752e1b04e67c8ed31b58bd72ff2b12de426644fd5ec985"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_18.png",
+      "sha256": "e72550182a3034c62b30953f64f7c49594284eb886473f4b891d0f9275755976"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_19.png",
+      "sha256": "8ac1020f7fa4216772169354d4aa4a5dfd2cc99118ba95e1f9e0c7dcef01b1e1"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_20.png",
+      "sha256": "81ba0055eed3fe0c01b5599f36561640e10f1e25f27d21ded5cc612b2231f74e"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_21.png",
+      "sha256": "ba2e2219a106d6601185a22f8e87e92e7997808145a0f1e98f181b7d87436c29"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_22.png",
+      "sha256": "7bc2da431fe414bf691215ba5cf8bddd88bed0e5e3e381a72b5ab96eac613a54"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_23.png",
+      "sha256": "df310697cdb87562019198edd6bebc692e347cfc1c806201512a19543bc81220"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_24.png",
+      "sha256": "462063f5a394e4f0587bd6fd37394e45054379f4147d6c3c60f782e80a21900f"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_25.png",
+      "sha256": "d0675a21e36b2e60d7966436b5f263e3c70a7f9ae7589ea627ea10cc74d52d10"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_26.png",
+      "sha256": "b6d1e65ee1b8245db07f6e8959490fc9f8adaa2f9f3624080558f865e405fc4c"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_27.png",
+      "sha256": "dc2764be3bb3b62a6a7d61bc26fd0d47e74e76e328ebccd4a392d16fba3fa4d1"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_28.png",
+      "sha256": "f4b12233a60e9896a50af94197dda7d7ee2a2b513913045676e375705015f02b"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_29.png",
+      "sha256": "9061dd61b7f7016d3d64bcf84be778ce6bf5f4fd6ff5eead989ba714e482550e"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_30.png",
+      "sha256": "62d9f8868d6ef2833b7bf3be4af737f699cca32f941e93a0cd55eb97b71d05d3"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_31.png",
+      "sha256": "a711456ff038effcfd717a959034647e902ba907e82ec71dfbe59079ea038aee"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_32.png",
+      "sha256": "e91393360863d5c2aa63497f36ad0cea6e2f309425f178c0f1f170a49f02032a"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_33.png",
+      "sha256": "6ffe0b7e6ee19e223e629bca966fd8ed5d1bbe0824110ce34d9f2a8fbdcd0c05"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_34.png",
+      "sha256": "823c0621bd8a0c35dcfe18f5551a311abe0e09e8f578054e94b0c3797df52b3e"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_35.png",
+      "sha256": "c82742ca9a17ecd92cbde343e990bbd646f18876b8113ded476f057b3eb95759"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_36.png",
+      "sha256": "7bcb7a409e2ac5a5166387d342ba437c31b863e2cd401a1e025d4c433bcc1252"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_37.png",
+      "sha256": "93ab03abd857d5ddccf031a49f96aa1ad0b04b41aa535ace4b0053047fc6034a"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_38.png",
+      "sha256": "cff76f57972c734a89b92b93c665e7280561c654154a8fa22f29dfd569c9e6d7"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_39.png",
+      "sha256": "c429b0adec97433764e77df9c930f3fa7940d7dba372024fc95002523c24cf52"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_40.png",
+      "sha256": "c2937a32cee05d3a5be8ce8adc99a843cebee7552c27118259e1d4101dc004f8"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_41.png",
+      "sha256": "eb5ad6ed855afc6990f49924790725147851c7076ad671e3a668b69a0bf39fec"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_42.png",
+      "sha256": "41fb840d38a22fc484eb0f1644484a1fb4700e12114661ae161303aa6f73d7a8"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_43.png",
+      "sha256": "c2c8175c162a171ec9e262f313a31d17fd01556790284f4363549345a6e7956f"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_44.png",
+      "sha256": "c2f6a9297dbe2f53c4f9534eef4c9abea14d76ff165b83f5b1d1062e745524f7"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_45.png",
+      "sha256": "8bde40febf022ccd14b2ba9513f66f6ca49846a03b5af5b31c539b60182dbf86"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_46.png",
+      "sha256": "0f1aa6a908e074249a727ad224e447565098451b4d086aa84f795afdbf204863"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_47.png",
+      "sha256": "d7a608782de76f500a35978b8065359790e503ec15bc3258446b98f441ca3140"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_48.png",
+      "sha256": "d9f4bd91679cf92a621cc7a946994cd777f5d76c672ac6e72f0cd3822efa2afc"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_49.png",
+      "sha256": "6b3b03a8018793233e0493099e64795ee00e5d7cf5eb748dc49fbce11f302dac"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_50.png",
+      "sha256": "88695d388f2e0f765c7ae95be7d4842a2845cf3b31499e857058281e62bcdc35"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_51.png",
+      "sha256": "73537181a1f6e1c7df737355c64faad0a7ffd10d6d31974fd99e0e131bb6d9a2"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_52.png",
+      "sha256": "bb6b7881202d153331ee0a7c8f0c79faf38e46761857e60abdb5789404d52811"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_53.png",
+      "sha256": "3b1ac80663744f9851d53cdaf732527d737ff0ebf19a540baddd6446d8b8c255"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_54.png",
+      "sha256": "879986fed32f777da72c674fe8c20e5d4c7ffdbc44b04f2698258cc820605d4c"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_55.png",
+      "sha256": "f7e1915b1949c118c52d9fe0335c00b46b018de52392e55edb08497d278f1271"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_56.png",
+      "sha256": "e81c37657885eca9175c930f59cb30f1f221ece4014a7d6622cdea78029379d6"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_57.png",
+      "sha256": "38c3be0173691fb23650d028ebb658e4b3e473d073c76e0275138cd5119e470a"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_58.png",
+      "sha256": "3f60fc665e923f3df9510c40ee64acfcc6adf91d0311f5569d7a2c65d142b703"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_59.png",
+      "sha256": "5bf9eeeef0c5576d6872d4cc99e375af9b0dc2da41ac9bb96c78af399298a0dc"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_60.png",
+      "sha256": "879986fed32f777da72c674fe8c20e5d4c7ffdbc44b04f2698258cc820605d4c"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_61.png",
+      "sha256": "f7e1915b1949c118c52d9fe0335c00b46b018de52392e55edb08497d278f1271"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_62.png",
+      "sha256": "e81c37657885eca9175c930f59cb30f1f221ece4014a7d6622cdea78029379d6"
+    }
+  ]
+}

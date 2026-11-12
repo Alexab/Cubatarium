@@ -1,0 +1,311 @@
+id: chicken
+backend: bone_skeleton
+family: meadow
+authoring_source: cubatarium-recipe
+recipe_version: 2
+palette_id: meadow
+pattern: spots
+template: chicken
+body:
+- 6
+- 6
+- 8
+head:
+- 4
+- 5
+- 4
+limb:
+- 2
+- 5
+extras:
+- beak
+muzzle: null
+bind_body: null
+direction: 'Медная несушка: каплевидный корпус и гребень'
+wave: W1
+silhouette:
+  comb: 0.45
+  beak: 0.55
+  tail: 0.2
+marks:
+- comb
+- beak
+- back
+selected_concept: familiar_species_authored_rig
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: 'Медная несушка: каплевидный корпус и гребень'
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 16024079672956182123
+surface_style: avian
+anatomy:
+  bones:
+  - name: body
+    parent: null
+    pivot:
+    - 0
+    - 8
+    - 1
+    cubes:
+    - name: breast
+      origin:
+      - -3
+      - 4
+      - -2
+      size:
+      - 6
+      - 7
+      - 6
+      role: body
+    - name: tail
+      origin:
+      - -2
+      - 6
+      - 4
+      size:
+      - 4
+      - 4
+      - 1
+      role: wing
+  - name: head
+    parent: body
+    pivot:
+    - 0
+    - 11
+    - -2
+    cubes:
+    - name: head
+      origin:
+      - -2
+      - 8
+      - -5
+      size:
+      - 4
+      - 5
+      - 3
+      role: face
+  - name: comb
+    parent: head
+    pivot:
+    - 0
+    - 13
+    - -3
+    cubes:
+    - name: comb
+      origin:
+      - -0.5
+      - 13
+      - -4.5
+      size:
+      - 1
+      - 2
+      - 3
+      role: accent
+    - name: wattle
+      origin:
+      - -1
+      - 7
+      - -6
+      size:
+      - 2
+      - 2
+      - 1
+      role: accent
+  - name: beak
+    parent: head
+    pivot:
+    - 0
+    - 10
+    - -5
+    cubes:
+    - name: beak
+      origin:
+      - -2
+      - 9
+      - -7
+      size:
+      - 4
+      - 2
+      - 2
+      role: horn
+  - name: leg0
+    parent: body
+    pivot:
+    - -2
+    - 4
+    - 0
+    cubes:
+    - name: leg0
+      origin:
+      - -2.5
+      - 1
+      - -0.5
+      size:
+      - 1
+      - 3
+      - 1
+      role: horn
+    - name: heel_leg0
+      origin:
+      - -3.5
+      - 0
+      - 0
+      size:
+      - 3
+      - 1
+      - 1
+      role: horn
+    - name: toe_outer_leg0
+      origin:
+      - -3.5
+      - 0
+      - -2
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+    - name: toe_inner_leg0
+      origin:
+      - -1.5
+      - 0
+      - -2
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+  - name: wing0
+    parent: body
+    pivot:
+    - -3
+    - 9
+    - 1
+    cubes:
+    - name: wing0
+      origin:
+      - -4
+      - 5
+      - -1
+      size:
+      - 1
+      - 5
+      - 4
+      role: wing
+  - name: leg1
+    parent: body
+    pivot:
+    - 2
+    - 4
+    - 0
+    cubes:
+    - name: leg1
+      origin:
+      - 1.5
+      - 1
+      - -0.5
+      size:
+      - 1
+      - 3
+      - 1
+      role: horn
+    - name: heel_leg1
+      origin:
+      - 0.5
+      - 0
+      - 0
+      size:
+      - 3
+      - 1
+      - 1
+      role: horn
+    - name: toe_outer_leg1
+      origin:
+      - 0.5
+      - 0
+      - -2
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+    - name: toe_inner_leg1
+      origin:
+      - 2.5
+      - 0
+      - -2
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+  - name: wing1
+    parent: body
+    pivot:
+    - 3
+    - 9
+    - 1
+    cubes:
+    - name: wing1
+      origin:
+      - 3
+      - 5
+      - -1
+      size:
+      - 1
+      - 5
+      - 4
+      role: wing
+palette_overrides:
+  body:
+  - 218
+  - 211
+  - 185
+  face:
+  - 234
+  - 225
+  - 194
+  wing:
+  - 195
+  - 185
+  - 154
+  belly:
+  - 222
+  - 212
+  - 179
+  horn:
+  - 194
+  - 146
+  - 50
+  limb:
+  - 184
+  - 137
+  - 55
+  accent:
+  - 156
+  - 58
+  - 43
+  mark:
+  - 143
+  - 118
+  - 77
+  eye:
+  - 24
+  - 25
+  - 21
+animation_profile: chicken

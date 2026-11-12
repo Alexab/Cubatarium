@@ -1,0 +1,56 @@
+{
+  "dungeon_master": {
+    "baseline": {
+      "extent_blocks": [
+        1.6547002792358403,
+        2.6686012873204383,
+        0.9512526690959962
+      ],
+      "palette_joints": 7,
+      "weighted_joints": 2,
+      "clips": [
+        "idle",
+        "walk",
+        "run",
+        "punch"
+      ]
+    },
+    "candidate": {
+      "palette_joints": 17,
+      "weighted_joints": 17,
+      "clips": [
+        "idle",
+        "walk",
+        "run",
+        "punch"
+      ]
+    }
+  },
+  "land_guard": {
+    "baseline": {
+      "extent_blocks": [
+        1.6547002792358403,
+        2.6686012873204383,
+        0.9512526690959962
+      ],
+      "palette_joints": 7,
+      "weighted_joints": 2,
+      "clips": [
+        "idle",
+        "walk",
+        "run",
+        "punch"
+      ]
+    },
+    "candidate": {
+      "palette_joints": 17,
+      "weighted_joints": 17,
+      "clips": [
+        "idle",
+        "walk",
+        "run",
+        "punch"
+      ]
+    }
+  }
+}

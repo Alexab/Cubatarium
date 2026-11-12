@@ -1,0 +1,79 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R5 medium terrestrial glTF wave; global R6 compatibility/performance/reproducibility pending",
+  "metrics_path": "metrics.json",
+  "species": {
+    "panda": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct equal-scale baseline comparison, native Release four views and 24 movement/action phases, final close-follow world and 64px icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "4646cee822d51ea0e4a63523dcc8c2bbb4bbde6085e9855984097db53299b6da",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "panda.png",
+          "sha256": "2c55c9279db89c13e71dbf08e6f6ca93d3dd99c863a49d294bd4f35da33d9ac0"
+        },
+        "motion": {
+          "path": "native_approved_panda.png",
+          "sha256": "7729719d710e24056775d67a517162237f6c4b7522b3202a80837a850d5b705a"
+        },
+        "runtime": {
+          "path": "runtime_close_panda/frame_001.png",
+          "sha256": "c540770d00fc974b8703459f4787dec9603f41695d6a75d6495403b49085ae0e"
+        },
+        "ui": {
+          "path": "native_candidate/panda_12.png",
+          "sha256": "d91ff0fa1afd22e617f0f2c01ba49e904a568d2978c56191aa151eb363a751dd"
+        }
+      },
+      "notes": "15 functional joints, weighted heavy trunk, four segmented bear limbs, rounded ears, own warm-white/charcoal shoulder band and eye mask. Familiar 0.609375 x 0.75 x 0.984375 block rest extent. Preserved idle/walk/run/punch with authored heavy steps and forepaw swipe. Increased punch key density after 65-phase measurement exposed between-key paw sinking. Real exported skinning measured over 65 phases for contact clips; max sinking across walk/run/punch is below 0.0035 blocks. Loops, every paw, normalized/mixed weights, shaped/scaled death contact and preserved horizontal lunge are tested. Gameplay bounds/speeds/habitat unchanged. Production generator reads no reference geometry or pixels. Performance gates disabled; not a performance pass."
+    },
+    "warthog": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct equal-scale baseline comparison, native Release four views and 24 movement/action phases, final close-follow world and 64px icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "3a2d4c10bcd763fdd5cabd0bdabc3d62b7b2c2a8d700c5034a3aed67c42a296a",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "warthog.png",
+          "sha256": "fecb52fb5a73875373095b17eee9accf04d3e5cf8173be02b8f6d405b6697764"
+        },
+        "motion": {
+          "path": "native_approved_warthog.png",
+          "sha256": "19bafe8f9bde576c48e3abc5a7afa3348cd625fb1ba3a252051e789ffdb0002a"
+        },
+        "runtime": {
+          "path": "runtime_close_warthog/frame_001.png",
+          "sha256": "5fd109a721793510c4c9fde60e50d0c788dcb354e398dbb554b025cd25316b9b"
+        },
+        "ui": {
+          "path": "native_candidate/warthog_12.png",
+          "sha256": "dbd62c9432fb23132c538a1178f6c0d81f57a1855af6d747bd6cef46be3a2e25"
+        },
+        "death_asset": {
+          "path": "warthog_die_asset.png",
+          "sha256": "3a3de9642375aa9cfe14e7429b06817b5707cf091109dac30a9bde585ec944e4"
+        }
+      },
+      "notes": "16 functional joints, sloping high shoulders, long low snout, lateral cheek warts, paired ivory tusks, short mane, cloven-colour hooves and raised tufted tail. Own umber/bristle surface. Familiar 0.6875 x 1.0625 x 1.4375 block extent. Preserved idle/walk/run/punch/die. Explicit recipe runtime_speed=1 for die gives 1.2 seconds rather than inheriting an 18-second period from legacy metadata. Die asset inspected as sampled skinning; no runtime Death locomotion state is claimed. Real exported skinning measured over 65 phases for contact clips; max sinking across walk/run/punch is below 0.0035 blocks. Loops, every paw, normalized/mixed weights, shaped/scaled death contact and preserved horizontal lunge are tested. Gameplay bounds/speeds/habitat unchanged. Production generator reads no reference geometry or pixels. Performance gates disabled; not a performance pass."
+    }
+  }
+}

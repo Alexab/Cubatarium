@@ -21,17 +21,27 @@ void CreatureBoneSkeletonCache::SetCreaturesRoot(const std::string &root)
   // again — drop them (aligned with CreatureGltfCache, audit V12).
   cache.clear();
   failedKeys.clear();
+  revision.fetch_add(1,std::memory_order_release);
+}
+
+void CreatureBoneSkeletonCache::Clear()
+{
+  std::lock_guard<std::mutex> lock(mutex);
+  cache.clear();failedKeys.clear();
+  revision.fetch_add(1,std::memory_order_release);
 }
 
 std::shared_ptr<const CreatureBoneSkeletonMeshAsset>
 CreatureBoneSkeletonCache::Load(const std::string &speciesId,
                               const std::string &geometryFile,
-                              const std::string &geometryId)
+                              const std::string &geometryId,
+                              const std::string &sourceDirectory)
 {
-  const std::filesystem::path geoPath =
-      std::filesystem::path(creaturesRoot) / speciesId / geometryFile;
-  const std::string cacheKey = geoPath.string() + "|" + geometryId;
   std::lock_guard<std::mutex> lock(mutex);
+  const std::filesystem::path geoPath =
+      (sourceDirectory.empty()?std::filesystem::path(creaturesRoot)/speciesId:
+                               std::filesystem::path(sourceDirectory))/geometryFile;
+  const std::string cacheKey = geoPath.lexically_normal().generic_string() + "|" + geometryId;
   if (failedKeys.count(cacheKey) != 0)
   {
     return nullptr;

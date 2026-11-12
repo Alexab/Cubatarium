@@ -1,0 +1,16 @@
+{
+  "scope": "actual-world fixed crop, diagnostic overlays retained; not phase aligned with baseline; not performance evidence",
+  "source_context": "current/context_current.json",
+  "frames": [
+    20,
+    25,
+    30,
+    35
+  ],
+  "crop": [
+    390,
+    215,
+    850,
+    510
+  ]
+}

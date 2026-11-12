@@ -1,0 +1,826 @@
+[
+  {
+    "elapsed_process_observation_seconds": 2.4094610000029206,
+    "pid": 7032,
+    "rss_bytes": 76804096,
+    "private_bytes": 104816640,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 31.0
+  },
+  {
+    "elapsed_process_observation_seconds": 2.6234657000750303,
+    "pid": 7032,
+    "rss_bytes": 117481472,
+    "private_bytes": 147881984,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 44.2
+  },
+  {
+    "elapsed_process_observation_seconds": 2.8440499000716954,
+    "pid": 7032,
+    "rss_bytes": 120217600,
+    "private_bytes": 150863872,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 35.7
+  },
+  {
+    "elapsed_process_observation_seconds": 3.064964300021529,
+    "pid": 7032,
+    "rss_bytes": 122978304,
+    "private_bytes": 153440256,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 38.5
+  },
+  {
+    "elapsed_process_observation_seconds": 3.2798195000505075,
+    "pid": 7032,
+    "rss_bytes": 127016960,
+    "private_bytes": 157589504,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 38.0
+  },
+  {
+    "elapsed_process_observation_seconds": 3.4946649000048637,
+    "pid": 7032,
+    "rss_bytes": 158404608,
+    "private_bytes": 191262720,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 38.4
+  },
+  {
+    "elapsed_process_observation_seconds": 3.7100206000031903,
+    "pid": 7032,
+    "rss_bytes": 150904832,
+    "private_bytes": 190287872,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 44.1
+  },
+  {
+    "elapsed_process_observation_seconds": 3.92567190004047,
+    "pid": 7032,
+    "rss_bytes": 168046592,
+    "private_bytes": 206233600,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 48.7
+  },
+  {
+    "elapsed_process_observation_seconds": 4.1409462000010535,
+    "pid": 7032,
+    "rss_bytes": 182239232,
+    "private_bytes": 219258880,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 53.3
+  },
+  {
+    "elapsed_process_observation_seconds": 4.357232500100508,
+    "pid": 7032,
+    "rss_bytes": 318439424,
+    "private_bytes": 360808448,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 62.5
+  },
+  {
+    "elapsed_process_observation_seconds": 4.574462300050072,
+    "pid": 7032,
+    "rss_bytes": 225460224,
+    "private_bytes": 265379840,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 32.7
+  },
+  {
+    "elapsed_process_observation_seconds": 4.792801900068298,
+    "pid": 7032,
+    "rss_bytes": 248963072,
+    "private_bytes": 309391360,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 44.6
+  },
+  {
+    "elapsed_process_observation_seconds": 5.0121551000047475,
+    "pid": 7032,
+    "rss_bytes": 266792960,
+    "private_bytes": 326799360,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 50.9
+  },
+  {
+    "elapsed_process_observation_seconds": 5.227187900105491,
+    "pid": 7032,
+    "rss_bytes": 271372288,
+    "private_bytes": 331624448,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 38.4
+  },
+  {
+    "elapsed_process_observation_seconds": 5.450016400078312,
+    "pid": 7032,
+    "rss_bytes": 271757312,
+    "private_bytes": 331698176,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 32.1
+  },
+  {
+    "elapsed_process_observation_seconds": 5.665973299997859,
+    "pid": 7032,
+    "rss_bytes": 272363520,
+    "private_bytes": 332599296,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 41.6
+  },
+  {
+    "elapsed_process_observation_seconds": 5.894281400018372,
+    "pid": 7032,
+    "rss_bytes": 417669120,
+    "private_bytes": 475258880,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 62.5
+  },
+  {
+    "elapsed_process_observation_seconds": 6.124049600097351,
+    "pid": 7032,
+    "rss_bytes": 461586432,
+    "private_bytes": 520822784,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 95.5
+  },
+  {
+    "elapsed_process_observation_seconds": 6.372970600030385,
+    "pid": 7032,
+    "rss_bytes": 460472320,
+    "private_bytes": 519254016,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 100.0
+  },
+  {
+    "elapsed_process_observation_seconds": 6.7457361000124365,
+    "pid": 7032,
+    "rss_bytes": 454873088,
+    "private_bytes": 512909312,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 100.0
+  },
+  {
+    "elapsed_process_observation_seconds": 7.18449250003323,
+    "pid": 7032,
+    "rss_bytes": 468262912,
+    "private_bytes": 531075072,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 91.5
+  },
+  {
+    "elapsed_process_observation_seconds": 7.654819600051269,
+    "pid": 7032,
+    "rss_bytes": 470798336,
+    "private_bytes": 536350720,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 100.0
+  },
+  {
+    "elapsed_process_observation_seconds": 7.998084400082007,
+    "pid": 7032,
+    "rss_bytes": 471289856,
+    "private_bytes": 535240704,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 100.0
+  },
+  {
+    "elapsed_process_observation_seconds": 8.400126400054432,
+    "pid": 7032,
+    "rss_bytes": 462536704,
+    "private_bytes": 526983168,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 98.4
+  },
+  {
+    "elapsed_process_observation_seconds": 8.619840900064446,
+    "pid": 7032,
+    "rss_bytes": 462974976,
+    "private_bytes": 527642624,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 84.8
+  },
+  {
+    "elapsed_process_observation_seconds": 8.854587500100024,
+    "pid": 7032,
+    "rss_bytes": 463147008,
+    "private_bytes": 527720448,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 95.9
+  },
+  {
+    "elapsed_process_observation_seconds": 9.095083600026555,
+    "pid": 7032,
+    "rss_bytes": 463224832,
+    "private_bytes": 527757312,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 94.6
+  },
+  {
+    "elapsed_process_observation_seconds": 9.32218370004557,
+    "pid": 7032,
+    "rss_bytes": 463298560,
+    "private_bytes": 527781888,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 89.3
+  },
+  {
+    "elapsed_process_observation_seconds": 9.55493420001585,
+    "pid": 7032,
+    "rss_bytes": 463360000,
+    "private_bytes": 527814656,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 86.7
+  },
+  {
+    "elapsed_process_observation_seconds": 9.77803110005334,
+    "pid": 7032,
+    "rss_bytes": 463486976,
+    "private_bytes": 528068608,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 90.3
+  },
+  {
+    "elapsed_process_observation_seconds": 9.997673200094141,
+    "pid": 7032,
+    "rss_bytes": 468135936,
+    "private_bytes": 532344832,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 88.4
+  },
+  {
+    "elapsed_process_observation_seconds": 10.218666900065728,
+    "pid": 7032,
+    "rss_bytes": 468328448,
+    "private_bytes": 532365312,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 95.0
+  },
+  {
+    "elapsed_process_observation_seconds": 10.447413600049913,
+    "pid": 7032,
+    "rss_bytes": 468455424,
+    "private_bytes": 532381696,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 92.0
+  },
+  {
+    "elapsed_process_observation_seconds": 10.66567560005933,
+    "pid": 7032,
+    "rss_bytes": 468492288,
+    "private_bytes": 532410368,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 89.4
+  },
+  {
+    "elapsed_process_observation_seconds": 10.908785200095735,
+    "pid": 7032,
+    "rss_bytes": 468545536,
+    "private_bytes": 532455424,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 89.4
+  },
+  {
+    "elapsed_process_observation_seconds": 11.159806200070307,
+    "pid": 7032,
+    "rss_bytes": 468631552,
+    "private_bytes": 532480000,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 91.1
+  },
+  {
+    "elapsed_process_observation_seconds": 11.38554050005041,
+    "pid": 7032,
+    "rss_bytes": 469245952,
+    "private_bytes": 533094400,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 92.5
+  },
+  {
+    "elapsed_process_observation_seconds": 11.610546000069007,
+    "pid": 7032,
+    "rss_bytes": 469229568,
+    "private_bytes": 533057536,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 79.8
+  },
+  {
+    "elapsed_process_observation_seconds": 11.843950900016353,
+    "pid": 7032,
+    "rss_bytes": 469405696,
+    "private_bytes": 533360640,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 94.0
+  },
+  {
+    "elapsed_process_observation_seconds": 12.069921700051054,
+    "pid": 7032,
+    "rss_bytes": 469970944,
+    "private_bytes": 533786624,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 88.3
+  },
+  {
+    "elapsed_process_observation_seconds": 12.293955100001767,
+    "pid": 7032,
+    "rss_bytes": 470224896,
+    "private_bytes": 533790720,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 93.8
+  },
+  {
+    "elapsed_process_observation_seconds": 12.513649800093845,
+    "pid": 7032,
+    "rss_bytes": 470245376,
+    "private_bytes": 533790720,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 86.8
+  },
+  {
+    "elapsed_process_observation_seconds": 12.755856500007212,
+    "pid": 7032,
+    "rss_bytes": 470822912,
+    "private_bytes": 533803008,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 89.8
+  },
+  {
+    "elapsed_process_observation_seconds": 12.973397299996577,
+    "pid": 7032,
+    "rss_bytes": 471035904,
+    "private_bytes": 534499328,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 94.6
+  },
+  {
+    "elapsed_process_observation_seconds": 13.191068800049834,
+    "pid": 7032,
+    "rss_bytes": 471060480,
+    "private_bytes": 534507520,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 89.3
+  },
+  {
+    "elapsed_process_observation_seconds": 13.424446500022896,
+    "pid": 7032,
+    "rss_bytes": 471089152,
+    "private_bytes": 534528000,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 93.3
+  },
+  {
+    "elapsed_process_observation_seconds": 13.662223000079393,
+    "pid": 7032,
+    "rss_bytes": 471093248,
+    "private_bytes": 534528000,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 93.3
+  },
+  {
+    "elapsed_process_observation_seconds": 13.899416300002486,
+    "pid": 7032,
+    "rss_bytes": 471109632,
+    "private_bytes": 534540288,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 95.0
+  },
+  {
+    "elapsed_process_observation_seconds": 14.1178985000588,
+    "pid": 7032,
+    "rss_bytes": 471179264,
+    "private_bytes": 534540288,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 85.7
+  },
+  {
+    "elapsed_process_observation_seconds": 14.349201000062749,
+    "pid": 7032,
+    "rss_bytes": 471183360,
+    "private_bytes": 534540288,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 94.2
+  },
+  {
+    "elapsed_process_observation_seconds": 14.570335100055672,
+    "pid": 7032,
+    "rss_bytes": 471191552,
+    "private_bytes": 534540288,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 87.5
+  },
+  {
+    "elapsed_process_observation_seconds": 14.79883730004076,
+    "pid": 7032,
+    "rss_bytes": 471199744,
+    "private_bytes": 534544384,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 98.3
+  },
+  {
+    "elapsed_process_observation_seconds": 15.022973700077273,
+    "pid": 7032,
+    "rss_bytes": 471269376,
+    "private_bytes": 534544384,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 92.9
+  },
+  {
+    "elapsed_process_observation_seconds": 15.243839500006288,
+    "pid": 7032,
+    "rss_bytes": 471269376,
+    "private_bytes": 534544384,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 95.6
+  },
+  {
+    "elapsed_process_observation_seconds": 15.462582600070164,
+    "pid": 7032,
+    "rss_bytes": 471269376,
+    "private_bytes": 534548480,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 90.3
+  },
+  {
+    "elapsed_process_observation_seconds": 15.687355000060052,
+    "pid": 7032,
+    "rss_bytes": 471289856,
+    "private_bytes": 534552576,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 87.5
+  },
+  {
+    "elapsed_process_observation_seconds": 15.906832100008614,
+    "pid": 7032,
+    "rss_bytes": 471293952,
+    "private_bytes": 534552576,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 66.1
+  },
+  {
+    "elapsed_process_observation_seconds": 16.1259621999925,
+    "pid": 7032,
+    "rss_bytes": 472387584,
+    "private_bytes": 535244800,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 82.1
+  },
+  {
+    "elapsed_process_observation_seconds": 16.347631800104864,
+    "pid": 7032,
+    "rss_bytes": 472399872,
+    "private_bytes": 535252992,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 76.7
+  },
+  {
+    "elapsed_process_observation_seconds": 16.566371700027958,
+    "pid": 7032,
+    "rss_bytes": 472412160,
+    "private_bytes": 535257088,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 74.1
+  },
+  {
+    "elapsed_process_observation_seconds": 16.784812500001863,
+    "pid": 7032,
+    "rss_bytes": 472551424,
+    "private_bytes": 535277568,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 75.9
+  },
+  {
+    "elapsed_process_observation_seconds": 17.00940080010332,
+    "pid": 7032,
+    "rss_bytes": 472629248,
+    "private_bytes": 535289856,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 86.7
+  },
+  {
+    "elapsed_process_observation_seconds": 17.238811400020495,
+    "pid": 7032,
+    "rss_bytes": 472678400,
+    "private_bytes": 536162304,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 79.5
+  },
+  {
+    "elapsed_process_observation_seconds": 17.457030400051735,
+    "pid": 7032,
+    "rss_bytes": 472698880,
+    "private_bytes": 536162304,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 87.7
+  },
+  {
+    "elapsed_process_observation_seconds": 17.675786800100468,
+    "pid": 7032,
+    "rss_bytes": 472702976,
+    "private_bytes": 536162304,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 90.1
+  },
+  {
+    "elapsed_process_observation_seconds": 17.896229700068943,
+    "pid": 7032,
+    "rss_bytes": 472715264,
+    "private_bytes": 536166400,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 85.1
+  },
+  {
+    "elapsed_process_observation_seconds": 18.125297700054944,
+    "pid": 7032,
+    "rss_bytes": 472788992,
+    "private_bytes": 536178688,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 81.6
+  },
+  {
+    "elapsed_process_observation_seconds": 18.351794800022617,
+    "pid": 7032,
+    "rss_bytes": 472788992,
+    "private_bytes": 536178688,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 82.2
+  },
+  {
+    "elapsed_process_observation_seconds": 18.575530900037847,
+    "pid": 7032,
+    "rss_bytes": 472793088,
+    "private_bytes": 536190976,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 75.9
+  },
+  {
+    "elapsed_process_observation_seconds": 18.796554300002754,
+    "pid": 7032,
+    "rss_bytes": 473849856,
+    "private_bytes": 536911872,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 57.0
+  },
+  {
+    "elapsed_process_observation_seconds": 19.022009600070305,
+    "pid": 7032,
+    "rss_bytes": 475246592,
+    "private_bytes": 536911872,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 63.4
+  },
+  {
+    "elapsed_process_observation_seconds": 19.24035790003836,
+    "pid": 7032,
+    "rss_bytes": 475332608,
+    "private_bytes": 536924160,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 74.8
+  },
+  {
+    "elapsed_process_observation_seconds": 19.46542650007177,
+    "pid": 7032,
+    "rss_bytes": 475369472,
+    "private_bytes": 536924160,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 76.1
+  },
+  {
+    "elapsed_process_observation_seconds": 19.68587889999617,
+    "pid": 7032,
+    "rss_bytes": 475512832,
+    "private_bytes": 536924160,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 83.9
+  },
+  {
+    "elapsed_process_observation_seconds": 19.905256400001235,
+    "pid": 7032,
+    "rss_bytes": 475521024,
+    "private_bytes": 536924160,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 85.7
+  },
+  {
+    "elapsed_process_observation_seconds": 20.122387400013395,
+    "pid": 7032,
+    "rss_bytes": 475725824,
+    "private_bytes": 536924160,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 90.3
+  },
+  {
+    "elapsed_process_observation_seconds": 20.340372600010596,
+    "pid": 7032,
+    "rss_bytes": 475725824,
+    "private_bytes": 536924160,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 83.0
+  },
+  {
+    "elapsed_process_observation_seconds": 20.560496899997815,
+    "pid": 7032,
+    "rss_bytes": 475725824,
+    "private_bytes": 536924160,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 74.1
+  },
+  {
+    "elapsed_process_observation_seconds": 20.78197920008097,
+    "pid": 7032,
+    "rss_bytes": 475750400,
+    "private_bytes": 536952832,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 62.3
+  },
+  {
+    "elapsed_process_observation_seconds": 21.00328480009921,
+    "pid": 7032,
+    "rss_bytes": 475922432,
+    "private_bytes": 536952832,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 49.2
+  },
+  {
+    "elapsed_process_observation_seconds": 21.227776000043377,
+    "pid": 7032,
+    "rss_bytes": 476000256,
+    "private_bytes": 536952832,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 60.2
+  },
+  {
+    "elapsed_process_observation_seconds": 21.45465970004443,
+    "pid": 7032,
+    "rss_bytes": 476078080,
+    "private_bytes": 537939968,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 72.6
+  },
+  {
+    "elapsed_process_observation_seconds": 21.674490200006403,
+    "pid": 7032,
+    "rss_bytes": 476348416,
+    "private_bytes": 537939968,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 52.5
+  },
+  {
+    "elapsed_process_observation_seconds": 21.891561900032684,
+    "pid": 7032,
+    "rss_bytes": 480583680,
+    "private_bytes": 540946432,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 91.9
+  },
+  {
+    "elapsed_process_observation_seconds": 22.113863400067203,
+    "pid": 7032,
+    "rss_bytes": 476094464,
+    "private_bytes": 536219648,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 78.1
+  },
+  {
+    "elapsed_process_observation_seconds": 22.339953100075945,
+    "pid": 7032,
+    "rss_bytes": 476090368,
+    "private_bytes": 536231936,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 78.2
+  },
+  {
+    "elapsed_process_observation_seconds": 22.58029459998943,
+    "pid": 7032,
+    "rss_bytes": 476241920,
+    "private_bytes": 536367104,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 86.8
+  },
+  {
+    "elapsed_process_observation_seconds": 22.799327000044286,
+    "pid": 7032,
+    "rss_bytes": 476274688,
+    "private_bytes": 536379392,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 75.9
+  },
+  {
+    "elapsed_process_observation_seconds": 23.017050500027835,
+    "pid": 7032,
+    "rss_bytes": 476282880,
+    "private_bytes": 536403968,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 86.6
+  },
+  {
+    "elapsed_process_observation_seconds": 23.24253440008033,
+    "pid": 7032,
+    "rss_bytes": 476368896,
+    "private_bytes": 536403968,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 69.6
+  },
+  {
+    "elapsed_process_observation_seconds": 23.458072300069034,
+    "pid": 7032,
+    "rss_bytes": 477437952,
+    "private_bytes": 537460736,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 73.2
+  },
+  {
+    "elapsed_process_observation_seconds": 23.67587989999447,
+    "pid": 7032,
+    "rss_bytes": 477474816,
+    "private_bytes": 537473024,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 68.5
+  },
+  {
+    "elapsed_process_observation_seconds": 23.897369700018317,
+    "pid": 7032,
+    "rss_bytes": 477507584,
+    "private_bytes": 537473024,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 54.9
+  },
+  {
+    "elapsed_process_observation_seconds": 24.123227900010534,
+    "pid": 7032,
+    "rss_bytes": 481783808,
+    "private_bytes": 541675520,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 60.2
+  },
+  {
+    "elapsed_process_observation_seconds": 24.342246600077488,
+    "pid": 7032,
+    "rss_bytes": 482144256,
+    "private_bytes": 542330880,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 67.0
+  },
+  {
+    "elapsed_process_observation_seconds": 24.56086349999532,
+    "pid": 7032,
+    "rss_bytes": 484401152,
+    "private_bytes": 544448512,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 69.9
+  },
+  {
+    "elapsed_process_observation_seconds": 24.776552300085314,
+    "pid": 7032,
+    "rss_bytes": 484413440,
+    "private_bytes": 544448512,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 72.6
+  },
+  {
+    "elapsed_process_observation_seconds": 24.993684100103565,
+    "pid": 7032,
+    "rss_bytes": 484548608,
+    "private_bytes": 544448512,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 50.9
+  },
+  {
+    "elapsed_process_observation_seconds": 25.213597399997525,
+    "pid": 7032,
+    "rss_bytes": 484634624,
+    "private_bytes": 544448512,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 69.6
+  },
+  {
+    "elapsed_process_observation_seconds": 25.434699000092223,
+    "pid": 7032,
+    "rss_bytes": 485167104,
+    "private_bytes": 544976896,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 65.5
+  },
+  {
+    "elapsed_process_observation_seconds": 25.653242000029422,
+    "pid": 7032,
+    "rss_bytes": 485232640,
+    "private_bytes": 544976896,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 48.7
+  },
+  {
+    "elapsed_process_observation_seconds": 25.8804017000366,
+    "pid": 7032,
+    "rss_bytes": 485298176,
+    "private_bytes": 544976896,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 66.9
+  },
+  {
+    "elapsed_process_observation_seconds": 26.12192020006478,
+    "pid": 7032,
+    "rss_bytes": 490119168,
+    "private_bytes": 549208064,
+    "app_cpu_percent_one_core_units": 0.0,
+    "host_cpu_percent": 32.8
+  }
+]

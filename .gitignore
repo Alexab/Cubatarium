@@ -190,3 +190,40 @@ tools/debug_uv_overlays/
 /models/blocks/
 /textures/
 *.log
+
+# Archived creature research runs: bulk generated captures and intermediate exports.
+# Release reports, review inputs and sheets already committed remain tracked.
+# Keep future research in a new run directory; use git add -f for selected new evidence here.
+/docs/research/creature-aquatic-aerial-pilots-v2/
+/docs/research/creature-aquatic-fish-v2/
+/docs/research/creature-arboreal-v2/
+/docs/research/creature-bone-aquatic-v2/
+/docs/research/creature-bone-coats-v2/
+/docs/research/creature-bone-humanoids-v2/
+/docs/research/creature-bone-small-v2/
+/docs/research/creature-bone-spider-v2/
+/docs/research/creature-bone-tortoise-v2/
+/docs/research/creature-crystal-lava-v2/
+/docs/research/creature-crystal-v2/
+/docs/research/creature-elemental-bipeds-v2/
+/docs/research/creature-fidelity-pilots-v2/
+/docs/research/creature-forward-birds-v2/
+/docs/research/creature-gltf-birds-v2/
+/docs/research/creature-gltf-medium-v2/
+/docs/research/creature-gltf-side-uv-v2/
+/docs/research/creature-gltf-small-v2/
+/docs/research/creature-guardians-v2/
+/docs/research/creature-hermitcrab-stress-v2/
+/docs/research/creature-humanoid-pilots-v2/
+/docs/research/creature-large-aquatic-v2/
+/docs/research/creature-marine-invertebrates-v2/
+/docs/research/creature-marine-mammals-v2/
+/docs/research/creature-monster-baseline-v2/
+/docs/research/creature-puffin-wasp-v2/
+/docs/research/creature-r6-v2/
+/docs/research/creature-review-2026-11-10/
+/docs/research/creature-timebox-2026-11-12/
+/docs/research/creature-warriors-v2/
+
+# Local Windows installer diagnostic output.
+/packaging/windows/installer/stall_log.txt

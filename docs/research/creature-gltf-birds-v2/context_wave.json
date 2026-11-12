@@ -1,0 +1,30 @@
+{
+  "captured_at_utc": "2026-11-10T18:56:16.697311+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_birds_v2\\models",
+  "files_sha256": {
+    "creatures\\penguin\\creature.json": "b951a645e9fd9b882e8486c25e0289f8223b39916c08f6986ddbb207ee684df1",
+    "creatures\\penguin\\LICENSE.txt": "21600c3265b05b98b1a92d4ffaa3ec9508a0b621eb46cf0ee60c5018d1ae5158",
+    "creatures\\penguin\\manifest.json": "b09df4230474ca60f3298008e431ed1b6f73bfc80bb4cfaf74ce9c0e22bb3ccf",
+    "creatures\\penguin\\model.bin": "9777f7a114abdc7fef379c69968735fd0c329c43e61e247e8ad891b10ca50ac9",
+    "creatures\\penguin\\model.gltf": "54185405177575fbcc568a5d4d3b0db24a6183e09d9e3229ea4edc5fa149fa73",
+    "creatures\\penguin\\textures\\body.png": "c1a4c84fdc6918f774928e2c1a4bdf4a3f86c8e8ce328449e7c4aa72c7ee82d6",
+    "creatures\\penguin\\textures\\icon.png": "97c89d20fabb5c8bf0ed1dc4337a64c85a345215b465bd1d785953a255e41b50",
+    "creatures\\owl\\creature.json": "ba85554d5bcc13fb48637023d50b57f906a39ca60568c114288777bad830533e",
+    "creatures\\owl\\LICENSE.txt": "14a483c3dd435eb955afab28e12fe3c87e58ad51c91677655b08a40ed92497d5",
+    "creatures\\owl\\manifest.json": "2bf5904df1ff48ccbba6e0132f4e6d7662754fbbb79edbddfa4709d25d74af6e",
+    "creatures\\owl\\model.bin": "f3b2434d1a852774eb0ed1acccce76c977c144e20ab5481c718e3b50f6dddaf3",
+    "creatures\\owl\\model.gltf": "7af2a3d558769f263c43406e1f53526ea45769380fbc56c26f9c321000248cce",
+    "creatures\\owl\\textures\\body.png": "ee388d35270a654860a3ddb559574177e24d39c7f5accf5c5ac48c447b3b5c4a",
+    "creatures\\owl\\textures\\icon.png": "de8e84eab13314e16f9fef1d1dd21f3508e79dd6e7702403bc7f0385b7dbff6a"
+  },
+  "exe_sha256": "3ded024cb68cf4b9c11b59289f85a0fb308acca542ac03e750d154e100d7358a",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "wave",
+  "qa_camera": "grid",
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

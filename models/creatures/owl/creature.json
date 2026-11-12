@@ -59,7 +59,7 @@
     "texture_layout": "rigid_crop",
     "default_texture": "body",
     "icon": {
-      "mode": "species_texture",
+      "mode": "parts_preview",
       "color": [
         0.5,
         0.4,
@@ -70,13 +70,10 @@
     "gltf": {
       "model": "model.gltf",
       "textures": [
-        "body",
-        "face",
-        "leg",
-        "wing"
+        "body"
       ],
-      "model_scale": 1.0,
-      "model_yaw_offset_deg": 0
+      "model_scale": 0.95,
+      "model_yaw_offset_deg": 180
     },
     "animation": {
       "walk_cycle_hz": 2.0,
@@ -85,13 +82,26 @@
           "start": 1,
           "end": 50,
           "loop": true,
-          "speed": 0.06666666666666667
+          "speed": 1,
+          "ground_distance_per_cycle": 0.528
         },
         "idle": {
           "start": 1,
           "end": 50,
           "loop": true,
-          "speed": 0.06666666666666667
+          "speed": 1
+        },
+        "fly": {
+          "start": 0,
+          "end": 1,
+          "loop": true,
+          "speed": 1
+        },
+        "glide": {
+          "start": 0,
+          "end": 1,
+          "loop": true,
+          "speed": 1
         }
       },
       "state_map": {
@@ -104,11 +114,11 @@
         "Slither": "walk",
         "Coil": "idle",
         "Action": "walk",
-        "Hover": "idle",
-        "Glide": "idle",
+        "Hover": "fly",
+        "Glide": "glide",
         "Swim": "walk",
         "Tread": "idle",
-        "Fly": "idle"
+        "Fly": "fly"
       }
     }
   }

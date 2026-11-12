@@ -1,0 +1,23 @@
+{
+  "captured_at_utc": "2026-11-10T19:23:00.413580+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_forward_birds_v2\\models",
+  "files_sha256": {
+    "creatures\\penguin\\creature.json": "3d175d036833d74657173bf4cedf704f6002179280008be352a84568305d5d83",
+    "creatures\\penguin\\LICENSE.txt": "21600c3265b05b98b1a92d4ffaa3ec9508a0b621eb46cf0ee60c5018d1ae5158",
+    "creatures\\penguin\\manifest.json": "e11c0047c51c7232e0332964d7356066ae9f9695b0b88bed7bbc847151d1f492",
+    "creatures\\penguin\\model.bin": "775cc133e74874fd294afab3c01202924171ab3f94b0df252e61ad5a1c1de686",
+    "creatures\\penguin\\model.gltf": "54185405177575fbcc568a5d4d3b0db24a6183e09d9e3229ea4edc5fa149fa73",
+    "creatures\\penguin\\textures\\body.png": "fa5e85d275633e17fbf1e53072063e9e297617e43abc9297f25d5a8915a86a4e",
+    "creatures\\penguin\\textures\\icon.png": "e6ec4601fc818a3ba012843503b475000a35fbbfc2669ac07231c1026f657182"
+  },
+  "exe_sha256": "748cdc56661f2661cd8aa806321173d9370bb2017bdc9990716a287ce8993a99",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "close_penguin",
+  "qa_camera": "close",
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

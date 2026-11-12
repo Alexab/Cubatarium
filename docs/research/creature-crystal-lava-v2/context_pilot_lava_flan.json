@@ -1,0 +1,27 @@
+{
+  "captured_at_utc": "2026-11-11T01:12:26.019686+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_crystal_lava_v2\\models",
+  "files_sha256": {
+    "creatures\\lava_flan\\creature.json": "03a82bce7e3d682c4215db883410ef398303f64b0deae7396362136b45dce151",
+    "creatures\\lava_flan\\LICENSE.txt": "86f3dd813a29614b4a0bfbddc18fba9e009edd9e2e7c28de179b655ae89b4e16",
+    "creatures\\lava_flan\\manifest.json": "732c6ea1525074f7cc60038f12ebce0cb66e532870764818e4169e32f876f824",
+    "creatures\\lava_flan\\model.bin": "fca8f2278515a1f6c75e6f8770d2d8ff6cb196d36dc58b639e67c97193246fb0",
+    "creatures\\lava_flan\\model.gltf": "d3c795888ec55b8e81b464a11fafd920990dc9cd9707cced084a457f362062b4",
+    "creatures\\lava_flan\\textures\\body.png": "2e44942ab06d145dad577d0d1f48d6d7e0551a05bba54ad06ed8a1e291ee839a",
+    "creatures\\lava_flan\\textures\\icon.png": "a2ae4dde46e75b154b779bcad133275f9e8ed196a0b3eabf8262646bc70cd876"
+  },
+  "qa_models_override": true,
+  "exe_sha256": "6e3a02162ef721ed03b6f7026c20c9759e3a888b2d7b5dcd07f61ca367160c06",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "pilot_lava_flan",
+  "qa_camera": "close",
+  "qa_water_placement": false,
+  "qa_lava_fixture": true,
+  "world": "CreatureQaLava_254",
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

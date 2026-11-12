@@ -1,0 +1,717 @@
+{
+  "schema": "creature-native-envelope-profile.v1",
+  "resources": {
+    "oerkki": {
+      "framing_low": [
+        -0.471526055353105,
+        -0.05000005861276398,
+        -0.643714713480648
+      ],
+      "framing_high": [
+        0.4715260553531048,
+        1.95,
+        1.0773430233713337
+      ],
+      "collision": [
+        0.8,
+        1.9,
+        0.33
+      ],
+      "frames": [
+        {
+          "state": "Idle",
+          "phase": 0.0,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.0,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.0,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.25,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.25,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.25,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.5,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.5,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.5,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.75,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.75,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.75,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.0,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.0,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.0,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.03125,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.03125,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.03125,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.25,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.25,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.25,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.34375,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.34375,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.34375,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.5,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.5,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.5,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.75,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.75,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.75,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Run",
+          "phase": 0.0,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "run",
+            "current": "run"
+          }
+        },
+        {
+          "state": "Run",
+          "phase": 0.0,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "run",
+            "current": "run"
+          }
+        },
+        {
+          "state": "Run",
+          "phase": 0.0,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "run",
+            "current": "run"
+          }
+        },
+        {
+          "state": "Run",
+          "phase": 0.03125,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "run",
+            "current": "run"
+          }
+        },
+        {
+          "state": "Run",
+          "phase": 0.03125,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "run",
+            "current": "run"
+          }
+        },
+        {
+          "state": "Run",
+          "phase": 0.03125,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "run",
+            "current": "run"
+          }
+        },
+        {
+          "state": "Run",
+          "phase": 0.25,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "run",
+            "current": "run"
+          }
+        },
+        {
+          "state": "Run",
+          "phase": 0.25,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "run",
+            "current": "run"
+          }
+        },
+        {
+          "state": "Run",
+          "phase": 0.25,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "run",
+            "current": "run"
+          }
+        },
+        {
+          "state": "Run",
+          "phase": 0.3515625,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "run",
+            "current": "run"
+          }
+        },
+        {
+          "state": "Run",
+          "phase": 0.3515625,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "run",
+            "current": "run"
+          }
+        },
+        {
+          "state": "Run",
+          "phase": 0.3515625,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "run",
+            "current": "run"
+          }
+        },
+        {
+          "state": "Run",
+          "phase": 0.5,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "run",
+            "current": "run"
+          }
+        },
+        {
+          "state": "Run",
+          "phase": 0.5,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "run",
+            "current": "run"
+          }
+        },
+        {
+          "state": "Run",
+          "phase": 0.5,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "run",
+            "current": "run"
+          }
+        },
+        {
+          "state": "Run",
+          "phase": 0.75,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "run",
+            "current": "run"
+          }
+        },
+        {
+          "state": "Run",
+          "phase": 0.75,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "run",
+            "current": "run"
+          }
+        },
+        {
+          "state": "Run",
+          "phase": 0.75,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "run",
+            "current": "run"
+          }
+        },
+        {
+          "state": "Action",
+          "phase": 0.0,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "punch",
+            "current": "punch"
+          }
+        },
+        {
+          "state": "Action",
+          "phase": 0.0,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "punch",
+            "current": "punch"
+          }
+        },
+        {
+          "state": "Action",
+          "phase": 0.0,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "punch",
+            "current": "punch"
+          }
+        },
+        {
+          "state": "Action",
+          "phase": 0.2421875,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "punch",
+            "current": "punch"
+          }
+        },
+        {
+          "state": "Action",
+          "phase": 0.2421875,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "punch",
+            "current": "punch"
+          }
+        },
+        {
+          "state": "Action",
+          "phase": 0.2421875,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "punch",
+            "current": "punch"
+          }
+        },
+        {
+          "state": "Action",
+          "phase": 0.25,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "punch",
+            "current": "punch"
+          }
+        },
+        {
+          "state": "Action",
+          "phase": 0.25,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "punch",
+            "current": "punch"
+          }
+        },
+        {
+          "state": "Action",
+          "phase": 0.25,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "punch",
+            "current": "punch"
+          }
+        },
+        {
+          "state": "Action",
+          "phase": 0.5,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "punch",
+            "current": "punch"
+          }
+        },
+        {
+          "state": "Action",
+          "phase": 0.5,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "punch",
+            "current": "punch"
+          }
+        },
+        {
+          "state": "Action",
+          "phase": 0.5,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "punch",
+            "current": "punch"
+          }
+        },
+        {
+          "state": "Action",
+          "phase": 0.75,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "punch",
+            "current": "punch"
+          }
+        },
+        {
+          "state": "Action",
+          "phase": 0.75,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "punch",
+            "current": "punch"
+          }
+        },
+        {
+          "state": "Action",
+          "phase": 0.75,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "punch",
+            "current": "punch"
+          }
+        }
+      ]
+    }
+  }
+}

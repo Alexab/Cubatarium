@@ -1,0 +1,55 @@
+{
+  "captured_at_utc": "2026-11-11T22:54:51.628778+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\review_2026_11_10\\baseline\\models",
+  "files_sha256": {
+    "creatures\\lobster\\creature.json": "5c83d865d7bec58d37cf1fb2c36ecbd5cd9e82e20a49afb29782cb146ebcb021",
+    "creatures\\lobster\\LICENSE.txt": "c497d1aa69427ca3e450de2dd15970f56a9b9a8ef22c6616bd816af65ac0cee6",
+    "creatures\\lobster\\model.bin": "90f9f17c096bdaf8b19a9dc56d06ba4b9b710aafc0afb5e326d0d0cdff2d4fdf",
+    "creatures\\lobster\\model.gltf": "369dbac672ea786c3fd4b54a9511ebac11c7811ae790abb2b580ca1cfb1c028a",
+    "creatures\\lobster\\textures\\body.png": "75f5bbea176d153c5fa9b4a4eb5925b13b6ac7dcff4a70f1c546f52005762507",
+    "creatures\\lobster\\textures\\claw_l.png": "cc3fcd49e05eed38800383f9682ec251b1fbc40d5e38060de9c5183593bf9e7b",
+    "creatures\\lobster\\textures\\claw_r.png": "cc3fcd49e05eed38800383f9682ec251b1fbc40d5e38060de9c5183593bf9e7b",
+    "creatures\\lobster\\textures\\face.png": "cc3fcd49e05eed38800383f9682ec251b1fbc40d5e38060de9c5183593bf9e7b",
+    "creatures\\lobster\\textures\\icon.png": "8a39930c52d2a72b4fcedff51044a592caa982204f3fd8ad3e86edc10caf6962",
+    "creatures\\lobster\\textures\\leg.png": "3a3be2172fe33f6acbb0a0513e00c0234cae8c619a7efc9959c3c6d5e36aa87b"
+  },
+  "qa_models_override": true,
+  "exe_sha256": "a0872e87a1551dbe7ac0cff1346b58176743d18eba13817cb7779473415df68f",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "envelope_original",
+  "qa_camera": "close",
+  "native_matrix": false,
+  "native_equipment_matrix": false,
+  "native_equipment_texture_probe": false,
+  "native_resource_cache_probe": false,
+  "native_resource_reload_probe": false,
+  "native_fp_matrix": false,
+  "native_save_probe": false,
+  "native_envelope_variant": "baseline",
+  "native_transition_probe": false,
+  "native_fluid_transition_probe": false,
+  "world_motion": null,
+  "world_seconds": 8.0,
+  "world_capture_interval_seconds": 3.0,
+  "native_posed_culling_probe": false,
+  "envelope_profile_sha256": "a968628df4c2e9fdfd12661bb3040ab65e1088138ca708ce30a1726c21ae2266",
+  "fp_shaders_sha256": {},
+  "equipment_material": "copper",
+  "world_gear_fixture": false,
+  "equipment_files_sha256": {},
+  "world_species": [
+    "lobster"
+  ],
+  "preview_species": [
+    "lobster"
+  ],
+  "qa_water_placement": true,
+  "qa_lava_fixture": false,
+  "world": "World_254",
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

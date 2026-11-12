@@ -1,0 +1,49 @@
+{
+  "reviewer": "Codex direct native images inspection",
+  "date": "2026-11-12",
+  "decision": "assisted_R5_revision_accepted_and_published",
+  "r6_state": "pending",
+  "scope": "Directly inspected three original/before/v3 sheets, three full-turn sheets and three full-size world images plus contact sheet. This is not direct review of all5290 regression images or full R6 acceptance.",
+  "artifacts": [
+    {
+      "path": "threeway_idle.png",
+      "sha256": "b1d3845f5545e917b33b054445cb1743a4f57539fa540cd5b5afd05bf56fd5c2"
+    },
+    {
+      "path": "threeway_walk.png",
+      "sha256": "76be3d2d5020b40f6494217485e60904f917481a7de6ab07c0d03b004211017e"
+    },
+    {
+      "path": "threeway_action.png",
+      "sha256": "bd7227c5d2cd6c23a01a1abc2dd78b39f2bdbd6ec5c8e641bee16b27eb8b0193"
+    },
+    {
+      "path": "fullturn_0.png",
+      "sha256": "3707dd6f2bf5d531d3e8206beda751a349218d7bc73cbdb01e7371191a456929"
+    },
+    {
+      "path": "fullturn_1.png",
+      "sha256": "d9ce4d86d2dd53c311c5d26e40fe39580a9df87e9fe6f3fb6b7209d288296795"
+    },
+    {
+      "path": "fullturn_2.png",
+      "sha256": "5c1692826951d688cb650c90b552e5982e4029c9442b176a389bc1bd403cb6ea"
+    },
+    {
+      "path": "world_contact_sheet.png",
+      "sha256": "c73d8c1f86fc8d7e51286bf670c1fbf1f2aa47eb46d8ecfa919bb80a00eeb5dc"
+    },
+    {
+      "path": "runtime_envelope_current/frame_008.png",
+      "sha256": "c65c23e1955721d24c2b93ecabe15a4918c869e0f4d8f0bf7e0baee7d09bb02e"
+    },
+    {
+      "path": "world_tread/runtime_tread_candidate/frame_008.png",
+      "sha256": "88b90217937c55241097d9b3102d72f00892a5b0280b59ef2178a822e2b44a51"
+    },
+    {
+      "path": "world_published/runtime_tread_published/frame_008.png",
+      "sha256": "07fe00278196c584bfff532d9f1b941f9f9b71cd9a496cc5badcde947c9dfd7e"
+    }
+  ]
+}

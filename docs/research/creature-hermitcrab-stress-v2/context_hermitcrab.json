@@ -1,0 +1,21 @@
+{
+  "captured_at_utc": "2026-11-10T14:44:42.134005+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\hermitcrab_v2\\models",
+  "files_sha256": {
+    "creatures\\hermitcrab\\creature.json": "f65496a6de4bae0076fec677803546a9c628e63cfa23d05793ab62ccc288add7",
+    "creatures\\hermitcrab\\LICENSE.txt": "222efa5c1c78010397dca23ff23bb21d900529503d7dec27e05185781214d05a",
+    "creatures\\hermitcrab\\manifest.json": "95fdb3066c71ad964fcc90951ec14f3586f7912982fadaee750acf0c64933c08",
+    "creatures\\hermitcrab\\model.bin": "e00f0e3b89552ff0a59f2cabeefa5e83b2dd0f6f823f75de45405d6942cb467c",
+    "creatures\\hermitcrab\\model.gltf": "aa73980a6546eb65c36c4293ef7838bfc6d22f18dea3337e2e8c4d34551b2007",
+    "creatures\\hermitcrab\\textures\\body.png": "c94270af8e710934020f1efbf3cd23403452fd9ee0584f9fdf8e5e0732fea959",
+    "creatures\\hermitcrab\\textures\\icon.png": "5910534f41babe0c311d58c077064400975dabe9a26947fd1d4c51c98e805782"
+  },
+  "exe_sha256": "a3361df098856896e7598c8640b6a9317cd35959b991a7a4c5fa38a06639a26c",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "hermitcrab",
+  "performance_gate": "disabled"
+}

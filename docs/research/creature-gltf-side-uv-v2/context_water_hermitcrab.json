@@ -1,0 +1,24 @@
+{
+  "captured_at_utc": "2026-11-10T20:34:47.269498+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_aquatic_fish_v2\\models",
+  "files_sha256": {
+    "creatures\\hermitcrab\\creature.json": "f65496a6de4bae0076fec677803546a9c628e63cfa23d05793ab62ccc288add7",
+    "creatures\\hermitcrab\\LICENSE.txt": "222efa5c1c78010397dca23ff23bb21d900529503d7dec27e05185781214d05a",
+    "creatures\\hermitcrab\\manifest.json": "3eeb10351b7adf0d9ccce05cfc8bee5cd0647281f1eacaecb8d309983614b219",
+    "creatures\\hermitcrab\\model.bin": "398ffc642985b18821693856ddd58e6af8919974abac8931366058185e3be274",
+    "creatures\\hermitcrab\\model.gltf": "aa73980a6546eb65c36c4293ef7838bfc6d22f18dea3337e2e8c4d34551b2007",
+    "creatures\\hermitcrab\\textures\\body.png": "c94270af8e710934020f1efbf3cd23403452fd9ee0584f9fdf8e5e0732fea959",
+    "creatures\\hermitcrab\\textures\\icon.png": "5910534f41babe0c311d58c077064400975dabe9a26947fd1d4c51c98e805782"
+  },
+  "exe_sha256": "0c2f544b61042e0498e927a37c88793e72530e58d8b4acaaff1eb90e2561dac9",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "water_hermitcrab",
+  "qa_camera": "grid",
+  "qa_water_placement": true,
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

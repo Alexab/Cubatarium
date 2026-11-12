@@ -1,0 +1,121 @@
+{
+  "shark": {
+    "baseline": {
+      "palette_joints": 27,
+      "weighted_joints": 13,
+      "weighted_and_directly_animated": 13,
+      "weighted_global_node_ids": [
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27
+      ],
+      "clips": [
+        "walk",
+        "fly",
+        "punch",
+        "die",
+        "idle"
+      ]
+    },
+    "candidate": {
+      "palette_joints": 20,
+      "weighted_joints": 20,
+      "weighted_and_directly_animated": 14,
+      "weighted_global_node_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "punch",
+        "fly",
+        "die"
+      ]
+    }
+  },
+  "seahorse": {
+    "baseline": {
+      "palette_joints": 22,
+      "weighted_joints": 13,
+      "weighted_and_directly_animated": 8,
+      "weighted_global_node_ids": [
+        3,
+        5,
+        7,
+        8,
+        9,
+        10,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        22
+      ],
+      "clips": [
+        "idle",
+        "fly",
+        "die"
+      ]
+    },
+    "candidate": {
+      "palette_joints": 17,
+      "weighted_joints": 17,
+      "weighted_and_directly_animated": 16,
+      "weighted_global_node_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "clips": [
+        "idle",
+        "fly",
+        "die"
+      ]
+    }
+  }
+}

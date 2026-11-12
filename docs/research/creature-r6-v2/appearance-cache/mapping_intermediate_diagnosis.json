@@ -1,0 +1,21 @@
+{
+  "schema": "creature-mapping-intermediate-diagnosis.v1",
+  "context": "context_mapping_catalog.json",
+  "probe_sha256": "05e45fca9d7dd5dc31157ce2f69e95c0b9978eeec70d83640b187174d643cfe0",
+  "cases": 297,
+  "failed": 104,
+  "bone_oracle_cardinality_errors": 102,
+  "actual_sprite_mapping_failures": [
+    [
+      "fire_spirit",
+      "mapped"
+    ],
+    [
+      "fire_spirit",
+      "direct_key"
+    ]
+  ],
+  "all_geometry_submissions_unchanged": true,
+  "gpu_readbacks_passed": 891,
+  "scope": "Historical failed diagnostic, not current acceptance"
+}

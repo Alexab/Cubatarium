@@ -1,0 +1,43 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "Explicit assisted R5 own orc multi-stride body sway; not full R6/user approval",
+  "r6_state": "pending",
+  "species": {
+    "orc": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct three native reference/own-before/candidate sheets,3 full-turn sheets and ordinary world image; independent equal-elapsed-time limb audit",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "ec4c90bcfffdb48eb399adbdfaaafe08bb8851c17d3bc535c3e1942c1a6c8a54",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "threeway_walk.png",
+          "sha256": "cdb7125fc2175e38936311c82fe26dcc6b07e095742c4767292cd700f41ac4d6"
+        },
+        "motion": {
+          "path": "fullturn_1.png",
+          "sha256": "6a1f08598f7943e100840b85a685fdea2c0e817cb7fb2fa11a9a444a89bf1a1e"
+        },
+        "runtime": {
+          "path": "runtime_envelope_current/frame_002.png",
+          "sha256": "473fe26d161ea8bee301584f4e371edcb4019ca7aa30726855d902d49616a2aa"
+        },
+        "ui": {
+          "path": "fullturn_0.png",
+          "sha256": "7ec908074de9f2115aa4b2ce1fa8016c121c7061e7a284be589ba6fa228641d3"
+        }
+      },
+      "notes": "Restore slow heavy body sway20deg Walk/24deg Run on own articulated rig. Macroloops4/3 strides preserve old limb local timing and frequency (max sampled quaternion error<0.000072deg). Sway periods2.542/2.621s at unit travel, reference2.4s. Mesh/UV/indices/nodes/IBM/weights/textures/definition exact; Idle/Action22 samplers exact and30 envelope PNG exact. Root Y regenerated full skinned-mesh contact, C0 loop closure and2156 native transition frames pass. Original source vertices100% one joint; that deficient binding was not copied.",
+      "skin_scope": "No authored compatible orc skins; native preview/UI body uses unchanged own material.",
+      "limits": "R5 assistant review only. World-space limb paths intentionally change with body sway/root lift; terrain/stance/stride/sliding/AI/continuous fades/control/equipment-G/performance/package R6 open. Gait period differs from slow reference while preserving existing own limb frequency. BIN131400 to313200 bytes; animation memory/load/runtime cost requires matched p95/memory gate. Failed B-only world gear fixture was not accepted."
+    }
+  }
+}

@@ -14,18 +14,62 @@
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonModelSpace.h"
 #include "Game/Inventory/InventoryTypes.h"
 #include "Pose/BoneSkeleton/BoneSkeletonPoseEngine.h"
+#include "Pose/BoneSkeleton/SkeletalAnimationProfiles.h"
 #include "Render/Engine/GeometryEngine.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
+#include <limits>
 
 namespace cutum
 {
 
 UCreatureVisualBoneSkeleton::~UCreatureVisualBoneSkeleton() = default;
 
+bool UCreatureVisualBoneSkeleton::GetWorldBoneTransform(
+    const std::string &name, glm::mat4 &out) const
+{
+  if (!MeshAsset) return false;
+  const auto bone = MeshAsset->geometry.boneIndexByName.find(name);
+  if (bone == MeshAsset->geometry.boneIndexByName.end() ||
+      bone->second >= CachedBoneMatrices.size()) return false;
+  const glm::mat4 root = BuildCreatureRootMatrix(BodyOrigin, BodyYawDeg, 0.f,
+      []() { return BoneSkeletonEntityConventionMatrix(); });
+  out = root * CachedBoneMatrices[bone->second];
+  return true;
+}
+
 std::unique_ptr<IUCreatureVisual> CreateCreatureVisualBoneSkeleton()
 {
   return std::make_unique<UCreatureVisualBoneSkeleton>();
+}
+
+bool UCreatureVisualBoneSkeleton::GetBoneLocalBounds(
+    const std::string &name, glm::vec3 &low, glm::vec3 &high) const
+{
+  if (!MeshAsset || !Hierarchy) return false;
+  if (const auto cached=AttachmentBounds.find(name);cached!=AttachmentBounds.end())
+  { low=cached->second.first;high=cached->second.second;return true; }
+  const auto anchor=MeshAsset->geometry.boneIndexByName.find(name);
+  if (anchor==MeshAsset->geometry.boneIndexByName.end()) return false;
+  size_t source=anchor->second;
+  while (MeshAsset->boneMeshes[source].cubes.empty())
+  {
+    const auto parent=MeshAsset->geometry.boneIndexByName.find(MeshAsset->geometry.bones[source].parent);
+    if (parent==MeshAsset->geometry.boneIndexByName.end()) return false;
+    source=parent->second;
+  }
+  const BoneSkeletonPose rest;
+  const glm::mat4 intoAnchor=glm::inverse(Hierarchy->ComputeBoneMatrix(anchor->second,rest)) *
+      Hierarchy->ComputeBoneMatrix(source,rest);
+  low=glm::vec3(std::numeric_limits<float>::max());high=-low;bool any=false;
+  for (const auto &cube:MeshAsset->boneMeshes[source].cubes)
+  {
+    const auto matrix=intoAnchor*cube.restLocalMatrix;const auto &v=cube.interleavedPosUv;
+    for(size_t i=0;i+4<v.size();i+=5)
+    { const glm::vec3 point(matrix*glm::vec4(v[i],v[i+1],v[i+2],1.f));low=glm::min(low,point);high=glm::max(high,point);any=true; }
+  }
+  if(any) AttachmentBounds.emplace(name,std::make_pair(low,high));
+  return any;
 }
 
 void UCreatureVisualBoneSkeleton::UpdatePose(
@@ -36,7 +80,6 @@ void UCreatureVisualBoneSkeleton::UpdatePose(
   BodyOrigin = creature.GetFeetPosition();
   BodyYawDeg = ComputeBodyYawDeg(creature, animDef);
   SpeciesId = animDef.Id;
-  SkinId = creature.GetSkinId();
   const std::string geoFile = animDef.visual.boneSkeleton.geometryFile.empty()
                                   ? "geometry.geo.json"
                                   : animDef.visual.boneSkeleton.geometryFile;
@@ -46,10 +89,17 @@ void UCreatureVisualBoneSkeleton::UpdatePose(
                     : animDef.visual.boneSkeleton.textureStem;
   RefreshDefaultTextureKey(animDef);
 
-  if (!MeshAsset || MeshAsset->geometry.identifier != GeometryId)
+  auto &meshCache=CreatureBoneSkeletonCache::Instance();
+  const uint64_t revision=meshCache.GetRevision();
+  if (!MeshRequestSeen || LoadedRevision!=revision || LoadedSpecies!=SpeciesId ||
+      LoadedFile!=geoFile || LoadedGeometry!=GeometryId ||
+      LoadedDirectory!=animDef.visual.sourceDirectory)
   {
-    MeshAsset = CreatureBoneSkeletonCache::Instance().Load(SpeciesId, geoFile,
-                                                          GeometryId);
+    MeshRequestSeen=true;LoadedRevision=revision;LoadedSpecies=SpeciesId;
+    LoadedFile=geoFile;LoadedGeometry=GeometryId;LoadedDirectory=animDef.visual.sourceDirectory;
+    Hierarchy.reset();AttachmentBounds.clear();CachedBoneMatrices.clear();
+    GroundClearance={};
+    MeshAsset = meshCache.Load(SpeciesId, geoFile,GeometryId,LoadedDirectory);
     if (MeshAsset)
     {
       Hierarchy = std::make_unique<BoneSkeletonHierarchy>(MeshAsset->geometry);
@@ -76,6 +126,15 @@ void UCreatureVisualBoneSkeleton::UpdatePose(
     }
   }
 
+  const bool groundClearance = UsesBoneGroundClearance(facts, animDef,
+      SkeletalAnimationProfiles::ResolveProfileId(animDef));
+  const float requiredLift = groundClearance && MeshAsset
+      ? ComputeBoneGroundClearance(*MeshAsset, CachedBoneMatrices) : 0.f;
+  // The common root also carries equipment. Bone matrices, pivots, authored
+  // rotations and physics/collider position remain untouched. On takeoff the
+  // small clearance offset decays instead of snapping off in one frame.
+  BodyOrigin.y += GroundClearance.Update(requiredLift, groundClearance, dt);
+
   PoseCreature = &creature;
 }
 
@@ -91,7 +150,7 @@ void UCreatureVisualBoneSkeleton::SubmitDraw(const CreatureDrawContext &ctx,
   const RenderSettings &settings = *ctx.Settings;
 
   const GLuint tex = ResolveCreatureSpeciesTexture(
-      creatureTextures, SpeciesId, TextureStem, DefaultTextureKey, SkinId);
+      creatureTextures, SpeciesId, TextureStem, DefaultTextureKey, &Appearance);
   if (tex == 0)
   {
     const std::string key =
@@ -99,7 +158,7 @@ void UCreatureVisualBoneSkeleton::SubmitDraw(const CreatureDrawContext &ctx,
     LogCreatureMissingTextureOnce(
         key, "UCreatureVisualBoneSkeleton: missing texture for species=" +
                  SpeciesId + " stem=" + TextureStem +
-                 " default=" + DefaultTextureKey + " skin=" + SkinId);
+                 " default=" + DefaultTextureKey + " skin=" + Appearance.effectiveSkinId);
     return;
   }
 
@@ -174,10 +233,12 @@ void UCreatureVisualBoneSkeleton::SubmitDraw(const CreatureDrawContext &ctx,
     // defaults via id when the storage is absent).
     if (ctx.Queue)
     {
+      const BoneBoundsLookupFn bounds=[this](const std::string &name,glm::vec3 &low,glm::vec3 &high)
+          {return GetBoneLocalBounds(name,low,high);};
       WornEquipmentDrawer::SubmitFromCreature(*ctx.Queue, *PoseCreature,
-                                              viewProj, bodyMat, boneLookup);
+                                              viewProj, bodyMat, boneLookup, bounds);
       WornEquipmentDrawer::SubmitWieldedFromCreature(
-          *ctx.Queue, *PoseCreature, ctx.Items, viewProj, bodyMat, boneLookup);
+          *ctx.Queue, *PoseCreature, ctx.Items, viewProj, bodyMat, boneLookup, bounds);
     }
   }
 }

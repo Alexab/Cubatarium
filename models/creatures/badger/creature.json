@@ -58,7 +58,7 @@
     "texture_layout": "rigid_crop",
     "default_texture": "body",
     "icon": {
-      "mode": "species_texture",
+      "mode": "parts_preview",
       "color": [
         0.3137254901960784,
         0.27450980392156865,
@@ -69,11 +69,9 @@
     "gltf": {
       "model": "model.gltf",
       "textures": [
-        "body",
-        "face",
-        "leg"
+        "body"
       ],
-      "model_scale": 1.0,
+      "model_scale": 0.75,
       "model_yaw_offset_deg": 0
     },
     "animation": {
@@ -89,13 +87,15 @@
           "start": 34,
           "end": 58,
           "loop": true,
-          "speed": 0.8
+          "speed": 0.8,
+          "ground_distance_per_cycle": 5.390000104904176
         },
         "run": {
           "start": 34,
           "end": 58,
           "loop": true,
-          "speed": 0.8
+          "speed": 0.8,
+          "ground_distance_per_cycle": 5.444999999999999
         },
         "punch": {
           "start": 60,

@@ -355,6 +355,7 @@ set(SOURCES
     src/Render/Engine/UnderwaterFogPass.cpp
     src/Render/Engine/SkyGradientPass.cpp
     src/Render/Engine/CreatureDrawPass.cpp
+    src/Creatures/Diagnostics/CreaturePassTimingProbe.cpp
     src/Render/Engine/RenderMeshSink.cpp
     src/Render/Engine/GreedyGpuBackend.cpp
     src/Render/Engine/GreedyGpuPublication.cpp
@@ -1163,6 +1164,68 @@ cubatarium_add_test(NAME creature_bone_skeleton_loader_test
         src/Creatures/Visual/BoneSkeleton/BoneSkeletonHierarchy.cpp
         src/Test/CreatureBoneSkeletonLoaderTest.cpp
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+# Explicit research utility, not a test that can grant art/contact acceptance.
+add_executable(creature_bone_motion_audit EXCLUDE_FROM_ALL
+    tools/research/creature_bone_motion_audit.cpp
+    src/Creatures/Stats/CreatureStatsDefaults.cpp
+    src/Creatures/Stats/CreatureStatsJson.cpp
+    src/Creatures/Locomotion/LocomotionTypes.cpp
+    src/Creatures/Core/CreatureCatalogTypes.cpp
+    src/Creatures/Definition/CreatureDefinitionStorage.cpp
+    src/Creatures/Visual/CreatureRigidModelLoader.cpp
+    src/Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonLoader.cpp
+    src/Creatures/Visual/BoneSkeleton/BoneSkeletonCubeMeshBuilder.cpp
+    src/Creatures/Visual/BoneSkeleton/BoneSkeletonHierarchy.cpp
+    src/Pose/BoneSkeleton/BoneSkeletonPoseEngine.cpp
+    src/Pose/BoneSkeleton/SkeletalAnimationProfiles.cpp)
+target_include_directories(creature_bone_motion_audit PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(creature_bone_motion_audit PRIVATE glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(creature_gltf_render_envelope_audit EXCLUDE_FROM_ALL
+    tools/research/creature_gltf_render_envelope_audit.cpp
+    src/Creatures/Visual/Gltf/CreatureGltfLoader.cpp
+    src/Creatures/Visual/Gltf/CreatureGltfBonePalette.cpp
+    src/Creatures/Visual/Gltf/CreatureGltfAnimPlayer.cpp)
+target_include_directories(creature_gltf_render_envelope_audit PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(creature_gltf_render_envelope_audit PRIVATE glm::glm nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME creature_bone_ground_clearance_test
+    SOURCES src/Test/CreatureBoneGroundClearanceTest.cpp
+    LIBRARIES glm::glm)
+add_test(NAME creature_bone_ground_clearance_test COMMAND $<TARGET_FILE:creature_bone_ground_clearance_test>)
+set_tests_properties(creature_bone_ground_clearance_test PROPERTIES LABELS "unit;creatures")
+
+cubatarium_add_test(NAME creature_gltf_transition_ground_clearance_test
+    SOURCES src/Test/CreatureGltfTransitionGroundClearanceTest.cpp
+    LIBRARIES glm::glm)
+add_test(NAME creature_gltf_transition_ground_clearance_test COMMAND $<TARGET_FILE:creature_gltf_transition_ground_clearance_test>)
+set_tests_properties(creature_gltf_transition_ground_clearance_test PROPERTIES LABELS "unit;creatures")
+
+cubatarium_add_test(NAME creature_gltf_render_envelope_test
+    SOURCES src/Test/CreatureGltfRenderEnvelopeTest.cpp
+        src/Creatures/Visual/Gltf/CreatureGltfBonePalette.cpp
+        src/Creatures/Visual/Gltf/CreatureGltfAnimPlayer.cpp
+    LIBRARIES glm::glm)
+add_test(NAME creature_gltf_render_envelope_test COMMAND $<TARGET_FILE:creature_gltf_render_envelope_test>)
+set_tests_properties(creature_gltf_render_envelope_test PROPERTIES LABELS "unit;creatures")
+
+cubatarium_add_test(NAME creature_draw_clip_bounds_test
+    SOURCES src/Test/CreatureDrawClipBoundsTest.cpp
+    LIBRARIES glm::glm)
+add_test(NAME creature_draw_clip_bounds_test COMMAND $<TARGET_FILE:creature_draw_clip_bounds_test>)
+set_tests_properties(creature_draw_clip_bounds_test PROPERTIES LABELS "unit;creatures")
+
+cubatarium_add_test(NAME known_air_terrain_slice_policy_test
+    SOURCES src/Test/KnownAirTerrainSlicePolicyTest.cpp)
+add_test(NAME known_air_terrain_slice_policy_test COMMAND $<TARGET_FILE:known_air_terrain_slice_policy_test>)
+set_tests_properties(known_air_terrain_slice_policy_test PROPERTIES LABELS "unit;creatures;streaming")
+
+cubatarium_add_test(NAME creature_equipment_fit_test
+    SOURCES src/Test/CreatureEquipmentFitTest.cpp
+    LIBRARIES glm::glm)
+add_test(NAME creature_equipment_fit_test COMMAND $<TARGET_FILE:creature_equipment_fit_test>)
+set_tests_properties(creature_equipment_fit_test PROPERTIES LABELS "unit;creatures")
 
 cubatarium_add_test(NAME creature_gltf_loader_test
     SOURCES

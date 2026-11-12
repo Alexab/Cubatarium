@@ -1,0 +1,113 @@
+{
+  "schema": "creature-native-bone-clearance-audit.v1",
+  "scope": "Dense sampled floor and geometry envelopes, not stance/stride/terrain/performance acceptance",
+  "resource_count": 17,
+  "same_executable_and_inputs": true,
+  "raw_control_matches_previous_kinematics": true,
+  "no_negative_ground_floor_beyond_roundoff": true,
+  "positive_clearance_and_exempt_scenarios_preserved": true,
+  "resources": [
+    {
+      "id": "human",
+      "corrected_ground_scenarios": 8,
+      "all_xz_envelopes_unchanged": true,
+      "exempt_scenarios_exact": true
+    },
+    {
+      "id": "bot",
+      "corrected_ground_scenarios": 8,
+      "all_xz_envelopes_unchanged": true,
+      "exempt_scenarios_exact": true
+    },
+    {
+      "id": "sheep",
+      "corrected_ground_scenarios": 7,
+      "all_xz_envelopes_unchanged": true,
+      "exempt_scenarios_exact": true
+    },
+    {
+      "id": "pig",
+      "corrected_ground_scenarios": 8,
+      "all_xz_envelopes_unchanged": true,
+      "exempt_scenarios_exact": true
+    },
+    {
+      "id": "cow",
+      "corrected_ground_scenarios": 8,
+      "all_xz_envelopes_unchanged": true,
+      "exempt_scenarios_exact": true
+    },
+    {
+      "id": "chicken",
+      "corrected_ground_scenarios": 8,
+      "all_xz_envelopes_unchanged": true,
+      "exempt_scenarios_exact": true
+    },
+    {
+      "id": "bunny",
+      "corrected_ground_scenarios": 0,
+      "all_xz_envelopes_unchanged": true,
+      "exempt_scenarios_exact": true
+    },
+    {
+      "id": "wolf",
+      "corrected_ground_scenarios": 8,
+      "all_xz_envelopes_unchanged": true,
+      "exempt_scenarios_exact": true
+    },
+    {
+      "id": "bee",
+      "corrected_ground_scenarios": 0,
+      "all_xz_envelopes_unchanged": true,
+      "exempt_scenarios_exact": true
+    },
+    {
+      "id": "skeleton",
+      "corrected_ground_scenarios": 8,
+      "all_xz_envelopes_unchanged": true,
+      "exempt_scenarios_exact": true
+    },
+    {
+      "id": "zombie",
+      "corrected_ground_scenarios": 8,
+      "all_xz_envelopes_unchanged": true,
+      "exempt_scenarios_exact": true
+    },
+    {
+      "id": "spider",
+      "corrected_ground_scenarios": 0,
+      "all_xz_envelopes_unchanged": true,
+      "exempt_scenarios_exact": true
+    },
+    {
+      "id": "fox",
+      "corrected_ground_scenarios": 8,
+      "all_xz_envelopes_unchanged": true,
+      "exempt_scenarios_exact": true
+    },
+    {
+      "id": "tortoise",
+      "corrected_ground_scenarios": 8,
+      "all_xz_envelopes_unchanged": true,
+      "exempt_scenarios_exact": true
+    },
+    {
+      "id": "trout",
+      "corrected_ground_scenarios": 0,
+      "all_xz_envelopes_unchanged": true,
+      "exempt_scenarios_exact": true
+    },
+    {
+      "id": "squid",
+      "corrected_ground_scenarios": 0,
+      "all_xz_envelopes_unchanged": true,
+      "exempt_scenarios_exact": true
+    },
+    {
+      "id": "dolphin",
+      "corrected_ground_scenarios": 0,
+      "all_xz_envelopes_unchanged": true,
+      "exempt_scenarios_exact": true
+    }
+  ]
+}

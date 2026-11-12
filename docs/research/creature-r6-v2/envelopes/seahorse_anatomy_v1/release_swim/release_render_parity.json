@@ -1,0 +1,378 @@
+{
+  "schema": "creature-complete-capture-parity.v1",
+  "scope": "Exact sampled preview RGBA only; no world/state/performance acceptance",
+  "reference_context": "docs\\research\\creature-r6-v2\\envelopes\\seahorse_anatomy_v1\\context_envelope_current.json",
+  "candidate_context": "docs\\research\\creature-r6-v2\\envelopes\\seahorse_anatomy_v1\\release_swim\\context_envelope_current.json",
+  "same_executable": false,
+  "same_shaders": true,
+  "exe_sha256": [
+    "a0872e87a1551dbe7ac0cff1346b58176743d18eba13817cb7779473415df68f",
+    "235ce58dd65546f38164020295ff403bf48c2816b14bb16cd96228faee030483"
+  ],
+  "fresh_images": true,
+  "current_candidate_inputs_verified": true,
+  "resources": 1,
+  "legacy_png_count": 29,
+  "matrix_png_count": 60,
+  "exact_rgba_png_count": 89,
+  "expected_changed_resources": [],
+  "expected_changed_frames": [],
+  "frames": [
+    {
+      "path": "seahorse_0.png",
+      "candidate_sha256": "d6a0bf743fcbb55a9035139e54f904b471f943477b704dbd78029826de93aa8d"
+    },
+    {
+      "path": "seahorse_1.png",
+      "candidate_sha256": "0da99d27d33467d286d2cba146efb36e2e1f1814273acaceb2789d32a1719a65"
+    },
+    {
+      "path": "seahorse_2.png",
+      "candidate_sha256": "b3fc0e1ceae51f9ed4a00462f7e9efcf360eea60112853df69e69feaab0d30f8"
+    },
+    {
+      "path": "seahorse_3.png",
+      "candidate_sha256": "78441075826424f458c0d6a860383be314442926cfe0464074a54164f9abd761"
+    },
+    {
+      "path": "seahorse_4.png",
+      "candidate_sha256": "af62cf5bd31b5857bae790b3f2d2ec09dcf4b7cc64be922dbc025f4edc7e6152"
+    },
+    {
+      "path": "seahorse_5.png",
+      "candidate_sha256": "471cf5d0d986c3b7fb9d580d7da9a4cd1776044e6bb0e68463a7247ad803305c"
+    },
+    {
+      "path": "seahorse_6.png",
+      "candidate_sha256": "83cbf06fb2fec32babfe4cc14bc35dfe56dd3dd70f67387bb347f60474fd2360"
+    },
+    {
+      "path": "seahorse_7.png",
+      "candidate_sha256": "68ebb2f4a4e0107b52b5ae5eab1e64d1eb677ccb4b59a6d985096357b53e7e12"
+    },
+    {
+      "path": "seahorse_8.png",
+      "candidate_sha256": "f0f5db10b0a23a7c7563a47a3d2a50cfbcb48cee2d72160dd29e6f5d146aa7d3"
+    },
+    {
+      "path": "seahorse_9.png",
+      "candidate_sha256": "4ba6c8d027623ea79184e3d560d76215bc2a066c13427a58e59229cb5a66b3a4"
+    },
+    {
+      "path": "seahorse_10.png",
+      "candidate_sha256": "8962490b28bff0c42e8c6c4c702a7f266a1d545b253355fcb0ac91ef5c2eab7b"
+    },
+    {
+      "path": "seahorse_11.png",
+      "candidate_sha256": "ce113da6fc9f7db4779e210a381846ea195912061f4d08b62d7bb9b92de27348"
+    },
+    {
+      "path": "seahorse_12.png",
+      "candidate_sha256": "c4391e40f6b1c15c0b0b355b5fa783d0c97b41d31f25cea85e37ced624dcf3da"
+    },
+    {
+      "path": "seahorse_13.png",
+      "candidate_sha256": "af62cf5bd31b5857bae790b3f2d2ec09dcf4b7cc64be922dbc025f4edc7e6152"
+    },
+    {
+      "path": "seahorse_14.png",
+      "candidate_sha256": "471cf5d0d986c3b7fb9d580d7da9a4cd1776044e6bb0e68463a7247ad803305c"
+    },
+    {
+      "path": "seahorse_15.png",
+      "candidate_sha256": "83cbf06fb2fec32babfe4cc14bc35dfe56dd3dd70f67387bb347f60474fd2360"
+    },
+    {
+      "path": "seahorse_16.png",
+      "candidate_sha256": "68ebb2f4a4e0107b52b5ae5eab1e64d1eb677ccb4b59a6d985096357b53e7e12"
+    },
+    {
+      "path": "seahorse_17.png",
+      "candidate_sha256": "f0f5db10b0a23a7c7563a47a3d2a50cfbcb48cee2d72160dd29e6f5d146aa7d3"
+    },
+    {
+      "path": "seahorse_18.png",
+      "candidate_sha256": "4ba6c8d027623ea79184e3d560d76215bc2a066c13427a58e59229cb5a66b3a4"
+    },
+    {
+      "path": "seahorse_19.png",
+      "candidate_sha256": "8962490b28bff0c42e8c6c4c702a7f266a1d545b253355fcb0ac91ef5c2eab7b"
+    },
+    {
+      "path": "seahorse_20.png",
+      "candidate_sha256": "ce113da6fc9f7db4779e210a381846ea195912061f4d08b62d7bb9b92de27348"
+    },
+    {
+      "path": "seahorse_21.png",
+      "candidate_sha256": "52dfab8ac8b6f6e1b88ffe2ce03dc40d845097f0679a821344f2f80f7c68e2b3"
+    },
+    {
+      "path": "seahorse_22.png",
+      "candidate_sha256": "3a6361fa24e002e47259d47b02f0a7ca0efc44e6d726bdbc28459b15a9386377"
+    },
+    {
+      "path": "seahorse_23.png",
+      "candidate_sha256": "f67415370f3a2b0c222801b8bbd3c8b1fa8b4ea9a2c7433595316dfbc98f0a37"
+    },
+    {
+      "path": "seahorse_24.png",
+      "candidate_sha256": "9dc71628c4c62487191a1dcf1e4ed256d8578cf639c95842be8ff5a5a4eddc14"
+    },
+    {
+      "path": "seahorse_25.png",
+      "candidate_sha256": "af1f41809cdbb525f0f62712bac0316627394c0099b4454c3ea14bb8cf1613a0"
+    },
+    {
+      "path": "seahorse_26.png",
+      "candidate_sha256": "4c5378ad7751db8bf2a7e17f7f23f489ae7cbecc5e1a6034a38b7ce23202e914"
+    },
+    {
+      "path": "seahorse_27.png",
+      "candidate_sha256": "9bbd68a2068cd17ebbc1e3efd8172ce08ded5465b4a60521685e72c3bee2d9ea"
+    },
+    {
+      "path": "seahorse_28.png",
+      "candidate_sha256": "52dfab8ac8b6f6e1b88ffe2ce03dc40d845097f0679a821344f2f80f7c68e2b3"
+    },
+    {
+      "path": "matrix/seahorse/pose_0_view_0_color.png",
+      "candidate_sha256": "a0df24efc4ef7704d8cf5203e57084bef7fb346bd0b2611469d1ab7aad92640c"
+    },
+    {
+      "path": "matrix/seahorse/pose_0_view_0_silhouette.png",
+      "candidate_sha256": "23148db0ed594da8eacb54d9b93495672c2f860ceb7ced2ffd0d0d9a8e2778c2"
+    },
+    {
+      "path": "matrix/seahorse/pose_0_view_1_color.png",
+      "candidate_sha256": "190e6f2f564aa3817d881a0b5d1a198cefa1798959c1717d2dcb172056069555"
+    },
+    {
+      "path": "matrix/seahorse/pose_0_view_1_silhouette.png",
+      "candidate_sha256": "7a1340a874424e72990ce97e54599863e6cd235fca8f5b8582f1fadd9d4a6dc0"
+    },
+    {
+      "path": "matrix/seahorse/pose_0_view_2_color.png",
+      "candidate_sha256": "2151cc43991ef10d112021015b3202d50a4d099ead75cc2782853b7af46feead"
+    },
+    {
+      "path": "matrix/seahorse/pose_0_view_2_silhouette.png",
+      "candidate_sha256": "d37de13f9c496be78c4875f0067cdd59f3e76f98889156f83e48a3a9d5293ba6"
+    },
+    {
+      "path": "matrix/seahorse/pose_0_view_3_color.png",
+      "candidate_sha256": "7d62d8a9b66504990d8e10fda8b247aca0c8f83fe1a3fefb6867443c93fa9c14"
+    },
+    {
+      "path": "matrix/seahorse/pose_0_view_3_silhouette.png",
+      "candidate_sha256": "97e8a32a054e8292c4562fefe1beeb922bb47ed779934b6f1ec73dce7b38dffe"
+    },
+    {
+      "path": "matrix/seahorse/pose_0_view_4_color.png",
+      "candidate_sha256": "6f708ad7c72e576ba39e743a30483e303592f549176193baffbae386534bee90"
+    },
+    {
+      "path": "matrix/seahorse/pose_0_view_4_silhouette.png",
+      "candidate_sha256": "e0526843b326aa3aa1aae99f95afa5906e4a2a424ae2844334682cf2ad2a5603"
+    },
+    {
+      "path": "matrix/seahorse/pose_0_view_5_color.png",
+      "candidate_sha256": "263c148f26cfcb69bff9c0b0076309fcbfa403a8228969fb90416ac5de7a8dde"
+    },
+    {
+      "path": "matrix/seahorse/pose_0_view_5_silhouette.png",
+      "candidate_sha256": "50995875fe1f542ca2ec274e7b147f5e787443b8422ee972e9a80dd857ae173a"
+    },
+    {
+      "path": "matrix/seahorse/pose_0_view_6_color.png",
+      "candidate_sha256": "f34f2607facd1392240c34c1f7b4f57cbaa1cd13e3482ee6b25eb4f3636bb8a0"
+    },
+    {
+      "path": "matrix/seahorse/pose_0_view_6_silhouette.png",
+      "candidate_sha256": "947a3ac94fb08f863c60e1118a147aeeeee311f8440414745e4d6bf0544f621d"
+    },
+    {
+      "path": "matrix/seahorse/pose_0_view_7_color.png",
+      "candidate_sha256": "6853c36861131377557a09120f718df974e47e6c9de3a949fbb0a7bdb53db4e9"
+    },
+    {
+      "path": "matrix/seahorse/pose_0_view_7_silhouette.png",
+      "candidate_sha256": "45b60ffeae22b2457ceacfb3244c6e50ae350d1a8d079bad9cc98f7085ceb7f2"
+    },
+    {
+      "path": "matrix/seahorse/pose_0_view_8_color.png",
+      "candidate_sha256": "55e1fe9602d8e9b01816c4d75a540192d4c650a7a07d576ca4d9c5a6d618b955"
+    },
+    {
+      "path": "matrix/seahorse/pose_0_view_8_silhouette.png",
+      "candidate_sha256": "c6bf29f0a8086f14b885d4b82525245c651e589b91328784e28ba4b6114b09e2"
+    },
+    {
+      "path": "matrix/seahorse/pose_0_view_9_color.png",
+      "candidate_sha256": "ab3e50b81bcede75e5e5fbc4012cf9984d04976808ec9f10671ca51859af0db4"
+    },
+    {
+      "path": "matrix/seahorse/pose_0_view_9_silhouette.png",
+      "candidate_sha256": "5c5b74913097f21f7a7f431491532f72721988f885aad3dca2d08dec7b6ed2e2"
+    },
+    {
+      "path": "matrix/seahorse/pose_1_view_0_color.png",
+      "candidate_sha256": "4f850b52a1f0e8286777b0569e748f813acdc4d9426ba99c14ebc2c047ffddfe"
+    },
+    {
+      "path": "matrix/seahorse/pose_1_view_0_silhouette.png",
+      "candidate_sha256": "d9974138c957dd1ffdd60e1479c44662262924acf1510371aa23771e2cab652d"
+    },
+    {
+      "path": "matrix/seahorse/pose_1_view_1_color.png",
+      "candidate_sha256": "416d3bbb9d153734b671bd04dba9c36d32e25d38b54ea108eb52393ab0a209a8"
+    },
+    {
+      "path": "matrix/seahorse/pose_1_view_1_silhouette.png",
+      "candidate_sha256": "16b67e78e9eb35ed60f627327d1f8d477663d9d3b5c079193f19344b66892105"
+    },
+    {
+      "path": "matrix/seahorse/pose_1_view_2_color.png",
+      "candidate_sha256": "fdcd26b6a01df30e0f2504954a0b9ecdac051c413795ff945552355fc8fafe07"
+    },
+    {
+      "path": "matrix/seahorse/pose_1_view_2_silhouette.png",
+      "candidate_sha256": "f9fcd4f9339e0cdf2b9bebb6b9322555680a0b6f517d1775e7e6c1818c61e85a"
+    },
+    {
+      "path": "matrix/seahorse/pose_1_view_3_color.png",
+      "candidate_sha256": "0d330f96c90251ae5b183d8cbe50da5b8c157689eaa7acb3623307a0f52acd7c"
+    },
+    {
+      "path": "matrix/seahorse/pose_1_view_3_silhouette.png",
+      "candidate_sha256": "eb9be1359d75540734aab67485f487dc1c90af4ad9d3689bf639c4444c17f3f0"
+    },
+    {
+      "path": "matrix/seahorse/pose_1_view_4_color.png",
+      "candidate_sha256": "507e6081833ddaa3250f20ec37ef9133926e01b3ae806d00bf5322f2e1b1af78"
+    },
+    {
+      "path": "matrix/seahorse/pose_1_view_4_silhouette.png",
+      "candidate_sha256": "cdefaafc5737354ba74259cdf8b5a805b539ede7686e200b081945a716b9f81b"
+    },
+    {
+      "path": "matrix/seahorse/pose_1_view_5_color.png",
+      "candidate_sha256": "b588bcb59a8c88b2636ccc80b38f075de32f996e90444b43a2837577fb80be2f"
+    },
+    {
+      "path": "matrix/seahorse/pose_1_view_5_silhouette.png",
+      "candidate_sha256": "fbf6a929394fb46666f6523fc1ac1ca992a5ca7725413271b2056d1b78094a4c"
+    },
+    {
+      "path": "matrix/seahorse/pose_1_view_6_color.png",
+      "candidate_sha256": "dd1f5331aaa3b3f220081949f63521e419204fe479257aed826a14234ad8d4cd"
+    },
+    {
+      "path": "matrix/seahorse/pose_1_view_6_silhouette.png",
+      "candidate_sha256": "e77498589876775b8821ba92e9113e4c8728427fc2de0e6917e0f0fa518eb4f1"
+    },
+    {
+      "path": "matrix/seahorse/pose_1_view_7_color.png",
+      "candidate_sha256": "5f37858c1592fd1e671231589410a3278243bd77b0f9744ada21a6802c71a329"
+    },
+    {
+      "path": "matrix/seahorse/pose_1_view_7_silhouette.png",
+      "candidate_sha256": "8caa5c13692b18b0864634e48c4c4111715431dea52fd749a66f2dc3d4caf2d9"
+    },
+    {
+      "path": "matrix/seahorse/pose_1_view_8_color.png",
+      "candidate_sha256": "2d024c59c622c5fff6701e612e9d39103c88b8c7cc0e571794ad2f14a5f123b5"
+    },
+    {
+      "path": "matrix/seahorse/pose_1_view_8_silhouette.png",
+      "candidate_sha256": "9c98e227ad49afad40373f4d7a9a66562b05ce4e85b830b7ef2a8942bfcf1396"
+    },
+    {
+      "path": "matrix/seahorse/pose_1_view_9_color.png",
+      "candidate_sha256": "9aeedf873ef87dce1537e4b38f33e74d025547da07edea9495407efe206c9f07"
+    },
+    {
+      "path": "matrix/seahorse/pose_1_view_9_silhouette.png",
+      "candidate_sha256": "3a5fcbeb005ecc1c2ef93b39b92653728e9323939012b84509c2b7702032c612"
+    },
+    {
+      "path": "matrix/seahorse/pose_2_view_0_color.png",
+      "candidate_sha256": "b4580c2bbe93a34dbfeb6d13c876033bf03fbf42cdf9fcb8ec522c5b12c8a090"
+    },
+    {
+      "path": "matrix/seahorse/pose_2_view_0_silhouette.png",
+      "candidate_sha256": "95317837265267027a92b03e409c11c7ae8907bb88ff4fb0684a83d8f9de0df5"
+    },
+    {
+      "path": "matrix/seahorse/pose_2_view_1_color.png",
+      "candidate_sha256": "c4af1b8a02cea763b9eaa2132a4ea490271b5b9f3558ccbf9955b361939adbd7"
+    },
+    {
+      "path": "matrix/seahorse/pose_2_view_1_silhouette.png",
+      "candidate_sha256": "84503c364e3e4ef509731d7394e56d88be1b0e100c654780cd4de5c7560990f7"
+    },
+    {
+      "path": "matrix/seahorse/pose_2_view_2_color.png",
+      "candidate_sha256": "00a73ba569539de1f53b5bee52d70e2d3a51d122fc34acd4758f12c71f21ea2a"
+    },
+    {
+      "path": "matrix/seahorse/pose_2_view_2_silhouette.png",
+      "candidate_sha256": "2e576c09299ea595bbc20633b000a775011df8ebc2c44548baaa4dc8d3c9afd6"
+    },
+    {
+      "path": "matrix/seahorse/pose_2_view_3_color.png",
+      "candidate_sha256": "23b5d7833179e399211d9f94bdb8255f08cbcda2fee13650bf6ea5d3a66947b9"
+    },
+    {
+      "path": "matrix/seahorse/pose_2_view_3_silhouette.png",
+      "candidate_sha256": "f63a6e677ce287f620b1768af6150b1213a7f667477096e4cd95abd2c23d5fbb"
+    },
+    {
+      "path": "matrix/seahorse/pose_2_view_4_color.png",
+      "candidate_sha256": "c68668a44b7c54c8ac09ad0442bfd9f76a2a1df316dc75991cf8d180a137f268"
+    },
+    {
+      "path": "matrix/seahorse/pose_2_view_4_silhouette.png",
+      "candidate_sha256": "24cefa92f0c46ef622f366fbf3764ec857c606462e2b7eb8d3fd34d914becd01"
+    },
+    {
+      "path": "matrix/seahorse/pose_2_view_5_color.png",
+      "candidate_sha256": "6142d2d51ea6ff5e5b13739a8e9340211c51d957e07806e16a63dcb7228d9712"
+    },
+    {
+      "path": "matrix/seahorse/pose_2_view_5_silhouette.png",
+      "candidate_sha256": "5acc2407817ae3d5af246fb7135422cf6d881c4c17170e41c42604180893e3bc"
+    },
+    {
+      "path": "matrix/seahorse/pose_2_view_6_color.png",
+      "candidate_sha256": "8e0199b5aa2df363eb114040850d8b6dfc6aad4441735303e41ebdc9b46daaf5"
+    },
+    {
+      "path": "matrix/seahorse/pose_2_view_6_silhouette.png",
+      "candidate_sha256": "9e7ad7d7ab82a3e9de61bf5c8d2c7697491e90315a3ae8f6c88bf2e622af00db"
+    },
+    {
+      "path": "matrix/seahorse/pose_2_view_7_color.png",
+      "candidate_sha256": "3b6ecf1ab0de85718d8159d13f6bf94bb0582a92253e4cb587a3f36e6c559db4"
+    },
+    {
+      "path": "matrix/seahorse/pose_2_view_7_silhouette.png",
+      "candidate_sha256": "68ab0285590432e46095c77bc94a333cb666e06169818915ad1413ef188dbddf"
+    },
+    {
+      "path": "matrix/seahorse/pose_2_view_8_color.png",
+      "candidate_sha256": "d366cbf23a5a3d6a605c5f6fbc12817f4b27cce3698f7aa454b23d69c76bb1ff"
+    },
+    {
+      "path": "matrix/seahorse/pose_2_view_8_silhouette.png",
+      "candidate_sha256": "8acadb1f85e9ec5ac83a77b20382f7ebf83485af46689de21b3309b51823f85a"
+    },
+    {
+      "path": "matrix/seahorse/pose_2_view_9_color.png",
+      "candidate_sha256": "36138ccca15290645265b17637c20f19d4c4173f87e1feecbf85ee74e28a3a23"
+    },
+    {
+      "path": "matrix/seahorse/pose_2_view_9_silhouette.png",
+      "candidate_sha256": "4cfa47d64ab4e7e4df0c6434e42cec43d8acce2fea22f55e93814462c4fc95e9"
+    }
+  ]
+}

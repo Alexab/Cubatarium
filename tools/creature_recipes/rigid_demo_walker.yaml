@@ -1,0 +1,231 @@
+id: rigid_demo_walker
+backend: rigid_voxels
+family: meadow
+authoring_source: cubatarium-recipe
+recipe_version: 2
+palette_id: meadow
+pattern: mask
+template: quadruped
+body:
+- 10
+- 6
+- 14
+head:
+- 6
+- 5
+- 5
+limb:
+- 4
+- 7
+extras:
+- muzzle
+muzzle:
+- 4
+- 3
+- 3
+bind_body: null
+direction: Клубнелап
+wave: D
+silhouette: {}
+marks: []
+selected_concept: fidelity_moss_walker
+rigid_center_pivot_bones:
+- tail
+concepts:
+- id: tuber
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: низкий корпус
+- id: low
+  body_scale:
+  - 1.12
+  - 0.78
+  - 0.92
+  note: ещё ниже
+- id: tall_legs
+  body_scale:
+  - 0.84
+  - 1.2
+  - 1.16
+  note: высокие лапы
+seed: 541321891911766015
+anatomy:
+  bones:
+  - name: body
+    pivot:
+    - 0
+    - 8
+    - 0
+    cubes:
+    - name: torso
+      origin:
+      - -4.5
+      - 5
+      - -6.5
+      size:
+      - 9
+      - 6
+      - 13
+      role: body
+  - name: head
+    pivot:
+    - 0
+    - 10
+    - 6
+    cubes:
+    - name: head
+      origin:
+      - -2.5
+      - 8
+      - 5.5
+      size:
+      - 5
+      - 5
+      - 4
+      role: face
+    - name: ear_l
+      origin:
+      - -3
+      - 12
+      - 6
+      size:
+      - 2
+      - 2
+      - 1
+      role: body
+    - name: ear_r
+      origin:
+      - 1
+      - 12
+      - 6
+      size:
+      - 2
+      - 2
+      - 1
+      role: body
+    parent: body
+  - name: snout
+    pivot:
+    - 0
+    - 9
+    - 9
+    cubes:
+    - name: snout
+      origin:
+      - -2
+      - 8
+      - 9.5
+      size:
+      - 4
+      - 2
+      - 2
+      role: muzzle
+    parent: head
+  - name: tail
+    pivot:
+    - 0
+    - 8
+    - -6.5
+    cubes:
+    - name: tail
+      origin:
+      - -1
+      - 7
+      - -9
+      size:
+      - 2
+      - 2
+      - 3
+      role: accent
+    parent: body
+  - name: leg0
+    pivot:
+    - -3.0
+    - 5
+    - 5.0
+    cubes:
+    - name: leg0
+      origin:
+      - -4.5
+      - 0
+      - 3.5
+      size:
+      - 3
+      - 5
+      - 3
+      role: limb
+    parent: body
+  - name: leg1
+    pivot:
+    - 3.0
+    - 5
+    - 5.0
+    cubes:
+    - name: leg1
+      origin:
+      - 1.5
+      - 0
+      - 3.5
+      size:
+      - 3
+      - 5
+      - 3
+      role: limb
+    parent: body
+  - name: leg2
+    pivot:
+    - -3.0
+    - 5
+    - -4.0
+    cubes:
+    - name: leg2
+      origin:
+      - -4.5
+      - 0
+      - -5.5
+      size:
+      - 3
+      - 5
+      - 3
+      role: limb
+    parent: body
+  - name: leg3
+    pivot:
+    - 3.0
+    - 5
+    - -4.0
+    cubes:
+    - name: leg3
+      origin:
+      - 1.5
+      - 0
+      - -5.5
+      size:
+      - 3
+      - 5
+      - 3
+      role: limb
+    parent: body
+palette_overrides:
+  body:
+  - 115
+  - 103
+  - 72
+  face:
+  - 158
+  - 144
+  - 103
+  limb:
+  - 64
+  - 58
+  - 44
+  mark:
+  - 81
+  - 76
+  - 53
+  eye:
+  - 24
+  - 27
+  - 23

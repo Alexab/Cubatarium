@@ -1,0 +1,25 @@
+{
+  "captured_at_utc": "2026-11-10T23:24:46.331732+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_warriors_v2\\models",
+  "files_sha256": {
+    "creatures\\ogre\\creature.json": "17e5845dada216a771824ca2896fb4b7ae3ec4422f94f238ac626075afdf6a1f",
+    "creatures\\ogre\\LICENSE.txt": "f2e950bf4a59c9c9bb6606ac48fe244f9caa34f89b7dc6f2c2e64469f241169e",
+    "creatures\\ogre\\manifest.json": "dae524942b4551da35ded3bb47d833b76e193f9f04bb1373d2bf8dcaaaa4379b",
+    "creatures\\ogre\\model.bin": "f9ce952356af808f31db9e770e779adce822d7733f1cf588abfca9e85e1bca74",
+    "creatures\\ogre\\model.gltf": "3f5d0d0806c6c63f4848189880319516551c0dd38d2a215417761ee8dffd4592",
+    "creatures\\ogre\\textures\\body.png": "7c4c4e5ee99182b32d43fac27c0b150ef46910654418e81522e794b54ac97ae9",
+    "creatures\\ogre\\textures\\icon.png": "ad75bf35713b1be566b7d240cc962ce59ca2d3ff0da5b4b96ce6472e9821fbda"
+  },
+  "qa_models_override": true,
+  "exe_sha256": "43bb4bf75f6f14d792169bcc31453103515469d7f530f3f566e7121249a0a900",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "contact_ogre",
+  "qa_camera": "close",
+  "qa_water_placement": false,
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

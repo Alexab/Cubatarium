@@ -1,0 +1,29 @@
+{
+  "references": [
+    {
+      "id": "cow",
+      "process_success": true,
+      "derived_grounded_walk_records": 299,
+      "pause_observed": true,
+      "context": "docs\\research\\creature-timebox-2026-11-12\\world\\cow\\context_cow.json",
+      "scope": "Ordinary motor smoke only, not full footplant/art acceptance"
+    },
+    {
+      "id": "badger",
+      "process_success": true,
+      "derived_grounded_walk_records": 242,
+      "pause_observed": true,
+      "context": "docs\\research\\creature-timebox-2026-11-12\\world\\badger\\context_badger.json",
+      "scope": "Ordinary motor smoke only, not full footplant/art acceptance"
+    },
+    {
+      "id": "rigid_demo_walker",
+      "process_success": true,
+      "derived_grounded_walk_records": 302,
+      "pause_observed": true,
+      "context": "docs\\research\\creature-timebox-2026-11-12\\world\\rigid_demo_walker\\context_rigid_demo_walker.json",
+      "scope": "Ordinary motor smoke only, not full footplant/art acceptance"
+    }
+  ],
+  "passed": 3
+}

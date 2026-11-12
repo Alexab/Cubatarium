@@ -1,0 +1,98 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R5 marine mammals; full R6 routes, equipment/FP/save-load/performance/GLES and all-61 reproducibility remain pending",
+  "species": {
+    "manatee": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct native view/motion/icon, real-world land/water, original native baseline and equal-scale comparisons; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "baf8ac8292b052ad596ea686caafa150c436541e727023bf957aaf4f8ad8fa73",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "manatee.png",
+          "sha256": "17b5e2d85a3aee19563da28233a62cbfa4a5ae3f909df6a158b30351b5666b67"
+        },
+        "motion": {
+          "path": "native_approved_manatee.png",
+          "sha256": "40529f29377528210451f630019dc99f942cf889f140e846b2bc676ecb34f561"
+        },
+        "runtime": {
+          "path": "runtime_final_water_manatee/frame_002.png",
+          "sha256": "d55d88921f6588cfdd9eb3fe728420d3563d712d392b8248839a0b19a921195f"
+        },
+        "ui": {
+          "path": "native_candidate/manatee_12.png",
+          "sha256": "52f8e2a948eb94717cbe6015b8f38581572e9fd71c15fde7bf237754e60485e3"
+        },
+        "death_asset": {
+          "path": "manatee_die_asset.png",
+          "sha256": "589d34031c245a946346b58d21778ca34aa71116245dde4d7250dcbe55026e0f"
+        },
+        "baseline_native": {
+          "path": "native_baseline_sheet_manatee.png",
+          "sha256": "5b71410dfe75a7c18ac61e83e160c72d7f636bf7b6746e1e016961c55aa1c873"
+        }
+      },
+      "notes": "Own anatomy, surface atlas and named motion; no baseline mesh/pixels copied. Every required original clip retained. True exported skinning tests verify vertical manatee paddle versus lateral seal hind-flipper propulsion, no loop seams, contact and coincident moving neck vertices. Gameplay bounds/speeds/habitat unchanged; manatee visual Swim corrected from idle to fly. Full native and actual 64px icons directly reviewed, plus real-water manatee and seal land/water views. Seal close-water camera was occluded by foreground terrain; discarded for acceptance in favor of water_grid_seal frame_002. Baseline manatee separation was confirmed in actual Release preview; no need to reproduce that defect. Death remains sampled asset capability, not verified runtime Death. Performance gates disabled, no performance PASS or full-route acceptance. Reviewer is Codex, not user sign-off."
+    },
+    "seal": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct native view/motion/icon, real-world land/water, original native baseline and equal-scale comparisons; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "d3e5cebb3ed223acd30eba56f02fbfd92bb2508949c886f444ccdbd8f88dc1e6",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "seal.png",
+          "sha256": "81edeaf6bc46d086be76775a9ba5f932479d6ad2934eb940cf2a2a481cf3d27d"
+        },
+        "motion": {
+          "path": "native_approved_seal.png",
+          "sha256": "e79e34e6373bb5edc4db97f929d8a24ec67232521e6f2cb046a6cdb28ea35e52"
+        },
+        "runtime": {
+          "path": "runtime_final_land_seal/frame_002.png",
+          "sha256": "7176baf1127f8f0b8cc07ebe55a48afe2451b6d8cd5b49dbb0223fde99a4532f"
+        },
+        "ui": {
+          "path": "native_candidate/seal_12.png",
+          "sha256": "2800fc43ab990a1a3cb2c55d62e796792b3c255773cdf803c8fdf3447030f0df"
+        },
+        "death_asset": {
+          "path": "seal_die_asset.png",
+          "sha256": "bae1840af07b7b3d21afdfb7746a0769005c46b1cdd5c6bda9236616aa895b67"
+        },
+        "baseline_native": {
+          "path": "native_baseline_sheet_seal.png",
+          "sha256": "6b3a99137c91293ce5c810837ccafbf818ec168a4882e12281fff44c3c77a36e"
+        },
+        "swim": {
+          "path": "native_swim_seal.png",
+          "sha256": "b24fc1f056df3eff415aa68c64377d2d5b09fa3947b1daed2c833763a9af14d4"
+        },
+        "water_runtime": {
+          "path": "runtime_water_grid_seal/frame_002.png",
+          "sha256": "3d06ef92a862c4417b566337c279445addd2a51e8ca3b71fc349eb4a34f846bf"
+        }
+      },
+      "notes": "Own anatomy, surface atlas and named motion; no baseline mesh/pixels copied. Every required original clip retained. True exported skinning tests verify vertical manatee paddle versus lateral seal hind-flipper propulsion, no loop seams, contact and coincident moving neck vertices. Gameplay bounds/speeds/habitat unchanged; manatee visual Swim corrected from idle to fly. Full native and actual 64px icons directly reviewed, plus real-water manatee and seal land/water views. Seal close-water camera was occluded by foreground terrain; discarded for acceptance in favor of water_grid_seal frame_002. Baseline manatee separation was confirmed in actual Release preview; no need to reproduce that defect. Death remains sampled asset capability, not verified runtime Death. Performance gates disabled, no performance PASS or full-route acceptance. Reviewer is Codex, not user sign-off."
+    }
+  }
+}

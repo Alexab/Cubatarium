@@ -1,0 +1,260 @@
+{
+  "assets": [
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 4763,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\badger\\model.gltf",
+      "root_checks": 6252
+    },
+    {
+      "clips": 3,
+      "exact_float_bits": true,
+      "palette_checks": 1801,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\butterfly\\model.gltf",
+      "root_checks": 1758
+    },
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 2937,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\crab\\model.gltf",
+      "root_checks": 2600
+    },
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 3240,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\dirt_monster\\model.gltf",
+      "root_checks": 3206
+    },
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 3789,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\dungeon_master\\model.gltf",
+      "root_checks": 4304
+    },
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 4616,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\golem\\model.gltf",
+      "root_checks": 5958
+    },
+    {
+      "clips": 3,
+      "exact_float_bits": true,
+      "palette_checks": 3400,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\hedgehog\\model.gltf",
+      "root_checks": 4956
+    },
+    {
+      "clips": 3,
+      "exact_float_bits": true,
+      "palette_checks": 1801,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\hermitcrab\\model.gltf",
+      "root_checks": 1758
+    },
+    {
+      "clips": 3,
+      "exact_float_bits": true,
+      "palette_checks": 3258,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\kitten\\model.gltf",
+      "root_checks": 4672
+    },
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 3789,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\land_guard\\model.gltf",
+      "root_checks": 4304
+    },
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 3971,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\lava_flan\\model.gltf",
+      "root_checks": 4668
+    },
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 3408,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\lobster\\model.gltf",
+      "root_checks": 3542
+    },
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 2937,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\manatee\\model.gltf",
+      "root_checks": 2600
+    },
+    {
+      "clips": 5,
+      "exact_float_bits": true,
+      "palette_checks": 5333,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\mese_monster\\model.gltf",
+      "root_checks": 5554
+    },
+    {
+      "clips": 3,
+      "exact_float_bits": true,
+      "palette_checks": 1897,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\octopus\\model.gltf",
+      "root_checks": 1950
+    },
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 3699,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\oerkki\\model.gltf",
+      "root_checks": 4124
+    },
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 3699,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\ogre\\model.gltf",
+      "root_checks": 4124
+    },
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 6838,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\orc\\model.gltf",
+      "root_checks": 10402
+    },
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 2825,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\owl\\model.gltf",
+      "root_checks": 2376
+    },
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 4781,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\panda\\model.gltf",
+      "root_checks": 6288
+    },
+    {
+      "clips": 3,
+      "exact_float_bits": true,
+      "palette_checks": 2793,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\penguin\\model.gltf",
+      "root_checks": 3742
+    },
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 2881,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\puffin\\model.gltf",
+      "root_checks": 2488
+    },
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 4937,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\rat\\model.gltf",
+      "root_checks": 6600
+    },
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 3240,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\sand_monster\\model.gltf",
+      "root_checks": 3206
+    },
+    {
+      "clips": 3,
+      "exact_float_bits": true,
+      "palette_checks": 1897,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\seahorse\\model.gltf",
+      "root_checks": 1950
+    },
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 2897,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\seal\\model.gltf",
+      "root_checks": 2520
+    },
+    {
+      "clips": 5,
+      "exact_float_bits": true,
+      "palette_checks": 4213,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\shark\\model.gltf",
+      "root_checks": 3314
+    },
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 2782,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\stingray\\model.gltf",
+      "root_checks": 2290
+    },
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 3240,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\stone_monster\\model.gltf",
+      "root_checks": 3206
+    },
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 4764,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\tree_monster\\model.gltf",
+      "root_checks": 6254
+    },
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 6202,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\treeman\\model.gltf",
+      "root_checks": 9130
+    },
+    {
+      "clips": 5,
+      "exact_float_bits": true,
+      "palette_checks": 7243,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\warthog\\model.gltf",
+      "root_checks": 9374
+    },
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 2937,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\wasp\\model.gltf",
+      "root_checks": 2600
+    },
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 2937,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\water_dragon\\model.gltf",
+      "root_checks": 2600
+    },
+    {
+      "clips": 3,
+      "exact_float_bits": true,
+      "palette_checks": 1897,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\whale\\model.gltf",
+      "root_checks": 1950
+    },
+    {
+      "clips": 4,
+      "exact_float_bits": true,
+      "palette_checks": 15042,
+      "path": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\badger_sway_v2\\models\\creatures\\badger\\model.gltf",
+      "root_checks": 26810
+    }
+  ],
+  "palette_checks": 142684,
+  "passed": true,
+  "root_checks": 173430,
+  "scope": "Actual loaded assets, all clips, exact/adjacent keys and crossfades; float-bit equivalence to original linear lookup, not world/terrain/GPU/performance acceptance"
+}

@@ -1,0 +1,17 @@
+{
+  "scope": "29 ordinary prototype19 native RGBA images, not the60-view matrix or world camera parity",
+  "all_exact": true,
+  "images": 29,
+  "exe_sha256": [
+    "7e7f668f440e3a678e548c06f8dba021ed6fde99ce67e5eb43fc1d223d002859",
+    "30714e6226629f931ca35259bc440011ca1220a7c7544295847f44cc5f628e52"
+  ],
+  "observer_enabled": [
+    false,
+    true
+  ],
+  "contexts": [
+    "docs\\research\\creature-r6-v2\\badger-stance-ik-v2\\current\\context_current.json",
+    "docs\\research\\creature-r6-v2\\badger-stance-ik-v2\\world\\current\\context_current.json"
+  ]
+}

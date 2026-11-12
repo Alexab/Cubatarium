@@ -1,0 +1,108 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R2 pilot assets; R6 equipment/save/performance matrix remains pending",
+  "species": {
+    "cow": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct baseline, native Release rest/motion, world and icon inspection",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "cc27c901e5956660717dd94e84bbc8d98fe117c2a49b743b01c5f197ef809858",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "cow.png",
+          "sha256": "658e8f07c81dc54bbe4aed8521dd4df244d55b2e32d43ea89d10f17e2f29a95f"
+        },
+        "motion": {
+          "path": "native_approved_cow.png",
+          "sha256": "9bfbd2cd17a30377c63d80d51e1d26097af22d03778c9b557acd9c36e6bcd312"
+        },
+        "runtime": {
+          "path": "runtime_approved/frame_001.png",
+          "sha256": "80d94f7d4e74ff5f82cb28ba5cc3f7c0b19fc05c4346545d7539ecd156d36293"
+        },
+        "ui": {
+          "path": "ui.png",
+          "sha256": "c71da90ffb536d243f99c687e30507009bc34ca9b8ebd5bfee941c0feaa4f48f"
+        }
+      },
+      "notes": "Own authored anatomy/materials. Native world and 64px icon verified. No skins assigned to these pilots. B/R action remains original procedural capability; badger retains idle/walk/run/punch."
+    },
+    "badger": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct baseline, native Release rest/motion, world and icon inspection",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "47915ccf493018906df1dd78012b5e1023ee8075fd3aff5f4c22503d8ca96289",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "badger.png",
+          "sha256": "fb306b9cd30d850fa2b4d58d920bb58d050c837b77e068ca14fdcb20fe138a09"
+        },
+        "motion": {
+          "path": "native_approved_badger.png",
+          "sha256": "28c41a936dbd2251b01b8cf9c52efcc7388afa8f839dc8d775e41ea72215b012"
+        },
+        "runtime": {
+          "path": "runtime_approved/frame_001.png",
+          "sha256": "80d94f7d4e74ff5f82cb28ba5cc3f7c0b19fc05c4346545d7539ecd156d36293"
+        },
+        "ui": {
+          "path": "ui.png",
+          "sha256": "c71da90ffb536d243f99c687e30507009bc34ca9b8ebd5bfee941c0feaa4f48f"
+        }
+      },
+      "notes": "Own authored anatomy/materials. Native world and 64px icon verified. No skins assigned to these pilots. B/R action remains original procedural capability; badger retains idle/walk/run/punch."
+    },
+    "rigid_demo_walker": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct baseline, native Release rest/motion, world and icon inspection",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "95e773a4ae7ef0bfb0921a675459c848b743bcf5784d86b7e06a273b889c7288",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "rigid_demo_walker.png",
+          "sha256": "406b3cb94e2746794895212aca180c82f749f7e0c261d6fc4d762c7785a2aa49"
+        },
+        "motion": {
+          "path": "native_approved_rigid_demo_walker.png",
+          "sha256": "20583171b30f9ede5101b840fe2b888c3d9c961f526bf20c408f7070a46d0d58"
+        },
+        "runtime": {
+          "path": "runtime_approved/frame_001.png",
+          "sha256": "80d94f7d4e74ff5f82cb28ba5cc3f7c0b19fc05c4346545d7539ecd156d36293"
+        },
+        "ui": {
+          "path": "ui.png",
+          "sha256": "c71da90ffb536d243f99c687e30507009bc34ca9b8ebd5bfee941c0feaa4f48f"
+        }
+      },
+      "notes": "Own authored anatomy/materials. Native world and 64px icon verified. No skins assigned to these pilots. B/R action remains original procedural capability; badger retains idle/walk/run/punch."
+    }
+  }
+}

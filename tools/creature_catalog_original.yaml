@@ -1,0 +1,338 @@
+schema: creature-catalog-original.v1
+species:
+  cow:
+    backend: bone_skeleton
+    wave: W1
+    palette_id: meadow
+    template: quadruped
+    state: authored
+  pig:
+    backend: bone_skeleton
+    wave: W1
+    palette_id: meadow
+    template: quadruped
+    state: authored
+  sheep:
+    backend: bone_skeleton
+    wave: W1
+    palette_id: meadow
+    template: quadruped
+    state: authored
+  wolf:
+    backend: bone_skeleton
+    wave: W1
+    palette_id: forest
+    template: quadruped
+    state: authored
+  chicken:
+    backend: bone_skeleton
+    wave: W1
+    palette_id: meadow
+    template: chicken
+    state: authored
+  fox:
+    backend: bone_skeleton
+    wave: W1
+    palette_id: forest
+    template: quadruped
+    state: authored
+  bunny:
+    backend: bone_skeleton
+    wave: W1
+    palette_id: meadow
+    template: rabbit
+    state: authored
+  bee:
+    backend: bone_skeleton
+    wave: W1
+    palette_id: meadow
+    template: aerial
+    state: authored
+  spider:
+    backend: bone_skeleton
+    wave: W1
+    palette_id: forest
+    template: arachnid
+    state: authored
+  skeleton:
+    backend: bone_skeleton
+    wave: W1
+    palette_id: mineral
+    template: humanoid
+    state: authored
+  zombie:
+    backend: bone_skeleton
+    wave: W1
+    palette_id: peat
+    template: humanoid
+    state: authored
+  human:
+    backend: bone_skeleton
+    wave: W1
+    palette_id: traveler
+    template: humanoid
+    state: authored
+  bot:
+    backend: bone_skeleton
+    wave: W1
+    palette_id: mineral
+    template: humanoid
+    state: authored
+  dolphin:
+    backend: bone_skeleton
+    wave: W1
+    palette_id: river
+    template: aquatic
+    state: authored
+  squid:
+    backend: bone_skeleton
+    wave: W1
+    palette_id: river
+    template: aquatic
+    state: authored
+  tortoise:
+    backend: bone_skeleton
+    wave: W1
+    palette_id: meadow
+    template: quadruped
+    state: authored
+  trout:
+    backend: bone_skeleton
+    wave: W1
+    palette_id: meadow
+    template: aquatic
+    state: authored
+  badger:
+    backend: gltf_skeleton
+    wave: W2
+    palette_id: forest
+    template: quadruped
+    state: authored
+  hedgehog:
+    backend: gltf_skeleton
+    wave: W2
+    palette_id: meadow
+    template: quadruped
+    state: authored
+  kitten:
+    backend: gltf_skeleton
+    wave: W2
+    palette_id: forest
+    template: quadruped
+    state: authored
+  panda:
+    backend: gltf_skeleton
+    wave: W2
+    palette_id: forest
+    template: quadruped
+    state: authored
+  rat:
+    backend: gltf_skeleton
+    wave: W2
+    palette_id: meadow
+    template: quadruped
+    state: authored
+  warthog:
+    backend: gltf_skeleton
+    wave: W2
+    palette_id: mineral
+    template: quadruped
+    state: authored
+  owl:
+    backend: gltf_skeleton
+    wave: W2
+    palette_id: forest
+    template: chicken
+    state: authored
+  puffin:
+    backend: gltf_skeleton
+    wave: W2
+    palette_id: river
+    template: chicken
+    state: authored
+  butterfly:
+    backend: gltf_skeleton
+    wave: W2
+    palette_id: meadow
+    template: aerial
+    state: authored
+  wasp:
+    backend: gltf_skeleton
+    wave: W2
+    palette_id: peat
+    template: aerial
+    state: authored
+  penguin:
+    backend: gltf_skeleton
+    wave: W3
+    palette_id: river
+    template: humanoid
+    state: authored
+  seal:
+    backend: gltf_skeleton
+    wave: W3
+    palette_id: meadow
+    template: aquatic
+    state: authored
+  crab:
+    backend: gltf_skeleton
+    wave: W3
+    palette_id: mineral
+    template: crab
+    state: authored
+  hermitcrab:
+    backend: gltf_skeleton
+    wave: W3
+    palette_id: meadow
+    template: crab
+    state: authored
+  lobster:
+    backend: gltf_skeleton
+    wave: W3
+    palette_id: meadow
+    template: crab
+    state: authored
+  manatee:
+    backend: gltf_skeleton
+    wave: W3
+    palette_id: meadow
+    template: aquatic
+    state: authored
+  octopus:
+    backend: gltf_skeleton
+    wave: W3
+    palette_id: river
+    template: octopus
+    state: authored
+  seahorse:
+    backend: gltf_skeleton
+    wave: W3
+    palette_id: meadow
+    template: serpentine
+    state: authored
+  shark:
+    backend: gltf_skeleton
+    wave: W3
+    palette_id: mineral
+    template: aquatic
+    state: authored
+  stingray:
+    backend: gltf_skeleton
+    wave: W3
+    palette_id: river
+    template: ray
+    state: authored
+  water_dragon:
+    backend: gltf_skeleton
+    wave: W3
+    palette_id: meadow
+    template: serpentine
+    state: authored
+  whale:
+    backend: gltf_skeleton
+    wave: W3
+    palette_id: river
+    template: aquatic
+    state: authored
+  dirt_monster:
+    backend: gltf_skeleton
+    wave: W4
+    palette_id: meadow
+    template: humanoid
+    state: authored
+  dungeon_master:
+    backend: gltf_skeleton
+    wave: W4
+    palette_id: mineral
+    template: humanoid
+    state: authored
+  golem:
+    backend: gltf_skeleton
+    wave: W4
+    palette_id: mineral
+    template: humanoid
+    state: authored
+  land_guard:
+    backend: gltf_skeleton
+    wave: W4
+    palette_id: forest
+    template: humanoid
+    state: authored
+  lava_flan:
+    backend: gltf_skeleton
+    wave: W4
+    palette_id: flame
+    template: blob
+    state: authored
+  mese_monster:
+    backend: gltf_skeleton
+    wave: W4
+    palette_id: mineral
+    template: humanoid
+    state: authored
+  oerkki:
+    backend: gltf_skeleton
+    wave: W4
+    palette_id: forest
+    template: humanoid
+    state: authored
+  ogre:
+    backend: gltf_skeleton
+    wave: W4
+    palette_id: meadow
+    template: humanoid
+    state: authored
+  orc:
+    backend: gltf_skeleton
+    wave: W4
+    palette_id: mineral
+    template: humanoid
+    state: authored
+  sand_monster:
+    backend: gltf_skeleton
+    wave: W4
+    palette_id: meadow
+    template: humanoid
+    state: authored
+  stone_monster:
+    backend: gltf_skeleton
+    wave: W4
+    palette_id: mineral
+    template: humanoid
+    state: authored
+  tree_monster:
+    backend: gltf_skeleton
+    wave: W4
+    palette_id: forest
+    template: humanoid
+    state: authored
+  treeman:
+    backend: gltf_skeleton
+    wave: W4
+    palette_id: forest
+    template: humanoid
+    state: authored
+  rigid_demo_walker:
+    backend: rigid_voxels
+    wave: D
+    palette_id: meadow
+    template: quadruped
+    state: authored
+  rigid_demo_flyer:
+    backend: rigid_voxels
+    wave: D
+    palette_id: river
+    template: aerial
+    state: authored
+  rigid_demo_swimmer:
+    backend: rigid_voxels
+    wave: D
+    palette_id: river
+    template: aquatic
+    state: authored
+  fire_spirit:
+    backend: rigid_voxels
+    wave: D
+    palette_id: flame
+    template: sprite
+    state: authored

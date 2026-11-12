@@ -1,0 +1,2168 @@
+{
+  "schema": "creature-quality-review.v1",
+  "species": {
+    "badger": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "77dea98a5e04062070b2c315b9acacf01cf7703d6d3b29fbe0ce5b93d330f517",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/badger.png",
+          "sha256": "5402eef70a4fd667cb8df07606d14a6256ac7d70c01b735daf57d1be45f12907"
+        },
+        "motion": {
+          "path": "../format/native_approved_badger.png",
+          "sha256": "56b93869366d8d0791e1f11b37674ef5e02f692a9dc1e28bfa2f8356c623d243"
+        },
+        "runtime": {
+          "path": "../repro/runtime_candidate_catalog/frame_002.png",
+          "sha256": "4422d2b5762731e34fdc8be85c3f897d89c6241c0295f9ef36648d5450a4200e"
+        },
+        "ui": {
+          "path": "native_current/badger_12.png",
+          "sha256": "df3e845f480511c85d357c3766d8081add4002aa26fa8d93fffbdea30d2dab28"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "bee": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "2c034ed9c336ce02b065479a71d54e38a2d46b69332a2d365865a43fdc04b82e",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/bee.png",
+          "sha256": "12eb369e13e426d10f74741babdd7372db10be9a3825f4e25f5481a779387522"
+        },
+        "motion": {
+          "path": "../../creature-bone-small-v2/native_approved_bee.png",
+          "sha256": "ff41b80361a8e6f0263e759e4acc72285ed6cb7d25d9003030665087789b2c94"
+        },
+        "runtime": {
+          "path": "../../creature-bone-small-v2/runtime_wave/frame_001.png",
+          "sha256": "46812fec7311a0eb094eeafe1575bdc901b17f0e45df99118385f84873191d87"
+        },
+        "ui": {
+          "path": "native_current/bee_12.png",
+          "sha256": "34587dd07fd1ce62c4ddef4da3c5c1fbe998b17ac26d296cff7639ff07763a9f"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "bot": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "c182518c3cdb0be0fa7eefa31ca2cfd98a61df164980d75b39980732dc46e8ee",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/bot.png",
+          "sha256": "6207acef194ab7d9c5477e7b72f23c95e94044f9373a6c930105ebe4e0af51b7"
+        },
+        "motion": {
+          "path": "motion_current/bot.png",
+          "sha256": "1552c02b632d9f67f86aa1986923b8b6224304edc506873d6f091158622f6f3a"
+        },
+        "runtime": {
+          "path": "../../creature-bone-humanoids-v2/runtime_wave/frame_001.png",
+          "sha256": "6218b2403c0111f56c074bac01078391e4b6366098149bd42f360533fa818847"
+        },
+        "ui": {
+          "path": "native_current/bot_12.png",
+          "sha256": "47e86e7bf2ede0e5030d69f37d7c0cef36f2aaf5c5d4b004f4df272c98b3b3c7"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "bunny": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "5b68e4260a054b515b62054d94821d5a5bba45355cee955174840d19aeae7f78",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/bunny.png",
+          "sha256": "2a735c767893c24bb8e9833dbf0d307055d5b9301265d741dc23e5aa9c486513"
+        },
+        "motion": {
+          "path": "../../creature-bone-small-v2/native_approved_bunny.png",
+          "sha256": "d5d701e488c3745f8697827dc1c6fbdea4b6e8002af73b6b346a8ed673bba6bb"
+        },
+        "runtime": {
+          "path": "../../creature-bone-small-v2/runtime_wave/frame_001.png",
+          "sha256": "46812fec7311a0eb094eeafe1575bdc901b17f0e45df99118385f84873191d87"
+        },
+        "ui": {
+          "path": "native_current/bunny_12.png",
+          "sha256": "591584b48858da65e4951247f5969c7753954aa0a3a4aaf59f5b34db56537297"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "butterfly": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "92868ec8c381848162638e83a6832de6187a212096fda2dbd80f583fffe76614",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/butterfly.png",
+          "sha256": "238fdf5b7ecb0fb00a3e972d5331d3f93016d1c4f6888bba6d78c4dafb0cb091"
+        },
+        "motion": {
+          "path": "../format/native_approved_butterfly.png",
+          "sha256": "0ac4b73347ff48d44205ceac8bce388b86370f526ee21248a88bf6942728d233"
+        },
+        "runtime": {
+          "path": "../../creature-gltf-side-uv-v2/runtime_final_butterfly/frame_002.png",
+          "sha256": "beddf10f84d4766b1eda1af516ef8d312f3d77b6edee3c03ff1f27b771b6a17b"
+        },
+        "ui": {
+          "path": "native_current/butterfly_12.png",
+          "sha256": "19db31b1b34b65992722936f92624c09b99fda83828bb59de2c5f1b4fb4b76c2"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "chicken": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "873ccddc2e4073694bbc0f888a6595b2c8bcf12b3d8010b6a2540db0b7234756",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/chicken.png",
+          "sha256": "4c610977859f049640ef1b0e15e17a4ff5b27389c95b4b795454012c1fe0eeff"
+        },
+        "motion": {
+          "path": "motion_current/chicken.png",
+          "sha256": "2f7b8add7ee2aa9edd4c18ceea29e58fdc85e52aa320b35da6324c09920b0c28"
+        },
+        "runtime": {
+          "path": "../../creature-bone-small-v2/runtime_wave/frame_001.png",
+          "sha256": "46812fec7311a0eb094eeafe1575bdc901b17f0e45df99118385f84873191d87"
+        },
+        "ui": {
+          "path": "native_current/chicken_12.png",
+          "sha256": "32153427576cbcff32e4aefde1fd991c510ecf61a37b52b97f29f3dabca45d96"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "cow": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "9b3d1caa3dfa9ffd648fd202d1ea23e850609d72232818638aab5271e691d1f5",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/cow.png",
+          "sha256": "61558ee344d166dab7c03fda781962183e147075d732e2913c70e5b769d2732f"
+        },
+        "motion": {
+          "path": "motion_current/cow.png",
+          "sha256": "f993ec227b0039de545761e7f57d7fdf4ba3838bcca61fbf8f4339c2e2d0a2f1"
+        },
+        "runtime": {
+          "path": "../../creature-fidelity-pilots-v2/runtime_approved/frame_001.png",
+          "sha256": "80d94f7d4e74ff5f82cb28ba5cc3f7c0b19fc05c4346545d7539ecd156d36293"
+        },
+        "ui": {
+          "path": "native_current/cow_12.png",
+          "sha256": "398810f2815714c2d74d9a37ab569621f53911ed0124407dd5dec2d184c2ecfd"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "crab": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "050954ea213576e25c77fb1b8770298a08f7de7f4d8b2865e6f86163603da2f0",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/crab.png",
+          "sha256": "8e8ac2f321ce88e96e17d158d5f792372f4b9f38cc129dc5bc171599af64821c"
+        },
+        "motion": {
+          "path": "../format/native_approved_crab.png",
+          "sha256": "10c7187bf18ee031cb2e9630b093fa758c5d21ac8cc927965a8f0c9db1a1f58b"
+        },
+        "runtime": {
+          "path": "../../creature-marine-invertebrates-v2/runtime_corrected_crab/frame_002.png",
+          "sha256": "fed1c06b72754a9bafdc18c48ed17e456ab726790f62691bee1b525fbe9cc10a"
+        },
+        "ui": {
+          "path": "native_current/crab_12.png",
+          "sha256": "560fe549927984c02029cc338a69352837c07759eb7b032339eeeee17ed34bf0"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "dirt_monster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "2e0b47c993649c0e9e5430fcdfdbed7f48c965314b2d7c62d5dbf8653047d36c",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/dirt_monster.png",
+          "sha256": "0031ceced05c0f7a77a164ba5abd6983b87eb51354d4e273cf3eed2ea73f0a30"
+        },
+        "motion": {
+          "path": "../format/native_approved_dirt_monster.png",
+          "sha256": "6692c0101bc91cd8e03bc777c9c12657820591ec7d4ac387a52336c8d72e2614"
+        },
+        "runtime": {
+          "path": "../../creature-elemental-bipeds-v2/runtime_cadence_dirt_monster/frame_002.png",
+          "sha256": "003c4dbf4a0c8a5b261fdb376fea874f4b849bb0936c3cb5296e1942adaf366e"
+        },
+        "ui": {
+          "path": "native_current/dirt_monster_12.png",
+          "sha256": "c34c0cc4bcbba8475c5d6b24b763c1a30ecb535df6b44116c519a0e9ae8e072d"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "dolphin": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "187242cc46770862b66a8ca961dda72131beb41037a6dda00a1aba388b14cd33",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/dolphin.png",
+          "sha256": "d899136f5e0ff9ce28a50899109039778c3ee75010c3c743b66166b9eaffb186"
+        },
+        "motion": {
+          "path": "../../creature-bone-aquatic-v2/native_approved_dolphin.png",
+          "sha256": "e2164c53d5e472b68cbf801b138296c89f472c74994e7a9a70172824fa8e5068"
+        },
+        "runtime": {
+          "path": "../../creature-bone-aquatic-v2/runtime_dolphin/frame_001.png",
+          "sha256": "6bfd4bd9e3f1aa111b83d0a8439582960fbaf98b2bd5fa96123f12790053c35d"
+        },
+        "ui": {
+          "path": "native_current/dolphin_12.png",
+          "sha256": "157b67f55a10dc428a0839731f23f91be87e2e13ac94f58436522b3640bc7f97"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "dungeon_master": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "a20cbfcc65ec1596733eca1f4ab95cc4e0b952e028315c31fa7b8111b4863059",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/dungeon_master.png",
+          "sha256": "55a7fa50e1febf6641b2d8ed09bead71afdb10a3a19bd74161530f71cb40a6f1"
+        },
+        "motion": {
+          "path": "../format/native_approved_dungeon_master.png",
+          "sha256": "f27b44528f350a57410fbde26d7f7687028502a767909d95248a6bbfa62554d6"
+        },
+        "runtime": {
+          "path": "../../creature-guardians-v2/runtime_final_dungeon_master/frame_002.png",
+          "sha256": "4c4237b8c6aababc948715c6bd5cff4f64c2540bedb888b35cd5404cf2e03531"
+        },
+        "ui": {
+          "path": "native_current/dungeon_master_12.png",
+          "sha256": "291879b7c88d599d029cd8e558f10ec8cf84743324e6e5168606d09f4a860775"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "fire_spirit": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "9ed930ee245e56a2f656b3bfba377e45c3361efa699dbbfe1edefe02201695a4",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/fire_spirit.png",
+          "sha256": "81ca4b3721adb9c38aed4474b86066b3619e4dfb4223405c26171581f75008d7"
+        },
+        "motion": {
+          "path": "../../creature-aquatic-aerial-pilots-v2/native_approved_fire_spirit.png",
+          "sha256": "f261e3a72811c8c658ded551311a819066c2d1b4bf066ccb469e6d9e5d461901"
+        },
+        "runtime": {
+          "path": "../../creature-aquatic-aerial-pilots-v2/runtime_air/frame_001.png",
+          "sha256": "99d97e3f6412cd02e96ce691cb798f382b5312574143abdbbd1f241b2345a8fd"
+        },
+        "ui": {
+          "path": "native_current/fire_spirit_12.png",
+          "sha256": "116309f6a83ced3c65c9239333f340e5dacca991338ef67c3991ad4f03553485"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "fox": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "6cec7d0c8ab5848e35eb3c2e2cfd6ba7b4ea7debe71c862fb63788bc9115fd44",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/fox.png",
+          "sha256": "5bbc280434b53ca4c95e7b63d5730a5a951262323445e04d27e56c41039008f4"
+        },
+        "motion": {
+          "path": "motion_current/fox.png",
+          "sha256": "b03be67a2a49a63fe467eeed16943d6e247d852bddcd7121df129bda012abb89"
+        },
+        "runtime": {
+          "path": "../../creature-bone-coats-v2/runtime_coats/frame_001.png",
+          "sha256": "14db2978ad1d426121c7cba3d7f4319222c52ae071d6a220f2e7dda340ada0d5"
+        },
+        "ui": {
+          "path": "native_current/fox_12.png",
+          "sha256": "a7cf97d9f27787bdd410623bc044f3ba3566c16bb7bc25b6ef033abb1276e751"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "golem": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "2c2119160d378d22dc228d746703acfc58fd9149a3aa2357918a716e55d7df04",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/golem.png",
+          "sha256": "087bb384bf6ca15e436110e78cf371f9e1f16f9a720cb238964f78a6964a5d2f"
+        },
+        "motion": {
+          "path": "../format/native_approved_golem.png",
+          "sha256": "2e16e0ec0e0bfaf93f1b19e34aafcddcd5be771335626914fd022d9cf4ece644"
+        },
+        "runtime": {
+          "path": "../../creature-arboreal-v2/runtime_final_golem/frame_002.png",
+          "sha256": "f046dbb83f23e40a75a164bceebfa4ee7acb8c2895d745867ff2091f3cab7642"
+        },
+        "ui": {
+          "path": "native_current/golem_12.png",
+          "sha256": "2d925fc38f0ddf0dd2edd7090f6d3e84bb74d571d70c1c817cf41bdad2cf4118"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "hedgehog": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "5d062d8bc2b14f8c3a1b2abfe158e05acff4297fa24bc7f12fc74c39bb57b0db",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/hedgehog.png",
+          "sha256": "66be6b9dd20e3e68aeb471f1cc3fe067279b816c9af70f345713bfbe2fe307e6"
+        },
+        "motion": {
+          "path": "../format/native_approved_hedgehog.png",
+          "sha256": "bf82d3eb6bf4186300ac1d63a8dc4e61a9a73877e5ad1ba48a5623bbbcb69706"
+        },
+        "runtime": {
+          "path": "../ground/runtime_final_hedgehog/frame_002.png",
+          "sha256": "76191cc655598f1e50db75e206f3abad2503fb30e200f1e8fe7e416c729b1c87"
+        },
+        "ui": {
+          "path": "native_current/hedgehog_12.png",
+          "sha256": "4d5bea70b93f5799774d656d9955b2f53ba52ae9b589d8392e27ae010f1a6270"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "hermitcrab": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "59353c05c5913f3c280eb85cb86e51de30d92db00b1bd489e864ef99ed2f28b3",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/hermitcrab.png",
+          "sha256": "1189a10602699a078b7efeacc2e49b79816df417707554bbc7f8db051063d0f9"
+        },
+        "motion": {
+          "path": "../format/native_approved_hermitcrab.png",
+          "sha256": "9ec3c2321e12780ff38e4ec02027ccfd0fd3c2473654b336317ab4c288c9a1e4"
+        },
+        "runtime": {
+          "path": "../../creature-gltf-side-uv-v2/runtime_water_hermitcrab/frame_002.png",
+          "sha256": "f6801170070c3304e5912a8f7d420ad25b189904b25cee2bb488779ca8f7ac2c"
+        },
+        "ui": {
+          "path": "native_current/hermitcrab_12.png",
+          "sha256": "eabef66c89dd96dbaa639ee252f1f64040cb511ab073106f569bb53ab9664988"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "human": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "29c29e0796bf1d5f2037602e3417a6c9d33ca1917b6773c168e261abe28c2aaf",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/human.png",
+          "sha256": "6027c77b909eb0ba23625d5f11c5bb92d346e5298d2ff283464beec5bb462a81"
+        },
+        "motion": {
+          "path": "motion_current/human.png",
+          "sha256": "a8219059f886870b9544b584f1a9939cb3dcbb8d2eee308ac1f8efb833d1b8bd"
+        },
+        "runtime": {
+          "path": "../../creature-humanoid-pilots-v2/runtime_human_adventurer/frame_002.png",
+          "sha256": "7d0ec3723018241ffb26139dcdd316c65425561cfb3dd0cb4a6ba4a6ff529555"
+        },
+        "ui": {
+          "path": "native_current/human_12.png",
+          "sha256": "a0f72e2003db7ac7c8c74f10abbded81d92f526af0169401ab878cc211ec4d8f"
+        },
+        "equipment": {
+          "path": "../../creature-humanoid-pilots-v2/equipment_baseline_comparison.png",
+          "sha256": "6adc7dbee254d1e652568ca199678abcaf9e5a2b759a6784020557a643b3b633"
+        },
+        "first_person": {
+          "path": "../../creature-humanoid-pilots-v2/equipment_fp_candidate.png",
+          "sha256": "e660f85f14de718a1b513e38b38e1393104445b7a1a625ba2c09741b978ae46f"
+        },
+        "skins": {
+          "path": "../../creature-humanoid-pilots-v2/skins_ui.png",
+          "sha256": "c94a1bbcd3d304ca1d7a7c8e8e26581650e9e80ea588a0067a2d29891efb71ae"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "kitten": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "8c652dc0098bd7e8735456dc2c2fb3aab7683c1facecd1428c02e881cd2e65f5",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/kitten.png",
+          "sha256": "16c174348e77b6f1ef4be7914f8e85d023487d2c36e5dce3d6868e91027b0726"
+        },
+        "motion": {
+          "path": "../format/native_approved_kitten.png",
+          "sha256": "fbe8f25b1f8dbae4a3b764a65e04f1016db16fedf8e112f4a72dd84a1111d9e8"
+        },
+        "runtime": {
+          "path": "../ground/runtime_final_kitten/frame_002.png",
+          "sha256": "91c7e6587f4e0c1d43e7e2f4e7a50555de2837e58549e9402f264d4aa912430b"
+        },
+        "ui": {
+          "path": "native_current/kitten_12.png",
+          "sha256": "b32c85c08f0effad078f16a9a741c1ea8cd76497bb4a3fae48a6a179c87a32ba"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "land_guard": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "760e9bfe3065c7707a0a6dded3e701adf6decec7be46a519867540f01c2995ed",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/land_guard.png",
+          "sha256": "3d8c1786511963ab048cf2284f3e921acbd6f43c978f6ce652ca49b2bdb34961"
+        },
+        "motion": {
+          "path": "../format/native_approved_land_guard.png",
+          "sha256": "5284c6c3a5df440f2173df3f4ac8386813cd1526b56f91aa633b2b295180fbaa"
+        },
+        "runtime": {
+          "path": "../../creature-guardians-v2/runtime_final_land_guard/frame_002.png",
+          "sha256": "eff4401937ab21c7d50d5b437ca08d60d9735e1cd0f09ad93acead7d779d8364"
+        },
+        "ui": {
+          "path": "native_current/land_guard_12.png",
+          "sha256": "5429aa2592c64329845690b759c81e3dbda20ad1ce7ba4926757ad66ef1c7c8f"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "lava_flan": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "7abef9bb3b77030496ddab967c349dcc610961655cf50b3267f1904504a0d155",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/lava_flan.png",
+          "sha256": "0e4bf2471c03458271fe812892c52840734606afdfe05c50d090e7b96899a2c2"
+        },
+        "motion": {
+          "path": "../format/native_approved_lava_flan.png",
+          "sha256": "5d0ad210c9fc14887ce07e650c192f81a3c0a67b605b054f52c0496c688da85c"
+        },
+        "runtime": {
+          "path": "../../creature-crystal-lava-v2/runtime_flow_lava_flan/frame_002.png",
+          "sha256": "06195e01c2a6ee3dab5cd6242668a27a25cfc6af29c5076f56ba5b843933c648"
+        },
+        "ui": {
+          "path": "native_current/lava_flan_12.png",
+          "sha256": "1645f49231f54786c32ae82dba78f295afd3fecf9c0ee7b1a2e9b6124acd2e8f"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "lobster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "18ca76acc6260d7216fbdbf2f0f1b6070b53084e423b0e3b051e8906e1951f90",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/lobster.png",
+          "sha256": "b5ea5666f5830da1c37859dee97029eb1453f6e688473d9318f505ccbc2cbcdf"
+        },
+        "motion": {
+          "path": "../format/native_approved_lobster.png",
+          "sha256": "b76aab2223db5bc4ed6ef6a1ffba8e78ec43611ed99357de35390b9dfdcfd5ea"
+        },
+        "runtime": {
+          "path": "../../creature-marine-invertebrates-v2/runtime_corrected_lobster/frame_002.png",
+          "sha256": "e065e5dfc681cc21e15c144ea8b46811cbaa933549bc08dedee1baeb2d9f8878"
+        },
+        "ui": {
+          "path": "native_current/lobster_12.png",
+          "sha256": "5b01ee53b6704bf05481ac5046b3ba968fd3aa7e5863186c1cc278ed489fbc0c"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "manatee": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "2865d7aadf5a04e60081c1811c18423ff67fa68f5e425d3cbda746acc8da8df2",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/manatee.png",
+          "sha256": "2b7c563d696b79634f697406e38358f6468c2164dc7d6847649e0941efe4ce5f"
+        },
+        "motion": {
+          "path": "../format/native_approved_manatee.png",
+          "sha256": "40529f29377528210451f630019dc99f942cf889f140e846b2bc676ecb34f561"
+        },
+        "runtime": {
+          "path": "../../creature-marine-mammals-v2/runtime_final_water_manatee/frame_002.png",
+          "sha256": "d55d88921f6588cfdd9eb3fe728420d3563d712d392b8248839a0b19a921195f"
+        },
+        "ui": {
+          "path": "native_current/manatee_12.png",
+          "sha256": "52f8e2a948eb94717cbe6015b8f38581572e9fd71c15fde7bf237754e60485e3"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "mese_monster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "1b0cbabcfcc3c666d3eb45a348b3f07f106a6d9a02951283b4214b71e85ec47e",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/mese_monster.png",
+          "sha256": "d3caffa461f82e926369701033ac1f214dfb59ba3f173be9506e71983627e663"
+        },
+        "motion": {
+          "path": "../format/native_approved_mese_monster.png",
+          "sha256": "3ec45c0cd588cbe8307ae2e0472dc313ab78d3b0b1b22f531efcc33be3cc974c"
+        },
+        "runtime": {
+          "path": "../../creature-crystal-lava-v2/runtime_current_mese_monster/frame_002.png",
+          "sha256": "b0ad539fe3a074e6e5bc500e137f8b9464dd72c8b79d68f33b0dd653fea7f241"
+        },
+        "ui": {
+          "path": "native_current/mese_monster_12.png",
+          "sha256": "c9de2694f9ed9629377653f5e6b43d5f4f9aeb4c228506aecb56b181709115b3"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "octopus": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "366fbe6dc66196d14163933627c71719c384e479cc0350d2cfa1c9e538350fcb",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/octopus.png",
+          "sha256": "43aae074719c901bba618157d43f94047aaee9ebfd679c23585526e726d756fe"
+        },
+        "motion": {
+          "path": "../format/native_approved_octopus.png",
+          "sha256": "f7a4a968bc2d10c43ab1fa07fbe0a56e9d2521deb95e9d6a9b9330a8d57b9b96"
+        },
+        "runtime": {
+          "path": "../../creature-marine-invertebrates-v2/runtime_corrected_octopus/frame_002.png",
+          "sha256": "20775aea5da415b5422f0f723956c52287d1622e6a8ccab21b98e38e45778651"
+        },
+        "ui": {
+          "path": "native_current/octopus_12.png",
+          "sha256": "5a0a31aafd402782ca82414f627684fc65b29b37f0fc362ecd02d545ef25e9ff"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "oerkki": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "57baecaa216346210c83385656416d94cfbc6d2c0b46526026f64726bbd17abd",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/oerkki.png",
+          "sha256": "cd616e6c3acfaf1cc37a4733adea73040154f3c0c7da7e56b95b747b9f1e7840"
+        },
+        "motion": {
+          "path": "../format/native_approved_oerkki.png",
+          "sha256": "6d85db6bd1625db348bf2e2b971eb493bb91b017f9c764f8dde5dbeea7b3ce7d"
+        },
+        "runtime": {
+          "path": "../../creature-warriors-v2/runtime_contact_oerkki/frame_002.png",
+          "sha256": "1be5c96156b5d0677d747303c7c7474f644ef25dfd26d7ecd37591f4b40abfc4"
+        },
+        "ui": {
+          "path": "native_current/oerkki_12.png",
+          "sha256": "ba173b7cc1b3e5e4f53ced0851d16ce04a22d7aaab8ddd4565e86d73d0afb6da"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "ogre": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "7e6590069adfa37ca928319378f1a891818aacc23bfdee039b7ad8f602adc569",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/ogre.png",
+          "sha256": "6180f31dd512641012002b5391272f8fb3cbccfa6b776f2eda0953cc3156ffe6"
+        },
+        "motion": {
+          "path": "../format/native_approved_ogre.png",
+          "sha256": "eefa152e1b99956eb9222cdabd5fa4f4c2e3b9b4f247377fc53b7866703edca0"
+        },
+        "runtime": {
+          "path": "../../creature-warriors-v2/runtime_contact_ogre/frame_002.png",
+          "sha256": "973e450dde8ae79ebe60a0877c63f9237ab5ccdb7edd542112ec37fa2641217d"
+        },
+        "ui": {
+          "path": "native_current/ogre_12.png",
+          "sha256": "111bc5286ee330fad3c2b4c298d6037796d19c75408e99d34c6c747b2b9f83cc"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "orc": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "4375c00ab5255fde51e7e838aea37f0eec8bc70598184aa9adee6080b232b285",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/orc.png",
+          "sha256": "d05636ec65e2d1600009dfefdfd9b4e22a1ee97e8ad7bc944357e4c4dc2846ef"
+        },
+        "motion": {
+          "path": "../format/native_approved_orc.png",
+          "sha256": "e58eb987e2382e30683a246e8267b72389b5f9bd1b7b69162df8446d79cd87c7"
+        },
+        "runtime": {
+          "path": "../../creature-warriors-v2/runtime_contact_orc/frame_002.png",
+          "sha256": "2fdc183e08fef78160e871ebb1be0fccba5bd6ffc0d550b5cb0c3572d476c43c"
+        },
+        "ui": {
+          "path": "native_current/orc_12.png",
+          "sha256": "4ec36c3ec0434fca49091691364a8c5431c010978397e4deb5ae85633f72abb2"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "owl": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "2eef0810aeb89634899ee9268519751ada345acfb0c754c5837997e87bd6a0a3",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/owl.png",
+          "sha256": "9ba9acefafbd2c50afc259569f42b1353f22022403b9b1409998f2b2edd9e3bd"
+        },
+        "motion": {
+          "path": "../format/native_approved_owl.png",
+          "sha256": "0c08b26f56ab14efaae60953b1f4fd348d8d26524fda48163c851d097e644961"
+        },
+        "runtime": {
+          "path": "../../creature-gltf-side-uv-v2/runtime_final_owl/frame_002.png",
+          "sha256": "e9562329a970a43e6182edae9d0ada6af9f0dd81687d0af280c132210a847842"
+        },
+        "ui": {
+          "path": "native_current/owl_12.png",
+          "sha256": "e787283f9633691e3b8ac3d6872fbc5e207c05b40abba17b86a0f82e3f06a817"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "panda": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "ec41c28d817c8568954ad5909ac7906936250899a240474b8dd203b35e58f166",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/panda.png",
+          "sha256": "a423394fe93f4fe83b3ab2ee18658b0a38c8f523956b5402b4f394372edf7aa0"
+        },
+        "motion": {
+          "path": "../format/native_approved_panda.png",
+          "sha256": "62122324e9909c0ff34bc4694aac5e181484655fec9772b12296b5805b22054f"
+        },
+        "runtime": {
+          "path": "../ground/runtime_final_panda/frame_002.png",
+          "sha256": "df565d941e91f56f1dc7a219cf46c13028e835ec8c4457c3fdfe984cd0f1866e"
+        },
+        "ui": {
+          "path": "native_current/panda_12.png",
+          "sha256": "295dcdd5ae440ec4393805a3b0a07e8aa80a2c299d33f31503ff8f1c3db5a77d"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "penguin": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "dcfd22191efd3644063a9d5c1494391d0e25171bf2d9e4c5cdf5613580f539d8",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/penguin.png",
+          "sha256": "7c2e60fb94a5e3d8d66280fedd75da46e55df06917c120678849a758c13379d5"
+        },
+        "motion": {
+          "path": "../format/native_approved_penguin.png",
+          "sha256": "11ee322e935dc25721a085ffd7ca4e6094f007fa54884ab3670210d5be7a2213"
+        },
+        "runtime": {
+          "path": "../ground/runtime_final_penguin/frame_002.png",
+          "sha256": "fd5939e3e06dfd9fc6b4130486cd266d8cc0fa2cce23008d054239cb1fb93732"
+        },
+        "ui": {
+          "path": "native_current/penguin_12.png",
+          "sha256": "73ab217bc81a7356d65c2f3e9d8943054fc11298be9aea085da49fc0d7e5ce6d"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "pig": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "cc2c30a89cb8e153b9c6de6ddd8aaebf36b48d2157b1783c51fb15d3e7076464",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/pig.png",
+          "sha256": "1262a8358c1cc5d841c51f816aa92494fc3a3cbe3bfdb07bb56af9d06cad081a"
+        },
+        "motion": {
+          "path": "motion_current/pig.png",
+          "sha256": "a0edd2d53134f4fb699f52a7dcc9aac0b27d2a7b2051a408f1fd77ec0d138706"
+        },
+        "runtime": {
+          "path": "../../creature-bone-coats-v2/runtime_coats/frame_001.png",
+          "sha256": "14db2978ad1d426121c7cba3d7f4319222c52ae071d6a220f2e7dda340ada0d5"
+        },
+        "ui": {
+          "path": "native_current/pig_12.png",
+          "sha256": "219d06965454cfd6b072e3d4bfe8a40be33cbe7f70b72831569dc6ec4a12c986"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "puffin": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "667800908ac601a37bdaba2f733d31196edc4ea3399178119c60bcd1fc471b6b",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/puffin.png",
+          "sha256": "5f2070dcfc4eba8ee94e4538f65dd2bdc6115b7141c109eb9c3e3cd062d99951"
+        },
+        "motion": {
+          "path": "../format/native_approved_puffin.png",
+          "sha256": "d716a9faaa63aa860db2c3d7ff3211442cd11e1f1770a610c4f87afb66e39593"
+        },
+        "runtime": {
+          "path": "../../creature-gltf-side-uv-v2/runtime_final_puffin/frame_002.png",
+          "sha256": "6cb8f1016fab669acc9832de651012594336446f27c4d8fc8048838557d6c59c"
+        },
+        "ui": {
+          "path": "native_current/puffin_12.png",
+          "sha256": "32f4cfc01e920f24ea8c200ad98867e7d46f86e55c66ba443a6fa87033dbbb65"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "rat": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "e520eb4dc7c4cdfa1e6783396f00a97b4a64a22e2b825ff61e230608b67b56ce",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/rat.png",
+          "sha256": "9e2c0d3869b31e492b98a7acab693d651b1e110f0a4c87cd30dd88155bf6e86c"
+        },
+        "motion": {
+          "path": "../format/native_approved_rat.png",
+          "sha256": "61a0b19641d9c3afdae8637a1e73be8e544f123db4a3d7b49133248eaf9495ef"
+        },
+        "runtime": {
+          "path": "../ground/runtime_final_rat/frame_002.png",
+          "sha256": "07023a82a001aa50dca07a89d256f82aed88f1a192ef75eb1580f54b5e3afd45"
+        },
+        "ui": {
+          "path": "native_current/rat_12.png",
+          "sha256": "91726435fa3ab4b52b83c4db582d17c99327c2d1224d8a29b48aae61c0000bd0"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "rigid_demo_flyer": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "f7d9a1a27a700e87c7e26947bedf4ec00a6e4cdba92e643150567072931a1b80",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/rigid_demo_flyer.png",
+          "sha256": "c31bfb2669bedbf3c08130e506753d8b2136c800b31ad6a6dd97ba785f561609"
+        },
+        "motion": {
+          "path": "../../creature-aquatic-aerial-pilots-v2/native_approved_rigid_demo_flyer.png",
+          "sha256": "31e7cbc27a35238fadaf147f75bb8394c483d753037680822053dd6cbce92a92"
+        },
+        "runtime": {
+          "path": "../../creature-aquatic-aerial-pilots-v2/runtime_air/frame_001.png",
+          "sha256": "99d97e3f6412cd02e96ce691cb798f382b5312574143abdbbd1f241b2345a8fd"
+        },
+        "ui": {
+          "path": "native_current/rigid_demo_flyer_12.png",
+          "sha256": "ae368c2f4e2930d59518250db2a2bfa3b7b5c5819ed81676b65425374608aa65"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "rigid_demo_swimmer": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "caaeb7de241439219696dc4a9c0f6b279e3f2a02d6084860d2a1dfa8aa97cdb3",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/rigid_demo_swimmer.png",
+          "sha256": "e3b46f8cd8d6b854d99faef6af637d38f87cea08903277ef03f72878f5ee2224"
+        },
+        "motion": {
+          "path": "../../creature-aquatic-aerial-pilots-v2/native_approved_rigid_demo_swimmer.png",
+          "sha256": "b0cb019fdad08cd711520d3f8961c292cfc36843b2eccf280b89018f18d1c254"
+        },
+        "runtime": {
+          "path": "../../creature-aquatic-aerial-pilots-v2/runtime_rigid_demo_swimmer/frame_001.png",
+          "sha256": "04cd4808623b1e6c2d2e1a320182942e3740df7682df0db6ecd295059942f628"
+        },
+        "ui": {
+          "path": "native_current/rigid_demo_swimmer_12.png",
+          "sha256": "c29343b88bccbadf9fb81c4cd7a5beed0d81cfb7fbff6d0414261e1bf7f0022e"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "rigid_demo_walker": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "3fc243bd6dd2fa5295ed5908cafacf14d2e9d9e15f91222e0628baf4547ae582",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/rigid_demo_walker.png",
+          "sha256": "c307256b982a2a4a789b04a29864d8bab150b1b8723bcd04c317c528668dc491"
+        },
+        "motion": {
+          "path": "../../creature-fidelity-pilots-v2/native_approved_rigid_demo_walker.png",
+          "sha256": "20583171b30f9ede5101b840fe2b888c3d9c961f526bf20c408f7070a46d0d58"
+        },
+        "runtime": {
+          "path": "../../creature-fidelity-pilots-v2/runtime_approved/frame_001.png",
+          "sha256": "80d94f7d4e74ff5f82cb28ba5cc3f7c0b19fc05c4346545d7539ecd156d36293"
+        },
+        "ui": {
+          "path": "native_current/rigid_demo_walker_12.png",
+          "sha256": "d0192f4a528d3a3a2d91d492dcc055dbd6bccbda6dc4a3d6dc409ec75c9bb801"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "sand_monster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "e4f3f2f7adf3547b826445dbf010c38deebc4c18bdfe0203d0cd9cb70dead10a",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/sand_monster.png",
+          "sha256": "c0b04f3c7f1434d0b915f5ae7e59173ca763575587984cdcd0577afa94d8d3ad"
+        },
+        "motion": {
+          "path": "../matrix/sand_cap/native_approved_sand_monster.png",
+          "sha256": "cc05fe826e4d65cdf26309521d4742f7b4b3437b7de0bfc47463466bae37f70b"
+        },
+        "runtime": {
+          "path": "../matrix/sand_cap/runtime_candidate/frame_002.png",
+          "sha256": "69cad0945028ff23707c693d768bdef2a3de1d3b0ac89cd3256f73cf484c8952"
+        },
+        "ui": {
+          "path": "native_current/sand_monster_12.png",
+          "sha256": "b703d8e199649a576078ab7c7cd6c3bc3a6541dc7a44bfb02fa8cbbe904889d3"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "seahorse": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "d0320b572e78cbe0384716d1442c996da65b8d09f50079e1dcafa879c0cafc57",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/seahorse.png",
+          "sha256": "81758b05a12d127d3cc8e535d5988d10d543ca0212b72cd21a2c44aa35b21ed9"
+        },
+        "motion": {
+          "path": "../format/native_approved_seahorse.png",
+          "sha256": "c13fc9c5f91601049565ead74fa5ffdf0688019ac0edce77500fffb004def3e7"
+        },
+        "runtime": {
+          "path": "../../creature-aquatic-fish-v2/runtime_final_seahorse/frame_002.png",
+          "sha256": "4d58f0673f2055750ddc5517d629f1f780ae37d9860cb9a9678548aaba9900aa"
+        },
+        "ui": {
+          "path": "native_current/seahorse_12.png",
+          "sha256": "33c9fed946d4dedefab16abd04cc94799fba38eb4adb426c089c9de72d660bbe"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "seal": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "356bbc4d7df4ca7cd66673012d5d89abe890f4e2b56543abc90e382e871e8504",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/seal.png",
+          "sha256": "da623ce8b11bcbcf02df5788d260e13a6a7ae5b4714863f8d3513afc27e98420"
+        },
+        "motion": {
+          "path": "../format/native_approved_seal.png",
+          "sha256": "e79e34e6373bb5edc4db97f929d8a24ec67232521e6f2cb046a6cdb28ea35e52"
+        },
+        "runtime": {
+          "path": "../../creature-marine-mammals-v2/runtime_final_land_seal/frame_002.png",
+          "sha256": "7176baf1127f8f0b8cc07ebe55a48afe2451b6d8cd5b49dbb0223fde99a4532f"
+        },
+        "ui": {
+          "path": "native_current/seal_12.png",
+          "sha256": "2800fc43ab990a1a3cb2c55d62e796792b3c255773cdf803c8fdf3447030f0df"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "shark": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "d8fc0898f88b4feb64e9c39b2da4b7c70a850331306c5a9dc47331eb4ecf3a07",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/shark.png",
+          "sha256": "a38230f3232614182aaa1d1ab8e374e31023481e113079b4ebd84978850a7300"
+        },
+        "motion": {
+          "path": "../format/native_approved_shark.png",
+          "sha256": "b72802007858daf6593feaaa4db3f52863c8239616b0e909617ef98af90fef51"
+        },
+        "runtime": {
+          "path": "../../creature-aquatic-fish-v2/runtime_final_shark/frame_002.png",
+          "sha256": "55caecdd641eb35f96e9663aa3fead9ddf7d0b032e629896e11e8f3392440098"
+        },
+        "ui": {
+          "path": "native_current/shark_12.png",
+          "sha256": "72c85c5437abf304f13fc04918c312fbb2d699c717dbb3785411fcd3a19e7fd5"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "sheep": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "0bf7c2ebbf6aed86c22d5dd3dce48fb818a8fe6bd9835eb73c49497b7570d82a",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/sheep.png",
+          "sha256": "58ed023d454cf8ac173b30d2f3832788a4e0cc52eaab6b5e4233e48051f6a707"
+        },
+        "motion": {
+          "path": "motion_current/sheep.png",
+          "sha256": "c2ddf1cb0358fc38c4caaa03c8aa69247844a71cba0f30444de1bfee695eb009"
+        },
+        "runtime": {
+          "path": "../../creature-bone-coats-v2/runtime_coats/frame_001.png",
+          "sha256": "14db2978ad1d426121c7cba3d7f4319222c52ae071d6a220f2e7dda340ada0d5"
+        },
+        "ui": {
+          "path": "native_current/sheep_12.png",
+          "sha256": "ba0e141d416eac975c5aff20064bad4548d6142f8810e899f8a63185d2692544"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "skeleton": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "73ce2c71e2f8b224c9cae6d380b82029acb3e6344a2c155635a4d3e94e9ca0f0",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/skeleton.png",
+          "sha256": "de4a93947ca62a85629882d6088714ec7413f1f9a622117974d613d0e1f3954d"
+        },
+        "motion": {
+          "path": "motion_current/skeleton.png",
+          "sha256": "9aad80d177f80775daa02d679c9a29b526539a8a82c656df2b46bb355cd5b946"
+        },
+        "runtime": {
+          "path": "../../creature-bone-humanoids-v2/runtime_wave/frame_001.png",
+          "sha256": "6218b2403c0111f56c074bac01078391e4b6366098149bd42f360533fa818847"
+        },
+        "ui": {
+          "path": "native_current/skeleton_12.png",
+          "sha256": "c271b132e05b1773421e8a0708637092ffca9d6ad67269503d620aa80ecab93e"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "spider": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "6f19f04c209f39119c116f0f11df488b2f62030931d174fff53552b4fcc1e13f",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/spider.png",
+          "sha256": "0a6b5123f4d1a1a793f714ab3edccca1213ad06805de4c90fc276207cf071707"
+        },
+        "motion": {
+          "path": "../../creature-bone-spider-v2/native_approved_spider.png",
+          "sha256": "b7b4c17bf57bd08011f6b9e1e9899c04752781eac15c60c2648511bd1de38b54"
+        },
+        "runtime": {
+          "path": "../../creature-bone-spider-v2/runtime_wave/frame_001.png",
+          "sha256": "b34910b528e4491c425f2b3801fcb693227cb35c72d535872c1167c42b8f2314"
+        },
+        "ui": {
+          "path": "native_current/spider_12.png",
+          "sha256": "c8f9ead07b68d91c5c0c8f28eb5d25fa821e7c1b5b631e99c5ea24b2b467d701"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "squid": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "f94e24d779ff9de8467d3b1cf71171351de4445fe3ac0bd0fe94198e37ed26bf",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/squid.png",
+          "sha256": "2b6da62691c14b6c6712d3a20e166ccd0e934e5ca512b250b346cc505db7bf02"
+        },
+        "motion": {
+          "path": "../../creature-bone-aquatic-v2/native_approved_squid.png",
+          "sha256": "88c70d59770995d88cb875d8f530eeb1a0da44135e532cee6fa3d0767a122f23"
+        },
+        "runtime": {
+          "path": "../../creature-bone-aquatic-v2/runtime_squid/frame_001.png",
+          "sha256": "507ab19cc26540e684f188cc5b3f8720b9b9378d163d524b3d752610c33b1159"
+        },
+        "ui": {
+          "path": "native_current/squid_12.png",
+          "sha256": "3d3a05d88c1463bfd5afb9d24bef333b94bd114cc967823e2ab8588c385c2157"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "stingray": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "e3e1da18fae9d4ee1a4169a512dfea45017dbfa89ed7cd9221ff757f320e58fe",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/stingray.png",
+          "sha256": "3679728eee49dd313d41c33f3f952c094565a5bcc1799e5ecea9f5a69ae5631a"
+        },
+        "motion": {
+          "path": "../format/native_approved_stingray.png",
+          "sha256": "f5c04ffbcb68ef9307261bf5651f67948eb91440e0a7ec47288bcfc9d84b7915"
+        },
+        "runtime": {
+          "path": "../../creature-gltf-side-uv-v2/runtime_final_stingray/frame_002.png",
+          "sha256": "8afa7726af30e0fa68d7cfea6e3e192f13255ef00e46628710e876b2bf7f8568"
+        },
+        "ui": {
+          "path": "native_current/stingray_12.png",
+          "sha256": "312480285e751ff2ac41aed9ee7cc1367807d3f89fea3f92d9b65261755d9c1a"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "stone_monster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "eca98e96b93f4f1893d498e295521553d436010d9d13ba9b9210c8acf0b5e7cb",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/stone_monster.png",
+          "sha256": "a78829d4cfc0b66b5bbc391cc586eccd7daf84f4d5aad16f7c171ae1627370da"
+        },
+        "motion": {
+          "path": "../format/native_approved_stone_monster.png",
+          "sha256": "37b627d1fd3a30fb4bd2ae78bc3214fdcc66d43404ca2ad93e911c33dffdc914"
+        },
+        "runtime": {
+          "path": "../../creature-elemental-bipeds-v2/runtime_cadence_stone_monster/frame_002.png",
+          "sha256": "a3c7ee580d5d236d7ef86ec5c2f77359800298ac55161cc623406086111f8e48"
+        },
+        "ui": {
+          "path": "native_current/stone_monster_12.png",
+          "sha256": "2d822f82f9e4962ca058d1f5146ef0c4da291ad0944ae85ed856323e5ab1b7e6"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "tortoise": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "0d39185b335e5237b05fc155d06a8adc37bb3f6122e111d9e11777f3eebe1796",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/tortoise.png",
+          "sha256": "fc2e6630b83df2436567f8e064aaaa366acc3a33099355015002e03f64b2d1d0"
+        },
+        "motion": {
+          "path": "motion_current/tortoise.png",
+          "sha256": "e2f42752c05163bce515af46d8e81da5e5ac16c775d1bc56f71f033ace9bed6d"
+        },
+        "runtime": {
+          "path": "../../creature-bone-tortoise-v2/runtime_wave/frame_001.png",
+          "sha256": "96f1a3cf8df9646b8251dec940e773cb751258a5eca28115482cca131bc01538"
+        },
+        "ui": {
+          "path": "native_current/tortoise_12.png",
+          "sha256": "0c3a61bea5003cc76ba788bc3c5176affde1f3547f3743c6307756ae88a11c91"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "tree_monster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "affe2cd6171356f3ea6d259637f7a92f31b3e175083997dfae9d69cebb2ecd58",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/tree_monster.png",
+          "sha256": "a854e071c215c927c08c3690c6ffbc6ca2accc7a12822d37de7798528615d3bc"
+        },
+        "motion": {
+          "path": "../format/native_approved_tree_monster.png",
+          "sha256": "ea89c052410fcc24e35d909ac905f619bc8bef3351fbdadb774cb1946c8d2986"
+        },
+        "runtime": {
+          "path": "../../creature-arboreal-v2/runtime_final_tree_monster/frame_002.png",
+          "sha256": "ae53018b04210990df29f15e1132cc56a6000b68ff1bbb64e0ae32b622a02e18"
+        },
+        "ui": {
+          "path": "native_current/tree_monster_12.png",
+          "sha256": "db4f8f78827c87cf84d36ee223b5c522daf7578153b315bf361880f3f6daaa32"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "treeman": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "4c9a8b40338677c8548f4d0b854e0f99a91bd9ea5918a8e4731fb1b98304376c",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/treeman.png",
+          "sha256": "95193a2e8923195fa4d7ba1afbc26308c7065f7fe2522a75ad629952aae89973"
+        },
+        "motion": {
+          "path": "../format/native_approved_treeman.png",
+          "sha256": "e2326ffd9aedcbdedc8081e4ee59389245db1ad78efbcf34412021af81bb0d29"
+        },
+        "runtime": {
+          "path": "../../creature-arboreal-v2/runtime_final_treeman/frame_002.png",
+          "sha256": "575abbb390211d63808dd6352c20a0db84777eef3e1cbe02c3790ef3782d6a3c"
+        },
+        "ui": {
+          "path": "native_current/treeman_12.png",
+          "sha256": "b9ea27553c387cae7847326bab2c5f83f3f379943003b9889ae549f336ebd7ef"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "trout": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "082b034440f0bd687d2be7462e5905897ded4b8daa2dc2c2a230a92ac074c6ce",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/trout.png",
+          "sha256": "b3a72a108595cf0fdf756cd441000c1430a257b2e8b5c92fe004a2112ccb2fc0"
+        },
+        "motion": {
+          "path": "../../creature-bone-aquatic-v2/native_approved_trout.png",
+          "sha256": "8263e92964fb367c5202676f88c2f59d711d9aa9bc6fd131122e1a74e6132b99"
+        },
+        "runtime": {
+          "path": "../../creature-bone-aquatic-v2/runtime_trout/frame_001.png",
+          "sha256": "b7e4f1d4a57d5aa33b4e7898a689c178161c16a3fad10151d63ca2af5f7f56b9"
+        },
+        "ui": {
+          "path": "native_current/trout_12.png",
+          "sha256": "0338995b889ceb1fae49c785f2eb70651329af40b8fd917903dc767bc56a2b49"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "warthog": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "206366d1eedb93d802a0e3237d6f0e2d897540b5ec4fe00f21da168611033b10",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/warthog.png",
+          "sha256": "cb546969e36ca6542aa76f6f6ed0dd065292d9bbe39419215145b9f3872e3429"
+        },
+        "motion": {
+          "path": "../format/native_approved_warthog.png",
+          "sha256": "8618f534843b560bc92867006f7571e11b6a0059f57c1c0ee3d68cfc95df4e3f"
+        },
+        "runtime": {
+          "path": "../ground/runtime_dense_warthog/frame_002.png",
+          "sha256": "f4e069bf56f483d54498dfc26d17eaf725bc1fe1358f73ff7ef55f7cf342af63"
+        },
+        "ui": {
+          "path": "native_current/warthog_12.png",
+          "sha256": "ad73bac6a81dd86e8c31b01efa097d3495784dcc9ca756773a636ddb51740040"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "wasp": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "9df1fd645309d9b02a92a57bac4e3ba71463f7904875cec6bb6d95c189ff9081",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/wasp.png",
+          "sha256": "454d4703f2c57f445fd424f256540b3e52b5cd98580b2c12f06a166ee12ee1c3"
+        },
+        "motion": {
+          "path": "../format/native_approved_wasp.png",
+          "sha256": "90c469c5778933b922f4cc20e06c8defc544c2bc1fc18c1315757836f966286f"
+        },
+        "runtime": {
+          "path": "../../creature-gltf-side-uv-v2/runtime_final_wasp/frame_002.png",
+          "sha256": "b77c13f280458bda6bcf3e1c353a3475ed9e7064fe6d86fb41b093acb2acc93e"
+        },
+        "ui": {
+          "path": "native_current/wasp_12.png",
+          "sha256": "24d83adce9d0c5658da0aab2f327d0835be4b4854c96bcdafbbe5cbad3cefd7e"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "water_dragon": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "27634785a21e52f4e5754bf10720b5f8df0f94dc820cf2aa50a20ceacd2a22d0",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/water_dragon.png",
+          "sha256": "c531403aa569538474370883cda8cf797d222a35d8d0d56bc7d6b9c08cb4f4ac"
+        },
+        "motion": {
+          "path": "../format/native_approved_water_dragon.png",
+          "sha256": "8610f44335ce98c9365d2e8fc714e864b9b76fb7e61fd80800ccaed25d953bc4"
+        },
+        "runtime": {
+          "path": "../../creature-large-aquatic-v2/runtime_final_water_dragon/frame_002.png",
+          "sha256": "ad3a50311d5522c6fba0e0476800fd3ef6b9b0524fcf39851ea81a80c8ffcf07"
+        },
+        "ui": {
+          "path": "native_current/water_dragon_12.png",
+          "sha256": "5d01aeb460ac3caf3aa905d5100a5713648bf034c1b13c7577d1fb571cc5a7ac"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "whale": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "bb5ed21b678fa1399e6b0306082fdb66951b0fe53ad0f26488031767eba2a097",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/whale.png",
+          "sha256": "c78c98326157c7bdcc4e6e7d49036e86961268117bafa03cda4820772bab9008"
+        },
+        "motion": {
+          "path": "../format/native_approved_whale.png",
+          "sha256": "5deaf3498ad31cf5da142c04680eab92cc74ecab3e5580f64550ade2cd3fcc39"
+        },
+        "runtime": {
+          "path": "../../creature-large-aquatic-v2/runtime_final_whale/frame_002.png",
+          "sha256": "0a8ef85d992c46e8ebc3af03cefada05dbb3def06f24d4b9ab0aa7f4c6139504"
+        },
+        "ui": {
+          "path": "native_current/whale_12.png",
+          "sha256": "6ac1ebcf818aef20daf4f5513d541af77377852063d6df47e18f2093eb1a4555"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json",
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending."
+    },
+    "wolf": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "f3d7a53dd8f11270afb77fe98065908c650a80bbe7a65d78a000c89cf575e733",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/wolf.png",
+          "sha256": "5eb55b90a8b908ed8b63d5fd2c6e9d5da70550f5fd9b46ec1811e1729e3587ff"
+        },
+        "motion": {
+          "path": "motion_current/wolf.png",
+          "sha256": "df21d3650e294e64351431aefe4b9ee4d4e6b7f0ad1ac363ed094fccf0ab3caa"
+        },
+        "runtime": {
+          "path": "runtime_current_catalog/frame_002.png",
+          "sha256": "211ff9f9e4e09cf68e363c80a798375ee3ec2813c41ffa00bbe07578a701a9ec"
+        },
+        "ui": {
+          "path": "native_current/wolf_12.png",
+          "sha256": "d665f46761bb7b10ca4d21c5a569c42da76e0aa1703abb23f52db428df258127"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "zombie": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "4c5417f7196812a96c43acc25a0e267e85691047bcf82316e5fcec74d3e31ced",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/zombie.png",
+          "sha256": "09c5df0c570726ec3e206bc6dcf03035edb4992ac946c4d8a2066659d0ce6178"
+        },
+        "motion": {
+          "path": "motion_current/zombie.png",
+          "sha256": "74804c19317f03ff119986fa9d284dfeba8931d278eb4a000e9081471a13a4fa"
+        },
+        "runtime": {
+          "path": "../../creature-humanoid-pilots-v2/runtime_human_adventurer/frame_002.png",
+          "sha256": "7d0ec3723018241ffb26139dcdd316c65425561cfb3dd0cb4a6ba4a6ff529555"
+        },
+        "ui": {
+          "path": "native_current/zombie_12.png",
+          "sha256": "a3ff856aadc7b8bf3d6e7101dcd944e18f68c921bde64889a9bfdca0bb13019d"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "human_adventurer": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "49644bac524d9d490dab7bff5f0195cbfcdd7556589e87362f31b93d6be336c7",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/human_adventurer.png",
+          "sha256": "5e7cab1cd9a29ed1afdde3fed90550fe6122977697b229e07cc0880bb966e5e8"
+        },
+        "motion": {
+          "path": "sheets_current_catalog/human_adventurer.png",
+          "sha256": "5e7cab1cd9a29ed1afdde3fed90550fe6122977697b229e07cc0880bb966e5e8"
+        },
+        "runtime": {
+          "path": "../../creature-humanoid-pilots-v2/runtime_human_adventurer/frame_002.png",
+          "sha256": "7d0ec3723018241ffb26139dcdd316c65425561cfb3dd0cb4a6ba4a6ff529555"
+        },
+        "ui": {
+          "path": "native_current/matrix/human_adventurer/pose_0_view_0_color.png",
+          "sha256": "b313aab174a2ab8faf543efdaf27b276e71699f6baf99bb6b1a754dcbadb1da4"
+        },
+        "first_person": {
+          "path": "../../creature-humanoid-pilots-v2/equipment_fp_candidate.png",
+          "sha256": "e660f85f14de718a1b513e38b38e1393104445b7a1a625ba2c09741b978ae46f"
+        },
+        "equipment": {
+          "path": "../../creature-humanoid-pilots-v2/equipment_baseline_comparison.png",
+          "sha256": "6adc7dbee254d1e652568ca199678abcaf9e5a2b759a6784020557a643b3b633"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "human_guard": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "81200577eccc5db72f35501834506347eb1a8916c2ba3a9abf3a0e9e51b06f48",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/human_guard.png",
+          "sha256": "552a48c5f9dd29fc1aa9301e40752cb0d98918452308ab4b096fa4411490c0de"
+        },
+        "motion": {
+          "path": "sheets_current_catalog/human_guard.png",
+          "sha256": "552a48c5f9dd29fc1aa9301e40752cb0d98918452308ab4b096fa4411490c0de"
+        },
+        "runtime": {
+          "path": "../../creature-humanoid-pilots-v2/runtime_human_guard/frame_002.png",
+          "sha256": "fd593a1c0c3df22bba0614d5c76b75a7f215f1901c5b0ed3edb82d3772c5c7e8"
+        },
+        "ui": {
+          "path": "native_current/matrix/human_guard/pose_0_view_0_color.png",
+          "sha256": "086b12d637f89a9a384a6cf696713f61f8d88b6182eb3a627e436035d8595fa7"
+        },
+        "first_person": {
+          "path": "../../creature-humanoid-pilots-v2/equipment_fp_candidate.png",
+          "sha256": "e660f85f14de718a1b513e38b38e1393104445b7a1a625ba2c09741b978ae46f"
+        },
+        "equipment": {
+          "path": "../../creature-humanoid-pilots-v2/equipment_baseline_comparison.png",
+          "sha256": "6adc7dbee254d1e652568ca199678abcaf9e5a2b759a6784020557a643b3b633"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "sheep_wool_black": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "71d7afcb6f7a7da655cca635f522b71456f1349eba16d442e0314d7a8b336107",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/sheep_wool_black.png",
+          "sha256": "1b80443816b18e99a7d3f14a9dcc22e9c64d507c9b931d64d17a85591e05a087"
+        },
+        "motion": {
+          "path": "sheets_current_catalog/sheep_wool_black.png",
+          "sha256": "1b80443816b18e99a7d3f14a9dcc22e9c64d507c9b931d64d17a85591e05a087"
+        },
+        "runtime": {
+          "path": "../../creature-bone-coats-v2/runtime_sheep_wool_black/frame_002.png",
+          "sha256": "163e24cd4db91970c320b06304588f35ba59c52d0cc113a1ad7163d177cbbdbd"
+        },
+        "ui": {
+          "path": "native_current/matrix/sheep_wool_black/pose_0_view_0_color.png",
+          "sha256": "7fbe12aca59f428a7d4aa65fce79fcab53e1f05317b5ecaaf7b635114c2c0188"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "sheep_wool_golden": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "433c6b549700fb5b4258ecc3bef5cf7c2840a3e1d7af087debd2c86937d73e64",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/sheep_wool_golden.png",
+          "sha256": "d0124d31ed48316c868f9328f3a0a8b69de3195eaa63f33a2f3b5281acf62f41"
+        },
+        "motion": {
+          "path": "sheets_current_catalog/sheep_wool_golden.png",
+          "sha256": "d0124d31ed48316c868f9328f3a0a8b69de3195eaa63f33a2f3b5281acf62f41"
+        },
+        "runtime": {
+          "path": "../../creature-bone-coats-v2/runtime_sheep_wool_golden/frame_002.png",
+          "sha256": "2940b65cddb0c1433f13508f034db1c1a1d407967cd76704ec9fc8253addc1f2"
+        },
+        "ui": {
+          "path": "native_current/matrix/sheep_wool_golden/pose_0_view_0_color.png",
+          "sha256": "b8710ac87bafa38657b157b3fae64cd598101db182385c93865955b599c47cc2"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    },
+    "wolf_snow": {
+      "decision": "accepted",
+      "reviewed_by": "Codex; explicit unchanged-payload authoring-profile review and separate native clearance inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "23b1c1b7baaf1c2d07fb1dcc1bcd03f6edb7bb14e98ae04857458ebd7152eb16",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets_current_catalog/wolf_snow.png",
+          "sha256": "8c9eb13c18dcdb3ccee022a1fbe93996688304633a1dd7e5fb9f95ccd0bc4093"
+        },
+        "motion": {
+          "path": "sheets_current_catalog/wolf_snow.png",
+          "sha256": "8c9eb13c18dcdb3ccee022a1fbe93996688304633a1dd7e5fb9f95ccd0bc4093"
+        },
+        "runtime": {
+          "path": "../../creature-bone-coats-v2/runtime_wolf_snow/frame_002.png",
+          "sha256": "76da41ddc6e3ef5ef0e6f286b45d371a0f9f9be3ac59d1c45a7122d17754f1a6"
+        },
+        "ui": {
+          "path": "native_current/matrix/wolf_snow/pose_0_view_0_color.png",
+          "sha256": "bac446887945f4e1fcfb0fddc83641173f54ce27340baecac5bca5425855600e"
+        }
+      },
+      "notes": "R5 art acceptance retained for byte-identical complete runtime payload. All 17 B profiles now explicit in own recipes; generator rejects missing assignment. Updated generator provenance, no mesh/PNG/UV/rig/animation/runtime-definition changes. Separate C++ root-clearance runtime change: native all61 matrix repeated, 16 changed paired sheets directly viewed, 45 paired sheets exactly identical; 11 full native motion sheets inspected at walk_speed. Dense C++ floor checks preserve positive/hop/air/water behavior and all XZ envelopes. Fresh world capture covers wolf only; other prior world artifacts inherited. R6 stance/stride/terrain/transitions/appearance/equipment/FP/save/performance remain pending.",
+      "inherited_review": "docs/research/creature-r6-v2/formats/review.json"
+    }
+  }
+}

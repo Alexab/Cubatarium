@@ -1,0 +1,108 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R4 last three bone species; global R6 performance/full compatibility pending",
+  "species": {
+    "trout": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct baseline comparison, native Release four rest views, 24 motion phases, actual underwater world and 64px icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "3017e72629909e76bd483893c6274a8bb56325fbe9e2459c66b182f6aa6e526a",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "trout.png",
+          "sha256": "b8fe3ea0a6bd4426b2b1962c61c63403e573c24f4733cd4d8a19adeb027885d1"
+        },
+        "motion": {
+          "path": "native_approved_trout.png",
+          "sha256": "8263e92964fb367c5202676f88c2f59d711d9aa9bc6fd131122e1a74e6132b99"
+        },
+        "runtime": {
+          "path": "runtime_trout/frame_001.png",
+          "sha256": "b7e4f1d4a57d5aa33b4e7898a689c178161c16a3fad10151d63ca2af5f7f56b9"
+        },
+        "ui": {
+          "path": "native_candidate/trout_12.png",
+          "sha256": "56be6ff9bf9400db6017044c1b7b6722efca38d518dc7febd33c179235029dc6"
+        }
+      },
+      "notes": "Eight bones, 25px length, narrow olive/silver body with own rose lateral stripe and anatomical spots. Separate dorsal fins and forked vertical caudal fin. Loaded mesh centroids across 64 swim phases prove lateral tail beat, not vertical flapping. No same-facing coplanar overlaps. Gameplay bounds/habitat/speeds unchanged. Production generator reads no reference geometry or pixels. Performance diagnostics disabled; no performance pass claimed."
+    },
+    "squid": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct baseline comparison, native Release four rest views, 24 motion phases, actual underwater world and 64px icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "7921f1119914aec1ae9cf415a46ad42cc80b631de5811ccdb05cbcc97d1c3b92",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "squid.png",
+          "sha256": "d65d1979b54d2206bbe3d9511deddef50c528645eb914dbd1ebb26ede8959fd4"
+        },
+        "motion": {
+          "path": "native_approved_squid.png",
+          "sha256": "88c70d59770995d88cb875d8f530eeb1a0da44135e532cee6fa3d0767a122f23"
+        },
+        "runtime": {
+          "path": "runtime_squid/frame_001.png",
+          "sha256": "507ab19cc26540e684f188cc5b3f8720b9b9378d163d524b3d752610c33b1159"
+        },
+        "ui": {
+          "path": "native_candidate/squid_12.png",
+          "sha256": "da8117b86490478d568aa9b43cddd2718503f3e9ec127043da26adce0d5830e2"
+        }
+      },
+      "notes": "Seventeen functional bones; familiar 12px-wide, 33px-tall warm rust mantle and eight independent two-segment arms with own inward-facing sucker marks. Axial body pulse and phase-lagged radial spread/curl. Loaded hierarchy across 64 swim phases proves every distal mesh moves and every proximal/distal joint remains attached. This is an articulated voxel rig, not a continuous soft-body mantle simulation. No same-facing coplanar overlaps. Gameplay bounds/habitat/speeds unchanged. Production generator reads no reference geometry or pixels. Performance diagnostics disabled; no performance pass claimed."
+    },
+    "dolphin": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct baseline comparison, native Release four rest views, 24 motion phases, actual underwater world and 64px icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "f4c61b39ac80abcd36eb8605483ab9785305ec11ebec72f0c944649b24219943",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "dolphin.png",
+          "sha256": "cf62f55f07bacbd87998b23a9fab838968337ae81661443d757c3b1f77427132"
+        },
+        "motion": {
+          "path": "native_approved_dolphin.png",
+          "sha256": "e2164c53d5e472b68cbf801b138296c89f472c74994e7a9a70172824fa8e5068"
+        },
+        "runtime": {
+          "path": "runtime_dolphin/frame_001.png",
+          "sha256": "6bfd4bd9e3f1aa111b83d0a8439582960fbaf98b2bd5fa96123f12790053c35d"
+        },
+        "ui": {
+          "path": "native_candidate/dolphin_12.png",
+          "sha256": "79f4027364e849f76d2f582a0bceed67ff4877e7175c533066a7dad778bbcb81"
+        }
+      },
+      "notes": "Eight bones, 38px length, familiar pale blue countershading, long rostrum, stepped forehead/dorsal fin, paired flippers and horizontal forked flukes. Dedicated cetacean profile uses dorsoventral body/tail/fluke wave. Loaded mesh centroids across 64 swim phases prove vertical fluke beat with no lateral beat. No same-facing coplanar overlaps. Gameplay bounds/habitat/speeds unchanged. Production generator reads no reference geometry or pixels. Performance diagnostics disabled; no performance pass claimed."
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "Explicit assisted R5 oerkki geometry-only anatomy revision; not complete R6/user approval",
+  "r6_state": "pending",
+  "species": {
+    "oerkki": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct review of three original/own-before/candidate sheets, three native full-turn sheets and actual world still",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "46f8117ace92bed388435def000ef1c4c0c347913a47f392b8d5ae9c692e84fe",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "threeway_idle.png",
+          "sha256": "de61c6cef47f4fd897e1bd7e5ea2a1aa0a6b8db717ebed06075b276b93218ba3"
+        },
+        "motion": {
+          "path": "threeway_action.png",
+          "sha256": "aec3ef45d071323d7c4d7664c6f4db88b8a330e28f78c37bdcb9f4d0fe4e4878"
+        },
+        "runtime": {
+          "path": "runtime_envelope_current/frame_002.png",
+          "sha256": "b13a1a839e2ccdd133a48158589c37756ba86bd71928da300eb534990b90b9fc"
+        },
+        "ui": {
+          "path": "fullturn_0.png",
+          "sha256": "997111ce8541daf34b3d5d2c6b176a26f06ae1d4dc23d2b72eba0868ce86b867"
+        }
+      },
+      "notes": "Fuller torso depth5 vs4 and core width7 vs6, arms width3 vs2/depth4 vs3, legs depth4 vs3, head width7 vs6 with moderate taper. Pivots/hierarchy/IBM/weights and62 sampler arrays exact. Own surface rebaked to refit UV;300 triangles unchanged. Separate arms/hands/claws/jaw remain articulated. Legs not widened to compensate a motion union. Original source textures body/face are near black, so original rows establish silhouette more strongly than surface detail.",
+      "skin_scope": "No compatible authored oerkki skin. Native full-turn/UI preview inspected.",
+      "limits": "Assistant R5 revision only. No complete terrain/stride/lighting/GPU transition/AI/control/pack/performance/package acceptance. Original static black captures do not prove matching motion expressiveness. All61 R6 remain pending."
+    }
+  }
+}

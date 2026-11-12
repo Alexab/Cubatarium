@@ -1,0 +1,25 @@
+{
+  "captured_at_utc": "2026-11-10T23:47:43.403190+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_guardians_v2\\models",
+  "files_sha256": {
+    "creatures\\dungeon_master\\creature.json": "ca73af24cad07d294674ae51109c0fd8c30b2e25c91a70696bc69fecce8d3bb0",
+    "creatures\\dungeon_master\\LICENSE.txt": "56ea57dd1e9e3c2306f4680867c99e29d1a3c738b4710ff023ea3783b8d0e8df",
+    "creatures\\dungeon_master\\manifest.json": "b4c365936f87465fc4c3d96be655bd5a9d0179bf76fe04f355cf8df716531a67",
+    "creatures\\dungeon_master\\model.bin": "f6837e820df46067f496ffd69e386faae4d39f93d6d1eaeac25b82864e444fa8",
+    "creatures\\dungeon_master\\model.gltf": "a40e58ed20cb7da190b88bc19aa1fde662c400a12050bfd1cf0985b326464284",
+    "creatures\\dungeon_master\\textures\\body.png": "51e0c9c5df84609e2a4d7322332eed1dd20937efa091b4bc7ca28633c23a91d6",
+    "creatures\\dungeon_master\\textures\\icon.png": "c5d91d14533291ff3d6dbcb4f46d31f1b3aa2a4b7be267b6e78b9ef502339196"
+  },
+  "qa_models_override": true,
+  "exe_sha256": "43bb4bf75f6f14d792169bcc31453103515469d7f530f3f566e7121249a0a900",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "final_dungeon_master",
+  "qa_camera": "close",
+  "qa_water_placement": false,
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

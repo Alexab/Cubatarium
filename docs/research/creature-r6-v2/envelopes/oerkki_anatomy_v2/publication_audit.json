@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "species": "oerkki",
+  "scope": "One normal-pipeline geometry-only R5 revision, full61 sampled GPU regression and isolated FP/entity persistence; not complete R6",
+  "exe_sha256": "a0872e87a1551dbe7ac0cff1346b58176743d18eba13817cb7779473415df68f",
+  "candidate_to_production_rgba_exact": 89,
+  "body_rgba_exact": 5201,
+  "changed_resource_frames": 89,
+  "fp_rgba_exact": 936,
+  "ledger_fresh": 61,
+  "animation_sampler_arrays_exact": 62,
+  "review_sha256": "5718b1a718475fdfc09105920f1d9c75b1a3cb3580009ba08d454b5746768458",
+  "snapshot_sha256": "37b7dd19160336f28ec8c792b0bef4e98f7c95642c8ce40b646fd1520f9f754e",
+  "input_reports_sha256": {
+    "body_parity.json": "07995fe8cc02dea941b9b10f8195380ca0a734a571e60d5f117c05f47c6e2982",
+    "fp_audit.json": "d22879db6bd5bc738fcaa8075721b7f139657ecc5a8ecde68a159e62a682df1b",
+    "audit_production_final.json": "0335cf17a11ba1ff079454061c38b9b1502a6e3b0c77aeece32ca9f7b23fcd74"
+  }
+}

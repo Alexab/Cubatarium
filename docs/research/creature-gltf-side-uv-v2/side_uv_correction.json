@@ -1,0 +1,132 @@
+{
+  "badger": {
+    "nodes_skin_inverse_bind_geometry_weights_indices_unchanged": true,
+    "all_animation_tracks_bit_identical_by_clip_name": true,
+    "all_png_payloads_bit_identical": true,
+    "runtime_definition_unchanged": true,
+    "serialized_gltf_structure_unchanged": true,
+    "note": "clip serialization order can change when a newly published clip becomes declared; semantic tracks compared by clip and target",
+    "old_model_bin_sha256": "d802b232c81637d0449b28c6a084dac67fb4218b5c7dcb97bc6c90114337cc9a",
+    "new_model_bin_sha256": "6d47522e6a982cb2e4def356f91fbb6475f56622c476312d2cb857c1bf531405"
+  },
+  "stingray": {
+    "nodes_skin_inverse_bind_geometry_weights_indices_unchanged": true,
+    "all_animation_tracks_bit_identical_by_clip_name": true,
+    "all_png_payloads_bit_identical": true,
+    "runtime_definition_unchanged": true,
+    "serialized_gltf_structure_unchanged": true,
+    "note": "clip serialization order can change when a newly published clip becomes declared; semantic tracks compared by clip and target",
+    "old_model_bin_sha256": "2f23baafbc308de8eeb9a9532e33797421e231f87f7b787855d4be3d0c069ec5",
+    "new_model_bin_sha256": "8e7db6b02bb88a45b85d569fa71c3c3ec574fb1374b0f4f2bef6c833784510e5"
+  },
+  "butterfly": {
+    "nodes_skin_inverse_bind_geometry_weights_indices_unchanged": true,
+    "all_animation_tracks_bit_identical_by_clip_name": true,
+    "all_png_payloads_bit_identical": true,
+    "runtime_definition_unchanged": true,
+    "serialized_gltf_structure_unchanged": true,
+    "note": "clip serialization order can change when a newly published clip becomes declared; semantic tracks compared by clip and target",
+    "old_model_bin_sha256": "45f963206218d7a29680259a65e45ec6e3a702eeb73316fac9b64dde137f7e29",
+    "new_model_bin_sha256": "ef9ad85a2e11342b4f743e59d844e1dabac06fce4252ac1e8799a4c85033f7f3"
+  },
+  "hermitcrab": {
+    "nodes_skin_inverse_bind_geometry_weights_indices_unchanged": true,
+    "all_animation_tracks_bit_identical_by_clip_name": true,
+    "all_png_payloads_bit_identical": true,
+    "runtime_definition_unchanged": true,
+    "serialized_gltf_structure_unchanged": true,
+    "note": "clip serialization order can change when a newly published clip becomes declared; semantic tracks compared by clip and target",
+    "old_model_bin_sha256": "e00f0e3b89552ff0a59f2cabeefa5e83b2dd0f6f823f75de45405d6942cb467c",
+    "new_model_bin_sha256": "398ffc642985b18821693856ddd58e6af8919974abac8931366058185e3be274"
+  },
+  "rat": {
+    "nodes_skin_inverse_bind_geometry_weights_indices_unchanged": true,
+    "all_animation_tracks_bit_identical_by_clip_name": true,
+    "all_png_payloads_bit_identical": true,
+    "runtime_definition_unchanged": true,
+    "serialized_gltf_structure_unchanged": true,
+    "note": "clip serialization order can change when a newly published clip becomes declared; semantic tracks compared by clip and target",
+    "old_model_bin_sha256": "60ad7c364c3cb976e925a446f48c5467dcd6bc6cf7a808ea688cbe55103510fb",
+    "new_model_bin_sha256": "47212999160cb9893322c9194316babd7b19e3e6b61f76b0bfef291f3dfbfe3c"
+  },
+  "kitten": {
+    "nodes_skin_inverse_bind_geometry_weights_indices_unchanged": true,
+    "all_animation_tracks_bit_identical_by_clip_name": true,
+    "all_png_payloads_bit_identical": true,
+    "runtime_definition_unchanged": true,
+    "serialized_gltf_structure_unchanged": true,
+    "note": "clip serialization order can change when a newly published clip becomes declared; semantic tracks compared by clip and target",
+    "old_model_bin_sha256": "575acd25cd01b80d6760a794c66795a6275458c5103a38a1949624e4c6e44e19",
+    "new_model_bin_sha256": "2e3b69db770008b378c9d7211751b27f600e5f67a24a68885eed245dcc882d67"
+  },
+  "hedgehog": {
+    "nodes_skin_inverse_bind_geometry_weights_indices_unchanged": true,
+    "all_animation_tracks_bit_identical_by_clip_name": true,
+    "all_png_payloads_bit_identical": true,
+    "runtime_definition_unchanged": true,
+    "serialized_gltf_structure_unchanged": true,
+    "note": "clip serialization order can change when a newly published clip becomes declared; semantic tracks compared by clip and target",
+    "old_model_bin_sha256": "37263741bee76f8e3f787fe28e0a3dff20518459760af2df125c9d9644c03b92",
+    "new_model_bin_sha256": "8ad9b8d0948f007c326c1a70c5c872e9e313f812d62202d1716a9ea42aa12d62"
+  },
+  "panda": {
+    "nodes_skin_inverse_bind_geometry_weights_indices_unchanged": true,
+    "all_animation_tracks_bit_identical_by_clip_name": true,
+    "all_png_payloads_bit_identical": true,
+    "runtime_definition_unchanged": true,
+    "serialized_gltf_structure_unchanged": true,
+    "note": "clip serialization order can change when a newly published clip becomes declared; semantic tracks compared by clip and target",
+    "old_model_bin_sha256": "e58853b95579f30d5680bd0388741e76f8797fa778834e21800ffed21c0f38db",
+    "new_model_bin_sha256": "a0d089284b23acc9693190759474778c97dfabf2ca55d8f34a804e428b591f67"
+  },
+  "warthog": {
+    "nodes_skin_inverse_bind_geometry_weights_indices_unchanged": true,
+    "all_animation_tracks_bit_identical_by_clip_name": true,
+    "all_png_payloads_bit_identical": true,
+    "runtime_definition_unchanged": true,
+    "serialized_gltf_structure_unchanged": true,
+    "note": "clip serialization order can change when a newly published clip becomes declared; semantic tracks compared by clip and target",
+    "old_model_bin_sha256": "fde8ef4d764c4d88c698b1cdb072629d3da334f5fa2a4c6a0195e0d4ad0d9564",
+    "new_model_bin_sha256": "df58362f2d8cb7b9fed3f1ea6b2172974f4a6e7d523a305854ff14ed4ad73e28"
+  },
+  "penguin": {
+    "nodes_skin_inverse_bind_geometry_weights_indices_unchanged": true,
+    "all_animation_tracks_bit_identical_by_clip_name": true,
+    "all_png_payloads_bit_identical": true,
+    "runtime_definition_unchanged": true,
+    "serialized_gltf_structure_unchanged": true,
+    "note": "clip serialization order can change when a newly published clip becomes declared; semantic tracks compared by clip and target",
+    "old_model_bin_sha256": "775cc133e74874fd294afab3c01202924171ab3f94b0df252e61ad5a1c1de686",
+    "new_model_bin_sha256": "25d20586154053bfbde22af88370a35c7ab2b61c04a2ed8f3547799851d5634c"
+  },
+  "owl": {
+    "nodes_skin_inverse_bind_geometry_weights_indices_unchanged": true,
+    "all_animation_tracks_bit_identical_by_clip_name": true,
+    "all_png_payloads_bit_identical": true,
+    "runtime_definition_unchanged": true,
+    "serialized_gltf_structure_unchanged": true,
+    "note": "clip serialization order can change when a newly published clip becomes declared; semantic tracks compared by clip and target",
+    "old_model_bin_sha256": "1ffe68d70927c506453d09e709dd01a768a4e65cf12f6483cc9af7f3b3ba0d42",
+    "new_model_bin_sha256": "5c186e5819a594f21fc14d8ca64a0edb83ee808f1dbfcfb8ef7bba80bbccafb7"
+  },
+  "puffin": {
+    "nodes_skin_inverse_bind_geometry_weights_indices_unchanged": true,
+    "all_animation_tracks_bit_identical_by_clip_name": true,
+    "all_png_payloads_bit_identical": true,
+    "runtime_definition_unchanged": true,
+    "serialized_gltf_structure_unchanged": false,
+    "note": "clip serialization order can change when a newly published clip becomes declared; semantic tracks compared by clip and target",
+    "old_model_bin_sha256": "fd66bdb9f8df68d1da56cc1677a6fd85ae1352895fa9f4393788b1c28e380f91",
+    "new_model_bin_sha256": "636bb1b7d9a88987bf4618828df53ae6b9bdcb4293397cf1e09e9a362ae382c3"
+  },
+  "wasp": {
+    "nodes_skin_inverse_bind_geometry_weights_indices_unchanged": true,
+    "all_animation_tracks_bit_identical_by_clip_name": true,
+    "all_png_payloads_bit_identical": true,
+    "runtime_definition_unchanged": true,
+    "serialized_gltf_structure_unchanged": true,
+    "note": "clip serialization order can change when a newly published clip becomes declared; semantic tracks compared by clip and target",
+    "old_model_bin_sha256": "b676f59e8dc30f908dbe1b9a164afcce4b25187c53fa3a59c001b367c1e13b63",
+    "new_model_bin_sha256": "5ebc5f323e73c700054f91a64c61bb0208cb61413bf09fd89765080828d5747e"
+  }
+}

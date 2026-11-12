@@ -1,0 +1,74 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R5 final pair, full R6 compatibility/routes/provenance/performance still pending",
+  "species": {
+    "mese_monster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct baseline/comparison/native/animation/world/64px UI inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "9fd48a9615fb66b44e0e89c4d4ea4007487d5a168821e1b98c9bbad16735543a",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "mese_monster.png",
+          "sha256": "0e6b90b8a9f269aaf56be92cd69ef99f895c7db44745633d10e8dbc583d939c7"
+        },
+        "motion": {
+          "path": "native_approved_mese_monster.png",
+          "sha256": "3ec45c0cd588cbe8307ae2e0472dc313ab78d3b0b1b22f531efcc33be3cc974c"
+        },
+        "runtime": {
+          "path": "runtime_current_mese_monster/frame_002.png",
+          "sha256": "b0ad539fe3a074e6e5bc500e137f8b9464dd72c8b79d68f33b0dd653fea7f241"
+        },
+        "ui": {
+          "path": "native_candidate/mese_monster_12.png",
+          "sha256": "c9de2694f9ed9629377653f5e6b43d5f4f9aeb4c228506aecb56b181709115b3"
+        }
+      },
+      "notes": "Own low hovering mineral body, broad three-joint wings, three-joint tail, opposed terminal pincers, articulated biting jaw. Golden/violet mineral fields and dark membranes preserve original identity without copied pixels or mesh. All five original clips including die retained. Hover origin preserved; die settles full mesh after correcting initial wing penetration. 513-phase mesh and closed tail/wing section tests. All nonvisual definition fields exactly match baseline. 34 fidelity, 9 quality and 9 selected Release C++ checks passed. No full R6 or performance PASS claimed."
+    },
+    "lava_flan": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct baseline/comparison/native/animation/world/64px UI inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "c3dfbf0e296a646633c319c3b3deaf52b17f3891da02d4e6fd3f2a2dcf14df2a",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "lava_flan.png",
+          "sha256": "71a8a7284ad2c3fab4892ccc33649254678d6489ed0a0e57cf76f60122cbb119"
+        },
+        "motion": {
+          "path": "native_approved_lava_flan.png",
+          "sha256": "5d0ad210c9fc14887ce07e650c192f81a3c0a67b605b054f52c0496c688da85c"
+        },
+        "runtime": {
+          "path": "runtime_flow_lava_flan/frame_002.png",
+          "sha256": "06195e01c2a6ee3dab5cd6242668a27a25cfc6af29c5076f56ba5b843933c648"
+        },
+        "ui": {
+          "path": "native_candidate/lava_flan_12.png",
+          "sha256": "1645f49231f54786c32ae82dba78f295afd3fecf9c0ee7b1a2e9b6124acd2e8f"
+        }
+      },
+      "notes": "Own vertical layered hot column, stepped head, dark eye masks, molten channels/crust and opening toothed mouth. Six genuinely weighted joints and all four original clips retained. Basal flow stays on origin plane through squash/stretch; initial head motion was nearly cancelled by trunk lean and was corrected. Mesh dimensions remain 0.6/1.05/0.6; reference negative mesh offset -0.3 block intentionally raised to zero basal plane. Real lava actor spawned with ordinary habitat/collision checks in isolated copied CreatureQaLava_254 world. Lower body naturally immersed; full body art evaluated in native sheets/UI. Source-fed flowing lava and face-follow camera used for readable world evidence; first dry/misnamed/opaque/back-facing attempts rejected. All nonvisual definition fields exactly match baseline. 34 fidelity, 9 quality and 9 selected Release C++ checks passed. No full R6 or performance PASS claimed."
+    }
+  }
+}

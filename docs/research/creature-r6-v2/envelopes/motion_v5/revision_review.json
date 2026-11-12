@@ -1,0 +1,151 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "Explicit assisted R5 revision review of four authored resources, not final R6 acceptance",
+  "r6_state": "pending",
+  "species": {
+    "badger": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct native sheet/UI/world visual review",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "0cf9211d9857ac6ca7dcf9db229340a5aab1e804fc516ea954bbbe930da167eb",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets/badger_views.png",
+          "sha256": "09ceca6a2f8cac51af69f326ce585f6ea1906af343104c39295043285416deae"
+        },
+        "motion": {
+          "path": "sheets/badger_motion.png",
+          "sha256": "7dfe03aaab2349e979c26f6443be37c460d081649894750b0bd579b073be30a5"
+        },
+        "runtime": {
+          "path": "world/runtime_world_badger/frame_002.png",
+          "sha256": "10b9d1340fc32f6216f32e7d64bd080bfe602f3df3af69968d81ea663c8a041a"
+        },
+        "ui": {
+          "path": "ui_native_sheet.png",
+          "sha256": "dc92ba598b0746f2b6bd9be7f38dfbd3da7d4835af8a106691692918e75d51a2"
+        }
+      },
+      "notes": "Accept this R5 revision: restrained6/9-degree body roll restores secondary walk/run motion while preserving the authored anatomy/face, all joints and textures. Full stride/contact R6 remains pending.",
+      "skin_scope": "No compatible authored skins for these four resources",
+      "limits": "R5 revision only; full R6 terrain/stance/stride/habitats/control/UI-pack/FP/package/performance not granted"
+    },
+    "treeman": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct native sheet/UI/world visual review",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "81b95f2b824f68ad69ab740d7b2ca75794581f22c161b489e6eabd0c769a91a8",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets/treeman_views.png",
+          "sha256": "1355646a044becb27a5386eca06c4f4560e8fbf3f45b44237b3276dc0bbb0f47"
+        },
+        "motion": {
+          "path": "sheets/treeman_motion.png",
+          "sha256": "6eb755bfdaf8e840147af8990975511718882b9324d209c65600836894787c8d"
+        },
+        "runtime": {
+          "path": "world/runtime_world_treeman/frame_002.png",
+          "sha256": "c841752994f04011f9e9eecee45dbaee8640a12f0477a576c157c7100107fe06"
+        },
+        "ui": {
+          "path": "ui_native_sheet.png",
+          "sha256": "dc92ba598b0746f2b6bd9be7f38dfbd3da7d4835af8a106691692918e75d51a2"
+        }
+      },
+      "notes": "Accept this R5 revision after direct original/own motion, front/side, native UI and world review: broader trunk and thicker centreline-preserving branches restore body mass; rebaked bark reads clearly. All rig nodes/IBM retained. Full terrain/stride/performance R6 remains pending.",
+      "skin_scope": "No compatible authored skins for these four resources",
+      "limits": "R5 revision only; full R6 terrain/stance/stride/habitats/control/UI-pack/FP/package/performance not granted"
+    },
+    "lobster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct native sheet/UI/world visual review",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "d298070ccd8588b0661c5cf5ae508be2d5d018095866481b2feab04d1d200d42",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets/lobster_views.png",
+          "sha256": "2e622550ad40697b02c34ce280c68611bf0fc2a24fa845baf84ee6741836a98d"
+        },
+        "motion": {
+          "path": "sheets/lobster_motion.png",
+          "sha256": "d2d7c3d431ec43f17a5af8033c0902945a6f13a808b3678f430ee204064d0480"
+        },
+        "runtime": {
+          "path": "world/runtime_world_lobster/frame_002.png",
+          "sha256": "3cb38c08f3ed477f8104fda0f6f8e3a35ad136e019e16baad007b6620b3447a9"
+        },
+        "ui": {
+          "path": "ui_native_sheet.png",
+          "sha256": "dc92ba598b0746f2b6bd9be7f38dfbd3da7d4835af8a106691692918e75d51a2"
+        }
+      },
+      "notes": "Accept this R5 revision: raised claws and modest forebody pitch restore the readable attack gesture; owned texture/rig retained. Actual benthic world appearance and native transition clearance checked; continuous world attack/contact R6 remains pending.",
+      "skin_scope": "No compatible authored skins for these four resources",
+      "limits": "R5 revision only; full R6 terrain/stance/stride/habitats/control/UI-pack/FP/package/performance not granted"
+    },
+    "seahorse": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct native sheet/UI/world visual review",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "ea157a404d427860fc779d96802a899c367b5f4b1138fa5e7e65db60451ff725",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheets/seahorse_views.png",
+          "sha256": "ea389f8a8789e4807a9eb79844de1bb8a659e6dbee164f2c724285ad684a851e"
+        },
+        "motion": {
+          "path": "sheets/seahorse_motion.png",
+          "sha256": "9edc5f710a2b6a765f6074f2b5ebe25b965bef57700bfd59e9d3bbc739cc078f"
+        },
+        "runtime": {
+          "path": "world/runtime_world_seahorse/frame_002.png",
+          "sha256": "e82d31df916ac242eef970f046b2ad099203a6b39857d71fe052d0e5d1b1e853"
+        },
+        "ui": {
+          "path": "ui_native_sheet.png",
+          "sha256": "dc92ba598b0746f2b6bd9be7f38dfbd3da7d4835af8a106691692918e75d51a2"
+        }
+      },
+      "notes": "Accept this R5 revision: bind-centreline-derived tail extension restores swimming excursion without the rejectedv3 knot. Owned head, colour and skeleton preserved; free swimming is not ground-clamped. Full water routes/continuous motion R6 remains pending.",
+      "skin_scope": "No compatible authored skins for these four resources",
+      "limits": "R5 revision only; full R6 terrain/stance/stride/habitats/control/UI-pack/FP/package/performance not granted"
+    }
+  }
+}

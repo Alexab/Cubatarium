@@ -1,4 +1,5 @@
 #include "Creatures/Visual/Gltf/CreatureGltfAnimPlayer.h"
+#include "Creatures/Visual/Gltf/GltfKeyframeInterval.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -39,11 +40,7 @@ glm::mat4 SampleGltfRootTransform(const GltfAnimationCpu &anim, float timeSec,
     {
       continue;
     }
-    size_t i1 = 1;
-    while (i1 < ch.keyTimes.size() && ch.keyTimes[i1] < t)
-    {
-      ++i1;
-    }
+    size_t i1 = GltfKeyframeUpperIndex(ch.keyTimes, t);
     const size_t i0 = (i1 > 0) ? i1 - 1 : 0;
     i1 = std::min(i1, ch.keyTimes.size() - 1);
     const float t0 = ch.keyTimes[i0];

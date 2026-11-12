@@ -1,0 +1,24 @@
+{
+  "captured_at_utc": "2026-11-10T21:45:41.717883+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_large_aquatic_v2\\models",
+  "files_sha256": {
+    "creatures\\water_dragon\\creature.json": "64635549432da40f4bed9c74f92372c60ea3155f02a9ed0175f2f838ba5ae6c3",
+    "creatures\\water_dragon\\LICENSE.txt": "86f3dd813a29614b4a0bfbddc18fba9e009edd9e2e7c28de179b655ae89b4e16",
+    "creatures\\water_dragon\\manifest.json": "444fa677569836d695d739dfdb1499c625e28f54f60c3b4ad629f79671574b89",
+    "creatures\\water_dragon\\model.bin": "86736ef2b6584da4340bbe82faec185a09221238872c40fc6a14708239447a36",
+    "creatures\\water_dragon\\model.gltf": "869c13fbfb850ce6a8203ad050d1006daa9b04a8f5345e606e2e157d7ed8daa8",
+    "creatures\\water_dragon\\textures\\body.png": "202f25c954835cf73626b8b8f880b87f787768b3570b10dc90601e3d01607926",
+    "creatures\\water_dragon\\textures\\icon.png": "72ee4a7ef1ac7e731fd9095bbd876ea26cd0e2fa723337b97c70ce6888ee576e"
+  },
+  "exe_sha256": "88472a678b747f0e0cf8b92d3a8bf862e7c30c0cf23902ce9a120f4147be8b87",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "final_water_dragon",
+  "qa_camera": "close",
+  "qa_water_placement": true,
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

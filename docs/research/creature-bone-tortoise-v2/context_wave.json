@@ -1,0 +1,20 @@
+{
+  "captured_at_utc": "2026-11-10T16:59:44.377445+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\bone_tortoise_v2\\models",
+  "files_sha256": {
+    "creatures\\tortoise\\creature.json": "0106da47422dc2b99cb52b38f37149a9623f7a86b1a57ab200a22954a205ebdd",
+    "creatures\\tortoise\\geometry.geo.json": "b52eab82ef84556b3b585aca75e1994eacdfa18735ce6a2366c995f080ab3b16",
+    "creatures\\tortoise\\LICENSE.txt": "d99f417b9ee2d3e3fbda4353cc0dbfbc4cb81774bb8d9c084c876e19f6681920",
+    "creatures\\tortoise\\manifest.json": "cdf8e23bdea69387b88f747fb59c878cc4f39a39d1b713a048bf514ab81662a3",
+    "creatures\\tortoise\\textures\\diffuse.png": "797adc78b87ca33aa9009345d9192bbcec5d7c57ca87e4b587a56da81c051503",
+    "creatures\\tortoise\\textures\\icon.png": "ac2ed36a881d859ee5908499744baf01cea6d91191716cd17548d5f88dbd6d72"
+  },
+  "exe_sha256": "9a685d88bad3391d0ea431249a4e267e3d9359216891b9ef8889838fa56b432b",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "wave",
+  "performance_gate": "disabled"
+}

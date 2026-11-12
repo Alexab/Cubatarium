@@ -136,13 +136,16 @@ enum class CreaturePartMesh
 
 inline bool UsesRigidFaceTexture(const std::string &textureAssetKey)
 {
-  static constexpr const char kSuffix[] = "/face";
-  if (textureAssetKey.size() < sizeof(kSuffix) - 1)
+  for (const std::string suffix : {std::string("/face"), std::string("/muzzle")})
   {
-    return false;
+    if (textureAssetKey.size() >= suffix.size() &&
+        textureAssetKey.compare(textureAssetKey.size() - suffix.size(),
+                                suffix.size(), suffix) == 0)
+    {
+      return true;
+    }
   }
-  return textureAssetKey.compare(textureAssetKey.size() - (sizeof(kSuffix) - 1),
-                                sizeof(kSuffix) - 1, kSuffix) == 0;
+  return false;
 }
 
 } // namespace cutum

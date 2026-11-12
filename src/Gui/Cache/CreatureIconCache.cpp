@@ -7,15 +7,42 @@
 #include "Creatures/Definition/SkinDefinitionStorage.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
 #include "App/Platform/IUPlatformPaths.h"
+#include "App/CreatureQaAssetRoot.h"
 #include "Gui/Preview/CreaturePreviewRenderer.h"
 
 #include "Render/GlIncludes.h"
 #include <filesystem>
 #include <glm/vec4.hpp>
 #include <sstream>
+#include <algorithm>
+#include <vector>
 
 namespace cutum
 {
+namespace
+{
+void AppendAssetFingerprint(std::ostringstream &out,
+                            const std::filesystem::path &directory)
+{
+  // Called only for cache misses/warmup, never for an already cached icon.
+  // Geometry and PNG changes must invalidate B/R icons as well as glTF ones.
+  out << '|' << directory.generic_string();
+  std::error_code ec;
+  std::vector<std::filesystem::path> files;
+  for (std::filesystem::recursive_directory_iterator it(directory, ec), end;
+       !ec && it != end; it.increment(ec))
+  {
+    if (it->is_regular_file(ec)) { files.push_back(it->path()); }
+  }
+  std::sort(files.begin(), files.end());
+  for (const auto &file : files)
+  {
+    out << '|' << file.lexically_relative(directory).generic_string() << ':'
+        << std::filesystem::file_size(file, ec) << ':'
+        << std::filesystem::last_write_time(file, ec).time_since_epoch().count();
+  }
+}
+} // namespace
 
 UCreatureIconCache::UCreatureIconCache(
     std::shared_ptr<UCreaturePreviewRenderer> preview,
@@ -296,7 +323,7 @@ std::string UCreatureIconCache::BuildSpeciesFingerprint(
     return {};
   }
   std::ostringstream out;
-  out << "v2|species|" << speciesId << '|' << def->visual.backend << '|'
+  out << "v3|species|" << speciesId << '|' << def->visual.backend << '|'
       << def->visual.textureLayout << '|' << def->visual.iconMode << '|'
       << def->visual.defaultTextureKey << '|'
       << def->visual.boneSkeleton.geometryFile << '|'
@@ -304,26 +331,10 @@ std::string UCreatureIconCache::BuildSpeciesFingerprint(
       << def->visual.gltf.modelPath << '|' << def->visual.gltf.modelScale
       << '|' << def->visual.gltf.modelOffsetY << '|'
       << def->visual.Parts.size();
-  if (def->visual.backend == "gltf_skeleton")
+  if (const auto *paths = IUPlatformPaths::TryGet())
   {
-    if (const auto *paths = IUPlatformPaths::TryGet())
-    {
-      const std::string modelFile = def->visual.gltf.modelPath.empty()
-                                        ? "model.gltf"
-                                        : def->visual.gltf.modelPath;
-      const std::filesystem::path binPath =
-          paths->AssetRoot() / "models" / "creatures" / speciesId /
-          std::filesystem::path(modelFile).replace_extension(".bin");
-      std::error_code ec;
-      if (std::filesystem::exists(binPath, ec))
-      {
-        out << '|' << std::filesystem::file_size(binPath, ec) << '|'
-            << static_cast<long long>(
-                   std::filesystem::last_write_time(binPath, ec)
-                       .time_since_epoch()
-                       .count());
-      }
-    }
+    AppendAssetFingerprint(out, CreatureModelsRoot(paths->AssetRoot()) /
+                                  "creatures" / speciesId);
   }
   return out.str();
 }
@@ -346,10 +357,16 @@ std::string UCreatureIconCache::BuildSkinFingerprint(
     return {};
   }
   std::ostringstream out;
-  out << "v2|skin|" << skinId << '|' << def->creatureId << '|'
+  out << "v3|skin|" << skinId << '|' << def->creatureId << '|'
       << def->textureKey << '|' << def->iconFallbackColor.r << ','
       << def->iconFallbackColor.g << ',' << def->iconFallbackColor.b << ','
       << def->iconFallbackColor.a;
+  out << '|' << BuildSpeciesFingerprint(def->creatureId);
+  if (const auto *paths = IUPlatformPaths::TryGet())
+  {
+    AppendAssetFingerprint(out, CreatureModelsRoot(paths->AssetRoot()) /
+                                  "skins" / skinId);
+  }
   return out.str();
 }
 

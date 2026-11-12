@@ -1,0 +1,38 @@
+{
+  "schema": "creature-resource-reload-visual-parity-review.v1",
+  "reviewed_at_utc": "2026-11-11T14:17:00.330067+00:00",
+  "decision": "inherited_sampled_art_via_exact_rgba_and_direct_world_observation",
+  "r6_final_acceptance": "pending",
+  "exe_sha256": "c0853349cc1f0f6633ff67c2e8297ad06f0cd687ea9cc40a32b7deb81613b09b",
+  "scope": "All61 native previews exact before reload diagnostics and across process restart; directly viewed two world wolf frames after probe reports. No new full states/routes/FP/save/performance art verdict.",
+  "prior_review": "../appearance-cache/visual_review.json",
+  "parity": [
+    {
+      "path": "body_parity.json",
+      "sha256": "90b0037cff2195487015fbe914062692e43018c56b336335193ab83698318cfa"
+    },
+    {
+      "path": "restart_body_parity.json",
+      "sha256": "26befa58e69fccf4d674d1997f1f3a67e05717ebfee9d76e2dc1ddb7ff45496e"
+    }
+  ],
+  "direct_world_frames": [
+    {
+      "path": "runtime_reload_catalog/frame_002.png",
+      "sha256": "c197962e05fd1cf82aad8a3036bf2024a747e9ced19fd215d46e3a3ee87d4e1a",
+      "captured_seconds_after_probe_report": 4.116663217544556,
+      "observation": "World wolf front/three-quarter view on beach, expected gray texture/head/limbs, no visible diagnostic palette or missing mesh. Single sampled frame does not establish route/terrain/full gait acceptance."
+    },
+    {
+      "path": "runtime_reload_restart_catalog/frame_002.png",
+      "sha256": "bc32ecfa4ba96afd66589b8b05d66a56305da47a152266330a72a6f79c9ad7f3",
+      "captured_seconds_after_probe_report": 3.640881299972534,
+      "observation": "World wolf front/three-quarter view on beach, expected gray texture/head/limbs, no visible diagnostic palette or missing mesh. Single sampled frame does not establish route/terrain/full gait acceptance."
+    }
+  ],
+  "data_audits": [
+    "resource_reload_audit.json",
+    "resource_reload_restart_audit.json"
+  ],
+  "limitation": "Reload fixture overlays are checked through actual loaders, resolver, merge, retained CPU draw submissions and full GPU texture readback, not per-state full model rendering or world bootstrap/UI pack switching."
+}

@@ -1,0 +1,27 @@
+{
+  "mese_monster": {
+    "weighted_joints": 15,
+    "baseline_weighted_joints_all_primitives": 1,
+    "clips": [
+      "idle",
+      "walk",
+      "run",
+      "punch",
+      "die"
+    ],
+    "nonvisual_definition_exactly_matches_baseline": true,
+    "bundle_sha256": "9fd48a9615fb66b44e0e89c4d4ea4007487d5a168821e1b98c9bbad16735543a"
+  },
+  "lava_flan": {
+    "weighted_joints": 6,
+    "baseline_weighted_joints_all_primitives": 1,
+    "clips": [
+      "idle",
+      "walk",
+      "run",
+      "punch"
+    ],
+    "nonvisual_definition_exactly_matches_baseline": true,
+    "bundle_sha256": "c3dfbf0e296a646633c319c3b3deaf52b17f3891da02d4e6fd3f2a2dcf14df2a"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "captured_at_utc": "2026-11-10T17:43:48.624055+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_small_v2\\models",
+  "files_sha256": {
+    "creatures\\kitten\\creature.json": "ec3556e90132c01dc3ce824344ed95406e468ae778a129af44b83598b1e33ec4",
+    "creatures\\kitten\\LICENSE.txt": "9d88911a2802990ed455747a23371865835620754134fb87331da32fbf2fe011",
+    "creatures\\kitten\\manifest.json": "505232bcbef344118a8d0278f931409a73e860e114e22c14692e30cd671c4ecb",
+    "creatures\\kitten\\model.bin": "0874220fe9cc216eb4f1a5e9b87425402b6819bf93c1191c73dabc2369f43cb6",
+    "creatures\\kitten\\model.gltf": "4f8e654a1335733f2d082a1ff22cb6a4014097f017c9896750a063288c1646ea",
+    "creatures\\kitten\\textures\\body.png": "551cd79d23b69e511daa8270749365a37dfc872aeae983337be1483bab363819",
+    "creatures\\kitten\\textures\\icon.png": "144a098a038651993cb2d327e3b23576f8122aa14181297883cd1f18821bd496"
+  },
+  "exe_sha256": "fadab253954d19ec21264ffe4b84b821d483e6909947e97cc19726927ecc284e",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "close_kitten",
+  "qa_camera": "close",
+  "performance_gate": "disabled"
+}

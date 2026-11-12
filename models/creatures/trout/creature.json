@@ -158,7 +158,7 @@
       }
     ],
     "icon": {
-      "mode": "species_texture",
+      "mode": "parts_preview",
       "color": [
         0.7058823529411765,
         0.47058823529411764,
@@ -171,7 +171,7 @@
     "texture": "diffuse",
     "texture_size": [
       64,
-      32
+      64
     ],
     "animation_profile": "aquatic"
   }

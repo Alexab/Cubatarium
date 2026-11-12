@@ -1,0 +1,6 @@
+{
+  "passed": true,
+  "scope": "Final verifier rejects2x instead of reviewed4x Walk timing; no changes to owner/state/phase/backend metadata allowed",
+  "bad_factor_rc": 1,
+  "verifier_sha256": "d068d6dc03d46ac685c7b438995ad8ccb5231b2c68d54e63b897aefc164c90e9"
+}

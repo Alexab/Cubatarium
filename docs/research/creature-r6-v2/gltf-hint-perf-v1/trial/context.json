@@ -1,0 +1,87 @@
+{
+  "scope": "Paired actual loader/sampler, original linear baseline vs indexed128 or exact-bracket hint. Not world/GPU/R6 acceptance",
+  "core": 2,
+  "runs": [
+    {
+      "label": "0_badger_hint",
+      "command": [
+        "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_hint_perf_v1\\paired_hint.exe",
+        "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\gltf-hint-perf-v1\\trial\\0_badger_hint.json",
+        "E:\\Work\\Home\\Cubatarium\\models\\creatures\\badger\\model.gltf",
+        "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\badger_sway_v2\\models\\creatures\\badger\\model.gltf"
+      ],
+      "exe_sha256": "cbd529ed575420f52e02d841288f13fc88664eedf8a8fe3acb36629322e801b5"
+    },
+    {
+      "label": "1_badger_indexed128",
+      "command": [
+        "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_sampling_perf_v1\\paired\\paired_bench.exe",
+        "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\gltf-hint-perf-v1\\trial\\1_badger_indexed128.json",
+        "E:\\Work\\Home\\Cubatarium\\models\\creatures\\badger\\model.gltf",
+        "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\badger_sway_v2\\models\\creatures\\badger\\model.gltf"
+      ],
+      "exe_sha256": "f81bba7809984c317a894d354747887af2db13fa76719bd4712859e8e2345940"
+    },
+    {
+      "label": "2_badger_indexed128",
+      "command": [
+        "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_sampling_perf_v1\\paired\\paired_bench.exe",
+        "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\gltf-hint-perf-v1\\trial\\2_badger_indexed128.json",
+        "E:\\Work\\Home\\Cubatarium\\models\\creatures\\badger\\model.gltf",
+        "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\badger_sway_v2\\models\\creatures\\badger\\model.gltf"
+      ],
+      "exe_sha256": "f81bba7809984c317a894d354747887af2db13fa76719bd4712859e8e2345940"
+    },
+    {
+      "label": "3_badger_hint",
+      "command": [
+        "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_hint_perf_v1\\paired_hint.exe",
+        "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\gltf-hint-perf-v1\\trial\\3_badger_hint.json",
+        "E:\\Work\\Home\\Cubatarium\\models\\creatures\\badger\\model.gltf",
+        "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\badger_sway_v2\\models\\creatures\\badger\\model.gltf"
+      ],
+      "exe_sha256": "cbd529ed575420f52e02d841288f13fc88664eedf8a8fe3acb36629322e801b5"
+    },
+    {
+      "label": "4_orc_hint",
+      "command": [
+        "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_hint_perf_v1\\paired_hint.exe",
+        "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\gltf-hint-perf-v1\\trial\\4_orc_hint.json",
+        "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\orc_sway_pre_publish\\models\\creatures\\orc\\model.gltf",
+        "E:\\Work\\Home\\Cubatarium\\models\\creatures\\orc\\model.gltf"
+      ],
+      "exe_sha256": "cbd529ed575420f52e02d841288f13fc88664eedf8a8fe3acb36629322e801b5"
+    },
+    {
+      "label": "5_treeman_hint",
+      "command": [
+        "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_hint_perf_v1\\paired_hint.exe",
+        "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\gltf-hint-perf-v1\\trial\\5_treeman_hint.json",
+        "E:\\Work\\Home\\Cubatarium\\models\\creatures\\treeman\\model.gltf",
+        "E:\\Work\\Home\\Cubatarium\\models\\creatures\\treeman\\model.gltf"
+      ],
+      "exe_sha256": "cbd529ed575420f52e02d841288f13fc88664eedf8a8fe3acb36629322e801b5"
+    }
+  ],
+  "files_sha256": {
+    "src\\Creatures\\Visual\\Gltf\\GltfKeyframeInterval.h": "aebf1a668313eaf1e0457b1528736c21ec1ce4dc19191f163d9b0695cfc39b28",
+    "assetgen_output\\creatures\\gltf_hint_perf_v1\\trial_src\\Creatures\\Visual\\Gltf\\GltfKeyframeInterval.h": "e716eb9d8fa6dc0818746f4d81863f992844cacecaa16473f0e87bcd29b0029a",
+    "assetgen_output\\creatures\\gltf_hint_perf_v1\\compile.bat": "468bcd4fb83c6645b36340829b2902d44c0c63e0a6cfe9a068794948953fec2c",
+    "assetgen_output\\creatures\\gltf_hint_perf_v1\\linear_bone.obj": "2216776759a264f95d4d391e014348d2f966c4c3329dd46db0ad98dc5ad24e36",
+    "assetgen_output\\creatures\\gltf_hint_perf_v1\\linear_root.obj": "ebb07ff37a31d9e563dd8cf1d5b5d10477f37ea6707d1cc917f6b24bd8628679",
+    "tools\\research\\creature_gltf_sampling_paired_bench.cpp": "d0195f1df363eb0daff864798155516f4b4008889f616e43d8dd6e61fb597272",
+    "src\\Creatures\\Visual\\Gltf\\CreatureGltfBonePalette.cpp": "3d6b45608e7e2ea7e6c99924a082f44f5ab860126b0ee52b6695561a285f7e99",
+    "src\\Creatures\\Visual\\Gltf\\CreatureGltfAnimPlayer.cpp": "ff836abeb186009f89b883442e3b26427f1c8827731886f85f76602e70b28a21",
+    "src\\Creatures\\Visual\\Gltf\\CreatureGltfLoader.cpp": "a329cf00724aea31998830ae56ff8ecf60aec819f8e17644e6a3837f10834702",
+    "models\\creatures\\treeman\\model.gltf": "6e93406291ef05e20c548b735386bd001c314729f29ac1a1c8fd1cf1d2d83870",
+    "assetgen_output\\creatures\\orc_sway_pre_publish\\models\\creatures\\orc\\model.gltf": "8068b773536ccd0b8c35065123a5fc6e0e50fbf1df876b0d406ede8aae01a1b2",
+    "assetgen_output\\creatures\\badger_sway_v2\\models\\creatures\\badger\\model.gltf": "937ad2f56cce6438f1dfed477600189ad0aba0efe9659a1b095ff3f7535dba00",
+    "models\\creatures\\orc\\model.gltf": "d36eb28e6410e5619102de571c33b398c0d39075dbb9c1cdca288fa5dba909c0",
+    "models\\creatures\\badger\\model.gltf": "95ecd5d538250578257ba9c1ce03e99072e7532e5c3e0ceffae2b108324f16e7",
+    "models\\creatures\\treeman\\model.bin": "b3369aaa171ce71b6eaf4b9dc2c42a5cb7e24be2b0ee2ccc8a551023f751be65",
+    "assetgen_output\\creatures\\badger_sway_v2\\models\\creatures\\badger\\model.bin": "193b010b19c1b5a9d45345876d78ba0b3be1520ad938100bbe19b24ff285894a",
+    "models\\creatures\\badger\\model.bin": "55cc3e55c2393445ca6ec17a18d71cad63ad2aafc2a9c0a7abcdc9b0b5f31d54",
+    "models\\creatures\\orc\\model.bin": "8a32da77530569fc14229f79d59005fe6e23cfb00011872f632bf30498087c89",
+    "assetgen_output\\creatures\\orc_sway_pre_publish\\models\\creatures\\orc\\model.bin": "848b306e2ef1e1a4e44c438cb8a6645cc03f737b79c1b1d6f2d5b64f2e532e5e"
+  }
+}

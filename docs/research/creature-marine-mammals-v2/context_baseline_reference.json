@@ -1,0 +1,33 @@
+{
+  "captured_at_utc": "2026-11-10T20:49:40.286397+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\review_2026_11_10\\baseline\\models",
+  "files_sha256": {
+    "creatures\\manatee\\creature.json": "464db42367a62222703ef744b8833b9bf899b5f44c3db4e56b5f204c459eeff7",
+    "creatures\\manatee\\LICENSE.txt": "a7f6bc69d48133fa4287f0e860491eb15ffa4616205258630602d08b8e3b967d",
+    "creatures\\manatee\\model.bin": "cec94168e29a943bdf277675029fcfd269975f38e814f484515f611f33036507",
+    "creatures\\manatee\\model.gltf": "f1c0b7255b055300cfdcd14c7dbfff10a35dd7c70cdcb91665511ecf06da49ce",
+    "creatures\\manatee\\textures\\body.png": "166a481a2330633f6cad37d4d5053c80c598da44cdd3e4e5ca63695f4de34fa6",
+    "creatures\\manatee\\textures\\face.png": "f9c15eaf05b4e292f0ad49cd26d270f6ee9dcfa99bf8a9e7cec29f9025822be9",
+    "creatures\\manatee\\textures\\icon.png": "a9036f97400b8098ad4b65dcdab0fbeacf849097680d1b2b1b5917e547b56921",
+    "creatures\\manatee\\textures\\leg.png": "f9c15eaf05b4e292f0ad49cd26d270f6ee9dcfa99bf8a9e7cec29f9025822be9",
+    "creatures\\seal\\creature.json": "100c4cac1d6dc3974f7c34471bcba900fd8accdbab1de9e2b2df3bfaf807da28",
+    "creatures\\seal\\LICENSE.txt": "03a949ee091af0d820e979edbf343e848f2adfdf8f7afaaadbc7d4c56d3416a8",
+    "creatures\\seal\\model.bin": "86c9bad168bbf7c484e567aec1e9babb03fb38b8a2bb4cbb847d7261e5289c94",
+    "creatures\\seal\\model.gltf": "b44acf6d1f0102d394d2174f88d2b352989d875624d58fb039f3da93ece38319",
+    "creatures\\seal\\textures\\body.png": "5896442e13e1bee593e3923739d6df623ff19e398f7d8b5e10412de9a9b4e9a8",
+    "creatures\\seal\\textures\\face.png": "55539e0fde67f3432db07436819d315fa4bd03e2eaf7a3416777426751e4fe69",
+    "creatures\\seal\\textures\\icon.png": "61b167bd87f677fc386c44b451fd014d677ce79121c15942ec9ff60efc9861cd",
+    "creatures\\seal\\textures\\leg.png": "748d4dd4db9ce9b32a1c4439f5dd772c507190345a9cdc794f056a0af5447612"
+  },
+  "exe_sha256": "0c2f544b61042e0498e927a37c88793e72530e58d8b4acaaff1eb90e2561dac9",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "baseline_reference",
+  "qa_camera": "grid",
+  "qa_water_placement": true,
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

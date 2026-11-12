@@ -1,0 +1,5 @@
+{
+  "accepted": false,
+  "reason": "Initial horizontal-only QA input sank to bottom:653 Tread/408 Idle, one initial nonmoving Swim; no requested-move Swim",
+  "next": "Separate water_swim_pause ordinary swim-up input; no change to product motor/state or species habitat"
+}

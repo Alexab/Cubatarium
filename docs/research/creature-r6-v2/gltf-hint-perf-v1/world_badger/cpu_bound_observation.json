@@ -1,0 +1,29 @@
+{
+  "scope": "Only CPU creature pass in one fixed badger flat-ground QA scenario; not GPU/frame/all-species/R6 acceptance",
+  "groups": {
+    "all_steady": {
+      "reference_run_p95_ms": [
+        0.1206,
+        0.1276
+      ],
+      "candidate_run_p95_ms": [
+        0.1268,
+        0.1277
+      ],
+      "worst_candidate_over_best_reference": 1.0588723051409619,
+      "provisional_10_percent_cpu_bound_met_in_observed_repeats": true
+    },
+    "walk_only": {
+      "reference_run_p95_ms": [
+        0.1283,
+        0.1246
+      ],
+      "candidate_run_p95_ms": [
+        0.1346,
+        0.1279
+      ],
+      "worst_candidate_over_best_reference": 1.0802568218298556,
+      "provisional_10_percent_cpu_bound_met_in_observed_repeats": true
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "passed": true,
+  "scope": "Diagnosis before orc sway publication;3 live own and immutable pre-sway orc verified",
+  "resources": [
+    {
+      "id": "orc",
+      "own_source": "historical own orc snapshot"
+    },
+    {
+      "id": "puffin",
+      "own_source": "live own models"
+    },
+    {
+      "id": "badger",
+      "own_source": "live own models"
+    },
+    {
+      "id": "treeman",
+      "own_source": "live own models"
+    }
+  ]
+}

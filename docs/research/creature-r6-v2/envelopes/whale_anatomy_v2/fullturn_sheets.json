@@ -1,0 +1,355 @@
+{
+  "scope": "Verified native views; not artistic acceptance",
+  "context_exe_sha256": "235ce58dd65546f38164020295ff403bf48c2816b14bb16cd96228faee030483",
+  "manifest_sha256": "c32b6db8edee5902ea678f9ec0dc0682ad04b47bcf958687bd2f7aadd9fa16f9",
+  "sheets": [
+    {
+      "path": "fullturn_0.png",
+      "sha256": "66a5abe282660ff30f82696e193bffcc997e20712f259633bd2800d8aa79e8cb",
+      "frames": [
+        {
+          "color": "whale/pose_0_view_0_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 15.0,
+          "pose": 0,
+          "silhouette": "whale/pose_0_view_0_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 0,
+          "yaw_degrees": 0.0
+        },
+        {
+          "color": "whale/pose_0_view_1_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 15.0,
+          "pose": 0,
+          "silhouette": "whale/pose_0_view_1_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 1,
+          "yaw_degrees": 45.0
+        },
+        {
+          "color": "whale/pose_0_view_2_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 15.0,
+          "pose": 0,
+          "silhouette": "whale/pose_0_view_2_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 2,
+          "yaw_degrees": 90.0
+        },
+        {
+          "color": "whale/pose_0_view_3_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 15.0,
+          "pose": 0,
+          "silhouette": "whale/pose_0_view_3_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 3,
+          "yaw_degrees": 135.0
+        },
+        {
+          "color": "whale/pose_0_view_4_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 15.0,
+          "pose": 0,
+          "silhouette": "whale/pose_0_view_4_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 4,
+          "yaw_degrees": 180.0
+        },
+        {
+          "color": "whale/pose_0_view_5_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 15.0,
+          "pose": 0,
+          "silhouette": "whale/pose_0_view_5_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 5,
+          "yaw_degrees": 225.0
+        },
+        {
+          "color": "whale/pose_0_view_6_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 15.0,
+          "pose": 0,
+          "silhouette": "whale/pose_0_view_6_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 6,
+          "yaw_degrees": 270.0
+        },
+        {
+          "color": "whale/pose_0_view_7_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 15.0,
+          "pose": 0,
+          "silhouette": "whale/pose_0_view_7_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 7,
+          "yaw_degrees": 315.0
+        },
+        {
+          "color": "whale/pose_0_view_8_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 90.0,
+          "pose": 0,
+          "silhouette": "whale/pose_0_view_8_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 8,
+          "yaw_degrees": 0.0
+        },
+        {
+          "color": "whale/pose_0_view_9_color.png",
+          "phase": 0.0,
+          "pitch_degrees": -90.0,
+          "pose": 0,
+          "silhouette": "whale/pose_0_view_9_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 9,
+          "yaw_degrees": 0.0
+        }
+      ]
+    },
+    {
+      "path": "fullturn_1.png",
+      "sha256": "4bae2347db75e7717cd1d7f9664f80f1617f447e5df34d3faf4b340f7cbc41a8",
+      "frames": [
+        {
+          "color": "whale/pose_1_view_0_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 15.0,
+          "pose": 1,
+          "silhouette": "whale/pose_1_view_0_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.3499999940395355,
+          "view": 0,
+          "yaw_degrees": 0.0
+        },
+        {
+          "color": "whale/pose_1_view_1_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 15.0,
+          "pose": 1,
+          "silhouette": "whale/pose_1_view_1_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.3499999940395355,
+          "view": 1,
+          "yaw_degrees": 45.0
+        },
+        {
+          "color": "whale/pose_1_view_2_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 15.0,
+          "pose": 1,
+          "silhouette": "whale/pose_1_view_2_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.3499999940395355,
+          "view": 2,
+          "yaw_degrees": 90.0
+        },
+        {
+          "color": "whale/pose_1_view_3_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 15.0,
+          "pose": 1,
+          "silhouette": "whale/pose_1_view_3_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.3499999940395355,
+          "view": 3,
+          "yaw_degrees": 135.0
+        },
+        {
+          "color": "whale/pose_1_view_4_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 15.0,
+          "pose": 1,
+          "silhouette": "whale/pose_1_view_4_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.3499999940395355,
+          "view": 4,
+          "yaw_degrees": 180.0
+        },
+        {
+          "color": "whale/pose_1_view_5_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 15.0,
+          "pose": 1,
+          "silhouette": "whale/pose_1_view_5_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.3499999940395355,
+          "view": 5,
+          "yaw_degrees": 225.0
+        },
+        {
+          "color": "whale/pose_1_view_6_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 15.0,
+          "pose": 1,
+          "silhouette": "whale/pose_1_view_6_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.3499999940395355,
+          "view": 6,
+          "yaw_degrees": 270.0
+        },
+        {
+          "color": "whale/pose_1_view_7_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 15.0,
+          "pose": 1,
+          "silhouette": "whale/pose_1_view_7_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.3499999940395355,
+          "view": 7,
+          "yaw_degrees": 315.0
+        },
+        {
+          "color": "whale/pose_1_view_8_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 90.0,
+          "pose": 1,
+          "silhouette": "whale/pose_1_view_8_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.3499999940395355,
+          "view": 8,
+          "yaw_degrees": 0.0
+        },
+        {
+          "color": "whale/pose_1_view_9_color.png",
+          "phase": 0.125,
+          "pitch_degrees": -90.0,
+          "pose": 1,
+          "silhouette": "whale/pose_1_view_9_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.3499999940395355,
+          "view": 9,
+          "yaw_degrees": 0.0
+        }
+      ]
+    },
+    {
+      "path": "fullturn_2.png",
+      "sha256": "c741da103c57db5b6d3e0f8a5f5c3b6a956f6a947e957a43dcc64a9fe4be8751",
+      "frames": [
+        {
+          "color": "whale/pose_2_view_0_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 15.0,
+          "pose": 2,
+          "silhouette": "whale/pose_2_view_0_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 1.75,
+          "view": 0,
+          "yaw_degrees": 0.0
+        },
+        {
+          "color": "whale/pose_2_view_1_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 15.0,
+          "pose": 2,
+          "silhouette": "whale/pose_2_view_1_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 1.75,
+          "view": 1,
+          "yaw_degrees": 45.0
+        },
+        {
+          "color": "whale/pose_2_view_2_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 15.0,
+          "pose": 2,
+          "silhouette": "whale/pose_2_view_2_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 1.75,
+          "view": 2,
+          "yaw_degrees": 90.0
+        },
+        {
+          "color": "whale/pose_2_view_3_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 15.0,
+          "pose": 2,
+          "silhouette": "whale/pose_2_view_3_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 1.75,
+          "view": 3,
+          "yaw_degrees": 135.0
+        },
+        {
+          "color": "whale/pose_2_view_4_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 15.0,
+          "pose": 2,
+          "silhouette": "whale/pose_2_view_4_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 1.75,
+          "view": 4,
+          "yaw_degrees": 180.0
+        },
+        {
+          "color": "whale/pose_2_view_5_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 15.0,
+          "pose": 2,
+          "silhouette": "whale/pose_2_view_5_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 1.75,
+          "view": 5,
+          "yaw_degrees": 225.0
+        },
+        {
+          "color": "whale/pose_2_view_6_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 15.0,
+          "pose": 2,
+          "silhouette": "whale/pose_2_view_6_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 1.75,
+          "view": 6,
+          "yaw_degrees": 270.0
+        },
+        {
+          "color": "whale/pose_2_view_7_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 15.0,
+          "pose": 2,
+          "silhouette": "whale/pose_2_view_7_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 1.75,
+          "view": 7,
+          "yaw_degrees": 315.0
+        },
+        {
+          "color": "whale/pose_2_view_8_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 90.0,
+          "pose": 2,
+          "silhouette": "whale/pose_2_view_8_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 1.75,
+          "view": 8,
+          "yaw_degrees": 0.0
+        },
+        {
+          "color": "whale/pose_2_view_9_color.png",
+          "phase": 0.625,
+          "pitch_degrees": -90.0,
+          "pose": 2,
+          "silhouette": "whale/pose_2_view_9_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 1.75,
+          "view": 9,
+          "yaw_degrees": 0.0
+        }
+      ]
+    }
+  ]
+}

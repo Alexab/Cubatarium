@@ -1,0 +1,27 @@
+{
+  "passed": true,
+  "scope": "One ordinary-input actual world fluid route; derived state and XZ travel, not all terrain/sliding/world attack/AI/art/performance acceptance",
+  "exe_sha256": "235ce58dd65546f38164020295ff403bf48c2816b14bb16cd96228faee030483",
+  "qa_models_override": true,
+  "expected_state": "swim",
+  "world_samples": 1071,
+  "sim_seconds": 18.839815139770508,
+  "driver": "water_swim_pause",
+  "requested_jump_samples": 16,
+  "state_counts": {
+    "swim": 1066,
+    "idle": 5
+  },
+  "matching_move_samples": 656,
+  "xz_travel_in_expected_state": 5.1006622314453125,
+  "move_direction_samples": {
+    "1.0": 382,
+    "-1.0": 274
+  },
+  "frozen_or_solid_overlap": false,
+  "inputs_sha256": {
+    "world_motion_swim_candidate.jsonl": "d0089007e3dfe4ee7d783751f6878de5323d64fb3f71b10f6ed976a5c4df9cca",
+    "context_swim_candidate.json": "9ef57e3c10269d7ff2a3da18493e572ede369d13fe1a8ebe74127b8ec4b2d5ae",
+    "report_swim_candidate.json": "2d061176144f8c8e15b11390a5b1210e00abbb5b2285d39235019e1159712d98"
+  }
+}

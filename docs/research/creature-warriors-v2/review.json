@@ -1,0 +1,108 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R5 authored warriors; full R6 compatibility/routes/performance/all-61 reproducibility remains pending",
+  "species": {
+    "oerkki": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct final native/comparison/world/icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "afc5f9d523d5eda2d40cb7aeb4a2c609e3b11d49f53dc7ecea277c4d75411b01",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "oerkki.png",
+          "sha256": "e42fcc715f2f58b6b1d380e9b746fe7f035a1f235abd179244ac0bd4c3dd80b4"
+        },
+        "motion": {
+          "path": "native_approved_oerkki.png",
+          "sha256": "6d85db6bd1625db348bf2e2b971eb493bb91b017f9c764f8dde5dbeea7b3ce7d"
+        },
+        "runtime": {
+          "path": "runtime_contact_oerkki/frame_002.png",
+          "sha256": "1be5c96156b5d0677d747303c7c7474f644ef25dfd26d7ecd37591f4b40abfc4"
+        },
+        "ui": {
+          "path": "native_candidate/oerkki_12.png",
+          "sha256": "ba173b7cc1b3e5e4f53ced0851d16ce04a22d7aaab8ddd4565e86d73d0afb6da"
+        }
+      },
+      "notes": "Own authored mesh/UV/pixels/rig/clips. Restores distinct dark long-armed Oerkki with jaw/claws, green tall Orc with leather and bulky shoulders, pale broad-bellied short-legged Ogre with long club. Baseline nearly-black Oerkki reproduced in native Release; new own charcoal planes intentionally readable. Original idle/walk/run/punch retained; die not present in original. Shoulder masses enlarged after first comparison; rigid chest-bound armor replaces visibly rubber-bent blended plates. Orc upper arm tapered to matching elbow cross-section. Full skinning tests check joint closure, proximal attachment, stance direction, calibrated stride speed, loop, swing, floor and true weapon/claw actions. Runtime gameplay bounds/speeds/habitat preserved. Walk/Run contact keys increased to 129 after inter-key audit; final 257-phase full-skinning bounds -0.000134 to +0.000968 blocks, including phases between the new keys. Prior 129-phase diagnostic is retained; thresholds were not weakened. Exact revised native/world captures reinspected before this review. Full routes/transitions/travelScale limits/compatibility/performance remain R6; no performance PASS."
+    },
+    "orc": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct final native/comparison/world/icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "8dd89cae004c861cec94cdbed2460f403911df8e5b89050d1a93d9f4f75a20fd",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "orc.png",
+          "sha256": "66bae30f9e61715fb6694108d2907568c487d035de2d96e4a41e784fb6955e67"
+        },
+        "motion": {
+          "path": "native_approved_orc.png",
+          "sha256": "e58eb987e2382e30683a246e8267b72389b5f9bd1b7b69162df8446d79cd87c7"
+        },
+        "runtime": {
+          "path": "runtime_contact_orc/frame_002.png",
+          "sha256": "2fdc183e08fef78160e871ebb1be0fccba5bd6ffc0d550b5cb0c3572d476c43c"
+        },
+        "ui": {
+          "path": "native_candidate/orc_12.png",
+          "sha256": "4ec36c3ec0434fca49091691364a8c5431c010978397e4deb5ae85633f72abb2"
+        }
+      },
+      "notes": "Own authored mesh/UV/pixels/rig/clips. Restores distinct dark long-armed Oerkki with jaw/claws, green tall Orc with leather and bulky shoulders, pale broad-bellied short-legged Ogre with long club. Baseline nearly-black Oerkki reproduced in native Release; new own charcoal planes intentionally readable. Original idle/walk/run/punch retained; die not present in original. Shoulder masses enlarged after first comparison; rigid chest-bound armor replaces visibly rubber-bent blended plates. Orc upper arm tapered to matching elbow cross-section. Full skinning tests check joint closure, proximal attachment, stance direction, calibrated stride speed, loop, swing, floor and true weapon/claw actions. Runtime gameplay bounds/speeds/habitat preserved. Walk/Run contact keys increased to 129 after inter-key audit; final 257-phase full-skinning bounds -0.000134 to +0.000968 blocks, including phases between the new keys. Prior 129-phase diagnostic is retained; thresholds were not weakened. Exact revised native/world captures reinspected before this review. Full routes/transitions/travelScale limits/compatibility/performance remain R6; no performance PASS."
+    },
+    "ogre": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct final native/comparison/world/icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "8f8f3af7403f64821337974ecabf0d5e4dc3988d478d64319ef5fd9a442dfaed",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "ogre.png",
+          "sha256": "69332aaf04cc3893680accaedaed6f47a418a614eb8ecd62e3c43686078f1ce3"
+        },
+        "motion": {
+          "path": "native_approved_ogre.png",
+          "sha256": "eefa152e1b99956eb9222cdabd5fa4f4c2e3b9b4f247377fc53b7866703edca0"
+        },
+        "runtime": {
+          "path": "runtime_contact_ogre/frame_002.png",
+          "sha256": "973e450dde8ae79ebe60a0877c63f9237ab5ccdb7edd542112ec37fa2641217d"
+        },
+        "ui": {
+          "path": "native_candidate/ogre_12.png",
+          "sha256": "111bc5286ee330fad3c2b4c298d6037796d19c75408e99d34c6c747b2b9f83cc"
+        }
+      },
+      "notes": "Own authored mesh/UV/pixels/rig/clips. Restores distinct dark long-armed Oerkki with jaw/claws, green tall Orc with leather and bulky shoulders, pale broad-bellied short-legged Ogre with long club. Baseline nearly-black Oerkki reproduced in native Release; new own charcoal planes intentionally readable. Original idle/walk/run/punch retained; die not present in original. Shoulder masses enlarged after first comparison; rigid chest-bound armor replaces visibly rubber-bent blended plates. Orc upper arm tapered to matching elbow cross-section. Full skinning tests check joint closure, proximal attachment, stance direction, calibrated stride speed, loop, swing, floor and true weapon/claw actions. Runtime gameplay bounds/speeds/habitat preserved. Walk/Run contact keys increased to 129 after inter-key audit; final 257-phase full-skinning bounds -0.000134 to +0.000968 blocks, including phases between the new keys. Prior 129-phase diagnostic is retained; thresholds were not weakened. Exact revised native/world captures reinspected before this review. Full routes/transitions/travelScale limits/compatibility/performance remain R6; no performance PASS."
+    }
+  }
+}

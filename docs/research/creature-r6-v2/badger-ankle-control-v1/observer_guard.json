@@ -1,0 +1,20 @@
+{
+  "unsupported_articulated_foot_rejected_before_launch": true,
+  "exit_code": 1,
+  "command": [
+    "C:\\Users\\Bakhshiev\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+    "tools/research/run_creature_pilot_qa.py",
+    "--qa-name",
+    "badger_ankle_world_v1",
+    "--species",
+    "badger",
+    "--out",
+    "docs/research/creature-r6-v2/badger-ankle-control-v1/unsupported_foot_probe",
+    "--label",
+    "unsupported",
+    "--world-motion",
+    "land_walk_pause",
+    "--foot-probe"
+  ],
+  "reason": "v2 rigid-foot observer must not silently record only shin vertices"
+}

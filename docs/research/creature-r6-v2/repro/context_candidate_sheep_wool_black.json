@@ -1,0 +1,41 @@
+{
+  "captured_at_utc": "2026-11-11T03:27:15.171804+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\r6_repro_v2\\run_a\\models",
+  "files_sha256": {
+    "creatures\\sheep\\creature.json": "c8ce099f3ab963984fc7018c7acd41b5d62e0fb21ab0efa26f0b9a1dd5c4e041",
+    "creatures\\sheep\\geometry.geo.json": "8d5c6c504bb51419f08f97d7d9a73beaecf6dd643833b1d1ce6da49220d90e7e",
+    "creatures\\sheep\\LICENSE.txt": "75f87b6aee1a3f5805a3d28ba6e1c79aad19ca34b86073203015395de79f3f42",
+    "creatures\\sheep\\manifest.json": "3a9ad203636145d4c6320b55456069826bd8b1a0bd6804bc068b386e8e0cf557",
+    "creatures\\sheep\\textures\\diffuse.png": "f605da204e6400eb5978e94d51e8e0ef3cbf23b65d19ed82d84a45423e3b0b99",
+    "creatures\\sheep\\textures\\icon.png": "f237a5b061a86ed428863d40a2b3925ba55cb6e64bb49ed352c4ca988d007120",
+    "skins\\sheep_wool_black\\LICENSE.txt": "f3ec5089cd8c78c28106451ba7419a1cadd7b656acdf6300460d668a1485797d",
+    "skins\\sheep_wool_black\\manifest.json": "6fe3929983f6bbd7cd47a108978fc15bb8d442b3261b79e586706e7234fc106e",
+    "skins\\sheep_wool_black\\skin.json": "4eb58aa8fead3c707da2cd3d7d330d38ed7a1e234face1ac0f4a195e30f58aef",
+    "skins\\sheep_wool_black\\textures\\body.png": "edccdb33cdfb8a432257b0bfea096112bc5b09ad0acb43e8c3e7f6a20928b175",
+    "skins\\sheep_wool_black\\textures\\diffuse.png": "edccdb33cdfb8a432257b0bfea096112bc5b09ad0acb43e8c3e7f6a20928b175",
+    "skins\\sheep_wool_black\\textures\\ear.png": "edccdb33cdfb8a432257b0bfea096112bc5b09ad0acb43e8c3e7f6a20928b175",
+    "skins\\sheep_wool_black\\textures\\face.png": "edccdb33cdfb8a432257b0bfea096112bc5b09ad0acb43e8c3e7f6a20928b175",
+    "skins\\sheep_wool_black\\textures\\leg.png": "edccdb33cdfb8a432257b0bfea096112bc5b09ad0acb43e8c3e7f6a20928b175",
+    "skins\\sheep_wool_black\\textures\\tail.png": "edccdb33cdfb8a432257b0bfea096112bc5b09ad0acb43e8c3e7f6a20928b175"
+  },
+  "qa_models_override": true,
+  "exe_sha256": "cd420654aabb559cd046529d39eca9c172121c942953066027622b27a7590044",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "candidate_sheep_wool_black",
+  "qa_camera": "close",
+  "world_species": [
+    "sheep"
+  ],
+  "preview_species": [
+    "sheep"
+  ],
+  "qa_water_placement": false,
+  "qa_lava_fixture": false,
+  "world": "World_254",
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

@@ -5,6 +5,7 @@
 #include "Creatures/Visual/Gltf/CreatureGltfBonePalette.h"
 #include "Creatures/Visual/Gltf/CreatureGltfClipClock.h"
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
+#include "Creatures/Visual/BoneSkeleton/BoneSkeletonGroundClearance.h"
 #include <memory>
 #include <string>
 
@@ -21,14 +22,19 @@ public:
                   const CreaturePoseParams &pose,
                   const CreatureDefinition &animDef, float dt) override;
   void SubmitDraw(const CreatureDrawContext &ctx, const glm::mat4 &viewProj) override;
+  bool GetConservativeWorldBounds(const UCreature &,const CreatureDefinition &,
+      glm::vec3 &,glm::vec3 &) override;
 
 private:
+  void EnsureMesh(const CreatureDefinition &);
   std::shared_ptr<CreatureGltfMeshAsset> MeshAsset;
   glm::mat4 RootAnimMatrix{1.f};
   float ModelScale{1.f};
   float ModelFeetOffsetY{0.f};
   std::string ModelFile;
-  std::string SkinId;
+  std::string LoadedSpecies,LoadedFile,LoadedDirectory;
+  uint64_t LoadedRevision{0};
+  bool MeshRequestSeen{false};
   UGltfClipClock ClipClock;
   const GltfAnimationCpu *ActiveAnimation{nullptr};
   /// Bone palette owned by this visual and refilled in place every frame;
@@ -37,6 +43,8 @@ private:
   std::shared_ptr<std::vector<glm::mat4>> BoneMatrices;
   bool HasBonePalette{false};
   GltfSkinScratch SkinScratch;
+  BoneGroundClearanceState TransitionGroundClearance;
+  float TransitionLift{0.f};
 };
 
 } // namespace cutum

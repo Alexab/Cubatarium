@@ -9,6 +9,8 @@
 #include "Creatures/Combat/CreatureCombat.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
+#include "Creatures/Diagnostics/CreatureQaWorldMotion.h"
+#include "World/Chunks/KnownAirTerrainSlice.h"
 #include "Creatures/Influence/InfluenceApplier.h"
 #include "Creatures/Influence/InfluenceResolver.h"
 #include "Creatures/Influence/StatusEffectSystem.h"
@@ -860,19 +862,31 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
         // chunk not ready yet) has no ground: simulating it makes it fall
         // through the void forever. Freeze it until the chunk returns, and
         // present it standing (it kept its last walk/fly facts and walked in
-        // place).
+        // place). A completed column's omitted sky slices are known air,
+        // using the same resident/disk/pending-save policy as opaque raycasts;
+        // do not freeze a swimmer whose body centre just crosses the surface.
+        CreatureQaWorldMotionTerrain qaTerrain;
         {
           const CollisionVolume vol = creature.GetCollisionVolume();
           const UChunkManager &chunkManager = GetBlockWorld().GetChunkManager();
-          if (!chunkManager.HasChunk(UChunkManager::WorldToChunk(
-                  WorldPosToBlock(vol.center))) ||
-              !chunkManager.HasChunk(UChunkManager::WorldToChunk(
-                  WorldPosToBlock(vol.center - glm::vec3(0.0f, vol.halfExtents.y + 0.5f, 0.0f)))))
+          const auto centerChunk = UChunkManager::WorldToChunk(WorldPosToBlock(vol.center));
+          const auto belowChunk = UChunkManager::WorldToChunk(
+              WorldPosToBlock(vol.center - glm::vec3(0.f, vol.halfExtents.y + .5f, 0.f)));
+          qaTerrain.centerResident = chunkManager.HasChunk(centerChunk);
+          qaTerrain.belowResident = chunkManager.HasChunk(belowChunk);
+          const int minCy = FloorDiv(GetProceduralSettings().MinHeight, CHUNK_SIZE);
+          qaTerrain.centerKnownAir = !qaTerrain.centerResident && centerChunk.y >= minCy && IsKnownAirTerrainSlice(*this, centerChunk);
+          qaTerrain.belowKnownAir = !qaTerrain.belowResident && belowChunk.y >= minCy && IsKnownAirTerrainSlice(*this, belowChunk);
+          if (!(qaTerrain.centerResident || qaTerrain.centerKnownAir) ||
+              !(qaTerrain.belowResident || qaTerrain.belowKnownAir))
           {
             creature.SettleFrozenLocomotion();
+            if (CreatureQaWorldMotionEnabled())
+              RecordCreatureQaWorldMotion(creature, false, qaTerrain, true);
             return;
           }
         }
+        PrepareCreatureQaWorldMotion(creature, dt);
         if (!tick_world_ai)
         {
           // Hitch gate freezes the BRAINS (TickActivity above), never the
@@ -881,6 +895,8 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
           // parity - entity simulation is not gated on frame time).
           ++world_creatures_skipped;
           creature.ExecuteIntent(*this, dt);
+          if (CreatureQaWorldMotionEnabled())
+            RecordCreatureQaWorldMotion(creature, CheckBlockCollisionVolume(creature.GetCollisionVolume()), qaTerrain);
           Environment.UpdateCreatureInSpatialIndex(creature);
           carryRider(creature);
           return;
@@ -893,6 +909,8 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
           CreatureCombat::TryMeleeStrike(*this, creature, GetGameMode());
         }
         creature.ExecuteIntent(*this, dt);
+        if (CreatureQaWorldMotionEnabled())
+          RecordCreatureQaWorldMotion(creature, CheckBlockCollisionVolume(creature.GetCollisionVolume()), qaTerrain);
         // Keep the spatial index live as bodies move (audit S7): per-move
         // upserts replace the full per-activity-tick rebuild; Upsert no-ops
         // when position and extents are unchanged.

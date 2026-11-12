@@ -1,0 +1,131 @@
+{
+  "schema": "creature-native-equivalence.v1",
+  "species_count": 1,
+  "exact_rgba_frames": 29,
+  "reference": "candidate_sheep_wool_black",
+  "candidate": "production_sheep_wool_black",
+  "same_executable_and_shaders": true,
+  "fresh_images_and_current_candidate_payload": true,
+  "world_species": [
+    "sheep"
+  ],
+  "scope": "native preview equivalence only; not full pose/habitat/equipment/performance acceptance",
+  "frames": [
+    {
+      "frame": "sheep_0.png",
+      "sha256": "cbada98a765005914be3f5a922d900fdfcf08e3484559b9389a410fb7fc0ab48"
+    },
+    {
+      "frame": "sheep_1.png",
+      "sha256": "b048a921add8bef1ac42c51d96dd3a1e82aeb4e3ccc110396fbf9a53f7b8dc03"
+    },
+    {
+      "frame": "sheep_2.png",
+      "sha256": "08fa2f0e8fae1444e3007261aef849e65c89a116aa202b7e92de06621e01f9b3"
+    },
+    {
+      "frame": "sheep_3.png",
+      "sha256": "8339bbf9fcbcb9dc72afff79e10e061d88413b41f3312506deeece84de2db4c1"
+    },
+    {
+      "frame": "sheep_4.png",
+      "sha256": "8afa3c5c1af9d5321737470d30b24ebd712b3f7e1e5e38a00941cd82cc21714e"
+    },
+    {
+      "frame": "sheep_5.png",
+      "sha256": "26ac6157e99d64836179fa8b65d3b2df61062d8de8b8966bf49fbedfa3e5fb93"
+    },
+    {
+      "frame": "sheep_6.png",
+      "sha256": "e732199f66dbc9a4270af97b9678e6ea7ab521ec1aa6b570429560f262b7b9b1"
+    },
+    {
+      "frame": "sheep_7.png",
+      "sha256": "143a32c0b9b7ad402d24babc2c7bd47cb09eb9e411e4498c89932a1d94586e54"
+    },
+    {
+      "frame": "sheep_8.png",
+      "sha256": "83d88f71932e1aa5c04e74141652a6ca44c466585827b47495c5cb5f61bb16fd"
+    },
+    {
+      "frame": "sheep_9.png",
+      "sha256": "b38dec9415f1b3a1fb06dbe448d624ab6b1f49992ea05814368311160cd9393c"
+    },
+    {
+      "frame": "sheep_10.png",
+      "sha256": "d1498fedb253de3b626b256ea8061af92cb3dc3af9bf90d718018102d940c47b"
+    },
+    {
+      "frame": "sheep_11.png",
+      "sha256": "0a58f744040b9e73f0d66707aa6383da68cff812b57db8a9639daffd962141c3"
+    },
+    {
+      "frame": "sheep_12.png",
+      "sha256": "a5125f151378a714f15aa8e4eaa6ac4f58707dbbe7cd51c85dd978d6d7ed4b7f"
+    },
+    {
+      "frame": "sheep_13.png",
+      "sha256": "8afa3c5c1af9d5321737470d30b24ebd712b3f7e1e5e38a00941cd82cc21714e"
+    },
+    {
+      "frame": "sheep_14.png",
+      "sha256": "26ac6157e99d64836179fa8b65d3b2df61062d8de8b8966bf49fbedfa3e5fb93"
+    },
+    {
+      "frame": "sheep_15.png",
+      "sha256": "e732199f66dbc9a4270af97b9678e6ea7ab521ec1aa6b570429560f262b7b9b1"
+    },
+    {
+      "frame": "sheep_16.png",
+      "sha256": "143a32c0b9b7ad402d24babc2c7bd47cb09eb9e411e4498c89932a1d94586e54"
+    },
+    {
+      "frame": "sheep_17.png",
+      "sha256": "83d88f71932e1aa5c04e74141652a6ca44c466585827b47495c5cb5f61bb16fd"
+    },
+    {
+      "frame": "sheep_18.png",
+      "sha256": "b38dec9415f1b3a1fb06dbe448d624ab6b1f49992ea05814368311160cd9393c"
+    },
+    {
+      "frame": "sheep_19.png",
+      "sha256": "d1498fedb253de3b626b256ea8061af92cb3dc3af9bf90d718018102d940c47b"
+    },
+    {
+      "frame": "sheep_20.png",
+      "sha256": "0a58f744040b9e73f0d66707aa6383da68cff812b57db8a9639daffd962141c3"
+    },
+    {
+      "frame": "sheep_21.png",
+      "sha256": "4f71a2983f2a6bd2b55775c6298677fcbecb31bb6ab803921b39f449221e69db"
+    },
+    {
+      "frame": "sheep_22.png",
+      "sha256": "4f71a2983f2a6bd2b55775c6298677fcbecb31bb6ab803921b39f449221e69db"
+    },
+    {
+      "frame": "sheep_23.png",
+      "sha256": "4f71a2983f2a6bd2b55775c6298677fcbecb31bb6ab803921b39f449221e69db"
+    },
+    {
+      "frame": "sheep_24.png",
+      "sha256": "4f71a2983f2a6bd2b55775c6298677fcbecb31bb6ab803921b39f449221e69db"
+    },
+    {
+      "frame": "sheep_25.png",
+      "sha256": "4f71a2983f2a6bd2b55775c6298677fcbecb31bb6ab803921b39f449221e69db"
+    },
+    {
+      "frame": "sheep_26.png",
+      "sha256": "4f71a2983f2a6bd2b55775c6298677fcbecb31bb6ab803921b39f449221e69db"
+    },
+    {
+      "frame": "sheep_27.png",
+      "sha256": "4f71a2983f2a6bd2b55775c6298677fcbecb31bb6ab803921b39f449221e69db"
+    },
+    {
+      "frame": "sheep_28.png",
+      "sha256": "4f71a2983f2a6bd2b55775c6298677fcbecb31bb6ab803921b39f449221e69db"
+    }
+  ]
+}

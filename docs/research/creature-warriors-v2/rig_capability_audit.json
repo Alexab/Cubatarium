@@ -1,0 +1,83 @@
+{
+  "oerkki": {
+    "baseline": {
+      "extent_blocks": [
+        0.802176296710968,
+        1.897473692893982,
+        0.333196297287941
+      ],
+      "palette_joints": 9,
+      "weighted_joints": 1,
+      "clips": [
+        "idle",
+        "walk",
+        "run",
+        "punch"
+      ]
+    },
+    "candidate": {
+      "palette_joints": 21,
+      "weighted_joints": 21,
+      "clips": [
+        "idle",
+        "walk",
+        "run",
+        "punch"
+      ]
+    }
+  },
+  "orc": {
+    "baseline": {
+      "extent_blocks": [
+        1.8546765446663889,
+        2.7422149181365967,
+        0.8764099478722136
+      ],
+      "palette_joints": 9,
+      "weighted_joints": 1,
+      "clips": [
+        "idle",
+        "walk",
+        "run",
+        "punch"
+      ]
+    },
+    "candidate": {
+      "palette_joints": 18,
+      "weighted_joints": 18,
+      "clips": [
+        "idle",
+        "walk",
+        "run",
+        "punch"
+      ]
+    }
+  },
+  "ogre": {
+    "baseline": {
+      "extent_blocks": [
+        2.5820945501327595,
+        3.1397716392984574,
+        2.8615766813831933
+      ],
+      "palette_joints": 9,
+      "weighted_joints": 1,
+      "clips": [
+        "idle",
+        "walk",
+        "run",
+        "punch"
+      ]
+    },
+    "candidate": {
+      "palette_joints": 18,
+      "weighted_joints": 18,
+      "clips": [
+        "idle",
+        "walk",
+        "run",
+        "punch"
+      ]
+    }
+  }
+}

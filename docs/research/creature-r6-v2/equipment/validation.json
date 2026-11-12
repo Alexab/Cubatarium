@@ -1,0 +1,36 @@
+{
+  "schema": "creature-equipment-root-validation.v1",
+  "scope": "Actual preview root/pose forwarding only; anatomical equipment fit explicitly rejected",
+  "release_exe_sha256": "abf31283ea126a96fc1ddb858293d0841c749ddb3abeceff056d879c6cbf2bfd",
+  "release_app_build": "passed; static6 system DLL",
+  "selected_release_cpp_tests": 10,
+  "current_resource_ledger": {
+    "expected_species": 56,
+    "expected_skins": 5,
+    "exact_valid_r5_reviews": 61,
+    "published_payload_matches_staged": 61,
+    "bin_payload_matches_staged": 61,
+    "current_generator_source_inputs": 61,
+    "manifest_species_count": 56,
+    "manifest_skin_count": 5,
+    "valid_file_records": 61,
+    "runtime_global_manifest_matches": true,
+    "contracts_states": {
+      "accepted": 56
+    },
+    "unexpected_live_species": []
+  },
+  "equipment_resources": 6,
+  "equipment_pngs_per_run": 2448,
+  "restart_pngs_exact": 2448,
+  "max_anchor_matrix_error": 0.0,
+  "standard_catalog_resources": 61,
+  "standard_exact_rgba_pngs": 5290,
+  "directly_inspected_stress_sheets": 6,
+  "equipment_art_decision": "needs_anatomical_equipment_fit",
+  "current_world_actor": "zombie; fresh src=3 and frame002 inspected; no world gear claim",
+  "first_run_scope": "Complete preview evidence only; failed human world spawn gate retained honestly",
+  "performance": "disabled; not accepted",
+  "r6_final_acceptance": false,
+  "next_required": "Anatomical bone-local wear fitting and explicit grip frame, preserving body/rig/texture/animation, then dense visual/world/FP/save/cache checks"
+}

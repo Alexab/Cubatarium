@@ -1,0 +1,22 @@
+{
+  "baseline_build_exit": 0,
+  "restoration_build_exit": 0,
+  "command": [
+    "cmake",
+    "--build",
+    "build/desktop-msvc",
+    "--config",
+    "Release",
+    "--target",
+    "Cubatarium",
+    "--parallel",
+    "8"
+  ],
+  "scope": "Both instrumented Release binaries differ only in linear/indexed lookup source variant; final live source and bin restored to indexed",
+  "hashes": {
+    "assetgen_output\\creatures\\world_pass_perf_v1\\baseline\\Cubatarium.exe": "5dd79a6997274d4d4b8a9dc9c95359d2a19eb80cc3d61952b10dbcf114d4fed6",
+    "assetgen_output\\creatures\\world_pass_perf_v1\\baseline\\GltfKeyframeInterval.h": "654f7278c5e75103e965bd2cde417971c8c973762ef53410aa9847d185edc53d",
+    "assetgen_output\\creatures\\world_pass_perf_v1\\indexed\\Cubatarium.exe": "81283a1c5b148e659eaa66e9f4be9e14cbf2730ad70b3e50a1f6a59535076018",
+    "assetgen_output\\creatures\\world_pass_perf_v1\\indexed\\GltfKeyframeInterval.h": "aebf1a668313eaf1e0457b1528736c21ec1ce4dc19191f163d9b0695cfc39b28"
+  }
+}

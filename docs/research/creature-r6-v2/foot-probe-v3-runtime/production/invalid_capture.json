@@ -1,0 +1,30 @@
+{
+  "usable_for_regression": false,
+  "reason": "Preview species argument was manually assembled and differs from the actual56-species selected catalog",
+  "unknown_ids": [
+    "camel",
+    "cat",
+    "crocodile",
+    "deer",
+    "dog",
+    "duck",
+    "elephant",
+    "frog",
+    "giraffe",
+    "horse",
+    "lion"
+  ],
+  "missing_ids": [
+    "bunny",
+    "fire_spirit",
+    "rigid_demo_flyer",
+    "skeleton",
+    "spider",
+    "squid",
+    "tortoise",
+    "trout",
+    "water_dragon",
+    "zombie"
+  ],
+  "replacement": "../production_valid"
+}

@@ -1,0 +1,26 @@
+{
+  "oerkki": {
+    "bundle_sha256": "afc5f9d523d5eda2d40cb7aeb4a2c609e3b11d49f53dc7ecea277c4d75411b01",
+    "ordinary_production_catalog": true,
+    "qa_models_override": false,
+    "actual_spawn_in_fresh_runner_dump": true,
+    "pixel_identical_native_frames": 29,
+    "context": "context_production_contact_oerkki.json"
+  },
+  "orc": {
+    "bundle_sha256": "8dd89cae004c861cec94cdbed2460f403911df8e5b89050d1a93d9f4f75a20fd",
+    "ordinary_production_catalog": true,
+    "qa_models_override": false,
+    "actual_spawn_in_fresh_runner_dump": true,
+    "pixel_identical_native_frames": 29,
+    "context": "context_production_contact_orc.json"
+  },
+  "ogre": {
+    "bundle_sha256": "8f8f3af7403f64821337974ecabf0d5e4dc3988d478d64319ef5fd9a442dfaed",
+    "ordinary_production_catalog": true,
+    "qa_models_override": false,
+    "actual_spawn_in_fresh_runner_dump": true,
+    "pixel_identical_native_frames": 29,
+    "context": "context_production_contact_ogre.json"
+  }
+}

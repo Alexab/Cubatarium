@@ -1,0 +1,592 @@
+{
+  "schema": "creature-proposal-contact-diagnostic.v1",
+  "scope": "Exported proposal clips1025 phases; contact metadata explicit, aquatic free clips are not ground gates; no terrain/stride/transition acceptance",
+  "species": {
+    "badger": {
+      "walk": {
+        "semantics": "authored_ground_contact",
+        "sample_count": 1025,
+        "min_geometry_y_blocks": -1.5e-05,
+        "max_min_geometry_y_blocks": 0.000377,
+        "owned_effectors": {
+          "lower_fl": {
+            "min_y_blocks": -1.5e-05,
+            "max_min_y_blocks": 0.061828
+          },
+          "lower_fr": {
+            "min_y_blocks": -1.5e-05,
+            "max_min_y_blocks": 0.061828
+          },
+          "lower_bl": {
+            "min_y_blocks": -1.2e-05,
+            "max_min_y_blocks": 0.07689
+          },
+          "lower_br": {
+            "min_y_blocks": -1.2e-05,
+            "max_min_y_blocks": 0.07689
+          }
+        }
+      },
+      "run": {
+        "semantics": "authored_ground_contact",
+        "sample_count": 1025,
+        "min_geometry_y_blocks": -2.9e-05,
+        "max_min_geometry_y_blocks": 0.000671,
+        "owned_effectors": {
+          "lower_fl": {
+            "min_y_blocks": -2.9e-05,
+            "max_min_y_blocks": 0.09615
+          },
+          "lower_fr": {
+            "min_y_blocks": -2.9e-05,
+            "max_min_y_blocks": 0.09615
+          },
+          "lower_bl": {
+            "min_y_blocks": -1.9e-05,
+            "max_min_y_blocks": 0.132991
+          },
+          "lower_br": {
+            "min_y_blocks": -1.9e-05,
+            "max_min_y_blocks": 0.132991
+          }
+        }
+      },
+      "idle": {
+        "semantics": "authored_ground_contact",
+        "sample_count": 1025,
+        "min_geometry_y_blocks": 0.0,
+        "max_min_geometry_y_blocks": 0.0,
+        "owned_effectors": {
+          "lower_fl": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.0
+          },
+          "lower_fr": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.0
+          },
+          "lower_bl": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.0
+          },
+          "lower_br": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.0
+          }
+        }
+      },
+      "punch": {
+        "semantics": "authored_ground_contact",
+        "sample_count": 1025,
+        "min_geometry_y_blocks": -0.000218,
+        "max_min_geometry_y_blocks": 0.000702,
+        "owned_effectors": {
+          "lower_fl": {
+            "min_y_blocks": -0.000218,
+            "max_min_y_blocks": 0.001974
+          },
+          "lower_fr": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.039122
+          },
+          "lower_bl": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.039122
+          },
+          "lower_br": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.039122
+          }
+        }
+      }
+    },
+    "treeman": {
+      "idle": {
+        "semantics": "authored_ground_contact",
+        "sample_count": 1025,
+        "min_geometry_y_blocks": 0.0,
+        "max_min_geometry_y_blocks": 0.0,
+        "owned_effectors": {
+          "foot_left": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.0
+          },
+          "foot_right": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.0
+          }
+        }
+      },
+      "walk": {
+        "semantics": "authored_ground_contact",
+        "sample_count": 1025,
+        "min_geometry_y_blocks": -2e-05,
+        "max_min_geometry_y_blocks": 0.0,
+        "owned_effectors": {
+          "foot_left": {
+            "min_y_blocks": -2e-05,
+            "max_min_y_blocks": 0.546317
+          },
+          "foot_right": {
+            "min_y_blocks": -2e-05,
+            "max_min_y_blocks": 0.546317
+          }
+        }
+      },
+      "run": {
+        "semantics": "authored_ground_contact",
+        "sample_count": 1025,
+        "min_geometry_y_blocks": -2.9e-05,
+        "max_min_geometry_y_blocks": 0.0,
+        "owned_effectors": {
+          "foot_left": {
+            "min_y_blocks": -2.9e-05,
+            "max_min_y_blocks": 0.759487
+          },
+          "foot_right": {
+            "min_y_blocks": -2.9e-05,
+            "max_min_y_blocks": 0.759487
+          }
+        }
+      },
+      "punch": {
+        "semantics": "authored_ground_contact",
+        "sample_count": 1025,
+        "min_geometry_y_blocks": -0.0,
+        "max_min_geometry_y_blocks": 0.0,
+        "owned_effectors": {
+          "foot_left": {
+            "min_y_blocks": -0.0,
+            "max_min_y_blocks": 0.0
+          },
+          "foot_right": {
+            "min_y_blocks": -0.0,
+            "max_min_y_blocks": 0.0
+          }
+        }
+      }
+    },
+    "lobster": {
+      "idle": {
+        "semantics": "authored_ground_contact",
+        "sample_count": 1025,
+        "min_geometry_y_blocks": -0.0,
+        "max_min_geometry_y_blocks": 0.0,
+        "owned_effectors": {
+          "foot_left0": {
+            "min_y_blocks": -0.0,
+            "max_min_y_blocks": 0.003
+          },
+          "foot_left1": {
+            "min_y_blocks": -0.0,
+            "max_min_y_blocks": 0.003
+          },
+          "foot_left2": {
+            "min_y_blocks": -0.0,
+            "max_min_y_blocks": 0.003
+          },
+          "foot_left3": {
+            "min_y_blocks": -0.0,
+            "max_min_y_blocks": 0.003
+          },
+          "foot_right0": {
+            "min_y_blocks": -0.0,
+            "max_min_y_blocks": 0.003
+          },
+          "foot_right1": {
+            "min_y_blocks": -0.0,
+            "max_min_y_blocks": 0.003
+          },
+          "foot_right2": {
+            "min_y_blocks": -0.0,
+            "max_min_y_blocks": 0.003
+          },
+          "foot_right3": {
+            "min_y_blocks": -0.0,
+            "max_min_y_blocks": 0.003
+          }
+        }
+      },
+      "walk": {
+        "semantics": "authored_ground_contact",
+        "sample_count": 1025,
+        "min_geometry_y_blocks": -2.8e-05,
+        "max_min_geometry_y_blocks": 0.0,
+        "owned_effectors": {
+          "foot_left0": {
+            "min_y_blocks": -2.8e-05,
+            "max_min_y_blocks": 0.0225
+          },
+          "foot_left1": {
+            "min_y_blocks": -2.8e-05,
+            "max_min_y_blocks": 0.0225
+          },
+          "foot_left2": {
+            "min_y_blocks": -2.8e-05,
+            "max_min_y_blocks": 0.0225
+          },
+          "foot_left3": {
+            "min_y_blocks": -2.8e-05,
+            "max_min_y_blocks": 0.0225
+          },
+          "foot_right0": {
+            "min_y_blocks": -2.8e-05,
+            "max_min_y_blocks": 0.0225
+          },
+          "foot_right1": {
+            "min_y_blocks": -2.8e-05,
+            "max_min_y_blocks": 0.0225
+          },
+          "foot_right2": {
+            "min_y_blocks": -2.8e-05,
+            "max_min_y_blocks": 0.0225
+          },
+          "foot_right3": {
+            "min_y_blocks": -2.8e-05,
+            "max_min_y_blocks": 0.0225
+          }
+        }
+      },
+      "punch": {
+        "semantics": "authored_ground_contact",
+        "sample_count": 1025,
+        "min_geometry_y_blocks": -0.0,
+        "max_min_geometry_y_blocks": 0.0,
+        "owned_effectors": {
+          "foot_left0": {
+            "min_y_blocks": -0.0,
+            "max_min_y_blocks": 0.0
+          },
+          "foot_left1": {
+            "min_y_blocks": -0.0,
+            "max_min_y_blocks": 0.0
+          },
+          "foot_left2": {
+            "min_y_blocks": -0.0,
+            "max_min_y_blocks": 0.0
+          },
+          "foot_left3": {
+            "min_y_blocks": -0.0,
+            "max_min_y_blocks": 0.0
+          },
+          "foot_right0": {
+            "min_y_blocks": -0.0,
+            "max_min_y_blocks": 0.0
+          },
+          "foot_right1": {
+            "min_y_blocks": -0.0,
+            "max_min_y_blocks": 0.0
+          },
+          "foot_right2": {
+            "min_y_blocks": -0.0,
+            "max_min_y_blocks": 0.0
+          },
+          "foot_right3": {
+            "min_y_blocks": -0.0,
+            "max_min_y_blocks": 0.0
+          }
+        }
+      },
+      "die": {
+        "semantics": "authored_ground_contact",
+        "sample_count": 1025,
+        "min_geometry_y_blocks": -0.000224,
+        "max_min_geometry_y_blocks": 0.001409,
+        "owned_effectors": {
+          "body": {
+            "min_y_blocks": 0.10625,
+            "max_min_y_blocks": 0.238731
+          },
+          "head": {
+            "min_y_blocks": 0.1,
+            "max_min_y_blocks": 0.262781
+          },
+          "eye_left": {
+            "min_y_blocks": 0.175,
+            "max_min_y_blocks": 0.288426
+          },
+          "mandible_left": {
+            "min_y_blocks": 0.0875,
+            "max_min_y_blocks": 0.299817
+          },
+          "antenna_base_left": {
+            "min_y_blocks": 0.175,
+            "max_min_y_blocks": 0.28859
+          },
+          "antenna_tip_left": {
+            "min_y_blocks": 0.18125,
+            "max_min_y_blocks": 0.238067
+          },
+          "upper_left0": {
+            "min_y_blocks": 0.125,
+            "max_min_y_blocks": 0.186469
+          },
+          "lower_left0": {
+            "min_y_blocks": 0.125,
+            "max_min_y_blocks": 0.19121
+          },
+          "foot_left0": {
+            "min_y_blocks": -0.00017,
+            "max_min_y_blocks": 0.109378
+          },
+          "upper_left1": {
+            "min_y_blocks": 0.125,
+            "max_min_y_blocks": 0.189513
+          },
+          "lower_left1": {
+            "min_y_blocks": 0.125,
+            "max_min_y_blocks": 0.19121
+          },
+          "foot_left1": {
+            "min_y_blocks": -0.00017,
+            "max_min_y_blocks": 0.109378
+          },
+          "upper_left2": {
+            "min_y_blocks": 0.125,
+            "max_min_y_blocks": 0.189513
+          },
+          "lower_left2": {
+            "min_y_blocks": 0.125,
+            "max_min_y_blocks": 0.19121
+          },
+          "foot_left2": {
+            "min_y_blocks": -0.00017,
+            "max_min_y_blocks": 0.109378
+          },
+          "upper_left3": {
+            "min_y_blocks": 0.125,
+            "max_min_y_blocks": 0.186469
+          },
+          "lower_left3": {
+            "min_y_blocks": 0.125,
+            "max_min_y_blocks": 0.19121
+          },
+          "foot_left3": {
+            "min_y_blocks": -0.00017,
+            "max_min_y_blocks": 0.109378
+          },
+          "claw_upper_left": {
+            "min_y_blocks": 0.1125,
+            "max_min_y_blocks": 0.233598
+          },
+          "forearm_left": {
+            "min_y_blocks": 0.1125,
+            "max_min_y_blocks": 0.15924
+          },
+          "palm_left": {
+            "min_y_blocks": -0.000224,
+            "max_min_y_blocks": 0.0875
+          },
+          "moving_finger_left": {
+            "min_y_blocks": 0.02393,
+            "max_min_y_blocks": 0.1
+          },
+          "eye_right": {
+            "min_y_blocks": 0.175,
+            "max_min_y_blocks": 0.384939
+          },
+          "mandible_right": {
+            "min_y_blocks": 0.0875,
+            "max_min_y_blocks": 0.349787
+          },
+          "antenna_base_right": {
+            "min_y_blocks": 0.175,
+            "max_min_y_blocks": 0.385106
+          },
+          "antenna_tip_right": {
+            "min_y_blocks": 0.18125,
+            "max_min_y_blocks": 0.41229
+          },
+          "upper_right0": {
+            "min_y_blocks": 0.125,
+            "max_min_y_blocks": 0.419224
+          },
+          "lower_right0": {
+            "min_y_blocks": 0.125,
+            "max_min_y_blocks": 0.488862
+          },
+          "foot_right0": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.534119
+          },
+          "upper_right1": {
+            "min_y_blocks": 0.125,
+            "max_min_y_blocks": 0.423876
+          },
+          "lower_right1": {
+            "min_y_blocks": 0.125,
+            "max_min_y_blocks": 0.488862
+          },
+          "foot_right1": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.534119
+          },
+          "upper_right2": {
+            "min_y_blocks": 0.125,
+            "max_min_y_blocks": 0.423876
+          },
+          "lower_right2": {
+            "min_y_blocks": 0.125,
+            "max_min_y_blocks": 0.488862
+          },
+          "foot_right2": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.534119
+          },
+          "upper_right3": {
+            "min_y_blocks": 0.125,
+            "max_min_y_blocks": 0.419224
+          },
+          "lower_right3": {
+            "min_y_blocks": 0.125,
+            "max_min_y_blocks": 0.488862
+          },
+          "foot_right3": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.534119
+          },
+          "claw_upper_right": {
+            "min_y_blocks": 0.1125,
+            "max_min_y_blocks": 0.408088
+          },
+          "forearm_right": {
+            "min_y_blocks": 0.1125,
+            "max_min_y_blocks": 0.482958
+          },
+          "palm_right": {
+            "min_y_blocks": 0.0875,
+            "max_min_y_blocks": 0.499695
+          },
+          "moving_finger_right": {
+            "min_y_blocks": 0.1,
+            "max_min_y_blocks": 0.588216
+          },
+          "tail0": {
+            "min_y_blocks": 0.1125,
+            "max_min_y_blocks": 0.238731
+          },
+          "tail1": {
+            "min_y_blocks": 0.1125,
+            "max_min_y_blocks": 0.251124
+          },
+          "tail2": {
+            "min_y_blocks": 0.125,
+            "max_min_y_blocks": 0.265149
+          },
+          "tail3": {
+            "min_y_blocks": 0.125,
+            "max_min_y_blocks": 0.277542
+          },
+          "tail4": {
+            "min_y_blocks": 0.1375,
+            "max_min_y_blocks": 0.291678
+          },
+          "tail5": {
+            "min_y_blocks": 0.1375,
+            "max_min_y_blocks": 0.30396
+          },
+          "telson": {
+            "min_y_blocks": 0.15,
+            "max_min_y_blocks": 0.30644
+          },
+          "uropod_left": {
+            "min_y_blocks": 0.15,
+            "max_min_y_blocks": 0.221487
+          },
+          "uropod_right": {
+            "min_y_blocks": 0.15,
+            "max_min_y_blocks": 0.367658
+          }
+        }
+      }
+    },
+    "seahorse": {
+      "idle": {
+        "semantics": "full_mesh_clearance_not_foot_contact",
+        "sample_count": 1025,
+        "min_geometry_y_blocks": 0.021112,
+        "max_min_geometry_y_blocks": 0.028131,
+        "owned_effectors": {}
+      },
+      "fly": {
+        "semantics": "full_mesh_clearance_not_foot_contact",
+        "sample_count": 1025,
+        "min_geometry_y_blocks": -0.014719,
+        "max_min_geometry_y_blocks": 0.035099,
+        "owned_effectors": {}
+      },
+      "die": {
+        "semantics": "authored_ground_contact",
+        "sample_count": 1025,
+        "min_geometry_y_blocks": -0.000166,
+        "max_min_geometry_y_blocks": 0.002302,
+        "owned_effectors": {
+          "body": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.159375
+          },
+          "neck0": {
+            "min_y_blocks": 0.044813,
+            "max_min_y_blocks": 0.290625
+          },
+          "head": {
+            "min_y_blocks": 0.047584,
+            "max_min_y_blocks": 0.384375
+          },
+          "snout": {
+            "min_y_blocks": 0.076879,
+            "max_min_y_blocks": 0.388736
+          },
+          "jaw": {
+            "min_y_blocks": 0.075626,
+            "max_min_y_blocks": 0.375
+          },
+          "tail0": {
+            "min_y_blocks": 0.012266,
+            "max_min_y_blocks": 0.084375
+          },
+          "tail1": {
+            "min_y_blocks": 0.009096,
+            "max_min_y_blocks": 0.063463
+          },
+          "tail2": {
+            "min_y_blocks": -0.000166,
+            "max_min_y_blocks": 0.062253
+          },
+          "tail3": {
+            "min_y_blocks": 0.004098,
+            "max_min_y_blocks": 0.062751
+          },
+          "tail4": {
+            "min_y_blocks": 0.011531,
+            "max_min_y_blocks": 0.063699
+          },
+          "tail5": {
+            "min_y_blocks": 0.029017,
+            "max_min_y_blocks": 0.084752
+          },
+          "tail6": {
+            "min_y_blocks": 0.028178,
+            "max_min_y_blocks": 0.075929
+          },
+          "dorsal0": {
+            "min_y_blocks": 0.05347,
+            "max_min_y_blocks": 0.197406
+          },
+          "dorsal1": {
+            "min_y_blocks": 0.05687,
+            "max_min_y_blocks": 0.214237
+          },
+          "pectoral_left": {
+            "min_y_blocks": -5.4e-05,
+            "max_min_y_blocks": 0.35625
+          },
+          "pectoral_right": {
+            "min_y_blocks": 0.130127,
+            "max_min_y_blocks": 0.361361
+          }
+        }
+      }
+    }
+  }
+}

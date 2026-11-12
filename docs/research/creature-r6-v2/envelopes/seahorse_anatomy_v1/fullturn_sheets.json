@@ -1,0 +1,355 @@
+{
+  "scope": "Verified native views; not artistic acceptance",
+  "context_exe_sha256": "a0872e87a1551dbe7ac0cff1346b58176743d18eba13817cb7779473415df68f",
+  "manifest_sha256": "f750b436c0a4ba91fb6a315fc07e8c9b025712d815f1da760960b141a5d4ff36",
+  "sheets": [
+    {
+      "path": "fullturn_0.png",
+      "sha256": "ca3035d59a4174480f33a2408db56490a0ae75a84ed2e0099c2a08ea0406939c",
+      "frames": [
+        {
+          "color": "seahorse/pose_0_view_0_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 15.0,
+          "pose": 0,
+          "silhouette": "seahorse/pose_0_view_0_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 0,
+          "yaw_degrees": 0.0
+        },
+        {
+          "color": "seahorse/pose_0_view_1_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 15.0,
+          "pose": 0,
+          "silhouette": "seahorse/pose_0_view_1_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 1,
+          "yaw_degrees": 45.0
+        },
+        {
+          "color": "seahorse/pose_0_view_2_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 15.0,
+          "pose": 0,
+          "silhouette": "seahorse/pose_0_view_2_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 2,
+          "yaw_degrees": 90.0
+        },
+        {
+          "color": "seahorse/pose_0_view_3_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 15.0,
+          "pose": 0,
+          "silhouette": "seahorse/pose_0_view_3_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 3,
+          "yaw_degrees": 135.0
+        },
+        {
+          "color": "seahorse/pose_0_view_4_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 15.0,
+          "pose": 0,
+          "silhouette": "seahorse/pose_0_view_4_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 4,
+          "yaw_degrees": 180.0
+        },
+        {
+          "color": "seahorse/pose_0_view_5_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 15.0,
+          "pose": 0,
+          "silhouette": "seahorse/pose_0_view_5_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 5,
+          "yaw_degrees": 225.0
+        },
+        {
+          "color": "seahorse/pose_0_view_6_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 15.0,
+          "pose": 0,
+          "silhouette": "seahorse/pose_0_view_6_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 6,
+          "yaw_degrees": 270.0
+        },
+        {
+          "color": "seahorse/pose_0_view_7_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 15.0,
+          "pose": 0,
+          "silhouette": "seahorse/pose_0_view_7_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 7,
+          "yaw_degrees": 315.0
+        },
+        {
+          "color": "seahorse/pose_0_view_8_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 90.0,
+          "pose": 0,
+          "silhouette": "seahorse/pose_0_view_8_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 8,
+          "yaw_degrees": 0.0
+        },
+        {
+          "color": "seahorse/pose_0_view_9_color.png",
+          "phase": 0.0,
+          "pitch_degrees": -90.0,
+          "pose": 0,
+          "silhouette": "seahorse/pose_0_view_9_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 9,
+          "yaw_degrees": 0.0
+        }
+      ]
+    },
+    {
+      "path": "fullturn_1.png",
+      "sha256": "ff5dbfe8b6beb723d3b5b90228787d5131efb09c52fe1a409c33e8a92905e157",
+      "frames": [
+        {
+          "color": "seahorse/pose_1_view_0_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 15.0,
+          "pose": 1,
+          "silhouette": "seahorse/pose_1_view_0_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.10000000149011612,
+          "view": 0,
+          "yaw_degrees": 0.0
+        },
+        {
+          "color": "seahorse/pose_1_view_1_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 15.0,
+          "pose": 1,
+          "silhouette": "seahorse/pose_1_view_1_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.10000000149011612,
+          "view": 1,
+          "yaw_degrees": 45.0
+        },
+        {
+          "color": "seahorse/pose_1_view_2_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 15.0,
+          "pose": 1,
+          "silhouette": "seahorse/pose_1_view_2_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.10000000149011612,
+          "view": 2,
+          "yaw_degrees": 90.0
+        },
+        {
+          "color": "seahorse/pose_1_view_3_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 15.0,
+          "pose": 1,
+          "silhouette": "seahorse/pose_1_view_3_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.10000000149011612,
+          "view": 3,
+          "yaw_degrees": 135.0
+        },
+        {
+          "color": "seahorse/pose_1_view_4_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 15.0,
+          "pose": 1,
+          "silhouette": "seahorse/pose_1_view_4_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.10000000149011612,
+          "view": 4,
+          "yaw_degrees": 180.0
+        },
+        {
+          "color": "seahorse/pose_1_view_5_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 15.0,
+          "pose": 1,
+          "silhouette": "seahorse/pose_1_view_5_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.10000000149011612,
+          "view": 5,
+          "yaw_degrees": 225.0
+        },
+        {
+          "color": "seahorse/pose_1_view_6_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 15.0,
+          "pose": 1,
+          "silhouette": "seahorse/pose_1_view_6_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.10000000149011612,
+          "view": 6,
+          "yaw_degrees": 270.0
+        },
+        {
+          "color": "seahorse/pose_1_view_7_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 15.0,
+          "pose": 1,
+          "silhouette": "seahorse/pose_1_view_7_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.10000000149011612,
+          "view": 7,
+          "yaw_degrees": 315.0
+        },
+        {
+          "color": "seahorse/pose_1_view_8_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 90.0,
+          "pose": 1,
+          "silhouette": "seahorse/pose_1_view_8_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.10000000149011612,
+          "view": 8,
+          "yaw_degrees": 0.0
+        },
+        {
+          "color": "seahorse/pose_1_view_9_color.png",
+          "phase": 0.125,
+          "pitch_degrees": -90.0,
+          "pose": 1,
+          "silhouette": "seahorse/pose_1_view_9_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.10000000149011612,
+          "view": 9,
+          "yaw_degrees": 0.0
+        }
+      ]
+    },
+    {
+      "path": "fullturn_2.png",
+      "sha256": "c2161bf5856a88d64f5c18fc4dfe0231b7a520b21395b3dee1e4765d9631c24c",
+      "frames": [
+        {
+          "color": "seahorse/pose_2_view_0_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 15.0,
+          "pose": 2,
+          "silhouette": "seahorse/pose_2_view_0_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.5,
+          "view": 0,
+          "yaw_degrees": 0.0
+        },
+        {
+          "color": "seahorse/pose_2_view_1_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 15.0,
+          "pose": 2,
+          "silhouette": "seahorse/pose_2_view_1_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.5,
+          "view": 1,
+          "yaw_degrees": 45.0
+        },
+        {
+          "color": "seahorse/pose_2_view_2_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 15.0,
+          "pose": 2,
+          "silhouette": "seahorse/pose_2_view_2_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.5,
+          "view": 2,
+          "yaw_degrees": 90.0
+        },
+        {
+          "color": "seahorse/pose_2_view_3_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 15.0,
+          "pose": 2,
+          "silhouette": "seahorse/pose_2_view_3_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.5,
+          "view": 3,
+          "yaw_degrees": 135.0
+        },
+        {
+          "color": "seahorse/pose_2_view_4_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 15.0,
+          "pose": 2,
+          "silhouette": "seahorse/pose_2_view_4_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.5,
+          "view": 4,
+          "yaw_degrees": 180.0
+        },
+        {
+          "color": "seahorse/pose_2_view_5_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 15.0,
+          "pose": 2,
+          "silhouette": "seahorse/pose_2_view_5_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.5,
+          "view": 5,
+          "yaw_degrees": 225.0
+        },
+        {
+          "color": "seahorse/pose_2_view_6_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 15.0,
+          "pose": 2,
+          "silhouette": "seahorse/pose_2_view_6_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.5,
+          "view": 6,
+          "yaw_degrees": 270.0
+        },
+        {
+          "color": "seahorse/pose_2_view_7_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 15.0,
+          "pose": 2,
+          "silhouette": "seahorse/pose_2_view_7_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.5,
+          "view": 7,
+          "yaw_degrees": 315.0
+        },
+        {
+          "color": "seahorse/pose_2_view_8_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 90.0,
+          "pose": 2,
+          "silhouette": "seahorse/pose_2_view_8_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.5,
+          "view": 8,
+          "yaw_degrees": 0.0
+        },
+        {
+          "color": "seahorse/pose_2_view_9_color.png",
+          "phase": 0.625,
+          "pitch_degrees": -90.0,
+          "pose": 2,
+          "silhouette": "seahorse/pose_2_view_9_silhouette.png",
+          "state": "Swim",
+          "time_seconds": 0.5,
+          "view": 9,
+          "yaw_degrees": 0.0
+        }
+      ]
+    }
+  ]
+}

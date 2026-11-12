@@ -1,0 +1,170 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R3 fidelity pilot assets; global R6 save/performance coverage remains pending",
+  "species": {
+    "human": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct image inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "dfb30d4771b88fbcba47696f8158534c7a1faca117679fab681c6f986ba25198",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "human.png",
+          "sha256": "ca2085be717c0ed511043f0de480ac0be50188aa186bfc5c1a0af92684d604c3"
+        },
+        "motion": {
+          "path": "native_approved_human.png",
+          "sha256": "84a176893860a622a9ecc5a81a293838bc2d10cea005d09ffa7e63c6ad2f3ae1"
+        },
+        "runtime": {
+          "path": "runtime_human_adventurer/frame_002.png",
+          "sha256": "7d0ec3723018241ffb26139dcdd316c65425561cfb3dd0cb4a6ba4a6ff529555"
+        },
+        "ui": {
+          "path": "ui.png",
+          "sha256": "feb50df7eb440e50af7a79946f1c78009f89bdf581448504b97c10bb3615c89e"
+        },
+        "equipment": {
+          "path": "equipment_baseline_comparison.png",
+          "sha256": "6adc7dbee254d1e652568ca199678abcaf9e5a2b759a6784020557a643b3b633"
+        },
+        "first_person": {
+          "path": "equipment_fp_candidate.png",
+          "sha256": "e660f85f14de718a1b513e38b38e1393104445b7a1a625ba2c09741b978ae46f"
+        },
+        "skins": {
+          "path": "skins_ui.png",
+          "sha256": "c94a1bbcd3d304ca1d7a7c8e8e26581650e9e80ea588a0067a2d29891efb71ae"
+        }
+      },
+      "notes": "Own authored anatomy and materials; native rest, eight full-cycle phases, world and 64px icon directly inspected. FP arms, two skins and anchors checked. Existing copper armor neck/torso fitting issue reproduces on baseline; attachment positions are preserved, see equipment_baseline_comparison.png. Controlled human is not a separate spawnable mob."
+    },
+    "zombie": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct image inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "93d715300043947381747a72b72b42f2d3f5ab9142aa5198e195ab0676f73daf",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "zombie.png",
+          "sha256": "1d09d72193cf496242481310eb57ff2d845c825332adbd71726e05cc8a8a6429"
+        },
+        "motion": {
+          "path": "native_approved_zombie.png",
+          "sha256": "60cbe24f1a91114b2e20d627689f9e99e806cbd7454f08207350079021fdd2a5"
+        },
+        "runtime": {
+          "path": "runtime_human_adventurer/frame_002.png",
+          "sha256": "7d0ec3723018241ffb26139dcdd316c65425561cfb3dd0cb4a6ba4a6ff529555"
+        },
+        "ui": {
+          "path": "ui.png",
+          "sha256": "feb50df7eb440e50af7a79946f1c78009f89bdf581448504b97c10bb3615c89e"
+        }
+      },
+      "notes": "Own authored anatomy and materials; native rest, eight full-cycle phases, world and 64px icon directly inspected."
+    },
+    "human_adventurer": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct native skin, icon, equipment and FP inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "c3474e16ad630f42cdc9d0f6adb5bac1beaf2994c059bc366d2ed25ba7474837",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "human_adventurer_comparison.png",
+          "sha256": "ab0563ed9a75d31dde5981ddd522ab23fb97e41f5916c53e1d2d94c8df1b979f"
+        },
+        "motion": {
+          "path": "native_approved_human.png",
+          "sha256": "84a176893860a622a9ecc5a81a293838bc2d10cea005d09ffa7e63c6ad2f3ae1"
+        },
+        "runtime": {
+          "path": "runtime_human_adventurer/frame_002.png",
+          "sha256": "7d0ec3723018241ffb26139dcdd316c65425561cfb3dd0cb4a6ba4a6ff529555"
+        },
+        "ui": {
+          "path": "skins_ui.png",
+          "sha256": "c94a1bbcd3d304ca1d7a7c8e8e26581650e9e80ea588a0067a2d29891efb71ae"
+        },
+        "first_person": {
+          "path": "equipment_fp_candidate.png",
+          "sha256": "e660f85f14de718a1b513e38b38e1393104445b7a1a625ba2c09741b978ae46f"
+        },
+        "equipment": {
+          "path": "equipment_baseline_comparison.png",
+          "sha256": "6adc7dbee254d1e652568ca199678abcaf9e5a2b759a6784020557a643b3b633"
+        }
+      },
+      "notes": "Compatible own humanoid atlas; right-arm FP UV slot preserved; existing baseline copper armor fitting limitation recorded."
+    },
+    "human_guard": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct native skin, icon, equipment and FP inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "fa01a16c31604672eb009dfc5f39ff142ea49df3b6b7a7ab1d3f52b77c27625c",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "human_guard_comparison.png",
+          "sha256": "9ab987f723360c5a5bf852164aaa8469925d3ef9da2c9503eca31067a73a0335"
+        },
+        "motion": {
+          "path": "native_approved_human.png",
+          "sha256": "84a176893860a622a9ecc5a81a293838bc2d10cea005d09ffa7e63c6ad2f3ae1"
+        },
+        "runtime": {
+          "path": "runtime_human_guard/frame_002.png",
+          "sha256": "fd593a1c0c3df22bba0614d5c76b75a7f215f1901c5b0ed3edb82d3772c5c7e8"
+        },
+        "ui": {
+          "path": "skins_ui.png",
+          "sha256": "c94a1bbcd3d304ca1d7a7c8e8e26581650e9e80ea588a0067a2d29891efb71ae"
+        },
+        "first_person": {
+          "path": "equipment_fp_candidate.png",
+          "sha256": "e660f85f14de718a1b513e38b38e1393104445b7a1a625ba2c09741b978ae46f"
+        },
+        "equipment": {
+          "path": "equipment_baseline_comparison.png",
+          "sha256": "6adc7dbee254d1e652568ca199678abcaf9e5a2b759a6784020557a643b3b633"
+        }
+      },
+      "notes": "Compatible own humanoid atlas; right-arm FP UV slot preserved; existing baseline copper armor fitting limitation recorded."
+    }
+  }
+}

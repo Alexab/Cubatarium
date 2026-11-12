@@ -1,0 +1,25 @@
+{
+  "captured_at_utc": "2026-11-10T22:47:42.718024+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_elemental_bipeds_v2\\models",
+  "files_sha256": {
+    "creatures\\sand_monster\\creature.json": "0e06b0264db4de7b9cc6b2be6354320cfc46a38b75c01784735eb1fbe6d78694",
+    "creatures\\sand_monster\\LICENSE.txt": "34e3ef62917eecbdb9b69f6aa965a42a8fd582e36cf8405858cd5e5fc31b01b3",
+    "creatures\\sand_monster\\manifest.json": "2491e96e15e0b7dd5ee704335ef047267c76e396e2aafdd7ba21b220894b2222",
+    "creatures\\sand_monster\\model.bin": "990430d05984ab6c8b7b46c674bd2f29f451c139873e68bf1e0e325f2fe9c865",
+    "creatures\\sand_monster\\model.gltf": "7a426e35b9c25c358435815b969bcb244eba6352d47c78971ee7f3d64bfc6c27",
+    "creatures\\sand_monster\\textures\\body.png": "8f04fed8a30f1aa0091e5f517c04227d03bd08c88b364fbf5ebac7de6abcc8f7",
+    "creatures\\sand_monster\\textures\\icon.png": "78f620c9de926f8372b0b4367272eaab0c03f751c5e3119ad4c9d0ae91d38455"
+  },
+  "qa_models_override": true,
+  "exe_sha256": "43bb4bf75f6f14d792169bcc31453103515469d7f530f3f566e7121249a0a900",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "cadence_sand_monster",
+  "qa_camera": "close",
+  "qa_water_placement": false,
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

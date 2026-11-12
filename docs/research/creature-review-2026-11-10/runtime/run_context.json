@@ -1,0 +1,20 @@
+{
+  "source_head": "d35cc74e1a70ef24681a5ca502e9f07987b45350",
+  "baseline_ref": "b35f00a75",
+  "desktop_configuration": "Release",
+  "executable": "bin/Cubatarium.exe",
+  "executable_sha256": "239a37b662888c49ff2d9f36304022da650e42248c4b10630ebe56b59fb73460",
+  "capture_env": {
+    "CUBA_FLIGHT_QA_GRID": "1",
+    "CUBA_FLIGHT_QA_ALL": "1",
+    "CUBA_FLIGHT_QA_YAW_SWEEP": "1",
+    "CUBA_FLIGHT_CAPTURE_INTERVAL_SEC": "5"
+  },
+  "note": "Generated assets were not republished by this audit. Source generator/quality metadata changes are described in the audit. Runtime created World_253 rather than the requested new-world label; partial gallery only.",
+  "png_sha256": {
+    "frame_000.png": "dcdc18f49cae4344000fe8b7d030c1ad872f1d758e0be628c7feaf45383ea54d",
+    "frame_001.png": "5043671e77911525c84331b1b1f683322e39ca0d73b3332cea739205bc2f74ca",
+    "frame_002.png": "849ae6c958d948ba325657125ba75dd46b626ad28aac0a5721fd303c3d77d971",
+    "frame_003.png": "950033da91d99de76ad15ddf8eb75ca606dc33b294a0757b118cff303f90c96c"
+  }
+}

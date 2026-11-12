@@ -1,99 +1,490 @@
 {
-  "format_version": "1.21.0",
-  "minecraft:geometry": [
-    {
-      "description": {
-        "identifier": "geometry.squid",
-        "texture_width": 64,
-        "texture_height": 32,
-        "visible_bounds_width": 3,
-        "visible_bounds_height": 3.5,
-        "visible_bounds_offset": [0, -0.25, 0]
-      },
-      "bones": [
-        {
-          "name": "body",
-          "pivot": [0, 0, 0],
-          "cubes": [
-            {"origin": [-6, -8, -6], "size": [12, 16, 12], "uv": [0, 0]}
-          ],
-          "locators": {
-            "lead": [0, 0, 0],
-            "lead_hold": [0, 4, 0]
+  "format_version": "1.8.0",
+  "geometry.squid": {
+    "texturewidth": 128,
+    "textureheight": 128,
+    "visible_bounds_width": 2,
+    "visible_bounds_height": 2,
+    "visible_bounds_offset": [
+      0,
+      1,
+      0
+    ],
+    "bones": [
+      {
+        "name": "body",
+        "pivot": [
+          0.0,
+          23.0,
+          0.0
+        ],
+        "cubes": [
+          {
+            "origin": [
+              -6.0,
+              18.0,
+              -6.0
+            ],
+            "size": [
+              12,
+              14,
+              12
+            ],
+            "uv": [
+              1,
+              1
+            ]
+          },
+          {
+            "origin": [
+              -5.0,
+              32.0,
+              -5.0
+            ],
+            "size": [
+              10,
+              1,
+              10
+            ],
+            "uv": [
+              51,
+              1
+            ]
           }
-        },
-        {
-          "name": "tentacle1",
-          "parent": "body",
-          "pivot": [5, -7, 0],
-          "rotation": [0, 90, 0],
-          "cubes": [
-            {"origin": [4, -25, -1], "size": [2, 18, 2], "uv": [48, 0]}
-          ]
-        },
-        {
-          "name": "tentacle2",
-          "parent": "body",
-          "pivot": [3.5, -7, 3.5],
-          "rotation": [0, 45, 0],
-          "cubes": [
-            {"origin": [2.5, -25, 2.5], "size": [2, 18, 2], "uv": [48, 0]}
-          ]
-        },
-        {
-          "name": "tentacle3",
-          "parent": "body",
-          "pivot": [0, -7, 5],
-          "cubes": [
-            {"origin": [-1, -25, 4], "size": [2, 18, 2], "uv": [48, 0]}
-          ]
-        },
-        {
-          "name": "tentacle4",
-          "parent": "body",
-          "pivot": [-3.5, -7, 3.5],
-          "rotation": [0, -45, 0],
-          "cubes": [
-            {"origin": [-4.5, -25, 2.5], "size": [2, 18, 2], "uv": [48, 0]}
-          ]
-        },
-        {
-          "name": "tentacle5",
-          "parent": "body",
-          "pivot": [-5, -7, 0],
-          "rotation": [0, -90, 0],
-          "cubes": [
-            {"origin": [-6, -25, -1], "size": [2, 18, 2], "uv": [48, 0]}
-          ]
-        },
-        {
-          "name": "tentacle6",
-          "parent": "body",
-          "pivot": [-3.5, -7, -3.5],
-          "rotation": [0, -135, 0],
-          "cubes": [
-            {"origin": [-4.5, -25, -4.5], "size": [2, 18, 2], "uv": [48, 0]}
-          ]
-        },
-        {
-          "name": "tentacle7",
-          "parent": "body",
-          "pivot": [0, -7, -5],
-          "rotation": [0, -180, 0],
-          "cubes": [
-            {"origin": [-1, -25, -6], "size": [2, 18, 2], "uv": [48, 0]}
-          ]
-        },
-        {
-          "name": "tentacle8",
-          "parent": "body",
-          "pivot": [3.5, -7, -3.5],
-          "rotation": [0, -225, 0],
-          "cubes": [
-            {"origin": [2.5, -25, -4.5], "size": [2, 18, 2], "uv": [48, 0]}
-          ]
-        }
-      ]
-    }
-  ]
+        ]
+      },
+      {
+        "name": "tentacle0",
+        "pivot": [
+          5.0,
+          18.0,
+          0.0
+        ],
+        "cubes": [
+          {
+            "origin": [
+              4.0,
+              8.0,
+              -1.0
+            ],
+            "size": [
+              2,
+              10,
+              2
+            ],
+            "uv": [
+              93,
+              1
+            ]
+          }
+        ],
+        "parent": "body"
+      },
+      {
+        "name": "tip0",
+        "pivot": [
+          5.0,
+          8.0,
+          0.0
+        ],
+        "cubes": [
+          {
+            "origin": [
+              4.5,
+              0.0,
+              -0.5
+            ],
+            "size": [
+              1,
+              8,
+              1
+            ],
+            "uv": [
+              103,
+              1
+            ]
+          }
+        ],
+        "parent": "tentacle0"
+      },
+      {
+        "name": "tentacle1",
+        "pivot": [
+          3.536,
+          18.0,
+          3.536
+        ],
+        "cubes": [
+          {
+            "origin": [
+              2.536,
+              8.0,
+              2.536
+            ],
+            "size": [
+              2,
+              10,
+              2
+            ],
+            "uv": [
+              109,
+              1
+            ]
+          }
+        ],
+        "parent": "body"
+      },
+      {
+        "name": "tip1",
+        "pivot": [
+          3.536,
+          8.0,
+          3.536
+        ],
+        "cubes": [
+          {
+            "origin": [
+              3.036,
+              0.0,
+              3.036
+            ],
+            "size": [
+              1,
+              8,
+              1
+            ],
+            "uv": [
+              119,
+              1
+            ]
+          }
+        ],
+        "parent": "tentacle1"
+      },
+      {
+        "name": "tentacle2",
+        "pivot": [
+          0.0,
+          18.0,
+          5.0
+        ],
+        "cubes": [
+          {
+            "origin": [
+              -1.0,
+              8.0,
+              4.0
+            ],
+            "size": [
+              2,
+              10,
+              2
+            ],
+            "uv": [
+              1,
+              29
+            ]
+          }
+        ],
+        "parent": "body"
+      },
+      {
+        "name": "tip2",
+        "pivot": [
+          0.0,
+          8.0,
+          5.0
+        ],
+        "cubes": [
+          {
+            "origin": [
+              -0.5,
+              0.0,
+              4.5
+            ],
+            "size": [
+              1,
+              8,
+              1
+            ],
+            "uv": [
+              11,
+              29
+            ]
+          }
+        ],
+        "parent": "tentacle2"
+      },
+      {
+        "name": "tentacle3",
+        "pivot": [
+          -3.536,
+          18.0,
+          3.536
+        ],
+        "cubes": [
+          {
+            "origin": [
+              -4.536,
+              8.0,
+              2.536
+            ],
+            "size": [
+              2,
+              10,
+              2
+            ],
+            "uv": [
+              17,
+              29
+            ]
+          }
+        ],
+        "parent": "body"
+      },
+      {
+        "name": "tip3",
+        "pivot": [
+          -3.536,
+          8.0,
+          3.536
+        ],
+        "cubes": [
+          {
+            "origin": [
+              -4.036,
+              0.0,
+              3.036
+            ],
+            "size": [
+              1,
+              8,
+              1
+            ],
+            "uv": [
+              27,
+              29
+            ]
+          }
+        ],
+        "parent": "tentacle3"
+      },
+      {
+        "name": "tentacle4",
+        "pivot": [
+          -5.0,
+          18.0,
+          0.0
+        ],
+        "cubes": [
+          {
+            "origin": [
+              -6.0,
+              8.0,
+              -1.0
+            ],
+            "size": [
+              2,
+              10,
+              2
+            ],
+            "uv": [
+              33,
+              29
+            ]
+          }
+        ],
+        "parent": "body"
+      },
+      {
+        "name": "tip4",
+        "pivot": [
+          -5.0,
+          8.0,
+          0.0
+        ],
+        "cubes": [
+          {
+            "origin": [
+              -5.5,
+              0.0,
+              -0.5
+            ],
+            "size": [
+              1,
+              8,
+              1
+            ],
+            "uv": [
+              43,
+              29
+            ]
+          }
+        ],
+        "parent": "tentacle4"
+      },
+      {
+        "name": "tentacle5",
+        "pivot": [
+          -3.536,
+          18.0,
+          -3.536
+        ],
+        "cubes": [
+          {
+            "origin": [
+              -4.536,
+              8.0,
+              -4.536
+            ],
+            "size": [
+              2,
+              10,
+              2
+            ],
+            "uv": [
+              49,
+              29
+            ]
+          }
+        ],
+        "parent": "body"
+      },
+      {
+        "name": "tip5",
+        "pivot": [
+          -3.536,
+          8.0,
+          -3.536
+        ],
+        "cubes": [
+          {
+            "origin": [
+              -4.036,
+              0.0,
+              -4.036
+            ],
+            "size": [
+              1,
+              8,
+              1
+            ],
+            "uv": [
+              59,
+              29
+            ]
+          }
+        ],
+        "parent": "tentacle5"
+      },
+      {
+        "name": "tentacle6",
+        "pivot": [
+          -0.0,
+          18.0,
+          -5.0
+        ],
+        "cubes": [
+          {
+            "origin": [
+              -1.0,
+              8.0,
+              -6.0
+            ],
+            "size": [
+              2,
+              10,
+              2
+            ],
+            "uv": [
+              65,
+              29
+            ]
+          }
+        ],
+        "parent": "body"
+      },
+      {
+        "name": "tip6",
+        "pivot": [
+          -0.0,
+          8.0,
+          -5.0
+        ],
+        "cubes": [
+          {
+            "origin": [
+              -0.5,
+              0.0,
+              -5.5
+            ],
+            "size": [
+              1,
+              8,
+              1
+            ],
+            "uv": [
+              75,
+              29
+            ]
+          }
+        ],
+        "parent": "tentacle6"
+      },
+      {
+        "name": "tentacle7",
+        "pivot": [
+          3.536,
+          18.0,
+          -3.536
+        ],
+        "cubes": [
+          {
+            "origin": [
+              2.536,
+              8.0,
+              -4.536
+            ],
+            "size": [
+              2,
+              10,
+              2
+            ],
+            "uv": [
+              81,
+              29
+            ]
+          }
+        ],
+        "parent": "body"
+      },
+      {
+        "name": "tip7",
+        "pivot": [
+          3.536,
+          8.0,
+          -3.536
+        ],
+        "cubes": [
+          {
+            "origin": [
+              3.036,
+              0.0,
+              -4.036
+            ],
+            "size": [
+              1,
+              8,
+              1
+            ],
+            "uv": [
+              91,
+              29
+            ]
+          }
+        ],
+        "parent": "tentacle7"
+      }
+    ]
+  }
 }

@@ -1,0 +1,10 @@
+{
+  "scope": "Prototype8-key cutoff; noisy cross-process timings, not performance acceptance",
+  "sources_sha256": {
+    "src/Creatures/Visual/Gltf/CreatureGltfBonePalette.cpp": "3d6b45608e7e2ea7e6c99924a082f44f5ab860126b0ee52b6695561a285f7e99",
+    "src/Creatures/Visual/Gltf/CreatureGltfAnimPlayer.cpp": "ff836abeb186009f89b883442e3b26427f1c8827731886f85f76602e70b28a21",
+    "src/Creatures/Visual/Gltf/GltfKeyframeInterval.h": "aafa33c25adeaf20bb09c9b60dbe81dfa640c85c0e4924fc5150118ef553117d"
+  },
+  "exe_sha256": "485445ba88e7e6d355b694d1deacc95c1e2302dfb0b682f62e751e4217ece19b",
+  "benchmark_exe_sha256": "dc8e7179e257dad38fb24d5251da715aa28bcabd8d6fcd7a5907e39e2be69abb"
+}

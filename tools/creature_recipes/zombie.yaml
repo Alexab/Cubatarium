@@ -1,0 +1,222 @@
+id: zombie
+backend: bone_skeleton
+family: peat
+authoring_source: cubatarium-recipe
+recipe_version: 2
+palette_id: peat
+pattern: bands
+template: humanoid
+body:
+- 8
+- 12
+- 4
+head:
+- 8
+- 8
+- 8
+limb:
+- 4
+- 12
+extras:
+- jaw
+- long_arm
+- belly
+muzzle: null
+bind_body: null
+direction: 'Торфяник: сутулый клин и тяжёлая рука'
+wave: W1
+silhouette:
+  chest: 2.0
+marks:
+- shirt
+- jaw
+selected_concept: familiar_humanoid_own_clothes
+concepts:
+- id: peat_hunch
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: сутулый клин
+- id: wide_jaw
+  body_scale:
+  - 1.12
+  - 0.78
+  - 0.92
+  note: широкая челюсть
+- id: tall_reach
+  body_scale:
+  - 0.84
+  - 1.2
+  - 1.16
+  note: длинная рука
+seed: 7042109869257794097
+surface_style: undead
+atlas_layout:
+  minimum_size: 128
+  slots:
+    right_sleeve:
+    - 40
+    - 16
+anatomy:
+  bones:
+  - name: waist
+    parent: null
+    pivot:
+    - 0
+    - 12
+    - 0
+    cubes: []
+  - name: body
+    parent: waist
+    pivot:
+    - 0
+    - 24
+    - 0
+    cubes:
+    - name: jacket
+      origin:
+      - -4
+      - 12
+      - -2
+      size:
+      - 8
+      - 12
+      - 4
+      role: body
+  - name: head
+    parent: body
+    pivot:
+    - 0
+    - 24
+    - 0
+    cubes:
+    - name: head
+      origin:
+      - -4
+      - 24
+      - -4
+      size:
+      - 8
+      - 8
+      - 8
+      role: face
+  - name: hat
+    parent: head
+    pivot:
+    - 0
+    - 24
+    - 0
+    cubes: []
+  - name: rightArm
+    parent: body
+    pivot:
+    - -5
+    - 22
+    - 0
+    cubes:
+    - name: right_sleeve
+      origin:
+      - -8
+      - 12
+      - -2
+      size:
+      - 4
+      - 12
+      - 4
+      role: body
+  - name: rightItem
+    parent: rightArm
+    pivot:
+    - -6
+    - 15
+    - 1
+    cubes: []
+  - name: rightLeg
+    parent: body
+    pivot:
+    - -2
+    - 12
+    - 0
+    cubes:
+    - name: right_trouser
+      origin:
+      - -4
+      - 0
+      - -2
+      size:
+      - 4
+      - 12
+      - 4
+      role: limb
+  - name: leftArm
+    parent: body
+    pivot:
+    - 5
+    - 22
+    - 0
+    cubes:
+    - name: left_sleeve
+      origin:
+      - 4
+      - 12
+      - -2
+      size:
+      - 4
+      - 12
+      - 4
+      role: body
+  - name: leftItem
+    parent: leftArm
+    pivot:
+    - 6
+    - 15
+    - 1
+    cubes: []
+  - name: leftLeg
+    parent: body
+    pivot:
+    - 2
+    - 12
+    - 0
+    cubes:
+    - name: left_trouser
+      origin:
+      - 0
+      - 0
+      - -2
+      size:
+      - 4
+      - 12
+      - 4
+      role: limb
+palette_overrides:
+  body:
+  - 78
+  - 103
+  - 109
+  belly:
+  - 91
+  - 108
+  - 69
+  face:
+  - 112
+  - 137
+  - 79
+  limb:
+  - 55
+  - 65
+  - 62
+  mark:
+  - 57
+  - 64
+  - 41
+  accent:
+  - 41
+  - 47
+  - 34
+  eye:
+  - 29
+  - 34
+  - 23
+animation_profile: humanoid

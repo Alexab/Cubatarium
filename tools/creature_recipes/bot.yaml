@@ -1,0 +1,243 @@
+id: bot
+backend: bone_skeleton
+family: mineral
+authoring_source: cubatarium-recipe
+recipe_version: 2
+palette_id: mineral
+pattern: plates
+template: humanoid
+body:
+- 8
+- 12
+- 4
+head:
+- 8
+- 8
+- 8
+limb:
+- 4
+- 12
+extras:
+- pauldron
+- crest
+muzzle: null
+bind_body: null
+direction: 'Проводник: тот же силуэт, другой ворот и шапка'
+wave: W1
+silhouette:
+  chest: 2.0
+  legs: 0.5
+marks:
+- collar
+- hat
+- shirt
+selected_concept: familiar_guide_in_ochre
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: 'Проводник: тот же силуэт, другой ворот и шапка'
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 16036143852759747167
+anatomy:
+  bones:
+  - name: waist
+    parent: null
+    pivot:
+    - 0
+    - 12
+    - 0
+    cubes: []
+  - name: body
+    parent: waist
+    pivot:
+    - 0
+    - 24
+    - 0
+    cubes:
+    - name: jacket
+      origin:
+      - -4
+      - 12
+      - -2
+      size:
+      - 8
+      - 12
+      - 4
+      role: body
+  - name: head
+    parent: body
+    pivot:
+    - 0
+    - 24
+    - 0
+    cubes:
+    - name: head
+      origin:
+      - -4
+      - 24
+      - -4
+      size:
+      - 8
+      - 8
+      - 8
+      role: face
+  - name: hat
+    parent: head
+    pivot:
+    - 0
+    - 24
+    - 0
+    cubes:
+    - name: cap
+      origin:
+      - -4.5
+      - 31.2
+      - -4.5
+      size:
+      - 9
+      - 1
+      - 9
+      role: mark
+    - name: brim
+      origin:
+      - -4
+      - 30.6
+      - -5
+      size:
+      - 8
+      - 1
+      - 1
+      role: mark
+  - name: rightArm
+    parent: body
+    pivot:
+    - -5
+    - 22
+    - 0
+    cubes:
+    - name: right_sleeve
+      origin:
+      - -8
+      - 12
+      - -2
+      size:
+      - 4
+      - 12
+      - 4
+      role: body
+  - name: rightItem
+    parent: rightArm
+    pivot:
+    - -6
+    - 15
+    - 1
+    cubes: []
+  - name: rightLeg
+    parent: body
+    pivot:
+    - -2
+    - 12
+    - 0
+    cubes:
+    - name: right_trouser
+      origin:
+      - -4
+      - 0
+      - -2
+      size:
+      - 4
+      - 12
+      - 4
+      role: limb
+  - name: leftArm
+    parent: body
+    pivot:
+    - 5
+    - 22
+    - 0
+    cubes:
+    - name: left_sleeve
+      origin:
+      - 4
+      - 12
+      - -2
+      size:
+      - 4
+      - 12
+      - 4
+      role: body
+  - name: leftItem
+    parent: leftArm
+    pivot:
+    - 6
+    - 15
+    - 1
+    cubes: []
+  - name: leftLeg
+    parent: body
+    pivot:
+    - 2
+    - 12
+    - 0
+    cubes:
+    - name: left_trouser
+      origin:
+      - 0
+      - 0
+      - -2
+      size:
+      - 4
+      - 12
+      - 4
+      role: limb
+atlas_layout:
+  minimum_size: 128
+  slots:
+    right_sleeve:
+    - 40
+    - 16
+surface_style: traveler
+palette_overrides:
+  body:
+  - 166
+  - 120
+  - 56
+  belly:
+  - 216
+  - 199
+  - 156
+  face:
+  - 164
+  - 118
+  - 83
+  limb:
+  - 58
+  - 74
+  - 82
+  mark:
+  - 102
+  - 77
+  - 43
+  accent:
+  - 48
+  - 42
+  - 33
+  eye:
+  - 25
+  - 40
+  - 40
+animation_profile: humanoid

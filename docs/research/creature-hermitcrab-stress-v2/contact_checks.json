@@ -1,0 +1,8 @@
+{
+  "sampled_phases": 33,
+  "walk_minY_blocks": [
+    -5.649014989908336e-05,
+    6.288055927200498e-09
+  ],
+  "source": "actual exported glTF skinning; offline diagnostic, native motion inspected separately"
+}

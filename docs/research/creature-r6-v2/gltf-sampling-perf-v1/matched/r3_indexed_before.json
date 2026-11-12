@@ -1,0 +1,84 @@
+{
+  "compiler": 194435229,
+  "pointer_bits": 64,
+  "resources": [
+    {
+      "accounted_vector_string_heap_bytes": 158356,
+      "bin_bytes": 131400,
+      "cases": [
+        {
+          "batch_average_microseconds_per_pose": {
+            "max": 26.33359375,
+            "min": 2.93515625,
+            "p50": 3.0328125,
+            "p95": 3.08125,
+            "samples": 81
+          },
+          "clip": "walk",
+          "duration": 1.0499999523162842,
+          "fade": false,
+          "key_times": 1806,
+          "max_keys_per_channel": 129,
+          "palette_signature": 17823155103668320220
+        },
+        {
+          "batch_average_microseconds_per_pose": {
+            "max": 12.31328125,
+            "min": 4.4390625,
+            "p50": 4.6671875,
+            "p95": 5.05,
+            "samples": 81
+          },
+          "clip": "walk",
+          "duration": 1.0499999523162842,
+          "fade": true,
+          "key_times": 1806,
+          "max_keys_per_channel": 129,
+          "palette_signature": 5018754372736646845
+        },
+        {
+          "batch_average_microseconds_per_pose": {
+            "max": 3.4,
+            "min": 2.8546875,
+            "p50": 2.91953125,
+            "p95": 2.9734375,
+            "samples": 81
+          },
+          "clip": "run",
+          "duration": 0.699999988079071,
+          "fade": false,
+          "key_times": 1806,
+          "max_keys_per_channel": 129,
+          "palette_signature": 11077818183324129338
+        },
+        {
+          "batch_average_microseconds_per_pose": {
+            "max": 5.05546875,
+            "min": 4.221875,
+            "p50": 4.30546875,
+            "p95": 4.3609375,
+            "samples": 81
+          },
+          "clip": "run",
+          "duration": 0.699999988079071,
+          "fade": true,
+          "key_times": 1806,
+          "max_keys_per_channel": 129,
+          "palette_signature": 16399155512476416601
+        }
+      ],
+      "joints": 18,
+      "nodes": 19,
+      "path": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\orc_sway_pre_publish\\models\\creatures\\orc\\model.gltf",
+      "root_sampler_signature": 12647924430203001107,
+      "warm_loader_milliseconds": {
+        "max": 3.3788,
+        "min": 2.7525,
+        "p50": 2.9244,
+        "p95": 3.0384,
+        "samples": 13
+      }
+    }
+  ],
+  "scope": "Release actual CPU loader and warmed allocation-reusing pose sampler; warm I/O, batch-average p95, no world/GPU/total RSS acceptance"
+}

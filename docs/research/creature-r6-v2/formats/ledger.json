@@ -1,0 +1,1181 @@
+{
+  "schema": "creature-r6-ledger.v1",
+  "scope": "evidence integrity and source freshness, not final artistic/runtime acceptance",
+  "summary": {
+    "expected_species": 56,
+    "expected_skins": 5,
+    "exact_valid_r5_reviews": 61,
+    "published_payload_matches_staged": 61,
+    "bin_payload_matches_staged": 61,
+    "current_generator_source_inputs": 61,
+    "manifest_species_count": 56,
+    "manifest_skin_count": 5,
+    "valid_file_records": 61,
+    "runtime_global_manifest_matches": true,
+    "contracts_states": {
+      "accepted": 56
+    },
+    "unexpected_live_species": []
+  },
+  "resources": [
+    {
+      "id": "badger",
+      "kind": "species",
+      "base_species": "badger",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "4d5bcb7e3353a25bca1d33a827a70556dc6bb31d3bca491e28ee4559cd0bf551",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "bee",
+      "kind": "species",
+      "base_species": "bee",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "bc4826607f9a585820944b07acc24c5a88f7e07dc93d935ee65c575dbe371151",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "bot",
+      "kind": "species",
+      "base_species": "bot",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "c50072d68458bde58778c6c5fba8c1f982de675dc43d613ad459abab12ca7d09",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "bunny",
+      "kind": "species",
+      "base_species": "bunny",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "3f356f186780923d9136cb293fbf8ec2f89b77dc677859754de7c780082a73da",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "butterfly",
+      "kind": "species",
+      "base_species": "butterfly",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "4d7bb09cd63b90f9953bd444d8ed7ce390475b26f64833abacec3b8c9c1e2362",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "chicken",
+      "kind": "species",
+      "base_species": "chicken",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "d912637403bca5728d285d1bbcaa14154854c2fbf6008a314e4c0931cef91f17",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "cow",
+      "kind": "species",
+      "base_species": "cow",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "3bb148882958e1a49ef787ac3c06d2d12848799646696ddf5b0247d2a73ab91a",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "crab",
+      "kind": "species",
+      "base_species": "crab",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "06347fc0954cfd412870877fb58c1e8ff7333e5ee7c0548c8d325f86a834f2db",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "dirt_monster",
+      "kind": "species",
+      "base_species": "dirt_monster",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "fd63c42a4c99279b262f002131d8bef34b7f2de3e9225b92a426fa4715bd2818",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "dolphin",
+      "kind": "species",
+      "base_species": "dolphin",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "34467b45026b1589aba26055de54bd6d75a4c81c47cb23b6c1b073eb4d600b16",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "dungeon_master",
+      "kind": "species",
+      "base_species": "dungeon_master",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "a333bac28647d50272775aedeb9c1500d37d837f95df3ac066a202d45f87c427",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "fire_spirit",
+      "kind": "species",
+      "base_species": "fire_spirit",
+      "backend": "rigid_voxels",
+      "bundle_sha256": "4b90e469a3c9275985fce8280e27d029c9e4cb2d966a0d644740217ff2721c3e",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "fox",
+      "kind": "species",
+      "base_species": "fox",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "ee537206e501ff8872ae47fdccbd2b6d41fc6ca7759e340169c84db7258ed164",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "golem",
+      "kind": "species",
+      "base_species": "golem",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "4b4c191afd14bbea43ebe047bfa630a81eeffebecde1b9c34858937713f41939",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "hedgehog",
+      "kind": "species",
+      "base_species": "hedgehog",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "da2d409c0331a814cffd80e1ae16f1961a9dd38b6ea8382e1fe1d6f80169a96c",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "hermitcrab",
+      "kind": "species",
+      "base_species": "hermitcrab",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "132cbd5233cdd3b5db3908d13024a5dd0c6b467528102703bc161fbc61ffa4a4",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "human",
+      "kind": "species",
+      "base_species": "human",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "36f196eea5cf3a3dbda715bdd99c5c2818bd51448d731a34e3a9b3a8ccaf6646",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "kitten",
+      "kind": "species",
+      "base_species": "kitten",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "e8d62bc725639d5a255e34d18d44a66f1103e84f6d7e485b2483edd5309f8db7",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "land_guard",
+      "kind": "species",
+      "base_species": "land_guard",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "56fd2ebc6d23bf0a219ce1d20ff2386f99c3be5b3af25c08aec64b2827a807fd",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "lava_flan",
+      "kind": "species",
+      "base_species": "lava_flan",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "d3e6289eccd507e98170b9c737656f9ecadd62a06980f25173f528b4dd17dbf2",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "lobster",
+      "kind": "species",
+      "base_species": "lobster",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "fcf1ee0cac7e67ce5640bb8e5bc3123a5a1825bed46a73ca8df38d0c363db251",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "manatee",
+      "kind": "species",
+      "base_species": "manatee",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "a4aab409730f97fd9b6194616c355af4314b9236b09c261b8c2c94b051cf08b0",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "mese_monster",
+      "kind": "species",
+      "base_species": "mese_monster",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "a924675228d09da6c4eb283bf70f1c9b2629a9a1fc6025dc6bff8b99c51f6a13",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "octopus",
+      "kind": "species",
+      "base_species": "octopus",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "265a4dc852577fbf19e8d0bd3926e6fe1401d74a0d0d43a80ba0690cd289a05d",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "oerkki",
+      "kind": "species",
+      "base_species": "oerkki",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "a7c52fe7149b2df6b1c868256f42be50024b73055ca83d9012ac259bfc620fee",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "ogre",
+      "kind": "species",
+      "base_species": "ogre",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "65f4e8ef0086f4b31dfbb94bb772c92ce88457f2720b6e12a885451be0e28c1c",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "orc",
+      "kind": "species",
+      "base_species": "orc",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "b1408acc9db437c10a16b187028dfbc837f05ef7352ea4c067dfd91eb26d7e7f",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "owl",
+      "kind": "species",
+      "base_species": "owl",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "9ebd61c615ec5fdb19d75178c40525cfdc75c2f88cb091d591200630133131e5",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "panda",
+      "kind": "species",
+      "base_species": "panda",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "426009bc73203cc7ae6100f8182c5ed603aa7348c191315a10046b42da85bbc9",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "penguin",
+      "kind": "species",
+      "base_species": "penguin",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "23fa74854f6b8e2ffafea4439cd1313df1bfcfa3e3fd023cf060e4d100d95982",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "pig",
+      "kind": "species",
+      "base_species": "pig",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "3af9bec089626ae0682f43524e6beb25c2c5f2231402cbc01fb59ce499cc67e7",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "puffin",
+      "kind": "species",
+      "base_species": "puffin",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "d39df15173ecd879210722b8c9ac08f9dbd622847ba804153b1870d33afbfac9",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "rat",
+      "kind": "species",
+      "base_species": "rat",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "4282abe95eca9e1f36f85f763f37b07e4ae2e074e41e538c95897f795d749a1c",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "rigid_demo_flyer",
+      "kind": "species",
+      "base_species": "rigid_demo_flyer",
+      "backend": "rigid_voxels",
+      "bundle_sha256": "b77d36d7f12dd0a058226c6a2e391cf4066abcce2d0d253dbd83c586915a60b9",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "rigid_demo_swimmer",
+      "kind": "species",
+      "base_species": "rigid_demo_swimmer",
+      "backend": "rigid_voxels",
+      "bundle_sha256": "5eb1dc0b51205d76e972b4d4e3d32814b1745332c0f23c682ab9374453d8d14d",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "rigid_demo_walker",
+      "kind": "species",
+      "base_species": "rigid_demo_walker",
+      "backend": "rigid_voxels",
+      "bundle_sha256": "97d4b691e1721626efe5f3667bc14dd9e7344a87f489a862d686f6a4b7b6d7dc",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "sand_monster",
+      "kind": "species",
+      "base_species": "sand_monster",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "4d10fb5fa32199b3e651fe42b0a59e6eb01897f95628adaf1fd7b3194fbdb63f",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "seahorse",
+      "kind": "species",
+      "base_species": "seahorse",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "f2ccacb0c663a2ec18b812a2754e2c1d7cc04456a91741b6ba30c14aa9dd622a",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "seal",
+      "kind": "species",
+      "base_species": "seal",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "16fce6beecf53f6c99a9ccec579c6b8605489a4d6b4e8fcac34b41931af43d2f",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "shark",
+      "kind": "species",
+      "base_species": "shark",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "aeb13d5b7e69a55dc3aa3f1c004ce60edd6e660f998b4de84e6d3414880dfda9",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "sheep",
+      "kind": "species",
+      "base_species": "sheep",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "900853822a8f18722eea08d06778e2531b55f433b4b5790c76ab90abd13f3389",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "skeleton",
+      "kind": "species",
+      "base_species": "skeleton",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "80caf88a1ca617ed718a480b8a1792e0a82ca3af9dac61db29dfd18695f5f36f",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "spider",
+      "kind": "species",
+      "base_species": "spider",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "e5926317a1fd634148f6fc57311464786b2a4f5def6cc49fd83d78270f225575",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "squid",
+      "kind": "species",
+      "base_species": "squid",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "e6b50039053d0890d09f5c55eb0d6a21ee02a84439f4ff23ee58b7eb2288214f",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "stingray",
+      "kind": "species",
+      "base_species": "stingray",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "1a79bb4652c60ed18af79f07ca5da013c73a23d43698d1a7433f1e5c45fd50b7",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "stone_monster",
+      "kind": "species",
+      "base_species": "stone_monster",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "1ba1edad114e394e757ccaf15b285785e6422a8f3a6a9de8bbc556ac4f796b0b",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "tortoise",
+      "kind": "species",
+      "base_species": "tortoise",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "a659e48215b7e762b3898e395260d37be4c94e1512d4204903a677834f66dd00",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "tree_monster",
+      "kind": "species",
+      "base_species": "tree_monster",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "d030bfef4049dd99da17cf74064f8f2368381961a054ad914d89de312c4be5a1",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "treeman",
+      "kind": "species",
+      "base_species": "treeman",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "92313bdfdc5bf666ed5711ea48e39d33c770ba44fa112b1190f989efd8685913",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "trout",
+      "kind": "species",
+      "base_species": "trout",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "faeef87d726f5ae65522716ef39bad53d9b5a3b613eca09276ce65079d789177",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "warthog",
+      "kind": "species",
+      "base_species": "warthog",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "a59beaf66316ffaf7ffa0638e037f85487c5cd4e6a88dde95df0d773dc8eeb95",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "wasp",
+      "kind": "species",
+      "base_species": "wasp",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "6abbdb24827502c25941b3cfbbc1f337e1afe54fb684a8e3f94239e7bd310cbf",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "water_dragon",
+      "kind": "species",
+      "base_species": "water_dragon",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "757933541ba123a6d64fa61e1c30550a788f5ff68a1a8b922ca0e656a2212475",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "whale",
+      "kind": "species",
+      "base_species": "whale",
+      "backend": "gltf_skeleton",
+      "bundle_sha256": "9bf76264e0a3d8aad5f240069c7e3a74bcc25815c4f7a9bf339d83e2c65d96c3",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "wolf",
+      "kind": "species",
+      "base_species": "wolf",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "b95af32feb89d87123e706cea66840029bb7117f2553e78527e9def4bd856ca9",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "zombie",
+      "kind": "species",
+      "base_species": "zombie",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "9bc2a31a77ab38caade66c4bbe0937d811ef6f08213214131a75aad8563607db",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": "accepted",
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "human_adventurer",
+      "kind": "skins",
+      "base_species": "human",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "a3afa8de2769e8b3c6d204eed2caed80ff780c5f88541d519a8b4fb27daf0ef2",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": null,
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "human_guard",
+      "kind": "skins",
+      "base_species": "human",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "81c6255a2478b0c6b488636402610b91924863bce28a799ac21c3ca85dc3b858",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": null,
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "sheep_wool_black",
+      "kind": "skins",
+      "base_species": "sheep",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "4df5922a81a775142bb11aade6311ab5930d64daa6427f7d0ce0e793b4101bf5",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": null,
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "sheep_wool_golden",
+      "kind": "skins",
+      "base_species": "sheep",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "5895180eefceb661e6073238c5ec0759f4a1f7f5b4338d41ab7a22608276feeb",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": null,
+      "r6_final_acceptance": "unproven"
+    },
+    {
+      "id": "wolf_snow",
+      "kind": "skins",
+      "base_species": "wolf",
+      "backend": "bone_skeleton",
+      "bundle_sha256": "d4a8bc18f287a593d4fa0b4a8435597aa11a75058ca26a59b3dcaca84bb14541",
+      "published_payload_matches_staged": true,
+      "bin_payload_matches_staged": true,
+      "exact_valid_r5_reviews": [
+        "docs\\research\\creature-r6-v2\\formats\\review.json"
+      ],
+      "invalid_exact_reviews": {},
+      "current_generator_source_inputs": true,
+      "stale_source_inputs": [],
+      "manifest_state": "accepted",
+      "file_records_valid": true,
+      "contract_state": null,
+      "r6_final_acceptance": "unproven"
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "args": [
+    "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_sampling_perf_v1\\paired\\paired_bench.exe",
+    "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\gltf-sampling-perf-v1\\paired_run_0.json",
+    "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\orc_sway_pre_publish\\models\\creatures\\orc\\model.gltf",
+    "E:\\Work\\Home\\Cubatarium\\models\\creatures\\orc\\model.gltf"
+  ],
+  "core": 2,
+  "exe_sha256": "f81bba7809984c317a894d354747887af2db13fa76719bd4712859e8e2345940",
+  "returncode": 0,
+  "platform": "Windows-10-10.0.19045-SP0",
+  "processor": "AMD64 Family 23 Model 96 Stepping 1, AuthenticAMD",
+  "compile_flags": "/O2 /DNDEBUG /std:c++17 /EHsc /MT; baseline functions renamed into same process, no LTCG",
+  "hashes": {
+    "tools/research/creature_gltf_sampling_paired_bench.cpp": "d0195f1df363eb0daff864798155516f4b4008889f616e43d8dd6e61fb597272",
+    "src/Creatures/Visual/Gltf/GltfKeyframeInterval.h": "aebf1a668313eaf1e0457b1528736c21ec1ce4dc19191f163d9b0695cfc39b28",
+    "src/Creatures/Visual/Gltf/CreatureGltfBonePalette.cpp": "3d6b45608e7e2ea7e6c99924a082f44f5ab860126b0ee52b6695561a285f7e99",
+    "src/Creatures/Visual/Gltf/CreatureGltfAnimPlayer.cpp": "ff836abeb186009f89b883442e3b26427f1c8827731886f85f76602e70b28a21",
+    "src/Creatures/Visual/Gltf/CreatureGltfLoader.cpp": "a329cf00724aea31998830ae56ff8ecf60aec819f8e17644e6a3837f10834702",
+    "assetgen_output/creatures/gltf_sampling_perf_v1/paired/compile.bat": "7fe0d58403e5579ea4977110801f68f9ecdc3d7f7b6fcfdddfbed679fa4f65b1",
+    "assetgen_output/creatures/gltf_sampling_perf_v1/paired/linear_bone.obj": "2216776759a264f95d4d391e014348d2f966c4c3329dd46db0ad98dc5ad24e36",
+    "assetgen_output/creatures/gltf_sampling_perf_v1/paired/linear_root.obj": "ebb07ff37a31d9e563dd8cf1d5b5d10477f37ea6707d1cc917f6b24bd8628679",
+    "bin/Cubatarium.exe": "a8d94126dad8067857a3332b3e929f544b43d380bee48f3ab138620a78a61374",
+    "assetgen_output\\creatures\\gltf_sampling_perf_v1\\baseline_src\\src\\Creatures\\Visual\\CreatureMeshGpuHash.h": "2a85f679a7836287e918ec4ac21b69bab73a3c785b4ada84bca2e6f509f772df",
+    "assetgen_output\\creatures\\gltf_sampling_perf_v1\\baseline_src\\src\\Creatures\\Visual\\BoneSkeleton\\CreatureBoneSkeletonTypes.h": "67494cfdd019bf4ee6576a479056205567840eee32c6cb1e19c49aa93d899e5c",
+    "assetgen_output\\creatures\\gltf_sampling_perf_v1\\baseline_src\\src\\Creatures\\Visual\\Gltf\\CreatureGltfAnimPlayer.cpp": "9e6f083ab68c0fa7966a2f74819d66b15bbf4b5aca3dbd0a8e3531be715d2001",
+    "assetgen_output\\creatures\\gltf_sampling_perf_v1\\baseline_src\\src\\Creatures\\Visual\\Gltf\\CreatureGltfAnimPlayer.h": "6f2097946b959f3f0eb584c7650adf70c98ad8d9b530d8cdf23ca33b0a2c3c8a",
+    "assetgen_output\\creatures\\gltf_sampling_perf_v1\\baseline_src\\src\\Creatures\\Visual\\Gltf\\CreatureGltfBonePalette.cpp": "2cfaa1268d1b4c76128a02dcf53c853dca1b70c7f0498724fd9081a484a015d0",
+    "assetgen_output\\creatures\\gltf_sampling_perf_v1\\baseline_src\\src\\Creatures\\Visual\\Gltf\\CreatureGltfBonePalette.h": "e5e593c97f3d5a988249b6c2eed4169d91327d80568491c75dfb4a3b26ea6ff8",
+    "assetgen_output\\creatures\\gltf_sampling_perf_v1\\baseline_src\\src\\Creatures\\Visual\\Gltf\\CreatureGltfClipClock.h": "b3e6f0c051563c367aaaa2cc63c0d0487ad3433733411129492ad0cf49afc2f0",
+    "assetgen_output\\creatures\\gltf_sampling_perf_v1\\baseline_src\\src\\Creatures\\Visual\\Gltf\\CreatureGltfLoader.cpp": "a329cf00724aea31998830ae56ff8ecf60aec819f8e17644e6a3837f10834702",
+    "assetgen_output\\creatures\\gltf_sampling_perf_v1\\baseline_src\\src\\Creatures\\Visual\\Gltf\\CreatureGltfTypes.h": "69a59c8415874f9260843f8d760de92ffc51f5617176a35bfb7e890d723d72f6",
+    "assetgen_output\\creatures\\gltf_sampling_perf_v1\\baseline_src\\src\\Creatures\\Visual\\Gltf\\GltfConservativeRenderRadius.h": "64ae81f09e5598b02c2169ab5bcd1b8b85156d71cf1a7f7e418e133c139a4855",
+    "assetgen_output\\creatures\\gltf_sampling_perf_v1\\indexed8_src\\src\\Creatures\\Visual\\Gltf\\CreatureGltfAnimPlayer.cpp": "ff836abeb186009f89b883442e3b26427f1c8827731886f85f76602e70b28a21",
+    "assetgen_output\\creatures\\gltf_sampling_perf_v1\\indexed8_src\\src\\Creatures\\Visual\\Gltf\\CreatureGltfBonePalette.cpp": "3d6b45608e7e2ea7e6c99924a082f44f5ab860126b0ee52b6695561a285f7e99",
+    "assetgen_output\\creatures\\gltf_sampling_perf_v1\\indexed8_src\\src\\Creatures\\Visual\\Gltf\\GltfKeyframeInterval.h": "aafa33c25adeaf20bb09c9b60dbe81dfa640c85c0e4924fc5150118ef553117d",
+    "models\\creatures\\orc\\model.gltf": "d36eb28e6410e5619102de571c33b398c0d39075dbb9c1cdca288fa5dba909c0",
+    "models\\creatures\\orc\\model.bin": "8a32da77530569fc14229f79d59005fe6e23cfb00011872f632bf30498087c89",
+    "assetgen_output\\creatures\\orc_sway_pre_publish\\models\\creatures\\orc\\model.gltf": "8068b773536ccd0b8c35065123a5fc6e0e50fbf1df876b0d406ede8aae01a1b2",
+    "assetgen_output\\creatures\\orc_sway_pre_publish\\models\\creatures\\orc\\model.bin": "848b306e2ef1e1a4e44c438cb8a6645cc03f737b79c1b1d6f2d5b64f2e532e5e"
+  },
+  "report_sha256": "9edca18971ac9eb19fd6f7afde2c1dd1ff4baf7f7cb88d38bc6b56be9ccd1164"
+}

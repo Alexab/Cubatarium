@@ -1,0 +1,372 @@
+{
+  "resources": [
+    {
+      "id": "badger",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\badger\\pose_0_view_1_color.png",
+      "sha256": "52bd60dea43d6867c57610e3c1b539ae508fb5a0f54e4e77ee6c75e0a8185dd1"
+    },
+    {
+      "id": "butterfly",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\butterfly\\pose_0_view_1_color.png",
+      "sha256": "09c3ce3f87828be5183876f6d9de78a350ad2b1f287aade64d425eb5838aa800"
+    },
+    {
+      "id": "crab",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\crab\\pose_0_view_1_color.png",
+      "sha256": "37f62b4a607f7fde2ad8fa8c739d1bfa05c902cbebe9ae2c7ab04d1140dbe647"
+    },
+    {
+      "id": "dirt_monster",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\dirt_monster\\pose_0_view_1_color.png",
+      "sha256": "5ea0a83dfc24b133bffcbd8d4533897f7a45ac015519f00fe359825e003f5753"
+    },
+    {
+      "id": "dungeon_master",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\dungeon_master\\pose_0_view_1_color.png",
+      "sha256": "4b90082ab722829cb27ccd6ff1877a19583e90c8377141ee21fb7e1501c88fe8"
+    },
+    {
+      "id": "golem",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\golem\\pose_0_view_1_color.png",
+      "sha256": "3f4cb2e1e670e94fe2606bf3295520548d2b1dbbe7cd1599bb5f92842d8f1d58"
+    },
+    {
+      "id": "hedgehog",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\hedgehog\\pose_0_view_1_color.png",
+      "sha256": "82bdfec979f7bb56f0537f63c4727bb1c29f1455a55bd410f9541193bcfdda41"
+    },
+    {
+      "id": "hermitcrab",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\hermitcrab\\pose_0_view_1_color.png",
+      "sha256": "3ec41901293477783247c271382829e85e663ae8aa5280f3a59ca70bedcf9e27"
+    },
+    {
+      "id": "kitten",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\kitten\\pose_0_view_1_color.png",
+      "sha256": "a19f612928da5a4fbe21d8cf850ae8bade245f363b155026adb0425c68b379f5"
+    },
+    {
+      "id": "land_guard",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\land_guard\\pose_0_view_1_color.png",
+      "sha256": "1bd540b29dbf47bfdc8a7e17846a5d36b8a17d96c757e1f5ece4c0c2ca720296"
+    },
+    {
+      "id": "lava_flan",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\lava_flan\\pose_0_view_1_color.png",
+      "sha256": "8fefef35c43b8a2c2959feb7a22b4cf21c7f2f7a1f51103b79c86b63244336ab"
+    },
+    {
+      "id": "lobster",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\lobster\\pose_0_view_1_color.png",
+      "sha256": "bdd7807989587b5584bf039161f15bb0547e9071bdf1b51a67823788fbb2c919"
+    },
+    {
+      "id": "manatee",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\manatee\\pose_0_view_1_color.png",
+      "sha256": "3029d5bf3bd19132b6e828e8af99fa3c98a896307efebc04c841384fcd490b0e"
+    },
+    {
+      "id": "mese_monster",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\mese_monster\\pose_0_view_1_color.png",
+      "sha256": "aed5b0f8f70eab35e0a224177636a2f87916a1daba14f1763cc5bfddac143f6c"
+    },
+    {
+      "id": "octopus",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\octopus\\pose_0_view_1_color.png",
+      "sha256": "a00df31a1ef9c6de4e08e73a938c1f0bda881d3d4d4dee9b802d9223158eefce"
+    },
+    {
+      "id": "oerkki",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\oerkki\\pose_0_view_1_color.png",
+      "sha256": "543c15b85506b5a3bbf3ec38aaf5a107a8bafd96c9316cadf63995debbca06f7"
+    },
+    {
+      "id": "ogre",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\ogre\\pose_0_view_1_color.png",
+      "sha256": "e09bd55007e9ceb0dff3350aa14aa1ad0c01d7c6f485414d0b16bb777a49001e"
+    },
+    {
+      "id": "orc",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\orc\\pose_0_view_1_color.png",
+      "sha256": "96715419694c42fb5ecc411fa2b78e26a9e57e7d8614ab85f0e37e6c0d87645c"
+    },
+    {
+      "id": "owl",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\owl\\pose_0_view_1_color.png",
+      "sha256": "d4d80d80b82eff60b3be9be3c1254aae0c4a49f53958fe7aecbf3f1f8dae5d26"
+    },
+    {
+      "id": "panda",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\panda\\pose_0_view_1_color.png",
+      "sha256": "0f2d1966e6c57ecb0cb5d9a29548c60266ee0a6f286516e2742d9039be99a2b5"
+    },
+    {
+      "id": "penguin",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\penguin\\pose_0_view_1_color.png",
+      "sha256": "b09a7a40314f320dc20c435b7f03c28979d5e960a4abe135d1e70e4a86ef9db3"
+    },
+    {
+      "id": "puffin",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\puffin\\pose_0_view_1_color.png",
+      "sha256": "a49d66e04186d816afd39dfe546ac37d04f52f8c48eedd244130b71d470b446b"
+    },
+    {
+      "id": "rat",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\rat\\pose_0_view_1_color.png",
+      "sha256": "fff8a8f5128cfc85d8593e6986ffc25f9604d9955bd7057f5bafe2768b02f9a3"
+    },
+    {
+      "id": "sand_monster",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\sand_monster\\pose_0_view_1_color.png",
+      "sha256": "464851251b2ae28456e896731845665775b0cb6b315862fd47cbbf963d974759"
+    },
+    {
+      "id": "seahorse",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\seahorse\\pose_0_view_1_color.png",
+      "sha256": "190e6f2f564aa3817d881a0b5d1a198cefa1798959c1717d2dcb172056069555"
+    },
+    {
+      "id": "seal",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\seal\\pose_0_view_1_color.png",
+      "sha256": "c323b2b8bbb64ed726a1c5b1d8ff4a68bd5e6025f4d69c2a099020dab36ad219"
+    },
+    {
+      "id": "shark",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\shark\\pose_0_view_1_color.png",
+      "sha256": "e42d52e9e7859f587e398cb436855d8966c5241d2a8d830ce1e94137ae177468"
+    },
+    {
+      "id": "stingray",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\stingray\\pose_0_view_1_color.png",
+      "sha256": "a46c8a4090a9962dda0eee4872ba161eb3417ddcac77ef9c0d4088627f3245ce"
+    },
+    {
+      "id": "stone_monster",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\stone_monster\\pose_0_view_1_color.png",
+      "sha256": "652de92366e42728441705fd603ab31b63f0e69f5e13e1d9839c38acc7214e5f"
+    },
+    {
+      "id": "tree_monster",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\tree_monster\\pose_0_view_1_color.png",
+      "sha256": "c9cb72fdebe19f77303820404b3ed510476716cbcc932f28be6c570910704303"
+    },
+    {
+      "id": "treeman",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\treeman\\pose_0_view_1_color.png",
+      "sha256": "74165fab41aef221c12fb10804cc5309e6af4d65c7a28320b3aaf71dda489fca"
+    },
+    {
+      "id": "warthog",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\warthog\\pose_0_view_1_color.png",
+      "sha256": "f1c7fd4c9f17f31d5c532386a106c5c69c74f1426e958205d4f93e8406d1e590"
+    },
+    {
+      "id": "wasp",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\wasp\\pose_0_view_1_color.png",
+      "sha256": "2168daaddf18a335d06cc0c80666b51ef76a6475239b51a02511e432de2a0b4f"
+    },
+    {
+      "id": "water_dragon",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\water_dragon\\pose_0_view_1_color.png",
+      "sha256": "dee0e97a557c5fce9f510a2252f65f3a3078dfc85433c1a897b13f881ec794bc"
+    },
+    {
+      "id": "whale",
+      "backend": "gltf_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\whale\\pose_0_view_1_color.png",
+      "sha256": "28217366ff33b0af210e81f140b0e67021624a45807ba6d4686459becf6d6a68"
+    },
+    {
+      "id": "bee",
+      "backend": "bone_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\bee\\pose_0_view_1_color.png",
+      "sha256": "0e10ddbff496517d212475f8875aa31e35f2e998c42a1c92689188bff8307365"
+    },
+    {
+      "id": "bot",
+      "backend": "bone_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\bot\\pose_0_view_1_color.png",
+      "sha256": "d076b323e1f209e1d2caf7f8e150e047aeb0b63040630200cb23753270eb0b3b"
+    },
+    {
+      "id": "bunny",
+      "backend": "bone_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\bunny\\pose_0_view_1_color.png",
+      "sha256": "7c57ae6e99f1f6f83fc5733c33a0e4fc56e3bfcb1004d1378439c1edeb7cf6ff"
+    },
+    {
+      "id": "chicken",
+      "backend": "bone_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\chicken\\pose_0_view_1_color.png",
+      "sha256": "9937213b26392b45a1a54ce5879a9d34c41997de6a73415abc83710fdca52d5d"
+    },
+    {
+      "id": "cow",
+      "backend": "bone_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\cow\\pose_0_view_1_color.png",
+      "sha256": "5c88e1ea5af8ceb0592047688a4c7c3927f3d51503c42212d407380eb0ac7cd9"
+    },
+    {
+      "id": "dolphin",
+      "backend": "bone_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\dolphin\\pose_0_view_1_color.png",
+      "sha256": "7044115be7d30d453b5a9a00d6c1523c7cd4f3abc3273b131f8538760b807ffd"
+    },
+    {
+      "id": "fox",
+      "backend": "bone_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\fox\\pose_0_view_1_color.png",
+      "sha256": "6986d933bd26ecffc876daed6ffd1966ad1d21b753efb122c19a5be102f64f8d"
+    },
+    {
+      "id": "human",
+      "backend": "bone_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\human\\pose_0_view_1_color.png",
+      "sha256": "9dd7a8324856c7d10f50812893c4d178b5f8eed541b5e8a5303a60ab17138e22"
+    },
+    {
+      "id": "pig",
+      "backend": "bone_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\pig\\pose_0_view_1_color.png",
+      "sha256": "2581f2d3f8b5956b79ad58f02333a206454fd19124b9034d28e2f488186288bb"
+    },
+    {
+      "id": "sheep",
+      "backend": "bone_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\sheep\\pose_0_view_1_color.png",
+      "sha256": "a227867c5a1983746beef26d489fe9ced7939fda795dfc2681715fe12d4872c8"
+    },
+    {
+      "id": "skeleton",
+      "backend": "bone_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\skeleton\\pose_0_view_1_color.png",
+      "sha256": "2d16e59ad8993b3d39bd9c1fdcb36ca94f8bd09328932bc4770e580782556a64"
+    },
+    {
+      "id": "spider",
+      "backend": "bone_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\spider\\pose_0_view_1_color.png",
+      "sha256": "2010a4360bf75ac19fbcd06f21061141e07f19ba51b209ba3f8d9d89bb17e72a"
+    },
+    {
+      "id": "squid",
+      "backend": "bone_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\squid\\pose_0_view_1_color.png",
+      "sha256": "780482a0339d4a2e5cb9c36cb648f95b5411198047d71325b3c6f996516949c9"
+    },
+    {
+      "id": "tortoise",
+      "backend": "bone_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\tortoise\\pose_0_view_1_color.png",
+      "sha256": "ea00a49ae74d5f6519c4da389586de754273bc3e82c91c77ea4a4b61794b79d4"
+    },
+    {
+      "id": "trout",
+      "backend": "bone_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\trout\\pose_0_view_1_color.png",
+      "sha256": "3956a8954d2882707fad8a4db313788cdd2bcffede1b5e046044f0ef85547a78"
+    },
+    {
+      "id": "wolf",
+      "backend": "bone_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\wolf\\pose_0_view_1_color.png",
+      "sha256": "5ecdf1c57952fe3f16b722e92762452aab87dd12b38386fa45b9047d64bb3ad3"
+    },
+    {
+      "id": "zombie",
+      "backend": "bone_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\zombie\\pose_0_view_1_color.png",
+      "sha256": "b72e50fd619ed12842d29cd599d8928c547422a61cc5a126a7dcfb92e3d7d1b9"
+    },
+    {
+      "id": "fire_spirit",
+      "backend": "rigid_voxels",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\fire_spirit\\pose_0_view_1_color.png",
+      "sha256": "396b80a0a684d2535760746da90cf20cd2331cfc14c9468e0d807b0077ac627c"
+    },
+    {
+      "id": "rigid_demo_flyer",
+      "backend": "rigid_voxels",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\rigid_demo_flyer\\pose_0_view_1_color.png",
+      "sha256": "41dc03839fe8e3374e9ab49e5297e1dd5c9c8714e2c2f860876995fb435cf4f9"
+    },
+    {
+      "id": "rigid_demo_swimmer",
+      "backend": "rigid_voxels",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\rigid_demo_swimmer\\pose_0_view_1_color.png",
+      "sha256": "6cc67b2bea4fa8d71691f11882d97fe3ad3a97c333359ff6f5a39930b4f95077"
+    },
+    {
+      "id": "rigid_demo_walker",
+      "backend": "rigid_voxels",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\rigid_demo_walker\\pose_0_view_1_color.png",
+      "sha256": "3dd2e267a7647a356941ca93fdb471048946927097161bddf4f845f6d3510fac"
+    },
+    {
+      "id": "human_adventurer",
+      "backend": "bone_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\human_adventurer\\pose_0_view_1_color.png",
+      "sha256": "dfa9b078f330ce4f53ed1a102b06be6b5f104d25e1135cc3ef633ced08bde432"
+    },
+    {
+      "id": "human_guard",
+      "backend": "bone_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\human_guard\\pose_0_view_1_color.png",
+      "sha256": "76ad97f5522c5ed7ef8fb5adf6da607b21a69128ef3b908c1cec33538228b766"
+    },
+    {
+      "id": "sheep_wool_black",
+      "backend": "bone_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\sheep_wool_black\\pose_0_view_1_color.png",
+      "sha256": "a7beedf7a8b8ccdd0a27d4f451623df244055f4b2c4b15b2783e08db15d0a5d9"
+    },
+    {
+      "id": "sheep_wool_golden",
+      "backend": "bone_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\sheep_wool_golden\\pose_0_view_1_color.png",
+      "sha256": "a88aba1231848b370cf76c8c23656e73a6d8d809a5e2b39b163f84d7b072ef9a"
+    },
+    {
+      "id": "wolf_snow",
+      "backend": "bone_skeleton",
+      "native_image": "docs\\research\\creature-timebox-2026-11-12\\candidate\\native\\matrix\\wolf_snow\\pose_0_view_1_color.png",
+      "sha256": "e8a046a95abc2115ddd3b680110c5bae391880e239f3d414f2999a61bbfdfece"
+    }
+  ],
+  "count": 61,
+  "scope": "Native front/side/three-quarter release triage, not complete R6 art acceptance"
+}

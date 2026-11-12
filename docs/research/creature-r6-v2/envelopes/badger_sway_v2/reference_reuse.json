@@ -1,0 +1,29 @@
+{
+  "scope": "Verified identical EXE, shader, frozen framing/profile and unchanged reference/own-before payload; original timestamps/context preserved",
+  "references": [
+    {
+      "source": "docs\\research\\creature-r6-v2\\envelopes\\badger_sway_v1\\native_original",
+      "destination": "docs\\research\\creature-r6-v2\\envelopes\\badger_sway_v2\\native_original",
+      "context_sha256": "3f38c073e1d0136f52314c03de1db3f0b3f4fbb0e71ea9a234a6d68df7b8e0b1",
+      "context_copy_byte_exact": true
+    },
+    {
+      "source": "docs\\research\\creature-r6-v2\\envelopes\\badger_sway_v1\\native_before",
+      "destination": "docs\\research\\creature-r6-v2\\envelopes\\badger_sway_v2\\native_before",
+      "context_sha256": "0f9ba9966582549975efd2b7ff74ce51b4f4285240fdc5f1bd8abcce938b96e7",
+      "context_copy_byte_exact": true
+    },
+    {
+      "source": "docs\\research\\creature-r6-v2\\envelopes\\badger_sway_v1\\temporal\\native_original",
+      "destination": "docs\\research\\creature-r6-v2\\envelopes\\badger_sway_v2\\temporal\\native_original",
+      "context_sha256": "acb16f94593ab0bf6ddf6d87145245d373858d35aead4204d12b728da98cab5b",
+      "context_copy_byte_exact": true
+    },
+    {
+      "source": "docs\\research\\creature-r6-v2\\envelopes\\badger_sway_v1\\temporal\\native_before",
+      "destination": "docs\\research\\creature-r6-v2\\envelopes\\badger_sway_v2\\temporal\\native_before",
+      "context_sha256": "ff96531c6510c782cd1a8d6575acfdc38582e2072058e14e6034f96f7c592959",
+      "context_copy_byte_exact": true
+    }
+  ]
+}

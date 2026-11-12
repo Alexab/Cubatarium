@@ -1,0 +1,40 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R4 spider fidelity; global R6 performance and compatibility remain pending",
+  "species": {
+    "spider": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct comparison, native Release four views, 24 motion phases, world and 64px icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "0b51bff526d01a157d0512b4b9bc6dca53c1ff325bca153e8fc858fa02fff7e4",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "spider.png",
+          "sha256": "83ceeb89e0329afaeff92f4037ecfab76236b20c20781d904c549d7f591e8c55"
+        },
+        "motion": {
+          "path": "native_approved_spider.png",
+          "sha256": "b7b4c17bf57bd08011f6b9e1e9899c04752781eac15c60c2648511bd1de38b54"
+        },
+        "runtime": {
+          "path": "runtime_wave/frame_001.png",
+          "sha256": "b34910b528e4491c425f2b3801fcb693227cb35c72d535872c1167c42b8f2314"
+        },
+        "ui": {
+          "path": "native_candidate/spider_12.png",
+          "sha256": "8682407b559c2f789f60f4116dce0bb8f6f297c42179f4075b926141df46e501"
+        }
+      },
+      "notes": "Eleven functional bones, eight distinct bent legs fanned in bind pose, paired dorsal markings and six small red ocelli. Half-wave swing lifts the return group while four feet support the body. Actual loaded mesh/hierarchy tested in 64 phases each of Walk and Run; every leg clears floor and no foot sinks beyond 0.025 blocks. Recipe gait overrides included in prospective definition and its hash. No reference asset reads in production generator. Performance gate disabled, not a performance pass."
+    }
+  }
+}

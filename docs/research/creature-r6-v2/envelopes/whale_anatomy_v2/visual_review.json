@@ -1,0 +1,52 @@
+{
+  "decision": "accepted_for_R5_local_profile_revision",
+  "r6_state": "pending",
+  "directly_viewed": [
+    {
+      "path": "threeway_idle.png",
+      "sha256": "1ac4de204c12068dade4ca1108d7bf0988a8f7b9aa2bd4ea380bfe2cbd407a5d"
+    },
+    {
+      "path": "threeway_walk.png",
+      "sha256": "6b761fd11e27ef38d46c0bc8a1109ee62f13ad970786ccd3076447826579d4dd"
+    },
+    {
+      "path": "threeway_run.png",
+      "sha256": "ca880b7577f32672f4115f537e9d199734c76892209845a6bf90584a40bac3a9"
+    },
+    {
+      "path": "aligned_reference/threeway_idle.png",
+      "sha256": "4a09576569117545a6f68a1ea1ec38eb8e488026887c4fb0fe2bd0c010f7c694"
+    },
+    {
+      "path": "aligned_reference/threeway_walk.png",
+      "sha256": "2757d1f7fb35d08c5fa0ebf7bee5fce3900ef1e2057b57df3e3eeffbc483671c"
+    },
+    {
+      "path": "aligned_reference/threeway_run.png",
+      "sha256": "08df53c723db779c1da8c8643bac91a1ca02a6582c8aec419eebe586da0bedec"
+    },
+    {
+      "path": "fullturn_0.png",
+      "sha256": "66a5abe282660ff30f82696e193bffcc997e20712f259633bd2800d8aa79e8cb"
+    },
+    {
+      "path": "fullturn_1.png",
+      "sha256": "4bae2347db75e7717cd1d7f9664f80f1617f447e5df34d3faf4b340f7cbc41a8"
+    },
+    {
+      "path": "fullturn_2.png",
+      "sha256": "c741da103c57db5b6d3e0f8a5f5c3b6a956f6a947e957a43dcc64a9fe4be8751"
+    },
+    {
+      "path": "runtime_envelope_current/frame_008.png",
+      "sha256": "a3b04d813071a55ae4e400f8e40acf06ae51e44f5868c4f72f5f5f2c3bae81de"
+    },
+    {
+      "path": "production/runtime_production_final/frame_008.png",
+      "sha256": "b2bfe00c91fa316a44ce60f9eaec099d477258d0a50f0212ba302352db6d6d6b"
+    }
+  ],
+  "observation": "Fuller head/trunk side silhouette, own dark blue body/pale pleats, articulated jaw/tail/flippers remain. Aligned front/side/oblique area much closer; width still differs, no all-anatomy acceptance.",
+  "limits": "Assistant R5 revision only. Aligned reference is research clone with rigid transform, not pristine source pixels at original actor orientation. Width/fin silhouette and full original motion range not accepted. Section matches do not prove every surface watertight/intersection free. Ordinary input water route is not AI hover/performance/terrain/lighting/control/UI-pack/user-save/package R6. All61 R6 pending."
+}

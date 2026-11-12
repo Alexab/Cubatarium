@@ -1,5 +1,7 @@
 #include "Core/StallTimer.h"
 #include "App/Application.h"
+#include "Creatures/Visual/CreatureAppearance.h"
+#include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Game/Inventory/HotbarInput.h"
 #include "Game/Inventory/SlotInteraction.h"
 #include "World/Diagnostics/EnterLitDiagnostics.h"
@@ -2372,11 +2374,34 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
   }
 
   const auto fp_viewmodel_begin = std::chrono::high_resolution_clock::now();
-  if (State == AppState::InGame && World && !MinimalOverlayForBench &&
+  if (State == AppState::InGame && World &&
+      (!MinimalOverlayForBench || std::getenv("CUBA_FLIGHT_QA_FP_SKIN") ||
+       std::getenv("CUBA_FLIGHT_QA_WORLD_USER")) &&
       !PaletteOpen && FpViewmodelRenderer)
   {
     const WorldViewSettings &view = World->GetViewSettings();
-    if (ShouldDrawFpViewmodel(view))
+    if (const char *qaSkin = std::getenv("CUBA_FLIGHT_QA_FP_SKIN");
+        qaSkin && std::getenv("CUBA_CREATURE_QA_MODELS"))
+    {
+      // Explicit candidate-only visual probe. Does not equip or save items.
+      InventoryEntryRef main{InventoryEntryKind::Item, "wood_sword", 1, false};
+      InventoryEntryRef offhand{InventoryEntryKind::Item, "wood_torch", 1, false};
+      FpViewmodelDrawParams fpParams;
+      fpParams.FramebufferW = width;
+      fpParams.FramebufferH = height;
+      fpParams.Active = &main;
+      fpParams.Offhand = &offhand;
+      fpParams.SpeciesId = "human";
+      if (const auto definitions = World->GetCreatureDefinitionStorage())
+      {
+        fpParams.Definition = definitions->Get("human");
+        if (const auto skins = World->GetSkinDefinitionStorage())
+          fpParams.Appearance = std::make_shared<const ResolvedCreatureAppearance>(
+              ResolveCreatureAppearance(*definitions, *skins, "human", qaSkin));
+      }
+      FpViewmodelRenderer->DrawWorldOverlay(fpParams);
+    }
+    else if (ShouldDrawFpViewmodel(view))
     {
       if (const UCreature *creature = World->GetControlledCreature())
       {
@@ -2387,7 +2412,9 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
         fpParams.Active = inv.GetActiveEntryRef();
         fpParams.Offhand = &inv.GetEquippedOffhand();
         fpParams.SpeciesId = creature->GetTypeId();
-        fpParams.SkinId = creature->GetSkinId();
+        fpParams.Appearance = World->GetResolvedAppearanceShared(*creature);
+        if (const auto definitions = World->GetCreatureDefinitionStorage())
+          fpParams.Definition = definitions->Get(creature->GetTypeId());
         FpViewmodelRenderer->DrawWorldOverlay(fpParams);
       }
     }

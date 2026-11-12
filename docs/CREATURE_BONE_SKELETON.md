@@ -1,6 +1,6 @@
 # Bone skeleton creature backend
 
-Hierarchical `geometry.geo.json` models with a single diffuse atlas and procedural bone animation.
+Hierarchical `geometry.geo.json` models with a single diffuse atlas and procedural bone animation. Seventeen species, including `bot`. Texture size comes from the geo file. Pose bone names stay the profile contract (`leg0`, `body`, `rightArm`, `rightItem`, and the rest).
 
 ## Backend selection
 

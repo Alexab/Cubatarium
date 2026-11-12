@@ -1,0 +1,313 @@
+id: bunny
+backend: bone_skeleton
+family: meadow
+authoring_source: cubatarium-recipe
+recipe_version: 2
+palette_id: meadow
+pattern: spots
+template: rabbit
+body:
+- 8
+- 6
+- 12
+head:
+- 5
+- 5
+- 5
+limb:
+- 3
+- 4
+extras:
+- ears
+muzzle: null
+bind_body: null
+direction: 'Листоух: длинные уши и крупные бёдра'
+wave: W1
+silhouette:
+  ears: 1.6
+  tail: 0.15
+marks:
+- ears
+- chest
+selected_concept: familiar_species_authored_rig
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: 'Листоух: длинные уши и крупные бёдра'
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 11364480138913454690
+surface_style: lagomorph
+anatomy:
+  bones:
+  - name: body
+    parent: null
+    pivot:
+    - 0
+    - 5
+    - 2
+    cubes:
+    - name: torso
+      origin:
+      - -2.5
+      - 3
+      - -2
+      size:
+      - 5
+      - 5
+      - 8
+      role: body
+    - name: chest
+      origin:
+      - -1.5
+      - 3.2
+      - -2.2
+      size:
+      - 3
+      - 3
+      - 2
+      role: belly
+  - name: head
+    parent: body
+    pivot:
+    - 0
+    - 8
+    - -2
+    cubes:
+    - name: head
+      origin:
+      - -2.5
+      - 6
+      - -7
+      size:
+      - 5
+      - 4
+      - 5
+      role: face
+  - name: nose
+    parent: head
+    pivot:
+    - 0
+    - 7
+    - -7
+    cubes:
+    - name: whisker_pad
+      origin:
+      - -1.5
+      - 6
+      - -8
+      size:
+      - 3
+      - 2
+      - 1
+      role: belly
+    - name: nose
+      origin:
+      - -0.5
+      - 6.8
+      - -8.8
+      size:
+      - 1
+      - 1
+      - 1
+      role: muzzle
+  - name: earLeft
+    parent: head
+    pivot:
+    - -1.5
+    - 10
+    - -4.5
+    cubes:
+    - name: ear_Left
+      origin:
+      - -2.5
+      - 10
+      - -5
+      size:
+      - 2
+      - 7
+      - 1
+      role: face
+  - name: haunchLeft
+    parent: body
+    pivot:
+    - -2.5
+    - 3.5
+    - 4
+    cubes:
+    - name: haunch_Left
+      origin:
+      - -4
+      - 1
+      - 2.1
+      size:
+      - 3
+      - 4
+      - 4
+      role: limb
+  - name: rearFootLeft
+    parent: body
+    pivot:
+    - -2.5
+    - 3.5
+    - 4
+    cubes:
+    - name: rear_foot_Left
+      origin:
+      - -4
+      - 0
+      - 0
+      size:
+      - 3
+      - 1
+      - 6
+      role: limb
+  - name: frontLegLeft
+    parent: body
+    pivot:
+    - -1.5
+    - 4
+    - -2
+    cubes:
+    - name: front_foot_Left
+      origin:
+      - -2
+      - 0
+      - -3
+      size:
+      - 1
+      - 4
+      - 2
+      role: limb
+  - name: earRight
+    parent: head
+    pivot:
+    - 1.5
+    - 10
+    - -4.5
+    cubes:
+    - name: ear_Right
+      origin:
+      - 0.5
+      - 10
+      - -5
+      size:
+      - 2
+      - 7
+      - 1
+      role: face
+  - name: haunchRight
+    parent: body
+    pivot:
+    - 2.5
+    - 3.5
+    - 4
+    cubes:
+    - name: haunch_Right
+      origin:
+      - 1
+      - 1
+      - 2.1
+      size:
+      - 3
+      - 4
+      - 4
+      role: limb
+  - name: rearFootRight
+    parent: body
+    pivot:
+    - 2.5
+    - 3.5
+    - 4
+    cubes:
+    - name: rear_foot_Right
+      origin:
+      - 1
+      - 0
+      - 0
+      size:
+      - 3
+      - 1
+      - 6
+      role: limb
+  - name: frontLegRight
+    parent: body
+    pivot:
+    - 1.5
+    - 4
+    - -2
+    cubes:
+    - name: front_foot_Right
+      origin:
+      - 1
+      - 0
+      - -3
+      size:
+      - 1
+      - 4
+      - 2
+      role: limb
+  - name: tail
+    parent: body
+    pivot:
+    - 0
+    - 5
+    - 6
+    cubes:
+    - name: tail
+      origin:
+      - -1
+      - 4.2
+      - 6
+      size:
+      - 2
+      - 2
+      - 2
+      role: belly
+palette_overrides:
+  body:
+  - 151
+  - 123
+  - 91
+  belly:
+  - 220
+  - 205
+  - 171
+  face:
+  - 165
+  - 139
+  - 104
+  muzzle:
+  - 181
+  - 135
+  - 127
+  limb:
+  - 135
+  - 108
+  - 79
+  mark:
+  - 91
+  - 75
+  - 55
+  accent:
+  - 103
+  - 82
+  - 62
+  eye:
+  - 24
+  - 25
+  - 21
+animation_profile: rabbit

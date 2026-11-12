@@ -1,0 +1,180 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R3 fidelity pilot assets; global R6 save/performance coverage remains pending",
+  "species": {
+    "stingray": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct image inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "e12947bbf8f1e1ae0e0fef5fcf09c27a67d222d561894b09e34faf9850df10db",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "stingray.png",
+          "sha256": "56610e5c19b907355f1382343b7ca85b595b96df751ff45c905115bd51f44655"
+        },
+        "motion": {
+          "path": "native_approved_stingray.png",
+          "sha256": "db66032a0d8100d19ef1766e2794501af506f557f47b8a6dd27f825e957ac5d8"
+        },
+        "runtime": {
+          "path": "runtime_stingray/frame_001.png",
+          "sha256": "3f47559ba9c63b7831025102f3b9fab353624d7fff3417514cebae82a3fca95e"
+        },
+        "ui": {
+          "path": "ui.png",
+          "sha256": "6249909fb22e2512f477b3eaf3bdecb2053f4a0d9cee6bed856cdfbd25274777"
+        },
+        "asset_capabilities": {
+          "path": "stingray_die_capability.png",
+          "sha256": "41cf5fd0b065016d60d89fc81edd153fa10c23fccf274311383379e28f212350"
+        }
+      },
+      "notes": "Own authored anatomy and materials; native rest, eight full-cycle phases, world and 64px icon directly inspected. 24 joints and idle/fly/punch/die retained. Runtime has no death locomotion state; die reviewed as sampled asset capability."
+    },
+    "butterfly": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct image inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "386f10e2f168ed5d59f5ba19b6de31f54226aec705bf974bb0e50aaca12ce60d",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "butterfly.png",
+          "sha256": "d15d20984882f83bd6eee9ffff9d4aa187fcd2abec5bbae5c1aa1fb9aee42886"
+        },
+        "motion": {
+          "path": "native_approved_butterfly.png",
+          "sha256": "a27bc2b40ff5463843907acdb0a99e791c8830223c4bb533358749d59a04ac6c"
+        },
+        "runtime": {
+          "path": "runtime_air/frame_001.png",
+          "sha256": "99d97e3f6412cd02e96ce691cb798f382b5312574143abdbbd1f241b2345a8fd"
+        },
+        "ui": {
+          "path": "ui.png",
+          "sha256": "6249909fb22e2512f477b3eaf3bdecb2053f4a0d9cee6bed856cdfbd25274777"
+        }
+      },
+      "notes": "Own authored anatomy and materials; native rest, eight full-cycle phases, world and 64px icon directly inspected."
+    },
+    "rigid_demo_flyer": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct image inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "a812aef11b316e74d50aed1425a3cf803a0cebebe851e26513bb0db0cc5da576",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "rigid_demo_flyer.png",
+          "sha256": "0c48039113f791147db433abc626b5e39b89722b6bd871bcab5d037b00ebf400"
+        },
+        "motion": {
+          "path": "native_approved_rigid_demo_flyer.png",
+          "sha256": "31e7cbc27a35238fadaf147f75bb8394c483d753037680822053dd6cbce92a92"
+        },
+        "runtime": {
+          "path": "runtime_air/frame_001.png",
+          "sha256": "99d97e3f6412cd02e96ce691cb798f382b5312574143abdbbd1f241b2345a8fd"
+        },
+        "ui": {
+          "path": "ui.png",
+          "sha256": "6249909fb22e2512f477b3eaf3bdecb2053f4a0d9cee6bed856cdfbd25274777"
+        }
+      },
+      "notes": "Own authored anatomy and materials; native rest, eight full-cycle phases, world and 64px icon directly inspected."
+    },
+    "rigid_demo_swimmer": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct image inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "4ed0ffe5eecf3225ca6e389605ca250380fc0d63b92cf1592829419d469499e1",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "rigid_demo_swimmer.png",
+          "sha256": "9bdd2d848061a2be1080cf16b1ffc0bc4db79fb9b986353470befaf3fbfa881c"
+        },
+        "motion": {
+          "path": "native_approved_rigid_demo_swimmer.png",
+          "sha256": "b0cb019fdad08cd711520d3f8961c292cfc36843b2eccf280b89018f18d1c254"
+        },
+        "runtime": {
+          "path": "runtime_rigid_demo_swimmer/frame_001.png",
+          "sha256": "04cd4808623b1e6c2d2e1a320182942e3740df7682df0db6ecd295059942f628"
+        },
+        "ui": {
+          "path": "ui.png",
+          "sha256": "6249909fb22e2512f477b3eaf3bdecb2053f4a0d9cee6bed856cdfbd25274777"
+        }
+      },
+      "notes": "Own authored anatomy and materials; native rest, eight full-cycle phases, world and 64px icon directly inspected."
+    },
+    "fire_spirit": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct image inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "6c7f562d37a64195414575d12bcd59f721014e2e11171527a11739a76d231a84",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "fire_spirit.png",
+          "sha256": "929427789785a5d2c4fb30b134efd75c013f5e7e5037ca0111749d9cc95ab368"
+        },
+        "motion": {
+          "path": "native_approved_fire_spirit.png",
+          "sha256": "f261e3a72811c8c658ded551311a819066c2d1b4bf066ccb469e6d9e5d461901"
+        },
+        "runtime": {
+          "path": "runtime_air/frame_001.png",
+          "sha256": "99d97e3f6412cd02e96ce691cb798f382b5312574143abdbbd1f241b2345a8fd"
+        },
+        "ui": {
+          "path": "ui.png",
+          "sha256": "6249909fb22e2512f477b3eaf3bdecb2053f4a0d9cee6bed856cdfbd25274777"
+        }
+      },
+      "notes": "Own authored anatomy and materials; native rest, eight full-cycle phases, world and 64px icon directly inspected."
+    }
+  }
+}

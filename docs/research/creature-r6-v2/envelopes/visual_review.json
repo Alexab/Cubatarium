@@ -1,0 +1,217 @@
+{
+  "schema": "creature-envelope-direct-visual-review.v1",
+  "art_acceptance": "pending",
+  "canonical_proposal_publication": false,
+  "main": {
+    "directly_viewed": [
+      {
+        "id": "badger",
+        "kind": "motion",
+        "file": "sheets/badger_motion.png",
+        "sha256": "2ccc8125b05a92e38d249a6cffbda9ded165380f4b5973b2d83fc0ca7e81348a"
+      },
+      {
+        "id": "badger",
+        "kind": "front_side",
+        "file": "sheets/badger_views.png",
+        "sha256": "f7fec7c992fd485194541e8d487a7eaa0dc1cba9f3ffe9ec92fb7575ab8241f4"
+      },
+      {
+        "id": "dirt_monster",
+        "kind": "motion",
+        "file": "sheets/dirt_monster_motion.png",
+        "sha256": "5479571c071306daeae4fb8abfe353ab4ee01e22c61102fd7faef3457243a5c3"
+      },
+      {
+        "id": "dungeon_master",
+        "kind": "motion",
+        "file": "sheets/dungeon_master_motion.png",
+        "sha256": "5403f2ae276da74fdc380fef46aca8c156a32e46bfd2599dc888ddbdd853ea19"
+      },
+      {
+        "id": "golem",
+        "kind": "motion",
+        "file": "sheets/golem_motion.png",
+        "sha256": "a365dfd7e1002488fd1df3498b1881c0406ff93f25038e51abc4f6661f9fbc0d"
+      },
+      {
+        "id": "land_guard",
+        "kind": "motion",
+        "file": "sheets/land_guard_motion.png",
+        "sha256": "15f664305299d3f8a1644555916f3a4cf9d32cc1d23e8e0a21d3bcefd3bcb02b"
+      },
+      {
+        "id": "lobster",
+        "kind": "motion",
+        "file": "sheets/lobster_motion.png",
+        "sha256": "c2b96b647be58789d6b50d2c948fdb7a82764ec9209fdf10831e4bcbbf85a0c3"
+      },
+      {
+        "id": "oerkki",
+        "kind": "motion",
+        "file": "sheets/oerkki_motion.png",
+        "sha256": "c0cd6a1ad4f44e6b5316621cbc1bdfc319417c54574275d7612a8305c54e6ce4"
+      },
+      {
+        "id": "orc",
+        "kind": "motion",
+        "file": "sheets/orc_motion.png",
+        "sha256": "c137d9a141c417aaf15366bd85d298a055d8958bb823c0021a7b6b5365370c79"
+      },
+      {
+        "id": "owl",
+        "kind": "motion",
+        "file": "sheets/owl_motion.png",
+        "sha256": "fc5e787e2d9982bd8040b34deb48897e489976da73e343a69ae32014f0e9017e"
+      },
+      {
+        "id": "penguin",
+        "kind": "motion",
+        "file": "sheets/penguin_motion.png",
+        "sha256": "9f934ac3d7476c6778af21ce02cc3a60f532ad38f31e9784daa4dc8b5d113f8f"
+      },
+      {
+        "id": "puffin",
+        "kind": "motion",
+        "file": "sheets/puffin_motion.png",
+        "sha256": "e70d0435763ed3e74183474144228ad57922740cae4521db17a6c5c187d3dbb0"
+      },
+      {
+        "id": "sand_monster",
+        "kind": "motion",
+        "file": "sheets/sand_monster_motion.png",
+        "sha256": "757a1df26426a31a131ecaf8ad47b5a7439befe4ab47ac50977c7439f7d5f14b"
+      },
+      {
+        "id": "seahorse",
+        "kind": "motion",
+        "file": "sheets/seahorse_motion.png",
+        "sha256": "3f7e56121e073f2c620d50ccf8a0f479c42c7105754437e4884df7d194db7a98"
+      },
+      {
+        "id": "stone_monster",
+        "kind": "motion",
+        "file": "sheets/stone_monster_motion.png",
+        "sha256": "eeb4a0e2615b9ceacbe5ff49d945e041d6f72e9e55601dde832bc9dee1f743dd"
+      },
+      {
+        "id": "treeman",
+        "kind": "motion",
+        "file": "sheets/treeman_motion.png",
+        "sha256": "ced7b3864a63aef9982bc3e7add619e053621404a596267a1fde407e02cbe7a3"
+      },
+      {
+        "id": "treeman",
+        "kind": "front_side",
+        "file": "sheets/treeman_views.png",
+        "sha256": "a49de71e5afe959e65754ccf96c5a3aca5b83c5a6bfa4c03e953e718d88b2cda"
+      },
+      {
+        "id": "wasp",
+        "kind": "motion",
+        "file": "sheets/wasp_motion.png",
+        "sha256": "d2e8e728efb15bd5c16b892a3b1201af829967cf80a344918625b8516b530204"
+      },
+      {
+        "id": "whale",
+        "kind": "motion",
+        "file": "sheets/whale_motion.png",
+        "sha256": "c5198f031cf9846aba9ae0bb81b1187674711abdfd20e97747deadb322ad63c2"
+      }
+    ],
+    "generated_count": 34
+  },
+  "v4": {
+    "directly_viewed": [
+      {
+        "id": "badger",
+        "kind": "motion",
+        "file": "sheets/badger_motion.png",
+        "sha256": "7dfe03aaab2349e979c26f6443be37c460d081649894750b0bd579b073be30a5"
+      },
+      {
+        "id": "badger",
+        "kind": "front_side",
+        "file": "sheets/badger_views.png",
+        "sha256": "09ceca6a2f8cac51af69f326ce585f6ea1906af343104c39295043285416deae"
+      },
+      {
+        "id": "treeman",
+        "kind": "motion",
+        "file": "sheets/treeman_motion.png",
+        "sha256": "aedb8d841885601338c1a6216abc038843f74619f7872d256dde3b3dfddac5fb"
+      },
+      {
+        "id": "treeman",
+        "kind": "front_side",
+        "file": "sheets/treeman_views.png",
+        "sha256": "d8cf51196af747f0044b8e788d93bd220fc2b864a380b87daa97d26d4a4c6a18"
+      },
+      {
+        "id": "lobster",
+        "kind": "motion",
+        "file": "sheets/lobster_motion.png",
+        "sha256": "d2d7c3d431ec43f17a5af8033c0902945a6f13a808b3678f430ee204064d0480"
+      },
+      {
+        "id": "lobster",
+        "kind": "front_side",
+        "file": "sheets/lobster_views.png",
+        "sha256": "2e622550ad40697b02c34ce280c68611bf0fc2a24fa845baf84ee6741836a98d"
+      },
+      {
+        "id": "seahorse",
+        "kind": "motion",
+        "file": "sheets/seahorse_motion.png",
+        "sha256": "9edc5f710a2b6a765f6074f2b5ebe25b965bef57700bfd59e9d3bbc739cc078f"
+      },
+      {
+        "id": "seahorse",
+        "kind": "front_side",
+        "file": "sheets/seahorse_views.png",
+        "sha256": "ea389f8a8789e4807a9eb79844de1bb8a659e6dbee164f2c724285ad684a851e"
+      }
+    ],
+    "decisions": {
+      "badger": "candidate_pending_world_stride",
+      "treeman": "revise_trunk_and_limb_mass_before_acceptance",
+      "lobster": "candidate_pending_benthic_world_contact",
+      "seahorse": "v3_rejected_excess_curl_v4_candidate_pending_water_motion"
+    },
+    "world_directly_viewed": [
+      {
+        "id": "badger",
+        "file": "motion_v4/world/runtime_world_badger\\frame_002.png",
+        "sha256": "4938ef101d6e0c99e803b19564a07d3886fd55108ebafb2e5296879d753f16d1"
+      },
+      {
+        "id": "treeman",
+        "file": "motion_v4/world/runtime_world_treeman\\frame_002.png",
+        "sha256": "9e7573d83d47b23d99604b00611ced6edd5355219dbca706f1047119d4113df7"
+      },
+      {
+        "id": "lobster",
+        "file": "motion_v4/world/runtime_world_lobster\\frame_002.png",
+        "sha256": "730d99789af371152dc1a419a9faeda6edf5f3ca340e04b930326f1d9bc73e71"
+      },
+      {
+        "id": "seahorse",
+        "file": "motion_v4/world/runtime_world_seahorse\\frame_002.png",
+        "sha256": "5d925a0f60728c904630e5f747be858961a01223eb91372deebaea5a95facf02"
+      }
+    ],
+    "world_sheet": {
+      "file": "motion_v4/world/world_contact_sheet.png",
+      "sha256": "262012a74afb105a132bdb0a554f264f1d41891f5f222dca0061cc2011b51238",
+      "directly_viewed": true
+    },
+    "world_acceptance": "pending_contact_stride_and_world_pose_debug_box_alignment"
+  },
+  "dark_source_backing": {
+    "file": "dark_source_light_backing.png",
+    "sha256": "30ad42a4be3c2d728648077ffe1d7adfa4c5e91838fe1254da401a333fb3e296",
+    "directly_viewed": true
+  },
+  "open_culling_defect": true,
+  "scope": "Direct static-sheet review; not continuous playback, world contact or final artistic acceptance"
+}

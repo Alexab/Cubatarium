@@ -1,0 +1,33 @@
+{
+  "scope": "Pinned single-core serialized ABBA CPU sampler, warm loads and sampled process working set; not world frame/GPU/total application memory acceptance",
+  "cpu_affinity": [
+    2
+  ],
+  "logical_cpu_count": 8,
+  "processor": "AMD64 Family 23 Model 96 Stepping 1, AuthenticAMD",
+  "platform": "Windows-10-10.0.19045-SP0",
+  "rounds": 4,
+  "executables": {
+    "linear": {
+      "path": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_sampling_perf_v1\\baseline\\sampling_bench.exe",
+      "sha256": "7cba979777f91b5ec70b4fdee2eb0571a31eb9b0c2000ec0a27c4045a712ffdf"
+    },
+    "indexed": {
+      "path": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_sampling_perf_v1\\indexed\\sampling_bench.exe",
+      "sha256": "dc8e7179e257dad38fb24d5251da715aa28bcabd8d6fcd7a5907e39e2be69abb"
+    }
+  },
+  "assets": {
+    "before": {
+      "path": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\orc_sway_pre_publish\\models\\creatures\\orc\\model.gltf",
+      "gltf_sha256": "8068b773536ccd0b8c35065123a5fc6e0e50fbf1df876b0d406ede8aae01a1b2",
+      "bin_sha256": "848b306e2ef1e1a4e44c438cb8a6645cc03f737b79c1b1d6f2d5b64f2e532e5e"
+    },
+    "current": {
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\orc\\model.gltf",
+      "gltf_sha256": "d36eb28e6410e5619102de571c33b398c0d39075dbb9c1cdca288fa5dba909c0",
+      "bin_sha256": "8a32da77530569fc14229f79d59005fe6e23cfb00011872f632bf30498087c89"
+    }
+  },
+  "runner_sha256": "8242b17959bd6e54980e90a5ee3b8fd075584b41a2e8df16010b667e706e89b5"
+}

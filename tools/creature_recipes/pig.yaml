@@ -1,0 +1,296 @@
+id: pig
+backend: bone_skeleton
+family: meadow
+authoring_source: cubatarium-recipe
+recipe_version: 2
+palette_id: meadow
+pattern: bands
+template: quadruped
+body:
+- 10
+- 8
+- 12
+head:
+- 8
+- 6
+- 5
+limb:
+- 4
+- 6
+extras:
+- muzzle
+muzzle:
+- 8
+- 4
+- 3
+bind_body:
+- 12
+- 0
+- 0
+direction: 'Корнеискатель: рыло и короткие ноги'
+wave: W1
+silhouette:
+  snout: 0.9
+  snout_width: 1.2
+  tail: 0.2
+  tail_drop: 0.1
+marks:
+- snout
+- belly
+selected_concept: familiar_anatomy_own_surface
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: 'Корнеискатель: рыло и короткие ноги'
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 18177446258666941085
+surface_style: porcine
+anatomy:
+  bones:
+  - name: body
+    parent: null
+    pivot:
+    - 0
+    - 10
+    - 3
+    cubes:
+    - name: torso
+      origin:
+      - -5
+      - 6
+      - -5
+      size:
+      - 10
+      - 8
+      - 16
+      role: body
+  - name: head
+    parent: body
+    pivot:
+    - 0
+    - 11
+    - -4
+    cubes:
+    - name: head
+      origin:
+      - -4
+      - 6
+      - -12
+      size:
+      - 8
+      - 8
+      - 7
+      role: face
+    - name: muzzle
+      origin:
+      - -2
+      - 8
+      - -13
+      size:
+      - 4
+      - 3
+      - 1
+      role: muzzle
+    - name: ear_l
+      origin:
+      - -3.9
+      - 13
+      - -8
+      size:
+      - 2
+      - 3
+      - 2
+      role: face
+    - name: ear_r
+      origin:
+      - 1.9
+      - 13
+      - -8
+      size:
+      - 2
+      - 3
+      - 2
+      role: face
+  - name: leg0
+    parent: body
+    pivot:
+    - -2.5
+    - 6
+    - -3
+    cubes:
+    - name: leg0
+      origin:
+      - -4.0
+      - 1
+      - -4.5
+      size:
+      - 3
+      - 5
+      - 3
+      role: limb
+    - name: leg0_hoof
+      origin:
+      - -4.0
+      - 0
+      - -4.5
+      size:
+      - 3
+      - 1
+      - 3
+      role: accent
+  - name: leg1
+    parent: body
+    pivot:
+    - 2.5
+    - 6
+    - 8
+    cubes:
+    - name: leg1
+      origin:
+      - 1.0
+      - 1
+      - 6.5
+      size:
+      - 3
+      - 5
+      - 3
+      role: limb
+    - name: leg1_hoof
+      origin:
+      - 1.0
+      - 0
+      - 6.5
+      size:
+      - 3
+      - 1
+      - 3
+      role: accent
+  - name: leg2
+    parent: body
+    pivot:
+    - 2.5
+    - 6
+    - -3
+    cubes:
+    - name: leg2
+      origin:
+      - 1.0
+      - 1
+      - -4.5
+      size:
+      - 3
+      - 5
+      - 3
+      role: limb
+    - name: leg2_hoof
+      origin:
+      - 1.0
+      - 0
+      - -4.5
+      size:
+      - 3
+      - 1
+      - 3
+      role: accent
+  - name: leg3
+    parent: body
+    pivot:
+    - -2.5
+    - 6
+    - 8
+    cubes:
+    - name: leg3
+      origin:
+      - -4.0
+      - 1
+      - 6.5
+      size:
+      - 3
+      - 5
+      - 3
+      role: limb
+    - name: leg3_hoof
+      origin:
+      - -4.0
+      - 0
+      - 6.5
+      size:
+      - 3
+      - 1
+      - 3
+      role: accent
+  - name: tail
+    parent: body
+    pivot:
+    - 0
+    - 10
+    - 10
+    cubes:
+    - name: tail
+      origin:
+      - -0.5
+      - 10
+      - 11
+      size:
+      - 1
+      - 2
+      - 1
+      role: body
+    - name: tail_curl
+      origin:
+      - 0.5
+      - 11
+      - 11
+      size:
+      - 1
+      - 1
+      - 1
+      role: muzzle
+palette_overrides:
+  body:
+  - 202
+  - 145
+  - 134
+  belly:
+  - 217
+  - 164
+  - 150
+  face:
+  - 213
+  - 155
+  - 144
+  muzzle:
+  - 170
+  - 105
+  - 103
+  limb:
+  - 194
+  - 132
+  - 125
+  mark:
+  - 100
+  - 60
+  - 58
+  accent:
+  - 94
+  - 69
+  - 62
+  eye:
+  - 25
+  - 23
+  - 23
+animation_profile: quadruped

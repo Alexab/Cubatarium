@@ -1,0 +1,111 @@
+{
+  "inventory": {
+    "active_bar": 0,
+    "active_slot": 0,
+    "equipped_armor": [
+      {
+        "broken": false,
+        "count": 1,
+        "empty": false,
+        "id": "iron_head",
+        "kind": "item",
+        "wear": 0.0
+      },
+      {
+        "broken": false,
+        "count": 1,
+        "empty": false,
+        "id": "iron_chest",
+        "kind": "item",
+        "wear": 0.0
+      },
+      {
+        "broken": false,
+        "count": 1,
+        "empty": false,
+        "id": "iron_arms",
+        "kind": "item",
+        "wear": 0.0
+      },
+      {
+        "broken": false,
+        "count": 1,
+        "empty": false,
+        "id": "iron_hands",
+        "kind": "item",
+        "wear": 0.0
+      },
+      {
+        "broken": false,
+        "count": 1,
+        "empty": false,
+        "id": "iron_legs",
+        "kind": "item",
+        "wear": 0.0
+      },
+      {
+        "broken": false,
+        "count": 1,
+        "empty": false,
+        "id": "iron_feet",
+        "kind": "item",
+        "wear": 0.0
+      }
+    ],
+    "equipped_armor_groups": {
+      "fleshy": 550
+    },
+    "equipped_offhand": {
+      "broken": false,
+      "count": 1,
+      "empty": false,
+      "id": "wood_torch",
+      "kind": "item",
+      "wear": 0.0
+    },
+    "hotbars": [
+      [
+        {
+          "broken": false,
+          "count": 1,
+          "empty": false,
+          "id": "wood_sword",
+          "kind": "item",
+          "wear": 0.0
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ]
+    ],
+    "storage": {}
+  },
+  "material": "iron",
+  "skin": "",
+  "spawn_source": "Qa",
+  "species": "zombie"
+}

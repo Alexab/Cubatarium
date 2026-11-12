@@ -1,0 +1,52 @@
+{
+  "captured_at_utc": "2026-11-12T00:15:25.991677+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\seahorse_anatomy_v1\\models",
+  "files_sha256": {
+    "creatures\\seahorse\\creature.json": "32155db030f593c5874b242352d036e29b5893b2c492b80ad39f10ce80255db2",
+    "creatures\\seahorse\\LICENSE.txt": "77fe7cb6dbcc6f6855ab400b1c37b5da2f323fd93797dc9aa7a539c15141032b",
+    "creatures\\seahorse\\model.bin": "eabc8b60f228565397da82df4844c23496a3c9bde30d14fe7dae35957c204f90",
+    "creatures\\seahorse\\model.gltf": "4d17ce3cf990a16bf23af9d575b5a8e0c7a3de0de43638d26465716675ade826",
+    "creatures\\seahorse\\textures\\body.png": "122931bc0c3fd10d75d2234421ac930bd3c34d15ec1e74d51149c8539fe72f58",
+    "creatures\\seahorse\\textures\\icon.png": "6b777bae00bd32d47ff6bbf42bcf985e44bb3317df70a64faca96064f8974644"
+  },
+  "qa_models_override": true,
+  "exe_sha256": "235ce58dd65546f38164020295ff403bf48c2816b14bb16cd96228faee030483",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "swim_candidate",
+  "qa_camera": "close",
+  "native_matrix": false,
+  "native_equipment_matrix": false,
+  "native_equipment_texture_probe": false,
+  "native_resource_cache_probe": false,
+  "native_resource_reload_probe": false,
+  "native_fp_matrix": false,
+  "native_save_probe": false,
+  "native_envelope_variant": null,
+  "native_transition_probe": false,
+  "native_fluid_transition_probe": false,
+  "world_motion": "water_swim_pause",
+  "world_motion_expected_fluid_state": "Swim",
+  "world_seconds": 20.0,
+  "world_capture_interval_seconds": 1.0,
+  "native_posed_culling_probe": false,
+  "envelope_profile_sha256": null,
+  "fp_shaders_sha256": {},
+  "equipment_material": "copper",
+  "world_gear_fixture": false,
+  "equipment_files_sha256": {},
+  "world_species": [
+    "seahorse"
+  ],
+  "preview_species": [
+    "seahorse"
+  ],
+  "qa_water_placement": true,
+  "qa_lava_fixture": false,
+  "world": "World_254",
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

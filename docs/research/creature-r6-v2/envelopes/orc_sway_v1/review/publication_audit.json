@@ -1,0 +1,37 @@
+{
+  "passed": true,
+  "species": "orc",
+  "scope": "One normal-pipeline multi-stride body-sway R5 revision, full61 sampled GPU regression and isolated FP/entity persistence; not complete R6",
+  "exe_sha256": "235ce58dd65546f38164020295ff403bf48c2816b14bb16cd96228faee030483",
+  "candidate_to_production_rgba_exact": 89,
+  "body_rgba_exact": 5234,
+  "changed_resource_frames": 56,
+  "fp_rgba_exact": 936,
+  "ledger_fresh": 61,
+  "unchanged_idle_action_samplers": 22,
+  "limb_timing_preserved": [
+    {
+      "clip": "walk",
+      "stride_cycles_per_loop": 4,
+      "stride_period_seconds_at_unit_travel": 0.6355258688191531,
+      "sway_period_seconds_at_unit_travel": 2.5421034752766123,
+      "nonroot_rotation_error_degrees": 7.155417793373891e-05,
+      "unchanged_translation_components_error_blocks": 0.0
+    },
+    {
+      "clip": "run",
+      "stride_cycles_per_loop": 3,
+      "stride_period_seconds_at_unit_travel": 0.873738525103221,
+      "sway_period_seconds_at_unit_travel": 2.62121550091127,
+      "nonroot_rotation_error_degrees": 6.027424262605257e-05,
+      "unchanged_translation_components_error_blocks": 0.0
+    }
+  ],
+  "review_sha256": "eee81c1de70a2cc9eb346f6135b8ca184d900540b824e5259f387a172b3b0446",
+  "snapshot_sha256": "b69cf1c9e35bba96f48233f80d04f54a3684ce10b2df881341eadf7d2d4cb374",
+  "input_reports_sha256": {
+    "body_parity.json": "52ae90c7ac2137294faa01019ab2d6f7ad505ee0610f13a7d0a9a639620a4540",
+    "fp_audit.json": "92452fe9d97ba931dd7c61b2f68409a0872bc8928399728bbdcc5b73bf9fc0d9",
+    "audit_production_final.json": "cfba322f3fcdadcc174285cccbe2237a2e58750932b336e292d81f4ed8204bfa"
+  }
+}

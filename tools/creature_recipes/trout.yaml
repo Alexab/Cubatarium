@@ -1,0 +1,254 @@
+id: trout
+backend: bone_skeleton
+family: meadow
+authoring_source: cubatarium-recipe
+recipe_version: 2
+palette_id: meadow
+pattern: spots
+template: aquatic
+body:
+- 6
+- 6
+- 16
+head:
+- 4
+- 4
+- 4
+limb:
+- 2
+- 3
+extras:
+- fins
+muzzle: null
+bind_body: null
+direction: 'Янтарная форель: высокий корпус и пятна'
+wave: W1
+silhouette:
+  tail: 0.3
+marks:
+- spots
+- back
+selected_concept: familiar_species_authored_rig
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: 'Янтарная форель: высокий корпус и пятна'
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 13006691179069935489
+surface_style: salmonid
+animation_profile: aquatic
+anatomy:
+  bones:
+  - name: body
+    parent: null
+    pivot:
+    - 0
+    - 4.5
+    - -4
+    cubes:
+    - name: trunk
+      origin:
+      - -1.5
+      - 2
+      - -8
+      size:
+      - 3
+      - 5
+      - 10
+      role: body
+  - name: head
+    parent: body
+    pivot:
+    - 0
+    - 4.5
+    - -8
+    cubes:
+    - name: head
+      origin:
+      - -1
+      - 2.5
+      - -12
+      size:
+      - 2
+      - 4
+      - 4
+      role: face
+  - name: body_back
+    parent: body
+    pivot:
+    - 0
+    - 4.5
+    - 2
+    cubes:
+    - name: rear_trunk
+      origin:
+      - -1.5
+      - 2.5
+      - 2
+      size:
+      - 3
+      - 4
+      - 4
+      role: body
+    - name: peduncle
+      origin:
+      - -1
+      - 3
+      - 6
+      size:
+      - 2
+      - 3
+      - 2
+      role: body
+  - name: tailfin
+    parent: body_back
+    pivot:
+    - 0
+    - 4.5
+    - 8
+    cubes:
+    - name: caudal_root
+      origin:
+      - -0.5
+      - 1
+      - 8
+      size:
+      - 1
+      - 6
+      - 2
+      role: wing
+    - name: caudal_upper
+      origin:
+      - -0.5
+      - 6
+      - 10
+      size:
+      - 1
+      - 2
+      - 3
+      role: wing
+    - name: caudal_lower
+      origin:
+      - -0.5
+      - 0
+      - 10
+      size:
+      - 1
+      - 2
+      - 3
+      role: wing
+  - name: dorsal_front
+    parent: body
+    pivot:
+    - 0
+    - 7
+    - -3
+    cubes:
+    - name: dorsal_front
+      origin:
+      - -0.5
+      - 7
+      - -3
+      size:
+      - 1
+      - 1
+      - 4
+      role: wing
+  - name: dorsal_back
+    parent: body_back
+    pivot:
+    - 0
+    - 6.5
+    - 2
+    cubes:
+    - name: dorsal_back
+      origin:
+      - -0.5
+      - 6.5
+      - 2
+      size:
+      - 1
+      - 2
+      - 3
+      role: wing
+  - name: leftFin
+    parent: body
+    pivot:
+    - 1.5
+    - 2.5
+    - -5
+    cubes:
+    - name: left_fin
+      origin:
+      - 1.5
+      - 2
+      - -5
+      size:
+      - 1
+      - 1
+      - 3
+      role: wing
+  - name: rightFin
+    parent: body
+    pivot:
+    - -1.5
+    - 2.5
+    - -5
+    cubes:
+    - name: right_fin
+      origin:
+      - -2.5
+      - 2
+      - -5
+      size:
+      - 1
+      - 1
+      - 3
+      role: wing
+palette_overrides:
+  body:
+  - 109
+  - 126
+  - 98
+  belly:
+  - 199
+  - 201
+  - 176
+  face:
+  - 166
+  - 176
+  - 149
+  accent:
+  - 175
+  - 121
+  - 117
+  mark:
+  - 60
+  - 77
+  - 62
+  eye:
+  - 24
+  - 31
+  - 27
+  muzzle:
+  - 111
+  - 119
+  - 99
+  wing:
+  - 144
+  - 126
+  - 104

@@ -1,0 +1,155 @@
+{
+  "badger": {
+    "baseline": {
+      "extent_blocks": [
+        0.532253,
+        0.545738,
+        1.183429
+      ],
+      "min_y": -0.0
+    },
+    "candidate": {
+      "extent_blocks": [
+        0.515625,
+        0.515625,
+        1.101562
+      ],
+      "min_y": 0.0
+    },
+    "authored_axes": {
+      "forward_axis": "+z"
+    },
+    "candidate_bones": 13,
+    "candidate_clips": [
+      "walk",
+      "run",
+      "idle",
+      "punch"
+    ],
+    "clip_timing": {
+      "idle": {
+        "asset_duration_sec": 4.0,
+        "runtime_speed": 0.8,
+        "effective_period_at_unit_travel_scale_sec": 5.0
+      },
+      "walk": {
+        "asset_duration_sec": 0.28,
+        "runtime_speed": 0.8,
+        "effective_period_at_unit_travel_scale_sec": 0.35
+      },
+      "run": {
+        "asset_duration_sec": 0.22,
+        "runtime_speed": 0.8,
+        "effective_period_at_unit_travel_scale_sec": 0.275
+      },
+      "punch": {
+        "asset_duration_sec": 1.0,
+        "runtime_speed": 0.8,
+        "effective_period_at_unit_travel_scale_sec": 1.25
+      }
+    },
+    "payload_sha256": {
+      "creature.json": "7fc1c6ece1d377efba3861c22239d9f942e31a454f4e5f636e38e6fb442a6224",
+      "model.gltf": "7aba39ae3a23b7fe92bd12b55099cda9ed49ed4edb3e93f39115beb5d04eaf00",
+      "model.bin": "6e349956d73d2f3f278e57e1a409c6bff50f238edb68354e92befafbec414b90"
+    },
+    "contact": {
+      "walk": {
+        "semantics": "authored_ground_contact",
+        "sample_count": 1025,
+        "min_geometry_y_blocks": -1.5e-05,
+        "max_min_geometry_y_blocks": 0.00037,
+        "owned_effectors": {
+          "lower_fl": {
+            "min_y_blocks": -1.5e-05,
+            "max_min_y_blocks": 0.061828
+          },
+          "lower_fr": {
+            "min_y_blocks": -1.5e-05,
+            "max_min_y_blocks": 0.061828
+          },
+          "lower_bl": {
+            "min_y_blocks": -1.5e-05,
+            "max_min_y_blocks": 0.061828
+          },
+          "lower_br": {
+            "min_y_blocks": -1.5e-05,
+            "max_min_y_blocks": 0.061828
+          }
+        }
+      },
+      "run": {
+        "semantics": "authored_ground_contact",
+        "sample_count": 1025,
+        "min_geometry_y_blocks": -2.8e-05,
+        "max_min_geometry_y_blocks": 0.000606,
+        "owned_effectors": {
+          "lower_fl": {
+            "min_y_blocks": -2.8e-05,
+            "max_min_y_blocks": 0.098313
+          },
+          "lower_fr": {
+            "min_y_blocks": -2.8e-05,
+            "max_min_y_blocks": 0.098313
+          },
+          "lower_bl": {
+            "min_y_blocks": -2.8e-05,
+            "max_min_y_blocks": 0.098313
+          },
+          "lower_br": {
+            "min_y_blocks": -2.8e-05,
+            "max_min_y_blocks": 0.098313
+          }
+        }
+      },
+      "idle": {
+        "semantics": "authored_ground_contact",
+        "sample_count": 1025,
+        "min_geometry_y_blocks": 0.0,
+        "max_min_geometry_y_blocks": 0.0,
+        "owned_effectors": {
+          "lower_fl": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.0
+          },
+          "lower_fr": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.0
+          },
+          "lower_bl": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.0
+          },
+          "lower_br": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.0
+          }
+        }
+      },
+      "punch": {
+        "semantics": "authored_ground_contact",
+        "sample_count": 1025,
+        "min_geometry_y_blocks": -0.000218,
+        "max_min_geometry_y_blocks": 0.000702,
+        "owned_effectors": {
+          "lower_fl": {
+            "min_y_blocks": -0.000218,
+            "max_min_y_blocks": 0.001974
+          },
+          "lower_fr": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.039122
+          },
+          "lower_bl": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.039122
+          },
+          "lower_br": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.039122
+          }
+        }
+      }
+    }
+  }
+}

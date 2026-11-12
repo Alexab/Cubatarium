@@ -1,0 +1,250 @@
+{
+  "resources": [
+    {
+      "id": "badger",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "bee",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "bot",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "bunny",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "butterfly",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "chicken",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "cow",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "crab",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "dirt_monster",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "dolphin",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "dungeon_master",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "fire_spirit",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "fox",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "golem",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "hedgehog",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "hermitcrab",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "human",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "kitten",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "land_guard",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "lava_flan",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "lobster",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "manatee",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "mese_monster",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "octopus",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "oerkki",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "ogre",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "orc",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "owl",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "panda",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "penguin",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "pig",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "puffin",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "rat",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "rigid_demo_flyer",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "rigid_demo_swimmer",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "rigid_demo_walker",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "sand_monster",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "seahorse",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "seal",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "shark",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "sheep",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "skeleton",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "spider",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "squid",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "stingray",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "stone_monster",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "tortoise",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "tree_monster",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "treeman",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "trout",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "warthog",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "wasp",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "water_dragon",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "whale",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "wolf",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "zombie",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "human_adventurer",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "human_guard",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "sheep_wool_black",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "sheep_wool_golden",
+      "reproduces_exact_bundle": true
+    },
+    {
+      "id": "wolf_snow",
+      "reproduces_exact_bundle": true
+    }
+  ],
+  "exact": 61,
+  "scope": "Rebuilt all61 from current generator/recipes after publication; payload+source/runtime context exact"
+}

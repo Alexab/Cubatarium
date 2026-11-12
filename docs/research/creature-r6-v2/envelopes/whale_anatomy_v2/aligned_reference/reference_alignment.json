@@ -1,0 +1,26 @@
+{
+  "scope": "Read-only art comparison alignment; source originals immutable, never generator or production input",
+  "translation_on_unanimated_skeleton_root_z": -1.3897914886474614,
+  "yaw_degrees": 180,
+  "source_sha256": {
+    "creatures\\whale\\creature.json": "5a25344bc102c3f70519e100842272100b70d97010bf7d170b220949d70699a2",
+    "creatures\\whale\\LICENSE.txt": "86f3dd813a29614b4a0bfbddc18fba9e009edd9e2e7c28de179b655ae89b4e16",
+    "creatures\\whale\\model.bin": "1dc0c2b2db82de1d392131bff2277c99f79ec0ffd96579fe3b517ad97369d7b7",
+    "creatures\\whale\\model.gltf": "d42522ca0439f61a4007ffe4f0808557572d250da45eacd53a3740a390401cae",
+    "creatures\\whale\\textures\\body.png": "95425660178d169caf8212bb87b90b32d3911f5caadd2c79bc9256b0f1775286",
+    "creatures\\whale\\textures\\face.png": "f4d915d8eb9d596135c2d173712e18084e0960f0c5e224b080728f4a229a513c",
+    "creatures\\whale\\textures\\icon.png": "b3628e1ed9c22b211981ec57ab46f291075e7914bc79e40dcd3478564f213174",
+    "creatures\\whale\\textures\\leg.png": "7fd674d104d109f1eba1369675f2abaae9beb2fe159940de9282910b92a8153a"
+  },
+  "aligned_sha256": {
+    "creatures\\whale\\creature.json": "0a66bd9fa8a2f10ffef95209ba4fff8e1de92e2bdcd4f320ae8996ff0673a21e",
+    "creatures\\whale\\LICENSE.txt": "86f3dd813a29614b4a0bfbddc18fba9e009edd9e2e7c28de179b655ae89b4e16",
+    "creatures\\whale\\model.bin": "1dc0c2b2db82de1d392131bff2277c99f79ec0ffd96579fe3b517ad97369d7b7",
+    "creatures\\whale\\model.gltf": "ff52e06b1ee1fca9c47b125c1ad715aa2f36ffdefa6cebbbb2f3b0ee4ddb0669",
+    "creatures\\whale\\textures\\body.png": "95425660178d169caf8212bb87b90b32d3911f5caadd2c79bc9256b0f1775286",
+    "creatures\\whale\\textures\\face.png": "f4d915d8eb9d596135c2d173712e18084e0960f0c5e224b080728f4a229a513c",
+    "creatures\\whale\\textures\\icon.png": "b3628e1ed9c22b211981ec57ab46f291075e7914bc79e40dcd3478564f213174",
+    "creatures\\whale\\textures\\leg.png": "7fd674d104d109f1eba1369675f2abaae9beb2fe159940de9282910b92a8153a"
+  },
+  "changes": "Only root1 translationZ and definition visual yaw; animations/BIN/PNG/IBM unchanged. Constant rigid translation affects every joint equally."
+}

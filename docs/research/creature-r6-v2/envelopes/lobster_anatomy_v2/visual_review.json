@@ -1,0 +1,17 @@
+{
+  "reviewer": "Codex direct native comparison and rig audit",
+  "decision": "rejected",
+  "published": false,
+  "r6_state": "pending",
+  "reason": "Rejected: improved palm shape, but independent refit check finds unintended foot Y trajectory change0.016875block. Format and floor checks alone did not catch it. V3 fixes the bind compensation and ventral material.",
+  "artifacts": [
+    {
+      "path": "threeway_idle.png",
+      "sha256": "b1d3845f5545e917b33b054445cb1743a4f57539fa540cd5b5afd05bf56fd5c2"
+    },
+    {
+      "path": "threeway_action.png",
+      "sha256": "c35966001ff268448f892a9b8d1b6cd8f5335c2394f5b48c91f5e955bd6d219e"
+    }
+  ]
+}

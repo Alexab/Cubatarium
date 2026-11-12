@@ -1,0 +1,120 @@
+{
+  "scope": "Offline source-asset checks only; no desktop run or visual acceptance.",
+  "checks": [
+    {
+      "command": [
+        "python",
+        "tools/validate_gltf_creature.py",
+        "--all"
+      ],
+      "exit_code": 0,
+      "stdout": "OK validate_gltf_creature: badger\nOK validate_gltf_creature: butterfly\nOK validate_gltf_creature: crab\nOK validate_gltf_creature: dirt_monster\nOK validate_gltf_creature: dungeon_master\nOK validate_gltf_creature: golem\nOK validate_gltf_creature: hedgehog\nOK validate_gltf_creature: hermitcrab\nOK validate_gltf_creature: kitten\nOK validate_gltf_creature: land_guard\nOK validate_gltf_creature: lava_flan\nOK validate_gltf_creature: lobster\nOK validate_gltf_creature: manatee\nOK validate_gltf_creature: mese_monster\nOK validate_gltf_creature: octopus\nOK validate_gltf_creature: oerkki\nOK validate_gltf_creature: ogre\nOK validate_gltf_creature: orc\nOK validate_gltf_creature: owl\nOK validate_gltf_creature: panda\nOK validate_gltf_creature: penguin\nOK validate_gltf_creature: puffin\nOK validate_gltf_creature: rat\nOK validate_gltf_creature: sand_monster\nOK validate_gltf_creature: seahorse\nOK validate_gltf_creature: seal\nOK validate_gltf_creature: shark\nOK validate_gltf_creature: stingray\nOK validate_gltf_creature: stone_monster\nOK validate_gltf_creature: tree_monster\nOK validate_gltf_creature: treeman\nOK validate_gltf_creature: warthog\nOK validate_gltf_creature: wasp\nOK validate_gltf_creature: water_dragon\nOK validate_gltf_creature: whale\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "python",
+        "tools/validate_bedrock_creature.py"
+      ],
+      "exit_code": 1,
+      "stdout": "OK cow: bones=6 geo=geometry.geo.json\nOK pig: bones=6 geo=geometry.geo.json\nOK sheep: bones=6 geo=geometry.geo.json\nOK wolf: bones=8 geo=geometry.geo.json\nOK chicken: bones=8 geo=geometry.geo.json\nOK skeleton: bones=10 geo=geometry.geo.json\nOK human: bones=10 geo=geometry.geo.json\nOK zombie: bones=10 geo=geometry.geo.json\nOK bee: bones=7 geo=geometry.geo.json\nOK fox: bones=11 geo=geometry.geo.json\nOK spider: bones=11 geo=geometry.geo.json\nOK dolphin: bones=8 geo=geometry.geo.json\n",
+      "stderr": "FAIL squid: missing textures/diffuse.png\n"
+    },
+    {
+      "command": [
+        "python",
+        "tools/test_gltf_skinned_bind_pose.py"
+      ],
+      "exit_code": 0,
+      "stdout": "OK badger: joints=8 anims=['idle', 'walk', 'run', 'punch']\nOK crab: joints=43 anims=['idle', 'walk', 'punch', 'die']\nOK dirt_monster: joints=7 anims=['idle', 'walk', 'run', 'punch']\nOK dungeon_master: joints=7 anims=['idle', 'walk', 'run', 'punch']\nOK golem: joints=13 anims=['idle', 'walk', 'run', 'punch']\nOK hedgehog: joints=3 anims=['idle', 'walk', 'run']\nOK hermitcrab: joints=67 anims=['idle', 'walk', 'die']\nOK kitten: joints=9 anims=['idle', 'walk', 'run']\nOK land_guard: joints=7 anims=['idle', 'walk', 'run', 'punch']\nOK lava_flan: joints=6 anims=['idle', 'walk', 'run', 'punch']\nOK lobster: joints=55 anims=['idle', 'walk', 'punch', 'die']\nOK manatee: joints=12 anims=['idle', 'fly', 'punch', 'die']\nOK mese_monster: joints=15 anims=['idle', 'walk', 'run', 'punch', 'die']\nOK oerkki: joints=9 anims=['idle', 'walk', 'run', 'punch']\nOK ogre: joints=9 anims=['idle', 'walk', 'run', 'punch']\nOK orc: joints=9 anims=['idle', 'walk', 'run', 'punch']\nOK owl: joints=4 anims=['walk', 'idle']\nOK panda: joints=8 anims=['idle', 'walk', 'run', 'punch']\nOK penguin: joints=10 anims=['idle', 'walk', 'fly']\nOK puffin: joints=33 anims=['idle', 'fly', 'die']\nOK rat: joints=2 anims=['idle', 'walk', 'run', 'punch']\nOK sand_monster: joints=18 anims=['idle', 'walk', 'run', 'punch']\nOK seahorse: joints=22 anims=['idle', 'fly', 'die']\nOK seal: joints=13 anims=['idle', 'walk', 'fly', 'die']\nOK shark: joints=27 anims=['walk', 'fly', 'punch', 'die', 'idle']\nOK stingray: joints=24 anims=['idle', 'fly', 'punch', 'die']\nOK stone_monster: joints=7 anims=['idle', 'walk', 'run', 'punch']\nOK tree_monster: joints=7 anims=['idle', 'walk', 'run', 'punch']\nOK treeman: joints=16 anims=['idle', 'walk', 'run', 'punch']\nOK warthog: joints=11 anims=['idle', 'walk', 'run', 'punch', 'die']\nOK wasp: joints=15 anims=['idle', 'walk', 'punch', 'die']\nOK water_dragon: joints=8 anims=['idle', 'walk', 'run', 'punch']\nOK whale: joints=8 anims=['idle', 'walk', 'run']\ntest_gltf_skinned_bind_pose: 33/33 passed\n",
+      "stderr": ""
+    }
+  ],
+  "all_bone_species_direct_validation": [
+    {
+      "id": "bee",
+      "passed": true,
+      "output": "OK bee: bones=7 geo=geometry.geo.json\n"
+    },
+    {
+      "id": "bot",
+      "passed": true,
+      "output": "OK bot: bones=10 geo=geometry.geo.json\n"
+    },
+    {
+      "id": "bunny",
+      "passed": false,
+      "output": "FAIL bunny: missing textures/diffuse.png\n"
+    },
+    {
+      "id": "chicken",
+      "passed": true,
+      "output": "OK chicken: bones=8 geo=geometry.geo.json\n"
+    },
+    {
+      "id": "cow",
+      "passed": true,
+      "output": "OK cow: bones=6 geo=geometry.geo.json\n"
+    },
+    {
+      "id": "dolphin",
+      "passed": true,
+      "output": "OK dolphin: bones=8 geo=geometry.geo.json\n"
+    },
+    {
+      "id": "fox",
+      "passed": true,
+      "output": "OK fox: bones=11 geo=geometry.geo.json\n"
+    },
+    {
+      "id": "human",
+      "passed": true,
+      "output": "OK human: bones=10 geo=geometry.geo.json\n"
+    },
+    {
+      "id": "pig",
+      "passed": true,
+      "output": "OK pig: bones=6 geo=geometry.geo.json\n"
+    },
+    {
+      "id": "sheep",
+      "passed": true,
+      "output": "OK sheep: bones=6 geo=geometry.geo.json\n"
+    },
+    {
+      "id": "skeleton",
+      "passed": true,
+      "output": "OK skeleton: bones=10 geo=geometry.geo.json\n"
+    },
+    {
+      "id": "spider",
+      "passed": true,
+      "output": "OK spider: bones=11 geo=geometry.geo.json\n"
+    },
+    {
+      "id": "squid",
+      "passed": false,
+      "output": "FAIL squid: missing textures/diffuse.png\n"
+    },
+    {
+      "id": "tortoise",
+      "passed": true,
+      "output": "OK tortoise: bones=7 geo=geometry.geo.json\n"
+    },
+    {
+      "id": "trout",
+      "passed": false,
+      "output": "FAIL trout: missing textures/diffuse.png\n"
+    },
+    {
+      "id": "wolf",
+      "passed": true,
+      "output": "OK wolf: bones=8 geo=geometry.geo.json\n"
+    },
+    {
+      "id": "zombie",
+      "passed": true,
+      "output": "OK zombie: bones=10 geo=geometry.geo.json\n"
+    }
+  ]
+}

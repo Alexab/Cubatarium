@@ -1,0 +1,109 @@
+{
+  "manatee": {
+    "baseline": {
+      "extent": [
+        1.0462870299816132,
+        0.934353656307076,
+        3.825565560918018
+      ],
+      "min_y": 0.034677907824516296,
+      "palette_joints": 12,
+      "weighted_joints": 6,
+      "weighted_global_node_ids": [
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "clips": [
+        "idle",
+        "fly",
+        "punch",
+        "die"
+      ]
+    },
+    "candidate": {
+      "palette_joints": 15,
+      "weighted_joints": 15,
+      "weighted_global_node_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "clips": [
+        "idle",
+        "fly",
+        "punch",
+        "die"
+      ]
+    }
+  },
+  "seal": {
+    "baseline": {
+      "extent": [
+        1.1404607264332949,
+        0.5245658802765122,
+        2.2503866192773785
+      ],
+      "min_y": -8.958552618877463e-09,
+      "palette_joints": 13,
+      "weighted_joints": 6,
+      "weighted_global_node_ids": [
+        3,
+        5,
+        7,
+        9,
+        11,
+        13
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "fly",
+        "die"
+      ]
+    },
+    "candidate": {
+      "palette_joints": 16,
+      "weighted_joints": 16,
+      "weighted_global_node_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "fly",
+        "die"
+      ]
+    }
+  }
+}

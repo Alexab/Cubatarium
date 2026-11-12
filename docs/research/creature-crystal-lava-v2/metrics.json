@@ -1,0 +1,185 @@
+{
+  "mese_monster": {
+    "baseline": {
+      "extent_blocks": [
+        2.907251,
+        1.125,
+        2.971079
+      ],
+      "min_y": 0.716356
+    },
+    "candidate": {
+      "extent_blocks": [
+        2.875,
+        1.09375,
+        2.9375
+      ],
+      "min_y": 0.71875
+    },
+    "authored_axes": {
+      "forward_axis": "+z"
+    },
+    "candidate_bones": 15,
+    "candidate_clips": [
+      "idle",
+      "walk",
+      "run",
+      "punch",
+      "die"
+    ],
+    "clip_timing": {
+      "idle": {
+        "asset_duration_sec": 3.2,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 3.2
+      },
+      "walk": {
+        "asset_duration_sec": 1.1,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 1.1
+      },
+      "run": {
+        "asset_duration_sec": 0.8,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 0.8
+      },
+      "punch": {
+        "asset_duration_sec": 1.2,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 1.2
+      },
+      "die": {
+        "asset_duration_sec": 1.5,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 1.5
+      }
+    },
+    "payload_sha256": {
+      "creature.json": "b580c5254ca55214abe87361697cd16b1c3ba89689dd741fbe1baf0e3e62636b",
+      "model.gltf": "acc4e95b7e7d2df72f91de80061b0594841a58f5f706543a6b207c50374debdd",
+      "model.bin": "8b5db2b5b9048dd1525d39c3ad38f63b075bbb0aa05d750aa68ee32dd999b538"
+    },
+    "contact": {
+      "idle": {
+        "semantics": "full_mesh_clearance_not_foot_contact",
+        "sample_count": 513,
+        "min_geometry_y_blocks": 0.670866,
+        "max_min_geometry_y_blocks": 0.753529,
+        "owned_effectors": {}
+      },
+      "walk": {
+        "semantics": "full_mesh_clearance_not_foot_contact",
+        "sample_count": 513,
+        "min_geometry_y_blocks": 0.670866,
+        "max_min_geometry_y_blocks": 0.753529,
+        "owned_effectors": {}
+      },
+      "run": {
+        "semantics": "full_mesh_clearance_not_foot_contact",
+        "sample_count": 513,
+        "min_geometry_y_blocks": 0.670725,
+        "max_min_geometry_y_blocks": 0.753529,
+        "owned_effectors": {}
+      },
+      "punch": {
+        "semantics": "full_mesh_clearance_not_foot_contact",
+        "sample_count": 513,
+        "min_geometry_y_blocks": 0.703899,
+        "max_min_geometry_y_blocks": 0.803869,
+        "owned_effectors": {}
+      },
+      "die": {
+        "semantics": "full_mesh_clearance_not_foot_contact",
+        "sample_count": 513,
+        "min_geometry_y_blocks": -0.0,
+        "max_min_geometry_y_blocks": 0.71875,
+        "owned_effectors": {}
+      }
+    }
+  },
+  "lava_flan": {
+    "baseline": {
+      "extent_blocks": [
+        0.6,
+        1.05,
+        0.6
+      ],
+      "min_y": 0.0
+    },
+    "candidate": {
+      "extent_blocks": [
+        0.6,
+        1.05,
+        0.6
+      ],
+      "min_y": 0.0
+    },
+    "authored_axes": {
+      "forward_axis": "-z"
+    },
+    "candidate_bones": 6,
+    "candidate_clips": [
+      "idle",
+      "walk",
+      "run",
+      "punch"
+    ],
+    "clip_timing": {
+      "idle": {
+        "asset_duration_sec": 3.0,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 3.0
+      },
+      "walk": {
+        "asset_duration_sec": 1.15,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 1.15
+      },
+      "run": {
+        "asset_duration_sec": 0.8,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 0.8
+      },
+      "punch": {
+        "asset_duration_sec": 1.1,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 1.1
+      }
+    },
+    "payload_sha256": {
+      "creature.json": "03a82bce7e3d682c4215db883410ef398303f64b0deae7396362136b45dce151",
+      "model.gltf": "069f5d530ef0ece79af6dd6f1fa2c82df7d487fba361fe880bc0092ef5feaf2a",
+      "model.bin": "80e69a8dec63f0a1d22251f7a6f09997bdd231559bc1a4cde9364c3849aa8861"
+    },
+    "contact": {
+      "idle": {
+        "semantics": "full_mesh_clearance_not_foot_contact",
+        "sample_count": 513,
+        "min_geometry_y_blocks": 0.0,
+        "max_min_geometry_y_blocks": 0.0,
+        "owned_effectors": {}
+      },
+      "walk": {
+        "semantics": "full_mesh_clearance_not_foot_contact",
+        "sample_count": 513,
+        "min_geometry_y_blocks": 0.0,
+        "max_min_geometry_y_blocks": 0.0,
+        "owned_effectors": {}
+      },
+      "run": {
+        "semantics": "full_mesh_clearance_not_foot_contact",
+        "sample_count": 513,
+        "min_geometry_y_blocks": 0.0,
+        "max_min_geometry_y_blocks": 0.0,
+        "owned_effectors": {}
+      },
+      "punch": {
+        "semantics": "full_mesh_clearance_not_foot_contact",
+        "sample_count": 513,
+        "min_geometry_y_blocks": 0.0,
+        "max_min_geometry_y_blocks": 0.0,
+        "owned_effectors": {}
+      }
+    }
+  }
+}

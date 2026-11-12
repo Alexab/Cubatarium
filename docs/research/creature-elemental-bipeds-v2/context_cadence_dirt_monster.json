@@ -1,0 +1,25 @@
+{
+  "captured_at_utc": "2026-11-10T22:49:20.822690+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_elemental_bipeds_v2\\models",
+  "files_sha256": {
+    "creatures\\dirt_monster\\creature.json": "0564ace187714e4bef8b8c82b15ec2470f7e408473970bf3d156db35f1994d06",
+    "creatures\\dirt_monster\\LICENSE.txt": "28fb154f184761d18f2d1c604a234d0dcd75ae21346cdf05ab245e99cbe2db27",
+    "creatures\\dirt_monster\\manifest.json": "ddb2936445e1d1f60cd8ab53aa1c3b8fa95686991b9e0d37151ba79338e21783",
+    "creatures\\dirt_monster\\model.bin": "e33f5c7a0451a5ff0574ae5afdcf6aa21e997bf4f0756a9293290fb21fba4e0e",
+    "creatures\\dirt_monster\\model.gltf": "eda2cc34839de308ed2807a148cb58d73092ee818fdd4f34069c5a6424b7f3f6",
+    "creatures\\dirt_monster\\textures\\body.png": "1b973053e0aab5413b6aa53bca31af9ebf849e5e050afeff6acda7c7c62fcd8d",
+    "creatures\\dirt_monster\\textures\\icon.png": "60daca90770afbdd42e4c458f52a4d523860cadb55d5de90171da53fc5c061cf"
+  },
+  "qa_models_override": true,
+  "exe_sha256": "43bb4bf75f6f14d792169bcc31453103515469d7f530f3f566e7121249a0a900",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "cadence_dirt_monster",
+  "qa_camera": "close",
+  "qa_water_placement": false,
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

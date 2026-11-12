@@ -1,0 +1,74 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R5 own aquatic species and side-UV correction; explicit R6 routes, compatibility/performance/reproducibility remain pending",
+  "species": {
+    "shark": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct visual inspection of final native view/motion sheets, actual 64px icons, world screenshots, baseline comparisons and semantic change proof; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "79c3482568ac524547b261855668d1afb7273a309bb8baa45aaba94fd232f385",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "shark.png",
+          "sha256": "2ab978d22951d6334aa734507c374564e2b0c62ea7fc76c59f417d650574fafc"
+        },
+        "motion": {
+          "path": "native_approved_shark.png",
+          "sha256": "b72802007858daf6593feaaa4db3f52863c8239616b0e909617ef98af90fef51"
+        },
+        "runtime": {
+          "path": "runtime_final_shark/frame_002.png",
+          "sha256": "55caecdd641eb35f96e9663aa3fead9ddf7d0b032e629896e11e8f3392440098"
+        },
+        "ui": {
+          "path": "native_candidate/shark_12.png",
+          "sha256": "72c85c5437abf304f13fc04918c312fbb2d699c717dbb3785411fcd3a19e7fd5"
+        }
+      },
+      "notes": "Own recipe anatomy, atlas and motion, no baseline mesh/pixels copied. Shark: long body, swept fins, vertical asymmetric tail with lateral beat, separate bite jaw. Seahorse: upright curved neck, long snout, seven-segment curled tail with an actual opening and fast dorsal/pectoral propulsion. All original clip capabilities retained. True water close-world and actual native images inspected. No runtime Death proof: die is sampled asset capability only. Performance/route/equipment/save-load/GLES acceptance remain R6."
+    },
+    "seahorse": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct visual inspection of final native view/motion sheets, actual 64px icons, world screenshots, baseline comparisons and semantic change proof; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "ed464974782010ab80a214c64bf136d1eb2f5dc8f15eb0780aee209c339b187c",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "seahorse.png",
+          "sha256": "bd19da1f2d98f2a2bc4f349a65a53c7f9e43fbe58a2cd16fb2951e9832b2ed62"
+        },
+        "motion": {
+          "path": "native_approved_seahorse.png",
+          "sha256": "c13fc9c5f91601049565ead74fa5ffdf0688019ac0edce77500fffb004def3e7"
+        },
+        "runtime": {
+          "path": "runtime_final_seahorse/frame_002.png",
+          "sha256": "4d58f0673f2055750ddc5517d629f1f780ae37d9860cb9a9678548aaba9900aa"
+        },
+        "ui": {
+          "path": "native_candidate/seahorse_12.png",
+          "sha256": "33c9fed946d4dedefab16abd04cc94799fba38eb4adb426c089c9de72d660bbe"
+        }
+      },
+      "notes": "Own recipe anatomy, atlas and motion, no baseline mesh/pixels copied. Shark: long body, swept fins, vertical asymmetric tail with lateral beat, separate bite jaw. Seahorse: upright curved neck, long snout, seven-segment curled tail with an actual opening and fast dorsal/pectoral propulsion. All original clip capabilities retained. True water close-world and actual native images inspected. No runtime Death proof: die is sampled asset capability only. Performance/route/equipment/save-load/GLES acceptance remain R6."
+    }
+  }
+}

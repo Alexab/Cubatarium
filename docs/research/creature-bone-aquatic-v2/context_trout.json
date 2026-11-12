@@ -1,0 +1,20 @@
+{
+  "captured_at_utc": "2026-11-10T17:07:30.322170+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\bone_aquatic_v2\\models",
+  "files_sha256": {
+    "creatures\\trout\\creature.json": "473f9b9aab93ab1d06af627f311ecfd58860d0a3e8c3fd3a39c96f2724d479b8",
+    "creatures\\trout\\geometry.geo.json": "3ee56d526044169469d40d3f6e91423c5f66bec246b3c83094143a137fa9f802",
+    "creatures\\trout\\LICENSE.txt": "00b88747c4bc8844c08539f0649c6f79e5a291f1093793bfa97e224f0c281145",
+    "creatures\\trout\\manifest.json": "86c2e3cd4d453425c87a8ad720da98d8db05aed714043d20b8f0c7af02d0833e",
+    "creatures\\trout\\textures\\diffuse.png": "3a15a4d2e90e7d94b8558f9be7e9f8cec8df871fda37b332efe267cb1bd7335d",
+    "creatures\\trout\\textures\\icon.png": "a112a281406d95826e63b3aea10fff6266c817819667fdbe0a32fb787a9a95c8"
+  },
+  "exe_sha256": "09736f903f04b3779cc7b598fbbac55bf82fa1bf5ac6558655470cc04c1318cc",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "trout",
+  "performance_gate": "disabled"
+}

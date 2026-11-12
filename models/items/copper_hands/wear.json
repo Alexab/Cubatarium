@@ -13,5 +13,6 @@
     0,
     0
   ],
-  "scale": 1.0
+  "scale": 1.0,
+  "fit_mode": "bone_volume"
 }

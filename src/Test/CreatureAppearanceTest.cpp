@@ -164,10 +164,18 @@ int main()
     const ResolvedCreaturePart *face = FindPart(skinned, "face");
     Expect(body && body->textureAssetKey == "skin/skin_map/wool",
            "texture_map stems remap to skin/<id>/<mapped>", failures);
+    Expect(body && body->baseTextureAssetKey == "rigid_test/body",
+           "mapped part retains its original material for missing-file fallback and UVs", failures);
+    Expect(skinned.skinTextureOverrides.at("body") == "skin/skin_map/wool",
+           "explicit mapping is available to skeletal and FP texture resolution", failures);
+    Expect(skinned.skinTextureOverrides.find("face") == skinned.skinTextureOverrides.end(),
+           "unmapped material is not replaced by another skin atlas", failures);
     Expect(face && face->textureAssetKey == "rigid_test/face",
            "stems absent from texture_map stay with the species", failures);
     Expect(skinned.wireframeColor == glm::vec4(1.f, 0.f, 0.f, 1.f),
            "compatible skin tint overrides wireframe color", failures);
+    Expect(skinned.effectiveSkinId == "skin_map",
+           "compatible selection is retained for skeletal backends", failures);
   }
 
   {
@@ -176,6 +184,10 @@ int main()
     const ResolvedCreaturePart *body = FindPart(foreign, "body");
     Expect(body && body->textureAssetKey == "rigid_test/body",
            "skin bound to another creature is ignored", failures);
+    Expect(foreign.effectiveSkinId.empty(),
+           "foreign selection cannot reach skeletal texture lookup", failures);
+    Expect(foreign.skinTextureOverrides.empty(),
+           "foreign skin cannot publish texture overrides", failures);
   }
 
   {
@@ -187,6 +199,8 @@ int main()
            "unbound skin leaves other stems untouched", failures);
     Expect(face && face->textureAssetKey == "skin/skin_key_only/face",
            "skin with no creature_id matches any species by texture key", failures);
+    Expect(keyed.effectiveSkinId == "skin_key_only",
+           "universal selection remains available to all backends", failures);
   }
 
   {
@@ -196,6 +210,9 @@ int main()
            "non-rigid backends resolve no rigid parts", failures);
     Expect(bone.defaultTextureKey == "body",
            "default texture key defaults to body when unset", failures);
+    const auto atlas = ResolveCreatureAppearance(species, skins, "bone_test", "skin_key_only");
+    Expect(atlas.skinTextureOverrides.at("diffuse") == "skin/skin_key_only/diffuse",
+           "bone backend preserves the bundled whole-mesh diffuse atlas convention", failures);
   }
 
   {
@@ -215,6 +232,17 @@ int main()
     Expect(unknown.useWireframeFallback,
            "unknown species triggers wireframe fallback", failures);
     Expect(unknown.Parts.empty(), "unknown species resolves no parts", failures);
+  }
+
+  {
+    const auto previousRevision = species.Revision.load();
+    const auto emptyRoot = catalog.Root / "empty_catalog";
+    std::filesystem::create_directories(emptyRoot);
+    species.Load(emptyRoot.string());
+    Expect(species.Count() == 0 && species.Get("rigid_test") == nullptr,
+           "loading an empty catalog removes previous definitions", failures);
+    Expect(species.Revision.load() > previousRevision,
+           "empty catalog replacement invalidates cached appearances", failures);
   }
 
   if (failures != 0)

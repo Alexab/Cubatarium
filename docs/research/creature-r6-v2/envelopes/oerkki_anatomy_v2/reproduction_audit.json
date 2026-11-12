@@ -1,0 +1,5 @@
+{
+  "passed": true,
+  "scope": "Own pre-publish recipe/model snapshot reproduces reviewed candidate glTF semantic and BIN/PNG/recipe byte exact",
+  "source_snapshot_manifest_sha256": "37b7dd19160336f28ec8c792b0bef4e98f7c95642c8ce40b646fd1520f9f754e"
+}

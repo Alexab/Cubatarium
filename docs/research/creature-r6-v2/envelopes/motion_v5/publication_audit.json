@@ -1,0 +1,49 @@
+{
+  "schema": "creature-motion-v5-publication-audit.v1",
+  "passed": true,
+  "scope": "Four normal-pipeline R5 revisions, exact reviewed data and GPU previews, full61 capture regression, unchanged FP pixels; not final R6 art/terrain/routes/UI-pack/performance acceptance",
+  "exe_sha256": "929205bada51d2c6862ad3989471ccc79a70c91104c099894de497b0279bb5f1",
+  "resources": [
+    {
+      "id": "badger",
+      "recipe_sha256": "df75feda370e82e61e8b72cbddc7c5adc65aa1a3251c35c4357719b0db7d9fba",
+      "staged_manifest_sha256": "e2785f9ffa7b4077ea2e238124c92466deb038ed139fc164ecee1351b414f281",
+      "model_bin_sha256": "55cc3e55c2393445ca6ec17a18d71cad63ad2aafc2a9c0a7abcdc9b0b5f31d54",
+      "ordinary_preview_rgba_exact": 29
+    },
+    {
+      "id": "treeman",
+      "recipe_sha256": "0981b2f58ca7a12de7d3ca6c249b288ca1a1c977954b736b90bee5a2130700c2",
+      "staged_manifest_sha256": "385b0326f6d77f04190cb14960754282d45a9da8b215bec2d5dc73d84356ec7b",
+      "model_bin_sha256": "b3369aaa171ce71b6eaf4b9dc2c42a5cb7e24be2b0ee2ccc8a551023f751be65",
+      "ordinary_preview_rgba_exact": 29
+    },
+    {
+      "id": "lobster",
+      "recipe_sha256": "4951d839379531b121533479c07db58dd138ff46aaa2dd93db1d26187150f69f",
+      "staged_manifest_sha256": "35dd773de504cbffee7added5c8ecf018e7f80c844753ead078d153b935909c4",
+      "model_bin_sha256": "f6027bc70df05af1a36518e1ab1f61a4ac8819f3fc4f235ac68ca415608be675",
+      "ordinary_preview_rgba_exact": 29
+    },
+    {
+      "id": "seahorse",
+      "recipe_sha256": "c90f064a089cb482a5acd6be5e138afa094d857cd1eed66bd6c2f8dede145527",
+      "staged_manifest_sha256": "a2e005c8df017260863fd3c7180bd3e88123daa041aaef91d02e4edc81f720e1",
+      "model_bin_sha256": "196b72d5d5f01d9394b41cce901c390d84c99dcfbe9e31b51bb9cf28669d3a24",
+      "ordinary_preview_rgba_exact": 29
+    }
+  ],
+  "proposal_preview_rgba_exact_count": 116,
+  "body_matrix_total": 5290,
+  "unchanged_rgba_count": 5081,
+  "changed_frames_in_four_reviewed_resources": 209,
+  "fp_rgba_exact_count": 936,
+  "fp_authored_arm_gpu_draws": 1872,
+  "ledger_resources_fresh": 61,
+  "review_sha256": "f14c50113cf24bd3c2564d7a0904bde6ab976a31c10e4f9471a3fe920713b9e1",
+  "input_reports_sha256": {
+    "body_parity.json": "20c6ca8adaf65116b58475dd3758ea174bc5c5d764975d35d33b88b74ba43e80",
+    "fp_audit.json": "679c5558eed1cdfb8917cb38b7386c91f9d6610328dae0f5b54b944b566eee44",
+    "context_production_final.json": "b2f792530ca92fdd87e16ac7fad5099c97880294bc6b7a3931caa0f3ed3a09e7"
+  }
+}

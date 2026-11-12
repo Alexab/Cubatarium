@@ -204,8 +204,8 @@
     "geometry_file": "geometry.geo.json",
     "texture": "diffuse",
     "texture_size": [
-      64,
-      32
+      128,
+      128
     ],
     "animation_profile": "humanoid"
   }

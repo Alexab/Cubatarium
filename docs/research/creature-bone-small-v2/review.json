@@ -1,0 +1,108 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R4 authored bone anatomy, own surfaces and real procedural motion; global R6 performance/full compatibility matrix pending",
+  "species": {
+    "bunny": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct final comparison, native Release rest/full-cycle phases, world and icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "b184e4f515a18d28fa4b215307fbb7c0078a31e53ef4deca2958d7daae7eedde",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "bunny.png",
+          "sha256": "0be2ea9f6c56d0e00e0b0d11a345e8d2b1efb5a5273a8587a8aca6f7a4f6185e"
+        },
+        "motion": {
+          "path": "native_approved_bunny.png",
+          "sha256": "d5d701e488c3745f8697827dc1c6fbdea4b6e8002af73b6b346a8ed673bba6bb"
+        },
+        "runtime": {
+          "path": "runtime_wave/frame_001.png",
+          "sha256": "46812fec7311a0eb094eeafe1575bdc901b17f0e45df99118385f84873191d87"
+        },
+        "ui": {
+          "path": "ui.png",
+          "sha256": "bb344c46931d7946a3d0799ac7f93dfc8051c574d58823fd496f14f4823e09cb"
+        }
+      },
+      "notes": "Twelve working bones, compound connected hind feet, long ears, cream whisker pad and small pink nose. Rabbit profile now pushes off then settles instead of swinging toes through the ground. Actual C++ mesh/hierarchy check samples 64 phases in Walk and Run, requires airborne phases and rejects >0.025-block penetration."
+    },
+    "chicken": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct final comparison, native Release rest/full-cycle phases, world and icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "65056761808ea63b9515cdfe400a7e4d3992a386ba82615b4977392876d17f11",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "chicken.png",
+          "sha256": "d97fb0a7a4465a194b85e61dec9dd7dd0d49a3cc92e8eea5a5da37c64f8cbdef"
+        },
+        "motion": {
+          "path": "native_approved_chicken.png",
+          "sha256": "cb95b322d307db8b773b2f0f00a1154a19ce6eba0bb539a3ed939b812f93c0e3"
+        },
+        "runtime": {
+          "path": "runtime_wave/frame_001.png",
+          "sha256": "46812fec7311a0eb094eeafe1575bdc901b17f0e45df99118385f84873191d87"
+        },
+        "ui": {
+          "path": "ui.png",
+          "sha256": "bb344c46931d7946a3d0799ac7f93dfc8051c574d58823fd496f14f4823e09cb"
+        }
+      },
+      "notes": "Eight working bones, beak, comb, wattle, separate feather wings/tail, slender legs and forked toes. Alternating gait retained; no merged foot board."
+    },
+    "bee": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct final comparison, native Release rest/full-cycle phases, world and icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "3fda7e1ca7dfd1c19d149ecf856dbc44e53ac58fd0d62d932de5850035919863",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "bee.png",
+          "sha256": "b37d0771085ddea0d061c040352dcd66bd40d2cd63bca57a579a58a727c5fa4b"
+        },
+        "motion": {
+          "path": "native_approved_bee.png",
+          "sha256": "ff41b80361a8e6f0263e759e4acc72285ed6cb7d25d9003030665087789b2c94"
+        },
+        "runtime": {
+          "path": "runtime_wave/frame_001.png",
+          "sha256": "46812fec7311a0eb094eeafe1575bdc901b17f0e45df99118385f84873191d87"
+        },
+        "ui": {
+          "path": "ui.png",
+          "sha256": "bb344c46931d7946a3d0799ac7f93dfc8051c574d58823fd496f14f4823e09cb"
+        }
+      },
+      "notes": "Eleven working bones, six separate legs, segmented thorax/abdomen, stinger, antennae and three-strip rounded wings. Own honey/dark bands and pale vein pattern. Real wing beat verified over its actual frequency, four times locomotion phase; no empty wing alias bones."
+    }
+  }
+}

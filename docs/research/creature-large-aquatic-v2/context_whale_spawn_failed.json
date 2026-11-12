@@ -1,0 +1,24 @@
+{
+  "captured_at_utc": "2026-11-10T21:22:04.072870+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_large_aquatic_v2\\models",
+  "files_sha256": {
+    "creatures\\whale\\creature.json": "f2e00818f8b4e73448a32775ac4397f5eb218e56eed9a81dc79e4c7107071f04",
+    "creatures\\whale\\LICENSE.txt": "86f3dd813a29614b4a0bfbddc18fba9e009edd9e2e7c28de179b655ae89b4e16",
+    "creatures\\whale\\manifest.json": "7f0bd61efa7dc7a8daf2ce0b77423fdb3b7641dc5258385bfd62e10abb267bd3",
+    "creatures\\whale\\model.bin": "4e6fccfb70925cb513339f57b3401d38e2caa3a744e8b80b78bc11a1d49f4515",
+    "creatures\\whale\\model.gltf": "f7d71ef4eecff8c6558d3446ca276458170a8ecbf78ea3af32765a6f56fc79b2",
+    "creatures\\whale\\textures\\body.png": "ecc0ecfbec7421fc799b328c659e98ffd7742b57c0f0d4153336a3c6d588287e",
+    "creatures\\whale\\textures\\icon.png": "350d6f28ac962d8e914bf4d86547ba4a111e6e635f25c711ab062b0e22c33015"
+  },
+  "exe_sha256": "0c2f544b61042e0498e927a37c88793e72530e58d8b4acaaff1eb90e2561dac9",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "final_whale",
+  "qa_camera": "close",
+  "qa_water_placement": true,
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

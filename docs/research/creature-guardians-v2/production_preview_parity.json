@@ -1,0 +1,18 @@
+{
+  "dungeon_master": {
+    "bundle_sha256": "342bb2c6a71d3a6d7772366f8a3755f59aeb96d4dd96868d4c8c77401dfd898c",
+    "ordinary_production_catalog": true,
+    "qa_models_override": false,
+    "actual_spawn_in_fresh_runner_dump": true,
+    "pixel_identical_native_frames": 29,
+    "context": "context_production_dungeon_master.json"
+  },
+  "land_guard": {
+    "bundle_sha256": "bb48e338ceffc977bc7e0572d22aa3155b9e257002815f48483be980f3e3c8dd",
+    "ordinary_production_catalog": true,
+    "qa_models_override": false,
+    "actual_spawn_in_fresh_runner_dump": true,
+    "pixel_identical_native_frames": 29,
+    "context": "context_production_land_guard.json"
+  }
+}

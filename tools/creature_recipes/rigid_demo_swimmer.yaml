@@ -1,0 +1,160 @@
+id: rigid_demo_swimmer
+backend: rigid_voxels
+family: river
+authoring_source: cubatarium-recipe
+recipe_version: 2
+palette_id: river
+pattern: bands
+template: aquatic
+body:
+- 6
+- 5
+- 12
+head:
+- 4
+- 4
+- 4
+limb:
+- 2
+- 3
+extras:
+- fins
+muzzle: null
+bind_body: null
+direction: Р©РёС‚РѕРїР»Р°РІ
+wave: D
+silhouette: {}
+marks: []
+selected_concept: primary
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: Р©РёС‚РѕРїР»Р°РІ
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 12087417304998721942
+anatomy:
+  bones:
+  - name: body
+    parent: null
+    pivot:
+    - 0
+    - 4.5
+    - 0
+    cubes:
+    - name: body
+      origin:
+      - -4
+      - 2
+      - -8
+      size:
+      - 8
+      - 5
+      - 14
+      role: body
+  - name: head
+    parent: body
+    pivot:
+    - 0
+    - 4.5
+    - 6
+    cubes:
+    - name: head
+      origin:
+      - -3
+      - 2.5
+      - 6
+      size:
+      - 6
+      - 4
+      - 3
+      role: face
+  - name: tail
+    parent: body
+    pivot:
+    - 0
+    - 4.5
+    - -8
+    cubes:
+    - name: tail
+      origin:
+      - -1.5
+      - 3.5
+      - -14
+      size:
+      - 3
+      - 2
+      - 6
+      role: body
+  - name: fin_l
+    parent: body
+    pivot:
+    - -4
+    - 4
+    - 0
+    cubes:
+    - name: fin_l
+      origin:
+      - -6
+      - 3
+      - -0.5
+      size:
+      - 2
+      - 3
+      - 1
+      role: wing
+  - name: fin_r
+    parent: body
+    pivot:
+    - 4
+    - 4
+    - 0
+    cubes:
+    - name: fin_r
+      origin:
+      - 4
+      - 3
+      - -0.5
+      size:
+      - 2
+      - 3
+      - 1
+      role: wing
+palette_overrides:
+  body:
+  - 58
+  - 114
+  - 130
+  face:
+  - 98
+  - 146
+  - 148
+  wing:
+  - 37
+  - 84
+  - 107
+  belly:
+  - 165
+  - 178
+  - 153
+  mark:
+  - 33
+  - 75
+  - 86
+  eye:
+  - 14
+  - 28
+  - 32

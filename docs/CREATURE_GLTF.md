@@ -2,6 +2,8 @@
 
 Runtime: `UCreatureVisualGltf` + loader in `src/Creatures/Visual/Gltf/`.
 
+Current catalog: 35 `gltf_skeleton` species, all skinned. The loader reads external `model.gltf` + `model.bin` and uses `materials[].name` as the texture stem. GPU bone palette cap is 96. CreatureGen is the authoring path.
+
 ## creature.json
 
 ```json

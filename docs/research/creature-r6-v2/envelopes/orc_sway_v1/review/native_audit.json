@@ -1,0 +1,730 @@
+{
+  "schema": "creature-native-envelope-evidence-audit.v1",
+  "evidence_consistent": true,
+  "scope": "Actual preview draws at shared world scale; actual CPU submitted vertex bounds and GPU culling-edge witnesses, not contact/terrain/all-backend acceptance",
+  "art_acceptance": "pending",
+  "contact_acceptance": "pending",
+  "exe_sha256": "235ce58dd65546f38164020295ff403bf48c2816b14bb16cd96228faee030483",
+  "native_main_images": 168,
+  "sheet_background": "neutral_light",
+  "max_offline_native_bounds_error_blocks": 6.470156997706589e-05,
+  "profile_sha256": "c56f072113e664fb69b73e76fdd81bcf4ae64921bc36ab10e2c35178cbf7a8e2",
+  "offline_metrics_sha256": "0818e49004c862068ec9353c599f1409602130bed2f267de06f3d514c4513698",
+  "confirmed_false_culls": {
+    "baseline": 1,
+    "current": 1
+  },
+  "visual_envelope_required": true,
+  "recovered_false_culls": {
+    "baseline": 1,
+    "current": 1
+  },
+  "sheets": [
+    {
+      "id": "orc",
+      "kind": "motion",
+      "file": "sheets/orc_motion.png",
+      "sha256": "a7177abe7b049102057314c8a97dd97185b36a6ed0445cee35320bf42aacf0a6"
+    },
+    {
+      "id": "orc",
+      "kind": "front_side",
+      "file": "sheets/orc_views.png",
+      "sha256": "0dc0dea67815aa199adc00ee4baa4fa6008549731282a2ed03f3d77de0d8abb0"
+    }
+  ],
+  "culling_witnesses": [
+    {
+      "id": "orc",
+      "variant": "baseline",
+      "confirmed_false_cull": true,
+      "new_visual_culling_rejects": false,
+      "alpha_pixels": 1966,
+      "file": "native_original/envelopes/orc_edge.png",
+      "sha256": "653b400d976f2057635873c7208d3d4cbd0c2026a5374da363fcc3aeac1e509a"
+    },
+    {
+      "id": "orc",
+      "variant": "current",
+      "confirmed_false_cull": true,
+      "new_visual_culling_rejects": false,
+      "alpha_pixels": 397,
+      "file": "native_current/envelopes/orc_edge.png",
+      "sha256": "b595df1ebf7a8169655e33db3a5b9f1100943c313370ad9e9c90f2b3eb8ddca7"
+    }
+  ],
+  "native_frames": [
+    {
+      "file": "native_original/envelopes/orc_0.png",
+      "sha256": "9d79439bb10c7fc0da4dcbefaa8968fcab70d98710aebd9ddd0b4f793e5a091b"
+    },
+    {
+      "file": "native_original/envelopes/orc_1.png",
+      "sha256": "8d87fa9a5763c55fc960675bd81049a4fb286afd096fec7d9d18c5b1a4b2eab5"
+    },
+    {
+      "file": "native_original/envelopes/orc_2.png",
+      "sha256": "9015cbeb22b13d048a6bde6105ba63788001009ca68f6610d8ee90961b1cd59a"
+    },
+    {
+      "file": "native_original/envelopes/orc_3.png",
+      "sha256": "9d79439bb10c7fc0da4dcbefaa8968fcab70d98710aebd9ddd0b4f793e5a091b"
+    },
+    {
+      "file": "native_original/envelopes/orc_4.png",
+      "sha256": "8d87fa9a5763c55fc960675bd81049a4fb286afd096fec7d9d18c5b1a4b2eab5"
+    },
+    {
+      "file": "native_original/envelopes/orc_5.png",
+      "sha256": "9015cbeb22b13d048a6bde6105ba63788001009ca68f6610d8ee90961b1cd59a"
+    },
+    {
+      "file": "native_original/envelopes/orc_6.png",
+      "sha256": "9d79439bb10c7fc0da4dcbefaa8968fcab70d98710aebd9ddd0b4f793e5a091b"
+    },
+    {
+      "file": "native_original/envelopes/orc_7.png",
+      "sha256": "8d87fa9a5763c55fc960675bd81049a4fb286afd096fec7d9d18c5b1a4b2eab5"
+    },
+    {
+      "file": "native_original/envelopes/orc_8.png",
+      "sha256": "9015cbeb22b13d048a6bde6105ba63788001009ca68f6610d8ee90961b1cd59a"
+    },
+    {
+      "file": "native_original/envelopes/orc_9.png",
+      "sha256": "9d79439bb10c7fc0da4dcbefaa8968fcab70d98710aebd9ddd0b4f793e5a091b"
+    },
+    {
+      "file": "native_original/envelopes/orc_10.png",
+      "sha256": "8d87fa9a5763c55fc960675bd81049a4fb286afd096fec7d9d18c5b1a4b2eab5"
+    },
+    {
+      "file": "native_original/envelopes/orc_11.png",
+      "sha256": "9015cbeb22b13d048a6bde6105ba63788001009ca68f6610d8ee90961b1cd59a"
+    },
+    {
+      "file": "native_original/envelopes/orc_12.png",
+      "sha256": "d9ed4fa1ab367d899d804d966934d37afd665403dd076d6565884eda8622ba71"
+    },
+    {
+      "file": "native_original/envelopes/orc_13.png",
+      "sha256": "e5bbd8ee7f46b166434c94af32e8106eab38aced6d1eabb517f5cfa8859d9215"
+    },
+    {
+      "file": "native_original/envelopes/orc_14.png",
+      "sha256": "f153267c57b42d165f45774a774e8edde2c7387e25fd2e0c3e16b71da283b704"
+    },
+    {
+      "file": "native_original/envelopes/orc_15.png",
+      "sha256": "63c23d487e4743eacb60699ac28633607d0add7566f67cd498fe301d29862762"
+    },
+    {
+      "file": "native_original/envelopes/orc_16.png",
+      "sha256": "f49caf4b044ede6728291e071b73fb6707e66bfdac696af1d23760a34cbbc816"
+    },
+    {
+      "file": "native_original/envelopes/orc_17.png",
+      "sha256": "f84373b7fee138f5dbd8979e038bbd893b4de70453dfa9ff30891464a0c28ee6"
+    },
+    {
+      "file": "native_original/envelopes/orc_18.png",
+      "sha256": "04059f878b37baf036137f55299317e304bf4cc16262a9aaf50a7cd53a2442a7"
+    },
+    {
+      "file": "native_original/envelopes/orc_19.png",
+      "sha256": "0bfc9e08b8711c6f6364c5eba86feb754c2f91dccec9fd29246238bada47fbb5"
+    },
+    {
+      "file": "native_original/envelopes/orc_20.png",
+      "sha256": "f1244d4a2768a81ded176dd1143207a8559ac2b7f8c4ec01e19b9e78e8b75bfe"
+    },
+    {
+      "file": "native_original/envelopes/orc_21.png",
+      "sha256": "06376b6753528d4a5bc6b329ea25d566d5a2abf3bd9510fd869ab4f0aef73c41"
+    },
+    {
+      "file": "native_original/envelopes/orc_22.png",
+      "sha256": "214d5bb8552fd95eb849bce429651ea863cb8fd57742d2772f042d5b3415ffe7"
+    },
+    {
+      "file": "native_original/envelopes/orc_23.png",
+      "sha256": "837f02ed454ad2c1cd5befc5442796e3ee811281d9ec097862514f616b124127"
+    },
+    {
+      "file": "native_original/envelopes/orc_24.png",
+      "sha256": "a0ab7e0cc40b7f8d54975da33aa26000fac52f4209553b9b9b143051ae63c1b2"
+    },
+    {
+      "file": "native_original/envelopes/orc_25.png",
+      "sha256": "3d6b362f04df291384d4231139ee0b61851fa0abbace7fbe74ece726178574ac"
+    },
+    {
+      "file": "native_original/envelopes/orc_26.png",
+      "sha256": "ba41ec2795fca971ee65a7a4dbc4078f2793040187a206a6816a6e6e3522d618"
+    },
+    {
+      "file": "native_original/envelopes/orc_27.png",
+      "sha256": "02a3bb3863ac189f01ae82666d35dbccdd96a03d73aae8e84b1b68c4d6b03ecc"
+    },
+    {
+      "file": "native_original/envelopes/orc_28.png",
+      "sha256": "dfb3987bcd43233a5b740f5eaa1838c0e2d8dee35bcf78ab3bfce37d55ab7ff4"
+    },
+    {
+      "file": "native_original/envelopes/orc_29.png",
+      "sha256": "dcdb68e251f4645bf27331c671a7d5bfe6fe5ba3cf34648f603833d7ea6d9dd3"
+    },
+    {
+      "file": "native_original/envelopes/orc_30.png",
+      "sha256": "490d9b2fd30a58dc94752a31a5ea69a4aeaafb4dd1a27a100678b93e7935dad0"
+    },
+    {
+      "file": "native_original/envelopes/orc_31.png",
+      "sha256": "a59986b6fd9f412b1e2cc94310f4e1135ff085edba15677df1810fce4f49588e"
+    },
+    {
+      "file": "native_original/envelopes/orc_32.png",
+      "sha256": "b1f366e192951e903f601f9f3edd0d6a384df209129774e34ce24fbeb99e7b9c"
+    },
+    {
+      "file": "native_original/envelopes/orc_33.png",
+      "sha256": "cc270ff6a2acbb896b134b79971384cdfabb3802b67394b1fc9d15249615128d"
+    },
+    {
+      "file": "native_original/envelopes/orc_34.png",
+      "sha256": "5ca330ad22dce1f178656271fb8094cb045f92271e76f144be794c2f663a6ad8"
+    },
+    {
+      "file": "native_original/envelopes/orc_35.png",
+      "sha256": "7484459fe7415b32bd25a8c3ffc98309ee70ad60f8edd963fb81456f9ceb6f2a"
+    },
+    {
+      "file": "native_original/envelopes/orc_36.png",
+      "sha256": "817288607fa2345556a10d56b172dfaad917ac1016d15aa45fa745ead77b29cd"
+    },
+    {
+      "file": "native_original/envelopes/orc_37.png",
+      "sha256": "c28aebe8d223f36b8aad68e13d7659dbfeb477aec8791ab53a3992bea45f0c4b"
+    },
+    {
+      "file": "native_original/envelopes/orc_38.png",
+      "sha256": "5cbd40a094e58d01c1f3c6f1f1d3ff82c7bd8521a5fee64f320da2798d9c4399"
+    },
+    {
+      "file": "native_original/envelopes/orc_39.png",
+      "sha256": "d9ed4fa1ab367d899d804d966934d37afd665403dd076d6565884eda8622ba71"
+    },
+    {
+      "file": "native_original/envelopes/orc_40.png",
+      "sha256": "e5bbd8ee7f46b166434c94af32e8106eab38aced6d1eabb517f5cfa8859d9215"
+    },
+    {
+      "file": "native_original/envelopes/orc_41.png",
+      "sha256": "f153267c57b42d165f45774a774e8edde2c7387e25fd2e0c3e16b71da283b704"
+    },
+    {
+      "file": "native_original/envelopes/orc_42.png",
+      "sha256": "f8cc94fec53b71b07520ac11f122aaf29967b519ba3c126ec926db77fe237e4e"
+    },
+    {
+      "file": "native_original/envelopes/orc_43.png",
+      "sha256": "3f8fddf7bec6568f15e62dcba4a6a83991bf06d9b5987afe47d59b20abb557b0"
+    },
+    {
+      "file": "native_original/envelopes/orc_44.png",
+      "sha256": "77c93bf544fc47ba5145978afa9edddcb951bc5e4338949fab7ef8d889e32c59"
+    },
+    {
+      "file": "native_original/envelopes/orc_45.png",
+      "sha256": "04059f878b37baf036137f55299317e304bf4cc16262a9aaf50a7cd53a2442a7"
+    },
+    {
+      "file": "native_original/envelopes/orc_46.png",
+      "sha256": "0bfc9e08b8711c6f6364c5eba86feb754c2f91dccec9fd29246238bada47fbb5"
+    },
+    {
+      "file": "native_original/envelopes/orc_47.png",
+      "sha256": "f1244d4a2768a81ded176dd1143207a8559ac2b7f8c4ec01e19b9e78e8b75bfe"
+    },
+    {
+      "file": "native_original/envelopes/orc_48.png",
+      "sha256": "a0ab7e0cc40b7f8d54975da33aa26000fac52f4209553b9b9b143051ae63c1b2"
+    },
+    {
+      "file": "native_original/envelopes/orc_49.png",
+      "sha256": "3d6b362f04df291384d4231139ee0b61851fa0abbace7fbe74ece726178574ac"
+    },
+    {
+      "file": "native_original/envelopes/orc_50.png",
+      "sha256": "ba41ec2795fca971ee65a7a4dbc4078f2793040187a206a6816a6e6e3522d618"
+    },
+    {
+      "file": "native_original/envelopes/orc_51.png",
+      "sha256": "490d9b2fd30a58dc94752a31a5ea69a4aeaafb4dd1a27a100678b93e7935dad0"
+    },
+    {
+      "file": "native_original/envelopes/orc_52.png",
+      "sha256": "a59986b6fd9f412b1e2cc94310f4e1135ff085edba15677df1810fce4f49588e"
+    },
+    {
+      "file": "native_original/envelopes/orc_53.png",
+      "sha256": "b1f366e192951e903f601f9f3edd0d6a384df209129774e34ce24fbeb99e7b9c"
+    },
+    {
+      "file": "native_original/envelopes/orc_54.png",
+      "sha256": "2701f8998e4defddefe1f317f3711ed8b015c69915a805b6b764e3aec44dd7b2"
+    },
+    {
+      "file": "native_original/envelopes/orc_55.png",
+      "sha256": "14fef05c0ba8b07a110a79f5e9bebd48ba1f1f3e1749e58f75e50750226a2873"
+    },
+    {
+      "file": "native_original/envelopes/orc_56.png",
+      "sha256": "109bee093eadcef5b3b99c40e63b9c796b4378e4f6cdb3a2faeb553f1c2a909c"
+    },
+    {
+      "file": "native_original/envelopes/orc_57.png",
+      "sha256": "cc270ff6a2acbb896b134b79971384cdfabb3802b67394b1fc9d15249615128d"
+    },
+    {
+      "file": "native_original/envelopes/orc_58.png",
+      "sha256": "5ca330ad22dce1f178656271fb8094cb045f92271e76f144be794c2f663a6ad8"
+    },
+    {
+      "file": "native_original/envelopes/orc_59.png",
+      "sha256": "7484459fe7415b32bd25a8c3ffc98309ee70ad60f8edd963fb81456f9ceb6f2a"
+    },
+    {
+      "file": "native_original/envelopes/orc_60.png",
+      "sha256": "be6641c53408a1f0869b52d6f1c9bd6813652a00ed9cfd6a1aa396636e1fb86e"
+    },
+    {
+      "file": "native_original/envelopes/orc_61.png",
+      "sha256": "1c6a5d5ef43ace20d4cf6bdd9782967d1603cbb4868048471f7f932f1e619a6e"
+    },
+    {
+      "file": "native_original/envelopes/orc_62.png",
+      "sha256": "7b7b7304319228c30f8574f76409dbb694843c957d0acc289a1fe0a74ced6451"
+    },
+    {
+      "file": "native_original/envelopes/orc_63.png",
+      "sha256": "817288607fa2345556a10d56b172dfaad917ac1016d15aa45fa745ead77b29cd"
+    },
+    {
+      "file": "native_original/envelopes/orc_64.png",
+      "sha256": "c28aebe8d223f36b8aad68e13d7659dbfeb477aec8791ab53a3992bea45f0c4b"
+    },
+    {
+      "file": "native_original/envelopes/orc_65.png",
+      "sha256": "5cbd40a094e58d01c1f3c6f1f1d3ff82c7bd8521a5fee64f320da2798d9c4399"
+    },
+    {
+      "file": "native_original/envelopes/orc_66.png",
+      "sha256": "7325d88e52cece660c749989519ca0d5156baaafeb377d542651dda14bd1e9a3"
+    },
+    {
+      "file": "native_original/envelopes/orc_67.png",
+      "sha256": "8bfe8cb7c28a7e6ed349f75eca9ad535b275c9199d894a659a1dc2e6cc53b4a9"
+    },
+    {
+      "file": "native_original/envelopes/orc_68.png",
+      "sha256": "d532625a7f7972bf7c26fb19d23bbfc2a280497daf2087b2c1168802420f51bc"
+    },
+    {
+      "file": "native_original/envelopes/orc_69.png",
+      "sha256": "e485d8e6f69c9066742ba590fb07372f693dee926f22e1309f26d160a3e49415"
+    },
+    {
+      "file": "native_original/envelopes/orc_70.png",
+      "sha256": "4cae65427efc52393d5139e7972c6a00ad538b6264bb3e98d3adf4bfaa9e7f3b"
+    },
+    {
+      "file": "native_original/envelopes/orc_71.png",
+      "sha256": "eedb4a3bdf5305195c036836855d236041bd5222e1cbe75c638ef92ff4e5b03f"
+    },
+    {
+      "file": "native_original/envelopes/orc_72.png",
+      "sha256": "6d157046575153f0c1a3fb9c20d8bc16eef93c6e6944561e91ad9a07428b6b0b"
+    },
+    {
+      "file": "native_original/envelopes/orc_73.png",
+      "sha256": "e374068f0601644a6cc431bf6812f65023d20a38c9ea0b114fde338177e816b3"
+    },
+    {
+      "file": "native_original/envelopes/orc_74.png",
+      "sha256": "e02ab9847df62d1e27689a9223df1a01bb651d72b25a15d9b7085facaac4c8cf"
+    },
+    {
+      "file": "native_original/envelopes/orc_75.png",
+      "sha256": "2a12b9193375ebf3494200cc5128e8fdf63e365335dbefa53789097395a1352d"
+    },
+    {
+      "file": "native_original/envelopes/orc_76.png",
+      "sha256": "7815885b964a1528d4a36bf19d95ffef3a0e4d9187dfa1a3a2dda3e71548428b"
+    },
+    {
+      "file": "native_original/envelopes/orc_77.png",
+      "sha256": "4d6880ceb6d63d1a3c73270b5b71a8e452026cd61eb380465ba520d4d1935bbe"
+    },
+    {
+      "file": "native_original/envelopes/orc_78.png",
+      "sha256": "8f0bb31476f23208fb59ddc56bf6f502842e5bb1a59a5fd004cdfc3200d977a9"
+    },
+    {
+      "file": "native_original/envelopes/orc_79.png",
+      "sha256": "3e81da22e287634c64f14574e4100e8f21b47a24d42bd906356bc2b94e67860a"
+    },
+    {
+      "file": "native_original/envelopes/orc_80.png",
+      "sha256": "7da7daa2442adffdb2651387a3f77e5055fb35e59674a5f228e44ebe725cce73"
+    },
+    {
+      "file": "native_original/envelopes/orc_81.png",
+      "sha256": "54163e9296ccb6a1190d5bfb6f959ee39a1f9cfb786938e2fb6c7924b81b53f5"
+    },
+    {
+      "file": "native_original/envelopes/orc_82.png",
+      "sha256": "e56688d12f452eb5d106845a4f7cd79358c565f5961aaa6a7a6a642519c6172d"
+    },
+    {
+      "file": "native_original/envelopes/orc_83.png",
+      "sha256": "59854722a66bf750e8ca9fac7df4c33286e4482ed381c754dc2dc903c1e774be"
+    },
+    {
+      "file": "native_current/envelopes/orc_0.png",
+      "sha256": "cc444a282cdcf44429644398517f59d84ea2983911524bd791711df74f746a61"
+    },
+    {
+      "file": "native_current/envelopes/orc_1.png",
+      "sha256": "f4e9c8306b0444642fd92b8f63ab854a0abae1c0a3787f18362baab88e55c4a3"
+    },
+    {
+      "file": "native_current/envelopes/orc_2.png",
+      "sha256": "4cc0e71e4d329a4aebcfcf4d7fcbba9b49c8a8ef51c52c673d51befa3c6bd5e1"
+    },
+    {
+      "file": "native_current/envelopes/orc_3.png",
+      "sha256": "4eae580f2265b182c2a26d5627a2e74cd521cdbe963a5329e0a215d39a21ab47"
+    },
+    {
+      "file": "native_current/envelopes/orc_4.png",
+      "sha256": "e9b5a144cf2dbbec91e3145d80b6d4b76971c84f92e772db98913dd4c7ac860d"
+    },
+    {
+      "file": "native_current/envelopes/orc_5.png",
+      "sha256": "cfec85bd29d1a7806ab3314f61679b4eabac3736360f8bd45985dd858b9015a0"
+    },
+    {
+      "file": "native_current/envelopes/orc_6.png",
+      "sha256": "645eeea6b4a50020bba808413a37718203667cc07346f7ed8221742ccafa1421"
+    },
+    {
+      "file": "native_current/envelopes/orc_7.png",
+      "sha256": "c9a7b9d3581b65f66e6d539f516a7ba6042599736f03256920f033bc6ae8e38c"
+    },
+    {
+      "file": "native_current/envelopes/orc_8.png",
+      "sha256": "5c71be919b6962cd95dda0101bdf7220d04f827f60011da8673ce918dc7f4041"
+    },
+    {
+      "file": "native_current/envelopes/orc_9.png",
+      "sha256": "49ce2e27ae909e4dfb5139f1a5e7aa2bdb623894f5575a8a37275c66006d4efe"
+    },
+    {
+      "file": "native_current/envelopes/orc_10.png",
+      "sha256": "8cb9d33d2d975150defdc39aa40454fd7816955516f89a4a84dc229343aa555b"
+    },
+    {
+      "file": "native_current/envelopes/orc_11.png",
+      "sha256": "6295b756d4b6ae25af85725c03d11fd4fb25a50eda7c02f5e6c6e744e1f4a75e"
+    },
+    {
+      "file": "native_current/envelopes/orc_12.png",
+      "sha256": "a6dcc7f6a8ee2860d810c73548e59190baf2c71d76d95a5e6ee1f7085ba83a8a"
+    },
+    {
+      "file": "native_current/envelopes/orc_13.png",
+      "sha256": "bab1ff045e7be1f947462e080daa544659dbe702ecb85b2465bfac619b1edae3"
+    },
+    {
+      "file": "native_current/envelopes/orc_14.png",
+      "sha256": "a6ade96165a95eee071d85cf51e2e543f208edc9f0a42a724290fbf1204658b5"
+    },
+    {
+      "file": "native_current/envelopes/orc_15.png",
+      "sha256": "e5d975c7041be4c926ca34bf376e19cb329058a09f7f016a1c8e0dfdb3ff4909"
+    },
+    {
+      "file": "native_current/envelopes/orc_16.png",
+      "sha256": "4148ebb6697aefdefb99c910c4c479c14bc7e1c45613b6f86a773cf38ef00d04"
+    },
+    {
+      "file": "native_current/envelopes/orc_17.png",
+      "sha256": "f01e6c59707b75daf5bd80c1f2d4371d0e0fc3d5376e220d5a43bd1a28e34dfe"
+    },
+    {
+      "file": "native_current/envelopes/orc_18.png",
+      "sha256": "e19e7db164281d522967f1c180cb69ae02d88f0016d9c9f240c823fc884cb0e1"
+    },
+    {
+      "file": "native_current/envelopes/orc_19.png",
+      "sha256": "392d59b0aedfec40cd4ad91d02f7ddfacf08ca9f9bb3a923232ce58a68e1602c"
+    },
+    {
+      "file": "native_current/envelopes/orc_20.png",
+      "sha256": "79d6a52901e957cedf0251b3b147a5a4ae8b5547898769ea638cd86537cd59b0"
+    },
+    {
+      "file": "native_current/envelopes/orc_21.png",
+      "sha256": "dd8725a88c5f4e61b302115bfb9833a4f6f070bf9765fadfdd0ffdb5b41a1534"
+    },
+    {
+      "file": "native_current/envelopes/orc_22.png",
+      "sha256": "475638478e1cab1eaa06653f89502ad0a2a95bc3401e632fc4b1f70f7dc03cec"
+    },
+    {
+      "file": "native_current/envelopes/orc_23.png",
+      "sha256": "833f8636360755d62e8f5613f45da2197dcc7dc637af161f31ee02b7183d45de"
+    },
+    {
+      "file": "native_current/envelopes/orc_24.png",
+      "sha256": "8a370f51034c6886cea90eead7b918d911e4930c475eda296b217a629a8cb150"
+    },
+    {
+      "file": "native_current/envelopes/orc_25.png",
+      "sha256": "d806e5918d1aed459bd3a6829508fc19b806bca14c7c38f96b610b3c9660f98c"
+    },
+    {
+      "file": "native_current/envelopes/orc_26.png",
+      "sha256": "597e25d7316065f146868a2f0bde1580859a6e679b39a8d98d28e28f7c39e4ca"
+    },
+    {
+      "file": "native_current/envelopes/orc_27.png",
+      "sha256": "f165f2b6917022d64b33041779fbfa5a6ae37b5bb375ba8afe9df82d074f0cf4"
+    },
+    {
+      "file": "native_current/envelopes/orc_28.png",
+      "sha256": "def9e215593c6e7741e0ead47d41bf37a4e0cdcaf1b47a546e96d6026c24a5f3"
+    },
+    {
+      "file": "native_current/envelopes/orc_29.png",
+      "sha256": "4b4ac3f55c33a7c2a81666a4e23efabaa646cc9588bf8d9ac965f5f8001a4ca6"
+    },
+    {
+      "file": "native_current/envelopes/orc_30.png",
+      "sha256": "a6dcc7f6a8ee2860d810c73548e59190baf2c71d76d95a5e6ee1f7085ba83a8a"
+    },
+    {
+      "file": "native_current/envelopes/orc_31.png",
+      "sha256": "bab1ff045e7be1f947462e080daa544659dbe702ecb85b2465bfac619b1edae3"
+    },
+    {
+      "file": "native_current/envelopes/orc_32.png",
+      "sha256": "a6ade96165a95eee071d85cf51e2e543f208edc9f0a42a724290fbf1204658b5"
+    },
+    {
+      "file": "native_current/envelopes/orc_33.png",
+      "sha256": "ecac46a094df80f179fb7d524c90cb899f2fee904eddb641e1fa5ed150154dff"
+    },
+    {
+      "file": "native_current/envelopes/orc_34.png",
+      "sha256": "f595009e6a7dfe9435bb83017aeb4c65aa9dbc2bbf7612aaf1eaaead1f2aa26f"
+    },
+    {
+      "file": "native_current/envelopes/orc_35.png",
+      "sha256": "cfc2b20a59b888832da5e447239acf444ec323ded15dec70f5a7a26fd0dec509"
+    },
+    {
+      "file": "native_current/envelopes/orc_36.png",
+      "sha256": "325d7bef0f68362ede058b352c777769fb5c6947cedefbd01d14c24fb5a41623"
+    },
+    {
+      "file": "native_current/envelopes/orc_37.png",
+      "sha256": "3dc4ee0f0626c50a58b70d17145fb68ba9a7d8cebd15ba2438de5683b530188b"
+    },
+    {
+      "file": "native_current/envelopes/orc_38.png",
+      "sha256": "07cd9d181d4ce3c8c5ede896afd778ff0b6976388b3cbbfd5f27989275fd815e"
+    },
+    {
+      "file": "native_current/envelopes/orc_39.png",
+      "sha256": "911d44f846a437f92c3f5f78812d4a9a02cb80826c38e8eb18c2d93acbea8b45"
+    },
+    {
+      "file": "native_current/envelopes/orc_40.png",
+      "sha256": "3705bcb5659858f22b4ac24d2a2e8fabe49b768f9268ade4601ac7d8eeb7edc2"
+    },
+    {
+      "file": "native_current/envelopes/orc_41.png",
+      "sha256": "d9da1d7fd63c2b94dd3642c2e29ee5ed5aa9ce221c21d79c210731a3540a0982"
+    },
+    {
+      "file": "native_current/envelopes/orc_42.png",
+      "sha256": "298646786d15bc575f0ab5e589c9aa8d2d4ea300f3c5ec9f61f10d253eaff821"
+    },
+    {
+      "file": "native_current/envelopes/orc_43.png",
+      "sha256": "ee11f0a0f1f19896c6f439cbfe44c65ed2535b97eda1a505d0e3af65534433c4"
+    },
+    {
+      "file": "native_current/envelopes/orc_44.png",
+      "sha256": "38982c4b61aab265941253ed3fab215cab14a1a41f1caae26aca0880025fb0ea"
+    },
+    {
+      "file": "native_current/envelopes/orc_45.png",
+      "sha256": "d0c6bb39488dec55fd979507dbc980a5720b2058a954656aea2580f4141053df"
+    },
+    {
+      "file": "native_current/envelopes/orc_46.png",
+      "sha256": "70dab9cce577c3d326259396f5cd41f4db1a3a7863b49ee92d596c694c4651f5"
+    },
+    {
+      "file": "native_current/envelopes/orc_47.png",
+      "sha256": "4cdb9d7be9b19ff337a0f9aae9b75cd5450a051c488b2ad85a81f7945ca0555c"
+    },
+    {
+      "file": "native_current/envelopes/orc_48.png",
+      "sha256": "0c7414e38361c8ed3508537b4d6fd6dd0f57ba8e2368b739567321eb3beb0954"
+    },
+    {
+      "file": "native_current/envelopes/orc_49.png",
+      "sha256": "8adbf8e132d07e8186c536ef49aa6017d823b6fb3bbfdbed474638ee5e04228a"
+    },
+    {
+      "file": "native_current/envelopes/orc_50.png",
+      "sha256": "94ca585d66274b595f08b6ea9cc1acdd18a0933622f79d09884ed004617c1c93"
+    },
+    {
+      "file": "native_current/envelopes/orc_51.png",
+      "sha256": "de77e2f469ff9b27dc4ac28de1158acc52a83568c20bf7a1a77b55a841c4e704"
+    },
+    {
+      "file": "native_current/envelopes/orc_52.png",
+      "sha256": "7c88e23e334db02c3b1e9794f23a4775ba3293e467e79679c29ddebcfd2342ef"
+    },
+    {
+      "file": "native_current/envelopes/orc_53.png",
+      "sha256": "9f241d234feb9d5eb8858f782af392f543d994265bf49999f79595e1583fe44d"
+    },
+    {
+      "file": "native_current/envelopes/orc_54.png",
+      "sha256": "02689a2e25168ee5ec0c82ae9cde9a6d9a6ef4beb0f705e6913769e341008c89"
+    },
+    {
+      "file": "native_current/envelopes/orc_55.png",
+      "sha256": "b3bb7ae0e7e3478c61ef0aa4c7745f94318850925996db40808d0d59b82573ec"
+    },
+    {
+      "file": "native_current/envelopes/orc_56.png",
+      "sha256": "137afd932a1b8f9a1fb71a6fc3f2a169961ac35a097699f534c847f6e6f3e0de"
+    },
+    {
+      "file": "native_current/envelopes/orc_57.png",
+      "sha256": "1c9e4afe4650ca3b180cd5f37028afad43afbd6a70f59d0620ed24a61b7ef08f"
+    },
+    {
+      "file": "native_current/envelopes/orc_58.png",
+      "sha256": "a718f6c144f3b5e191f9650486241bf24f26fc77e5afd25ad11137ebeef79128"
+    },
+    {
+      "file": "native_current/envelopes/orc_59.png",
+      "sha256": "0fe1f7c97c048aac4a14c333a808fa8ca20b942f6e528b0258bcc442e0276bb3"
+    },
+    {
+      "file": "native_current/envelopes/orc_60.png",
+      "sha256": "bdd18066a2b16a3467f1132e69949a7bf589e8604797619d36647283ef5e095d"
+    },
+    {
+      "file": "native_current/envelopes/orc_61.png",
+      "sha256": "2a708f96399bb0c5c8ae150e7913a6f3e9c8b02ecb3abf54d27db0802e2b1407"
+    },
+    {
+      "file": "native_current/envelopes/orc_62.png",
+      "sha256": "b175e3063e365c8d653b99c11da55afce5171fd91a47dbf8c63f879a120c3347"
+    },
+    {
+      "file": "native_current/envelopes/orc_63.png",
+      "sha256": "d181c657b07c3372c1233e11ebd79ccb2f08aeb0c6de83fcb0c175c5313e08ff"
+    },
+    {
+      "file": "native_current/envelopes/orc_64.png",
+      "sha256": "ad19ee055f9ccb3c706a6f411cae0fc23eae709a9e139be1ac9db9f4dfe86455"
+    },
+    {
+      "file": "native_current/envelopes/orc_65.png",
+      "sha256": "bc49b4a52e61270da32bff8b402bd484440b9bc18a7405dacaa7b7b9f83576b0"
+    },
+    {
+      "file": "native_current/envelopes/orc_66.png",
+      "sha256": "2e3d3e29e7588dae5d3b07d922d6390ddb9a7110565313b71b092525e78af9f0"
+    },
+    {
+      "file": "native_current/envelopes/orc_67.png",
+      "sha256": "caf3a81a5d31a16de77379971748baff1928400e4d0d66c9d1b2042ac92677b1"
+    },
+    {
+      "file": "native_current/envelopes/orc_68.png",
+      "sha256": "321cb713632006b66f6724e4df2980df2a72ec70e3f1d36817a8ca4b7578c534"
+    },
+    {
+      "file": "native_current/envelopes/orc_69.png",
+      "sha256": "7347a22282af7daa160696950ff9981dbb18df58a32f0515514cfee34b68f73c"
+    },
+    {
+      "file": "native_current/envelopes/orc_70.png",
+      "sha256": "e04b1a75188aad801d792442432fb44a39dcfa376a0e00b22a4481de165dc509"
+    },
+    {
+      "file": "native_current/envelopes/orc_71.png",
+      "sha256": "9c5d70ded812528a133d22d7303e4deb0826717b54e0ae7da88ebe39d7a073ba"
+    },
+    {
+      "file": "native_current/envelopes/orc_72.png",
+      "sha256": "8e5d892facd0399fbb329f6e290cb28fc249cbab9cb21ea7d40e1a57845387ab"
+    },
+    {
+      "file": "native_current/envelopes/orc_73.png",
+      "sha256": "4477444a2a9ece8cc00ab1cbc645593953ed82d0bafaa0f6b558940c05fd4354"
+    },
+    {
+      "file": "native_current/envelopes/orc_74.png",
+      "sha256": "80ff05bcd5834f97c59f9a50a85db97876773c153d06494080787d1c2dd35638"
+    },
+    {
+      "file": "native_current/envelopes/orc_75.png",
+      "sha256": "68f3e74283f62c2c44370c3d320f0666da2762dbb28996cba7fa71d8ae03e7c3"
+    },
+    {
+      "file": "native_current/envelopes/orc_76.png",
+      "sha256": "f115913a78dfd7c6979afc2fbed57cf6f2e3c8d4cfb0a1ca973fba6f0beb3d23"
+    },
+    {
+      "file": "native_current/envelopes/orc_77.png",
+      "sha256": "deab76d9691e357ebeb1ac62e368f873a49daf7440493bab7c0f3c34507008c9"
+    },
+    {
+      "file": "native_current/envelopes/orc_78.png",
+      "sha256": "7347a22282af7daa160696950ff9981dbb18df58a32f0515514cfee34b68f73c"
+    },
+    {
+      "file": "native_current/envelopes/orc_79.png",
+      "sha256": "e04b1a75188aad801d792442432fb44a39dcfa376a0e00b22a4481de165dc509"
+    },
+    {
+      "file": "native_current/envelopes/orc_80.png",
+      "sha256": "9c5d70ded812528a133d22d7303e4deb0826717b54e0ae7da88ebe39d7a073ba"
+    },
+    {
+      "file": "native_current/envelopes/orc_81.png",
+      "sha256": "6420a1ff884a4759de8553dacc80cb3b5fd78d400de6bd7286394fe3eeeecfce"
+    },
+    {
+      "file": "native_current/envelopes/orc_82.png",
+      "sha256": "996e5ef2259f30a9d119952d851d75b802ed82927f0bebda76299b22133442e4"
+    },
+    {
+      "file": "native_current/envelopes/orc_83.png",
+      "sha256": "5b4be9ae28775105b5b4cfe6029066184e22809d8c412b5787e8c347d91a646e"
+    }
+  ]
+}

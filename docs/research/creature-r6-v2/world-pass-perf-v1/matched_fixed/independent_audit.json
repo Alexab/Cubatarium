@@ -1,0 +1,413 @@
+{
+  "evidence_integrity_passed": true,
+  "performance_gate": "unproven",
+  "scope": "One fixed-population QA Orc actual-world Walk/pause; do not generalize to all species/backends/scenes",
+  "processor": "AMD64 Family 23 Model 96 Stepping 1, AuthenticAMD",
+  "logical_cpu_count": 8,
+  "quantile_scope": "Individual-frame p95 in each run; table reports median of 2 run p95 values, not pooled-frame p95",
+  "summary_sha256": "428b46944f3df9fa952c82a7a20163e1faf39a4c965bc78fc5ada687f93e8bca",
+  "runs": [
+    {
+      "label": "r0_baseline_before",
+      "timing_sha256": "4ea1b6970025df403877420bcf0d5970b4f9b4fbe4f0f81e18e0a70e2b358acb",
+      "motion_sha256": "6c9a3044c50b75b68d9988f10f4758e8debc9b7db986fa8562199b076ac336cf",
+      "host_sha256": "561a9c798d8e79faf03525ec86bc80c64980de2c7909c0ab003db9e8396bed59",
+      "considered_culled": [
+        2,
+        1
+      ],
+      "camera_ranges": [
+        [
+          -11.25739860534668,
+          -10.188644409179688
+        ],
+        [
+          66.8550033569336,
+          66.8550033569336
+        ],
+        [
+          -96.57499694824219,
+          -96.57499694824219
+        ]
+      ],
+      "gl_probe": "I20261112 05:26:21.138588 18224 RenderBackendCapsProbe.cpp:129] [RenderBackendCaps] probe version=\"3.3.0 Core Profile Context 23.19.14.07.240801\" renderer=\"AMD Radeon(TM) Graphics\" compute=1 ssbo=1 mdi=1",
+      "actual_motion_states": {
+        "idle": 400,
+        "walk": 594
+      }
+    },
+    {
+      "label": "r0_indexed_before",
+      "timing_sha256": "62d85f46105f0257f5ae1d2c5739fc9ae350b1a90a87594f41788f47ebcbf210",
+      "motion_sha256": "2f0bc6bbbba4107eed90717afdbb116c617694bddfa87452f9a157172444e1fc",
+      "host_sha256": "27e3f88b89145345593bedd59a20a21740cf54d45e1c42cd1acf9b6d5db76c5b",
+      "considered_culled": [
+        2,
+        1
+      ],
+      "camera_ranges": [
+        [
+          -11.268501281738281,
+          -10.185834884643555
+        ],
+        [
+          66.8550033569336,
+          66.8550033569336
+        ],
+        [
+          -96.57499694824219,
+          -96.57499694824219
+        ]
+      ],
+      "gl_probe": "I20261112 05:26:49.282342 28792 RenderBackendCapsProbe.cpp:129] [RenderBackendCaps] probe version=\"3.3.0 Core Profile Context 23.19.14.07.240801\" renderer=\"AMD Radeon(TM) Graphics\" compute=1 ssbo=1 mdi=1",
+      "actual_motion_states": {
+        "idle": 247,
+        "walk": 392
+      }
+    },
+    {
+      "label": "r0_indexed_current",
+      "timing_sha256": "369efbc6b22996171f18506899f894321667822f6cf7bd4352ee43b8a4a5940c",
+      "motion_sha256": "842cdbf926e2ab92a1518a7bfd38c324f3bc0a9d09b75dad6104aabc0cf6bb77",
+      "host_sha256": "884347d8e8245b6b24f92bbfa72399e60ade9027bd2b6d52126d3866c07e9705",
+      "considered_culled": [
+        2,
+        1
+      ],
+      "camera_ranges": [
+        [
+          -11.252943992614746,
+          -10.180754661560059
+        ],
+        [
+          66.8550033569336,
+          66.8550033569336
+        ],
+        [
+          -96.57499694824219,
+          -96.57499694824219
+        ]
+      ],
+      "gl_probe": "I20261112 05:27:18.358917  1836 RenderBackendCapsProbe.cpp:129] [RenderBackendCaps] probe version=\"3.3.0 Core Profile Context 23.19.14.07.240801\" renderer=\"AMD Radeon(TM) Graphics\" compute=1 ssbo=1 mdi=1",
+      "actual_motion_states": {
+        "idle": 330,
+        "walk": 428
+      }
+    },
+    {
+      "label": "r0_baseline_current",
+      "timing_sha256": "d972ec73a879dc2f1328ff526453eef99e2e4a62235626b2d4325daec89f074b",
+      "motion_sha256": "e5dbe7a440999a494394083c78fcc6ba6edde27b071259d91be3de004f33529d",
+      "host_sha256": "070f28f316c84771669fe43a40e762f0fad3d675bdbfe2cdc5846af514d9d2e6",
+      "considered_culled": [
+        2,
+        1
+      ],
+      "camera_ranges": [
+        [
+          -11.253681182861328,
+          -10.184415817260742
+        ],
+        [
+          66.8550033569336,
+          66.8550033569336
+        ],
+        [
+          -96.57499694824219,
+          -96.57499694824219
+        ]
+      ],
+      "gl_probe": "I20261112 05:27:46.934661 34460 RenderBackendCapsProbe.cpp:129] [RenderBackendCaps] probe version=\"3.3.0 Core Profile Context 23.19.14.07.240801\" renderer=\"AMD Radeon(TM) Graphics\" compute=1 ssbo=1 mdi=1",
+      "actual_motion_states": {
+        "idle": 332,
+        "walk": 471
+      }
+    },
+    {
+      "label": "r1_baseline_current",
+      "timing_sha256": "3e8910fff8dd2025f5a410636d063ffd70deef0bba48ca06679e5b21013ef2d6",
+      "motion_sha256": "4ec227e01ded19d75950a6a1c6b29a56e26723169cc7bf531fdf346dd0c91ca9",
+      "host_sha256": "09132bedac8425e8f3a528da51754f4d7e4e868029a99a49aa6543cca3240f2c",
+      "considered_culled": [
+        2,
+        1
+      ],
+      "camera_ranges": [
+        [
+          -11.268965721130371,
+          -10.198553085327148
+        ],
+        [
+          66.8550033569336,
+          66.8550033569336
+        ],
+        [
+          -96.57499694824219,
+          -96.57499694824219
+        ]
+      ],
+      "gl_probe": "I20261112 05:28:15.062263  6924 RenderBackendCapsProbe.cpp:129] [RenderBackendCaps] probe version=\"3.3.0 Core Profile Context 23.19.14.07.240801\" renderer=\"AMD Radeon(TM) Graphics\" compute=1 ssbo=1 mdi=1",
+      "actual_motion_states": {
+        "idle": 369,
+        "walk": 531
+      }
+    },
+    {
+      "label": "r1_indexed_current",
+      "timing_sha256": "d609875d64aab6f2cc260c6ebf1ccff78165d99bda631b6a529afe3d67c0d9eb",
+      "motion_sha256": "b1f38b20185d1f3cb93403fabf82532c6cd761788cd34ded15463f5e1ce82734",
+      "host_sha256": "247eda9d398a52d6c929829b8a0a171cfde2ceb010df266fbcea8f8a5bd329ec",
+      "considered_culled": [
+        2,
+        1
+      ],
+      "camera_ranges": [
+        [
+          -11.251632690429688,
+          -10.184537887573242
+        ],
+        [
+          66.8550033569336,
+          66.8550033569336
+        ],
+        [
+          -96.57499694824219,
+          -96.57499694824219
+        ]
+      ],
+      "gl_probe": "I20261112 05:28:43.375350 25612 RenderBackendCapsProbe.cpp:129] [RenderBackendCaps] probe version=\"3.3.0 Core Profile Context 23.19.14.07.240801\" renderer=\"AMD Radeon(TM) Graphics\" compute=1 ssbo=1 mdi=1",
+      "actual_motion_states": {
+        "idle": 377,
+        "walk": 532
+      }
+    },
+    {
+      "label": "r1_indexed_before",
+      "timing_sha256": "82093f1a41911c1c1fb7ec71db77b8c2c9c5967cedc601db1b6c0dc517f314a7",
+      "motion_sha256": "348d4e31bd1a160c1ab60233d0ab759ba8b5a14f4bb3f50bf1322368e74b6a85",
+      "host_sha256": "86874a4ec403d1d1f0125be6de053b02c4fa282bbb1e85c6c64c0f8b03b04973",
+      "considered_culled": [
+        2,
+        1
+      ],
+      "camera_ranges": [
+        [
+          -11.267662048339844,
+          -10.185195922851562
+        ],
+        [
+          66.8550033569336,
+          66.8550033569336
+        ],
+        [
+          -96.57499694824219,
+          -96.57499694824219
+        ]
+      ],
+      "gl_probe": "I20261112 05:29:11.084572 20824 RenderBackendCapsProbe.cpp:129] [RenderBackendCaps] probe version=\"3.3.0 Core Profile Context 23.19.14.07.240801\" renderer=\"AMD Radeon(TM) Graphics\" compute=1 ssbo=1 mdi=1",
+      "actual_motion_states": {
+        "idle": 387,
+        "walk": 539
+      }
+    },
+    {
+      "label": "r1_baseline_before",
+      "timing_sha256": "7f45f55d9f40da1102b6002ef02593076b00898da7e70d9d827ad40421b48fd2",
+      "motion_sha256": "99f86092d161f5e2e6a9d814510c00944df94ab408a3e6f658d4fba97e814486",
+      "host_sha256": "c26a8a3f50a504d25bdf0eba6ebb4a2c08dd31465f3092f161b34dfea000d56e",
+      "considered_culled": [
+        2,
+        1
+      ],
+      "camera_ranges": [
+        [
+          -11.253329277038574,
+          -10.183181762695312
+        ],
+        [
+          66.8550033569336,
+          66.8550033569336
+        ],
+        [
+          -96.57499694824219,
+          -96.57499694824219
+        ]
+      ],
+      "gl_probe": "I20261112 05:29:38.655342 30516 RenderBackendCapsProbe.cpp:129] [RenderBackendCaps] probe version=\"3.3.0 Core Profile Context 23.19.14.07.240801\" renderer=\"AMD Radeon(TM) Graphics\" compute=1 ssbo=1 mdi=1",
+      "actual_motion_states": {
+        "idle": 396,
+        "walk": 569
+      }
+    }
+  ],
+  "table": [
+    {
+      "implementation": "baseline",
+      "asset": "before",
+      "walk_only": {
+        "cpu_pose_ms": {
+          "median_run_p50": 0.01375,
+          "median_run_p95": 0.02895,
+          "repeat_p95_range": [
+            0.0267,
+            0.0312
+          ],
+          "repeat_p95_max_over_min": 1.1685393258426966
+        },
+        "cpu_pass_ms": {
+          "median_run_p50": 0.06912499999999999,
+          "median_run_p95": 0.128,
+          "repeat_p95_range": [
+            0.1219,
+            0.1341
+          ],
+          "repeat_p95_max_over_min": 1.1000820344544708
+        },
+        "window_wall_ms": {
+          "median_run_p50": 17.493475,
+          "median_run_p95": 27.30065,
+          "repeat_p95_range": [
+            26.428,
+            28.1733
+          ],
+          "repeat_p95_max_over_min": 1.0660398062660814
+        },
+        "gpu_draw_interval_ns": {
+          "median_run_p50": 12980.0,
+          "median_run_p95": 22100.0,
+          "repeat_p95_range": [
+            21760,
+            22440
+          ],
+          "repeat_p95_max_over_min": 1.03125
+        }
+      }
+    },
+    {
+      "implementation": "baseline",
+      "asset": "current",
+      "walk_only": {
+        "cpu_pose_ms": {
+          "median_run_p50": 0.019700000000000002,
+          "median_run_p95": 0.04095,
+          "repeat_p95_range": [
+            0.0379,
+            0.044
+          ],
+          "repeat_p95_max_over_min": 1.1609498680738786
+        },
+        "cpu_pass_ms": {
+          "median_run_p50": 0.08007500000000001,
+          "median_run_p95": 0.1572,
+          "repeat_p95_range": [
+            0.1536,
+            0.1608
+          ],
+          "repeat_p95_max_over_min": 1.046875
+        },
+        "window_wall_ms": {
+          "median_run_p50": 18.970025,
+          "median_run_p95": 33.5308,
+          "repeat_p95_range": [
+            31.017,
+            36.0446
+          ],
+          "repeat_p95_max_over_min": 1.1620917561337332
+        },
+        "gpu_draw_interval_ns": {
+          "median_run_p50": 14480.0,
+          "median_run_p95": 31645.0,
+          "repeat_p95_range": [
+            23240,
+            40050
+          ],
+          "repeat_p95_max_over_min": 1.7233218588640276
+        }
+      }
+    },
+    {
+      "implementation": "indexed",
+      "asset": "before",
+      "walk_only": {
+        "cpu_pose_ms": {
+          "median_run_p50": 0.0135,
+          "median_run_p95": 0.0286,
+          "repeat_p95_range": [
+            0.0264,
+            0.0308
+          ],
+          "repeat_p95_max_over_min": 1.1666666666666667
+        },
+        "cpu_pass_ms": {
+          "median_run_p50": 0.077575,
+          "median_run_p95": 0.1558,
+          "repeat_p95_range": [
+            0.128,
+            0.1836
+          ],
+          "repeat_p95_max_over_min": 1.4343750000000002
+        },
+        "window_wall_ms": {
+          "median_run_p50": 21.375349999999997,
+          "median_run_p95": 42.988299999999995,
+          "repeat_p95_range": [
+            31.0925,
+            54.8841
+          ],
+          "repeat_p95_max_over_min": 1.7651877462410548
+        },
+        "gpu_draw_interval_ns": {
+          "median_run_p50": 17250.0,
+          "median_run_p95": 34340.0,
+          "repeat_p95_range": [
+            23080,
+            45600
+          ],
+          "repeat_p95_max_over_min": 1.975736568457539
+        }
+      }
+    },
+    {
+      "implementation": "indexed",
+      "asset": "current",
+      "walk_only": {
+        "cpu_pose_ms": {
+          "median_run_p50": 0.015625,
+          "median_run_p95": 0.03585000000000001,
+          "repeat_p95_range": [
+            0.035,
+            0.0367
+          ],
+          "repeat_p95_max_over_min": 1.0485714285714285
+        },
+        "cpu_pass_ms": {
+          "median_run_p50": 0.076675,
+          "median_run_p95": 0.16285,
+          "repeat_p95_range": [
+            0.1589,
+            0.1668
+          ],
+          "repeat_p95_max_over_min": 1.0497168030207678
+        },
+        "window_wall_ms": {
+          "median_run_p50": 19.38765,
+          "median_run_p95": 33.8686,
+          "repeat_p95_range": [
+            29.9955,
+            37.7417
+          ],
+          "repeat_p95_max_over_min": 1.2582454034771884
+        },
+        "gpu_draw_interval_ns": {
+          "median_run_p50": 14840.0,
+          "median_run_p95": 31235.0,
+          "repeat_p95_range": [
+            21920,
+            40550
+          ],
+          "repeat_p95_max_over_min": 1.8499087591240877
+        }
+      }
+    }
+  ]
+}

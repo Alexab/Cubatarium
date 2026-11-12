@@ -1,0 +1,562 @@
+{
+  "schema": "creature-native-envelope-evidence-audit.v1",
+  "evidence_consistent": true,
+  "scope": "Actual preview draws at shared world scale; actual CPU submitted vertex bounds and GPU culling-edge witnesses, not contact/terrain/all-backend acceptance",
+  "art_acceptance": "pending",
+  "contact_acceptance": "pending",
+  "exe_sha256": "235ce58dd65546f38164020295ff403bf48c2816b14bb16cd96228faee030483",
+  "native_main_images": 126,
+  "sheet_background": "neutral_light",
+  "max_offline_native_bounds_error_blocks": 0.000258207321166104,
+  "profile_sha256": "f07c8fec33bc4f3d50ac7e7c35bd5b9ac1606b5e735772b63028d193ac900280",
+  "offline_metrics_sha256": "2e7aaa4cd239729c2f665ac3a6d7c9f09aac12e859ced12c331c2268b133288b",
+  "confirmed_false_culls": {
+    "baseline": 1,
+    "current": 1
+  },
+  "visual_envelope_required": true,
+  "recovered_false_culls": {
+    "baseline": 1,
+    "current": 1
+  },
+  "sheets": [
+    {
+      "id": "whale",
+      "kind": "motion",
+      "file": "sheets/whale_motion.png",
+      "sha256": "f17bbbb795088d50d56b2b5ca0042e91eb1d8d6d6dbc08f5bdc9d9a833fb443d"
+    },
+    {
+      "id": "whale",
+      "kind": "front_side",
+      "file": "sheets/whale_views.png",
+      "sha256": "aea936b5b2f0567457971eb39806a6bd0e93098197dc090bd8d4b9e8a0034ae7"
+    }
+  ],
+  "culling_witnesses": [
+    {
+      "id": "whale",
+      "variant": "baseline",
+      "confirmed_false_cull": true,
+      "new_visual_culling_rejects": false,
+      "alpha_pixels": 3184,
+      "file": "native_original/envelopes/whale_edge.png",
+      "sha256": "85aaf3bf3a618e7dc05542284b46b09df79e2c93a3bfedf48e91166af0cca501"
+    },
+    {
+      "id": "whale",
+      "variant": "current",
+      "confirmed_false_cull": true,
+      "new_visual_culling_rejects": false,
+      "alpha_pixels": 1825,
+      "file": "native_current/envelopes/whale_edge.png",
+      "sha256": "e45f9469fd222307219424e225c93b4786aa63a85e70a79d15c66ce5bd5565a1"
+    }
+  ],
+  "native_frames": [
+    {
+      "file": "native_original/envelopes/whale_0.png",
+      "sha256": "8662a6549b8ed4f6c775dee61ff7f3a0358d694250922ca434ca9bd2082dae72"
+    },
+    {
+      "file": "native_original/envelopes/whale_1.png",
+      "sha256": "e6a9bfa1bca24a092983cbe0c8f8974f6bee5e7715e52417ff31b97db596f4bc"
+    },
+    {
+      "file": "native_original/envelopes/whale_2.png",
+      "sha256": "230e36bcf3d6a88917ece80a129c7fee2c2f13cde31a32999c37356cabd9c046"
+    },
+    {
+      "file": "native_original/envelopes/whale_3.png",
+      "sha256": "8662a6549b8ed4f6c775dee61ff7f3a0358d694250922ca434ca9bd2082dae72"
+    },
+    {
+      "file": "native_original/envelopes/whale_4.png",
+      "sha256": "e6a9bfa1bca24a092983cbe0c8f8974f6bee5e7715e52417ff31b97db596f4bc"
+    },
+    {
+      "file": "native_original/envelopes/whale_5.png",
+      "sha256": "230e36bcf3d6a88917ece80a129c7fee2c2f13cde31a32999c37356cabd9c046"
+    },
+    {
+      "file": "native_original/envelopes/whale_6.png",
+      "sha256": "8662a6549b8ed4f6c775dee61ff7f3a0358d694250922ca434ca9bd2082dae72"
+    },
+    {
+      "file": "native_original/envelopes/whale_7.png",
+      "sha256": "e6a9bfa1bca24a092983cbe0c8f8974f6bee5e7715e52417ff31b97db596f4bc"
+    },
+    {
+      "file": "native_original/envelopes/whale_8.png",
+      "sha256": "230e36bcf3d6a88917ece80a129c7fee2c2f13cde31a32999c37356cabd9c046"
+    },
+    {
+      "file": "native_original/envelopes/whale_9.png",
+      "sha256": "8662a6549b8ed4f6c775dee61ff7f3a0358d694250922ca434ca9bd2082dae72"
+    },
+    {
+      "file": "native_original/envelopes/whale_10.png",
+      "sha256": "e6a9bfa1bca24a092983cbe0c8f8974f6bee5e7715e52417ff31b97db596f4bc"
+    },
+    {
+      "file": "native_original/envelopes/whale_11.png",
+      "sha256": "230e36bcf3d6a88917ece80a129c7fee2c2f13cde31a32999c37356cabd9c046"
+    },
+    {
+      "file": "native_original/envelopes/whale_12.png",
+      "sha256": "8662a6549b8ed4f6c775dee61ff7f3a0358d694250922ca434ca9bd2082dae72"
+    },
+    {
+      "file": "native_original/envelopes/whale_13.png",
+      "sha256": "e6a9bfa1bca24a092983cbe0c8f8974f6bee5e7715e52417ff31b97db596f4bc"
+    },
+    {
+      "file": "native_original/envelopes/whale_14.png",
+      "sha256": "230e36bcf3d6a88917ece80a129c7fee2c2f13cde31a32999c37356cabd9c046"
+    },
+    {
+      "file": "native_original/envelopes/whale_15.png",
+      "sha256": "8662a6549b8ed4f6c775dee61ff7f3a0358d694250922ca434ca9bd2082dae72"
+    },
+    {
+      "file": "native_original/envelopes/whale_16.png",
+      "sha256": "e6a9bfa1bca24a092983cbe0c8f8974f6bee5e7715e52417ff31b97db596f4bc"
+    },
+    {
+      "file": "native_original/envelopes/whale_17.png",
+      "sha256": "230e36bcf3d6a88917ece80a129c7fee2c2f13cde31a32999c37356cabd9c046"
+    },
+    {
+      "file": "native_original/envelopes/whale_18.png",
+      "sha256": "8662a6549b8ed4f6c775dee61ff7f3a0358d694250922ca434ca9bd2082dae72"
+    },
+    {
+      "file": "native_original/envelopes/whale_19.png",
+      "sha256": "e6a9bfa1bca24a092983cbe0c8f8974f6bee5e7715e52417ff31b97db596f4bc"
+    },
+    {
+      "file": "native_original/envelopes/whale_20.png",
+      "sha256": "230e36bcf3d6a88917ece80a129c7fee2c2f13cde31a32999c37356cabd9c046"
+    },
+    {
+      "file": "native_original/envelopes/whale_21.png",
+      "sha256": "8662a6549b8ed4f6c775dee61ff7f3a0358d694250922ca434ca9bd2082dae72"
+    },
+    {
+      "file": "native_original/envelopes/whale_22.png",
+      "sha256": "e6a9bfa1bca24a092983cbe0c8f8974f6bee5e7715e52417ff31b97db596f4bc"
+    },
+    {
+      "file": "native_original/envelopes/whale_23.png",
+      "sha256": "230e36bcf3d6a88917ece80a129c7fee2c2f13cde31a32999c37356cabd9c046"
+    },
+    {
+      "file": "native_original/envelopes/whale_24.png",
+      "sha256": "8662a6549b8ed4f6c775dee61ff7f3a0358d694250922ca434ca9bd2082dae72"
+    },
+    {
+      "file": "native_original/envelopes/whale_25.png",
+      "sha256": "e6a9bfa1bca24a092983cbe0c8f8974f6bee5e7715e52417ff31b97db596f4bc"
+    },
+    {
+      "file": "native_original/envelopes/whale_26.png",
+      "sha256": "230e36bcf3d6a88917ece80a129c7fee2c2f13cde31a32999c37356cabd9c046"
+    },
+    {
+      "file": "native_original/envelopes/whale_27.png",
+      "sha256": "8662a6549b8ed4f6c775dee61ff7f3a0358d694250922ca434ca9bd2082dae72"
+    },
+    {
+      "file": "native_original/envelopes/whale_28.png",
+      "sha256": "e6a9bfa1bca24a092983cbe0c8f8974f6bee5e7715e52417ff31b97db596f4bc"
+    },
+    {
+      "file": "native_original/envelopes/whale_29.png",
+      "sha256": "230e36bcf3d6a88917ece80a129c7fee2c2f13cde31a32999c37356cabd9c046"
+    },
+    {
+      "file": "native_original/envelopes/whale_30.png",
+      "sha256": "8662a6549b8ed4f6c775dee61ff7f3a0358d694250922ca434ca9bd2082dae72"
+    },
+    {
+      "file": "native_original/envelopes/whale_31.png",
+      "sha256": "e6a9bfa1bca24a092983cbe0c8f8974f6bee5e7715e52417ff31b97db596f4bc"
+    },
+    {
+      "file": "native_original/envelopes/whale_32.png",
+      "sha256": "230e36bcf3d6a88917ece80a129c7fee2c2f13cde31a32999c37356cabd9c046"
+    },
+    {
+      "file": "native_original/envelopes/whale_33.png",
+      "sha256": "8662a6549b8ed4f6c775dee61ff7f3a0358d694250922ca434ca9bd2082dae72"
+    },
+    {
+      "file": "native_original/envelopes/whale_34.png",
+      "sha256": "e6a9bfa1bca24a092983cbe0c8f8974f6bee5e7715e52417ff31b97db596f4bc"
+    },
+    {
+      "file": "native_original/envelopes/whale_35.png",
+      "sha256": "230e36bcf3d6a88917ece80a129c7fee2c2f13cde31a32999c37356cabd9c046"
+    },
+    {
+      "file": "native_original/envelopes/whale_36.png",
+      "sha256": "8662a6549b8ed4f6c775dee61ff7f3a0358d694250922ca434ca9bd2082dae72"
+    },
+    {
+      "file": "native_original/envelopes/whale_37.png",
+      "sha256": "e6a9bfa1bca24a092983cbe0c8f8974f6bee5e7715e52417ff31b97db596f4bc"
+    },
+    {
+      "file": "native_original/envelopes/whale_38.png",
+      "sha256": "230e36bcf3d6a88917ece80a129c7fee2c2f13cde31a32999c37356cabd9c046"
+    },
+    {
+      "file": "native_original/envelopes/whale_39.png",
+      "sha256": "8662a6549b8ed4f6c775dee61ff7f3a0358d694250922ca434ca9bd2082dae72"
+    },
+    {
+      "file": "native_original/envelopes/whale_40.png",
+      "sha256": "e6a9bfa1bca24a092983cbe0c8f8974f6bee5e7715e52417ff31b97db596f4bc"
+    },
+    {
+      "file": "native_original/envelopes/whale_41.png",
+      "sha256": "230e36bcf3d6a88917ece80a129c7fee2c2f13cde31a32999c37356cabd9c046"
+    },
+    {
+      "file": "native_original/envelopes/whale_42.png",
+      "sha256": "8662a6549b8ed4f6c775dee61ff7f3a0358d694250922ca434ca9bd2082dae72"
+    },
+    {
+      "file": "native_original/envelopes/whale_43.png",
+      "sha256": "e6a9bfa1bca24a092983cbe0c8f8974f6bee5e7715e52417ff31b97db596f4bc"
+    },
+    {
+      "file": "native_original/envelopes/whale_44.png",
+      "sha256": "230e36bcf3d6a88917ece80a129c7fee2c2f13cde31a32999c37356cabd9c046"
+    },
+    {
+      "file": "native_original/envelopes/whale_45.png",
+      "sha256": "8662a6549b8ed4f6c775dee61ff7f3a0358d694250922ca434ca9bd2082dae72"
+    },
+    {
+      "file": "native_original/envelopes/whale_46.png",
+      "sha256": "e6a9bfa1bca24a092983cbe0c8f8974f6bee5e7715e52417ff31b97db596f4bc"
+    },
+    {
+      "file": "native_original/envelopes/whale_47.png",
+      "sha256": "230e36bcf3d6a88917ece80a129c7fee2c2f13cde31a32999c37356cabd9c046"
+    },
+    {
+      "file": "native_original/envelopes/whale_48.png",
+      "sha256": "8662a6549b8ed4f6c775dee61ff7f3a0358d694250922ca434ca9bd2082dae72"
+    },
+    {
+      "file": "native_original/envelopes/whale_49.png",
+      "sha256": "e6a9bfa1bca24a092983cbe0c8f8974f6bee5e7715e52417ff31b97db596f4bc"
+    },
+    {
+      "file": "native_original/envelopes/whale_50.png",
+      "sha256": "230e36bcf3d6a88917ece80a129c7fee2c2f13cde31a32999c37356cabd9c046"
+    },
+    {
+      "file": "native_original/envelopes/whale_51.png",
+      "sha256": "8662a6549b8ed4f6c775dee61ff7f3a0358d694250922ca434ca9bd2082dae72"
+    },
+    {
+      "file": "native_original/envelopes/whale_52.png",
+      "sha256": "e6a9bfa1bca24a092983cbe0c8f8974f6bee5e7715e52417ff31b97db596f4bc"
+    },
+    {
+      "file": "native_original/envelopes/whale_53.png",
+      "sha256": "230e36bcf3d6a88917ece80a129c7fee2c2f13cde31a32999c37356cabd9c046"
+    },
+    {
+      "file": "native_original/envelopes/whale_54.png",
+      "sha256": "8662a6549b8ed4f6c775dee61ff7f3a0358d694250922ca434ca9bd2082dae72"
+    },
+    {
+      "file": "native_original/envelopes/whale_55.png",
+      "sha256": "e6a9bfa1bca24a092983cbe0c8f8974f6bee5e7715e52417ff31b97db596f4bc"
+    },
+    {
+      "file": "native_original/envelopes/whale_56.png",
+      "sha256": "230e36bcf3d6a88917ece80a129c7fee2c2f13cde31a32999c37356cabd9c046"
+    },
+    {
+      "file": "native_original/envelopes/whale_57.png",
+      "sha256": "8662a6549b8ed4f6c775dee61ff7f3a0358d694250922ca434ca9bd2082dae72"
+    },
+    {
+      "file": "native_original/envelopes/whale_58.png",
+      "sha256": "e6a9bfa1bca24a092983cbe0c8f8974f6bee5e7715e52417ff31b97db596f4bc"
+    },
+    {
+      "file": "native_original/envelopes/whale_59.png",
+      "sha256": "230e36bcf3d6a88917ece80a129c7fee2c2f13cde31a32999c37356cabd9c046"
+    },
+    {
+      "file": "native_original/envelopes/whale_60.png",
+      "sha256": "8662a6549b8ed4f6c775dee61ff7f3a0358d694250922ca434ca9bd2082dae72"
+    },
+    {
+      "file": "native_original/envelopes/whale_61.png",
+      "sha256": "e6a9bfa1bca24a092983cbe0c8f8974f6bee5e7715e52417ff31b97db596f4bc"
+    },
+    {
+      "file": "native_original/envelopes/whale_62.png",
+      "sha256": "230e36bcf3d6a88917ece80a129c7fee2c2f13cde31a32999c37356cabd9c046"
+    },
+    {
+      "file": "native_current/envelopes/whale_0.png",
+      "sha256": "d4dab71e3c08889ab670b30d42b70e6ea1ca0ebf2f703c5f0fb43d3c62e73ae8"
+    },
+    {
+      "file": "native_current/envelopes/whale_1.png",
+      "sha256": "394d8b81ecc12146edded6ca3ce15557c131860c4e1cbbdce8058fe02b379684"
+    },
+    {
+      "file": "native_current/envelopes/whale_2.png",
+      "sha256": "6109b959320bdcdb86390d716ed18d71fc6ca32a0720967b788f5774bcab546b"
+    },
+    {
+      "file": "native_current/envelopes/whale_3.png",
+      "sha256": "5f3956a65317186f007b65d10f13c77d6ee750c6087160e0135f97443a9069aa"
+    },
+    {
+      "file": "native_current/envelopes/whale_4.png",
+      "sha256": "b8a027bcac130aedaa44bd40a6c263dda0e9eb647b5e18b9c05230507f0e3d53"
+    },
+    {
+      "file": "native_current/envelopes/whale_5.png",
+      "sha256": "23db87347dfb068fdc8b3502c599f7d9b6dee48a65bdab282ea297261e2138a3"
+    },
+    {
+      "file": "native_current/envelopes/whale_6.png",
+      "sha256": "e0c8dc062e8ead526e0da958eb7d568e4c2a4f20d36591564eed3ec43f0c3a52"
+    },
+    {
+      "file": "native_current/envelopes/whale_7.png",
+      "sha256": "08eb91f8693f26c7bc1b15c4cd2df5454d0e5eb8234142763284744a42f4c3a8"
+    },
+    {
+      "file": "native_current/envelopes/whale_8.png",
+      "sha256": "0a9552b51e59ddd36db88e8fa1490ce181b2543fa6d87253875087eff8081809"
+    },
+    {
+      "file": "native_current/envelopes/whale_9.png",
+      "sha256": "6702c3f8848bb19855fec969e55630ba809eb133dfced130dc99a17f78f460b4"
+    },
+    {
+      "file": "native_current/envelopes/whale_10.png",
+      "sha256": "9b021bfabdc74adf3cf2a2e8301a9223bb0b2bf61c55a985990181e77947bfc5"
+    },
+    {
+      "file": "native_current/envelopes/whale_11.png",
+      "sha256": "972210d2cf5d9d61fe37e33199b3efc1826658e648b0a7a3e73fdca1c7b55ca7"
+    },
+    {
+      "file": "native_current/envelopes/whale_12.png",
+      "sha256": "b7494d363944e7449877fd0e71f81dba940e0ea832b068b096f59bf991c74366"
+    },
+    {
+      "file": "native_current/envelopes/whale_13.png",
+      "sha256": "d706989119773ac9199ea45774d13e6fb7521566c700ffb026040852b0919b6d"
+    },
+    {
+      "file": "native_current/envelopes/whale_14.png",
+      "sha256": "1d98db23ce28c778ed91d3ab464dd2b956f1b63cffe37bd6916740bec1a4cd56"
+    },
+    {
+      "file": "native_current/envelopes/whale_15.png",
+      "sha256": "3686fe531581e3f2d164e076bda6a13219a5d694be7b76a8306b000287e9e100"
+    },
+    {
+      "file": "native_current/envelopes/whale_16.png",
+      "sha256": "6b2fd63e1e64b155153503137bb3a4c47be5dae71222bf70d79a07014b7f2774"
+    },
+    {
+      "file": "native_current/envelopes/whale_17.png",
+      "sha256": "2d9c9b48e40c6e20499b976fb28e3e84d9fa54642174249c268f39f80cf5f4b8"
+    },
+    {
+      "file": "native_current/envelopes/whale_18.png",
+      "sha256": "cb9ba1b5eef006541cc5e686a59c7201e602078cb69232b87b235d0c6c391ae2"
+    },
+    {
+      "file": "native_current/envelopes/whale_19.png",
+      "sha256": "338d7776cfe4cccfcec59af18676736decf460d2d2e93ace08840548efa0e047"
+    },
+    {
+      "file": "native_current/envelopes/whale_20.png",
+      "sha256": "3f36b5ba51fc0a839a794ca72e7cf2517f27fed97957575e4c71d3eaa002229e"
+    },
+    {
+      "file": "native_current/envelopes/whale_21.png",
+      "sha256": "a13fd366d5633b8734a28297cf9a8715344c8139e9051ff3bfebdf57e81d5d13"
+    },
+    {
+      "file": "native_current/envelopes/whale_22.png",
+      "sha256": "484d371e53358eaf7f2c5866c59b0a1627aa66ec8a22843ed60a22747eb0c837"
+    },
+    {
+      "file": "native_current/envelopes/whale_23.png",
+      "sha256": "971c20511fd9daba42fe495e889fcdc41ff8297a7054251c8e15b3e4a2326fcf"
+    },
+    {
+      "file": "native_current/envelopes/whale_24.png",
+      "sha256": "2d4a6c6f8f915cead7513c65273797ff22c6d21047a2890ee216a68d06a15570"
+    },
+    {
+      "file": "native_current/envelopes/whale_25.png",
+      "sha256": "65c5ed22206aaa74776a7a2f079367581e4b87d09d4e662c8459b6b173abd0a6"
+    },
+    {
+      "file": "native_current/envelopes/whale_26.png",
+      "sha256": "2a09d8d90524b644ba678ef6b56a95dbc609e26a6f346e285262246dcf6da3a8"
+    },
+    {
+      "file": "native_current/envelopes/whale_27.png",
+      "sha256": "5ae6c3e9ca74567d08853d43549489bdf6aaef64ef456a680a34a62cfdc0ecbc"
+    },
+    {
+      "file": "native_current/envelopes/whale_28.png",
+      "sha256": "19263bdc8422362c28fc172f359abd4654fe6d87355c9c80b13d238c1774ed76"
+    },
+    {
+      "file": "native_current/envelopes/whale_29.png",
+      "sha256": "40c183098b95239519f75f3e1063fe17f240a9b9cd73dcf1c930629388e29064"
+    },
+    {
+      "file": "native_current/envelopes/whale_30.png",
+      "sha256": "3b6dc24dadf546c798c1286eacd8f036a922638954cb28f5f5f1c25aed2e415a"
+    },
+    {
+      "file": "native_current/envelopes/whale_31.png",
+      "sha256": "fcc819e6986b4d10d7a0fc4684e505a4afc46c735ada5c8bccb75d2c7c82da41"
+    },
+    {
+      "file": "native_current/envelopes/whale_32.png",
+      "sha256": "4f045032538d89e28a030f973581136d820d777b3b6f53641b13b3baea9d5659"
+    },
+    {
+      "file": "native_current/envelopes/whale_33.png",
+      "sha256": "23d9152fe59565f2d29fa94c5f1f6e8bce78c76c5f913c4e60febac7ec88165e"
+    },
+    {
+      "file": "native_current/envelopes/whale_34.png",
+      "sha256": "daff55190e0649e8216778940462e82eae542bdcacbf92868916537fb0036634"
+    },
+    {
+      "file": "native_current/envelopes/whale_35.png",
+      "sha256": "d39c551d282973577a908689d1962c7b9f32d546c628fb61b9ca33253c21e24f"
+    },
+    {
+      "file": "native_current/envelopes/whale_36.png",
+      "sha256": "8545b51fd4ec8256ffa102af3c7f234a77e8b509e585be83fdf304d9f6a81e1b"
+    },
+    {
+      "file": "native_current/envelopes/whale_37.png",
+      "sha256": "29d8e44873504ed956a23f7e7092b07efc9cc15e358973e0f88cc18657c1dc46"
+    },
+    {
+      "file": "native_current/envelopes/whale_38.png",
+      "sha256": "83fe453c4c19b3eea2c5d3974e3e825a7f8bcf6483ef01dd76247519edad3cee"
+    },
+    {
+      "file": "native_current/envelopes/whale_39.png",
+      "sha256": "316d3eee4ee8175ca0385c699fbff18738921308501a95d04277078075507573"
+    },
+    {
+      "file": "native_current/envelopes/whale_40.png",
+      "sha256": "6d32f837e753e917b86c8eda5dee883aabbfc0895e50c82799e65b5f6233f54a"
+    },
+    {
+      "file": "native_current/envelopes/whale_41.png",
+      "sha256": "3e750089e0dbddc487108c05e94bcd5aee85ed26c3baa64c240d6e52bf54f114"
+    },
+    {
+      "file": "native_current/envelopes/whale_42.png",
+      "sha256": "a13fd366d5633b8734a28297cf9a8715344c8139e9051ff3bfebdf57e81d5d13"
+    },
+    {
+      "file": "native_current/envelopes/whale_43.png",
+      "sha256": "d78710fd08ea15f75562bae1eebf95574928ac057a9a0d22d23511c4baa6f9cb"
+    },
+    {
+      "file": "native_current/envelopes/whale_44.png",
+      "sha256": "0423807672a7eb592374eb1db8e176f2c023a0e2eb00bff9d54ce131c78e9f88"
+    },
+    {
+      "file": "native_current/envelopes/whale_45.png",
+      "sha256": "2d4a6c6f8f915cead7513c65273797ff22c6d21047a2890ee216a68d06a15570"
+    },
+    {
+      "file": "native_current/envelopes/whale_46.png",
+      "sha256": "cf6d2c8b0f81fe184d140d28f80234d5d4d7cc3414ad9a43d27ba22441cc3dd1"
+    },
+    {
+      "file": "native_current/envelopes/whale_47.png",
+      "sha256": "836bd361ab58fc8688004bd5a0576dbc3a3e048a28e4115328422564dc59b285"
+    },
+    {
+      "file": "native_current/envelopes/whale_48.png",
+      "sha256": "0c20be4112a527cd1889e2301eddcb7dc50be7d0668676d0b4bc326051aa89f3"
+    },
+    {
+      "file": "native_current/envelopes/whale_49.png",
+      "sha256": "1ce8737e130c494df6e47d53d54405ea3deaa4067dd58064ea4e8f07decd88b9"
+    },
+    {
+      "file": "native_current/envelopes/whale_50.png",
+      "sha256": "806baec21d60573003f082595f41c6e0410adfb0fe9f2cf3b77464a11c4ece4b"
+    },
+    {
+      "file": "native_current/envelopes/whale_51.png",
+      "sha256": "3b6dc24dadf546c798c1286eacd8f036a922638954cb28f5f5f1c25aed2e415a"
+    },
+    {
+      "file": "native_current/envelopes/whale_52.png",
+      "sha256": "fb07395ef79bde8291c7f5f9fb10308f710207ade40bb9f7d059bb1bf563cd92"
+    },
+    {
+      "file": "native_current/envelopes/whale_53.png",
+      "sha256": "cadf49ca960b534042311021a777bbe39fbd0674b7d0df5cfddad63e685070ea"
+    },
+    {
+      "file": "native_current/envelopes/whale_54.png",
+      "sha256": "23d9152fe59565f2d29fa94c5f1f6e8bce78c76c5f913c4e60febac7ec88165e"
+    },
+    {
+      "file": "native_current/envelopes/whale_55.png",
+      "sha256": "1c169d69a40026a420e8dbfab970f5a745b1038870362d910d2aa0dc2331699d"
+    },
+    {
+      "file": "native_current/envelopes/whale_56.png",
+      "sha256": "3820eeabc07dd460bfa7468110935a19a5b680ba0898f8f49eeafded133ad737"
+    },
+    {
+      "file": "native_current/envelopes/whale_57.png",
+      "sha256": "d39003814c9d9809c1e67bbecb733fd5cf0348466e4eb7127a6c1638bc0239c0"
+    },
+    {
+      "file": "native_current/envelopes/whale_58.png",
+      "sha256": "aba957b560d1f042c2729b122be08d0763d59a51717810d1dcbacef5be7ef668"
+    },
+    {
+      "file": "native_current/envelopes/whale_59.png",
+      "sha256": "75a61cb6790e24c69fec7fdbe0284c718e17a9feca1d5008827602d4ad2b2780"
+    },
+    {
+      "file": "native_current/envelopes/whale_60.png",
+      "sha256": "aca3db9ed4bf4baf7ca14fb451cb9eb3c4d1b0ba115a3ffb1f7580785fc23626"
+    },
+    {
+      "file": "native_current/envelopes/whale_61.png",
+      "sha256": "2eb4c924f573da23f77feb7810c2577b9e485cef86518f540406f3db83c26e86"
+    },
+    {
+      "file": "native_current/envelopes/whale_62.png",
+      "sha256": "a36f5be1dedaf308a874c1d9a91c75c660693351517adcea3a1850c3e867ceda"
+    }
+  ]
+}

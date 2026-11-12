@@ -1,0 +1,50 @@
+{
+  "passed": true,
+  "scope": "Isolated candidate data invariants and native input consistency; not art/contact/performance acceptance",
+  "animation_sampler_arrays_exact": 62,
+  "nodes_skin_ibm_definition_joint_indices_weights_exact": true,
+  "before_geometry": {
+    "triangles": 300,
+    "min_triangle_area": 0.0008886720752343535,
+    "constant_uv_triangles": 48,
+    "model_texel_density_p05": 0.0,
+    "model_texel_density_median": 10.666666666666666
+  },
+  "candidate_geometry": {
+    "triangles": 300,
+    "min_triangle_area": 0.0008886720752343535,
+    "constant_uv_triangles": 48,
+    "model_texel_density_p05": 0.0,
+    "model_texel_density_median": 11.313708498984761
+  },
+  "sheets": [
+    {
+      "path": "threeway_idle.png",
+      "sha256": "de61c6cef47f4fd897e1bd7e5ea2a1aa0a6b8db717ebed06075b276b93218ba3"
+    },
+    {
+      "path": "threeway_walk.png",
+      "sha256": "64777145191c92f6a35aaee8b4a2e554a4f0db2b1a8dd049d50a74ddd4de4e1e"
+    },
+    {
+      "path": "threeway_action.png",
+      "sha256": "aec3ef45d071323d7c4d7664c6f4db88b8a330e28f78c37bdcb9f4d0fe4e4878"
+    }
+  ],
+  "payload_sha256": {
+    "creature.json": "cd28c9f25ef9a75e9424346a02ad172d5b4f7f914e254757935813b6c01cd8a2",
+    "LICENSE.txt": "4e73003463f11e66bb9951bc530b269deddb6f4d8b58a467078ede965c3d8b42",
+    "model.bin": "382b3a18b34944d3a26b57be28fa98dc1c894ca4faf7ddf2e9397580f0a5ae39",
+    "model.gltf": "98c6abae255cc389e5113b6fa92d075a56573ac800edb8b4c13228e3f5d871ba",
+    "textures\\body.png": "e658199826567cccbe3202d0b3b3d287d6953a293653360359b7badf40273d4a",
+    "textures\\icon.png": "e3e5f15f16b524741ef6634bc7054eed497ea1406c8d1bc8726ecbe7069ffa15"
+  },
+  "sampled_native_cpu_transitions": {
+    "cases": 196,
+    "frames": 2156,
+    "supported_frames": 2112,
+    "supported_min_y": 0.0,
+    "sha256": "71a9086238d6f6019b3ba34bc50747eb38f70f09f14a65ec889664909b727ade",
+    "scope": "Sampled retained UpdatePose; not terrain/stride or GPU fade acceptance"
+  }
+}

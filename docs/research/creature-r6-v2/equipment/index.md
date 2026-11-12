@@ -1,0 +1,12 @@
+# Preview экипировки: обнаружены ошибки посадки
+
+Общий root исправлен, численная проверка проходит. Художественная приёмка экипировки НЕ пройдена: требуется анатомическая посадка.
+
+| Ресурс | Просмотренные детали | Полные циклы | Решение |
+|---|---|---|---|
+| bot | [17-я, худшая фаза](sheets/bot_deepest_clearance.png) | [Walk 0.22](sheets/bot_Walk_0.22.png) / [Walk 1.0](sheets/bot_Walk_1.0.png) / [Walk 1.5](sheets/bot_Walk_1.5.png) / [Run 0.22](sheets/bot_Run_0.22.png) / [Run 1.0](sheets/bot_Run_1.0.png) / [Run 1.5](sheets/bot_Run_1.5.png) | needs_anatomical_equipment_fit |
+| human | [17-я, худшая фаза](sheets/human_deepest_clearance.png) | [Walk 0.22](sheets/human_Walk_0.22.png) / [Walk 1.0](sheets/human_Walk_1.0.png) / [Walk 1.5](sheets/human_Walk_1.5.png) / [Run 0.22](sheets/human_Run_0.22.png) / [Run 1.0](sheets/human_Run_1.0.png) / [Run 1.5](sheets/human_Run_1.5.png) | needs_anatomical_equipment_fit |
+| human_adventurer | [17-я, худшая фаза](sheets/human_adventurer_deepest_clearance.png) | [Walk 0.22](sheets/human_adventurer_Walk_0.22.png) / [Walk 1.0](sheets/human_adventurer_Walk_1.0.png) / [Walk 1.5](sheets/human_adventurer_Walk_1.5.png) / [Run 0.22](sheets/human_adventurer_Run_0.22.png) / [Run 1.0](sheets/human_adventurer_Run_1.0.png) / [Run 1.5](sheets/human_adventurer_Run_1.5.png) | needs_anatomical_equipment_fit |
+| human_guard | [17-я, худшая фаза](sheets/human_guard_deepest_clearance.png) | [Walk 0.22](sheets/human_guard_Walk_0.22.png) / [Walk 1.0](sheets/human_guard_Walk_1.0.png) / [Walk 1.5](sheets/human_guard_Walk_1.5.png) / [Run 0.22](sheets/human_guard_Run_0.22.png) / [Run 1.0](sheets/human_guard_Run_1.0.png) / [Run 1.5](sheets/human_guard_Run_1.5.png) | needs_anatomical_equipment_fit |
+| skeleton | [17-я, худшая фаза](sheets/skeleton_deepest_clearance.png) | [Walk 0.22](sheets/skeleton_Walk_0.22.png) / [Walk 1.0](sheets/skeleton_Walk_1.0.png) / [Walk 1.5](sheets/skeleton_Walk_1.5.png) / [Run 0.22](sheets/skeleton_Run_0.22.png) / [Run 1.0](sheets/skeleton_Run_1.0.png) / [Run 1.5](sheets/skeleton_Run_1.5.png) | needs_anatomical_equipment_fit |
+| zombie | [17-я, худшая фаза](sheets/zombie_deepest_clearance.png) | [Walk 0.22](sheets/zombie_Walk_0.22.png) / [Walk 1.0](sheets/zombie_Walk_1.0.png) / [Walk 1.5](sheets/zombie_Walk_1.5.png) / [Run 0.22](sheets/zombie_Run_0.22.png) / [Run 1.0](sheets/zombie_Run_1.0.png) / [Run 1.5](sheets/zombie_Run_1.5.png) | needs_anatomical_equipment_fit |

@@ -204,6 +204,10 @@ struct CreatureAnimationClipDef
 {
   bool loop{true};
   float speed{1.f};
+  // Opt-in glTF grounded gait: world blocks travelled over the entire file
+  // loop, including every stride in a multi-rate upper-body macroloop.
+  // Zero retains legacy speed/reference/minimum-rate playback.
+  float groundDistancePerCycle{0.f};
 };
 
 struct CreatureAnimationParams
@@ -253,6 +257,8 @@ struct CreatureSpriteSpec
 
 struct CreatureVisualSpec
 {
+  /// Runtime locator of the definition's folder; never serialized into assets.
+  std::string sourceDirectory;
   std::string backend{"rigid_voxels"};
   std::string fallbackBackend;
   std::string textureLayout{"rigid_crop"};
@@ -278,6 +284,9 @@ struct ResolvedCreaturePart
   glm::vec3 offsetBlocks{0.f};
   glm::vec3 sizeBlocks{0.6f, 1.8f, 0.6f};
   std::string textureAssetKey;
+  // Original material key also defines the UV layout and remains a fallback
+  // when an optional mapped skin file is absent.
+  std::string baseTextureAssetKey;
   glm::vec3 PivotBlocks{0.f};
   bool HasPivot{false};
   std::string LimbKind;
@@ -286,6 +295,10 @@ struct ResolvedCreaturePart
 
 struct ResolvedCreatureAppearance
 {
+  // Validated against the species by ResolveCreatureAppearance. Backends
+  // must not bypass ownership or the player's effective selection.
+  std::string effectiveSkinId;
+  std::unordered_map<std::string, std::string> skinTextureOverrides;
   glm::vec4 wireframeColor{1.f, 1.f, 1.f, 1.f};
   std::string visualBackend{"rigid_voxels"};
   std::string textureLayout{"rigid_crop"};

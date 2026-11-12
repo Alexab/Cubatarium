@@ -1,0 +1,27 @@
+{
+  "captured_at_utc": "2026-11-11T01:51:52.965493+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\r6_ground_v2\\models",
+  "files_sha256": {
+    "creatures\\hedgehog\\creature.json": "c33bc4d8abf7cc404e72db05ef74dd3b694034239815d93108ac4d7ce72d7e81",
+    "creatures\\hedgehog\\LICENSE.txt": "672c3064c4dedaf20f5b8130e643bb273e5a08bc1616ccfb34d1b2789d48c699",
+    "creatures\\hedgehog\\manifest.json": "cb761ac26f552e35e17729315e354e84eb5a0932ace75b97943a8a81a715a3b9",
+    "creatures\\hedgehog\\model.bin": "1637f13abfdb8c8f2378f842e0c2ac20c0c6abaecee9a056c2ff9761da7e7d6d",
+    "creatures\\hedgehog\\model.gltf": "4406bea10878d070d52eaddd85b1563f73d58174e81e44cc3e08e01c5345dfa9",
+    "creatures\\hedgehog\\textures\\body.png": "99d559b059286509e3974dfd52f67b25bb30347e660716344703b2fd35165472",
+    "creatures\\hedgehog\\textures\\icon.png": "8b4a4a9e2bc2c37cd1874a08e8b9b6f6e90cc6aaf923eba569a6d668e3849da9"
+  },
+  "qa_models_override": true,
+  "exe_sha256": "07639445569a24154eab1befef0c945ff37ed6cb13d5ec16877c6818df7db329",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "final_hedgehog",
+  "qa_camera": "close",
+  "qa_water_placement": false,
+  "qa_lava_fixture": false,
+  "world": "World_254",
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

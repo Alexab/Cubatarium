@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "species": "seahorse",
+  "scope": "One normal-pipeline geometry-only R5 revision, full61 sampled GPU regression and isolated FP/entity persistence; not complete R6",
+  "exe_sha256": "235ce58dd65546f38164020295ff403bf48c2816b14bb16cd96228faee030483",
+  "candidate_to_production_rgba_exact": 89,
+  "body_rgba_exact": 5207,
+  "changed_resource_frames": 83,
+  "fp_rgba_exact": 936,
+  "ledger_fresh": 61,
+  "animation_sampler_arrays_exact": 42,
+  "review_sha256": "1f1f309c39e285a0cd73bc5401a8df748734c3000d337af90e5813d64a582ff5",
+  "snapshot_sha256": "3496fd47192e3fc928c9965f15fe8c5f8545bcde86431e650c3f0a8b08abb85a",
+  "input_reports_sha256": {
+    "body_parity.json": "2b397c51e45e956e0bcb2a49a6ce3570aa86544d20f7373092bfd63a37f4646e",
+    "fp_audit.json": "dd595916a0be5c0b52f55a8aabb59e107f0bd4386d8862dd1456f69410f5be8e",
+    "audit_production_final.json": "8d3e4e6c068be68b05c4412c6df3b93166e5a400dc35cee66460fb9f5605c156"
+  }
+}

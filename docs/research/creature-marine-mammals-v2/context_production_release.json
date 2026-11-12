@@ -1,0 +1,20 @@
+{
+  "qa_models_env": false,
+  "models_root": "E:\\Work\\Home\\Cubatarium\\bin\\models",
+  "exe_sha256": "0c2f544b61042e0498e927a37c88793e72530e58d8b4acaaff1eb90e2561dac9",
+  "files_sha256": {
+    "creatures\\manatee\\creature.json": "d6d912addc2955b00c408eab8b8a1e1c5784c0006e3f5fa57803a654188c6378",
+    "creatures\\manatee\\LICENSE.txt": "a7f6bc69d48133fa4287f0e860491eb15ffa4616205258630602d08b8e3b967d",
+    "creatures\\manatee\\model.bin": "f037e172cf04930756c0640b70e172a3179f5b838fabf3f7a02414231b94347a",
+    "creatures\\manatee\\model.gltf": "59ebe2465d7ecda88c1950d980988714541efcfc63370142327dd1e8eb815d45",
+    "creatures\\manatee\\textures\\body.png": "4a9b65d5b826a533c9bb3c13a2ca3b2040e7c20dbe572ad33c07eed9260d77eb",
+    "creatures\\manatee\\textures\\icon.png": "4ba191f6628f899231f9d9e1ad4de3f0f2b5e47f9db47fad6da9f2090b845913",
+    "creatures\\seal\\creature.json": "72fdcfea631068dd790c6d8b60c15bf32be4a930d562e1c063d96d79f3bd6d07",
+    "creatures\\seal\\LICENSE.txt": "03a949ee091af0d820e979edbf343e848f2adfdf8f7afaaadbc7d4c56d3416a8",
+    "creatures\\seal\\model.bin": "a4b187d85cdd2cfea6fd97df6d22615b2e1fa6f48beec25907f22f38a58b21bb",
+    "creatures\\seal\\model.gltf": "29c1cb3a7b8e6b0267a21a7d69a531837487cc234d312d9f129b96475539559d",
+    "creatures\\seal\\textures\\body.png": "2bb5f17ddda1309bd7410fd823b3f0077257c93c658ed57099d7a2e717108940",
+    "creatures\\seal\\textures\\icon.png": "96ffa395c9b1b990b33a6787fe7631f67091f85aa80fc750f06628884c9d951d"
+  },
+  "performance_gate": "disabled"
+}

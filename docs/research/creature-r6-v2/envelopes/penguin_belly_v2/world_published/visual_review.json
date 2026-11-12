@@ -1,0 +1,28 @@
+{
+  "reviewer": "Codex direct native image inspection",
+  "date": "2026-11-12",
+  "scope": "Directly inspected published world contact sheet of19 frames and four full-size images. Frame3 shows horizontal penguin; other poses include transition/jump/fall/idle. No frame-synchronous telemetry/state assertion or full habitat acceptance.",
+  "r6_state": "pending",
+  "artifacts": [
+    {
+      "path": "world_contact_sheet.png",
+      "sha256": "76e39a3e74609b041a76e63499c415058306d3972a1fe9682f32b527b20dd1b1"
+    },
+    {
+      "path": "runtime_fluid_candidate/frame_003.png",
+      "sha256": "3a121f8652a35513a9f423ccc651c2ff182fb89152f725112f3a60790701d54d"
+    },
+    {
+      "path": "runtime_fluid_candidate/frame_008.png",
+      "sha256": "dd0377e264e0f18a352ba2df5aa54937591b423a518d7d4230b34f385ed29b06"
+    },
+    {
+      "path": "runtime_fluid_candidate/frame_010.png",
+      "sha256": "881e50d2709e1bfe899c977b65756a639db8bda62c2d5d7651937aeda50c6a95"
+    },
+    {
+      "path": "runtime_fluid_candidate/frame_012.png",
+      "sha256": "09e3460c795868a7e5175857008b423b2830d34af55baf8a9a34af5427469472"
+    }
+  ]
+}

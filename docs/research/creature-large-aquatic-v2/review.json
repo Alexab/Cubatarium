@@ -1,0 +1,74 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R5 large aquatic pair; full R6 routes, compatibility/performance/GLES/all-61 reproducibility remain pending",
+  "species": {
+    "whale": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct visual inspection of exact final native/world/icon/comparison sheets; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "9db5356b5c366481d2c67860d489ecf1485df5d20ea3180ff78a16338afdba03",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "whale.png",
+          "sha256": "b40fb76a5fa632de3d6afb88c3ef2200719b6165398e752609b5b74ffeded07c"
+        },
+        "motion": {
+          "path": "native_approved_whale.png",
+          "sha256": "5deaf3498ad31cf5da142c04680eab92cc74ecab3e5580f64550ade2cd3fcc39"
+        },
+        "runtime": {
+          "path": "runtime_final_whale/frame_002.png",
+          "sha256": "0a8ef85d992c46e8ebc3af03cefada05dbb3def06f24d4b9ab0aa7f4c6139504"
+        },
+        "ui": {
+          "path": "native_candidate/whale_12.png",
+          "sha256": "6ac1ebcf818aef20daf4f5513d541af77377852063d6df47e18f2093eb1a4555"
+        }
+      },
+      "notes": "Own authored mesh, UV, textures and clips; no baseline geometry/pixels copied. Original required clips retained. Baseline has eight palette nodes but only one weighted joint; candidate has fourteen/ fifteen weighted joints. Native full view/motion sheets, real 64px icon, equal-scale anatomy comparison and actual final world capture directly inspected. Whale width is +15.1% to expose long pectoral blades instead of burying them in the restored broad trunk; length preserved, height -9.5%. Dragon vertical silhouette dimensions within about 3% of original, horns lengthened and head lowered after first comparison. Curved/tapered neck rings remain coincident under actual exported skinning. Earlier whale preview-only capture had no spawned world creature and was rejected; raw failed evidence retained in runtime_whale_spawn_failed. Final actual species presence verified. Gameplay bounds/speeds/habitat preserved. No added die clip: original capabilities did not include one. No performance PASS or full routes/compatibility acceptance; R6 remains pending."
+    },
+    "water_dragon": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct visual inspection of exact final native/world/icon/comparison sheets; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "2df847e513dc0e200777972d4b267fd98b03895e509f3dfa4a998a550f4eae84",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "water_dragon.png",
+          "sha256": "176b21d1b8ef6142bc296dc371707782bbe57075ec67d58638f87d9fb50b56de"
+        },
+        "motion": {
+          "path": "native_approved_water_dragon.png",
+          "sha256": "8610f44335ce98c9365d2e8fc714e864b9b76fb7e61fd80800ccaed25d953bc4"
+        },
+        "runtime": {
+          "path": "runtime_final_water_dragon/frame_002.png",
+          "sha256": "ad3a50311d5522c6fba0e0476800fd3ef6b9b0524fcf39851ea81a80c8ffcf07"
+        },
+        "ui": {
+          "path": "native_candidate/water_dragon_12.png",
+          "sha256": "5d01aeb460ac3caf3aa905d5100a5713648bf034c1b13c7577d1fb571cc5a7ac"
+        }
+      },
+      "notes": "Own authored mesh, UV, textures and clips; no baseline geometry/pixels copied. Original required clips retained. Baseline has eight palette nodes but only one weighted joint; candidate has fourteen/ fifteen weighted joints. Native full view/motion sheets, real 64px icon, equal-scale anatomy comparison and actual final world capture directly inspected. Whale width is +15.1% to expose long pectoral blades instead of burying them in the restored broad trunk; length preserved, height -9.5%. Dragon vertical silhouette dimensions within about 3% of original, horns lengthened and head lowered after first comparison. Curved/tapered neck rings remain coincident under actual exported skinning. Earlier whale preview-only capture had no spawned world creature and was rejected; raw failed evidence retained in runtime_whale_spawn_failed. Final actual species presence verified. Gameplay bounds/speeds/habitat preserved. No added die clip: original capabilities did not include one. No performance PASS or full routes/compatibility acceptance; R6 remains pending."
+    }
+  }
+}

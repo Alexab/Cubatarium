@@ -1,0 +1,113 @@
+{
+  "scope": "Actual fixed-world-camera opaque/discard pixel coverage, not volume or art acceptance",
+  "frames": [
+    {
+      "state": "Idle",
+      "phase": 0,
+      "view": "front",
+      "alpha_pixels": {
+        "original": 2026,
+        "before": 1282,
+        "current": 1692
+      },
+      "before_original_ratio": 0.6327739387956565,
+      "candidate_original_ratio": 0.8351431391905232
+    },
+    {
+      "state": "Idle",
+      "phase": 0,
+      "view": "side",
+      "alpha_pixels": {
+        "original": 2914,
+        "before": 2142,
+        "current": 2606
+      },
+      "before_original_ratio": 0.7350720658888126,
+      "candidate_original_ratio": 0.8943033630748113
+    },
+    {
+      "state": "Idle",
+      "phase": 0,
+      "view": "oblique",
+      "alpha_pixels": {
+        "original": 3832,
+        "before": 2577,
+        "current": 3659
+      },
+      "before_original_ratio": 0.6724947807933194,
+      "candidate_original_ratio": 0.9548538622129437
+    },
+    {
+      "state": "Walk",
+      "phase": 0.25,
+      "view": "front",
+      "alpha_pixels": {
+        "original": 2027,
+        "before": 1232,
+        "current": 1663
+      },
+      "before_original_ratio": 0.6077947705969413,
+      "candidate_original_ratio": 0.820424272323631
+    },
+    {
+      "state": "Walk",
+      "phase": 0.25,
+      "view": "side",
+      "alpha_pixels": {
+        "original": 2993,
+        "before": 2085,
+        "current": 2516
+      },
+      "before_original_ratio": 0.696625459405279,
+      "candidate_original_ratio": 0.8406281323087204
+    },
+    {
+      "state": "Walk",
+      "phase": 0.25,
+      "view": "oblique",
+      "alpha_pixels": {
+        "original": 3779,
+        "before": 2494,
+        "current": 3568
+      },
+      "before_original_ratio": 0.6599629531622122,
+      "candidate_original_ratio": 0.9441651230484255
+    },
+    {
+      "state": "Action",
+      "phase": 0.5,
+      "view": "front",
+      "alpha_pixels": {
+        "original": 4076,
+        "before": 2495,
+        "current": 3396
+      },
+      "before_original_ratio": 0.6121197252208047,
+      "candidate_original_ratio": 0.8331697742885181
+    },
+    {
+      "state": "Action",
+      "phase": 0.5,
+      "view": "side",
+      "alpha_pixels": {
+        "original": 2893,
+        "before": 2108,
+        "current": 2521
+      },
+      "before_original_ratio": 0.7286553750432078,
+      "candidate_original_ratio": 0.8714137573453162
+    },
+    {
+      "state": "Action",
+      "phase": 0.5,
+      "view": "oblique",
+      "alpha_pixels": {
+        "original": 3089,
+        "before": 2468,
+        "current": 3539
+      },
+      "before_original_ratio": 0.7989640660407898,
+      "candidate_original_ratio": 1.1456782130139203
+    }
+  ]
+}

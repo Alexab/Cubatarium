@@ -1,0 +1,496 @@
+{
+  "schema": "creature-provenance-rebuild-audit.v1",
+  "resource_count": 61,
+  "isolated_builds_left_live_models_tree_unchanged": "see audit_candidate.json",
+  "published_source_and_bin_verified": true,
+  "resources": [
+    {
+      "id": "badger",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "bee",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 4
+    },
+    {
+      "id": "bot",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 4
+    },
+    {
+      "id": "bunny",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 4
+    },
+    {
+      "id": "butterfly",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "chicken",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 4
+    },
+    {
+      "id": "cow",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 4
+    },
+    {
+      "id": "crab",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "dirt_monster",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "dolphin",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 4
+    },
+    {
+      "id": "dungeon_master",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "fire_spirit",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 2
+    },
+    {
+      "id": "fox",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 4
+    },
+    {
+      "id": "golem",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "hedgehog",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "hermitcrab",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "human",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 4
+    },
+    {
+      "id": "kitten",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "land_guard",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "lava_flan",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "lobster",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "manatee",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "mese_monster",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "octopus",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "oerkki",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "ogre",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "orc",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "owl",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "panda",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "penguin",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "pig",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 4
+    },
+    {
+      "id": "puffin",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "rat",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "rigid_demo_flyer",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 7
+    },
+    {
+      "id": "rigid_demo_swimmer",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 7
+    },
+    {
+      "id": "rigid_demo_walker",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 9
+    },
+    {
+      "id": "sand_monster",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "seahorse",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "seal",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "shark",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "sheep",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 4
+    },
+    {
+      "id": "skeleton",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 4
+    },
+    {
+      "id": "spider",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 4
+    },
+    {
+      "id": "squid",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 4
+    },
+    {
+      "id": "stingray",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "stone_monster",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "tortoise",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 4
+    },
+    {
+      "id": "tree_monster",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "treeman",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "trout",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 4
+    },
+    {
+      "id": "warthog",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "wasp",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "water_dragon",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "whale",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 5
+    },
+    {
+      "id": "wolf",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 4
+    },
+    {
+      "id": "zombie",
+      "kind": "creatures",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 4
+    },
+    {
+      "id": "human_adventurer",
+      "kind": "skins",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 7
+    },
+    {
+      "id": "human_guard",
+      "kind": "skins",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 7
+    },
+    {
+      "id": "sheep_wool_black",
+      "kind": "skins",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 8
+    },
+    {
+      "id": "sheep_wool_golden",
+      "kind": "skins",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 8
+    },
+    {
+      "id": "wolf_snow",
+      "kind": "skins",
+      "current_provenance": true,
+      "generated_runtime_payload_identical_to_accepted_archive": true,
+      "own_license_recorded": true,
+      "file_records_verified": 6
+    }
+  ]
+}

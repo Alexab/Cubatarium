@@ -12,6 +12,9 @@
 #include "Creatures/Visual/Gltf/CreatureGltfBonePalette.h"
 #include "Creatures/Visual/Gltf/CreatureGltfCache.h"
 #include "Creatures/Visual/Gltf/CreatureGltfModelSpace.h"
+#include "Creatures/Visual/Gltf/GltfTransitionGroundClearance.h"
+#include "Creatures/Visual/Gltf/GltfDistancePlayback.h"
+#include "Creatures/Diagnostics/CreatureQaFootProbe.h"
 #include "Render/Engine/GeometryEngine.h"
 #include <algorithm>
 #include <glm/gtc/matrix_transform.hpp>
@@ -26,26 +29,22 @@ std::unique_ptr<IUCreatureVisual> CreateCreatureVisualGltf()
   return std::make_unique<UCreatureVisualGltf>();
 }
 
-void UCreatureVisualGltf::UpdatePose(const UCreature &creature,
-                                     const CreatureLocomotionFacts &facts,
-                                     const CreaturePoseParams & /*pose*/,
-                                     const CreatureDefinition &animDef,
-                                     float dt)
+void UCreatureVisualGltf::EnsureMesh(const CreatureDefinition &animDef)
 {
-  BodyOrigin = creature.GetFeetPosition();
-  BodyYawDeg = ComputeBodyYawDeg(creature, animDef);
   SpeciesId = animDef.Id;
-  SkinId = creature.GetSkinId();
-  RefreshDefaultTextureKey(animDef);
   ModelFile = animDef.visual.gltf.modelPath.empty()
                   ? "model.gltf"
                   : animDef.visual.gltf.modelPath;
-  ModelScale = animDef.visual.gltf.modelScale;
-  ModelFeetOffsetY = animDef.visual.gltf.modelOffsetY;
-
-  if (!MeshAsset)
+  auto &meshCache=CreatureGltfCache::Instance();
+  const uint64_t revision=meshCache.GetRevision();
+  if (!MeshRequestSeen || LoadedRevision!=revision || LoadedSpecies!=SpeciesId ||
+      LoadedFile!=ModelFile || LoadedDirectory!=animDef.visual.sourceDirectory)
   {
-    MeshAsset = CreatureGltfCache::Instance().Load(SpeciesId, ModelFile);
+    MeshRequestSeen=true;LoadedRevision=revision;LoadedSpecies=SpeciesId;
+    LoadedFile=ModelFile;LoadedDirectory=animDef.visual.sourceDirectory;
+    ActiveAnimation=nullptr;HasBonePalette=false;BoneMatrices.reset();SkinScratch={};
+    // Keep the clip clock: a content refresh must not restart a live walk.
+    MeshAsset = meshCache.Load(SpeciesId, ModelFile,LoadedDirectory);
     if (!MeshAsset)
     {
       const std::string key = SpeciesId + "|" + ModelFile;
@@ -54,6 +53,36 @@ void UCreatureVisualGltf::UpdatePose(const UCreature &creature,
                    " model=" + ModelFile);
     }
   }
+}
+
+bool UCreatureVisualGltf::GetConservativeWorldBounds(const UCreature &creature,
+    const CreatureDefinition &def,glm::vec3 &low,glm::vec3 &high)
+{
+  EnsureMesh(def);
+  const float radius=MeshAsset?MeshAsset->conservativeRenderRadius*std::abs(def.visual.gltf.modelScale):
+      std::numeric_limits<float>::infinity();
+  const float offset=def.visual.gltf.modelOffsetY-(MeshAsset?MeshAsset->bindMinY*def.visual.gltf.modelScale:0.f);
+  const glm::vec3 origin=creature.GetFeetPosition();
+  low=origin+glm::vec3(-radius,offset-radius,-radius);
+  // Fade clearance can only lift the surface. Also cover retained takeoff
+  // decay after a larger previous mesh/scale was replaced while airborne.
+  const float lift=std::max(TransitionLift,std::max(0.f,radius-offset+.00001f));
+  high=origin+glm::vec3(radius,offset+radius+lift,radius);
+  return true;
+}
+
+void UCreatureVisualGltf::UpdatePose(const UCreature &creature,
+                                     const CreatureLocomotionFacts &facts,
+                                     const CreaturePoseParams & /*pose*/,
+                                     const CreatureDefinition &animDef,
+                                     float dt)
+{
+  BodyOrigin = creature.GetFeetPosition();
+  BodyYawDeg = ComputeBodyYawDeg(creature, animDef);
+  RefreshDefaultTextureKey(animDef);
+  EnsureMesh(animDef);
+  ModelScale = animDef.visual.gltf.modelScale;
+  ModelFeetOffsetY = animDef.visual.gltf.modelOffsetY;
   if (MeshAsset)
   {
     // bindMinY is in unscaled model units; the offset is applied in world
@@ -71,11 +100,13 @@ void UCreatureVisualGltf::UpdatePose(const UCreature &creature,
     std::string animName = clipId.value_or("idle");
     const auto clipDefIt = animDef.visual.Animation.clips.find(animName);
     float speed = 1.f;
+    float groundDistancePerCycle=0.f;
     bool loop = true;
     if (clipDefIt != animDef.visual.Animation.clips.end())
     {
       speed = clipDefIt->second.speed;
       loop = clipDefIt->second.loop;
+      groundDistancePerCycle=clipDefIt->second.groundDistancePerCycle;
     }
     float playback = speed;
     if (facts.state == LocomotionState::Walk ||
@@ -107,6 +138,11 @@ void UCreatureVisualGltf::UpdatePose(const UCreature &creature,
                  : nullptr;
     };
     ActiveAnimation = findAnimation(animName);
+    if(groundDistancePerCycle>0.f && facts.onGround && !facts.inFluid &&
+       (facts.state==LocomotionState::Walk || facts.state==LocomotionState::Run ||
+        facts.state==LocomotionState::Slither))
+      playback=GltfDistancePlayback(facts.horizontalSpeed,
+          ActiveAnimation?GltfAnimationDuration(*ActiveAnimation):0.f,groundDistancePerCycle);
     ClipClock.Update(animName, dt, playback,
                      ActiveAnimation ? GltfAnimationDuration(*ActiveAnimation)
                                      : 0.f,
@@ -149,6 +185,15 @@ void UCreatureVisualGltf::UpdatePose(const UCreature &creature,
       }
     }
   }
+  const bool supported=UsesGltfTransitionGroundClearance(facts,animDef);
+  static const std::vector<glm::mat4> emptyPalette;
+  const float required=supported && MeshAsset && !ClipClock.GetFadeClip().empty()
+      ? ComputeGltfTransitionGroundClearance(*MeshAsset,
+          BoneMatrices ? *BoneMatrices : emptyPalette,
+          RootAnimMatrix,ModelScale,ModelFeetOffsetY) : 0.f;
+  TransitionLift=TransitionGroundClearance.Update(required,supported,dt);
+  ModelFeetOffsetY+=TransitionLift;
+  RememberCreatureQaFootPose(this,creature,facts,dt,BodyYawDeg,ClipClock);
 }
 
 void UCreatureVisualGltf::SubmitDraw(const CreatureDrawContext &ctx,
@@ -165,11 +210,12 @@ void UCreatureVisualGltf::SubmitDraw(const CreatureDrawContext &ctx,
       { return GltfEntityConventionMatrix(); }, ModelScale, RootAnimMatrix);
 
   CreatureDrawQueue &queue = *ctx.Queue;
+  const size_t firstRequest = queue.Size();
   for (const GltfPrimitiveCpu &prim : MeshAsset->primitives)
   {
     const GLuint tex = ResolveCreatureSpeciesTexture(
         creatureTextures, SpeciesId, prim.textureStem, DefaultTextureKey,
-        SkinId);
+        &Appearance);
     if (tex == 0)
     {
       const std::string key = SpeciesId + "|" + prim.textureStem;
@@ -196,6 +242,8 @@ void UCreatureVisualGltf::SubmitDraw(const CreatureDrawContext &ctx,
     }
     queue.Push(std::move(req));
   }
+  if(!CreatureQaFootProbePath().empty() && queue.Size()>firstRequest && HasBonePalette && BoneMatrices)
+    RecordCreatureQaFootDraw(this,MeshAsset,*BoneMatrices,bodyMat);
 }
 
 } // namespace cutum

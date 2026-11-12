@@ -1,0 +1,25 @@
+{
+  "captured_at_utc": "2026-11-10T22:23:07.552557+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_marine_invertebrates_v2\\models",
+  "files_sha256": {
+    "creatures\\crab\\creature.json": "c6a29f9d474f65e1cc610b7c7f236da4c6ba8cbb8afc5e5cab7cbef50a425a43",
+    "creatures\\crab\\LICENSE.txt": "a1dafe03b501080c9bcbaf36969ed591726ec00e64d3907bf3ee16b7e17c0030",
+    "creatures\\crab\\manifest.json": "d2ce6a8781b7452521fee43aa53e5fb0fb0e50f491545e6a6ffde4f0b8bbcc9d",
+    "creatures\\crab\\model.bin": "3deb9b68f07926dafa3f2e2a5ff9f151c6247d8829c9bd4d2fa62e95b9068261",
+    "creatures\\crab\\model.gltf": "a0dbb8b2a5c98d10cdaf32188787e3f5f9ebe6010c5fee9c9a29457e9317dc38",
+    "creatures\\crab\\textures\\body.png": "0be3590802a20ce59bbf128719128bb4b7d06cba3b9858f94ec9e0b3101b8dd9",
+    "creatures\\crab\\textures\\icon.png": "1cb3947f1a6d0c694980fae6eb4ff23311c7521faa40a35c0476114a7f3a3aeb"
+  },
+  "qa_models_override": true,
+  "exe_sha256": "3fa0c8e11332b7fd0c1e7a651d73f3c827b0ae7eba26267ab8cb75dcdb590f09",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "final_crab",
+  "qa_camera": "close",
+  "qa_water_placement": true,
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

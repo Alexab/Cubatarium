@@ -17,7 +17,7 @@ class ItemGltfTextureCache
 public:
   static ItemGltfTextureCache &Instance();
 
-  /// modelGltfAbs: absolute path to models/items/<id>/model.gltf
+  /// Absolute glTF path: inventory and worn variants can share a folder.
   GLuint Get(const std::filesystem::path &modelGltfAbs,
              const std::string &textureStem);
 
@@ -29,9 +29,9 @@ private:
   void EnsureLoaded(const std::filesystem::path &modelGltfAbs);
 
   std::mutex Mu;
-  /// Key: model folder path (parent of model.gltf).
+  /// Key: normalized full glTF path. Material tables belong to a model.
   std::unordered_map<std::string, std::unordered_map<std::string, GLuint>>
-      ByModelDir;
+      ByModel;
 };
 
 } // namespace cutum

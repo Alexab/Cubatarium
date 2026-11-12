@@ -1,0 +1,19 @@
+{
+  "schema": "creature-save-visual-observation.v1",
+  "decision": "body_parity_and_sampled_world_continuation_only",
+  "reviewed": [
+    {
+      "file": "runtime_save_first\\frame_002.png",
+      "sha256": "22088082a76c3eed31e846a6e374ba42b7109728d892c907a61cbf2e96d30df9",
+      "seconds_after_save_probe_manifest": 3.6232962608337402,
+      "observations": "Directly viewed: expected gray wolf intact on beach after diagnostics; no full habitat, locomotion, FP, saved-actor pixel or performance acceptance."
+    },
+    {
+      "file": "runtime_save_restart\\frame_002.png",
+      "sha256": "eec0eb37802fcf3ff0e8bd26c3f9d963231f3216046e837bd50474f9d842a24d",
+      "seconds_after_save_probe_manifest": 3.640942096710205,
+      "observations": "Directly viewed: expected gray wolf intact on beach after diagnostics; no full habitat, locomotion, FP, saved-actor pixel or performance acceptance."
+    }
+  ],
+  "full_r6": "pending"
+}

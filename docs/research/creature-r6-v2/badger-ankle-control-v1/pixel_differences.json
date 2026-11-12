@@ -1,0 +1,26 @@
+{
+  "exact_parity": false,
+  "scope": "Identity-control native raster differences; not waived as exact or artistic acceptance",
+  "changed_images": 3,
+  "total_images": 89,
+  "images": [
+    {
+      "file": "badger_7.png",
+      "pixels_changed": 3,
+      "rgba_max_abs": 3,
+      "image_pixels": 65536
+    },
+    {
+      "file": "matrix\\badger\\pose_1_view_8_color.png",
+      "pixels_changed": 1,
+      "rgba_max_abs": 255,
+      "image_pixels": 65536
+    },
+    {
+      "file": "matrix\\badger\\pose_1_view_8_silhouette.png",
+      "pixels_changed": 1,
+      "rgba_max_abs": 255,
+      "image_pixels": 65536
+    }
+  ]
+}

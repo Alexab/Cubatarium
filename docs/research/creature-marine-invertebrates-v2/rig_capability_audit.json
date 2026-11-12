@@ -1,0 +1,135 @@
+{
+  "crab": {
+    "baseline": {
+      "extent": [
+        1.0095015287518736,
+        0.4361803943474703,
+        1.384818674781508
+      ],
+      "palette_joints": 43,
+      "weighted_joints": 23,
+      "weighted_node_ids": [
+        2,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        28,
+        30,
+        32,
+        34,
+        36,
+        38,
+        40,
+        41,
+        43
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "punch",
+        "die"
+      ]
+    },
+    "candidate": {
+      "palette_joints": 40,
+      "weighted_joints": 40,
+      "clips": [
+        "idle",
+        "walk",
+        "punch",
+        "die"
+      ]
+    }
+  },
+  "lobster": {
+    "baseline": {
+      "extent": [
+        0.6727626234239278,
+        0.24978955063770952,
+        1.1316349475916008
+      ],
+      "palette_joints": 55,
+      "weighted_joints": 27,
+      "weighted_node_ids": [
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39,
+        41,
+        43,
+        45,
+        47,
+        49,
+        51,
+        53,
+        55
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "punch",
+        "die"
+      ]
+    },
+    "candidate": {
+      "palette_joints": 51,
+      "weighted_joints": 51,
+      "clips": [
+        "idle",
+        "walk",
+        "punch",
+        "die"
+      ]
+    }
+  },
+  "octopus": {
+    "baseline": {
+      "extent": [
+        0.5400000214576721,
+        0.46999998949468136,
+        0.6200000047683716
+      ],
+      "palette_joints": 0,
+      "weighted_joints": 0,
+      "weighted_node_ids": [],
+      "clips": [
+        "idle",
+        "walk"
+      ]
+    },
+    "candidate": {
+      "palette_joints": 35,
+      "weighted_joints": 35,
+      "clips": [
+        "idle",
+        "walk",
+        "swim"
+      ]
+    }
+  }
+}

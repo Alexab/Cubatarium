@@ -1,0 +1,24 @@
+{
+  "passed": true,
+  "source_own_snapshot": "assetgen_output/creatures/lobster_anatomy_pre_publish",
+  "fresh_output": "assetgen_output/creatures/lobster_anatomy_v3_repro",
+  "gltf_semantic_and_bin_png_byte_exact": true,
+  "resource_sizes": {
+    "before": {
+      "atlas_size": [
+        128,
+        128
+      ],
+      "rgba8_level0_bytes": 65536,
+      "bin_bytes": 134600
+    },
+    "published": {
+      "atlas_size": [
+        128,
+        128
+      ],
+      "rgba8_level0_bytes": 65536,
+      "bin_bytes": 134600
+    }
+  }
+}

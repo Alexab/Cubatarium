@@ -1,0 +1,38 @@
+{
+  "captured_at_utc": "2026-11-10T15:20:17.968104+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\bone_coats_v2\\models",
+  "files_sha256": {
+    "creatures\\pig\\creature.json": "c727dfdde6defa1187ff8c1563f36a116cf78764da1ea6010525eeda4887e170",
+    "creatures\\pig\\geometry.geo.json": "d3e6b3c79cd9212443e6ab5a285573c1b890d2d87030bf2f214c51962f621e26",
+    "creatures\\pig\\LICENSE.txt": "175080678c5bbbb81a1bd16a44220d470a128d83c20ee2b3d54767def48b8697",
+    "creatures\\pig\\manifest.json": "a5cb2c9a93acde84da48c203ba08f7ecb004742727f6974a3e34b7b646bdacc7",
+    "creatures\\pig\\textures\\diffuse.png": "8233eb604b4ad3134fd384e63ec80c7d5652b324ab200cd106e0ff8fcc88cf05",
+    "creatures\\pig\\textures\\icon.png": "c140edd8c414147a205469f03523df7baf90b3842588220ab3d06aa612fe6467",
+    "creatures\\sheep\\creature.json": "c8ce099f3ab963984fc7018c7acd41b5d62e0fb21ab0efa26f0b9a1dd5c4e041",
+    "creatures\\sheep\\geometry.geo.json": "8d5c6c504bb51419f08f97d7d9a73beaecf6dd643833b1d1ce6da49220d90e7e",
+    "creatures\\sheep\\LICENSE.txt": "731aa0521e56e81cdfe460e00fb6a8b0d6da30ec72d713dded0956c5ca9e101e",
+    "creatures\\sheep\\manifest.json": "f5782a9c38ef11cc34cc4e9dad66b2e8be9a3e85730afd547962c6719dab1b3a",
+    "creatures\\sheep\\textures\\diffuse.png": "f605da204e6400eb5978e94d51e8e0ef3cbf23b65d19ed82d84a45423e3b0b99",
+    "creatures\\sheep\\textures\\icon.png": "f237a5b061a86ed428863d40a2b3925ba55cb6e64bb49ed352c4ca988d007120",
+    "creatures\\wolf\\creature.json": "958ba270e2e739f7f3a588c716897c49778356de5af23e17ac0434a544f81d1f",
+    "creatures\\wolf\\geometry.geo.json": "7be066ab16a5e0a2c1ab3e36d0176a9f7fdf84a407895ee09757668385f6e7a5",
+    "creatures\\wolf\\LICENSE.txt": "47c844fdb14470ac8a25ca7e9257fae9fc7fbe9a9a7b6635581ea9ea53fa3096",
+    "creatures\\wolf\\manifest.json": "b5a2a71a9bbf62115de432a7d803cfa34e746a6f46e9723ac860ab5b309e51a5",
+    "creatures\\wolf\\textures\\diffuse.png": "d7f181f935e74ae014b801eb79e54b54fd600e4f3b09952106dffbfbe131ee2d",
+    "creatures\\wolf\\textures\\icon.png": "aba241537020cec6a0eb632875cc070dccd22e3156f175ce3452da4fe553477a",
+    "creatures\\fox\\creature.json": "18d1538c92bbd46cf17ed5f21bceca412cb1e36fb7bae877d6f9c3a1725fd792",
+    "creatures\\fox\\geometry.geo.json": "472ff8ca216b7c7dfcd141aa6e80d292be516b6080a423041214d25fb7ea40cc",
+    "creatures\\fox\\LICENSE.txt": "f17399ebcf4a578b46d00488ea603a6a9c49eac09be98eb96e95e28bdd7416ae",
+    "creatures\\fox\\manifest.json": "deee7db1158377a2e4fd90041c1e5c656f9af0cc6617efe5becfbc8b9ff81f51",
+    "creatures\\fox\\textures\\diffuse.png": "a96e833eaf797b1f9eb83c1edc600e5850e6ec21f98fc772a5ab2af844d8b9ee",
+    "creatures\\fox\\textures\\icon.png": "ddecef9c3f203bd7b745565e5e85247429bd79fda007bba6f99b928b1bb5c4f4"
+  },
+  "exe_sha256": "ec9d5c680b7e3bf960314b6183046b30fe7bafed49809cc937dc288941e579e2",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "coats",
+  "performance_gate": "disabled"
+}

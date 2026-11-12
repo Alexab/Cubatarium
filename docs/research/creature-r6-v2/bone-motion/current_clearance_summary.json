@@ -1,0 +1,136 @@
+{
+  "schema": "creature-native-bone-motion-summary.v1",
+  "scope": "Ground-candidate mesh-floor extrema only, not a stance/stride verdict",
+  "resources": [
+    {
+      "id": "human",
+      "profile": "humanoid",
+      "lowest_y": 0.0,
+      "lowest_state": "Idle",
+      "lowest_speed_ratio": 0.0,
+      "highest_floor_y": 0.1725267767906189,
+      "highest_floor_state": "Run",
+      "highest_floor_speed_ratio": 1.5
+    },
+    {
+      "id": "bot",
+      "profile": "humanoid",
+      "lowest_y": 0.0,
+      "lowest_state": "Idle",
+      "lowest_speed_ratio": 0.0,
+      "highest_floor_y": 0.1725267767906189,
+      "highest_floor_state": "Run",
+      "highest_floor_speed_ratio": 1.5
+    },
+    {
+      "id": "sheep",
+      "profile": "quadruped",
+      "lowest_y": -3.725290298461914e-09,
+      "lowest_state": "Walk",
+      "lowest_speed_ratio": 0.2199999988079071,
+      "highest_floor_y": 0.17161038517951965,
+      "highest_floor_state": "Run",
+      "highest_floor_speed_ratio": 1.5
+    },
+    {
+      "id": "pig",
+      "profile": "quadruped",
+      "lowest_y": -3.725290298461914e-09,
+      "lowest_state": "Walk",
+      "lowest_speed_ratio": 1.0,
+      "highest_floor_y": 0.05710592865943909,
+      "highest_floor_state": "Run",
+      "highest_floor_speed_ratio": 1.5
+    },
+    {
+      "id": "cow",
+      "profile": "quadruped",
+      "lowest_y": -3.725290298461914e-09,
+      "lowest_state": "Walk",
+      "lowest_speed_ratio": 0.2199999988079071,
+      "highest_floor_y": 0.12894847989082336,
+      "highest_floor_state": "Run",
+      "highest_floor_speed_ratio": 1.5
+    },
+    {
+      "id": "chicken",
+      "profile": "chicken",
+      "lowest_y": -3.725290298461914e-09,
+      "lowest_state": "Walk",
+      "lowest_speed_ratio": 1.5,
+      "highest_floor_y": 3.725290298461914e-09,
+      "highest_floor_state": "Walk",
+      "highest_floor_speed_ratio": 1.5
+    },
+    {
+      "id": "bunny",
+      "profile": "rabbit",
+      "lowest_y": 0.0,
+      "lowest_state": "Idle",
+      "lowest_speed_ratio": 0.0,
+      "highest_floor_y": 0.2734408974647522,
+      "highest_floor_state": "Run",
+      "highest_floor_speed_ratio": 1.5
+    },
+    {
+      "id": "wolf",
+      "profile": "quadruped",
+      "lowest_y": -1.862645149230957e-09,
+      "lowest_state": "Walk",
+      "lowest_speed_ratio": 0.2199999988079071,
+      "highest_floor_y": 0.09493892639875412,
+      "highest_floor_state": "Run",
+      "highest_floor_speed_ratio": 1.5
+    },
+    {
+      "id": "skeleton",
+      "profile": "humanoid",
+      "lowest_y": 0.0,
+      "lowest_state": "Idle",
+      "lowest_speed_ratio": 0.0,
+      "highest_floor_y": 0.21870633959770203,
+      "highest_floor_state": "Run",
+      "highest_floor_speed_ratio": 1.5
+    },
+    {
+      "id": "zombie",
+      "profile": "humanoid",
+      "lowest_y": 0.0,
+      "lowest_state": "Idle",
+      "lowest_speed_ratio": 0.0,
+      "highest_floor_y": 0.6015780568122864,
+      "highest_floor_state": "Run",
+      "highest_floor_speed_ratio": 1.5
+    },
+    {
+      "id": "spider",
+      "profile": "arachnid",
+      "lowest_y": 0.0,
+      "lowest_state": "Idle",
+      "lowest_speed_ratio": 0.0,
+      "highest_floor_y": 0.0,
+      "highest_floor_state": "Idle",
+      "highest_floor_speed_ratio": 0.0
+    },
+    {
+      "id": "fox",
+      "profile": "fox",
+      "lowest_y": -3.725290298461914e-09,
+      "lowest_state": "Walk",
+      "lowest_speed_ratio": 0.2199999988079071,
+      "highest_floor_y": 0.06252782046794891,
+      "highest_floor_state": "Run",
+      "highest_floor_speed_ratio": 1.5
+    },
+    {
+      "id": "tortoise",
+      "profile": "turtle",
+      "lowest_y": -1.4901161193847656e-08,
+      "lowest_state": "Run",
+      "lowest_speed_ratio": 1.5,
+      "highest_floor_y": 1.4901161193847656e-08,
+      "highest_floor_state": "Run",
+      "highest_floor_speed_ratio": 1.5
+    }
+  ]
+}

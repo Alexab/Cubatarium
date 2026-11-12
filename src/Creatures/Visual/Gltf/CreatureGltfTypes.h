@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <limits>
 
 namespace cutum
 {
@@ -65,6 +66,9 @@ struct CreatureGltfMeshAsset
   bool loaded{false};
   /// Lowest bind-pose vertex Y in model space (Luanti b3d meshes extend below origin).
   float bindMinY{0.f};
+  /// All-clip/crossfade model-space radius, computed once by the loader.
+  /// Infinity disables visual frustum rejection for unsupported assets.
+  float conservativeRenderRadius{std::numeric_limits<float>::infinity()};
 };
 
 } // namespace cutum

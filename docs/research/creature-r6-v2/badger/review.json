@@ -1,0 +1,40 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R6 badger support correction only, remaining R6 unproven",
+  "species": {
+    "badger": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct full native/comparison/icon/world inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "795d96f9ef14d6d639c3c5526fd489d93d309982712a5a24e9dbdd25dca4d6d8",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "badger.png",
+          "sha256": "f9a50be1cb31781dfac1405bfeaa03f170151cfa08924f304d16a3150a76dd70"
+        },
+        "motion": {
+          "path": "native_approved_badger.png",
+          "sha256": "56b93869366d8d0791e1f11b37674ef5e02f692a9dc1e28bfa2f8356c623d243"
+        },
+        "runtime": {
+          "path": "runtime_final_badger/frame_002.png",
+          "sha256": "87f686c5c1f06ea98a84264798902a5a17c8edcf6668c3b3869c9b72131c659a"
+        },
+        "ui": {
+          "path": "native_candidate/badger_12.png",
+          "sha256": "df3e845f480511c85d357c3766d8081add4002aa26fa8d93fffbdea30d2dab28"
+        }
+      },
+      "notes": "Geometry, UVs, skin weights and texture pixels unchanged. All authored joint keys retained exactly; only root height gains dense samples. Full skinned mesh including blended joints corrects support. 1025-phase bounds -0.000218..+0.000702 block across walk/run/idle/punch versus prior run -0.016909 and punch -0.039122. Regression proves deformation and horizontal motion unchanged, with a uniform vertical correction. Real Release actor spawned. Full R6 catalog/routes/compatibility/performance still pending."
+    }
+  }
+}

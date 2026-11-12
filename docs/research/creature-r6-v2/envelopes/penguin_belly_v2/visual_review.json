@@ -1,0 +1,44 @@
+{
+  "schema": "creature-anatomy-proposal-review.v1",
+  "reviewer": "Codex direct native image inspection",
+  "date": "2026-11-12",
+  "decision": "promising_unapproved",
+  "published": false,
+  "r6_state": "pending",
+  "observations": "Moderate anterior fullness improves side body while retaining back/wing connection. Full-turn UI, actual fluid swim/control and contacts remain unverified. Do not publish yet.",
+  "artifacts": [
+    {
+      "path": "threeway_idle.png",
+      "sha256": "5b885171ea4897e96194eeca3f060415d5383adc361d0312cba5e79a7df4ecea"
+    },
+    {
+      "path": "threeway_walk.png",
+      "sha256": "913ac331634133e99b37dfcef6035e54f62453ce3b9c2151324b31bc343c175d"
+    },
+    {
+      "path": "threeway_fly.png",
+      "sha256": "d596eddbcfb0cb5bfd1c1e1510aecd02f73bb391cd8f6e1ddb230130564c4ba3"
+    },
+    {
+      "path": "runtime_envelope_current/frame_002.png",
+      "sha256": "fe3291342c32f247b49edec87245351b0aaf8c6a735c619b36de1ec739207573"
+    },
+    {
+      "path": "water/runtime_water_candidate/frame_002.png",
+      "sha256": "14deb863de296ff385cf1ce7ad43f9cb12ac0ca054f7cd2b039d40b087837943"
+    },
+    {
+      "path": "water/native_water/penguin_6.png",
+      "sha256": "3707649df60ebc378fa6896c81930f13e9fc3ab57bb346306a82cacbbba0b2a4"
+    }
+  ],
+  "transition_subset": {
+    "cases": 36,
+    "frames": 396,
+    "supported_frames": 352,
+    "supported_min_y": 0.0,
+    "envelope_covered": true,
+    "scope": "idle/walk; the water run repeats these same dry synthetic conditions, not 792 unique cases or fluid swim proof"
+  },
+  "preview_observation": "Directly inspected ordinary preview frame6 with primary-state Swim: horizontal pose. The actual water world still remains vertical; no actual-world swim acceptance."
+}

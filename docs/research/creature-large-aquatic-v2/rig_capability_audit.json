@@ -1,0 +1,93 @@
+{
+  "whale": {
+    "baseline": {
+      "extent": [
+        4.996481180191042,
+        3.313672065734864,
+        11.00180530548096
+      ],
+      "min_y": -1.9428902930940244e-16,
+      "palette_joints": 8,
+      "weighted_joints": 1,
+      "weighted_node_ids": [
+        2
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "run"
+      ]
+    },
+    "candidate": {
+      "weighted_joints": 14,
+      "weighted_node_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "run"
+      ]
+    }
+  },
+  "water_dragon": {
+    "baseline": {
+      "extent": [
+        1.0921372771263123,
+        5.699745254872873,
+        2.8829218284078553
+      ],
+      "min_y": -6.465626511996128e-09,
+      "palette_joints": 8,
+      "weighted_joints": 1,
+      "weighted_node_ids": [
+        2
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "run",
+        "punch"
+      ]
+    },
+    "candidate": {
+      "weighted_joints": 15,
+      "weighted_node_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "run",
+        "punch"
+      ]
+    }
+  }
+}

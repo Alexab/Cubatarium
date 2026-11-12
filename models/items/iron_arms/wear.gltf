@@ -1,0 +1,138 @@
+{
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "asset": {
+    "version": "2.0",
+    "generator": "Cubatarium build_creature_wear_variants.py",
+    "extras": {
+      "source_model_sha256": "b2e195cd186ae2cbfa129621e404adc3e9bea2f346a58977c0ae55bdf63e1368",
+      "purpose": "authored worn-only hollow armor shell; original inventory/FP resources retained"
+    }
+  },
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 192,
+      "type": "VEC3",
+      "min": [
+        -1.06,
+        -1,
+        -1.06
+      ],
+      "max": [
+        1.06,
+        1,
+        1.06
+      ]
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 192,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5125,
+      "count": 192,
+      "type": "SCALAR",
+      "min": [
+        0
+      ],
+      "max": [
+        191
+      ]
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Armor_Metal_Cylinder.049",
+      "extras": {
+        "processed": true,
+        "name": "Armor_Metal_Cylinder.049",
+        "node": "Armor_Metal_Cylinder.049"
+      },
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "TEXCOORD_0": 1
+          },
+          "indices": 2,
+          "mode": 4,
+          "material": 0
+        }
+      ]
+    }
+  ],
+  "materials": [
+    {
+      "name": "Cubatarium fitted iron_arms",
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicFactor": 0.0,
+        "roughnessFactor": 0.8
+      }
+    }
+  ],
+  "nodes": [
+    {
+      "name": "Armor_Metal_Cylinder.049",
+      "mesh": 0
+    }
+  ],
+  "buffers": [
+    {
+      "uri": "wear_indices.bin",
+      "byteLength": 4608
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 2304,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 2304,
+      "byteLength": 1536,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 3840,
+      "byteLength": 768,
+      "target": 34963
+    }
+  ],
+  "images": [
+    {
+      "uri": "wear_texture.png"
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9728,
+      "minFilter": 9728,
+      "wrapS": 33071,
+      "wrapT": 33071
+    }
+  ],
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
+    }
+  ]
+}

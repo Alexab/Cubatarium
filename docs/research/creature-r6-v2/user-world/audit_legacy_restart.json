@@ -1,0 +1,25 @@
+{
+  "schema": "creature-user-world-independent-audit.v1",
+  "passed": true,
+  "label": "legacy_restart",
+  "mode": "legacy",
+  "restart": true,
+  "exe_sha256": "8543a363e0a48f06b4abfeb1cac41e793f1d529db092782b03a8bbf952ddf8c4",
+  "context_sha256": "99b7b476931834eb697fb5bdd098b589084e9bf2dd5b694029110c44560efd30",
+  "scope": "Normal cooperative load and save, actual current user/appearance/inventory, sampled control roundtrip; no UI pack/terrain/FP animation/performance acceptance",
+  "loaded_user": 1,
+  "loaded_npcs": 64,
+  "control_roundtrips": 5,
+  "selected_skin": "human_guard",
+  "legacy_migrated_to_selected_skin": false,
+  "native_files_sha256": {
+    "fixture_marker.json": "1eff2de5972b7e2bf29f70cf322d7cd82141a418ec3626dde461ce1f844845ee",
+    "input_creatures.json": "a0abc1e6387c1f0566b990736c3af86f906c4b05dcf2d36e86946b08d2d4904b",
+    "input_users.json": "4f5980c8ce29551f37709d3014938576ee4d9eaf56700f9a8590b4ebec965af5",
+    "input_world_data.json": "1201ee6f3037f14fdbe1b72aa8fed14234812383cf02b26fd20c8ab801a21963",
+    "manifest.json": "ce67cc453d1e8b78329d938aab6ca2fa7a5a1c16bb7f7589bf3e62868bee6202",
+    "saved_creatures.json": "b3c11571958374b2b2b90ab003464e9cca2f5fd7582443fb626dfe266035f073",
+    "saved_users.json": "7306255b68dfa0a090533f25f65d64de0c39c3437bd755f33e31e2d48a16585f",
+    "saved_world_data.json": "b00b62fcec0dae2df2aa85880b7193b453ca7e8830c84c7522ad0afc7e41cc88"
+  }
+}

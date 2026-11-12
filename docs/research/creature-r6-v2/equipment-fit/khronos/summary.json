@@ -1,0 +1,123 @@
+{
+  "schema": "creature-khronos-validation.v1",
+  "validator_version": "2.0.0-dev.3.10",
+  "package_version": "2.0.0-dev.3.10",
+  "scope": "worn-only armor glTF buffers/images/schema; not artistic or complete R6 acceptance",
+  "totals": {
+    "assets": 9,
+    "errors": 0,
+    "warnings": 0,
+    "infos": 0
+  },
+  "message_codes": {},
+  "assets": [
+    {
+      "id": "copper_arms",
+      "files_sha256": {
+        "wear.gltf": "6344f12cf80676cd5d2b8d3ca837f62413a6299126cca639e1c2187a88081069",
+        "wear_indices.bin": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
+        "wear_texture.png": "04100fbd80b805e8bb4fcd95214edf2d3c316544fe69a05633aab7b468c1a08a"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "copper_chest",
+      "files_sha256": {
+        "wear.gltf": "f147a4b2b2cede6c88aa98d71e435e1d7e6e54690326d2dce22ed54206930619",
+        "wear_indices.bin": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
+        "wear_texture.png": "05822b4c9abe8971260d8ac0cfc0742092e22cd2926f2be2b17093b9d8458aee"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "copper_legs",
+      "files_sha256": {
+        "wear.gltf": "89091738bce6890163e988809d77472842fa183d78e6d07da39e9b9ea1b353ef",
+        "wear_indices.bin": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
+        "wear_texture.png": "792c4ee7bbbccee855bee6b6e2e72371bb26dca593756cbcbcbf49d2aa94b93b"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "iron_arms",
+      "files_sha256": {
+        "wear.gltf": "78927741d9e24f004d1b9fc2b986db7cb01822eb9e614f144d581ce4094e4fac",
+        "wear_indices.bin": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
+        "wear_texture.png": "2148e5dcfcbf3a201f89560852b53f82249201aafad33b0e82dfda53d538d4ea"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "iron_chest",
+      "files_sha256": {
+        "wear.gltf": "484f17b9000f93551556f8d10a157e6f4a1b8bf0254e410c8f88432e77cb9447",
+        "wear_indices.bin": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
+        "wear_texture.png": "973d015b3544b7c100d874cf02aa9222ee5145006de327e2bff502f74e56d079"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "iron_legs",
+      "files_sha256": {
+        "wear.gltf": "27e18644aee251240fce5f51744c6edaca9a5a71b7bf4ebff82e2d87e8b80370",
+        "wear_indices.bin": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
+        "wear_texture.png": "e5a23738574176757e6cd0d2962d5aba5d98c2bd052dedbb1a2c8a07f753c396"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "leather_arms",
+      "files_sha256": {
+        "wear.gltf": "1b27d3abde6f36a27efd831f1635fb482c263355807f1f68501212cb684d44cc",
+        "wear_indices.bin": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
+        "wear_texture.png": "8453d9cc74ddca626121f987c5762fb86c3ab2d059fda5b054438a5f54472c86"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "leather_chest",
+      "files_sha256": {
+        "wear.gltf": "47813f966628936121e87d46ce29a52ba9689d646b0d62087ecef7b4c458fa8b",
+        "wear_indices.bin": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
+        "wear_texture.png": "2559651738726cd28bea6291a655d16ced9605add40b84c69ec24c4e160d262f"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "leather_legs",
+      "files_sha256": {
+        "wear.gltf": "7f2cef168cf2e1a2dc90757a414249e68155e3179a18e0926f442c2114aeeead",
+        "wear_indices.bin": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
+        "wear_texture.png": "e9c9b026cd86a6889a3c2f1cc16b3ce49d5539f80f9794c65bf390c816748d17"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    }
+  ]
+}

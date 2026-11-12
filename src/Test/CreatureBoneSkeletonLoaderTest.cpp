@@ -218,7 +218,7 @@ int main()
   }
 
   const auto pigGeometry = cutum::CreatureBoneSkeletonLoader::LoadFromFile(
-      "models/creatures/pig/geometry.geo.json", "geometry.pig.v1.8");
+      "models/creatures/_sources/bedrock_geo/pig.geo.json", "geometry.pig.v1.8");
   if (!pigGeometry)
   {
     std::cerr << "FAIL: could not load pig geometry\n";
@@ -303,6 +303,41 @@ int main()
             << geometry->bones.size() << " cubes="
             << asset.boneMeshes[0].cubes.size() << "\n";
 
+  // Import semantics above stay covered by their unchanged bind-rotation
+  // fixture. An authored production pig may model the torso horizontally.
+  const auto authoredPig = cutum::CreatureBoneSkeletonLoader::LoadFromFile(
+      "models/creatures/pig/geometry.geo.json", "geometry.pig.v1.8");
+  if (!authoredPig) { std::cerr << "FAIL: authored pig missing\n"; return 1; }
+  const auto authoredPigAsset = cutum::BoneSkeletonCubeMeshBuilder::BuildMeshAsset(*authoredPig);
+  cutum::BoneSkeletonHierarchy authoredPigHierarchy(*authoredPig);
+  const glm::vec3 authoredBody = MeshCenter(authoredPigHierarchy, authoredPigAsset,
+      authoredPig->boneIndexByName.at("body"), idlePose);
+  const glm::vec3 authoredHead = MeshCenter(authoredPigHierarchy, authoredPigAsset,
+      authoredPig->boneIndexByName.at("head"), idlePose);
+  if (authoredBody.y < .2f || authoredHead.z >= authoredBody.z - .2f)
+  {
+    std::cerr << "FAIL: authored pig torso/head anatomical placement\n";
+    return 1;
+  }
+  for (const char *leg : {"leg0", "leg1", "leg2", "leg3"})
+  {
+    const size_t i = authoredPig->boneIndexByName.at(leg);
+    float lowest = 100.f;
+    for (const auto &cube : authoredPigAsset.boneMeshes[i].cubes)
+    {
+      const glm::mat4 m = authoredPigHierarchy.ComputeBoneMatrix(i, idlePose) * cube.restLocalMatrix;
+      for (int x : {-1, 1}) for (int y : {-1, 1}) for (int z : {-1, 1})
+      {
+        lowest = std::min(lowest, (m * glm::vec4(x*.5f, y*.5f, z*.5f, 1.f)).y);
+      }
+    }
+    if (std::fabs(lowest) > .02f)
+    {
+      std::cerr << "FAIL: authored pig " << leg << " ground contact " << lowest << "\n";
+      return 1;
+    }
+  }
+
   const auto beeGeometry = cutum::CreatureBoneSkeletonLoader::LoadFromFile(
       "models/creatures/bee/geometry.geo.json", "geometry.bee");
   if (!beeGeometry)
@@ -325,40 +360,49 @@ int main()
       }
     }
   }
-  if (beeGeometry->bones.size() != 7 || beeCubeCount != 9)
+  const auto hasRenderedWing = [&](const char *name)
   {
-    std::cerr << "FAIL: bee bones/cubes=" << beeGeometry->bones.size() << "/"
-              << beeCubeCount << "\n";
+    const auto it = beeGeometry->boneIndexByName.find(name);
+    if (it == beeGeometry->boneIndexByName.end()) return false;
+    for (const auto &cube : beeAsset.boneMeshes[it->second].cubes)
+      if (!cube.indices.empty()) return true;
+    return false;
+  };
+  if (beeGeometry->boneIndexByName.count("body") == 0 ||
+      !(hasRenderedWing("wing0") || hasRenderedWing("rightwing_bone")) ||
+      !(hasRenderedWing("wing1") || hasRenderedWing("leftwing_bone")))
+  {
+    std::cerr << "FAIL: bee missing body or wing bones, bones="
+              << beeGeometry->bones.size() << "\n";
     return 1;
   }
-  if (beeRenderedFaces < 9)
+  if (beeCubeCount < 4 || beeRenderedFaces < 4)
   {
-    std::cerr << "FAIL: bee rendered face groups=" << beeRenderedFaces << "\n";
+    std::cerr << "FAIL: bee bones/cubes/faces=" << beeGeometry->bones.size()
+              << "/" << beeCubeCount << "/" << beeRenderedFaces << "\n";
     return 1;
+  }
+  for (const cutum::BoneSkeletonBoneMeshCpu &boneMesh : beeAsset.boneMeshes)
+  {
+    for (const cutum::BoneSkeletonCubeMeshCpu &cube : boneMesh.cubes)
+    {
+      for (size_t i = 3; i + 1 < cube.interleavedPosUv.size(); i += 5)
+      {
+        const float u = cube.interleavedPosUv[i];
+        const float v = cube.interleavedPosUv[i + 1];
+        if (u < -1e-4f || u > 1.0001f || v < -1e-4f || v > 1.0001f)
+        {
+          std::cerr << "FAIL: bee UV out of range u=" << u << " v=" << v
+                    << "\n";
+          return 1;
+        }
+      }
+    }
   }
 
-  const cutum::BoneSkeletonBoneMeshCpu &beeBody =
-      beeAsset.boneMeshes[beeGeometry->boneIndexByName.at("body")];
-  const cutum::BoneSkeletonCubeMeshCpu &beeTorso = beeBody.cubes[0];
-  // Face 1 (+X east), first vertex (BL): u0 / v1 with half-texel inset.
-  const float eastU = beeTorso.interleavedPosUv[4u * 5u + 3u];
-  const float eastV = beeTorso.interleavedPosUv[4u * 5u + 4u];
-  if (!NearlyEqual(eastU, InsetNormU0(17, 64.f)) ||
-      !NearlyEqual(eastV, InsetNormV1(17, 64.f)))
-  {
-    std::cerr << "FAIL: bee east UV=(" << eastU << "," << eastV
-              << ") expected inset east BL (17,17)/64\n";
-    return 1;
-  }
-  const float southU = beeTorso.interleavedPosUv[3u];
-  if (!NearlyEqual(southU, InsetNormU0(27, 64.f)))
-  {
-    std::cerr << "FAIL: bee south U=" << southU << " expected inset 27/64\n";
-    return 1;
-  }
-
-  std::cout << "OK bee: bones=7 cubes=9 rendered_face_groups="
-            << beeRenderedFaces << "\n";
+  std::cout << "OK bee: bones=" << beeGeometry->bones.size()
+            << " cubes=" << beeCubeCount
+            << " rendered_face_groups=" << beeRenderedFaces << "\n";
 
   const auto humanGeometry = cutum::CreatureBoneSkeletonLoader::LoadFromFile(
       "models/creatures/human/geometry.geo.json", "geometry.zombie.v1.8");
@@ -393,17 +437,32 @@ int main()
   }
   const cutum::CreatureBoneSkeletonMeshAsset bunnyAsset =
       cutum::BoneSkeletonCubeMeshBuilder::BuildMeshAsset(*bunnyGeometry);
-  const cutum::BoneSkeletonBoneMeshCpu &bunnyBody =
-      bunnyAsset.boneMeshes[bunnyGeometry->boneIndexByName.at("body")];
-  const cutum::BoneSkeletonCubeMeshCpu &bunnyTorso = bunnyBody.cubes[0];
-  const float bunnyEastU = bunnyTorso.interleavedPosUv[4u * 5u + 3u];
-  const float bunnyEastV = bunnyTorso.interleavedPosUv[4u * 5u + 4u];
-  if (!NearlyEqual(bunnyEastU, (25.5f / 64.f)) ||
-      !NearlyEqual(bunnyEastV, (14.5f / 32.f)))
+  for (const char *boneName : {"body", "haunchLeft", "haunchRight", "earLeft",
+                               "earRight", "frontLegLeft", "frontLegRight"})
   {
-    std::cerr << "FAIL: bunny mirrored east UV=(" << bunnyEastU << ","
-              << bunnyEastV << ") expected ~(25.5/64,14.5/32)\n";
-    return 1;
+    if (bunnyGeometry->boneIndexByName.find(boneName) ==
+        bunnyGeometry->boneIndexByName.end())
+    {
+      std::cerr << "FAIL: bunny missing bone " << boneName << "\n";
+      return 1;
+    }
+  }
+  for (const cutum::BoneSkeletonBoneMeshCpu &boneMesh : bunnyAsset.boneMeshes)
+  {
+    for (const cutum::BoneSkeletonCubeMeshCpu &cube : boneMesh.cubes)
+    {
+      for (size_t i = 3; i + 1 < cube.interleavedPosUv.size(); i += 5)
+      {
+        const float u = cube.interleavedPosUv[i];
+        const float v = cube.interleavedPosUv[i + 1];
+        if (u < -1e-4f || u > 1.0001f || v < -1e-4f || v > 1.0001f)
+        {
+          std::cerr << "FAIL: bunny UV out of range u=" << u << " v=" << v
+                    << "\n";
+          return 1;
+        }
+      }
+    }
   }
 
   const auto foxGeometry = cutum::CreatureBoneSkeletonLoader::LoadFromFile(

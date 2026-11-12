@@ -1,0 +1,30 @@
+{
+  "schema": "creature-posed-culling-visual-review.v1",
+  "reviewer": "Codex direct image inspection",
+  "date": "2026-11-12",
+  "r6_state": "pending",
+  "exe_sha256": "26f7f77d36a7ab28661db03ae468c309ae1f08ca9303ad59d4189bf41758b2aa",
+  "artifacts": [
+    {
+      "path": "fast_clip/posed_examples.png",
+      "sha256": "178466c9084dc1f581ea29d3ae7d1c0687aa932333129f5120fa41f8f9d6842f",
+      "observation": "Directly inspected diagnostic sheet: eight resources, actual pose/inventory and recovered edge fragments. Fire spirit has no recovered-edge case; action may fall back to idle. Not final art acceptance."
+    },
+    {
+      "path": "fast_clip/runtime_production_final/frame_002.png",
+      "sha256": "6716fe77693833ac893324dc8bdf26c2fa59c97e59e072cc88c9931585da3965",
+      "observation": "Directly inspected actual-world bot with copper equipment. Visible actor and equipment; short stationary subset only."
+    },
+    {
+      "path": "fast_world/runtime_world_rigid_demo_walker/frame_002.png",
+      "sha256": "acf2674d921a811a2dce6616e50fb687b7b0f2338c8e82e0dd4c0762ee1b3cf3",
+      "observation": "Directly inspected actual-world rigid walker; visible textured body/legs. Rear view alone cannot establish anatomy or contact acceptance."
+    },
+    {
+      "path": "fast_world/runtime_world_fire_spirit/frame_002.png",
+      "sha256": "18667b51d8464498c44059b445c6c43219b9f693d65b7d5eeeca5222368fb701",
+      "observation": "Directly inspected actual-world sprite with transparent outline. No full camera sweep or animation acceptance."
+    }
+  ],
+  "limits": "Four directly viewed artifacts; automated coverage of 1308 frames is not a claim of direct review of every frame. Debug collision boxes are intentional QA overlays. FPS overlays are not matched performance evidence."
+}

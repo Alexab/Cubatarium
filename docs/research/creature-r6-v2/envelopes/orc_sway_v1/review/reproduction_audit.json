@@ -1,0 +1,5 @@
+{
+  "passed": true,
+  "scope": "Own pre-sway snapshot reproduces candidate glTF semantic and BIN/PNG/recipe byte exact",
+  "snapshot_sha256": "b69cf1c9e35bba96f48233f80d04f54a3684ce10b2df881341eadf7d2d4cb374"
+}

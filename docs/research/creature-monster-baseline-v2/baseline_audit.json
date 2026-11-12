@@ -1,0 +1,1921 @@
+{
+  "oerkki": {
+    "extent_blocks": [
+      0.802176296710968,
+      1.897473692893982,
+      0.333196297287941
+    ],
+    "min_y": 0.0,
+    "palette_joints": 9,
+    "weighted_joints": 1,
+    "clips": [
+      "idle",
+      "walk",
+      "run",
+      "punch"
+    ],
+    "definition": {
+      "id": "oerkki",
+      "display_name": "Oerkki",
+      "catalog": {
+        "tags": [
+          "mobs",
+          "hostile"
+        ],
+        "spawnable": true,
+        "sort_order": 30,
+        "natural_spawnable": true,
+        "spawn_weight": 0.7,
+        "spawn_group_min": 1,
+        "spawn_group_max": 2,
+        "spawn_biomes": [
+          "deep_dark",
+          "dripstone_caves",
+          "lush_caves"
+        ]
+      },
+      "role": "mob",
+      "bounds": {
+        "rest": [
+          0.8,
+          1.9,
+          0.33
+        ],
+        "max": [
+          0.8,
+          1.9,
+          0.33
+        ],
+        "min": [
+          0.8,
+          1.45,
+          0.33
+        ]
+      },
+      "eye_height": 1.73,
+      "habitat": "terrestrial",
+      "locomotion_archetype": "terrestrial_biped",
+      "locomotion": {
+        "can_fly": false,
+        "can_crouch": false,
+        "can_jump": true,
+        "jump_height": 1.0,
+        "walk_speed": 2.5
+      },
+      "behavior": "melee_attack",
+      "behavior_params": {
+        "move_speed": 2.5,
+        "wander_interval_min": 2.0,
+        "wander_interval_max": 4.0,
+        "aggro_radius": 12.0,
+        "attack_range": 1.4,
+        "attack_cooldown": 1.5
+      },
+      "visual": {
+        "backend": "gltf_skeleton",
+        "texture_layout": "rigid_crop",
+        "default_texture": "body",
+        "icon": {
+          "mode": "species_texture",
+          "color": [
+            0.2,
+            0.55,
+            0.3,
+            1.0
+          ]
+        },
+        "gltf": {
+          "model": "model.gltf",
+          "textures": [
+            "arm",
+            "body",
+            "face",
+            "leg"
+          ],
+          "model_scale": 1.0,
+          "model_yaw_offset_deg": 0
+        },
+        "animation": {
+          "walk_cycle_hz": 2.0,
+          "clips": {
+            "idle": {
+              "start": 0,
+              "end": 23,
+              "loop": true,
+              "speed": 1.0
+            },
+            "walk": {
+              "start": 24,
+              "end": 36,
+              "loop": true,
+              "speed": 1.0
+            },
+            "run": {
+              "start": 37,
+              "end": 49,
+              "loop": true,
+              "speed": 1.0
+            },
+            "punch": {
+              "start": 37,
+              "end": 49,
+              "loop": false,
+              "speed": 1.0
+            }
+          },
+          "state_map": {
+            "Idle": "idle",
+            "Walk": "walk",
+            "Run": "run",
+            "Jump": "run",
+            "Fall": "idle",
+            "Crouch": "idle",
+            "Slither": "walk",
+            "Coil": "idle",
+            "Action": "punch",
+            "Hover": "idle",
+            "Glide": "idle",
+            "Swim": "walk",
+            "Tread": "idle",
+            "Fly": "idle"
+          }
+        }
+      },
+      "vitals": {
+        "max_health": 80,
+        "max_satiety": 100,
+        "max_thirst": 100,
+        "max_fatigue": 100,
+        "max_breath": 100,
+        "max_fatal_wounds": 1,
+        "armor": 2
+      },
+      "attributes": {
+        "strength": 14,
+        "agility": 8,
+        "endurance": 11,
+        "accuracy": 8,
+        "intelligence": 5,
+        "luck": 5,
+        "perception": 10
+      }
+    }
+  },
+  "orc": {
+    "extent_blocks": [
+      1.8546765446663889,
+      2.7422149181365967,
+      0.8764099478722136
+    ],
+    "min_y": -1.1920928910669204e-08,
+    "palette_joints": 9,
+    "weighted_joints": 1,
+    "clips": [
+      "idle",
+      "walk",
+      "run",
+      "punch"
+    ],
+    "definition": {
+      "id": "orc",
+      "display_name": "Orc",
+      "catalog": {
+        "tags": [
+          "mobs",
+          "hostile"
+        ],
+        "spawnable": true,
+        "sort_order": 54,
+        "natural_spawnable": true,
+        "spawn_weight": 0.7,
+        "spawn_group_min": 1,
+        "spawn_group_max": 2,
+        "spawn_biomes": [
+          "plains",
+          "savanna",
+          "hills",
+          "foothills",
+          "forest"
+        ]
+      },
+      "role": "mob",
+      "bounds": {
+        "rest": [
+          2.47,
+          3.05,
+          0.88
+        ],
+        "max": [
+          2.47,
+          3.05,
+          0.88
+        ],
+        "min": [
+          2.47,
+          2.27,
+          0.88
+        ]
+      },
+      "eye_height": 2.7,
+      "habitat": "terrestrial",
+      "locomotion_archetype": "terrestrial_biped",
+      "locomotion": {
+        "can_fly": false,
+        "can_crouch": false,
+        "can_jump": true,
+        "jump_height": 1.0,
+        "walk_speed": 2.4
+      },
+      "behavior": "melee_attack",
+      "behavior_params": {
+        "move_speed": 2.4,
+        "wander_interval_min": 2.0,
+        "wander_interval_max": 4.0,
+        "aggro_radius": 12.0,
+        "attack_range": 1.4,
+        "attack_cooldown": 1.5
+      },
+      "visual": {
+        "backend": "gltf_skeleton",
+        "texture_layout": "rigid_crop",
+        "default_texture": "body",
+        "icon": {
+          "mode": "species_texture",
+          "color": [
+            0.3137254901960784,
+            0.47058823529411764,
+            0.27450980392156865,
+            1.0
+          ]
+        },
+        "gltf": {
+          "model": "model.gltf",
+          "textures": [
+            "arm",
+            "body",
+            "face",
+            "leg"
+          ],
+          "model_scale": 1.0,
+          "model_yaw_offset_deg": 0
+        },
+        "animation": {
+          "walk_cycle_hz": 2.0,
+          "clips": {
+            "idle": {
+              "start": 30,
+              "end": 40,
+              "loop": true,
+              "speed": 0.6666666666666666
+            },
+            "walk": {
+              "start": 2,
+              "end": 18,
+              "loop": true,
+              "speed": 0.6666666666666666
+            },
+            "run": {
+              "start": 2,
+              "end": 18,
+              "loop": true,
+              "speed": 0.6666666666666666
+            },
+            "punch": {
+              "start": 20,
+              "end": 30,
+              "loop": false,
+              "speed": 0.6666666666666666
+            }
+          },
+          "state_map": {
+            "Idle": "idle",
+            "Walk": "walk",
+            "Run": "run",
+            "Jump": "run",
+            "Fall": "idle",
+            "Crouch": "idle",
+            "Slither": "walk",
+            "Coil": "idle",
+            "Action": "punch",
+            "Hover": "idle",
+            "Glide": "idle",
+            "Swim": "walk",
+            "Tread": "idle",
+            "Fly": "idle"
+          }
+        }
+      }
+    }
+  },
+  "ogre": {
+    "extent_blocks": [
+      2.5820945501327595,
+      3.1397716392984574,
+      2.8615766813831933
+    ],
+    "min_y": -1.9991619409541147e-09,
+    "palette_joints": 9,
+    "weighted_joints": 1,
+    "clips": [
+      "idle",
+      "walk",
+      "run",
+      "punch"
+    ],
+    "definition": {
+      "id": "ogre",
+      "display_name": "Ogre",
+      "catalog": {
+        "tags": [
+          "mobs",
+          "hostile"
+        ],
+        "spawnable": true,
+        "sort_order": 55,
+        "natural_spawnable": true,
+        "spawn_weight": 0.7,
+        "spawn_group_min": 1,
+        "spawn_group_max": 2,
+        "spawn_biomes": [
+          "savanna",
+          "scrubland",
+          "plains",
+          "forest"
+        ]
+      },
+      "role": "mob",
+      "bounds": {
+        "rest": [
+          2.58,
+          3.14,
+          2.86
+        ],
+        "max": [
+          2.58,
+          3.14,
+          2.86
+        ],
+        "min": [
+          2.58,
+          2.33,
+          2.86
+        ]
+      },
+      "eye_height": 2.89,
+      "habitat": "terrestrial",
+      "locomotion_archetype": "terrestrial_biped",
+      "locomotion": {
+        "can_fly": false,
+        "can_crouch": false,
+        "can_jump": true,
+        "jump_height": 1.0,
+        "walk_speed": 2.0
+      },
+      "behavior": "melee_attack",
+      "behavior_params": {
+        "move_speed": 2.0,
+        "wander_interval_min": 2.0,
+        "wander_interval_max": 4.0,
+        "aggro_radius": 12.0,
+        "attack_range": 1.4,
+        "attack_cooldown": 1.5
+      },
+      "visual": {
+        "backend": "gltf_skeleton",
+        "texture_layout": "rigid_crop",
+        "default_texture": "body",
+        "icon": {
+          "mode": "species_texture",
+          "color": [
+            0.39215686274509803,
+            0.35294117647058826,
+            0.29411764705882354,
+            1.0
+          ]
+        },
+        "gltf": {
+          "model": "model.gltf",
+          "textures": [
+            "arm",
+            "body",
+            "face",
+            "leg"
+          ],
+          "model_scale": 1.0,
+          "model_yaw_offset_deg": 0
+        },
+        "animation": {
+          "walk_cycle_hz": 2.0,
+          "clips": {
+            "idle": {
+              "start": 40,
+              "end": 70,
+              "loop": true,
+              "speed": 0.6666666666666666
+            },
+            "walk": {
+              "start": 3,
+              "end": 38,
+              "loop": true,
+              "speed": 0.6666666666666666
+            },
+            "run": {
+              "start": 3,
+              "end": 38,
+              "loop": true,
+              "speed": 0.6666666666666666
+            },
+            "punch": {
+              "start": 70,
+              "end": 100,
+              "loop": false,
+              "speed": 0.6666666666666666
+            }
+          },
+          "state_map": {
+            "Idle": "idle",
+            "Walk": "walk",
+            "Run": "run",
+            "Jump": "run",
+            "Fall": "idle",
+            "Crouch": "idle",
+            "Slither": "walk",
+            "Coil": "idle",
+            "Action": "punch",
+            "Hover": "idle",
+            "Glide": "idle",
+            "Swim": "walk",
+            "Tread": "idle",
+            "Fly": "idle"
+          }
+        }
+      }
+    }
+  },
+  "dungeon_master": {
+    "extent_blocks": [
+      1.6547002792358403,
+      2.6686012873204383,
+      0.9512526690959962
+    ],
+    "min_y": 0.0,
+    "palette_joints": 7,
+    "weighted_joints": 2,
+    "clips": [
+      "idle",
+      "walk",
+      "run",
+      "punch"
+    ],
+    "definition": {
+      "id": "dungeon_master",
+      "display_name": "Dungeon Master",
+      "catalog": {
+        "tags": [
+          "mobs",
+          "hostile"
+        ],
+        "spawnable": true,
+        "sort_order": 45,
+        "natural_spawnable": true,
+        "spawn_weight": 0.4,
+        "spawn_group_min": 1,
+        "spawn_group_max": 2,
+        "spawn_biomes": [
+          "deep_dark",
+          "dripstone_caves"
+        ]
+      },
+      "role": "mob",
+      "bounds": {
+        "rest": [
+          1.65,
+          2.67,
+          0.95
+        ],
+        "max": [
+          1.65,
+          2.67,
+          0.95
+        ],
+        "min": [
+          1.65,
+          1.98,
+          0.95
+        ]
+      },
+      "eye_height": 2.59,
+      "habitat": "terrestrial",
+      "locomotion_archetype": "terrestrial_biped",
+      "locomotion": {
+        "can_fly": false,
+        "can_crouch": false,
+        "can_jump": true,
+        "jump_height": 1.0,
+        "walk_speed": 2.3
+      },
+      "behavior": "melee_attack",
+      "behavior_params": {
+        "move_speed": 2.3,
+        "aggro_radius": 16.0,
+        "attack_range": 2.5,
+        "attack_cooldown": 2.0
+      },
+      "visual": {
+        "backend": "gltf_skeleton",
+        "texture_layout": "rigid_crop",
+        "default_texture": "body",
+        "icon": {
+          "mode": "species_texture",
+          "color": [
+            0.3137254901960784,
+            0.11764705882352941,
+            0.11764705882352941,
+            1.0
+          ]
+        },
+        "gltf": {
+          "model": "model.gltf",
+          "textures": [
+            "arm",
+            "body",
+            "face",
+            "leg"
+          ],
+          "model_scale": 1.0,
+          "model_yaw_offset_deg": 0
+        },
+        "animation": {
+          "walk_cycle_hz": 2.0,
+          "clips": {
+            "idle": {
+              "start": 0,
+              "end": 19,
+              "loop": true,
+              "speed": 1.0
+            },
+            "walk": {
+              "start": 20,
+              "end": 35,
+              "loop": true,
+              "speed": 1.0
+            },
+            "run": {
+              "start": 20,
+              "end": 35,
+              "loop": true,
+              "speed": 2.6666666666666665
+            },
+            "punch": {
+              "start": 36,
+              "end": 48,
+              "loop": false,
+              "speed": 1.0
+            }
+          },
+          "state_map": {
+            "Idle": "idle",
+            "Walk": "walk",
+            "Run": "run",
+            "Jump": "run",
+            "Fall": "idle",
+            "Crouch": "idle",
+            "Slither": "walk",
+            "Coil": "idle",
+            "Action": "punch",
+            "Hover": "idle",
+            "Glide": "idle",
+            "Swim": "walk",
+            "Tread": "idle",
+            "Fly": "idle"
+          }
+        }
+      }
+    }
+  },
+  "sand_monster": {
+    "extent_blocks": [
+      0.5936254560947418,
+      1.8647528886795044,
+      0.3946565091609955
+    ],
+    "min_y": 0.0,
+    "palette_joints": 18,
+    "weighted_joints": 1,
+    "clips": [
+      "idle",
+      "walk",
+      "run",
+      "punch"
+    ],
+    "definition": {
+      "id": "sand_monster",
+      "display_name": "Sand Monster",
+      "catalog": {
+        "tags": [
+          "mobs",
+          "hostile"
+        ],
+        "spawnable": true,
+        "sort_order": 32,
+        "natural_spawnable": true,
+        "spawn_weight": 0.7,
+        "spawn_group_min": 1,
+        "spawn_group_max": 2,
+        "spawn_biomes": [
+          "desert",
+          "savanna",
+          "scrubland",
+          "beach"
+        ]
+      },
+      "role": "mob",
+      "bounds": {
+        "rest": [
+          0.59,
+          1.86,
+          0.39
+        ],
+        "max": [
+          0.59,
+          1.86,
+          0.39
+        ],
+        "min": [
+          0.59,
+          1.37,
+          0.39
+        ]
+      },
+      "eye_height": 1.62,
+      "habitat": "terrestrial",
+      "locomotion_archetype": "terrestrial_biped",
+      "locomotion": {
+        "can_fly": false,
+        "can_crouch": false,
+        "can_jump": true,
+        "jump_height": 1.0,
+        "walk_speed": 1.5
+      },
+      "behavior": "melee_attack",
+      "behavior_params": {
+        "move_speed": 1.5,
+        "wander_interval_min": 2.0,
+        "wander_interval_max": 4.0,
+        "aggro_radius": 12.0,
+        "attack_range": 1.4,
+        "attack_cooldown": 1.5
+      },
+      "visual": {
+        "backend": "gltf_skeleton",
+        "texture_layout": "rigid_crop",
+        "default_texture": "body",
+        "icon": {
+          "mode": "species_texture",
+          "color": [
+            0.8,
+            0.65,
+            0.3,
+            1.0
+          ]
+        },
+        "gltf": {
+          "model": "model.gltf",
+          "textures": [
+            "arm",
+            "body",
+            "face",
+            "leg"
+          ],
+          "model_scale": 1.0,
+          "model_yaw_offset_deg": 0
+        },
+        "animation": {
+          "walk_cycle_hz": 2.0,
+          "clips": {
+            "idle": {
+              "start": 0,
+              "end": 39,
+              "loop": true,
+              "speed": 1.0
+            },
+            "walk": {
+              "start": 41,
+              "end": 72,
+              "loop": true,
+              "speed": 1.0
+            },
+            "run": {
+              "start": 74,
+              "end": 105,
+              "loop": true,
+              "speed": 3.0
+            },
+            "punch": {
+              "start": 74,
+              "end": 105,
+              "loop": false,
+              "speed": 1.0
+            }
+          },
+          "state_map": {
+            "Idle": "idle",
+            "Walk": "walk",
+            "Run": "run",
+            "Jump": "run",
+            "Fall": "idle",
+            "Crouch": "idle",
+            "Slither": "walk",
+            "Coil": "idle",
+            "Action": "punch",
+            "Hover": "idle",
+            "Glide": "idle",
+            "Swim": "walk",
+            "Tread": "idle",
+            "Fly": "idle"
+          }
+        }
+      },
+      "vitals": {
+        "max_health": 60,
+        "max_satiety": 100,
+        "max_thirst": 100,
+        "max_fatigue": 100,
+        "max_breath": 100,
+        "max_fatal_wounds": 1,
+        "armor": 2
+      },
+      "attributes": {
+        "strength": 12,
+        "agility": 8,
+        "endurance": 11,
+        "accuracy": 8,
+        "intelligence": 4,
+        "luck": 5,
+        "perception": 10
+      }
+    }
+  },
+  "stone_monster": {
+    "extent_blocks": [
+      0.8045886754989624,
+      1.724323034286499,
+      0.41880838572978973
+    ],
+    "min_y": 0.0,
+    "palette_joints": 7,
+    "weighted_joints": 1,
+    "clips": [
+      "idle",
+      "walk",
+      "run",
+      "punch"
+    ],
+    "definition": {
+      "id": "stone_monster",
+      "display_name": "Stone Monster",
+      "catalog": {
+        "tags": [
+          "mobs",
+          "hostile"
+        ],
+        "spawnable": true,
+        "sort_order": 41,
+        "natural_spawnable": true,
+        "spawn_weight": 0.7,
+        "spawn_group_min": 1,
+        "spawn_group_max": 2,
+        "spawn_biomes": [
+          "mountains",
+          "hills",
+          "jagged_peaks",
+          "foothills",
+          "dripstone_caves"
+        ]
+      },
+      "role": "mob",
+      "bounds": {
+        "rest": [
+          0.8,
+          1.72,
+          0.42
+        ],
+        "max": [
+          0.8,
+          1.72,
+          0.42
+        ],
+        "min": [
+          0.8,
+          1.28,
+          0.42
+        ]
+      },
+      "eye_height": 1.47,
+      "habitat": "terrestrial",
+      "locomotion_archetype": "terrestrial_biped",
+      "locomotion": {
+        "can_fly": false,
+        "can_crouch": false,
+        "can_jump": true,
+        "jump_height": 1.0,
+        "walk_speed": 1.5
+      },
+      "behavior": "melee_attack",
+      "behavior_params": {
+        "move_speed": 1.5,
+        "wander_interval_min": 2.0,
+        "wander_interval_max": 4.0,
+        "aggro_radius": 12.0,
+        "attack_range": 1.4,
+        "attack_cooldown": 1.5
+      },
+      "visual": {
+        "backend": "gltf_skeleton",
+        "texture_layout": "rigid_crop",
+        "default_texture": "body",
+        "icon": {
+          "mode": "species_texture",
+          "color": [
+            0.5098039215686274,
+            0.5098039215686274,
+            0.5294117647058824,
+            1.0
+          ]
+        },
+        "gltf": {
+          "model": "model.gltf",
+          "textures": [
+            "arm",
+            "body",
+            "face",
+            "leg"
+          ],
+          "model_scale": 1.0,
+          "model_yaw_offset_deg": 0
+        },
+        "animation": {
+          "walk_cycle_hz": 2.0,
+          "clips": {
+            "idle": {
+              "start": 0,
+              "end": 14,
+              "loop": true,
+              "speed": 1.0
+            },
+            "walk": {
+              "start": 15,
+              "end": 38,
+              "loop": true,
+              "speed": 1.0
+            },
+            "run": {
+              "start": 40,
+              "end": 63,
+              "loop": true,
+              "speed": 2.6666666666666665
+            },
+            "punch": {
+              "start": 40,
+              "end": 63,
+              "loop": false,
+              "speed": 1.0
+            }
+          },
+          "state_map": {
+            "Idle": "idle",
+            "Walk": "walk",
+            "Run": "run",
+            "Jump": "run",
+            "Fall": "idle",
+            "Crouch": "idle",
+            "Slither": "walk",
+            "Coil": "idle",
+            "Action": "punch",
+            "Hover": "idle",
+            "Glide": "idle",
+            "Swim": "walk",
+            "Tread": "idle",
+            "Fly": "idle"
+          }
+        }
+      }
+    }
+  },
+  "mese_monster": {
+    "extent_blocks": [
+      2.9072505235857906,
+      1.124999983575417,
+      2.9710794197453554
+    ],
+    "min_y": 0.7163562106477684,
+    "palette_joints": 15,
+    "weighted_joints": 1,
+    "clips": [
+      "idle",
+      "walk",
+      "run",
+      "punch",
+      "die"
+    ],
+    "definition": {
+      "id": "mese_monster",
+      "display_name": "Mese Monster",
+      "catalog": {
+        "tags": [
+          "mobs",
+          "hostile"
+        ],
+        "spawnable": true,
+        "sort_order": 43,
+        "natural_spawnable": true,
+        "spawn_weight": 0.7,
+        "spawn_group_min": 1,
+        "spawn_group_max": 2,
+        "spawn_biomes": [
+          "plains",
+          "savanna",
+          "scrubland",
+          "hills"
+        ]
+      },
+      "role": "mob",
+      "bounds": {
+        "rest": [
+          2.91,
+          1.24,
+          2.97
+        ],
+        "max": [
+          2.91,
+          1.24,
+          2.97
+        ],
+        "min": [
+          2.91,
+          0.92,
+          2.97
+        ]
+      },
+      "eye_height": 1.1,
+      "habitat": "terrestrial",
+      "locomotion_archetype": "terrestrial_biped",
+      "locomotion": {
+        "can_fly": false,
+        "can_crouch": false,
+        "can_jump": true,
+        "jump_height": 1.0,
+        "walk_speed": 2.2
+      },
+      "behavior": "melee_attack",
+      "behavior_params": {
+        "move_speed": 2.2,
+        "wander_interval_min": 2.0,
+        "wander_interval_max": 4.0,
+        "aggro_radius": 12.0,
+        "attack_range": 1.4,
+        "attack_cooldown": 1.5
+      },
+      "visual": {
+        "backend": "gltf_skeleton",
+        "texture_layout": "rigid_crop",
+        "default_texture": "body",
+        "icon": {
+          "mode": "species_texture",
+          "color": [
+            0.39215686274509803,
+            0.23529411764705882,
+            0.7058823529411765,
+            1.0
+          ]
+        },
+        "gltf": {
+          "model": "model.gltf",
+          "textures": [
+            "arm",
+            "body",
+            "face",
+            "leg"
+          ],
+          "model_scale": 1.0,
+          "model_yaw_offset_deg": 0
+        },
+        "animation": {
+          "walk_cycle_hz": 2.0,
+          "clips": {
+            "idle": {
+              "start": 60,
+              "end": 83,
+              "loop": true,
+              "speed": 1.2
+            },
+            "walk": {
+              "start": 10,
+              "end": 41,
+              "loop": true,
+              "speed": 1.3333333333333333
+            },
+            "run": {
+              "start": 10,
+              "end": 41,
+              "loop": true,
+              "speed": 2.0
+            },
+            "punch": {
+              "start": 175,
+              "end": 189,
+              "loop": false,
+              "speed": 1.2
+            },
+            "die": {
+              "start": 125,
+              "end": 141,
+              "loop": false,
+              "speed": 1.2
+            }
+          },
+          "state_map": {
+            "Idle": "idle",
+            "Walk": "walk",
+            "Run": "run",
+            "Jump": "run",
+            "Fall": "idle",
+            "Crouch": "idle",
+            "Slither": "walk",
+            "Coil": "idle",
+            "Action": "punch",
+            "Hover": "idle",
+            "Glide": "idle",
+            "Swim": "walk",
+            "Tread": "idle",
+            "Fly": "idle"
+          }
+        }
+      }
+    }
+  },
+  "dirt_monster": {
+    "extent_blocks": [
+      0.8045886754989624,
+      1.724323034286499,
+      0.41880838572978973
+    ],
+    "min_y": 0.0,
+    "palette_joints": 7,
+    "weighted_joints": 1,
+    "clips": [
+      "idle",
+      "walk",
+      "run",
+      "punch"
+    ],
+    "definition": {
+      "id": "dirt_monster",
+      "display_name": "Dirt Monster",
+      "catalog": {
+        "tags": [
+          "mobs",
+          "hostile"
+        ],
+        "spawnable": true,
+        "sort_order": 44,
+        "natural_spawnable": true,
+        "spawn_weight": 0.7,
+        "spawn_group_min": 1,
+        "spawn_group_max": 2,
+        "spawn_biomes": [
+          "plains",
+          "forest",
+          "hills",
+          "foothills",
+          "lush_caves"
+        ]
+      },
+      "role": "mob",
+      "bounds": {
+        "rest": [
+          0.8,
+          1.72,
+          0.42
+        ],
+        "max": [
+          0.8,
+          1.72,
+          0.42
+        ],
+        "min": [
+          0.8,
+          1.28,
+          0.42
+        ]
+      },
+      "eye_height": 1.47,
+      "habitat": "terrestrial",
+      "locomotion_archetype": "terrestrial_biped",
+      "locomotion": {
+        "can_fly": false,
+        "can_crouch": false,
+        "can_jump": true,
+        "jump_height": 1.0,
+        "walk_speed": 1.5
+      },
+      "behavior": "melee_attack",
+      "behavior_params": {
+        "move_speed": 1.5,
+        "wander_interval_min": 2.0,
+        "wander_interval_max": 4.0,
+        "aggro_radius": 12.0,
+        "attack_range": 1.4,
+        "attack_cooldown": 1.5
+      },
+      "visual": {
+        "backend": "gltf_skeleton",
+        "texture_layout": "rigid_crop",
+        "default_texture": "body",
+        "icon": {
+          "mode": "species_texture",
+          "color": [
+            0.35294117647058826,
+            0.27450980392156865,
+            0.19607843137254902,
+            1.0
+          ]
+        },
+        "gltf": {
+          "model": "model.gltf",
+          "textures": [
+            "arm",
+            "body",
+            "face",
+            "leg"
+          ],
+          "model_scale": 1.0,
+          "model_yaw_offset_deg": 0
+        },
+        "animation": {
+          "walk_cycle_hz": 2.0,
+          "clips": {
+            "idle": {
+              "start": 0,
+              "end": 14,
+              "loop": true,
+              "speed": 1.0
+            },
+            "walk": {
+              "start": 15,
+              "end": 38,
+              "loop": true,
+              "speed": 1.0
+            },
+            "run": {
+              "start": 40,
+              "end": 63,
+              "loop": true,
+              "speed": 3.0
+            },
+            "punch": {
+              "start": 40,
+              "end": 63,
+              "loop": false,
+              "speed": 1.0
+            }
+          },
+          "state_map": {
+            "Idle": "idle",
+            "Walk": "walk",
+            "Run": "run",
+            "Jump": "run",
+            "Fall": "idle",
+            "Crouch": "idle",
+            "Slither": "walk",
+            "Coil": "idle",
+            "Action": "punch",
+            "Hover": "idle",
+            "Glide": "idle",
+            "Swim": "walk",
+            "Tread": "idle",
+            "Fly": "idle"
+          }
+        }
+      }
+    }
+  },
+  "tree_monster": {
+    "extent_blocks": [
+      1.1246333718299868,
+      2.3890743255615305,
+      1.0046594738960297
+    ],
+    "min_y": -1.196136745207346e-09,
+    "palette_joints": 7,
+    "weighted_joints": 1,
+    "clips": [
+      "idle",
+      "walk",
+      "run",
+      "punch"
+    ],
+    "definition": {
+      "id": "tree_monster",
+      "display_name": "Tree Monster",
+      "catalog": {
+        "tags": [
+          "mobs",
+          "hostile"
+        ],
+        "spawnable": true,
+        "sort_order": 42,
+        "natural_spawnable": true,
+        "spawn_weight": 0.7,
+        "spawn_group_min": 1,
+        "spawn_group_max": 2,
+        "spawn_biomes": [
+          "forest",
+          "lush_caves"
+        ]
+      },
+      "role": "mob",
+      "bounds": {
+        "rest": [
+          1.13,
+          2.39,
+          1.0
+        ],
+        "max": [
+          1.13,
+          2.39,
+          1.0
+        ],
+        "min": [
+          1.13,
+          1.78,
+          1.0
+        ]
+      },
+      "eye_height": 2.32,
+      "habitat": "terrestrial",
+      "locomotion_archetype": "terrestrial_biped",
+      "locomotion": {
+        "can_fly": false,
+        "can_crouch": false,
+        "can_jump": true,
+        "jump_height": 1.0,
+        "walk_speed": 1.8
+      },
+      "behavior": "melee_attack",
+      "behavior_params": {
+        "move_speed": 1.8,
+        "wander_interval_min": 2.0,
+        "wander_interval_max": 4.0,
+        "aggro_radius": 12.0,
+        "attack_range": 1.4,
+        "attack_cooldown": 1.5
+      },
+      "visual": {
+        "backend": "gltf_skeleton",
+        "texture_layout": "rigid_crop",
+        "default_texture": "body",
+        "icon": {
+          "mode": "species_texture",
+          "color": [
+            0.27450980392156865,
+            0.43137254901960786,
+            0.19607843137254902,
+            1.0
+          ]
+        },
+        "gltf": {
+          "model": "model.gltf",
+          "textures": [
+            "arm",
+            "body",
+            "face",
+            "leg"
+          ],
+          "model_scale": 1.0,
+          "model_yaw_offset_deg": 0
+        },
+        "animation": {
+          "walk_cycle_hz": 2.0,
+          "clips": {
+            "idle": {
+              "start": 0,
+              "end": 24,
+              "loop": true,
+              "speed": 1.0
+            },
+            "walk": {
+              "start": 25,
+              "end": 47,
+              "loop": true,
+              "speed": 1.0
+            },
+            "run": {
+              "start": 48,
+              "end": 62,
+              "loop": true,
+              "speed": 2.3333333333333335
+            },
+            "punch": {
+              "start": 48,
+              "end": 62,
+              "loop": false,
+              "speed": 1.0
+            }
+          },
+          "state_map": {
+            "Idle": "idle",
+            "Walk": "walk",
+            "Run": "run",
+            "Jump": "run",
+            "Fall": "idle",
+            "Crouch": "idle",
+            "Slither": "walk",
+            "Coil": "idle",
+            "Action": "punch",
+            "Hover": "idle",
+            "Glide": "idle",
+            "Swim": "walk",
+            "Tread": "idle",
+            "Fly": "idle"
+          }
+        }
+      }
+    }
+  },
+  "land_guard": {
+    "extent_blocks": [
+      1.6547002792358403,
+      2.6686012873204383,
+      0.9512526690959962
+    ],
+    "min_y": 0.0,
+    "palette_joints": 7,
+    "weighted_joints": 2,
+    "clips": [
+      "idle",
+      "walk",
+      "run",
+      "punch"
+    ],
+    "definition": {
+      "id": "land_guard",
+      "display_name": "Land Guard",
+      "catalog": {
+        "tags": [
+          "mobs",
+          "hostile"
+        ],
+        "spawnable": true,
+        "sort_order": 47,
+        "natural_spawnable": true,
+        "spawn_weight": 0.7,
+        "spawn_group_min": 1,
+        "spawn_group_max": 2,
+        "spawn_biomes": [
+          "plains",
+          "savanna",
+          "foothills",
+          "hills"
+        ]
+      },
+      "role": "mob",
+      "bounds": {
+        "rest": [
+          1.65,
+          2.67,
+          0.95
+        ],
+        "max": [
+          1.65,
+          2.67,
+          0.95
+        ],
+        "min": [
+          1.65,
+          1.98,
+          0.95
+        ]
+      },
+      "eye_height": 2.52,
+      "habitat": "terrestrial",
+      "locomotion_archetype": "terrestrial_biped",
+      "locomotion": {
+        "can_fly": false,
+        "can_crouch": false,
+        "can_jump": true,
+        "jump_height": 1.0,
+        "walk_speed": 2.1
+      },
+      "behavior": "melee_attack",
+      "behavior_params": {
+        "move_speed": 2.1,
+        "wander_interval_min": 2.0,
+        "wander_interval_max": 4.0,
+        "aggro_radius": 12.0,
+        "attack_range": 1.4,
+        "attack_cooldown": 1.5
+      },
+      "visual": {
+        "backend": "gltf_skeleton",
+        "texture_layout": "rigid_crop",
+        "default_texture": "body",
+        "icon": {
+          "mode": "species_texture",
+          "color": [
+            0.6274509803921569,
+            0.5490196078431373,
+            0.35294117647058826,
+            1.0
+          ]
+        },
+        "gltf": {
+          "model": "model.gltf",
+          "textures": [
+            "arm",
+            "body",
+            "face",
+            "leg"
+          ],
+          "model_scale": 1.0,
+          "model_yaw_offset_deg": 0
+        },
+        "animation": {
+          "walk_cycle_hz": 2.0,
+          "clips": {
+            "idle": {
+              "start": 0,
+              "end": 19,
+              "loop": true,
+              "speed": 1.0
+            },
+            "walk": {
+              "start": 20,
+              "end": 35,
+              "loop": true,
+              "speed": 1.0
+            },
+            "run": {
+              "start": 20,
+              "end": 35,
+              "loop": true,
+              "speed": 2.6666666666666665
+            },
+            "punch": {
+              "start": 36,
+              "end": 48,
+              "loop": false,
+              "speed": 1.0
+            }
+          },
+          "state_map": {
+            "Idle": "idle",
+            "Walk": "walk",
+            "Run": "run",
+            "Jump": "run",
+            "Fall": "idle",
+            "Crouch": "idle",
+            "Slither": "walk",
+            "Coil": "idle",
+            "Action": "punch",
+            "Hover": "idle",
+            "Glide": "idle",
+            "Swim": "walk",
+            "Tread": "idle",
+            "Fly": "idle"
+          }
+        }
+      }
+    }
+  },
+  "lava_flan": {
+    "extent_blocks": [
+      0.600000351667411,
+      1.0499999523162873,
+      0.6000003814697351
+    ],
+    "min_y": 1.1920929798847334e-08,
+    "palette_joints": 6,
+    "weighted_joints": 1,
+    "clips": [
+      "idle",
+      "walk",
+      "run",
+      "punch"
+    ],
+    "definition": {
+      "id": "lava_flan",
+      "display_name": "Lava Flan",
+      "catalog": {
+        "tags": [
+          "mobs",
+          "hostile"
+        ],
+        "spawnable": true,
+        "sort_order": 48,
+        "natural_spawnable": true,
+        "spawn_weight": 0.4,
+        "spawn_group_min": 1,
+        "spawn_group_max": 2,
+        "spawn_biomes": [
+          "deep_dark",
+          "dripstone_caves",
+          "lush_caves",
+          "mountains"
+        ]
+      },
+      "role": "mob",
+      "bounds": {
+        "rest": [
+          0.6,
+          1.05,
+          0.6
+        ],
+        "max": [
+          0.6,
+          1.05,
+          0.6
+        ],
+        "min": [
+          0.6,
+          0.78,
+          0.6
+        ]
+      },
+      "eye_height": 0.6,
+      "habitat": "lava",
+      "locomotion_archetype": "terrestrial_biped",
+      "locomotion": {
+        "can_fly": false,
+        "can_crouch": false,
+        "can_jump": false,
+        "jump_height": 1.0,
+        "walk_speed": 1.8
+      },
+      "behavior": "melee_attack",
+      "behavior_params": {
+        "move_speed": 1.8,
+        "wander_interval_min": 2.0,
+        "wander_interval_max": 4.0,
+        "aggro_radius": 12.0,
+        "attack_range": 1.4,
+        "attack_cooldown": 1.5
+      },
+      "visual": {
+        "backend": "gltf_skeleton",
+        "texture_layout": "rigid_crop",
+        "default_texture": "body",
+        "icon": {
+          "mode": "species_texture",
+          "color": [
+            0.7843137254901961,
+            0.3137254901960784,
+            0.11764705882352941,
+            1.0
+          ]
+        },
+        "gltf": {
+          "model": "model.gltf",
+          "textures": [
+            "arm",
+            "body",
+            "face",
+            "leg"
+          ],
+          "model_scale": 1.0,
+          "model_yaw_offset_deg": 0
+        },
+        "animation": {
+          "walk_cycle_hz": 2.0,
+          "clips": {
+            "idle": {
+              "start": 0,
+              "end": 8,
+              "loop": true,
+              "speed": 1.0
+            },
+            "walk": {
+              "start": 10,
+              "end": 18,
+              "loop": true,
+              "speed": 1.0
+            },
+            "run": {
+              "start": 20,
+              "end": 28,
+              "loop": true,
+              "speed": 1.0
+            },
+            "punch": {
+              "start": 20,
+              "end": 28,
+              "loop": false,
+              "speed": 1.0
+            }
+          },
+          "state_map": {
+            "Idle": "idle",
+            "Walk": "walk",
+            "Run": "run",
+            "Jump": "run",
+            "Fall": "idle",
+            "Crouch": "idle",
+            "Slither": "walk",
+            "Coil": "idle",
+            "Action": "punch",
+            "Hover": "idle",
+            "Glide": "idle",
+            "Swim": "walk",
+            "Tread": "idle",
+            "Fly": "idle"
+          }
+        }
+      }
+    }
+  },
+  "golem": {
+    "extent_blocks": [
+      1.4869304895401358,
+      2.4460459135570205,
+      1.0819693152115868
+    ],
+    "min_y": -4.8295084292968576e-08,
+    "palette_joints": 13,
+    "weighted_joints": 1,
+    "clips": [
+      "idle",
+      "walk",
+      "run",
+      "punch"
+    ],
+    "definition": {
+      "id": "golem",
+      "display_name": "Golem",
+      "catalog": {
+        "tags": [
+          "mobs",
+          "passive"
+        ],
+        "spawnable": true,
+        "sort_order": 56,
+        "natural_spawnable": true,
+        "spawn_weight": 0.4,
+        "spawn_group_min": 2,
+        "spawn_group_max": 4,
+        "spawn_biomes": [
+          "mountains",
+          "hills",
+          "jagged_peaks",
+          "plains"
+        ]
+      },
+      "role": "mob",
+      "bounds": {
+        "rest": [
+          1.49,
+          2.45,
+          1.08
+        ],
+        "max": [
+          1.49,
+          2.45,
+          1.08
+        ],
+        "min": [
+          1.49,
+          1.82,
+          1.08
+        ]
+      },
+      "eye_height": 2.45,
+      "habitat": "terrestrial",
+      "locomotion_archetype": "terrestrial_biped",
+      "locomotion": {
+        "can_fly": false,
+        "can_crouch": false,
+        "can_jump": true,
+        "jump_height": 1.0,
+        "walk_speed": 1.6
+      },
+      "behavior": "wander",
+      "behavior_params": {
+        "move_speed": 1.6,
+        "wander_interval_min": 2.0,
+        "wander_interval_max": 4.0
+      },
+      "visual": {
+        "backend": "gltf_skeleton",
+        "texture_layout": "rigid_crop",
+        "default_texture": "body",
+        "icon": {
+          "mode": "species_texture",
+          "color": [
+            0.5490196078431373,
+            0.5490196078431373,
+            0.5882352941176471,
+            1.0
+          ]
+        },
+        "gltf": {
+          "model": "model.gltf",
+          "textures": [
+            "arm",
+            "body",
+            "face",
+            "leg"
+          ],
+          "model_scale": 1.0,
+          "model_yaw_offset_deg": 0
+        },
+        "animation": {
+          "walk_cycle_hz": 2.0,
+          "clips": {
+            "idle": {
+              "start": 1,
+              "end": 20,
+              "loop": true,
+              "speed": 0.6666666666666666
+            },
+            "walk": {
+              "start": 46,
+              "end": 66,
+              "loop": true,
+              "speed": 0.6666666666666666
+            },
+            "run": {
+              "start": 46,
+              "end": 66,
+              "loop": true,
+              "speed": 0.6666666666666666
+            },
+            "punch": {
+              "start": 20,
+              "end": 45,
+              "loop": false,
+              "speed": 0.6666666666666666
+            }
+          },
+          "state_map": {
+            "Idle": "idle",
+            "Walk": "walk",
+            "Run": "run",
+            "Jump": "run",
+            "Fall": "idle",
+            "Crouch": "idle",
+            "Slither": "walk",
+            "Coil": "idle",
+            "Action": "punch",
+            "Hover": "idle",
+            "Glide": "idle",
+            "Swim": "walk",
+            "Tread": "idle",
+            "Fly": "idle"
+          }
+        }
+      }
+    }
+  },
+  "treeman": {
+    "extent_blocks": [
+      1.803213477134788,
+      4.872025487493512,
+      1.8256245774371902
+    ],
+    "min_y": -6.604878082401704e-08,
+    "palette_joints": 16,
+    "weighted_joints": 1,
+    "clips": [
+      "idle",
+      "walk",
+      "run",
+      "punch"
+    ],
+    "definition": {
+      "id": "treeman",
+      "display_name": "Treeman",
+      "catalog": {
+        "tags": [
+          "mobs",
+          "hostile"
+        ],
+        "spawnable": true,
+        "sort_order": 57,
+        "natural_spawnable": true,
+        "spawn_weight": 0.4,
+        "spawn_group_min": 1,
+        "spawn_group_max": 2,
+        "spawn_biomes": [
+          "forest",
+          "hills"
+        ]
+      },
+      "role": "mob",
+      "bounds": {
+        "rest": [
+          4.8,
+          5.29,
+          2.75
+        ],
+        "max": [
+          4.8,
+          5.29,
+          2.75
+        ],
+        "min": [
+          4.8,
+          3.93,
+          2.75
+        ]
+      },
+      "eye_height": 4.87,
+      "habitat": "terrestrial",
+      "locomotion_archetype": "terrestrial_biped",
+      "locomotion": {
+        "can_fly": false,
+        "can_crouch": false,
+        "can_jump": true,
+        "jump_height": 1.0,
+        "walk_speed": 1.5
+      },
+      "behavior": "melee_attack",
+      "behavior_params": {
+        "move_speed": 1.5,
+        "wander_interval_min": 2.0,
+        "wander_interval_max": 4.0,
+        "aggro_radius": 12.0,
+        "attack_range": 1.4,
+        "attack_cooldown": 1.5
+      },
+      "visual": {
+        "backend": "gltf_skeleton",
+        "texture_layout": "rigid_crop",
+        "default_texture": "body",
+        "icon": {
+          "mode": "species_texture",
+          "color": [
+            0.23529411764705882,
+            0.39215686274509803,
+            0.17647058823529413,
+            1.0
+          ]
+        },
+        "gltf": {
+          "model": "model.gltf",
+          "textures": [
+            "arm",
+            "body",
+            "face",
+            "leg"
+          ],
+          "model_scale": 1.0,
+          "model_yaw_offset_deg": 0
+        },
+        "animation": {
+          "walk_cycle_hz": 2.0,
+          "clips": {
+            "idle": {
+              "start": 1,
+              "end": 20,
+              "loop": true,
+              "speed": 0.6666666666666666
+            },
+            "walk": {
+              "start": 46,
+              "end": 66,
+              "loop": true,
+              "speed": 0.6666666666666666
+            },
+            "run": {
+              "start": 46,
+              "end": 66,
+              "loop": true,
+              "speed": 0.6666666666666666
+            },
+            "punch": {
+              "start": 20,
+              "end": 45,
+              "loop": false,
+              "speed": 0.6666666666666666
+            }
+          },
+          "state_map": {
+            "Idle": "idle",
+            "Walk": "walk",
+            "Run": "run",
+            "Jump": "run",
+            "Fall": "idle",
+            "Crouch": "idle",
+            "Slither": "walk",
+            "Coil": "idle",
+            "Action": "punch",
+            "Hover": "idle",
+            "Glide": "idle",
+            "Swim": "walk",
+            "Tread": "idle",
+            "Fly": "idle"
+          }
+        }
+      }
+    }
+  }
+}

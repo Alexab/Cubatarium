@@ -1,0 +1,32 @@
+{
+  "captured_at_utc": "2026-11-10T15:55:37.692623+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\bone_small_v2\\models",
+  "files_sha256": {
+    "creatures\\bunny\\creature.json": "5538b743922c48934f9e6256660490bc9e0f6c9b935c6e48e17a2ad03ab94232",
+    "creatures\\bunny\\geometry.geo.json": "f99c805dbdfb90de08dcdec11a58275fdc8de5f8e86f8f307235b805f97c5d68",
+    "creatures\\bunny\\LICENSE.txt": "943155039cd9bd3db8f46d6c41b837227d82d2d29fc7c19574aae53fd2958907",
+    "creatures\\bunny\\manifest.json": "e4a395569c8f29090b1bcb65f343ad1afe6457150f4f0338a0f186c19b32d48d",
+    "creatures\\bunny\\textures\\diffuse.png": "b35ce84359aaf3c397ea7396e4d22b05c4cfccc99c6b102a36b1e5b8de854fce",
+    "creatures\\bunny\\textures\\icon.png": "da52b1bafb062c6732a7bbfc0bc80c993769e4235a2966320f61ab250d7bf57e",
+    "creatures\\chicken\\creature.json": "97a18503b0e71b0ca8b5b0e152ddf62222a290cd169fdfbf78ff48388c2d2d0f",
+    "creatures\\chicken\\geometry.geo.json": "c7dc2e32a7567dc439bdbc9004c4001cf29507a56ad65498b8ea657bfe5ae0b3",
+    "creatures\\chicken\\LICENSE.txt": "6d1e9032b5e7275c9296a6dc5b71b4853f80cc2b1773fdc256460e4a60e34690",
+    "creatures\\chicken\\manifest.json": "c051dfda45980b3ded79641423020dab6ca95cae4b93178c72cfc8c7262a51a3",
+    "creatures\\chicken\\textures\\diffuse.png": "256d0196204608ac3f1aa136fc293dce9ef7d84cbf4cf150f2ddb7e34f943f0d",
+    "creatures\\chicken\\textures\\icon.png": "adf716d6ce670d636c887f654bb243ecb5980e14f5e4b27c2e6acb2a31d920b7",
+    "creatures\\bee\\creature.json": "695da701fe685a4fb9f68da8fab6604e8516a2bfb9b813a0e34ffcb9130d2a10",
+    "creatures\\bee\\geometry.geo.json": "efa28f140c51e3977857e811b9fc519d2df78df11caf7198d5a112637ab20d04",
+    "creatures\\bee\\LICENSE.txt": "6d7c5bfc387f7cf4115ea1142f9c769ca888d104228556669820d2c1b558f858",
+    "creatures\\bee\\manifest.json": "1a4c62375c991b35fcce5f69ed85daf28324c6712320b5d3f9acf950a03ebc38",
+    "creatures\\bee\\textures\\diffuse.png": "5917d232815ceaadb7b5cfc178e925fa683dc818e8b1275dbfce24eb96aa04d0",
+    "creatures\\bee\\textures\\icon.png": "e9193fd4dde21ecca4b079c4ca7b5c117dc31cbf785f591eb105029214b6a37a"
+  },
+  "exe_sha256": "f701976da31d8128a3bca30ea3916b3039a583fb0f7710eb2c2eb77b3567bfcd",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "wave",
+  "performance_gate": "disabled"
+}

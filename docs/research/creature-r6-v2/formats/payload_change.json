@@ -1,0 +1,487 @@
+{
+  "schema": "creature-bone-header-equivalence.v1",
+  "scope": "Runtime file inventories and parsed geometry, not standalone art acceptance",
+  "resources": [
+    {
+      "id": "badger",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "bee",
+      "kind": "creatures",
+      "file_count": 5,
+      "changes": [
+        "geometry.geo.json"
+      ],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "bot",
+      "kind": "creatures",
+      "file_count": 5,
+      "changes": [
+        "geometry.geo.json"
+      ],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "bunny",
+      "kind": "creatures",
+      "file_count": 5,
+      "changes": [
+        "geometry.geo.json"
+      ],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "butterfly",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "chicken",
+      "kind": "creatures",
+      "file_count": 5,
+      "changes": [
+        "geometry.geo.json"
+      ],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "cow",
+      "kind": "creatures",
+      "file_count": 5,
+      "changes": [
+        "geometry.geo.json"
+      ],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "crab",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "dirt_monster",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "dolphin",
+      "kind": "creatures",
+      "file_count": 5,
+      "changes": [
+        "geometry.geo.json"
+      ],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "dungeon_master",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "fire_spirit",
+      "kind": "creatures",
+      "file_count": 3,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "fox",
+      "kind": "creatures",
+      "file_count": 5,
+      "changes": [
+        "geometry.geo.json"
+      ],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "golem",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "hedgehog",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "hermitcrab",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "human",
+      "kind": "creatures",
+      "file_count": 5,
+      "changes": [
+        "geometry.geo.json"
+      ],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "kitten",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "land_guard",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "lava_flan",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "lobster",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "manatee",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "mese_monster",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "octopus",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "oerkki",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "ogre",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "orc",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "owl",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "panda",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "penguin",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "pig",
+      "kind": "creatures",
+      "file_count": 5,
+      "changes": [
+        "geometry.geo.json"
+      ],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "puffin",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "rat",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "rigid_demo_flyer",
+      "kind": "creatures",
+      "file_count": 8,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "rigid_demo_swimmer",
+      "kind": "creatures",
+      "file_count": 8,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "rigid_demo_walker",
+      "kind": "creatures",
+      "file_count": 10,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "sand_monster",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "seahorse",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "seal",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "shark",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "sheep",
+      "kind": "creatures",
+      "file_count": 5,
+      "changes": [
+        "geometry.geo.json"
+      ],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "skeleton",
+      "kind": "creatures",
+      "file_count": 5,
+      "changes": [
+        "geometry.geo.json"
+      ],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "spider",
+      "kind": "creatures",
+      "file_count": 5,
+      "changes": [
+        "geometry.geo.json"
+      ],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "squid",
+      "kind": "creatures",
+      "file_count": 5,
+      "changes": [
+        "geometry.geo.json"
+      ],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "stingray",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "stone_monster",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "tortoise",
+      "kind": "creatures",
+      "file_count": 5,
+      "changes": [
+        "geometry.geo.json"
+      ],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "tree_monster",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "treeman",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "trout",
+      "kind": "creatures",
+      "file_count": 5,
+      "changes": [
+        "geometry.geo.json"
+      ],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "warthog",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "wasp",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "water_dragon",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "whale",
+      "kind": "creatures",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "wolf",
+      "kind": "creatures",
+      "file_count": 5,
+      "changes": [
+        "geometry.geo.json"
+      ],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "zombie",
+      "kind": "creatures",
+      "file_count": 5,
+      "changes": [
+        "geometry.geo.json"
+      ],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "human_adventurer",
+      "kind": "skins",
+      "file_count": 7,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "human_guard",
+      "kind": "skins",
+      "file_count": 7,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "sheep_wool_black",
+      "kind": "skins",
+      "file_count": 8,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "sheep_wool_golden",
+      "kind": "skins",
+      "file_count": 8,
+      "changes": [],
+      "all_other_bytes_identical": true
+    },
+    {
+      "id": "wolf_snow",
+      "kind": "skins",
+      "file_count": 6,
+      "changes": [],
+      "all_other_bytes_identical": true
+    }
+  ],
+  "header_only_changes": [
+    "bee",
+    "bot",
+    "bunny",
+    "chicken",
+    "cow",
+    "dolphin",
+    "fox",
+    "human",
+    "pig",
+    "sheep",
+    "skeleton",
+    "spider",
+    "squid",
+    "tortoise",
+    "trout",
+    "wolf",
+    "zombie"
+  ],
+  "all_png_geometry_rig_uv_animation_semantics_unchanged": true
+}

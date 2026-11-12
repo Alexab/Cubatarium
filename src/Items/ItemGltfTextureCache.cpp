@@ -278,8 +278,8 @@ ItemGltfTextureCache &ItemGltfTextureCache::Instance()
 
 void ItemGltfTextureCache::EnsureLoaded(const std::filesystem::path &modelGltfAbs)
 {
-  const std::string key = modelGltfAbs.parent_path().generic_string();
-  if (ByModelDir.find(key) != ByModelDir.end())
+  const std::string key = modelGltfAbs.lexically_normal().generic_string();
+  if (ByModel.find(key) != ByModel.end())
   {
     return;
   }
@@ -287,7 +287,7 @@ void ItemGltfTextureCache::EnsureLoaded(const std::filesystem::path &modelGltfAb
   LoadFromGltfJson(modelGltfAbs, texMap);
   IndexPngDir(modelGltfAbs.parent_path() / "Textures", texMap);
   IndexPngDir(modelGltfAbs.parent_path(), texMap);
-  ByModelDir[key] = std::move(texMap);
+  ByModel[key] = std::move(texMap);
 }
 
 GLuint ItemGltfTextureCache::Get(const std::filesystem::path &modelGltfAbs,
@@ -295,8 +295,8 @@ GLuint ItemGltfTextureCache::Get(const std::filesystem::path &modelGltfAbs,
 {
   std::lock_guard<std::mutex> lock(Mu);
   EnsureLoaded(modelGltfAbs);
-  const std::string key = modelGltfAbs.parent_path().generic_string();
-  const auto &texMap = ByModelDir[key];
+  const std::string key = modelGltfAbs.lexically_normal().generic_string();
+  const auto &texMap = ByModel[key];
   if (!textureStem.empty())
   {
     const auto it = texMap.find(textureStem);
@@ -315,7 +315,7 @@ GLuint ItemGltfTextureCache::Get(const std::filesystem::path &modelGltfAbs,
 void ItemGltfTextureCache::Clear()
 {
   std::lock_guard<std::mutex> lock(Mu);
-  for (auto &kv : ByModelDir)
+  for (auto &kv : ByModel)
   {
     for (auto &t : kv.second)
     {
@@ -325,7 +325,7 @@ void ItemGltfTextureCache::Clear()
       }
     }
   }
-  ByModelDir.clear();
+  ByModel.clear();
 }
 
 } // namespace cutum

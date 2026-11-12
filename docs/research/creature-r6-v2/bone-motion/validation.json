@@ -1,0 +1,56 @@
+{
+  "schema": "creature-bone-clearance-and-profile-validation.v1",
+  "scope": "B ground penetration prevention and explicit authoring profiles; full R6 pending",
+  "release_app_build_passed": true,
+  "desktop_exe_sha256": "045f73b11330bdeaab24774648ab363b67cf4d7d9029f0d37f1c04b37dc1ce01",
+  "native_release_pose_inputs_and_source_verified": true,
+  "native_bone_species": 17,
+  "scenarios_per_species": 66,
+  "phases_per_scenario": 1025,
+  "corrected_ground_scenarios": 87,
+  "corrected_base_species": 11,
+  "native_catalog_resources": 61,
+  "reinspected_paired_sheets": 16,
+  "byte_identical_paired_sheets_inherited": 45,
+  "additional_full_motion_sheets_inspected": 11,
+  "both_versions_border_clipping": 0,
+  "world_species_this_pass": [
+    "wolf"
+  ],
+  "partial_equipment_probe": "human_adventurer/human_guard: copper set + main sword + offhand torch, one phase",
+  "python_fidelity_tests": 36,
+  "python_quality_tests": 13,
+  "selected_release_cpp_tests": 10,
+  "two_full_builds_resources_byte_identical": 61,
+  "published_source_runtime_payload_byte_identical": true,
+  "inactive_bin_only_owl_backups": [
+    {
+      "path": "creatures/owl/model.bin.orig",
+      "sha256": "e79f0402085ce43df0d4d560e5535f1b0571fcfd293ef955265376f918d2b37b",
+      "scope": "Inactive bin-only backup; not in source catalog/candidate and not referenced by owl definition or glTF URIs; clean package remains pending"
+    },
+    {
+      "path": "creatures/owl/model.gltf.orig",
+      "sha256": "0550b81e146352389f0524b24851c1040c182e1aeb0af76b881961335d29b656",
+      "scope": "Inactive bin-only backup; not in source catalog/candidate and not referenced by owl definition or glTF URIs; clean package remains pending"
+    }
+  ],
+  "ledger": {
+    "expected_species": 56,
+    "expected_skins": 5,
+    "exact_valid_r5_reviews": 61,
+    "published_payload_matches_staged": 61,
+    "bin_payload_matches_staged": 61,
+    "current_generator_source_inputs": 61,
+    "manifest_species_count": 56,
+    "manifest_skin_count": 5,
+    "valid_file_records": 61,
+    "runtime_global_manifest_matches": true,
+    "contracts_states": {
+      "accepted": 56
+    },
+    "unexpected_live_species": []
+  },
+  "remaining": "stance/stride/terrain/transition/travelScale; habitat routes/culling; resolved appearance/cache; equipment/FP/save-load; clean Release package; comparable performance",
+  "r6_final_acceptance": false
+}

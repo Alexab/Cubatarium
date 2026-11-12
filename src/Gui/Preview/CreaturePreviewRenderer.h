@@ -2,10 +2,16 @@
 #define CREATURE_PREVIEW_RENDERER_H
 
 #include <array>
+#include <functional>
 #include <memory>
 #include <string>
+#include <optional>
+#include <unordered_map>
+#include <cstdint>
+#include "Creatures/Locomotion/LocomotionTypes.h"
 
 #include <glm/mat4x4.hpp>
+#include <glm/vec3.hpp>
 
 typedef unsigned int GLuint;
 
@@ -16,7 +22,9 @@ class UCreatureDefinitionStorage;
 class USkinDefinitionStorage;
 class UCreatureTextureStorage;
 class UShaderManager;
+class CreatureDrawQueue;
 struct WornArmorPreviewSlot;
+struct CreatureGltfMeshAsset;
 
 class UCreaturePreviewRenderer
 {
@@ -31,6 +39,37 @@ public:
   bool Initialize();
   void Shutdown();
   void Invalidate();
+  void SetAnimationPreviewState(LocomotionState state)
+  {
+    AnimationPreviewState = state;
+  }
+  void SetTransparentBackground(bool enabled) { TransparentBackground = enabled; }
+  void SetAnimationPreviewSpeedRatio(float ratio)
+  {
+    AnimationPreviewSpeedRatio = ratio >= 0.f ? (ratio > 3.f ? 3.f : ratio) : 0.f;
+  }
+  /// Optional QA observer of the actual anchor supplied to equipment drawers.
+  void SetAttachmentObserver(std::function<void(const std::string &, const glm::mat4 &)> observer)
+  {
+    AttachmentObserver = std::move(observer);
+  }
+  void SetAttachmentBoundsObserver(std::function<void(const std::string &, const glm::vec3 &, const glm::vec3 &)> observer)
+  {
+    AttachmentBoundsObserver = std::move(observer);
+  }
+  /// Explicit research capture: shared world framing and observation of the
+  /// exact native submissions; unset in ordinary icons/dock rendering.
+  void SetQaEnvelopeProbe(
+      std::optional<std::pair<glm::vec3, glm::vec3>> bounds,
+      std::function<void(CreatureDrawQueue &, const glm::mat4 &)> observer = {},
+      std::optional<glm::mat4> viewProjection = {},
+      std::optional<glm::vec3> cameraPosition = {})
+  {
+    QaFramingBounds = std::move(bounds);
+    QaSubmissionObserver = std::move(observer);
+    QaViewProjection = std::move(viewProjection);
+    QaCameraPosition = std::move(cameraPosition);
+  }
 
   UCreatureDefinitionStorage *GetSpecies() const { return Species.get(); }
   USkinDefinitionStorage *GetSkins() const { return Skins.get(); }
@@ -56,6 +95,23 @@ public:
   GLuint TryGetDirectSpeciesIcon(const std::string &speciesId) const;
 
 private:
+  struct GltfBoundsEntry
+  {
+    std::shared_ptr<const CreatureGltfMeshAsset> asset;
+    glm::vec3 low{0.f}, high{0.f};
+  };
+  std::unordered_map<std::string, GltfBoundsEntry> GltfBoundsCache;
+  uint64_t BoundsDefinitionsRevision{0},BoundsBoneRevision{0},BoundsGltfRevision{0};
+  std::unordered_map<std::string, std::pair<glm::vec3, glm::vec3>> ProceduralBoundsCache;
+  std::optional<LocomotionState> AnimationPreviewState;
+  bool TransparentBackground{false};
+  float AnimationPreviewSpeedRatio{1.f};
+  std::function<void(const std::string &, const glm::mat4 &)> AttachmentObserver;
+  std::function<void(const std::string &, const glm::vec3 &, const glm::vec3 &)> AttachmentBoundsObserver;
+  std::optional<std::pair<glm::vec3, glm::vec3>> QaFramingBounds;
+  std::function<void(CreatureDrawQueue &, const glm::mat4 &)> QaSubmissionObserver;
+  std::optional<glm::mat4> QaViewProjection;
+  std::optional<glm::vec3> QaCameraPosition;
   bool InitCubeMesh();
   bool EnsureFboSize(int size);
   glm::mat4 OrbitView(float yawDeg, float pitchDeg, float distance) const;

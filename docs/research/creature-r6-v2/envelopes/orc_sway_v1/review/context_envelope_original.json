@@ -1,0 +1,55 @@
+{
+  "captured_at_utc": "2026-11-12T01:03:23.112364+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\review_2026_11_10\\baseline\\models",
+  "files_sha256": {
+    "creatures\\orc\\creature.json": "4756ed4033fa791db49785fdcd5fa08f04b6cb85b1f7391cfe20972beb73ae70",
+    "creatures\\orc\\LICENSE.txt": "c92fb05e59d7198590a584036346bdecd9853447698e8a82573e1b608af035aa",
+    "creatures\\orc\\model.bin": "b1d930b88515ffbb05249838d481e8d867e059f9f732dd3a38d7481387ed2329",
+    "creatures\\orc\\model.gltf": "ddf78e4429b0aebb27d74a3b346c93f402ed672edf2e6c7495137703bc1d95b3",
+    "creatures\\orc\\textures\\arm.png": "d295ca770eab176a95c159388918f562af1923608dde0171427a1fa52da807cb",
+    "creatures\\orc\\textures\\body.png": "1583c353ea6e0db9e21403363de184edd15084896efc974748937ac511c5e875",
+    "creatures\\orc\\textures\\face.png": "18ac8044610768516574d239bfed9f7d094dc87292b9afb87751ba42a81d42af",
+    "creatures\\orc\\textures\\icon.png": "e26ba01e8bf63062897aac39357d70d7be645d3ee9d90ece41406d34b0446f63",
+    "creatures\\orc\\textures\\leg.png": "d37159152f18a6540d3958d3b6056d254205d78a52c0297ec597fe60c806cb41"
+  },
+  "qa_models_override": true,
+  "exe_sha256": "235ce58dd65546f38164020295ff403bf48c2816b14bb16cd96228faee030483",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "envelope_original",
+  "qa_camera": "close",
+  "native_matrix": false,
+  "native_equipment_matrix": false,
+  "native_equipment_texture_probe": false,
+  "native_resource_cache_probe": false,
+  "native_resource_reload_probe": false,
+  "native_fp_matrix": false,
+  "native_save_probe": false,
+  "native_envelope_variant": "baseline",
+  "native_transition_probe": false,
+  "native_fluid_transition_probe": false,
+  "world_motion": null,
+  "world_motion_expected_fluid_state": null,
+  "world_seconds": 8.0,
+  "world_capture_interval_seconds": 3.0,
+  "native_posed_culling_probe": false,
+  "envelope_profile_sha256": "c56f072113e664fb69b73e76fdd81bcf4ae64921bc36ab10e2c35178cbf7a8e2",
+  "fp_shaders_sha256": {},
+  "equipment_material": "copper",
+  "world_gear_fixture": false,
+  "equipment_files_sha256": {},
+  "world_species": [
+    "orc"
+  ],
+  "preview_species": [
+    "orc"
+  ],
+  "qa_water_placement": false,
+  "qa_lava_fixture": false,
+  "world": "World_254",
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

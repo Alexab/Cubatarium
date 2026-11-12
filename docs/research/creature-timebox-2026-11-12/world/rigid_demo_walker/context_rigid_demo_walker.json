@@ -1,0 +1,59 @@
+{
+  "captured_at_utc": "2026-11-12T08:14:26.271255+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\bin\\models",
+  "files_sha256": {
+    "creatures\\rigid_demo_walker\\creature.json": "bd1ecae572ada2aa5f9acfdf744ce4ae68d71f94326d1d9e1f10b2743e39951b",
+    "creatures\\rigid_demo_walker\\LICENSE.txt": "dc7878a1544ee387f266aa6da47d2101434579f965b7640238d1feb113c9df83",
+    "creatures\\rigid_demo_walker\\rigid_model.json": "2f6d3e7f780ac3d474b475c6e7c38fa008b55dcad660c0e230e4e3dc4b5dc2b8",
+    "creatures\\rigid_demo_walker\\textures\\body.png": "5aa5c06d4bb6884d031b6056b25e777d0dc7790806d5ebd23a67598280600d42",
+    "creatures\\rigid_demo_walker\\textures\\ear.png": "78346fe081e26bd828e15f7b32adca0cf5ffe3c0a78b07dfed08beabad15b33a",
+    "creatures\\rigid_demo_walker\\textures\\face.png": "0720f6c90b8fc11cc150c84f14608c983072c4976c8506bb1f73baa89666be0f",
+    "creatures\\rigid_demo_walker\\textures\\icon.png": "5aa5c06d4bb6884d031b6056b25e777d0dc7790806d5ebd23a67598280600d42",
+    "creatures\\rigid_demo_walker\\textures\\leg.png": "51942a6d7c30fff4a3a01dd2e66f8a4669bfbb7aa7394723049edefb4dae6734",
+    "creatures\\rigid_demo_walker\\textures\\muzzle.png": "8ade06cd151c2323b8da4f35155c4748d45cba1b7d068028918bf10758706057",
+    "creatures\\rigid_demo_walker\\textures\\tail.png": "a9396b74bca0fd59853c03ee2baf6aa70b1d1c3a28cdcc8d55588797c82ff2c2"
+  },
+  "qa_models_override": false,
+  "exe_sha256": "6a997c20969b72006636ed7c5cd9a5c035ac5d55bee224bff49e2bfb1537bd57",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "rigid_demo_walker",
+  "qa_camera": "close",
+  "native_matrix": false,
+  "native_equipment_matrix": false,
+  "native_equipment_texture_probe": false,
+  "native_resource_cache_probe": false,
+  "native_resource_reload_probe": false,
+  "native_fp_matrix": false,
+  "native_save_probe": false,
+  "native_envelope_variant": null,
+  "native_transition_probe": false,
+  "native_fluid_transition_probe": false,
+  "world_motion": "land_walk_pause",
+  "world_requested_speed": 0.5,
+  "world_motion_expected_fluid_state": "Swim",
+  "world_seconds": 12.0,
+  "world_capture_interval_seconds": 1.0,
+  "native_posed_culling_probe": false,
+  "envelope_profile_sha256": null,
+  "fp_shaders_sha256": {},
+  "equipment_material": "copper",
+  "world_gear_fixture": false,
+  "equipment_files_sha256": {},
+  "world_species": [
+    "rigid_demo_walker"
+  ],
+  "preview_species": [
+    "rigid_demo_walker"
+  ],
+  "qa_water_placement": false,
+  "qa_lava_fixture": false,
+  "world": "CreatureQaPerf_HintV1",
+  "qa_primary_state": null,
+  "pass_timing": false,
+  "foot_probe": false,
+  "performance_gate": "disabled"
+}

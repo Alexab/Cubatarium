@@ -1,0 +1,8 @@
+{
+  "passed": true,
+  "source": "assetgen_output/creatures/penguin_belly_pre_publish",
+  "fresh_output": "assetgen_output/creatures/penguin_belly_v2_repro",
+  "own_recipe_exports_exact": true,
+  "gltf_semantic_and_bin_png_byte_exact": true,
+  "builder_sha256": "b1f07a9f984046424f4d18a08a70b0b96f5937e503dbc694925d897be041349d"
+}

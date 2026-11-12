@@ -1,0 +1,448 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R5 own aquatic species and side-UV correction; explicit R6 routes, compatibility/performance/reproducibility remain pending",
+  "species": {
+    "badger": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct visual inspection of final native view/motion sheets, actual 64px icons, world screenshots, baseline comparisons and semantic change proof; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "3c263e100c8b745ff88470516f997dda98d07cb34b60d409b6b983e8e4486bff",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "badger.png",
+          "sha256": "f9a50be1cb31781dfac1405bfeaa03f170151cfa08924f304d16a3150a76dd70"
+        },
+        "motion": {
+          "path": "native_approved_badger.png",
+          "sha256": "4e81976ffa8c06826f8164c14d0a61365091e50e7e4e7fe1bd098088dfd91787"
+        },
+        "runtime": {
+          "path": "runtime_final_badger/frame_002.png",
+          "sha256": "48551b2964d41ba4ca7f5f5a7b95d9b1e36d6ed670f002f8946bfe0ee7e7abec"
+        },
+        "ui": {
+          "path": "native_candidate/badger_12.png",
+          "sha256": "df3e845f480511c85d357c3766d8081add4002aa26fa8d93fffbdea30d2dab28"
+        }
+      },
+      "notes": "Directly re-reviewed full native poses/motions, 64px icon and selected actual world image. Correct -X/west and +X/east islands. Geometry, skin, named motion tracks, PNGs and runtime definitions unchanged per side_uv_correction.json. All prior extra clip capabilities preserved. Not user sign-off. Performance gates disabled; full R6 remains pending. Re-measured inherited Run contact reaches -0.016819 blocks between keys; retained as an explicit R6 contact follow-up, not concealed by this UV correction."
+    },
+    "stingray": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct visual inspection of final native view/motion sheets, actual 64px icons, world screenshots, baseline comparisons and semantic change proof; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "46ddc9bb992c9c85f510bbaf28415a8ed74387cdb18960c07c22e7dfcb8daeae",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "stingray.png",
+          "sha256": "90135ba66761cb82bc0a2915112e93761ad7c48f1a55a3dac61f6a427b5cf224"
+        },
+        "motion": {
+          "path": "native_approved_stingray.png",
+          "sha256": "f5c04ffbcb68ef9307261bf5651f67948eb91440e0a7ec47288bcfc9d84b7915"
+        },
+        "runtime": {
+          "path": "runtime_final_stingray/frame_002.png",
+          "sha256": "8afa7726af30e0fa68d7cfea6e3e192f13255ef00e46628710e876b2bf7f8568"
+        },
+        "ui": {
+          "path": "native_candidate/stingray_12.png",
+          "sha256": "312480285e751ff2ac41aed9ee7cc1367807d3f89fea3f92d9b65261755d9c1a"
+        }
+      },
+      "notes": "Directly re-reviewed full native poses/motions, 64px icon and selected actual world image. Correct -X/west and +X/east islands. Geometry, skin, named motion tracks, PNGs and runtime definitions unchanged per side_uv_correction.json. All prior extra clip capabilities preserved. Not user sign-off. Performance gates disabled; full R6 remains pending."
+    },
+    "butterfly": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct visual inspection of final native view/motion sheets, actual 64px icons, world screenshots, baseline comparisons and semantic change proof; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "39784ff5d252c9c1b18c9ac479e0e1b30f481ea827bdf835736232b44ebff841",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "butterfly.png",
+          "sha256": "42c25cc6f92edb044d144bf3611341f25bd822a54bd4013e202ec193faed9afb"
+        },
+        "motion": {
+          "path": "native_approved_butterfly.png",
+          "sha256": "0ac4b73347ff48d44205ceac8bce388b86370f526ee21248a88bf6942728d233"
+        },
+        "runtime": {
+          "path": "runtime_final_butterfly/frame_002.png",
+          "sha256": "beddf10f84d4766b1eda1af516ef8d312f3d77b6edee3c03ff1f27b771b6a17b"
+        },
+        "ui": {
+          "path": "native_candidate/butterfly_12.png",
+          "sha256": "19db31b1b34b65992722936f92624c09b99fda83828bb59de2c5f1b4fb4b76c2"
+        }
+      },
+      "notes": "Directly re-reviewed full native poses/motions, 64px icon and selected actual world image. Correct -X/west and +X/east islands. Geometry, skin, named motion tracks, PNGs and runtime definitions unchanged per side_uv_correction.json. All prior extra clip capabilities preserved. Not user sign-off. Performance gates disabled; full R6 remains pending."
+    },
+    "hermitcrab": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct visual inspection of final native view/motion sheets, actual 64px icons, world screenshots, baseline comparisons and semantic change proof; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "38faac15eda77ee8f5377127a1d248550b162744fc35af463a9b0c9b64114842",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "hermitcrab.png",
+          "sha256": "3f6f662dd9aa4aa947110c6ef90e3caf7d4fd91faaf0d85df0dd2b5c3b250e72"
+        },
+        "motion": {
+          "path": "native_approved_hermitcrab.png",
+          "sha256": "9ec3c2321e12780ff38e4ec02027ccfd0fd3c2473654b336317ab4c288c9a1e4"
+        },
+        "runtime": {
+          "path": "runtime_water_hermitcrab/frame_002.png",
+          "sha256": "f6801170070c3304e5912a8f7d420ad25b189904b25cee2bb488779ca8f7ac2c"
+        },
+        "ui": {
+          "path": "native_candidate/hermitcrab_12.png",
+          "sha256": "eabef66c89dd96dbaa639ee252f1f64040cb511ab073106f569bb53ab9664988"
+        }
+      },
+      "notes": "Directly re-reviewed full native poses/motions, 64px icon and selected actual world image. Correct -X/west and +X/east islands. Geometry, skin, named motion tracks, PNGs and runtime definitions unchanged per side_uv_correction.json. All prior extra clip capabilities preserved. Not user sign-off. Performance gates disabled; full R6 remains pending. Close follow frame was obstructed by shoreline terrain; discarded for acceptance, selected fresh unobstructed water grid frame instead."
+    },
+    "rat": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct visual inspection of final native view/motion sheets, actual 64px icons, world screenshots, baseline comparisons and semantic change proof; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "32060a190b47cc07cb8c58f6c22f2b651fda454ac3a1d43ec930ce7c4047802e",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "rat.png",
+          "sha256": "33621037806844286a9deefb329f1537f378650d12cb4aaea4df14ee28fa335c"
+        },
+        "motion": {
+          "path": "native_approved_rat.png",
+          "sha256": "791a27865f37def2e335910827d1da60e438fbb73481ab3ae3c844102da2e86a"
+        },
+        "runtime": {
+          "path": "runtime_final_rat/frame_002.png",
+          "sha256": "2ab1c6c3257dfbde7cd7651f736643d2dfc4bad438c23cb4673f3c3ddd042107"
+        },
+        "ui": {
+          "path": "native_candidate/rat_12.png",
+          "sha256": "91726435fa3ab4b52b83c4db582d17c99327c2d1224d8a29b48aae61c0000bd0"
+        }
+      },
+      "notes": "Directly re-reviewed full native poses/motions, 64px icon and selected actual world image. Correct -X/west and +X/east islands. Geometry, skin, named motion tracks, PNGs and runtime definitions unchanged per side_uv_correction.json. All prior extra clip capabilities preserved. Not user sign-off. Performance gates disabled; full R6 remains pending."
+    },
+    "kitten": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct visual inspection of final native view/motion sheets, actual 64px icons, world screenshots, baseline comparisons and semantic change proof; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "48d8b1fadfee83ccf3ceb7927c9b15ef3441f19f2545b6be2af6d3b928b602eb",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "kitten.png",
+          "sha256": "dd6654b0226cd564c6bfc3d956ebb9c57905e7c6c401b9ac89691f06e5fe83a6"
+        },
+        "motion": {
+          "path": "native_approved_kitten.png",
+          "sha256": "f84369cf9ef7d551cda6c1941b72460e27a9806543e46ade7fa999584edc4aaf"
+        },
+        "runtime": {
+          "path": "runtime_final_kitten/frame_002.png",
+          "sha256": "a92432bcbcc65bb2eea6b16b53173e0416c555b805c6c2b977b7639195ec8baf"
+        },
+        "ui": {
+          "path": "native_candidate/kitten_12.png",
+          "sha256": "b32c85c08f0effad078f16a9a741c1ea8cd76497bb4a3fae48a6a179c87a32ba"
+        }
+      },
+      "notes": "Directly re-reviewed full native poses/motions, 64px icon and selected actual world image. Correct -X/west and +X/east islands. Geometry, skin, named motion tracks, PNGs and runtime definitions unchanged per side_uv_correction.json. All prior extra clip capabilities preserved. Not user sign-off. Performance gates disabled; full R6 remains pending."
+    },
+    "hedgehog": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct visual inspection of final native view/motion sheets, actual 64px icons, world screenshots, baseline comparisons and semantic change proof; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "c5dd3cff49e58424cfd147119b7cfbfa2991bf7a35b4dcc0b6a5270cca20a2dd",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "hedgehog.png",
+          "sha256": "8c7050a0b68b7096419b8a9dfb9891abc6e3f5725d74db2fb43db6c763754e7d"
+        },
+        "motion": {
+          "path": "native_approved_hedgehog.png",
+          "sha256": "2e11078942e175bc8b8d03f5834f17518d52afd124da6b694c9d3dddab7d11b0"
+        },
+        "runtime": {
+          "path": "runtime_final_hedgehog/frame_002.png",
+          "sha256": "7f60214d4df4cbbb09a12a492870ef9f6e4f88d0cefdc5ba13041f5fc7d7dae5"
+        },
+        "ui": {
+          "path": "native_candidate/hedgehog_12.png",
+          "sha256": "4d5bea70b93f5799774d656d9955b2f53ba52ae9b589d8392e27ae010f1a6270"
+        }
+      },
+      "notes": "Directly re-reviewed full native poses/motions, 64px icon and selected actual world image. Correct -X/west and +X/east islands. Geometry, skin, named motion tracks, PNGs and runtime definitions unchanged per side_uv_correction.json. All prior extra clip capabilities preserved. Not user sign-off. Performance gates disabled; full R6 remains pending."
+    },
+    "panda": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct visual inspection of final native view/motion sheets, actual 64px icons, world screenshots, baseline comparisons and semantic change proof; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "036d42581c34c782b661c3274879cb35b2497d5e61be529db284b9f1373c4a0e",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "panda.png",
+          "sha256": "e0ae5fc64fd4e3320baeb41682fccad6b98b8264d272664a453e63dd06631747"
+        },
+        "motion": {
+          "path": "native_approved_panda.png",
+          "sha256": "9674c809284d94061e8d89ed9c9d8439ffa1d71d5f745c7094954427834cadc5"
+        },
+        "runtime": {
+          "path": "runtime_final_panda/frame_002.png",
+          "sha256": "33f2b35bbed28c42d3961414d4ed2f96287d5349b0f83a13ae01df489a2978e7"
+        },
+        "ui": {
+          "path": "native_candidate/panda_12.png",
+          "sha256": "295dcdd5ae440ec4393805a3b0a07e8aa80a2c299d33f31503ff8f1c3db5a77d"
+        }
+      },
+      "notes": "Directly re-reviewed full native poses/motions, 64px icon and selected actual world image. Correct -X/west and +X/east islands. Geometry, skin, named motion tracks, PNGs and runtime definitions unchanged per side_uv_correction.json. All prior extra clip capabilities preserved. Not user sign-off. Performance gates disabled; full R6 remains pending."
+    },
+    "warthog": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct visual inspection of final native view/motion sheets, actual 64px icons, world screenshots, baseline comparisons and semantic change proof; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "9b720d300e5b59d5d6c1f84f7252ef071b4a1ed1ab63e71ccc46f29cb70264ea",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "warthog.png",
+          "sha256": "0693a0e0341ab43d21b284f5489f5b8d8b60efb58b1c62eba0e29ec1f41e1b0f"
+        },
+        "motion": {
+          "path": "native_approved_warthog.png",
+          "sha256": "b6aad6286a1849c779321043b54ea2f4039b93aa34daaced741be64e6a3eaed6"
+        },
+        "runtime": {
+          "path": "runtime_final_warthog/frame_002.png",
+          "sha256": "cc0532f3e78f117732420a3b19e30b87fbfa38d8ad1fc028a4cadd03e7572c53"
+        },
+        "ui": {
+          "path": "native_candidate/warthog_12.png",
+          "sha256": "ad73bac6a81dd86e8c31b01efa097d3495784dcc9ca756773a636ddb51740040"
+        }
+      },
+      "notes": "Directly re-reviewed full native poses/motions, 64px icon and selected actual world image. Correct -X/west and +X/east islands. Geometry, skin, named motion tracks, PNGs and runtime definitions unchanged per side_uv_correction.json. All prior extra clip capabilities preserved. Not user sign-off. Performance gates disabled; full R6 remains pending."
+    },
+    "penguin": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct visual inspection of final native view/motion sheets, actual 64px icons, world screenshots, baseline comparisons and semantic change proof; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "5d26e37be71e91ec5f80d95cd60f4121949fe22fa34dcdf9a005c2e85f91e662",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "penguin.png",
+          "sha256": "4041d4917d4e1a730bdfdd0f69435b2d38ce62d9db9686ca52a14b9949688b1f"
+        },
+        "motion": {
+          "path": "native_approved_penguin.png",
+          "sha256": "2aa92a728bcdbf4320abd7cded57052eb943dca947ef1028539d7eb7e922ac19"
+        },
+        "runtime": {
+          "path": "runtime_final_penguin/frame_002.png",
+          "sha256": "d5b7837be16d6741616ecce19acb9fa8919c53fc276aa8dd37fb85fc0e904a8e"
+        },
+        "ui": {
+          "path": "native_candidate/penguin_12.png",
+          "sha256": "73ab217bc81a7356d65c2f3e9d8943054fc11298be9aea085da49fc0d7e5ce6d"
+        }
+      },
+      "notes": "Directly re-reviewed full native poses/motions, 64px icon and selected actual world image. Correct -X/west and +X/east islands. Geometry, skin, named motion tracks, PNGs and runtime definitions unchanged per side_uv_correction.json. All prior extra clip capabilities preserved. Not user sign-off. Performance gates disabled; full R6 remains pending."
+    },
+    "owl": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct visual inspection of final native view/motion sheets, actual 64px icons, world screenshots, baseline comparisons and semantic change proof; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "d948b95f5edefd99c3471bfd83156815d14f7b86675058da1fda930ba3dd010e",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "owl.png",
+          "sha256": "dae646b1c6a6248f82615c04f3917045c31d2b1abee04eb8022c55cb8d5491f6"
+        },
+        "motion": {
+          "path": "native_approved_owl.png",
+          "sha256": "0c08b26f56ab14efaae60953b1f4fd348d8d26524fda48163c851d097e644961"
+        },
+        "runtime": {
+          "path": "runtime_final_owl/frame_002.png",
+          "sha256": "e9562329a970a43e6182edae9d0ada6af9f0dd81687d0af280c132210a847842"
+        },
+        "ui": {
+          "path": "native_candidate/owl_12.png",
+          "sha256": "e787283f9633691e3b8ac3d6872fbc5e207c05b40abba17b86a0f82e3f06a817"
+        }
+      },
+      "notes": "Directly re-reviewed full native poses/motions, 64px icon and selected actual world image. Correct -X/west and +X/east islands. Geometry, skin, named motion tracks, PNGs and runtime definitions unchanged per side_uv_correction.json. All prior extra clip capabilities preserved. Not user sign-off. Performance gates disabled; full R6 remains pending."
+    },
+    "puffin": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct visual inspection of final native view/motion sheets, actual 64px icons, world screenshots, baseline comparisons and semantic change proof; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "3393de8ea9940f7d5c63e776bcf5bb8bac1158c67d16f4501d6f1deb30517265",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "puffin.png",
+          "sha256": "4d142d639a6be19c6bac43d102ee57f1021e7a9880b7bdbe8fd08ddf3d5ce171"
+        },
+        "motion": {
+          "path": "native_approved_puffin.png",
+          "sha256": "d716a9faaa63aa860db2c3d7ff3211442cd11e1f1770a610c4f87afb66e39593"
+        },
+        "runtime": {
+          "path": "runtime_final_puffin/frame_002.png",
+          "sha256": "6cb8f1016fab669acc9832de651012594336446f27c4d8fc8048838557d6c59c"
+        },
+        "ui": {
+          "path": "native_candidate/puffin_12.png",
+          "sha256": "32f4cfc01e920f24ea8c200ad98867e7d46f86e55c66ba443a6fa87033dbbb65"
+        }
+      },
+      "notes": "Directly re-reviewed full native poses/motions, 64px icon and selected actual world image. Correct -X/west and +X/east islands. Geometry, skin, named motion tracks, PNGs and runtime definitions unchanged per side_uv_correction.json. All prior extra clip capabilities preserved. Not user sign-off. Performance gates disabled; full R6 remains pending."
+    },
+    "wasp": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct visual inspection of final native view/motion sheets, actual 64px icons, world screenshots, baseline comparisons and semantic change proof; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "619280a223e5b7be2f5d185bd7c55cbd2d48389a20c68fb036023a2cd2cf3fc6",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "wasp.png",
+          "sha256": "d07fd05ed6f01a18e9e70235ea5cb58f05dca5b4ff339328d177a14bdd2302f1"
+        },
+        "motion": {
+          "path": "native_approved_wasp.png",
+          "sha256": "90c469c5778933b922f4cc20e06c8defc544c2bc1fc18c1315757836f966286f"
+        },
+        "runtime": {
+          "path": "runtime_final_wasp/frame_002.png",
+          "sha256": "b77c13f280458bda6bcf3e1c353a3475ed9e7064fe6d86fb41b093acb2acc93e"
+        },
+        "ui": {
+          "path": "native_candidate/wasp_12.png",
+          "sha256": "24d83adce9d0c5658da0aab2f327d0835be4b4854c96bcdafbbe5cbad3cefd7e"
+        }
+      },
+      "notes": "Directly re-reviewed full native poses/motions, 64px icon and selected actual world image. Correct -X/west and +X/east islands. Geometry, skin, named motion tracks, PNGs and runtime definitions unchanged per side_uv_correction.json. All prior extra clip capabilities preserved. Not user sign-off. Performance gates disabled; full R6 remains pending."
+    }
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "passed": true,
+  "scope": "Original17 + current own16 + historical own penguin snapshot matched; metrics retain the pre-penguin-publication anatomy diagnosis",
+  "resources": [
+    {
+      "id": "badger",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "current_live_models"
+    },
+    {
+      "id": "dirt_monster",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "current_live_models"
+    },
+    {
+      "id": "dungeon_master",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "current_live_models"
+    },
+    {
+      "id": "golem",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "current_live_models"
+    },
+    {
+      "id": "land_guard",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "current_live_models"
+    },
+    {
+      "id": "lobster",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "current_live_models"
+    },
+    {
+      "id": "oerkki",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "current_live_models"
+    },
+    {
+      "id": "orc",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "current_live_models"
+    },
+    {
+      "id": "owl",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "current_live_models"
+    },
+    {
+      "id": "penguin",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "historical_own_pre_publish_snapshot"
+    },
+    {
+      "id": "puffin",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "current_live_models"
+    },
+    {
+      "id": "sand_monster",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "current_live_models"
+    },
+    {
+      "id": "seahorse",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "current_live_models"
+    },
+    {
+      "id": "stone_monster",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "current_live_models"
+    },
+    {
+      "id": "treeman",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "current_live_models"
+    },
+    {
+      "id": "wasp",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "current_live_models"
+    },
+    {
+      "id": "whale",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "current_live_models"
+    }
+  ]
+}

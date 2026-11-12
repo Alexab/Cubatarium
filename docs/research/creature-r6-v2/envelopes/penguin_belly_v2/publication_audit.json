@@ -1,0 +1,33 @@
+{
+  "passed": true,
+  "scope": "One normal-pipeline R5 body revision, full61 sampled RGBA regression, persistence/FP subset and invariant proof; not full R6 acceptance",
+  "exe_sha256": "a0872e87a1551dbe7ac0cff1346b58176743d18eba13817cb7779473415df68f",
+  "body_rgba_exact": 5201,
+  "expected_changed_png_in_penguin": 89,
+  "candidate_to_published_png_exact": 89,
+  "fp_png_exact": 936,
+  "ledger_fresh": 61,
+  "animation_arrays_exact": 17,
+  "nodes_ibm_weights_definition_unchanged": true,
+  "before_geometry": {
+    "triangles": 132,
+    "min_triangle_area": 0.0007519520586356521,
+    "constant_uv_triangles": 76,
+    "model_texel_density_p05": 0.0,
+    "model_texel_density_median": 0.0
+  },
+  "published_geometry": {
+    "triangles": 132,
+    "min_triangle_area": 0.0007519520586356521,
+    "constant_uv_triangles": 76,
+    "model_texel_density_p05": 0.0,
+    "model_texel_density_median": 0.0
+  },
+  "review_sha256": "d901893cecaf48e6bc87de69195cf8f3bc609fe1de4117c7d93c955ba7013c6d",
+  "source_snapshot_sha256": "6c1ba7513d3b96865c8c054a3f76c16354d5c95fae2d0f7b844672345246a3f0",
+  "input_reports_sha256": {
+    "body_parity.json": "50770fb9d45295d2ad7742ea03690d9fe3ca7a4d5f1a139bf1a4b00c6574a941",
+    "fp_audit.json": "4d650afd50ba7b6faf92de64dbb8e31b96dc94f939581dfab8e1c5ee7ffdc873",
+    "audit_production_final.json": "7dde2da711f04089491e28007ac20bd4c16e3bba00fa52644cc37a8e80d4c6e6"
+  }
+}

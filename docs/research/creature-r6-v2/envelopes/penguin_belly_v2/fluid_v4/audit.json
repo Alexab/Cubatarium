@@ -1,0 +1,50 @@
+{
+  "passed": true,
+  "scope": "Explicit synthetic conditions and one short actual open-water input/motor route; not terrain/wet-dry travel/GPU fade/performance/art acceptance",
+  "exe_sha256": "a0872e87a1551dbe7ac0cff1346b58176743d18eba13817cb7779473415df68f",
+  "transition_cases": 160,
+  "cpu_transition_frames": 3360,
+  "supported_frames": 1680,
+  "supported_min_y": -5.587935447692871e-08,
+  "world_samples": 350,
+  "world_simulated_seconds": 15.672472953796387,
+  "world_xz_move_travel": 1.785837173461914,
+  "world_move_direction_samples": {
+    "1.0": 59,
+    "-1.0": 42
+  },
+  "world_state_counts": {
+    "swim": 166,
+    "Jump": 91,
+    "idle": 21,
+    "fall": 72
+  },
+  "known_air_legacy_freeze_recovered_samples": 272,
+  "sheets": [
+    {
+      "path": "penguin_fullturn_0.png",
+      "sha256": "3c7f0b7bd3a452ff366c7828ee2563d9a571a274dd297a6ad4f0f232ef7268d7"
+    },
+    {
+      "path": "penguin_fullturn_1.png",
+      "sha256": "91c894757dfea4c6b1c9f06f7746b17c0615ddd15c0bf385752f82d27f910b43"
+    },
+    {
+      "path": "penguin_fullturn_2.png",
+      "sha256": "a9b990ceb009323c866bc320605160849087f3b784075ef566d28a0cc31a0272"
+    }
+  ],
+  "input_sha256": {
+    "world_motion_fluid_candidate.jsonl": "8e6a285f2894acc688512d5de820af40d286f35d9d53105fec8eb2879460dc5b",
+    "native_candidate\\fluid_transition_probe.json": "eea37e5ba29b88ffb214a63a99ac5f03e8c8a97d801dffb0729799926184dda2",
+    "context_fluid_candidate.json": "e576e4b403419a5c86cd9134b18fb3ed31c065008cde3704255f0be3f9ac7b81"
+  },
+  "source_sha256": {
+    "src/App/Platform/CreatureQaFluidTransitionProbe.h": "baea3da915c761516c2979c6c04f7e5b6a853a2a3efb655683ff1b37a1178420",
+    "src/Creatures/Diagnostics/CreatureQaWorldMotion.h": "5a57309cf5913db36d7fc47107ccae0accddb6dc14e5c87f1967e7f218ce7a17",
+    "src/World/Core/WorldViewBinding.cpp": "25772632100844efa33724787840cb8b7405f529fd45702091e61d460d602bcc",
+    "src/World/Chunks/KnownAirTerrainSlice.h": "a921ad68abd4e1cd7c89ff58f0258d7f471c1f06290b6aa4bba40f5af211ad2a",
+    "src/World/Chunks/KnownAirTerrainSlicePolicy.h": "4ac29be9a65c365c32a744bbbe02b9278bd709a9e5a5c0da650ba5c73f8e06d8",
+    "src/World/Raycast/OpaqueVoxelRayTrace.cpp": "2addc185bda63cf88417abdcb90d3593c6a1321630a9a560c17dfaddf6ff3d0e"
+  }
+}

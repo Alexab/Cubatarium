@@ -251,7 +251,7 @@
       }
     ],
     "icon": {
-      "mode": "species_texture",
+      "mode": "parts_preview",
       "color": [
         1.0,
         0.7,
@@ -263,8 +263,8 @@
     "geometry_file": "geometry.geo.json",
     "texture": "diffuse",
     "texture_size": [
-      64,
-      32
+      128,
+      128
     ],
     "animation_profile": "quadruped"
   },

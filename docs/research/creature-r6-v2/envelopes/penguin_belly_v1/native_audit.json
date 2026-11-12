@@ -1,0 +1,610 @@
+{
+  "schema": "creature-native-envelope-evidence-audit.v1",
+  "evidence_consistent": true,
+  "scope": "Actual preview draws at shared world scale; actual CPU submitted vertex bounds and GPU culling-edge witnesses, not contact/terrain/all-backend acceptance",
+  "art_acceptance": "pending",
+  "contact_acceptance": "pending",
+  "exe_sha256": "26f7f77d36a7ab28661db03ae468c309ae1f08ca9303ad59d4189bf41758b2aa",
+  "native_main_images": 138,
+  "sheet_background": "neutral_light",
+  "max_offline_native_bounds_error_blocks": 7.838010788019378e-06,
+  "profile_sha256": "88621d6115d5fe9bb611aa2c6f9e5bd110e29009a2c2610afd4713403f73b71a",
+  "offline_metrics_sha256": "c7aab2f61df1c252491800e80acfe1a8930f78f44cac6e074aff32ad649fcd01",
+  "confirmed_false_culls": {
+    "baseline": 1,
+    "current": 1
+  },
+  "visual_envelope_required": true,
+  "recovered_false_culls": {
+    "baseline": 1,
+    "current": 1
+  },
+  "sheets": [
+    {
+      "id": "penguin",
+      "kind": "motion",
+      "file": "sheets/penguin_motion.png",
+      "sha256": "d56728430a7d5417ae536aea90fd4879d3cdfcd2eea7b32003a1a74e2a88400c"
+    },
+    {
+      "id": "penguin",
+      "kind": "front_side",
+      "file": "sheets/penguin_views.png",
+      "sha256": "820393338468c9b605c68978a04769772e1eb5c1eb1f0ff102681f1a69f42613"
+    }
+  ],
+  "culling_witnesses": [
+    {
+      "id": "penguin",
+      "variant": "baseline",
+      "confirmed_false_cull": true,
+      "new_visual_culling_rejects": false,
+      "alpha_pixels": 364,
+      "file": "native_original/envelopes/penguin_edge.png",
+      "sha256": "baa4018508077b1dee1d69c6255cecd915f2223db3327f89ba38806cd0989cce"
+    },
+    {
+      "id": "penguin",
+      "variant": "current",
+      "confirmed_false_cull": true,
+      "new_visual_culling_rejects": false,
+      "alpha_pixels": 1632,
+      "file": "native_current/envelopes/penguin_edge.png",
+      "sha256": "163ef486c87c1e34880c1d45a99cd14ba19bf72ec2461ae1ecaaa29e9fdcc9f9"
+    }
+  ],
+  "native_frames": [
+    {
+      "file": "native_original/envelopes/penguin_0.png",
+      "sha256": "d427662be903bf6e7a49c7e39da02c7bc086f6b7a648b6385fff4d3ce08a722c"
+    },
+    {
+      "file": "native_original/envelopes/penguin_1.png",
+      "sha256": "d6c8fed5a0a5acf7362fd81f7470157c9d951b946090e8e9fed11ca3a69e2940"
+    },
+    {
+      "file": "native_original/envelopes/penguin_2.png",
+      "sha256": "57b228c4d381bb6b8c4b9cfb2d51d8b6cc83121ca8df4fd222165a25ee43592a"
+    },
+    {
+      "file": "native_original/envelopes/penguin_3.png",
+      "sha256": "d427662be903bf6e7a49c7e39da02c7bc086f6b7a648b6385fff4d3ce08a722c"
+    },
+    {
+      "file": "native_original/envelopes/penguin_4.png",
+      "sha256": "5f8a46b0023d104ca70ce094a158c113b44b2b784cb6630faa448b52526a0112"
+    },
+    {
+      "file": "native_original/envelopes/penguin_5.png",
+      "sha256": "71f0f5cbbb36e541333d7f8812edc6ee856721a7e3f5b846f8271fa9c78b02a8"
+    },
+    {
+      "file": "native_original/envelopes/penguin_6.png",
+      "sha256": "9b9286d87db2ab7d064b53f259436db08b1ecd2c6a6b8a63a4986298d814c95b"
+    },
+    {
+      "file": "native_original/envelopes/penguin_7.png",
+      "sha256": "063a8aba2038efdb8c01b03693b93ef2eed1c0cca97629f761fad5737249d678"
+    },
+    {
+      "file": "native_original/envelopes/penguin_8.png",
+      "sha256": "e86db27395ca600599c81a13f9307a9a5c8807d6a49446ebb94977e1ef69296f"
+    },
+    {
+      "file": "native_original/envelopes/penguin_9.png",
+      "sha256": "23e5f4a8a5673f90547c1c9d61b211b12fcc233654425366faf98d7e02692981"
+    },
+    {
+      "file": "native_original/envelopes/penguin_10.png",
+      "sha256": "ce2a35cb3abc1d659f2f123a6d9f04de4367359d03ed7fa24321a84e920771f0"
+    },
+    {
+      "file": "native_original/envelopes/penguin_11.png",
+      "sha256": "f3b6ad47fdf075eab4d13040e92306ee5330ac2af097479a972552549550e60a"
+    },
+    {
+      "file": "native_original/envelopes/penguin_12.png",
+      "sha256": "23e5f4a8a5673f90547c1c9d61b211b12fcc233654425366faf98d7e02692981"
+    },
+    {
+      "file": "native_original/envelopes/penguin_13.png",
+      "sha256": "b8de380f77f2888cfd7f5c922b487761b08c36da569a35d4ab458cb1a6cf1b1f"
+    },
+    {
+      "file": "native_original/envelopes/penguin_14.png",
+      "sha256": "3212bb2213798b362920fd4780d2c80b3bd24e5b9f60abbbd1e5e30cfb4cd0d8"
+    },
+    {
+      "file": "native_original/envelopes/penguin_15.png",
+      "sha256": "9b9286d87db2ab7d064b53f259436db08b1ecd2c6a6b8a63a4986298d814c95b"
+    },
+    {
+      "file": "native_original/envelopes/penguin_16.png",
+      "sha256": "2fe2c116ab4ab5aeb9edfa7eb209d7cdd14afa7a14a8b3b0e5e71168e87f7b62"
+    },
+    {
+      "file": "native_original/envelopes/penguin_17.png",
+      "sha256": "c2cd0588c6196c5edf377421815862f888ec7b566e591411b07a82663bf0540f"
+    },
+    {
+      "file": "native_original/envelopes/penguin_18.png",
+      "sha256": "9b9286d87db2ab7d064b53f259436db08b1ecd2c6a6b8a63a4986298d814c95b"
+    },
+    {
+      "file": "native_original/envelopes/penguin_19.png",
+      "sha256": "a44176b8821fd946f545d5d32a174c2400f6ae39c6e1d24604036468a73666c5"
+    },
+    {
+      "file": "native_original/envelopes/penguin_20.png",
+      "sha256": "8c98b17459df64b1d971a8fd9ca58f9a4051ca0cd7270048882e984b41eeab22"
+    },
+    {
+      "file": "native_original/envelopes/penguin_21.png",
+      "sha256": "2912907e569f8782e209c10a4ec600a67047c83d04b9ddc425079e7e0773ed91"
+    },
+    {
+      "file": "native_original/envelopes/penguin_22.png",
+      "sha256": "f997853b1e95057a397317df75008247e3c016dcbc4b7dc6db224a0dcb629b9b"
+    },
+    {
+      "file": "native_original/envelopes/penguin_23.png",
+      "sha256": "7c7178ba927da054b2213d54415cfc088d6de085c99f01a56e634a5f77320689"
+    },
+    {
+      "file": "native_original/envelopes/penguin_24.png",
+      "sha256": "e5256325b73567529911a090b336c3fc6759b29cc9df02c0c578940434a62eff"
+    },
+    {
+      "file": "native_original/envelopes/penguin_25.png",
+      "sha256": "67c58e733cb9aab9b398a34b574b758ddba57fe1fcd407d68cf8954c89902ac8"
+    },
+    {
+      "file": "native_original/envelopes/penguin_26.png",
+      "sha256": "a21f2e4b890339d3189e172abc89c22070aff7541854443927a895a2ab655757"
+    },
+    {
+      "file": "native_original/envelopes/penguin_27.png",
+      "sha256": "dcab155799f42cb0018d4ca0477e9d76e08ee4d88ed473ef781281d1846f4a22"
+    },
+    {
+      "file": "native_original/envelopes/penguin_28.png",
+      "sha256": "ee24000aca83743cdc64885f71e8abd46b7f7d3f4a7c9a4675c244fe35105cf9"
+    },
+    {
+      "file": "native_original/envelopes/penguin_29.png",
+      "sha256": "38c4ce3f142c15a4efce1607407b9d9aabd3fd9789875262d8d868b171060d1e"
+    },
+    {
+      "file": "native_original/envelopes/penguin_30.png",
+      "sha256": "44f54d8a1adebb371599fbe861ee4745164eca3680d7bb4e47cbb81c0415eb2d"
+    },
+    {
+      "file": "native_original/envelopes/penguin_31.png",
+      "sha256": "78f160e5d0f481bf139bd539685b5e8e444be1bf31b78b787644cde5e6acd634"
+    },
+    {
+      "file": "native_original/envelopes/penguin_32.png",
+      "sha256": "cf0f53cc518d4e6d587352753605279e5bd2a58176996c8dfbc80ad5b16fc305"
+    },
+    {
+      "file": "native_original/envelopes/penguin_33.png",
+      "sha256": "b4dc76436be21e968d67e9400c63ad7416199da210c1248ebd7c421db24fdd83"
+    },
+    {
+      "file": "native_original/envelopes/penguin_34.png",
+      "sha256": "b4fec551be62fc0d0c647e412bc3cebc2a552163a7474a227555e978243814f1"
+    },
+    {
+      "file": "native_original/envelopes/penguin_35.png",
+      "sha256": "da9faa02445d60d0b4300303a1f18f43a75a90e2aeb1a29ac2375ee9d5bfe493"
+    },
+    {
+      "file": "native_original/envelopes/penguin_36.png",
+      "sha256": "44f54d8a1adebb371599fbe861ee4745164eca3680d7bb4e47cbb81c0415eb2d"
+    },
+    {
+      "file": "native_original/envelopes/penguin_37.png",
+      "sha256": "78f160e5d0f481bf139bd539685b5e8e444be1bf31b78b787644cde5e6acd634"
+    },
+    {
+      "file": "native_original/envelopes/penguin_38.png",
+      "sha256": "cf0f53cc518d4e6d587352753605279e5bd2a58176996c8dfbc80ad5b16fc305"
+    },
+    {
+      "file": "native_original/envelopes/penguin_39.png",
+      "sha256": "1441f55efc0aff27a5be8586d4675c5dfbc1fa6dbd4aebeae6f626ccc664afff"
+    },
+    {
+      "file": "native_original/envelopes/penguin_40.png",
+      "sha256": "91b64906dfe3991dea29c8ce23dd2bc9e778f868e0b79ff717057dba37180527"
+    },
+    {
+      "file": "native_original/envelopes/penguin_41.png",
+      "sha256": "84a68bf66c8188b2d82dcd4428e4db331d466ddc3d82bca7810b916abd817963"
+    },
+    {
+      "file": "native_original/envelopes/penguin_42.png",
+      "sha256": "53b15c46408afc0e55eee4f3dd88a4aa1aaef5ad787fde1e0c3b4c9238cc9f58"
+    },
+    {
+      "file": "native_original/envelopes/penguin_43.png",
+      "sha256": "b040b4cc81f830ef795b160563faff420ddb5c134aede60287a6cc1de8a88ca4"
+    },
+    {
+      "file": "native_original/envelopes/penguin_44.png",
+      "sha256": "1594e6176f26e5cdcf4d9ce49891048c2d29a211dc9248b628831d47af20af9b"
+    },
+    {
+      "file": "native_original/envelopes/penguin_45.png",
+      "sha256": "45845a46c7ea83fa281d3696f1f00be6f0d9a31a39e7433a4da67b3c8370f37b"
+    },
+    {
+      "file": "native_original/envelopes/penguin_46.png",
+      "sha256": "692fac1a55a4fb4bb9aa69046291e39d0e2b2f860039ba91df00901909d08f7f"
+    },
+    {
+      "file": "native_original/envelopes/penguin_47.png",
+      "sha256": "858127180d63c1a9eaf5ad0ef2a28396c999a1104b32539d91a5a577468f82f2"
+    },
+    {
+      "file": "native_original/envelopes/penguin_48.png",
+      "sha256": "5542aeac36ce8aea2c0aa49e40b27625172f0c61160e58344c4d95ef01800e62"
+    },
+    {
+      "file": "native_original/envelopes/penguin_49.png",
+      "sha256": "255e232dda9552a067b7ae51bed48c817b31df07455f2550d3a441e158d24f8b"
+    },
+    {
+      "file": "native_original/envelopes/penguin_50.png",
+      "sha256": "2607f77ab385c6cc5fa1d304e4315653649625a9eb4dca2a83f2a9871a9f5af3"
+    },
+    {
+      "file": "native_original/envelopes/penguin_51.png",
+      "sha256": "45845a46c7ea83fa281d3696f1f00be6f0d9a31a39e7433a4da67b3c8370f37b"
+    },
+    {
+      "file": "native_original/envelopes/penguin_52.png",
+      "sha256": "692fac1a55a4fb4bb9aa69046291e39d0e2b2f860039ba91df00901909d08f7f"
+    },
+    {
+      "file": "native_original/envelopes/penguin_53.png",
+      "sha256": "858127180d63c1a9eaf5ad0ef2a28396c999a1104b32539d91a5a577468f82f2"
+    },
+    {
+      "file": "native_original/envelopes/penguin_54.png",
+      "sha256": "1441f55efc0aff27a5be8586d4675c5dfbc1fa6dbd4aebeae6f626ccc664afff"
+    },
+    {
+      "file": "native_original/envelopes/penguin_55.png",
+      "sha256": "91b64906dfe3991dea29c8ce23dd2bc9e778f868e0b79ff717057dba37180527"
+    },
+    {
+      "file": "native_original/envelopes/penguin_56.png",
+      "sha256": "84a68bf66c8188b2d82dcd4428e4db331d466ddc3d82bca7810b916abd817963"
+    },
+    {
+      "file": "native_original/envelopes/penguin_57.png",
+      "sha256": "53b15c46408afc0e55eee4f3dd88a4aa1aaef5ad787fde1e0c3b4c9238cc9f58"
+    },
+    {
+      "file": "native_original/envelopes/penguin_58.png",
+      "sha256": "b040b4cc81f830ef795b160563faff420ddb5c134aede60287a6cc1de8a88ca4"
+    },
+    {
+      "file": "native_original/envelopes/penguin_59.png",
+      "sha256": "1594e6176f26e5cdcf4d9ce49891048c2d29a211dc9248b628831d47af20af9b"
+    },
+    {
+      "file": "native_original/envelopes/penguin_60.png",
+      "sha256": "45845a46c7ea83fa281d3696f1f00be6f0d9a31a39e7433a4da67b3c8370f37b"
+    },
+    {
+      "file": "native_original/envelopes/penguin_61.png",
+      "sha256": "692fac1a55a4fb4bb9aa69046291e39d0e2b2f860039ba91df00901909d08f7f"
+    },
+    {
+      "file": "native_original/envelopes/penguin_62.png",
+      "sha256": "858127180d63c1a9eaf5ad0ef2a28396c999a1104b32539d91a5a577468f82f2"
+    },
+    {
+      "file": "native_original/envelopes/penguin_63.png",
+      "sha256": "5542aeac36ce8aea2c0aa49e40b27625172f0c61160e58344c4d95ef01800e62"
+    },
+    {
+      "file": "native_original/envelopes/penguin_64.png",
+      "sha256": "255e232dda9552a067b7ae51bed48c817b31df07455f2550d3a441e158d24f8b"
+    },
+    {
+      "file": "native_original/envelopes/penguin_65.png",
+      "sha256": "2607f77ab385c6cc5fa1d304e4315653649625a9eb4dca2a83f2a9871a9f5af3"
+    },
+    {
+      "file": "native_original/envelopes/penguin_66.png",
+      "sha256": "45845a46c7ea83fa281d3696f1f00be6f0d9a31a39e7433a4da67b3c8370f37b"
+    },
+    {
+      "file": "native_original/envelopes/penguin_67.png",
+      "sha256": "692fac1a55a4fb4bb9aa69046291e39d0e2b2f860039ba91df00901909d08f7f"
+    },
+    {
+      "file": "native_original/envelopes/penguin_68.png",
+      "sha256": "858127180d63c1a9eaf5ad0ef2a28396c999a1104b32539d91a5a577468f82f2"
+    },
+    {
+      "file": "native_current/envelopes/penguin_0.png",
+      "sha256": "62109c1fdd5c904915351385c2e7977ba9e58d990a78cdc9719024c8a8acabc8"
+    },
+    {
+      "file": "native_current/envelopes/penguin_1.png",
+      "sha256": "23e57992d4b2b1875cbef2faf7cafbc8430c483175a15ad67a6cfe3ed8109423"
+    },
+    {
+      "file": "native_current/envelopes/penguin_2.png",
+      "sha256": "b8607e2ba3fb0593e7d23a40ea006ce85b2aac7665d0fd6db52ba83dcb79bca5"
+    },
+    {
+      "file": "native_current/envelopes/penguin_3.png",
+      "sha256": "0750842e90402c93265ffd645cb315061a48c05b2eea755e319f357af4f44317"
+    },
+    {
+      "file": "native_current/envelopes/penguin_4.png",
+      "sha256": "fe4876bd1d1804cc950f5a3d858d407aa628ba6a78381c2aca691f36185c91d2"
+    },
+    {
+      "file": "native_current/envelopes/penguin_5.png",
+      "sha256": "7e1e9473164782a0360b6c2dcae612928194bd5f6c513d3f38c0e6c97f630612"
+    },
+    {
+      "file": "native_current/envelopes/penguin_6.png",
+      "sha256": "b8c45461986fc5dedd67df0ea3d9de95754b6575fbb46faf4431d672b239cf20"
+    },
+    {
+      "file": "native_current/envelopes/penguin_7.png",
+      "sha256": "f4618bfc172eb9735a06a710e1c8f521062b8a4ae69759957c751bfe8c262904"
+    },
+    {
+      "file": "native_current/envelopes/penguin_8.png",
+      "sha256": "21bf77479e35aaffa79ccca66f6596a1a8cb1d04fd21f3d9a5bfd65b67972ab5"
+    },
+    {
+      "file": "native_current/envelopes/penguin_9.png",
+      "sha256": "bdc9b7d96562459f6c2d5e38f62743781e83b63e8344ceb5ea3d5c33b52a3e18"
+    },
+    {
+      "file": "native_current/envelopes/penguin_10.png",
+      "sha256": "06f5bb75f90443278dd53925ae9c0d49e953b95587441ddbe964bc3103e7e1d8"
+    },
+    {
+      "file": "native_current/envelopes/penguin_11.png",
+      "sha256": "fe45d5e51513c977040c94c08deec2e30f3f658188e9b09d66a24e959b168370"
+    },
+    {
+      "file": "native_current/envelopes/penguin_12.png",
+      "sha256": "62109c1fdd5c904915351385c2e7977ba9e58d990a78cdc9719024c8a8acabc8"
+    },
+    {
+      "file": "native_current/envelopes/penguin_13.png",
+      "sha256": "23e57992d4b2b1875cbef2faf7cafbc8430c483175a15ad67a6cfe3ed8109423"
+    },
+    {
+      "file": "native_current/envelopes/penguin_14.png",
+      "sha256": "b8607e2ba3fb0593e7d23a40ea006ce85b2aac7665d0fd6db52ba83dcb79bca5"
+    },
+    {
+      "file": "native_current/envelopes/penguin_15.png",
+      "sha256": "96929fc683764d6d9a7eec27826111cfddd129d3e165c78b3647bbe2cfbfa34f"
+    },
+    {
+      "file": "native_current/envelopes/penguin_16.png",
+      "sha256": "4396d5daec145fddcc577a5e1f83cce7e1e62008dfce4cf3927245d1be9d431f"
+    },
+    {
+      "file": "native_current/envelopes/penguin_17.png",
+      "sha256": "5a73af100d2e709e80e71d8a7f5654b3b750c154b1afe204c4a593719d80ef58"
+    },
+    {
+      "file": "native_current/envelopes/penguin_18.png",
+      "sha256": "209a56f85165107a3195e908cc13a393b1956764d8042c7a35d438a0cee34532"
+    },
+    {
+      "file": "native_current/envelopes/penguin_19.png",
+      "sha256": "5353cf6c3f2dd940a713fd85df11a41cb09d3b4b82e827e5a68a3386488633e5"
+    },
+    {
+      "file": "native_current/envelopes/penguin_20.png",
+      "sha256": "dd6b18a46f6246a790237c5bbf13f9631a304fcd4daf42ef33c2d9566ececa34"
+    },
+    {
+      "file": "native_current/envelopes/penguin_21.png",
+      "sha256": "5e953a00df99dd1f4630ef41ae92de383b4cd0d16645c47b00969950e07a99d9"
+    },
+    {
+      "file": "native_current/envelopes/penguin_22.png",
+      "sha256": "5523b580d9bb68542351aa86889d644931b788e3a223c06c84e09ba8da4d2cfe"
+    },
+    {
+      "file": "native_current/envelopes/penguin_23.png",
+      "sha256": "f94ded68a26bd9b0e22b3cf2a09985e9a1e4be9ab80847f3bb84aab39b7a8867"
+    },
+    {
+      "file": "native_current/envelopes/penguin_24.png",
+      "sha256": "17161ea8b745d6e7654bbd51fbeee83ce89dcf0569dbafc9d8f0606d546337fa"
+    },
+    {
+      "file": "native_current/envelopes/penguin_25.png",
+      "sha256": "f9c7a24625ff173ab9e65ade9398c545050a0d8a065b2aaf9010dbdcaf14d120"
+    },
+    {
+      "file": "native_current/envelopes/penguin_26.png",
+      "sha256": "21ee0d2585d17db32353c353ecfdca727f73a5759e9ff12c038375bfcddd85c6"
+    },
+    {
+      "file": "native_current/envelopes/penguin_27.png",
+      "sha256": "3a296835f6ca691fa0eb4cac3c750f6d6789649db780f8f5b4c8dc780b0df76f"
+    },
+    {
+      "file": "native_current/envelopes/penguin_28.png",
+      "sha256": "d5744e78da1736a112878eb658cc98bc821cee9938999ccfbe284557154851f8"
+    },
+    {
+      "file": "native_current/envelopes/penguin_29.png",
+      "sha256": "7dc5934d7268bb200a5da84c2050dcf728e4827a6b11438dbd3b55b1173e6a7f"
+    },
+    {
+      "file": "native_current/envelopes/penguin_30.png",
+      "sha256": "1223496b1064cbf5f9e63bff1d65e45eba81956c8385722bf1848e96b59a3b31"
+    },
+    {
+      "file": "native_current/envelopes/penguin_31.png",
+      "sha256": "100d35bfdf6f0ea648a58f68d0efa939e171516c6df1c7b1df77bd9b3f146f36"
+    },
+    {
+      "file": "native_current/envelopes/penguin_32.png",
+      "sha256": "f4a2f44dfba45bca79f7f361696859a2f54bf916080d1c39f7a31b7f1e7c2b64"
+    },
+    {
+      "file": "native_current/envelopes/penguin_33.png",
+      "sha256": "d871f127b9caef8b222d378642958c85b7723010898562cc8e68566aa1132651"
+    },
+    {
+      "file": "native_current/envelopes/penguin_34.png",
+      "sha256": "467b7369b3c4b9c90916146179dbfbe055cb64c53792e08bb6fdc34d91036e94"
+    },
+    {
+      "file": "native_current/envelopes/penguin_35.png",
+      "sha256": "834cf5df92e25c7d0fd0449a476efe2f5e7f7c52b99be2faa95ed3b2a23b026f"
+    },
+    {
+      "file": "native_current/envelopes/penguin_36.png",
+      "sha256": "32657144503c1df983c63160de860ef3868834f3a05e99dc4b0725c54b36f748"
+    },
+    {
+      "file": "native_current/envelopes/penguin_37.png",
+      "sha256": "87f8a99cfc263922b8c5b7278bd10a51986a0fc87912b327cd73592e5f5ccbe2"
+    },
+    {
+      "file": "native_current/envelopes/penguin_38.png",
+      "sha256": "8a3f21ae28777d4aed9eed5aaeea2f427f9b654e051a32ad5430d5a7cb99c935"
+    },
+    {
+      "file": "native_current/envelopes/penguin_39.png",
+      "sha256": "ff475a97c4ae749934c5e33f66cf7ccfba1f2994a323181c192b45a5cf1bf11a"
+    },
+    {
+      "file": "native_current/envelopes/penguin_40.png",
+      "sha256": "0593fceca84448177862059c6bbb32ee0b47eaafae4c5c36d7dc4d0a658aafa3"
+    },
+    {
+      "file": "native_current/envelopes/penguin_41.png",
+      "sha256": "23418d288eeb275041a6437078505472758cb409fd4518619ede53331b00abfa"
+    },
+    {
+      "file": "native_current/envelopes/penguin_42.png",
+      "sha256": "38c2b8bb617859f175f9181817c7548080d049ffafb32529ca427d08f7d08045"
+    },
+    {
+      "file": "native_current/envelopes/penguin_43.png",
+      "sha256": "8143869a869548375b4d6946f62b0d0d22f8d53e2bae5a60675ddc6508059ada"
+    },
+    {
+      "file": "native_current/envelopes/penguin_44.png",
+      "sha256": "0367313fe79dfda1bc706a1a482f4753658cb03ee144279b5b8415a1f28016ef"
+    },
+    {
+      "file": "native_current/envelopes/penguin_45.png",
+      "sha256": "082640a1e65398753fdaf71a44155db816d3d1dbbef310af0890e46e963fac9a"
+    },
+    {
+      "file": "native_current/envelopes/penguin_46.png",
+      "sha256": "faede0ccab8e449690f647e8e1e7a596e5050aee7492b16c84b86987afdc6723"
+    },
+    {
+      "file": "native_current/envelopes/penguin_47.png",
+      "sha256": "2c50fa4c5a12d4aa0bbeca0be6376cc495707e8f84166fa3fd2ca3e7607b971c"
+    },
+    {
+      "file": "native_current/envelopes/penguin_48.png",
+      "sha256": "ff475a97c4ae749934c5e33f66cf7ccfba1f2994a323181c192b45a5cf1bf11a"
+    },
+    {
+      "file": "native_current/envelopes/penguin_49.png",
+      "sha256": "0593fceca84448177862059c6bbb32ee0b47eaafae4c5c36d7dc4d0a658aafa3"
+    },
+    {
+      "file": "native_current/envelopes/penguin_50.png",
+      "sha256": "23418d288eeb275041a6437078505472758cb409fd4518619ede53331b00abfa"
+    },
+    {
+      "file": "native_current/envelopes/penguin_51.png",
+      "sha256": "ede0f9da1bd4cb5796692fcb0172020038f753d35effccde2cd8b375652648fd"
+    },
+    {
+      "file": "native_current/envelopes/penguin_52.png",
+      "sha256": "8943d4b1f5a617cd50a421d74b08c0dbde16359b05c6a2e4789fd25dbd02f62e"
+    },
+    {
+      "file": "native_current/envelopes/penguin_53.png",
+      "sha256": "a571915c347e3f36c6481608c55e35b0a8bec8cc98217cacb3d77df5e5b1b6e8"
+    },
+    {
+      "file": "native_current/envelopes/penguin_54.png",
+      "sha256": "ff475a97c4ae749934c5e33f66cf7ccfba1f2994a323181c192b45a5cf1bf11a"
+    },
+    {
+      "file": "native_current/envelopes/penguin_55.png",
+      "sha256": "0593fceca84448177862059c6bbb32ee0b47eaafae4c5c36d7dc4d0a658aafa3"
+    },
+    {
+      "file": "native_current/envelopes/penguin_56.png",
+      "sha256": "23418d288eeb275041a6437078505472758cb409fd4518619ede53331b00abfa"
+    },
+    {
+      "file": "native_current/envelopes/penguin_57.png",
+      "sha256": "38c2b8bb617859f175f9181817c7548080d049ffafb32529ca427d08f7d08045"
+    },
+    {
+      "file": "native_current/envelopes/penguin_58.png",
+      "sha256": "8143869a869548375b4d6946f62b0d0d22f8d53e2bae5a60675ddc6508059ada"
+    },
+    {
+      "file": "native_current/envelopes/penguin_59.png",
+      "sha256": "0367313fe79dfda1bc706a1a482f4753658cb03ee144279b5b8415a1f28016ef"
+    },
+    {
+      "file": "native_current/envelopes/penguin_60.png",
+      "sha256": "082640a1e65398753fdaf71a44155db816d3d1dbbef310af0890e46e963fac9a"
+    },
+    {
+      "file": "native_current/envelopes/penguin_61.png",
+      "sha256": "faede0ccab8e449690f647e8e1e7a596e5050aee7492b16c84b86987afdc6723"
+    },
+    {
+      "file": "native_current/envelopes/penguin_62.png",
+      "sha256": "2c50fa4c5a12d4aa0bbeca0be6376cc495707e8f84166fa3fd2ca3e7607b971c"
+    },
+    {
+      "file": "native_current/envelopes/penguin_63.png",
+      "sha256": "ff475a97c4ae749934c5e33f66cf7ccfba1f2994a323181c192b45a5cf1bf11a"
+    },
+    {
+      "file": "native_current/envelopes/penguin_64.png",
+      "sha256": "0593fceca84448177862059c6bbb32ee0b47eaafae4c5c36d7dc4d0a658aafa3"
+    },
+    {
+      "file": "native_current/envelopes/penguin_65.png",
+      "sha256": "23418d288eeb275041a6437078505472758cb409fd4518619ede53331b00abfa"
+    },
+    {
+      "file": "native_current/envelopes/penguin_66.png",
+      "sha256": "ede0f9da1bd4cb5796692fcb0172020038f753d35effccde2cd8b375652648fd"
+    },
+    {
+      "file": "native_current/envelopes/penguin_67.png",
+      "sha256": "8943d4b1f5a617cd50a421d74b08c0dbde16359b05c6a2e4789fd25dbd02f62e"
+    },
+    {
+      "file": "native_current/envelopes/penguin_68.png",
+      "sha256": "a571915c347e3f36c6481608c55e35b0a8bec8cc98217cacb3d77df5e5b1b6e8"
+    }
+  ]
+}

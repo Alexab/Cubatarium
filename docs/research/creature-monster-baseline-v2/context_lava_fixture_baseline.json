@@ -1,0 +1,29 @@
+{
+  "captured_at_utc": "2026-11-11T01:08:15.545149+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\review_2026_11_10\\baseline\\models",
+  "files_sha256": {
+    "creatures\\lava_flan\\creature.json": "dac9f40ff476a7f17b12036f110994ea5cd235bb417f0fd0b6b915896cc25d45",
+    "creatures\\lava_flan\\LICENSE.txt": "86f3dd813a29614b4a0bfbddc18fba9e009edd9e2e7c28de179b655ae89b4e16",
+    "creatures\\lava_flan\\model.bin": "8e2bce563da646cc3b49f9fd9685c5c62ec4434bab44ba6ab43488d0d80a305e",
+    "creatures\\lava_flan\\model.gltf": "217c8e226917c6602bd976841dd8c87e96ba0f1c562058327872a97fecb78e2d",
+    "creatures\\lava_flan\\textures\\arm.png": "6c247c886f834f1bda50f4995ec7b3294b6fcf2f344a88e4a0b7f67f0a71ae8a",
+    "creatures\\lava_flan\\textures\\body.png": "6c247c886f834f1bda50f4995ec7b3294b6fcf2f344a88e4a0b7f67f0a71ae8a",
+    "creatures\\lava_flan\\textures\\face.png": "4bb3fc301b5a0243de37a6146b94535d7d9729048255940372523817eff50b57",
+    "creatures\\lava_flan\\textures\\icon.png": "354c48d11836e00187c305c20c4004c82104a8140aabbe97448b25559133bbc6",
+    "creatures\\lava_flan\\textures\\leg.png": "f8280ce7e21407d34eff9e7b54a84a8c03675842cc2cf8a05790518c392b7815"
+  },
+  "qa_models_override": true,
+  "exe_sha256": "6e3a02162ef721ed03b6f7026c20c9759e3a888b2d7b5dcd07f61ca367160c06",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "lava_fixture_baseline",
+  "qa_camera": "close",
+  "qa_water_placement": false,
+  "qa_lava_fixture": true,
+  "world": "CreatureQaLava_254",
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

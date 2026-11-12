@@ -10,6 +10,9 @@
 #include "Creatures/Locomotion/CreatureLocomotionController.h"
 #include "App/Platform/SampleProfiler.h"
 #include "App/Platform/AppRunner.h"
+#include "App/Platform/CreatureQaCapture.h"
+#include "App/Platform/CreatureQaWorldUserProbe.h"
+#include "Game/CreatureVisualQaPlacement.h"
 
 #include "App/Application.h"
 #include "App/Core.h"
@@ -30,6 +33,7 @@
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureSpawnSource.h"
 #include "Creatures/Definition/CreatureDefinition.h"
+#include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Stats/CreatureVitalsSystem.h"
 #include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
@@ -1302,14 +1306,6 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
               {
                 world->SetTimeOfDayNormalized(0.35f);
                 world->SetTimeFrozen(true);
-                if (ModePolicy::AllowsQaSpawner(world->GetGameMode()))
-                {
-                  UCreatureVisualQaSpawner spawner(*world);
-                  const CreatureVisualQaSpawnResult spawnResult =
-                      spawner.SpawnAllInGrid();
-                  std::cout << "flight-sim: QA grid spawn: "
-                            << spawnResult.Message << std::endl;
-                }
               }
             }
               // QA grid: suppress wander drift so captured frames show the
@@ -1317,8 +1313,22 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
               // every frame keeps the motor wish at zero).
               if (std::getenv("CUBA_FLIGHT_QA_GRID") != nullptr && world)
               {
+                const char *yawSweep = std::getenv("CUBA_FLIGHT_QA_YAW_SWEEP");
+                const bool sweep = yawSweep != nullptr && yawSweep[0] != '\0' &&
+                                   yawSweep[0] != '0';
+                const float yaw = sweep
+                                      ? std::fmod(static_cast<float>(elapsed_sec) * 45.0f, 360.0f)
+                                      : 0.0f;
                 world->ForEachCreature(
-                    [](UCreature &creature) { creature.ClearIntent(); });
+                    [&](UCreature &creature)
+                    {
+                      creature.ClearIntent();
+                      if (sweep &&
+                          creature.GetSpawnSource() == CreatureSpawnSource::Qa)
+                      {
+                        creature.SetOrientation(yaw, 0.0f);
+                      }
+                    });
               }
               // One-shot relocation at frame 30: ground queries need
               // collision-ready chunks, which the first InGame frame does
@@ -1326,6 +1336,14 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
               if (std::getenv("CUBA_FLIGHT_QA_GRID") != nullptr && world &&
                   ingame_frames_seen == 30)
               {
+                  // Spawning needs collision-ready water/terrain too. Doing
+                  // this at the first playable frame silently skipped whales.
+                  if (ModePolicy::AllowsQaSpawner(world->GetGameMode()))
+                  {
+                    UCreatureVisualQaSpawner spawner(*world);
+                    const auto result = spawner.SpawnAllInGrid();
+                    std::cout << "flight-sim: QA grid spawn: " << result.Message << std::endl;
+                  }
                   // Relocate every QA creature onto a flat, ground-snapped
                   // grid in front of the camera: terrain slope used to
                   // scatter the review set across hills and canopies.
@@ -1348,12 +1366,22 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       right = glm::normalize(right);
                     }
                     const glm::vec3 base = camera->GetPosition();
-                    constexpr int kCols = 10;
+                    int qaCount = 0;
+                    world->ForEachCreature([&](const UCreature &creature)
+                    {
+                      if (creature.GetSpawnSource() == CreatureSpawnSource::Qa)
+                      {
+                        ++qaCount;
+                      }
+                    });
+                    const int kCols = std::clamp(qaCount, 1, 10);
                     constexpr float kColSpacing = 2.0f;
                     constexpr float kRowSpacing = 3.0f;
                     size_t slot = 0;
                     float gridGroundSum = 0.0f;
                     int gridGroundSamples = 0;
+                    const bool waterReview = std::getenv("CUBA_FLIGHT_QA_WATER") != nullptr;
+                    std::vector<glm::vec3> waterSlots;
                     world->ForEachCreature(
                         [&](UCreature &creature)
                         {
@@ -1372,7 +1400,33 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                                               kRowSpacing) +
                               right * (static_cast<float>(col - kCols / 2) *
                                        kColSpacing);
-                          if (const std::optional<float> ground =
+                          if (waterReview)
+                          {
+                            // Explicit aquatic QA: choose real loaded water,
+                            // with room for the full creature below its surface.
+                            // This creature already exists: relocation writes
+                            // the validated free-water position directly, so
+                            // do not run spawn checks against its own body.
+                            const auto water = FindCreatureQaWaterPosition(*world, pos, waterSlots, creature.GetCollisionSize());
+                            if (!water)
+                              throw std::runtime_error("Aquatic QA: no loaded water with sufficient depth");
+                            pos = *water;
+                            waterSlots.push_back(pos);
+                            gridGroundSum += pos.y;
+                            ++gridGroundSamples;
+                          }
+                          else if (const auto *definition = world->GetCreatureDefinitionStorage()->Get(creature.GetTypeId());
+                                   definition && (definition->habitat == CreatureHabitat::Terrestrial ||
+                                     (definition->habitat == CreatureHabitat::Lava && std::getenv("CUBA_FLIGHT_QA_LAVA") != nullptr)))
+                          {
+                            // SpawnAllInGrid already found a valid whole-body
+                            // land site. Do not move a wide treeman back into
+                            // the original grid's tree trunk on this same frame.
+                            pos = creature.GetBodyOrigin();
+                            gridGroundSum += pos.y;
+                            ++gridGroundSamples;
+                          }
+                          else if (const std::optional<float> ground =
                                   world->QueryGroundFeetYUnder(
                                       static_cast<int>(std::floor(pos.x)),
                                       static_cast<int>(std::floor(pos.z)),
@@ -1397,15 +1451,30 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       // Float the review camera: gravity would otherwise
                       // drop it off the vantage into the grid.
                       camera->SetFreeMove(true);
-                      const glm::vec3 vantage =
-                          base - forward * 4.0f +
-                          glm::vec3(0.0f, gridGroundY - base.y + 10.0f, 0.0f);
+                      glm::vec3 vantage =
+                          base - forward * (qaCount <= 5 ? 1.f : 4.f) +
+                          glm::vec3(0.0f, gridGroundY - base.y +
+                                             (qaCount <= 5 ? 2.5f : 10.f), 0.0f);
                       camera->SetPosition(vantage);
                       // Aim at the grid center (mid rows): the spawn-time
                       // yaw is arbitrary when autopilot never armed.
-                      const glm::vec3 center =
-                          base + forward * 11.5f +
+                      glm::vec3 center =
+                          base + forward * (qaCount <= 5 ? 4.f : 11.5f) +
                           glm::vec3(0.0f, gridGroundY - base.y + 0.5f, 0.0f);
+                      if (std::getenv("CUBA_FLIGHT_QA_CLOSE") != nullptr)
+                      {
+                        if (qaCount != 1)
+                          throw std::runtime_error("Close QA requires one creature");
+                      }
+                      if (!waterSlots.empty())
+                      {
+                        center = glm::vec3(0.f);
+                        for (const auto &p : waterSlots) { center += p; }
+                        center /= static_cast<float>(waterSlots.size());
+                        center.y += .3f;
+                        vantage = center - forward * 4.f + glm::vec3(0.f, .6f, 0.f);
+                        camera->SetPosition(vantage);
+                      }
                       const glm::vec3 dir = center - vantage;
                       const float horizontal =
                           std::sqrt(dir.x * dir.x + dir.z * dir.z);
@@ -1436,6 +1505,65 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                          << std::endl;
                   }
                 }
+            }
+            // Close review follows the actual body after physics settles;
+            // a one-shot camera can lose a tiny creature at sub-block range.
+            if (ingame_frames_seen >= 30 && std::getenv("CUBA_FLIGHT_QA_CLOSE") != nullptr)
+            {
+              if (auto camera = world->GetCurrentUserCamera())
+              {
+                world->ForEachCreature([&](const UCreature &creature)
+                {
+                  if (creature.GetSpawnSource() != CreatureSpawnSource::Qa || creature.IsPlayerCharacter()) return;
+                  const auto size = creature.GetCollisionSize();
+                  const float distance = std::max(.7f, std::max({size.x,size.y,size.z})*1.5f);
+                  const auto center = creature.GetBodyOrigin() + glm::vec3(0.f,size.y*.5f,0.f);
+                  const bool waterClose = std::getenv("CUBA_FLIGHT_QA_WATER") != nullptr;
+                  auto offset = glm::vec3(.6f,waterClose ? .08f : .4f,-1.f)*distance;
+                  if (std::getenv("CUBA_FLIGHT_QA_LAVA") != nullptr)
+                  {
+                    const float yaw=glm::radians(creature.GetYaw());
+                    offset=glm::vec3(.6f*std::cos(yaw)+std::sin(yaw),.65f,
+                                     -.6f*std::sin(yaw)+std::cos(yaw))*distance;
+                  }
+                  // Keep a review camera out of terrain; looking through a
+                  // shore bank is not evidence that the model rendered well.
+                  if (waterClose)
+                  {
+                    const auto &blocks = world->GetBlockWorld();
+                    auto &registry = world->GetBlockRegistry();
+                    for (int turn = 0; turn < 8; ++turn)
+                    {
+                      const float angle = glm::radians(45.f*turn);
+                      const auto candidate = glm::vec3(offset.x*std::cos(angle)-offset.z*std::sin(angle),offset.y,
+                                                       offset.x*std::sin(angle)+offset.z*std::cos(angle));
+                      bool clear = true;
+                      for (int step = 1; step <= 32; ++step)
+                      {
+                        const auto point = center+candidate*(static_cast<float>(step)/32.f);
+                        // The collision/render grid is centred on integers.
+                        // floor(point) can report water while the ray is
+                        // already inside the neighbouring shore block.
+                        const auto block = blocks.GetBlock(glm::ivec3(glm::floor(point+glm::vec3(.5f))));
+                        if (block != BLOCK_AIR && !registry.IsLiquid(block)) { clear = false; break; }
+                      }
+                      if (clear) { offset = candidate; break; }
+                    }
+                  }
+                  const auto position = center + offset;
+                  const auto direction = center-position;
+                  camera->SetFreeMove(true);
+                  camera->SetPosition(position);
+                  camera->SetOrientation(glm::degrees(std::atan2(direction.z,direction.x)),
+                      glm::degrees(std::atan2(direction.y,std::hypot(direction.x,direction.z))));
+                });
+              }
+            }
+            if (ingame_frames_seen == 30)
+            {
+              ExportCreatureQaFrames(*core, *world,
+                                    geometry_engine->GetShaderManager());
+              RunCreatureQaWorldUserProbe(*core,*world);
             }
             // Behavior QA: CUBA_FLIGHT_QA_BEHAVIOR=wasp,sheep,... spawns the
             // listed species in front of the camera and logs position and
@@ -2810,6 +2938,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
   }
   catch (const std::exception &e)
   {
+    CubatariumLogError("FlightSim",std::string("exception: ")+e.what());
+    CubatariumFlushLogs();
     std::cerr << "flight-sim: exception: " << e.what() << std::endl;
     std::_Exit(1);
   }

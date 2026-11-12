@@ -1,0 +1,46 @@
+{
+  "schema": "creature-user-world-restart-parity.v1",
+  "passed": true,
+  "runs": 4,
+  "pairs": [
+    {
+      "mode": "legacy",
+      "user_fields": [
+        "storage",
+        "hotbars",
+        "active_bar",
+        "active_slot",
+        "equipped_armor",
+        "equipped_offhand",
+        "equipped_armor_groups",
+        "vitals",
+        "attributes",
+        "selected_skin_id",
+        "player_creature_id"
+      ],
+      "npc_count": 64,
+      "npc_state_exact": true,
+      "passed": true
+    },
+    {
+      "mode": "selected",
+      "user_fields": [
+        "storage",
+        "hotbars",
+        "active_bar",
+        "active_slot",
+        "equipped_armor",
+        "equipped_offhand",
+        "equipped_armor_groups",
+        "vitals",
+        "attributes",
+        "selected_skin_id",
+        "player_creature_id"
+      ],
+      "npc_count": 64,
+      "npc_state_exact": true,
+      "passed": true
+    }
+  ],
+  "scope": "Actual on-disk user/equipment/NPC save to next process load; player camera position may move under ordinary simulation; no perpetual possession migration promise"
+}

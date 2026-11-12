@@ -1,0 +1,161 @@
+{
+  "compiler": 194435229,
+  "pointer_bits": 64,
+  "resources": [
+    {
+      "accounted_vector_string_heap_bytes": 398400,
+      "bin_bytes": 313200,
+      "cases": [
+        {
+          "batch_average_microseconds_per_pose": {
+            "max": 5.0203125,
+            "min": 4.02265625,
+            "p50": 4.14140625,
+            "p95": 4.33828125,
+            "samples": 81
+          },
+          "clip": "walk",
+          "duration": 4.199999809265137,
+          "fade": false,
+          "key_times": 7311,
+          "max_keys_per_channel": 513,
+          "palette_signature": 14880080702038051
+        },
+        {
+          "batch_average_microseconds_per_pose": {
+            "max": 13.44375,
+            "min": 5.4453125,
+            "p50": 5.55703125,
+            "p95": 8.69765625,
+            "samples": 81
+          },
+          "clip": "walk",
+          "duration": 4.199999809265137,
+          "fade": true,
+          "key_times": 7311,
+          "max_keys_per_channel": 513,
+          "palette_signature": 9896381992107065049
+        },
+        {
+          "batch_average_microseconds_per_pose": {
+            "max": 7.6328125,
+            "min": 3.68671875,
+            "p50": 3.76875,
+            "p95": 4.63515625,
+            "samples": 81
+          },
+          "clip": "run",
+          "duration": 2.0999999046325684,
+          "fade": false,
+          "key_times": 5519,
+          "max_keys_per_channel": 385,
+          "palette_signature": 2043629494647927278
+        },
+        {
+          "batch_average_microseconds_per_pose": {
+            "max": 13.11015625,
+            "min": 5.1671875,
+            "p50": 5.309375,
+            "p95": 6.41875,
+            "samples": 81
+          },
+          "clip": "run",
+          "duration": 2.0999999046325684,
+          "fade": true,
+          "key_times": 5519,
+          "max_keys_per_channel": 385,
+          "palette_signature": 9714035252831778607
+        }
+      ],
+      "joints": 18,
+      "nodes": 19,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\orc\\model.gltf",
+      "root_sampler_signature": 11752018504384293373,
+      "warm_loader_milliseconds": {
+        "max": 5.308,
+        "min": 3.7819,
+        "p50": 4.1508,
+        "p95": 5.0146,
+        "samples": 13
+      }
+    },
+    {
+      "accounted_vector_string_heap_bytes": 158356,
+      "bin_bytes": 131400,
+      "cases": [
+        {
+          "batch_average_microseconds_per_pose": {
+            "max": 2.98359375,
+            "min": 2.85078125,
+            "p50": 2.8953125,
+            "p95": 2.92890625,
+            "samples": 81
+          },
+          "clip": "walk",
+          "duration": 1.0499999523162842,
+          "fade": false,
+          "key_times": 1806,
+          "max_keys_per_channel": 129,
+          "palette_signature": 17823155103668320220
+        },
+        {
+          "batch_average_microseconds_per_pose": {
+            "max": 9.6515625,
+            "min": 4.1734375,
+            "p50": 4.23046875,
+            "p95": 6.0375,
+            "samples": 81
+          },
+          "clip": "walk",
+          "duration": 1.0499999523162842,
+          "fade": true,
+          "key_times": 1806,
+          "max_keys_per_channel": 129,
+          "palette_signature": 5018754372736646845
+        },
+        {
+          "batch_average_microseconds_per_pose": {
+            "max": 6.603125,
+            "min": 2.8890625,
+            "p50": 2.93203125,
+            "p95": 3.28046875,
+            "samples": 81
+          },
+          "clip": "run",
+          "duration": 0.699999988079071,
+          "fade": false,
+          "key_times": 1806,
+          "max_keys_per_channel": 129,
+          "palette_signature": 11077818183324129338
+        },
+        {
+          "batch_average_microseconds_per_pose": {
+            "max": 9.846875,
+            "min": 4.225,
+            "p50": 4.2796875,
+            "p95": 5.340625,
+            "samples": 81
+          },
+          "clip": "run",
+          "duration": 0.699999988079071,
+          "fade": true,
+          "key_times": 1806,
+          "max_keys_per_channel": 129,
+          "palette_signature": 16399155512476416601
+        }
+      ],
+      "joints": 18,
+      "nodes": 19,
+      "path": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\orc_sway_pre_publish\\models\\creatures\\orc\\model.gltf",
+      "root_sampler_signature": 12647924430203001107,
+      "warm_loader_milliseconds": {
+        "max": 5.2416,
+        "min": 2.6444,
+        "p50": 2.9274,
+        "p95": 4.7654,
+        "samples": 13
+      }
+    }
+  ],
+  "scope": "Release actual CPU loader and warmed allocation-reusing pose sampler; warm I/O, batch-average p95, no world/GPU/total RSS acceptance"
+}

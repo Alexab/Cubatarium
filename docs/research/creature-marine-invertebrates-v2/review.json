@@ -1,0 +1,108 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R5 marine invertebrates; full R6 routes/performance/compatibility/GLES and all-61 reproducibility remain pending",
+  "species": {
+    "crab": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct final native/comparison/world/icon inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "4b6a61efe6f5d6b41a132a75f30fe27f3290a167c62313ff84445c368a3dac92",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "crab.png",
+          "sha256": "34727590c2e458a2eae62be96b64f0a3c2f7c44b8cc93e16822622b6ee75c6e7"
+        },
+        "motion": {
+          "path": "native_approved_crab.png",
+          "sha256": "10c7187bf18ee031cb2e9630b093fa758c5d21ac8cc927965a8f0c9db1a1f58b"
+        },
+        "runtime": {
+          "path": "runtime_corrected_crab/frame_002.png",
+          "sha256": "fed1c06b72754a9bafdc18c48ed17e456ab726790f62691bee1b525fbe9cc10a"
+        },
+        "ui": {
+          "path": "native_candidate/crab_12.png",
+          "sha256": "560fe549927984c02029cc338a69352837c07759eb7b032339eeeee17ed34bf0"
+        }
+      },
+      "notes": "Own mesh, UV, pixels, rig and authored clips. Full original capabilities retained. Crab anatomy -Z, sideways travel +X maps to entity +Z: both runtime footprint and anatomical extents reported. Eight walking legs and two independent closing pincers per decapod; lobster six-part abdomen and tail fan. Octopus restored original orange/pale identity with eight 4-segment arms, separate crawl/swim and mantle pulse. Oblique tube distal rings fully child-weighted; actual skinning seam, stance, cycle and contact tests pass. Gameplay bounds, speed and habitat preserved. Initial shore-occluded worlds rejected; corrected open-water captures inspected. Die is asset capability, no runtime Death state. Eight-second art probes have performance gates disabled. Benthic routes/normal AI, compatibility and performance remain R6."
+    },
+    "lobster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct final native/comparison/world/icon inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "9453fef106c0fb8f7add5d7134621c20924aa723e713329b0f3309b86113a1b9",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "lobster.png",
+          "sha256": "bc2b70d56bbcace666b0fd3817f0e77830b367429152d360f4781fe181dae241"
+        },
+        "motion": {
+          "path": "native_approved_lobster.png",
+          "sha256": "b76aab2223db5bc4ed6ef6a1ffba8e78ec43611ed99357de35390b9dfdcfd5ea"
+        },
+        "runtime": {
+          "path": "runtime_corrected_lobster/frame_002.png",
+          "sha256": "e065e5dfc681cc21e15c144ea8b46811cbaa933549bc08dedee1baeb2d9f8878"
+        },
+        "ui": {
+          "path": "native_candidate/lobster_12.png",
+          "sha256": "5b01ee53b6704bf05481ac5046b3ba968fd3aa7e5863186c1cc278ed489fbc0c"
+        }
+      },
+      "notes": "Own mesh, UV, pixels, rig and authored clips. Full original capabilities retained. Crab anatomy -Z, sideways travel +X maps to entity +Z: both runtime footprint and anatomical extents reported. Eight walking legs and two independent closing pincers per decapod; lobster six-part abdomen and tail fan. Octopus restored original orange/pale identity with eight 4-segment arms, separate crawl/swim and mantle pulse. Oblique tube distal rings fully child-weighted; actual skinning seam, stance, cycle and contact tests pass. Gameplay bounds, speed and habitat preserved. Initial shore-occluded worlds rejected; corrected open-water captures inspected. Die is asset capability, no runtime Death state. Eight-second art probes have performance gates disabled. Benthic routes/normal AI, compatibility and performance remain R6."
+    },
+    "octopus": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct final native/comparison/world/icon inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "abbc76522eea61084f2c215637afb895fc376ff61980a57b75b053c893342578",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "octopus.png",
+          "sha256": "989dba8d03a50db97b00424d8f557d2518a93e30ed3b9cf3d7e615fddc150d5e"
+        },
+        "motion": {
+          "path": "native_approved_octopus.png",
+          "sha256": "f7a4a968bc2d10c43ab1fa07fbe0a56e9d2521deb95e9d6a9b9330a8d57b9b96"
+        },
+        "runtime": {
+          "path": "runtime_corrected_octopus/frame_002.png",
+          "sha256": "20775aea5da415b5422f0f723956c52287d1622e6a8ccab21b98e38e45778651"
+        },
+        "ui": {
+          "path": "native_candidate/octopus_12.png",
+          "sha256": "5a0a31aafd402782ca82414f627684fc65b29b37f0fc362ecd02d545ef25e9ff"
+        }
+      },
+      "notes": "Own mesh, UV, pixels, rig and authored clips. Full original capabilities retained. Crab anatomy -Z, sideways travel +X maps to entity +Z: both runtime footprint and anatomical extents reported. Eight walking legs and two independent closing pincers per decapod; lobster six-part abdomen and tail fan. Octopus restored original orange/pale identity with eight 4-segment arms, separate crawl/swim and mantle pulse. Oblique tube distal rings fully child-weighted; actual skinning seam, stance, cycle and contact tests pass. Gameplay bounds, speed and habitat preserved. Initial shore-occluded worlds rejected; corrected open-water captures inspected. Die is asset capability, no runtime Death state. Eight-second art probes have performance gates disabled. Benthic routes/normal AI, compatibility and performance remain R6."
+    }
+  }
+}

@@ -105,6 +105,7 @@ bool UCreatureDrawPass::InitBuffers(UShaderManager &shader_manager)
 
 void UCreatureDrawPass::DestroyBuffers()
 {
+  TimingProbe.Shutdown();
   if (creatureRigidHeadPartEBO)
   {
     glDeleteBuffers(1, &creatureRigidHeadPartEBO);
@@ -239,8 +240,8 @@ bool UCreatureDrawPass::InitBillboardBuffers()
     return true;
   }
   const float vertices[] = {
-      -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f,  0.0f, 0.0f, 1.0f, 0.0f,
-      0.5f,  1.0f, 0.0f, 1.0f, 1.0f, -0.5f, 1.0f, 0.0f, 0.0f, 1.0f,
+      -0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.5f, -0.5f, 0.0f, 1.0f, 1.0f,
+      0.5f, 0.5f, 0.0f, 1.0f, 0.0f, -0.5f, 0.5f, 0.0f, 0.0f, 0.0f,
   };
   const unsigned int indices[] = {0, 1, 2, 0, 2, 3};
   glGenVertexArrays(1, &creatureBillboardVAO);
@@ -485,6 +486,7 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
 
   const Frustum frustum = Frustum::FromViewProjection(viewProj);
   const glm::vec3 cameraPos = camera->GetPosition();
+  TimingProbe.BeginFrame(dt, cameraPos.x, cameraPos.y, cameraPos.z);
 
   // Narrow draw context for the visual backends: queue, textures, settings,
   // camera position and item definitions (audit V13/V9).
@@ -565,13 +567,11 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
         const glm::vec3 sizeBlocks = creature.GetBounds().profile.maxSizeBlocks;
         if (!CreatureBoundsIntersectsFrustum(
                 frustum, creature.GetBodyOrigin(), sizeBlocks, cameraPos,
-                maxDistBlocks, render.FrustumCulling))
+                maxDistBlocks, false))
         {
           ++Stats.CreaturesCulled;
           return;
         }
-        ++Stats.CreaturesDrawn;
-
         const std::string animType = world.ResolveAnimationTypeId(creature);
         const CreatureDefinition *def = world.GetCreatureDefinition(animType);
         CreatureDefinition fallback;
@@ -580,6 +580,36 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
           fallback.Id = animType;
           def = &fallback;
         }
+        const glm::vec3 collisionCenter=BoundsCollisionCenter(creature.GetBodyOrigin(),sizeBlocks);
+        glm::vec3 visualLow=collisionCenter-BoundsHalfExtents(sizeBlocks);
+        glm::vec3 visualHigh=collisionCenter+BoundsHalfExtents(sizeBlocks);
+        bool hasConservativeEnvelope=false;
+        const size_t firstRequest=Queue.Size();
+        bool alreadySubmitted=false;
+        if(auto *visual=creature.GetVisual())
+        {
+          visual->SetAppearanceShared(world.GetResolvedAppearanceShared(creature));
+          hasConservativeEnvelope=visual->GetConservativeWorldBounds(creature,*def,visualLow,visualHigh);
+        }
+        if(render.FrustumCulling && hasConservativeEnvelope && !CreatureAabbIntersectsFrustum(frustum,visualLow,visualHigh))
+        {
+          ++Stats.CreaturesCulled;
+          return;
+        }
+        if(render.FrustumCulling && !hasConservativeEnvelope)
+        {
+          // B/R/sprite: test actual posed body + equipment requests, never a
+          // collision proxy or last frame's palette. Pose is advanced once.
+          SubmitCreatureVisual(world,creature,*def,dt,drawContext,viewProj);
+          alreadySubmitted=true;
+          if(!Queue.RangeIntersectsClip(firstRequest))
+          {
+            Queue.DiscardSince(firstRequest);
+            ++Stats.CreaturesCulled;
+            return;
+          }
+        }
+        ++Stats.CreaturesDrawn;
         glm::vec2 light(1.0f, 0.0f);
         {
           const auto lightBegin =
@@ -594,8 +624,7 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
             ++lightSamples;
           }
         }
-        const size_t firstRequest = Queue.Size();
-        SubmitCreatureVisual(world, creature, *def, dt, drawContext, viewProj);
+        if(!alreadySubmitted)SubmitCreatureVisual(world, creature, *def, dt, drawContext, viewProj);
         Queue.StampLight(firstRequest, light);
         if (creatureFogEnabled)
         {
@@ -726,7 +755,9 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
     UCreatureDrawPass &Pass;
     UGeometryEngine &Engine;
   } sink(*this, engine);
+  TimingProbe.BeginGpuDraw();
   Queue.Flush(sink);
+  TimingProbe.EndGpuDraw();
 
   // Other users of the creature programs (GUI previews) draw unlit.
   LightingActive = false;
@@ -760,6 +791,7 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
   {
     DrawCreatureLabels(world, viewProj, engine);
   }
+  TimingProbe.EndFrame(Stats);
 }
 
 void UCreatureDrawPass::ApplyCreatureLightUniforms(const UWorld &world,
@@ -915,7 +947,11 @@ void UCreatureDrawPass::SubmitCreatureVisual(
       pose = presenter->Compute(facts, def, dt);
     }
   }
+  const bool timePose = TimingProbe.Enabled();
+  const auto poseBegin = timePose ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
   visual->UpdatePose(creature, facts, pose, def, dt);
+  if (timePose) TimingProbe.RecordPose(facts.state,
+    std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-poseBegin).count());
   ActiveHitFlash01 = creature.GetHitFlash01();
   visual->SubmitDraw(ctx, viewProj);
   ActiveHitFlash01 = 0.f;

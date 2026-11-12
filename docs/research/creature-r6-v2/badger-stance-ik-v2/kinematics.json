@@ -1,0 +1,43 @@
+{
+  "scope": "Independent exported kinematic/contact/seam audit; offline, no art approval.",
+  "art_acceptance": "pending",
+  "runtime_world_acceptance": "pending",
+  "geometry_uv_png_exact": true,
+  "unchanged_upper_body_and_other_clip_channels": true,
+  "foot_and_claws_single_rigid_transform": true,
+  "non_foot_weights_exact": true,
+  "samples": 2049,
+  "max_support_xz_error_world": 0.00040392468499597493,
+  "support_y_world_range": [
+    7.525598249977748e-06,
+    0.0007645107567229321
+  ],
+  "max_support_orientation_error_degrees": 0.02137755114563667,
+  "nominal_offline_max_plant_endpoint_drift_world": 0.0002534901834908095,
+  "bone_length_max_error_model": 9.71445146547012e-17,
+  "max_foot_local_rotation_degrees": 102.83583364816751,
+  "knee_stance_max_degrees": 85.51210232761765,
+  "knee_swing_max_degrees": 128.51127994317486,
+  "upper_paw_disconnected_samples": 0,
+  "worst_upper_paw_separation": {
+    "phase": 0.302734375,
+    "foot": "br",
+    "gap_world": -0.048670831373391336
+  },
+  "floor_world_range": [
+    7.489563806442975e-06,
+    0.000750217729071265
+  ],
+  "mesh": {
+    "triangles": 360,
+    "min_triangle_area": 0.000244140625,
+    "constant_uv_triangles": 172,
+    "model_texel_density_p05": 0.0,
+    "model_texel_density_median": 9.263114434894703
+  },
+  "analyzer_sha256": "962539fc09cacf9b8018cf2a01bbb4a42132541b93f37e75aaeddf9f4bbf7988",
+  "proposal_bin_sha256": "d9e29c78482eba4823eaea78d85762747325f09afb7f0d25fe35836d477ad6aa",
+  "contract_sha256": "e1af70777c29554a6ea709acf95d7b90d42760c4da1b3de83077ff2da04a8c02",
+  "kinematic_checks_pass": true,
+  "attachment_checks_pass": true
+}

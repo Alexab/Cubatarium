@@ -1,0 +1,158 @@
+{
+  "schema": "creature-wear-submesh-derivation.v1",
+  "items": [
+    {
+      "item": "copper_chest",
+      "source_model_sha256": "0ff45f87f947fc3a7e698438d41de729c52a4fa2d4b212b003ae0211491e9ec4",
+      "wear_gltf_sha256": "f147a4b2b2cede6c88aa98d71e435e1d7e6e54690326d2dce22ed54206930619",
+      "wear_indices_sha256": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
+      "primitives": [
+        {
+          "policy": "cuirass",
+          "component_count": 9,
+          "source_triangles": 1040,
+          "worn_triangles": 64,
+          "surface_cage": true,
+          "wear_geometry": "authored_hollow_beveled_shell",
+          "triangle_plane_exclusion_verified": true
+        }
+      ]
+    },
+    {
+      "item": "copper_arms",
+      "source_model_sha256": "0ff45f87f947fc3a7e698438d41de729c52a4fa2d4b212b003ae0211491e9ec4",
+      "wear_gltf_sha256": "6344f12cf80676cd5d2b8d3ca837f62413a6299126cca639e1c2187a88081069",
+      "wear_indices_sha256": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
+      "primitives": [
+        {
+          "policy": "positive_x_pauldron",
+          "component_count": 9,
+          "source_triangles": 1040,
+          "worn_triangles": 64,
+          "surface_cage": true,
+          "wear_geometry": "authored_hollow_beveled_shell",
+          "triangle_plane_exclusion_verified": true
+        }
+      ]
+    },
+    {
+      "item": "copper_legs",
+      "source_model_sha256": "0ff45f87f947fc3a7e698438d41de729c52a4fa2d4b212b003ae0211491e9ec4",
+      "wear_gltf_sha256": "89091738bce6890163e988809d77472842fa183d78e6d07da39e9b9ea1b353ef",
+      "wear_indices_sha256": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
+      "primitives": [
+        {
+          "policy": "cuirass",
+          "component_count": 9,
+          "source_triangles": 1040,
+          "worn_triangles": 64,
+          "surface_cage": true,
+          "wear_geometry": "authored_hollow_beveled_shell",
+          "triangle_plane_exclusion_verified": true
+        }
+      ]
+    },
+    {
+      "item": "iron_chest",
+      "source_model_sha256": "b2e195cd186ae2cbfa129621e404adc3e9bea2f346a58977c0ae55bdf63e1368",
+      "wear_gltf_sha256": "484f17b9000f93551556f8d10a157e6f4a1b8bf0254e410c8f88432e77cb9447",
+      "wear_indices_sha256": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
+      "primitives": [
+        {
+          "policy": "cuirass",
+          "component_count": 3,
+          "source_triangles": 584,
+          "worn_triangles": 64,
+          "surface_cage": true,
+          "wear_geometry": "authored_hollow_beveled_shell",
+          "triangle_plane_exclusion_verified": true
+        }
+      ]
+    },
+    {
+      "item": "iron_arms",
+      "source_model_sha256": "b2e195cd186ae2cbfa129621e404adc3e9bea2f346a58977c0ae55bdf63e1368",
+      "wear_gltf_sha256": "78927741d9e24f004d1b9fc2b986db7cb01822eb9e614f144d581ce4094e4fac",
+      "wear_indices_sha256": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
+      "primitives": [
+        {
+          "policy": "positive_x_pauldron",
+          "component_count": 3,
+          "source_triangles": 584,
+          "worn_triangles": 64,
+          "surface_cage": true,
+          "wear_geometry": "authored_hollow_beveled_shell",
+          "triangle_plane_exclusion_verified": true
+        }
+      ]
+    },
+    {
+      "item": "iron_legs",
+      "source_model_sha256": "b2e195cd186ae2cbfa129621e404adc3e9bea2f346a58977c0ae55bdf63e1368",
+      "wear_gltf_sha256": "27e18644aee251240fce5f51744c6edaca9a5a71b7bf4ebff82e2d87e8b80370",
+      "wear_indices_sha256": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
+      "primitives": [
+        {
+          "policy": "cuirass",
+          "component_count": 3,
+          "source_triangles": 584,
+          "worn_triangles": 64,
+          "surface_cage": true,
+          "wear_geometry": "authored_hollow_beveled_shell",
+          "triangle_plane_exclusion_verified": true
+        }
+      ]
+    },
+    {
+      "item": "leather_chest",
+      "source_model_sha256": "393f7ae131498e8b874513590389b6f5f98d93d6bb0f4af43493ec8654e5ed49",
+      "wear_gltf_sha256": "47813f966628936121e87d46ce29a52ba9689d646b0d62087ecef7b4c458fa8b",
+      "wear_indices_sha256": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
+      "primitives": [
+        {
+          "policy": "cuirass",
+          "component_count": 1,
+          "source_triangles": 288,
+          "worn_triangles": 64,
+          "surface_cage": true,
+          "wear_geometry": "authored_hollow_beveled_shell",
+          "triangle_plane_exclusion_verified": true
+        }
+      ]
+    },
+    {
+      "item": "leather_arms",
+      "source_model_sha256": "393f7ae131498e8b874513590389b6f5f98d93d6bb0f4af43493ec8654e5ed49",
+      "wear_gltf_sha256": "1b27d3abde6f36a27efd831f1635fb482c263355807f1f68501212cb684d44cc",
+      "wear_indices_sha256": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
+      "primitives": [
+        {
+          "policy": "cuirass",
+          "component_count": 1,
+          "source_triangles": 288,
+          "worn_triangles": 64,
+          "surface_cage": true,
+          "wear_geometry": "authored_hollow_beveled_shell",
+          "triangle_plane_exclusion_verified": true
+        }
+      ]
+    },
+    {
+      "item": "leather_legs",
+      "source_model_sha256": "393f7ae131498e8b874513590389b6f5f98d93d6bb0f4af43493ec8654e5ed49",
+      "wear_gltf_sha256": "7f2cef168cf2e1a2dc90757a414249e68155e3179a18e0926f442c2114aeeead",
+      "wear_indices_sha256": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
+      "primitives": [
+        {
+          "policy": "cuirass",
+          "component_count": 1,
+          "source_triangles": 288,
+          "worn_triangles": 64,
+          "surface_cage": true,
+          "wear_geometry": "authored_hollow_beveled_shell",
+          "triangle_plane_exclusion_verified": true
+        }
+      ]
+    }
+  ]
+}

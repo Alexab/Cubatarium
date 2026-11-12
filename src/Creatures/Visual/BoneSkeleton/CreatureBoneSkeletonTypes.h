@@ -65,6 +65,11 @@ struct BoneSkeletonCubeMeshCpu
   /// Mutable: the cache may lazily fill it for meshes built outside the
   /// loaders (idempotent write of the same value).
   mutable size_t GpuHash{0};
+  /// Geometry is immutable while its GPU content key is retained. Bounds
+  /// share that invalidation rule; no pointer-only cache survives a reload.
+  mutable bool ClipBoundsReady{false},ClipBoundsFinite{false};
+  mutable size_t ClipBoundsGpuHash{0},ClipBoundsFloatCount{0};
+  mutable glm::vec3 ClipBoundsLow{0.f},ClipBoundsHigh{0.f};
 };
 
 struct BoneSkeletonBoneMeshCpu

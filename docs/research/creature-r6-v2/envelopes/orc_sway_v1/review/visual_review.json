@@ -1,0 +1,40 @@
+{
+  "decision": "accepted_for_R5_body_sway_revision",
+  "r6_state": "pending",
+  "directly_viewed": [
+    {
+      "path": "threeway_idle.png",
+      "sha256": "605030c7f5ae2c541455e1c0d472ec55fd9d7af6bf01569a869dac89da58e2ef"
+    },
+    {
+      "path": "threeway_walk.png",
+      "sha256": "cdb7125fc2175e38936311c82fe26dcc6b07e095742c4767292cd700f41ac4d6"
+    },
+    {
+      "path": "threeway_action.png",
+      "sha256": "18b410e4241ea021d92c7efa99c8c726930cd6b5495f879c227bb9fd53725a03"
+    },
+    {
+      "path": "fullturn_0.png",
+      "sha256": "7ec908074de9f2115aa4b2ce1fa8016c121c7061e7a284be589ba6fa228641d3"
+    },
+    {
+      "path": "fullturn_1.png",
+      "sha256": "6a1f08598f7943e100840b85a685fdea2c0e817cb7fb2fa11a9a444a89bf1a1e"
+    },
+    {
+      "path": "fullturn_2.png",
+      "sha256": "b1c638b7c36a7b83872241b1c0929b93a9e61b27c71965ef471c0c7e03278618"
+    },
+    {
+      "path": "runtime_envelope_current/frame_002.png",
+      "sha256": "473fe26d161ea8bee301584f4e371edcb4019ca7aa30726855d902d49616a2aa"
+    },
+    {
+      "path": "production/world_contact_sheet.png",
+      "sha256": "a40f2d014617abdcded29da16308dffe931f701fc174fb06ed703df4ea5e7058"
+    }
+  ],
+  "observation": "Heavy alternating lean restored while own multi-joint gait, skin/leather/tusks, Idle and Action retained. Normalized comparison phase is macro phase, not equal stride phase; separate dense audit compares limb local timing at equal elapsed seconds.",
+  "limits": "R5 assistant review only. World-space limb paths intentionally change with body sway/root lift; terrain/stance/stride/sliding/AI/continuous fades/control/equipment-G/performance/package R6 open. Gait period differs from slow reference while preserving existing own limb frequency. BIN131400 to313200 bytes; animation memory/load/runtime cost requires matched p95/memory gate. Failed B-only world gear fixture was not accepted."
+}

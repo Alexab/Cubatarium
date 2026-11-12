@@ -1,0 +1,17 @@
+{
+  "scope": "Composition only; no art acceptance",
+  "sheets": [
+    {
+      "path": "threeway_idle.png",
+      "sha256": "4cf6ad5526b4bc69b7523e34ec9288c89a48f8659523ecb89bf0f32b5185034e"
+    },
+    {
+      "path": "threeway_walk.png",
+      "sha256": "507622365b6bd654304a6a63203ab8c525c73aa2f0306ebc10a0204920502ab1"
+    },
+    {
+      "path": "threeway_fly.png",
+      "sha256": "9724223ef1b32861e5eb3ceb426bac7cfbdd4eed887440aa591dd436672c124e"
+    }
+  ]
+}

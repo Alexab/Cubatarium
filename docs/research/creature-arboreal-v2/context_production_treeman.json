@@ -1,0 +1,24 @@
+{
+  "captured_at_utc": "2026-11-11T00:47:51.535247+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\bin\\models",
+  "files_sha256": {
+    "creatures\\treeman\\creature.json": "a8b51b987b8e662c76891c1052dd4dbbf2e8647b7c299ed565693e1ed8d156fd",
+    "creatures\\treeman\\LICENSE.txt": "1ad7ac47a6673678c8411fe6e3922bc6bed5f49751321bc68f88b2aef5010570",
+    "creatures\\treeman\\model.bin": "c33f7e7555153f9de5597b58ca107d13b742302797e0d2d05358ed668adf8417",
+    "creatures\\treeman\\model.gltf": "666e3867ddce8a36d26f3bf19713e8b09bd9a0409e40cd83b1299966f4d33f1a",
+    "creatures\\treeman\\textures\\body.png": "af12145b135c634f7037d5ac4572cad921824cee96b074f5bdb0339eaea21bcd",
+    "creatures\\treeman\\textures\\icon.png": "52146a470ebfa13dc68250c66fb62bdc098ea1b1065b27cb468236efdff706b1"
+  },
+  "qa_models_override": false,
+  "exe_sha256": "bf9a9055a62206179288ef4108d39e850f15b8c4d43ecb5d5bd6c6a46616c490",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "production_treeman",
+  "qa_camera": "close",
+  "qa_water_placement": false,
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

@@ -1,0 +1,301 @@
+id: dolphin
+backend: bone_skeleton
+family: river
+authoring_source: cubatarium-recipe
+recipe_version: 2
+palette_id: river
+pattern: bands
+template: aquatic
+body:
+- 8
+- 7
+- 16
+head:
+- 6
+- 5
+- 6
+limb:
+- 2
+- 4
+extras:
+- fins
+- muzzle
+muzzle:
+- 4
+- 3
+- 5
+bind_body: null
+direction: 'Речной свистун: лоб и парные плавники'
+wave: W1
+silhouette:
+  snout: 0.7
+  tail: 0.35
+marks:
+- back
+- belly
+selected_concept: familiar_species_authored_rig
+concepts:
+- id: primary
+  body_scale:
+  - 1
+  - 1
+  - 1
+  note: 'Речной свистун: лоб и парные плавники'
+- id: tall
+  body_scale:
+  - 0.86
+  - 1.28
+  - 0.9
+  note: taller mass
+- id: long
+  body_scale:
+  - 1.08
+  - 0.82
+  - 1.34
+  note: longer mass
+seed: 15118113155213526615
+surface_style: cetacean
+animation_profile: dolphin
+anatomy:
+  bones:
+  - name: body
+    parent: null
+    pivot:
+    - 0
+    - 5.5
+    - -4
+    cubes:
+    - name: trunk
+      origin:
+      - -4
+      - 2
+      - -6
+      size:
+      - 8
+      - 7
+      - 13
+      role: body
+  - name: head
+    parent: body
+    pivot:
+    - 0
+    - 5
+    - -6
+    cubes:
+    - name: head
+      origin:
+      - -3.5
+      - 2
+      - -12
+      size:
+      - 7
+      - 6
+      - 6
+      role: face
+    - name: forehead
+      origin:
+      - -2.5
+      - 8
+      - -11
+      size:
+      - 5
+      - 1
+      - 4
+      role: face
+  - name: nose
+    parent: head
+    pivot:
+    - 0
+    - 3
+    - -12
+    cubes:
+    - name: rostrum
+      origin:
+      - -1.5
+      - 2
+      - -18
+      size:
+      - 3
+      - 2
+      - 6
+      role: face
+  - name: tail
+    parent: body
+    pivot:
+    - 0
+    - 5.5
+    - 7
+    cubes:
+    - name: tailstock
+      origin:
+      - -2
+      - 3
+      - 7
+      size:
+      - 4
+      - 5
+      - 8
+      role: body
+    - name: peduncle
+      origin:
+      - -1
+      - 4
+      - 15
+      size:
+      - 2
+      - 3
+      - 3
+      role: body
+  - name: tail_fin
+    parent: tail
+    pivot:
+    - 0
+    - 5.5
+    - 17
+    cubes:
+    - name: fluke_center
+      origin:
+      - -2
+      - 5
+      - 17
+      size:
+      - 4
+      - 1
+      - 2
+      role: wing
+    - name: fluke_left
+      origin:
+      - -6
+      - 5
+      - 16
+      size:
+      - 4
+      - 1
+      - 4
+      role: wing
+    - name: fluke_right
+      origin:
+      - 2
+      - 5
+      - 16
+      size:
+      - 4
+      - 1
+      - 4
+      role: wing
+  - name: back_fin
+    parent: body
+    pivot:
+    - 0
+    - 8
+    - 1
+    cubes:
+    - name: dorsal_base
+      origin:
+      - -0.5
+      - 8
+      - -1
+      size:
+      - 1
+      - 2
+      - 5
+      role: wing
+    - name: dorsal_middle
+      origin:
+      - -0.5
+      - 10
+      - 0
+      size:
+      - 1
+      - 2
+      - 3
+      role: wing
+    - name: dorsal_tip
+      origin:
+      - -0.5
+      - 12
+      - 1
+      size:
+      - 1
+      - 2
+      - 1
+      role: wing
+  - name: left_fin
+    parent: body
+    pivot:
+    - 3.5
+    - 2.7
+    - -3
+    cubes:
+    - name: left_fin_base
+      origin:
+      - 3.5
+      - 2.2
+      - -5
+      size:
+      - 4
+      - 1
+      - 4
+      role: wing
+    - name: left_fin_tip
+      origin:
+      - 7.5
+      - 2.2
+      - -3
+      size:
+      - 3
+      - 1
+      - 3
+      role: wing
+  - name: right_fin
+    parent: body
+    pivot:
+    - -3.5
+    - 2.7
+    - -3
+    cubes:
+    - name: right_fin_base
+      origin:
+      - -7.5
+      - 2.2
+      - -5
+      size:
+      - 4
+      - 1
+      - 4
+      role: wing
+    - name: right_fin_tip
+      origin:
+      - -10.5
+      - 2.2
+      - -3
+      size:
+      - 3
+      - 1
+      - 3
+      role: wing
+palette_overrides:
+  body:
+  - 141
+  - 165
+  - 180
+  face:
+  - 174
+  - 195
+  - 204
+  belly:
+  - 214
+  - 225
+  - 225
+  wing:
+  - 109
+  - 139
+  - 158
+  mark:
+  - 83
+  - 112
+  - 130
+  eye:
+  - 24
+  - 35
+  - 43
