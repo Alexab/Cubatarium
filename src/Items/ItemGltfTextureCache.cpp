@@ -286,8 +286,9 @@ void ItemGltfTextureCache::EnsureLoaded(const std::filesystem::path &modelGltfAb
   std::unordered_map<std::string, GLuint> texMap;
   LoadFromGltfJson(modelGltfAbs, texMap);
   // itemgen publishes lowercase `textures/`; older packs used `Textures/`.
+  // On case-insensitive filesystems both names resolve to the same directory,
+  // so index the lowercase name once instead of scanning it twice.
   IndexPngDir(modelGltfAbs.parent_path() / "textures", texMap);
-  IndexPngDir(modelGltfAbs.parent_path() / "Textures", texMap);
   IndexPngDir(modelGltfAbs.parent_path(), texMap);
   ByModel[key] = std::move(texMap);
 }
