@@ -184,6 +184,7 @@ set(SOURCES
     src/Items/ItemWieldRenderer.cpp
     src/Items/FpViewmodelRenderer.cpp
     src/Items/ItemGltfTextureCache.cpp
+    src/World/Items/WorldItemSystem.cpp
     src/Items/ItemToolInfluenceProvider.cpp
     src/Items/ItemVisualPresetLibrary.cpp
     src/Creatures/Influence/InfluenceHitMath.cpp

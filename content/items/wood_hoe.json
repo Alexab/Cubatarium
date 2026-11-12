@@ -18,7 +18,18 @@
       "melee": 1,
       "fleshy": 1
     },
-    "punch_attack_uses": 30
+    "punch_attack_uses": 30,
+    "groupcaps": {
+      "crumbly": {
+        "maxlevel": 0,
+        "uses": 20,
+        "times": {
+          "1": 1.6,
+          "2": 1.2,
+          "3": 0.9
+        }
+      }
+    }
   },
   "model": "models/items/wood_hoe/model.gltf",
   "visual": {

@@ -1,0 +1,14 @@
+{
+  "id": "leather_chest",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "leather",
+      "count": 8
+    }
+  ],
+  "output": {
+    "id": "leather_chest",
+    "count": 1
+  }
+}

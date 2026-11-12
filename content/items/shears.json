@@ -1,0 +1,24 @@
+{
+  "id": "shears",
+  "displayName": "Shears",
+  "types": [
+    "utility"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "model": "models/items/shears/model.gltf",
+  "visual": {
+    "wield_scale": 1.1,
+    "fit_axis": "y",
+    "wield_euler_deg": [
+      0,
+      0,
+      90
+    ],
+    "wield_offset": [
+      0,
+      -0.05,
+      0
+    ]
+  }
+}

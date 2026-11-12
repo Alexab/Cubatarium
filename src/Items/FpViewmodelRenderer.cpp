@@ -968,17 +968,37 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const std::string &itemId,
     fitExtent = ext.z;
   }
   fitExtent = std::max(1e-5f, fitExtent);
+  float poseOff[3];
+  float poseEuler[3];
+  std::string fitFromPose;
+  ResolveWieldPose(*def, poseOff, poseEuler, fitFromPose);
+  if (def->Visual.FitAxis == "longest" || def->Visual.FitAxis.empty())
+  {
+    if (fitFromPose == "x")
+    {
+      fitExtent = ext.x;
+    }
+    else if (fitFromPose == "y")
+    {
+      fitExtent = ext.y;
+    }
+    else if (fitFromPose == "z")
+    {
+      fitExtent = ext.z;
+    }
+    fitExtent = std::max(1e-5f, fitExtent);
+  }
   const float fitScale = kFpWieldTargetExtent / fitExtent;
   const float wieldScale = DefaultWieldScale(*def);
-  const glm::vec3 visualOff(def->Visual.WieldOffset[0],
-                            def->Visual.WieldOffset[1],
-                            def->Visual.WieldOffset[2]);
+  const glm::vec3 visualOff(poseOff[0], poseOff[1], poseOff[2]);
+  // kToolWieldLeanDeg is an arm-local bias applied in `orient` below.
+  // poseEuler is the tool-local grip (family default or visual.wield_euler_deg).
   const glm::mat4 visualRot =
-      glm::rotate(glm::mat4(1.f), glm::radians(def->Visual.WieldEulerDeg[0]),
+      glm::rotate(glm::mat4(1.f), glm::radians(poseEuler[0]),
                   glm::vec3(1.f, 0.f, 0.f)) *
-      glm::rotate(glm::mat4(1.f), glm::radians(def->Visual.WieldEulerDeg[1]),
+      glm::rotate(glm::mat4(1.f), glm::radians(poseEuler[1]),
                   glm::vec3(0.f, 1.f, 0.f)) *
-      glm::rotate(glm::mat4(1.f), glm::radians(def->Visual.WieldEulerDeg[2]),
+      glm::rotate(glm::mat4(1.f), glm::radians(poseEuler[2]),
                   glm::vec3(0.f, 0.f, 1.f));
 
   // Same Y-up → arm remap as parts; lean so blade sits above palm.

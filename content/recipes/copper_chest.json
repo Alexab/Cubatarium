@@ -1,0 +1,14 @@
+{
+  "id": "copper_chest",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "mtg_copperblock",
+      "count": 8
+    }
+  ],
+  "output": {
+    "id": "copper_chest",
+    "count": 1
+  }
+}

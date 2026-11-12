@@ -9,7 +9,7 @@
   "model": "models/items/gold_pickaxe/model.gltf",
   "repair": {
     "materials": [
-      "gold_ingot",
+      "mtg_goldblock",
       "gold"
     ],
     "amount": 0.25

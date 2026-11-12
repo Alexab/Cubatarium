@@ -26,6 +26,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/World.h"
+#include "World/Items/WorldItemSystem.h"
 #include "World/Diagnostics/CreatureTickTrace.h"
 #include "World/Diagnostics/JobStageTrace.h"
 #include "World/Diagnostics/MovementDiagnosticsRecorder.h"
@@ -615,6 +616,8 @@ void UWorld::RunLegacyPhysicsFrame()
   }
   PhysicsTelemetryData.EnvironmentTickMs =
       std::chrono::duration<double, std::milli>(clock_t::now() - t_env).count();
+
+  WorldItemSystem::Instance().Tick(*this, creatureDt);
 
   TickNpcCreatureIntents(creatureDt, tick_world_ai, mountId,
                          mountOriginBefore);

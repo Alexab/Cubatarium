@@ -1,0 +1,14 @@
+{
+  "id": "leather_feet",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "leather",
+      "count": 4
+    }
+  ],
+  "output": {
+    "id": "leather_feet",
+    "count": 1
+  }
+}

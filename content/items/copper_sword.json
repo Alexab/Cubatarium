@@ -8,7 +8,7 @@
   "wear_end": "destroy",
   "repair": {
     "materials": [
-      "copper_ingot",
+      "mtg_copperblock",
       "copper"
     ],
     "amount": 0.25

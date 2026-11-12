@@ -7,6 +7,7 @@
 #include "Game/WorldGameMode.h"
 #include <array>
 #include <string>
+#include <vector>
 
 namespace cutum
 {
@@ -28,6 +29,12 @@ struct CharacterStatsSnapshot
   CreatureAttributes attributes{};
   std::array<EquippedSlotSnapshot, 4> equippedArmor{};
   std::array<EquippedSlotSnapshot, 2> equippedTools{};
+  struct CarriedItem
+  {
+    std::string id;
+    int count{0};
+  };
+  std::vector<CarriedItem> carriedItems;
   WorldGameMode gameMode{WorldGameMode::Creative};
   WorldDifficulty difficulty{WorldDifficulty::Normal};
   bool valid{false};

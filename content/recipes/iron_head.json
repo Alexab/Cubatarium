@@ -1,0 +1,14 @@
+{
+  "id": "iron_head",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "mtg_steelblock",
+      "count": 5
+    }
+  ],
+  "output": {
+    "id": "iron_head",
+    "count": 1
+  }
+}

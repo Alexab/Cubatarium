@@ -5,6 +5,7 @@
 #include "Creatures/Influence/StatusEffectSystem.h"
 #include "Creatures/Stats/CreatureVitalsSystem.h"
 #include "Game/Economy/ResourceEconomy.h"
+#include "World/Items/WorldItemSystem.h"
 #include "Game/Inventory/InventoryTypes.h"
 #include "Game/ModePolicy.h"
 #include "Items/ItemDefinitionStorage.h"
@@ -384,8 +385,8 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
           {
             for (const CreatureDropEntry &drop : killed->drops)
             {
-              ResourceEconomyService::GrantItemDrop(
-                  mode, source->GetInventory(), drop.itemId, drop.count);
+              WorldItemSystem::Instance().Spawn(
+                  target->GetBodyOrigin(), drop.itemId, drop.count, false);
             }
           }
         }

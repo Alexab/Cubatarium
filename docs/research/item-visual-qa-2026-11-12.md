@@ -4,8 +4,8 @@ Date: 2026-11-12. Offline contact sheets + silhouette/gray separation.
 
 - Passed: **True**
 - Failures: 0
-- Warnings: 2
-- Items audited: 51
+- Warnings: 1
+- Items audited: 56
 
 ## Failures
 
@@ -14,7 +14,6 @@ Date: 2026-11-12. Offline contact sheets + silhouette/gray separation.
 ## Warnings
 
 - `weak_gray_separation:axe:2`
-- `weak_gray_separation:hoe:2`
 
 ## Family sheets
 

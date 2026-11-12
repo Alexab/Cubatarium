@@ -1,0 +1,18 @@
+{
+  "id": "copper_pickaxe",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "mtg_copperblock",
+      "count": 3
+    },
+    {
+      "id": "wood",
+      "count": 2
+    }
+  ],
+  "output": {
+    "id": "copper_pickaxe",
+    "count": 1
+  }
+}

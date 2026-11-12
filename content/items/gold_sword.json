@@ -8,7 +8,7 @@
   "wear_end": "destroy",
   "repair": {
     "materials": [
-      "gold_ingot",
+      "mtg_goldblock",
       "gold"
     ],
     "amount": 0.25

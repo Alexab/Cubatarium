@@ -19,7 +19,18 @@
       "melee": 1,
       "fleshy": 1
     },
-    "punch_attack_uses": 50
+    "punch_attack_uses": 50,
+    "groupcaps": {
+      "crumbly": {
+        "maxlevel": 1,
+        "uses": 20,
+        "times": {
+          "1": 1.6,
+          "2": 1.2,
+          "3": 0.9
+        }
+      }
+    }
   },
   "model": "models/items/stone_hoe/model.gltf",
   "visual": {

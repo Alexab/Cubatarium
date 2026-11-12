@@ -64,6 +64,9 @@ private:
   UGuiPreviewViewport *PreviewViewport{nullptr};
   std::vector<UGuiSlot *> ArmorSlots;
   std::vector<UGuiSlot *> ToolSlots;
+  UGuiPanel *BagPanel{nullptr};
+  std::vector<UGuiSlot *> BagSlots;
+  bool WideLayout{true};
   GLuint PreviewTexture{0};
   bool PreviewValid{false};
   std::string PreviewTypeId;

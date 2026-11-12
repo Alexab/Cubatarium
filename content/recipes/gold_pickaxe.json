@@ -1,0 +1,18 @@
+{
+  "id": "gold_pickaxe",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "mtg_goldblock",
+      "count": 3
+    },
+    {
+      "id": "wood",
+      "count": 2
+    }
+  ],
+  "output": {
+    "id": "gold_pickaxe",
+    "count": 1
+  }
+}

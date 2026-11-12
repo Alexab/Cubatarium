@@ -217,6 +217,21 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
     body->AddChild(std::move(doll));
   }
 
+  {
+    auto bag = std::make_unique<UGuiPanel>(&theme);
+    BagPanel = bag.get();
+    BagPanel->SetDrawBackground(true);
+    BagSlots.clear();
+    for (int i = 0; i < 24; ++i)
+    {
+      auto slot = std::make_unique<UGuiSlot>(&theme);
+      slot->SetIconTexture(0);
+      BagSlots.push_back(slot.get());
+      BagPanel->AddChild(std::move(slot));
+    }
+    body->AddChild(std::move(bag));
+  }
+
   // Stats panel (vitals + attributes).
   {
     auto stats = std::make_unique<UGuiPanel>(&theme);
@@ -267,8 +282,11 @@ void UCharacterSheetScreen::Relayout()
   }
   Root->SetBounds({0, 0, ViewportW, ViewportH});
 
-  const int sheetW = std::min(kSheetW, std::max(320, ViewportW - 16));
-  const int sheetH = std::min(kSheetH, std::max(360, ViewportH - 16));
+  WideLayout = ViewportW >= 900 && ViewportH >= 640;
+  const int sheetW = WideLayout ? std::min(ViewportW - 24, 980)
+                                : std::min(kSheetW, std::max(320, ViewportW - 16));
+  const int sheetH = WideLayout ? std::min(ViewportH - 24, 640)
+                                : std::min(ViewportH - 16, std::max(420, ViewportH - 16));
   const int x = std::max(8, (ViewportW - sheetW) / 2);
   const int y = std::max(8, (ViewportH - sheetH) / 2);
   Window->SetBounds({x, y, sheetW, sheetH});
@@ -289,18 +307,27 @@ void UCharacterSheetScreen::Relayout()
   // Two columns under identity: doll (left ~58%) + stats (right ~40%).
   const int gap = 8;
   const int contentH = client.Y + client.H - cy - 8;
-  const int dollW = std::max(220, (client.W * 58) / 100);
-  const int statsW = std::max(160, client.W - dollW - gap - 16);
+  const int dollW = WideLayout ? std::min(380, (client.W * 46) / 100)
+                              : std::max(200, client.W - 16);
+  const int dollH = WideLayout ? contentH : std::min(contentH / 2, 300);
   const int dollX = client.X + 8;
-  const int statsX = dollX + dollW + gap;
+  const int bagX = WideLayout ? dollX + dollW + gap : dollX;
+  const int bagY = WideLayout ? cy : cy + dollH + gap;
+  const int bagW = WideLayout ? std::max(160, client.W - dollW - gap - 16)
+                             : dollW;
+  const int bagH = WideLayout ? contentH : std::max(80, contentH - dollH - gap);
 
   if (DollPanel)
   {
-    DollPanel->SetBounds({dollX, cy, dollW, contentH});
+    DollPanel->SetBounds({dollX, cy, dollW, dollH});
+  }
+  if (BagPanel)
+  {
+    BagPanel->SetBounds({bagX, bagY, bagW, bagH});
   }
   if (StatsPanel)
   {
-    StatsPanel->SetBounds({statsX, cy, statsW, contentH});
+    StatsPanel->SetVisible(false);
   }
 
   // --- Paper-doll interior ---
@@ -315,8 +342,9 @@ void UCharacterSheetScreen::Relayout()
   }
 
   const int slotColW = kSlotSize + kSlotGap;
+  const int previewCap = WideLayout ? 160 : 96;
   const int previewSide = std::min(
-      180, std::max(110, dollW - pad * 2 - slotColW * 2 - 8));
+      previewCap, std::max(72, dollW - pad * 2 - slotColW * 2 - 8));
   const int headerBottom = cy + pad + headerH;
   // Reserve a full slot row above the preview for Head (centered).
   const int previewTop = headerBottom + 4 + kSlotSize + kSlotGap;
@@ -360,7 +388,9 @@ void UCharacterSheetScreen::Relayout()
         {feetX + (kSlotSize + kSlotGap), bottomY, kSlotSize, kSlotSize});
   }
 
-  // --- Stats interior ---
+  // Stats stay hidden in the combined equip+bag layout.
+  const int statsX = 0;
+  const int statsW = 160;
   int sy = cy + pad;
   if (VitalsHeader)
   {
@@ -390,6 +420,23 @@ void UCharacterSheetScreen::Relayout()
     }
     lab->SetBounds({statsX + pad, sy, statsW - pad * 2, kLineH});
     sy += kLineH;
+  }
+
+  if (BagPanel)
+  {
+    const GuiRect bag = BagPanel->GetBounds();
+    const int slot = WideLayout ? kSlotSize : 40;
+    const int gapS = 4;
+    const int maxCols = WideLayout ? 5 : 4;
+    const int cols = std::max(
+        1, std::min(maxCols, (bag.W - 8 + gapS) / std::max(1, slot + gapS)));
+    for (size_t i = 0; i < BagSlots.size(); ++i)
+    {
+      const int col = static_cast<int>(i) % cols;
+      const int row = static_cast<int>(i) / cols;
+      BagSlots[i]->SetBounds({bag.X + 6 + col * (slot + gapS),
+                              bag.Y + 6 + row * (slot + gapS), slot, slot});
+    }
   }
 }
 
@@ -532,6 +579,28 @@ void UCharacterSheetScreen::RefreshLabels()
         ToolSlots[i]->SetWearProgress(0.f);
         ToolSlots[i]->SetBroken(false);
         ToolSlots[i]->SetDimmed(false);
+      }
+    }
+    for (size_t i = 0; i < BagSlots.size(); ++i)
+    {
+      if (!BagSlots[i])
+      {
+        continue;
+      }
+      if (i < snap.carriedItems.size())
+      {
+        const auto &carried = snap.carriedItems[i];
+        BagSlots[i]->SetIconTexture(Icons->GetItemIconTexture(carried.id));
+        BagSlots[i]->SetCornerHint(carried.count > 1
+                                       ? "x" + std::to_string(carried.count)
+                                       : "");
+        BagSlots[i]->SetVisible(true);
+      }
+      else
+      {
+        BagSlots[i]->SetIconTexture(0);
+        BagSlots[i]->SetCornerHint("");
+        BagSlots[i]->SetVisible(i < 8 || !snap.carriedItems.empty());
       }
     }
   }

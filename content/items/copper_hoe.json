@@ -8,7 +8,7 @@
   "wear_end": "destroy",
   "repair": {
     "materials": [
-      "copper_ingot",
+      "mtg_copperblock",
       "copper"
     ],
     "amount": 0.25
@@ -19,7 +19,18 @@
       "melee": 1,
       "fleshy": 1
     },
-    "punch_attack_uses": 60
+    "punch_attack_uses": 60,
+    "groupcaps": {
+      "crumbly": {
+        "maxlevel": 1,
+        "uses": 20,
+        "times": {
+          "1": 1.6,
+          "2": 1.2,
+          "3": 0.9
+        }
+      }
+    }
   },
   "model": "models/items/copper_hoe/model.gltf",
   "visual": {

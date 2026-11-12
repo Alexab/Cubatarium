@@ -108,6 +108,11 @@ int main()
            "explicit wield_scale wins");
     Expect(DefaultSwingPreset(sword, FpSwingKind::Melee) == "slash_weapon",
            "sword melee preset");
+    float off[3], euler[3];
+    std::string fit;
+    ResolveWieldPose(pick, off, euler, fit);
+    Expect(fit == "y", "pickaxe fit axis");
+    Expect(std::fabs(euler[2] - 90.f) < 1e-3f, "pickaxe roll");
   }
 
   if (Failures != 0)

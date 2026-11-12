@@ -11,9 +11,9 @@ wood:
 stone:
   handle: [118, 78, 42]
   binding: [84, 64, 48]
-  head: [128, 128, 132]
-  accent: [96, 96, 100]
-  edge: [72, 72, 76]
+  head: [92, 92, 98]
+  accent: [70, 70, 76]
+  edge: [48, 48, 52]
 
 copper:
   handle: [108, 72, 40]
@@ -25,16 +25,16 @@ copper:
 iron:
   handle: [100, 68, 38]
   binding: [72, 72, 76]
-  head: [156, 160, 168]
-  accent: [110, 114, 122]
-  edge: [210, 214, 220]
+  head: [188, 192, 200]
+  accent: [140, 144, 152]
+  edge: [230, 234, 240]
 
 gold:
   handle: [108, 72, 40]
   binding: [160, 120, 48]
-  head: [220, 180, 64]
-  accent: [180, 140, 48]
-  edge: [240, 210, 110]
+  head: [236, 196, 72]
+  accent: [200, 156, 48]
+  edge: [255, 230, 140]
 
 leather:
   handle: [118, 78, 42]

@@ -25,8 +25,8 @@ def pickaxe(material: str) -> list[Part]:
         parts += [
             _p("binding", 0.0, 0.24, 0.0, 0.12, 0.10, 0.09),
             _p("head", 0.0, 0.34, 0.0, 0.50, 0.10, 0.08),
-            _p("edge", 0.22, 0.18, 0.0, 0.11, 0.22, 0.08),
-            _p("edge", -0.22, 0.18, 0.0, 0.11, 0.22, 0.08),
+            _p("edge", 0.24, 0.10, 0.0, 0.10, 0.36, 0.07),
+            _p("edge", -0.24, 0.10, 0.0, 0.10, 0.36, 0.07),
         ]
         if material == "stone":
             parts.append(_p("accent", 0.0, 0.40, 0.0, 0.22, 0.06, 0.09))
@@ -37,8 +37,8 @@ def pickaxe(material: str) -> list[Part]:
         parts += [
             _p("binding", 0.0, 0.28, 0.0, 0.08, 0.05, 0.06),
             _p("head", 0.0, 0.36, 0.0, 0.42, 0.07, 0.05),
-            _p("edge", 0.20, 0.22, 0.0, 0.07, 0.24, 0.05),
-            _p("edge", -0.20, 0.22, 0.0, 0.07, 0.24, 0.05),
+            _p("edge", 0.20, 0.12, 0.0, 0.06, 0.36, 0.045),
+            _p("edge", -0.20, 0.12, 0.0, 0.06, 0.36, 0.045),
             _p("accent", 0.0, 0.40, 0.0, 0.10, 0.04, 0.06),
         ]
     return parts
@@ -263,6 +263,11 @@ FAMILY_BUILDERS = {
     "armor_chest": armor_chest,
     "armor_legs": armor_legs,
     "armor_feet": armor_feet,
+    "bucket": waterskin,
+    "flint": torch,
+    "shears": sword,
+    "spear": sword,
+    "seeds": leather_item,
 }
 
 

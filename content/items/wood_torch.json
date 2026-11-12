@@ -4,7 +4,7 @@
   "types": [
     "utility"
   ],
-  "stack_max": 1,
+  "stack_max": 64,
   "wear_end": "destroy",
   "repair": {
     "materials": [
@@ -20,6 +20,10 @@
       "fleshy": 1
     },
     "punch_attack_uses": 60
+  },
+  "use_action": "place_block",
+  "use": {
+    "action": "place_block"
   },
   "model": "models/items/wood_torch/model.gltf",
   "visual": {

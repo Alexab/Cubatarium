@@ -1,0 +1,14 @@
+{
+  "id": "iron_chest",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "mtg_steelblock",
+      "count": 8
+    }
+  ],
+  "output": {
+    "id": "iron_chest",
+    "count": 1
+  }
+}

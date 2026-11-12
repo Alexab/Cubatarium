@@ -9,7 +9,7 @@
   "wear_end": "destroy",
   "repair": {
     "materials": [
-      "iron_ingot",
+      "mtg_steelblock",
       "iron"
     ],
     "amount": 0.25

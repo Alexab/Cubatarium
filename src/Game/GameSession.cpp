@@ -946,6 +946,21 @@ CharacterStatsSnapshot UGameSession::GetCharacterStatsSnapshot() const
     }
   }
 
+  if (UItemDefinitionStorage *itemDefs = World->GetItemDefinitionStorage())
+  {
+    for (const auto &kv : inv.GetStorage())
+    {
+      if (!itemDefs->Get(kv.first) || kv.second == 0)
+      {
+        continue;
+      }
+      CharacterStatsSnapshot::CarriedItem carried;
+      carried.id = kv.first;
+      carried.count = kv.second;
+      snap.carriedItems.push_back(std::move(carried));
+    }
+  }
+
   if (const CreatureDefinition *def =
           World->GetCreatureDefinition(creature->GetTypeId()))
   {

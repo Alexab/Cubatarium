@@ -13,6 +13,7 @@
 #include "Render/Camera/Camera.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "World/Core/World.h"
+#include "World/Interaction/BlockPlacementService.h"
 #include "World/Diagnostics/BlockInspectDiagnostics.h"
 #include "World/Raycast/BlockRaycast.h"
 #if defined(__ANDROID__)
@@ -254,6 +255,20 @@ void UBlockInputController::TryUseActiveSlot(const BlockInputContext &ctx)
       if (const ItemDefinition *def = items->Get(Active->Id))
       {
         const ItemUseParams use = ItemUseRegistry::FromDefinition(*def);
+        if (use.Action == ItemUseAction::PlaceBlock ||
+            def->Id == "wood_torch")
+        {
+          auto camera = ctx.World->GetCurrentUserCamera();
+          if (camera)
+          {
+            const std::string blockId =
+                def->Id == "wood_torch" ? "torch" : def->Id;
+            placed = UBlockPlacementService::PlaceBlockFromHeldItem(
+                *ctx.World, camera->GetPosition(), camera->GetFront(),
+                blockId);
+          }
+          break;
+        }
         if (use.Action == ItemUseAction::Eat ||
             use.Action == ItemUseAction::Drink)
         {

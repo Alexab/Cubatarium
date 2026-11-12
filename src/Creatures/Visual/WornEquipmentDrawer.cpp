@@ -836,12 +836,9 @@ void ResolveWieldParams(const UItemDefinitionStorage *items,
   if (const ItemDefinition *def = src->Get(itemId))
   {
     scale = DefaultWieldScale(*def);
-    offset[0] = def->Visual.WieldOffset[0];
-    offset[1] = def->Visual.WieldOffset[1];
-    offset[2] = def->Visual.WieldOffset[2];
-    euler[0] = def->Visual.WieldEulerDeg[0];
-    euler[1] = def->Visual.WieldEulerDeg[1];
-    euler[2] = def->Visual.WieldEulerDeg[2];
+    std::string fitAxis;
+    ResolveWieldPose(*def, offset, euler, fitAxis);
+    (void)fitAxis;
   }
 }
 

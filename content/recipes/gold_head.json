@@ -1,0 +1,14 @@
+{
+  "id": "gold_head",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "mtg_goldblock",
+      "count": 5
+    }
+  ],
+  "output": {
+    "id": "gold_head",
+    "count": 1
+  }
+}
