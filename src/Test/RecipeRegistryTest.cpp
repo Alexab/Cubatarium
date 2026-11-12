@@ -1,6 +1,7 @@
 #include "Game/Crafting/RecipeRegistry.h"
 #include "Creatures/Core/CreatureInventory.h"
 
+#include <filesystem>
 #include <iostream>
 
 static void Expect(bool cond, const char *msg)
@@ -12,7 +13,7 @@ static void Expect(bool cond, const char *msg)
   }
 }
 
-int main()
+int main(int argc, char **argv)
 {
   using cutum::RecipeDefinition;
   using cutum::RecipeIngredient;
@@ -33,13 +34,34 @@ int main()
          "wood consumed");
   Expect(inv.GetStorage().at("wood_sword") == 1, "sword granted");
 
+  // Resolve the published recipes relative to the executable (build tree:
+  // build/<config>/<compiler>/<Release> -> repo root), then fall back to the
+  // working directory. A wrong cwd must fail the test, not skip it.
   URecipeRegistry loaded;
-  if (loaded.LoadFromDirectory("content/recipes"))
+  bool recipesLoaded = false;
+  std::filesystem::path exeDir;
+  if (argc > 0 && argv[0] != nullptr)
   {
-    const cutum::RecipeDefinition *iron = loaded.FindById("iron_pickaxe");
-    Expect(iron != nullptr, "iron_pickaxe recipe published");
-    Expect(iron && iron->Inputs.size() >= 1, "iron_pickaxe has inputs");
+    std::error_code ec;
+    exeDir = std::filesystem::absolute(std::filesystem::path(argv[0]), ec)
+                 .parent_path();
   }
+  const std::filesystem::path candidates[] = {
+      exeDir / ".." / ".." / ".." / "content" / "recipes",
+      std::filesystem::path("content") / "recipes",
+  };
+  for (const auto &dir : candidates)
+  {
+    if (loaded.LoadFromDirectory(dir.string()))
+    {
+      recipesLoaded = true;
+      break;
+    }
+  }
+  Expect(recipesLoaded, "published recipes load (repo root resolvable)");
+  const cutum::RecipeDefinition *iron = loaded.FindById("iron_pickaxe");
+  Expect(iron != nullptr, "iron_pickaxe recipe published");
+  Expect(iron && iron->Inputs.size() >= 1, "iron_pickaxe has inputs");
 
   Expect(!registry.TryCraft(inv, recipe), "craft fails without wood");
 
