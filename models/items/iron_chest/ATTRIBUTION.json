@@ -2,7 +2,9 @@
   "id": "iron_chest",
   "format": "gltf",
   "license": "CC0-1.0",
-  "source": "quaternius_fantasy_props",
-  "upstream_file": "Ultimate RPG Items Pack - Aug 2019/OBJ/Armor_Metal.obj",
-  "url": "https://opengameart.org/content/low-poly-rpg-pack"
+  "authoring_source": "cubatarium-recipe",
+  "family": "armor_chest",
+  "material": "iron",
+  "recipe_version": 1,
+  "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
 }

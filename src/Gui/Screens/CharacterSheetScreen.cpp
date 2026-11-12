@@ -134,9 +134,8 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
 
     ArmorSlots.clear();
     ToolSlots.clear();
-    const char *armorNames[6] = {"Head", "Chest", "Arms",
-                                 "Hands", "Legs", "Feet"};
-    for (int i = 0; i < 6; ++i)
+    const char *armorNames[4] = {"Head", "Chest", "Legs", "Feet"};
+    for (int i = 0; i < 4; ++i)
     {
       auto slot = std::make_unique<UGuiSlot>(&theme);
       slot->SetLabel(armorNames[i]);
@@ -306,8 +305,7 @@ void UCharacterSheetScreen::Relayout()
 
   // --- Paper-doll interior ---
   //        [Head]
-  // [Chest][PREVIEW][Arms]
-  // [Legs]          [Hands]
+  // [Chest][PREVIEW][Legs]
   //   [Tool1][Feet][Tool2]
   const int pad = 8;
   const int headerH = kLineH;
@@ -343,15 +341,13 @@ void UCharacterSheetScreen::Relayout()
 
   const int headX = previewX + (previewSide - kSlotSize) / 2;
   const int headY = previewTop - kSlotSize - kSlotGap;
-  placeArmor(0, headX, headY);                                   // Head
-  placeArmor(1, leftSlotX, midY - kSlotSize / 2 - 4);             // Chest
-  placeArmor(4, leftSlotX, midY + kSlotSize / 2 + 4);             // Legs
-  placeArmor(2, rightSlotX, midY - kSlotSize / 2 - 4);            // Arms
-  placeArmor(3, rightSlotX, midY + kSlotSize / 2 + 4);            // Hands
+  placeArmor(0, headX, headY);                       // Head
+  placeArmor(1, leftSlotX, midY);                    // Chest
+  placeArmor(2, rightSlotX, midY);                   // Legs
 
   const int bottomY = previewTop + previewSide + kSlotGap;
   const int feetX = previewX + (previewSide - kSlotSize) / 2;
-  placeArmor(5, feetX, bottomY);                                 // Feet
+  placeArmor(3, feetX, bottomY);                     // Feet
 
   if (ToolSlots.size() >= 1 && ToolSlots[0])
   {
@@ -498,7 +494,7 @@ void UCharacterSheetScreen::RefreshLabels()
 
   if (Icons)
   {
-    for (int i = 0; i < 6 && i < static_cast<int>(ArmorSlots.size()); ++i)
+    for (int i = 0; i < 4 && i < static_cast<int>(ArmorSlots.size()); ++i)
     {
       const auto &s = snap.equippedArmor[i];
       if (ArmorSlots[i] && !s.itemId.empty())
@@ -576,7 +572,7 @@ void UCharacterSheetScreen::RenderCharacterPreview()
     return;
   }
 
-  std::array<WornArmorPreviewSlot, 6> armorSlots{};
+  std::array<WornArmorPreviewSlot, kWornArmorSlotCount> armorSlots{};
   std::string armorKey;
   std::string mainId;
   std::string offId;
@@ -584,7 +580,7 @@ void UCharacterSheetScreen::RenderCharacterPreview()
   if (Stats)
   {
     const CharacterStatsSnapshot snap = Stats->GetCharacterStatsSnapshot();
-    for (size_t i = 0; i < 6; ++i)
+    for (size_t i = 0; i < kWornArmorSlotCount; ++i)
     {
       const auto &s = snap.equippedArmor[i];
       if (!s.itemId.empty() && !s.broken)

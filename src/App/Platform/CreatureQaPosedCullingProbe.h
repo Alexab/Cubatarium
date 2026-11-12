@@ -57,9 +57,9 @@ inline void ExportCreatureQaPosedCulling(UCreaturePreviewRenderer &preview,
       if(material!="bare")
       {
         if(!ctx.Items)throw std::runtime_error("Posed culling item definitions missing");
-        const char *slots[]={"head","chest","arms","hands","legs","feet"};
+        const char *slots[]={"head","chest","legs","feet"};
         auto &inventory=creature.GetInventory();
-        for(size_t slot=0;slot<6;++slot)
+        for(size_t slot=0;slot<4;++slot)
         {
           const std::string item=material+"_"+slots[slot];inventory.AddItem(item,1);
           InventoryEntryRef entry{InventoryEntryKind::Item,item,1,false};

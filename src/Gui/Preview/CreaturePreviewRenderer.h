@@ -85,7 +85,7 @@ public:
       const std::string &speciesId, const std::string &skinId, int size,
       float yawDeg, float pitchDeg, float animTimeSec = 0.f,
       bool animateWalk = false,
-      const std::array<WornArmorPreviewSlot, 6> *armor = nullptr,
+      const std::array<WornArmorPreviewSlot, kWornArmorSlotCount> *armor = nullptr,
       const std::string *mainItemId = nullptr,
       const std::string *offhandItemId = nullptr);
 
@@ -118,7 +118,7 @@ private:
   bool DrawSpeciesParts(const std::string &speciesId, const std::string &skinId,
                         int viewportSize, float yawDeg, float pitchDeg,
                         float animTimeSec = 0.f, bool animateWalk = false,
-                        const std::array<WornArmorPreviewSlot, 6> *armor =
+                        const std::array<WornArmorPreviewSlot, kWornArmorSlotCount> *armor =
                             nullptr,
                         const std::string *mainItemId = nullptr,
                         const std::string *offhandItemId = nullptr);

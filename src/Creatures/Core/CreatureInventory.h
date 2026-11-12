@@ -53,8 +53,8 @@ public:
   void SerializeToJson(nlohmann::json &out) const;
   void DeserializeFromJson(const nlohmann::json &data, size_t maxBarCount = 4);
 
-  // Armor equipment (0..5):
-  // 0=head,1=chest,2=arms,3=hands,4=legs,5=feet.
+  // Armor equipment (0..3): 0=head, 1=chest, 2=legs, 3=feet.
+  static constexpr size_t kArmorSlotCount = 4;
   const InventoryEntryRef &GetEquippedArmor(size_t slot) const;
   bool EquipArmor(size_t slot, const InventoryEntryRef &entry,
                    const UItemDefinitionStorage &items);
@@ -77,7 +77,7 @@ private:
   size_t ActiveBarIndex{0};
   size_t ActiveSlotIndex{0};
 
-  std::array<InventoryEntryRef, 6> EquippedArmor{};
+  std::array<InventoryEntryRef, kArmorSlotCount> EquippedArmor{};
   ArmorGroups EquippedArmorGroups{};
   InventoryEntryRef EquippedOffhand{};
   ArmorGroups OffhandArmorGroups{};

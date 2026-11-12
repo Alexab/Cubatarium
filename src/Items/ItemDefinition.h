@@ -63,7 +63,7 @@ struct ItemRepairDef
 
 struct ItemArmorDef
 {
-  /// Slot ids: {"head","chest","arms","hands","legs","feet"}.
+  /// Slot ids: {"head","chest","legs","feet"}.
   std::vector<std::string> Slots;
   /// Luanti-style armor_groups: group -> rating (int).
   std::unordered_map<std::string, int> ArmorGroups;

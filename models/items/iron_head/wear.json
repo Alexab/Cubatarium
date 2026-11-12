@@ -1,6 +1,6 @@
 {
   "bones": [
-    "head"
+    "hat"
   ],
   "offset": [
     0,
@@ -13,5 +13,6 @@
     0
   ],
   "scale": 1.0,
-  "fit_mode": "bone_volume"
+  "fit_mode": "bone_volume",
+  "model": "model.gltf"
 }

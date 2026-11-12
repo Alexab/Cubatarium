@@ -39,7 +39,7 @@ void ApplyArmorWearForHit(UWorld &world, UCreature &target,
     if (items)
     {
       std::vector<size_t> worn;
-      for (size_t slot = 0; slot < 6; ++slot)
+      for (size_t slot = 0; slot < UCreatureInventory::kArmorSlotCount; ++slot)
       {
         const InventoryEntryRef &e = inv.GetEquippedArmor(slot);
         if (!e.empty && !e.broken && e.kind == InventoryEntryKind::Item)

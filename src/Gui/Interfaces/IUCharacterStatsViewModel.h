@@ -26,7 +26,7 @@ struct CharacterStatsSnapshot
   std::string skinId;
   CreatureVitals vitals{};
   CreatureAttributes attributes{};
-  std::array<EquippedSlotSnapshot, 6> equippedArmor{};
+  std::array<EquippedSlotSnapshot, 4> equippedArmor{};
   std::array<EquippedSlotSnapshot, 2> equippedTools{};
   WorldGameMode gameMode{WorldGameMode::Creative};
   WorldDifficulty difficulty{WorldDifficulty::Normal};

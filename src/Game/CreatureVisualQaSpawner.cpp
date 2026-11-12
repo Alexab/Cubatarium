@@ -251,7 +251,7 @@ CreatureVisualQaSpawnResult UCreatureVisualQaSpawner::SpawnAllInGrid()
         const std::string material=selected?selected:"copper";
         if(material!="copper" && material!="iron" && material!="leather")throw std::runtime_error("Unknown world gear material");
         auto item=[](const std::string &id){InventoryEntryRef e;e.kind=InventoryEntryKind::Item;e.Id=id;e.count=1;e.empty=false;return e;};
-        const char *slots[]={"head","chest","arms","hands","legs","feet"};
+        const char *slots[]={"head","chest","legs","feet"};
         auto &inventory=actor->GetInventory();
         for(size_t slot=0;slot<6;++slot)
           if(!inventory.EquipArmor(slot,item(material+"_"+slots[slot]),*items))throw std::runtime_error("World QA armor rejected");

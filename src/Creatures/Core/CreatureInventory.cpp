@@ -9,17 +9,35 @@ namespace
 {
 constexpr size_t kHotbarSlots = 10;
 
-constexpr size_t kArmorSlots = 6;
+constexpr size_t kArmorSlots = UCreatureInventory::kArmorSlotCount;
 
 const char *ArmorSlotId(size_t slot)
 {
-  static constexpr const char *ids[kArmorSlots] = {"head",  "chest", "arms",
-                                                    "hands", "legs",  "feet"};
+  static constexpr const char *ids[kArmorSlots] = {"head", "chest", "legs",
+                                                    "feet"};
   if (slot >= kArmorSlots)
   {
     return "";
   }
   return ids[slot];
+}
+
+InventoryEntryRef ParseArmorEntry(const nlohmann::json &ej)
+{
+  InventoryEntryRef entry{};
+  const bool empty =
+      ej.value("empty", ej.value("id", std::string()).empty());
+  entry.empty = empty;
+  if (!empty)
+  {
+    entry.kind = InventoryEntryKind::Item;
+    entry.Id = ej.value("id", "");
+    entry.count = ej.value("count", 1);
+    entry.wear = ej.value("wear", 0.f);
+    entry.broken = ej.value("broken", false);
+    entry.empty = entry.Id.empty();
+  }
+  return entry;
 }
 
 void RemapLegacyHotbarEntryId(InventoryEntryRef &entry)
@@ -735,20 +753,29 @@ void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data,
   if (data.contains("equipped_armor") && data["equipped_armor"].is_array())
   {
     const auto &arr = data["equipped_armor"];
-    const size_t n = std::min(static_cast<size_t>(arr.size()), kArmorSlots);
-    for (size_t i = 0; i < n; ++i)
+    // Legacy saves stored 6 slots: head,chest,arms,hands,legs,feet.
+    // Map 0→head, 1→chest, 4→legs, 5→feet; park arms/hands into storage.
+    if (arr.size() >= 6)
     {
-      const auto &ej = arr[i];
-      const bool empty = ej.value("empty", ej.value("id", std::string()).empty());
-      EquippedArmor[i].empty = empty;
-      if (!empty)
+      EquippedArmor[0] = ParseArmorEntry(arr[0]);
+      EquippedArmor[1] = ParseArmorEntry(arr[1]);
+      EquippedArmor[2] = ParseArmorEntry(arr[4]);
+      EquippedArmor[3] = ParseArmorEntry(arr[5]);
+      for (size_t legacy : {2ull, 3ull})
       {
-        EquippedArmor[i].kind = InventoryEntryKind::Item;
-        EquippedArmor[i].Id = ej.value("id", "");
-        EquippedArmor[i].count = ej.value("count", 1);
-        EquippedArmor[i].wear = ej.value("wear", 0.f);
-        EquippedArmor[i].broken = ej.value("broken", false);
-        EquippedArmor[i].empty = EquippedArmor[i].Id.empty();
+        InventoryEntryRef parked = ParseArmorEntry(arr[legacy]);
+        if (!parked.empty && !parked.Id.empty())
+        {
+          AddItem(parked.Id, std::max(1, parked.count));
+        }
+      }
+    }
+    else
+    {
+      const size_t n = std::min(static_cast<size_t>(arr.size()), kArmorSlots);
+      for (size_t i = 0; i < n; ++i)
+      {
+        EquippedArmor[i] = ParseArmorEntry(arr[i]);
       }
     }
   }

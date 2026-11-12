@@ -1,1 +1,311 @@
-{"scene":0,"scenes":[{"nodes":[0]}],"asset":{"version":"2.0","generator":"https://github.com/mikedh/trimesh"},"accessors":[{"componentType":5125,"type":"SCALAR","bufferView":0,"count":1680,"max":[1111],"min":[0]},{"componentType":5126,"type":"VEC3","byteOffset":0,"bufferView":1,"count":1112,"max":[0.4157559871673584,0.36436399817466736,0.4157559871673584],"min":[-0.4157559871673584,-0.12759000062942505,-0.4157559871673584]}],"meshes":[{"name":"Crown_Cylinder.011","extras":{"processed":true,"name":"Crown_Cylinder.011","node":"Crown_Cylinder.011"},"primitives":[{"attributes":{"POSITION":1},"indices":0,"mode":4,"material":0}]}],"materials":[{"pbrMetallicRoughness":{"baseColorFactor":[0.4823529411764706,0.3764705882352941,0.0784313725490196,1.0],"roughnessFactor":0.377888888028231},"doubleSided":false}],"nodes":[{"name":"Crown_Cylinder.011","mesh":0}],"buffers":[{"uri":"gltf_buffer_0.bin","byteLength":6720},{"uri":"gltf_buffer_1.bin","byteLength":13344}],"bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":6720},{"buffer":1,"byteOffset":0,"byteLength":13344}]}
+{
+  "asset": {
+    "version": "2.0",
+    "generator": "cubatarium-itemgen"
+  },
+  "buffers": [
+    {
+      "uri": "model.bin",
+      "byteLength": 2208
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 288,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 288,
+      "byteLength": 192,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 480,
+      "byteLength": 72,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 552,
+      "byteLength": 288,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 840,
+      "byteLength": 192,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1032,
+      "byteLength": 72,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1104,
+      "byteLength": 288,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1392,
+      "byteLength": 192,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1584,
+      "byteLength": 72,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1656,
+      "byteLength": 288,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1944,
+      "byteLength": 192,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 2136,
+      "byteLength": 72,
+      "target": 34963
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC3",
+      "min": [
+        -0.17,
+        -0.009999999999999995,
+        -0.18
+      ],
+      "max": [
+        0.17,
+        0.16999999999999998,
+        0.18
+      ]
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5123,
+      "count": 36,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC3",
+      "min": [
+        -0.18,
+        -0.05,
+        -0.19
+      ],
+      "max": [
+        0.18,
+        0.009999999999999998,
+        0.19
+      ]
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 5,
+      "componentType": 5123,
+      "count": 36,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 6,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC3",
+      "min": [
+        -0.1,
+        0.09000000000000001,
+        0.1
+      ],
+      "max": [
+        0.1,
+        0.19,
+        0.18000000000000002
+      ]
+    },
+    {
+      "bufferView": 7,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 8,
+      "componentType": 5123,
+      "count": 36,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 9,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC3",
+      "min": [
+        -0.14,
+        -0.02,
+        -0.19
+      ],
+      "max": [
+        0.14,
+        0.06,
+        -0.13
+      ]
+    },
+    {
+      "bufferView": 10,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 11,
+      "componentType": 5123,
+      "count": 36,
+      "type": "SCALAR"
+    }
+  ],
+  "materials": [
+    {
+      "name": "head",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.7215686274509804,
+          0.4392156862745098,
+          0.25098039215686274,
+          1.0
+        ],
+        "metallicFactor": 0.05,
+        "roughnessFactor": 0.75
+      }
+    },
+    {
+      "name": "edge",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.8235294117647058,
+          0.5490196078431373,
+          0.34509803921568627,
+          1.0
+        ],
+        "metallicFactor": 0.05,
+        "roughnessFactor": 0.75
+      }
+    },
+    {
+      "name": "accent",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.611764705882353,
+          0.3607843137254902,
+          0.20392156862745098,
+          1.0
+        ],
+        "metallicFactor": 0.05,
+        "roughnessFactor": 0.95
+      }
+    },
+    {
+      "name": "binding",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.5490196078431373,
+          0.34509803921568627,
+          0.18823529411764706,
+          1.0
+        ],
+        "metallicFactor": 0.0,
+        "roughnessFactor": 0.95
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "copper_head",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "TEXCOORD_0": 1
+          },
+          "indices": 2,
+          "mode": 4,
+          "material": 0
+        },
+        {
+          "attributes": {
+            "POSITION": 3,
+            "TEXCOORD_0": 4
+          },
+          "indices": 5,
+          "mode": 4,
+          "material": 1
+        },
+        {
+          "attributes": {
+            "POSITION": 6,
+            "TEXCOORD_0": 7
+          },
+          "indices": 8,
+          "mode": 4,
+          "material": 2
+        },
+        {
+          "attributes": {
+            "POSITION": 9,
+            "TEXCOORD_0": 10
+          },
+          "indices": 11,
+          "mode": 4,
+          "material": 3
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 0,
+      "name": "copper_head"
+    }
+  ],
+  "scenes": [
+    {
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "scene": 0
+}

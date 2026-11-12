@@ -1,12 +1,13 @@
 {
   "id": "copper_chest",
-  "displayName": "Copper Chest",
+  "displayName": "Copper Chestplate",
   "types": [
     "armor",
     "chest"
   ],
   "stack_max": 1,
   "wear_end": "destroy",
+  "model": "models/items/copper_chest/model.gltf",
   "armor": {
     "slots": [
       "chest"
@@ -15,7 +16,6 @@
       "fleshy": 70
     }
   },
-  "model": "models/items/copper_chest/model.gltf",
   "visual": {
     "wield_scale": 1.0
   }

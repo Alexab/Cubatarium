@@ -38,7 +38,7 @@ inline void ProbeCreatureQaEquipmentTextureModels(const std::filesystem::path &f
     {"models",Json::array()}};
   GLuint fbo=0;glGenFramebuffers(1,&fbo);
   int index=0;
-  for(const char *material:{"copper","iron","leather"}) for(const char *slot:{"chest","arms","legs"})
+  for(const char *material:{"copper","iron","leather"}) for(const char *slot:{"chest","legs","feet"})
   {
     const std::string item=std::string(material)+"_"+slot;
     const auto source=paths->AssetRoot()/"models/items"/item/"model.gltf";
@@ -169,10 +169,10 @@ inline void ExportCreatureQaEquipmentFrames(UCreaturePreviewRenderer &preview,
             [](){return BoneSkeletonEntityConventionMatrix();});
         for(int loadout=0;loadout<4;++loadout)
         {
-          std::array<WornArmorPreviewSlot,6> armor{};
+          std::array<WornArmorPreviewSlot,kWornArmorSlotCount> armor{};
           if(loadout==0 || loadout==3) {
-            const char *parts[]={"head","chest","arms","hands","legs","feet"};
-            for(int i=0;i<6;++i)armor[i].ItemId=material+"_"+parts[i];
+            const char *parts[]={"head","chest","legs","feet"};
+            for(int i=0;i<4;++i)armor[i].ItemId=material+"_"+parts[i];
           }
           const std::string main=(loadout==1 || loadout==3)?"wood_sword":"";
           const std::string off=(loadout==2 || loadout==3)?"wood_torch":"";

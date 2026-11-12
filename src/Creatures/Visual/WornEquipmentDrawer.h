@@ -27,6 +27,8 @@ struct WornArmorPreviewSlot
   std::string ItemId;
 };
 
+constexpr size_t kWornArmorSlotCount = 4;
+
 /// Draw equipped armor overlays attached to humanoid bones.
 class WornEquipmentDrawer
 {
@@ -68,7 +70,7 @@ public:
                                    const BoneBoundsLookupFn &bounds = {});
 
   /// Direct GL draw for preview FBO (no CreatureDrawQueue).
-  static void DrawImmediate(const std::array<WornArmorPreviewSlot, 6> &slots,
+  static void DrawImmediate(const std::array<WornArmorPreviewSlot, kWornArmorSlotCount> &slots,
                             const glm::mat4 &viewProj,
                             const glm::mat4 &bodyMat,
                             const BoneMatrixLookupFn &bones,

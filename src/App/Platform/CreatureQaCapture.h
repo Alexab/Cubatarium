@@ -104,7 +104,7 @@ inline void ExportCreatureQaFrames(UCore &core, UWorld &world,
         skin = selectedSkin;
       }
       std::string mainItem, offhandItem;
-      std::array<WornArmorPreviewSlot, 6> armor{};
+      std::array<WornArmorPreviewSlot, kWornArmorSlotCount> armor{};
       const bool equipment = frame == 31 || frame == 32;
       if (frame >= 29)
       {
@@ -113,8 +113,8 @@ inline void ExportCreatureQaFrames(UCore &core, UWorld &world,
         phaseIndex = 2;
         if (equipment)
         {
-          const char *ids[] = {"copper_head", "copper_chest", "copper_arms", "copper_hands", "copper_legs", "copper_feet"};
-          for (int i = 0; i < 6; ++i) { armor[i].ItemId = ids[i]; }
+          const char *ids[] = {"copper_head", "copper_chest", "copper_legs", "copper_feet"};
+          for (int i = 0; i < 4; ++i) { armor[i].ItemId = ids[i]; }
           mainItem = "wood_sword";
           offhandItem = "wood_torch";
         }

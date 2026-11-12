@@ -19,8 +19,6 @@ KNOWN_TYPES = {
     "misc",
     "head",
     "chest",
-    "arms",
-    "hands",
     "legs",
     "feet",
     "tool",

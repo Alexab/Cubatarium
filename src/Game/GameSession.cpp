@@ -362,7 +362,7 @@ InventoryEntryRef UGameSession::GetArmorEntryRef(size_t armorSlot) const
 {
   InventoryEntryRef entry;
   const UCreatureInventory *inv = GetControlledInventory(World.get());
-  if (!inv || armorSlot >= 6)
+  if (!inv || armorSlot >= UCreatureInventory::kArmorSlotCount)
   {
     return entry;
   }
@@ -914,7 +914,7 @@ CharacterStatsSnapshot UGameSession::GetCharacterStatsSnapshot() const
 
   // Equipped armor (0..5) + active tool items (2 slots).
   const UCreatureInventory &inv = creature->GetInventory();
-  for (size_t i = 0; i < 6; ++i)
+  for (size_t i = 0; i < UCreatureInventory::kArmorSlotCount; ++i)
   {
     const InventoryEntryRef &e = inv.GetEquippedArmor(i);
     snap.equippedArmor[i].itemId = e.empty ? std::string() : e.Id;
