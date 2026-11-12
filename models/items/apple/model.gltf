@@ -197,16 +197,29 @@
       "type": "SCALAR"
     }
   ],
+  "images": [
+    {
+      "uri": "textures/diffuse.png"
+    }
+  ],
+  "textures": [
+    {
+      "source": 0
+    }
+  ],
   "materials": [
     {
       "name": "body",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          0.7686274509803922,
-          0.18823529411764706,
-          0.18823529411764706,
+          1.0,
+          1.0,
+          1.0,
           1.0
         ],
+        "baseColorTexture": {
+          "index": 0
+        },
         "metallicFactor": 0.0,
         "roughnessFactor": 0.95
       }
@@ -215,11 +228,14 @@
       "name": "stem",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          0.2823529411764706,
-          0.47058823529411764,
-          0.18823529411764706,
+          1.0,
+          1.0,
+          1.0,
           1.0
         ],
+        "baseColorTexture": {
+          "index": 0
+        },
         "metallicFactor": 0.0,
         "roughnessFactor": 0.95
       }
@@ -228,11 +244,14 @@
       "name": "leaf",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          0.34509803921568627,
-          0.5803921568627451,
-          0.2196078431372549,
+          1.0,
+          1.0,
+          1.0,
           1.0
         ],
+        "baseColorTexture": {
+          "index": 0
+        },
         "metallicFactor": 0.0,
         "roughnessFactor": 0.95
       }
@@ -241,11 +260,14 @@
       "name": "accent",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          0.8627450980392157,
-          0.3137254901960784,
-          0.2823529411764706,
+          1.0,
+          1.0,
+          1.0,
           1.0
         ],
+        "baseColorTexture": {
+          "index": 0
+        },
         "metallicFactor": 0.05,
         "roughnessFactor": 0.95
       }
@@ -307,5 +329,16 @@
       ]
     }
   ],
-  "scene": 0
+  "scene": 0,
+  "extras": {
+    "cubatarium_grip": {
+      "offset": [
+        0.0,
+        -0.15,
+        0.0
+      ],
+      "note": "handle grasp"
+    },
+    "authoring_source": "cubatarium-recipe"
+  }
 }

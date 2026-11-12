@@ -1,5 +1,6 @@
 #include "Creatures/Core/CreatureInventory.h"
 #include "Items/ItemDefinitionStorage.h"
+#include <iostream>
 #include <nlohmann/json.hpp>
 
 namespace cutum
@@ -767,6 +768,9 @@ void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data,
         if (!parked.empty && !parked.Id.empty())
         {
           AddItem(parked.Id, std::max(1, parked.count));
+          std::cerr << "UCreatureInventory: migrated legacy armor slot "
+                    << (legacy == 2 ? "arms" : "hands") << " item '"
+                    << parked.Id << "' into storage\n";
         }
       }
     }

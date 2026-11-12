@@ -197,16 +197,29 @@
       "type": "SCALAR"
     }
   ],
+  "images": [
+    {
+      "uri": "textures/diffuse.png"
+    }
+  ],
+  "textures": [
+    {
+      "source": 0
+    }
+  ],
   "materials": [
     {
       "name": "handle",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          0.4627450980392157,
-          0.3058823529411765,
-          0.16470588235294117,
+          1.0,
+          1.0,
+          1.0,
           1.0
         ],
+        "baseColorTexture": {
+          "index": 0
+        },
         "metallicFactor": 0.0,
         "roughnessFactor": 0.95
       }
@@ -215,11 +228,14 @@
       "name": "head",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          0.5803921568627451,
-          0.4,
-          0.21176470588235294,
+          1.0,
+          1.0,
+          1.0,
           1.0
         ],
+        "baseColorTexture": {
+          "index": 0
+        },
         "metallicFactor": 0.05,
         "roughnessFactor": 0.75
       }
@@ -228,11 +244,14 @@
       "name": "edge",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          0.2823529411764706,
-          0.18823529411764706,
-          0.10980392156862745,
+          1.0,
+          1.0,
+          1.0,
           1.0
         ],
+        "baseColorTexture": {
+          "index": 0
+        },
         "metallicFactor": 0.05,
         "roughnessFactor": 0.75
       }
@@ -241,11 +260,14 @@
       "name": "binding",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          0.8235294117647058,
-          0.8235294117647058,
-          0.7843137254901961,
+          1.0,
+          1.0,
+          1.0,
           1.0
         ],
+        "baseColorTexture": {
+          "index": 0
+        },
         "metallicFactor": 0.0,
         "roughnessFactor": 0.95
       }
@@ -307,5 +329,16 @@
       ]
     }
   ],
-  "scene": 0
+  "scene": 0,
+  "extras": {
+    "cubatarium_grip": {
+      "offset": [
+        0.0,
+        -0.15,
+        0.0
+      ],
+      "note": "handle grasp"
+    },
+    "authoring_source": "cubatarium-recipe"
+  }
 }

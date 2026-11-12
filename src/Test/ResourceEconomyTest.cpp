@@ -82,6 +82,17 @@ int main()
     Expect(inv.GetStorage().at("wood") == 1, "break drop grants block");
   }
 
+  // Item drops follow the same Creative gate.
+  {
+    UCreatureInventory inv;
+    ResourceEconomyService::GrantItemDrop(WorldGameMode::Creative, inv,
+                                           "raw_meat", 1);
+    Expect(inv.GetStorage().count("raw_meat") == 0, "creative item drop skipped");
+    ResourceEconomyService::GrantItemDrop(WorldGameMode::Survival, inv,
+                                           "raw_meat", 1);
+    Expect(inv.GetStorage().at("raw_meat") == 1, "survival item drop granted");
+  }
+
   std::cout << "resource_economy_test: OK" << std::endl;
   return 0;
 }

@@ -80,7 +80,7 @@ bool TryResolveUse(UWorld &world, UCreature &source, InfluencePrediction &pred)
   }
   pred.UseSelf = true;
   // Food is consumed; waterskin-style drink tools are reusable.
-  pred.UseConsumes = use.Action == ItemUseAction::Eat;
+  pred.UseConsumes = ItemUseConsumes(use.Action);
   pred.UseItemId = active->Id;
   pred.UseSatietyDelta = use.SatietyDelta;
   pred.UseThirstDelta = use.ThirstDelta;

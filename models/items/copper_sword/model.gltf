@@ -243,16 +243,29 @@
       "type": "SCALAR"
     }
   ],
+  "images": [
+    {
+      "uri": "textures/diffuse.png"
+    }
+  ],
+  "textures": [
+    {
+      "source": 0
+    }
+  ],
   "materials": [
     {
       "name": "handle",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          0.4235294117647059,
-          0.2823529411764706,
-          0.1568627450980392,
+          1.0,
+          1.0,
+          1.0,
           1.0
         ],
+        "baseColorTexture": {
+          "index": 0
+        },
         "metallicFactor": 0.0,
         "roughnessFactor": 0.95
       }
@@ -261,11 +274,14 @@
       "name": "binding",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          0.5490196078431373,
-          0.34509803921568627,
-          0.18823529411764706,
+          1.0,
+          1.0,
+          1.0,
           1.0
         ],
+        "baseColorTexture": {
+          "index": 0
+        },
         "metallicFactor": 0.0,
         "roughnessFactor": 0.95
       }
@@ -274,11 +290,14 @@
       "name": "accent",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          0.611764705882353,
-          0.3607843137254902,
-          0.20392156862745098,
+          1.0,
+          1.0,
+          1.0,
           1.0
         ],
+        "baseColorTexture": {
+          "index": 0
+        },
         "metallicFactor": 0.05,
         "roughnessFactor": 0.95
       }
@@ -287,11 +306,14 @@
       "name": "head",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          0.7215686274509804,
-          0.4392156862745098,
-          0.25098039215686274,
+          1.0,
+          1.0,
+          1.0,
           1.0
         ],
+        "baseColorTexture": {
+          "index": 0
+        },
         "metallicFactor": 0.05,
         "roughnessFactor": 0.75
       }
@@ -300,11 +322,14 @@
       "name": "edge",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          0.8235294117647058,
-          0.5490196078431373,
-          0.34509803921568627,
+          1.0,
+          1.0,
+          1.0,
           1.0
         ],
+        "baseColorTexture": {
+          "index": 0
+        },
         "metallicFactor": 0.05,
         "roughnessFactor": 0.75
       }
@@ -375,5 +400,16 @@
       ]
     }
   ],
-  "scene": 0
+  "scene": 0,
+  "extras": {
+    "cubatarium_grip": {
+      "offset": [
+        0.0,
+        -0.15,
+        0.0
+      ],
+      "note": "handle grasp"
+    },
+    "authoring_source": "cubatarium-recipe"
+  }
 }

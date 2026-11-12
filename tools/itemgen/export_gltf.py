@@ -1,4 +1,4 @@
-"""Export box parts with per-role materials to glTF 2.0."""
+"""Export box parts with a shared 64x64 atlas to glTF 2.0."""
 
 from __future__ import annotations
 
@@ -7,8 +7,18 @@ import struct
 from pathlib import Path
 from typing import Any
 
+from itemgen.texturegen import bake_atlas, role_uv
 
-def box_mesh(ox: float, oy: float, oz: float, sx: float, sy: float, sz: float):
+
+def box_mesh(
+    ox: float,
+    oy: float,
+    oz: float,
+    sx: float,
+    sy: float,
+    sz: float,
+    uv_rect: tuple[float, float, float, float],
+):
     hx, hy, hz = sx * 0.5, sy * 0.5, sz * 0.5
     corners = [
         (ox - hx, oy - hy, oz - hz),
@@ -28,7 +38,13 @@ def box_mesh(ox: float, oy: float, oz: float, sx: float, sy: float, sz: float):
         (4, 0, 3, 7),
         (1, 5, 6, 2),
     ]
-    uvs = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
+    u0, v0, u1, v1 = uv_rect
+    # Inset slightly so nearest filtering stays inside the tile.
+    pad_u = (u1 - u0) * 0.08
+    pad_v = (v1 - v0) * 0.08
+    uu0, uu1 = u0 + pad_u, u1 - pad_u
+    vv0, vv1 = v0 + pad_v, v1 - pad_v
+    uvs = [(uu0, vv0), (uu1, vv0), (uu1, vv1), (uu0, vv1)]
     positions: list[float] = []
     texcoords: list[float] = []
     indices: list[int] = []
@@ -44,21 +60,21 @@ def box_mesh(ox: float, oy: float, oz: float, sx: float, sy: float, sz: float):
     return positions, texcoords, indices
 
 
-def _rgb01(rgb: list[int] | tuple[int, int, int]) -> list[float]:
-    return [rgb[0] / 255.0, rgb[1] / 255.0, rgb[2] / 255.0, 1.0]
-
-
 def write_gltf(
     dest_dir: Path,
     item_id: str,
     parts: list[dict[str, Any]],
     palette: dict[str, list[int]],
     *,
+    material: str = "iron",
     generator: str = "cubatarium-itemgen",
-) -> None:
+) -> Path:
     dest_dir.mkdir(parents=True, exist_ok=True)
+    tex_dir = dest_dir / "textures"
+    tex_dir.mkdir(parents=True, exist_ok=True)
+    atlas_path = tex_dir / "diffuse.png"
+    bake_atlas(palette, material=material, out_path=atlas_path)
 
-    # Group parts by role so each material is one primitive.
     roles: list[str] = []
     grouped: dict[str, list[dict[str, Any]]] = {}
     for part in parts:
@@ -68,14 +84,10 @@ def write_gltf(
             grouped[role] = []
         grouped[role].append(part)
 
-    positions: list[float] = []
-    texcoords: list[float] = []
-    indices: list[int] = []
-    primitives: list[dict[str, Any]] = []
-    materials: list[dict[str, Any]] = []
-    accessors: list[dict[str, Any]] = []
     buffer_views: list[dict[str, Any]] = []
-
+    accessors: list[dict[str, Any]] = []
+    materials: list[dict[str, Any]] = []
+    primitives: list[dict[str, Any]] = []
     blob = bytearray()
 
     def align4() -> None:
@@ -86,8 +98,9 @@ def write_gltf(
         role_parts = grouped[role]
         vbase = 0
         role_pos: list[float] = []
-        role_uv: list[float] = []
+        role_uvs: list[float] = []
         role_idx: list[int] = []
+        uv_rect = role_uv(role)
         for part in role_parts:
             off = part.get("offset", [0, 0, 0])
             size = part.get("size", [0.2, 0.2, 0.2])
@@ -98,10 +111,11 @@ def write_gltf(
                 max(0.02, float(size[0])),
                 max(0.02, float(size[1])),
                 max(0.02, float(size[2])),
+                uv_rect,
             )
             nverts = len(pos) // 3
             role_pos.extend(pos)
-            role_uv.extend(uv)
+            role_uvs.extend(uv)
             role_idx.extend([i + vbase for i in idx])
             vbase += nverts
 
@@ -112,8 +126,8 @@ def write_gltf(
         align4()
 
         uv_ofs = len(blob)
-        for i in range(0, len(role_uv), 2):
-            blob.extend(struct.pack("<ff", role_uv[i], role_uv[i + 1]))
+        for i in range(0, len(role_uvs), 2):
+            blob.extend(struct.pack("<ff", role_uvs[i], role_uvs[i + 1]))
         uv_len = len(blob) - uv_ofs
         align4()
 
@@ -160,12 +174,12 @@ def write_gltf(
             }
         )
 
-        color = palette.get(role) or palette.get("head") or palette.get("body") or [160, 160, 160]
         materials.append(
             {
                 "name": role,
                 "pbrMetallicRoughness": {
-                    "baseColorFactor": _rgb01(color),
+                    "baseColorFactor": [1.0, 1.0, 1.0, 1.0],
+                    "baseColorTexture": {"index": 0},
                     "metallicFactor": 0.05 if role in ("head", "edge", "accent") else 0.0,
                     "roughnessFactor": 0.75 if role in ("head", "edge") else 0.95,
                 },
@@ -188,12 +202,19 @@ def write_gltf(
         "buffers": [{"uri": bin_name, "byteLength": len(blob)}],
         "bufferViews": buffer_views,
         "accessors": accessors,
+        "images": [{"uri": "textures/diffuse.png"}],
+        "textures": [{"source": 0}],
         "materials": materials,
         "meshes": [{"name": item_id, "primitives": primitives}],
         "nodes": [{"mesh": 0, "name": item_id}],
         "scenes": [{"nodes": [0]}],
         "scene": 0,
+        "extras": {
+            "cubatarium_grip": {"offset": [0.0, -0.15, 0.0], "note": "handle grasp"},
+            "authoring_source": "cubatarium-recipe",
+        },
     }
     (dest_dir / "model.gltf").write_text(
         json.dumps(gltf, indent=2) + "\n", encoding="utf-8"
     )
+    return atlas_path

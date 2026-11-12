@@ -151,16 +151,29 @@
       "type": "SCALAR"
     }
   ],
+  "images": [
+    {
+      "uri": "textures/diffuse.png"
+    }
+  ],
+  "textures": [
+    {
+      "source": 0
+    }
+  ],
   "materials": [
     {
       "name": "body",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          0.6588235294117647,
-          0.2823529411764706,
-          0.2823529411764706,
+          1.0,
+          1.0,
+          1.0,
           1.0
         ],
+        "baseColorTexture": {
+          "index": 0
+        },
         "metallicFactor": 0.0,
         "roughnessFactor": 0.95
       }
@@ -169,11 +182,14 @@
       "name": "accent",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          0.8235294117647058,
-          0.5490196078431373,
-          0.5490196078431373,
+          1.0,
+          1.0,
+          1.0,
           1.0
         ],
+        "baseColorTexture": {
+          "index": 0
+        },
         "metallicFactor": 0.05,
         "roughnessFactor": 0.95
       }
@@ -182,11 +198,14 @@
       "name": "edge",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          0.3764705882352941,
-          0.1568627450980392,
-          0.1568627450980392,
+          1.0,
+          1.0,
+          1.0,
           1.0
         ],
+        "baseColorTexture": {
+          "index": 0
+        },
         "metallicFactor": 0.05,
         "roughnessFactor": 0.75
       }
@@ -239,5 +258,16 @@
       ]
     }
   ],
-  "scene": 0
+  "scene": 0,
+  "extras": {
+    "cubatarium_grip": {
+      "offset": [
+        0.0,
+        -0.15,
+        0.0
+      ],
+      "note": "handle grasp"
+    },
+    "authoring_source": "cubatarium-recipe"
+  }
 }

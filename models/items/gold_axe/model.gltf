@@ -136,14 +136,14 @@
       "count": 24,
       "type": "VEC3",
       "min": [
-        -0.02,
-        0.28,
-        -0.035
+        -0.015000000000000003,
+        0.29500000000000004,
+        -0.03
       ],
       "max": [
-        0.06,
-        0.36,
-        0.035
+        0.05500000000000001,
+        0.365,
+        0.03
       ]
     },
     {
@@ -164,14 +164,14 @@
       "count": 24,
       "type": "VEC3",
       "min": [
-        0.03,
-        0.26,
-        -0.0275
+        0.030000000000000013,
+        0.27999999999999997,
+        -0.025
       ],
       "max": [
-        0.27,
-        0.42000000000000004,
-        0.0275
+        0.25,
+        0.42,
+        0.025
       ]
     },
     {
@@ -192,14 +192,14 @@
       "count": 24,
       "type": "VEC3",
       "min": [
-        0.23500000000000001,
-        0.22000000000000003,
-        -0.0175
+        0.225,
+        0.24,
+        -0.015
       ],
       "max": [
-        0.28500000000000003,
-        0.46,
-        0.0175
+        0.275,
+        0.45999999999999996,
+        0.015
       ]
     },
     {
@@ -220,14 +220,14 @@
       "count": 24,
       "type": "VEC3",
       "min": [
-        0.05,
-        0.29000000000000004,
-        -0.03
+        0.045000000000000005,
+        0.305,
+        -0.025
       ],
       "max": [
-        0.11,
-        0.39,
-        0.03
+        0.095,
+        0.39499999999999996,
+        0.025
       ]
     },
     {
@@ -243,16 +243,29 @@
       "type": "SCALAR"
     }
   ],
+  "images": [
+    {
+      "uri": "textures/diffuse.png"
+    }
+  ],
+  "textures": [
+    {
+      "source": 0
+    }
+  ],
   "materials": [
     {
       "name": "handle",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          0.4235294117647059,
-          0.2823529411764706,
-          0.1568627450980392,
+          1.0,
+          1.0,
+          1.0,
           1.0
         ],
+        "baseColorTexture": {
+          "index": 0
+        },
         "metallicFactor": 0.0,
         "roughnessFactor": 0.95
       }
@@ -261,11 +274,14 @@
       "name": "binding",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          0.6274509803921569,
-          0.47058823529411764,
-          0.18823529411764706,
+          1.0,
+          1.0,
+          1.0,
           1.0
         ],
+        "baseColorTexture": {
+          "index": 0
+        },
         "metallicFactor": 0.0,
         "roughnessFactor": 0.95
       }
@@ -274,11 +290,14 @@
       "name": "head",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          0.8627450980392157,
-          0.7058823529411765,
-          0.25098039215686274,
+          1.0,
+          1.0,
+          1.0,
           1.0
         ],
+        "baseColorTexture": {
+          "index": 0
+        },
         "metallicFactor": 0.05,
         "roughnessFactor": 0.75
       }
@@ -287,11 +306,14 @@
       "name": "edge",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          0.9411764705882353,
-          0.8235294117647058,
-          0.43137254901960786,
+          1.0,
+          1.0,
+          1.0,
           1.0
         ],
+        "baseColorTexture": {
+          "index": 0
+        },
         "metallicFactor": 0.05,
         "roughnessFactor": 0.75
       }
@@ -300,11 +322,14 @@
       "name": "accent",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          0.7058823529411765,
-          0.5490196078431373,
-          0.18823529411764706,
+          1.0,
+          1.0,
+          1.0,
           1.0
         ],
+        "baseColorTexture": {
+          "index": 0
+        },
         "metallicFactor": 0.05,
         "roughnessFactor": 0.95
       }
@@ -375,5 +400,16 @@
       ]
     }
   ],
-  "scene": 0
+  "scene": 0,
+  "extras": {
+    "cubatarium_grip": {
+      "offset": [
+        0.0,
+        -0.15,
+        0.0
+      ],
+      "note": "handle grasp"
+    },
+    "authoring_source": "cubatarium-recipe"
+  }
 }

@@ -19,6 +19,23 @@ CONTENT = ROOT / "content" / "items"
 STAGING = ROOT / "assetgen_output" / "items" / "staging"
 
 
+def _normalize_textures_dir(dest: Path) -> Path:
+    """Ensure published atlas lives under lowercase `textures/` (Windows-safe)."""
+    desired = dest / "textures"
+    for child in list(dest.iterdir()) if dest.is_dir() else []:
+        if child.is_dir() and child.name.lower() == "textures" and child.name != "textures":
+            tmp = dest / "_textures_case_fix"
+            if tmp.exists():
+                for old in tmp.iterdir():
+                    old.unlink()
+                tmp.rmdir()
+            child.rename(tmp)
+            tmp.rename(desired)
+            break
+    desired.mkdir(parents=True, exist_ok=True)
+    return desired
+
+
 def load_materials() -> dict[str, dict[str, list[int]]]:
     data = yaml.safe_load(MATERIALS.read_text(encoding="utf-8"))
     return {str(k): v for k, v in data.items() if isinstance(v, dict)}
@@ -62,7 +79,7 @@ def build_item(item_id: str, *, publish: bool = True) -> Path:
                 child.unlink()
     staging.mkdir(parents=True, exist_ok=True)
 
-    write_gltf(staging, item_id, parts, palette)
+    write_gltf(staging, item_id, parts, palette, material=str(recipe.get("palette") or material))
 
     attribution = {
         "id": item_id,
@@ -116,6 +133,15 @@ def build_item(item_id: str, *, publish: bool = True) -> Path:
             src = staging / name
             if src.is_file():
                 (dest / name).write_bytes(src.read_bytes())
+        tex_src = staging / "textures" / "diffuse.png"
+        if tex_src.is_file():
+            tex_dest = _normalize_textures_dir(dest)
+            (tex_dest / "diffuse.png").write_bytes(tex_src.read_bytes())
+            # Drop legacy Minecraft atlas leftovers if present.
+            for stale in ("colormap.png", "body.png"):
+                leftover = tex_dest / stale
+                if leftover.is_file():
+                    leftover.unlink()
         wear_src = staging / "wear.json"
         if wear_src.is_file():
             (dest / "wear.json").write_bytes(wear_src.read_bytes())

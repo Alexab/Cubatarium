@@ -35,6 +35,16 @@ int main()
   Expect(params.SatietyDelta == 20.f, "apple satiety");
   Expect(params.HealthDelta == 2.f, "apple health");
 
+  ItemDefinition waterskin;
+  waterskin.Id = "waterskin";
+  waterskin.Use.Action = ItemUseActionKind::Drink;
+  waterskin.Use.Thirst = 40.f;
+  const auto drink = ItemUseRegistry::FromDefinition(waterskin);
+  Expect(drink.Action == ItemUseAction::Drink, "waterskin drink");
+  Expect(drink.ThirstDelta == 40.f, "waterskin thirst");
+  Expect(cutum::ItemUseConsumes(ItemUseAction::Eat), "eat consumes");
+  Expect(!cutum::ItemUseConsumes(ItemUseAction::Drink), "drink reusable");
+
   std::cout << "influence_use_test: OK" << std::endl;
   return 0;
 }

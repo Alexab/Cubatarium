@@ -1515,6 +1515,25 @@ cubatarium_add_test(NAME resource_economy_test
         src/Test/ResourceEconomyTest.cpp
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
+cubatarium_add_test(NAME item_survival_hooks_test
+    SOURCES
+        src/Creatures/Core/CreatureCatalogTypes.cpp
+        src/Creatures/Core/CreatureInventory.cpp
+        src/Creatures/Definition/CreatureDefinitionStorage.cpp
+        src/Creatures/Locomotion/LocomotionTypes.cpp
+        src/Creatures/Stats/CreatureStatsDefaults.cpp
+        src/Creatures/Stats/CreatureStatsJson.cpp
+        src/Creatures/Visual/CreatureRigidModelLoader.cpp
+        src/Game/Economy/ResourceEconomy.cpp
+        src/Items/ItemDefinitionStorage.cpp
+        src/Items/ItemUseRegistry.cpp
+        src/Items/ItemVisualPresetLibrary.cpp
+        src/Items/ToolCapabilities.cpp
+        src/Test/ItemSurvivalHooksTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+add_test(NAME item_survival_hooks_test COMMAND $<TARGET_FILE:item_survival_hooks_test>)
+set_tests_properties(item_survival_hooks_test PROPERTIES LABELS "unit;items")
+
 cubatarium_add_test(NAME mode_policy_test
     SOURCES
         src/Test/ModePolicyTest.cpp
