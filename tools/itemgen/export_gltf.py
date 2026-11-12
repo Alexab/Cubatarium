@@ -30,13 +30,19 @@ def box_mesh(
         (ox + hx, oy + hy, oz + hz),
         (ox - hx, oy + hy, oz + hz),
     ]
+    # Faces are wound counter-clockwise when viewed from outside, so triangle
+    # normals point outward as required by glTF (front faces are CCW in a
+    # right-handed coordinate system). Each face also lists the world axes its
+    # (u, v) texture coordinates map onto: UVs derive from the corner position
+    # in the face plane, not from the vertex traversal order, so reversed
+    # contours no longer mirror the texture.
     faces = [
-        (0, 1, 2, 3),
-        (5, 4, 7, 6),
-        (4, 5, 1, 0),
-        (3, 2, 6, 7),
-        (4, 0, 3, 7),
-        (1, 5, 6, 2),
+        ((3, 2, 1, 0), (0, 1)),  # -Z
+        ((6, 7, 4, 5), (0, 1)),  # +Z
+        ((0, 1, 5, 4), (0, 2)),  # -Y
+        ((7, 6, 2, 3), (0, 2)),  # +Y
+        ((7, 3, 0, 4), (2, 1)),  # -X
+        ((2, 6, 5, 1), (2, 1)),  # +X
     ]
     u0, v0, u1, v1 = uv_rect
     # Inset slightly so nearest filtering stays inside the tile.
@@ -44,32 +50,24 @@ def box_mesh(
     pad_v = (v1 - v0) * 0.08
     uu0, uu1 = u0 + pad_u, u1 - pad_u
     vv0, vv1 = v0 + pad_v, v1 - pad_v
-    uvs = [(uu0, vv0), (uu1, vv0), (uu1, vv1), (uu0, vv1)]
+    bounds = [(ox - hx, ox + hx), (oy - hy, oy + hy), (oz - hz, oz + hz)]
     positions: list[float] = []
     texcoords: list[float] = []
     indices: list[int] = []
     base = 0
-    for face in faces:
-        for i, ci in enumerate(face):
+    for face_corners, (u_axis, v_axis) in faces:
+        for ci in face_corners:
             x, y, z = corners[ci]
-            u, v = uvs[i]
+            coord = (x, y, z)
+            t_u = 0.0 if coord[u_axis] <= bounds[u_axis][0] else 1.0
+            t_v = 0.0 if coord[v_axis] <= bounds[v_axis][0] else 1.0
             positions.extend([x, y, z])
-            texcoords.extend([u, v])
+            texcoords.extend(
+                [uu0 + (uu1 - uu0) * t_u, vv0 + (vv1 - vv0) * t_v]
+            )
         indices.extend([base, base + 1, base + 2, base, base + 2, base + 3])
         base += 4
     return positions, texcoords, indices
-
-
-def _grip_offset(parts: list[dict[str, Any]]) -> list[float]:
-    handles = [p for p in parts if str(p.get("role")) == "handle"]
-    chosen = handles or parts
-    part = min(
-        chosen,
-        key=lambda p: float(p["offset"][1]) - float(p["size"][1]) * 0.5,
-    )
-    ox, oy, oz = (float(v) for v in part["offset"])
-    sy = float(part["size"][1])
-    return [round(ox, 3), round(oy - sy * 0.25, 3), round(oz, 3)]
 
 
 def write_gltf(
@@ -221,13 +219,7 @@ def write_gltf(
         "nodes": [{"mesh": 0, "name": item_id}],
         "scenes": [{"nodes": [0]}],
         "scene": 0,
-        "extras": {
-            "cubatarium_grip": {
-                "offset": _grip_offset(parts),
-                "note": "lower third of the handle",
-            },
-            "authoring_source": "cubatarium-recipe",
-        },
+        "extras": {"authoring_source": "cubatarium-recipe"},
     }
     (dest_dir / "model.gltf").write_text(
         json.dumps(gltf, indent=2) + "\n", encoding="utf-8"
