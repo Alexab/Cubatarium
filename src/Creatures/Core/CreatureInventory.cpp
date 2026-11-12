@@ -159,17 +159,13 @@ void UCreatureInventory::EnsureDefaultHotbar()
     }
   }
 
-  // Owned / survival: drop hotbar ghosts that are not backed by storage, and
-  // convert leftover creative unlimited counts to owned stack sizes.
+  // Owned / survival: drop hotbar ghosts that are not backed by storage (any
+  // kind — Block, Object and Item alike), and convert leftover creative
+  // unlimited counts to owned stack sizes.
   for (size_t slot = 0; slot < Hotbars[0].slots.size(); ++slot)
   {
     auto &s = Hotbars[0].slots[slot];
     if (s.empty || s.entry.Id.empty())
-    {
-      continue;
-    }
-    if (s.entry.kind != InventoryEntryKind::Block &&
-        s.entry.kind != InventoryEntryKind::Object)
     {
       continue;
     }
@@ -351,7 +347,8 @@ const InventoryEntryRef &UCreatureInventory::GetEquippedArmor(size_t slot) const
 }
 
 bool UCreatureInventory::EquipArmor(size_t slot, const InventoryEntryRef &entry,
-                                     const UItemDefinitionStorage &items)
+                                     const UItemDefinitionStorage &items,
+                                     bool consumeFromStorage)
 {
   if (slot >= kArmorSlots)
   {
@@ -383,7 +380,32 @@ bool UCreatureInventory::EquipArmor(size_t slot, const InventoryEntryRef &entry,
     return false;
   }
 
-  EquippedArmor[slot] = entry;
+  InventoryEntryRef worn = entry;
+  worn.empty = false;
+  // The worn instance is a single copy; a bag/hotbar mirror may carry the
+  // whole stack count. Unlimited (-1) copies stay unlimited.
+  if (worn.count > 1)
+  {
+    worn.count = 1;
+  }
+
+  if (consumeFromStorage && worn.count > 0)
+  {
+    // The worn copy leaves the bag: decrement storage so it is not counted
+    // twice, then re-sync the hotbar mirrors.
+    const auto it = Storage.find(worn.Id);
+    if (it != Storage.end() && it->second > 0)
+    {
+      it->second -= 1;
+      if (it->second <= 0)
+      {
+        Storage.erase(it);
+      }
+      SyncItemMirrors(worn.kind, worn.Id);
+    }
+  }
+
+  EquippedArmor[slot] = worn;
 
   // Recompute pre-aggregated armor groups.
   EquippedArmorGroups.Ratings.clear();
@@ -435,7 +457,19 @@ void UCreatureInventory::UnequipArmor(size_t slot,
   {
     return;
   }
+  const InventoryEntryRef worn = EquippedArmor[slot];
   EquippedArmor[slot] = InventoryEntryRef{};
+  // Non-broken gear returns to the bag (storage); broken items are destroyed.
+  if (!worn.empty && !worn.broken && !worn.Id.empty())
+  {
+    // Legacy worn copies may carry a stale mirror count; one copy was worn.
+    const int returned = worn.count > 1 ? 1 : worn.count;
+    if (returned > 0)
+    {
+      AddItem(worn.Id, returned);
+      SyncItemMirrors(worn.kind, worn.Id);
+    }
+  }
   EquippedArmorGroups.Ratings.clear();
   for (size_t i = 0; i < kArmorSlots; ++i)
   {
@@ -515,16 +549,36 @@ bool UCreatureInventory::EquipOffhand(const InventoryEntryRef &entry)
   }
   EquippedOffhand = entry;
   EquippedOffhand.empty = false;
+  // The worn instance is a single copy; unlimited (-1) stays unlimited.
+  if (EquippedOffhand.count > 1)
+  {
+    EquippedOffhand.count = 1;
+  }
   OffhandArmorGroups.Ratings.clear();
   return true;
 }
 
 bool UCreatureInventory::EquipOffhand(const InventoryEntryRef &entry,
-                                      const UItemDefinitionStorage &items)
+                                      const UItemDefinitionStorage &items,
+                                      bool consumeFromStorage)
 {
   if (!EquipOffhand(entry))
   {
     return false;
+  }
+  if (consumeFromStorage && entry.count > 0)
+  {
+    // The worn copy leaves the bag: decrement storage and re-sync mirrors.
+    const auto it = Storage.find(entry.Id);
+    if (it != Storage.end() && it->second > 0)
+    {
+      it->second -= 1;
+      if (it->second <= 0)
+      {
+        Storage.erase(it);
+      }
+      SyncItemMirrors(entry.kind, entry.Id);
+    }
   }
   RecalcOffhandArmorGroups(&items);
   return true;
@@ -538,8 +592,48 @@ void UCreatureInventory::UnequipOffhand()
 
 void UCreatureInventory::UnequipOffhand(const UItemDefinitionStorage &items)
 {
-  (void)items;
+  const InventoryEntryRef worn = EquippedOffhand;
   UnequipOffhand();
+  // Non-broken gear returns to the bag (storage); broken items are destroyed.
+  if (!worn.empty && !worn.broken && !worn.Id.empty())
+  {
+    const int returned = worn.count > 1 ? 1 : worn.count;
+    if (returned > 0)
+    {
+      AddItem(worn.Id, returned);
+      SyncItemMirrors(worn.kind, worn.Id);
+    }
+  }
+}
+
+void UCreatureInventory::SyncItemMirrors(InventoryEntryKind kind,
+                                         const std::string &id)
+{
+  if (id.empty())
+  {
+    return;
+  }
+  const auto it = Storage.find(id);
+  const int total = (it == Storage.end()) ? 0 : it->second;
+  for (auto &bar : Hotbars)
+  {
+    for (auto &slot : bar.slots)
+    {
+      if (slot.empty || slot.entry.kind != kind || slot.entry.Id != id)
+      {
+        continue;
+      }
+      if (total <= 0)
+      {
+        slot.empty = true;
+        slot.entry = InventoryEntryRef{};
+      }
+      else
+      {
+        slot.entry.count = total;
+      }
+    }
+  }
 }
 
 void UCreatureInventory::EnsureHotbarCount(size_t count)

@@ -56,21 +56,34 @@ public:
   // Armor equipment (0..3): 0=head, 1=chest, 2=legs, 3=feet.
   static constexpr size_t kArmorSlotCount = 4;
   const InventoryEntryRef &GetEquippedArmor(size_t slot) const;
+  /// Equips a worn copy. When `consumeFromStorage` is set and storage backs
+  /// the id, one unit leaves storage and every hotbar mirror is re-synced;
+  /// worn armor is therefore no longer also counted in the bag. Fabricated
+  /// entries without storage backing (QA gear) are accepted unchanged.
   bool EquipArmor(size_t slot, const InventoryEntryRef &entry,
-                   const UItemDefinitionStorage &items);
+                   const UItemDefinitionStorage &items,
+                   bool consumeFromStorage = true);
+  /// Clears the worn copy. Non-broken items return to storage; broken ones
+  /// are destroyed (wear reached the end).
   void UnequipArmor(size_t slot, const UItemDefinitionStorage &items);
   const ArmorGroups &GetEquippedArmorGroups() const { return EquippedArmorGroups; }
 
   const InventoryEntryRef &GetEquippedOffhand() const;
   bool EquipOffhand(const InventoryEntryRef &entry);
   bool EquipOffhand(const InventoryEntryRef &entry,
-                    const UItemDefinitionStorage &items);
+                    const UItemDefinitionStorage &items,
+                    bool consumeFromStorage = true);
   void UnequipOffhand();
+  /// Items-aware unequip: non-broken worn copies return to storage.
   void UnequipOffhand(const UItemDefinitionStorage &items);
   const ArmorGroups &GetOffhandArmorGroups() const { return OffhandArmorGroups; }
 
 private:
   void RecalcOffhandArmorGroups(const UItemDefinitionStorage *items);
+  /// Sets every hotbar mirror of (kind, id) to the current storage total and
+  /// clears the mirrors when nothing is left. Keeps HUD counts true when the
+  /// same item is held in several slots.
+  void SyncItemMirrors(InventoryEntryKind kind, const std::string &id);
 
   std::map<std::string, int> Storage;
   std::vector<HotbarBar> Hotbars;

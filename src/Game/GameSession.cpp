@@ -21,6 +21,7 @@
 #include "WorldGen/Core/WorldGenContentReload.h"
 
 #include <algorithm>
+#include <functional>
 #include <iostream>
 #include <sstream>
 
@@ -448,7 +449,15 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
     {
       if (UCreatureInventory *inv = GetControlledInventory(World.get()))
       {
-        inv->UnequipOffhand();
+        if (UItemDefinitionStorage *items =
+                World ? World->GetItemDefinitionStorage() : nullptr)
+        {
+          inv->UnequipOffhand(*items);
+        }
+        else
+        {
+          inv->UnequipOffhand();
+        }
       }
     }
     SelectSlot(target.bar, target.slot);
@@ -461,8 +470,23 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
     UCreatureInventory *inv = GetControlledInventory(World.get());
     UItemDefinitionStorage *items =
         World ? World->GetItemDefinitionStorage() : nullptr;
-    if (!inv || !items || entry.kind != InventoryEntryKind::Item ||
-        !inv->EquipArmor(target.slot, entry, *items))
+    if (!inv || !items || entry.kind != InventoryEntryKind::Item)
+    {
+      CancelDrag();
+      return false;
+    }
+    // Return the source copy to storage before the equip consumes one, so
+    // re-equipping (armor -> armor, offhand -> armor) is net zero.
+    if (source.surface == SlotSurface::CharacterArmor &&
+        source.slot != target.slot)
+    {
+      inv->UnequipArmor(source.slot, *items);
+    }
+    else if (source.surface == SlotSurface::CharacterOffhand)
+    {
+      inv->UnequipOffhand(*items);
+    }
+    if (!inv->EquipArmor(target.slot, entry, *items))
     {
       CancelDrag();
       return false;
@@ -470,15 +494,6 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
     if (source.surface == SlotSurface::Hotbar)
     {
       inv->ClearHotbarSlot(source.bar, source.slot);
-    }
-    else if (source.surface == SlotSurface::CharacterArmor &&
-             source.slot != target.slot)
-    {
-      inv->UnequipArmor(source.slot, *items);
-    }
-    else if (source.surface == SlotSurface::CharacterOffhand)
-    {
-      inv->UnequipOffhand();
     }
     CancelDrag();
     return true;
@@ -526,7 +541,7 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
       }
       if (source.surface == SlotSurface::CharacterOffhand)
       {
-        inv->UnequipOffhand();
+        inv->UnequipOffhand(*items);
       }
       else if (source.surface == SlotSurface::CharacterArmor)
       {
@@ -536,6 +551,16 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
       CancelDrag();
       return true;
     }
+    // Return the source copy to storage before the equip consumes one, so
+    // re-equipping (armor -> armor, offhand -> armor) is net zero.
+    if (source.surface == SlotSurface::CharacterArmor)
+    {
+      inv->UnequipArmor(source.slot, *items);
+    }
+    else if (source.surface == SlotSurface::CharacterOffhand)
+    {
+      inv->UnequipOffhand(*items);
+    }
     if (!inv->EquipArmor(static_cast<size_t>(armorSlot), entry, *items))
     {
       CancelDrag();
@@ -544,14 +569,6 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
     if (source.surface == SlotSurface::Hotbar)
     {
       inv->ClearHotbarSlot(source.bar, source.slot);
-    }
-    else if (source.surface == SlotSurface::CharacterArmor)
-    {
-      inv->UnequipArmor(source.slot, *items);
-    }
-    else if (source.surface == SlotSurface::CharacterOffhand)
-    {
-      inv->UnequipOffhand();
     }
     CancelDrag();
     return true;
@@ -568,6 +585,11 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
     }
     UItemDefinitionStorage *items =
         World ? World->GetItemDefinitionStorage() : nullptr;
+    // Return the armor copy to storage before the offhand equip consumes one.
+    if (source.surface == SlotSurface::CharacterArmor && items)
+    {
+      inv->UnequipArmor(source.slot, *items);
+    }
     const bool ok =
         items ? inv->EquipOffhand(entry, *items) : inv->EquipOffhand(entry);
     if (!ok)
@@ -578,17 +600,6 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
     if (source.surface == SlotSurface::Hotbar)
     {
       inv->ClearHotbarSlot(source.bar, source.slot);
-    }
-    else if (source.surface == SlotSurface::CharacterArmor)
-    {
-      if (UItemDefinitionStorage *items =
-              World ? World->GetItemDefinitionStorage() : nullptr)
-      {
-        if (items)
-        {
-          inv->UnequipArmor(source.slot, *items);
-        }
-      }
     }
     CancelDrag();
     return true;
@@ -625,7 +636,15 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
   {
     if (UCreatureInventory *inv = GetControlledInventory(World.get()))
     {
-      inv->UnequipOffhand();
+      if (UItemDefinitionStorage *items =
+              World ? World->GetItemDefinitionStorage() : nullptr)
+      {
+        inv->UnequipOffhand(*items);
+      }
+      else
+      {
+        inv->UnequipOffhand();
+      }
     }
     CancelDrag();
     return true;
@@ -672,6 +691,25 @@ std::vector<InventoryEntryView>
 UGameSession::GetEntries(ContentKind tab, const std::string &groupId) const
 {
   return GetEntries(tab, groupId, GetInventoryMode());
+}
+
+size_t UGameSession::GetInventorySignature() const
+{
+  const UCreatureInventory *inv = GetControlledInventory(World.get());
+  if (!inv)
+  {
+    return 0;
+  }
+  size_t sig = 0;
+  for (const auto &pair : inv->GetStorage())
+  {
+    // Map negative (unlimited) counts onto a distinct constant so a creative
+    // -1 <-> finite flip still changes the signature.
+    const size_t magnitude =
+        pair.second < 0 ? size_t{0x7FFFFFFF} : static_cast<size_t>(pair.second) + 1;
+    sig += std::hash<std::string>{}(pair.first) * magnitude;
+  }
+  return sig;
 }
 
 std::vector<InventoryEntryView>
