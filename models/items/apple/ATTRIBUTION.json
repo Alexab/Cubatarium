@@ -2,6 +2,9 @@
   "id": "apple",
   "format": "gltf",
   "license": "CC0-1.0",
-  "source": "cubatarium_parts_v1",
-  "notes": "parts_v1 box extrusion; optional upstream pack override"
+  "authoring_source": "cubatarium-recipe",
+  "family": "apple",
+  "material": "organic",
+  "recipe_version": 1,
+  "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
 }

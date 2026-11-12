@@ -27,6 +27,10 @@ struct ResourceEconomyService
   static void GrantBlockDrop(WorldGameMode mode, UCreatureInventory &inv,
                               const std::string &blockTypeName,
                               int count = 1);
+
+  /// Grants a creature/item drop into inventory (same Creative gate as blocks).
+  static void GrantItemDrop(WorldGameMode mode, UCreatureInventory &inv,
+                             const std::string &itemId, int count = 1);
 };
 
 } // namespace cutum

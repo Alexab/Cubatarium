@@ -1,2 +1,2 @@
 CC0-1.0
-https://kaylousberg.itch.io/rpg-tools-bits
+Original Cubatarium item mesh generated from item_recipes.

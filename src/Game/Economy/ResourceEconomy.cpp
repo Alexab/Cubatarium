@@ -107,6 +107,14 @@ bool ResourceEconomyService::ConsumeOnPlace(WorldGameMode mode,
   return true;
 }
 
+void ResourceEconomyService::GrantItemDrop(WorldGameMode mode,
+                                            UCreatureInventory &inv,
+                                            const std::string &itemId,
+                                            int count)
+{
+  GrantBlockDrop(mode, inv, itemId, count);
+}
+
 void ResourceEconomyService::GrantBlockDrop(WorldGameMode mode,
                                              UCreatureInventory &inv,
                                              const std::string &blockTypeName,

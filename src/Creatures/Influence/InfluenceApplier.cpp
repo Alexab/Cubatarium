@@ -1,8 +1,10 @@
 #include "Creatures/Influence/InfluenceApplier.h"
 #include "Creatures/Core/Creature.h"
+#include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Influence/InfluenceEvent.h"
 #include "Creatures/Influence/StatusEffectSystem.h"
 #include "Creatures/Stats/CreatureVitalsSystem.h"
+#include "Game/Economy/ResourceEconomy.h"
 #include "Game/Inventory/InventoryTypes.h"
 #include "Game/ModePolicy.h"
 #include "Items/ItemDefinitionStorage.h"
@@ -298,31 +300,34 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
     }
     v.ClampCurrents();
 
-    // Consume one from storage and active hotbar if present.
-    auto &storage = source->GetInventory().GetStorageMutable();
-    const auto it = storage.find(pred.UseItemId);
-    if (it != storage.end() && it->second > 0)
+    // Consume one from storage and active hotbar when the use is edible.
+    if (pred.UseConsumes)
     {
-      --it->second;
-      if (it->second <= 0)
+      auto &storage = source->GetInventory().GetStorageMutable();
+      const auto it = storage.find(pred.UseItemId);
+      if (it != storage.end() && it->second > 0)
       {
-        storage.erase(it);
-      }
-    }
-    if (InventoryEntryRef *active = source->GetInventory().GetActiveEntryRef())
-    {
-      if (!active->empty && active->kind == InventoryEntryKind::Item &&
-          active->Id == pred.UseItemId)
-      {
-        if (active->count > 1)
+        --it->second;
+        if (it->second <= 0)
         {
-          --active->count;
+          storage.erase(it);
         }
-        else
+      }
+      if (InventoryEntryRef *active = source->GetInventory().GetActiveEntryRef())
+      {
+        if (!active->empty && active->kind == InventoryEntryKind::Item &&
+            active->Id == pred.UseItemId)
         {
-          const size_t bar = source->GetInventory().GetActiveBarIndex();
-          const size_t slot = source->GetInventory().GetActiveSlotIndex();
-          source->GetInventory().ClearHotbarSlot(bar, slot);
+          if (active->count > 1)
+          {
+            --active->count;
+          }
+          else
+          {
+            const size_t bar = source->GetInventory().GetActiveBarIndex();
+            const size_t slot = source->GetInventory().GetActiveSlotIndex();
+            source->GetInventory().ClearHotbarSlot(bar, slot);
+          }
         }
       }
     }
@@ -372,6 +377,18 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
                                             "influence", pred.SourceId))
       {
         result.AnyTargetRemoved = true;
+        if (source && source->GetId() != delta.TargetId)
+        {
+          if (const CreatureDefinition *killed =
+                  world.GetCreatureDefinition(target->GetTypeId()))
+          {
+            for (const CreatureDropEntry &drop : killed->drops)
+            {
+              ResourceEconomyService::GrantItemDrop(
+                  mode, source->GetInventory(), drop.itemId, drop.count);
+            }
+          }
+        }
         world.RemoveCreature(delta.TargetId);
         continue;
       }

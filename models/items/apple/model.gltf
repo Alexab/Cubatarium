@@ -1,31 +1,85 @@
 {
   "asset": {
     "version": "2.0",
-    "generator": "cubatarium parts_to_gltf"
+    "generator": "cubatarium-itemgen"
   },
   "buffers": [
     {
       "uri": "model.bin",
-      "byteLength": 1104
+      "byteLength": 2208
     }
   ],
   "bufferViews": [
     {
       "buffer": 0,
       "byteOffset": 0,
-      "byteLength": 576,
+      "byteLength": 288,
       "target": 34962
     },
     {
       "buffer": 0,
-      "byteOffset": 576,
-      "byteLength": 384,
+      "byteOffset": 288,
+      "byteLength": 192,
       "target": 34962
     },
     {
       "buffer": 0,
-      "byteOffset": 960,
-      "byteLength": 144,
+      "byteOffset": 480,
+      "byteLength": 72,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 552,
+      "byteLength": 288,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 840,
+      "byteLength": 192,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1032,
+      "byteLength": 72,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1104,
+      "byteLength": 288,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1392,
+      "byteLength": 192,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1584,
+      "byteLength": 72,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1656,
+      "byteLength": 288,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1944,
+      "byteLength": 192,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 2136,
+      "byteLength": 72,
       "target": 34963
     }
   ],
@@ -33,30 +87,168 @@
     {
       "bufferView": 0,
       "componentType": 5126,
-      "count": 48,
+      "count": 24,
       "type": "VEC3",
       "min": [
-        -0.14,
-        -0.020000000000000018,
-        -0.14
+        -0.11,
+        -0.11,
+        -0.11
       ],
       "max": [
-        0.14,
-        0.33,
-        0.14
+        0.11,
+        0.11,
+        0.11
       ]
     },
     {
       "bufferView": 1,
       "componentType": 5126,
-      "count": 48,
+      "count": 24,
       "type": "VEC2"
     },
     {
       "bufferView": 2,
       "componentType": 5123,
-      "count": 72,
+      "count": 36,
       "type": "SCALAR"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC3",
+      "min": [
+        -0.015,
+        0.1,
+        -0.015
+      ],
+      "max": [
+        0.015,
+        0.18000000000000002,
+        0.015
+      ]
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 5,
+      "componentType": 5123,
+      "count": 36,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 6,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC3",
+      "min": [
+        0.010000000000000002,
+        0.125,
+        -0.025
+      ],
+      "max": [
+        0.09,
+        0.15500000000000003,
+        0.025
+      ]
+    },
+    {
+      "bufferView": 7,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 8,
+      "componentType": 5123,
+      "count": 36,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 9,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC3",
+      "min": [
+        -0.03,
+        -0.05,
+        0.06
+      ],
+      "max": [
+        0.03,
+        0.009999999999999998,
+        0.1
+      ]
+    },
+    {
+      "bufferView": 10,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 11,
+      "componentType": 5123,
+      "count": 36,
+      "type": "SCALAR"
+    }
+  ],
+  "materials": [
+    {
+      "name": "body",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.7686274509803922,
+          0.18823529411764706,
+          0.18823529411764706,
+          1.0
+        ],
+        "metallicFactor": 0.0,
+        "roughnessFactor": 0.95
+      }
+    },
+    {
+      "name": "stem",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.2823529411764706,
+          0.47058823529411764,
+          0.18823529411764706,
+          1.0
+        ],
+        "metallicFactor": 0.0,
+        "roughnessFactor": 0.95
+      }
+    },
+    {
+      "name": "leaf",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.34509803921568627,
+          0.5803921568627451,
+          0.2196078431372549,
+          1.0
+        ],
+        "metallicFactor": 0.0,
+        "roughnessFactor": 0.95
+      }
+    },
+    {
+      "name": "accent",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.8627450980392157,
+          0.3137254901960784,
+          0.2823529411764706,
+          1.0
+        ],
+        "metallicFactor": 0.05,
+        "roughnessFactor": 0.95
+      }
     }
   ],
   "meshes": [
@@ -71,6 +263,33 @@
           "indices": 2,
           "mode": 4,
           "material": 0
+        },
+        {
+          "attributes": {
+            "POSITION": 3,
+            "TEXCOORD_0": 4
+          },
+          "indices": 5,
+          "mode": 4,
+          "material": 1
+        },
+        {
+          "attributes": {
+            "POSITION": 6,
+            "TEXCOORD_0": 7
+          },
+          "indices": 8,
+          "mode": 4,
+          "material": 2
+        },
+        {
+          "attributes": {
+            "POSITION": 9,
+            "TEXCOORD_0": 10
+          },
+          "indices": 11,
+          "mode": 4,
+          "material": 3
         }
       ]
     }
@@ -88,34 +307,5 @@
       ]
     }
   ],
-  "scene": 0,
-  "images": [
-    {
-      "uri": "Textures/body.png",
-      "name": "body"
-    }
-  ],
-  "textures": [
-    {
-      "source": 0
-    }
-  ],
-  "materials": [
-    {
-      "name": "body",
-      "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 0
-        },
-        "baseColorFactor": [
-          0.8235294117647058,
-          0.1568627450980392,
-          0.13725490196078433,
-          1.0
-        ],
-        "metallicFactor": 0.0,
-        "roughnessFactor": 1.0
-      }
-    }
-  ]
+  "scene": 0
 }

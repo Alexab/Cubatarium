@@ -23,6 +23,6 @@
   },
   "model": "models/items/wood_torch/model.gltf",
   "visual": {
-    "wield_scale": 1.1
+    "wield_scale": 1.0
   }
 }

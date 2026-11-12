@@ -1,0 +1,22 @@
+{
+  "id": "raw_meat",
+  "displayName": "Raw Meat",
+  "types": [
+    "misc"
+  ],
+  "stack_max": 16,
+  "wear_end": "destroy",
+  "use_action": "eat",
+  "use": {
+    "action": "eat",
+    "satiety": 28,
+    "health": 0
+  },
+  "visual": {
+    "wield_scale": 0.95,
+    "use": {
+      "eat": "eat_hand"
+    }
+  },
+  "model": "models/items/raw_meat/model.gltf"
+}

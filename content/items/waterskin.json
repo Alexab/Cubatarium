@@ -1,0 +1,24 @@
+{
+  "id": "waterskin",
+  "displayName": "Waterskin",
+  "types": [
+    "utility",
+    "misc"
+  ],
+  "stack_max": 1,
+  "wear_end": "indestructible",
+  "use_action": "drink",
+  "use": {
+    "action": "drink",
+    "thirst": 40,
+    "satiety": 0,
+    "health": 0
+  },
+  "visual": {
+    "wield_scale": 0.95,
+    "use": {
+      "drink": "eat_hand"
+    }
+  },
+  "model": "models/items/waterskin/model.gltf"
+}

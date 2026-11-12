@@ -1,0 +1,13 @@
+{
+  "id": "leather",
+  "displayName": "Leather",
+  "types": [
+    "misc"
+  ],
+  "stack_max": 64,
+  "wear_end": "destroy",
+  "model": "models/items/leather/model.gltf",
+  "visual": {
+    "wield_scale": 0.9
+  }
+}
