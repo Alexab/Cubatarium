@@ -1,8 +1,10 @@
 #include "Creatures/Core/CreatureInventory.h"
 #include "Game/ModePolicy.h"
 #include "Game/WorldGameMode.h"
+#include "Gui/Layout/GuiLayout.h"
 
 #include <iostream>
+#include <vector>
 
 static int Failures = 0;
 
@@ -68,6 +70,18 @@ int main()
   for (const auto &entry : survivalAfterMigrate.GetStorage())
   {
     Expect(entry.second != -1, "migrate leaves no unlimited counts");
+  }
+
+  {
+    const std::vector<bool> enabled{false, false, true, false, true};
+    Expect(cutum::NearestEnabledIndex(0, enabled) == 2,
+           "empty tab falls to the nearest enabled, not the last");
+    Expect(cutum::NearestEnabledIndex(3, enabled) == 2,
+           "index 3 is closer to 2 than to 4");
+    Expect(cutum::NearestEnabledIndex(4, enabled) == 4,
+           "an enabled tab stays selected");
+    Expect(cutum::StackIsUnlimited(-1), "negative count is unlimited");
+    Expect(!cutum::StackIsUnlimited(1), "finite stack can be consumed");
   }
 
   if (Failures != 0)

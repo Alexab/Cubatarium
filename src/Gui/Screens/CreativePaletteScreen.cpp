@@ -828,29 +828,32 @@ void UCreativePaletteScreen::SyncTypeTabs()
   SubTabs->SetTabs(labels);
   SubTabs->SetTabEnabled(enabled);
 
-  int active = -1;
+  int previous = 0;
   for (size_t i = 0; i < types.size(); ++i)
   {
-    if (types[i] == ActiveTypeId && enabled[i])
+    if (types[i] == ActiveTypeId)
     {
-      active = static_cast<int>(i);
+      previous = static_cast<int>(i);
       break;
     }
   }
-  if (active < 0)
+  int active = -1;
+  if (previous >= 0 && previous < static_cast<int>(enabled.size()) &&
+      enabled[static_cast<size_t>(previous)] &&
+      previous < static_cast<int>(types.size()) &&
+      types[static_cast<size_t>(previous)] == ActiveTypeId)
   {
-    for (size_t i = 0; i < enabled.size(); ++i)
+    active = previous;
+  }
+  if (active < 0 && !enabled.empty())
+  {
+    active = NearestEnabledIndex(previous, enabled);
+    if (active >= 0 && active < static_cast<int>(enabled.size()) &&
+        enabled[static_cast<size_t>(active)] &&
+        active < static_cast<int>(types.size()))
     {
-      if (enabled[i])
-      {
-        active = static_cast<int>(i);
-        if (i < types.size())
-        {
-          ActiveTypeId = types[i];
-        }
-        Built = false;
-        break;
-      }
+      ActiveTypeId = types[static_cast<size_t>(active)];
+      Built = false;
     }
   }
   if (active < 0)
