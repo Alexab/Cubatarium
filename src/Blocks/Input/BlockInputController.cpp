@@ -255,14 +255,15 @@ void UBlockInputController::TryUseActiveSlot(const BlockInputContext &ctx)
       if (const ItemDefinition *def = items->Get(Active->Id))
       {
         const ItemUseParams use = ItemUseRegistry::FromDefinition(*def);
-        if (use.Action == ItemUseAction::PlaceBlock ||
-            def->Id == "wood_torch")
+        if (use.Action == ItemUseAction::PlaceBlock)
         {
           auto camera = ctx.World->GetCurrentUserCamera();
           if (camera)
           {
-            const std::string blockId =
-                def->Id == "wood_torch" ? "torch" : def->Id;
+            // Data-driven target block; empty means the item id itself.
+            const std::string blockId = def->Use.PlaceBlockId.empty()
+                                            ? def->Id
+                                            : def->Use.PlaceBlockId;
             placed = UBlockPlacementService::PlaceBlockFromHeldItem(
                 *ctx.World, camera->GetPosition(), camera->GetFront(),
                 blockId);

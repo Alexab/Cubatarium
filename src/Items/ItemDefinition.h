@@ -80,6 +80,8 @@ enum class ItemUseActionKind
 struct ItemUseDef
 {
   ItemUseActionKind Action{ItemUseActionKind::None};
+  /// World block placed by the place_block action; empty = use the item id.
+  std::string PlaceBlockId;
   float Satiety{0.f};
   float Thirst{0.f};
   float Health{0.f};

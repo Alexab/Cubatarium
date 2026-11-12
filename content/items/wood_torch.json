@@ -23,7 +23,8 @@
   },
   "use_action": "place_block",
   "use": {
-    "action": "place_block"
+    "action": "place_block",
+    "place_block": "torch"
   },
   "model": "models/items/wood_torch/model.gltf",
   "visual": {
