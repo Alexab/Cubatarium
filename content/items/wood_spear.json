@@ -11,9 +11,9 @@
     "wield_scale": 1.6,
     "fit_axis": "y",
     "wield_euler_deg": [
+      -18,
       0,
-      0,
-      90
+      8
     ],
     "wield_offset": [
       0,

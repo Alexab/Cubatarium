@@ -88,9 +88,14 @@ int main()
     ResourceEconomyService::GrantItemDrop(WorldGameMode::Creative, inv,
                                            "raw_meat", 1);
     Expect(inv.GetStorage().count("raw_meat") == 0, "creative item drop skipped");
+    inv.EnsureDefaultHotbar();
     ResourceEconomyService::GrantItemDrop(WorldGameMode::Survival, inv,
                                            "raw_meat", 1);
     Expect(inv.GetStorage().at("raw_meat") == 1, "survival item drop granted");
+    const InventoryEntryRef *active = inv.GetActiveEntryRef();
+    Expect(active && active->kind == InventoryEntryKind::Item &&
+               active->Id == "raw_meat",
+           "empty hand receives item kind");
   }
 
   std::cout << "resource_economy_test: OK" << std::endl;

@@ -39,6 +39,17 @@
     "wield_scale": 1.1,
     "use": {
       "block": "raise_shield"
-    }
+    },
+    "fit_axis": "z",
+    "wield_euler_deg": [
+      0,
+      180,
+      0
+    ],
+    "wield_offset": [
+      0,
+      0,
+      0
+    ]
   }
 }

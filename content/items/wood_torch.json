@@ -27,6 +27,17 @@
   },
   "model": "models/items/wood_torch/model.gltf",
   "visual": {
-    "wield_scale": 1.0
+    "wield_scale": 1.0,
+    "fit_axis": "y",
+    "wield_euler_deg": [
+      -10,
+      0,
+      0
+    ],
+    "wield_offset": [
+      0,
+      0.12,
+      0
+    ]
   }
 }

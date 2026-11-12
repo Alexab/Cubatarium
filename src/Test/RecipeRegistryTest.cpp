@@ -33,6 +33,14 @@ int main()
          "wood consumed");
   Expect(inv.GetStorage().at("wood_sword") == 1, "sword granted");
 
+  URecipeRegistry loaded;
+  if (loaded.LoadFromDirectory("content/recipes"))
+  {
+    const cutum::RecipeDefinition *iron = loaded.FindById("iron_pickaxe");
+    Expect(iron != nullptr, "iron_pickaxe recipe published");
+    Expect(iron && iron->Inputs.size() >= 1, "iron_pickaxe has inputs");
+  }
+
   Expect(!registry.TryCraft(inv, recipe), "craft fails without wood");
 
   std::cout << "recipe_registry_test: OK" << std::endl;

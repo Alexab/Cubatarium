@@ -38,6 +38,17 @@
     "swing": {
       "dig": "dig_tool",
       "melee": "dig_tool"
-    }
+    },
+    "fit_axis": "y",
+    "wield_euler_deg": [
+      -8,
+      0,
+      90
+    ],
+    "wield_offset": [
+      0,
+      -0.12,
+      0
+    ]
   }
 }

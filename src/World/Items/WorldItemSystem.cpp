@@ -66,21 +66,15 @@ void WorldItemSystem::Tick(UWorld &world, float dt)
     if (player && glm::distance(playerPos, it->position) <= kPickupRadius)
     {
       auto &inv = player->GetInventory();
-      ResourceEconomyService::GrantItemDrop(world.GetGameMode(), inv,
-                                             it->itemId, it->count);
-      if (!it->isBlock)
+      if (it->isBlock)
       {
-        const InventoryEntryRef *active = inv.GetActiveEntryRef();
-        if (!active)
-        {
-          InventoryEntryRef entry;
-          entry.empty = false;
-          entry.kind = InventoryEntryKind::Item;
-          entry.Id = it->itemId;
-          entry.count = it->count;
-          inv.AssignToHotbar(inv.GetActiveBarIndex(),
-                             inv.GetActiveSlotIndex(), entry);
-        }
+        ResourceEconomyService::GrantBlockDrop(world.GetGameMode(), inv,
+                                                it->itemId, it->count);
+      }
+      else
+      {
+        ResourceEconomyService::GrantItemDrop(world.GetGameMode(), inv,
+                                               it->itemId, it->count);
       }
       it = Items.erase(it);
       continue;

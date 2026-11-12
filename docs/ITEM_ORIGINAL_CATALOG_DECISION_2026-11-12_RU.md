@@ -30,6 +30,7 @@
 - `raw_meat` ×1: cow, sheep, pig, chicken, bunny, warthog
 - `leather` ×1: cow, sheep
 
-## Вне scope
+## Вне исходного scope, затем возвращено
 
-Вспашка, рыбалка, ножницы, ведро, огниво, печь / жареное мясо, чары, дроп на землю.
+Дроп на землю и подбор входят в каталог. Волны расширения: utilities, затем food/farming, затем combat extras. См. [research/item-catalog-expansion-2026-11-12_RU.md](research/item-catalog-expansion-2026-11-12_RU.md).
+

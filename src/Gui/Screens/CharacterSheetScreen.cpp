@@ -2,6 +2,7 @@
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Interfaces/IUCharacterStatsViewModel.h"
+#include "Gui/Layout/GuiLayout.h"
 #include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiPreviewViewport.h"
@@ -309,7 +310,7 @@ void UCharacterSheetScreen::Relayout()
   const int contentH = client.Y + client.H - cy - 8;
   const int dollW = WideLayout ? std::min(380, (client.W * 46) / 100)
                               : std::max(200, client.W - 16);
-  const int dollH = WideLayout ? contentH : std::min(contentH / 2, 300);
+  const int dollH = WideLayout ? (contentH * 62) / 100 : std::min(contentH / 2, 300);
   const int dollX = client.X + 8;
   const int bagX = WideLayout ? dollX + dollW + gap : dollX;
   const int bagY = WideLayout ? cy : cy + dollH + gap;
@@ -327,7 +328,16 @@ void UCharacterSheetScreen::Relayout()
   }
   if (StatsPanel)
   {
-    StatsPanel->SetVisible(false);
+    if (WideLayout)
+    {
+      StatsPanel->SetVisible(true);
+      StatsPanel->SetBounds(
+          {dollX, cy + dollH + gap, dollW, std::max(80, contentH - dollH - gap)});
+    }
+    else
+    {
+      StatsPanel->SetVisible(false);
+    }
   }
 
   // --- Paper-doll interior ---
@@ -388,9 +398,9 @@ void UCharacterSheetScreen::Relayout()
         {feetX + (kSlotSize + kSlotGap), bottomY, kSlotSize, kSlotSize});
   }
 
-  // Stats stay hidden in the combined equip+bag layout.
-  const int statsX = 0;
-  const int statsW = 160;
+  // Stats sit under the doll on wide screens (same absolute coordinates).
+  const int statsX = dollX;
+  const int statsW = dollW;
   int sy = cy + pad;
   if (VitalsHeader)
   {
@@ -428,8 +438,7 @@ void UCharacterSheetScreen::Relayout()
     const int slot = WideLayout ? kSlotSize : 40;
     const int gapS = 4;
     const int maxCols = WideLayout ? 5 : 4;
-    const int cols = std::max(
-        1, std::min(maxCols, (bag.W - 8 + gapS) / std::max(1, slot + gapS)));
+    const int cols = SlotGridColumnCount(bag.W - 8, slot, gapS, maxCols);
     for (size_t i = 0; i < BagSlots.size(); ++i)
     {
       const int col = static_cast<int>(i) % cols;

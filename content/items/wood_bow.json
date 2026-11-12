@@ -35,6 +35,17 @@
     },
     "swing": {
       "melee": "slash_weapon"
-    }
+    },
+    "fit_axis": "z",
+    "wield_euler_deg": [
+      0,
+      0,
+      90
+    ],
+    "wield_offset": [
+      0,
+      0,
+      0
+    ]
   }
 }

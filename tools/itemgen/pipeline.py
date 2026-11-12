@@ -150,6 +150,33 @@ def build_item(item_id: str, *, publish: bool = True) -> Path:
     return staging
 
 
+FAMILY_POSE = {
+    "pickaxe": {"fit_axis": "y", "wield_euler_deg": [-8, 0, 90], "wield_offset": [0, -0.12, 0]},
+    "axe": {"fit_axis": "y", "wield_euler_deg": [-8, 20, 80], "wield_offset": [0, -0.1, 0]},
+    "shovel": {"fit_axis": "y", "wield_euler_deg": [12, 0, 90], "wield_offset": [0, 0.08, 0]},
+    "hoe": {"fit_axis": "y", "wield_euler_deg": [-6, 0, 90], "wield_offset": [0, -0.08, 0]},
+    "sword": {"fit_axis": "y", "wield_euler_deg": [-18, 0, 8], "wield_offset": [0, -0.05, 0]},
+    "spear": {"fit_axis": "y", "wield_euler_deg": [-18, 0, 8], "wield_offset": [0, -0.05, 0]},
+    "bow": {"fit_axis": "z", "wield_euler_deg": [0, 0, 90], "wield_offset": [0, 0, 0]},
+    "arrow": {"fit_axis": "y", "wield_euler_deg": [0, 0, 90], "wield_offset": [0, 0, 0]},
+    "shield": {"fit_axis": "z", "wield_euler_deg": [0, 180, 0], "wield_offset": [0, 0, 0]},
+    "torch": {"fit_axis": "y", "wield_euler_deg": [-10, 0, 0], "wield_offset": [0, 0.12, 0]},
+    "flint": {"fit_axis": "y", "wield_euler_deg": [-10, 0, 0], "wield_offset": [0, 0.12, 0]},
+}
+
+
+def _pose_for(recipe: dict[str, Any]) -> dict[str, Any]:
+    family = str(recipe.get("family", ""))
+    return FAMILY_POSE.get(
+        family,
+        {
+            "fit_axis": "longest",
+            "wield_euler_deg": [-25, 0, 0],
+            "wield_offset": [0, 0, 0],
+        },
+    )
+
+
 def _retarget_content(item_id: str, recipe: dict[str, Any]) -> None:
     path = CONTENT / f"{item_id}.json"
     if not path.is_file():
@@ -159,6 +186,12 @@ def _retarget_content(item_id: str, recipe: dict[str, Any]) -> None:
     visual = data.setdefault("visual", {})
     if "wield_scale" in recipe:
         visual["wield_scale"] = recipe["wield_scale"]
+    pose = _pose_for(recipe)
+    for key in ("fit_axis", "wield_euler_deg", "wield_offset"):
+        if key in recipe:
+            visual[key] = recipe[key]
+        else:
+            visual[key] = pose[key]
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 

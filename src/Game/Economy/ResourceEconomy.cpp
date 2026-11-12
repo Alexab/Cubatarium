@@ -112,13 +112,14 @@ void ResourceEconomyService::GrantItemDrop(WorldGameMode mode,
                                             const std::string &itemId,
                                             int count)
 {
-  GrantBlockDrop(mode, inv, itemId, count);
+  GrantBlockDrop(mode, inv, itemId, count, InventoryEntryKind::Item);
 }
 
 void ResourceEconomyService::GrantBlockDrop(WorldGameMode mode,
                                              UCreatureInventory &inv,
                                              const std::string &blockTypeName,
-                                             int count)
+                                             int count,
+                                             InventoryEntryKind kind)
 {
   if (blockTypeName.empty() || count <= 0)
   {
@@ -155,7 +156,7 @@ void ResourceEconomyService::GrantBlockDrop(WorldGameMode mode,
     for (auto &slot : bar.slots)
     {
       if (slot.empty || slot.entry.Id != blockTypeName ||
-          slot.entry.kind != InventoryEntryKind::Block)
+          slot.entry.kind != kind)
       {
         continue;
       }
@@ -169,7 +170,7 @@ void ResourceEconomyService::GrantBlockDrop(WorldGameMode mode,
   {
     InventoryEntryRef entry;
     entry.empty = false;
-    entry.kind = InventoryEntryKind::Block;
+    entry.kind = kind;
     entry.Id = blockTypeName;
     entry.count = total;
     inv.AssignToHotbar(inv.GetActiveBarIndex(), inv.GetActiveSlotIndex(),

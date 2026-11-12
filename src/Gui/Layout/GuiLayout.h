@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Gui/Core/GuiTypes.h"
+#include <algorithm>
 #include <vector>
 
 namespace cutum
@@ -72,5 +73,17 @@ public:
   static void GridPlace(const GuiRect &clientArea, const GuiGridSpec &spec,
                         const std::vector<GuiGridItem> &items);
 };
+
+/// How many slot columns fit. maxCols <= 0 means "as many as the width allows".
+inline int SlotGridColumnCount(int viewportW, int slotSize, int gap, int maxCols)
+{
+  const int denom = std::max(1, slotSize + gap);
+  const int fit = std::max(1, (std::max(0, viewportW) + gap) / denom);
+  if (maxCols > 0)
+  {
+    return std::min(maxCols, fit);
+  }
+  return fit;
+}
 
 } // namespace cutum

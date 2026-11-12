@@ -14,6 +14,7 @@
 #include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiScrollView.h"
+#include "Gui/Layout/GuiLayout.h"
 #include "Gui/Widgets/GuiSlot.h"
 #include "Gui/Widgets/GuiTabBar.h"
 #include "Items/ItemDefinitionStorage.h"
@@ -969,8 +970,7 @@ void UCreativePaletteScreen::LayoutGridInScroll()
   const int gap = Theme->HotbarSlotGap;
   const int viewportW = contentRect.W;
   const int viewportH = std::max(1, Scroll->GetBounds().H);
-  const int denom = std::max(1, slotSize + gap);
-  const int cols = std::max(1, (viewportW + gap) / denom);
+  const int cols = SlotGridColumnCount(viewportW, slotSize, gap, 0);
   const int contentTop = contentRect.Y;
 
   int x = contentRect.X;

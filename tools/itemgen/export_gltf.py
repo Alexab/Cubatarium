@@ -60,6 +60,18 @@ def box_mesh(
     return positions, texcoords, indices
 
 
+def _grip_offset(parts: list[dict[str, Any]]) -> list[float]:
+    handles = [p for p in parts if str(p.get("role")) == "handle"]
+    chosen = handles or parts
+    part = min(
+        chosen,
+        key=lambda p: float(p["offset"][1]) - float(p["size"][1]) * 0.5,
+    )
+    ox, oy, oz = (float(v) for v in part["offset"])
+    sy = float(part["size"][1])
+    return [round(ox, 3), round(oy - sy * 0.25, 3), round(oz, 3)]
+
+
 def write_gltf(
     dest_dir: Path,
     item_id: str,
@@ -210,7 +222,10 @@ def write_gltf(
         "scenes": [{"nodes": [0]}],
         "scene": 0,
         "extras": {
-            "cubatarium_grip": {"offset": [0.0, -0.15, 0.0], "note": "handle grasp"},
+            "cubatarium_grip": {
+                "offset": _grip_offset(parts),
+                "note": "lower third of the handle",
+            },
             "authoring_source": "cubatarium-recipe",
         },
     }

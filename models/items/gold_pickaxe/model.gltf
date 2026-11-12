@@ -405,10 +405,10 @@
     "cubatarium_grip": {
       "offset": [
         0.0,
-        -0.15,
+        -0.23,
         0.0
       ],
-      "note": "handle grasp"
+      "note": "lower third of the handle"
     },
     "authoring_source": "cubatarium-recipe"
   }

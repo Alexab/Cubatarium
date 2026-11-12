@@ -16,7 +16,18 @@
     "wield_scale": 0.95,
     "use": {
       "eat": "eat_hand"
-    }
+    },
+    "fit_axis": "longest",
+    "wield_euler_deg": [
+      -25,
+      0,
+      0
+    ],
+    "wield_offset": [
+      0,
+      0,
+      0
+    ]
   },
   "model": "models/items/bread/model.gltf"
 }

@@ -34,6 +34,17 @@
   },
   "model": "models/items/copper_hoe/model.gltf",
   "visual": {
-    "wield_scale": 1.45
+    "wield_scale": 1.45,
+    "fit_axis": "y",
+    "wield_euler_deg": [
+      -6,
+      0,
+      90
+    ],
+    "wield_offset": [
+      0,
+      -0.08,
+      0
+    ]
   }
 }

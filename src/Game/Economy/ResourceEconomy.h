@@ -23,10 +23,11 @@ struct ResourceEconomyService
   static bool ConsumeOnPlace(WorldGameMode mode, UCreatureInventory &inv,
                               const InventoryEntryRef &activeEntry);
 
-  /// Grants a single dropped block into inventory.
+  /// Grants a dropped stack. `kind` selects the hotbar entry written into an empty hand.
   static void GrantBlockDrop(WorldGameMode mode, UCreatureInventory &inv,
                               const std::string &blockTypeName,
-                              int count = 1);
+                              int count = 1,
+                              InventoryEntryKind kind = InventoryEntryKind::Block);
 
   /// Grants a creature/item drop into inventory (same Creative gate as blocks).
   static void GrantItemDrop(WorldGameMode mode, UCreatureInventory &inv,
