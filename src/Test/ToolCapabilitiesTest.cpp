@@ -89,10 +89,10 @@ int main()
 
   // Category / explicit wield_scale defaults (ItemVisualDefaults).
   {
-    ItemDefinition spear;
-    spear.Id = "wood_spear";
-    Expect(std::fabs(DefaultWieldScale(spear) - 1.80f) < 1e-4f,
-           "spear category scale");
+    ItemDefinition sword;
+    sword.Id = "wood_sword";
+    Expect(std::fabs(DefaultWieldScale(sword) - 1.35f) < 1e-4f,
+           "sword category scale");
     ItemDefinition food;
     food.Id = "apple";
     food.Use.Action = ItemUseActionKind::Eat;
@@ -101,13 +101,13 @@ int main()
     bow.Id = "wood_bow";
     bow.Ranged.Enabled = true;
     Expect(std::fabs(DefaultWieldScale(bow) - 1.40f) < 1e-4f, "bow scale");
-    ItemDefinition scaled = spear;
+    ItemDefinition scaled = sword;
     scaled.Visual.HasWieldScale = true;
     scaled.Visual.WieldScale = 2.5f;
     Expect(std::fabs(DefaultWieldScale(scaled) - 2.5f) < 1e-4f,
            "explicit wield_scale wins");
-    Expect(DefaultSwingPreset(spear, FpSwingKind::Melee) == "thrust_spear",
-           "spear melee preset");
+    Expect(DefaultSwingPreset(sword, FpSwingKind::Melee) == "slash_weapon",
+           "sword melee preset");
   }
 
   if (Failures != 0)

@@ -1,8 +1,0 @@
-{
-  "id": "wood_spear",
-  "shapeless": true,
-  "inputs": [
-    { "id": "wood", "count": 3 }
-  ],
-  "output": { "id": "wood_spear", "count": 1 }
-}

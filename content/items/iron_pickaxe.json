@@ -22,7 +22,7 @@
     },
     "groupcaps": {
       "cracky": {
-        "maxlevel": 2,
+        "maxlevel": 3,
         "uses": 120,
         "times": {
           "2": 0.8,
