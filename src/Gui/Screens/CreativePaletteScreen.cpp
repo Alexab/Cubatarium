@@ -11,6 +11,7 @@
 #include "Gui/Preview/ContentPreviewDock.h"
 #include "Gui/Preview/ContentPreviewRenderer.h"
 #include "Gui/Core/GuiRenderer.h"
+#include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiScrollView.h"
@@ -100,10 +101,9 @@ bool UCreativePaletteScreen::PickSlot(int x, int y, SlotAddress &out) const
 
 void UCreativePaletteScreen::SetVisible(bool visible)
 {
-  if (visible && Session &&
-      !ModePolicy::AllowsCreativePalette(Session->GetWorldGameMode()))
+  if (visible)
   {
-    visible = false;
+    RefreshListingPolicy();
   }
   Visible = visible;
   if (Root)
@@ -118,6 +118,51 @@ void UCreativePaletteScreen::SetVisible(bool visible)
       PreviewDock->ClearSelection();
     }
   }
+  else
+  {
+    RelayoutPanel();
+  }
+}
+
+void UCreativePaletteScreen::SetCatalogAllowed(bool allowed)
+{
+  CatalogAllowed = allowed;
+  if (!CatalogAllowed)
+  {
+    Listing = PaletteListing::Backpack;
+    Built = false;
+  }
+  if (CatalogButton)
+  {
+    CatalogButton->SetVisible(CatalogAllowed);
+  }
+}
+
+void UCreativePaletteScreen::SetListingBackpack(bool backpack)
+{
+  if (backpack)
+  {
+    Listing = PaletteListing::Backpack;
+  }
+  else if (CatalogAllowed)
+  {
+    Listing = PaletteListing::Catalog;
+  }
+  Built = false;
+  RelayoutPanel();
+}
+
+void UCreativePaletteScreen::RefreshListingPolicy()
+{
+  const bool creative =
+      Session && Session->GetInventoryMode() == InventoryMode::Creative;
+  SetCatalogAllowed(creative);
+}
+
+InventoryMode UCreativePaletteScreen::CurrentListingMode() const
+{
+  return Listing == PaletteListing::Backpack ? InventoryMode::Owned
+                                             : InventoryMode::Creative;
 }
 
 void UCreativePaletteScreen::Toggle() { SetVisible(!Visible); }
@@ -254,6 +299,16 @@ void UCreativePaletteScreen::Build(UGuiContext &ctx)
   HotbarStripLabel = stripLabel.get();
   rootShell->AddChild(std::move(stripLabel));
 
+  auto catalogBtn = std::make_unique<UGuiButton>(Theme, "Cat");
+  CatalogButton = catalogBtn.get();
+  CatalogButton->SetOnClick([this]() { SetListingBackpack(false); });
+  rootShell->AddChild(std::move(catalogBtn));
+
+  auto bagBtn = std::make_unique<UGuiButton>(Theme, "Bag");
+  BackpackButton = bagBtn.get();
+  BackpackButton->SetOnClick([this]() { SetListingBackpack(true); });
+  rootShell->AddChild(std::move(bagBtn));
+
   panel->AddChild(std::move(mainTabs));
   panel->AddChild(std::move(subTabs));
   panel->AddChild(std::move(scroll));
@@ -311,15 +366,32 @@ void UCreativePaletteScreen::RelayoutPanel()
         {GetContentOffsetX(), GetContentOffsetY(), ViewportW, ViewportH});
   }
   Panel->SetBounds(layout.main);
+  const int modeW = 56;
+  GuiRect panelRect = layout.main;
+  panelRect.X += modeW;
+  panelRect.W = std::max(160, panelRect.W - modeW);
+  Panel->SetBounds(panelRect);
+  if (CatalogButton)
+  {
+    CatalogButton->SetVisible(CatalogAllowed);
+    CatalogButton->SetLabel(Listing == PaletteListing::Catalog ? "[Cat]" : "Cat");
+    CatalogButton->SetBounds({panelRect.X - modeW, panelRect.Y, modeW - 6, 40});
+  }
+  if (BackpackButton)
+  {
+    BackpackButton->SetLabel(Listing == PaletteListing::Backpack ? "[Bag]" : "Bag");
+    BackpackButton->SetBounds(
+        {panelRect.X - modeW, panelRect.Y + 46, modeW - 6, 40});
+  }
   if (PreviewDock)
   {
     PreviewDock->Relayout(layout.preview);
   }
 
-  const int panelX = layout.main.X;
-  const int panelY = layout.main.Y;
-  const int panelW = layout.main.W;
-  const int panelH = layout.main.H;
+  const int panelX = panelRect.X;
+  const int panelY = panelRect.Y;
+  const int panelW = panelRect.W;
+  const int panelH = panelRect.H;
 
   const int pad = Theme->Padding;
   const int tabH = Theme->TabBarHeight;
