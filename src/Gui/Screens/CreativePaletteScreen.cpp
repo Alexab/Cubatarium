@@ -875,7 +875,8 @@ void UCreativePaletteScreen::RebuildGrid()
 
   const std::string groupId =
       ActiveTypeId.empty() ? "misc" : ActiveTypeId;
-  GridPendingViews = Session->GetEntries(Kind, groupId);
+  GridPendingViews =
+      Session->GetEntries(Kind, groupId, CurrentListingMode());
   GridBuiltCount = 0;
 
   // UX tail: materialize the first chunk only; Update appends the rest per
