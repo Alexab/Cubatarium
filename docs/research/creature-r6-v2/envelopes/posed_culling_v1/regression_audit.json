@@ -1,0 +1,51 @@
+{
+  "schema": "creature-posed-culling-regression.v1",
+  "passed": true,
+  "scope": "All61 sampled preview/FP pixels and isolated persistence; three short idle/no-travel world process/spawn subsets, not full camera routes or matched performance acceptance",
+  "exe_sha256": "4d3fb0916c1b0609dffa6f07b0da70f41733f7c4af938d056e6c750cef3560bb",
+  "body_rgba_exact_count": 5290,
+  "fp_rgba_exact_count": 936,
+  "fp_gpu_arm_draws": 1872,
+  "entity_cases": 128,
+  "actual_entity_restores": 256,
+  "world_subsets": [
+    {
+      "species": [
+        "bot"
+      ],
+      "context_sha256": "5ad3a48d94ff5c6890de443b8d396a32f294a5812d0c6a7ccd13552e266ee5b3",
+      "world_frame": "verified\\runtime_posed_culling\\frame_002.png",
+      "world_frame_sha256": "03b0a88d9d8e7687847772d3f75a1b7138826f4f146737716849e312c75e5d60"
+    },
+    {
+      "species": [
+        "rigid_demo_walker"
+      ],
+      "context_sha256": "a91d123d374127c027191f45623a7c61c6b128c31c4b5c5a1e76ef44c79fd618",
+      "world_frame": "production\\runtime_production_final\\frame_002.png",
+      "world_frame_sha256": "fd106c5a146ba7bbbe197dd2d5e24fcc26c9dc335ac73c69e5c6def90e6a5942"
+    },
+    {
+      "species": [
+        "fire_spirit"
+      ],
+      "context_sha256": "220c8fe1b0aaf7d6ecf9e03f6b2d776f4b1bfaa44a2d3867dff5a9c9718a1eed",
+      "world_frame": "sprite_world\\runtime_sprite_world\\frame_002.png",
+      "world_frame_sha256": "49aaff069f1f7fd4a96548ddaa33114142b75ddf0034580d549e71d44cf517d5"
+    }
+  ],
+  "source_sha256_at_audit": {
+    "src/Creatures/Visual/CreatureDrawClipBounds.h": "6ffa2622ad501ce655a186361f9c82c3c1c54918070fa02f894ef4bcf4e784cf",
+    "src/Creatures/Visual/CreatureDrawQueue.h": "69f8827de5a735cce28b3a1fd42b3a5642793acda2d053ad95984002aea81faa",
+    "src/Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonTypes.h": "67494cfdd019bf4ee6576a479056205567840eee32c6cb1e19c49aa93d899e5c",
+    "src/Render/Engine/CreatureDrawPass.cpp": "c2608e2dbd0dad63b064330d863b74ff56f9fb01c8cdfcbc7988023545246fda",
+    "src/Creatures/Visual/CreatureVisual.h": "ba749d9ebf1e820f04a083101a811382c789575dfd1b74bb18e0aa9cdc4f912f",
+    "src/App/Platform/CreatureQaPosedCullingProbe.h": "e85717260c8571aa8ef1f6af6ece80ab3445b315d5e3c4a60043757dad884085",
+    "src/Test/CreatureDrawClipBoundsTest.cpp": "9d081a0c9d47fba74d913d58ceab790c7a2f6996c5c28b4011202df869735648"
+  },
+  "input_report_sha256": {
+    "body_parity.json": "9105775fac27cbc2eb32f9e674943aa454ddc63ccb6698a26e9f50ac5199a0e4",
+    "fp_audit.json": "c3062a90e13f8e18dd91b53c7b40a88063ca949e315afa8f76ed5eb980a29dca",
+    "audit_production_final.json": "dace3fa3ab93e99ca6ef076b26cc650c82bc19203ad44034c2b16879b3221708"
+  }
+}

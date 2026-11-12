@@ -2,7 +2,7 @@ id: sheep
 backend: bone_skeleton
 family: meadow
 authoring_source: cubatarium-recipe
-recipe_version: 1
+recipe_version: 2
 palette_id: meadow
 pattern: spots
 template: quadruped
@@ -34,7 +34,7 @@ silhouette:
 marks:
 - wool
 - face_dark
-selected_concept: primary
+selected_concept: familiar_anatomy_own_surface
 concepts:
 - id: primary
   body_scale:
@@ -55,3 +55,253 @@ concepts:
   - 1.34
   note: longer mass
 seed: 11487820473030359180
+surface_style: ovine
+anatomy:
+  bones:
+  - name: body
+    parent: null
+    pivot:
+    - 0
+    - 14
+    - 2
+    cubes:
+    - name: fleece
+      origin:
+      - -5
+      - 11
+      - -7
+      size:
+      - 10
+      - 7
+      - 16
+      role: wool
+    - name: shoulder_fleece
+      origin:
+      - -4
+      - 17
+      - -6
+      size:
+      - 8
+      - 2
+      - 13
+      role: wool
+  - name: head
+    parent: body
+    pivot:
+    - 0
+    - 18
+    - -6
+    cubes:
+    - name: head
+      origin:
+      - -3
+      - 16
+      - -12
+      size:
+      - 6
+      - 6
+      - 7
+      role: face
+    - name: muzzle
+      origin:
+      - -2
+      - 16
+      - -13
+      size:
+      - 4
+      - 2
+      - 1
+      role: muzzle
+    - name: head_wool
+      origin:
+      - -3.5
+      - 21.2
+      - -10.5
+      size:
+      - 7
+      - 1
+      - 6
+      role: wool
+    - name: ear_l
+      origin:
+      - -5
+      - 19
+      - -9
+      size:
+      - 2
+      - 2
+      - 2
+      role: face
+    - name: ear_r
+      origin:
+      - 3
+      - 19
+      - -9
+      size:
+      - 2
+      - 2
+      - 2
+      role: face
+  - name: leg0
+    parent: body
+    pivot:
+    - -3.0
+    - 11
+    - -3
+    cubes:
+    - name: leg0
+      origin:
+      - -4.0
+      - 2
+      - -4.0
+      size:
+      - 2
+      - 9
+      - 2
+      role: limb
+    - name: leg0_paw
+      origin:
+      - -4.0
+      - 0
+      - -4.0
+      size:
+      - 2
+      - 2
+      - 2
+      role: accent
+  - name: leg1
+    parent: body
+    pivot:
+    - 3.0
+    - 11
+    - 6
+    cubes:
+    - name: leg1
+      origin:
+      - 2.0
+      - 2
+      - 5.0
+      size:
+      - 2
+      - 9
+      - 2
+      role: limb
+    - name: leg1_paw
+      origin:
+      - 2.0
+      - 0
+      - 5.0
+      size:
+      - 2
+      - 2
+      - 2
+      role: accent
+  - name: leg2
+    parent: body
+    pivot:
+    - 3.0
+    - 11
+    - -3
+    cubes:
+    - name: leg2
+      origin:
+      - 2.0
+      - 2
+      - -4.0
+      size:
+      - 2
+      - 9
+      - 2
+      role: limb
+    - name: leg2_paw
+      origin:
+      - 2.0
+      - 0
+      - -4.0
+      size:
+      - 2
+      - 2
+      - 2
+      role: accent
+  - name: leg3
+    parent: body
+    pivot:
+    - -3.0
+    - 11
+    - 6
+    cubes:
+    - name: leg3
+      origin:
+      - -4.0
+      - 2
+      - 5.0
+      size:
+      - 2
+      - 9
+      - 2
+      role: limb
+    - name: leg3_paw
+      origin:
+      - -4.0
+      - 0
+      - 5.0
+      size:
+      - 2
+      - 2
+      - 2
+      role: accent
+  - name: tail
+    parent: body
+    pivot:
+    - 0
+    - 14
+    - 9
+    cubes:
+    - name: tail
+      origin:
+      - -1
+      - 12
+      - 9
+      size:
+      - 2
+      - 3
+      - 1
+      role: wool
+palette_overrides:
+  body:
+  - 218
+  - 214
+  - 193
+  wool:
+  - 223
+  - 218
+  - 195
+  face:
+  - 111
+  - 91
+  - 73
+  muzzle:
+  - 127
+  - 105
+  - 87
+  limb:
+  - 118
+  - 102
+  - 85
+  belly:
+  - 201
+  - 194
+  - 170
+  mark:
+  - 71
+  - 60
+  - 48
+  accent:
+  - 69
+  - 61
+  - 51
+  eye:
+  - 20
+  - 22
+  - 19
+animation_profile: quadruped

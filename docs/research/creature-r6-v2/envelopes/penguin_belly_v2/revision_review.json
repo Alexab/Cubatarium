@@ -1,0 +1,42 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "Explicit assisted R5 penguin body-volume revision; full56+5 R6 still pending",
+  "r6_state": "pending",
+  "species": {
+    "penguin": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct three-way native sheets, full-turn three poses and actual world swimming image inspection",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "41d05952841a7f03b34668e434a56f27334a9a0c595eca836bdc69057063e01e",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "threeway_idle.png",
+          "sha256": "5b885171ea4897e96194eeca3f060415d5383adc361d0312cba5e79a7df4ecea"
+        },
+        "motion": {
+          "path": "threeway_fly.png",
+          "sha256": "d596eddbcfb0cb5bfd1c1e1510aecd02f73bb391cd8f6e1ddb230130564c4ba3"
+        },
+        "runtime": {
+          "path": "fluid_v4/runtime_fluid_candidate/frame_010.png",
+          "sha256": "42ab3d7ac361ea4fac4d3efb4fc8371eda16b42bf6b1f968969f87d09645e619"
+        },
+        "ui": {
+          "path": "fluid_v4/penguin_fullturn_0.png",
+          "sha256": "3c7f0b7bd3a452ff366c7828ee2563d9a571a274dd297a6ad4f0f232ef7268d7"
+        }
+      },
+      "notes": "Accept moderate v2 fullness: depth5 to6 and origin Z-1 to-2 retain back face and wing connection, improving side body without rejected v1 breast panel. Own surface rebaked;17 animation arrays,nodes/IBM/weights and collider unchanged. Actual fluid motor route and supported transition frames pass. No authored penguin skins.",
+      "limits": "R5 revision only. Wet/dry terrain routes, continuous GPU fades/stride/contacts, fluid-surface jump/fall behavior, packaging/performance and all other R6 gates remain open. Not user approval."
+    }
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "schema": "creature-equipment-visual-review.v1",
+  "reviewed_by": "Codex; direct image inspection, not user sign-off",
+  "decision": "needs_further_work",
+  "scope": "Six deepest-clearance detail sheets reviewed; 36 full loop/loadout sheets exist but have not received visual acceptance",
+  "resources": {
+    "human": {
+      "decision": "needs_anatomical_equipment_fit",
+      "directly_inspected_sheet": "sheets/human_deepest_clearance.png",
+      "sha256": "404532771fe1a8df588b7e5b3185037b4997457407cbbc862d81bdac9bf281d5",
+      "notes": "Actual shared anchor matrices include the correct body lift, but generic AABB centering at bone pivots places the helmet near the neck and armor volumes around joints. Main/offhand items are partly hidden inside/behind arms in these sampled views. Correct numeric anchors do not approve visual fit. Creature body pixels/geometry remain unchanged.",
+      "max_anchor_matrix_error": 0.0,
+      "positive_clearance_pngs": 192
+    },
+    "bot": {
+      "decision": "needs_anatomical_equipment_fit",
+      "directly_inspected_sheet": "sheets/bot_deepest_clearance.png",
+      "sha256": "59a8fd529b9f2d4bf13e9955fd6423742c829735d2056895e9b87b948f416772",
+      "notes": "Actual shared anchor matrices include the correct body lift, but generic AABB centering at bone pivots places the helmet near the neck and armor volumes around joints. Main/offhand items are partly hidden inside/behind arms in these sampled views. Correct numeric anchors do not approve visual fit. Creature body pixels/geometry remain unchanged.",
+      "max_anchor_matrix_error": 0.0,
+      "positive_clearance_pngs": 192
+    },
+    "zombie": {
+      "decision": "needs_anatomical_equipment_fit",
+      "directly_inspected_sheet": "sheets/zombie_deepest_clearance.png",
+      "sha256": "d6340d13cb6f266dd0207e1efa46506ae90a6225b87888af1296f80d15d09934",
+      "notes": "Actual shared anchor matrices include the correct body lift, but generic AABB centering at bone pivots places the helmet near the neck and armor volumes around joints. Main/offhand items are partly hidden inside/behind arms in these sampled views. Correct numeric anchors do not approve visual fit. Creature body pixels/geometry remain unchanged.",
+      "max_anchor_matrix_error": 0.0,
+      "positive_clearance_pngs": 128
+    },
+    "skeleton": {
+      "decision": "needs_anatomical_equipment_fit",
+      "directly_inspected_sheet": "sheets/skeleton_deepest_clearance.png",
+      "sha256": "9dfe4f8e9ae8a1665b9a95977ffe6f96bafc1f3599027f164864c8b9e41f611c",
+      "notes": "Actual shared anchor matrices include the correct body lift, but generic AABB centering at bone pivots places the helmet near the neck and armor volumes around joints. Main/offhand items are partly hidden inside/behind arms in these sampled views. Correct numeric anchors do not approve visual fit. Creature body pixels/geometry remain unchanged.",
+      "max_anchor_matrix_error": 0.0,
+      "positive_clearance_pngs": 136
+    },
+    "human_adventurer": {
+      "decision": "needs_anatomical_equipment_fit",
+      "directly_inspected_sheet": "sheets/human_adventurer_deepest_clearance.png",
+      "sha256": "c7ed58c9aae3b4adcf3da36e21ba4e6aa83ccc82ebf5b2e53cf2ea686aacab91",
+      "notes": "Actual shared anchor matrices include the correct body lift, but generic AABB centering at bone pivots places the helmet near the neck and armor volumes around joints. Main/offhand items are partly hidden inside/behind arms in these sampled views. Correct numeric anchors do not approve visual fit. Creature body pixels/geometry remain unchanged.",
+      "max_anchor_matrix_error": 0.0,
+      "positive_clearance_pngs": 192
+    },
+    "human_guard": {
+      "decision": "needs_anatomical_equipment_fit",
+      "directly_inspected_sheet": "sheets/human_guard_deepest_clearance.png",
+      "sha256": "af5076bc5097dc7f10ac40f0ae3363c27ecaa3295c2b6524ae868d8baf507863",
+      "notes": "Actual shared anchor matrices include the correct body lift, but generic AABB centering at bone pivots places the helmet near the neck and armor volumes around joints. Main/offhand items are partly hidden inside/behind arms in these sampled views. Correct numeric anchors do not approve visual fit. Creature body pixels/geometry remain unchanged.",
+      "max_anchor_matrix_error": 0.0,
+      "positive_clearance_pngs": 192
+    }
+  }
+}

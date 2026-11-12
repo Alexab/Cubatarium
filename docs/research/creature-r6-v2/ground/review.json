@@ -1,0 +1,210 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R6 ground contact corrections, remaining R6 unproven",
+  "species": {
+    "hedgehog": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct full native/comparison/icon/world inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "4f8f7f210ab89909ae05e1cd2c3a2d89690f2dd165694034c0ee0cf0e09db9e6",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "hedgehog.png",
+          "sha256": "d940e11b82b603349ce2d935bca101c64d560c505ef94336b2f8fb34e4d934d6"
+        },
+        "motion": {
+          "path": "native_approved_hedgehog.png",
+          "sha256": "bf82d3eb6bf4186300ac1d63a8dc4e61a9a73877e5ad1ba48a5623bbbcb69706"
+        },
+        "runtime": {
+          "path": "runtime_final_hedgehog/frame_002.png",
+          "sha256": "76191cc655598f1e50db75e206f3abad2503fb30e200f1e8fe7e416c729b1c87"
+        },
+        "ui": {
+          "path": "native_candidate/hedgehog_12.png",
+          "sha256": "4d5bea70b93f5799774d656d9955b2f53ba52ae9b589d8392e27ae010f1a6270"
+        }
+      },
+      "notes": "R6 support correction only. Mesh, UV, weights, texture bytes, non-root animation channels and entire runtime definition unchanged. Independent-key skinned_mesh contact keeps authored motion/deformation with only uniform vertical root correction. 1025-phase ground clearance remains within +/-0.001 block; warthog Run refined to 513 root samples after initial 257-root version floated +0.001561. Other corrected clips use 257 root samples. Penguin aquatic fly unchanged. Full R6 routes/stride/travelScale/compatibility/catalog reproducibility/performance still pending."
+    },
+    "kitten": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct full native/comparison/icon/world inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "d4c0bfbc881f88ea785978ce7a6e60b35e274258a8e92b9f9641cd950591976d",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "kitten.png",
+          "sha256": "fc026363c5f4f2779c92a447ffcab02365b067d7df31409b77debe9d16a1b1e7"
+        },
+        "motion": {
+          "path": "native_approved_kitten.png",
+          "sha256": "fbe8f25b1f8dbae4a3b764a65e04f1016db16fedf8e112f4a72dd84a1111d9e8"
+        },
+        "runtime": {
+          "path": "runtime_final_kitten/frame_002.png",
+          "sha256": "91c7e6587f4e0c1d43e7e2f4e7a50555de2837e58549e9402f264d4aa912430b"
+        },
+        "ui": {
+          "path": "native_candidate/kitten_12.png",
+          "sha256": "b32c85c08f0effad078f16a9a741c1ea8cd76497bb4a3fae48a6a179c87a32ba"
+        }
+      },
+      "notes": "R6 support correction only. Mesh, UV, weights, texture bytes, non-root animation channels and entire runtime definition unchanged. Independent-key skinned_mesh contact keeps authored motion/deformation with only uniform vertical root correction. 1025-phase ground clearance remains within +/-0.001 block; warthog Run refined to 513 root samples after initial 257-root version floated +0.001561. Other corrected clips use 257 root samples. Penguin aquatic fly unchanged. Full R6 routes/stride/travelScale/compatibility/catalog reproducibility/performance still pending."
+    },
+    "panda": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct full native/comparison/icon/world inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "175511d2f24873d7a7803ff5f9cace1f4fc38b339c6235078243bb7be951ddf8",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "panda.png",
+          "sha256": "11c56ecec26159217a73d50e1fdcbefc56c1f5dd27b3458051bc04c85b1bbb0d"
+        },
+        "motion": {
+          "path": "native_approved_panda.png",
+          "sha256": "62122324e9909c0ff34bc4694aac5e181484655fec9772b12296b5805b22054f"
+        },
+        "runtime": {
+          "path": "runtime_final_panda/frame_002.png",
+          "sha256": "df565d941e91f56f1dc7a219cf46c13028e835ec8c4457c3fdfe984cd0f1866e"
+        },
+        "ui": {
+          "path": "native_candidate/panda_12.png",
+          "sha256": "295dcdd5ae440ec4393805a3b0a07e8aa80a2c299d33f31503ff8f1c3db5a77d"
+        }
+      },
+      "notes": "R6 support correction only. Mesh, UV, weights, texture bytes, non-root animation channels and entire runtime definition unchanged. Independent-key skinned_mesh contact keeps authored motion/deformation with only uniform vertical root correction. 1025-phase ground clearance remains within +/-0.001 block; warthog Run refined to 513 root samples after initial 257-root version floated +0.001561. Other corrected clips use 257 root samples. Penguin aquatic fly unchanged. Full R6 routes/stride/travelScale/compatibility/catalog reproducibility/performance still pending."
+    },
+    "penguin": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct full native/comparison/icon/world inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "9d96d5eb1e67a4cab8cda87c4d912f0c58db011c4390a7903166da1a8ecb027f",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "penguin.png",
+          "sha256": "110d0cad1c642b78c1ece0e15d577a460c32a6af1f878382437262e2949e3e83"
+        },
+        "motion": {
+          "path": "native_approved_penguin.png",
+          "sha256": "11ee322e935dc25721a085ffd7ca4e6094f007fa54884ab3670210d5be7a2213"
+        },
+        "runtime": {
+          "path": "runtime_final_penguin/frame_002.png",
+          "sha256": "fd5939e3e06dfd9fc6b4130486cd266d8cc0fa2cce23008d054239cb1fb93732"
+        },
+        "ui": {
+          "path": "native_candidate/penguin_12.png",
+          "sha256": "73ab217bc81a7356d65c2f3e9d8943054fc11298be9aea085da49fc0d7e5ce6d"
+        }
+      },
+      "notes": "R6 support correction only. Mesh, UV, weights, texture bytes, non-root animation channels and entire runtime definition unchanged. Independent-key skinned_mesh contact keeps authored motion/deformation with only uniform vertical root correction. 1025-phase ground clearance remains within +/-0.001 block; warthog Run refined to 513 root samples after initial 257-root version floated +0.001561. Other corrected clips use 257 root samples. Penguin aquatic fly unchanged. Full R6 routes/stride/travelScale/compatibility/catalog reproducibility/performance still pending."
+    },
+    "rat": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct full native/comparison/icon/world inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "949ee83fcab4ea9297fa479fd86e3a08277e4a78ebad08dfce545baf331fd216",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "rat.png",
+          "sha256": "4e3b7a1ffc3b520612f44edaa7ffe9100e23a1af2ac7b6ae1c758706bfb10d7f"
+        },
+        "motion": {
+          "path": "native_approved_rat.png",
+          "sha256": "61a0b19641d9c3afdae8637a1e73be8e544f123db4a3d7b49133248eaf9495ef"
+        },
+        "runtime": {
+          "path": "runtime_final_rat/frame_002.png",
+          "sha256": "07023a82a001aa50dca07a89d256f82aed88f1a192ef75eb1580f54b5e3afd45"
+        },
+        "ui": {
+          "path": "native_candidate/rat_12.png",
+          "sha256": "91726435fa3ab4b52b83c4db582d17c99327c2d1224d8a29b48aae61c0000bd0"
+        }
+      },
+      "notes": "R6 support correction only. Mesh, UV, weights, texture bytes, non-root animation channels and entire runtime definition unchanged. Independent-key skinned_mesh contact keeps authored motion/deformation with only uniform vertical root correction. 1025-phase ground clearance remains within +/-0.001 block; warthog Run refined to 513 root samples after initial 257-root version floated +0.001561. Other corrected clips use 257 root samples. Penguin aquatic fly unchanged. Full R6 routes/stride/travelScale/compatibility/catalog reproducibility/performance still pending."
+    },
+    "warthog": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct full native/comparison/icon/world inspection, not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "5093a7a9e930517c724541e2f603419985b0f95bc087083ed6418cdb3902ddc1",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "warthog.png",
+          "sha256": "5e69ec531d9e94b7f11c5f86c9da86c3752370bbb8fce1d42a377b52b3bddf57"
+        },
+        "motion": {
+          "path": "native_approved_warthog.png",
+          "sha256": "8618f534843b560bc92867006f7571e11b6a0059f57c1c0ee3d68cfc95df4e3f"
+        },
+        "runtime": {
+          "path": "runtime_dense_warthog/frame_002.png",
+          "sha256": "f4e069bf56f483d54498dfc26d17eaf725bc1fe1358f73ff7ef55f7cf342af63"
+        },
+        "ui": {
+          "path": "native_candidate/warthog_12.png",
+          "sha256": "ad73bac6a81dd86e8c31b01efa097d3495784dcc9ca756773a636ddb51740040"
+        }
+      },
+      "notes": "R6 support correction only. Mesh, UV, weights, texture bytes, non-root animation channels and entire runtime definition unchanged. Independent-key skinned_mesh contact keeps authored motion/deformation with only uniform vertical root correction. 1025-phase ground clearance remains within +/-0.001 block; warthog Run refined to 513 root samples after initial 257-root version floated +0.001561. Other corrected clips use 257 root samples. Penguin aquatic fly unchanged. Full R6 routes/stride/travelScale/compatibility/catalog reproducibility/performance still pending."
+    }
+  }
+}

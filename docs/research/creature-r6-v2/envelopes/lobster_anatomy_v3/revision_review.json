@@ -1,0 +1,43 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "Explicit assisted R5 lobster anatomy/bind-refit revision, not all56+5 R6 acceptance",
+  "r6_state": "pending",
+  "species": {
+    "lobster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct original/own-before/v3 native sheets, three full-turn sheets and actual bottom Tread world image inspection",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "23867ab061e9038fdbbd19540c7fbf6da8d4ef80e4119d261c68a7c9e973c881",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "threeway_idle.png",
+          "sha256": "b1d3845f5545e917b33b054445cb1743a4f57539fa540cd5b5afd05bf56fd5c2"
+        },
+        "motion": {
+          "path": "threeway_action.png",
+          "sha256": "bd7227c5d2cd6c23a01a1abc2dd78b39f2bdbd6ec5c8e641bee16b27eb8b0193"
+        },
+        "runtime": {
+          "path": "world_tread/runtime_tread_candidate/frame_008.png",
+          "sha256": "88b90217937c55241097d9b3102d72f00892a5b0280b59ef2178a822e2b44a51"
+        },
+        "ui": {
+          "path": "fullturn_0.png",
+          "sha256": "3707dd6f2bf5d531d3e8206beda751a349218d7bc73cbdb01e7371191a456929"
+        }
+      },
+      "notes": "Accept v3: fuller carapace, raised wider leg stance, longer asymmetric claw palms with correctly moved finger hinges, steel-blue ventral surface.51 joints/hierarchy and90 angular channels retained.18 bind positions intentionally refit;16 translation tracks preserve original foot lift. UV allocation and own surface rebaked,18 joint-centre attachments checked. Collider/state map/speeds unchanged.",
+      "skin_scope": "No authored compatible lobster skins.",
+      "limits": "R5 revision by assistant, not user approval. Center attachment is not watertightness proof. All R6 stride/sliding, terrain slopes, continuous GPU fades/world attack/AI, full compatibility/pack/UI/performance/package gates remain open. Earlier v1/v2 rejected; initial v3 Swim postcheck was inappropriate for the benthic route and remains recorded as failed."
+    }
+  }
+}

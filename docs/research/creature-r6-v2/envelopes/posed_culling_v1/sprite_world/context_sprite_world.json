@@ -1,0 +1,44 @@
+{
+  "captured_at_utc": "2026-11-11T20:53:57.317067+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\bin\\models",
+  "files_sha256": {
+    "creatures\\fire_spirit\\creature.json": "3ab40d30a4fdb54c03258c1ad6b38017416c5c864fd59b73b361b8950616ac2d",
+    "creatures\\fire_spirit\\LICENSE.txt": "a5312eff7446a3a7bb7328cf12f4e9aaa72fd95682ea6e475927b1b96a247377",
+    "creatures\\fire_spirit\\textures\\body.png": "3e590504ad421aaa436366b1dda2db3824f090f5d3df4c59c42626ffd741c904"
+  },
+  "qa_models_override": false,
+  "exe_sha256": "4d3fb0916c1b0609dffa6f07b0da70f41733f7c4af938d056e6c750cef3560bb",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "sprite_world",
+  "qa_camera": "close",
+  "native_matrix": false,
+  "native_equipment_matrix": false,
+  "native_equipment_texture_probe": false,
+  "native_resource_cache_probe": false,
+  "native_resource_reload_probe": false,
+  "native_fp_matrix": false,
+  "native_save_probe": false,
+  "native_envelope_variant": null,
+  "native_transition_probe": false,
+  "native_posed_culling_probe": false,
+  "envelope_profile_sha256": null,
+  "fp_shaders_sha256": {},
+  "equipment_material": "copper",
+  "world_gear_fixture": false,
+  "equipment_files_sha256": {},
+  "world_species": [
+    "fire_spirit"
+  ],
+  "preview_species": [
+    "fire_spirit"
+  ],
+  "qa_water_placement": false,
+  "qa_lava_fixture": false,
+  "world": "World_254",
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

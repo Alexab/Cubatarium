@@ -1,0 +1,52 @@
+{
+  "captured_at_utc": "2026-11-11T23:56:40.845700+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\bin\\models",
+  "files_sha256": {
+    "creatures\\oerkki\\creature.json": "cd28c9f25ef9a75e9424346a02ad172d5b4f7f914e254757935813b6c01cd8a2",
+    "creatures\\oerkki\\LICENSE.txt": "4e73003463f11e66bb9951bc530b269deddb6f4d8b58a467078ede965c3d8b42",
+    "creatures\\oerkki\\model.bin": "48e9b2b84ebbc70db7264a6f3306b20f26829fe09b94ea6297d5c6577cfb0435",
+    "creatures\\oerkki\\model.gltf": "98c6abae255cc389e5113b6fa92d075a56573ac800edb8b4c13228e3f5d871ba",
+    "creatures\\oerkki\\textures\\body.png": "70fe205e95a7195bf0e7d6770f25068f317aa058cdaea2519410a4105695cc10",
+    "creatures\\oerkki\\textures\\icon.png": "3c128c9ebfe5ac4d1c947b85f1cc89acd8cf3afad6b1397a50fdd76dcd7aa3a1"
+  },
+  "qa_models_override": false,
+  "exe_sha256": "a0872e87a1551dbe7ac0cff1346b58176743d18eba13817cb7779473415df68f",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "own_before",
+  "qa_camera": "close",
+  "native_matrix": false,
+  "native_equipment_matrix": false,
+  "native_equipment_texture_probe": false,
+  "native_resource_cache_probe": false,
+  "native_resource_reload_probe": false,
+  "native_fp_matrix": false,
+  "native_save_probe": false,
+  "native_envelope_variant": "current",
+  "native_transition_probe": false,
+  "native_fluid_transition_probe": false,
+  "world_motion": null,
+  "world_motion_expected_fluid_state": null,
+  "world_seconds": 8.0,
+  "world_capture_interval_seconds": 3.0,
+  "native_posed_culling_probe": false,
+  "envelope_profile_sha256": "52fba7cd7e8df6ed1ca6a874d48e674fda88ce27054458bbbc33a84c647370d0",
+  "fp_shaders_sha256": {},
+  "equipment_material": "copper",
+  "world_gear_fixture": false,
+  "equipment_files_sha256": {},
+  "world_species": [
+    "oerkki"
+  ],
+  "preview_species": [
+    "oerkki"
+  ],
+  "qa_water_placement": false,
+  "qa_lava_fixture": false,
+  "world": "World_254",
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

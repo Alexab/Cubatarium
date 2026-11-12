@@ -1,0 +1,403 @@
+{
+  "schema": "creature-khronos-validation.v1",
+  "validator_version": "2.0.0-dev.3.10",
+  "package_version": "2.0.0-dev.3.10",
+  "scope": "published glTF buffers/images/schema; not artistic or complete R6 acceptance",
+  "totals": {
+    "assets": 35,
+    "errors": 0,
+    "warnings": 6030,
+    "infos": 35
+  },
+  "message_codes": {
+    "UNUSED_OBJECT": 35,
+    "ACCESSOR_JOINTS_USED_ZERO_WEIGHT": 6030
+  },
+  "assets": [
+    {
+      "id": "badger",
+      "files_sha256": {
+        "model.gltf": "7aba39ae3a23b7fe92bd12b55099cda9ed49ed4edb3e93f39115beb5d04eaf00",
+        "model.bin": "6e349956d73d2f3f278e57e1a409c6bff50f238edb68354e92befafbec414b90"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "butterfly",
+      "files_sha256": {
+        "model.gltf": "4d1b074d2efa5935bec38c727a7d85707c42fd4b7e81cf3867eba737cc84f9d5",
+        "model.bin": "ef9ad85a2e11342b4f743e59d844e1dabac06fce4252ac1e8799a4c85033f7f3"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "crab",
+      "files_sha256": {
+        "model.gltf": "a0dbb8b2a5c98d10cdaf32188787e3f5f9ebe6010c5fee9c9a29457e9317dc38",
+        "model.bin": "6f19eab7a5bd25fbd6f980d5b9bbf19b882c5f6a510c73d8e567d441375ad105"
+      },
+      "errors": 0,
+      "warnings": 288,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "dirt_monster",
+      "files_sha256": {
+        "model.gltf": "eda2cc34839de308ed2807a148cb58d73092ee818fdd4f34069c5a6424b7f3f6",
+        "model.bin": "e33f5c7a0451a5ff0574ae5afdcf6aa21e997bf4f0756a9293290fb21fba4e0e"
+      },
+      "errors": 0,
+      "warnings": 276,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "dungeon_master",
+      "files_sha256": {
+        "model.gltf": "a40e58ed20cb7da190b88bc19aa1fde662c400a12050bfd1cf0985b326464284",
+        "model.bin": "f6837e820df46067f496ffd69e386faae4d39f93d6d1eaeac25b82864e444fa8"
+      },
+      "errors": 0,
+      "warnings": 276,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "golem",
+      "files_sha256": {
+        "model.gltf": "e07333e4e3c44e34ff8bb6cc86e85dc5e1355c1b921bc25a435c23f5a5fab30e",
+        "model.bin": "25c65e7d37c9b9ca71db797567ea6737bc7a27becaefb8df20e356ba59c3921d"
+      },
+      "errors": 0,
+      "warnings": 12,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "hedgehog",
+      "files_sha256": {
+        "model.gltf": "4406bea10878d070d52eaddd85b1563f73d58174e81e44cc3e08e01c5345dfa9",
+        "model.bin": "1637f13abfdb8c8f2378f842e0c2ac20c0c6abaecee9a056c2ff9761da7e7d6d"
+      },
+      "errors": 0,
+      "warnings": 96,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "hermitcrab",
+      "files_sha256": {
+        "model.gltf": "aa73980a6546eb65c36c4293ef7838bfc6d22f18dea3337e2e8c4d34551b2007",
+        "model.bin": "398ffc642985b18821693856ddd58e6af8919974abac8931366058185e3be274"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "kitten",
+      "files_sha256": {
+        "model.gltf": "cb6415930cbdf04864f175045676ad863719e7bf4898ddae77f45d8fa693c1e7",
+        "model.bin": "2b29f939b453afaf129cb25e78acf51970366e306589c3075254eff116972ca1"
+      },
+      "errors": 0,
+      "warnings": 96,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "land_guard",
+      "files_sha256": {
+        "model.gltf": "a7a12017704e8a17e817a0987c2cf4159a4b654abda651b49587ccb347382811",
+        "model.bin": "10dd20958888fd14b0235e064061d34de31f80c505d2d357330538586d4ae613"
+      },
+      "errors": 0,
+      "warnings": 276,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "lava_flan",
+      "files_sha256": {
+        "model.gltf": "069f5d530ef0ece79af6dd6f1fa2c82df7d487fba361fe880bc0092ef5feaf2a",
+        "model.bin": "80e69a8dec63f0a1d22251f7a6f09997bdd231559bc1a4cde9364c3849aa8861"
+      },
+      "errors": 0,
+      "warnings": 36,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "lobster",
+      "files_sha256": {
+        "model.gltf": "64c9e62b09ef4972255cc01380009c2f47ecffed2f0617dc8caf7d5bf172a168",
+        "model.bin": "61309a11256ae6d7b677da96f42a16071c933e78f585808b5a9e94ae1b26fe8b"
+      },
+      "errors": 0,
+      "warnings": 456,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "manatee",
+      "files_sha256": {
+        "model.gltf": "59ebe2465d7ecda88c1950d980988714541efcfc63370142327dd1e8eb815d45",
+        "model.bin": "f037e172cf04930756c0640b70e172a3179f5b838fabf3f7a02414231b94347a"
+      },
+      "errors": 0,
+      "warnings": 132,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "mese_monster",
+      "files_sha256": {
+        "model.gltf": "acc4e95b7e7d2df72f91de80061b0594841a58f5f706543a6b207c50374debdd",
+        "model.bin": "8b5db2b5b9048dd1525d39c3ad38f63b075bbb0aa05d750aa68ee32dd999b538"
+      },
+      "errors": 0,
+      "warnings": 144,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "octopus",
+      "files_sha256": {
+        "model.gltf": "885af350a3d62439218c660eb6ba9f6c736e1b19f25c6593cbfc0c307aa03ce9",
+        "model.bin": "30422e53925ce6f52d41de8ec1e0c05901738aa5ffc9acdee9fb9f3cf2b2ba93"
+      },
+      "errors": 0,
+      "warnings": 582,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "oerkki",
+      "files_sha256": {
+        "model.gltf": "40202cb5322c66ac627d89c53f418727cd18d5e110867a23d16db85fe8880892",
+        "model.bin": "7fe562f95b912b9cc38bab084cc5cda290c02d3fa275b170e46fb6a01d4aedc0"
+      },
+      "errors": 0,
+      "warnings": 276,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "ogre",
+      "files_sha256": {
+        "model.gltf": "3f5d0d0806c6c63f4848189880319516551c0dd38d2a215417761ee8dffd4592",
+        "model.bin": "f9ce952356af808f31db9e770e779adce822d7733f1cf588abfca9e85e1bca74"
+      },
+      "errors": 0,
+      "warnings": 276,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "orc",
+      "files_sha256": {
+        "model.gltf": "5a8b74b28b74d7de6ec17fa197b25392eb1006d2a4dd80dc330fd446974111dd",
+        "model.bin": "d7552cb93c4b7fbe6728a739db1959ffcdad03765f4db0d19b890999d7b97201"
+      },
+      "errors": 0,
+      "warnings": 276,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "owl",
+      "files_sha256": {
+        "model.gltf": "0bf958f832729f0ff701011557ceb8058692750b51115415a10312893384fb37",
+        "model.bin": "5c186e5819a594f21fc14d8ca64a0edb83ee808f1dbfcfb8ef7bba80bbccafb7"
+      },
+      "errors": 0,
+      "warnings": 54,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "panda",
+      "files_sha256": {
+        "model.gltf": "1f2070cf6ef642e60bf476eef294a4666352f6e2ff111d5b7cf7ab9e81ed4642",
+        "model.bin": "816824003c38f3469f2d1dc78d117e87dcd542f046819037722234379b4fbbee"
+      },
+      "errors": 0,
+      "warnings": 96,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "penguin",
+      "files_sha256": {
+        "model.gltf": "e7ea070fd405f609f1efd3f39bd247de9dc1267416effec2af14cb5af7fad479",
+        "model.bin": "1730b446021920a4abd3dea019ba382721af3e8fa13d2f3d54f11ffd92db1d31"
+      },
+      "errors": 0,
+      "warnings": 6,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "puffin",
+      "files_sha256": {
+        "model.gltf": "eb9c1e7b1afe7f6784242ff500dc59e9adf4750c949da3f4b23249527001d36d",
+        "model.bin": "636bb1b7d9a88987bf4618828df53ae6b9bdcb4293397cf1e09e9a362ae382c3"
+      },
+      "errors": 0,
+      "warnings": 96,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "rat",
+      "files_sha256": {
+        "model.gltf": "93cb169d77d9a816adeb9b3782d78448c136c749af639988b37346db954ea15d",
+        "model.bin": "6ca22acdb5e0449ad3d0ee694d9f08ed0230d926f3c019ad899a6de8a65a8437"
+      },
+      "errors": 0,
+      "warnings": 144,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "sand_monster",
+      "files_sha256": {
+        "model.gltf": "7a426e35b9c25c358435815b969bcb244eba6352d47c78971ee7f3d64bfc6c27",
+        "model.bin": "990430d05984ab6c8b7b46c674bd2f29f451c139873e68bf1e0e325f2fe9c865"
+      },
+      "errors": 0,
+      "warnings": 276,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "seahorse",
+      "files_sha256": {
+        "model.gltf": "4aa5ed9d1447746c3e308d4537a4d89e08555d29e58ac4aebf8b9790735fa1cd",
+        "model.bin": "aa09eee3d6d5da43bdacd01c1793f7663f29294e7d977c869e13850795b0db68"
+      },
+      "errors": 0,
+      "warnings": 48,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "seal",
+      "files_sha256": {
+        "model.gltf": "29c1cb3a7b8e6b0267a21a7d69a531837487cc234d312d9f129b96475539559d",
+        "model.bin": "a4b187d85cdd2cfea6fd97df6d22615b2e1fa6f48beec25907f22f38a58b21bb"
+      },
+      "errors": 0,
+      "warnings": 156,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "shark",
+      "files_sha256": {
+        "model.gltf": "e1b03fe3f6c46b8505932b5d3c001b702c26792df8835438734bf260e740f212",
+        "model.bin": "60b2ad4e3c9e16ff97d7cef90d0430adb7d8eb1f86be14d69610db56bbd0d8df"
+      },
+      "errors": 0,
+      "warnings": 120,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "stingray",
+      "files_sha256": {
+        "model.gltf": "f575acfed77a4e0b15568a7b79b595d5297134e2e12bce4980a01ea6d9e47751",
+        "model.bin": "8e7db6b02bb88a45b85d569fa71c3c3ec574fb1374b0f4f2bef6c833784510e5"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "stone_monster",
+      "files_sha256": {
+        "model.gltf": "eda2cc34839de308ed2807a148cb58d73092ee818fdd4f34069c5a6424b7f3f6",
+        "model.bin": "e33f5c7a0451a5ff0574ae5afdcf6aa21e997bf4f0756a9293290fb21fba4e0e"
+      },
+      "errors": 0,
+      "warnings": 276,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "tree_monster",
+      "files_sha256": {
+        "model.gltf": "2cf0b977346ba25065986b49bf2b55e180519d24a3bf3b182a55ca50cc8588cc",
+        "model.bin": "7605a6705ae75c329db238ff8c9f6bdcbe7520a7276d991806e683e416418309"
+      },
+      "errors": 0,
+      "warnings": 420,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "treeman",
+      "files_sha256": {
+        "model.gltf": "666e3867ddce8a36d26f3bf19713e8b09bd9a0409e40cd83b1299966f4d33f1a",
+        "model.bin": "c33f7e7555153f9de5597b58ca107d13b742302797e0d2d05358ed668adf8417"
+      },
+      "errors": 0,
+      "warnings": 468,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "warthog",
+      "files_sha256": {
+        "model.gltf": "710d5ae624c604f9498a03029ddc239b25c7cf7a0fdd372fd27f52d4bae95e9b",
+        "model.bin": "f46d79b20148db0dc589eb6053dba6da2a83f04c82dd856524e614c651fd9546"
+      },
+      "errors": 0,
+      "warnings": 96,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "wasp",
+      "files_sha256": {
+        "model.gltf": "69a5b3f4719566d1e62fb5d7cc8e323a33f202b04d933e77db947fe8839de45e",
+        "model.bin": "5ebc5f323e73c700054f91a64c61bb0208cb61413bf09fd89765080828d5747e"
+      },
+      "errors": 0,
+      "warnings": 60,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "water_dragon",
+      "files_sha256": {
+        "model.gltf": "869c13fbfb850ce6a8203ad050d1006daa9b04a8f5345e606e2e157d7ed8daa8",
+        "model.bin": "86736ef2b6584da4340bbe82faec185a09221238872c40fc6a14708239447a36"
+      },
+      "errors": 0,
+      "warnings": 120,
+      "infos": 1,
+      "truncated": false
+    },
+    {
+      "id": "whale",
+      "files_sha256": {
+        "model.gltf": "b9fd8bf2af8f2bf5c0b7c88f71b15e7ae7a3250bbc60e74ceee448c2539385a5",
+        "model.bin": "400c525e379ffff08b0e998532b80a65613386716a3bf33c2074be88b94cdc56"
+      },
+      "errors": 0,
+      "warnings": 96,
+      "infos": 1,
+      "truncated": false
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "exe_sha256": "235ce58dd65546f38164020295ff403bf48c2816b14bb16cd96228faee030483",
+  "archived_exe": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_sampling_perf_v1\\baseline\\Cubatarium.exe",
+  "sources_sha256": {
+    "src/Creatures/Visual/Gltf/CreatureGltfBonePalette.cpp": "2cfaa1268d1b4c76128a02dcf53c853dca1b70c7f0498724fd9081a484a015d0",
+    "src/Creatures/Visual/Gltf/CreatureGltfAnimPlayer.cpp": "9e6f083ab68c0fa7966a2f74819d66b15bbf4b5aca3dbd0a8e3531be715d2001",
+    "src/Creatures/Visual/Gltf/CreatureGltfLoader.cpp": "a329cf00724aea31998830ae56ff8ecf60aec819f8e17644e6a3837f10834702",
+    "src/Creatures/Visual/Gltf/CreatureGltfTypes.h": "69a59c8415874f9260843f8d760de92ffc51f5617176a35bfb7e890d723d72f6",
+    "src/Creatures/Visual/Gltf/CreatureGltfBonePalette.h": "e5e593c97f3d5a988249b6c2eed4169d91327d80568491c75dfb4a3b26ea6ff8",
+    "src/Creatures/Visual/Gltf/CreatureGltfAnimPlayer.h": "6f2097946b959f3f0eb584c7650adf70c98ad8d9b530d8cdf23ca33b0a2c3c8a",
+    "src/Creatures/Visual/Gltf/CreatureGltfClipClock.h": "b3e6f0c051563c367aaaa2cc63c0d0487ad3433733411129492ad0cf49afc2f0",
+    "src/Creatures/Visual/Gltf/GltfConservativeRenderRadius.h": "64ae81f09e5598b02c2169ab5bcd1b8b85156d71cf1a7f7e418e133c139a4855",
+    "src/Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonTypes.h": "67494cfdd019bf4ee6576a479056205567840eee32c6cb1e19c49aa93d899e5c",
+    "src/Creatures/Visual/CreatureMeshGpuHash.h": "2a85f679a7836287e918ec4ac21b69bab73a3c785b4ada84bca2e6f509f772df"
+  },
+  "benchmark_sha256": "e8f813305640fff8604a832e0a20490e0158efaff2e970658d9d90e369df8cdb",
+  "compile_flags": "MSVC x64 /O2 /DNDEBUG /std:c++17 /EHsc /MT; no LTCG",
+  "benchmark_exe_sha256": "7cba979777f91b5ec70b4fdee2eb0571a31eb9b0c2000ec0a27c4045a712ffdf"
+}

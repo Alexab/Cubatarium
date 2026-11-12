@@ -1,0 +1,27 @@
+{
+  "captured_at_utc": "2026-11-11T01:52:24.554209+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\r6_ground_v2\\models",
+  "files_sha256": {
+    "creatures\\panda\\creature.json": "4f3cf46e264daf7923f93e10704ee17fa02ece948aaeea457c5299058c4b6e39",
+    "creatures\\panda\\LICENSE.txt": "8af98df02269ada4ae305fc68ea5acd24d6b1acd8a7c0fd72dc3cfdd22573dac",
+    "creatures\\panda\\manifest.json": "1611050a9442ac90f72da1a1cb87ee6fdf4234f25ef8551faaf000ceea518f31",
+    "creatures\\panda\\model.bin": "816824003c38f3469f2d1dc78d117e87dcd542f046819037722234379b4fbbee",
+    "creatures\\panda\\model.gltf": "1f2070cf6ef642e60bf476eef294a4666352f6e2ff111d5b7cf7ab9e81ed4642",
+    "creatures\\panda\\textures\\body.png": "cb5ab10ec347d6ec3b4f16b58c8eab3da4700478aaf24c7b969fc699e12ff287",
+    "creatures\\panda\\textures\\icon.png": "f8e0fdcde1966bbd55ae574a9a5f7e65dcc68300de47f51dff1aa86efe35ebe2"
+  },
+  "qa_models_override": true,
+  "exe_sha256": "07639445569a24154eab1befef0c945ff37ed6cb13d5ec16877c6818df7db329",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "final_panda",
+  "qa_camera": "close",
+  "qa_water_placement": false,
+  "qa_lava_fixture": false,
+  "world": "World_254",
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

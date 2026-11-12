@@ -1,0 +1,54 @@
+{
+  "captured_at_utc": "2026-11-12T08:13:45.144137+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\bin\\models",
+  "files_sha256": {
+    "creatures\\cow\\creature.json": "b7d04bbc2fbb2521ef3aaa5ddaedc7b0d3bf2cc043968ff50a5c91555a594ad9",
+    "creatures\\cow\\geometry.geo.json": "d2cbbdb821d0e68d441c527b0341ced503374aac97fa189972f77b75c4fc49ed",
+    "creatures\\cow\\LICENSE.txt": "533bf25b80c7fd63486c205a959295b081422b268c3cbc9265dd0c56e5309d86",
+    "creatures\\cow\\textures\\diffuse.png": "4ababc1fd553b0e23bbf3480932b9f989fd000c7e4f9073ac274f9b19dd29f63",
+    "creatures\\cow\\textures\\icon.png": "2c5c79d345619fe4d5ef843b5057f5e7551afee1bac14ed0316cc3cff13a6cd2"
+  },
+  "qa_models_override": false,
+  "exe_sha256": "6a997c20969b72006636ed7c5cd9a5c035ac5d55bee224bff49e2bfb1537bd57",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "cow",
+  "qa_camera": "close",
+  "native_matrix": false,
+  "native_equipment_matrix": false,
+  "native_equipment_texture_probe": false,
+  "native_resource_cache_probe": false,
+  "native_resource_reload_probe": false,
+  "native_fp_matrix": false,
+  "native_save_probe": false,
+  "native_envelope_variant": null,
+  "native_transition_probe": false,
+  "native_fluid_transition_probe": false,
+  "world_motion": "land_walk_pause",
+  "world_requested_speed": 0.5,
+  "world_motion_expected_fluid_state": "Swim",
+  "world_seconds": 12.0,
+  "world_capture_interval_seconds": 1.0,
+  "native_posed_culling_probe": false,
+  "envelope_profile_sha256": null,
+  "fp_shaders_sha256": {},
+  "equipment_material": "copper",
+  "world_gear_fixture": false,
+  "equipment_files_sha256": {},
+  "world_species": [
+    "cow"
+  ],
+  "preview_species": [
+    "cow"
+  ],
+  "qa_water_placement": false,
+  "qa_lava_fixture": false,
+  "world": "CreatureQaPerf_HintV1",
+  "qa_primary_state": null,
+  "pass_timing": false,
+  "foot_probe": false,
+  "performance_gate": "disabled"
+}

@@ -1,0 +1,1130 @@
+schema: creature-quality-contracts.v1
+policy: familiar anatomy and motion capability before stylistic novelty; no reference
+  pixels or meshes in production build
+species:
+  badger:
+    backend: gltf_skeleton
+    identity_features:
+    - low broad grey body
+    - long ivory face with dark eye bands
+    - articulated digging feet and claws
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.53225
+    - 0.54574
+    - 1.18343
+    reference_joint_count_signal: 8
+    required_clip_capabilities:
+    - idle
+    - walk
+    - run
+    - punch
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/envelopes/motion_v5/revision_review.json
+    r6_state: pending
+  bee:
+    backend: bone_skeleton
+    identity_features:
+    - segmented thorax abdomen and antennae
+    - six legs and paired wings
+    - gold and dark bands
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 1.47004
+    - 0.62287
+    - 0.9375
+    reference_joint_count_signal: 7
+    required_clip_capabilities: []
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  bot:
+    backend: bone_skeleton
+    identity_features:
+    - readable face and hands
+    - shared humanoid rig contract
+    - distinct clothes and headwear
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 1.0
+    - 2.0
+    - 0.5
+    reference_joint_count_signal: 10
+    required_clip_capabilities: []
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  bunny:
+    backend: bone_skeleton
+    identity_features:
+    - long ears
+    - large haunches and small forelegs
+    - coordinated hop
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.5
+    - 1.0625
+    - 0.96875
+    reference_joint_count_signal: 12
+    required_clip_capabilities: []
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  butterfly:
+    backend: gltf_skeleton
+    identity_features:
+    - slim segmented body and antennae
+    - two pairs of shaped wings
+    - opposed wing beat with distinct pattern
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.18505
+    - 0.04757
+    - 0.17986
+    reference_joint_count_signal: 0
+    required_clip_capabilities: []
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  chicken:
+    backend: bone_skeleton
+    identity_features:
+    - beak comb and wattle
+    - thin bird legs
+    - body wings and feathered tail
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.5
+    - 0.9375
+    - 0.75
+    reference_joint_count_signal: 8
+    required_clip_capabilities: []
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  cow:
+    backend: bone_skeleton
+    identity_features:
+    - bovine muzzle and small horns
+    - four hoofed legs
+    - piebald chestnut and cream coat
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.75
+    - 1.5625
+    - 1.5
+    reference_joint_count_signal: 6
+    required_clip_capabilities: []
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  crab:
+    backend: gltf_skeleton
+    identity_features:
+    - wide shield and eye stalks
+    - sideways articulated legs
+    - opening separate claws
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 1.0095
+    - 0.43618
+    - 1.38482
+    reference_joint_count_signal: 43
+    required_clip_capabilities:
+    - idle
+    - walk
+    - punch
+    - die
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  dirt_monster:
+    backend: gltf_skeleton
+    identity_features:
+    - earth material
+    - different torso and face masses
+    - rootlike supporting limbs
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.80459
+    - 1.72432
+    - 0.41881
+    reference_joint_count_signal: 7
+    required_clip_capabilities:
+    - idle
+    - walk
+    - run
+    - punch
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  dolphin:
+    backend: bone_skeleton
+    identity_features:
+    - long rostrum and curved forehead
+    - paired fins and dorsal fin
+    - horizontal tail flukes
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 1.30111
+    - 0.76129
+    - 2.375
+    reference_joint_count_signal: 8
+    required_clip_capabilities: []
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  dungeon_master:
+    backend: gltf_skeleton
+    identity_features:
+    - massive rounded upper torso
+    - heavy forearms and low head
+    - clear attack anticipation
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 1.6547
+    - 2.6686
+    - 0.95125
+    reference_joint_count_signal: 7
+    required_clip_capabilities:
+    - idle
+    - walk
+    - run
+    - punch
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  fire_spirit:
+    backend: rigid_voxels
+    identity_features:
+    - readable flame alpha silhouette
+    - dark core and warm flame lobes
+    - billboard readability on dark and light backgrounds
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 1.0
+    - 1.0
+    - 0.0
+    reference_joint_count_signal: 0
+    required_clip_capabilities: []
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  fox:
+    backend: bone_skeleton
+    identity_features:
+    - pointed muzzle and ears
+    - long bushy tail
+    - russet coat and pale chest
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.5
+    - 0.875
+    - 1.35938
+    reference_joint_count_signal: 11
+    required_clip_capabilities: []
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  golem:
+    backend: gltf_skeleton
+    identity_features:
+    - segmented stone anatomy
+    - massive shoulders and articulated joints
+    - heavy weight transfer
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 1.48693
+    - 2.44605
+    - 1.08197
+    reference_joint_count_signal: 13
+    required_clip_capabilities:
+    - idle
+    - walk
+    - run
+    - punch
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  hedgehog:
+    backend: gltf_skeleton
+    identity_features:
+    - low pointed snout
+    - domed grouped spines
+    - short separate feet
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.40007
+    - 0.30423
+    - 0.60682
+    reference_joint_count_signal: 3
+    required_clip_capabilities:
+    - idle
+    - walk
+    - run
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  hermitcrab:
+    backend: gltf_skeleton
+    identity_features:
+    - spiral shell resting above body
+    - unequal articulated claws
+    - side legs carrying the shell
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.47475
+    - 0.30794
+    - 0.95815
+    reference_joint_count_signal: 67
+    required_clip_capabilities:
+    - idle
+    - walk
+    - die
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  human:
+    backend: bone_skeleton
+    identity_features:
+    - readable face and hands
+    - clothed humanoid proportions
+    - equipment and hand anchors
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 1.0
+    - 2.0
+    - 0.5
+    reference_joint_count_signal: 10
+    required_clip_capabilities: []
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  kitten:
+    backend: gltf_skeleton
+    identity_features:
+    - cat ears and muzzle
+    - curved long tail
+    - cat stance and springing steps
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.0875
+    - 0.19031
+    - 0.44273
+    reference_joint_count_signal: 9
+    required_clip_capabilities:
+    - idle
+    - walk
+    - run
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  land_guard:
+    backend: gltf_skeleton
+    identity_features:
+    - broad guarding shoulder silhouette
+    - separate forearm and trunk masses
+    - green stony material and readable face
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 1.6547
+    - 2.6686
+    - 0.95125
+    reference_joint_count_signal: 7
+    required_clip_capabilities:
+    - idle
+    - walk
+    - run
+    - punch
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  lava_flan:
+    backend: gltf_skeleton
+    identity_features:
+    - recognizable hot creature mass
+    - dark crust and warm exposed core
+    - controlled squash without broken joints
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.6
+    - 1.05
+    - 0.6
+    reference_joint_count_signal: 6
+    required_clip_capabilities:
+    - idle
+    - walk
+    - run
+    - punch
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  lobster:
+    backend: gltf_skeleton
+    identity_features:
+    - elongated segmented shell and tail fan
+    - long antennae
+    - articulated legs and opening claws
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.67276
+    - 0.24979
+    - 1.13163
+    reference_joint_count_signal: 55
+    required_clip_capabilities:
+    - idle
+    - walk
+    - punch
+    - die
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/envelopes/lobster_anatomy_v3/revision_review.json
+    r6_state: pending
+  manatee:
+    backend: gltf_skeleton
+    identity_features:
+    - continuous rounded torso and neck
+    - small front flippers
+    - broad rounded tail paddle
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 1.04629
+    - 0.93435
+    - 3.82557
+    reference_joint_count_signal: 12
+    required_clip_capabilities:
+    - idle
+    - fly
+    - punch
+    - die
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  mese_monster:
+    backend: gltf_skeleton
+    identity_features:
+    - mineral creature silhouette
+    - embedded golden crystal structures
+    - readable attacking appendages
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 2.90725
+    - 1.125
+    - 2.97108
+    reference_joint_count_signal: 15
+    required_clip_capabilities:
+    - idle
+    - walk
+    - run
+    - punch
+    - die
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  octopus:
+    backend: gltf_skeleton
+    identity_features:
+    - mantle and eyes
+    - eight flexible articulated arms
+    - phase delayed arm motion
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.54
+    - 0.47
+    - 0.62
+    reference_joint_count_signal: 0
+    required_clip_capabilities:
+    - idle
+    - walk
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  oerkki:
+    backend: gltf_skeleton
+    identity_features:
+    - long arms and narrow trunk
+    - elongated head and jaw
+    - dark anatomy with readable face
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.80218
+    - 1.89747
+    - 0.3332
+    reference_joint_count_signal: 9
+    required_clip_capabilities:
+    - idle
+    - walk
+    - run
+    - punch
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/envelopes/oerkki_anatomy_v2/revision_review.json
+    r6_state: pending
+  ogre:
+    backend: gltf_skeleton
+    identity_features:
+    - large belly and thick neck
+    - short heavy legs
+    - distinct broad jaw and forearms
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 2.58209
+    - 3.13977
+    - 2.86158
+    reference_joint_count_signal: 9
+    required_clip_capabilities:
+    - idle
+    - walk
+    - run
+    - punch
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  orc:
+    backend: gltf_skeleton
+    identity_features:
+    - lean tall humanoid stance
+    - jaw and brows
+    - own leather cloth and skin zones
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 1.85468
+    - 2.74221
+    - 0.87641
+    reference_joint_count_signal: 9
+    required_clip_capabilities:
+    - idle
+    - walk
+    - run
+    - punch
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/envelopes/orc_sway_v1/review/revision_review.json
+    r6_state: pending
+  owl:
+    backend: gltf_skeleton
+    identity_features:
+    - upright perched bird
+    - facial disc and hooked beak
+    - folded and spread wings
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.45751
+    - 1.18075
+    - 0.53975
+    reference_joint_count_signal: 4
+    required_clip_capabilities:
+    - walk
+    - idle
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  panda:
+    backend: gltf_skeleton
+    identity_features:
+    - broad black and white body masses
+    - round small ears and eye patches
+    - heavy bear limbs
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.625
+    - 0.75
+    - 0.93713
+    reference_joint_count_signal: 8
+    required_clip_capabilities:
+    - idle
+    - walk
+    - run
+    - punch
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  penguin:
+    backend: gltf_skeleton
+    identity_features:
+    - upright dark back and pale chest
+    - short flippers and feet
+    - distinct land and swim poses
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.36943
+    - 0.69996
+    - 0.49488
+    reference_joint_count_signal: 10
+    required_clip_capabilities:
+    - idle
+    - walk
+    - fly
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/envelopes/penguin_belly_v2/revision_review.json
+    r6_state: pending
+  pig:
+    backend: bone_skeleton
+    identity_features:
+    - broad low snout
+    - short four legs
+    - pink skin and ears
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.625
+    - 1.0
+    - 1.5
+    reference_joint_count_signal: 6
+    required_clip_capabilities: []
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  puffin:
+    backend: gltf_skeleton
+    identity_features:
+    - upright black and pale bird
+    - large coloured wedge beak
+    - short legs and wings
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.22027
+    - 0.58642
+    - 0.77056
+    reference_joint_count_signal: 33
+    required_clip_capabilities:
+    - idle
+    - fly
+    - die
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  rat:
+    backend: gltf_skeleton
+    identity_features:
+    - pointed muzzle and rounded ears
+    - thin long segmented tail
+    - low running body
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.33355
+    - 0.2513
+    - 0.86992
+    reference_joint_count_signal: 2
+    required_clip_capabilities:
+    - idle
+    - walk
+    - run
+    - punch
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  rigid_demo_flyer:
+    backend: rigid_voxels
+    identity_features:
+    - distinct airborne body
+    - paired broad pivoted wings
+    - tail rudder and wing beat
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.92
+    - 0.28
+    - 0.4
+    reference_joint_count_signal: 0
+    required_clip_capabilities: []
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  rigid_demo_swimmer:
+    backend: rigid_voxels
+    identity_features:
+    - streamlined aquatic body
+    - paired small fins
+    - tail driven swim motion
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.76
+    - 0.34
+    - 1.435
+    reference_joint_count_signal: 0
+    required_clip_capabilities: []
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  rigid_demo_walker:
+    backend: rigid_voxels
+    identity_features:
+    - four distinct pivoted legs
+    - body head and forward muzzle
+    - own restrained earthy coat
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.59
+    - 0.9
+    - 1.125
+    reference_joint_count_signal: 0
+    required_clip_capabilities: []
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  sand_monster:
+    backend: gltf_skeleton
+    identity_features:
+    - sandstone and sand material
+    - elongated dry humanoid proportions
+    - layered readable face
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.59363
+    - 1.86475
+    - 0.39466
+    reference_joint_count_signal: 18
+    required_clip_capabilities:
+    - idle
+    - walk
+    - run
+    - punch
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  seahorse:
+    backend: gltf_skeleton
+    identity_features:
+    - upright S-shaped axis
+    - curled prehensile tail
+    - small dorsal fin and long snout
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.1848
+    - 0.47813
+    - 0.30968
+    reference_joint_count_signal: 22
+    required_clip_capabilities:
+    - idle
+    - fly
+    - die
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/envelopes/seahorse_anatomy_v1/release_swim/revision_review.json
+    r6_state: pending
+  seal:
+    backend: gltf_skeleton
+    identity_features:
+    - continuous rounded torso and neck
+    - paired short flippers and tail
+    - land body propulsion and swimming
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 1.14046
+    - 0.52457
+    - 2.25039
+    reference_joint_count_signal: 13
+    required_clip_capabilities:
+    - idle
+    - walk
+    - fly
+    - die
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  shark:
+    backend: gltf_skeleton
+    identity_features:
+    - distinct head and dorsal fin
+    - paired pectoral fins
+    - heterocercal vertical tail beat
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 1.50406
+    - 1.22304
+    - 3.4736
+    reference_joint_count_signal: 27
+    required_clip_capabilities:
+    - walk
+    - fly
+    - punch
+    - die
+    - idle
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  sheep:
+    backend: bone_skeleton
+    identity_features:
+    - visible narrow face outside wool
+    - four separate hooves
+    - soft light wool mass
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.625
+    - 1.375
+    - 1.4375
+    reference_joint_count_signal: 6
+    required_clip_capabilities: []
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  skeleton:
+    backend: bone_skeleton
+    identity_features:
+    - thin exposed bone limbs
+    - rib cage and skull
+    - humanoid anchors without clothing
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.75
+    - 2.0
+    - 0.5
+    reference_joint_count_signal: 10
+    required_clip_capabilities: []
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  spider:
+    backend: bone_skeleton
+    identity_features:
+    - eight articulated side legs
+    - two main body masses
+    - arachnid supporting gait
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 2.375
+    - 0.5
+    - 1.625
+    reference_joint_count_signal: 11
+    required_clip_capabilities: []
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  squid:
+    backend: bone_skeleton
+    identity_features:
+    - elongated mantle
+    - independent trailing tentacles
+    - mantle pumping motion
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.75
+    - 2.0625
+    - 0.75
+    reference_joint_count_signal: 9
+    required_clip_capabilities: []
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  stingray:
+    backend: gltf_skeleton
+    identity_features:
+    - continuous tapered diamond wings
+    - long narrow tail
+    - distributed wing undulation
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 1.58359
+    - 0.34987
+    - 2.26952
+    reference_joint_count_signal: 24
+    required_clip_capabilities:
+    - idle
+    - fly
+    - punch
+    - die
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  stone_monster:
+    backend: gltf_skeleton
+    identity_features:
+    - rock body with cracks
+    - asymmetric heavy arms
+    - clear stone face and weight
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.80459
+    - 1.72432
+    - 0.41881
+    reference_joint_count_signal: 7
+    required_clip_capabilities:
+    - idle
+    - walk
+    - run
+    - punch
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  tortoise:
+    backend: bone_skeleton
+    identity_features:
+    - rounded segmented shell
+    - four flippers and separate neck
+    - reptile head and muted green shell
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 2.25
+    - 0.625
+    - 2.125
+    reference_joint_count_signal: 7
+    required_clip_capabilities: []
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  tree_monster:
+    backend: gltf_skeleton
+    identity_features:
+    - bark and branching silhouette
+    - split wooden face
+    - rooted articulated limbs
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 1.12463
+    - 2.38907
+    - 1.00466
+    reference_joint_count_signal: 7
+    required_clip_capabilities:
+    - idle
+    - walk
+    - run
+    - punch
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  treeman:
+    backend: gltf_skeleton
+    identity_features:
+    - tall branching trunk
+    - canopy or foliage mass
+    - long root legs and swaying limbs
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 1.80321
+    - 4.87203
+    - 1.82562
+    reference_joint_count_signal: 16
+    required_clip_capabilities:
+    - idle
+    - walk
+    - run
+    - punch
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/envelopes/motion_v5/revision_review.json
+    r6_state: pending
+  trout:
+    backend: bone_skeleton
+    identity_features:
+    - streamlined fish silhouette
+    - dorsal fin and forked vertical tail
+    - longitudinal side spots
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.29531
+    - 0.51893
+    - 1.5625
+    reference_joint_count_signal: 8
+    required_clip_capabilities: []
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  warthog:
+    backend: gltf_skeleton
+    identity_features:
+    - sloping high shoulders
+    - lateral tusks and snout
+    - short mane and heavy front legs
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.66869
+    - 1.06779
+    - 1.41561
+    reference_joint_count_signal: 11
+    required_clip_capabilities:
+    - idle
+    - walk
+    - run
+    - punch
+    - die
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  wasp:
+    backend: gltf_skeleton
+    identity_features:
+    - narrow waist and antennae
+    - six legs and correctly oriented wings
+    - yellow and dark warning bands
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.52613
+    - 0.97697
+    - 0.83099
+    reference_joint_count_signal: 15
+    required_clip_capabilities:
+    - idle
+    - walk
+    - punch
+    - die
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  water_dragon:
+    backend: gltf_skeleton
+    identity_features:
+    - high curved neck and small horned head
+    - long articulated aquatic body
+    - coherent neck and tail motion
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 1.09214
+    - 5.69975
+    - 2.88292
+    reference_joint_count_signal: 8
+    required_clip_capabilities:
+    - idle
+    - walk
+    - run
+    - punch
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  whale:
+    backend: gltf_skeleton
+    identity_features:
+    - large streamlined continuous body
+    - long pectoral fins
+    - broad horizontal tail beat
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 4.99648
+    - 3.31367
+    - 11.00181
+    reference_joint_count_signal: 8
+    required_clip_capabilities:
+    - idle
+    - walk
+    - run
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/envelopes/whale_anatomy_v2/revision_review.json
+    r6_state: pending
+  wolf:
+    backend: bone_skeleton
+    identity_features:
+    - canine muzzle
+    - raised withers and low tail
+    - grey coat and lighter chest
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 0.5
+    - 0.96875
+    - 1.3125
+    reference_joint_count_signal: 8
+    required_clip_capabilities: []
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  zombie:
+    backend: bone_skeleton
+    identity_features:
+    - recognizable undead face and hands
+    - humanoid clothes and skin separation
+    - readable heavy gait
+    baseline_revision: b35f00a75
+    reference_extent_blocks:
+    - 1.0
+    - 2.0
+    - 0.5
+    reference_joint_count_signal: 10
+    required_clip_capabilities: []
+    review_state: accepted
+    count_reduction_policy: review_functional_equivalence_not_automatic_rejection
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+skins:
+  human_adventurer:
+    base_species: human
+    backend: bone_skeleton
+    identity_features:
+    - own authored skin palette and masks
+    - base geometry and atlas compatibility
+    review_state: accepted
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  human_guard:
+    base_species: human
+    backend: bone_skeleton
+    identity_features:
+    - own authored skin palette and masks
+    - base geometry and atlas compatibility
+    review_state: accepted
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  sheep_wool_black:
+    base_species: sheep
+    backend: bone_skeleton
+    identity_features:
+    - own authored skin palette and masks
+    - base geometry and atlas compatibility
+    review_state: accepted
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  sheep_wool_golden:
+    base_species: sheep
+    backend: bone_skeleton
+    identity_features:
+    - own authored skin palette and masks
+    - base geometry and atlas compatibility
+    review_state: accepted
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending
+  wolf_snow:
+    base_species: wolf
+    backend: bone_skeleton
+    identity_features:
+    - own authored skin palette and masks
+    - base geometry and atlas compatibility
+    review_state: accepted
+    r5_review_path: docs/research/creature-r6-v2/bone-motion/profiles_review.json
+    r6_state: pending

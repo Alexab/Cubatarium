@@ -109,18 +109,18 @@ void ApplyFlyingPose(CreaturePoseParams &pose,
   const float bankDeg = std::sin(phase * 0.5f) * 10.0f * speedFactor;
 
   CreaturePartPose wingUpperL;
-  wingUpperL.eulerDeg = glm::vec3(upperFlap, 0.0f, -bankDeg);
+  wingUpperL.eulerDeg = glm::vec3(0.0f, 0.0f, upperFlap - bankDeg);
   CreaturePartPose wingUpperR;
-  wingUpperR.eulerDeg = glm::vec3(-upperFlap, 0.0f, bankDeg);
+  wingUpperR.eulerDeg = glm::vec3(0.0f, 0.0f, -upperFlap + bankDeg);
   pose.SetPart("wing_l", wingUpperL);
   pose.SetPart("wing_r", wingUpperR);
   pose.SetPart("wing_upper_l", wingUpperL);
   pose.SetPart("wing_upper_r", wingUpperR);
 
   CreaturePartPose wingLowerL;
-  wingLowerL.eulerDeg = glm::vec3(lowerFlap, 0.0f, -bankDeg * 0.45f);
+  wingLowerL.eulerDeg = glm::vec3(0.0f, 0.0f, lowerFlap - bankDeg * 0.45f);
   CreaturePartPose wingLowerR;
-  wingLowerR.eulerDeg = glm::vec3(-lowerFlap, 0.0f, bankDeg * 0.45f);
+  wingLowerR.eulerDeg = glm::vec3(0.0f, 0.0f, -lowerFlap + bankDeg * 0.45f);
   pose.SetPart("wing_lower_l", wingLowerL);
   pose.SetPart("wing_lower_r", wingLowerR);
 
@@ -174,9 +174,9 @@ UAerialPosePresenter::Compute(const CreatureLocomotionFacts &facts,
     {
       const float idleFlap = std::sin(phase * 0.5f) * flapDeg * 0.35f;
       CreaturePartPose wingL;
-      wingL.eulerDeg = glm::vec3(idleFlap, 0.0f, 0.0f);
+      wingL.eulerDeg = glm::vec3(0.0f, 0.0f, idleFlap);
       CreaturePartPose wingR;
-      wingR.eulerDeg = glm::vec3(-idleFlap, 0.0f, 0.0f);
+      wingR.eulerDeg = glm::vec3(0.0f, 0.0f, -idleFlap);
       pose.SetPart("wing_l", wingL);
       pose.SetPart("wing_r", wingR);
       break;

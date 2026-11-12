@@ -1,0 +1,1 @@
+Intermediate offline diagnostic only; the candidate column here is also baseline. Do not use these comparisons for acceptance. Actual baseline native sheets are in ../native_baseline_sheet_manatee.png and ../native_baseline_sheet_seal.png.

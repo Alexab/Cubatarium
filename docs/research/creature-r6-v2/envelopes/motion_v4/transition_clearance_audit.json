@@ -1,0 +1,114 @@
+{
+  "schema": "creature-native-transition-clearance-audit.v1",
+  "passed": true,
+  "scope": "Actual cold-entry retained G visual CPU submissions,12 clip pairs/16 outgoing phases/11 fade steps where available, supported/free fixtures; not GPU crossfade raster, sliding, terrain, every clip history or performance acceptance",
+  "catalogs": [
+    {
+      "id": "published",
+      "before_exe": "0140ebe1277d2a501304d7799ba50e32c12c09e2b4f1b0a80a7459aee522e62b",
+      "after_exe": "ef4925fcfe9b860d1625c04509be8f7b5963432953969a2452929ef1fbd4c7f5",
+      "resources": [
+        {
+          "id": "badger",
+          "cases": 196,
+          "supported_min_before": -0.030964510515332222,
+          "supported_min_after": -4.889443516731262e-09,
+          "fixed_penetrating_frames": 1235,
+          "free_frames_exact": 44,
+          "positive_clearance_frames_preserved": 251
+        },
+        {
+          "id": "treeman",
+          "cases": 196,
+          "supported_min_before": -0.08525596559047699,
+          "supported_min_after": 0.0,
+          "fixed_penetrating_frames": 1315,
+          "free_frames_exact": 44,
+          "positive_clearance_frames_preserved": 22
+        },
+        {
+          "id": "lobster",
+          "cases": 100,
+          "supported_min_before": -0.0009415149688720703,
+          "supported_min_after": 0.0,
+          "fixed_penetrating_frames": 0,
+          "free_frames_exact": 44,
+          "positive_clearance_frames_preserved": 82
+        },
+        {
+          "id": "seahorse",
+          "cases": 4,
+          "supported_min_before": null,
+          "supported_min_after": null,
+          "fixed_penetrating_frames": 0,
+          "free_frames_exact": 44,
+          "positive_clearance_frames_preserved": 0
+        }
+      ],
+      "native_sha256": [
+        "ab4214f53a5914f2a4a373b7dfaabac86efe13b9229c053d02819880dbd9d379",
+        "27951e4aad51409d89ace3c6254f3348566b117a530918aed5fde02f30facc23"
+      ]
+    },
+    {
+      "id": "proposal_v4",
+      "before_exe": "0140ebe1277d2a501304d7799ba50e32c12c09e2b4f1b0a80a7459aee522e62b",
+      "after_exe": "ef4925fcfe9b860d1625c04509be8f7b5963432953969a2452929ef1fbd4c7f5",
+      "resources": [
+        {
+          "id": "badger",
+          "cases": 196,
+          "supported_min_before": -0.030964510515332222,
+          "supported_min_after": -5.587935447692871e-09,
+          "fixed_penetrating_frames": 1214,
+          "free_frames_exact": 44,
+          "positive_clearance_frames_preserved": 297
+        },
+        {
+          "id": "treeman",
+          "cases": 196,
+          "supported_min_before": -0.08863242715597153,
+          "supported_min_after": 0.0,
+          "fixed_penetrating_frames": 1357,
+          "free_frames_exact": 44,
+          "positive_clearance_frames_preserved": 81
+        },
+        {
+          "id": "lobster",
+          "cases": 100,
+          "supported_min_before": -0.0015544024063274264,
+          "supported_min_after": 0.0,
+          "fixed_penetrating_frames": 33,
+          "free_frames_exact": 44,
+          "positive_clearance_frames_preserved": 106
+        },
+        {
+          "id": "seahorse",
+          "cases": 4,
+          "supported_min_before": null,
+          "supported_min_after": null,
+          "fixed_penetrating_frames": 0,
+          "free_frames_exact": 44,
+          "positive_clearance_frames_preserved": 0
+        }
+      ],
+      "native_sha256": [
+        "bc047e4d3a0da5d857e52182b7757727dcd81b1b98693ed8d02575d34eb032b4",
+        "321f6c1ddafea072d5f9da2af07357340401e05a36157dd3d5018c36a3b17105"
+      ]
+    }
+  ],
+  "frame_count": 10912,
+  "palette_bit_exact_count": 10912,
+  "ordinary_rgba_exact_count": 232,
+  "after_source_sha256": {
+    "src/Creatures/Visual/CreatureVisualGltf.cpp": "614c94d571180f0f673e5ee11750ff6253d0feae6d81d7d7faf1968aa1b895ab",
+    "src/Creatures/Visual/CreatureVisualGltf.h": "a1dcaf2f9906239225eac6e9002323c03cbf8c2cde5a170cb65e8c6680f17aa5",
+    "src/Creatures/Visual/Gltf/CreatureGltfBonePalette.cpp": "2cfaa1268d1b4c76128a02dcf53c853dca1b70c7f0498724fd9081a484a015d0",
+    "src/Creatures/Visual/Gltf/CreatureGltfClipClock.h": "b3e6f0c051563c367aaaa2cc63c0d0487ad3433733411129492ad0cf49afc2f0",
+    "src/App/Platform/CreatureQaTransitionProbe.h": "d1ef387553f2d2fb1b4e15d228c4ee16a9305a24bef51d589d033f3e5070a726",
+    "src/App/Platform/CreatureQaEnvelopeCapture.h": "c7aad4b9ef5877a102919121dfe28af2350a8449f92dc93deb0c97cf69c728ac",
+    "src/Gui/Preview/CreaturePreviewRenderer.cpp": "b94f69fc0fb48b9c1a9055d659ef26b4cada0de98ca16d27100d5996f77ba348",
+    "src/Gui/Preview/CreaturePreviewRenderer.h": "a7cad6db27a4f8c5452629f9ec29b5749d6940d4c956c7c15d729e8fca9de96a"
+  }
+}

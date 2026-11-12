@@ -1,0 +1,87 @@
+{
+  "rat": {
+    "geometry_attributes_numerically_identical": {
+      "POSITION": true,
+      "TEXCOORD_0": true,
+      "JOINTS_0": true,
+      "WEIGHTS_0": true
+    },
+    "nodes_and_skin_unchanged": true,
+    "texture_png_sha256_unchanged": {
+      "body.png": "e53f7470d8c4663e2937cd4582caefd5e6159db8000892e04f1af7a575c047f6",
+      "icon.png": "ed867e12f0ebcb580dfde23c6fc20b0f7988ec7b4be1e08363316c977581f687"
+    },
+    "runtime_definition_change": "visual.gltf.model_yaw_offset_deg: 0 -> 180",
+    "animation_change": "walk/run keys reversed in time; identical loop poses, corrected stance direction",
+    "old_catalog": "assetgen_output\\creatures\\gltf_small_v2\\models\\creatures\\rat",
+    "new_catalog": "assetgen_output\\creatures\\gltf_forward_birds_v2\\models\\creatures\\rat"
+  },
+  "kitten": {
+    "geometry_attributes_numerically_identical": {
+      "POSITION": true,
+      "TEXCOORD_0": true,
+      "JOINTS_0": true,
+      "WEIGHTS_0": true
+    },
+    "nodes_and_skin_unchanged": true,
+    "texture_png_sha256_unchanged": {
+      "body.png": "551cd79d23b69e511daa8270749365a37dfc872aeae983337be1483bab363819",
+      "icon.png": "144a098a038651993cb2d327e3b23576f8122aa14181297883cd1f18821bd496"
+    },
+    "runtime_definition_change": "visual.gltf.model_yaw_offset_deg: 0 -> 180",
+    "animation_change": "walk/run keys reversed in time; identical loop poses, corrected stance direction",
+    "old_catalog": "assetgen_output\\creatures\\gltf_small_v2\\models\\creatures\\kitten",
+    "new_catalog": "assetgen_output\\creatures\\gltf_forward_birds_v2\\models\\creatures\\kitten"
+  },
+  "hedgehog": {
+    "geometry_attributes_numerically_identical": {
+      "POSITION": true,
+      "TEXCOORD_0": true,
+      "JOINTS_0": true,
+      "WEIGHTS_0": true
+    },
+    "nodes_and_skin_unchanged": true,
+    "texture_png_sha256_unchanged": {
+      "body.png": "99d559b059286509e3974dfd52f67b25bb30347e660716344703b2fd35165472",
+      "icon.png": "8b4a4a9e2bc2c37cd1874a08e8b9b6f6e90cc6aaf923eba569a6d668e3849da9"
+    },
+    "runtime_definition_change": "visual.gltf.model_yaw_offset_deg: 0 -> 180",
+    "animation_change": "walk/run keys reversed in time; identical loop poses, corrected stance direction",
+    "old_catalog": "assetgen_output\\creatures\\gltf_small_v2\\models\\creatures\\hedgehog",
+    "new_catalog": "assetgen_output\\creatures\\gltf_forward_birds_v2\\models\\creatures\\hedgehog"
+  },
+  "panda": {
+    "geometry_attributes_numerically_identical": {
+      "POSITION": true,
+      "TEXCOORD_0": true,
+      "JOINTS_0": true,
+      "WEIGHTS_0": true
+    },
+    "nodes_and_skin_unchanged": true,
+    "texture_png_sha256_unchanged": {
+      "body.png": "cb5ab10ec347d6ec3b4f16b58c8eab3da4700478aaf24c7b969fc699e12ff287",
+      "icon.png": "f8e0fdcde1966bbd55ae574a9a5f7e65dcc68300de47f51dff1aa86efe35ebe2"
+    },
+    "runtime_definition_change": "visual.gltf.model_yaw_offset_deg: 0 -> 180",
+    "animation_change": "walk/run keys reversed in time; identical loop poses, corrected stance direction",
+    "old_catalog": "assetgen_output\\creatures\\gltf_medium_v2\\models\\creatures\\panda",
+    "new_catalog": "assetgen_output\\creatures\\gltf_forward_birds_v2\\models\\creatures\\panda"
+  },
+  "warthog": {
+    "geometry_attributes_numerically_identical": {
+      "POSITION": true,
+      "TEXCOORD_0": true,
+      "JOINTS_0": true,
+      "WEIGHTS_0": true
+    },
+    "nodes_and_skin_unchanged": true,
+    "texture_png_sha256_unchanged": {
+      "body.png": "df64deee3be0db434d02032e4b5585abbcb880bff64adf57c66bd807e2b81d4b",
+      "icon.png": "71db9038b3da638469fce531a5eb0b7f16c5b67e804afb69076fb8e393872fcd"
+    },
+    "runtime_definition_change": "visual.gltf.model_yaw_offset_deg: 0 -> 180",
+    "animation_change": "walk/run keys reversed in time; identical loop poses, corrected stance direction",
+    "old_catalog": "assetgen_output\\creatures\\gltf_medium_v2\\models\\creatures\\warthog",
+    "new_catalog": "assetgen_output\\creatures\\gltf_forward_birds_v2\\models\\creatures\\warthog"
+  }
+}

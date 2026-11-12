@@ -1,0 +1,138 @@
+{
+  "passed": true,
+  "scope": "Six exported section matches across bind +129 phases/all3 clips per own version, static blowhole cap exposure/base embed; not all surfaces/intersections/animation art acceptance",
+  "resources": [
+    {
+      "version": "before",
+      "seams": [
+        {
+          "parts": [
+            "rostrum",
+            "head"
+          ],
+          "z_texels": -20,
+          "max_section_error_blocks": 8.881784197001252e-16
+        },
+        {
+          "parts": [
+            "head",
+            "trunk_front"
+          ],
+          "z_texels": -12,
+          "max_section_error_blocks": 0.0
+        },
+        {
+          "parts": [
+            "trunk_front",
+            "trunk_rear"
+          ],
+          "z_texels": -4,
+          "max_section_error_blocks": 0.0
+        },
+        {
+          "parts": [
+            "trunk_rear",
+            "rump"
+          ],
+          "z_texels": 4,
+          "max_section_error_blocks": 0.0
+        },
+        {
+          "parts": [
+            "rump",
+            "tail0"
+          ],
+          "z_texels": 10,
+          "max_section_error_blocks": 0.0
+        },
+        {
+          "parts": [
+            "tail0",
+            "tail1"
+          ],
+          "z_texels": 14,
+          "max_section_error_blocks": 0.0
+        }
+      ],
+      "blowhole_cap_clearance_blocks": [
+        0.24375009536743164,
+        0.13750004768371582
+      ],
+      "blowhole_base_embed_blocks": [
+        0.006249904632568359,
+        0.11249995231628418
+      ],
+      "files_sha256": {
+        "assetgen_output\\creatures\\whale_anatomy_pre_publish\\models\\creatures\\whale\\model.gltf": "9a80d2a5791230ca999c1853cc285dc3c91cb1b471634ee7c22be00e3dce222f",
+        "assetgen_output\\creatures\\whale_anatomy_pre_publish\\models\\creatures\\whale\\model.bin": "4c9b5993f358709c7dbdb1d6e8dfbbf34b897887376dd70fe75e72db0c0e62f7",
+        "assetgen_output\\creatures\\whale_anatomy_pre_publish\\tools\\creature_recipes\\whale.yaml": "4e7802a452521034a39a30d64f7abb6d9afbb9000dedd094ec654a1e7d21a912"
+      }
+    },
+    {
+      "version": "candidate",
+      "seams": [
+        {
+          "parts": [
+            "rostrum",
+            "head"
+          ],
+          "z_texels": -20,
+          "max_section_error_blocks": 8.881784197001252e-16
+        },
+        {
+          "parts": [
+            "head",
+            "trunk_front"
+          ],
+          "z_texels": -12,
+          "max_section_error_blocks": 0.0
+        },
+        {
+          "parts": [
+            "trunk_front",
+            "trunk_rear"
+          ],
+          "z_texels": -4,
+          "max_section_error_blocks": 0.0
+        },
+        {
+          "parts": [
+            "trunk_rear",
+            "rump"
+          ],
+          "z_texels": 4,
+          "max_section_error_blocks": 0.0
+        },
+        {
+          "parts": [
+            "rump",
+            "tail0"
+          ],
+          "z_texels": 10,
+          "max_section_error_blocks": 0.0
+        },
+        {
+          "parts": [
+            "tail0",
+            "tail1"
+          ],
+          "z_texels": 14,
+          "max_section_error_blocks": 0.0
+        }
+      ],
+      "blowhole_cap_clearance_blocks": [
+        0.16874980926513672,
+        0.03749990463256836
+      ],
+      "blowhole_base_embed_blocks": [
+        0.08125019073486328,
+        0.21250009536743164
+      ],
+      "files_sha256": {
+        "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\whale_anatomy_v2\\models\\creatures\\whale\\model.gltf": "e5246c82528e41020bc385853102affafa0c6ff49926d8dd9d9eda6e7f120259",
+        "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\whale_anatomy_v2\\models\\creatures\\whale\\model.bin": "1cea7e7722522ca4c3b6affc591099c6378b1b76297da5755fde038a665c0c9e",
+        "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\whale_anatomy_v2\\recipes\\whale.yaml": "cb5aca3a6d64cccce1d8fd1642cdbdd8093f7830e5cd2e8031fc7b0ddbf4b252"
+      }
+    }
+  ]
+}

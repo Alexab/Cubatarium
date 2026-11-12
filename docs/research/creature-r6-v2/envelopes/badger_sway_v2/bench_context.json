@@ -1,0 +1,38 @@
+{
+  "runs": [
+    {
+      "label": "memory_subset",
+      "command": [
+        "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_sampling_perf_v1\\baseline\\sampling_bench.exe",
+        "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\envelopes\\badger_sway_v2\\memory_subset.json",
+        "E:\\Work\\Home\\Cubatarium\\models\\creatures\\badger\\model.gltf",
+        "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\badger_sway_v2\\models\\creatures\\badger\\model.gltf"
+      ],
+      "cpu_affinity": [
+        2
+      ],
+      "exe_sha256": "7cba979777f91b5ec70b4fdee2eb0571a31eb9b0c2000ec0a27c4045a712ffdf",
+      "scope": "memory_subset uses only accounted heap fields from original linear standalone; paired_cpu is final128 vs linear in one process; neither is world/R6 acceptance"
+    },
+    {
+      "label": "paired_cpu",
+      "command": [
+        "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_sampling_perf_v1\\paired\\paired_bench.exe",
+        "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\envelopes\\badger_sway_v2\\paired_cpu.json",
+        "E:\\Work\\Home\\Cubatarium\\models\\creatures\\badger\\model.gltf",
+        "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\badger_sway_v2\\models\\creatures\\badger\\model.gltf"
+      ],
+      "cpu_affinity": [
+        2
+      ],
+      "exe_sha256": "f81bba7809984c317a894d354747887af2db13fa76719bd4712859e8e2345940",
+      "scope": "memory_subset uses only accounted heap fields from original linear standalone; paired_cpu is final128 vs linear in one process; neither is world/R6 acceptance"
+    }
+  ],
+  "models_sha256": {
+    "models/creatures/badger/model.gltf": "95ecd5d538250578257ba9c1ce03e99072e7532e5c3e0ceffae2b108324f16e7",
+    "models\\creatures\\badger\\model.bin": "55cc3e55c2393445ca6ec17a18d71cad63ad2aafc2a9c0a7abcdc9b0b5f31d54",
+    "assetgen_output/creatures/badger_sway_v2/models/creatures/badger/model.gltf": "937ad2f56cce6438f1dfed477600189ad0aba0efe9659a1b095ff3f7535dba00",
+    "assetgen_output\\creatures\\badger_sway_v2\\models\\creatures\\badger\\model.bin": "193b010b19c1b5a9d45345876d78ba0b3be1520ad938100bbe19b24ff285894a"
+  }
+}

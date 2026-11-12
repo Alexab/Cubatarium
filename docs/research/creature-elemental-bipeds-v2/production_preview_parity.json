@@ -1,0 +1,20 @@
+{
+  "sand_monster": {
+    "ordinary_production_catalog": true,
+    "actual_spawn_and_fresh_dump_required": true,
+    "pixel_identical_native_frames": 29,
+    "bundle_sha256": "4f39847c08107a167c2a338a080a24b00d0f6d2f16fb681dc3192ecf6ceff71d"
+  },
+  "stone_monster": {
+    "ordinary_production_catalog": true,
+    "actual_spawn_and_fresh_dump_required": true,
+    "pixel_identical_native_frames": 29,
+    "bundle_sha256": "035acd1786ea7944468634538a8d64c5ad181bff9e7fd0302e8c364be0683b2e"
+  },
+  "dirt_monster": {
+    "ordinary_production_catalog": true,
+    "actual_spawn_and_fresh_dump_required": true,
+    "pixel_identical_native_frames": 29,
+    "bundle_sha256": "3d35684f87cfe6020895b33c80c589f0bf4088a07e9bbc390e131a54161de8c8"
+  }
+}

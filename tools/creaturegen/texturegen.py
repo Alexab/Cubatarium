@@ -174,6 +174,23 @@ def bake_icon(atlas: Image.Image) -> Image.Image:
 
 
 def bake_sprite(palette: dict, species: str, version: int) -> Image.Image:
+    if species == "fire_spirit":
+        image = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        # Three unequal tongues with an irregular base and a quiet, dark
+        # ember inside. Authored outline; never a stack of noisy scanlines.
+        draw.polygon([(12,53),(8,41),(14,28),(15,17),(24,28),(28,18),
+                      (33,3),(39,19),(38,29),(47,18),(48,31),(55,42),
+                      (51,53),(42,59),(24,60)],fill=(211,67,22,255))
+        draw.polygon([(17,51),(15,40),(23,31),(26,37),(33,15),(38,35),
+                      (44,29),(49,43),(44,53),(34,57),(24,55)],fill=(246,133,30,255))
+        draw.polygon([(23,48),(25,40),(30,42),(33,29),(40,44),(39,51),
+                      (32,55)],fill=(255,203,74,255))
+        draw.polygon([(26,52),(26,47),(30,43),(36,44),(39,50),
+                      (35,55),(30,55)],fill=(70,34,25,255))
+        draw.rectangle((28,47,30,49),fill=(255,218,104,255))
+        draw.rectangle((35,47,37,49),fill=(255,218,104,255))
+        return image
     image = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
     core = _rgb(palette, "belly")
@@ -193,7 +210,8 @@ def bake_sprite(palette: dict, species: str, version: int) -> Image.Image:
 
 def bake_part_tile(palette: dict, stem: str, species: str, size: tuple[int, int] = (32, 32)) -> Image.Image:
     """A tile the rigid renderer stretches over a whole cube. Not a box-UV atlas."""
-    role = {"face": "face", "leg": "limb"}.get(stem, "body")
+    role = {"face": "face", "leg": "limb", "muzzle": "muzzle", "horn": "horn",
+            "wing": "wing", "belly": "belly", "ear": "face", "tail": "body"}.get(stem, "body")
     image = Image.new("RGBA", size, _rgb(palette, role) + (255,))
     draw = ImageDraw.Draw(image)
     width, height = size
@@ -209,7 +227,17 @@ def bake_part_tile(palette: dict, stem: str, species: str, size: tuple[int, int]
         mouth_y = ey + eye_size + max(1, height // 8)
         draw.line((gap, mouth_y, right + eye_size, mouth_y), fill=eye)
     elif stem == "body" and width >= 8 and height >= 8:
-        draw.ellipse((width // 8, height // 3, (2 * width) // 3, height - 2), fill=mark)
+        # Low-contrast directional fibre, since one tile is sampled on all six
+        # rigid faces. A big emblem would repeat on the back and every ear.
+        base = _rgb(palette, role)
+        for row in range(3, height-2, 5):
+            start = 2 + stable_seed(species, row) % max(1,width//2)
+            draw.line((start, row, min(width-2,start+width//5), row), fill=_shade(base,-8)+(255,))
+    elif stem == "muzzle":
+        nostril = _rgb(palette, "eye")+(255,)
+        y = height//2
+        draw.rectangle((width//5,y,width//3,y+1), fill=nostril)
+        draw.rectangle((2*width//3,y,4*width//5,y+1), fill=nostril)
     elif stem == "leg":
         draw.rectangle((0, height // 2, width - 1, height - 1), fill=_shade(_rgb(palette, role), -24) + (255,))
     del species

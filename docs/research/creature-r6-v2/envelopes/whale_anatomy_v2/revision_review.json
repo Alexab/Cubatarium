@@ -1,0 +1,43 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "Assisted R5 local whale hull/head vertical profile revision, not all anatomy/motion R6 or user approval",
+  "r6_state": "pending",
+  "species": {
+    "whale": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct raw and explicitly aligned original/own-before/candidate Idle/Walk/Run sheets,3 full-turn sheets, actual Swim world full frame",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "18e13188af99d5d86692b2f157556765e1fa6e65e5548d4fcceb4b3a4df9c060",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "aligned_reference/threeway_idle.png",
+          "sha256": "4a09576569117545a6f68a1ea1ec38eb8e488026887c4fb0fe2bd0c010f7c694"
+        },
+        "motion": {
+          "path": "aligned_reference/threeway_run.png",
+          "sha256": "08df53c723db779c1da8c8643bac91a1ca02a6582c8aec419eebe586da0bedec"
+        },
+        "runtime": {
+          "path": "runtime_envelope_current/frame_008.png",
+          "sha256": "a3b04d813071a55ae4e400f8e40acf06ae51e44f5868c4f72f5f5f2c3bae81de"
+        },
+        "ui": {
+          "path": "fullturn_0.png",
+          "sha256": "66a5abe282660ff30f82696e193bffcc997e20712f259633bd2800d8aa79e8cb"
+        }
+      },
+      "notes": "Accept local height/profile restoration:13-texel trunk around existing6.5 spine,12-texel head,7-texel rostrum, preserved tail entry and6 matching sections in387 phases/all3 clips.14 joints/hierarchy/IBM/weights and36 samplers (72 input/output arrays) exact. Blowhole remains exposed with base embedded; v1 buried cap rejected. Fin/fluke width and motion unchanged; full girth/expressiveness remain R6. Own UV/surface rebaked;192 triangles. Research reference additionally aligned180deg and rootZ-1.3897914886 only for honest comparison; no reference production inputs.",
+      "skin_scope": "No authored compatible whale skins; native full-turn/UI preview inspected.",
+      "limits": "Assistant R5 revision only. Aligned reference is research clone with rigid transform, not pristine source pixels at original actor orientation. Width/fin silhouette and full original motion range not accepted. Section matches do not prove every surface watertight/intersection free. Ordinary input water route is not AI hover/performance/terrain/lighting/control/UI-pack/user-save/package R6. All61 R6 pending."
+    }
+  }
+}

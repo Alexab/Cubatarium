@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "scope": "One normal-pipeline R5 lobster anatomy/bind revision, full61 sampled GPU regression and isolated FP/entity persistence; not final R6 or complete compatibility/terrain/performance",
+  "exe_sha256": "a0872e87a1551dbe7ac0cff1346b58176743d18eba13817cb7779473415df68f",
+  "candidate_to_production_rgba_exact": 89,
+  "body_rgba_exact": 5201,
+  "expected_changed_lobster_png": 89,
+  "fp_rgba_exact": 936,
+  "ledger_fresh": 61,
+  "joints_retained": 51,
+  "refit_bind_nodes": 18,
+  "angular_channels_exact": 90,
+  "foot_y_max_error_blocks": 2.1335365954300302e-05,
+  "review_sha256": "bb45c204e5e17bbea1baa9eb048f05a7e04515b6bada26663c92077dcee315a4",
+  "snapshot_sha256": "73ca5973ca6147e2a76cf22b594dfaa432c3048e34856bc49748007dd9dbf83d",
+  "input_reports_sha256": {
+    "body_parity.json": "01801fa5dcd8b4e1b178050673f053077172d9624977e0f5060eb2cf0b924822",
+    "fp_audit.json": "e854831fbd4c70f69b96302aa72513fafee1445bfe8b85797726e2e2c16488b3",
+    "audit_production_final.json": "2debdeeeacda3f68e4e5beaa291df345a0227eb932b5c555b5438f537a0d4e42"
+  }
+}

@@ -1,0 +1,1836 @@
+{
+  "schema": "creature-native-bone-floor-comparison.v1",
+  "same_native_release_executable": true,
+  "scope": "Diagnostic floor bounds; positive clearance may be intentional flight/hop. Not a stance/stride or full R6 verdict.",
+  "possible_ground_penetration_regressions_over_0_005": [
+    {
+      "id": "wolf",
+      "state": "Walk",
+      "speed_ratio": 0.2199999988079071,
+      "penetration_delta": -0.00928676500916481
+    },
+    {
+      "id": "wolf",
+      "state": "Walk",
+      "speed_ratio": 0.5,
+      "penetration_delta": -0.012564798817038536
+    },
+    {
+      "id": "wolf",
+      "state": "Walk",
+      "speed_ratio": 1.0,
+      "penetration_delta": -0.015622550621628761
+    },
+    {
+      "id": "wolf",
+      "state": "Walk",
+      "speed_ratio": 1.5,
+      "penetration_delta": -0.011499820277094841
+    },
+    {
+      "id": "wolf",
+      "state": "Run",
+      "speed_ratio": 0.2199999988079071,
+      "penetration_delta": -0.00928676500916481
+    },
+    {
+      "id": "wolf",
+      "state": "Run",
+      "speed_ratio": 0.5,
+      "penetration_delta": -0.012564798817038536
+    },
+    {
+      "id": "wolf",
+      "state": "Run",
+      "speed_ratio": 1.0,
+      "penetration_delta": -0.015622550621628761
+    },
+    {
+      "id": "wolf",
+      "state": "Run",
+      "speed_ratio": 1.5,
+      "penetration_delta": -0.005531366914510727
+    }
+  ],
+  "resources": [
+    {
+      "id": "human",
+      "profile_before": "humanoid",
+      "profile_after": "humanoid",
+      "ground_scenarios": [
+        {
+          "state": "Idle",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.018084049224853516,
+          "lowest_y_after": -0.018084049224853516,
+          "highest_floor_y_before": 0.00022864341735839844,
+          "highest_floor_y_after": 0.00022864341735839844
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.022810935974121094,
+          "lowest_y_after": -0.022810935974121094,
+          "highest_floor_y_before": 0.002226501703262329,
+          "highest_floor_y_after": 0.002226501703262329
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.031186997890472412,
+          "lowest_y_after": -0.031186997890472412,
+          "highest_floor_y_before": 0.028879910707473755,
+          "highest_floor_y_after": 0.028879910707473755
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.03435942530632019,
+          "lowest_y_after": -0.03435942530632019,
+          "highest_floor_y_before": 0.08992224931716919,
+          "highest_floor_y_after": 0.08992224931716919
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.018084049224853516,
+          "lowest_y_after": -0.018084049224853516,
+          "highest_floor_y_before": 0.00022864341735839844,
+          "highest_floor_y_after": 0.00022864341735839844
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.022810935974121094,
+          "lowest_y_after": -0.022810935974121094,
+          "highest_floor_y_before": 0.002226501703262329,
+          "highest_floor_y_after": 0.002226501703262329
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.031186997890472412,
+          "lowest_y_after": -0.031186997890472412,
+          "highest_floor_y_before": 0.028879910707473755,
+          "highest_floor_y_after": 0.028879910707473755
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.03566738963127136,
+          "lowest_y_after": -0.03566738963127136,
+          "highest_floor_y_before": 0.1725267767906189,
+          "highest_floor_y_after": 0.1725267767906189
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.5,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.5,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        }
+      ]
+    },
+    {
+      "id": "bot",
+      "profile_before": "humanoid",
+      "profile_after": "humanoid",
+      "ground_scenarios": [
+        {
+          "state": "Idle",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.018084049224853516,
+          "lowest_y_after": -0.018084049224853516,
+          "highest_floor_y_before": 0.00022864341735839844,
+          "highest_floor_y_after": 0.00022864341735839844
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.022810935974121094,
+          "lowest_y_after": -0.022810935974121094,
+          "highest_floor_y_before": 0.002226501703262329,
+          "highest_floor_y_after": 0.002226501703262329
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.031186997890472412,
+          "lowest_y_after": -0.031186997890472412,
+          "highest_floor_y_before": 0.028879910707473755,
+          "highest_floor_y_after": 0.028879910707473755
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.03435942530632019,
+          "lowest_y_after": -0.03435942530632019,
+          "highest_floor_y_before": 0.08992224931716919,
+          "highest_floor_y_after": 0.08992224931716919
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.018084049224853516,
+          "lowest_y_after": -0.018084049224853516,
+          "highest_floor_y_before": 0.00022864341735839844,
+          "highest_floor_y_after": 0.00022864341735839844
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.022810935974121094,
+          "lowest_y_after": -0.022810935974121094,
+          "highest_floor_y_before": 0.002226501703262329,
+          "highest_floor_y_after": 0.002226501703262329
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.031186997890472412,
+          "lowest_y_after": -0.031186997890472412,
+          "highest_floor_y_before": 0.028879910707473755,
+          "highest_floor_y_after": 0.028879910707473755
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.03566738963127136,
+          "lowest_y_after": -0.03566738963127136,
+          "highest_floor_y_before": 0.1725267767906189,
+          "highest_floor_y_after": 0.1725267767906189
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.5,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.5,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        }
+      ]
+    },
+    {
+      "id": "sheep",
+      "profile_before": "quadruped",
+      "profile_after": "quadruped",
+      "ground_scenarios": [
+        {
+          "state": "Idle",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.01875823736190796,
+          "lowest_y_after": -0.011010263115167618,
+          "highest_floor_y_before": 0.0046885013580322266,
+          "highest_floor_y_after": 0.006074298173189163
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.022626876831054688,
+          "lowest_y_after": -0.01241881400346756,
+          "highest_floor_y_before": 0.00669783353805542,
+          "highest_floor_y_after": 0.009804464876651764
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.02383086085319519,
+          "lowest_y_after": -0.009314723312854767,
+          "highest_floor_y_before": 0.019001394510269165,
+          "highest_floor_y_after": 0.037040937691926956
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.017767369747161865,
+          "lowest_y_after": -0.002309150993824005,
+          "highest_floor_y_before": 0.07060572504997253,
+          "highest_floor_y_after": 0.09489928185939789
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.01875823736190796,
+          "lowest_y_after": -0.011010263115167618,
+          "highest_floor_y_before": 0.0046885013580322266,
+          "highest_floor_y_after": 0.006074298173189163
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.022626876831054688,
+          "lowest_y_after": -0.01241881400346756,
+          "highest_floor_y_before": 0.00669783353805542,
+          "highest_floor_y_after": 0.009804464876651764
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.02383086085319519,
+          "lowest_y_after": -0.009314723312854767,
+          "highest_floor_y_before": 0.019001394510269165,
+          "highest_floor_y_after": 0.037040937691926956
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.011212766170501709,
+          "lowest_y_after": 0.004319198429584503,
+          "highest_floor_y_before": 0.14579254388809204,
+          "highest_floor_y_after": 0.17161038517951965
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.01339566707611084,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": 0.01339566707611084,
+          "highest_floor_y_after": 0.01339566707611084
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": 0.01339566707611084,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": 0.01339566707611084,
+          "highest_floor_y_after": 0.01339566707611084
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.5,
+          "lowest_y_before": 0.01339566707611084,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": 0.01339566707611084,
+          "highest_floor_y_after": 0.01339566707611084
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.0,
+          "lowest_y_before": 0.01339566707611084,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": 0.01339566707611084,
+          "highest_floor_y_after": 0.01339566707611084
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.5,
+          "lowest_y_before": 0.01339566707611084,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": 0.01339566707611084,
+          "highest_floor_y_after": 0.01339566707611084
+        }
+      ]
+    },
+    {
+      "id": "pig",
+      "profile_before": "quadruped",
+      "profile_after": "quadruped",
+      "ground_scenarios": [
+        {
+          "state": "Idle",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.022391557693481445,
+          "lowest_y_after": -0.01802268624305725,
+          "highest_floor_y_before": 0.0046885013580322266,
+          "highest_floor_y_after": 0.004698226228356361
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.029650241136550903,
+          "lowest_y_after": -0.023523028939962387,
+          "highest_floor_y_before": 0.00669783353805542,
+          "highest_floor_y_after": 0.006718790158629417
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.044673338532447815,
+          "lowest_y_after": -0.03351685404777527,
+          "highest_floor_y_before": 0.013395696878433228,
+          "highest_floor_y_after": 0.014058755710721016
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.048596784472465515,
+          "lowest_y_after": -0.0340757742524147,
+          "highest_floor_y_before": 0.020093530416488647,
+          "highest_floor_y_after": 0.02926735207438469
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.022391557693481445,
+          "lowest_y_after": -0.01802268624305725,
+          "highest_floor_y_before": 0.0046885013580322266,
+          "highest_floor_y_after": 0.004698226228356361
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.029650241136550903,
+          "lowest_y_after": -0.023523028939962387,
+          "highest_floor_y_before": 0.00669783353805542,
+          "highest_floor_y_after": 0.006718790158629417
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.044673338532447815,
+          "lowest_y_after": -0.03351685404777527,
+          "highest_floor_y_before": 0.013395696878433228,
+          "highest_floor_y_after": 0.014058755710721016
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.04643349349498749,
+          "lowest_y_after": -0.030228814110159874,
+          "highest_floor_y_before": 0.03712707757949829,
+          "highest_floor_y_after": 0.05710592865943909
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.01339566707611084,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": 0.01339566707611084,
+          "highest_floor_y_after": 0.01339566707611084
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": 0.01339566707611084,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": 0.01339566707611084,
+          "highest_floor_y_after": 0.01339566707611084
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.5,
+          "lowest_y_before": 0.01339566707611084,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": 0.01339566707611084,
+          "highest_floor_y_after": 0.01339566707611084
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.0,
+          "lowest_y_before": 0.01339566707611084,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": 0.01339566707611084,
+          "highest_floor_y_after": 0.01339566707611084
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.5,
+          "lowest_y_before": 0.01339566707611084,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": 0.01339566707611084,
+          "highest_floor_y_after": 0.01339566707611084
+        }
+      ]
+    },
+    {
+      "id": "cow",
+      "profile_before": "quadruped",
+      "profile_after": "quadruped",
+      "ground_scenarios": [
+        {
+          "state": "Idle",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.027460545301437378,
+          "lowest_y_after": -0.015675920993089676,
+          "highest_floor_y_before": 0.0046885013580322266,
+          "highest_floor_y_after": 0.004708003252744675
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.03460848331451416,
+          "lowest_y_after": -0.01900172233581543,
+          "highest_floor_y_before": 0.00669783353805542,
+          "highest_floor_y_after": 0.006803952157497406
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.04311773180961609,
+          "lowest_y_after": -0.02014143019914627,
+          "highest_floor_y_before": 0.019001394510269165,
+          "highest_floor_y_after": 0.02230364829301834
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.039448708295822144,
+          "lowest_y_after": -0.014356497675180435,
+          "highest_floor_y_before": 0.07060566544532776,
+          "highest_floor_y_after": 0.06574209034442902
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.027460545301437378,
+          "lowest_y_after": -0.015675920993089676,
+          "highest_floor_y_before": 0.0046885013580322266,
+          "highest_floor_y_after": 0.004708003252744675
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.03460848331451416,
+          "lowest_y_after": -0.01900172233581543,
+          "highest_floor_y_before": 0.00669783353805542,
+          "highest_floor_y_after": 0.006803952157497406
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.04311773180961609,
+          "lowest_y_after": -0.02014143019914627,
+          "highest_floor_y_before": 0.019001394510269165,
+          "highest_floor_y_after": 0.02230364829301834
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.033393263816833496,
+          "lowest_y_after": -0.007858995348215103,
+          "highest_floor_y_before": 0.14579248428344727,
+          "highest_floor_y_after": 0.12894847989082336
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.01339566707611084,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": 0.01339566707611084,
+          "highest_floor_y_after": 0.01339566707611084
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": 0.01339566707611084,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": 0.01339566707611084,
+          "highest_floor_y_after": 0.01339566707611084
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.5,
+          "lowest_y_before": 0.01339566707611084,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": 0.01339566707611084,
+          "highest_floor_y_after": 0.01339566707611084
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.0,
+          "lowest_y_before": 0.01339566707611084,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": 0.01339566707611084,
+          "highest_floor_y_after": 0.01339566707611084
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.5,
+          "lowest_y_before": 0.01339566707611084,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": 0.01339566707611084,
+          "highest_floor_y_after": 0.01339566707611084
+        }
+      ]
+    },
+    {
+      "id": "chicken",
+      "profile_before": "chicken",
+      "profile_after": "chicken",
+      "ground_scenarios": [
+        {
+          "state": "Idle",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.024886131286621094,
+          "lowest_y_after": -0.01610581763088703,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.03317493945360184,
+          "lowest_y_after": -0.02112896367907524,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.04996210336685181,
+          "lowest_y_after": -0.029404232278466225,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.051934413611888885,
+          "lowest_y_after": -0.02950839325785637,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.024886131286621094,
+          "lowest_y_after": -0.01610581763088703,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.03317493945360184,
+          "lowest_y_after": -0.02112896367907524,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.04996210336685181,
+          "lowest_y_after": -0.029404232278466225,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.05193442851305008,
+          "lowest_y_after": -0.029508497565984726,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.5,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.5,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        }
+      ]
+    },
+    {
+      "id": "bunny",
+      "profile_before": "rabbit",
+      "profile_after": "rabbit",
+      "ground_scenarios": [
+        {
+          "state": "Idle",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.003217788413167,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.02539656311273575
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.0032177697867155075,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0032557938247919083,
+          "highest_floor_y_after": 0.039596542716026306
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.0032175760716199875,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.045514415949583054,
+          "highest_floor_y_after": 0.1010785698890686
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.003214119002223015,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.12710627913475037,
+          "highest_floor_y_after": 0.18374848365783691
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.003217788413167,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.02539656311273575
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.0032177697867155075,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0032557938247919083,
+          "highest_floor_y_after": 0.039596542716026306
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.0032175760716199875,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.045514415949583054,
+          "highest_floor_y_after": 0.1010785698890686
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.003215039148926735,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.19717149436473846,
+          "highest_floor_y_after": 0.2734408974647522
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.5,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.5,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        }
+      ]
+    },
+    {
+      "id": "wolf",
+      "profile_before": "quadruped",
+      "profile_after": "quadruped",
+      "ground_scenarios": [
+        {
+          "state": "Idle",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.0038910508155822754,
+          "lowest_y_after": -0.013177815824747086,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.005677483975887299
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.003890901803970337,
+          "lowest_y_after": -0.016455700621008873,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.008511807769536972
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.003889799118041992,
+          "lowest_y_after": -0.019512349739670753,
+          "highest_floor_y_before": 0.0204324871301651,
+          "highest_floor_y_after": 0.022922683507204056
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.003888338804244995,
+          "lowest_y_after": -0.015388159081339836,
+          "highest_floor_y_before": 0.06527575850486755,
+          "highest_floor_y_after": 0.05241362750530243
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.0038910508155822754,
+          "lowest_y_after": -0.013177815824747086,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.005677483975887299
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.003890901803970337,
+          "lowest_y_after": -0.016455700621008873,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.008511807769536972
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.003889799118041992,
+          "lowest_y_after": -0.019512349739670753,
+          "highest_floor_y_before": 0.0204324871301651,
+          "highest_floor_y_after": 0.022922683507204056
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.0038910657167434692,
+          "lowest_y_after": -0.009422432631254196,
+          "highest_floor_y_before": 0.12333710491657257,
+          "highest_floor_y_after": 0.09493892639875412
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.01339566707611084
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.01339566707611084
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.5,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.01339566707611084
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.01339566707611084
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.5,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.01339566707611084
+        }
+      ]
+    },
+    {
+      "id": "bee",
+      "profile_before": "aerial",
+      "profile_after": "aerial",
+      "ground_scenarios": []
+    },
+    {
+      "id": "skeleton",
+      "profile_before": "humanoid",
+      "profile_after": "humanoid",
+      "ground_scenarios": [
+        {
+          "state": "Idle",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.011165708303451538,
+          "lowest_y_after": -0.011165708303451538,
+          "highest_floor_y_before": 0.006453007459640503,
+          "highest_floor_y_after": 0.006453007459640503
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.013744980096817017,
+          "lowest_y_after": -0.013744980096817017,
+          "highest_floor_y_before": 0.012582868337631226,
+          "highest_floor_y_after": 0.012582868337631226
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.017904132604599,
+          "lowest_y_after": -0.017904132604599,
+          "highest_floor_y_before": 0.05333629250526428,
+          "highest_floor_y_after": 0.05333629250526428
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.019342392683029175,
+          "lowest_y_after": -0.019342392683029175,
+          "highest_floor_y_before": 0.12677308917045593,
+          "highest_floor_y_after": 0.12677308917045593
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.011165708303451538,
+          "lowest_y_after": -0.011165708303451538,
+          "highest_floor_y_before": 0.006453007459640503,
+          "highest_floor_y_after": 0.006453007459640503
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.013744980096817017,
+          "lowest_y_after": -0.013744980096817017,
+          "highest_floor_y_before": 0.012582868337631226,
+          "highest_floor_y_after": 0.012582868337631226
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.017904132604599,
+          "lowest_y_after": -0.017904132604599,
+          "highest_floor_y_before": 0.05333629250526428,
+          "highest_floor_y_after": 0.05333629250526428
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.019910842180252075,
+          "lowest_y_after": -0.019910842180252075,
+          "highest_floor_y_before": 0.21870633959770203,
+          "highest_floor_y_after": 0.21870633959770203
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.5,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.5,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        }
+      ]
+    },
+    {
+      "id": "zombie",
+      "profile_before": "humanoid",
+      "profile_after": "humanoid",
+      "ground_scenarios": [
+        {
+          "state": "Idle",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.020657271146774292,
+          "lowest_y_after": -0.020657271146774292,
+          "highest_floor_y_before": 0.0008908212184906006,
+          "highest_floor_y_after": 0.0008908212184906006
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.0231458842754364,
+          "lowest_y_after": -0.0231458842754364,
+          "highest_floor_y_before": 0.015074819326400757,
+          "highest_floor_y_after": 0.015074819326400757
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.025709986686706543,
+          "lowest_y_after": -0.025709986686706543,
+          "highest_floor_y_before": 0.1363195776939392,
+          "highest_floor_y_after": 0.1363195776939392
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.02630135416984558,
+          "lowest_y_after": -0.02630135416984558,
+          "highest_floor_y_before": 0.3527420163154602,
+          "highest_floor_y_after": 0.3527420163154602
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.020657271146774292,
+          "lowest_y_after": -0.020657271146774292,
+          "highest_floor_y_before": 0.0008908212184906006,
+          "highest_floor_y_after": 0.0008908212184906006
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.0231458842754364,
+          "lowest_y_after": -0.0231458842754364,
+          "highest_floor_y_before": 0.015074819326400757,
+          "highest_floor_y_after": 0.015074819326400757
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.025709986686706543,
+          "lowest_y_after": -0.025709986686706543,
+          "highest_floor_y_before": 0.1363195776939392,
+          "highest_floor_y_after": 0.1363195776939392
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.026502370834350586,
+          "lowest_y_after": -0.026502370834350586,
+          "highest_floor_y_before": 0.6015780568122864,
+          "highest_floor_y_after": 0.6015780568122864
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.5,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.0,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.5,
+          "lowest_y_before": 0.0,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.0,
+          "highest_floor_y_after": 0.0
+        }
+      ]
+    },
+    {
+      "id": "spider",
+      "profile_before": "arachnid",
+      "profile_after": "arachnid",
+      "ground_scenarios": [
+        {
+          "state": "Idle",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.28792160749435425,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.3125,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.28792160749435425,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.3125,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": 0.2715553641319275,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.3212500214576721,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.5,
+          "lowest_y_before": 0.26793214678764343,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.32499998807907104,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.0,
+          "lowest_y_before": 0.2555997371673584,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.3374999761581421,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.5,
+          "lowest_y_before": 0.24316219985485077,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.3500000238418579,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.28792160749435425,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.3125,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": 0.2715553641319275,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.3212500214576721,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.5,
+          "lowest_y_before": 0.26793214678764343,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.32499998807907104,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.0,
+          "lowest_y_before": 0.2555997371673584,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.3374999761581421,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.5,
+          "lowest_y_before": 0.24316219985485077,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.3500000238418579,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.0,
+          "lowest_y_before": 0.3125,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.3125,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": 0.3125,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.3125,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.5,
+          "lowest_y_before": 0.3125,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.3125,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.0,
+          "lowest_y_before": 0.3125,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.3125,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.5,
+          "lowest_y_before": 0.3125,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": 0.3125,
+          "highest_floor_y_after": 0.0
+        }
+      ]
+    },
+    {
+      "id": "fox",
+      "profile_before": "fox",
+      "profile_after": "fox",
+      "ground_scenarios": [
+        {
+          "state": "Idle",
+          "speed_ratio": 0.0,
+          "lowest_y_before": -0.11289487779140472,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": -0.06710326671600342,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.0,
+          "lowest_y_before": -0.11289487779140472,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": -0.06710326671600342,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.11509761214256287,
+          "lowest_y_after": -0.014323197305202484,
+          "highest_floor_y_before": -0.060297057032585144,
+          "highest_floor_y_after": 0.005540046840906143
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.11806957423686981,
+          "lowest_y_after": -0.01868245378136635,
+          "highest_floor_y_before": -0.056847527623176575,
+          "highest_floor_y_after": 0.008128136396408081
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.12946295738220215,
+          "lowest_y_after": -0.02655203640460968,
+          "highest_floor_y_before": -0.044828593730926514,
+          "highest_floor_y_after": 0.018859311938285828
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.14153416454792023,
+          "lowest_y_after": -0.026699448004364967,
+          "highest_floor_y_before": -0.03253394365310669,
+          "highest_floor_y_after": 0.03664297237992287
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.0,
+          "lowest_y_before": -0.11289487779140472,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": -0.06710326671600342,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.11509761214256287,
+          "lowest_y_after": -0.014323197305202484,
+          "highest_floor_y_before": -0.060297057032585144,
+          "highest_floor_y_after": 0.005540046840906143
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.11806957423686981,
+          "lowest_y_after": -0.01868245378136635,
+          "highest_floor_y_before": -0.056847527623176575,
+          "highest_floor_y_after": 0.008128136396408081
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.12946295738220215,
+          "lowest_y_after": -0.02655203640460968,
+          "highest_floor_y_before": -0.044828593730926514,
+          "highest_floor_y_after": 0.018859311938285828
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.15257428586483002,
+          "lowest_y_after": -0.022987455129623413,
+          "highest_floor_y_before": -0.0213872492313385,
+          "highest_floor_y_after": 0.06252782046794891
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.0,
+          "lowest_y_before": -0.09949921071529388,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": -0.09949921071529388,
+          "highest_floor_y_after": 0.01339566707611084
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.09949921071529388,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": -0.09949921071529388,
+          "highest_floor_y_after": 0.01339566707611084
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.09949921071529388,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": -0.09949921071529388,
+          "highest_floor_y_after": 0.01339566707611084
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.09949921071529388,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": -0.09949921071529388,
+          "highest_floor_y_after": 0.01339566707611084
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.09949921071529388,
+          "lowest_y_after": 0.01339566707611084,
+          "highest_floor_y_before": -0.09949921071529388,
+          "highest_floor_y_after": 0.01339566707611084
+        }
+      ]
+    },
+    {
+      "id": "tortoise",
+      "profile_before": "quadruped",
+      "profile_after": "turtle",
+      "ground_scenarios": [
+        {
+          "state": "Idle",
+          "speed_ratio": 0.0,
+          "lowest_y_before": -0.062499966472387314,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": -0.062499966472387314,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.0,
+          "lowest_y_before": -0.062499966472387314,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": -0.062499966472387314,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.07124998420476913,
+          "lowest_y_after": -0.00034379586577415466,
+          "highest_floor_y_before": -0.053749945014715195,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.07937877625226974,
+          "lowest_y_after": -0.000700872391462326,
+          "highest_floor_y_before": -0.04999997839331627,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.21217474341392517,
+          "lowest_y_after": -0.0027857348322868347,
+          "highest_floor_y_before": -0.037499990314245224,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Walk",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.3302520513534546,
+          "lowest_y_after": -0.006201714277267456,
+          "highest_floor_y_before": -0.02500000037252903,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.0,
+          "lowest_y_before": -0.062499966472387314,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": -0.062499966472387314,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.07124998420476913,
+          "lowest_y_after": -0.00034379586577415466,
+          "highest_floor_y_before": -0.053749945014715195,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.07937877625226974,
+          "lowest_y_after": -0.000700872391462326,
+          "highest_floor_y_before": -0.04999997839331627,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.21217474341392517,
+          "lowest_y_after": -0.0027857348322868347,
+          "highest_floor_y_before": -0.037499990314245224,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Run",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.4199930429458618,
+          "lowest_y_after": -0.010343141853809357,
+          "highest_floor_y_before": -0.013749981299042702,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.0,
+          "lowest_y_before": -0.049104299396276474,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": -0.049104299396276474,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.2199999988079071,
+          "lowest_y_before": -0.049104299396276474,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": -0.049104299396276474,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 0.5,
+          "lowest_y_before": -0.049104299396276474,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": -0.049104299396276474,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.0,
+          "lowest_y_before": -0.049104299396276474,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": -0.049104299396276474,
+          "highest_floor_y_after": 0.0
+        },
+        {
+          "state": "Crouch",
+          "speed_ratio": 1.5,
+          "lowest_y_before": -0.049104299396276474,
+          "lowest_y_after": 0.0,
+          "highest_floor_y_before": -0.049104299396276474,
+          "highest_floor_y_after": 0.0
+        }
+      ]
+    },
+    {
+      "id": "trout",
+      "profile_before": "aquatic",
+      "profile_after": "aquatic",
+      "ground_scenarios": []
+    },
+    {
+      "id": "squid",
+      "profile_before": "aquatic",
+      "profile_after": "squid",
+      "ground_scenarios": []
+    },
+    {
+      "id": "dolphin",
+      "profile_before": "aquatic",
+      "profile_after": "dolphin",
+      "ground_scenarios": []
+    }
+  ]
+}

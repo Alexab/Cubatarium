@@ -1,0 +1,74 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R4 authored bone anatomy, own surfaces and real procedural motion; global R6 performance/full compatibility matrix pending",
+  "species": {
+    "bot": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct final comparison, native Release rest/full-cycle phases, world and icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "154560b8ceea0a9531764bf3e27f6ac5691d81a5c29f1b2f07d6fafd3a86f042",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "bot.png",
+          "sha256": "e7001af059bed3ba28e9ec046a39a3b72b99e9ef2e8c2bcd7d434740b507ee04"
+        },
+        "motion": {
+          "path": "native_approved_bot.png",
+          "sha256": "b93c4679dfbecf8f896ea121041b290e641bffcfdceddab03b4c45cf4d974c86"
+        },
+        "runtime": {
+          "path": "runtime_wave/frame_001.png",
+          "sha256": "6218b2403c0111f56c074bac01078391e4b6366098149bd42f360533fa818847"
+        },
+        "ui": {
+          "path": "ui.png",
+          "sha256": "2f5275982ad8095832d96ddd124a788933321e34c3475e72fb4f22379b4c414f"
+        }
+      },
+      "notes": "Own ochre clothes and guide cap on ten-bone humanoid; hand/armor anchor hierarchy retained. Small added depth is the intentional cap brim. Rendered payload and creature.json match captured context exactly after provenance-only refresh, see native_payload_reuse.json."
+    },
+    "skeleton": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct final comparison, native Release rest/full-cycle phases, world and icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "427ec1aa833d6d579838ae45664e8e1af72d8b4a41abb9368eb3e2f856daab7a",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "skeleton.png",
+          "sha256": "fd1bb38b9d2e6f740dc9680374f29533bd8c7dd60674c57958457c10352e164d"
+        },
+        "motion": {
+          "path": "native_approved_skeleton.png",
+          "sha256": "ee432642ec262725a35819282bfb3320a292e0db29ab24fde7b616955a3d68b2"
+        },
+        "runtime": {
+          "path": "runtime_wave/frame_001.png",
+          "sha256": "6218b2403c0111f56c074bac01078391e4b6366098149bd42f360533fa818847"
+        },
+        "ui": {
+          "path": "ui.png",
+          "sha256": "2f5275982ad8095832d96ddd124a788933321e34c3475e72fb4f22379b4c414f"
+        }
+      },
+      "notes": "Open rib cage, spine, separate hips, slender limbs and own skull/aged bone surface; ten-bone humanoid and equipment anchors retained. Same payload-preserving provenance refresh as bot."
+    }
+  }
+}

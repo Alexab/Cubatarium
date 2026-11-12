@@ -2,7 +2,7 @@ id: hedgehog
 backend: gltf_skeleton
 family: meadow
 authoring_source: cubatarium-recipe
-recipe_version: 1
+recipe_version: 2
 palette_id: meadow
 pattern: spots
 template: quadruped
@@ -29,7 +29,7 @@ direction: 'Семенной ёж: купол игл'
 wave: W2
 silhouette: {}
 marks: []
-selected_concept: primary
+selected_concept: familiar_species_authored_rig
 concepts:
 - id: primary
   body_scale:
@@ -50,3 +50,2508 @@ concepts:
   - 1.34
   note: longer mass
 seed: 17033525332484520236
+surface_style: erinaceid
+model_scale: 0.52
+anatomy:
+  bones:
+  - name: body
+    parent: null
+    pivot:
+    - 0
+    - 4
+    - 2
+    cubes:
+    - name: trunk
+      origin:
+      - -5
+      - 2
+      - -3
+      size:
+      - 10
+      - 5
+      - 11
+      role: body
+      shape:
+        back_scale:
+        - 0.85
+        - 0.9
+        front_scale:
+        - 0.8
+        - 0.85
+        top_scale:
+        - 0.85
+        - 0.9
+      blend:
+        bone: spine
+        axis: z
+        range:
+        - -3
+        - 8
+        weights:
+        - 0.1
+        - 0.5
+    - name: belly
+      origin:
+      - -4
+      - 1
+      - -2
+      size:
+      - 8
+      - 2
+      - 9
+      role: belly
+  - name: spine
+    parent: body
+    pivot:
+    - 0
+    - 4
+    - 4
+    cubes:
+    - name: dome
+      origin:
+      - -4
+      - 6
+      - -2
+      size:
+      - 8
+      - 2
+      - 9
+      role: body
+      shape:
+        top_scale:
+        - 0.65
+        - 0.8
+    - name: quill_0_0
+      origin:
+      - -5.0
+      - 5.4
+      - -1.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_0_1
+      origin:
+      - -3.5
+      - 6.4
+      - -1.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_0_2
+      origin:
+      - -2.0
+      - 7.4
+      - -1.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_0_3
+      origin:
+      - -0.5
+      - 7.4
+      - -1.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_0_4
+      origin:
+      - 1.0
+      - 7.4
+      - -1.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_0_5
+      origin:
+      - 2.5
+      - 6.4
+      - -1.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_0_6
+      origin:
+      - 4.0
+      - 5.4
+      - -1.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_1_0
+      origin:
+      - -5.0
+      - 5.4
+      - 0
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_1_1
+      origin:
+      - -3.5
+      - 6.4
+      - 0
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_1_2
+      origin:
+      - -2.0
+      - 7.4
+      - 0
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_1_3
+      origin:
+      - -0.5
+      - 7.4
+      - 0
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_1_4
+      origin:
+      - 1.0
+      - 7.4
+      - 0
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_1_5
+      origin:
+      - 2.5
+      - 6.4
+      - 0
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_1_6
+      origin:
+      - 4.0
+      - 5.4
+      - 0
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_2_0
+      origin:
+      - -5.0
+      - 5.4
+      - 1.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_2_1
+      origin:
+      - -3.5
+      - 6.4
+      - 1.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_2_2
+      origin:
+      - -2.0
+      - 7.4
+      - 1.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_2_3
+      origin:
+      - -0.5
+      - 7.4
+      - 1.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_2_4
+      origin:
+      - 1.0
+      - 7.4
+      - 1.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_2_5
+      origin:
+      - 2.5
+      - 6.4
+      - 1.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_2_6
+      origin:
+      - 4.0
+      - 5.4
+      - 1.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_3_0
+      origin:
+      - -5.0
+      - 5.4
+      - 3
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_3_1
+      origin:
+      - -3.5
+      - 6.4
+      - 3
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_3_2
+      origin:
+      - -2.0
+      - 7.4
+      - 3
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_3_3
+      origin:
+      - -0.5
+      - 7.4
+      - 3
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_3_4
+      origin:
+      - 1.0
+      - 7.4
+      - 3
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_3_5
+      origin:
+      - 2.5
+      - 6.4
+      - 3
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_3_6
+      origin:
+      - 4.0
+      - 5.4
+      - 3
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_4_0
+      origin:
+      - -5.0
+      - 5.4
+      - 4.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_4_1
+      origin:
+      - -3.5
+      - 6.4
+      - 4.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_4_2
+      origin:
+      - -2.0
+      - 7.4
+      - 4.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_4_3
+      origin:
+      - -0.5
+      - 7.4
+      - 4.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_4_4
+      origin:
+      - 1.0
+      - 7.4
+      - 4.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_4_5
+      origin:
+      - 2.5
+      - 6.4
+      - 4.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_4_6
+      origin:
+      - 4.0
+      - 5.4
+      - 4.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_5_0
+      origin:
+      - -5.0
+      - 5.4
+      - 6
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_5_1
+      origin:
+      - -3.5
+      - 6.4
+      - 6
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_5_2
+      origin:
+      - -2.0
+      - 7.4
+      - 6
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_5_3
+      origin:
+      - -0.5
+      - 7.4
+      - 6
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_5_4
+      origin:
+      - 1.0
+      - 7.4
+      - 6
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_5_5
+      origin:
+      - 2.5
+      - 6.4
+      - 6
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_5_6
+      origin:
+      - 4.0
+      - 5.4
+      - 6
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        back_scale:
+        - 1
+        - 1
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_side_left_0
+      origin:
+      - -5.5
+      - 4
+      - -0.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_side_left_1
+      origin:
+      - -5.5
+      - 4
+      - 1.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_side_left_2
+      origin:
+      - -5.5
+      - 4
+      - 3.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_side_left_3
+      origin:
+      - -5.5
+      - 4
+      - 5.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_side_right_0
+      origin:
+      - 4.5
+      - 4
+      - -0.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_side_right_1
+      origin:
+      - 4.5
+      - 4
+      - 1.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_side_right_2
+      origin:
+      - 4.5
+      - 4
+      - 3.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        front_scale:
+        - 0.05
+        - 0.05
+    - name: quill_side_right_3
+      origin:
+      - 4.5
+      - 4
+      - 5.5
+      size:
+      - 1
+      - 1
+      - 2
+      role: horn
+      shape:
+        front_scale:
+        - 0.05
+        - 0.05
+  - name: head
+    parent: body
+    pivot:
+    - 0
+    - 3
+    - -3
+    cubes:
+    - name: head
+      origin:
+      - -3
+      - 1.5
+      - -7
+      size:
+      - 6
+      - 4
+      - 4
+      role: face
+      shape:
+        back_scale:
+        - 0.6
+        - 0.7
+        front_scale:
+        - 1
+        - 1
+    - name: muzzle
+      origin:
+      - -1.5
+      - 1.5
+      - -10
+      size:
+      - 3
+      - 2
+      - 3
+      role: face
+      shape:
+        back_scale:
+        - 0.3
+        - 0.5
+        front_scale:
+        - 1
+        - 1
+    - name: nose
+      origin:
+      - -0.5
+      - 2
+      - -11
+      size:
+      - 1
+      - 1
+      - 1
+      role: muzzle
+    - name: ear_left
+      origin:
+      - -3
+      - 4
+      - -5
+      size:
+      - 1
+      - 1
+      - 1
+      role: face
+    - name: ear_right
+      origin:
+      - 2
+      - 4
+      - -5
+      size:
+      - 1
+      - 1
+      - 1
+      role: face
+  - name: upper_fl
+    parent: body
+    pivot:
+    - -3.2
+    - 2
+    - -1.5
+    cubes:
+    - name: upper_fl
+      origin:
+      - -3.7
+      - 1
+      - -2.0
+      size:
+      - 1
+      - 1
+      - 1
+      role: limb
+      blend:
+        bone: lower_fl
+        axis: y
+        range:
+        - 1
+        - 2
+        weights:
+        - 1
+        - 0
+  - name: lower_fl
+    parent: upper_fl
+    pivot:
+    - -3.2
+    - 1
+    - -1.5
+    cubes:
+    - name: paw_fl
+      origin:
+      - -3.7
+      - 0
+      - -3.0
+      size:
+      - 1
+      - 1
+      - 2
+      role: limb
+  - name: upper_fr
+    parent: body
+    pivot:
+    - 3.2
+    - 2
+    - -1.5
+    cubes:
+    - name: upper_fr
+      origin:
+      - 2.7
+      - 1
+      - -2.0
+      size:
+      - 1
+      - 1
+      - 1
+      role: limb
+      blend:
+        bone: lower_fr
+        axis: y
+        range:
+        - 1
+        - 2
+        weights:
+        - 1
+        - 0
+  - name: lower_fr
+    parent: upper_fr
+    pivot:
+    - 3.2
+    - 1
+    - -1.5
+    cubes:
+    - name: paw_fr
+      origin:
+      - 2.7
+      - 0
+      - -3.0
+      size:
+      - 1
+      - 1
+      - 2
+      role: limb
+  - name: upper_bl
+    parent: spine
+    pivot:
+    - -3.2
+    - 2
+    - 5.5
+    cubes:
+    - name: upper_bl
+      origin:
+      - -3.7
+      - 1
+      - 5.0
+      size:
+      - 1
+      - 1
+      - 1
+      role: limb
+      blend:
+        bone: lower_bl
+        axis: y
+        range:
+        - 1
+        - 2
+        weights:
+        - 1
+        - 0
+  - name: lower_bl
+    parent: upper_bl
+    pivot:
+    - -3.2
+    - 1
+    - 5.5
+    cubes:
+    - name: paw_bl
+      origin:
+      - -3.7
+      - 0
+      - 4.0
+      size:
+      - 1
+      - 1
+      - 2
+      role: limb
+  - name: upper_br
+    parent: spine
+    pivot:
+    - 3.2
+    - 2
+    - 5.5
+    cubes:
+    - name: upper_br
+      origin:
+      - 2.7
+      - 1
+      - 5.0
+      size:
+      - 1
+      - 1
+      - 1
+      role: limb
+      blend:
+        bone: lower_br
+        axis: y
+        range:
+        - 1
+        - 2
+        weights:
+        - 1
+        - 0
+  - name: lower_br
+    parent: upper_br
+    pivot:
+    - 3.2
+    - 1
+    - 5.5
+    cubes:
+    - name: paw_br
+      origin:
+      - 2.7
+      - 0
+      - 4.0
+      size:
+      - 1
+      - 1
+      - 2
+      role: limb
+palette_overrides:
+  body:
+  - 105
+  - 82
+  - 58
+  belly:
+  - 153
+  - 130
+  - 95
+  face:
+  - 196
+  - 177
+  - 137
+  limb:
+  - 82
+  - 63
+  - 48
+  muzzle:
+  - 45
+  - 37
+  - 31
+  mark:
+  - 80
+  - 60
+  - 43
+  horn:
+  - 205
+  - 188
+  - 147
+  eye:
+  - 24
+  - 23
+  - 20
+motion:
+  clips:
+    walk:
+      tracks:
+      - bone: upper_fl
+        path: rotation
+        times: &id001
+        - 0.0
+        - 0.006875
+        - 0.01375
+        - 0.020625
+        - 0.0275
+        - 0.034375
+        - 0.04125
+        - 0.048125
+        - 0.055
+        - 0.061875
+        - 0.06875
+        - 0.075625
+        - 0.0825
+        - 0.089375
+        - 0.09625
+        - 0.103125
+        - 0.11
+        values:
+        - - 38.0
+          - 0
+          - 0
+        - - 35.10742
+          - 0
+          - 0
+        - - 26.87006
+          - 0
+          - 0
+        - - 14.54197
+          - 0
+          - 0
+        - - -0.0
+          - 0
+          - 0
+        - - -14.54197
+          - 0
+          - 0
+        - - -26.87006
+          - 0
+          - 0
+        - - -35.10742
+          - 0
+          - 0
+        - - -38.0
+          - 0
+          - 0
+        - - -35.10742
+          - 0
+          - 0
+        - - -26.87006
+          - 0
+          - 0
+        - - -14.54197
+          - 0
+          - 0
+        - - 0.0
+          - 0
+          - 0
+        - - 14.54197
+          - 0
+          - 0
+        - - 26.87006
+          - 0
+          - 0
+        - - 35.10742
+          - 0
+          - 0
+        - - 38.0
+          - 0
+          - 0
+      - bone: lower_fl
+        path: rotation
+        times: *id001
+        values:
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - -0.0
+          - 0
+          - 0
+        - - -17.22075
+          - 0
+          - 0
+        - - -31.81981
+          - 0
+          - 0
+        - - -41.57458
+          - 0
+          - 0
+        - - -45.0
+          - 0
+          - 0
+        - - -41.57458
+          - 0
+          - 0
+        - - -31.81981
+          - 0
+          - 0
+        - - -17.22075
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+      - bone: upper_fr
+        path: rotation
+        times: *id001
+        values:
+        - - -38.0
+          - 0
+          - 0
+        - - -35.10742
+          - 0
+          - 0
+        - - -26.87006
+          - 0
+          - 0
+        - - -14.54197
+          - 0
+          - 0
+        - - 0.0
+          - 0
+          - 0
+        - - 14.54197
+          - 0
+          - 0
+        - - 26.87006
+          - 0
+          - 0
+        - - 35.10742
+          - 0
+          - 0
+        - - 38.0
+          - 0
+          - 0
+        - - 35.10742
+          - 0
+          - 0
+        - - 26.87006
+          - 0
+          - 0
+        - - 14.54197
+          - 0
+          - 0
+        - - -0.0
+          - 0
+          - 0
+        - - -14.54197
+          - 0
+          - 0
+        - - -26.87006
+          - 0
+          - 0
+        - - -35.10742
+          - 0
+          - 0
+        - - -38.0
+          - 0
+          - 0
+      - bone: lower_fr
+        path: rotation
+        times: *id001
+        values:
+        - - -0.0
+          - 0
+          - 0
+        - - -17.22075
+          - 0
+          - 0
+        - - -31.81981
+          - 0
+          - 0
+        - - -41.57458
+          - 0
+          - 0
+        - - -45.0
+          - 0
+          - 0
+        - - -41.57458
+          - 0
+          - 0
+        - - -31.81981
+          - 0
+          - 0
+        - - -17.22075
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - -0.0
+          - 0
+          - 0
+      - bone: upper_bl
+        path: rotation
+        times: *id001
+        values:
+        - - -38.0
+          - 0
+          - 0
+        - - -35.10742
+          - 0
+          - 0
+        - - -26.87006
+          - 0
+          - 0
+        - - -14.54197
+          - 0
+          - 0
+        - - 0.0
+          - 0
+          - 0
+        - - 14.54197
+          - 0
+          - 0
+        - - 26.87006
+          - 0
+          - 0
+        - - 35.10742
+          - 0
+          - 0
+        - - 38.0
+          - 0
+          - 0
+        - - 35.10742
+          - 0
+          - 0
+        - - 26.87006
+          - 0
+          - 0
+        - - 14.54197
+          - 0
+          - 0
+        - - -0.0
+          - 0
+          - 0
+        - - -14.54197
+          - 0
+          - 0
+        - - -26.87006
+          - 0
+          - 0
+        - - -35.10742
+          - 0
+          - 0
+        - - -38.0
+          - 0
+          - 0
+      - bone: lower_bl
+        path: rotation
+        times: *id001
+        values:
+        - - -0.0
+          - 0
+          - 0
+        - - -17.22075
+          - 0
+          - 0
+        - - -31.81981
+          - 0
+          - 0
+        - - -41.57458
+          - 0
+          - 0
+        - - -45.0
+          - 0
+          - 0
+        - - -41.57458
+          - 0
+          - 0
+        - - -31.81981
+          - 0
+          - 0
+        - - -17.22075
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - -0.0
+          - 0
+          - 0
+      - bone: upper_br
+        path: rotation
+        times: *id001
+        values:
+        - - 38.0
+          - 0
+          - 0
+        - - 35.10742
+          - 0
+          - 0
+        - - 26.87006
+          - 0
+          - 0
+        - - 14.54197
+          - 0
+          - 0
+        - - -0.0
+          - 0
+          - 0
+        - - -14.54197
+          - 0
+          - 0
+        - - -26.87006
+          - 0
+          - 0
+        - - -35.10742
+          - 0
+          - 0
+        - - -38.0
+          - 0
+          - 0
+        - - -35.10742
+          - 0
+          - 0
+        - - -26.87006
+          - 0
+          - 0
+        - - -14.54197
+          - 0
+          - 0
+        - - 0.0
+          - 0
+          - 0
+        - - 14.54197
+          - 0
+          - 0
+        - - 26.87006
+          - 0
+          - 0
+        - - 35.10742
+          - 0
+          - 0
+        - - 38.0
+          - 0
+          - 0
+      - bone: lower_br
+        path: rotation
+        times: *id001
+        values:
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - -0.0
+          - 0
+          - 0
+        - - -17.22075
+          - 0
+          - 0
+        - - -31.81981
+          - 0
+          - 0
+        - - -41.57458
+          - 0
+          - 0
+        - - -45.0
+          - 0
+          - 0
+        - - -41.57458
+          - 0
+          - 0
+        - - -31.81981
+          - 0
+          - 0
+        - - -17.22075
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+      - bone: body
+        path: translation
+        times: *id001
+        values:
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+      - bone: spine
+        path: rotation
+        times: *id001
+        values:
+        - - 0
+          - -0.0
+          - 0
+        - - 0
+          - -0.76537
+          - 0
+        - - 0
+          - -1.41421
+          - 0
+        - - 0
+          - -1.84776
+          - 0
+        - - 0
+          - -2.0
+          - 0
+        - - 0
+          - -1.84776
+          - 0
+        - - 0
+          - -1.41421
+          - 0
+        - - 0
+          - -0.76537
+          - 0
+        - - 0
+          - 0.0
+          - 0
+        - - 0
+          - 0.76537
+          - 0
+        - - 0
+          - 1.41421
+          - 0
+        - - 0
+          - 1.84776
+          - 0
+        - - 0
+          - 2.0
+          - 0
+        - - 0
+          - 1.84776
+          - 0
+        - - 0
+          - 1.41421
+          - 0
+        - - 0
+          - 0.76537
+          - 0
+        - - 0
+          - 0.0
+          - 0
+      - bone: head
+        path: rotation
+        times: *id001
+        values:
+        - - -0.0
+          - 0
+          - 0
+        - - -0.76537
+          - 0
+          - 0
+        - - -1.41421
+          - 0
+          - 0
+        - - -1.84776
+          - 0
+          - 0
+        - - -2.0
+          - 0
+          - 0
+        - - -1.84776
+          - 0
+          - 0
+        - - -1.41421
+          - 0
+          - 0
+        - - -0.76537
+          - 0
+          - 0
+        - - 0.0
+          - 0
+          - 0
+        - - 0.76537
+          - 0
+          - 0
+        - - 1.41421
+          - 0
+          - 0
+        - - 1.84776
+          - 0
+          - 0
+        - - 2.0
+          - 0
+          - 0
+        - - 1.84776
+          - 0
+          - 0
+        - - 1.41421
+          - 0
+          - 0
+        - - 0.76537
+          - 0
+          - 0
+        - - 0.0
+          - 0
+          - 0
+      contact:
+        root: body
+        bones: &id003
+        - lower_fl
+        - lower_fr
+        - lower_bl
+        - lower_br
+        geometry: skinned_mesh
+        samples: 257
+    run:
+      tracks:
+      - bone: upper_fl
+        path: rotation
+        times: &id002
+        - 0.0
+        - 0.004687
+        - 0.009375
+        - 0.014062
+        - 0.01875
+        - 0.023438
+        - 0.028125
+        - 0.032813
+        - 0.0375
+        - 0.042187
+        - 0.046875
+        - 0.051562
+        - 0.05625
+        - 0.060937
+        - 0.065625
+        - 0.070312
+        - 0.075
+        values:
+        - - 48.0
+          - 0
+          - 0
+        - - 44.34622
+          - 0
+          - 0
+        - - 33.94113
+          - 0
+          - 0
+        - - 18.3688
+          - 0
+          - 0
+        - - -0.0
+          - 0
+          - 0
+        - - -18.3688
+          - 0
+          - 0
+        - - -33.94113
+          - 0
+          - 0
+        - - -44.34622
+          - 0
+          - 0
+        - - -48.0
+          - 0
+          - 0
+        - - -44.34622
+          - 0
+          - 0
+        - - -33.94113
+          - 0
+          - 0
+        - - -18.3688
+          - 0
+          - 0
+        - - 0.0
+          - 0
+          - 0
+        - - 18.3688
+          - 0
+          - 0
+        - - 33.94113
+          - 0
+          - 0
+        - - 44.34622
+          - 0
+          - 0
+        - - 48.0
+          - 0
+          - 0
+      - bone: lower_fl
+        path: rotation
+        times: *id002
+        values:
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - -0.0
+          - 0
+          - 0
+        - - -22.96101
+          - 0
+          - 0
+        - - -42.42641
+          - 0
+          - 0
+        - - -55.43277
+          - 0
+          - 0
+        - - -60.0
+          - 0
+          - 0
+        - - -55.43277
+          - 0
+          - 0
+        - - -42.42641
+          - 0
+          - 0
+        - - -22.96101
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+      - bone: upper_fr
+        path: rotation
+        times: *id002
+        values:
+        - - -48.0
+          - 0
+          - 0
+        - - -44.34622
+          - 0
+          - 0
+        - - -33.94113
+          - 0
+          - 0
+        - - -18.3688
+          - 0
+          - 0
+        - - 0.0
+          - 0
+          - 0
+        - - 18.3688
+          - 0
+          - 0
+        - - 33.94113
+          - 0
+          - 0
+        - - 44.34622
+          - 0
+          - 0
+        - - 48.0
+          - 0
+          - 0
+        - - 44.34622
+          - 0
+          - 0
+        - - 33.94113
+          - 0
+          - 0
+        - - 18.3688
+          - 0
+          - 0
+        - - -0.0
+          - 0
+          - 0
+        - - -18.3688
+          - 0
+          - 0
+        - - -33.94113
+          - 0
+          - 0
+        - - -44.34622
+          - 0
+          - 0
+        - - -48.0
+          - 0
+          - 0
+      - bone: lower_fr
+        path: rotation
+        times: *id002
+        values:
+        - - -0.0
+          - 0
+          - 0
+        - - -22.96101
+          - 0
+          - 0
+        - - -42.42641
+          - 0
+          - 0
+        - - -55.43277
+          - 0
+          - 0
+        - - -60.0
+          - 0
+          - 0
+        - - -55.43277
+          - 0
+          - 0
+        - - -42.42641
+          - 0
+          - 0
+        - - -22.96101
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - -0.0
+          - 0
+          - 0
+      - bone: upper_bl
+        path: rotation
+        times: *id002
+        values:
+        - - -48.0
+          - 0
+          - 0
+        - - -44.34622
+          - 0
+          - 0
+        - - -33.94113
+          - 0
+          - 0
+        - - -18.3688
+          - 0
+          - 0
+        - - 0.0
+          - 0
+          - 0
+        - - 18.3688
+          - 0
+          - 0
+        - - 33.94113
+          - 0
+          - 0
+        - - 44.34622
+          - 0
+          - 0
+        - - 48.0
+          - 0
+          - 0
+        - - 44.34622
+          - 0
+          - 0
+        - - 33.94113
+          - 0
+          - 0
+        - - 18.3688
+          - 0
+          - 0
+        - - -0.0
+          - 0
+          - 0
+        - - -18.3688
+          - 0
+          - 0
+        - - -33.94113
+          - 0
+          - 0
+        - - -44.34622
+          - 0
+          - 0
+        - - -48.0
+          - 0
+          - 0
+      - bone: lower_bl
+        path: rotation
+        times: *id002
+        values:
+        - - -0.0
+          - 0
+          - 0
+        - - -22.96101
+          - 0
+          - 0
+        - - -42.42641
+          - 0
+          - 0
+        - - -55.43277
+          - 0
+          - 0
+        - - -60.0
+          - 0
+          - 0
+        - - -55.43277
+          - 0
+          - 0
+        - - -42.42641
+          - 0
+          - 0
+        - - -22.96101
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - -0.0
+          - 0
+          - 0
+      - bone: upper_br
+        path: rotation
+        times: *id002
+        values:
+        - - 48.0
+          - 0
+          - 0
+        - - 44.34622
+          - 0
+          - 0
+        - - 33.94113
+          - 0
+          - 0
+        - - 18.3688
+          - 0
+          - 0
+        - - -0.0
+          - 0
+          - 0
+        - - -18.3688
+          - 0
+          - 0
+        - - -33.94113
+          - 0
+          - 0
+        - - -44.34622
+          - 0
+          - 0
+        - - -48.0
+          - 0
+          - 0
+        - - -44.34622
+          - 0
+          - 0
+        - - -33.94113
+          - 0
+          - 0
+        - - -18.3688
+          - 0
+          - 0
+        - - 0.0
+          - 0
+          - 0
+        - - 18.3688
+          - 0
+          - 0
+        - - 33.94113
+          - 0
+          - 0
+        - - 44.34622
+          - 0
+          - 0
+        - - 48.0
+          - 0
+          - 0
+      - bone: lower_br
+        path: rotation
+        times: *id002
+        values:
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+        - - -0.0
+          - 0
+          - 0
+        - - -22.96101
+          - 0
+          - 0
+        - - -42.42641
+          - 0
+          - 0
+        - - -55.43277
+          - 0
+          - 0
+        - - -60.0
+          - 0
+          - 0
+        - - -55.43277
+          - 0
+          - 0
+        - - -42.42641
+          - 0
+          - 0
+        - - -22.96101
+          - 0
+          - 0
+        - - 0
+          - 0
+          - 0
+      - bone: body
+        path: translation
+        times: *id002
+        values:
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+        - - 0.0
+          - 0.25
+          - 0.125
+      - bone: spine
+        path: rotation
+        times: *id002
+        values:
+        - - 0
+          - -0.0
+          - 0
+        - - 0
+          - -0.76537
+          - 0
+        - - 0
+          - -1.41421
+          - 0
+        - - 0
+          - -1.84776
+          - 0
+        - - 0
+          - -2.0
+          - 0
+        - - 0
+          - -1.84776
+          - 0
+        - - 0
+          - -1.41421
+          - 0
+        - - 0
+          - -0.76537
+          - 0
+        - - 0
+          - 0.0
+          - 0
+        - - 0
+          - 0.76537
+          - 0
+        - - 0
+          - 1.41421
+          - 0
+        - - 0
+          - 1.84776
+          - 0
+        - - 0
+          - 2.0
+          - 0
+        - - 0
+          - 1.84776
+          - 0
+        - - 0
+          - 1.41421
+          - 0
+        - - 0
+          - 0.76537
+          - 0
+        - - 0
+          - 0.0
+          - 0
+      - bone: head
+        path: rotation
+        times: *id002
+        values:
+        - - -0.0
+          - 0
+          - 0
+        - - -0.76537
+          - 0
+          - 0
+        - - -1.41421
+          - 0
+          - 0
+        - - -1.84776
+          - 0
+          - 0
+        - - -2.0
+          - 0
+          - 0
+        - - -1.84776
+          - 0
+          - 0
+        - - -1.41421
+          - 0
+          - 0
+        - - -0.76537
+          - 0
+          - 0
+        - - 0.0
+          - 0
+          - 0
+        - - 0.76537
+          - 0
+          - 0
+        - - 1.41421
+          - 0
+          - 0
+        - - 1.84776
+          - 0
+          - 0
+        - - 2.0
+          - 0
+          - 0
+        - - 1.84776
+          - 0
+          - 0
+        - - 1.41421
+          - 0
+          - 0
+        - - 0.76537
+          - 0
+          - 0
+        - - 0.0
+          - 0
+          - 0
+      contact:
+        root: body
+        bones: *id003
+        geometry: skinned_mesh
+        samples: 257
+    idle:
+      tracks:
+      - bone: head
+        path: rotation
+        times: &id004
+        - 0
+        - 1
+        - 2
+        - 3
+        - 4
+        values:
+        - - 0
+          - 0
+          - 0
+        - - 3
+          - -7
+          - 0
+        - - -2
+          - 0
+          - 0
+        - - 2
+          - 6
+          - 0
+        - - 0
+          - 0
+          - 0
+      - bone: body
+        path: scale
+        times: *id004
+        values:
+        - - 1
+          - 1
+          - 1
+        - - 1
+          - 1.012
+          - 1
+        - - 1
+          - 1
+          - 1
+        - - 1
+          - 1.008
+          - 1
+        - - 1
+          - 1
+          - 1
+      - bone: body
+        path: translation
+        times:
+        - 0
+        - 4
+        values:
+        - &id005
+          - 0.0
+          - 0.25
+          - 0.125
+        - *id005
+      contact:
+        root: body
+        bones: *id003
+        geometry: skinned_mesh
+        samples: 257
+  calibration:
+    note: Independent authored short-leg steps, synchronized sole correction; full
+      runtime travel/performance matrix remains R6.
+    forward_axis_corrected: true
+    stance_direction: Stance retracts relative to authored -Z front; runtime yaw=180
+      aligns head with entity +Z.
+forward_axis: -z

@@ -1,0 +1,783 @@
+{
+  "schema": "creature-native-envelope-profile.v1",
+  "resources": {
+    "penguin": {
+      "framing_low": [
+        -0.4997258619958504,
+        -0.18148060823302076,
+        -0.4558862688432998
+      ],
+      "framing_high": [
+        0.4997258619958504,
+        0.814645962282259,
+        0.6629720027177242
+      ],
+      "collision": [
+        0.4,
+        0.7,
+        0.71
+      ],
+      "frames": [
+        {
+          "state": "Idle",
+          "phase": 0.0,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.0,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.0,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.078125,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.078125,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.078125,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.25,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.25,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.25,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.4765625,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.4765625,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.4765625,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.5,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.5,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.5,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.7265625,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.7265625,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.7265625,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.75,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.75,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Idle",
+          "phase": 0.75,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "idle",
+            "current": "idle"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.0,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.0,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.0,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.1484375,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.1484375,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.1484375,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.15625,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.15625,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.15625,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.25,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.25,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.25,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.5,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.5,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.5,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.75,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.75,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Walk",
+          "phase": 0.75,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "walk",
+            "current": "walk"
+          }
+        },
+        {
+          "state": "Fly",
+          "phase": 0.0,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Fly",
+          "phase": 0.0,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Fly",
+          "phase": 0.0,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Fly",
+          "phase": 0.015625,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Fly",
+          "phase": 0.015625,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Fly",
+          "phase": 0.015625,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Fly",
+          "phase": 0.25,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Fly",
+          "phase": 0.25,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Fly",
+          "phase": 0.25,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Fly",
+          "phase": 0.5,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Fly",
+          "phase": 0.5,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Fly",
+          "phase": 0.5,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Fly",
+          "phase": 0.75,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Fly",
+          "phase": 0.75,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Fly",
+          "phase": 0.75,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Glide",
+          "phase": 0.0,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Glide",
+          "phase": 0.0,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Glide",
+          "phase": 0.0,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Glide",
+          "phase": 0.015625,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Glide",
+          "phase": 0.015625,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Glide",
+          "phase": 0.015625,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Glide",
+          "phase": 0.25,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Glide",
+          "phase": 0.25,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Glide",
+          "phase": 0.25,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Glide",
+          "phase": 0.5,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Glide",
+          "phase": 0.5,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Glide",
+          "phase": 0.5,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Glide",
+          "phase": 0.75,
+          "view": "front",
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Glide",
+          "phase": 0.75,
+          "view": "side",
+          "yaw": 90.0,
+          "pitch": 0.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        },
+        {
+          "state": "Glide",
+          "phase": 0.75,
+          "view": "oblique",
+          "yaw": 35.0,
+          "pitch": 15.0,
+          "expected_clips": {
+            "baseline": "fly",
+            "current": "fly"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "passed": true,
+  "scope": "Exported trunk upper section and lower posterior corner coordinates; not all animation intersections/watertightness proof",
+  "upper_vertices_checked": 12,
+  "upper_section_error": 0.0,
+  "lower_back_vertices_checked": 6
+}

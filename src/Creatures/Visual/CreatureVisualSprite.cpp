@@ -44,7 +44,7 @@ void UCreatureVisualSprite::SubmitDraw(const CreatureDrawContext &ctx,
   }
 
   const GLuint tex = ResolveCreatureSpeciesTexture(*ctx.Textures, SpeciesId,
-                                                   TextureStem, TextureStem);
+                                                   TextureStem, TextureStem, &Appearance);
   if (tex == 0)
   {
     LogCreatureMissingTextureOnce(

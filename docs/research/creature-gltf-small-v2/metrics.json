@@ -1,0 +1,141 @@
+{
+  "rat": {
+    "baseline": {
+      "extent_blocks": [
+        0.333547,
+        0.251296,
+        0.869923
+      ],
+      "min_y": 0.0
+    },
+    "candidate": {
+      "extent_blocks": [
+        0.3375,
+        0.24375,
+        0.9
+      ],
+      "min_y": 0.0
+    },
+    "candidate_bones": 17,
+    "candidate_clips": [
+      "walk",
+      "run",
+      "idle",
+      "punch"
+    ],
+    "contact": {
+      "walk": {
+        "min_paw_y_blocks": -0.001077,
+        "max_min_support_y_blocks": 0.003752,
+        "max_lift_per_paw_blocks": {
+          "fl": 0.028791,
+          "fr": 0.028791,
+          "bl": 0.028791,
+          "br": 0.028791
+        }
+      },
+      "run": {
+        "min_paw_y_blocks": -0.001812,
+        "max_min_support_y_blocks": 0.004405,
+        "max_lift_per_paw_blocks": {
+          "fl": 0.029964,
+          "fr": 0.029964,
+          "bl": 0.029964,
+          "br": 0.029964
+        }
+      }
+    }
+  },
+  "kitten": {
+    "baseline": {
+      "extent_blocks": [
+        0.0875,
+        0.190312,
+        0.44273
+      ],
+      "min_y": -0.0
+    },
+    "candidate": {
+      "extent_blocks": [
+        0.096875,
+        0.184062,
+        0.406875
+      ],
+      "min_y": 0.0
+    },
+    "candidate_bones": 16,
+    "candidate_clips": [
+      "walk",
+      "run",
+      "idle"
+    ],
+    "contact": {
+      "walk": {
+        "min_paw_y_blocks": -0.000903,
+        "max_min_support_y_blocks": 0.001146,
+        "max_lift_per_paw_blocks": {
+          "fl": 0.019666,
+          "fr": 0.019666,
+          "bl": 0.019666,
+          "br": 0.019666
+        }
+      },
+      "run": {
+        "min_paw_y_blocks": -0.001437,
+        "max_min_support_y_blocks": 0.000492,
+        "max_lift_per_paw_blocks": {
+          "fl": 0.014398,
+          "fr": 0.014398,
+          "bl": 0.014398,
+          "br": 0.014398
+        }
+      }
+    }
+  },
+  "hedgehog": {
+    "baseline": {
+      "extent_blocks": [
+        0.400069,
+        0.30423,
+        0.606819
+      ],
+      "min_y": 0.0
+    },
+    "candidate": {
+      "extent_blocks": [
+        0.3575,
+        0.273,
+        0.6175
+      ],
+      "min_y": 0.0
+    },
+    "candidate_bones": 11,
+    "candidate_clips": [
+      "walk",
+      "run",
+      "idle"
+    ],
+    "contact": {
+      "walk": {
+        "min_paw_y_blocks": -0.000933,
+        "max_min_support_y_blocks": 0.003252,
+        "max_lift_per_paw_blocks": {
+          "fl": 0.024952,
+          "fr": 0.024952,
+          "bl": 0.024952,
+          "br": 0.024952
+        }
+      },
+      "run": {
+        "min_paw_y_blocks": -0.00157,
+        "max_min_support_y_blocks": 0.003819,
+        "max_lift_per_paw_blocks": {
+          "fl": 0.025969,
+          "fr": 0.025969,
+          "bl": 0.025969,
+          "br": 0.025969
+        }
+      }
+    }
+  }
+}

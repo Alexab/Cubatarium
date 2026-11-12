@@ -1,0 +1,82 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R5 puffin/wasp anatomy wave; full R6 routes, compatibility and performance remain pending",
+  "species": {
+    "puffin": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: directly inspected equal-scale comparisons, full native pose/motion sheets, actual 64px icons and close-world Release frames; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "f918bd21dc686b084c7008b14509fe32871d888a9e10373cc33d8a20039c5707",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "puffin.png",
+          "sha256": "34fcccfd064de591c68125cf5ba376d350f8dbc1b334701a36f0be092d8b1559"
+        },
+        "motion": {
+          "path": "native_approved_puffin.png",
+          "sha256": "1562be791cb8bf2d1fd2fbfe8642f4ca4bcd477eeeb63bb54facfe2a814516a2"
+        },
+        "runtime": {
+          "path": "runtime_close_puffin/frame_002.png",
+          "sha256": "7ad2b65c6f703101b2b93d372b2941981bcd3782ac294701eed5069a65c96f47"
+        },
+        "ui": {
+          "path": "native_candidate/puffin_12.png",
+          "sha256": "e4998954ed0d9d83d32929dd865d8823a494d8658b3635ee33682a390338f963"
+        },
+        "death_asset": {
+          "path": "puffin_die_asset.png",
+          "sha256": "f8364518723533ebcb81b1d8a8768659314d756db0fa2e9c5ee44f930a2a5941"
+        }
+      },
+      "notes": "Own authored mesh, UV, surface and animation; authored -Z mapped to entity +Z. Original clip capabilities retained. Puffin has 18 weighted joints vs original 16; wasp 29 vs original 1 weighted joint (15 palette entries including helpers). Flight performance gates disabled, no performance acceptance. Death evidence is actual sampled asset skinning, not runtime Death. Full navigation/flight routes remain R6."
+    },
+    "wasp": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: directly inspected equal-scale comparisons, full native pose/motion sheets, actual 64px icons and close-world Release frames; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "5c98443fddad275109363a7793410df70578e8ce5a5206ac9dd7d2bf6e834668",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "wasp.png",
+          "sha256": "f13d22ea1585c0139f5c7634a009bfc56d08e07a70d9257d7d2c62c29312da7a"
+        },
+        "motion": {
+          "path": "native_approved_wasp.png",
+          "sha256": "e5c26fcbfe471c8dd07f80aa4fc33ba0fcaefd2ee2d57504d5899170998737ac"
+        },
+        "runtime": {
+          "path": "runtime_close_wasp/frame_002.png",
+          "sha256": "144966e0cbe02df4d2075d2ca97295f35cf5b44b6ecad16b97c4b803b32142df"
+        },
+        "ui": {
+          "path": "native_candidate/wasp_12.png",
+          "sha256": "0cb5c055ee19f7db720b70180d5722dc0e1277105addbbc83c0d609d7bdc7bee"
+        },
+        "death_asset": {
+          "path": "wasp_die_asset.png",
+          "sha256": "efc6c3a1377f6099ae1900250acb0a335be4503399b6c595c169b6baaeedfb31"
+        }
+      },
+      "notes": "Own authored mesh, UV, surface and animation; authored -Z mapped to entity +Z. Original clip capabilities retained. Puffin has 18 weighted joints vs original 16; wasp 29 vs original 1 weighted joint (15 palette entries including helpers). Flight performance gates disabled, no performance acceptance. Death evidence is actual sampled asset skinning, not runtime Death. Full navigation/flight routes remain R6."
+    }
+  }
+}

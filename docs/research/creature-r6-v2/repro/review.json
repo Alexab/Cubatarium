@@ -1,0 +1,2169 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R6 provenance/reproducibility update retaining individually accepted R5 art by exact runtime payload and current-renderer equivalence; full R6 remains pending",
+  "species": {
+    "badger": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "d3635f2a2776a9fb57586e89afa8e8285b02985013694949a90628b4ff64133b",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/badger.png",
+          "sha256": "ccccd54c5ed5a31edca98ee648a0b8234327f605d8018f8cc3cc6356f12f1002"
+        },
+        "motion": {
+          "path": "../format/native_approved_badger.png",
+          "sha256": "56b93869366d8d0791e1f11b37674ef5e02f692a9dc1e28bfa2f8356c623d243"
+        },
+        "runtime": {
+          "path": "runtime_candidate_catalog/frame_002.png",
+          "sha256": "4422d2b5762731e34fdc8be85c3f897d89c6241c0295f9ef36648d5450a4200e"
+        },
+        "ui": {
+          "path": "native_candidate/badger_12.png",
+          "sha256": "df3e845f480511c85d357c3766d8081add4002aa26fa8d93fffbdea30d2dab28"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "bee": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "6e3994eaef91d5fcd6ff44d11729c26d22d6f4a041cbb97a704ff531c2e52358",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-bone-small-v2/bee.png",
+          "sha256": "b37d0771085ddea0d061c040352dcd66bd40d2cd63bca57a579a58a727c5fa4b"
+        },
+        "motion": {
+          "path": "../../creature-bone-small-v2/native_approved_bee.png",
+          "sha256": "ff41b80361a8e6f0263e759e4acc72285ed6cb7d25d9003030665087789b2c94"
+        },
+        "runtime": {
+          "path": "../../creature-bone-small-v2/runtime_wave/frame_001.png",
+          "sha256": "46812fec7311a0eb094eeafe1575bdc901b17f0e45df99118385f84873191d87"
+        },
+        "ui": {
+          "path": "native_candidate/bee_12.png",
+          "sha256": "e61f3f5ddcde7d15bdc2a1f0bf21c682d53460c30182c5264105a4559c9a2558"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-bone-small-v2/review.json"
+    },
+    "bot": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "83e130cdfb74d2cc2d4848a583f7e912be3c723c2f39dfc62974442a73c19360",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-bone-humanoids-v2/bot.png",
+          "sha256": "e7001af059bed3ba28e9ec046a39a3b72b99e9ef2e8c2bcd7d434740b507ee04"
+        },
+        "motion": {
+          "path": "../../creature-bone-humanoids-v2/native_approved_bot.png",
+          "sha256": "b93c4679dfbecf8f896ea121041b290e641bffcfdceddab03b4c45cf4d974c86"
+        },
+        "runtime": {
+          "path": "../../creature-bone-humanoids-v2/runtime_wave/frame_001.png",
+          "sha256": "6218b2403c0111f56c074bac01078391e4b6366098149bd42f360533fa818847"
+        },
+        "ui": {
+          "path": "native_candidate/bot_12.png",
+          "sha256": "6bfa9c7577d11b962e89ba6b48b209b0c16d2f62e42b71050a973ca712fd5989"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-bone-humanoids-v2/review.json"
+    },
+    "bunny": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "b0931b2f9e5d3f8e203e2a663da8ccee573e860f2c9628e3c41faac437a8675f",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-bone-small-v2/bunny.png",
+          "sha256": "0be2ea9f6c56d0e00e0b0d11a345e8d2b1efb5a5273a8587a8aca6f7a4f6185e"
+        },
+        "motion": {
+          "path": "../../creature-bone-small-v2/native_approved_bunny.png",
+          "sha256": "d5d701e488c3745f8697827dc1c6fbdea4b6e8002af73b6b346a8ed673bba6bb"
+        },
+        "runtime": {
+          "path": "../../creature-bone-small-v2/runtime_wave/frame_001.png",
+          "sha256": "46812fec7311a0eb094eeafe1575bdc901b17f0e45df99118385f84873191d87"
+        },
+        "ui": {
+          "path": "native_candidate/bunny_12.png",
+          "sha256": "5160922bf858359d7018dc2e61b993ab0f360bc278ef5a184d13f74ea878f1ff"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-bone-small-v2/review.json"
+    },
+    "butterfly": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "13422a3662e8afd74cdaf791fe148e99c93a2f8e9dc48cc65e74de8c7badb202",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/butterfly.png",
+          "sha256": "870dc5972ae4b03caf189eee0bc5a47863887253c52b6956bf65ee9d517eff0c"
+        },
+        "motion": {
+          "path": "../format/native_approved_butterfly.png",
+          "sha256": "0ac4b73347ff48d44205ceac8bce388b86370f526ee21248a88bf6942728d233"
+        },
+        "runtime": {
+          "path": "../../creature-gltf-side-uv-v2/runtime_final_butterfly/frame_002.png",
+          "sha256": "beddf10f84d4766b1eda1af516ef8d312f3d77b6edee3c03ff1f27b771b6a17b"
+        },
+        "ui": {
+          "path": "native_candidate/butterfly_12.png",
+          "sha256": "19db31b1b34b65992722936f92624c09b99fda83828bb59de2c5f1b4fb4b76c2"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "chicken": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "af7a78c0ccc534569a8f5fdca9d5f1a45b44677a013219f4e778992977d56eda",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-bone-small-v2/chicken.png",
+          "sha256": "d97fb0a7a4465a194b85e61dec9dd7dd0d49a3cc92e8eea5a5da37c64f8cbdef"
+        },
+        "motion": {
+          "path": "../../creature-bone-small-v2/native_approved_chicken.png",
+          "sha256": "cb95b322d307db8b773b2f0f00a1154a19ce6eba0bb539a3ed939b812f93c0e3"
+        },
+        "runtime": {
+          "path": "../../creature-bone-small-v2/runtime_wave/frame_001.png",
+          "sha256": "46812fec7311a0eb094eeafe1575bdc901b17f0e45df99118385f84873191d87"
+        },
+        "ui": {
+          "path": "native_candidate/chicken_12.png",
+          "sha256": "6a6fb17816b4f89b4876c23ca25f5594c0ed54e3d272c02059e9b8db6cd58ffc"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-bone-small-v2/review.json"
+    },
+    "cow": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "0fffd2f7482dbbf96064adac6ddf90999996e37eb0176666e6608e2703049014",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-fidelity-pilots-v2/cow.png",
+          "sha256": "658e8f07c81dc54bbe4aed8521dd4df244d55b2e32d43ea89d10f17e2f29a95f"
+        },
+        "motion": {
+          "path": "../../creature-fidelity-pilots-v2/native_approved_cow.png",
+          "sha256": "9bfbd2cd17a30377c63d80d51e1d26097af22d03778c9b557acd9c36e6bcd312"
+        },
+        "runtime": {
+          "path": "../../creature-fidelity-pilots-v2/runtime_approved/frame_001.png",
+          "sha256": "80d94f7d4e74ff5f82cb28ba5cc3f7c0b19fc05c4346545d7539ecd156d36293"
+        },
+        "ui": {
+          "path": "native_candidate/cow_12.png",
+          "sha256": "76f0b9524d397cf2c4cbc2e4732a68aef20179cffd61936889ca096a8e4202d3"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-fidelity-pilots-v2/review.json"
+    },
+    "crab": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "2848026d6a8a6dd170e9d913f8c892445a286894fd9ef87c65964b2ff13c1c5e",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/crab.png",
+          "sha256": "ea5365f34e7837e2042bd1252b445959f46b72f5c82db171a5628526efed1f57"
+        },
+        "motion": {
+          "path": "../format/native_approved_crab.png",
+          "sha256": "10c7187bf18ee031cb2e9630b093fa758c5d21ac8cc927965a8f0c9db1a1f58b"
+        },
+        "runtime": {
+          "path": "../../creature-marine-invertebrates-v2/runtime_corrected_crab/frame_002.png",
+          "sha256": "fed1c06b72754a9bafdc18c48ed17e456ab726790f62691bee1b525fbe9cc10a"
+        },
+        "ui": {
+          "path": "native_candidate/crab_12.png",
+          "sha256": "560fe549927984c02029cc338a69352837c07759eb7b032339eeeee17ed34bf0"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "dirt_monster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "051f9265d65d443735767645c345cd8c9029d9b985c91c6a2e1d9161bcd1b9b1",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/dirt_monster.png",
+          "sha256": "68a1cb47a5983ccf99147d892b9efdcae6d4bfeee65ab57b64ab04d6689a4373"
+        },
+        "motion": {
+          "path": "../format/native_approved_dirt_monster.png",
+          "sha256": "6692c0101bc91cd8e03bc777c9c12657820591ec7d4ac387a52336c8d72e2614"
+        },
+        "runtime": {
+          "path": "../../creature-elemental-bipeds-v2/runtime_cadence_dirt_monster/frame_002.png",
+          "sha256": "003c4dbf4a0c8a5b261fdb376fea874f4b849bb0936c3cb5296e1942adaf366e"
+        },
+        "ui": {
+          "path": "native_candidate/dirt_monster_12.png",
+          "sha256": "c34c0cc4bcbba8475c5d6b24b763c1a30ecb535df6b44116c519a0e9ae8e072d"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "dolphin": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "a596fb99f4c3cf5b1a1075e24408214fd1957220625e5ab2100156029f38cdb7",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-bone-aquatic-v2/dolphin.png",
+          "sha256": "cf62f55f07bacbd87998b23a9fab838968337ae81661443d757c3b1f77427132"
+        },
+        "motion": {
+          "path": "../../creature-bone-aquatic-v2/native_approved_dolphin.png",
+          "sha256": "e2164c53d5e472b68cbf801b138296c89f472c74994e7a9a70172824fa8e5068"
+        },
+        "runtime": {
+          "path": "../../creature-bone-aquatic-v2/runtime_dolphin/frame_001.png",
+          "sha256": "6bfd4bd9e3f1aa111b83d0a8439582960fbaf98b2bd5fa96123f12790053c35d"
+        },
+        "ui": {
+          "path": "native_candidate/dolphin_12.png",
+          "sha256": "79f4027364e849f76d2f582a0bceed67ff4877e7175c533066a7dad778bbcb81"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-bone-aquatic-v2/review.json"
+    },
+    "dungeon_master": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "a43ee49c02ad5a5b52223baf079006a0caa65a9622cb502554437c4549b12eb0",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/dungeon_master.png",
+          "sha256": "db514790cc16f8fe77495a099dcc8a0f40a6c7c1b0b8a914bab8dde53714e022"
+        },
+        "motion": {
+          "path": "../format/native_approved_dungeon_master.png",
+          "sha256": "f27b44528f350a57410fbde26d7f7687028502a767909d95248a6bbfa62554d6"
+        },
+        "runtime": {
+          "path": "../../creature-guardians-v2/runtime_final_dungeon_master/frame_002.png",
+          "sha256": "4c4237b8c6aababc948715c6bd5cff4f64c2540bedb888b35cd5404cf2e03531"
+        },
+        "ui": {
+          "path": "native_candidate/dungeon_master_12.png",
+          "sha256": "291879b7c88d599d029cd8e558f10ec8cf84743324e6e5168606d09f4a860775"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "fire_spirit": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "426ea7e879bb8415da470d509585310ac2611eae5decccc126e471ed5e088a74",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-aquatic-aerial-pilots-v2/fire_spirit.png",
+          "sha256": "929427789785a5d2c4fb30b134efd75c013f5e7e5037ca0111749d9cc95ab368"
+        },
+        "motion": {
+          "path": "../../creature-aquatic-aerial-pilots-v2/native_approved_fire_spirit.png",
+          "sha256": "f261e3a72811c8c658ded551311a819066c2d1b4bf066ccb469e6d9e5d461901"
+        },
+        "runtime": {
+          "path": "../../creature-aquatic-aerial-pilots-v2/runtime_air/frame_001.png",
+          "sha256": "99d97e3f6412cd02e96ce691cb798f382b5312574143abdbbd1f241b2345a8fd"
+        },
+        "ui": {
+          "path": "native_candidate/fire_spirit_12.png",
+          "sha256": "116309f6a83ced3c65c9239333f340e5dacca991338ef67c3991ad4f03553485"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-aquatic-aerial-pilots-v2/review.json"
+    },
+    "fox": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "f18460283daea552e926c224a1269b4285d01ef850924526420b7e38dc7191e1",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-bone-coats-v2/fox.png",
+          "sha256": "e6bc6bfb69eef4ed81c9ffa2f7214800cf8c7ee97ce50db211cfebd863a285a6"
+        },
+        "motion": {
+          "path": "../../creature-bone-coats-v2/native_approved_fox.png",
+          "sha256": "667a378882633efda7bd013d66dca9745ed2c1b9eeaf069765d1e016341b9807"
+        },
+        "runtime": {
+          "path": "../../creature-bone-coats-v2/runtime_coats/frame_001.png",
+          "sha256": "14db2978ad1d426121c7cba3d7f4319222c52ae071d6a220f2e7dda340ada0d5"
+        },
+        "ui": {
+          "path": "native_candidate/fox_12.png",
+          "sha256": "4edb859e9b87f67cf77ae4b6c7fb5b90c1715e7489cc835eb3e68f2a021b83cf"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-bone-coats-v2/review.json"
+    },
+    "golem": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "1394001fded151e78e09b00bf32402f2fef4f3b4bc53ac3fb8b722323d243bdc",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/golem.png",
+          "sha256": "950ef1ab4151c764b3ced24c5ca27b1b4fe6894bb72ffa91f7a4c5dad94c0791"
+        },
+        "motion": {
+          "path": "../format/native_approved_golem.png",
+          "sha256": "2e16e0ec0e0bfaf93f1b19e34aafcddcd5be771335626914fd022d9cf4ece644"
+        },
+        "runtime": {
+          "path": "../../creature-arboreal-v2/runtime_final_golem/frame_002.png",
+          "sha256": "f046dbb83f23e40a75a164bceebfa4ee7acb8c2895d745867ff2091f3cab7642"
+        },
+        "ui": {
+          "path": "native_candidate/golem_12.png",
+          "sha256": "2d925fc38f0ddf0dd2edd7090f6d3e84bb74d571d70c1c817cf41bdad2cf4118"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "hedgehog": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "7e96911b1a2f4a3b1e3e886528665c389f877ce15bf602889f6a3230741a481c",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/hedgehog.png",
+          "sha256": "d940e11b82b603349ce2d935bca101c64d560c505ef94336b2f8fb34e4d934d6"
+        },
+        "motion": {
+          "path": "../format/native_approved_hedgehog.png",
+          "sha256": "bf82d3eb6bf4186300ac1d63a8dc4e61a9a73877e5ad1ba48a5623bbbcb69706"
+        },
+        "runtime": {
+          "path": "../ground/runtime_final_hedgehog/frame_002.png",
+          "sha256": "76191cc655598f1e50db75e206f3abad2503fb30e200f1e8fe7e416c729b1c87"
+        },
+        "ui": {
+          "path": "native_candidate/hedgehog_12.png",
+          "sha256": "4d5bea70b93f5799774d656d9955b2f53ba52ae9b589d8392e27ae010f1a6270"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "hermitcrab": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "9e161c5d6b820b3427c47abd2d16c566fba787be67a1f2ab850d5ee8ebb1c47b",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/hermitcrab.png",
+          "sha256": "cc7e6d9fb1f74d0e70bcb1019e713c7907174af63a7dbafca2ba07635373536f"
+        },
+        "motion": {
+          "path": "../format/native_approved_hermitcrab.png",
+          "sha256": "9ec3c2321e12780ff38e4ec02027ccfd0fd3c2473654b336317ab4c288c9a1e4"
+        },
+        "runtime": {
+          "path": "../../creature-gltf-side-uv-v2/runtime_water_hermitcrab/frame_002.png",
+          "sha256": "f6801170070c3304e5912a8f7d420ad25b189904b25cee2bb488779ca8f7ac2c"
+        },
+        "ui": {
+          "path": "native_candidate/hermitcrab_12.png",
+          "sha256": "eabef66c89dd96dbaa639ee252f1f64040cb511ab073106f569bb53ab9664988"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "human": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "b6f44fae7786d4347a9e3ecb8d970d510f0948c3c0361edf96639e2a98d6b2ed",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-humanoid-pilots-v2/human.png",
+          "sha256": "ca2085be717c0ed511043f0de480ac0be50188aa186bfc5c1a0af92684d604c3"
+        },
+        "motion": {
+          "path": "../../creature-humanoid-pilots-v2/native_approved_human.png",
+          "sha256": "84a176893860a622a9ecc5a81a293838bc2d10cea005d09ffa7e63c6ad2f3ae1"
+        },
+        "runtime": {
+          "path": "../../creature-humanoid-pilots-v2/runtime_human_adventurer/frame_002.png",
+          "sha256": "7d0ec3723018241ffb26139dcdd316c65425561cfb3dd0cb4a6ba4a6ff529555"
+        },
+        "ui": {
+          "path": "native_candidate/human_12.png",
+          "sha256": "a0f72e2003db7ac7c8c74f10abbded81d92f526af0169401ab878cc211ec4d8f"
+        },
+        "equipment": {
+          "path": "../../creature-humanoid-pilots-v2/equipment_baseline_comparison.png",
+          "sha256": "6adc7dbee254d1e652568ca199678abcaf9e5a2b759a6784020557a643b3b633"
+        },
+        "first_person": {
+          "path": "../../creature-humanoid-pilots-v2/equipment_fp_candidate.png",
+          "sha256": "e660f85f14de718a1b513e38b38e1393104445b7a1a625ba2c09741b978ae46f"
+        },
+        "skins": {
+          "path": "../../creature-humanoid-pilots-v2/skins_ui.png",
+          "sha256": "c94a1bbcd3d304ca1d7a7c8e8e26581650e9e80ea588a0067a2d29891efb71ae"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-humanoid-pilots-v2/review.json"
+    },
+    "kitten": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "1ffd4fafd1e1f3ece32e134ef9842499f03b73931ac0f332f1105e3e73d5fbee",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/kitten.png",
+          "sha256": "fc026363c5f4f2779c92a447ffcab02365b067d7df31409b77debe9d16a1b1e7"
+        },
+        "motion": {
+          "path": "../format/native_approved_kitten.png",
+          "sha256": "fbe8f25b1f8dbae4a3b764a65e04f1016db16fedf8e112f4a72dd84a1111d9e8"
+        },
+        "runtime": {
+          "path": "../ground/runtime_final_kitten/frame_002.png",
+          "sha256": "91c7e6587f4e0c1d43e7e2f4e7a50555de2837e58549e9402f264d4aa912430b"
+        },
+        "ui": {
+          "path": "native_candidate/kitten_12.png",
+          "sha256": "b32c85c08f0effad078f16a9a741c1ea8cd76497bb4a3fae48a6a179c87a32ba"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "land_guard": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "d3cafa98551851edd0c1a08276cae446d312de97e9e256937aebaa4a047a32c1",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/land_guard.png",
+          "sha256": "f119e0459758a9fc6d4517c23698db82b8651bdfb9380684f736927fdef4f0a5"
+        },
+        "motion": {
+          "path": "../format/native_approved_land_guard.png",
+          "sha256": "5284c6c3a5df440f2173df3f4ac8386813cd1526b56f91aa633b2b295180fbaa"
+        },
+        "runtime": {
+          "path": "../../creature-guardians-v2/runtime_final_land_guard/frame_002.png",
+          "sha256": "eff4401937ab21c7d50d5b437ca08d60d9735e1cd0f09ad93acead7d779d8364"
+        },
+        "ui": {
+          "path": "native_candidate/land_guard_12.png",
+          "sha256": "5429aa2592c64329845690b759c81e3dbda20ad1ce7ba4926757ad66ef1c7c8f"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "lava_flan": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "73b6e5bc236489a5cd1b0badea3f78d036e7743cf2b2333d7134b670a99355eb",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/lava_flan.png",
+          "sha256": "88cd02647bae5286f7fc9a1aa5426d9887b54bf0aed00fbc7ee6e6e09ee83f71"
+        },
+        "motion": {
+          "path": "../format/native_approved_lava_flan.png",
+          "sha256": "5d0ad210c9fc14887ce07e650c192f81a3c0a67b605b054f52c0496c688da85c"
+        },
+        "runtime": {
+          "path": "../../creature-crystal-lava-v2/runtime_flow_lava_flan/frame_002.png",
+          "sha256": "06195e01c2a6ee3dab5cd6242668a27a25cfc6af29c5076f56ba5b843933c648"
+        },
+        "ui": {
+          "path": "native_candidate/lava_flan_12.png",
+          "sha256": "1645f49231f54786c32ae82dba78f295afd3fecf9c0ee7b1a2e9b6124acd2e8f"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "lobster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "3cee72662089d3e0716c2ffc5f44d5412d1fde7e107232468992c73d503aed15",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/lobster.png",
+          "sha256": "7229625e39698aa1709fff74d7dc9832e3b065a43bdef5f8570faeb2a552eee9"
+        },
+        "motion": {
+          "path": "../format/native_approved_lobster.png",
+          "sha256": "b76aab2223db5bc4ed6ef6a1ffba8e78ec43611ed99357de35390b9dfdcfd5ea"
+        },
+        "runtime": {
+          "path": "../../creature-marine-invertebrates-v2/runtime_corrected_lobster/frame_002.png",
+          "sha256": "e065e5dfc681cc21e15c144ea8b46811cbaa933549bc08dedee1baeb2d9f8878"
+        },
+        "ui": {
+          "path": "native_candidate/lobster_12.png",
+          "sha256": "5b01ee53b6704bf05481ac5046b3ba968fd3aa7e5863186c1cc278ed489fbc0c"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "manatee": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "a7d51936f13f3cc7f3813bedb6cb07102c1873f6205d1bf8a7fa471aefd4e142",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/manatee.png",
+          "sha256": "97a66a55d8fdc97d6e0541cbba704a0ee9cc536fb66d74110a2e9cde6ab6718d"
+        },
+        "motion": {
+          "path": "../format/native_approved_manatee.png",
+          "sha256": "40529f29377528210451f630019dc99f942cf889f140e846b2bc676ecb34f561"
+        },
+        "runtime": {
+          "path": "../../creature-marine-mammals-v2/runtime_final_water_manatee/frame_002.png",
+          "sha256": "d55d88921f6588cfdd9eb3fe728420d3563d712d392b8248839a0b19a921195f"
+        },
+        "ui": {
+          "path": "native_candidate/manatee_12.png",
+          "sha256": "52f8e2a948eb94717cbe6015b8f38581572e9fd71c15fde7bf237754e60485e3"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "mese_monster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "95da58d8f01900b83985a3e5b4404d8b600cb7c694c18fe91987fb5ac3e093ac",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/mese_monster.png",
+          "sha256": "d185d9a734342454811c5b94f2a244f4b8f44a30e27878811ca58746d96b66a0"
+        },
+        "motion": {
+          "path": "../format/native_approved_mese_monster.png",
+          "sha256": "3ec45c0cd588cbe8307ae2e0472dc313ab78d3b0b1b22f531efcc33be3cc974c"
+        },
+        "runtime": {
+          "path": "../../creature-crystal-lava-v2/runtime_current_mese_monster/frame_002.png",
+          "sha256": "b0ad539fe3a074e6e5bc500e137f8b9464dd72c8b79d68f33b0dd653fea7f241"
+        },
+        "ui": {
+          "path": "native_candidate/mese_monster_12.png",
+          "sha256": "c9de2694f9ed9629377653f5e6b43d5f4f9aeb4c228506aecb56b181709115b3"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "octopus": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "3511d3a7bb5e78244de6b96a563b3a2908f9b0c15c5e7adf9c21e6f434aa3f96",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/octopus.png",
+          "sha256": "6063834580f19a84b83da08d1bb73978bd9728b9727e7f067301022332f65bcb"
+        },
+        "motion": {
+          "path": "../format/native_approved_octopus.png",
+          "sha256": "f7a4a968bc2d10c43ab1fa07fbe0a56e9d2521deb95e9d6a9b9330a8d57b9b96"
+        },
+        "runtime": {
+          "path": "../../creature-marine-invertebrates-v2/runtime_corrected_octopus/frame_002.png",
+          "sha256": "20775aea5da415b5422f0f723956c52287d1622e6a8ccab21b98e38e45778651"
+        },
+        "ui": {
+          "path": "native_candidate/octopus_12.png",
+          "sha256": "5a0a31aafd402782ca82414f627684fc65b29b37f0fc362ecd02d545ef25e9ff"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "oerkki": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "bd492f74d07148c12ffab2db7dbacd967a35ce5690fd99a478cbd18d9ad1ae78",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/oerkki.png",
+          "sha256": "1be5bef5717f950c149f8565368225067c048fa73219f85cbd349f5ad1f7f8e7"
+        },
+        "motion": {
+          "path": "../format/native_approved_oerkki.png",
+          "sha256": "6d85db6bd1625db348bf2e2b971eb493bb91b017f9c764f8dde5dbeea7b3ce7d"
+        },
+        "runtime": {
+          "path": "../../creature-warriors-v2/runtime_contact_oerkki/frame_002.png",
+          "sha256": "1be5c96156b5d0677d747303c7c7474f644ef25dfd26d7ecd37591f4b40abfc4"
+        },
+        "ui": {
+          "path": "native_candidate/oerkki_12.png",
+          "sha256": "ba173b7cc1b3e5e4f53ced0851d16ce04a22d7aaab8ddd4565e86d73d0afb6da"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "ogre": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "92f5bb92c50312bdea329442ba529a4b07aa608b9174e4cc6367064cef52024d",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/ogre.png",
+          "sha256": "a984e9b8f6b7fb66e6b4acc13bf9d36902d842fa6b1c33529c0b5a9cd9aa01b2"
+        },
+        "motion": {
+          "path": "../format/native_approved_ogre.png",
+          "sha256": "eefa152e1b99956eb9222cdabd5fa4f4c2e3b9b4f247377fc53b7866703edca0"
+        },
+        "runtime": {
+          "path": "../../creature-warriors-v2/runtime_contact_ogre/frame_002.png",
+          "sha256": "973e450dde8ae79ebe60a0877c63f9237ab5ccdb7edd542112ec37fa2641217d"
+        },
+        "ui": {
+          "path": "native_candidate/ogre_12.png",
+          "sha256": "111bc5286ee330fad3c2b4c298d6037796d19c75408e99d34c6c747b2b9f83cc"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "orc": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "4daacf570c46d36aaeb80cef8037686cc712ef9b14460ff3bdddad28aca521dd",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/orc.png",
+          "sha256": "34834ef80fa486d3194705cb804f58a32893d333b27c2ce71fd2335e29c292c5"
+        },
+        "motion": {
+          "path": "../format/native_approved_orc.png",
+          "sha256": "e58eb987e2382e30683a246e8267b72389b5f9bd1b7b69162df8446d79cd87c7"
+        },
+        "runtime": {
+          "path": "../../creature-warriors-v2/runtime_contact_orc/frame_002.png",
+          "sha256": "2fdc183e08fef78160e871ebb1be0fccba5bd6ffc0d550b5cb0c3572d476c43c"
+        },
+        "ui": {
+          "path": "native_candidate/orc_12.png",
+          "sha256": "4ec36c3ec0434fca49091691364a8c5431c010978397e4deb5ae85633f72abb2"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "owl": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "a01fadcfddee248fd7aa5ec5da4aa50f3d452c5d663cc462ebfaa144c1647406",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/owl.png",
+          "sha256": "186ea56438ab8db7bf01f446c5835d00bd7db1f3d0c355409c9eb3ad4a143523"
+        },
+        "motion": {
+          "path": "../format/native_approved_owl.png",
+          "sha256": "0c08b26f56ab14efaae60953b1f4fd348d8d26524fda48163c851d097e644961"
+        },
+        "runtime": {
+          "path": "../../creature-gltf-side-uv-v2/runtime_final_owl/frame_002.png",
+          "sha256": "e9562329a970a43e6182edae9d0ada6af9f0dd81687d0af280c132210a847842"
+        },
+        "ui": {
+          "path": "native_candidate/owl_12.png",
+          "sha256": "e787283f9633691e3b8ac3d6872fbc5e207c05b40abba17b86a0f82e3f06a817"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "panda": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "f58b4baa9693d3256890c21064343a4ff12ec7d9f2e7c4db0f8d53bb9b6f736b",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/panda.png",
+          "sha256": "11c56ecec26159217a73d50e1fdcbefc56c1f5dd27b3458051bc04c85b1bbb0d"
+        },
+        "motion": {
+          "path": "../format/native_approved_panda.png",
+          "sha256": "62122324e9909c0ff34bc4694aac5e181484655fec9772b12296b5805b22054f"
+        },
+        "runtime": {
+          "path": "../ground/runtime_final_panda/frame_002.png",
+          "sha256": "df565d941e91f56f1dc7a219cf46c13028e835ec8c4457c3fdfe984cd0f1866e"
+        },
+        "ui": {
+          "path": "native_candidate/panda_12.png",
+          "sha256": "295dcdd5ae440ec4393805a3b0a07e8aa80a2c299d33f31503ff8f1c3db5a77d"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "penguin": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "26958ec264d1d122af84f9707eef11195a1541d5ac4e7db473c8b7eea508499f",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/penguin.png",
+          "sha256": "110d0cad1c642b78c1ece0e15d577a460c32a6af1f878382437262e2949e3e83"
+        },
+        "motion": {
+          "path": "../format/native_approved_penguin.png",
+          "sha256": "11ee322e935dc25721a085ffd7ca4e6094f007fa54884ab3670210d5be7a2213"
+        },
+        "runtime": {
+          "path": "../ground/runtime_final_penguin/frame_002.png",
+          "sha256": "fd5939e3e06dfd9fc6b4130486cd266d8cc0fa2cce23008d054239cb1fb93732"
+        },
+        "ui": {
+          "path": "native_candidate/penguin_12.png",
+          "sha256": "73ab217bc81a7356d65c2f3e9d8943054fc11298be9aea085da49fc0d7e5ce6d"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "pig": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "184ba8d33b036e97457e470b6422d379db61c3d88346359b50e2535cd449c6cb",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-bone-coats-v2/pig.png",
+          "sha256": "c216f62a5ecbe792c5bfe4f4c09088c3c2e7d2569ee83a03d22c0920e14e9116"
+        },
+        "motion": {
+          "path": "../../creature-bone-coats-v2/native_approved_pig.png",
+          "sha256": "0d2c33791f56fd060faf652362dd960de65d75f422a437dd114c1097a634b740"
+        },
+        "runtime": {
+          "path": "../../creature-bone-coats-v2/runtime_coats/frame_001.png",
+          "sha256": "14db2978ad1d426121c7cba3d7f4319222c52ae071d6a220f2e7dda340ada0d5"
+        },
+        "ui": {
+          "path": "native_candidate/pig_12.png",
+          "sha256": "1e92f1e21454a781b51914448e8d0551fec7855d0932c954421e18155fbba60b"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-bone-coats-v2/review.json"
+    },
+    "puffin": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "a773994ebe84ab3193b2a2444e2809ce5deebbf2b1837507cbb5045148b146d4",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/puffin.png",
+          "sha256": "434ef2ccde12ec2be3bfd09046d207ac48670dcce20b23439690b6b2a0ebb0ed"
+        },
+        "motion": {
+          "path": "../format/native_approved_puffin.png",
+          "sha256": "d716a9faaa63aa860db2c3d7ff3211442cd11e1f1770a610c4f87afb66e39593"
+        },
+        "runtime": {
+          "path": "../../creature-gltf-side-uv-v2/runtime_final_puffin/frame_002.png",
+          "sha256": "6cb8f1016fab669acc9832de651012594336446f27c4d8fc8048838557d6c59c"
+        },
+        "ui": {
+          "path": "native_candidate/puffin_12.png",
+          "sha256": "32f4cfc01e920f24ea8c200ad98867e7d46f86e55c66ba443a6fa87033dbbb65"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "rat": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "9dda1592c3990b77759815a2f2727e4fd02933e23f1276b693d80c5e7ab31ef8",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/rat.png",
+          "sha256": "4e3b7a1ffc3b520612f44edaa7ffe9100e23a1af2ac7b6ae1c758706bfb10d7f"
+        },
+        "motion": {
+          "path": "../format/native_approved_rat.png",
+          "sha256": "61a0b19641d9c3afdae8637a1e73be8e544f123db4a3d7b49133248eaf9495ef"
+        },
+        "runtime": {
+          "path": "../ground/runtime_final_rat/frame_002.png",
+          "sha256": "07023a82a001aa50dca07a89d256f82aed88f1a192ef75eb1580f54b5e3afd45"
+        },
+        "ui": {
+          "path": "native_candidate/rat_12.png",
+          "sha256": "91726435fa3ab4b52b83c4db582d17c99327c2d1224d8a29b48aae61c0000bd0"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "rigid_demo_flyer": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "a211e6e5ea3b5e4fd70112f4721e648a0b426ce95d14dcd258c16cf5ccc21ff0",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-aquatic-aerial-pilots-v2/rigid_demo_flyer.png",
+          "sha256": "0c48039113f791147db433abc626b5e39b89722b6bd871bcab5d037b00ebf400"
+        },
+        "motion": {
+          "path": "../../creature-aquatic-aerial-pilots-v2/native_approved_rigid_demo_flyer.png",
+          "sha256": "31e7cbc27a35238fadaf147f75bb8394c483d753037680822053dd6cbce92a92"
+        },
+        "runtime": {
+          "path": "../../creature-aquatic-aerial-pilots-v2/runtime_air/frame_001.png",
+          "sha256": "99d97e3f6412cd02e96ce691cb798f382b5312574143abdbbd1f241b2345a8fd"
+        },
+        "ui": {
+          "path": "native_candidate/rigid_demo_flyer_12.png",
+          "sha256": "606fecfedff680abcfd2a3fd9049b6955eef0764cb59e52a386068985d80dc0e"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-aquatic-aerial-pilots-v2/review.json"
+    },
+    "rigid_demo_swimmer": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "c69e76f1f7de04165cfd68d13f70ab0de473b1d421f30f5d379d8c1d423cd782",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-aquatic-aerial-pilots-v2/rigid_demo_swimmer.png",
+          "sha256": "9bdd2d848061a2be1080cf16b1ffc0bc4db79fb9b986353470befaf3fbfa881c"
+        },
+        "motion": {
+          "path": "../../creature-aquatic-aerial-pilots-v2/native_approved_rigid_demo_swimmer.png",
+          "sha256": "b0cb019fdad08cd711520d3f8961c292cfc36843b2eccf280b89018f18d1c254"
+        },
+        "runtime": {
+          "path": "../../creature-aquatic-aerial-pilots-v2/runtime_rigid_demo_swimmer/frame_001.png",
+          "sha256": "04cd4808623b1e6c2d2e1a320182942e3740df7682df0db6ecd295059942f628"
+        },
+        "ui": {
+          "path": "native_candidate/rigid_demo_swimmer_12.png",
+          "sha256": "094b25270f5289060fbd85d95a3864a9489a9fea48ff1fd463cae2965edb3df3"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-aquatic-aerial-pilots-v2/review.json"
+    },
+    "rigid_demo_walker": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "5211234a839787869e69bf14b396db9933602d1cb8fc386ad7cbd099f1f7a754",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-fidelity-pilots-v2/rigid_demo_walker.png",
+          "sha256": "406b3cb94e2746794895212aca180c82f749f7e0c261d6fc4d762c7785a2aa49"
+        },
+        "motion": {
+          "path": "../../creature-fidelity-pilots-v2/native_approved_rigid_demo_walker.png",
+          "sha256": "20583171b30f9ede5101b840fe2b888c3d9c961f526bf20c408f7070a46d0d58"
+        },
+        "runtime": {
+          "path": "../../creature-fidelity-pilots-v2/runtime_approved/frame_001.png",
+          "sha256": "80d94f7d4e74ff5f82cb28ba5cc3f7c0b19fc05c4346545d7539ecd156d36293"
+        },
+        "ui": {
+          "path": "native_candidate/rigid_demo_walker_12.png",
+          "sha256": "2a1a894603da7312a743e2c5aa545abe67e3922b82e6b86c8909762422ab1649"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-fidelity-pilots-v2/review.json"
+    },
+    "sand_monster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "045e1eb4cd07cc99cd2b72eef823a4bd01ff893957851154a4d899c176ac82e1",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/sand_monster.png",
+          "sha256": "043007475bb1c4b4bb86afd48427f8ea1ae7c3028aa0af8ffbf8c75286548131"
+        },
+        "motion": {
+          "path": "../format/native_approved_sand_monster.png",
+          "sha256": "576c03252a98629342b441c8fbba4f301be3d1906000f8b0a7529c87c5370750"
+        },
+        "runtime": {
+          "path": "../../creature-elemental-bipeds-v2/runtime_cadence_sand_monster/frame_002.png",
+          "sha256": "d6381ac446fbd2dad113c67cdaac338aa52cc2d4e421c4286ceecbff889934ba"
+        },
+        "ui": {
+          "path": "native_candidate/sand_monster_12.png",
+          "sha256": "b703d8e199649a576078ab7c7cd6c3bc3a6541dc7a44bfb02fa8cbbe904889d3"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "seahorse": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "75f89749d5e9e8bf46baad4c8d7023f380293ee8c645dd34141cbc81a2f13066",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/seahorse.png",
+          "sha256": "80dfa9d2f6a3aee96811668f686a7a3a41c229a97707ff02d9435a06bce49104"
+        },
+        "motion": {
+          "path": "../format/native_approved_seahorse.png",
+          "sha256": "c13fc9c5f91601049565ead74fa5ffdf0688019ac0edce77500fffb004def3e7"
+        },
+        "runtime": {
+          "path": "../../creature-aquatic-fish-v2/runtime_final_seahorse/frame_002.png",
+          "sha256": "4d58f0673f2055750ddc5517d629f1f780ae37d9860cb9a9678548aaba9900aa"
+        },
+        "ui": {
+          "path": "native_candidate/seahorse_12.png",
+          "sha256": "33c9fed946d4dedefab16abd04cc94799fba38eb4adb426c089c9de72d660bbe"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "seal": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "c0007f1be6f6c80e7f4f88606813c763c693031730fb31eec592749d590f2628",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/seal.png",
+          "sha256": "8323ba4abb31d3121804d5d37fb7d9f258cd21fff17185d0e2c79e70d55c07d9"
+        },
+        "motion": {
+          "path": "../format/native_approved_seal.png",
+          "sha256": "e79e34e6373bb5edc4db97f929d8a24ec67232521e6f2cb046a6cdb28ea35e52"
+        },
+        "runtime": {
+          "path": "../../creature-marine-mammals-v2/runtime_final_land_seal/frame_002.png",
+          "sha256": "7176baf1127f8f0b8cc07ebe55a48afe2451b6d8cd5b49dbb0223fde99a4532f"
+        },
+        "ui": {
+          "path": "native_candidate/seal_12.png",
+          "sha256": "2800fc43ab990a1a3cb2c55d62e796792b3c255773cdf803c8fdf3447030f0df"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "shark": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "fc3ca8437d2c9136f324df4e1e22ea307c8630de4f1eda8e2763040b7d94160e",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/shark.png",
+          "sha256": "1da72da3f6bd10a0fef3704f72b63b6a26895693c3a9609f29f5c90c9c20adb7"
+        },
+        "motion": {
+          "path": "../format/native_approved_shark.png",
+          "sha256": "b72802007858daf6593feaaa4db3f52863c8239616b0e909617ef98af90fef51"
+        },
+        "runtime": {
+          "path": "../../creature-aquatic-fish-v2/runtime_final_shark/frame_002.png",
+          "sha256": "55caecdd641eb35f96e9663aa3fead9ddf7d0b032e629896e11e8f3392440098"
+        },
+        "ui": {
+          "path": "native_candidate/shark_12.png",
+          "sha256": "72c85c5437abf304f13fc04918c312fbb2d699c717dbb3785411fcd3a19e7fd5"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "sheep": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "99922d4a351f252fa69cf90e214d2342aacdc9af75fa4e62bb79afa1ab392644",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-bone-coats-v2/sheep.png",
+          "sha256": "5b7217027dc5ff19ef8ede90ffb0215fa345a635d3d87f9780518611c400b4f8"
+        },
+        "motion": {
+          "path": "../../creature-bone-coats-v2/native_approved_sheep.png",
+          "sha256": "1f2910f05bf4d710fe539d3eec382bd71d821941af94f587cb8a89beb0aa3b03"
+        },
+        "runtime": {
+          "path": "../../creature-bone-coats-v2/runtime_coats/frame_001.png",
+          "sha256": "14db2978ad1d426121c7cba3d7f4319222c52ae071d6a220f2e7dda340ada0d5"
+        },
+        "ui": {
+          "path": "native_candidate/sheep_12.png",
+          "sha256": "bd86de06fbedce32f00761d23b72def33640e76985f1545377b288a91d539467"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-bone-coats-v2/review.json"
+    },
+    "skeleton": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "137ba03e2a3c9bb8da65f5835cb87f09a8d0653cd47e95463608cc4fda603626",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-bone-humanoids-v2/skeleton.png",
+          "sha256": "fd1bb38b9d2e6f740dc9680374f29533bd8c7dd60674c57958457c10352e164d"
+        },
+        "motion": {
+          "path": "../../creature-bone-humanoids-v2/native_approved_skeleton.png",
+          "sha256": "ee432642ec262725a35819282bfb3320a292e0db29ab24fde7b616955a3d68b2"
+        },
+        "runtime": {
+          "path": "../../creature-bone-humanoids-v2/runtime_wave/frame_001.png",
+          "sha256": "6218b2403c0111f56c074bac01078391e4b6366098149bd42f360533fa818847"
+        },
+        "ui": {
+          "path": "native_candidate/skeleton_12.png",
+          "sha256": "c271b132e05b1773421e8a0708637092ffca9d6ad67269503d620aa80ecab93e"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-bone-humanoids-v2/review.json"
+    },
+    "spider": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "4b7283aec33eb18ef3771fda816873adc34a75fd82e9749d9f0f1f3c1815fa2a",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-bone-spider-v2/spider.png",
+          "sha256": "83ceeb89e0329afaeff92f4037ecfab76236b20c20781d904c549d7f591e8c55"
+        },
+        "motion": {
+          "path": "../../creature-bone-spider-v2/native_approved_spider.png",
+          "sha256": "b7b4c17bf57bd08011f6b9e1e9899c04752781eac15c60c2648511bd1de38b54"
+        },
+        "runtime": {
+          "path": "../../creature-bone-spider-v2/runtime_wave/frame_001.png",
+          "sha256": "b34910b528e4491c425f2b3801fcb693227cb35c72d535872c1167c42b8f2314"
+        },
+        "ui": {
+          "path": "native_candidate/spider_12.png",
+          "sha256": "8682407b559c2f789f60f4116dce0bb8f6f297c42179f4075b926141df46e501"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-bone-spider-v2/review.json"
+    },
+    "squid": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "a4cb71d0bce190a21e8dbbe8a02af387e12183e909a159f3a652b2f6c30aebc7",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-bone-aquatic-v2/squid.png",
+          "sha256": "d65d1979b54d2206bbe3d9511deddef50c528645eb914dbd1ebb26ede8959fd4"
+        },
+        "motion": {
+          "path": "../../creature-bone-aquatic-v2/native_approved_squid.png",
+          "sha256": "88c70d59770995d88cb875d8f530eeb1a0da44135e532cee6fa3d0767a122f23"
+        },
+        "runtime": {
+          "path": "../../creature-bone-aquatic-v2/runtime_squid/frame_001.png",
+          "sha256": "507ab19cc26540e684f188cc5b3f8720b9b9378d163d524b3d752610c33b1159"
+        },
+        "ui": {
+          "path": "native_candidate/squid_12.png",
+          "sha256": "da8117b86490478d568aa9b43cddd2718503f3e9ec127043da26adce0d5830e2"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-bone-aquatic-v2/review.json"
+    },
+    "stingray": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "af259f35b513679a2a357c18f09353b92543176d11ab65803ba7416b7eb7e7bb",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/stingray.png",
+          "sha256": "718149e5aa929cee2c195d1f86da8b1ea135f3be0ea0c862ec917848fd35243e"
+        },
+        "motion": {
+          "path": "../format/native_approved_stingray.png",
+          "sha256": "f5c04ffbcb68ef9307261bf5651f67948eb91440e0a7ec47288bcfc9d84b7915"
+        },
+        "runtime": {
+          "path": "../../creature-gltf-side-uv-v2/runtime_final_stingray/frame_002.png",
+          "sha256": "8afa7726af30e0fa68d7cfea6e3e192f13255ef00e46628710e876b2bf7f8568"
+        },
+        "ui": {
+          "path": "native_candidate/stingray_12.png",
+          "sha256": "312480285e751ff2ac41aed9ee7cc1367807d3f89fea3f92d9b65261755d9c1a"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "stone_monster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "38ec5e7725ca1da29d0b1b740ab414c6bdd93b674a78312f28d29e07c121bc89",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/stone_monster.png",
+          "sha256": "945136d5952ce90cfb803d352b0e816fcc45101d84078116ef1db83499ffe062"
+        },
+        "motion": {
+          "path": "../format/native_approved_stone_monster.png",
+          "sha256": "37b627d1fd3a30fb4bd2ae78bc3214fdcc66d43404ca2ad93e911c33dffdc914"
+        },
+        "runtime": {
+          "path": "../../creature-elemental-bipeds-v2/runtime_cadence_stone_monster/frame_002.png",
+          "sha256": "a3c7ee580d5d236d7ef86ec5c2f77359800298ac55161cc623406086111f8e48"
+        },
+        "ui": {
+          "path": "native_candidate/stone_monster_12.png",
+          "sha256": "2d822f82f9e4962ca058d1f5146ef0c4da291ad0944ae85ed856323e5ab1b7e6"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "tortoise": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "2b2580accfe5f2ce1bd9447af1159d0c9d0d378030f5b29cd1c32d156e946153",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-bone-tortoise-v2/tortoise.png",
+          "sha256": "4f877514800c539b89052d787da4d6b674323ca34ac43e74231fe120b10f4e1d"
+        },
+        "motion": {
+          "path": "../../creature-bone-tortoise-v2/native_approved_tortoise.png",
+          "sha256": "3b4938550c3257947fae8a646695f660a6de8bf22f450d518b98336abcd67c7c"
+        },
+        "runtime": {
+          "path": "../../creature-bone-tortoise-v2/runtime_wave/frame_001.png",
+          "sha256": "96f1a3cf8df9646b8251dec940e773cb751258a5eca28115482cca131bc01538"
+        },
+        "ui": {
+          "path": "native_candidate/tortoise_12.png",
+          "sha256": "d5e38ee538b5a614b09dcb1c8a8b9b40127fe36f6abce77fdb2e4841609b1486"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-bone-tortoise-v2/review.json"
+    },
+    "tree_monster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "e0bb90eb5a9e4642032b1b304d7a18136a4376f0c018a8251a4b9c64e634216f",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/tree_monster.png",
+          "sha256": "bd6c9f04028cd1f939452124fb65afc1f716a5b7f7b508bc083059a8a21fb622"
+        },
+        "motion": {
+          "path": "../format/native_approved_tree_monster.png",
+          "sha256": "ea89c052410fcc24e35d909ac905f619bc8bef3351fbdadb774cb1946c8d2986"
+        },
+        "runtime": {
+          "path": "../../creature-arboreal-v2/runtime_final_tree_monster/frame_002.png",
+          "sha256": "ae53018b04210990df29f15e1132cc56a6000b68ff1bbb64e0ae32b622a02e18"
+        },
+        "ui": {
+          "path": "native_candidate/tree_monster_12.png",
+          "sha256": "db4f8f78827c87cf84d36ee223b5c522daf7578153b315bf361880f3f6daaa32"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "treeman": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "27632720678150de7f4f7d7c261e93b74062091f7c4a05cab9656dbbd3c98687",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/treeman.png",
+          "sha256": "371da055e2cf8a99de8b768c1178b86cbd8c400a21c6ca9c2cef8f17505584fe"
+        },
+        "motion": {
+          "path": "../format/native_approved_treeman.png",
+          "sha256": "e2326ffd9aedcbdedc8081e4ee59389245db1ad78efbcf34412021af81bb0d29"
+        },
+        "runtime": {
+          "path": "../../creature-arboreal-v2/runtime_final_treeman/frame_002.png",
+          "sha256": "575abbb390211d63808dd6352c20a0db84777eef3e1cbe02c3790ef3782d6a3c"
+        },
+        "ui": {
+          "path": "native_candidate/treeman_12.png",
+          "sha256": "b9ea27553c387cae7847326bab2c5f83f3f379943003b9889ae549f336ebd7ef"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "trout": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "92631e47196aab3b7458ec7a6dfe09ef5fd25cff705f0193d6ab0263a92d48ee",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-bone-aquatic-v2/trout.png",
+          "sha256": "b8fe3ea0a6bd4426b2b1962c61c63403e573c24f4733cd4d8a19adeb027885d1"
+        },
+        "motion": {
+          "path": "../../creature-bone-aquatic-v2/native_approved_trout.png",
+          "sha256": "8263e92964fb367c5202676f88c2f59d711d9aa9bc6fd131122e1a74e6132b99"
+        },
+        "runtime": {
+          "path": "../../creature-bone-aquatic-v2/runtime_trout/frame_001.png",
+          "sha256": "b7e4f1d4a57d5aa33b4e7898a689c178161c16a3fad10151d63ca2af5f7f56b9"
+        },
+        "ui": {
+          "path": "native_candidate/trout_12.png",
+          "sha256": "56be6ff9bf9400db6017044c1b7b6722efca38d518dc7febd33c179235029dc6"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-bone-aquatic-v2/review.json"
+    },
+    "warthog": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "d495476deab2bb7ea11c848ad98f41e0507d781baf98c995dc98b082cab62ccb",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/warthog.png",
+          "sha256": "5e69ec531d9e94b7f11c5f86c9da86c3752370bbb8fce1d42a377b52b3bddf57"
+        },
+        "motion": {
+          "path": "../format/native_approved_warthog.png",
+          "sha256": "8618f534843b560bc92867006f7571e11b6a0059f57c1c0ee3d68cfc95df4e3f"
+        },
+        "runtime": {
+          "path": "../ground/runtime_dense_warthog/frame_002.png",
+          "sha256": "f4e069bf56f483d54498dfc26d17eaf725bc1fe1358f73ff7ef55f7cf342af63"
+        },
+        "ui": {
+          "path": "native_candidate/warthog_12.png",
+          "sha256": "ad73bac6a81dd86e8c31b01efa097d3495784dcc9ca756773a636ddb51740040"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "wasp": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "4e4bf725d480f3b1fe61249fb008c6acbe51ae82037f9006b51eb57736fe9c80",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/wasp.png",
+          "sha256": "ffa2f2a961ca890faff335861c268ae0541173daae06fbc4b9e9a35fd650e949"
+        },
+        "motion": {
+          "path": "../format/native_approved_wasp.png",
+          "sha256": "90c469c5778933b922f4cc20e06c8defc544c2bc1fc18c1315757836f966286f"
+        },
+        "runtime": {
+          "path": "../../creature-gltf-side-uv-v2/runtime_final_wasp/frame_002.png",
+          "sha256": "b77c13f280458bda6bcf3e1c353a3475ed9e7064fe6d86fb41b093acb2acc93e"
+        },
+        "ui": {
+          "path": "native_candidate/wasp_12.png",
+          "sha256": "24d83adce9d0c5658da0aab2f327d0835be4b4854c96bcdafbbe5cbad3cefd7e"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "water_dragon": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "d5d4eed2189fbf825fad9df648fd0af77f02eb3b031c5a42fd54966c93963f71",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/water_dragon.png",
+          "sha256": "e3886bea8eb45391ac1c80a77c462c7738998ca23506661a8b53c64129169c02"
+        },
+        "motion": {
+          "path": "../format/native_approved_water_dragon.png",
+          "sha256": "8610f44335ce98c9365d2e8fc714e864b9b76fb7e61fd80800ccaed25d953bc4"
+        },
+        "runtime": {
+          "path": "../../creature-large-aquatic-v2/runtime_final_water_dragon/frame_002.png",
+          "sha256": "ad3a50311d5522c6fba0e0476800fd3ef6b9b0524fcf39851ea81a80c8ffcf07"
+        },
+        "ui": {
+          "path": "native_candidate/water_dragon_12.png",
+          "sha256": "5d01aeb460ac3caf3aa905d5100a5713648bf034c1b13c7577d1fb571cc5a7ac"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "whale": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "36826d46de8bb8140e602628203a03de0f2e40f9d2c93abcca14f8572f3ed0af",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../format/whale.png",
+          "sha256": "7d87094dd4b75d14ce964c14ae325018033770fa3664b78dfb9093fa01ef9533"
+        },
+        "motion": {
+          "path": "../format/native_approved_whale.png",
+          "sha256": "5deaf3498ad31cf5da142c04680eab92cc74ecab3e5580f64550ade2cd3fcc39"
+        },
+        "runtime": {
+          "path": "../../creature-large-aquatic-v2/runtime_final_whale/frame_002.png",
+          "sha256": "0a8ef85d992c46e8ebc3af03cefada05dbb3def06f24d4b9ab0aa7f4c6139504"
+        },
+        "ui": {
+          "path": "native_candidate/whale_12.png",
+          "sha256": "6ac1ebcf818aef20daf4f5513d541af77377852063d6df47e18f2093eb1a4555"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/format/review.json",
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical."
+    },
+    "wolf": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "135a02035f3e5b48bef64ba7b787de2e8c27286406647fd40ded12a140d9a512",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-bone-coats-v2/wolf.png",
+          "sha256": "9b3f07182020259a41a895232a4f9e422fa3fa40fb1242251c0eb23f9a7be70c"
+        },
+        "motion": {
+          "path": "../../creature-bone-coats-v2/native_approved_wolf.png",
+          "sha256": "bbe865d7bdea7357209e5391cb7a3bfb8d157a5b1c1674e12470c77c65e08cf2"
+        },
+        "runtime": {
+          "path": "../../creature-bone-coats-v2/runtime_coats/frame_001.png",
+          "sha256": "14db2978ad1d426121c7cba3d7f4319222c52ae071d6a220f2e7dda340ada0d5"
+        },
+        "ui": {
+          "path": "native_candidate/wolf_12.png",
+          "sha256": "167b3d559bfaaa1838815a5f6d6d1a398710d8e1b4c9ca39c16688b8d5a2b267"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-bone-coats-v2/review.json"
+    },
+    "zombie": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "c853accc600e8fe63ffae29561bb87d1375282cc7c0262cadff2dcf5f47fa326",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-humanoid-pilots-v2/zombie.png",
+          "sha256": "1d09d72193cf496242481310eb57ff2d845c825332adbd71726e05cc8a8a6429"
+        },
+        "motion": {
+          "path": "../../creature-humanoid-pilots-v2/native_approved_zombie.png",
+          "sha256": "60cbe24f1a91114b2e20d627689f9e99e806cbd7454f08207350079021fdd2a5"
+        },
+        "runtime": {
+          "path": "../../creature-humanoid-pilots-v2/runtime_human_adventurer/frame_002.png",
+          "sha256": "7d0ec3723018241ffb26139dcdd316c65425561cfb3dd0cb4a6ba4a6ff529555"
+        },
+        "ui": {
+          "path": "native_candidate/zombie_12.png",
+          "sha256": "a3ff856aadc7b8bf3d6e7101dcd944e18f68c921bde64889a9bfdca0bb13019d"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-humanoid-pilots-v2/review.json"
+    },
+    "human_adventurer": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "543079907c0c1fe698798e4f30ab6514aab7b3fd956be14adcaa7558da752a54",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-humanoid-pilots-v2/human_adventurer_comparison.png",
+          "sha256": "ab0563ed9a75d31dde5981ddd522ab23fb97e41f5916c53e1d2d94c8df1b979f"
+        },
+        "motion": {
+          "path": "../../creature-humanoid-pilots-v2/native_approved_human.png",
+          "sha256": "84a176893860a622a9ecc5a81a293838bc2d10cea005d09ffa7e63c6ad2f3ae1"
+        },
+        "runtime": {
+          "path": "../../creature-humanoid-pilots-v2/runtime_human_adventurer/frame_002.png",
+          "sha256": "7d0ec3723018241ffb26139dcdd316c65425561cfb3dd0cb4a6ba4a6ff529555"
+        },
+        "ui": {
+          "path": "native_candidate/human_29.png",
+          "sha256": "54bd864a0b6f0d6fe1e4328c7c38d2c76ca9ca3ead7394dfb6518f74b0ac7efd"
+        },
+        "first_person": {
+          "path": "../../creature-humanoid-pilots-v2/equipment_fp_candidate.png",
+          "sha256": "e660f85f14de718a1b513e38b38e1393104445b7a1a625ba2c09741b978ae46f"
+        },
+        "equipment": {
+          "path": "../../creature-humanoid-pilots-v2/equipment_baseline_comparison.png",
+          "sha256": "6adc7dbee254d1e652568ca199678abcaf9e5a2b759a6784020557a643b3b633"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-humanoid-pilots-v2/review.json"
+    },
+    "human_guard": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "811f4ed7c62e139682b619e9ef2096a62d00e43067fcc8dcbce4b33b9b71d71e",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-humanoid-pilots-v2/human_guard_comparison.png",
+          "sha256": "9ab987f723360c5a5bf852164aaa8469925d3ef9da2c9503eca31067a73a0335"
+        },
+        "motion": {
+          "path": "../../creature-humanoid-pilots-v2/native_approved_human.png",
+          "sha256": "84a176893860a622a9ecc5a81a293838bc2d10cea005d09ffa7e63c6ad2f3ae1"
+        },
+        "runtime": {
+          "path": "../../creature-humanoid-pilots-v2/runtime_human_guard/frame_002.png",
+          "sha256": "fd593a1c0c3df22bba0614d5c76b75a7f215f1901c5b0ed3edb82d3772c5c7e8"
+        },
+        "ui": {
+          "path": "native_candidate/human_30.png",
+          "sha256": "2a37eb96e650f1904a7ccd0507fd7dad4a9efa8df6355b08ab1e04c8f98689fa"
+        },
+        "first_person": {
+          "path": "../../creature-humanoid-pilots-v2/equipment_fp_candidate.png",
+          "sha256": "e660f85f14de718a1b513e38b38e1393104445b7a1a625ba2c09741b978ae46f"
+        },
+        "equipment": {
+          "path": "../../creature-humanoid-pilots-v2/equipment_baseline_comparison.png",
+          "sha256": "6adc7dbee254d1e652568ca199678abcaf9e5a2b759a6784020557a643b3b633"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-humanoid-pilots-v2/review.json"
+    },
+    "sheep_wool_black": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "a6c77b89f1b317cf59665bb080ca6c6f4b6f24ae4c0c16d5c6234aaf20eac394",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-bone-coats-v2/sheep_wool_black_comparison.png",
+          "sha256": "8a2cc6fe67226d6ca443d785045d14af79b2932dc8a3ecc0119e5daa4a47f655"
+        },
+        "motion": {
+          "path": "../../creature-bone-coats-v2/sheep_wool_black_motion.png",
+          "sha256": "ed2d2da1f4cad53063de657a077eb7ec4d6d4b2120fe8d7398a7d3bf1d14ba42"
+        },
+        "runtime": {
+          "path": "../../creature-bone-coats-v2/runtime_sheep_wool_black/frame_002.png",
+          "sha256": "163e24cd4db91970c320b06304588f35ba59c52d0cc113a1ad7163d177cbbdbd"
+        },
+        "ui": {
+          "path": "native_candidate_sheep_wool_black/sheep_12.png",
+          "sha256": "a5125f151378a714f15aa8e4eaa6ac4f58707dbbe7cd51c85dd978d6d7ed4b7f"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-bone-coats-v2/review.json"
+    },
+    "sheep_wool_golden": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "640d387ca0febac180b57577060c5617b69fd797f087fbc1edd6bec67bba361c",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-bone-coats-v2/sheep_wool_golden_comparison.png",
+          "sha256": "47c5a5ff1ada5b7eea51c94a5aec4db395c3036a6c775c85af51fee98d2bd571"
+        },
+        "motion": {
+          "path": "../../creature-bone-coats-v2/sheep_wool_golden_motion.png",
+          "sha256": "091506f274571ed14e31481bd16ed3555a3aa25066f51b9a7f01abe2719aac46"
+        },
+        "runtime": {
+          "path": "../../creature-bone-coats-v2/runtime_sheep_wool_golden/frame_002.png",
+          "sha256": "2940b65cddb0c1433f13508f034db1c1a1d407967cd76704ec9fc8253addc1f2"
+        },
+        "ui": {
+          "path": "native_candidate_sheep_wool_golden/sheep_12.png",
+          "sha256": "2194b1715de4806a7dd398ed40abbce553a67fa6cfb33ad82a5e18954dcc92c0"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-bone-coats-v2/review.json"
+    },
+    "wolf_snow": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 decisions retained by byte-identical runtime resources; directly inspected full native overview, skin views and supplemental world captures; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "77ab0bb66d67a13a7d3c8063776038d8261914bda42cfd2fbc563de3c76c16bb",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "../../creature-bone-coats-v2/wolf_snow_comparison.png",
+          "sha256": "90546cef208f14cc01a719db808dd2c50204e697a3f4331d7acad281571b28c4"
+        },
+        "motion": {
+          "path": "../../creature-bone-coats-v2/wolf_snow_motion.png",
+          "sha256": "70a240fed911e115a24ef696ff0a560d6f4d803fda0407bdba640f9bcbbaa656"
+        },
+        "runtime": {
+          "path": "../../creature-bone-coats-v2/runtime_wolf_snow/frame_002.png",
+          "sha256": "76da41ddc6e3ef5ef0e6f286b45d371a0f9f9be3ac59d1c45a7122d17754f1a6"
+        },
+        "ui": {
+          "path": "native_candidate_wolf_snow/wolf_12.png",
+          "sha256": "1160e0c4520587b954420cf3d28890c9b82b4f4e432ff1f527f2061926508f55"
+        }
+      },
+      "notes": "All generated runtime files (including geometry, animation buffers, atlas/icon PNGs, creature/skin definitions) are byte-identical to the accepted pre-provenance archive. Only provenance/license metadata changes. Two isolated 61-resource builds byte-identical, production reads traced with no reference mesh/PNG reads or network. Runtime resources already authored by project recipes retain their prior R5 review; historical notices archived, generated files use existing project MIT notice. Current Release native equivalence: 1630/1630 all-56 frames including two human skins, plus 87/87 frames for the remaining three skins. This is metadata-equivalence publication, not new whole-catalog world/pose/habitat/equipment/compatibility/performance acceptance. The full-catalog world probe actually spawns badger only; other individual world evidence explicitly inherited. Supplemental sheep captures face away and wolf capture has vegetation occlusion; they do not replace prior individual art proofs. Rigid walker recipe now explicitly preserves its accepted center-pivot tail; the regenerated rigid JSON remains byte-identical.",
+      "inherited_review": "docs/research/creature-bone-coats-v2/review.json"
+    }
+  }
+}

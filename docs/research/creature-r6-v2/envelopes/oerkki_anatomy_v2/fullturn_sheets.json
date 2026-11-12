@@ -1,0 +1,355 @@
+{
+  "scope": "Verified native views; not artistic acceptance",
+  "context_exe_sha256": "a0872e87a1551dbe7ac0cff1346b58176743d18eba13817cb7779473415df68f",
+  "manifest_sha256": "0230ec998991b57c8f9e1db3b9f1742eda02f2410a9732b7e24fdcc1c74735a0",
+  "sheets": [
+    {
+      "path": "fullturn_0.png",
+      "sha256": "997111ce8541daf34b3d5d2c6b176a26f06ae1d4dc23d2b72eba0868ce86b867",
+      "frames": [
+        {
+          "color": "oerkki/pose_0_view_0_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 15.0,
+          "pose": 0,
+          "silhouette": "oerkki/pose_0_view_0_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 0,
+          "yaw_degrees": 0.0
+        },
+        {
+          "color": "oerkki/pose_0_view_1_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 15.0,
+          "pose": 0,
+          "silhouette": "oerkki/pose_0_view_1_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 1,
+          "yaw_degrees": 45.0
+        },
+        {
+          "color": "oerkki/pose_0_view_2_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 15.0,
+          "pose": 0,
+          "silhouette": "oerkki/pose_0_view_2_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 2,
+          "yaw_degrees": 90.0
+        },
+        {
+          "color": "oerkki/pose_0_view_3_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 15.0,
+          "pose": 0,
+          "silhouette": "oerkki/pose_0_view_3_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 3,
+          "yaw_degrees": 135.0
+        },
+        {
+          "color": "oerkki/pose_0_view_4_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 15.0,
+          "pose": 0,
+          "silhouette": "oerkki/pose_0_view_4_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 4,
+          "yaw_degrees": 180.0
+        },
+        {
+          "color": "oerkki/pose_0_view_5_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 15.0,
+          "pose": 0,
+          "silhouette": "oerkki/pose_0_view_5_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 5,
+          "yaw_degrees": 225.0
+        },
+        {
+          "color": "oerkki/pose_0_view_6_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 15.0,
+          "pose": 0,
+          "silhouette": "oerkki/pose_0_view_6_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 6,
+          "yaw_degrees": 270.0
+        },
+        {
+          "color": "oerkki/pose_0_view_7_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 15.0,
+          "pose": 0,
+          "silhouette": "oerkki/pose_0_view_7_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 7,
+          "yaw_degrees": 315.0
+        },
+        {
+          "color": "oerkki/pose_0_view_8_color.png",
+          "phase": 0.0,
+          "pitch_degrees": 90.0,
+          "pose": 0,
+          "silhouette": "oerkki/pose_0_view_8_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 8,
+          "yaw_degrees": 0.0
+        },
+        {
+          "color": "oerkki/pose_0_view_9_color.png",
+          "phase": 0.0,
+          "pitch_degrees": -90.0,
+          "pose": 0,
+          "silhouette": "oerkki/pose_0_view_9_silhouette.png",
+          "state": "Idle",
+          "time_seconds": 0.0,
+          "view": 9,
+          "yaw_degrees": 0.0
+        }
+      ]
+    },
+    {
+      "path": "fullturn_1.png",
+      "sha256": "e543bdd9f7be73c65b2036030fba2ddd5adbbdef701b6454d84479df87d4fb0a",
+      "frames": [
+        {
+          "color": "oerkki/pose_1_view_0_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 15.0,
+          "pose": 1,
+          "silhouette": "oerkki/pose_1_view_0_silhouette.png",
+          "state": "Walk",
+          "time_seconds": 0.05868394672870636,
+          "view": 0,
+          "yaw_degrees": 0.0
+        },
+        {
+          "color": "oerkki/pose_1_view_1_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 15.0,
+          "pose": 1,
+          "silhouette": "oerkki/pose_1_view_1_silhouette.png",
+          "state": "Walk",
+          "time_seconds": 0.05868394672870636,
+          "view": 1,
+          "yaw_degrees": 45.0
+        },
+        {
+          "color": "oerkki/pose_1_view_2_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 15.0,
+          "pose": 1,
+          "silhouette": "oerkki/pose_1_view_2_silhouette.png",
+          "state": "Walk",
+          "time_seconds": 0.05868394672870636,
+          "view": 2,
+          "yaw_degrees": 90.0
+        },
+        {
+          "color": "oerkki/pose_1_view_3_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 15.0,
+          "pose": 1,
+          "silhouette": "oerkki/pose_1_view_3_silhouette.png",
+          "state": "Walk",
+          "time_seconds": 0.05868394672870636,
+          "view": 3,
+          "yaw_degrees": 135.0
+        },
+        {
+          "color": "oerkki/pose_1_view_4_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 15.0,
+          "pose": 1,
+          "silhouette": "oerkki/pose_1_view_4_silhouette.png",
+          "state": "Walk",
+          "time_seconds": 0.05868394672870636,
+          "view": 4,
+          "yaw_degrees": 180.0
+        },
+        {
+          "color": "oerkki/pose_1_view_5_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 15.0,
+          "pose": 1,
+          "silhouette": "oerkki/pose_1_view_5_silhouette.png",
+          "state": "Walk",
+          "time_seconds": 0.05868394672870636,
+          "view": 5,
+          "yaw_degrees": 225.0
+        },
+        {
+          "color": "oerkki/pose_1_view_6_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 15.0,
+          "pose": 1,
+          "silhouette": "oerkki/pose_1_view_6_silhouette.png",
+          "state": "Walk",
+          "time_seconds": 0.05868394672870636,
+          "view": 6,
+          "yaw_degrees": 270.0
+        },
+        {
+          "color": "oerkki/pose_1_view_7_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 15.0,
+          "pose": 1,
+          "silhouette": "oerkki/pose_1_view_7_silhouette.png",
+          "state": "Walk",
+          "time_seconds": 0.05868394672870636,
+          "view": 7,
+          "yaw_degrees": 315.0
+        },
+        {
+          "color": "oerkki/pose_1_view_8_color.png",
+          "phase": 0.125,
+          "pitch_degrees": 90.0,
+          "pose": 1,
+          "silhouette": "oerkki/pose_1_view_8_silhouette.png",
+          "state": "Walk",
+          "time_seconds": 0.05868394672870636,
+          "view": 8,
+          "yaw_degrees": 0.0
+        },
+        {
+          "color": "oerkki/pose_1_view_9_color.png",
+          "phase": 0.125,
+          "pitch_degrees": -90.0,
+          "pose": 1,
+          "silhouette": "oerkki/pose_1_view_9_silhouette.png",
+          "state": "Walk",
+          "time_seconds": 0.05868394672870636,
+          "view": 9,
+          "yaw_degrees": 0.0
+        }
+      ]
+    },
+    {
+      "path": "fullturn_2.png",
+      "sha256": "57c809d29b84aad10e8f1c2ca47968c353dff885d3453705ef49e5d2baced3b9",
+      "frames": [
+        {
+          "color": "oerkki/pose_2_view_0_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 15.0,
+          "pose": 2,
+          "silhouette": "oerkki/pose_2_view_0_silhouette.png",
+          "state": "Walk",
+          "time_seconds": 0.2934197187423706,
+          "view": 0,
+          "yaw_degrees": 0.0
+        },
+        {
+          "color": "oerkki/pose_2_view_1_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 15.0,
+          "pose": 2,
+          "silhouette": "oerkki/pose_2_view_1_silhouette.png",
+          "state": "Walk",
+          "time_seconds": 0.2934197187423706,
+          "view": 1,
+          "yaw_degrees": 45.0
+        },
+        {
+          "color": "oerkki/pose_2_view_2_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 15.0,
+          "pose": 2,
+          "silhouette": "oerkki/pose_2_view_2_silhouette.png",
+          "state": "Walk",
+          "time_seconds": 0.2934197187423706,
+          "view": 2,
+          "yaw_degrees": 90.0
+        },
+        {
+          "color": "oerkki/pose_2_view_3_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 15.0,
+          "pose": 2,
+          "silhouette": "oerkki/pose_2_view_3_silhouette.png",
+          "state": "Walk",
+          "time_seconds": 0.2934197187423706,
+          "view": 3,
+          "yaw_degrees": 135.0
+        },
+        {
+          "color": "oerkki/pose_2_view_4_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 15.0,
+          "pose": 2,
+          "silhouette": "oerkki/pose_2_view_4_silhouette.png",
+          "state": "Walk",
+          "time_seconds": 0.2934197187423706,
+          "view": 4,
+          "yaw_degrees": 180.0
+        },
+        {
+          "color": "oerkki/pose_2_view_5_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 15.0,
+          "pose": 2,
+          "silhouette": "oerkki/pose_2_view_5_silhouette.png",
+          "state": "Walk",
+          "time_seconds": 0.2934197187423706,
+          "view": 5,
+          "yaw_degrees": 225.0
+        },
+        {
+          "color": "oerkki/pose_2_view_6_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 15.0,
+          "pose": 2,
+          "silhouette": "oerkki/pose_2_view_6_silhouette.png",
+          "state": "Walk",
+          "time_seconds": 0.2934197187423706,
+          "view": 6,
+          "yaw_degrees": 270.0
+        },
+        {
+          "color": "oerkki/pose_2_view_7_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 15.0,
+          "pose": 2,
+          "silhouette": "oerkki/pose_2_view_7_silhouette.png",
+          "state": "Walk",
+          "time_seconds": 0.2934197187423706,
+          "view": 7,
+          "yaw_degrees": 315.0
+        },
+        {
+          "color": "oerkki/pose_2_view_8_color.png",
+          "phase": 0.625,
+          "pitch_degrees": 90.0,
+          "pose": 2,
+          "silhouette": "oerkki/pose_2_view_8_silhouette.png",
+          "state": "Walk",
+          "time_seconds": 0.2934197187423706,
+          "view": 8,
+          "yaw_degrees": 0.0
+        },
+        {
+          "color": "oerkki/pose_2_view_9_color.png",
+          "phase": 0.625,
+          "pitch_degrees": -90.0,
+          "pose": 2,
+          "silhouette": "oerkki/pose_2_view_9_silhouette.png",
+          "state": "Walk",
+          "time_seconds": 0.2934197187423706,
+          "view": 9,
+          "yaw_degrees": 0.0
+        }
+      ]
+    }
+  ]
+}

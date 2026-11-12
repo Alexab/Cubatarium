@@ -1,0 +1,79 @@
+{
+  "scope": "Same native idle pixels, neutral light alpha backing clarifies dark source bodies; no model/PNG asset edit",
+  "file": "dark_source_light_backing.png",
+  "sha256": "30ad42a4be3c2d728648077ffe1d7adfa4c5e91838fe1254da401a333fb3e296",
+  "sources": [
+    {
+      "file": "native_original/envelopes/oerkki_0.png",
+      "sha256": "dbcf49511bf155fe61ac14a66c3384c8772daa5e17da6311628b2e16d1ada32c"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_1.png",
+      "sha256": "6f320597ec14c6b0848e5ed023311ec6883c2b05579401cddcc55220d5e9b030"
+    },
+    {
+      "file": "native_original/envelopes/oerkki_2.png",
+      "sha256": "a6efed9cd67f91764d02eb9c80f28cb332ef0eb9aadbc6e3b7e9971a1a8c1d39"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_0.png",
+      "sha256": "849dafbf35bcad67ea428c2ef0995ccc7932ebb161e12731cdac0906f7272ad9"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_1.png",
+      "sha256": "02b47515923c2e7439382d8bf519aa70847d9b124a0e6b8ced3096b68d14aedd"
+    },
+    {
+      "file": "native_current/envelopes/oerkki_2.png",
+      "sha256": "693e4eb92fe077883cec06274dfe6c312d1a71768d2e21aea90a235c05a6dbf8"
+    },
+    {
+      "file": "native_original/envelopes/puffin_0.png",
+      "sha256": "6c0ea3dca5378c9ea8b07c0578b886efaf5cadcb928cd4b493776b4eb52df598"
+    },
+    {
+      "file": "native_original/envelopes/puffin_1.png",
+      "sha256": "2a2180d1b6afe38d403f83ab0675cce00840603aec0480fdf28c87d0256b24c7"
+    },
+    {
+      "file": "native_original/envelopes/puffin_2.png",
+      "sha256": "5d411289025f07054b4a3a6259891328b1a2a29d5ba51cf7c2aa32cdbafdfd11"
+    },
+    {
+      "file": "native_current/envelopes/puffin_0.png",
+      "sha256": "39a02d28e1b60cf62f0cb22ac25cd8fa8d3e068ca83a5ed9daed4fe9ea56c5e7"
+    },
+    {
+      "file": "native_current/envelopes/puffin_1.png",
+      "sha256": "a78c0d0026c1ac373790a1d9ed7b0abbd87c3c388b6075649db77e4648d6f43b"
+    },
+    {
+      "file": "native_current/envelopes/puffin_2.png",
+      "sha256": "cbbc50c4d132da7f3c635442d6eec0798a2c6a307a6f741dfa1d4a3ce08bdf81"
+    },
+    {
+      "file": "native_original/envelopes/whale_0.png",
+      "sha256": "0a0287ea4afe303aaa7061bc557e02c517ee936d62faa9bc830a211dab3c64d4"
+    },
+    {
+      "file": "native_original/envelopes/whale_1.png",
+      "sha256": "8a708ed11f39e8ab0e2e961fd77f040d85f77ebb70372c5a75c001b1a1056dbc"
+    },
+    {
+      "file": "native_original/envelopes/whale_2.png",
+      "sha256": "d7576adfd61bcbc5a0cd8d894b58f24a0c347cd3846407a26fb41eb20c41bb13"
+    },
+    {
+      "file": "native_current/envelopes/whale_0.png",
+      "sha256": "4ddad47a44d0560c8a53c51d2db5a81c7f8380b34d79fcf195db7d8f3783a4d9"
+    },
+    {
+      "file": "native_current/envelopes/whale_1.png",
+      "sha256": "54578d46602ac02ce613a0f061a9462ad8215da265dbadc6a1abe4273debddc3"
+    },
+    {
+      "file": "native_current/envelopes/whale_2.png",
+      "sha256": "e825b7379d84a4fd6fa0c939dadea7b72d04656dcc53d09c65987d8438fa4098"
+    }
+  ]
+}

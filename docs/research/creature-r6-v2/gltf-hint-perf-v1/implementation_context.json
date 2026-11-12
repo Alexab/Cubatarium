@@ -1,0 +1,12 @@
+{
+  "scope": "Final hint implementation and Release standalone equivalence verifier; serialized benchmark completed, final bin restored",
+  "files_sha256": {
+    "src/Creatures/Visual/Gltf/GltfKeyframeInterval.h": "e716eb9d8fa6dc0818746f4d81863f992844cacecaa16473f0e87bcd29b0029a",
+    "src/Test/CreatureGltfClipTest.cpp": "4cf39e3612c26fc450e84db543e21ac9963fb44160390e86316827c341c38973",
+    "tools/research/creature_gltf_sampling_equivalence.cpp": "d92911d841556047e74eaa61f65935e3e938b924ed1ea4bfd6b7de0fea9840d0",
+    "assetgen_output/creatures/gltf_hint_perf_v1/compile_equivalence.bat": "ff0248745d008f5da59964bcb8eb42e6a12dc73d48e66b7611882cdcc457ea41",
+    "assetgen_output/creatures/gltf_hint_perf_v1/equivalence.exe": "b0283a420ce50104486d58698294fe2013e7abefc604f0f99317bcd3331ef311",
+    "assetgen_output/creatures/gltf_hint_perf_v1/hint_Cubatarium.exe": "1507b3e843d54a29e7e8150d04da3d353f870828362ed4371461c87b6a574755"
+  },
+  "final_bin_restored_sha256": "1507b3e843d54a29e7e8150d04da3d353f870828362ed4371461c87b6a574755"
+}

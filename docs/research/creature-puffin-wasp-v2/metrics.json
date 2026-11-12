@@ -1,0 +1,319 @@
+{
+  "puffin": {
+    "baseline": {
+      "extent_blocks": [
+        0.220268,
+        0.586417,
+        0.770565
+      ],
+      "min_y": 0.0
+    },
+    "candidate": {
+      "extent_blocks": [
+        0.225,
+        0.6,
+        0.7875
+      ],
+      "min_y": 0.0
+    },
+    "candidate_bones": 18,
+    "candidate_clips": [
+      "idle",
+      "walk",
+      "fly",
+      "die"
+    ],
+    "clip_timing": {
+      "idle": {
+        "asset_duration_sec": 3.0,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 3.0
+      },
+      "fly": {
+        "asset_duration_sec": 0.24,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 0.24
+      },
+      "walk": {
+        "asset_duration_sec": 0.24,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 0.24
+      },
+      "die": {
+        "asset_duration_sec": 0.9,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 0.9
+      }
+    },
+    "payload_sha256": {
+      "creature.json": "6a3c1e28b526fa7d84c380ea1648e0d502a033e681411357d587cc9a10ca3e86",
+      "model.gltf": "3b6cb8b5be019756ab2888f06bb2512f5d069c36d75c987054123bb8d77be7cd",
+      "model.bin": "fd66bdb9f8df68d1da56cc1677a6fd85ae1352895fa9f4393788b1c28e380f91"
+    },
+    "contact": {
+      "walk": {
+        "sample_count": 65,
+        "min_geometry_y_blocks": -0.000286,
+        "max_min_geometry_y_blocks": 0.002108,
+        "owned_effectors": {
+          "foot_left": {
+            "min_y_blocks": -0.000286,
+            "max_min_y_blocks": 0.027452
+          },
+          "foot_right": {
+            "min_y_blocks": -0.000286,
+            "max_min_y_blocks": 0.027452
+          }
+        }
+      },
+      "die": {
+        "sample_count": 65,
+        "min_geometry_y_blocks": -0.000437,
+        "max_min_geometry_y_blocks": 0.0,
+        "owned_effectors": {
+          "neck": {
+            "min_y_blocks": 0.115121,
+            "max_min_y_blocks": 0.380163
+          },
+          "head": {
+            "min_y_blocks": 0.078853,
+            "max_min_y_blocks": 0.413762
+          },
+          "beak_upper": {
+            "min_y_blocks": 0.118431,
+            "max_min_y_blocks": 0.45779
+          },
+          "beak_lower": {
+            "min_y_blocks": 0.11702,
+            "max_min_y_blocks": 0.420207
+          },
+          "tail0": {
+            "min_y_blocks": 0.05625,
+            "max_min_y_blocks": 0.127839
+          },
+          "tail1": {
+            "min_y_blocks": 0.0375,
+            "max_min_y_blocks": 0.145924
+          },
+          "wing_upper_left": {
+            "min_y_blocks": 0.061794,
+            "max_min_y_blocks": 0.451231
+          },
+          "wing_lower_left": {
+            "min_y_blocks": 0.033706,
+            "max_min_y_blocks": 0.263777
+          },
+          "wing_primary_left": {
+            "min_y_blocks": -0.000319,
+            "max_min_y_blocks": 0.038832
+          },
+          "leg_left": {
+            "min_y_blocks": 0.072653,
+            "max_min_y_blocks": 0.113503
+          },
+          "foot_left": {
+            "min_y_blocks": -0.000437,
+            "max_min_y_blocks": 0.091286
+          },
+          "wing_upper_right": {
+            "min_y_blocks": 0.24902,
+            "max_min_y_blocks": 0.48486
+          },
+          "wing_lower_right": {
+            "min_y_blocks": 0.2625,
+            "max_min_y_blocks": 0.321673
+          },
+          "wing_primary_right": {
+            "min_y_blocks": 0.0375,
+            "max_min_y_blocks": 0.314674
+          },
+          "leg_right": {
+            "min_y_blocks": 0.075,
+            "max_min_y_blocks": 0.218439
+          },
+          "foot_right": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.196222
+          }
+        }
+      }
+    }
+  },
+  "wasp": {
+    "baseline": {
+      "extent_blocks": [
+        0.526132,
+        0.976967,
+        0.830989
+      ],
+      "min_y": 0.002013
+    },
+    "candidate": {
+      "extent_blocks": [
+        0.595,
+        1.009375,
+        0.85
+      ],
+      "min_y": 0.0
+    },
+    "candidate_bones": 29,
+    "candidate_clips": [
+      "idle",
+      "walk",
+      "punch",
+      "die"
+    ],
+    "clip_timing": {
+      "idle": {
+        "asset_duration_sec": 0.12,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 0.12
+      },
+      "walk": {
+        "asset_duration_sec": 0.12,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 0.12
+      },
+      "punch": {
+        "asset_duration_sec": 0.6,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 0.6
+      },
+      "die": {
+        "asset_duration_sec": 0.8,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 0.8
+      }
+    },
+    "payload_sha256": {
+      "creature.json": "68f6055ba3195fbf4f06b8af654f59e7fbfdece2e0064f7d92a5ee417afe9828",
+      "model.gltf": "69a5b3f4719566d1e62fb5d7cc8e323a33f202b04d933e77db947fe8839de45e",
+      "model.bin": "b676f59e8dc30f908dbe1b9a164afcce4b25187c53fa3a59c001b367c1e13b63"
+    },
+    "contact": {
+      "die": {
+        "sample_count": 65,
+        "min_geometry_y_blocks": -0.000378,
+        "max_min_geometry_y_blocks": 0.012096,
+        "owned_effectors": {
+          "body": {
+            "min_y_blocks": 0.147289,
+            "max_min_y_blocks": 0.425
+          },
+          "head": {
+            "min_y_blocks": 0.174536,
+            "max_min_y_blocks": 0.584375
+          },
+          "waist": {
+            "min_y_blocks": 0.242893,
+            "max_min_y_blocks": 0.373732
+          },
+          "abdomen": {
+            "min_y_blocks": 0.151733,
+            "max_min_y_blocks": 0.451562
+          },
+          "abdomen_tip": {
+            "min_y_blocks": -0.000378,
+            "max_min_y_blocks": 0.254419
+          },
+          "mandible_left": {
+            "min_y_blocks": 0.217797,
+            "max_min_y_blocks": 0.53125
+          },
+          "antenna_base_left": {
+            "min_y_blocks": 0.199142,
+            "max_min_y_blocks": 0.74375
+          },
+          "antenna_tip_left": {
+            "min_y_blocks": 0.183122,
+            "max_min_y_blocks": 0.85
+          },
+          "forewing_left": {
+            "min_y_blocks": 0.103554,
+            "max_min_y_blocks": 0.6375
+          },
+          "forewing_tip_left": {
+            "min_y_blocks": -0.00026,
+            "max_min_y_blocks": 0.775625
+          },
+          "hindwing_left": {
+            "min_y_blocks": 0.086274,
+            "max_min_y_blocks": 0.621562
+          },
+          "leg_upper_left0": {
+            "min_y_blocks": 0.096333,
+            "max_min_y_blocks": 0.371875
+          },
+          "leg_lower_left0": {
+            "min_y_blocks": -0.00031,
+            "max_min_y_blocks": 0.159375
+          },
+          "leg_upper_left1": {
+            "min_y_blocks": 0.096333,
+            "max_min_y_blocks": 0.371875
+          },
+          "leg_lower_left1": {
+            "min_y_blocks": -0.00031,
+            "max_min_y_blocks": 0.159375
+          },
+          "leg_upper_left2": {
+            "min_y_blocks": 0.096333,
+            "max_min_y_blocks": 0.371875
+          },
+          "leg_lower_left2": {
+            "min_y_blocks": -0.00031,
+            "max_min_y_blocks": 0.159375
+          },
+          "mandible_right": {
+            "min_y_blocks": 0.322482,
+            "max_min_y_blocks": 0.538927
+          },
+          "antenna_base_right": {
+            "min_y_blocks": 0.410619,
+            "max_min_y_blocks": 0.75722
+          },
+          "antenna_tip_right": {
+            "min_y_blocks": 0.447468,
+            "max_min_y_blocks": 0.866704
+          },
+          "forewing_right": {
+            "min_y_blocks": 0.31855,
+            "max_min_y_blocks": 0.641851
+          },
+          "forewing_tip_right": {
+            "min_y_blocks": 0.452125,
+            "max_min_y_blocks": 0.792765
+          },
+          "hindwing_right": {
+            "min_y_blocks": 0.338143,
+            "max_min_y_blocks": 0.629098
+          },
+          "leg_upper_right0": {
+            "min_y_blocks": 0.371875,
+            "max_min_y_blocks": 0.509419
+          },
+          "leg_lower_right0": {
+            "min_y_blocks": 0.159375,
+            "max_min_y_blocks": 0.535982
+          },
+          "leg_upper_right1": {
+            "min_y_blocks": 0.371875,
+            "max_min_y_blocks": 0.509419
+          },
+          "leg_lower_right1": {
+            "min_y_blocks": 0.159375,
+            "max_min_y_blocks": 0.535982
+          },
+          "leg_upper_right2": {
+            "min_y_blocks": 0.371875,
+            "max_min_y_blocks": 0.509419
+          },
+          "leg_lower_right2": {
+            "min_y_blocks": 0.159375,
+            "max_min_y_blocks": 0.535982
+          }
+        }
+      }
+    }
+  }
+}

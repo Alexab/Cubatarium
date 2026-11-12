@@ -1,0 +1,40 @@
+test_arboreal_stone_contact_and_functional_rigs (tools.test_creaturegen_fidelity.FidelityTests.test_arboreal_stone_contact_and_functional_rigs) ... FAIL
+test_invertebrates_keep_weighted_limbs_stance_and_species_motion (tools.test_creaturegen_fidelity.FidelityTests.test_invertebrates_keep_weighted_limbs_stance_and_species_motion) ... E:\Work\Home\Cubatarium\tools\test_creaturegen_fidelity.py:438: RuntimeWarning: Mean of empty slice.
+  gaps=[np.linalg.norm(sample('punch',t)[tip].mean(axis=0)-sample('punch',t)[fixed].mean(axis=0)) for t in (0,.5)]
+C:\Users\Bakhshiev\AppData\Local\Programs\Python\Python313\Lib\site-packages\numpy\core\_methods.py:121: RuntimeWarning: invalid value encountered in divide
+  ret = um.true_divide(
+FAIL
+test_warriors_preserve_attached_limbs_stride_and_weapon_action (tools.test_creaturegen_fidelity.FidelityTests.test_warriors_preserve_attached_limbs_stride_and_weapon_action) ... FAIL
+PREFLIGHT_BACKUP failures 3 errors 0
+
+======================================================================
+FAIL: test_arboreal_stone_contact_and_functional_rigs (tools.test_creaturegen_fidelity.FidelityTests.test_arboreal_stone_contact_and_functional_rigs)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "E:\Work\Home\Cubatarium\tools\test_creaturegen_fidelity.py", line 175, in test_arboreal_stone_contact_and_functional_rigs
+    self.assertTrue(retreat);self.assertLess(sum(retreat),-.05,sid+': backwards stance')
+    ~~~~~~~~~~~~~~~^^^^^^^^^
+AssertionError: [] is not true
+
+======================================================================
+FAIL: test_invertebrates_keep_weighted_limbs_stance_and_species_motion (tools.test_creaturegen_fidelity.FidelityTests.test_invertebrates_keep_weighted_limbs_stance_and_species_motion)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "E:\Work\Home\Cubatarium\tools\test_creaturegen_fidelity.py", line 439, in test_invertebrates_keep_weighted_limbs_stance_and_species_motion
+    self.assertGreater(gaps[0],gaps[1]+.015,'pincer does not close')
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: nan not greater than nan : pincer does not close
+
+======================================================================
+FAIL: test_warriors_preserve_attached_limbs_stride_and_weapon_action (tools.test_creaturegen_fidelity.FidelityTests.test_warriors_preserve_attached_limbs_stride_and_weapon_action)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "E:\Work\Home\Cubatarium\tools\test_creaturegen_fidelity.py", line 115, in test_warriors_preserve_attached_limbs_stride_and_weapon_action
+    self.assertAlmostEqual(speed,definition['locomotion']['walk_speed'],places=4)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0.0 != 2.4 within 4 places (2.4 difference)
+
+----------------------------------------------------------------------
+Ran 3 tests in 68.985s
+
+FAILED (failures=3)

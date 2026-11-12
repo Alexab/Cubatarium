@@ -1,0 +1,55 @@
+{
+  "captured_at_utc": "2026-11-12T00:16:53.282887+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\review_2026_11_10\\baseline\\models",
+  "files_sha256": {
+    "creatures\\seahorse\\creature.json": "a12775be71e89b90d88de27e504ce20383346dda9390e2dde9185f43bb29cb70",
+    "creatures\\seahorse\\LICENSE.txt": "0f943f765486219b5a0cb7092bf92bb8399e1a1affde3d8e6c59f6aef2d3ef6a",
+    "creatures\\seahorse\\model.bin": "dc89ef18a0fb722dd297af52cb183c799e8857733459a28145ff641077a051e8",
+    "creatures\\seahorse\\model.gltf": "efc0470c037ad5403c02c9788054b99fed22debe1cf3af6330e1d4ff6595ff15",
+    "creatures\\seahorse\\textures\\body.png": "2bfa22e257fc86db7e182157ff0e8e2a95cb16563d854fd76e6bb46a2c315737",
+    "creatures\\seahorse\\textures\\face.png": "77e87f20de4da7acc417871884cb80b1cc61a449c8a60a195edc6946b0780afd",
+    "creatures\\seahorse\\textures\\icon.png": "e3dd2d3e1e1412c7eca71842254f39586951d74c153974756fad51df09b3c077",
+    "creatures\\seahorse\\textures\\leg.png": "4280e986c1ecdc97a70fde38b1d5724d9c2c50bb9bebfa4385f8e50ede599a65",
+    "creatures\\seahorse\\textures\\tail.png": "6de26bc3a668e41362922b3e9117b8b782ab70f57fa138190fb7ee2ce8d10e43"
+  },
+  "qa_models_override": true,
+  "exe_sha256": "235ce58dd65546f38164020295ff403bf48c2816b14bb16cd96228faee030483",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "envelope_original",
+  "qa_camera": "close",
+  "native_matrix": false,
+  "native_equipment_matrix": false,
+  "native_equipment_texture_probe": false,
+  "native_resource_cache_probe": false,
+  "native_resource_reload_probe": false,
+  "native_fp_matrix": false,
+  "native_save_probe": false,
+  "native_envelope_variant": "baseline",
+  "native_transition_probe": false,
+  "native_fluid_transition_probe": false,
+  "world_motion": null,
+  "world_motion_expected_fluid_state": null,
+  "world_seconds": 8.0,
+  "world_capture_interval_seconds": 3.0,
+  "native_posed_culling_probe": false,
+  "envelope_profile_sha256": "e4beb3813fabb74b98d94fc0993b91e865185d66b52b39d49142c171c0e94c50",
+  "fp_shaders_sha256": {},
+  "equipment_material": "copper",
+  "world_gear_fixture": false,
+  "equipment_files_sha256": {},
+  "world_species": [
+    "seahorse"
+  ],
+  "preview_species": [
+    "seahorse"
+  ],
+  "qa_water_placement": true,
+  "qa_lava_fixture": false,
+  "world": "World_254",
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

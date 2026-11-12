@@ -12,5 +12,19 @@
     0,
     0
   ],
-  "scale": 1.0
+  "scale": 1.0,
+  "fit_mode": "bone_volume",
+  "model": "wear.gltf",
+  "fit_bounds": {
+    "low": [
+      -1,
+      -1,
+      -1
+    ],
+    "high": [
+      1,
+      1,
+      1
+    ]
+  }
 }

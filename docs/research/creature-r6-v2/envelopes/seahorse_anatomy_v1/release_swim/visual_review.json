@@ -1,0 +1,27 @@
+{
+  "decision": "accepted_for_R5_revision",
+  "r6_state": "pending",
+  "directly_viewed_current": [
+    "threeway_idle.png",
+    "world_swim/world_contact_sheet.png",
+    "world_swim/runtime_swim_candidate/frame_008.png",
+    "production/runtime_production_final/frame_008.png"
+  ],
+  "prior_directly_viewed_byte_exact_sheets": [
+    "../threeway_idle.png",
+    "../threeway_walk.png",
+    "../threeway_action.png",
+    "../fullturn_0.png",
+    "../fullturn_1.png",
+    "../fullturn_2.png"
+  ],
+  "carry_forward_proof": "sheet_carry_forward_audit.json",
+  "observation": "Anterior profile is fuller while neck/back/crown/tail preserve recognisable separation and articulation. Own gold ring material retained. Free-fluid world movement visible in both directions.",
+  "limits": "Assistant R5 revision only, not full original motion range, photoreal anatomy or user approval. CPU transition probe is4 free-fluid cases/44frames and has no supported route/floor verdict. World input depth controller pulses ordinary swim-up and does not prove autonomous hover/AI realism. All61 R6 remain pending; terrain/habitat/camera/GPU fades/control/pack/performance/package open.",
+  "directly_viewed_current_sha256": {
+    "threeway_idle.png": "3b653bbff7472eb8a1f6d21d5c49f1c8753b0c00343b0dc35792a4fecfd80368",
+    "world_swim/world_contact_sheet.png": "eac63e02311893d8c51ae62f85881cfb1597a53850778c04a9aee54d83f828c8",
+    "world_swim/runtime_swim_candidate/frame_008.png": "ba3479027d687a18e2cd60fd25eb36996a3070d9aa76e201f91c17f03f5d4c31",
+    "production/runtime_production_final/frame_008.png": "57ecc270e1a27e47491da2a596244e03fa14b301a82aad9879291566a4703726"
+  }
+}

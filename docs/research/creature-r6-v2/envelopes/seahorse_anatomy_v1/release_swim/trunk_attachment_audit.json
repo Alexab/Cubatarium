@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "scope": "Exported upper section and lower posterior corners; not all animation intersections/watertightness",
+  "upper_vertices": 12,
+  "upper_section_error": 0.0,
+  "lower_back_vertices": 6,
+  "before_sha256": {
+    "model.gltf": "4d17ce3cf990a16bf23af9d575b5a8e0c7a3de0de43638d26465716675ade826",
+    "model.bin": "196b72d5d5f01d9394b41cce901c390d84c99dcfbe9e31b51bb9cf28669d3a24"
+  },
+  "candidate_sha256": {
+    "model.gltf": "4d17ce3cf990a16bf23af9d575b5a8e0c7a3de0de43638d26465716675ade826",
+    "model.bin": "eabc8b60f228565397da82df4844c23496a3c9bde30d14fe7dae35957c204f90"
+  }
+}

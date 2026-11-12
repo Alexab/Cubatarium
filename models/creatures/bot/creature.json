@@ -12,9 +12,21 @@
   },
   "role": "bot",
   "bounds": {
-    "rest": [0.6, 1.8, 0.6],
-    "max": [0.6, 1.8, 0.6],
-    "min": [0.6, 1.5, 0.6]
+    "rest": [
+      0.6,
+      1.8,
+      0.6
+    ],
+    "max": [
+      0.6,
+      1.8,
+      0.6
+    ],
+    "min": [
+      0.6,
+      1.5,
+      0.6
+    ]
   },
   "eye_height": 1.62,
   "habitat": "terrestrial",
@@ -76,57 +88,129 @@
     "parts": [
       {
         "id": "torso",
-        "offset": [0.0, 0.95, 0.0],
-        "size": [0.5, 1.0, 0.32],
+        "offset": [
+          0.0,
+          0.95,
+          0.0
+        ],
+        "size": [
+          0.5,
+          1.0,
+          0.32
+        ],
         "texture": "body"
       },
       {
         "id": "arm_l",
-        "offset": [-0.34, 1.02, 0.0],
-        "size": [0.16, 0.52, 0.16],
+        "offset": [
+          -0.34,
+          1.02,
+          0.0
+        ],
+        "size": [
+          0.16,
+          0.52,
+          0.16
+        ],
         "texture": "arm",
-        "pivot": [-0.34, 1.28, 0.0],
+        "pivot": [
+          -0.34,
+          1.28,
+          0.0
+        ],
         "limb": "arm"
       },
       {
         "id": "arm_r",
-        "offset": [0.34, 1.02, 0.0],
-        "size": [0.16, 0.52, 0.16],
+        "offset": [
+          0.34,
+          1.02,
+          0.0
+        ],
+        "size": [
+          0.16,
+          0.52,
+          0.16
+        ],
         "texture": "arm",
-        "pivot": [0.34, 1.28, 0.0],
+        "pivot": [
+          0.34,
+          1.28,
+          0.0
+        ],
         "limb": "arm"
       },
       {
         "id": "head",
-        "offset": [0.0, 1.58, 0.0],
-        "size": [0.38, 0.38, 0.38],
+        "offset": [
+          0.0,
+          1.58,
+          0.0
+        ],
+        "size": [
+          0.38,
+          0.38,
+          0.38
+        ],
         "texture": "face"
       },
       {
         "id": "leg_l",
-        "offset": [-0.14, 0.32, 0.0],
-        "size": [0.2, 0.65, 0.2],
+        "offset": [
+          -0.14,
+          0.32,
+          0.0
+        ],
+        "size": [
+          0.2,
+          0.65,
+          0.2
+        ],
         "texture": "leg",
-        "pivot": [-0.14, 0.65, 0.0],
+        "pivot": [
+          -0.14,
+          0.65,
+          0.0
+        ],
         "limb": "leg"
       },
       {
         "id": "leg_r",
-        "offset": [0.14, 0.32, 0.0],
-        "size": [0.2, 0.65, 0.2],
+        "offset": [
+          0.14,
+          0.32,
+          0.0
+        ],
+        "size": [
+          0.2,
+          0.65,
+          0.2
+        ],
         "texture": "leg",
-        "pivot": [0.14, 0.65, 0.0],
+        "pivot": [
+          0.14,
+          0.65,
+          0.0
+        ],
         "limb": "leg"
       }
     ],
     "icon": {
       "mode": "parts_preview",
-      "color": [0.45, 0.7, 0.45, 1.0]
+      "color": [
+        0.45,
+        0.7,
+        0.45,
+        1.0
+      ]
     },
     "geometry": "geometry.zombie.v1.8",
     "geometry_file": "geometry.geo.json",
     "texture": "diffuse",
-    "texture_size": [64, 32],
+    "texture_size": [
+      128,
+      128
+    ],
     "animation_profile": "humanoid"
   }
 }

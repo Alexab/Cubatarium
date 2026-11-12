@@ -5,6 +5,7 @@
 #include "Creatures/Visual/CreatureDrawRequest.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
+#include "Creatures/Visual/CreatureTextureResolver.h"
 #include "Render/Engine/GeometryEngine.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <optional>
@@ -62,7 +63,7 @@ CreaturePartMesh MeshForPart(const ResolvedCreaturePart &part,
     }
   }
   else if (layout == CreatureTextureLayout::RigidCrop &&
-           UsesRigidFaceTexture(part.textureAssetKey))
+           UsesRigidFaceTexture(part.baseTextureAssetKey.empty() ? part.textureAssetKey : part.baseTextureAssetKey))
   {
     return CreaturePartMesh::RigidHead;
   }
@@ -238,7 +239,7 @@ void UCreatureVisualRigid::SubmitDraw(const CreatureDrawContext &ctx,
     for (const ResolvedCreaturePart &part : Appearance.Parts)
     {
       const glm::mat4 model = drawPart(part);
-      const GLuint tex = creatureTextures->GetTexture(part.textureAssetKey);
+      const GLuint tex = ResolveCreaturePartTexture(*creatureTextures, part);
       if (tex != 0)
       {
         CreatureDrawRequest req;

@@ -1,6 +1,7 @@
 #include "Creatures/Visual/CreatureTextureResolver.h"
 
 #include "Creatures/Visual/CreatureTextureStorage.h"
+#include "Creatures/Core/CreatureCatalogTypes.h"
 #include <iostream>
 #include <mutex>
 #include <unordered_set>
@@ -20,19 +21,15 @@ GLuint ResolveCreatureSpeciesTexture(const UCreatureTextureStorage &textures,
                                      const std::string &speciesId,
                                      const std::string &stem,
                                      const std::string &defaultStem,
-                                     const std::string &skinId)
+                                     const ResolvedCreatureAppearance *appearance)
 {
-  // A skin overrides the species base: with the base keys first the skin
-  // branch was dead — the storage always resolves the species' own texture.
-  if (!skinId.empty())
+  if (appearance)
   {
-    if (const GLuint tex = textures.GetTexture("skin/" + skinId + "/" + stem))
+    const auto mapped = appearance->skinTextureOverrides.find(stem);
+    if (mapped != appearance->skinTextureOverrides.end())
     {
-      return tex;
-    }
-    if (const GLuint tex = textures.GetTexture("skin/" + skinId + "/diffuse"))
-    {
-      return tex;
+      if (const GLuint tex = textures.GetTexture(mapped->second))
+        return tex;
     }
   }
   const std::string keys[] = {
@@ -52,6 +49,14 @@ GLuint ResolveCreatureSpeciesTexture(const UCreatureTextureStorage &textures,
     }
   }
   return 0;
+}
+
+GLuint ResolveCreaturePartTexture(const UCreatureTextureStorage &textures,
+                                 const ResolvedCreaturePart &part)
+{
+  if (const GLuint tex = textures.GetTexture(part.textureAssetKey))
+    return tex;
+  return part.baseTextureAssetKey.empty() ? 0 : textures.GetTexture(part.baseTextureAssetKey);
 }
 
 bool LogCreatureMissingTextureOnce(const std::string &logKey,

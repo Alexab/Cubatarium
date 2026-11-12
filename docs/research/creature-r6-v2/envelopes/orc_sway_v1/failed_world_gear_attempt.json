@@ -1,0 +1,5 @@
+{
+  "accepted": false,
+  "reason": "World gear QA is intentionally limited to humanoid B; orc is G and rejected before native export. No native artifacts from that failed process count as acceptance.",
+  "next": "Fresh labels/output without B-only fixture; own authored orc model/weapon remain in normal render."
+}

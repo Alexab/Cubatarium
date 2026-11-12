@@ -1,0 +1,109 @@
+{
+  "passed": true,
+  "scope": "Isolated own proposal structural/rig refit checks, not native artistic/contact acceptance",
+  "joints": 51,
+  "changed_bind_nodes": [
+    "lower_left0",
+    "foot_left0",
+    "lower_left1",
+    "foot_left1",
+    "lower_left2",
+    "foot_left2",
+    "lower_left3",
+    "foot_left3",
+    "lower_right0",
+    "foot_right0",
+    "lower_right1",
+    "foot_right1",
+    "lower_right2",
+    "foot_right2",
+    "lower_right3",
+    "foot_right3"
+  ],
+  "all_parents_names_key_times_exact": true,
+  "angular_channels_byte_exact": 90,
+  "changed_translation_channels": [
+    [
+      "idle",
+      "foot_left0"
+    ],
+    [
+      "idle",
+      "foot_left1"
+    ],
+    [
+      "idle",
+      "foot_left2"
+    ],
+    [
+      "idle",
+      "foot_left3"
+    ],
+    [
+      "idle",
+      "foot_right0"
+    ],
+    [
+      "idle",
+      "foot_right1"
+    ],
+    [
+      "idle",
+      "foot_right2"
+    ],
+    [
+      "idle",
+      "foot_right3"
+    ],
+    [
+      "walk",
+      "foot_left0"
+    ],
+    [
+      "walk",
+      "foot_left1"
+    ],
+    [
+      "walk",
+      "foot_left2"
+    ],
+    [
+      "walk",
+      "foot_left3"
+    ],
+    [
+      "walk",
+      "foot_right0"
+    ],
+    [
+      "walk",
+      "foot_right1"
+    ],
+    [
+      "walk",
+      "foot_right2"
+    ],
+    [
+      "walk",
+      "foot_right3"
+    ],
+    [
+      "die",
+      "body"
+    ]
+  ],
+  "before_geometry": {
+    "triangles": 672,
+    "min_triangle_area": 0.0004687494656536728,
+    "constant_uv_triangles": 320,
+    "model_texel_density_p05": 0.0,
+    "model_texel_density_median": 9.0453817954291
+  },
+  "candidate_geometry": {
+    "triangles": 672,
+    "min_triangle_area": 0.0004687494656536728,
+    "constant_uv_triangles": 192,
+    "model_texel_density_p05": 0.0,
+    "model_texel_density_median": 12.987444368344732
+  }
+}

@@ -10,6 +10,7 @@
 #include <glm/glm.hpp>
 
 #include "App/Core.h"
+#include "App/CreatureQaAssetRoot.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "App/Platform/Log.h"
 #include "App/ResourcePackSelectionUtil.h"
@@ -519,7 +520,7 @@ void UResourcePackBootstrap::ReloadCreatureCatalog(
   ApplyCreaturePackOverlays(
       *defs, *core.CreatureTextureStorageInstance,
       core.WorldInstance->GetSkinDefinitionStorage().get(),
-      core.WorkDir / "models" / "creatures", core.WorkDir / "models" / "skins",
+      CreatureModelsRoot(core.WorkDir) / "creatures", CreatureModelsRoot(core.WorkDir) / "skins",
       packs);
   core.WorldInstance->OnCreatureCatalogChanged();
 }

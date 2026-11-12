@@ -1,0 +1,444 @@
+{
+  "schema": "creature-proposal-transition-diagnostic.v1",
+  "scope": "16 outgoing phases,11 local-TRS blend steps/pair, fresh incoming clip; independent sampled math, not actual retained renderer/terrain or all clip history",
+  "resources": {
+    "badger": {
+      "published": [
+        {
+          "leaving": "idle",
+          "incoming": "walk",
+          "min_y": -0.008440078456081739,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.3
+        },
+        {
+          "leaving": "idle",
+          "incoming": "run",
+          "min_y": -0.01622972242336307,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "idle",
+          "incoming": "punch",
+          "min_y": -0.0016738549967607649,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.7
+        },
+        {
+          "leaving": "walk",
+          "incoming": "idle",
+          "min_y": -0.017857880769410063,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.4
+        },
+        {
+          "leaving": "walk",
+          "incoming": "run",
+          "min_y": -0.01856801361347177,
+          "leaving_phase": 0.625,
+          "blend_progress": 0.2
+        },
+        {
+          "leaving": "walk",
+          "incoming": "punch",
+          "min_y": -0.014756429181733095,
+          "leaving_phase": 0.5,
+          "blend_progress": 0.4
+        },
+        {
+          "leaving": "run",
+          "incoming": "idle",
+          "min_y": -0.030964512119757162,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "run",
+          "incoming": "walk",
+          "min_y": -0.02794853176035516,
+          "leaving_phase": 0.5,
+          "blend_progress": 0.3
+        },
+        {
+          "leaving": "run",
+          "incoming": "punch",
+          "min_y": -0.027668508220891726,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.4
+        },
+        {
+          "leaving": "punch",
+          "incoming": "idle",
+          "min_y": -0.009963058666682447,
+          "leaving_phase": 0.1875,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "punch",
+          "incoming": "walk",
+          "min_y": -0.015038020974109112,
+          "leaving_phase": 0.1875,
+          "blend_progress": 0.3
+        },
+        {
+          "leaving": "punch",
+          "incoming": "run",
+          "min_y": -0.01778282178937328,
+          "leaving_phase": 0.1875,
+          "blend_progress": 0.2
+        }
+      ],
+      "proposal": [
+        {
+          "leaving": "idle",
+          "incoming": "walk",
+          "min_y": -0.008638491835017706,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.3
+        },
+        {
+          "leaving": "idle",
+          "incoming": "run",
+          "min_y": -0.017213953381948956,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "idle",
+          "incoming": "punch",
+          "min_y": -0.0016738549967607649,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.7
+        },
+        {
+          "leaving": "walk",
+          "incoming": "idle",
+          "min_y": -0.017857880769410063,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.4
+        },
+        {
+          "leaving": "walk",
+          "incoming": "run",
+          "min_y": -0.01573420145190612,
+          "leaving_phase": 0.125,
+          "blend_progress": 0.9
+        },
+        {
+          "leaving": "walk",
+          "incoming": "punch",
+          "min_y": -0.014756429181733095,
+          "leaving_phase": 0.5,
+          "blend_progress": 0.4
+        },
+        {
+          "leaving": "run",
+          "incoming": "idle",
+          "min_y": -0.030964512119757162,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "run",
+          "incoming": "walk",
+          "min_y": -0.027727600833490903,
+          "leaving_phase": 0.5,
+          "blend_progress": 0.3
+        },
+        {
+          "leaving": "run",
+          "incoming": "punch",
+          "min_y": -0.027668508220891726,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.4
+        },
+        {
+          "leaving": "punch",
+          "incoming": "idle",
+          "min_y": -0.009963058666682447,
+          "leaving_phase": 0.1875,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "punch",
+          "incoming": "walk",
+          "min_y": -0.015209657743340507,
+          "leaving_phase": 0.1875,
+          "blend_progress": 0.3
+        },
+        {
+          "leaving": "punch",
+          "incoming": "run",
+          "min_y": -0.018020239669406447,
+          "leaving_phase": 0.1875,
+          "blend_progress": 0.2
+        }
+      ]
+    },
+    "treeman": {
+      "published": [
+        {
+          "leaving": "idle",
+          "incoming": "walk",
+          "min_y": -0.011253527596362667,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.4
+        },
+        {
+          "leaving": "idle",
+          "incoming": "run",
+          "min_y": -0.03093878085342594,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "idle",
+          "incoming": "punch",
+          "min_y": -1.1102230246251565e-16,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.1
+        },
+        {
+          "leaving": "walk",
+          "incoming": "idle",
+          "min_y": -0.013253045633313615,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "walk",
+          "incoming": "run",
+          "min_y": -0.08525608407981711,
+          "leaving_phase": 0.5,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "walk",
+          "incoming": "punch",
+          "min_y": -0.013253045633313615,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "run",
+          "incoming": "idle",
+          "min_y": -0.033398242214556895,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "run",
+          "incoming": "walk",
+          "min_y": -0.08297300078212808,
+          "leaving_phase": 0.5,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "run",
+          "incoming": "punch",
+          "min_y": -0.033398242214556895,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "punch",
+          "incoming": "idle",
+          "min_y": -1.1102230246251565e-16,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.1
+        },
+        {
+          "leaving": "punch",
+          "incoming": "walk",
+          "min_y": -0.011253527596362667,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.4
+        },
+        {
+          "leaving": "punch",
+          "incoming": "run",
+          "min_y": -0.03093878085342594,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.5
+        }
+      ],
+      "proposal": [
+        {
+          "leaving": "idle",
+          "incoming": "walk",
+          "min_y": -0.01721660768650403,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.6
+        },
+        {
+          "leaving": "idle",
+          "incoming": "run",
+          "min_y": -0.03397710949709657,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "idle",
+          "incoming": "punch",
+          "min_y": -1.1102230246251565e-16,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.1
+        },
+        {
+          "leaving": "walk",
+          "incoming": "idle",
+          "min_y": -0.03430053298093193,
+          "leaving_phase": 0.25,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "walk",
+          "incoming": "run",
+          "min_y": -0.08824123526365404,
+          "leaving_phase": 0.5,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "walk",
+          "incoming": "punch",
+          "min_y": -0.03430053298093193,
+          "leaving_phase": 0.25,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "run",
+          "incoming": "idle",
+          "min_y": -0.04820712268745497,
+          "leaving_phase": 0.25,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "run",
+          "incoming": "walk",
+          "min_y": -0.08863242635794025,
+          "leaving_phase": 0.5,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "run",
+          "incoming": "punch",
+          "min_y": -0.04820712268745497,
+          "leaving_phase": 0.25,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "punch",
+          "incoming": "idle",
+          "min_y": -3.3306690738754696e-16,
+          "leaving_phase": 0.6875,
+          "blend_progress": 0.1
+        },
+        {
+          "leaving": "punch",
+          "incoming": "walk",
+          "min_y": -0.01721660768650403,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.6
+        },
+        {
+          "leaving": "punch",
+          "incoming": "run",
+          "min_y": -0.03397710949709679,
+          "leaving_phase": 0.6875,
+          "blend_progress": 0.5
+        }
+      ]
+    },
+    "lobster": {
+      "published": [
+        {
+          "leaving": "idle",
+          "incoming": "walk",
+          "min_y": -0.0007780886903471174,
+          "leaving_phase": 0.5,
+          "blend_progress": 0.4
+        },
+        {
+          "leaving": "idle",
+          "incoming": "punch",
+          "min_y": -8.573585241550275e-06,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "walk",
+          "incoming": "idle",
+          "min_y": -0.0009415115149987275,
+          "leaving_phase": 0.5,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "walk",
+          "incoming": "punch",
+          "min_y": -0.0007738887448572873,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "punch",
+          "incoming": "idle",
+          "min_y": -8.310510733217091e-06,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "punch",
+          "incoming": "walk",
+          "min_y": -0.0006271784533604663,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.4
+        }
+      ],
+      "proposal": [
+        {
+          "leaving": "idle",
+          "incoming": "walk",
+          "min_y": -0.0007780886903471174,
+          "leaving_phase": 0.5,
+          "blend_progress": 0.4
+        },
+        {
+          "leaving": "idle",
+          "incoming": "punch",
+          "min_y": -0.00015047581144380653,
+          "leaving_phase": 0.8125,
+          "blend_progress": 0.8
+        },
+        {
+          "leaving": "walk",
+          "incoming": "idle",
+          "min_y": -0.0009415115149987275,
+          "leaving_phase": 0.5,
+          "blend_progress": 0.5
+        },
+        {
+          "leaving": "walk",
+          "incoming": "punch",
+          "min_y": -0.001014864621928488,
+          "leaving_phase": 0.0,
+          "blend_progress": 0.6
+        },
+        {
+          "leaving": "punch",
+          "incoming": "idle",
+          "min_y": -0.0015127546700030527,
+          "leaving_phase": 0.5,
+          "blend_progress": 0.4
+        },
+        {
+          "leaving": "punch",
+          "incoming": "walk",
+          "min_y": -0.0015543927594281748,
+          "leaving_phase": 0.5,
+          "blend_progress": 0.2
+        }
+      ]
+    }
+  }
+}

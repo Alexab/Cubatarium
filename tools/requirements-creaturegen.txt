@@ -1,0 +1,4 @@
+# Production generator verified with CPython 3.13.7 on Windows x64.
+# Research motion audits additionally use the host NumPy installation.
+Pillow==11.3.0
+PyYAML==6.0.2

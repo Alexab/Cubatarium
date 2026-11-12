@@ -92,15 +92,24 @@ def _compare(species_id: str) -> bool:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Build original Cubatarium creatures")
     parser.add_argument("command", choices=[
-        "inventory", "emit", "build", "validate", "compare", "publish", "audit", "silhouettes", "frames", "previews", "measure-familiar",
+        "inventory", "emit", "build", "validate", "compare", "publish", "release", "audit", "silhouettes", "frames", "previews", "measure-familiar", "qa",
     ])
     parser.add_argument("--species", default="")
+    parser.add_argument("--review", type=Path, help="versioned reviewer decision and hashed image evidence")
+    parser.add_argument("--skins", action="store_true", help="publish reviewed skins explicitly")
+    parser.add_argument("--skin-ids", default="", help="explicit comma-separated skins for QA or reviewed publication")
+    parser.add_argument("--overwrite-recipes", action="store_true", help="explicitly replace authored recipe files during emit")
     parser.add_argument("--all", action="store_true")
     parser.add_argument("--staging", action="store_true")
     parser.add_argument("--effective", action="store_true")
     parser.add_argument("--dir", default="")
     parser.add_argument("--textured", action="store_true", help="sample atlas texels onto each face")
     args = parser.parse_args(argv)
+    if args.command=='release':
+        if not args.review:parser.error('release requires an explicit bounded catalog review')
+        from creaturegen.timeboxed_release import publish_timeboxed_release
+        print(json.dumps(publish_timeboxed_release(args.review),indent=2))
+        return 0
     selected = [part for part in args.species.split(",") if part] if args.species else []
     if args.all or not selected:
         if args.command in ("build", "validate", "publish") and (args.all or not selected):
@@ -122,7 +131,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "previews":
         from creaturegen.preview import OUT, OUT_TEXTURED, render_all, render_species, write_index
-        out = OUT_TEXTURED if args.textured else OUT
+        out = Path(args.dir) if args.dir else (OUT_TEXTURED if args.textured else OUT)
         ids = selected or None
         if ids:
             for species_id in ids:
@@ -133,6 +142,14 @@ def main(argv: list[str] | None = None) -> int:
             paths = render_all(out, args.textured)
         print(f"wrote {len(paths)} sheets in {out}")
         return 0
+    if args.command == "qa":
+        from creaturegen.qa_bundle import prepare
+        destination = Path(args.dir) if args.dir else STAGING.parent / "qa_candidates"
+        models = prepare(selected or ["cow", "badger", "rigid_demo_walker"], destination,
+                         [s for s in args.skin_ids.split(',') if s])
+        print(f"CUBA_CREATURE_QA_MODELS={models}")
+        print("Candidate catalog only; production assets were not published.")
+        return 0
     if args.command == "measure-familiar":
         from creaturegen.measure_familiar import main as measure_main
         measure_main()
@@ -141,7 +158,7 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps({"species": len(creature_ids()), "ids": creature_ids()}, indent=2))
         return 0
     if args.command == "emit":
-        emit_recipes()
+        emit_recipes(overwrite=args.overwrite_recipes)
         print(f"wrote {CATALOG}")
         return 0
     if args.command == "audit":
@@ -159,9 +176,8 @@ def main(argv: list[str] | None = None) -> int:
         ids = selected or ["cow", "badger", "rigid_demo_walker"]
         failed = [species_id for species_id in ids if not _compare(species_id)]
         print("isolation", isolation_ok(), "reads", len(READS))
-        return 1 if failed else 0
+        return 1 if failed or not isolation_ok() else 0
     if args.command == "build":
-        emit_recipes()
         for species_id in selected:
             out = build_species(species_id)
             errors = validate_staging(species_id, out)
@@ -180,13 +196,26 @@ def main(argv: list[str] | None = None) -> int:
                 print("OK", species_id)
         return 1 if failed else 0
     if args.command == "publish":
-        emit_recipes()
-        for species_id in selected:
-            publish_species(species_id)
-            print("published", species_id)
-        publish_skins()
+        try:
+            if args.skins:
+                publish_skins(args.review, [s for s in args.skin_ids.split(',') if s] or None)
+            else:
+                # Preflight the full batch before publishing its first member.
+                from creaturegen.quality import require_review
+                for species_id in selected:
+                    staged = build_species(species_id)
+                    errors = validate_staging(species_id, staged)
+                    if errors:
+                        raise RuntimeError(f"{species_id}: {errors}")
+                    require_review(species_id, staged, args.review)
+                for species_id in selected:
+                    publish_species(species_id, args.review)
+                    print("published", species_id)
+        except RuntimeError as exc:
+            print(f"FAIL {exc}", file=sys.stderr)
+            return 1
         write_asset_manifest()
-        print("skins and manifest published")
+        print("reviewed assets and manifest published")
         return 0
     return 2
 

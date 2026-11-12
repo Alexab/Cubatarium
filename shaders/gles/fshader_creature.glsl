@@ -16,6 +16,21 @@ uniform float uEnvDayFactor = 1.0;
 uniform float uEnvNightFactor = 0.0;
 uniform float uEnvSkyLightScale = 1.0;
 
+// Distance fog matching the terrain block shaders (fshader_greedy.glsl):
+// the fog factor is precomputed per creature on the CPU from the same fog
+// range the world renders with, so mobs fade into the horizon instead of
+// popping crisp beyond the fog wall. uFogEnabled stays 0 for previews and
+// when distance fog is disabled in settings.
+uniform float uCreatureFogFactor = 0.0;
+uniform vec3 uFogColor = vec3(0.7, 0.8, 1.0);
+uniform float uFogEnabled = 0.0;
+
+vec3 applyCreatureFog(vec3 color)
+{
+    float fog = clamp(uCreatureFogFactor, 0.0, 1.0) * uFogEnabled;
+    return mix(color, uFogColor, fog);
+}
+
 float creatureLit()
 {
     if (uCreatureLitEnabled < 0.5) {
@@ -42,5 +57,6 @@ void main()
     vec4 tex = texture(texture0, uv);
     if (tex.a < 0.05)
         discard;
-    FragColor = vec4(tex.rgb * uTint.rgb * creatureLit(), tex.a * uTint.a);
+    vec3 lit = tex.rgb * uTint.rgb * creatureLit();
+    FragColor = vec4(applyCreatureFog(lit), tex.a * uTint.a);
 }

@@ -1,0 +1,48 @@
+{
+  "schema": "creature-world-user-visual-review.v1",
+  "decision": "sampled_loaded_world_idle_fp_subset_only",
+  "source_frames": [
+    {
+      "label": "legacy_first",
+      "frame": "runtime_legacy_first/frame_002.png",
+      "sha256": "03419a552f9764f7a377afff22fa4fd52711cb3bb24eba5d1f991b1e7c005d84",
+      "seconds_after_native_save_manifest": 3.681938409805298,
+      "directly_viewed": true,
+      "observation": "Expected source hands plus actual restored wood_sword/wood_torch. Legacy guard at night; selected adventurer in daylight. Low idle framing remains; no attack/wall/preset acceptance."
+    },
+    {
+      "label": "legacy_restart",
+      "frame": "runtime_legacy_restart/frame_001.png",
+      "sha256": "38911fd416158be18296c192fe25ec3accde506c6546c8fff684b1765f0318a8",
+      "seconds_after_native_save_manifest": 0.6316165924072266,
+      "directly_viewed": true,
+      "observation": "Expected source hands plus actual restored wood_sword/wood_torch. Legacy guard at night; selected adventurer in daylight. Low idle framing remains; no attack/wall/preset acceptance."
+    },
+    {
+      "label": "selected_first",
+      "frame": "runtime_selected_first/frame_002.png",
+      "sha256": "1efb02174f6069c99681248ecae28742250950a91f8c54be4b8091fe06fbfa46",
+      "seconds_after_native_save_manifest": 3.592573642730713,
+      "directly_viewed": true,
+      "observation": "Expected source hands plus actual restored wood_sword/wood_torch. Legacy guard at night; selected adventurer in daylight. Low idle framing remains; no attack/wall/preset acceptance."
+    },
+    {
+      "label": "selected_restart",
+      "frame": "runtime_selected_restart/frame_002.png",
+      "sha256": "4153daa5e64900fd36cbd8283cf04dc250a7f3ca556d7db84e42db24d732ff99",
+      "seconds_after_native_save_manifest": 1.3933534622192383,
+      "directly_viewed": true,
+      "observation": "Expected source hands plus actual restored wood_sword/wood_torch. Legacy guard at night; selected adventurer in daylight. Low idle framing remains; no attack/wall/preset acceptance."
+    }
+  ],
+  "sheet": "world_fp_contact_sheet.png",
+  "sheet_sha256": "f53e5e838b48a57fd7bdf482db54e7e4704c8935133c17487834a82f0403b1aa",
+  "full_r6": "pending",
+  "integrated_world_observation": {
+    "frame": "integrated/runtime_integrated_final/frame_002.png",
+    "sha256": "a89263d50739da57a87a8d28ed6c7a79823b87a14bf4bc6ef2a461cb641791b7",
+    "seconds_after_save_probe": 3.649881601333618,
+    "directly_viewed": true,
+    "observation": "Gray wolf body intact after combined body/FP/skin/cache/entity-save diagnostics; no new art or performance verdict"
+  }
+}

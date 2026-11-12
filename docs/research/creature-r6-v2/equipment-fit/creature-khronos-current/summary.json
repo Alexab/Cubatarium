@@ -1,0 +1,435 @@
+{
+  "schema": "creature-khronos-validation.v1",
+  "validator_version": "2.0.0-dev.3.10",
+  "package_version": "2.0.0-dev.3.10",
+  "scope": "published creature glTF buffers/images/schema; not artistic or complete R6 acceptance",
+  "totals": {
+    "assets": 35,
+    "errors": 0,
+    "warnings": 0,
+    "infos": 0
+  },
+  "message_codes": {},
+  "assets": [
+    {
+      "id": "badger",
+      "files_sha256": {
+        "model.gltf": "60f9bed10d5bc102b50c9a810b08be31c4912e009ef84677ce1fec19ea6e1440",
+        "model.bin": "6e349956d73d2f3f278e57e1a409c6bff50f238edb68354e92befafbec414b90",
+        "textures\\body.png": "8de2d9867c33435e76687366fea4e2c0740e160dfeddac66f6e41f6676f91200"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "butterfly",
+      "files_sha256": {
+        "model.gltf": "f511c1ff7d54450a2ca18c1b0bdc0603320eab743e4470b64267b4f47ea585e2",
+        "model.bin": "ef9ad85a2e11342b4f743e59d844e1dabac06fce4252ac1e8799a4c85033f7f3",
+        "textures\\body.png": "e80d245d1080b5fca4f0fcac5d1e8d0bc94617450d6a551000720ba18970449e"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "crab",
+      "files_sha256": {
+        "model.gltf": "0326bbe5219cc615c9c6b2607c70412e0d9c46e7a8ea382ea0b20b5f840ddc44",
+        "model.bin": "51f67ab74bdb26b22fcf07de08eb49e07425ad9aa0336afe51dfc4b3cbbedaa3",
+        "textures\\body.png": "0be3590802a20ce59bbf128719128bb4b7d06cba3b9858f94ec9e0b3101b8dd9"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "dirt_monster",
+      "files_sha256": {
+        "model.gltf": "a0d2100ba1df3061fa2d4369fccfccbef96835cb9ad697e9c9a6625160957c2c",
+        "model.bin": "92bf87e6787bb5aaa0a1b7bba977f39fa645bbd5efd287bac738a756cdd3029b",
+        "textures\\body.png": "1b973053e0aab5413b6aa53bca31af9ebf849e5e050afeff6acda7c7c62fcd8d"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "dungeon_master",
+      "files_sha256": {
+        "model.gltf": "5cb1e4a1ce33c9e4ae79c1de50bb6702753d23dce024827ac5cfdc1e06303673",
+        "model.bin": "d2c6a12fdf7ffb771316b7b25c1a79418a5771ad06b137ad12f2fd078a6df8e5",
+        "textures\\body.png": "51e0c9c5df84609e2a4d7322332eed1dd20937efa091b4bc7ca28633c23a91d6"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "golem",
+      "files_sha256": {
+        "model.gltf": "e25afb321396521e4e422f953f29cf58831fee8c3c3b2dda3458da2c838c5872",
+        "model.bin": "4d9973be6e54b4ed145f045c0c796d4c846e66b22215f81defb9ee0a01aee20b",
+        "textures\\body.png": "490dad63662ee18e55e7f41900a7a659db2117c981aa6043fa3313c18ea5dad3"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "hedgehog",
+      "files_sha256": {
+        "model.gltf": "113336b7baf34d29445c0a65485838167a642df2b7cd51b4fd212c50624ed326",
+        "model.bin": "cd8118131fec1b5cbcd0c677b51fc5572629e343af4a4dc99766158cbaf95b0d",
+        "textures\\body.png": "99d559b059286509e3974dfd52f67b25bb30347e660716344703b2fd35165472"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "hermitcrab",
+      "files_sha256": {
+        "model.gltf": "715c2ba2ecbc8b89681aa8fc7b8a118c7d868ac60f21583a5e487245fd741a6a",
+        "model.bin": "398ffc642985b18821693856ddd58e6af8919974abac8931366058185e3be274",
+        "textures\\body.png": "c94270af8e710934020f1efbf3cd23403452fd9ee0584f9fdf8e5e0732fea959"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "kitten",
+      "files_sha256": {
+        "model.gltf": "af694453d0fe44861fa9b7e91eec6a46d7405d513e3b0d4036554303b83bfdc6",
+        "model.bin": "a2ff812951b25767d4d5daa46e615a7248505209743f85e444c1d1136ed72f90",
+        "textures\\body.png": "551cd79d23b69e511daa8270749365a37dfc872aeae983337be1483bab363819"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "land_guard",
+      "files_sha256": {
+        "model.gltf": "e7144c77f5a733f269054dda31c96dbe8a42681d820db1401de3c7cab772ce9f",
+        "model.bin": "0250a860afbd5d8d1a775e68cfef3700f9d124a24d98b48aee8657fdf3357e7c",
+        "textures\\body.png": "7a5d16720434514c740b46309237eb52a7389720a0a1a6c41203ebfaa20df6db"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "lava_flan",
+      "files_sha256": {
+        "model.gltf": "2bfe1f6dbb54a967d1bd8c7fcedace626f521127a80ef5ed7ae5d2a0e239afc7",
+        "model.bin": "c800837ba18c2cf754a7addee47e21953b174782a864f1e4abfadb97350a00e4",
+        "textures\\body.png": "87c7655cc25b6e981639fe33b2165d09101a41b982a645f6ad7eb30fc11924f9"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "lobster",
+      "files_sha256": {
+        "model.gltf": "6fbc689ce8940fc611fd1f7deb6159aa112760d42866bf37c3c3920f0973065a",
+        "model.bin": "d358e4087dab55115b56307deee0ebc91668b123760044bc726d2c54c11a8e05",
+        "textures\\body.png": "dea26457e1f5413a1da2649ccf24da54adb50f6b16561c66f2912eebe8b3871e"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "manatee",
+      "files_sha256": {
+        "model.gltf": "98d684440f10ebf258cb1ab7cf79a7198e3e76b935a3c59a155f7d5311dd852f",
+        "model.bin": "bddb7c159ae925ce7aa962d3582190b050b308e218ff80b72ef0f480b69b5e9d",
+        "textures\\body.png": "4a9b65d5b826a533c9bb3c13a2ca3b2040e7c20dbe572ad33c07eed9260d77eb"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "mese_monster",
+      "files_sha256": {
+        "model.gltf": "259590be662cb1b825e686e0016e09a3c693cf693c211855ffceddaea658d448",
+        "model.bin": "25f95b75bda50ba67f961c5ed66d57ec030588291a608a2682d47eb7d2d41c13",
+        "textures\\body.png": "39201f80e14f97ac68ecee729eb71fd408a49c4aa5ee0e1fc8992bdcf1a03f4c"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "octopus",
+      "files_sha256": {
+        "model.gltf": "9a016606147bf27d387f2617fe08e62db57589f1a54c21686136b16c5534ed3b",
+        "model.bin": "2dc9509394efacf3aea4697326bc9e94726d11dc9933b8a4eb7026da087311e5",
+        "textures\\body.png": "30188233eec8915153214de3c3a12761c2c1b94d09b1c9f63125eac472b7e28a"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "oerkki",
+      "files_sha256": {
+        "model.gltf": "98c6abae255cc389e5113b6fa92d075a56573ac800edb8b4c13228e3f5d871ba",
+        "model.bin": "48e9b2b84ebbc70db7264a6f3306b20f26829fe09b94ea6297d5c6577cfb0435",
+        "textures\\body.png": "70fe205e95a7195bf0e7d6770f25068f317aa058cdaea2519410a4105695cc10"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "ogre",
+      "files_sha256": {
+        "model.gltf": "73e92a4000d9b72170fc1acd9650ba7acf820ee17f12f412c0be4b98373514ae",
+        "model.bin": "dbc1e74ac62c6e7ac7a0d5e1d697dc69e5533b6acd09b628dc03de6d7b9a2290",
+        "textures\\body.png": "7c4c4e5ee99182b32d43fac27c0b150ef46910654418e81522e794b54ac97ae9"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "orc",
+      "files_sha256": {
+        "model.gltf": "8068b773536ccd0b8c35065123a5fc6e0e50fbf1df876b0d406ede8aae01a1b2",
+        "model.bin": "848b306e2ef1e1a4e44c438cb8a6645cc03f737b79c1b1d6f2d5b64f2e532e5e",
+        "textures\\body.png": "0b55e70c0630f8786e7bfa0af5fcb7380cf33b730939dbcade53c7ca6e7caee2"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "owl",
+      "files_sha256": {
+        "model.gltf": "4c4be16159488421500cd17529f6c0dc8c3617764eebdca9df260e961e573e06",
+        "model.bin": "064e11309f6c8c6cd105a63fc42cb73807c2200047d31698c8e8c22c3db77c48",
+        "textures\\body.png": "d9d1615ca95bbb0a679b6dbfb8025637bd8bc9c659e190cb8914d1bd5e7572e0"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "panda",
+      "files_sha256": {
+        "model.gltf": "c2084fbe8f2a295126aeaf175fad3643023e330369f181d343e414cde4d381be",
+        "model.bin": "9cfc378dc22cbd7605396d5d628f5594ebc2eb66323ba902906f389b3761a7f0",
+        "textures\\body.png": "cb5ab10ec347d6ec3b4f16b58c8eab3da4700478aaf24c7b969fc699e12ff287"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "penguin",
+      "files_sha256": {
+        "model.gltf": "6bcf70d7a8e681ee5132171890ad20231d844795d20b558173dd92b463dfb7c0",
+        "model.bin": "d5544e88fd1d1d8fe1ae285ae51e656d34ae611e7c47a7487c0b02f313ccc6ea",
+        "textures\\body.png": "fa5e85d275633e17fbf1e53072063e9e297617e43abc9297f25d5a8915a86a4e"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "puffin",
+      "files_sha256": {
+        "model.gltf": "75ba869cb0cfb12510896a3bc3684ace601e9799bc7efb1966697eba025373d1",
+        "model.bin": "cfe0277bed6428830902ffe9977fb3807bb86a6b48f77bcafe3114292fc6bf04",
+        "textures\\body.png": "cddb29c42e07ae9c0c557b36d7d46bf55e6d74fd21a1272dfce4f12cada10262"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "rat",
+      "files_sha256": {
+        "model.gltf": "e7000906c235448f2d543e6d29d982af1da4fa614109dd49fa870817a65f73b7",
+        "model.bin": "4f03c30ad696771fdd643a6acb8dc13fa83629a2cbbdde265cff4a4149a6295c",
+        "textures\\body.png": "e53f7470d8c4663e2937cd4582caefd5e6159db8000892e04f1af7a575c047f6"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "sand_monster",
+      "files_sha256": {
+        "model.gltf": "566eb3693487f2f78fd4b2096229534bc05f2a343383dff4ad1e87741669ef89",
+        "model.bin": "6192c4f90a2e90ed756e1161b1b817c13d346cdf6441bcff9fa250801ca20b67",
+        "textures\\body.png": "d82e5794c8fb8e93bd93292877e409f798e60dfecb835914aa21dc5d69c04e31"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "seahorse",
+      "files_sha256": {
+        "model.gltf": "4d17ce3cf990a16bf23af9d575b5a8e0c7a3de0de43638d26465716675ade826",
+        "model.bin": "182dfa17d4c5a3d382f4ec2f50fb2843fb7c1ef71f107c5fed1ceac7e54a38d0",
+        "textures\\body.png": "53f15609eae1426a950d4f6f420fb8631187265042a3523a2d5a26b8db2670a1"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "seal",
+      "files_sha256": {
+        "model.gltf": "8877f27375315ca50b9c6a18aacc3e087e9007bf0f5bad5d80ee24abd8f5bd1f",
+        "model.bin": "a4831a5e928892c0e0849dc40464c22ba4d909109383918b19df55c3eacfe407",
+        "textures\\body.png": "2bb5f17ddda1309bd7410fd823b3f0077257c93c658ed57099d7a2e717108940"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "shark",
+      "files_sha256": {
+        "model.gltf": "d6767fca6088077889bafa376c39fd83b27d6ed7eb9fe9493cbaa5fec08e2e6f",
+        "model.bin": "8ed378228c707b8359259b10029c9ed365e9c527d66133f0c5ea9539a7391a5b",
+        "textures\\body.png": "ebc9bc5995f9335eb3cea15cc136aba3ab7740a5a36dadfb471100e45c81cbe9"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "stingray",
+      "files_sha256": {
+        "model.gltf": "f2d28b0d0e995bd0f0bb73f4beaa51ced2f1255ea5f9d9378c0487e822622cec",
+        "model.bin": "8e7db6b02bb88a45b85d569fa71c3c3ec574fb1374b0f4f2bef6c833784510e5",
+        "textures\\body.png": "71b3bc71e2782a1d0ef8570a1052faca3cab1b28397213477384142044852490"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "stone_monster",
+      "files_sha256": {
+        "model.gltf": "a0d2100ba1df3061fa2d4369fccfccbef96835cb9ad697e9c9a6625160957c2c",
+        "model.bin": "92bf87e6787bb5aaa0a1b7bba977f39fa645bbd5efd287bac738a756cdd3029b",
+        "textures\\body.png": "6043ff858136b4433b7cdbeeeb82039e3107baeedb3a8745e7dc704cde38a73c"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "tree_monster",
+      "files_sha256": {
+        "model.gltf": "003a61721aa066471964dc4d70ad17e2179bd57c8ef795252c7d2f7464912025",
+        "model.bin": "4f91c90c26d3dec262a3a34852b541e6586783c2381a487e3736d896c0328a38",
+        "textures\\body.png": "1e91b29a48d0fbb7bbab67a53d3385b8ebd281149d5a6939485c879a99888310"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "treeman",
+      "files_sha256": {
+        "model.gltf": "6e3f8c6acf19bbe32f7ad4df2d56d7e05dfbae6f8c3e18bb5eff538877e509af",
+        "model.bin": "16e10b8f6267c74203fbb574db2f2edcc21506563e543ce4dd8f796159b623de",
+        "textures\\body.png": "af12145b135c634f7037d5ac4572cad921824cee96b074f5bdb0339eaea21bcd"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "warthog",
+      "files_sha256": {
+        "model.gltf": "65388130077e6ce9f74015c21758aa9bd3a7878cf748955f9449c6545e18e264",
+        "model.bin": "bfe384976090c9252f49bf4b5e928e4d667d67fe840f24571e6fb32d59f5ae6c",
+        "textures\\body.png": "df64deee3be0db434d02032e4b5585abbcb880bff64adf57c66bd807e2b81d4b"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "wasp",
+      "files_sha256": {
+        "model.gltf": "64d974f3c4e4361dea2c61c196f3aa9025bb45e2a84a169135a8ce5365c9be4e",
+        "model.bin": "ccdbe2e6cecc7eeaea9b11e2c121d826cd35f76fd59320a20d883cc09d66eae0",
+        "textures\\body.png": "d74a7aca42a0ee1ef2454e56d791bd8e9fdbccd44643613b9001e74b74e475db"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "water_dragon",
+      "files_sha256": {
+        "model.gltf": "5eab93af9814162a5bf0942dbc7ff4238bb1d4e7c3f98d4a4fbeda6aff190938",
+        "model.bin": "a2242d627751d2ba995e2debb3302db92086ecd9e41e87393327d6edca9e3c23",
+        "textures\\body.png": "202f25c954835cf73626b8b8f880b87f787768b3570b10dc90601e3d01607926"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    },
+    {
+      "id": "whale",
+      "files_sha256": {
+        "model.gltf": "9a80d2a5791230ca999c1853cc285dc3c91cb1b471634ee7c22be00e3dce222f",
+        "model.bin": "4c9b5993f358709c7dbdb1d6e8dfbbf34b897887376dd70fe75e72db0c0e62f7",
+        "textures\\body.png": "540c6893d0cb9c3b88575344d5235cc2f10aa303ed867e2096aa5bb778f52046"
+      },
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "truncated": false
+    }
+  ]
+}

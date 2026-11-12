@@ -1,0 +1,40 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R4 turtle fidelity; global R6 performance and compatibility remain pending",
+  "species": {
+    "tortoise": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct comparison, native Release four views, 24 motion phases, world and 64px icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "c14bddaee46236aa5fc04d3e985289f436825884bf80d18ee76a0ca810d9bdd2",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "tortoise.png",
+          "sha256": "4f877514800c539b89052d787da4d6b674323ca34ac43e74231fe120b10f4e1d"
+        },
+        "motion": {
+          "path": "native_approved_tortoise.png",
+          "sha256": "3b4938550c3257947fae8a646695f660a6de8bf22f450d518b98336abcd67c7c"
+        },
+        "runtime": {
+          "path": "runtime_wave/frame_001.png",
+          "sha256": "96f1a3cf8df9646b8251dec940e773cb751258a5eca28115482cca131bc01538"
+        },
+        "ui": {
+          "path": "native_candidate/tortoise_12.png",
+          "sha256": "d5e38ee538b5a614b09dcb1c8a8b9b40127fe36f6abce77fdb2e4841609b1486"
+        }
+      },
+      "notes": "Seven bones, familiar 36px span / 34px length / 10px height, layered shell with own polygonal scutes and pale plastron, four flat flippers and lateral eyes. Turtle profile paddles around anatomical roots, lifts distal edges and retains diagonal stance supports. Actual loaded meshes tested in 64 phases each of Walk and Run: no >0.025-block sinking, at least two stance supports, each distal edge lifts >0.04 blocks. Gameplay bounds/habitat/speeds unchanged. No coplanar same-facing overlaps. Original pixels and source geometry not read by production generator. Performance gate disabled, not a performance pass."
+    }
+  }
+}

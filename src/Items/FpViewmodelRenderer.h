@@ -2,6 +2,7 @@
 #define FP_VIEWMODEL_RENDERER_H
 
 #include <cstdint>
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <vector>
@@ -21,7 +22,29 @@ class UBlockDefinitionStorage;
 class UTextureCubeStorage;
 class UCreatureTextureStorage;
 class UShaderManager;
+struct ResolvedCreatureAppearance;
+struct CreatureDefinition;
+struct CreatureBoneSkeletonMeshAsset;
 struct InventoryEntryRef;
+
+struct FpArmDrawAudit
+{
+  bool Left{false};
+  std::string Source;
+  GLuint Texture{0};
+  glm::mat4 Mvp{1.f};
+  uint64_t MeshHash{0};
+  GLuint VertexBuffer{0};
+  size_t VertexFloatCount{0};
+  float SourceScale{1.f};
+  glm::mat4 RootMvp{1.f};
+};
+
+struct FpViewmodelDrawAudit
+{
+  GLuint SkinTexture{0};
+  std::vector<FpArmDrawAudit> Arms;
+};
 
 struct FpViewmodelDrawParams
 {
@@ -30,12 +53,15 @@ struct FpViewmodelDrawParams
   const InventoryEntryRef *Active{nullptr};
   const InventoryEntryRef *Offhand{nullptr};
   std::string SpeciesId;
-  std::string SkinId;
+  std::shared_ptr<const ResolvedCreatureAppearance> Appearance;
+  const CreatureDefinition *Definition{nullptr};
+  GLuint TargetFramebuffer{0};
+  FpViewmodelDrawAudit *Audit{nullptr};
 };
 
-/// Luanti-style clear-Z FP viewmodel + Minecraft dual arms (box mesh).
-/// Not body-in-FP; skinned glTF arms remain TD-ITEM-004. Box arms sample
-/// player_skin_atlas UV for the right-arm region when a diffuse is available.
+/// Clear-Z FP presentation with authored B arm meshes/UV when available.
+/// Independent FP transforms/presets keep the world rig unchanged. The legacy
+/// atlas boxes remain a fallback for definitions without usable arm geometry.
 class UFpViewmodelRenderer
 {
 public:
@@ -60,6 +86,8 @@ public:
   void DrawWorldOverlay(const FpViewmodelDrawParams &params);
 
 private:
+  FpViewmodelDrawAudit *ActiveAudit{nullptr};
+  bool DrawingLeftArm{false};
   struct Part
   {
     float ox{0.f};
@@ -121,11 +149,21 @@ private:
                      const glm::mat4 &mvpBase);
   GLuint ResolveBlockAtlas(const std::string &typeName) const;
   GLuint ResolvePlayerSkin(const std::string &speciesId,
-                           const std::string &skinId) const;
+                             const ResolvedCreatureAppearance *appearance) const;
   glm::mat4 BuildRootMatrix(bool mirrorX) const;
   /// Mesh FP arms (box UV atlas path). Full GPU skinning remains optional.
-  bool TryDrawSkinnedArms(const glm::mat4 &mvpBase, bool leftHand,
+  bool TryDrawLegacyAtlasArms(const glm::mat4 &mvpBase, bool leftHand,
                           GLuint skinAtlas);
+  void PrepareArmSource(const CreatureDefinition *definition);
+  bool TryDrawAuthoredArm(const glm::mat4 &mvpBase,bool leftHand,GLuint skinAtlas);
+
+  std::shared_ptr<const CreatureBoneSkeletonMeshAsset> ArmSource;
+  std::string ArmSpecies,ArmFile,ArmGeometry,ArmDirectory;
+  uint64_t ArmRevision{0};
+  bool ArmRequestSeen{false};
+  size_t ArmIndices[2]{static_cast<size_t>(-1),static_cast<size_t>(-1)};
+  glm::mat4 ArmFits[2]{glm::mat4(1.f),glm::mat4(1.f)};
+  float ArmScales[2]{1.f,1.f};
 
   std::shared_ptr<UItemDefinitionStorage> Items;
   std::shared_ptr<UBlockDefinitionStorage> Blocks;

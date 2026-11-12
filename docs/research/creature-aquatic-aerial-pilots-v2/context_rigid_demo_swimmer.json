@@ -1,0 +1,22 @@
+{
+  "captured_at_utc": "2026-11-10T14:36:35.313986+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\aquatic_aerial_v2\\models",
+  "files_sha256": {
+    "creatures\\rigid_demo_swimmer\\creature.json": "17882cdb79456c7f2c10d847703760daba84e3694af9ea0acfb7a5f9abd4ab97",
+    "creatures\\rigid_demo_swimmer\\manifest.json": "d692fdea3802bf51da39a17ff11e9720129435b2ebe65c8fc25a935bd5046253",
+    "creatures\\rigid_demo_swimmer\\rigid_model.json": "b20d23960b580ac24d9bb96de8975e49cdd46a358ed177ec8c02cf3c1fc7cc7b",
+    "creatures\\rigid_demo_swimmer\\textures\\body.png": "6433ca760e00c1796365729ebd868b02bc80a978503681f537b296dc77a0883c",
+    "creatures\\rigid_demo_swimmer\\textures\\face.png": "8e5a990a94bec0105d504c0845c38f8eef06f37349658454053026fdfced3a2e",
+    "creatures\\rigid_demo_swimmer\\textures\\icon.png": "6433ca760e00c1796365729ebd868b02bc80a978503681f537b296dc77a0883c",
+    "creatures\\rigid_demo_swimmer\\textures\\tail.png": "7e9a02783ee602f0a9c103d766bec93e8d6c02ec5b3431ef6190aa16cb52ce29",
+    "creatures\\rigid_demo_swimmer\\textures\\wing.png": "0802729a5fcc2a25b39b27da4fcdb0b0fb1dccab0a3043daad88081bd486c461"
+  },
+  "exe_sha256": "a3361df098856896e7598c8640b6a9317cd35959b991a7a4c5fa38a06639a26c",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "rigid_demo_swimmer",
+  "performance_gate": "disabled"
+}

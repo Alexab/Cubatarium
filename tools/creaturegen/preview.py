@@ -386,14 +386,15 @@ def _raster_triangle(pixels, zbuf, size, a, b, c, uv_a, uv_b, uv_c, sampler, sil
             slot = y * size + x
             if depth >= zbuf[slot]:
                 continue
-            zbuf[slot] = depth
             if silhouette or sampler is None:
+                zbuf[slot] = depth
                 pixels[x, y] = (24, 22, 20)
                 continue
             u = w0 * uv_a[0] + w1 * uv_b[0] + w2 * uv_c[0]
             v = w0 * uv_a[1] + w1 * uv_b[1] + w2 * uv_c[1]
             color = sampler.at(u, v)
             if color is not None:
+                zbuf[slot] = depth
                 pixels[x, y] = color
 
 
@@ -471,7 +472,7 @@ def _font(size: int):
 
 def _sheet(species_id: str, faces_rest, faces_walk, sprite: Path | None, subtitle: str) -> Image.Image:
     panel = 132
-    labels = [f"{yaw}°" for yaw in YAWS] + ["сверху", "снизу", "силуэт", "шаг"]
+    labels = [f"{yaw}°" for yaw in YAWS] + ["сверху", "снизу", "силуэт", "синт. поза"]
     font = _font(13)
     width = 16 + len(labels) * (panel + 8)
     height = panel + 46
@@ -608,7 +609,7 @@ figcaption { margin-top: 6px; }
         "Каждая грань несёт тексели своего UV-участка, ближайшая выборка, как GL_NEAREST в игре."
         if textured else
         "Грань залита средним цветом своего участка атласа, без рисунка пятен и полос."
-    ) + """ Слева направо: восемь рысканий, вид сверху, снизу, силуэт и шаг.</p>
+    ) + """ Слева направо: восемь рысканий, вид сверху, снизу, силуэт и синтетическая поза. Последняя не читает клипы и не подтверждает качество анимации.</p>
 """ + "\n".join(cards) + "\n</html>\n"
     index = out_dir / "index.html"
     index.write_text(html, encoding="utf-8")

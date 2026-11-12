@@ -1,0 +1,131 @@
+{
+  "schema": "creature-native-equivalence.v1",
+  "species_count": 1,
+  "exact_rgba_frames": 29,
+  "reference": "reference_wolf_snow",
+  "candidate": "candidate_wolf_snow",
+  "same_executable_and_shaders": true,
+  "fresh_images_and_current_candidate_payload": true,
+  "world_species": [
+    "wolf"
+  ],
+  "scope": "native preview equivalence only; not full pose/habitat/equipment/performance acceptance",
+  "frames": [
+    {
+      "frame": "wolf_0.png",
+      "sha256": "01abab5a91fdfa160601f98f337b5935b27a2c341247cb4772882bdd4bbce81e"
+    },
+    {
+      "frame": "wolf_1.png",
+      "sha256": "a22a88cc9da1d7f74d5784ba83503a997f5fc7e48afe177538e096ee62419bcf"
+    },
+    {
+      "frame": "wolf_2.png",
+      "sha256": "c49af8c5db7ec542175380f677ad4ef02295ddba23e07dda2785635f1c7e6339"
+    },
+    {
+      "frame": "wolf_3.png",
+      "sha256": "954aa2f261a97a13c8b69011e9bf190670380fcbdec62077fc6b778828bc9b7e"
+    },
+    {
+      "frame": "wolf_4.png",
+      "sha256": "e06141223e451c806ecb7ae29fc54086285c2cbbf98f90bd6fb5591e4ba2445a"
+    },
+    {
+      "frame": "wolf_5.png",
+      "sha256": "b6c52a2f82066ea198a5ffe1241343489a0cc1a8b9e2178101254ab8d227e27d"
+    },
+    {
+      "frame": "wolf_6.png",
+      "sha256": "c8c27975bada8be99fa7166a047c9ccfb7c713fbac02ebb0be976b3dc8f6c80c"
+    },
+    {
+      "frame": "wolf_7.png",
+      "sha256": "9a48e2e4e5cfbec0495b7e59f78f77296b3a3325d51452609cb8896c93ad0555"
+    },
+    {
+      "frame": "wolf_8.png",
+      "sha256": "b7e1eafb0bfc0d60c4eac920a7010b7f918143b58423f996b6796bae47da68d6"
+    },
+    {
+      "frame": "wolf_9.png",
+      "sha256": "ebb62ad755d9514bfd8795d76839c0de90e58850bd713bfd224dd544d98b8b1f"
+    },
+    {
+      "frame": "wolf_10.png",
+      "sha256": "2f1d49775893a3e710e0c5d4f412e341e412365a7cf27fee3eaa5e510a598766"
+    },
+    {
+      "frame": "wolf_11.png",
+      "sha256": "8a488a5e4c63596b604433675fbfc8da7114441964db0a4c42dd7af38014297d"
+    },
+    {
+      "frame": "wolf_12.png",
+      "sha256": "1160e0c4520587b954420cf3d28890c9b82b4f4e432ff1f527f2061926508f55"
+    },
+    {
+      "frame": "wolf_13.png",
+      "sha256": "e06141223e451c806ecb7ae29fc54086285c2cbbf98f90bd6fb5591e4ba2445a"
+    },
+    {
+      "frame": "wolf_14.png",
+      "sha256": "b6c52a2f82066ea198a5ffe1241343489a0cc1a8b9e2178101254ab8d227e27d"
+    },
+    {
+      "frame": "wolf_15.png",
+      "sha256": "c8c27975bada8be99fa7166a047c9ccfb7c713fbac02ebb0be976b3dc8f6c80c"
+    },
+    {
+      "frame": "wolf_16.png",
+      "sha256": "9a48e2e4e5cfbec0495b7e59f78f77296b3a3325d51452609cb8896c93ad0555"
+    },
+    {
+      "frame": "wolf_17.png",
+      "sha256": "b7e1eafb0bfc0d60c4eac920a7010b7f918143b58423f996b6796bae47da68d6"
+    },
+    {
+      "frame": "wolf_18.png",
+      "sha256": "ebb62ad755d9514bfd8795d76839c0de90e58850bd713bfd224dd544d98b8b1f"
+    },
+    {
+      "frame": "wolf_19.png",
+      "sha256": "2f1d49775893a3e710e0c5d4f412e341e412365a7cf27fee3eaa5e510a598766"
+    },
+    {
+      "frame": "wolf_20.png",
+      "sha256": "8a488a5e4c63596b604433675fbfc8da7114441964db0a4c42dd7af38014297d"
+    },
+    {
+      "frame": "wolf_21.png",
+      "sha256": "d45220cb6728a36cb5cb85d82c3005015fc8966ed9abebaaa976911db5028cae"
+    },
+    {
+      "frame": "wolf_22.png",
+      "sha256": "d45220cb6728a36cb5cb85d82c3005015fc8966ed9abebaaa976911db5028cae"
+    },
+    {
+      "frame": "wolf_23.png",
+      "sha256": "d45220cb6728a36cb5cb85d82c3005015fc8966ed9abebaaa976911db5028cae"
+    },
+    {
+      "frame": "wolf_24.png",
+      "sha256": "d45220cb6728a36cb5cb85d82c3005015fc8966ed9abebaaa976911db5028cae"
+    },
+    {
+      "frame": "wolf_25.png",
+      "sha256": "d45220cb6728a36cb5cb85d82c3005015fc8966ed9abebaaa976911db5028cae"
+    },
+    {
+      "frame": "wolf_26.png",
+      "sha256": "d45220cb6728a36cb5cb85d82c3005015fc8966ed9abebaaa976911db5028cae"
+    },
+    {
+      "frame": "wolf_27.png",
+      "sha256": "d45220cb6728a36cb5cb85d82c3005015fc8966ed9abebaaa976911db5028cae"
+    },
+    {
+      "frame": "wolf_28.png",
+      "sha256": "d45220cb6728a36cb5cb85d82c3005015fc8966ed9abebaaa976911db5028cae"
+    }
+  ]
+}

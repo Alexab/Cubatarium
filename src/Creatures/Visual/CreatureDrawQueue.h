@@ -3,6 +3,7 @@
 
 #include "Creatures/Visual/CreatureDrawRequest.h"
 #include "Creatures/Visual/CreatureDrawSink.h"
+#include "Creatures/Visual/CreatureDrawClipBounds.h"
 #include <algorithm>
 #include <vector>
 
@@ -56,6 +57,22 @@ public:
   void Flush(ICreatureDrawSink &sink);
 
   size_t Size() const { return Requests.size(); }
+  /// Query before Flush sorts the queue; `first` begins one actor's requests.
+  bool RangeIntersectsClip(size_t first)const
+  {
+    if(first>=Requests.size())return true;
+    for(size_t i=first;i<Requests.size();++i)
+    {
+      CreatureDrawClipBounds part;
+      part.Add(Requests[i]);
+      if(part.Intersects())return true;
+    }
+    return false;
+  }
+  void DiscardSince(size_t first)
+  {
+    if(first<Requests.size())Requests.resize(first);
+  }
 
 private:
   std::vector<CreatureDrawRequest> Requests;

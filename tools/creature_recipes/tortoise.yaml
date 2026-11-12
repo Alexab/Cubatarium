@@ -2,7 +2,7 @@ id: tortoise
 backend: bone_skeleton
 family: meadow
 authoring_source: cubatarium-recipe
-recipe_version: 1
+recipe_version: 2
 palette_id: meadow
 pattern: plates
 template: quadruped
@@ -29,7 +29,7 @@ silhouette:
   tail: 0.15
 marks:
 - shell
-selected_concept: primary
+selected_concept: familiar_species_authored_rig
 concepts:
 - id: primary
   body_scale:
@@ -50,3 +50,183 @@ concepts:
   - 1.34
   note: longer mass
 seed: 9235987668870858419
+surface_style: chelonian
+animation_profile: turtle
+anatomy:
+  bones:
+  - name: body
+    parent: null
+    pivot:
+    - 0
+    - 4
+    - 1
+    cubes:
+    - name: shell_rim
+      origin:
+      - -9
+      - 2
+      - -8
+      size:
+      - 18
+      - 5
+      - 20
+      role: shell
+    - name: shell_dome
+      origin:
+      - -8
+      - 7
+      - -7
+      size:
+      - 16
+      - 2
+      - 18
+      role: shell
+    - name: shell_crown
+      origin:
+      - -6
+      - 9
+      - -5
+      size:
+      - 12
+      - 1
+      - 14
+      role: shell
+  - name: plastron
+    parent: body
+    pivot:
+    - 0
+    - 2
+    - 1
+    cubes:
+    - name: plastron
+      origin:
+      - -8
+      - 1
+      - -7
+      size:
+      - 16
+      - 1
+      - 18
+      role: belly
+  - name: head
+    parent: body
+    pivot:
+    - 0
+    - 3
+    - -8
+    cubes:
+    - name: head
+      origin:
+      - -3
+      - 1
+      - -14
+      size:
+      - 6
+      - 5
+      - 6
+      role: face
+  - name: flipper_front_left
+    parent: body
+    pivot:
+    - -8
+    - 1
+    - -3.5
+    cubes:
+    - name: front_left
+      origin:
+      - -18
+      - 0
+      - -6
+      size:
+      - 10
+      - 1
+      - 5
+      role: limb
+  - name: flipper_rear_left
+    parent: body
+    pivot:
+    - -4
+    - 1
+    - 11
+    cubes:
+    - name: rear_left
+      origin:
+      - -6
+      - 0
+      - 11
+      size:
+      - 4
+      - 1
+      - 9
+      role: limb
+  - name: flipper_front_right
+    parent: body
+    pivot:
+    - 8
+    - 1
+    - -3.5
+    cubes:
+    - name: front_right
+      origin:
+      - 8
+      - 0
+      - -6
+      size:
+      - 10
+      - 1
+      - 5
+      role: limb
+  - name: flipper_rear_right
+    parent: body
+    pivot:
+    - 4
+    - 1
+    - 11
+    cubes:
+    - name: rear_right
+      origin:
+      - 2
+      - 0
+      - 11
+      size:
+      - 4
+      - 1
+      - 9
+      role: limb
+animation_overrides:
+  leg_swing_deg: 12
+  walk_cycle_hz: 0.9
+  body_bob_blocks: 0
+palette_overrides:
+  shell:
+  - 76
+  - 127
+  - 62
+  body:
+  - 95
+  - 125
+  - 61
+  face:
+  - 126
+  - 157
+  - 79
+  limb:
+  - 106
+  - 147
+  - 71
+  belly:
+  - 186
+  - 174
+  - 101
+  accent:
+  - 151
+  - 147
+  - 76
+  mark:
+  - 49
+  - 77
+  - 38
+  eye:
+  - 24
+  - 30
+  - 23

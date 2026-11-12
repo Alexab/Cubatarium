@@ -11,20 +11,12 @@ namespace
 
 std::string ResolvePartTextureKey(const std::string &speciesId,
                                   const std::string &stem,
-                                  const SkinDefinition *skin,
-                                  const std::string &skinId)
+                                  const ResolvedCreatureAppearance &appearance)
 {
-  if (skin)
+  if (const auto mapped = appearance.skinTextureOverrides.find(stem);
+      mapped != appearance.skinTextureOverrides.end())
   {
-    const auto mapped = skin->textureMap.find(stem);
-    if (mapped != skin->textureMap.end())
-    {
-      return "skin/" + skinId + "/" + mapped->second;
-    }
-    if (stem == skin->textureKey || stem.empty())
-    {
-      return "skin/" + skinId + "/" + skin->textureKey;
-    }
+    return mapped->second;
   }
   if (stem.empty())
   {
@@ -43,13 +35,12 @@ void AppendFallbackPart(const CreatureDefinition &def,
   const std::string stem = def.visual.defaultTextureKey.empty()
                                ? "body"
                                : def.visual.defaultTextureKey;
-  part.textureAssetKey = def.Id + "/" + stem;
+  part.baseTextureAssetKey = def.Id + "/" + stem;
+  part.textureAssetKey = ResolvePartTextureKey(def.Id, stem, result);
   result.Parts.push_back(part);
 }
 
 void ResolvePartsFromSpecies(const CreatureDefinition &def,
-                             const SkinDefinition *skin,
-                             const std::string &skinId,
                              ResolvedCreatureAppearance &result)
 {
   if (def.visual.Parts.empty())
@@ -66,7 +57,8 @@ void ResolvePartsFromSpecies(const CreatureDefinition &def,
     const std::string stem = partDef.textureStem.empty()
                                  ? def.visual.defaultTextureKey
                                  : partDef.textureStem;
-    part.textureAssetKey = ResolvePartTextureKey(def.Id, stem, skin, skinId);
+    part.baseTextureAssetKey = def.Id + "/" + (stem.empty() ? "body" : stem);
+    part.textureAssetKey = ResolvePartTextureKey(def.Id, stem, result);
     part.PivotBlocks = partDef.PivotBlocks;
     part.HasPivot = partDef.HasPivot;
     part.LimbKind = partDef.LimbKind;
@@ -103,7 +95,21 @@ ResolveCreatureAppearance(const UCreatureDefinitionStorage &species,
     skin = skins.Get(skinId);
     if (skin && (skin->creatureId.empty() || skin->creatureId == speciesId))
     {
+      result.effectiveSkinId = skinId;
       result.wireframeColor = skin->wireframeTint;
+      const std::string prefix = "skin/" + skinId + "/";
+      for (const auto &mapped : skin->textureMap)
+        result.skinTextureOverrides[mapped.first] = prefix + mapped.second;
+      if (!skin->textureKey.empty())
+      {
+        result.skinTextureOverrides.emplace(skin->textureKey, prefix + skin->textureKey);
+        result.skinTextureOverrides.emplace("", prefix + skin->textureKey);
+      }
+      // Bundled B skins have one whole-mesh diffuse atlas as well as the
+      // legacy rigid-part files. Explicit diffuse mappings take precedence.
+      // Do not spread this atlas over unrelated glTF/rigid materials.
+      if (ParseCreatureVisualBackend(def->visual.backend) == CreatureVisualBackend::BoneSkeleton)
+        result.skinTextureOverrides.emplace("diffuse", prefix + "diffuse");
     }
     else
     {
@@ -114,7 +120,7 @@ ResolveCreatureAppearance(const UCreatureDefinitionStorage &species,
   if (ParseCreatureVisualBackend(def->visual.backend) ==
       CreatureVisualBackend::RigidVoxels)
   {
-    ResolvePartsFromSpecies(*def, skin, skinId, result);
+    ResolvePartsFromSpecies(*def, result);
   }
   return result;
 }

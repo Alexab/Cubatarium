@@ -81,17 +81,16 @@ void ApplyArachnid(BoneSkeletonPose &pose,
   {
     const float phase =
         facts.animPhase + (kPhaseGroup[i] != 0 ? kPi : 0.0f);
-    const float lift = std::sin(phase) * amp;
+    // Stance stays at the authored sole height. The return stroke lifts the
+    // foot; a signed sine would drive the other four feet below the floor.
+    const float lift = std::max(0.f, std::sin(phase)) * amp;
     const float stride = std::cos(phase) * amp * 0.55f;
     // even = left (−X), odd = right (+X, mirrored): flip so lift reads as up.
     const float side = (i % 2 == 0) ? 1.0f : -1.0f;
-    // Rest fan: legs splay outward from body (MC/Luanti look), then gait on top.
-    // Pair index 0..3 along body; base yaw ~±35° plus small per-pair spread.
-    const float pair = static_cast<float>(i / 2);
-    const float restYaw = side * (32.0f + pair * 8.0f);
+    // The fan belongs to the bind pose, so it also exists while standing.
     BoneSkeletonBonePose leg;
-    leg.rotationDeg.y = restYaw + stride * side;
-    leg.rotationDeg.z = lift * side;
+    leg.rotationDeg.y = stride * side;
+    leg.rotationDeg.z = -lift * side;
     pose.bones[kLegNames[i]] = leg;
   }
 
@@ -208,8 +207,12 @@ void ApplyRabbit(BoneSkeletonPose &pose,
   const float swingScale = WalkSwingScale(facts, def);
   const float legSwing = def.visual.Animation.legSwingDeg;
   const float hop = std::sin(facts.animPhase);
-  const float rear = hop * legSwing * 1.6f * swingScale;
-  const float front = -hop * legSwing * 1.1f * swingScale;
+  // A rabbit pushes off, folds in flight, then settles. Driving the return
+  // half-cycle with a negative pendulum angle pushed its long toes below the
+  // ground. The settled half keeps the feet neutral for the next push-off.
+  const float kick = std::max(0.0f, hop);
+  const float rear = kick * legSwing * 1.6f * swingScale;
+  const float front = -kick * legSwing * 1.1f * swingScale;
   for (const char *name : {"haunchLeft", "haunchRight", "rearFootLeft",
                            "rearFootRight"})
   {
@@ -225,7 +228,7 @@ void ApplyRabbit(BoneSkeletonPose &pose,
   }
   BoneSkeletonBonePose body;
   body.offsetBlocks.y = std::max(0.0f, hop) * 0.12f * swingScale;
-  body.rotationDeg.x = -hop * 6.f * swingScale;
+  body.rotationDeg.x = -kick * 6.f * swingScale;
   pose.bones["body"] = body;
   BoneSkeletonBonePose ear;
   ear.rotationDeg.x = std::sin(facts.animPhase * 2.f) * 8.f * swingScale;
@@ -253,6 +256,29 @@ void ApplyAerial(BoneSkeletonPose &pose,
   pose.bones["leftwing_bone"] = wing1;
 }
 
+void ApplyTurtle(BoneSkeletonPose &pose,
+                 const CreatureLocomotionFacts &facts,
+                 const CreatureDefinition &def)
+{
+  const float scale = WalkSwingScale(facts, def);
+  const float amp = def.visual.Animation.legSwingDeg * scale;
+  static constexpr const char *names[] = {"flipper_front_left", "flipper_front_right",
+                                         "flipper_rear_left", "flipper_rear_right"};
+  for (int i = 0; i < 4; ++i)
+  {
+    const float phase = facts.animPhase + ((i == 1 || i == 2) ? kPi : 0.f);
+    const float lift = std::max(0.f, std::sin(phase)) * amp;
+    BoneSkeletonBonePose flipper;
+    flipper.rotationDeg.y = std::cos(phase) * amp * (i % 2 == 0 ? 1.f : -1.f);
+    if (i < 2) flipper.rotationDeg.z = lift * (i == 0 ? -1.f : 1.f);
+    else flipper.rotationDeg.x = -lift;
+    pose.bones[names[i]] = flipper;
+  }
+  BoneSkeletonBonePose head;
+  head.rotationDeg.x = std::sin(facts.animPhase*.5f) * 3.f * scale;
+  pose.bones["head"] = head;
+}
+
 void ApplyAquatic(BoneSkeletonPose &pose,
                   const CreatureLocomotionFacts &facts,
                   const CreatureDefinition &def)
@@ -272,6 +298,54 @@ void ApplyAquatic(BoneSkeletonPose &pose,
       std::sin(facts.animPhase + kPi * 0.9f) * 22.f * swingScale;
   pose.bones["tailfin"] = tailFin;
   pose.bones["tail_fin"] = tailFin;
+}
+
+void ApplyDolphin(BoneSkeletonPose &pose,
+                  const CreatureLocomotionFacts &facts,
+                  const CreatureDefinition &def)
+{
+  // Cetacean flukes move dorsoventrally, unlike a fish's lateral tail beat.
+  const float scale = std::max(WalkSwingScale(facts, def), .35f);
+  BoneSkeletonBonePose body;
+  body.rotationDeg.x = std::sin(facts.animPhase) * 3.f * scale;
+  pose.bones["body"] = body;
+  BoneSkeletonBonePose tail;
+  tail.rotationDeg.x = std::sin(facts.animPhase + .5f*kPi) * 12.f * scale;
+  pose.bones["tail"] = tail;
+  BoneSkeletonBonePose fluke;
+  fluke.rotationDeg.x = std::sin(facts.animPhase + .85f*kPi) * 8.f * scale;
+  pose.bones["tail_fin"] = fluke;
+  for (const auto *name : {"left_fin", "right_fin"})
+  {
+    BoneSkeletonBonePose fin;
+    fin.rotationDeg.x = std::sin(facts.animPhase + .2f*kPi) * 3.f * scale;
+    pose.bones[name] = fin;
+  }
+}
+
+void ApplySquid(BoneSkeletonPose &pose,
+                const CreatureLocomotionFacts &facts,
+                const CreatureDefinition &def)
+{
+  const float scale = std::max(WalkSwingScale(facts, def), .35f);
+  BoneSkeletonBonePose body;
+  body.offsetBlocks.y = std::sin(facts.animPhase) * .04f * scale;
+  body.rotationDeg.y = std::sin(facts.animPhase*.5f) * 2.f * scale;
+  pose.bones["body"] = body;
+  for (int i = 0; i < 8; ++i)
+  {
+    const float radial = i*kPi*.25f;
+    const float phase = facts.animPhase + i*.18f;
+    const float spread = (12.f + std::sin(phase)*8.f) * scale;
+    const float curl = (-8.f + std::sin(phase-.7f)*10.f) * scale;
+    BoneSkeletonBonePose arm, tip;
+    arm.rotationDeg.x = -std::sin(radial)*spread;
+    arm.rotationDeg.z = std::cos(radial)*spread;
+    tip.rotationDeg.x = -std::sin(radial)*curl;
+    tip.rotationDeg.z = std::cos(radial)*curl;
+    pose.bones["tentacle"+std::to_string(i)] = arm;
+    pose.bones["tip"+std::to_string(i)] = tip;
+  }
 }
 
 void ApplySerpentine(BoneSkeletonPose &pose,
@@ -310,6 +384,18 @@ void ApplyProfileCycle(BoneSkeletonPose &pose, const std::string &profile,
   {
     ApplyRabbit(pose, facts, def);
   }
+  else if (profile == "turtle")
+  {
+    ApplyTurtle(pose, facts, def);
+  }
+  else if (profile == "dolphin")
+  {
+    ApplyDolphin(pose, facts, def);
+  }
+  else if (profile == "squid")
+  {
+    ApplySquid(pose, facts, def);
+  }
   else if (profile == "aquatic")
   {
     ApplyAquatic(pose, facts, def);
@@ -331,6 +417,7 @@ void ApplyProfileCycle(BoneSkeletonPose &pose, const std::string &profile,
 bool IsGroundProfile(const std::string &profile)
 {
   return profile != "aerial" && profile != "aquatic" &&
+         profile != "dolphin" && profile != "squid" &&
          profile != "serpentine";
 }
 
@@ -396,7 +483,7 @@ BoneSkeletonPoseEngine::Compute(const CreatureLocomotionFacts &facts,
   case LocomotionState::Idle:
   default:
     if (profile == "fox" || profile == "arachnid" || profile == "chicken" ||
-        profile == "aquatic")
+        profile == "aquatic" || profile == "dolphin" || profile == "squid")
     {
       ApplyProfileCycle(pose, profile, facts, def);
     }

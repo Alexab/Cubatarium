@@ -1,0 +1,32 @@
+{
+  "scope": "Actual native GPU alpha area at shared world framing, not physical volume/art acceptance",
+  "idle_views": {
+    "front": {
+      "pixels": {
+        "original": 7571,
+        "before": 6162,
+        "current": 7010
+      },
+      "before_original_ratio": 0.8138951261392154,
+      "candidate_original_ratio": 0.9259014661207238
+    },
+    "side": {
+      "pixels": {
+        "original": 4408,
+        "before": 3416,
+        "current": 3853
+      },
+      "before_original_ratio": 0.7749546279491834,
+      "candidate_original_ratio": 0.8740925589836661
+    },
+    "oblique": {
+      "pixels": {
+        "original": 8092,
+        "before": 6873,
+        "current": 7458
+      },
+      "before_original_ratio": 0.8493573900148295,
+      "candidate_original_ratio": 0.9216510133465151
+    }
+  }
+}

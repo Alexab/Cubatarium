@@ -1,0 +1,864 @@
+{
+  "execution_and_workload_validated": true,
+  "performance_gate": "not_granted; inspect repeat noise, scope and individual groups",
+  "context_sha256": "24fc9a0776c1c5e79960edd6bd7946611919bd41dbc86155f8fa6ff0f1645896",
+  "runs": [
+    {
+      "label": "r0_baseline_before",
+      "repeat": 0,
+      "implementation": "baseline",
+      "asset": "before",
+      "timing": {
+        "observer_reserved_frame_bytes": 2359296,
+        "total_frames": 1024,
+        "steady_elapsed_filter_seconds": [
+          5,
+          19.0
+        ],
+        "frame_quantile_method": "p50 median; p95 sorted[floor(.95*(n-1))], individual frames",
+        "steady_frames": 765,
+        "walk_frames": 429,
+        "groups": {
+          "all_steady": {
+            "cpu_pose_ms": {
+              "n": 765,
+              "p50": 0.0134,
+              "p95": 0.0268,
+              "min": 0.0096,
+              "max": 0.0592
+            },
+            "cpu_pass_ms": {
+              "n": 765,
+              "p50": 0.0698,
+              "p95": 0.1245,
+              "min": 0.0538,
+              "max": 0.2749
+            },
+            "window_wall_ms": {
+              "n": 765,
+              "p50": 16.844,
+              "p95": 28.5633,
+              "min": 11.1998,
+              "max": 41.7103
+            },
+            "swap_ms": {
+              "n": 765,
+              "p50": 0.0867,
+              "p95": 0.2489,
+              "min": 0.0686,
+              "max": 18.371
+            },
+            "gpu_draw_interval_ns": {
+              "n": 765,
+              "p50": 13440,
+              "p95": 22520,
+              "min": 5320,
+              "max": 43150
+            }
+          },
+          "walk_only": {
+            "cpu_pose_ms": {
+              "n": 429,
+              "p50": 0.0137,
+              "p95": 0.0267,
+              "min": 0.0105,
+              "max": 0.0509
+            },
+            "cpu_pass_ms": {
+              "n": 429,
+              "p50": 0.0694,
+              "p95": 0.1219,
+              "min": 0.0544,
+              "max": 0.1944
+            },
+            "window_wall_ms": {
+              "n": 429,
+              "p50": 16.7912,
+              "p95": 28.1733,
+              "min": 11.1998,
+              "max": 41.1035
+            },
+            "swap_ms": {
+              "n": 429,
+              "p50": 0.0861,
+              "p95": 0.1812,
+              "min": 0.0686,
+              "max": 18.371
+            },
+            "gpu_draw_interval_ns": {
+              "n": 429,
+              "p50": 13360,
+              "p95": 22440,
+              "min": 5320,
+              "max": 43150
+            }
+          }
+        }
+      },
+      "whole_process_observed_rss_bytes": {
+        "n": 102,
+        "p50": 480815104.0,
+        "p95": 491569152,
+        "min": 16400384,
+        "max": 497692672
+      },
+      "whole_process_observed_host_cpu_percent": {
+        "n": 102,
+        "p50": 69.9,
+        "p95": 96.5,
+        "min": 23.2,
+        "max": 100.0
+      }
+    },
+    {
+      "label": "r0_indexed_before",
+      "repeat": 0,
+      "implementation": "indexed",
+      "asset": "before",
+      "timing": {
+        "observer_reserved_frame_bytes": 2359296,
+        "total_frames": 669,
+        "steady_elapsed_filter_seconds": [
+          5,
+          19.0
+        ],
+        "frame_quantile_method": "p50 median; p95 sorted[floor(.95*(n-1))], individual frames",
+        "steady_frames": 481,
+        "walk_frames": 248,
+        "groups": {
+          "all_steady": {
+            "cpu_pose_ms": {
+              "n": 481,
+              "p50": 0.0146,
+              "p95": 0.0311,
+              "min": 0.0105,
+              "max": 0.2668
+            },
+            "cpu_pass_ms": {
+              "n": 481,
+              "p50": 0.0838,
+              "p95": 0.1786,
+              "min": 0.0564,
+              "max": 12.2452
+            },
+            "window_wall_ms": {
+              "n": 481,
+              "p50": 24.7345,
+              "p95": 54.8841,
+              "min": 11.7937,
+              "max": 106.5525
+            },
+            "swap_ms": {
+              "n": 481,
+              "p50": 0.0977,
+              "p95": 17.2776,
+              "min": 0.0537,
+              "max": 64.9622
+            },
+            "gpu_draw_interval_ns": {
+              "n": 481,
+              "p50": 21000,
+              "p95": 45500,
+              "min": 10120,
+              "max": 54770
+            }
+          },
+          "walk_only": {
+            "cpu_pose_ms": {
+              "n": 248,
+              "p50": 0.015,
+              "p95": 0.0308,
+              "min": 0.0112,
+              "max": 0.0929
+            },
+            "cpu_pass_ms": {
+              "n": 248,
+              "p50": 0.08635,
+              "p95": 0.1836,
+              "min": 0.0634,
+              "max": 5.0278
+            },
+            "window_wall_ms": {
+              "n": 248,
+              "p50": 23.8704,
+              "p95": 54.8841,
+              "min": 12.268,
+              "max": 99.9719
+            },
+            "swap_ms": {
+              "n": 248,
+              "p50": 0.1016,
+              "p95": 17.2776,
+              "min": 0.0537,
+              "max": 49.8
+            },
+            "gpu_draw_interval_ns": {
+              "n": 248,
+              "p50": 20900.0,
+              "p95": 45600,
+              "min": 12640,
+              "max": 54770
+            }
+          }
+        }
+      },
+      "whole_process_observed_rss_bytes": {
+        "n": 87,
+        "p50": 466513920,
+        "p95": 471764992,
+        "min": 17231872,
+        "max": 475275264
+      },
+      "whole_process_observed_host_cpu_percent": {
+        "n": 87,
+        "p50": 96.2,
+        "p95": 100.0,
+        "min": 29.5,
+        "max": 100.0
+      }
+    },
+    {
+      "label": "r0_indexed_current",
+      "repeat": 0,
+      "implementation": "indexed",
+      "asset": "current",
+      "timing": {
+        "observer_reserved_frame_bytes": 2359296,
+        "total_frames": 788,
+        "steady_elapsed_filter_seconds": [
+          5,
+          19.0
+        ],
+        "frame_quantile_method": "p50 median; p95 sorted[floor(.95*(n-1))], individual frames",
+        "steady_frames": 636,
+        "walk_frames": 322,
+        "groups": {
+          "all_steady": {
+            "cpu_pose_ms": {
+              "n": 636,
+              "p50": 0.0155,
+              "p95": 0.0352,
+              "min": 0.011,
+              "max": 0.1058
+            },
+            "cpu_pass_ms": {
+              "n": 636,
+              "p50": 0.079,
+              "p95": 0.1634,
+              "min": 0.0571,
+              "max": 15.7497
+            },
+            "window_wall_ms": {
+              "n": 636,
+              "p50": 19.8072,
+              "p95": 38.3063,
+              "min": 11.5789,
+              "max": 85.9507
+            },
+            "swap_ms": {
+              "n": 636,
+              "p50": 0.09275,
+              "p95": 7.116,
+              "min": 0.067,
+              "max": 33.2959
+            },
+            "gpu_draw_interval_ns": {
+              "n": 636,
+              "p50": 15200.0,
+              "p95": 42550,
+              "min": 8200,
+              "max": 51150
+            }
+          },
+          "walk_only": {
+            "cpu_pose_ms": {
+              "n": 322,
+              "p50": 0.016550000000000002,
+              "p95": 0.0367,
+              "min": 0.0118,
+              "max": 0.1058
+            },
+            "cpu_pass_ms": {
+              "n": 322,
+              "p50": 0.08065,
+              "p95": 0.1589,
+              "min": 0.0607,
+              "max": 6.1581
+            },
+            "window_wall_ms": {
+              "n": 322,
+              "p50": 20.2837,
+              "p95": 37.7417,
+              "min": 12.0501,
+              "max": 85.9507
+            },
+            "swap_ms": {
+              "n": 322,
+              "p50": 0.0934,
+              "p95": 6.2932,
+              "min": 0.067,
+              "max": 33.2959
+            },
+            "gpu_draw_interval_ns": {
+              "n": 322,
+              "p50": 15640.0,
+              "p95": 40550,
+              "min": 8200,
+              "max": 51150
+            }
+          }
+        }
+      },
+      "whole_process_observed_rss_bytes": {
+        "n": 101,
+        "p50": 464261120,
+        "p95": 477863936,
+        "min": 17252352,
+        "max": 477966336
+      },
+      "whole_process_observed_host_cpu_percent": {
+        "n": 101,
+        "p50": 87.6,
+        "p95": 100.0,
+        "min": 54.9,
+        "max": 100.0
+      }
+    },
+    {
+      "label": "r0_baseline_current",
+      "repeat": 0,
+      "implementation": "baseline",
+      "asset": "current",
+      "timing": {
+        "observer_reserved_frame_bytes": 2359296,
+        "total_frames": 833,
+        "steady_elapsed_filter_seconds": [
+          5,
+          19.0
+        ],
+        "frame_quantile_method": "p50 median; p95 sorted[floor(.95*(n-1))], individual frames",
+        "steady_frames": 637,
+        "walk_frames": 329,
+        "groups": {
+          "all_steady": {
+            "cpu_pose_ms": {
+              "n": 637,
+              "p50": 0.0174,
+              "p95": 0.0401,
+              "min": 0.0097,
+              "max": 0.1614
+            },
+            "cpu_pass_ms": {
+              "n": 637,
+              "p50": 0.0757,
+              "p95": 0.1624,
+              "min": 0.057,
+              "max": 0.5806
+            },
+            "window_wall_ms": {
+              "n": 637,
+              "p50": 19.4412,
+              "p95": 38.4677,
+              "min": 10.423,
+              "max": 166.5236
+            },
+            "swap_ms": {
+              "n": 637,
+              "p50": 0.0857,
+              "p95": 3.4782,
+              "min": 0.0522,
+              "max": 36.4211
+            },
+            "gpu_draw_interval_ns": {
+              "n": 637,
+              "p50": 14360,
+              "p95": 40900,
+              "min": 7600,
+              "max": 70600
+            }
+          },
+          "walk_only": {
+            "cpu_pose_ms": {
+              "n": 329,
+              "p50": 0.0193,
+              "p95": 0.044,
+              "min": 0.0148,
+              "max": 0.0853
+            },
+            "cpu_pass_ms": {
+              "n": 329,
+              "p50": 0.0783,
+              "p95": 0.1608,
+              "min": 0.0605,
+              "max": 0.4276
+            },
+            "window_wall_ms": {
+              "n": 329,
+              "p50": 19.3425,
+              "p95": 36.0446,
+              "min": 10.423,
+              "max": 166.5236
+            },
+            "swap_ms": {
+              "n": 329,
+              "p50": 0.0853,
+              "p95": 2.4686,
+              "min": 0.0522,
+              "max": 27.2601
+            },
+            "gpu_draw_interval_ns": {
+              "n": 329,
+              "p50": 14320,
+              "p95": 40050,
+              "min": 7600,
+              "max": 70600
+            }
+          }
+        }
+      },
+      "whole_process_observed_rss_bytes": {
+        "n": 107,
+        "p50": 468729856,
+        "p95": 487804928,
+        "min": 16412672,
+        "max": 488382464
+      },
+      "whole_process_observed_host_cpu_percent": {
+        "n": 107,
+        "p50": 78.9,
+        "p95": 97.6,
+        "min": 25.9,
+        "max": 100.0
+      }
+    },
+    {
+      "label": "r1_baseline_current",
+      "repeat": 1,
+      "implementation": "baseline",
+      "asset": "current",
+      "timing": {
+        "observer_reserved_frame_bytes": 2359296,
+        "total_frames": 930,
+        "steady_elapsed_filter_seconds": [
+          5,
+          19.0
+        ],
+        "frame_quantile_method": "p50 median; p95 sorted[floor(.95*(n-1))], individual frames",
+        "steady_frames": 715,
+        "walk_frames": 392,
+        "groups": {
+          "all_steady": {
+            "cpu_pose_ms": {
+              "n": 715,
+              "p50": 0.0188,
+              "p95": 0.0354,
+              "min": 0.0106,
+              "max": 0.1033
+            },
+            "cpu_pass_ms": {
+              "n": 715,
+              "p50": 0.08,
+              "p95": 0.1481,
+              "min": 0.0579,
+              "max": 1.9436
+            },
+            "window_wall_ms": {
+              "n": 715,
+              "p50": 18.5337,
+              "p95": 31.0089,
+              "min": 11.9616,
+              "max": 45.3158
+            },
+            "swap_ms": {
+              "n": 715,
+              "p50": 0.0881,
+              "p95": 2.2753,
+              "min": 0.0699,
+              "max": 26.6531
+            },
+            "gpu_draw_interval_ns": {
+              "n": 715,
+              "p50": 14960,
+              "p95": 23560,
+              "min": 7000,
+              "max": 47450
+            }
+          },
+          "walk_only": {
+            "cpu_pose_ms": {
+              "n": 392,
+              "p50": 0.0201,
+              "p95": 0.0379,
+              "min": 0.0155,
+              "max": 0.1033
+            },
+            "cpu_pass_ms": {
+              "n": 392,
+              "p50": 0.08185,
+              "p95": 0.1536,
+              "min": 0.0668,
+              "max": 1.9436
+            },
+            "window_wall_ms": {
+              "n": 392,
+              "p50": 18.59755,
+              "p95": 31.017,
+              "min": 12.3533,
+              "max": 45.3158
+            },
+            "swap_ms": {
+              "n": 392,
+              "p50": 0.0875,
+              "p95": 0.4574,
+              "min": 0.0699,
+              "max": 26.6531
+            },
+            "gpu_draw_interval_ns": {
+              "n": 392,
+              "p50": 14640.0,
+              "p95": 23240,
+              "min": 7000,
+              "max": 47450
+            }
+          }
+        }
+      },
+      "whole_process_observed_rss_bytes": {
+        "n": 100,
+        "p50": 480776192.0,
+        "p95": 485896192,
+        "min": 11317248,
+        "max": 486912000
+      },
+      "whole_process_observed_host_cpu_percent": {
+        "n": 100,
+        "p50": 85.55,
+        "p95": 100.0,
+        "min": 38.3,
+        "max": 100.0
+      }
+    },
+    {
+      "label": "r1_indexed_current",
+      "repeat": 1,
+      "implementation": "indexed",
+      "asset": "current",
+      "timing": {
+        "observer_reserved_frame_bytes": 2359296,
+        "total_frames": 939,
+        "steady_elapsed_filter_seconds": [
+          5,
+          19.0
+        ],
+        "frame_quantile_method": "p50 median; p95 sorted[floor(.95*(n-1))], individual frames",
+        "steady_frames": 713,
+        "walk_frames": 385,
+        "groups": {
+          "all_steady": {
+            "cpu_pose_ms": {
+              "n": 713,
+              "p50": 0.0143,
+              "p95": 0.0334,
+              "min": 0.01,
+              "max": 0.1054
+            },
+            "cpu_pass_ms": {
+              "n": 713,
+              "p50": 0.0718,
+              "p95": 0.1512,
+              "min": 0.0544,
+              "max": 0.2766
+            },
+            "window_wall_ms": {
+              "n": 713,
+              "p50": 18.3062,
+              "p95": 29.8242,
+              "min": 10.7437,
+              "max": 176.1821
+            },
+            "swap_ms": {
+              "n": 713,
+              "p50": 0.0844,
+              "p95": 0.2183,
+              "min": 0.07,
+              "max": 23.3754
+            },
+            "gpu_draw_interval_ns": {
+              "n": 713,
+              "p50": 14280,
+              "p95": 22480,
+              "min": 8160,
+              "max": 47100
+            }
+          },
+          "walk_only": {
+            "cpu_pose_ms": {
+              "n": 385,
+              "p50": 0.0147,
+              "p95": 0.035,
+              "min": 0.0117,
+              "max": 0.1054
+            },
+            "cpu_pass_ms": {
+              "n": 385,
+              "p50": 0.0727,
+              "p95": 0.1668,
+              "min": 0.0599,
+              "max": 0.2766
+            },
+            "window_wall_ms": {
+              "n": 385,
+              "p50": 18.4916,
+              "p95": 29.9955,
+              "min": 10.7437,
+              "max": 42.8506
+            },
+            "swap_ms": {
+              "n": 385,
+              "p50": 0.0848,
+              "p95": 0.2178,
+              "min": 0.07,
+              "max": 10.7032
+            },
+            "gpu_draw_interval_ns": {
+              "n": 385,
+              "p50": 14040,
+              "p95": 21920,
+              "min": 8160,
+              "max": 45450
+            }
+          }
+        }
+      },
+      "whole_process_observed_rss_bytes": {
+        "n": 109,
+        "p50": 479281152,
+        "p95": 486432768,
+        "min": 11059200,
+        "max": 488984576
+      },
+      "whole_process_observed_host_cpu_percent": {
+        "n": 109,
+        "p50": 77.7,
+        "p95": 99.2,
+        "min": 16.5,
+        "max": 100.0
+      }
+    },
+    {
+      "label": "r1_indexed_before",
+      "repeat": 1,
+      "implementation": "indexed",
+      "asset": "before",
+      "timing": {
+        "observer_reserved_frame_bytes": 2359296,
+        "total_frames": 956,
+        "steady_elapsed_filter_seconds": [
+          5,
+          19.0
+        ],
+        "frame_quantile_method": "p50 median; p95 sorted[floor(.95*(n-1))], individual frames",
+        "steady_frames": 712,
+        "walk_frames": 379,
+        "groups": {
+          "all_steady": {
+            "cpu_pose_ms": {
+              "n": 712,
+              "p50": 0.01205,
+              "p95": 0.0261,
+              "min": 0.0091,
+              "max": 0.0746
+            },
+            "cpu_pass_ms": {
+              "n": 712,
+              "p50": 0.06885,
+              "p95": 0.1267,
+              "min": 0.053,
+              "max": 0.2741
+            },
+            "window_wall_ms": {
+              "n": 712,
+              "p50": 18.41875,
+              "p95": 29.551,
+              "min": 10.0402,
+              "max": 45.0756
+            },
+            "swap_ms": {
+              "n": 712,
+              "p50": 0.0838,
+              "p95": 0.1905,
+              "min": 0.0685,
+              "max": 20.3889
+            },
+            "gpu_draw_interval_ns": {
+              "n": 712,
+              "p50": 13640.0,
+              "p95": 22800,
+              "min": 6520,
+              "max": 45550
+            }
+          },
+          "walk_only": {
+            "cpu_pose_ms": {
+              "n": 379,
+              "p50": 0.012,
+              "p95": 0.0264,
+              "min": 0.0096,
+              "max": 0.0662
+            },
+            "cpu_pass_ms": {
+              "n": 379,
+              "p50": 0.0688,
+              "p95": 0.128,
+              "min": 0.053,
+              "max": 0.2149
+            },
+            "window_wall_ms": {
+              "n": 379,
+              "p50": 18.8803,
+              "p95": 31.0925,
+              "min": 10.0402,
+              "max": 41.9691
+            },
+            "swap_ms": {
+              "n": 379,
+              "p50": 0.0842,
+              "p95": 0.1965,
+              "min": 0.0685,
+              "max": 20.3889
+            },
+            "gpu_draw_interval_ns": {
+              "n": 379,
+              "p50": 13600,
+              "p95": 23080,
+              "min": 6600,
+              "max": 44800
+            }
+          }
+        }
+      },
+      "whole_process_observed_rss_bytes": {
+        "n": 109,
+        "p50": 469929984,
+        "p95": 483708928,
+        "min": 7827456,
+        "max": 486375424
+      },
+      "whole_process_observed_host_cpu_percent": {
+        "n": 109,
+        "p50": 74.1,
+        "p95": 95.8,
+        "min": 23.0,
+        "max": 100.0
+      }
+    },
+    {
+      "label": "r1_baseline_before",
+      "repeat": 1,
+      "implementation": "baseline",
+      "asset": "before",
+      "timing": {
+        "observer_reserved_frame_bytes": 2359296,
+        "total_frames": 995,
+        "steady_elapsed_filter_seconds": [
+          5,
+          19.0
+        ],
+        "frame_quantile_method": "p50 median; p95 sorted[floor(.95*(n-1))], individual frames",
+        "steady_frames": 752,
+        "walk_frames": 406,
+        "groups": {
+          "all_steady": {
+            "cpu_pose_ms": {
+              "n": 752,
+              "p50": 0.0136,
+              "p95": 0.0281,
+              "min": 0.0094,
+              "max": 0.0852
+            },
+            "cpu_pass_ms": {
+              "n": 752,
+              "p50": 0.06935,
+              "p95": 0.1312,
+              "min": 0.0548,
+              "max": 0.2325
+            },
+            "window_wall_ms": {
+              "n": 752,
+              "p50": 17.87715,
+              "p95": 26.3234,
+              "min": 10.7072,
+              "max": 42.2115
+            },
+            "swap_ms": {
+              "n": 752,
+              "p50": 0.0848,
+              "p95": 0.16,
+              "min": 0.0678,
+              "max": 9.6088
+            },
+            "gpu_draw_interval_ns": {
+              "n": 752,
+              "p50": 13060.0,
+              "p95": 22200,
+              "min": 6880,
+              "max": 44950
+            }
+          },
+          "walk_only": {
+            "cpu_pose_ms": {
+              "n": 406,
+              "p50": 0.0138,
+              "p95": 0.0312,
+              "min": 0.0094,
+              "max": 0.0786
+            },
+            "cpu_pass_ms": {
+              "n": 406,
+              "p50": 0.06885,
+              "p95": 0.1341,
+              "min": 0.0548,
+              "max": 0.2325
+            },
+            "window_wall_ms": {
+              "n": 406,
+              "p50": 18.19575,
+              "p95": 26.428,
+              "min": 10.7072,
+              "max": 42.2115
+            },
+            "swap_ms": {
+              "n": 406,
+              "p50": 0.0846,
+              "p95": 0.1571,
+              "min": 0.0678,
+              "max": 6.6349
+            },
+            "gpu_draw_interval_ns": {
+              "n": 406,
+              "p50": 12600.0,
+              "p95": 21760,
+              "min": 7280,
+              "max": 44950
+            }
+          }
+        }
+      },
+      "whole_process_observed_rss_bytes": {
+        "n": 104,
+        "p50": 469731328.0,
+        "p95": 478621696,
+        "min": 16642048,
+        "max": 479776768
+      },
+      "whole_process_observed_host_cpu_percent": {
+        "n": 104,
+        "p50": 72.44999999999999,
+        "p95": 97.8,
+        "min": 20.0,
+        "max": 100.0
+      }
+    }
+  ],
+  "final_indexed_bin_restored": true
+}

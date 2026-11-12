@@ -1,0 +1,24 @@
+{
+  "captured_at_utc": "2026-11-11T00:48:43.339464+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\bin\\models",
+  "files_sha256": {
+    "creatures\\golem\\creature.json": "005167c61e3be66db53c976392a323ed3904d023756b3bf4e87ded725827d0ae",
+    "creatures\\golem\\LICENSE.txt": "a79862b6ca8c6b8c7b3d61fef10ee48ea19a5c9e4331424377ba85e2ed4233b4",
+    "creatures\\golem\\model.bin": "25c65e7d37c9b9ca71db797567ea6737bc7a27becaefb8df20e356ba59c3921d",
+    "creatures\\golem\\model.gltf": "e07333e4e3c44e34ff8bb6cc86e85dc5e1355c1b921bc25a435c23f5a5fab30e",
+    "creatures\\golem\\textures\\body.png": "490dad63662ee18e55e7f41900a7a659db2117c981aa6043fa3313c18ea5dad3",
+    "creatures\\golem\\textures\\icon.png": "cb31328190edcb5e7f4fdd1ad3973c82e554d115eb68fd0a481501584721eadd"
+  },
+  "qa_models_override": false,
+  "exe_sha256": "bf9a9055a62206179288ef4108d39e850f15b8c4d43ecb5d5bd6c6a46616c490",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "production_golem",
+  "qa_camera": "close",
+  "qa_water_placement": false,
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

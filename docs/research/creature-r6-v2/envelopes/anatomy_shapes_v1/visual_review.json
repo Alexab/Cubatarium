@@ -1,0 +1,20 @@
+{
+  "reviewer": "Codex direct geometry sheet inspection",
+  "date": "2026-11-12",
+  "r6_state": "pending",
+  "scope": "17 untextured bind silhouette diagnostics, not final art acceptance",
+  "sheets": [
+    {
+      "path": "bind_shapes_1.png",
+      "sha256": "c0fc8131c8f168c513a6502796b5660c7dfc4b53675b6dbdb4611aca007dbcd1"
+    },
+    {
+      "path": "bind_shapes_2.png",
+      "sha256": "594f17bd889e1347799a94590f80da5d84f361baf9765e8c5b06b7aa8280b5d9"
+    },
+    {
+      "path": "bind_shapes_3.png",
+      "sha256": "9f3cd29d8064c3d166c47230ba477d8b37e9d0b381d432d99c393466e9ba9dac"
+    }
+  ]
+}

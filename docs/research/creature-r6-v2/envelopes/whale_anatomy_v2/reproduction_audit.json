@@ -1,0 +1,5 @@
+{
+  "passed": true,
+  "scope": "Own pre-publish snapshot reproduces candidate glTF semantic, BIN/PNG/recipe byte exact",
+  "source_snapshot_manifest_sha256": "ce028e0c8f52b6084ca399b05e6e074a03b5c0b254377852c4fd31988cec1c01"
+}

@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "scope": "One ordinary-input actual world fluid route; derived state and XZ travel, not all terrain/sliding/world attack/AI/art/performance acceptance",
+  "exe_sha256": "a0872e87a1551dbe7ac0cff1346b58176743d18eba13817cb7779473415df68f",
+  "qa_models_override": false,
+  "expected_state": "tread",
+  "world_samples": 834,
+  "sim_seconds": 18.311443328857422,
+  "state_counts": {
+    "swim": 1,
+    "tread": 514,
+    "idle": 319
+  },
+  "matching_move_samples": 513,
+  "xz_travel_in_expected_state": 4.774881362915039,
+  "move_direction_samples": {
+    "1.0": 311,
+    "-1.0": 202
+  },
+  "frozen_or_solid_overlap": false,
+  "inputs_sha256": {
+    "world_motion_tread_published.jsonl": "e5427dff06803bdd8d309eda8ce10c8c96ef2912c11120296175c14688402890",
+    "context_tread_published.json": "16401b246887c006d6a65581d370d626e567954676702ee78d5f8d0ba866cb75",
+    "report_tread_published.json": "d644e8676bd1db8a25e9b2d2030ec16c3325c98a1d51c9902b71f2b9d3572c71"
+  }
+}

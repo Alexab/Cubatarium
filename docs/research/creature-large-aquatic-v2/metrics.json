@@ -1,0 +1,102 @@
+{
+  "whale": {
+    "baseline": {
+      "extent_blocks": [
+        4.996481,
+        3.313672,
+        11.001805
+      ],
+      "min_y": -0.0
+    },
+    "candidate": {
+      "extent_blocks": [
+        5.75,
+        3.0,
+        11.0
+      ],
+      "min_y": 0.25
+    },
+    "candidate_bones": 14,
+    "candidate_clips": [
+      "idle",
+      "walk",
+      "run"
+    ],
+    "clip_timing": {
+      "idle": {
+        "asset_duration_sec": 4.8,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 4.8
+      },
+      "walk": {
+        "asset_duration_sec": 2.8,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 2.8
+      },
+      "run": {
+        "asset_duration_sec": 1.7,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 1.7
+      }
+    },
+    "payload_sha256": {
+      "creature.json": "f2e00818f8b4e73448a32775ac4397f5eb218e56eed9a81dc79e4c7107071f04",
+      "model.gltf": "b9fd8bf2af8f2bf5c0b7c88f71b15e7ae7a3250bbc60e74ceee448c2539385a5",
+      "model.bin": "400c525e379ffff08b0e998532b80a65613386716a3bf33c2074be88b94cdc56"
+    },
+    "contact": {}
+  },
+  "water_dragon": {
+    "baseline": {
+      "extent_blocks": [
+        1.092137,
+        5.699745,
+        2.882922
+      ],
+      "min_y": -0.0
+    },
+    "candidate": {
+      "extent_blocks": [
+        1.125,
+        5.6375,
+        2.875
+      ],
+      "min_y": 0.0
+    },
+    "candidate_bones": 15,
+    "candidate_clips": [
+      "idle",
+      "walk",
+      "run",
+      "punch"
+    ],
+    "clip_timing": {
+      "idle": {
+        "asset_duration_sec": 4.0,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 4.0
+      },
+      "walk": {
+        "asset_duration_sec": 2.0,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 2.0
+      },
+      "run": {
+        "asset_duration_sec": 1.2,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 1.2
+      },
+      "punch": {
+        "asset_duration_sec": 0.9,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 0.9
+      }
+    },
+    "payload_sha256": {
+      "creature.json": "64635549432da40f4bed9c74f92372c60ea3155f02a9ed0175f2f838ba5ae6c3",
+      "model.gltf": "869c13fbfb850ce6a8203ad050d1006daa9b04a8f5345e606e2e157d7ed8daa8",
+      "model.bin": "86736ef2b6584da4340bbe82faec185a09221238872c40fc6a14708239447a36"
+    },
+    "contact": {}
+  }
+}

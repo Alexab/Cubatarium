@@ -1,0 +1,91 @@
+{
+  "passed": true,
+  "scope": "Original17 + current own15 + historical penguin/lobster own snapshots; metrics remain pre-publication diagnosis",
+  "resources": [
+    {
+      "id": "badger",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "models/creatures/badger"
+    },
+    {
+      "id": "dirt_monster",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "models/creatures/dirt_monster"
+    },
+    {
+      "id": "dungeon_master",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "models/creatures/dungeon_master"
+    },
+    {
+      "id": "golem",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "models/creatures/golem"
+    },
+    {
+      "id": "land_guard",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "models/creatures/land_guard"
+    },
+    {
+      "id": "lobster",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "assetgen_output/creatures/lobster_anatomy_pre_publish/models/creatures/lobster"
+    },
+    {
+      "id": "oerkki",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "models/creatures/oerkki"
+    },
+    {
+      "id": "orc",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "models/creatures/orc"
+    },
+    {
+      "id": "owl",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "models/creatures/owl"
+    },
+    {
+      "id": "penguin",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "assetgen_output/creatures/penguin_belly_pre_publish/models/creatures/penguin"
+    },
+    {
+      "id": "puffin",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "models/creatures/puffin"
+    },
+    {
+      "id": "sand_monster",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "models/creatures/sand_monster"
+    },
+    {
+      "id": "seahorse",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "models/creatures/seahorse"
+    },
+    {
+      "id": "stone_monster",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "models/creatures/stone_monster"
+    },
+    {
+      "id": "treeman",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "models/creatures/treeman"
+    },
+    {
+      "id": "wasp",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "models/creatures/wasp"
+    },
+    {
+      "id": "whale",
+      "original_current_inputs_verified": true,
+      "own_inputs_verified": "models/creatures/whale"
+    }
+  ]
+}

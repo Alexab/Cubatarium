@@ -1,0 +1,2117 @@
+{
+  "schema": "creature-native-envelope-evidence-audit.v1",
+  "evidence_consistent": true,
+  "scope": "Actual preview draws at shared world scale; actual CPU submitted vertex bounds and GPU culling-edge witnesses, not contact/terrain/all-backend acceptance",
+  "art_acceptance": "pending",
+  "contact_acceptance": "pending",
+  "exe_sha256": "81283a1c5b148e659eaa66e9f4be9e14cbf2730ad70b3e50a1f6a59535076018",
+  "native_main_images": 516,
+  "sheet_background": "neutral_light",
+  "max_offline_native_bounds_error_blocks": 3.591363712740492e-05,
+  "profile_sha256": "acc8a106b473e4afc21659fe806435078f20f577457dcd3e133b81f5e149e34a",
+  "offline_metrics_sha256": "9a17ec1dff66111ed5acf8820d69a96e58e1e521fd5d4642c62e6032641e07b1",
+  "confirmed_false_culls": {
+    "baseline": 1,
+    "current": 1
+  },
+  "visual_envelope_required": true,
+  "oblique_only_composition": true,
+  "recovered_false_culls": {
+    "baseline": 1,
+    "current": 1
+  },
+  "sheets": [
+    {
+      "id": "badger",
+      "kind": "motion",
+      "file": "sheets/badger_motion.png",
+      "sha256": "e8f4dc0178463f51cb1dc29ebfd46af5cdd03326d3789991918000b5194337ac"
+    }
+  ],
+  "culling_witnesses": [
+    {
+      "id": "badger",
+      "variant": "baseline",
+      "confirmed_false_cull": true,
+      "new_visual_culling_rejects": false,
+      "alpha_pixels": 1379,
+      "file": "native_original/envelopes/badger_edge.png",
+      "sha256": "098e679cb6409794aa9184eff21bb173f716816d1956f2f9d2380a0e5bbb5a01"
+    },
+    {
+      "id": "badger",
+      "variant": "current",
+      "confirmed_false_cull": true,
+      "new_visual_culling_rejects": false,
+      "alpha_pixels": 230,
+      "file": "native_current/envelopes/badger_edge.png",
+      "sha256": "6b34a721d284db8fb20ec7fe2366949b9ff4a750e4d78cb400e9beb6ad548914"
+    }
+  ],
+  "native_frames": [
+    {
+      "file": "native_original/envelopes/badger_0.png",
+      "sha256": "c46ab146050f758f7b4efd32c7323b8fb782635c0406098577114adbfcd4cbd0"
+    },
+    {
+      "file": "native_original/envelopes/badger_1.png",
+      "sha256": "7b34a6e21a545809fd374597072bcbf67a05a5391c5c2a3463f81713210ac63d"
+    },
+    {
+      "file": "native_original/envelopes/badger_2.png",
+      "sha256": "b155ee7a32e54c946ab462ba6835416489a43ff87fcdadc26822d796f2b8c6fc"
+    },
+    {
+      "file": "native_original/envelopes/badger_3.png",
+      "sha256": "36cf7f990ecdda371d0789978a4a5249cad566b2e200dafeb58dc4e9ec16b9e6"
+    },
+    {
+      "file": "native_original/envelopes/badger_4.png",
+      "sha256": "0d0ee6b9b0d1d4ee94e28d3b0b10bddce8f6bd31d6896792d462f943f27b46f7"
+    },
+    {
+      "file": "native_original/envelopes/badger_5.png",
+      "sha256": "07aca61384ac7d90d4052de28982a401a636597c1f36f0bf62e64b823a56403d"
+    },
+    {
+      "file": "native_original/envelopes/badger_6.png",
+      "sha256": "c7ae0664798999fc5be4418567cd757a710dc580667f1888d8755a655ec3a75b"
+    },
+    {
+      "file": "native_original/envelopes/badger_7.png",
+      "sha256": "7cd106fbdfe53328b9685cfa2b808dbf839cf225b08de14e1b873a60f4e4dd5d"
+    },
+    {
+      "file": "native_original/envelopes/badger_8.png",
+      "sha256": "023a5776da50671ca8f8ab64f809ca523d5e482ba3ecaf75949b33f137ef041b"
+    },
+    {
+      "file": "native_original/envelopes/badger_9.png",
+      "sha256": "7c4554fb3375ea193d49b8eee2356889da9fdd88e696e2b6fdaff62407f5b593"
+    },
+    {
+      "file": "native_original/envelopes/badger_10.png",
+      "sha256": "f9a8ff80efcb289618d244c298ec0842e5bb2e9777f41e427c3aa56e87af52f8"
+    },
+    {
+      "file": "native_original/envelopes/badger_11.png",
+      "sha256": "37db4418c5171807db58ed0ffe805e0e08ea4a2441a716c981b9b2dab4443fc0"
+    },
+    {
+      "file": "native_original/envelopes/badger_12.png",
+      "sha256": "7b4c00feea1fc796e633011fa0a91b8b97b179ff874b295feaa5fbe137460a7f"
+    },
+    {
+      "file": "native_original/envelopes/badger_13.png",
+      "sha256": "1dd3eb74419dd029be8f0af1896008dfaab352328e9ced7c980ec181aaef9dba"
+    },
+    {
+      "file": "native_original/envelopes/badger_14.png",
+      "sha256": "3ec8f2a83dc7151c3a6a22e47b823dc0ac776b46e94d87019c491b964fa4b163"
+    },
+    {
+      "file": "native_original/envelopes/badger_15.png",
+      "sha256": "bb597f0a028d5e85079d4aa3e598ec26ad51260660359283e09ff288044971fb"
+    },
+    {
+      "file": "native_original/envelopes/badger_16.png",
+      "sha256": "c29867a3d9f849967f1cb0241a5339bc078473ca8ad8f71e84bddd762414dc14"
+    },
+    {
+      "file": "native_original/envelopes/badger_17.png",
+      "sha256": "c2dda09e2698155036f22496bbdd85c67fa86e5199e15b592bad289f99218650"
+    },
+    {
+      "file": "native_original/envelopes/badger_18.png",
+      "sha256": "74a0c74c2d09216767c48e50c2ed6f6e1c7801734540181aaf08a2c80e5e1a87"
+    },
+    {
+      "file": "native_original/envelopes/badger_19.png",
+      "sha256": "7dd71207444e988c4e6163c96c11bc1cd967783911692f85a9102f362e4a15ef"
+    },
+    {
+      "file": "native_original/envelopes/badger_20.png",
+      "sha256": "4f2bc5c6de8f2c963841e1eab6438116cdd68236d4a32d187bc0325e458fb584"
+    },
+    {
+      "file": "native_original/envelopes/badger_21.png",
+      "sha256": "8f9ac6cc497d6c6cac6d1212d3017d04bd3c16317a2ed41c5a95c6a14834eb09"
+    },
+    {
+      "file": "native_original/envelopes/badger_22.png",
+      "sha256": "507feef330068baf09d90219a732e200d96bb47efe4087c71066e0d9df862d8e"
+    },
+    {
+      "file": "native_original/envelopes/badger_23.png",
+      "sha256": "639771c2c4cb37aaf56f788e778095a45497f221c1b3f2f74780162ea237f291"
+    },
+    {
+      "file": "native_original/envelopes/badger_24.png",
+      "sha256": "2a5bc6065642026a96301e2c4e761ad328f69ab49d6dfc633de9ca0a7cedd99f"
+    },
+    {
+      "file": "native_original/envelopes/badger_25.png",
+      "sha256": "e17fa64cbd628d7ec993968a1d7b947aa8f64d5040e4fb1d03963dd0abf13056"
+    },
+    {
+      "file": "native_original/envelopes/badger_26.png",
+      "sha256": "b05afa89966c3a4e5ebaad73b681adb1dfbaca41df1413d77044a340386331c2"
+    },
+    {
+      "file": "native_original/envelopes/badger_27.png",
+      "sha256": "6e7fbb9d4821a8dc1d3693c6ac7d518c6406058f3d048fc25a31daf52d676c6e"
+    },
+    {
+      "file": "native_original/envelopes/badger_28.png",
+      "sha256": "8e87c3a4257c60ef2a21c4acec4686e80a28a5553f5679dc47ba393321533531"
+    },
+    {
+      "file": "native_original/envelopes/badger_29.png",
+      "sha256": "52135cea414a739ec1e6da25ab3962040e1bcc7a308fcb8c20891daa068d2d97"
+    },
+    {
+      "file": "native_original/envelopes/badger_30.png",
+      "sha256": "4a7b2394a0e21caca74280d6995ea815aff963b03cc9ae1342b63a5c0e03d2ef"
+    },
+    {
+      "file": "native_original/envelopes/badger_31.png",
+      "sha256": "d603a5b91852f52efaf361320159834ec2fa77121cf9d6fbbfefa02c8e016e62"
+    },
+    {
+      "file": "native_original/envelopes/badger_32.png",
+      "sha256": "7bf0e5bb2349999a5e7fa2b2c52e5539dca823dd0a84b69c450e55231bb3dde1"
+    },
+    {
+      "file": "native_original/envelopes/badger_33.png",
+      "sha256": "be86397325a975b4720e900785662cfa24ff50e4dc27cdb166f6d20142ee52b6"
+    },
+    {
+      "file": "native_original/envelopes/badger_34.png",
+      "sha256": "8455a78cef5cfc2c1e6109330ac3d268da6659025ae5430c62565bf90e161983"
+    },
+    {
+      "file": "native_original/envelopes/badger_35.png",
+      "sha256": "63213d279706a6c109c7c9d5f4e867612aaed719b7b626d4cab500b4dbc12c5d"
+    },
+    {
+      "file": "native_original/envelopes/badger_36.png",
+      "sha256": "3452c51bee72a356b1543182366a3433c975c0ec5f248c19c609d6b3427c4bea"
+    },
+    {
+      "file": "native_original/envelopes/badger_37.png",
+      "sha256": "bc533d5a734e065644eb5b7a3d40021427818e9be592851c27318157436e4486"
+    },
+    {
+      "file": "native_original/envelopes/badger_38.png",
+      "sha256": "8af2b75c90b1e3cdbad27113ba543ef109f2c2510fa5b3771ca242766b59e207"
+    },
+    {
+      "file": "native_original/envelopes/badger_39.png",
+      "sha256": "800fa6f64898daaab02dec1b267cb65f23ced4af1d68d63f563de7117ea15f18"
+    },
+    {
+      "file": "native_original/envelopes/badger_40.png",
+      "sha256": "531e51d43509cc311e93eaebd8056aff216d524e28e305b6179f15b474b9851b"
+    },
+    {
+      "file": "native_original/envelopes/badger_41.png",
+      "sha256": "4e1f683e04ebbba666119057bc54ccea81e7f2831d4f6cd4877e8a9d5560ae65"
+    },
+    {
+      "file": "native_original/envelopes/badger_42.png",
+      "sha256": "27220bb7a1118c843014d8ab7abb34a46936c5ac6c320d21196e60e7ae397394"
+    },
+    {
+      "file": "native_original/envelopes/badger_43.png",
+      "sha256": "598ab3c7bc15eaa126e6c069cffd1c48f55a1843cbcfbd2fb9e94fe2ff8c3904"
+    },
+    {
+      "file": "native_original/envelopes/badger_44.png",
+      "sha256": "1d83c9a274a870ae58f265550d824542866dfd5b7edcde465a7892d0145c7bf0"
+    },
+    {
+      "file": "native_original/envelopes/badger_45.png",
+      "sha256": "0f1445bc4d2e306468f1df4f40dc1e8c88f72eb998c4091ed52a719369d531ae"
+    },
+    {
+      "file": "native_original/envelopes/badger_46.png",
+      "sha256": "136b5a1f17a464c19fa3e53e0296cc2e76a1af0cf0e7f6e04aca32a8ae060df4"
+    },
+    {
+      "file": "native_original/envelopes/badger_47.png",
+      "sha256": "0de0e3de8fd0677143d3218806c13f8647a2fec59024794ddd734018085f7204"
+    },
+    {
+      "file": "native_original/envelopes/badger_48.png",
+      "sha256": "3157f3f836d45c50946faf6adb27fdc7d8c62c27711fa8e3f4fa1b3d7c448075"
+    },
+    {
+      "file": "native_original/envelopes/badger_49.png",
+      "sha256": "b77db5863ac00e534a1c4f9b737bcbacea9bf3100669cc9a2781bde9b7a2653a"
+    },
+    {
+      "file": "native_original/envelopes/badger_50.png",
+      "sha256": "fa4db33ecfcdf057f1876439ea9ce299e3fe9aeb4f1cc5322dd77db134bb1644"
+    },
+    {
+      "file": "native_original/envelopes/badger_51.png",
+      "sha256": "c270429c53b124521ef1108bd7bd8e6698feb8a94cfc1f64882396233833ddbf"
+    },
+    {
+      "file": "native_original/envelopes/badger_52.png",
+      "sha256": "fbf8497369c62e9d2e81c85585ca6bfc74711ddf0f44d0b7c8dcb5ef122de37b"
+    },
+    {
+      "file": "native_original/envelopes/badger_53.png",
+      "sha256": "eeb55d2279733554cea88528342a1bf3eb833bcd2f3f94d5e5e61843fbb63ec1"
+    },
+    {
+      "file": "native_original/envelopes/badger_54.png",
+      "sha256": "64b977210c42bcd83994e90b05e8d60e3d72d45c13d14e68fcb78e978eb53953"
+    },
+    {
+      "file": "native_original/envelopes/badger_55.png",
+      "sha256": "bf33b1b5f1f1535b08ac1f1a02ddf928f00fa35ebbf31f11bc3037a7f2a5b77c"
+    },
+    {
+      "file": "native_original/envelopes/badger_56.png",
+      "sha256": "a96d7178bb073327573f70d8fd91e63649662b76e18d19b2c67420360c395fa6"
+    },
+    {
+      "file": "native_original/envelopes/badger_57.png",
+      "sha256": "e3af9879f67814ecc5d67c07007062a921f0e900b5d4eb800a95e15772b3f85d"
+    },
+    {
+      "file": "native_original/envelopes/badger_58.png",
+      "sha256": "353b923514da55989f339ce22809d763e1dbe7dda4cf94b3d4dbbb54d53e823d"
+    },
+    {
+      "file": "native_original/envelopes/badger_59.png",
+      "sha256": "907fc977ba8db4be2fdf29a11e6c0b2dff6a4ad2bab24627e03380cbb0fdc2cb"
+    },
+    {
+      "file": "native_original/envelopes/badger_60.png",
+      "sha256": "bfbba3f49085f99d7405a5c8f41941df7f0afb73cbdc0905f914b6774506e98d"
+    },
+    {
+      "file": "native_original/envelopes/badger_61.png",
+      "sha256": "e0b9a4821ef12312d98b2379fe7e98d2b0daa00bfa8b6cfb5ab16c60c583216b"
+    },
+    {
+      "file": "native_original/envelopes/badger_62.png",
+      "sha256": "fe4b21e3a2cdaadbdd3e2e3e9e8d0a1c717b21a280400d9f4213dc60946c2674"
+    },
+    {
+      "file": "native_original/envelopes/badger_63.png",
+      "sha256": "88afab5a81a859fe75bf5e16475bca7ef3936ef194f855af88b0ab4ccc4e5be2"
+    },
+    {
+      "file": "native_original/envelopes/badger_64.png",
+      "sha256": "56cb0295d2e060d70abb867def050cf90d88740c21776cf8be2f59e6b7d56b59"
+    },
+    {
+      "file": "native_original/envelopes/badger_65.png",
+      "sha256": "12b4765b06406f56c1560cf778c2d278f45fcf2d3ef7672ec3b5eaa21682b987"
+    },
+    {
+      "file": "native_original/envelopes/badger_66.png",
+      "sha256": "14b87cc5cc7b4e97ddacef7ecf368c35ca840895488124687043d93c37090718"
+    },
+    {
+      "file": "native_original/envelopes/badger_67.png",
+      "sha256": "ce442795b2207da525cf5de9a14c1a1e7fd571db13b9bb549e4374b63e1cbe8c"
+    },
+    {
+      "file": "native_original/envelopes/badger_68.png",
+      "sha256": "33d60882b9ee5a38a60362f77b27beb3ac3c86f80236af775aa960082b40e618"
+    },
+    {
+      "file": "native_original/envelopes/badger_69.png",
+      "sha256": "4c284e31bf29421e3b535a9f3e0f31ff2316ab17fd818116442949487fc2e5c6"
+    },
+    {
+      "file": "native_original/envelopes/badger_70.png",
+      "sha256": "c2cdaf68deae02ac3abafc526f00a335d6a378d2566abd8b3fb637fdcb571b27"
+    },
+    {
+      "file": "native_original/envelopes/badger_71.png",
+      "sha256": "1554a186fd4ff792b3cfd04066cbbe23cfd669e10012ee0791e774be6233245d"
+    },
+    {
+      "file": "native_original/envelopes/badger_72.png",
+      "sha256": "5cf8f7fdbc71f1db10a531379f9dd7540e8d93ebd805831db3aaba6b31bf4601"
+    },
+    {
+      "file": "native_original/envelopes/badger_73.png",
+      "sha256": "bcd4bd5250705433448ac3f3cbe8044c99fd1eff2d8c941d8ab1f565371e14fb"
+    },
+    {
+      "file": "native_original/envelopes/badger_74.png",
+      "sha256": "ba4cbc2efcb92be5665e006c5deedc2434ef49abbfa16b06bbece34b6449767f"
+    },
+    {
+      "file": "native_original/envelopes/badger_75.png",
+      "sha256": "1a2a682ed3b8702de8fd96d4db97f11410cf4de7bc402a8d9d6699f412b1f168"
+    },
+    {
+      "file": "native_original/envelopes/badger_76.png",
+      "sha256": "54b34679af21af6baf564896dd7af619ef3684014678efa36d10f38623056ba5"
+    },
+    {
+      "file": "native_original/envelopes/badger_77.png",
+      "sha256": "484844f360747056089d8e2635728a393fc9fb9d77a3c875a34b47aa7bfa0734"
+    },
+    {
+      "file": "native_original/envelopes/badger_78.png",
+      "sha256": "5a212372731a856a029e63b8948e932c4462dc4127cf11a39c0a6aed851835b0"
+    },
+    {
+      "file": "native_original/envelopes/badger_79.png",
+      "sha256": "d6a615a97a5ff0e0dfc30eaf4fe56a4ca1845881a78374c27cff0046abd52979"
+    },
+    {
+      "file": "native_original/envelopes/badger_80.png",
+      "sha256": "d2eef11331ffb94612b32a2046e7ecbc3057492d92c5da057e4ee14a66b1fb65"
+    },
+    {
+      "file": "native_original/envelopes/badger_81.png",
+      "sha256": "d0f1e7b7d03752cac5b21e31186a2d0c79edddda0e0a1b94ddfe0dea468aab95"
+    },
+    {
+      "file": "native_original/envelopes/badger_82.png",
+      "sha256": "d467c00e3b4483fc699f6cafd3f6896087294c63c2d6f15a110d3291ae8952b0"
+    },
+    {
+      "file": "native_original/envelopes/badger_83.png",
+      "sha256": "eec2d30b534eb16f02e331e4592f604757677034d0cf66b221be7c7f26a83e77"
+    },
+    {
+      "file": "native_original/envelopes/badger_84.png",
+      "sha256": "3427bffee136e988472d01f5e652bc62458ae8cf2192d1c9da5f68de8451c42e"
+    },
+    {
+      "file": "native_original/envelopes/badger_85.png",
+      "sha256": "d8f976d9e6dab57c4c44493f95efab7923c9c34b93723ac5cc9568504277e671"
+    },
+    {
+      "file": "native_original/envelopes/badger_86.png",
+      "sha256": "e4f61866fac41d9269c0347adcb24e4c3862eb8af6d07b75b83b1cc0962ba0b4"
+    },
+    {
+      "file": "native_original/envelopes/badger_87.png",
+      "sha256": "23448552c720f762d51552012aa10f717fb9cda07bcc53c7407683391a1d9c49"
+    },
+    {
+      "file": "native_original/envelopes/badger_88.png",
+      "sha256": "4978b87156af12990d7e30611a209960550c2c02260ac7bc12186beaf419ff14"
+    },
+    {
+      "file": "native_original/envelopes/badger_89.png",
+      "sha256": "cd45e987c73673fdd77b2d7b96e72b375a33725c695304bc5c53610a1fbd9c7b"
+    },
+    {
+      "file": "native_original/envelopes/badger_90.png",
+      "sha256": "71cc0b66dbfdf3c3e192be373fb03bd76c1a9a46a0089f37a92cc6ba33df9524"
+    },
+    {
+      "file": "native_original/envelopes/badger_91.png",
+      "sha256": "042000106e44863f6ee5b63e3d32c044d40b0edbe71a690472f01ddf81fd9778"
+    },
+    {
+      "file": "native_original/envelopes/badger_92.png",
+      "sha256": "10be64214123e6c9841cab970df18f6ab7e2f8cc0fa9606e87f7c21489f53535"
+    },
+    {
+      "file": "native_original/envelopes/badger_93.png",
+      "sha256": "64b2e6b7a18cfde033274d6ac0bcf8e7e9834c604ded1f42a5f021bbeeac9526"
+    },
+    {
+      "file": "native_original/envelopes/badger_94.png",
+      "sha256": "1e1a792592c3b26925a59e376c5c6a7faf904304ae6938150524907bc5522240"
+    },
+    {
+      "file": "native_original/envelopes/badger_95.png",
+      "sha256": "045c669e8ccb586a4d31f7d5f751bde806a792907aca95d672e68948aa9f36be"
+    },
+    {
+      "file": "native_original/envelopes/badger_96.png",
+      "sha256": "3c4511d6b2669626ac4aa19a3d3a48659d167a67d9c637c0a29cb742ee22f23f"
+    },
+    {
+      "file": "native_original/envelopes/badger_97.png",
+      "sha256": "25e5b6371c6dc1796ec18ceb530198bb8a4fdba21a2b8f9a0d0fcb3bb0be28cb"
+    },
+    {
+      "file": "native_original/envelopes/badger_98.png",
+      "sha256": "72eee2c35d255451e8438c0a5637606dc0f8e49d4aa49b3fd5b51c615352a36f"
+    },
+    {
+      "file": "native_original/envelopes/badger_99.png",
+      "sha256": "1815440a4c88266187f90f6ea7c12e99f81ce8c893bae87e87d19442efabbc5b"
+    },
+    {
+      "file": "native_original/envelopes/badger_100.png",
+      "sha256": "393ae98e0cd0ea29c3918fe0c15eca7a639f2471b601169b61ea5b60b591c698"
+    },
+    {
+      "file": "native_original/envelopes/badger_101.png",
+      "sha256": "61b1f7b7e8b2bc614418771819deb1d2fe6b82ea418844820545527c5ca6cd52"
+    },
+    {
+      "file": "native_original/envelopes/badger_102.png",
+      "sha256": "e5355666d2b5b51c26d84d76fedb811b41a7ee829234047853505ea287fc43d3"
+    },
+    {
+      "file": "native_original/envelopes/badger_103.png",
+      "sha256": "a246cdfdd638b06fb8ce2af9978b6988020a240aede3081c2e1122f106716fcc"
+    },
+    {
+      "file": "native_original/envelopes/badger_104.png",
+      "sha256": "42b683ab7eaa380dcce92d3750df86e40891644efc0c14409d54fad916da9eb6"
+    },
+    {
+      "file": "native_original/envelopes/badger_105.png",
+      "sha256": "eb4a8ede38c725815dc04bf00c694af35a3eefc087d1ba7c407d30fa7477e5a1"
+    },
+    {
+      "file": "native_original/envelopes/badger_106.png",
+      "sha256": "b1103634c926d2834a74ba9105bc35697cce8e93db3ab52dfd5880aa018e0b1b"
+    },
+    {
+      "file": "native_original/envelopes/badger_107.png",
+      "sha256": "a61a4f8e5b1f2002539fe64b21ec0f8b909098884e2e0b23fc6218041a721c03"
+    },
+    {
+      "file": "native_original/envelopes/badger_108.png",
+      "sha256": "3caa5b3b67af1b331481dea1e9f28f5e68f3b9cde491494e940c1df376320b42"
+    },
+    {
+      "file": "native_original/envelopes/badger_109.png",
+      "sha256": "27d2bba830a35a6d25fb94859b5b08b2e95f3096890b0f27e52aa1e9c66c8779"
+    },
+    {
+      "file": "native_original/envelopes/badger_110.png",
+      "sha256": "50348de2b0b0768ed71db9b775dfb8f8073778c1b433ca5b61824234fd25251e"
+    },
+    {
+      "file": "native_original/envelopes/badger_111.png",
+      "sha256": "c78701d49bdc4b95c1073983a1030d487a62f7493d4848c1a6834bbd69522268"
+    },
+    {
+      "file": "native_original/envelopes/badger_112.png",
+      "sha256": "521aeb72f7054941b3d85e1dc2932e6b5587c75bd9c935ebf1b4c7397a1b385a"
+    },
+    {
+      "file": "native_original/envelopes/badger_113.png",
+      "sha256": "37728e83ec902b76594b681322c968671426a19df4552c1bae7472cfad418ae7"
+    },
+    {
+      "file": "native_original/envelopes/badger_114.png",
+      "sha256": "3a408c0c9af3f6509131fc6286c8bd087f648b24b25743a2a3c3cf20d478e840"
+    },
+    {
+      "file": "native_original/envelopes/badger_115.png",
+      "sha256": "5e4596d0c21420e7e12129176607d7a699b6310b460a02042a9f0355e7c135e4"
+    },
+    {
+      "file": "native_original/envelopes/badger_116.png",
+      "sha256": "3a406987e365d3aef6a734bf34dbe435f104227a0492836e82f0fc425776fe3b"
+    },
+    {
+      "file": "native_original/envelopes/badger_117.png",
+      "sha256": "c6c7e56181947e680e6f092ebc767fcd6dee73b3ddcce78367e6fba29b95f61c"
+    },
+    {
+      "file": "native_original/envelopes/badger_118.png",
+      "sha256": "f171d22d8c1cd849f70a2244a40ac0b0af79ef679f45e4316430d7c265724a38"
+    },
+    {
+      "file": "native_original/envelopes/badger_119.png",
+      "sha256": "cada4f290dbfca2216d68358fd24017aa39c5b1b266472fbe5ee94c6d9dcf19b"
+    },
+    {
+      "file": "native_original/envelopes/badger_120.png",
+      "sha256": "0d3d18eeeef92ff06ba09c58b01512ceb8434b3cb3beb7c66ccba8fd58e19b86"
+    },
+    {
+      "file": "native_original/envelopes/badger_121.png",
+      "sha256": "0ce7ffaa93d7fee6bbafaf3d5ef55836d774da5da76a3a73f5e73c883b13b9e4"
+    },
+    {
+      "file": "native_original/envelopes/badger_122.png",
+      "sha256": "213e9cc49f32320faebb77a37075e4d453242d861a98ea414056db4901759591"
+    },
+    {
+      "file": "native_original/envelopes/badger_123.png",
+      "sha256": "8336f265d81d23c57c83ff7fc078183b2b32051d83ab5a6bd3076df409ca61fb"
+    },
+    {
+      "file": "native_original/envelopes/badger_124.png",
+      "sha256": "e4f5b8527a8d5b171416ea5f4aea72fd957ad649c23178372b15f2eaad603ebe"
+    },
+    {
+      "file": "native_original/envelopes/badger_125.png",
+      "sha256": "29eb039d22d3618773ddcc6ab4bc408cd4296c9a712cc5738f863fac8af6c70b"
+    },
+    {
+      "file": "native_original/envelopes/badger_126.png",
+      "sha256": "996d0c2231e95f0f12faee593345e5b7b93a735db9d8bf5ffbfcaac05b25d4ee"
+    },
+    {
+      "file": "native_original/envelopes/badger_127.png",
+      "sha256": "9f15b677cc59f6fa31b24b32711c09046efc37813fac3a55466de2da1a451277"
+    },
+    {
+      "file": "native_original/envelopes/badger_128.png",
+      "sha256": "c347d67dfae093b9552449f1bd69d28afbe213118e0e1fddcc018a787c2508d2"
+    },
+    {
+      "file": "native_original/envelopes/badger_129.png",
+      "sha256": "c46ab146050f758f7b4efd32c7323b8fb782635c0406098577114adbfcd4cbd0"
+    },
+    {
+      "file": "native_original/envelopes/badger_130.png",
+      "sha256": "7b34a6e21a545809fd374597072bcbf67a05a5391c5c2a3463f81713210ac63d"
+    },
+    {
+      "file": "native_original/envelopes/badger_131.png",
+      "sha256": "b155ee7a32e54c946ab462ba6835416489a43ff87fcdadc26822d796f2b8c6fc"
+    },
+    {
+      "file": "native_original/envelopes/badger_132.png",
+      "sha256": "36cf7f990ecdda371d0789978a4a5249cad566b2e200dafeb58dc4e9ec16b9e6"
+    },
+    {
+      "file": "native_original/envelopes/badger_133.png",
+      "sha256": "0d0ee6b9b0d1d4ee94e28d3b0b10bddce8f6bd31d6896792d462f943f27b46f7"
+    },
+    {
+      "file": "native_original/envelopes/badger_134.png",
+      "sha256": "07aca61384ac7d90d4052de28982a401a636597c1f36f0bf62e64b823a56403d"
+    },
+    {
+      "file": "native_original/envelopes/badger_135.png",
+      "sha256": "c7ae0664798999fc5be4418567cd757a710dc580667f1888d8755a655ec3a75b"
+    },
+    {
+      "file": "native_original/envelopes/badger_136.png",
+      "sha256": "7cd106fbdfe53328b9685cfa2b808dbf839cf225b08de14e1b873a60f4e4dd5d"
+    },
+    {
+      "file": "native_original/envelopes/badger_137.png",
+      "sha256": "023a5776da50671ca8f8ab64f809ca523d5e482ba3ecaf75949b33f137ef041b"
+    },
+    {
+      "file": "native_original/envelopes/badger_138.png",
+      "sha256": "7c4554fb3375ea193d49b8eee2356889da9fdd88e696e2b6fdaff62407f5b593"
+    },
+    {
+      "file": "native_original/envelopes/badger_139.png",
+      "sha256": "f9a8ff80efcb289618d244c298ec0842e5bb2e9777f41e427c3aa56e87af52f8"
+    },
+    {
+      "file": "native_original/envelopes/badger_140.png",
+      "sha256": "37db4418c5171807db58ed0ffe805e0e08ea4a2441a716c981b9b2dab4443fc0"
+    },
+    {
+      "file": "native_original/envelopes/badger_141.png",
+      "sha256": "7b4c00feea1fc796e633011fa0a91b8b97b179ff874b295feaa5fbe137460a7f"
+    },
+    {
+      "file": "native_original/envelopes/badger_142.png",
+      "sha256": "1dd3eb74419dd029be8f0af1896008dfaab352328e9ced7c980ec181aaef9dba"
+    },
+    {
+      "file": "native_original/envelopes/badger_143.png",
+      "sha256": "3ec8f2a83dc7151c3a6a22e47b823dc0ac776b46e94d87019c491b964fa4b163"
+    },
+    {
+      "file": "native_original/envelopes/badger_144.png",
+      "sha256": "bb597f0a028d5e85079d4aa3e598ec26ad51260660359283e09ff288044971fb"
+    },
+    {
+      "file": "native_original/envelopes/badger_145.png",
+      "sha256": "c29867a3d9f849967f1cb0241a5339bc078473ca8ad8f71e84bddd762414dc14"
+    },
+    {
+      "file": "native_original/envelopes/badger_146.png",
+      "sha256": "c2dda09e2698155036f22496bbdd85c67fa86e5199e15b592bad289f99218650"
+    },
+    {
+      "file": "native_original/envelopes/badger_147.png",
+      "sha256": "74a0c74c2d09216767c48e50c2ed6f6e1c7801734540181aaf08a2c80e5e1a87"
+    },
+    {
+      "file": "native_original/envelopes/badger_148.png",
+      "sha256": "7dd71207444e988c4e6163c96c11bc1cd967783911692f85a9102f362e4a15ef"
+    },
+    {
+      "file": "native_original/envelopes/badger_149.png",
+      "sha256": "4f2bc5c6de8f2c963841e1eab6438116cdd68236d4a32d187bc0325e458fb584"
+    },
+    {
+      "file": "native_original/envelopes/badger_150.png",
+      "sha256": "8f9ac6cc497d6c6cac6d1212d3017d04bd3c16317a2ed41c5a95c6a14834eb09"
+    },
+    {
+      "file": "native_original/envelopes/badger_151.png",
+      "sha256": "507feef330068baf09d90219a732e200d96bb47efe4087c71066e0d9df862d8e"
+    },
+    {
+      "file": "native_original/envelopes/badger_152.png",
+      "sha256": "639771c2c4cb37aaf56f788e778095a45497f221c1b3f2f74780162ea237f291"
+    },
+    {
+      "file": "native_original/envelopes/badger_153.png",
+      "sha256": "2a5bc6065642026a96301e2c4e761ad328f69ab49d6dfc633de9ca0a7cedd99f"
+    },
+    {
+      "file": "native_original/envelopes/badger_154.png",
+      "sha256": "e17fa64cbd628d7ec993968a1d7b947aa8f64d5040e4fb1d03963dd0abf13056"
+    },
+    {
+      "file": "native_original/envelopes/badger_155.png",
+      "sha256": "b05afa89966c3a4e5ebaad73b681adb1dfbaca41df1413d77044a340386331c2"
+    },
+    {
+      "file": "native_original/envelopes/badger_156.png",
+      "sha256": "6e7fbb9d4821a8dc1d3693c6ac7d518c6406058f3d048fc25a31daf52d676c6e"
+    },
+    {
+      "file": "native_original/envelopes/badger_157.png",
+      "sha256": "8e87c3a4257c60ef2a21c4acec4686e80a28a5553f5679dc47ba393321533531"
+    },
+    {
+      "file": "native_original/envelopes/badger_158.png",
+      "sha256": "52135cea414a739ec1e6da25ab3962040e1bcc7a308fcb8c20891daa068d2d97"
+    },
+    {
+      "file": "native_original/envelopes/badger_159.png",
+      "sha256": "4a7b2394a0e21caca74280d6995ea815aff963b03cc9ae1342b63a5c0e03d2ef"
+    },
+    {
+      "file": "native_original/envelopes/badger_160.png",
+      "sha256": "d603a5b91852f52efaf361320159834ec2fa77121cf9d6fbbfefa02c8e016e62"
+    },
+    {
+      "file": "native_original/envelopes/badger_161.png",
+      "sha256": "7bf0e5bb2349999a5e7fa2b2c52e5539dca823dd0a84b69c450e55231bb3dde1"
+    },
+    {
+      "file": "native_original/envelopes/badger_162.png",
+      "sha256": "be86397325a975b4720e900785662cfa24ff50e4dc27cdb166f6d20142ee52b6"
+    },
+    {
+      "file": "native_original/envelopes/badger_163.png",
+      "sha256": "8455a78cef5cfc2c1e6109330ac3d268da6659025ae5430c62565bf90e161983"
+    },
+    {
+      "file": "native_original/envelopes/badger_164.png",
+      "sha256": "63213d279706a6c109c7c9d5f4e867612aaed719b7b626d4cab500b4dbc12c5d"
+    },
+    {
+      "file": "native_original/envelopes/badger_165.png",
+      "sha256": "3452c51bee72a356b1543182366a3433c975c0ec5f248c19c609d6b3427c4bea"
+    },
+    {
+      "file": "native_original/envelopes/badger_166.png",
+      "sha256": "bc533d5a734e065644eb5b7a3d40021427818e9be592851c27318157436e4486"
+    },
+    {
+      "file": "native_original/envelopes/badger_167.png",
+      "sha256": "8af2b75c90b1e3cdbad27113ba543ef109f2c2510fa5b3771ca242766b59e207"
+    },
+    {
+      "file": "native_original/envelopes/badger_168.png",
+      "sha256": "800fa6f64898daaab02dec1b267cb65f23ced4af1d68d63f563de7117ea15f18"
+    },
+    {
+      "file": "native_original/envelopes/badger_169.png",
+      "sha256": "531e51d43509cc311e93eaebd8056aff216d524e28e305b6179f15b474b9851b"
+    },
+    {
+      "file": "native_original/envelopes/badger_170.png",
+      "sha256": "4e1f683e04ebbba666119057bc54ccea81e7f2831d4f6cd4877e8a9d5560ae65"
+    },
+    {
+      "file": "native_original/envelopes/badger_171.png",
+      "sha256": "27220bb7a1118c843014d8ab7abb34a46936c5ac6c320d21196e60e7ae397394"
+    },
+    {
+      "file": "native_original/envelopes/badger_172.png",
+      "sha256": "598ab3c7bc15eaa126e6c069cffd1c48f55a1843cbcfbd2fb9e94fe2ff8c3904"
+    },
+    {
+      "file": "native_original/envelopes/badger_173.png",
+      "sha256": "1d83c9a274a870ae58f265550d824542866dfd5b7edcde465a7892d0145c7bf0"
+    },
+    {
+      "file": "native_original/envelopes/badger_174.png",
+      "sha256": "0f1445bc4d2e306468f1df4f40dc1e8c88f72eb998c4091ed52a719369d531ae"
+    },
+    {
+      "file": "native_original/envelopes/badger_175.png",
+      "sha256": "136b5a1f17a464c19fa3e53e0296cc2e76a1af0cf0e7f6e04aca32a8ae060df4"
+    },
+    {
+      "file": "native_original/envelopes/badger_176.png",
+      "sha256": "0de0e3de8fd0677143d3218806c13f8647a2fec59024794ddd734018085f7204"
+    },
+    {
+      "file": "native_original/envelopes/badger_177.png",
+      "sha256": "3157f3f836d45c50946faf6adb27fdc7d8c62c27711fa8e3f4fa1b3d7c448075"
+    },
+    {
+      "file": "native_original/envelopes/badger_178.png",
+      "sha256": "b77db5863ac00e534a1c4f9b737bcbacea9bf3100669cc9a2781bde9b7a2653a"
+    },
+    {
+      "file": "native_original/envelopes/badger_179.png",
+      "sha256": "fa4db33ecfcdf057f1876439ea9ce299e3fe9aeb4f1cc5322dd77db134bb1644"
+    },
+    {
+      "file": "native_original/envelopes/badger_180.png",
+      "sha256": "c270429c53b124521ef1108bd7bd8e6698feb8a94cfc1f64882396233833ddbf"
+    },
+    {
+      "file": "native_original/envelopes/badger_181.png",
+      "sha256": "fbf8497369c62e9d2e81c85585ca6bfc74711ddf0f44d0b7c8dcb5ef122de37b"
+    },
+    {
+      "file": "native_original/envelopes/badger_182.png",
+      "sha256": "eeb55d2279733554cea88528342a1bf3eb833bcd2f3f94d5e5e61843fbb63ec1"
+    },
+    {
+      "file": "native_original/envelopes/badger_183.png",
+      "sha256": "64b977210c42bcd83994e90b05e8d60e3d72d45c13d14e68fcb78e978eb53953"
+    },
+    {
+      "file": "native_original/envelopes/badger_184.png",
+      "sha256": "bf33b1b5f1f1535b08ac1f1a02ddf928f00fa35ebbf31f11bc3037a7f2a5b77c"
+    },
+    {
+      "file": "native_original/envelopes/badger_185.png",
+      "sha256": "a96d7178bb073327573f70d8fd91e63649662b76e18d19b2c67420360c395fa6"
+    },
+    {
+      "file": "native_original/envelopes/badger_186.png",
+      "sha256": "e3af9879f67814ecc5d67c07007062a921f0e900b5d4eb800a95e15772b3f85d"
+    },
+    {
+      "file": "native_original/envelopes/badger_187.png",
+      "sha256": "353b923514da55989f339ce22809d763e1dbe7dda4cf94b3d4dbbb54d53e823d"
+    },
+    {
+      "file": "native_original/envelopes/badger_188.png",
+      "sha256": "907fc977ba8db4be2fdf29a11e6c0b2dff6a4ad2bab24627e03380cbb0fdc2cb"
+    },
+    {
+      "file": "native_original/envelopes/badger_189.png",
+      "sha256": "bfbba3f49085f99d7405a5c8f41941df7f0afb73cbdc0905f914b6774506e98d"
+    },
+    {
+      "file": "native_original/envelopes/badger_190.png",
+      "sha256": "e0b9a4821ef12312d98b2379fe7e98d2b0daa00bfa8b6cfb5ab16c60c583216b"
+    },
+    {
+      "file": "native_original/envelopes/badger_191.png",
+      "sha256": "fe4b21e3a2cdaadbdd3e2e3e9e8d0a1c717b21a280400d9f4213dc60946c2674"
+    },
+    {
+      "file": "native_original/envelopes/badger_192.png",
+      "sha256": "88afab5a81a859fe75bf5e16475bca7ef3936ef194f855af88b0ab4ccc4e5be2"
+    },
+    {
+      "file": "native_original/envelopes/badger_193.png",
+      "sha256": "56cb0295d2e060d70abb867def050cf90d88740c21776cf8be2f59e6b7d56b59"
+    },
+    {
+      "file": "native_original/envelopes/badger_194.png",
+      "sha256": "12b4765b06406f56c1560cf778c2d278f45fcf2d3ef7672ec3b5eaa21682b987"
+    },
+    {
+      "file": "native_original/envelopes/badger_195.png",
+      "sha256": "14b87cc5cc7b4e97ddacef7ecf368c35ca840895488124687043d93c37090718"
+    },
+    {
+      "file": "native_original/envelopes/badger_196.png",
+      "sha256": "ce442795b2207da525cf5de9a14c1a1e7fd571db13b9bb549e4374b63e1cbe8c"
+    },
+    {
+      "file": "native_original/envelopes/badger_197.png",
+      "sha256": "33d60882b9ee5a38a60362f77b27beb3ac3c86f80236af775aa960082b40e618"
+    },
+    {
+      "file": "native_original/envelopes/badger_198.png",
+      "sha256": "4c284e31bf29421e3b535a9f3e0f31ff2316ab17fd818116442949487fc2e5c6"
+    },
+    {
+      "file": "native_original/envelopes/badger_199.png",
+      "sha256": "c2cdaf68deae02ac3abafc526f00a335d6a378d2566abd8b3fb637fdcb571b27"
+    },
+    {
+      "file": "native_original/envelopes/badger_200.png",
+      "sha256": "1554a186fd4ff792b3cfd04066cbbe23cfd669e10012ee0791e774be6233245d"
+    },
+    {
+      "file": "native_original/envelopes/badger_201.png",
+      "sha256": "5cf8f7fdbc71f1db10a531379f9dd7540e8d93ebd805831db3aaba6b31bf4601"
+    },
+    {
+      "file": "native_original/envelopes/badger_202.png",
+      "sha256": "bcd4bd5250705433448ac3f3cbe8044c99fd1eff2d8c941d8ab1f565371e14fb"
+    },
+    {
+      "file": "native_original/envelopes/badger_203.png",
+      "sha256": "ba4cbc2efcb92be5665e006c5deedc2434ef49abbfa16b06bbece34b6449767f"
+    },
+    {
+      "file": "native_original/envelopes/badger_204.png",
+      "sha256": "1a2a682ed3b8702de8fd96d4db97f11410cf4de7bc402a8d9d6699f412b1f168"
+    },
+    {
+      "file": "native_original/envelopes/badger_205.png",
+      "sha256": "54b34679af21af6baf564896dd7af619ef3684014678efa36d10f38623056ba5"
+    },
+    {
+      "file": "native_original/envelopes/badger_206.png",
+      "sha256": "484844f360747056089d8e2635728a393fc9fb9d77a3c875a34b47aa7bfa0734"
+    },
+    {
+      "file": "native_original/envelopes/badger_207.png",
+      "sha256": "5a212372731a856a029e63b8948e932c4462dc4127cf11a39c0a6aed851835b0"
+    },
+    {
+      "file": "native_original/envelopes/badger_208.png",
+      "sha256": "d6a615a97a5ff0e0dfc30eaf4fe56a4ca1845881a78374c27cff0046abd52979"
+    },
+    {
+      "file": "native_original/envelopes/badger_209.png",
+      "sha256": "d2eef11331ffb94612b32a2046e7ecbc3057492d92c5da057e4ee14a66b1fb65"
+    },
+    {
+      "file": "native_original/envelopes/badger_210.png",
+      "sha256": "d0f1e7b7d03752cac5b21e31186a2d0c79edddda0e0a1b94ddfe0dea468aab95"
+    },
+    {
+      "file": "native_original/envelopes/badger_211.png",
+      "sha256": "d467c00e3b4483fc699f6cafd3f6896087294c63c2d6f15a110d3291ae8952b0"
+    },
+    {
+      "file": "native_original/envelopes/badger_212.png",
+      "sha256": "eec2d30b534eb16f02e331e4592f604757677034d0cf66b221be7c7f26a83e77"
+    },
+    {
+      "file": "native_original/envelopes/badger_213.png",
+      "sha256": "3427bffee136e988472d01f5e652bc62458ae8cf2192d1c9da5f68de8451c42e"
+    },
+    {
+      "file": "native_original/envelopes/badger_214.png",
+      "sha256": "d8f976d9e6dab57c4c44493f95efab7923c9c34b93723ac5cc9568504277e671"
+    },
+    {
+      "file": "native_original/envelopes/badger_215.png",
+      "sha256": "e4f61866fac41d9269c0347adcb24e4c3862eb8af6d07b75b83b1cc0962ba0b4"
+    },
+    {
+      "file": "native_original/envelopes/badger_216.png",
+      "sha256": "23448552c720f762d51552012aa10f717fb9cda07bcc53c7407683391a1d9c49"
+    },
+    {
+      "file": "native_original/envelopes/badger_217.png",
+      "sha256": "4978b87156af12990d7e30611a209960550c2c02260ac7bc12186beaf419ff14"
+    },
+    {
+      "file": "native_original/envelopes/badger_218.png",
+      "sha256": "cd45e987c73673fdd77b2d7b96e72b375a33725c695304bc5c53610a1fbd9c7b"
+    },
+    {
+      "file": "native_original/envelopes/badger_219.png",
+      "sha256": "71cc0b66dbfdf3c3e192be373fb03bd76c1a9a46a0089f37a92cc6ba33df9524"
+    },
+    {
+      "file": "native_original/envelopes/badger_220.png",
+      "sha256": "042000106e44863f6ee5b63e3d32c044d40b0edbe71a690472f01ddf81fd9778"
+    },
+    {
+      "file": "native_original/envelopes/badger_221.png",
+      "sha256": "10be64214123e6c9841cab970df18f6ab7e2f8cc0fa9606e87f7c21489f53535"
+    },
+    {
+      "file": "native_original/envelopes/badger_222.png",
+      "sha256": "64b2e6b7a18cfde033274d6ac0bcf8e7e9834c604ded1f42a5f021bbeeac9526"
+    },
+    {
+      "file": "native_original/envelopes/badger_223.png",
+      "sha256": "1e1a792592c3b26925a59e376c5c6a7faf904304ae6938150524907bc5522240"
+    },
+    {
+      "file": "native_original/envelopes/badger_224.png",
+      "sha256": "045c669e8ccb586a4d31f7d5f751bde806a792907aca95d672e68948aa9f36be"
+    },
+    {
+      "file": "native_original/envelopes/badger_225.png",
+      "sha256": "3c4511d6b2669626ac4aa19a3d3a48659d167a67d9c637c0a29cb742ee22f23f"
+    },
+    {
+      "file": "native_original/envelopes/badger_226.png",
+      "sha256": "25e5b6371c6dc1796ec18ceb530198bb8a4fdba21a2b8f9a0d0fcb3bb0be28cb"
+    },
+    {
+      "file": "native_original/envelopes/badger_227.png",
+      "sha256": "72eee2c35d255451e8438c0a5637606dc0f8e49d4aa49b3fd5b51c615352a36f"
+    },
+    {
+      "file": "native_original/envelopes/badger_228.png",
+      "sha256": "1815440a4c88266187f90f6ea7c12e99f81ce8c893bae87e87d19442efabbc5b"
+    },
+    {
+      "file": "native_original/envelopes/badger_229.png",
+      "sha256": "393ae98e0cd0ea29c3918fe0c15eca7a639f2471b601169b61ea5b60b591c698"
+    },
+    {
+      "file": "native_original/envelopes/badger_230.png",
+      "sha256": "61b1f7b7e8b2bc614418771819deb1d2fe6b82ea418844820545527c5ca6cd52"
+    },
+    {
+      "file": "native_original/envelopes/badger_231.png",
+      "sha256": "e5355666d2b5b51c26d84d76fedb811b41a7ee829234047853505ea287fc43d3"
+    },
+    {
+      "file": "native_original/envelopes/badger_232.png",
+      "sha256": "a246cdfdd638b06fb8ce2af9978b6988020a240aede3081c2e1122f106716fcc"
+    },
+    {
+      "file": "native_original/envelopes/badger_233.png",
+      "sha256": "42b683ab7eaa380dcce92d3750df86e40891644efc0c14409d54fad916da9eb6"
+    },
+    {
+      "file": "native_original/envelopes/badger_234.png",
+      "sha256": "eb4a8ede38c725815dc04bf00c694af35a3eefc087d1ba7c407d30fa7477e5a1"
+    },
+    {
+      "file": "native_original/envelopes/badger_235.png",
+      "sha256": "b1103634c926d2834a74ba9105bc35697cce8e93db3ab52dfd5880aa018e0b1b"
+    },
+    {
+      "file": "native_original/envelopes/badger_236.png",
+      "sha256": "a61a4f8e5b1f2002539fe64b21ec0f8b909098884e2e0b23fc6218041a721c03"
+    },
+    {
+      "file": "native_original/envelopes/badger_237.png",
+      "sha256": "3caa5b3b67af1b331481dea1e9f28f5e68f3b9cde491494e940c1df376320b42"
+    },
+    {
+      "file": "native_original/envelopes/badger_238.png",
+      "sha256": "27d2bba830a35a6d25fb94859b5b08b2e95f3096890b0f27e52aa1e9c66c8779"
+    },
+    {
+      "file": "native_original/envelopes/badger_239.png",
+      "sha256": "50348de2b0b0768ed71db9b775dfb8f8073778c1b433ca5b61824234fd25251e"
+    },
+    {
+      "file": "native_original/envelopes/badger_240.png",
+      "sha256": "c78701d49bdc4b95c1073983a1030d487a62f7493d4848c1a6834bbd69522268"
+    },
+    {
+      "file": "native_original/envelopes/badger_241.png",
+      "sha256": "521aeb72f7054941b3d85e1dc2932e6b5587c75bd9c935ebf1b4c7397a1b385a"
+    },
+    {
+      "file": "native_original/envelopes/badger_242.png",
+      "sha256": "37728e83ec902b76594b681322c968671426a19df4552c1bae7472cfad418ae7"
+    },
+    {
+      "file": "native_original/envelopes/badger_243.png",
+      "sha256": "3a408c0c9af3f6509131fc6286c8bd087f648b24b25743a2a3c3cf20d478e840"
+    },
+    {
+      "file": "native_original/envelopes/badger_244.png",
+      "sha256": "5e4596d0c21420e7e12129176607d7a699b6310b460a02042a9f0355e7c135e4"
+    },
+    {
+      "file": "native_original/envelopes/badger_245.png",
+      "sha256": "3a406987e365d3aef6a734bf34dbe435f104227a0492836e82f0fc425776fe3b"
+    },
+    {
+      "file": "native_original/envelopes/badger_246.png",
+      "sha256": "c6c7e56181947e680e6f092ebc767fcd6dee73b3ddcce78367e6fba29b95f61c"
+    },
+    {
+      "file": "native_original/envelopes/badger_247.png",
+      "sha256": "f171d22d8c1cd849f70a2244a40ac0b0af79ef679f45e4316430d7c265724a38"
+    },
+    {
+      "file": "native_original/envelopes/badger_248.png",
+      "sha256": "cada4f290dbfca2216d68358fd24017aa39c5b1b266472fbe5ee94c6d9dcf19b"
+    },
+    {
+      "file": "native_original/envelopes/badger_249.png",
+      "sha256": "0d3d18eeeef92ff06ba09c58b01512ceb8434b3cb3beb7c66ccba8fd58e19b86"
+    },
+    {
+      "file": "native_original/envelopes/badger_250.png",
+      "sha256": "0ce7ffaa93d7fee6bbafaf3d5ef55836d774da5da76a3a73f5e73c883b13b9e4"
+    },
+    {
+      "file": "native_original/envelopes/badger_251.png",
+      "sha256": "213e9cc49f32320faebb77a37075e4d453242d861a98ea414056db4901759591"
+    },
+    {
+      "file": "native_original/envelopes/badger_252.png",
+      "sha256": "8336f265d81d23c57c83ff7fc078183b2b32051d83ab5a6bd3076df409ca61fb"
+    },
+    {
+      "file": "native_original/envelopes/badger_253.png",
+      "sha256": "e4f5b8527a8d5b171416ea5f4aea72fd957ad649c23178372b15f2eaad603ebe"
+    },
+    {
+      "file": "native_original/envelopes/badger_254.png",
+      "sha256": "29eb039d22d3618773ddcc6ab4bc408cd4296c9a712cc5738f863fac8af6c70b"
+    },
+    {
+      "file": "native_original/envelopes/badger_255.png",
+      "sha256": "996d0c2231e95f0f12faee593345e5b7b93a735db9d8bf5ffbfcaac05b25d4ee"
+    },
+    {
+      "file": "native_original/envelopes/badger_256.png",
+      "sha256": "9f15b677cc59f6fa31b24b32711c09046efc37813fac3a55466de2da1a451277"
+    },
+    {
+      "file": "native_original/envelopes/badger_257.png",
+      "sha256": "c347d67dfae093b9552449f1bd69d28afbe213118e0e1fddcc018a787c2508d2"
+    },
+    {
+      "file": "native_current/envelopes/badger_0.png",
+      "sha256": "93a5579dcea97cdf564873e8fe868962262cfa38a8a072570e10a54bcad8b779"
+    },
+    {
+      "file": "native_current/envelopes/badger_1.png",
+      "sha256": "71aad427889e07f97ecd8bbe23daed99db95e362bc3e791f3ca07c6bc0c6b895"
+    },
+    {
+      "file": "native_current/envelopes/badger_2.png",
+      "sha256": "2dda51f3d81c2ed6b41342277d6ddc7e27e5efae92703b76a5ddf4844398c08d"
+    },
+    {
+      "file": "native_current/envelopes/badger_3.png",
+      "sha256": "8da6c20212f79c852a44d620a36140a0de5eabe5d79fbaa4827dd1fe3310b85d"
+    },
+    {
+      "file": "native_current/envelopes/badger_4.png",
+      "sha256": "6b80a3fa7b99c103822e900d2d54ea62161b454db2b815c7691d7de3dce1ca0f"
+    },
+    {
+      "file": "native_current/envelopes/badger_5.png",
+      "sha256": "8363e4e80e6c226c75b7be556912f95718127394726358e97b52cc6f60bc71cb"
+    },
+    {
+      "file": "native_current/envelopes/badger_6.png",
+      "sha256": "fdb0491c2eb2d61c6678ecbdce8d52044971370dfca713e0ee88e46040668ea9"
+    },
+    {
+      "file": "native_current/envelopes/badger_7.png",
+      "sha256": "ca189d2f5bc6b18f2a93a66fd7695ae0e3b3a7bfa69e5ecec25d915843e16ae0"
+    },
+    {
+      "file": "native_current/envelopes/badger_8.png",
+      "sha256": "edab0e100f7941f305defd22afed66849beea49467c27881ab56608a44f5412a"
+    },
+    {
+      "file": "native_current/envelopes/badger_9.png",
+      "sha256": "237f9e9dbd1a98a31773a3d6ece9d360cbaec98361167fbd0f390fe042e91dfe"
+    },
+    {
+      "file": "native_current/envelopes/badger_10.png",
+      "sha256": "9747fea53adebc56e256e84c03c45c8eacc841051858138cfb14ffdb130d58e7"
+    },
+    {
+      "file": "native_current/envelopes/badger_11.png",
+      "sha256": "23a93d5e22276d827479b505ba96272ed1ab8df94eb3cb1d9ef858aa32c890a8"
+    },
+    {
+      "file": "native_current/envelopes/badger_12.png",
+      "sha256": "e98233c5784b41f7adfa8dbd7e745912f04068c6c31b134ca4eef9386562e126"
+    },
+    {
+      "file": "native_current/envelopes/badger_13.png",
+      "sha256": "252990f8bc6141110065eb68db08e4f0f2700cf234644150fc835d418fcb0c11"
+    },
+    {
+      "file": "native_current/envelopes/badger_14.png",
+      "sha256": "8d181c428e3e16816716af88601782366bdfc1b49f7cacedb43718dcde478837"
+    },
+    {
+      "file": "native_current/envelopes/badger_15.png",
+      "sha256": "61f5b2c484170e21de8b020969baafa76ed537031bf97cbdccf00a5d71396212"
+    },
+    {
+      "file": "native_current/envelopes/badger_16.png",
+      "sha256": "5779d16672363b3ba9c14979b6d8cc615f15fb0a02bf1682dac7b726f690e152"
+    },
+    {
+      "file": "native_current/envelopes/badger_17.png",
+      "sha256": "a28b0d15478381a536af2d7b95d8beaca3a200215d05926755fa4589897f2985"
+    },
+    {
+      "file": "native_current/envelopes/badger_18.png",
+      "sha256": "7ce4a50dc7b8a5459465c15955e01ecf3faee2dd8468cd9fb56a2f8ae769d8e6"
+    },
+    {
+      "file": "native_current/envelopes/badger_19.png",
+      "sha256": "9e85588f31bd477cdc2ac8f8569db90abfe65bc9bf746d61a89e71ce20038051"
+    },
+    {
+      "file": "native_current/envelopes/badger_20.png",
+      "sha256": "630a0e4198cca1bb1c50a523f57bb0d3557fa7a918d47e8866ee47a312b1df24"
+    },
+    {
+      "file": "native_current/envelopes/badger_21.png",
+      "sha256": "687b17d24673135f4772b2e6dad2e4e469d36bb4cd611bf3151d27fcc033bf98"
+    },
+    {
+      "file": "native_current/envelopes/badger_22.png",
+      "sha256": "1cfe2a688198f93019919aa91b3ea4e66bfae7e01099ee01e66c564342d60fb8"
+    },
+    {
+      "file": "native_current/envelopes/badger_23.png",
+      "sha256": "8ac557139740b950596ac58ac2868499317c8af9f4dfddffe92b7d2b0dcdbb89"
+    },
+    {
+      "file": "native_current/envelopes/badger_24.png",
+      "sha256": "8b42c62f69ccb1f161a4ec06498f5b26e1baa4859a9a707c8c8462841296746f"
+    },
+    {
+      "file": "native_current/envelopes/badger_25.png",
+      "sha256": "e39f7e98ef881d4001212adc38b870e4a9b392e362900e337b5378ecc3f3710a"
+    },
+    {
+      "file": "native_current/envelopes/badger_26.png",
+      "sha256": "19c4cfaad2ea82d7274681a4a576d3f296542eaf75459561000b8f1c83bddf38"
+    },
+    {
+      "file": "native_current/envelopes/badger_27.png",
+      "sha256": "6514cc4e49ad7b1154633ebd2ff59a72366cbd40ba8233ef81054f8532d7d73f"
+    },
+    {
+      "file": "native_current/envelopes/badger_28.png",
+      "sha256": "14ae03b4c94a3784756f23d4c255870181d315f7f732802e03ba8009037353d1"
+    },
+    {
+      "file": "native_current/envelopes/badger_29.png",
+      "sha256": "939b56a35082a8082481452fd961ea0602617b912835370d5965a8d572c2d28f"
+    },
+    {
+      "file": "native_current/envelopes/badger_30.png",
+      "sha256": "779f0d159ee5a509ea4bd670b0c604efad3d293daafa0ef6ad5f383700f0132a"
+    },
+    {
+      "file": "native_current/envelopes/badger_31.png",
+      "sha256": "d87b1c1128fc3e5792220f760b68ed18a377dedf98f4e881185299ce8d0822c0"
+    },
+    {
+      "file": "native_current/envelopes/badger_32.png",
+      "sha256": "30ac47f3b557fe75a71c16f26623dafbb00aafc96d94c6e387a44dd1386cfac9"
+    },
+    {
+      "file": "native_current/envelopes/badger_33.png",
+      "sha256": "d278466ba32eaac067f5a1c4dcc59735dd51d6e01a9e13b58bcf13c820884883"
+    },
+    {
+      "file": "native_current/envelopes/badger_34.png",
+      "sha256": "b9a27d1d3a37ea8252b3ca7ef1e53d8fe01ea7c61baae55f4c15fc485136f106"
+    },
+    {
+      "file": "native_current/envelopes/badger_35.png",
+      "sha256": "3111a541c712468a3d0dd793f91000dff8201a187263a33f4d67681b8323db5d"
+    },
+    {
+      "file": "native_current/envelopes/badger_36.png",
+      "sha256": "b84593561cb3eb73ff955444641fac811f25edef10828aba0040663061738f04"
+    },
+    {
+      "file": "native_current/envelopes/badger_37.png",
+      "sha256": "af6c4e4f749777f849ab9471f3108424a192398df03028fd97adc0313e407066"
+    },
+    {
+      "file": "native_current/envelopes/badger_38.png",
+      "sha256": "15c2dfce3ce8d995556d6e9bcae31a3df770b4a8a55954dbb773aa869f370048"
+    },
+    {
+      "file": "native_current/envelopes/badger_39.png",
+      "sha256": "616257a8d79ebf1f4ff5eabf64214fe8d91500a34ecfd62dc4bb47149c94ce03"
+    },
+    {
+      "file": "native_current/envelopes/badger_40.png",
+      "sha256": "33ef5ab1d45b69d96776482322763afa53ee3031579d966d6f9de910dc0fc868"
+    },
+    {
+      "file": "native_current/envelopes/badger_41.png",
+      "sha256": "fb496147580e584b1584b6eeb794f1e83842ce33ea8cc6392ca1c3d8b74cdb07"
+    },
+    {
+      "file": "native_current/envelopes/badger_42.png",
+      "sha256": "9a4fd4d6cabec7b6c7ef0d073c6155e045135dbddaa5e74ed9e69e0997be9ec0"
+    },
+    {
+      "file": "native_current/envelopes/badger_43.png",
+      "sha256": "714219a9d6f7e4dabdbefbab1ad326922602a9c24055ed3d900fd064bd678c7e"
+    },
+    {
+      "file": "native_current/envelopes/badger_44.png",
+      "sha256": "98d8ee9e515ad59340b42c1bf6b97f872dd34624f6082f1139ff71a558f51deb"
+    },
+    {
+      "file": "native_current/envelopes/badger_45.png",
+      "sha256": "057bf97e2b05f24610e918ba7e685ff121c373284eeb85752ce1a27f56eb15ce"
+    },
+    {
+      "file": "native_current/envelopes/badger_46.png",
+      "sha256": "c1bbb16e59858d436a80c275fcea9df35c8a4a243af81cc027c58999a6dd05c1"
+    },
+    {
+      "file": "native_current/envelopes/badger_47.png",
+      "sha256": "e235192047036cb944c79925532d50bd24c45bddc2abce9f00c402ee952e8cb1"
+    },
+    {
+      "file": "native_current/envelopes/badger_48.png",
+      "sha256": "2aeb7a995dc279e8bbe1bb3ad04d95c83cebb129e32a9f4a530ff16277c2f79f"
+    },
+    {
+      "file": "native_current/envelopes/badger_49.png",
+      "sha256": "d4c0993aa462a2cdb1bf5b942532b5d9dc906c0b0ee7c7555c04f219d05830bc"
+    },
+    {
+      "file": "native_current/envelopes/badger_50.png",
+      "sha256": "d2070ff488cfbcab4b4ef888d45f25a565402aa4bda086623daf73e8b66f1fa9"
+    },
+    {
+      "file": "native_current/envelopes/badger_51.png",
+      "sha256": "4e6421f3124485e03ad9f018cb10134d24e590e5109750c3345164996a390173"
+    },
+    {
+      "file": "native_current/envelopes/badger_52.png",
+      "sha256": "d1ee6cc8dd07161c03ab0705f9a7ad71b635d6ddbd27c901c3e6d7d4538ef355"
+    },
+    {
+      "file": "native_current/envelopes/badger_53.png",
+      "sha256": "dcc616af74e74543fbaa75c6bbd94bc7b60112ca5d7bbba1c635ae3b13b97489"
+    },
+    {
+      "file": "native_current/envelopes/badger_54.png",
+      "sha256": "1e0520f4c8157e1a67ee420c20adc6049fabd0c59e6c303218ab79110d0c232b"
+    },
+    {
+      "file": "native_current/envelopes/badger_55.png",
+      "sha256": "0eb4715fb36b86dbf697a628b219edf9c5001b55bcbf2de9f5978c913d9aec61"
+    },
+    {
+      "file": "native_current/envelopes/badger_56.png",
+      "sha256": "d8b3ba7c8d987af14c45266eda2f1e33f4ee9d31f8f9a83a27d0ebfad7eb4273"
+    },
+    {
+      "file": "native_current/envelopes/badger_57.png",
+      "sha256": "0e1545cb9ff1aa3b4c4555c53ed75784d172b39d29aff73b4ded6faba3ed751a"
+    },
+    {
+      "file": "native_current/envelopes/badger_58.png",
+      "sha256": "702cae199fd7e0a1a2274fc324e8f44cf864a86e83114ed368cc9efe514b72e2"
+    },
+    {
+      "file": "native_current/envelopes/badger_59.png",
+      "sha256": "ead3b3fbf9ad5dc6015fe25db062b0c7e6f761430d2e4cc6f9752b7256436cf7"
+    },
+    {
+      "file": "native_current/envelopes/badger_60.png",
+      "sha256": "a47a5a037d61fa3373ec75814686e1ea62006d97b3f07f77506cf32667ca248d"
+    },
+    {
+      "file": "native_current/envelopes/badger_61.png",
+      "sha256": "07220fe076dec2603ce0260c7e12e3e40b41ac8c15cfb7e579c85eb20cfb62fd"
+    },
+    {
+      "file": "native_current/envelopes/badger_62.png",
+      "sha256": "25f8457a71df8c53e0bd23c1a5929e2893c7d6fe80b3b5d28d4d32d27f033f17"
+    },
+    {
+      "file": "native_current/envelopes/badger_63.png",
+      "sha256": "2ce555aa8ee469297f53ad1ebd0293a2cc176305be74d730a5c1a3323a02ebad"
+    },
+    {
+      "file": "native_current/envelopes/badger_64.png",
+      "sha256": "b9c8e88ba3855dc3a0f192f94e2602e48193f848550c6d1be6a15c5c786620f6"
+    },
+    {
+      "file": "native_current/envelopes/badger_65.png",
+      "sha256": "09ff6a7c40231c1f95eeac244f2dab76efabf17e483c10e81a24c79a5f571662"
+    },
+    {
+      "file": "native_current/envelopes/badger_66.png",
+      "sha256": "89e05d4ce9f2cc9219381f738e55e07d3a7c0d1fed9d6396fb142685f6c02039"
+    },
+    {
+      "file": "native_current/envelopes/badger_67.png",
+      "sha256": "5a7c3cb529ddc5c64722c1dd81940e743e3c466767aa0f243d6ee4f457e60476"
+    },
+    {
+      "file": "native_current/envelopes/badger_68.png",
+      "sha256": "1d4a24d774064d2af59fdf0d9f1879064818d914501524c61465756e3eea1a63"
+    },
+    {
+      "file": "native_current/envelopes/badger_69.png",
+      "sha256": "a7ae0b1dbb6f29ee48b66e6cd7c8a826c1f5930c4230ae5a6a3b05a1398daa24"
+    },
+    {
+      "file": "native_current/envelopes/badger_70.png",
+      "sha256": "2946e54e0f82105f4a5fc78565e62dcb2010d18642f151f96f0ed58592f2adfb"
+    },
+    {
+      "file": "native_current/envelopes/badger_71.png",
+      "sha256": "4332f4a4ed4a68ebaf3db3140329b95ac5d99cf54080c4e4c142f0a04ab98558"
+    },
+    {
+      "file": "native_current/envelopes/badger_72.png",
+      "sha256": "fddbf58d6b3e05d2d4f6057ff394b4db2362f90ee240a852ab174780ef1def2c"
+    },
+    {
+      "file": "native_current/envelopes/badger_73.png",
+      "sha256": "72a73b9e04c29b33b6dd71eef698614a112b8332591747275b1730a3e9a1b412"
+    },
+    {
+      "file": "native_current/envelopes/badger_74.png",
+      "sha256": "fada95ce62e7f19160c9f9e46b3eff0c64da553d7a21cb0dc8a4e56c96f83853"
+    },
+    {
+      "file": "native_current/envelopes/badger_75.png",
+      "sha256": "285cf0aae09276877a08ba43b9b2956358e444623d5ec844d68dee2c36873e0b"
+    },
+    {
+      "file": "native_current/envelopes/badger_76.png",
+      "sha256": "3bea95068af432b1c4e989edec62f73bddfa499e5ba7bd0ebfb8358c90ab3202"
+    },
+    {
+      "file": "native_current/envelopes/badger_77.png",
+      "sha256": "7a9704c3d996b8d51ec6169f9168f0d33577f34e3c5ba27050da03cda30cec38"
+    },
+    {
+      "file": "native_current/envelopes/badger_78.png",
+      "sha256": "a4b4ba19122e1726b68296f21a4ec761f173298f472bee9193e7b20fd863c76d"
+    },
+    {
+      "file": "native_current/envelopes/badger_79.png",
+      "sha256": "cc018984575a83bcb7d731b34b3d0bdf6247134b87230c000f1ad884bc2605b0"
+    },
+    {
+      "file": "native_current/envelopes/badger_80.png",
+      "sha256": "9953de55fa501ba6a50f6eed847f4b90686199d798ba21bb77cb868130e157ad"
+    },
+    {
+      "file": "native_current/envelopes/badger_81.png",
+      "sha256": "fc14a84b9857295278592554b6f634403a8f7aae80d15c2a8bc180be5a619517"
+    },
+    {
+      "file": "native_current/envelopes/badger_82.png",
+      "sha256": "3c85094e0b1920566c6a0bddf292006a5d979a94b7d4375b73b331db7885ba90"
+    },
+    {
+      "file": "native_current/envelopes/badger_83.png",
+      "sha256": "93f4a393174800e37c662c23ccdabfac23541c4b7e618cb47cdab6bdb411db95"
+    },
+    {
+      "file": "native_current/envelopes/badger_84.png",
+      "sha256": "a4158078517dc754b4d69d44785708148ab4dee0f1199c261958318a9aaf130d"
+    },
+    {
+      "file": "native_current/envelopes/badger_85.png",
+      "sha256": "ac9f141a60918bb47bca12048051c4aa1acb707bc29f89c314b950769b0ac5a4"
+    },
+    {
+      "file": "native_current/envelopes/badger_86.png",
+      "sha256": "5ec4df0612c05767a8174ad3e84b085d5807b94279856b7039aba4e2d81e60fc"
+    },
+    {
+      "file": "native_current/envelopes/badger_87.png",
+      "sha256": "d65fe7ca87ee0a833bbfe3ec356843514871d216581c18b83352b790f4c209c7"
+    },
+    {
+      "file": "native_current/envelopes/badger_88.png",
+      "sha256": "afbc111c3110cbe8281d7cc0b35185526bb6735337f1f6a41e5d6f46ca0cdd64"
+    },
+    {
+      "file": "native_current/envelopes/badger_89.png",
+      "sha256": "6906db9a250e61d2b38b35ee14367a3bb57a2eda34aea16355b7149f76dd0fa7"
+    },
+    {
+      "file": "native_current/envelopes/badger_90.png",
+      "sha256": "20854d984565a186f3a6ad041be2f65143fd13a1858565a4ff608834b060d00d"
+    },
+    {
+      "file": "native_current/envelopes/badger_91.png",
+      "sha256": "ef277c3c2efef73e65f3dc2c310333a319a44a2651809f695e99cf5b3a990eff"
+    },
+    {
+      "file": "native_current/envelopes/badger_92.png",
+      "sha256": "b92bf0d691915a7092490bbc276c811c18ee02c665c40b4d98aadca6d5aeb448"
+    },
+    {
+      "file": "native_current/envelopes/badger_93.png",
+      "sha256": "af4b64659a56e92fa2815b6c788c3afa26aa486c4b58692b4477460948c59332"
+    },
+    {
+      "file": "native_current/envelopes/badger_94.png",
+      "sha256": "0628c081aa9ddd0e4f4ce5a63baba98665b877bca2ae165618fabd47c4c95a0c"
+    },
+    {
+      "file": "native_current/envelopes/badger_95.png",
+      "sha256": "083cd7bcd39c45c096cfe8d1b789c5c896675aaf40be588edd2acbc696d858f2"
+    },
+    {
+      "file": "native_current/envelopes/badger_96.png",
+      "sha256": "c0d2733237bf5b488ed4842eb0c2cdaab7d06f859c7d883e5ac4897757386946"
+    },
+    {
+      "file": "native_current/envelopes/badger_97.png",
+      "sha256": "311361a4368a853ed075226c62ac7c0968a5b412ebb3bb3e5edf2e90dae3ee13"
+    },
+    {
+      "file": "native_current/envelopes/badger_98.png",
+      "sha256": "4cc625371f81ca35bcc4063bf21d19144e186941ee927cc204587707b7ac007e"
+    },
+    {
+      "file": "native_current/envelopes/badger_99.png",
+      "sha256": "9d4d4ef2d88abac641d85310d167af17825704bcf453aea4c5c2d352fc85cedf"
+    },
+    {
+      "file": "native_current/envelopes/badger_100.png",
+      "sha256": "8a23ceadad2642627ec6e99a1879c04b58b2bd85065b1c93dccece88104d1b17"
+    },
+    {
+      "file": "native_current/envelopes/badger_101.png",
+      "sha256": "4b20c533567022698e84c02901d089df8ca54e6d5e4be0c7beeed5cd8cb0cd3d"
+    },
+    {
+      "file": "native_current/envelopes/badger_102.png",
+      "sha256": "ed9f1d2cbf8e69df45c903c347258e8fefc659b092e36c390ae1ed54ab4029e2"
+    },
+    {
+      "file": "native_current/envelopes/badger_103.png",
+      "sha256": "beda7a1ba2b27fb40644f4b554425e3e2e0f6d54dcb387bb3b98c0b2d9a64c62"
+    },
+    {
+      "file": "native_current/envelopes/badger_104.png",
+      "sha256": "1e025d7f0c1c8dff3bf4d79918fa59a9d44caffe31fc083d8d12d03e48b0fcc7"
+    },
+    {
+      "file": "native_current/envelopes/badger_105.png",
+      "sha256": "8dae44b053490bd3dbec6f86bfa9e405d92843c5d11d0ca1857320da9f56089a"
+    },
+    {
+      "file": "native_current/envelopes/badger_106.png",
+      "sha256": "db42ca5d76e69ffff1e76bf0833bf02f34dcdcd54fd64b19b1fc407d55a0b024"
+    },
+    {
+      "file": "native_current/envelopes/badger_107.png",
+      "sha256": "5ecfa2c1335a511c313e536f0f30ca95b5141791215182be64bf6157138222ac"
+    },
+    {
+      "file": "native_current/envelopes/badger_108.png",
+      "sha256": "0401919745670e5f2b0ff0a00dfb62d288d020b48a13a839e5ade3b347093090"
+    },
+    {
+      "file": "native_current/envelopes/badger_109.png",
+      "sha256": "6f23249ed9facefc0a0b0ce0fd488fe94442141c4f062c49088d60150a8585d7"
+    },
+    {
+      "file": "native_current/envelopes/badger_110.png",
+      "sha256": "18b85ea1f2c35bb3a70d5500cc18f04442165260346039c93aba5f8d01845f77"
+    },
+    {
+      "file": "native_current/envelopes/badger_111.png",
+      "sha256": "c70a19a50d7af55f77dc9d7e7e58deda50a1eadc75aa7e286d96441681afab2a"
+    },
+    {
+      "file": "native_current/envelopes/badger_112.png",
+      "sha256": "108cfd2062709fba77f583ea0e95f69e67b34ecd769049931c1f791de6feeb2d"
+    },
+    {
+      "file": "native_current/envelopes/badger_113.png",
+      "sha256": "e27b38f1d7d16091647545886a997819731b1c1cd8811323c3ba8a5f0e393bff"
+    },
+    {
+      "file": "native_current/envelopes/badger_114.png",
+      "sha256": "1d54ed86fb2e08d58ae926beba2b47f173376b3dd20b5c3b2bea26a9b46056ac"
+    },
+    {
+      "file": "native_current/envelopes/badger_115.png",
+      "sha256": "6356cba35d81db86247f079a64a649443cfbaa13b132a5ee5c42b6ecb4aeea96"
+    },
+    {
+      "file": "native_current/envelopes/badger_116.png",
+      "sha256": "7df39d6b04db1f96664323bdc783a761f2dbd5ed40e8c9a8bff5dfd42eede001"
+    },
+    {
+      "file": "native_current/envelopes/badger_117.png",
+      "sha256": "94ae79a63c0626d6ce650bb8157e6dcb122d27cf0b08c0d55a203b9b183f72e1"
+    },
+    {
+      "file": "native_current/envelopes/badger_118.png",
+      "sha256": "96a26cf404cd5239b69e7530c6d502ea301dc84bbbfab5daaba00f6ca600ee1c"
+    },
+    {
+      "file": "native_current/envelopes/badger_119.png",
+      "sha256": "40f0de5fe1bd9eb713053880347dcfcacfd0551cef14d65b0385d7e96295c982"
+    },
+    {
+      "file": "native_current/envelopes/badger_120.png",
+      "sha256": "8052a84e58530e39d89ef0d2687fa6988cbf985def2e0453297358c465543c0b"
+    },
+    {
+      "file": "native_current/envelopes/badger_121.png",
+      "sha256": "6547df1d9f1e092d2e88f2ddbad374044242026c43a771e68f04fe98fc99228e"
+    },
+    {
+      "file": "native_current/envelopes/badger_122.png",
+      "sha256": "32572fb77c7cc570c7fb22df76e6e0c38f74bc2cec2a42fa4933fe06dd72f413"
+    },
+    {
+      "file": "native_current/envelopes/badger_123.png",
+      "sha256": "8db91bbffdd9054adde13b3b3e456744d8ee305e6e35d45ba1fc12c738732f93"
+    },
+    {
+      "file": "native_current/envelopes/badger_124.png",
+      "sha256": "a65e64c7bb77e3e6aec302762942ba03d81de791cf6bba445327b18ad061b0de"
+    },
+    {
+      "file": "native_current/envelopes/badger_125.png",
+      "sha256": "1b40cc7f225d71070a57e99efcc500285ead5854295ec8752ddd60bbefe05c85"
+    },
+    {
+      "file": "native_current/envelopes/badger_126.png",
+      "sha256": "96e49c0b0650ff8631363bbf06ca6e2ced24893c1e0186f36392f72bca866926"
+    },
+    {
+      "file": "native_current/envelopes/badger_127.png",
+      "sha256": "e37225eed273f9c9a830e64522fcc38773b1508344e6a822fc65d6b3164e05e3"
+    },
+    {
+      "file": "native_current/envelopes/badger_128.png",
+      "sha256": "fb6c23e8af921ca1259017bb36ef23abc69ba4fbde858793be3dc9b324f00a51"
+    },
+    {
+      "file": "native_current/envelopes/badger_129.png",
+      "sha256": "22805b72d4661e8a6f088b7f50a5f2399ef699df5b7bc9bfeb3a50217932d182"
+    },
+    {
+      "file": "native_current/envelopes/badger_130.png",
+      "sha256": "3d1ad59a8680326cdc6c6d0dcd121244a81fbd02c0d1249ccc84e336ba3fe91a"
+    },
+    {
+      "file": "native_current/envelopes/badger_131.png",
+      "sha256": "bf6e0706c6bcba37d7905fd12c7c745ad1f46f9473f35b28f155d1eae7e75e75"
+    },
+    {
+      "file": "native_current/envelopes/badger_132.png",
+      "sha256": "15d9ff8a0d9b082615f81ff92478d5c1e26198f994892cd72a235b6826f462e3"
+    },
+    {
+      "file": "native_current/envelopes/badger_133.png",
+      "sha256": "db89e85744aa3bc1aa455bf0e8dc9447a2ee10f84104d43c2c50a1cf9d31dda7"
+    },
+    {
+      "file": "native_current/envelopes/badger_134.png",
+      "sha256": "49a38c21cbc609761017fa3be23256da507c66c365309eb03272bbf7fdedf410"
+    },
+    {
+      "file": "native_current/envelopes/badger_135.png",
+      "sha256": "13453f8a85af62ed7f1cfef6dc99dfeafbb1f368af53ab02aaa136387b5cf9ba"
+    },
+    {
+      "file": "native_current/envelopes/badger_136.png",
+      "sha256": "bb077ec5d7c4b63b9ab4b32bbd83741b3702ea84093696bcb6d83fac5957d606"
+    },
+    {
+      "file": "native_current/envelopes/badger_137.png",
+      "sha256": "d20db0fc7f3171d67487dd542f4014315a2cfa81ec2a74518ffd93920c823192"
+    },
+    {
+      "file": "native_current/envelopes/badger_138.png",
+      "sha256": "bf7f53d995223b2deb691b128a9a761c7d86c82465bc1df6dba870c02bd81ff3"
+    },
+    {
+      "file": "native_current/envelopes/badger_139.png",
+      "sha256": "3e485b5302fdbceb8bb7cabf0ed32b039f703eb8ef488640d1db189e92939bfe"
+    },
+    {
+      "file": "native_current/envelopes/badger_140.png",
+      "sha256": "b488485d55ed7568ffe9edb5f3eb6a7efde7c7e723b75b48302cb9484e1070cb"
+    },
+    {
+      "file": "native_current/envelopes/badger_141.png",
+      "sha256": "e687f9031861186caa82a7b04cc070745d9c5ee5389160c52bec625b96b111f5"
+    },
+    {
+      "file": "native_current/envelopes/badger_142.png",
+      "sha256": "a4c60cfd8c6d9a196a7535c107450efc8da2a301efd0efdedfbe930fa11d34ac"
+    },
+    {
+      "file": "native_current/envelopes/badger_143.png",
+      "sha256": "91abba2425cc8b621e43215ec11e850c796d6f2c4bfc9ffdfb6c72adaee72bd9"
+    },
+    {
+      "file": "native_current/envelopes/badger_144.png",
+      "sha256": "74d09b721090b5e7b60147b758d527b956e3c53a499f4e37c44dd7224dfbf4fd"
+    },
+    {
+      "file": "native_current/envelopes/badger_145.png",
+      "sha256": "7d3c02d8a2349546f9ef98506bbe2d8086102f3b9b68f702852dbabd5a527caa"
+    },
+    {
+      "file": "native_current/envelopes/badger_146.png",
+      "sha256": "65bf16a1ea6d37148f694c6e618e4d99884a59a543f682ce92f6388d8dfea71d"
+    },
+    {
+      "file": "native_current/envelopes/badger_147.png",
+      "sha256": "4aa6736c316a789b7703003a7f66516301dd7fe511219e0b32a87a7fcb3d8732"
+    },
+    {
+      "file": "native_current/envelopes/badger_148.png",
+      "sha256": "5011a34b2a6643208ab52cf53298aef4fcc357798f3de6619155db050cb114e7"
+    },
+    {
+      "file": "native_current/envelopes/badger_149.png",
+      "sha256": "b6c1bf6dd252c216ac3b2209cc2ee05c4ff73abf667ca76ca83d49d97ee73b65"
+    },
+    {
+      "file": "native_current/envelopes/badger_150.png",
+      "sha256": "99aea3b8d30509bafcb70020bce30c726bef1a99fb44bbee7303aa95e68cbd9d"
+    },
+    {
+      "file": "native_current/envelopes/badger_151.png",
+      "sha256": "5a6a11010f83dfd05bf806f67297fa948ebded2d7cbef33bdf7faa3eff6248d6"
+    },
+    {
+      "file": "native_current/envelopes/badger_152.png",
+      "sha256": "4a45d64b424ddab4725dee770eed053532280f6cc7ab3c227685dd4ff149f55e"
+    },
+    {
+      "file": "native_current/envelopes/badger_153.png",
+      "sha256": "7fb5e09479025405391f62499afecb843f7dd6997d4f073ec3e0405ccf84d21d"
+    },
+    {
+      "file": "native_current/envelopes/badger_154.png",
+      "sha256": "c8eb07855b2ec0ace1cc9b8b5c2373509f357e48f658325a5fc175f40a659cd7"
+    },
+    {
+      "file": "native_current/envelopes/badger_155.png",
+      "sha256": "b2e4ddff1febcc5eea56cbf83fc723d0dcf8b4d993a994f77fc520170c52db22"
+    },
+    {
+      "file": "native_current/envelopes/badger_156.png",
+      "sha256": "364dea83df79f3dc79520bed47a15ccfebc1f8cdbc14a463411e206a0832e9fd"
+    },
+    {
+      "file": "native_current/envelopes/badger_157.png",
+      "sha256": "bc1b957fbce1a76a49395f8d45b6a6c0ba7f867d49911f33376ee5202a09fdfc"
+    },
+    {
+      "file": "native_current/envelopes/badger_158.png",
+      "sha256": "d719380a32a76be4569a3987206f221f8e302394e975e9d12410d421084c5e76"
+    },
+    {
+      "file": "native_current/envelopes/badger_159.png",
+      "sha256": "56eaf948f371a9ba04c2e47e152e3f1e8eeb828e2596c5e8d30eb60a245cb390"
+    },
+    {
+      "file": "native_current/envelopes/badger_160.png",
+      "sha256": "a4423899b9b0e96321e06a8c72a4d373e399cbebe89e7c7045c7a3e24a35209f"
+    },
+    {
+      "file": "native_current/envelopes/badger_161.png",
+      "sha256": "1e1a9acd2f44ec6d69aa6fdbf19ceba7fce21698605de1f53154b5c4a8d8a4e0"
+    },
+    {
+      "file": "native_current/envelopes/badger_162.png",
+      "sha256": "aaaee1126dcab157a21c7edae7a3adcb31a56c27e1de72a958278f809b24f871"
+    },
+    {
+      "file": "native_current/envelopes/badger_163.png",
+      "sha256": "30e246957c3a09dfd95a8cf36f5b03e0343ed97c940210913beb545cbfcaf412"
+    },
+    {
+      "file": "native_current/envelopes/badger_164.png",
+      "sha256": "a4d5a960fea92ea51162570cca3c6cbdf1551d40f22f3074257e2c476ab4a771"
+    },
+    {
+      "file": "native_current/envelopes/badger_165.png",
+      "sha256": "16631080b73ddb229480f570f5221504d9c7859db39044fe4f43543fd3d533c2"
+    },
+    {
+      "file": "native_current/envelopes/badger_166.png",
+      "sha256": "1eddb395f5cdf6f492fef039f3302612a978c8efefcf4e5d5468c13e58a94993"
+    },
+    {
+      "file": "native_current/envelopes/badger_167.png",
+      "sha256": "69558826371b746a3c53a5465d706dc1308f8153e0d643f5171c12b95e18d823"
+    },
+    {
+      "file": "native_current/envelopes/badger_168.png",
+      "sha256": "2b904e5b7948a4010acd42580b5acce4f971891a130e628daba162d19b85a226"
+    },
+    {
+      "file": "native_current/envelopes/badger_169.png",
+      "sha256": "a8c7fde019ec83cc79caa2f6bceffe22e3bb94af5fd00c6ddeed37552c480672"
+    },
+    {
+      "file": "native_current/envelopes/badger_170.png",
+      "sha256": "6650ff5438f017c7db93654f1a273e7c7b9288a793fa92c7159698c4fbdc7794"
+    },
+    {
+      "file": "native_current/envelopes/badger_171.png",
+      "sha256": "8dbe4da06a5612542d5dc1ae120e71ec5997b1cb2bcf3b0ad9535a5540bed89d"
+    },
+    {
+      "file": "native_current/envelopes/badger_172.png",
+      "sha256": "9eda609d71a4bc13ce1e815bc82f8100c3a133e9443c1b6b84cb4d73dbf923cf"
+    },
+    {
+      "file": "native_current/envelopes/badger_173.png",
+      "sha256": "e4274a63d6d3218a536185922bc63e4658b8d545dd098d5f99fda0152cf216d8"
+    },
+    {
+      "file": "native_current/envelopes/badger_174.png",
+      "sha256": "1e1115fc6dba33284d1cd39e5a7657ddd2fbc74339aaa0f2e82792b76d65dd0c"
+    },
+    {
+      "file": "native_current/envelopes/badger_175.png",
+      "sha256": "7f4ed3913a4e1f0fa26b9dec530120be17f92a820bf6397ee409898ae6131bc8"
+    },
+    {
+      "file": "native_current/envelopes/badger_176.png",
+      "sha256": "4410c2618da710741d0dfedd8e3eba48fbf5eadfd643dccaed240cc28d3219c0"
+    },
+    {
+      "file": "native_current/envelopes/badger_177.png",
+      "sha256": "c40324ba79d72bb23a2615e3c2c4d9ca2b2ee079276d2ea681ebe68057406720"
+    },
+    {
+      "file": "native_current/envelopes/badger_178.png",
+      "sha256": "e692ba32dac3d0e8cc0e626cd77f2d36dd499f535b02597c4464d56677f72b28"
+    },
+    {
+      "file": "native_current/envelopes/badger_179.png",
+      "sha256": "892cb51f710859b5543b1a376341d5e59f1d9bce02de7dc4bb2e4ece1937dd25"
+    },
+    {
+      "file": "native_current/envelopes/badger_180.png",
+      "sha256": "259fe00a860f1dfe05502a1be31d1baf10c285191cffb8fb20d7e14193403b4a"
+    },
+    {
+      "file": "native_current/envelopes/badger_181.png",
+      "sha256": "20aabbee79a8bc37ce6f432c805d5f92e533b113d6d71edf9acdd6d1c7a25789"
+    },
+    {
+      "file": "native_current/envelopes/badger_182.png",
+      "sha256": "b3719fdaed1e6f577ab1438e53acdad50811881d69fee061f6a9598b6d3c2d74"
+    },
+    {
+      "file": "native_current/envelopes/badger_183.png",
+      "sha256": "28f61175c5f716be4495eef87bd183c8ce7a34eafb3a15a73faf5bb4fc730533"
+    },
+    {
+      "file": "native_current/envelopes/badger_184.png",
+      "sha256": "a007b1f5f11d382500e6c8a1931b1a09c89302a99a3e3273e92cc8927f9da614"
+    },
+    {
+      "file": "native_current/envelopes/badger_185.png",
+      "sha256": "765b73c30d38c686d4fd50dc67a934bd9945419ef073693449f77b18a003023a"
+    },
+    {
+      "file": "native_current/envelopes/badger_186.png",
+      "sha256": "baf36bce85e0d467247910f2446e24f8d3d71337f1fab875b4450a1a3f485ae9"
+    },
+    {
+      "file": "native_current/envelopes/badger_187.png",
+      "sha256": "a3f59c3c2a06b05c9f8fdcafb1eaca3ef88622efec11b0ce0516ff5fdc57ce5a"
+    },
+    {
+      "file": "native_current/envelopes/badger_188.png",
+      "sha256": "ee11a3b26dae5e3f8d816e08bd71b646f6491b94f6816bee37e28facfc0be1bf"
+    },
+    {
+      "file": "native_current/envelopes/badger_189.png",
+      "sha256": "54efa4d0e3abb62f32bed2a707e7e913105d9d65fd71ac03572734271375d02e"
+    },
+    {
+      "file": "native_current/envelopes/badger_190.png",
+      "sha256": "9a650772abc0332604c47f758409687a910bb94d18c1a534281c6ad801ed90c4"
+    },
+    {
+      "file": "native_current/envelopes/badger_191.png",
+      "sha256": "b745728aef3bfdf2e3c7fbf0ef54d8711c3931ffa094d2697fd29d0523f67d90"
+    },
+    {
+      "file": "native_current/envelopes/badger_192.png",
+      "sha256": "bad59b0921e0b91d1ea3b702e16c5d88c5d3a77758f19891b7bbddb5859f9495"
+    },
+    {
+      "file": "native_current/envelopes/badger_193.png",
+      "sha256": "b5bf439be5da45c60d784ac16e259dee1c274b2a9fc528578fb58b463946cf8c"
+    },
+    {
+      "file": "native_current/envelopes/badger_194.png",
+      "sha256": "8c8fdf50b60a4b7fc5cc675e1b8dd234f02f870dba617826bfcf74e051b68419"
+    },
+    {
+      "file": "native_current/envelopes/badger_195.png",
+      "sha256": "56432a391c9fbd4ba2054f6a3385aceb1d1329e9bdd797a71a43b5d88d5d3156"
+    },
+    {
+      "file": "native_current/envelopes/badger_196.png",
+      "sha256": "2498180505f6d379a847cc0b58b89a5f0f5cc5ec5f4fd2b5b4eab416d489ba88"
+    },
+    {
+      "file": "native_current/envelopes/badger_197.png",
+      "sha256": "075b635b08665baba34fff328acaabab7788508489ae849e8985d9ed2506cabe"
+    },
+    {
+      "file": "native_current/envelopes/badger_198.png",
+      "sha256": "08275bc3ac1afe2ff61a29ba5e3ca64c64b8defabb0493aea565a990622970cc"
+    },
+    {
+      "file": "native_current/envelopes/badger_199.png",
+      "sha256": "e0751e737d0dd45b504823e1d0ec0dec10a7db0d94699a5278e8eaf673831f68"
+    },
+    {
+      "file": "native_current/envelopes/badger_200.png",
+      "sha256": "dc3d984352148c9fa1bc412061c39ac588065aa9550676c098e5fbaa3457f6a8"
+    },
+    {
+      "file": "native_current/envelopes/badger_201.png",
+      "sha256": "1397b6d3d2a95c577fda3e9699701f6d51eb33f0d8cf7b79d7345b0c87f92516"
+    },
+    {
+      "file": "native_current/envelopes/badger_202.png",
+      "sha256": "6ea7f929a49db224800534c845bbba423cf2633587c0c75014497747f33d141a"
+    },
+    {
+      "file": "native_current/envelopes/badger_203.png",
+      "sha256": "fbad080e3c8a2529c4665c74a64719e2e61ffe3037016ff48afbe98641233301"
+    },
+    {
+      "file": "native_current/envelopes/badger_204.png",
+      "sha256": "211bc54bda49bc0f0cee7f6814cbf72950805699beeea3e6b22bd67162158907"
+    },
+    {
+      "file": "native_current/envelopes/badger_205.png",
+      "sha256": "c6dc52077a8cf04975d1f0e71cc094f0749cf63b6c241fbc4df6fed510580e60"
+    },
+    {
+      "file": "native_current/envelopes/badger_206.png",
+      "sha256": "dfdd0fed4710c2dfd6d477f2311c968e750446e16d2adccc052ceb2e372134d7"
+    },
+    {
+      "file": "native_current/envelopes/badger_207.png",
+      "sha256": "782dd5798d5b48254418413b78a565480a56e0ea02a40693538994cb19f1cfe5"
+    },
+    {
+      "file": "native_current/envelopes/badger_208.png",
+      "sha256": "604f207c6dd0b0625de8f20487cc49d5b71a519a0db7fec8277fdc6c13a52485"
+    },
+    {
+      "file": "native_current/envelopes/badger_209.png",
+      "sha256": "e89bfec4bed1c9702598285f608de7516eb2bfd717f6a9d28c141e5f7af36bde"
+    },
+    {
+      "file": "native_current/envelopes/badger_210.png",
+      "sha256": "13fd9773fd836f178bdadb430eeef5996a84e28e570e9e97266b296f0df54283"
+    },
+    {
+      "file": "native_current/envelopes/badger_211.png",
+      "sha256": "6e66cd4395a9c3a296b4832332083105b946c1b63ddfec4ee64a618a3193a49e"
+    },
+    {
+      "file": "native_current/envelopes/badger_212.png",
+      "sha256": "58f51b02a73d19e78068a8c6ddb8d5d9f3c3cafba8158a83cfe7046655ef12f0"
+    },
+    {
+      "file": "native_current/envelopes/badger_213.png",
+      "sha256": "927edd3ca22c3513914eb44337408e3fa1f9408623a91efd4085d0f3c16612ec"
+    },
+    {
+      "file": "native_current/envelopes/badger_214.png",
+      "sha256": "40703317989c554c33bbdc71f32a071ebb3453798c4920d5cfaaefdaec4c1ee1"
+    },
+    {
+      "file": "native_current/envelopes/badger_215.png",
+      "sha256": "fa8ad9c553ae9a39b3d55e2a22ee1f8cb36578c249cfa1cddeaae9f5aa8a196b"
+    },
+    {
+      "file": "native_current/envelopes/badger_216.png",
+      "sha256": "189291c3076065be49fbb08f6de0b3355389f479482aa619c85197ac4007e792"
+    },
+    {
+      "file": "native_current/envelopes/badger_217.png",
+      "sha256": "9b09b673328ed8d93cff2a46bae268a9760a642e1483a6d2136e1420346ccf02"
+    },
+    {
+      "file": "native_current/envelopes/badger_218.png",
+      "sha256": "90719cb54808724e4a95e65e9d5fc51bfa9128a6625beac7a548563f061276b9"
+    },
+    {
+      "file": "native_current/envelopes/badger_219.png",
+      "sha256": "c301cf64ba2d01390a8ea7bd89084930ee2e6d5d3d5b103026696cfb735d3cda"
+    },
+    {
+      "file": "native_current/envelopes/badger_220.png",
+      "sha256": "ccab4065ca310c41b698d5293c2c5d726b96e5d1abc8d9b894869643ab905579"
+    },
+    {
+      "file": "native_current/envelopes/badger_221.png",
+      "sha256": "e29462c6ec5090e66311e03745ef5a41313fea6a805eb5f8dcb87998dd0e2901"
+    },
+    {
+      "file": "native_current/envelopes/badger_222.png",
+      "sha256": "4fb8d3207a64edf24a895f3cd4eea7f9eb63f7088a562ea4682c494548a4a981"
+    },
+    {
+      "file": "native_current/envelopes/badger_223.png",
+      "sha256": "4ee1d1ac75a29f8b087bb50875fd1df66fcef6c33163c0c561d236efe5d7fa05"
+    },
+    {
+      "file": "native_current/envelopes/badger_224.png",
+      "sha256": "ae876207e85d5f536a25b7bacc019f378e11377411390c4a50862aba50bc42cd"
+    },
+    {
+      "file": "native_current/envelopes/badger_225.png",
+      "sha256": "3beacdc570a16338145ba583ca61846c1adc14ae29ca3682333003c5d072a4c9"
+    },
+    {
+      "file": "native_current/envelopes/badger_226.png",
+      "sha256": "41fdd6c08d684dbf9724d84760d2be5ffb51c284b75c1e3ebfd354673ad5fea8"
+    },
+    {
+      "file": "native_current/envelopes/badger_227.png",
+      "sha256": "15aaf5266d6dea4b796c1ef707515fc2b57d955769d85828861c36a6cb4a2380"
+    },
+    {
+      "file": "native_current/envelopes/badger_228.png",
+      "sha256": "2debfa12f6018d8a046dfd97229f7b7762271f04675f2dadc8e1869b382c9b81"
+    },
+    {
+      "file": "native_current/envelopes/badger_229.png",
+      "sha256": "b3f1942b462890a6fb4cfacc123b166782fb4c7b3b2205ca64e07847255db0cf"
+    },
+    {
+      "file": "native_current/envelopes/badger_230.png",
+      "sha256": "09369ad1889599ed5d80357632e1b200f0a87f01d17fe5a1999b75c2d40d2eb5"
+    },
+    {
+      "file": "native_current/envelopes/badger_231.png",
+      "sha256": "ff33a9b89ecee58574e432cf2f0c7b9aeca35d460896f6672b95e2a959b85ac0"
+    },
+    {
+      "file": "native_current/envelopes/badger_232.png",
+      "sha256": "e233ae579ffc42d8134210799622d273a4fb9095a5b64d04891d85604801b51c"
+    },
+    {
+      "file": "native_current/envelopes/badger_233.png",
+      "sha256": "807fb7e946e24983fba4e7c90cbb085c8d7b983d1f535f40f2159e54194126ad"
+    },
+    {
+      "file": "native_current/envelopes/badger_234.png",
+      "sha256": "54fd0b0d74738a74a7c5413ebefd910327885280deea5805565eb36bbd6d355d"
+    },
+    {
+      "file": "native_current/envelopes/badger_235.png",
+      "sha256": "b6c09eb1cec63a3ef3e0ad98f6252e75ef92c0568c0f361515a3f24f744a8fe5"
+    },
+    {
+      "file": "native_current/envelopes/badger_236.png",
+      "sha256": "930b55d3fe8c8504026e6caf0335671ccf3abf0ddb49bf383f337bbf93db66d5"
+    },
+    {
+      "file": "native_current/envelopes/badger_237.png",
+      "sha256": "9a1df184171d9520319fd60da1d0b1db31b69cb8fec89a73dac2f7ae6c4d0661"
+    },
+    {
+      "file": "native_current/envelopes/badger_238.png",
+      "sha256": "7d44cad00dfe3883c4d944525aec90bf8a358473efce5a19156688b1099d647e"
+    },
+    {
+      "file": "native_current/envelopes/badger_239.png",
+      "sha256": "2f20cfee56cc3c8d2abbf998d3d2791801f983c0f8bf9c65af8aa4fb0170e19f"
+    },
+    {
+      "file": "native_current/envelopes/badger_240.png",
+      "sha256": "8c19d067a08d1a2a6ad45f47b4d3eb0ace8c0ce4b22d135f18ec1e93a5343b0f"
+    },
+    {
+      "file": "native_current/envelopes/badger_241.png",
+      "sha256": "cb2bda506f1be2920c4fa99a1e6f0dc251feed7155fc7fe2d7ab15d4362aa377"
+    },
+    {
+      "file": "native_current/envelopes/badger_242.png",
+      "sha256": "01d73e5a235098474f95f7059c21acd1625d15c728d6f9e70b27770ebb20e0d2"
+    },
+    {
+      "file": "native_current/envelopes/badger_243.png",
+      "sha256": "7aa4f815868e9ecb2620b7213d2208c8d655a45c467f8794ced2a089bdec3be0"
+    },
+    {
+      "file": "native_current/envelopes/badger_244.png",
+      "sha256": "9bad5e9fec18a1da0577419763b9481494eee2fa0392adb3adce3753ceb7c5c5"
+    },
+    {
+      "file": "native_current/envelopes/badger_245.png",
+      "sha256": "3bab425f0c745d43e94387a8ef234f7c3030cbe9270636f067b211402945a0a4"
+    },
+    {
+      "file": "native_current/envelopes/badger_246.png",
+      "sha256": "c44af8b0bb56b64cf6f5436d34d3b00cf563d6ca2acb345c2fd76c74d8441827"
+    },
+    {
+      "file": "native_current/envelopes/badger_247.png",
+      "sha256": "d1aa70699962b4255c1dd76c728230f896399bf63c9384ba7340364a589d9f60"
+    },
+    {
+      "file": "native_current/envelopes/badger_248.png",
+      "sha256": "dbb79f5e118243f57e564bcc3322b4b4cd9fa525398cfe8a71a13d2071e5e296"
+    },
+    {
+      "file": "native_current/envelopes/badger_249.png",
+      "sha256": "58a338d99dd4e9c4e3fe886add18ca4f2a48351c068722bfac9e41ad99570c41"
+    },
+    {
+      "file": "native_current/envelopes/badger_250.png",
+      "sha256": "aae3b4b6e64669b68d3dcb2e5241fae2190143b07d4013596233a584079fe365"
+    },
+    {
+      "file": "native_current/envelopes/badger_251.png",
+      "sha256": "ce8df589eed9d1028f946dc8a0b333f9ecaa52b3f5d20cf3542fe3fe6fd646f5"
+    },
+    {
+      "file": "native_current/envelopes/badger_252.png",
+      "sha256": "f38f55f0b003e32bf4baff8735e4ce98d1477ab1b9cdbe1e4314aeecbecef0b2"
+    },
+    {
+      "file": "native_current/envelopes/badger_253.png",
+      "sha256": "c5ce6eb257023cca05543f2f525049e243a53cec4c5845e14004976dca19211c"
+    },
+    {
+      "file": "native_current/envelopes/badger_254.png",
+      "sha256": "4ded826bdc390e1c7007821326da5ebcda7a4bcf97f7f5ca1121b29248f9b046"
+    },
+    {
+      "file": "native_current/envelopes/badger_255.png",
+      "sha256": "7ef885647216e0e3e55a24ba46a9d051a4f62f77b94635e7f39ebef774b5a5b7"
+    },
+    {
+      "file": "native_current/envelopes/badger_256.png",
+      "sha256": "12bc4dc05a8718a2aa620f396c197f7e560697a8122be3f6ea5d64266b9d5c1c"
+    },
+    {
+      "file": "native_current/envelopes/badger_257.png",
+      "sha256": "8e4becc9737e5cecc9cb043929edefe26b604c9dfb9904e7a442b3c97a074042"
+    }
+  ]
+}

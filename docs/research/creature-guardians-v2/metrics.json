@@ -1,0 +1,236 @@
+{
+  "dungeon_master": {
+    "baseline": {
+      "extent_blocks": [
+        1.6547,
+        2.668601,
+        0.951253
+      ],
+      "min_y": 0.0
+    },
+    "candidate": {
+      "extent_blocks": [
+        1.6875,
+        2.6875,
+        1.0125
+      ],
+      "min_y": 0.0
+    },
+    "authored_axes": {
+      "forward_axis": "-z"
+    },
+    "candidate_bones": 17,
+    "candidate_clips": [
+      "idle",
+      "walk",
+      "run",
+      "punch"
+    ],
+    "clip_timing": {
+      "idle": {
+        "asset_duration_sec": 3.0,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 3.0
+      },
+      "walk": {
+        "asset_duration_sec": 1.05,
+        "runtime_speed": 2.203612,
+        "effective_period_at_unit_travel_scale_sec": 0.47649
+      },
+      "run": {
+        "asset_duration_sec": 0.72,
+        "runtime_speed": 1.075916,
+        "effective_period_at_unit_travel_scale_sec": 0.669197
+      },
+      "punch": {
+        "asset_duration_sec": 1.15,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 1.15
+      }
+    },
+    "payload_sha256": {
+      "creature.json": "ca73af24cad07d294674ae51109c0fd8c30b2e25c91a70696bc69fecce8d3bb0",
+      "model.gltf": "a40e58ed20cb7da190b88bc19aa1fde662c400a12050bfd1cf0985b326464284",
+      "model.bin": "f6837e820df46067f496ffd69e386faae4d39f93d6d1eaeac25b82864e444fa8"
+    },
+    "contact": {
+      "idle": {
+        "sample_count": 257,
+        "min_geometry_y_blocks": 0.0,
+        "max_min_geometry_y_blocks": 0.0,
+        "owned_effectors": {
+          "foot_left": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.0
+          },
+          "foot_right": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.0
+          }
+        }
+      },
+      "walk": {
+        "sample_count": 257,
+        "min_geometry_y_blocks": -5e-05,
+        "max_min_geometry_y_blocks": 0.000319,
+        "owned_effectors": {
+          "foot_left": {
+            "min_y_blocks": -5e-05,
+            "max_min_y_blocks": 0.054138
+          },
+          "foot_right": {
+            "min_y_blocks": -5e-05,
+            "max_min_y_blocks": 0.054138
+          }
+        }
+      },
+      "run": {
+        "sample_count": 257,
+        "min_geometry_y_blocks": -0.00011,
+        "max_min_geometry_y_blocks": 0.000448,
+        "owned_effectors": {
+          "foot_left": {
+            "min_y_blocks": -0.00011,
+            "max_min_y_blocks": 0.120548
+          },
+          "foot_right": {
+            "min_y_blocks": -0.00011,
+            "max_min_y_blocks": 0.120548
+          }
+        }
+      },
+      "punch": {
+        "sample_count": 257,
+        "min_geometry_y_blocks": -0.0,
+        "max_min_geometry_y_blocks": 0.0,
+        "owned_effectors": {
+          "foot_left": {
+            "min_y_blocks": -0.0,
+            "max_min_y_blocks": 0.0
+          },
+          "foot_right": {
+            "min_y_blocks": -0.0,
+            "max_min_y_blocks": 0.0
+          }
+        }
+      }
+    }
+  },
+  "land_guard": {
+    "baseline": {
+      "extent_blocks": [
+        1.6547,
+        2.668601,
+        0.951253
+      ],
+      "min_y": 0.0
+    },
+    "candidate": {
+      "extent_blocks": [
+        1.6875,
+        2.6875,
+        1.0125
+      ],
+      "min_y": 0.0
+    },
+    "authored_axes": {
+      "forward_axis": "-z"
+    },
+    "candidate_bones": 17,
+    "candidate_clips": [
+      "idle",
+      "walk",
+      "run",
+      "punch"
+    ],
+    "clip_timing": {
+      "idle": {
+        "asset_duration_sec": 3.0,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 3.0
+      },
+      "walk": {
+        "asset_duration_sec": 1.05,
+        "runtime_speed": 2.011994,
+        "effective_period_at_unit_travel_scale_sec": 0.52187
+      },
+      "run": {
+        "asset_duration_sec": 0.72,
+        "runtime_speed": 0.982358,
+        "effective_period_at_unit_travel_scale_sec": 0.73293
+      },
+      "punch": {
+        "asset_duration_sec": 1.05,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 1.05
+      }
+    },
+    "payload_sha256": {
+      "creature.json": "b3321590fedff602d1e68162c8f1a51c1824663d7d185abb23406ba5ffcdaa41",
+      "model.gltf": "a7a12017704e8a17e817a0987c2cf4159a4b654abda651b49587ccb347382811",
+      "model.bin": "10dd20958888fd14b0235e064061d34de31f80c505d2d357330538586d4ae613"
+    },
+    "contact": {
+      "idle": {
+        "sample_count": 257,
+        "min_geometry_y_blocks": 0.0,
+        "max_min_geometry_y_blocks": 0.0,
+        "owned_effectors": {
+          "foot_left": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.0
+          },
+          "foot_right": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.0
+          }
+        }
+      },
+      "walk": {
+        "sample_count": 257,
+        "min_geometry_y_blocks": -5e-05,
+        "max_min_geometry_y_blocks": 0.000319,
+        "owned_effectors": {
+          "foot_left": {
+            "min_y_blocks": -5e-05,
+            "max_min_y_blocks": 0.054138
+          },
+          "foot_right": {
+            "min_y_blocks": -5e-05,
+            "max_min_y_blocks": 0.054138
+          }
+        }
+      },
+      "run": {
+        "sample_count": 257,
+        "min_geometry_y_blocks": -0.00011,
+        "max_min_geometry_y_blocks": 0.000448,
+        "owned_effectors": {
+          "foot_left": {
+            "min_y_blocks": -0.00011,
+            "max_min_y_blocks": 0.120548
+          },
+          "foot_right": {
+            "min_y_blocks": -0.00011,
+            "max_min_y_blocks": 0.120548
+          }
+        }
+      },
+      "punch": {
+        "sample_count": 257,
+        "min_geometry_y_blocks": -0.0,
+        "max_min_geometry_y_blocks": 0.0,
+        "owned_effectors": {
+          "foot_left": {
+            "min_y_blocks": -0.0,
+            "max_min_y_blocks": 0.0
+          },
+          "foot_right": {
+            "min_y_blocks": -0.0,
+            "max_min_y_blocks": 0.0
+          }
+        }
+      }
+    }
+  }
+}

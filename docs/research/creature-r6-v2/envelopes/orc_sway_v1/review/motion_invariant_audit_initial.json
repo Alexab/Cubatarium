@@ -1,0 +1,49 @@
+{
+  "passed": true,
+  "scope": "Own mesh/UV/skin/texture exact, repeated limb timing at equal elapsed time, new body roll/root clearance and sampled native transitions; not art/stride/sliding/performance acceptance",
+  "nodes_skin_geometry_textures_definition_exact": true,
+  "source_geometry": {
+    "triangles": 360,
+    "min_triangle_area": 0.00023437492200173438,
+    "constant_uv_triangles": 56,
+    "model_texel_density_p05": 0.0,
+    "model_texel_density_median": 12.799999999999999
+  },
+  "candidate_geometry": {
+    "triangles": 360,
+    "min_triangle_area": 0.00023437492200173438,
+    "constant_uv_triangles": 56,
+    "model_texel_density_p05": 0.0,
+    "model_texel_density_median": 12.799999999999999
+  },
+  "unchanged_idle_action_samplers": 22,
+  "macroloops": [
+    {
+      "clip": "walk",
+      "stride_cycles_per_loop": 4,
+      "stride_period_seconds_at_unit_travel": 0.6355258688191531,
+      "sway_period_seconds_at_unit_travel": 2.5421034752766123,
+      "nonroot_rotation_error_degrees": 7.155417793373891e-05,
+      "unchanged_translation_components_error_blocks": 0.0
+    },
+    {
+      "clip": "run",
+      "stride_cycles_per_loop": 3,
+      "stride_period_seconds_at_unit_travel": 0.873738525103221,
+      "sway_period_seconds_at_unit_travel": 2.62121550091127,
+      "nonroot_rotation_error_degrees": 6.027424262605257e-05,
+      "unchanged_translation_components_error_blocks": 0.0
+    }
+  ],
+  "transition_frames": 2156,
+  "supported_frames": 2112,
+  "supported_min_y": 0.0,
+  "payload_sha256": {
+    "creature.json": "3329adaa5cb77249339a24184d4517c552c678a5980ea43191044db7355b0d97",
+    "LICENSE.txt": "47ebeb227cb5dfff7649abcd8694e0d8a45f011398bc5d392d60894ce0e7a091",
+    "model.bin": "8a32da77530569fc14229f79d59005fe6e23cfb00011872f632bf30498087c89",
+    "model.gltf": "d36eb28e6410e5619102de571c33b398c0d39075dbb9c1cdca288fa5dba909c0",
+    "textures\\body.png": "0b55e70c0630f8786e7bfa0af5fcb7380cf33b730939dbcade53c7ca6e7caee2",
+    "textures\\icon.png": "a3bb5a3284312cebdf8182892f79b420fee0823b82e51acb43134ccb5f555997"
+  }
+}

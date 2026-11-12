@@ -223,7 +223,7 @@
       }
     ],
     "icon": {
-      "mode": "species_texture",
+      "mode": "parts_preview",
       "color": [
         1.0,
         0.95,
@@ -236,7 +236,7 @@
     "texture": "diffuse",
     "texture_size": [
       64,
-      32
+      64
     ],
     "animation_profile": "chicken"
   },

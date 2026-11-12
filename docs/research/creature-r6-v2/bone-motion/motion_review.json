@@ -1,0 +1,85 @@
+{
+  "schema": "creature-native-motion-visual-review.v1",
+  "reviewed_by": "Codex; direct image inspection, not user sign-off",
+  "scope": "11 changed ground B native sheets, rest4 + primary8 + Run8 at walk_speed + Action8; not speed1.5/transition/stride acceptance",
+  "exe_sha256": "045f73b11330bdeaab24774648ab363b67cf4d7d9029f0d37f1c04b37dc1ce01",
+  "resources": {
+    "bot": {
+      "sheet": "motion_current/bot.png",
+      "sha256": "1552c02b632d9f67f86aa1986923b8b6224304edc506873d6f091158622f6f3a",
+      "directly_inspected": true,
+      "decision": "no_new_geometry_joint_texture_or_sampled_cycle_issue",
+      "notes": "Rest views and both halves of locomotion/Run preserve authored rotations and connections. Action can retain idle/default behavior of the existing B profile; this review does not invent attack clip capability."
+    },
+    "chicken": {
+      "sheet": "motion_current/chicken.png",
+      "sha256": "2f7b8add7ee2aa9edd4c18ceea29e58fdc85e52aa320b35da6324c09920b0c28",
+      "directly_inspected": true,
+      "decision": "no_new_geometry_joint_texture_or_sampled_cycle_issue",
+      "notes": "Rest views and both halves of locomotion/Run preserve authored rotations and connections. Action can retain idle/default behavior of the existing B profile; this review does not invent attack clip capability."
+    },
+    "cow": {
+      "sheet": "motion_current/cow.png",
+      "sha256": "f993ec227b0039de545761e7f57d7fdf4ba3838bcca61fbf8f4339c2e2d0a2f1",
+      "directly_inspected": true,
+      "decision": "no_new_geometry_joint_texture_or_sampled_cycle_issue",
+      "notes": "Rest views and both halves of locomotion/Run preserve authored rotations and connections. Action can retain idle/default behavior of the existing B profile; this review does not invent attack clip capability."
+    },
+    "fox": {
+      "sheet": "motion_current/fox.png",
+      "sha256": "b03be67a2a49a63fe467eeed16943d6e247d852bddcd7121df129bda012abb89",
+      "directly_inspected": true,
+      "decision": "no_new_geometry_joint_texture_or_sampled_cycle_issue",
+      "notes": "Rest views and both halves of locomotion/Run preserve authored rotations and connections. Action can retain idle/default behavior of the existing B profile; this review does not invent attack clip capability."
+    },
+    "human": {
+      "sheet": "motion_current/human.png",
+      "sha256": "a8219059f886870b9544b584f1a9939cb3dcbb8d2eee308ac1f8efb833d1b8bd",
+      "directly_inspected": true,
+      "decision": "no_new_geometry_joint_texture_or_sampled_cycle_issue",
+      "notes": "Rest views and both halves of locomotion/Run preserve authored rotations and connections. Action can retain idle/default behavior of the existing B profile; this review does not invent attack clip capability."
+    },
+    "pig": {
+      "sheet": "motion_current/pig.png",
+      "sha256": "a0edd2d53134f4fb699f52a7dcc9aac0b27d2a7b2051a408f1fd77ec0d138706",
+      "directly_inspected": true,
+      "decision": "no_new_geometry_joint_texture_or_sampled_cycle_issue",
+      "notes": "Rest views and both halves of locomotion/Run preserve authored rotations and connections. Action can retain idle/default behavior of the existing B profile; this review does not invent attack clip capability."
+    },
+    "sheep": {
+      "sheet": "motion_current/sheep.png",
+      "sha256": "c2ddf1cb0358fc38c4caaa03c8aa69247844a71cba0f30444de1bfee695eb009",
+      "directly_inspected": true,
+      "decision": "no_new_geometry_joint_texture_or_sampled_cycle_issue",
+      "notes": "Rest views and both halves of locomotion/Run preserve authored rotations and connections. Action can retain idle/default behavior of the existing B profile; this review does not invent attack clip capability."
+    },
+    "skeleton": {
+      "sheet": "motion_current/skeleton.png",
+      "sha256": "9aad80d177f80775daa02d679c9a29b526539a8a82c656df2b46bb355cd5b946",
+      "directly_inspected": true,
+      "decision": "no_new_geometry_joint_texture_or_sampled_cycle_issue",
+      "notes": "Rest views and both halves of locomotion/Run preserve authored rotations and connections. Action can retain idle/default behavior of the existing B profile; this review does not invent attack clip capability."
+    },
+    "tortoise": {
+      "sheet": "motion_current/tortoise.png",
+      "sha256": "e2f42752c05163bce515af46d8e81da5e5ac16c775d1bc56f71f033ace9bed6d",
+      "directly_inspected": true,
+      "decision": "no_new_geometry_joint_texture_or_sampled_cycle_issue",
+      "notes": "Rest views and both halves of locomotion/Run preserve authored rotations and connections. Action can retain idle/default behavior of the existing B profile; this review does not invent attack clip capability."
+    },
+    "wolf": {
+      "sheet": "motion_current/wolf.png",
+      "sha256": "df21d3650e294e64351431aefe4b9ee4d4e6b7f0ad1ac363ed094fccf0ab3caa",
+      "directly_inspected": true,
+      "decision": "no_new_geometry_joint_texture_or_sampled_cycle_issue",
+      "notes": "Rest views and both halves of locomotion/Run preserve authored rotations and connections. Action can retain idle/default behavior of the existing B profile; this review does not invent attack clip capability."
+    },
+    "zombie": {
+      "sheet": "motion_current/zombie.png",
+      "sha256": "74804c19317f03ff119986fa9d284dfeba8931d278eb4a000e9081471a13a4fa",
+      "directly_inspected": true,
+      "decision": "no_new_geometry_joint_texture_or_sampled_cycle_issue",
+      "notes": "Rest views and both halves of locomotion/Run preserve authored rotations and connections. Action can retain idle/default behavior of the existing B profile; this review does not invent attack clip capability."
+    }
+  }
+}

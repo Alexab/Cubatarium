@@ -1,0 +1,621 @@
+{
+  "schema": "creature-proposal-pure-contact.v1",
+  "scope": "Offline pure asset clips; no fade, terrain, stride or art acceptance",
+  "samples_per_clip": 1025,
+  "species": {
+    "badger": {
+      "clips": {
+        "walk": {
+          "semantics": "authored_ground_contact",
+          "sample_count": 1025,
+          "min_geometry_y_blocks": -1.5e-05,
+          "max_min_geometry_y_blocks": 0.000377,
+          "owned_effectors": {
+            "lower_fl": {
+              "min_y_blocks": -1.5e-05,
+              "max_min_y_blocks": 0.061828
+            },
+            "lower_fr": {
+              "min_y_blocks": -1.5e-05,
+              "max_min_y_blocks": 0.061828
+            },
+            "lower_bl": {
+              "min_y_blocks": -1.2e-05,
+              "max_min_y_blocks": 0.07689
+            },
+            "lower_br": {
+              "min_y_blocks": -1.2e-05,
+              "max_min_y_blocks": 0.07689
+            }
+          }
+        },
+        "run": {
+          "semantics": "authored_ground_contact",
+          "sample_count": 1025,
+          "min_geometry_y_blocks": -2.9e-05,
+          "max_min_geometry_y_blocks": 0.000671,
+          "owned_effectors": {
+            "lower_fl": {
+              "min_y_blocks": -2.9e-05,
+              "max_min_y_blocks": 0.09615
+            },
+            "lower_fr": {
+              "min_y_blocks": -2.9e-05,
+              "max_min_y_blocks": 0.09615
+            },
+            "lower_bl": {
+              "min_y_blocks": -1.9e-05,
+              "max_min_y_blocks": 0.132991
+            },
+            "lower_br": {
+              "min_y_blocks": -1.9e-05,
+              "max_min_y_blocks": 0.132991
+            }
+          }
+        },
+        "idle": {
+          "semantics": "authored_ground_contact",
+          "sample_count": 1025,
+          "min_geometry_y_blocks": 0.0,
+          "max_min_geometry_y_blocks": 0.0,
+          "owned_effectors": {
+            "lower_fl": {
+              "min_y_blocks": 0.0,
+              "max_min_y_blocks": 0.0
+            },
+            "lower_fr": {
+              "min_y_blocks": 0.0,
+              "max_min_y_blocks": 0.0
+            },
+            "lower_bl": {
+              "min_y_blocks": 0.0,
+              "max_min_y_blocks": 0.0
+            },
+            "lower_br": {
+              "min_y_blocks": 0.0,
+              "max_min_y_blocks": 0.0
+            }
+          }
+        },
+        "punch": {
+          "semantics": "authored_ground_contact",
+          "sample_count": 1025,
+          "min_geometry_y_blocks": -0.000218,
+          "max_min_geometry_y_blocks": 0.000702,
+          "owned_effectors": {
+            "lower_fl": {
+              "min_y_blocks": -0.000218,
+              "max_min_y_blocks": 0.001974
+            },
+            "lower_fr": {
+              "min_y_blocks": 0.0,
+              "max_min_y_blocks": 0.039122
+            },
+            "lower_bl": {
+              "min_y_blocks": 0.0,
+              "max_min_y_blocks": 0.039122
+            },
+            "lower_br": {
+              "min_y_blocks": 0.0,
+              "max_min_y_blocks": 0.039122
+            }
+          }
+        }
+      },
+      "source_sha256": {
+        "recipes\\badger.yaml": "df75feda370e82e61e8b72cbddc7c5adc65aa1a3251c35c4357719b0db7d9fba",
+        "models\\creatures\\badger\\model.gltf": "95ecd5d538250578257ba9c1ce03e99072e7532e5c3e0ceffae2b108324f16e7",
+        "models\\creatures\\badger\\model.bin": "55cc3e55c2393445ca6ec17a18d71cad63ad2aafc2a9c0a7abcdc9b0b5f31d54"
+      }
+    },
+    "treeman": {
+      "clips": {
+        "idle": {
+          "semantics": "authored_ground_contact",
+          "sample_count": 1025,
+          "min_geometry_y_blocks": 0.0,
+          "max_min_geometry_y_blocks": 0.0,
+          "owned_effectors": {
+            "foot_left": {
+              "min_y_blocks": 0.0,
+              "max_min_y_blocks": 0.0
+            },
+            "foot_right": {
+              "min_y_blocks": 0.0,
+              "max_min_y_blocks": 0.0
+            }
+          }
+        },
+        "walk": {
+          "semantics": "authored_ground_contact",
+          "sample_count": 1025,
+          "min_geometry_y_blocks": -2e-05,
+          "max_min_geometry_y_blocks": 0.0,
+          "owned_effectors": {
+            "foot_left": {
+              "min_y_blocks": -2e-05,
+              "max_min_y_blocks": 0.546317
+            },
+            "foot_right": {
+              "min_y_blocks": -2e-05,
+              "max_min_y_blocks": 0.546317
+            }
+          }
+        },
+        "run": {
+          "semantics": "authored_ground_contact",
+          "sample_count": 1025,
+          "min_geometry_y_blocks": -2.9e-05,
+          "max_min_geometry_y_blocks": 0.0,
+          "owned_effectors": {
+            "foot_left": {
+              "min_y_blocks": -2.9e-05,
+              "max_min_y_blocks": 0.759487
+            },
+            "foot_right": {
+              "min_y_blocks": -2.9e-05,
+              "max_min_y_blocks": 0.759487
+            }
+          }
+        },
+        "punch": {
+          "semantics": "authored_ground_contact",
+          "sample_count": 1025,
+          "min_geometry_y_blocks": -0.0,
+          "max_min_geometry_y_blocks": 0.0,
+          "owned_effectors": {
+            "foot_left": {
+              "min_y_blocks": -0.0,
+              "max_min_y_blocks": 0.0
+            },
+            "foot_right": {
+              "min_y_blocks": -0.0,
+              "max_min_y_blocks": 0.0
+            }
+          }
+        }
+      },
+      "source_sha256": {
+        "recipes\\treeman.yaml": "ba2e3cb80b64ac8374d481984afe0fe9c90e48dca55bd97af9fe16158727c1db",
+        "models\\creatures\\treeman\\model.gltf": "42f5a9c57b4060f09b416414e136d1c9cd7e24cf0a91679c801099ffd2c35f30",
+        "models\\creatures\\treeman\\model.bin": "b13cdf6fa7728798e15effd7c874e5d805c9d049ca2096f3625b1eae1d65e703"
+      }
+    },
+    "lobster": {
+      "clips": {
+        "idle": {
+          "semantics": "authored_ground_contact",
+          "sample_count": 1025,
+          "min_geometry_y_blocks": -0.0,
+          "max_min_geometry_y_blocks": 0.0,
+          "owned_effectors": {
+            "foot_left0": {
+              "min_y_blocks": -0.0,
+              "max_min_y_blocks": 0.003
+            },
+            "foot_left1": {
+              "min_y_blocks": -0.0,
+              "max_min_y_blocks": 0.003
+            },
+            "foot_left2": {
+              "min_y_blocks": -0.0,
+              "max_min_y_blocks": 0.003
+            },
+            "foot_left3": {
+              "min_y_blocks": -0.0,
+              "max_min_y_blocks": 0.003
+            },
+            "foot_right0": {
+              "min_y_blocks": -0.0,
+              "max_min_y_blocks": 0.003
+            },
+            "foot_right1": {
+              "min_y_blocks": -0.0,
+              "max_min_y_blocks": 0.003
+            },
+            "foot_right2": {
+              "min_y_blocks": -0.0,
+              "max_min_y_blocks": 0.003
+            },
+            "foot_right3": {
+              "min_y_blocks": -0.0,
+              "max_min_y_blocks": 0.003
+            }
+          }
+        },
+        "walk": {
+          "semantics": "authored_ground_contact",
+          "sample_count": 1025,
+          "min_geometry_y_blocks": -2.8e-05,
+          "max_min_geometry_y_blocks": 0.0,
+          "owned_effectors": {
+            "foot_left0": {
+              "min_y_blocks": -2.8e-05,
+              "max_min_y_blocks": 0.0225
+            },
+            "foot_left1": {
+              "min_y_blocks": -2.8e-05,
+              "max_min_y_blocks": 0.0225
+            },
+            "foot_left2": {
+              "min_y_blocks": -2.8e-05,
+              "max_min_y_blocks": 0.0225
+            },
+            "foot_left3": {
+              "min_y_blocks": -2.8e-05,
+              "max_min_y_blocks": 0.0225
+            },
+            "foot_right0": {
+              "min_y_blocks": -2.8e-05,
+              "max_min_y_blocks": 0.0225
+            },
+            "foot_right1": {
+              "min_y_blocks": -2.8e-05,
+              "max_min_y_blocks": 0.0225
+            },
+            "foot_right2": {
+              "min_y_blocks": -2.8e-05,
+              "max_min_y_blocks": 0.0225
+            },
+            "foot_right3": {
+              "min_y_blocks": -2.8e-05,
+              "max_min_y_blocks": 0.0225
+            }
+          }
+        },
+        "punch": {
+          "semantics": "authored_ground_contact",
+          "sample_count": 1025,
+          "min_geometry_y_blocks": -0.0,
+          "max_min_geometry_y_blocks": 0.0,
+          "owned_effectors": {
+            "foot_left0": {
+              "min_y_blocks": 0.0,
+              "max_min_y_blocks": 0.071822
+            },
+            "foot_left1": {
+              "min_y_blocks": 0.0,
+              "max_min_y_blocks": 0.047882
+            },
+            "foot_left2": {
+              "min_y_blocks": 0.0,
+              "max_min_y_blocks": 0.023941
+            },
+            "foot_left3": {
+              "min_y_blocks": -0.0,
+              "max_min_y_blocks": 0.0
+            },
+            "foot_right0": {
+              "min_y_blocks": 0.0,
+              "max_min_y_blocks": 0.071822
+            },
+            "foot_right1": {
+              "min_y_blocks": 0.0,
+              "max_min_y_blocks": 0.047882
+            },
+            "foot_right2": {
+              "min_y_blocks": 0.0,
+              "max_min_y_blocks": 0.023941
+            },
+            "foot_right3": {
+              "min_y_blocks": -0.0,
+              "max_min_y_blocks": 0.0
+            }
+          }
+        },
+        "die": {
+          "semantics": "authored_ground_contact",
+          "sample_count": 1025,
+          "min_geometry_y_blocks": -0.000224,
+          "max_min_geometry_y_blocks": 0.001409,
+          "owned_effectors": {
+            "body": {
+              "min_y_blocks": 0.10625,
+              "max_min_y_blocks": 0.238731
+            },
+            "head": {
+              "min_y_blocks": 0.1,
+              "max_min_y_blocks": 0.262781
+            },
+            "eye_left": {
+              "min_y_blocks": 0.175,
+              "max_min_y_blocks": 0.288426
+            },
+            "mandible_left": {
+              "min_y_blocks": 0.0875,
+              "max_min_y_blocks": 0.299817
+            },
+            "antenna_base_left": {
+              "min_y_blocks": 0.175,
+              "max_min_y_blocks": 0.28859
+            },
+            "antenna_tip_left": {
+              "min_y_blocks": 0.18125,
+              "max_min_y_blocks": 0.238067
+            },
+            "upper_left0": {
+              "min_y_blocks": 0.125,
+              "max_min_y_blocks": 0.186469
+            },
+            "lower_left0": {
+              "min_y_blocks": 0.125,
+              "max_min_y_blocks": 0.19121
+            },
+            "foot_left0": {
+              "min_y_blocks": -0.00017,
+              "max_min_y_blocks": 0.109378
+            },
+            "upper_left1": {
+              "min_y_blocks": 0.125,
+              "max_min_y_blocks": 0.189513
+            },
+            "lower_left1": {
+              "min_y_blocks": 0.125,
+              "max_min_y_blocks": 0.19121
+            },
+            "foot_left1": {
+              "min_y_blocks": -0.00017,
+              "max_min_y_blocks": 0.109378
+            },
+            "upper_left2": {
+              "min_y_blocks": 0.125,
+              "max_min_y_blocks": 0.189513
+            },
+            "lower_left2": {
+              "min_y_blocks": 0.125,
+              "max_min_y_blocks": 0.19121
+            },
+            "foot_left2": {
+              "min_y_blocks": -0.00017,
+              "max_min_y_blocks": 0.109378
+            },
+            "upper_left3": {
+              "min_y_blocks": 0.125,
+              "max_min_y_blocks": 0.186469
+            },
+            "lower_left3": {
+              "min_y_blocks": 0.125,
+              "max_min_y_blocks": 0.19121
+            },
+            "foot_left3": {
+              "min_y_blocks": -0.00017,
+              "max_min_y_blocks": 0.109378
+            },
+            "claw_upper_left": {
+              "min_y_blocks": 0.1125,
+              "max_min_y_blocks": 0.233598
+            },
+            "forearm_left": {
+              "min_y_blocks": 0.1125,
+              "max_min_y_blocks": 0.15924
+            },
+            "palm_left": {
+              "min_y_blocks": -0.000224,
+              "max_min_y_blocks": 0.0875
+            },
+            "moving_finger_left": {
+              "min_y_blocks": 0.02393,
+              "max_min_y_blocks": 0.1
+            },
+            "eye_right": {
+              "min_y_blocks": 0.175,
+              "max_min_y_blocks": 0.384939
+            },
+            "mandible_right": {
+              "min_y_blocks": 0.0875,
+              "max_min_y_blocks": 0.349787
+            },
+            "antenna_base_right": {
+              "min_y_blocks": 0.175,
+              "max_min_y_blocks": 0.385106
+            },
+            "antenna_tip_right": {
+              "min_y_blocks": 0.18125,
+              "max_min_y_blocks": 0.41229
+            },
+            "upper_right0": {
+              "min_y_blocks": 0.125,
+              "max_min_y_blocks": 0.419224
+            },
+            "lower_right0": {
+              "min_y_blocks": 0.125,
+              "max_min_y_blocks": 0.488862
+            },
+            "foot_right0": {
+              "min_y_blocks": 0.0,
+              "max_min_y_blocks": 0.534119
+            },
+            "upper_right1": {
+              "min_y_blocks": 0.125,
+              "max_min_y_blocks": 0.423876
+            },
+            "lower_right1": {
+              "min_y_blocks": 0.125,
+              "max_min_y_blocks": 0.488862
+            },
+            "foot_right1": {
+              "min_y_blocks": 0.0,
+              "max_min_y_blocks": 0.534119
+            },
+            "upper_right2": {
+              "min_y_blocks": 0.125,
+              "max_min_y_blocks": 0.423876
+            },
+            "lower_right2": {
+              "min_y_blocks": 0.125,
+              "max_min_y_blocks": 0.488862
+            },
+            "foot_right2": {
+              "min_y_blocks": 0.0,
+              "max_min_y_blocks": 0.534119
+            },
+            "upper_right3": {
+              "min_y_blocks": 0.125,
+              "max_min_y_blocks": 0.419224
+            },
+            "lower_right3": {
+              "min_y_blocks": 0.125,
+              "max_min_y_blocks": 0.488862
+            },
+            "foot_right3": {
+              "min_y_blocks": 0.0,
+              "max_min_y_blocks": 0.534119
+            },
+            "claw_upper_right": {
+              "min_y_blocks": 0.1125,
+              "max_min_y_blocks": 0.408088
+            },
+            "forearm_right": {
+              "min_y_blocks": 0.1125,
+              "max_min_y_blocks": 0.482958
+            },
+            "palm_right": {
+              "min_y_blocks": 0.0875,
+              "max_min_y_blocks": 0.499695
+            },
+            "moving_finger_right": {
+              "min_y_blocks": 0.1,
+              "max_min_y_blocks": 0.588216
+            },
+            "tail0": {
+              "min_y_blocks": 0.1125,
+              "max_min_y_blocks": 0.238731
+            },
+            "tail1": {
+              "min_y_blocks": 0.1125,
+              "max_min_y_blocks": 0.251124
+            },
+            "tail2": {
+              "min_y_blocks": 0.125,
+              "max_min_y_blocks": 0.265149
+            },
+            "tail3": {
+              "min_y_blocks": 0.125,
+              "max_min_y_blocks": 0.277542
+            },
+            "tail4": {
+              "min_y_blocks": 0.1375,
+              "max_min_y_blocks": 0.291678
+            },
+            "tail5": {
+              "min_y_blocks": 0.1375,
+              "max_min_y_blocks": 0.30396
+            },
+            "telson": {
+              "min_y_blocks": 0.15,
+              "max_min_y_blocks": 0.30644
+            },
+            "uropod_left": {
+              "min_y_blocks": 0.15,
+              "max_min_y_blocks": 0.221487
+            },
+            "uropod_right": {
+              "min_y_blocks": 0.15,
+              "max_min_y_blocks": 0.367658
+            }
+          }
+        }
+      },
+      "source_sha256": {
+        "recipes\\lobster.yaml": "4951d839379531b121533479c07db58dd138ff46aaa2dd93db1d26187150f69f",
+        "models\\creatures\\lobster\\model.gltf": "2696980bdac47a143a4f8fd6d2fb0f6ba92cbcbdc9c3504dd33483156c82c574",
+        "models\\creatures\\lobster\\model.bin": "f6027bc70df05af1a36518e1ab1f61a4ac8819f3fc4f235ac68ca415608be675"
+      }
+    },
+    "seahorse": {
+      "clips": {
+        "idle": {
+          "semantics": "full_mesh_clearance_not_foot_contact",
+          "sample_count": 1025,
+          "min_geometry_y_blocks": 0.021112,
+          "max_min_geometry_y_blocks": 0.028131,
+          "owned_effectors": {}
+        },
+        "fly": {
+          "semantics": "full_mesh_clearance_not_foot_contact",
+          "sample_count": 1025,
+          "min_geometry_y_blocks": -0.089709,
+          "max_min_geometry_y_blocks": 0.029201,
+          "owned_effectors": {}
+        },
+        "die": {
+          "semantics": "authored_ground_contact",
+          "sample_count": 1025,
+          "min_geometry_y_blocks": -0.000166,
+          "max_min_geometry_y_blocks": 0.002302,
+          "owned_effectors": {
+            "body": {
+              "min_y_blocks": 0.0,
+              "max_min_y_blocks": 0.159375
+            },
+            "neck0": {
+              "min_y_blocks": 0.044813,
+              "max_min_y_blocks": 0.290625
+            },
+            "head": {
+              "min_y_blocks": 0.047584,
+              "max_min_y_blocks": 0.384375
+            },
+            "snout": {
+              "min_y_blocks": 0.076879,
+              "max_min_y_blocks": 0.388736
+            },
+            "jaw": {
+              "min_y_blocks": 0.075626,
+              "max_min_y_blocks": 0.375
+            },
+            "tail0": {
+              "min_y_blocks": 0.012266,
+              "max_min_y_blocks": 0.084375
+            },
+            "tail1": {
+              "min_y_blocks": 0.009096,
+              "max_min_y_blocks": 0.063463
+            },
+            "tail2": {
+              "min_y_blocks": -0.000166,
+              "max_min_y_blocks": 0.062253
+            },
+            "tail3": {
+              "min_y_blocks": 0.004098,
+              "max_min_y_blocks": 0.062751
+            },
+            "tail4": {
+              "min_y_blocks": 0.011531,
+              "max_min_y_blocks": 0.063699
+            },
+            "tail5": {
+              "min_y_blocks": 0.029017,
+              "max_min_y_blocks": 0.084752
+            },
+            "tail6": {
+              "min_y_blocks": 0.028178,
+              "max_min_y_blocks": 0.075929
+            },
+            "dorsal0": {
+              "min_y_blocks": 0.05347,
+              "max_min_y_blocks": 0.197406
+            },
+            "dorsal1": {
+              "min_y_blocks": 0.05687,
+              "max_min_y_blocks": 0.214237
+            },
+            "pectoral_left": {
+              "min_y_blocks": -5.4e-05,
+              "max_min_y_blocks": 0.35625
+            },
+            "pectoral_right": {
+              "min_y_blocks": 0.130127,
+              "max_min_y_blocks": 0.361361
+            }
+          }
+        }
+      },
+      "source_sha256": {
+        "recipes\\seahorse.yaml": "c90f064a089cb482a5acd6be5e138afa094d857cd1eed66bd6c2f8dede145527",
+        "models\\creatures\\seahorse\\model.gltf": "4d17ce3cf990a16bf23af9d575b5a8e0c7a3de0de43638d26465716675ade826",
+        "models\\creatures\\seahorse\\model.bin": "196b72d5d5f01d9394b41cce901c390d84c99dcfbe9e31b51bb9cf28669d3a24"
+      }
+    }
+  }
+}

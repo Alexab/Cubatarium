@@ -1,0 +1,24 @@
+{
+  "captured_at_utc": "2026-11-10T20:31:30.207727+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_aquatic_fish_v2\\models",
+  "files_sha256": {
+    "creatures\\penguin\\creature.json": "3d175d036833d74657173bf4cedf704f6002179280008be352a84568305d5d83",
+    "creatures\\penguin\\LICENSE.txt": "21600c3265b05b98b1a92d4ffaa3ec9508a0b621eb46cf0ee60c5018d1ae5158",
+    "creatures\\penguin\\manifest.json": "995cf6f0d52081b3096962cc7b0e138c4f158df7ef617e352a1e35962cf38498",
+    "creatures\\penguin\\model.bin": "25d20586154053bfbde22af88370a35c7ab2b61c04a2ed8f3547799851d5634c",
+    "creatures\\penguin\\model.gltf": "54185405177575fbcc568a5d4d3b0db24a6183e09d9e3229ea4edc5fa149fa73",
+    "creatures\\penguin\\textures\\body.png": "fa5e85d275633e17fbf1e53072063e9e297617e43abc9297f25d5a8915a86a4e",
+    "creatures\\penguin\\textures\\icon.png": "e6ec4601fc818a3ba012843503b475000a35fbbfc2669ac07231c1026f657182"
+  },
+  "exe_sha256": "0c2f544b61042e0498e927a37c88793e72530e58d8b4acaaff1eb90e2561dac9",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "final_penguin",
+  "qa_camera": "close",
+  "qa_water_placement": true,
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

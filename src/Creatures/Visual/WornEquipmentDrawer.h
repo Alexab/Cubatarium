@@ -5,6 +5,7 @@
 #include <functional>
 #include <string>
 #include <glm/mat4x4.hpp>
+#include <glm/vec3.hpp>
 
 namespace cutum
 {
@@ -18,6 +19,8 @@ struct InventoryEntryRef;
 /// Lookup bone model-space matrix by name (already without bodyMat).
 using BoneMatrixLookupFn =
     std::function<bool(const std::string &boneName, glm::mat4 &out)>;
+using BoneBoundsLookupFn =
+    std::function<bool(const std::string &boneName, glm::vec3 &low, glm::vec3 &high)>;
 
 struct WornArmorPreviewSlot
 {
@@ -40,7 +43,8 @@ public:
                                  const UCreature &creature,
                                  const glm::mat4 &viewProj,
                                  const glm::mat4 &bodyMat,
-                                 const BoneMatrixLookupFn &bones);
+                                 const BoneMatrixLookupFn &bones,
+                                 const BoneBoundsLookupFn &bounds = {});
 
   /// Hotbar (rightItem) + offhand (leftItem) held meshes.
   static void SubmitWieldedFromCreature(CreatureDrawQueue &queue,
@@ -48,7 +52,8 @@ public:
                                         const UItemDefinitionStorage *items,
                                         const glm::mat4 &viewProj,
                                         const glm::mat4 &bodyMat,
-                                        const BoneMatrixLookupFn &bones);
+                                        const BoneMatrixLookupFn &bones,
+                                        const BoneBoundsLookupFn &bounds = {});
 
   /// Sheet / preview path: explicit item ids; `queue` null draws immediate.
   static void SubmitWieldedPreview(CreatureDrawQueue *queue,
@@ -59,14 +64,16 @@ public:
                                    const glm::mat4 &viewProj,
                                    const glm::mat4 &bodyMat,
                                    const BoneMatrixLookupFn &bones,
-                                   bool immediate);
+                                   bool immediate,
+                                   const BoneBoundsLookupFn &bounds = {});
 
   /// Direct GL draw for preview FBO (no CreatureDrawQueue).
   static void DrawImmediate(const std::array<WornArmorPreviewSlot, 6> &slots,
                             const glm::mat4 &viewProj,
                             const glm::mat4 &bodyMat,
                             const BoneMatrixLookupFn &bones,
-                            UShaderProgram *shader);
+                            UShaderProgram *shader,
+                            const BoneBoundsLookupFn &bounds = {});
 };
 
 } // namespace cutum

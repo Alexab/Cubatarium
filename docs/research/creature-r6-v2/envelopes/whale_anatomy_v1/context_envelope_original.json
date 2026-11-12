@@ -1,0 +1,54 @@
+{
+  "captured_at_utc": "2026-11-12T00:29:45.373215+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\review_2026_11_10\\baseline\\models",
+  "files_sha256": {
+    "creatures\\whale\\creature.json": "5a25344bc102c3f70519e100842272100b70d97010bf7d170b220949d70699a2",
+    "creatures\\whale\\LICENSE.txt": "86f3dd813a29614b4a0bfbddc18fba9e009edd9e2e7c28de179b655ae89b4e16",
+    "creatures\\whale\\model.bin": "1dc0c2b2db82de1d392131bff2277c99f79ec0ffd96579fe3b517ad97369d7b7",
+    "creatures\\whale\\model.gltf": "d42522ca0439f61a4007ffe4f0808557572d250da45eacd53a3740a390401cae",
+    "creatures\\whale\\textures\\body.png": "95425660178d169caf8212bb87b90b32d3911f5caadd2c79bc9256b0f1775286",
+    "creatures\\whale\\textures\\face.png": "f4d915d8eb9d596135c2d173712e18084e0960f0c5e224b080728f4a229a513c",
+    "creatures\\whale\\textures\\icon.png": "b3628e1ed9c22b211981ec57ab46f291075e7914bc79e40dcd3478564f213174",
+    "creatures\\whale\\textures\\leg.png": "7fd674d104d109f1eba1369675f2abaae9beb2fe159940de9282910b92a8153a"
+  },
+  "qa_models_override": true,
+  "exe_sha256": "235ce58dd65546f38164020295ff403bf48c2816b14bb16cd96228faee030483",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "envelope_original",
+  "qa_camera": "close",
+  "native_matrix": false,
+  "native_equipment_matrix": false,
+  "native_equipment_texture_probe": false,
+  "native_resource_cache_probe": false,
+  "native_resource_reload_probe": false,
+  "native_fp_matrix": false,
+  "native_save_probe": false,
+  "native_envelope_variant": "baseline",
+  "native_transition_probe": false,
+  "native_fluid_transition_probe": false,
+  "world_motion": null,
+  "world_motion_expected_fluid_state": null,
+  "world_seconds": 8.0,
+  "world_capture_interval_seconds": 3.0,
+  "native_posed_culling_probe": false,
+  "envelope_profile_sha256": "f07c8fec33bc4f3d50ac7e7c35bd5b9ac1606b5e735772b63028d193ac900280",
+  "fp_shaders_sha256": {},
+  "equipment_material": "copper",
+  "world_gear_fixture": false,
+  "equipment_files_sha256": {},
+  "world_species": [
+    "whale"
+  ],
+  "preview_species": [
+    "whale"
+  ],
+  "qa_water_placement": true,
+  "qa_lava_fixture": false,
+  "world": "World_254",
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

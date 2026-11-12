@@ -1,0 +1,319 @@
+{
+  "manatee": {
+    "baseline": {
+      "extent_blocks": [
+        1.046287,
+        0.934354,
+        3.825566
+      ],
+      "min_y": 0.034678
+    },
+    "candidate": {
+      "extent_blocks": [
+        1.03125,
+        0.984375,
+        3.84375
+      ],
+      "min_y": 0.140625
+    },
+    "candidate_bones": 15,
+    "candidate_clips": [
+      "idle",
+      "fly",
+      "punch",
+      "die"
+    ],
+    "clip_timing": {
+      "idle": {
+        "asset_duration_sec": 2.4,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 2.4
+      },
+      "fly": {
+        "asset_duration_sec": 1.4,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 1.4
+      },
+      "punch": {
+        "asset_duration_sec": 1.1,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 1.1
+      },
+      "die": {
+        "asset_duration_sec": 1.2,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 1.2
+      }
+    },
+    "payload_sha256": {
+      "creature.json": "d6d912addc2955b00c408eab8b8a1e1c5784c0006e3f5fa57803a654188c6378",
+      "model.gltf": "59ebe2465d7ecda88c1950d980988714541efcfc63370142327dd1e8eb815d45",
+      "model.bin": "f037e172cf04930756c0640b70e172a3179f5b838fabf3f7a02414231b94347a"
+    },
+    "contact": {
+      "die": {
+        "sample_count": 65,
+        "min_geometry_y_blocks": -0.000411,
+        "max_min_geometry_y_blocks": 0.0,
+        "owned_effectors": {
+          "body": {
+            "min_y_blocks": 0.117188,
+            "max_min_y_blocks": 0.165692
+          },
+          "spine": {
+            "min_y_blocks": 0.046875,
+            "max_min_y_blocks": 0.066277
+          },
+          "neck": {
+            "min_y_blocks": 0.117188,
+            "max_min_y_blocks": 0.165692
+          },
+          "head": {
+            "min_y_blocks": 0.147083,
+            "max_min_y_blocks": 0.23428
+          },
+          "jaw": {
+            "min_y_blocks": 0.09375,
+            "max_min_y_blocks": 0.209741
+          },
+          "lip_left": {
+            "min_y_blocks": 0.140625,
+            "max_min_y_blocks": 0.19883
+          },
+          "lip_right": {
+            "min_y_blocks": 0.140625,
+            "max_min_y_blocks": 0.53425
+          },
+          "tail0": {
+            "min_y_blocks": 0.28125,
+            "max_min_y_blocks": 0.39766
+          },
+          "tail1": {
+            "min_y_blocks": 0.342648,
+            "max_min_y_blocks": 0.534425
+          },
+          "paddle_base": {
+            "min_y_blocks": 0.274015,
+            "max_min_y_blocks": 0.534689
+          },
+          "paddle_tip": {
+            "min_y_blocks": 0.016359,
+            "max_min_y_blocks": 0.46875
+          },
+          "flipper_left": {
+            "min_y_blocks": 0.09375,
+            "max_min_y_blocks": 0.252383
+          },
+          "flipper_tip_left": {
+            "min_y_blocks": -0.000411,
+            "max_min_y_blocks": 0.0
+          },
+          "flipper_right": {
+            "min_y_blocks": 0.09375,
+            "max_min_y_blocks": 0.802128
+          },
+          "flipper_tip_right": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.843236
+          }
+        }
+      }
+    }
+  },
+  "seal": {
+    "baseline": {
+      "extent_blocks": [
+        1.140461,
+        0.524566,
+        2.250387
+      ],
+      "min_y": -0.0
+    },
+    "candidate": {
+      "extent_blocks": [
+        1.1875,
+        0.5,
+        2.28125
+      ],
+      "min_y": 0.0
+    },
+    "candidate_bones": 16,
+    "candidate_clips": [
+      "idle",
+      "walk",
+      "fly",
+      "die"
+    ],
+    "clip_timing": {
+      "idle": {
+        "asset_duration_sec": 2.4,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 2.4
+      },
+      "walk": {
+        "asset_duration_sec": 1.1,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 1.1
+      },
+      "fly": {
+        "asset_duration_sec": 0.8,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 0.8
+      },
+      "die": {
+        "asset_duration_sec": 0.95,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 0.95
+      }
+    },
+    "payload_sha256": {
+      "creature.json": "72fdcfea631068dd790c6d8b60c15bf32be4a930d562e1c063d96d79f3bd6d07",
+      "model.gltf": "29c1cb3a7b8e6b0267a21a7d69a531837487cc234d312d9f129b96475539559d",
+      "model.bin": "a4b187d85cdd2cfea6fd97df6d22615b2e1fa6f48beec25907f22f38a58b21bb"
+    },
+    "contact": {
+      "walk": {
+        "sample_count": 65,
+        "min_geometry_y_blocks": -2e-05,
+        "max_min_geometry_y_blocks": 3.1e-05,
+        "owned_effectors": {
+          "body": {
+            "min_y_blocks": 0.061501,
+            "max_min_y_blocks": 0.123109
+          },
+          "spine": {
+            "min_y_blocks": 0.030043,
+            "max_min_y_blocks": 0.114781
+          },
+          "neck": {
+            "min_y_blocks": 0.091101,
+            "max_min_y_blocks": 0.1439
+          },
+          "head": {
+            "min_y_blocks": 0.188826,
+            "max_min_y_blocks": 0.240485
+          },
+          "muzzle": {
+            "min_y_blocks": 0.210732,
+            "max_min_y_blocks": 0.263337
+          },
+          "jaw": {
+            "min_y_blocks": 0.166982,
+            "max_min_y_blocks": 0.218866
+          },
+          "tail0": {
+            "min_y_blocks": 0.097561,
+            "max_min_y_blocks": 0.243833
+          },
+          "tail1": {
+            "min_y_blocks": 0.156574,
+            "max_min_y_blocks": 0.354576
+          },
+          "foreflipper_left": {
+            "min_y_blocks": 0.074719,
+            "max_min_y_blocks": 0.131246
+          },
+          "foreflipper_tip_left": {
+            "min_y_blocks": -2e-05,
+            "max_min_y_blocks": 3.1e-05
+          },
+          "hindflipper_left": {
+            "min_y_blocks": 0.187697,
+            "max_min_y_blocks": 0.391706
+          },
+          "hindflipper_tip_left": {
+            "min_y_blocks": 0.151788,
+            "max_min_y_blocks": 0.421837
+          },
+          "foreflipper_right": {
+            "min_y_blocks": 0.074719,
+            "max_min_y_blocks": 0.131246
+          },
+          "foreflipper_tip_right": {
+            "min_y_blocks": -2e-05,
+            "max_min_y_blocks": 3.1e-05
+          },
+          "hindflipper_right": {
+            "min_y_blocks": 0.187697,
+            "max_min_y_blocks": 0.391706
+          },
+          "hindflipper_tip_right": {
+            "min_y_blocks": 0.151788,
+            "max_min_y_blocks": 0.421837
+          }
+        }
+      },
+      "die": {
+        "sample_count": 65,
+        "min_geometry_y_blocks": -0.000436,
+        "max_min_geometry_y_blocks": 0.0,
+        "owned_effectors": {
+          "body": {
+            "min_y_blocks": 0.022222,
+            "max_min_y_blocks": 0.344273
+          },
+          "spine": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 0.3125
+          },
+          "neck": {
+            "min_y_blocks": 0.05,
+            "max_min_y_blocks": 0.38587
+          },
+          "head": {
+            "min_y_blocks": 0.146875,
+            "max_min_y_blocks": 0.433301
+          },
+          "muzzle": {
+            "min_y_blocks": 0.16875,
+            "max_min_y_blocks": 0.468775
+          },
+          "jaw": {
+            "min_y_blocks": 0.125,
+            "max_min_y_blocks": 0.454822
+          },
+          "tail0": {
+            "min_y_blocks": 0.1,
+            "max_min_y_blocks": 0.450202
+          },
+          "tail1": {
+            "min_y_blocks": 0.1875,
+            "max_min_y_blocks": 0.533693
+          },
+          "foreflipper_left": {
+            "min_y_blocks": 0.03125,
+            "max_min_y_blocks": 0.357598
+          },
+          "foreflipper_tip_left": {
+            "min_y_blocks": -0.000436,
+            "max_min_y_blocks": 0.0
+          },
+          "hindflipper_left": {
+            "min_y_blocks": 0.21875,
+            "max_min_y_blocks": 0.522634
+          },
+          "hindflipper_tip_left": {
+            "min_y_blocks": 0.21875,
+            "max_min_y_blocks": 0.455642
+          },
+          "foreflipper_right": {
+            "min_y_blocks": 0.03125,
+            "max_min_y_blocks": 0.831767
+          },
+          "foreflipper_tip_right": {
+            "min_y_blocks": 0.0,
+            "max_min_y_blocks": 1.0
+          },
+          "hindflipper_right": {
+            "min_y_blocks": 0.21875,
+            "max_min_y_blocks": 0.66504
+          },
+          "hindflipper_tip_right": {
+            "min_y_blocks": 0.21875,
+            "max_min_y_blocks": 0.656138
+          }
+        }
+      }
+    }
+  }
+}

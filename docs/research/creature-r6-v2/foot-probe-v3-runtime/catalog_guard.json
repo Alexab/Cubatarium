@@ -1,0 +1,6 @@
+{
+  "rejected_before_flight": true,
+  "returncode": 1,
+  "unknown_id": "unknown_creature_probe",
+  "scope": "Missing species QA preflight; not renderer behavior"
+}

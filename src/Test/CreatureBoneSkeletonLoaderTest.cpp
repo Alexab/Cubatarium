@@ -218,7 +218,7 @@ int main()
   }
 
   const auto pigGeometry = cutum::CreatureBoneSkeletonLoader::LoadFromFile(
-      "models/creatures/pig/geometry.geo.json", "geometry.pig.v1.8");
+      "models/creatures/_sources/bedrock_geo/pig.geo.json", "geometry.pig.v1.8");
   if (!pigGeometry)
   {
     std::cerr << "FAIL: could not load pig geometry\n";
@@ -303,6 +303,41 @@ int main()
             << geometry->bones.size() << " cubes="
             << asset.boneMeshes[0].cubes.size() << "\n";
 
+  // Import semantics above stay covered by their unchanged bind-rotation
+  // fixture. An authored production pig may model the torso horizontally.
+  const auto authoredPig = cutum::CreatureBoneSkeletonLoader::LoadFromFile(
+      "models/creatures/pig/geometry.geo.json", "geometry.pig.v1.8");
+  if (!authoredPig) { std::cerr << "FAIL: authored pig missing\n"; return 1; }
+  const auto authoredPigAsset = cutum::BoneSkeletonCubeMeshBuilder::BuildMeshAsset(*authoredPig);
+  cutum::BoneSkeletonHierarchy authoredPigHierarchy(*authoredPig);
+  const glm::vec3 authoredBody = MeshCenter(authoredPigHierarchy, authoredPigAsset,
+      authoredPig->boneIndexByName.at("body"), idlePose);
+  const glm::vec3 authoredHead = MeshCenter(authoredPigHierarchy, authoredPigAsset,
+      authoredPig->boneIndexByName.at("head"), idlePose);
+  if (authoredBody.y < .2f || authoredHead.z >= authoredBody.z - .2f)
+  {
+    std::cerr << "FAIL: authored pig torso/head anatomical placement\n";
+    return 1;
+  }
+  for (const char *leg : {"leg0", "leg1", "leg2", "leg3"})
+  {
+    const size_t i = authoredPig->boneIndexByName.at(leg);
+    float lowest = 100.f;
+    for (const auto &cube : authoredPigAsset.boneMeshes[i].cubes)
+    {
+      const glm::mat4 m = authoredPigHierarchy.ComputeBoneMatrix(i, idlePose) * cube.restLocalMatrix;
+      for (int x : {-1, 1}) for (int y : {-1, 1}) for (int z : {-1, 1})
+      {
+        lowest = std::min(lowest, (m * glm::vec4(x*.5f, y*.5f, z*.5f, 1.f)).y);
+      }
+    }
+    if (std::fabs(lowest) > .02f)
+    {
+      std::cerr << "FAIL: authored pig " << leg << " ground contact " << lowest << "\n";
+      return 1;
+    }
+  }
+
   const auto beeGeometry = cutum::CreatureBoneSkeletonLoader::LoadFromFile(
       "models/creatures/bee/geometry.geo.json", "geometry.bee");
   if (!beeGeometry)
@@ -325,10 +360,17 @@ int main()
       }
     }
   }
+  const auto hasRenderedWing = [&](const char *name)
+  {
+    const auto it = beeGeometry->boneIndexByName.find(name);
+    if (it == beeGeometry->boneIndexByName.end()) return false;
+    for (const auto &cube : beeAsset.boneMeshes[it->second].cubes)
+      if (!cube.indices.empty()) return true;
+    return false;
+  };
   if (beeGeometry->boneIndexByName.count("body") == 0 ||
-      beeGeometry->boneIndexByName.count("wing0") == 0 ||
-      beeGeometry->boneIndexByName.count("rightwing_bone") == 0 ||
-      beeGeometry->boneIndexByName.count("leftwing_bone") == 0)
+      !(hasRenderedWing("wing0") || hasRenderedWing("rightwing_bone")) ||
+      !(hasRenderedWing("wing1") || hasRenderedWing("leftwing_bone")))
   {
     std::cerr << "FAIL: bee missing body or wing bones, bones="
               << beeGeometry->bones.size() << "\n";

@@ -1,0 +1,19 @@
+{
+  "profile_byte_exact": true,
+  "same_current_executable_models_and_shaders_verified": true,
+  "captures_keep_original_context_timestamps": true,
+  "references": [
+    {
+      "source": "docs\\research\\creature-r6-v2\\envelopes\\lobster_anatomy_v2",
+      "context": "context_envelope_original.json",
+      "context_sha256": "6e5cb52487770701212fde2c6ee5d84b1937b7ce72fb6e3e59f3760c219f55e7",
+      "native_manifest_sha256": "4d14ae45f5a3bf6f34609a9e409dcb0f89c4fe2dd84b7ed709130fc570aa636a"
+    },
+    {
+      "source": "docs\\research\\creature-r6-v2\\envelopes\\lobster_anatomy_v2",
+      "context": "context_own_before.json",
+      "context_sha256": "231d53b44b8cc953102b2d818db55f6e11ea5638a5c7ddbb0d01f3c0406637cf",
+      "native_manifest_sha256": "2bb9511d8615fd719e0d4d27d6c9d9031a6d32ed49c9fd286bc8914c07b883b2"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "captured_at_utc": "2026-11-10T20:20:07.739608+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_aquatic_fish_v2\\models",
+  "files_sha256": {
+    "creatures\\shark\\creature.json": "a5b3220ec682e42256bd26a1a827cd4b8338a515fc80e07075c80c83f337c4e4",
+    "creatures\\shark\\LICENSE.txt": "ea6e810bb3d1922ff59a961306892df10184d98ec378be0bbe3d1b458bf5c623",
+    "creatures\\shark\\manifest.json": "3c9777eb2c09d4a85bf6dd18a4f18957fea1ee419c6d92e2ec9634c85c724343",
+    "creatures\\shark\\model.bin": "e301afa600bde4fe87fae71c1875c2174c3a8530b56749ab0e4b7c61a1c826c1",
+    "creatures\\shark\\model.gltf": "e1b03fe3f6c46b8505932b5d3c001b702c26792df8835438734bf260e740f212",
+    "creatures\\shark\\textures\\body.png": "ebc9bc5995f9335eb3cea15cc136aba3ab7740a5a36dadfb471100e45c81cbe9",
+    "creatures\\shark\\textures\\icon.png": "f4188d18721b479f0f9690220cce8f38555773050557d20972c217296145e7de",
+    "creatures\\seahorse\\creature.json": "32155db030f593c5874b242352d036e29b5893b2c492b80ad39f10ce80255db2",
+    "creatures\\seahorse\\LICENSE.txt": "0f943f765486219b5a0cb7092bf92bb8399e1a1affde3d8e6c59f6aef2d3ef6a",
+    "creatures\\seahorse\\manifest.json": "f72a0cb0ec994c2a09de935b3d0ecc24714d5471a59cb7461320a8ef89dd9b55",
+    "creatures\\seahorse\\model.bin": "b209dbd0feafc6f885dded8f240f0b728578cf40eb3c98e937b2b4df3cf96f0f",
+    "creatures\\seahorse\\model.gltf": "4aa5ed9d1447746c3e308d4537a4d89e08555d29e58ac4aebf8b9790735fa1cd",
+    "creatures\\seahorse\\textures\\body.png": "53f15609eae1426a950d4f6f420fb8631187265042a3523a2d5a26b8db2670a1",
+    "creatures\\seahorse\\textures\\icon.png": "43231bd03e79c65f0be663fdf1ca58ea27e182134bc8f5ee5c14783ffec8210a"
+  },
+  "exe_sha256": "e0ed6a9dba7294059dbd7eb1738362692b28d95b578e39e6892594a76eb4f1d3",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "water",
+  "qa_camera": "grid",
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

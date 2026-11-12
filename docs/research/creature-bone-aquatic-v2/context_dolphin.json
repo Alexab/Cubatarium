@@ -1,0 +1,20 @@
+{
+  "captured_at_utc": "2026-11-10T17:09:18.422190+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\bone_aquatic_v2\\models",
+  "files_sha256": {
+    "creatures\\dolphin\\creature.json": "55b970d347dc35a1ddb388148be98d7743db5df4bc3ce449f754fb4d2b1bd387",
+    "creatures\\dolphin\\geometry.geo.json": "c4e4ccc2c32734dfead5d1495a4f9db165ed328bcc036c62c0b4405c3918f2e4",
+    "creatures\\dolphin\\LICENSE.txt": "86f3dd813a29614b4a0bfbddc18fba9e009edd9e2e7c28de179b655ae89b4e16",
+    "creatures\\dolphin\\manifest.json": "b75ae414021a57d397965d459a78c8b7a63ffcaf046de5f0f37457b13a9dd845",
+    "creatures\\dolphin\\textures\\diffuse.png": "aa42330283553a73c8760e5227bf62af7e81b922ed6fcf2d71ddca928b0b2cbe",
+    "creatures\\dolphin\\textures\\icon.png": "8231c2361fe454e6d30b3eb24ee552afab54c469bcc0b074a9e24f1fe35eb989"
+  },
+  "exe_sha256": "09736f903f04b3779cc7b598fbbac55bf82fa1bf5ac6558655470cc04c1318cc",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "dolphin",
+  "performance_gate": "disabled"
+}

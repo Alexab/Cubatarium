@@ -1,0 +1,24 @@
+{
+  "captured_at_utc": "2026-11-10T23:54:47.377859+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\bin\\models",
+  "files_sha256": {
+    "creatures\\land_guard\\creature.json": "b3321590fedff602d1e68162c8f1a51c1824663d7d185abb23406ba5ffcdaa41",
+    "creatures\\land_guard\\LICENSE.txt": "545a478bd585027c37a5e9f392aa9a21c0cfe0d5d03348455fee68eadac0f2e1",
+    "creatures\\land_guard\\model.bin": "10dd20958888fd14b0235e064061d34de31f80c505d2d357330538586d4ae613",
+    "creatures\\land_guard\\model.gltf": "a7a12017704e8a17e817a0987c2cf4159a4b654abda651b49587ccb347382811",
+    "creatures\\land_guard\\textures\\body.png": "7a5d16720434514c740b46309237eb52a7389720a0a1a6c41203ebfaa20df6db",
+    "creatures\\land_guard\\textures\\icon.png": "36a2ad5bd1a4c0b57200cae6ce080fe69da056824d93bc9690b36bb226914527"
+  },
+  "qa_models_override": false,
+  "exe_sha256": "43bb4bf75f6f14d792169bcc31453103515469d7f530f3f566e7121249a0a900",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "production_land_guard",
+  "qa_camera": "close",
+  "qa_water_placement": false,
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

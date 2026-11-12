@@ -1,0 +1,23 @@
+{
+  "schema": "creature-anatomy-proposal-review.v1",
+  "reviewer": "Codex direct native image inspection",
+  "date": "2026-11-12",
+  "decision": "rejected",
+  "published": false,
+  "r6_state": "pending",
+  "observations": "Native three-way review: excessive anterior shift creates a flat protruding breast panel, especially in horizontal pose. Do not publish.",
+  "artifacts": [
+    {
+      "path": "threeway_idle.png",
+      "sha256": "3f58c4383f725613847c454dfee08a57e50547e7a9d62ae2e9807a4e9cbbf096"
+    },
+    {
+      "path": "threeway_walk.png",
+      "sha256": "3f4e2793057f8a0081b453653be90bb576ece5545c8c3ed7f64f3f557ee9b0e2"
+    },
+    {
+      "path": "threeway_fly.png",
+      "sha256": "b1da2b358d15f1583c5ab56ad8e6d1921697d35081c9b0f22448df26ed7bf195"
+    }
+  ]
+}

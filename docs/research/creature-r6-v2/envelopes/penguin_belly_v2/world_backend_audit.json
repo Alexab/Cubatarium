@@ -1,0 +1,39 @@
+{
+  "passed": true,
+  "scope": "Four production process/spawn/render subsets across B/R/G and sprite; only penguin has the explicit short water movement probe, not complete routes/terrain/control/performance acceptance",
+  "exe_sha256": "a0872e87a1551dbe7ac0cff1346b58176743d18eba13817cb7779473415df68f",
+  "worlds": [
+    {
+      "species": "bot",
+      "backend": "bone_skeleton",
+      "context_sha256": "61f86675aee1a01a2cc9800c71713f9b18bc2ea3ae4b9c9c69ba26417ebeb4a2",
+      "actual_world_frame": "production\\runtime_production_final\\frame_002.png",
+      "actual_world_frame_sha256": "7b87a95e48afad5456aa94a75410dbcac38e483227482b07ec214714db6484d3",
+      "directly_inspected": true
+    },
+    {
+      "species": "penguin",
+      "backend": "gltf_skeleton",
+      "context_sha256": "80affa9dd703d35596a5bbceee780fa1a0f202d8454fd8dbb3f759160696f0bb",
+      "actual_world_frame": "world_published\\runtime_fluid_candidate\\frame_003.png",
+      "actual_world_frame_sha256": "3a121f8652a35513a9f423ccc651c2ff182fb89152f725112f3a60790701d54d",
+      "directly_inspected": true
+    },
+    {
+      "species": "rigid_demo_walker",
+      "backend": "rigid_voxels",
+      "context_sha256": "c8dbe11e6e13f811716d4de29e10942d6350016ec221e78a10ac22e9d2a01ef4",
+      "actual_world_frame": "backend_worlds\\runtime_rigid_demo_walker\\frame_002.png",
+      "actual_world_frame_sha256": "0c2f5b4b7bc2e4d8f36d36ccce7dd71cc62c365ead825d130abeb667dfa84222",
+      "directly_inspected": true
+    },
+    {
+      "species": "fire_spirit",
+      "backend": "rigid_voxels",
+      "context_sha256": "0daafd68566b8df9ab5822061c7ad5dc0eca73e50257457e7646b47f7fb254a9",
+      "actual_world_frame": "backend_worlds\\runtime_fire_spirit\\frame_002.png",
+      "actual_world_frame_sha256": "c6f6b04f34be7e7340282318efe80aef5367170184b0d7c41094bd3c0ceca04b",
+      "directly_inspected": true
+    }
+  ]
+}

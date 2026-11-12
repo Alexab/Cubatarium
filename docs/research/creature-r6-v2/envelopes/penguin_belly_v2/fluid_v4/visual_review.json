@@ -1,0 +1,28 @@
+{
+  "reviewer": "Codex direct native image inspection",
+  "date": "2026-11-12",
+  "scope": "Directly inspected three Idle/Walk native full-turn sheets and two world images. Frame15 includes natural puffin; it is not a second penguin witness. R5 revision only; R6 pending.",
+  "r6_state": "pending",
+  "artifacts": [
+    {
+      "path": "penguin_fullturn_0.png",
+      "sha256": "3c7f0b7bd3a452ff366c7828ee2563d9a571a274dd297a6ad4f0f232ef7268d7"
+    },
+    {
+      "path": "penguin_fullturn_1.png",
+      "sha256": "91c894757dfea4c6b1c9f06f7746b17c0615ddd15c0bf385752f82d27f910b43"
+    },
+    {
+      "path": "penguin_fullturn_2.png",
+      "sha256": "a9b990ceb009323c866bc320605160849087f3b784075ef566d28a0cc31a0272"
+    },
+    {
+      "path": "runtime_fluid_candidate/frame_010.png",
+      "sha256": "42ab3d7ac361ea4fac4d3efb4fc8371eda16b42bf6b1f968969f87d09645e619"
+    },
+    {
+      "path": "runtime_fluid_candidate/frame_015.png",
+      "sha256": "cf3f9aa5dbaadca8a4278a797f209e851c6096ac12440d8a90a30c65cc306892"
+    }
+  ]
+}

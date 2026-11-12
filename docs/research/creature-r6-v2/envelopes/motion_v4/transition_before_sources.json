@@ -1,0 +1,13 @@
+{
+  "exe_sha256": "0140ebe1277d2a501304d7799ba50e32c12c09e2b4f1b0a80a7459aee522e62b",
+  "source_sha256": {
+    "src/Creatures/Visual/CreatureVisualGltf.cpp": "ea45d776261e0dc3cd00982a74602ca4b3abe23a4639b661f4d345146d60bc5f",
+    "src/Creatures/Visual/CreatureVisualGltf.h": "0c2f9e3485469a992f3981a265a7a6b24f15b7018d0713f5fc081044ed8f918c",
+    "src/Creatures/Visual/Gltf/CreatureGltfBonePalette.cpp": "2cfaa1268d1b4c76128a02dcf53c853dca1b70c7f0498724fd9081a484a015d0",
+    "src/Creatures/Visual/Gltf/CreatureGltfClipClock.h": "b3e6f0c051563c367aaaa2cc63c0d0487ad3433733411129492ad0cf49afc2f0",
+    "src/App/Platform/CreatureQaTransitionProbe.h": "d1ef387553f2d2fb1b4e15d228c4ee16a9305a24bef51d589d033f3e5070a726",
+    "src/App/Platform/CreatureQaEnvelopeCapture.h": "c7aad4b9ef5877a102919121dfe28af2350a8449f92dc93deb0c97cf69c728ac",
+    "src/Gui/Preview/CreaturePreviewRenderer.cpp": "b94f69fc0fb48b9c1a9055d659ef26b4cada0de98ca16d27100d5996f77ba348",
+    "src/Gui/Preview/CreaturePreviewRenderer.h": "a7cad6db27a4f8c5452629f9ec29b5749d6940d4c956c7c15d729e8fca9de96a"
+  }
+}

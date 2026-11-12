@@ -1,0 +1,55 @@
+{
+  "captured_at_utc": "2026-11-11T23:56:07.344645+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\review_2026_11_10\\baseline\\models",
+  "files_sha256": {
+    "creatures\\oerkki\\creature.json": "5edaaeb64992b3bdd87478ff5f757d61296aa55e2db1142c9fe3354b0c2d243e",
+    "creatures\\oerkki\\LICENSE.txt": "7f7042e057dd2be81a1e73ce93ce3e892aa5c6c51bfc2513fc8a689909ba88db",
+    "creatures\\oerkki\\model.bin": "8f2f49da6aab1c0f5b73ab6cb1e7ccc55e3a784a1daab3c3c57548cd7251ffad",
+    "creatures\\oerkki\\model.gltf": "ebae48a8084e16a748b646c30e6e67f4bac35132ac83b40e280db115425da9e7",
+    "creatures\\oerkki\\textures\\arm.png": "deb37ae334b7dec66fefa72557eb3966d8395c44cb8ebb172304153d3173f889",
+    "creatures\\oerkki\\textures\\body.png": "c96f681dfcf978c0708a52d63a3204b2834aee880ac1019c87f73b1397162025",
+    "creatures\\oerkki\\textures\\face.png": "1c0088cad46db05a5cc0f33ede941c96fb6259dc0a43a21674a7de0afc642616",
+    "creatures\\oerkki\\textures\\icon.png": "6bc68834a2573608e788a2db1998f250e1b8dfe145e7d193f403431ef7cb3583",
+    "creatures\\oerkki\\textures\\leg.png": "7683cb99e7ffdaa923670fe4740550c6d3d4ad731d24abef982ede8034436d57"
+  },
+  "qa_models_override": true,
+  "exe_sha256": "a0872e87a1551dbe7ac0cff1346b58176743d18eba13817cb7779473415df68f",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "envelope_original",
+  "qa_camera": "close",
+  "native_matrix": false,
+  "native_equipment_matrix": false,
+  "native_equipment_texture_probe": false,
+  "native_resource_cache_probe": false,
+  "native_resource_reload_probe": false,
+  "native_fp_matrix": false,
+  "native_save_probe": false,
+  "native_envelope_variant": "baseline",
+  "native_transition_probe": false,
+  "native_fluid_transition_probe": false,
+  "world_motion": null,
+  "world_motion_expected_fluid_state": null,
+  "world_seconds": 8.0,
+  "world_capture_interval_seconds": 3.0,
+  "native_posed_culling_probe": false,
+  "envelope_profile_sha256": "52fba7cd7e8df6ed1ca6a874d48e674fda88ce27054458bbbc33a84c647370d0",
+  "fp_shaders_sha256": {},
+  "equipment_material": "copper",
+  "world_gear_fixture": false,
+  "equipment_files_sha256": {},
+  "world_species": [
+    "oerkki"
+  ],
+  "preview_species": [
+    "oerkki"
+  ],
+  "qa_water_placement": false,
+  "qa_lava_fixture": false,
+  "world": "World_254",
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

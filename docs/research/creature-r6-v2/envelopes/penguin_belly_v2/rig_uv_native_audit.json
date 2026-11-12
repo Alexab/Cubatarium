@@ -1,0 +1,42 @@
+{
+  "passed": true,
+  "scope": "Isolated candidate data invariants and native input consistency; not art/contact/performance acceptance",
+  "animation_sampler_arrays_exact": 17,
+  "nodes_skin_ibm_definition_joint_indices_weights_exact": true,
+  "before_geometry": {
+    "triangles": 132,
+    "min_triangle_area": 0.0007519520586356521,
+    "constant_uv_triangles": 76,
+    "model_texel_density_p05": 0.0,
+    "model_texel_density_median": 0.0
+  },
+  "candidate_geometry": {
+    "triangles": 132,
+    "min_triangle_area": 0.0007519520586356521,
+    "constant_uv_triangles": 76,
+    "model_texel_density_p05": 0.0,
+    "model_texel_density_median": 0.0
+  },
+  "sheets": [
+    {
+      "path": "threeway_idle.png",
+      "sha256": "5b885171ea4897e96194eeca3f060415d5383adc361d0312cba5e79a7df4ecea"
+    },
+    {
+      "path": "threeway_walk.png",
+      "sha256": "913ac331634133e99b37dfcef6035e54f62453ce3b9c2151324b31bc343c175d"
+    },
+    {
+      "path": "threeway_fly.png",
+      "sha256": "d596eddbcfb0cb5bfd1c1e1510aecd02f73bb391cd8f6e1ddb230130564c4ba3"
+    }
+  ],
+  "payload_sha256": {
+    "creature.json": "3d175d036833d74657173bf4cedf704f6002179280008be352a84568305d5d83",
+    "LICENSE.txt": "236d88332f317db9be8e6949940e931c3b5972d852ff269eb87e0a78e6e22def",
+    "model.bin": "59efe9ebf9a07cf27977791685a81758d7570f04dfcc03b55a04e8cb16a7bace",
+    "model.gltf": "6bcf70d7a8e681ee5132171890ad20231d844795d20b558173dd92b463dfb7c0",
+    "textures\\body.png": "0c8e0e66b0541ac58949484c98bc14bd82383757c9f67b413ef2d22ee240c706",
+    "textures\\icon.png": "8d92e959d3ea45e580fb3d8c810b49a7e749f8d2c9e8b7c9a5479d7bd3e123d9"
+  }
+}

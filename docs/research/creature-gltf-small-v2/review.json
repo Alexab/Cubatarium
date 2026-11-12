@@ -1,0 +1,109 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R5 small terrestrial glTF wave; global R6 performance/full compatibility/reproducibility pending",
+  "metrics_path": "metrics.json",
+  "species": {
+    "rat": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct equal-scale comparison, native Release four views and 24 motion phases, 64px icon, grid and final close-follow world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "e3d491017486ee79ff52abe651122563fb06eb174f72d3f90852e2311607a09c",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "rat.png",
+          "sha256": "e16f8500b31e9f8636655016ffb04a1f3ae562af01c81c0d846ab6267421ae81"
+        },
+        "motion": {
+          "path": "native_approved_rat.png",
+          "sha256": "952600950e854c9ee01b85c6f5b5edbfb0a746214f81689307c332ea1da8e067"
+        },
+        "runtime": {
+          "path": "runtime_close_rat/frame_001.png",
+          "sha256": "f3f0d51b7c799b2bea680222421887fbfe65d0e26471e48bd7306ed86124538d"
+        },
+        "ui": {
+          "path": "native_candidate/rat_12.png",
+          "sha256": "48fd6718914c7d156c277cb505e4ad4ab5880d6a7387034c37af4bacf4506ee8"
+        }
+      },
+      "notes": "17 functional joints instead of original two palette entries: short segmented legs, weighted trunk, rounded ears, pointed muzzle/jaw and three weighted tail sections. Own grey-brown coat, pale underside and muted pink nose/ears/paws/tail. Original idle/walk/run/punch capability retained with independently authored tracks. Actual exported skinning tested at 64 phases in walk/run: all four paws move, loops join, weights normalize and ground penetration stays below 0.002 world blocks. Gameplay bounds/speeds/habitat unchanged. Production generator reads no reference assets. Close world QA follows the actual body after physics settles; previous clipped close frames were overwritten and not accepted. Performance gates disabled; not a performance pass."
+    },
+    "kitten": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct equal-scale comparison, native Release four views and 24 motion phases, 64px icon, grid and final close-follow world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "5fd4d605839760911dac84838bea311c40ad9b203fa64561f16f7d728a33f6a5",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "kitten.png",
+          "sha256": "ee6cc5396896ca2cb1dd8e1870e9ee1b117b0ca33c425ca421efc67f53ecfc14"
+        },
+        "motion": {
+          "path": "native_approved_kitten.png",
+          "sha256": "c4dc68e9ceb525e2b0d9c021b79b5c70b249cc7418c441798ac91f939f395bed"
+        },
+        "runtime": {
+          "path": "runtime_close_kitten/frame_001.png",
+          "sha256": "8bfa5f48b141b45fc30fe47ba73c832c891c903b0e3ff79ed92348bf713e7a27"
+        },
+        "ui": {
+          "path": "native_candidate/kitten_12.png",
+          "sha256": "5463482c2399a1bd746f95ddb0cfe49d63dc43e3f01fbb1fa7264e1199459762"
+        }
+      },
+      "notes": "16 functional joints instead of original nine: segmented legs, weighted trunk, pointed ears and a rising three-section tail. Own grey tabby/cream coat and small pink nose. Feline lateral footfall sequence in walk and paired springing steps in run. Original idle/walk/run clips retained. Exported ears taper to narrow tips; exported tail segments rise gradually rather than forming a right-angle hook. Actual exported skinning tested at 64 phases in walk/run: all four paws move, loops join, weights normalize and ground penetration stays below 0.002 world blocks. Gameplay bounds/speeds/habitat unchanged. Production generator reads no reference assets. Close world QA follows the actual body after physics settles; previous clipped close frames were overwritten and not accepted. Performance gates disabled; not a performance pass."
+    },
+    "hedgehog": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct equal-scale comparison, native Release four views and 24 motion phases, 64px icon, grid and final close-follow world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "03cb9bf5d6330ccdf358beae7d9faa43b5e4c2909368f0e4678c95fe96c02d77",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "hedgehog.png",
+          "sha256": "277aa4405719b7e03ae475e2f33643edb414f9669cde0f64307f5589be817ef9"
+        },
+        "motion": {
+          "path": "native_approved_hedgehog.png",
+          "sha256": "2755915aa60a34ae18d60c3b2d453ceffc56c4718e0f40923c93d6ef8aef0462"
+        },
+        "runtime": {
+          "path": "runtime_close_hedgehog/frame_001.png",
+          "sha256": "ff13de99e6efe073861e24780fd314c0d487a173413003a52df01039ff18a74b"
+        },
+        "ui": {
+          "path": "native_candidate/hedgehog_12.png",
+          "sha256": "d56f257f62eeae5b6f5b48644cc5f9e51daea5beb95353557ac72ccef69b3662"
+        }
+      },
+      "notes": "11 functional joints instead of original three palette entries: tapered low body/dome, pointed cream snout, separate short paws and 50 small rear-pointing quills. Own dark-brown quills with pale tips; no copied reference pixels. First coarse quill plates and rectangular rear silhouette were corrected after native inspection. Original idle/walk/run clips retained. Actual exported skinning tested at 64 phases in walk/run: all four paws move, loops join, weights normalize and ground penetration stays below 0.002 world blocks. Gameplay bounds/speeds/habitat unchanged. Production generator reads no reference assets. Close world QA follows the actual body after physics settles; previous clipped close frames were overwritten and not accepted. Performance gates disabled; not a performance pass."
+    }
+  }
+}

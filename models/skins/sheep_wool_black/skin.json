@@ -25,7 +25,7 @@
       1.0
     ],
     "icon": {
-      "mode": "skin_texture",
+      "mode": "parts_preview",
       "fallback_color": [
         0.2,
         0.2,

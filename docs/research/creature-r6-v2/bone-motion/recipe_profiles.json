@@ -1,0 +1,125 @@
+{
+  "schema": "creature-authored-bone-profile-bindings.v1",
+  "scope": "Explicitly preserve the current runtime profile in the authoring recipe; no gait retargeting",
+  "resources": [
+    {
+      "id": "bee",
+      "profile": "aerial",
+      "already_explicit_in_recipe": false,
+      "recipe_sha256_before": "26026f3e08ecd83cd47e346e905f9972eb80029351051492366d31c1d3457028",
+      "recipe_sha256_after": "afe1edfe42cb773dfe66b59c7fba05631dc9d78251a8850997e1ff11ddab782d"
+    },
+    {
+      "id": "bot",
+      "profile": "humanoid",
+      "already_explicit_in_recipe": false,
+      "recipe_sha256_before": "8094aac9f4065155d3f2a9629320f417cc98742bac5f76b342eab6ffc428bb7a",
+      "recipe_sha256_after": "083a55fbeed6c8f6a274d6e18af36560796514db0d70a4d5a46e6508159d74ad"
+    },
+    {
+      "id": "bunny",
+      "profile": "rabbit",
+      "already_explicit_in_recipe": false,
+      "recipe_sha256_before": "fcfe8e2cb1530c321bca0b8124cbba1d06d25ebf7a1af51de7cc72d91fefedb6",
+      "recipe_sha256_after": "d7470b40e5d672a9dd373cb2c70018ceea3575510ea3bf2b25ad40ac9c4c0865"
+    },
+    {
+      "id": "chicken",
+      "profile": "chicken",
+      "already_explicit_in_recipe": false,
+      "recipe_sha256_before": "c0bc7a0f20df4c88aa12b119c1f9a24069013230c8a01f5c94199135e8db24e2",
+      "recipe_sha256_after": "83d8b1b2ed26c10569de8ebe2da539bdf1435910ed892666e7caacd25ed453da"
+    },
+    {
+      "id": "cow",
+      "profile": "quadruped",
+      "already_explicit_in_recipe": false,
+      "recipe_sha256_before": "f8e088f41cef6e2183040c3184268fdce51a77cbd40e995e97b9042441839416",
+      "recipe_sha256_after": "2d37929c1c6310c2c2a805f494098d49cce85922ad2faeb2bc3207522d96a45d"
+    },
+    {
+      "id": "dolphin",
+      "profile": "dolphin",
+      "already_explicit_in_recipe": true,
+      "recipe_sha256_before": "589ccde3f4749778daf28c90dc3b010aa105c788a804b67f4155b95b0c1d9622",
+      "recipe_sha256_after": "589ccde3f4749778daf28c90dc3b010aa105c788a804b67f4155b95b0c1d9622"
+    },
+    {
+      "id": "fox",
+      "profile": "fox",
+      "already_explicit_in_recipe": false,
+      "recipe_sha256_before": "63d325d57def94d5de3a501a5cc2b0c2f6000bac125e749fcfd8fe0c910144b2",
+      "recipe_sha256_after": "cf856394b8dddcee05231b8f10dd69a3ba8457314a86c0e1a01f104a1fadb5fc"
+    },
+    {
+      "id": "human",
+      "profile": "humanoid",
+      "already_explicit_in_recipe": false,
+      "recipe_sha256_before": "3824f3c42bdd76a38bca935ee37983d00273bec8e036ae0e596698125899d129",
+      "recipe_sha256_after": "292345bbdd42ed36fab49c4797fe05facc8dc5d9166ba3aafed4a2d11ad523dd"
+    },
+    {
+      "id": "pig",
+      "profile": "quadruped",
+      "already_explicit_in_recipe": false,
+      "recipe_sha256_before": "d241bdd42022e3d97d770b118a1625a9d9e382c3d45db444fa805a12185450f7",
+      "recipe_sha256_after": "430b6b3c26a4e79db0a02203e824effe7561cd973a02cc0fdbee06157f0f889b"
+    },
+    {
+      "id": "sheep",
+      "profile": "quadruped",
+      "already_explicit_in_recipe": false,
+      "recipe_sha256_before": "bb9bcb2bd55df23e7e7fc7b925b26fdad46e3b2eb6e11162e7aa6917e9317682",
+      "recipe_sha256_after": "5b2ae152f4e96a6cd46ec32c24670d4486aff54d6ccece6fcdff8cf2ffd3a2d1"
+    },
+    {
+      "id": "skeleton",
+      "profile": "humanoid",
+      "already_explicit_in_recipe": false,
+      "recipe_sha256_before": "b5a0a0e52e57e271a356e76b45b3f80156118e6bdd3c5ab3ca269f9b1cf6a24a",
+      "recipe_sha256_after": "baaa08056f1f661293f60c0fb9c97d8ea709e4f4b4f1b672c4c897774cba14c2"
+    },
+    {
+      "id": "spider",
+      "profile": "arachnid",
+      "already_explicit_in_recipe": false,
+      "recipe_sha256_before": "c96906b4f3fb3147f52e042ce78497f423138e5c21eb2032126e9872e96e53b6",
+      "recipe_sha256_after": "8b665c145d59df447e502aeca60899c72f8b2ec07d5234e2f2119e5a2d7a3416"
+    },
+    {
+      "id": "squid",
+      "profile": "squid",
+      "already_explicit_in_recipe": true,
+      "recipe_sha256_before": "bc35aabd0ace23b584c56d955cfcbc6139f823d7f7924feed3becf2cce5f216c",
+      "recipe_sha256_after": "bc35aabd0ace23b584c56d955cfcbc6139f823d7f7924feed3becf2cce5f216c"
+    },
+    {
+      "id": "tortoise",
+      "profile": "turtle",
+      "already_explicit_in_recipe": true,
+      "recipe_sha256_before": "f65b1cca123ea35bdf954c2be56077fa1ee98a78f0e9f3d5aaa7d0da799f539f",
+      "recipe_sha256_after": "f65b1cca123ea35bdf954c2be56077fa1ee98a78f0e9f3d5aaa7d0da799f539f"
+    },
+    {
+      "id": "trout",
+      "profile": "aquatic",
+      "already_explicit_in_recipe": true,
+      "recipe_sha256_before": "5657ea54c12144321cae5347cb8fce5fdb2257353d2930749c65cb64808bfe9e",
+      "recipe_sha256_after": "5657ea54c12144321cae5347cb8fce5fdb2257353d2930749c65cb64808bfe9e"
+    },
+    {
+      "id": "wolf",
+      "profile": "quadruped",
+      "already_explicit_in_recipe": false,
+      "recipe_sha256_before": "480eff2742249b12419eb9a5576322cb5342c6f5994b8b614e507616e68df1f2",
+      "recipe_sha256_after": "a7b72c3fbc4b17055b691ec205c909163dbd05176a12a0ad0e370ecba53746fe"
+    },
+    {
+      "id": "zombie",
+      "profile": "humanoid",
+      "already_explicit_in_recipe": false,
+      "recipe_sha256_before": "adc61073602dc9978767ac56be4fa4da7cccb3bbd37f10fdffd1ecc02aa1e6eb",
+      "recipe_sha256_after": "04e8699f3f491d21cb4557dd8a1b7dda9b1633ed97700fb83dd35dcaef2ba7af"
+    }
+  ]
+}

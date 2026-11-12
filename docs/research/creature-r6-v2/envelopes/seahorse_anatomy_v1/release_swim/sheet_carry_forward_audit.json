@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "scope": "All six sheets byte exact to directly viewed pre-build sheets; new Release captures independently generated, no reference image reuse",
+  "sheets_sha256": {
+    "threeway_idle.png": "3b653bbff7472eb8a1f6d21d5c49f1c8753b0c00343b0dc35792a4fecfd80368",
+    "threeway_walk.png": "763f7f0e9de793f52e7e0516077e3c22057b5cf4d2de03eeedce4d03226bca23",
+    "threeway_action.png": "ef72dedc5f7276a316c892a4f403a121a5531b3566367b2d34581ae98df6afc1",
+    "fullturn_0.png": "ca3035d59a4174480f33a2408db56490a0ae75a84ed2e0099c2a08ea0406939c",
+    "fullturn_1.png": "ff5dbfe8b6beb723d3b5b90228787d5131efb09c52fe1a409c33e8a92905e157",
+    "fullturn_2.png": "c2161bf5856a88d64f5c18fc4dfe0231b7a520b21395b3dee1e4765d9631c24c"
+  }
+}

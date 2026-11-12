@@ -1,0 +1,68 @@
+{
+  "tree_monster": {
+    "weighted_joints": 27,
+    "palette_joints": 27,
+    "baseline_weighted_joints": 1,
+    "clips": [
+      "idle",
+      "walk",
+      "run",
+      "punch"
+    ],
+    "gameplay_fields_equal_baseline": {
+      "bounds": true,
+      "locomotion": true,
+      "spawn": true,
+      "habitat": true,
+      "attributes": true,
+      "behavior": true,
+      "catalog": true
+    },
+    "candidate_bundle_sha256": "5ccd77b3c6ad3aba1b5de4f212fee51a237602cf286c696912d70574351206f5",
+    "context_payload_matches": true
+  },
+  "treeman": {
+    "weighted_joints": 23,
+    "palette_joints": 23,
+    "baseline_weighted_joints": 1,
+    "clips": [
+      "idle",
+      "walk",
+      "run",
+      "punch"
+    ],
+    "gameplay_fields_equal_baseline": {
+      "bounds": true,
+      "locomotion": true,
+      "spawn": true,
+      "habitat": true,
+      "attributes": true,
+      "behavior": true,
+      "catalog": true
+    },
+    "candidate_bundle_sha256": "54a6257200ca18314c7f21bf58a55f4521787002ca9ed59aa1cfee63b4bcb8dc",
+    "context_payload_matches": true
+  },
+  "golem": {
+    "weighted_joints": 16,
+    "palette_joints": 16,
+    "baseline_weighted_joints": 1,
+    "clips": [
+      "idle",
+      "walk",
+      "run",
+      "punch"
+    ],
+    "gameplay_fields_equal_baseline": {
+      "bounds": true,
+      "locomotion": true,
+      "spawn": true,
+      "habitat": true,
+      "attributes": true,
+      "behavior": true,
+      "catalog": true
+    },
+    "candidate_bundle_sha256": "7f5b772c9fefe1872fa3f3b76e5908bc4ac3a86229d607eb9960c02947c56d03",
+    "context_payload_matches": true
+  }
+}

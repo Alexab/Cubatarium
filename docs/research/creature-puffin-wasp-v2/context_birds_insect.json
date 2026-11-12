@@ -1,0 +1,30 @@
+{
+  "captured_at_utc": "2026-11-10T20:06:49.096895+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_puffin_wasp_v2\\models",
+  "files_sha256": {
+    "creatures\\puffin\\creature.json": "6a3c1e28b526fa7d84c380ea1648e0d502a033e681411357d587cc9a10ca3e86",
+    "creatures\\puffin\\LICENSE.txt": "0397580c6d94803d7b903c3f48556a33762849dd38b0f5d69ebfcd2b6d878f94",
+    "creatures\\puffin\\manifest.json": "f006f68eed5d936af64e18f3a6ca2bcb802870e8ae7b1d7da56857d1c78f9dc3",
+    "creatures\\puffin\\model.bin": "fd66bdb9f8df68d1da56cc1677a6fd85ae1352895fa9f4393788b1c28e380f91",
+    "creatures\\puffin\\model.gltf": "3b6cb8b5be019756ab2888f06bb2512f5d069c36d75c987054123bb8d77be7cd",
+    "creatures\\puffin\\textures\\body.png": "cddb29c42e07ae9c0c557b36d7d46bf55e6d74fd21a1272dfce4f12cada10262",
+    "creatures\\puffin\\textures\\icon.png": "1224c14ece14799e79e2defe29df5bca4bf45e4fc64670408bf9c3b061891be2",
+    "creatures\\wasp\\creature.json": "68f6055ba3195fbf4f06b8af654f59e7fbfdece2e0064f7d92a5ee417afe9828",
+    "creatures\\wasp\\LICENSE.txt": "f3878303d9430e6ebe083672d4bc556fee6f1e4e1f80baa65786ce5671cd4d59",
+    "creatures\\wasp\\manifest.json": "399361012a5470f7aec9ebe58fd13e71d0a247f645a2406fe3d5db739e0ed8d9",
+    "creatures\\wasp\\model.bin": "b6fd72515f1fd48be2b56b558f5fb19c394acdb352f97bb382996b27a38e4ff8",
+    "creatures\\wasp\\model.gltf": "74211730ed6e4c7b9f8047626ff1ed6500c0412c0744654139503379b2d26085",
+    "creatures\\wasp\\textures\\body.png": "d74a7aca42a0ee1ef2454e56d791bd8e9fdbccd44643613b9001e74b74e475db",
+    "creatures\\wasp\\textures\\icon.png": "6d8eb12de6bd79c7f96c86511c888dca02008c2199ac96aa6a03cdec93f3d281"
+  },
+  "exe_sha256": "e0ed6a9dba7294059dbd7eb1738362692b28d95b578e39e6892594a76eb4f1d3",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "birds_insect",
+  "qa_camera": "grid",
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

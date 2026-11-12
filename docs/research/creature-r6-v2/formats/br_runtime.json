@@ -1,0 +1,549 @@
+{
+  "schema": "creature-independent-br-format-audit.v1",
+  "scope": "active structural paths; not art, actual contact, package or complete interchange conformance",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\bin\\models",
+  "summary": {
+    "bone_species": 17,
+    "rigid_species": 4,
+    "skins": 5,
+    "resources": 26,
+    "errors": 0,
+    "resources_with_errors": [],
+    "uv_overlap_resources": []
+  },
+  "resources": [
+    {
+      "id": "bee",
+      "kind": "species",
+      "backend": "bone_skeleton",
+      "geometry_id": "geometry.bee",
+      "bones": 11,
+      "cubes": 18,
+      "texture_size": [
+        64,
+        64
+      ],
+      "box_uv_overlaps": [],
+      "ignored_legacy_fallback_parts": 7,
+      "errors": [],
+      "files_sha256": {
+        "creature.json": "695da701fe685a4fb9f68da8fab6604e8516a2bfb9b813a0e34ffcb9130d2a10",
+        "geometry.geo.json": "9040f1f2f194977fa35c431c129ea2180276a0310e60003255b35daa7db884dc",
+        "textures/diffuse.png": "5917d232815ceaadb7b5cfc178e925fa683dc818e8b1275dbfce24eb96aa04d0"
+      }
+    },
+    {
+      "id": "bot",
+      "kind": "species",
+      "backend": "bone_skeleton",
+      "geometry_id": "geometry.zombie.v1.8",
+      "bones": 10,
+      "cubes": 8,
+      "texture_size": [
+        128,
+        128
+      ],
+      "box_uv_overlaps": [],
+      "ignored_legacy_fallback_parts": 6,
+      "errors": [],
+      "files_sha256": {
+        "creature.json": "cf9faeddeb299d770d6af23d60d364c27c47b57b0d62a38e0cec9170ef2181c9",
+        "geometry.geo.json": "50b1784564d098b792d120bf3db55ececfe2f4001485df676b5cccee8c02233c",
+        "textures/diffuse.png": "63aaac2717ca38083e96c5a9fb370f4ea1f017aa5ab553969e5fecb5ebbb1f8f"
+      }
+    },
+    {
+      "id": "bunny",
+      "kind": "species",
+      "backend": "bone_skeleton",
+      "geometry_id": "geometry.rabbit.v1.8",
+      "bones": 12,
+      "cubes": 14,
+      "texture_size": [
+        64,
+        64
+      ],
+      "box_uv_overlaps": [],
+      "ignored_legacy_fallback_parts": 7,
+      "errors": [],
+      "files_sha256": {
+        "creature.json": "5538b743922c48934f9e6256660490bc9e0f6c9b935c6e48e17a2ad03ab94232",
+        "geometry.geo.json": "b78a874bf1439be8e09b61b29f885e8281d5e6b8fd46287de8fca6f9708ecbdd",
+        "textures/diffuse.png": "b35ce84359aaf3c397ea7396e4d22b05c4cfccc99c6b102a36b1e5b8de854fce"
+      }
+    },
+    {
+      "id": "chicken",
+      "kind": "species",
+      "backend": "bone_skeleton",
+      "geometry_id": "geometry.chicken.v1.12",
+      "bones": 8,
+      "cubes": 16,
+      "texture_size": [
+        64,
+        64
+      ],
+      "box_uv_overlaps": [],
+      "ignored_legacy_fallback_parts": 9,
+      "errors": [],
+      "files_sha256": {
+        "creature.json": "97a18503b0e71b0ca8b5b0e152ddf62222a290cd169fdfbf78ff48388c2d2d0f",
+        "geometry.geo.json": "749792ceecc8ecd29ca08c515af75e57b8fcab4f1b28152ce38da219e73b236e",
+        "textures/diffuse.png": "256d0196204608ac3f1aa136fc293dce9ef7d84cbf4cf150f2ddb7e34f943f0d"
+      }
+    },
+    {
+      "id": "cow",
+      "kind": "species",
+      "backend": "bone_skeleton",
+      "geometry_id": "geometry.cow.v1.8",
+      "bones": 7,
+      "cubes": 18,
+      "texture_size": [
+        128,
+        128
+      ],
+      "box_uv_overlaps": [],
+      "ignored_legacy_fallback_parts": 11,
+      "errors": [],
+      "files_sha256": {
+        "creature.json": "b7d04bbc2fbb2521ef3aaa5ddaedc7b0d3bf2cc043968ff50a5c91555a594ad9",
+        "geometry.geo.json": "d2cbbdb821d0e68d441c527b0341ced503374aac97fa189972f77b75c4fc49ed",
+        "textures/diffuse.png": "4ababc1fd553b0e23bbf3480932b9f989fd000c7e4f9073ac274f9b19dd29f63"
+      }
+    },
+    {
+      "id": "dolphin",
+      "kind": "species",
+      "backend": "bone_skeleton",
+      "geometry_id": "geometry.dolphin",
+      "bones": 8,
+      "cubes": 16,
+      "texture_size": [
+        128,
+        128
+      ],
+      "box_uv_overlaps": [],
+      "ignored_legacy_fallback_parts": 4,
+      "errors": [],
+      "files_sha256": {
+        "creature.json": "55b970d347dc35a1ddb388148be98d7743db5df4bc3ce449f754fb4d2b1bd387",
+        "geometry.geo.json": "294548d12a0f8d6b9343093e9f085a47a6a7241f76fd11790cc974db6007dce2",
+        "textures/diffuse.png": "aa42330283553a73c8760e5227bf62af7e81b922ed6fcf2d71ddca928b0b2cbe"
+      }
+    },
+    {
+      "id": "fire_spirit",
+      "kind": "species",
+      "backend": "rigid_voxels",
+      "active_render_path": "billboard",
+      "errors": [],
+      "files_sha256": {
+        "creature.json": "3ab40d30a4fdb54c03258c1ad6b38017416c5c864fd59b73b361b8950616ac2d",
+        "textures/body.png": "3e590504ad421aaa436366b1dda2db3824f090f5d3df4c59c42626ffd741c904"
+      }
+    },
+    {
+      "id": "fox",
+      "kind": "species",
+      "backend": "bone_skeleton",
+      "geometry_id": "geometry.fox",
+      "bones": 9,
+      "cubes": 16,
+      "texture_size": [
+        64,
+        64
+      ],
+      "box_uv_overlaps": [],
+      "ignored_legacy_fallback_parts": 7,
+      "errors": [],
+      "files_sha256": {
+        "creature.json": "18d1538c92bbd46cf17ed5f21bceca412cb1e36fb7bae877d6f9c3a1725fd792",
+        "geometry.geo.json": "c0b406f3b7b1667bf5483528da31d106aa6751be0d5d5f46e94823a7bb7e55ba",
+        "textures/diffuse.png": "a96e833eaf797b1f9eb83c1edc600e5850e6ec21f98fc772a5ab2af844d8b9ee"
+      }
+    },
+    {
+      "id": "human",
+      "kind": "species",
+      "backend": "bone_skeleton",
+      "geometry_id": "geometry.zombie.v1.8",
+      "bones": 10,
+      "cubes": 6,
+      "texture_size": [
+        128,
+        128
+      ],
+      "box_uv_overlaps": [],
+      "ignored_legacy_fallback_parts": 6,
+      "errors": [],
+      "files_sha256": {
+        "creature.json": "940daef0f3f6227beae241d7ba3456be49f69489368a25cb8bcf00d62d8848e0",
+        "geometry.geo.json": "9b9b6bc1bb9ca101ab348fca3b48579f042dff7ea8754b85d3ed82e23c9bb74a",
+        "textures/diffuse.png": "ef6487eb449a3349fbaff7d7ae220ace28eb0bff27c62a49b4a44a32792aaed9"
+      }
+    },
+    {
+      "id": "pig",
+      "kind": "species",
+      "backend": "bone_skeleton",
+      "geometry_id": "geometry.pig.v1.8",
+      "bones": 7,
+      "cubes": 15,
+      "texture_size": [
+        128,
+        128
+      ],
+      "box_uv_overlaps": [],
+      "ignored_legacy_fallback_parts": 11,
+      "errors": [],
+      "files_sha256": {
+        "creature.json": "c727dfdde6defa1187ff8c1563f36a116cf78764da1ea6010525eeda4887e170",
+        "geometry.geo.json": "71c24471a65637b1a49945b785386dbb92ba617c126961b0703c24a230b3699c",
+        "textures/diffuse.png": "8233eb604b4ad3134fd384e63ec80c7d5652b324ab200cd106e0ff8fcc88cf05"
+      }
+    },
+    {
+      "id": "rigid_demo_flyer",
+      "kind": "species",
+      "backend": "rigid_voxels",
+      "active_render_path": "rigid_parts",
+      "parts": 5,
+      "texture_stems": [
+        "body",
+        "face",
+        "tail",
+        "wing"
+      ],
+      "errors": [],
+      "files_sha256": {
+        "creature.json": "56f0c27ee2278d202062a80ef7e812234e449d711ef704cc30e6de27957d6e10",
+        "rigid_model.json": "72aa0b6787cd1008242b4f45c1ff9e76175b9c4ed3c67180f5a016b3a671b039",
+        "textures/body.png": "4ca2454c9035253a207a87cf4c87a126ca8e1332024d50f7664cc238e69920b4",
+        "textures/face.png": "6cb684736d47a37df71cf10c7ebcefc65023806e908b77d840392a702b5ed2d1",
+        "textures/tail.png": "6b7070fab0bde367540abf37e88d49e42be700930786ed80561b0de72af88de8",
+        "textures/wing.png": "8d9daec8890afc9552ae9f01c83f376245fc2b5c098171f0cfd9a65554b0e88f"
+      }
+    },
+    {
+      "id": "rigid_demo_swimmer",
+      "kind": "species",
+      "backend": "rigid_voxels",
+      "active_render_path": "rigid_parts",
+      "parts": 5,
+      "texture_stems": [
+        "body",
+        "face",
+        "tail",
+        "wing"
+      ],
+      "errors": [],
+      "files_sha256": {
+        "creature.json": "17882cdb79456c7f2c10d847703760daba84e3694af9ea0acfb7a5f9abd4ab97",
+        "rigid_model.json": "b20d23960b580ac24d9bb96de8975e49cdd46a358ed177ec8c02cf3c1fc7cc7b",
+        "textures/body.png": "6433ca760e00c1796365729ebd868b02bc80a978503681f537b296dc77a0883c",
+        "textures/face.png": "8e5a990a94bec0105d504c0845c38f8eef06f37349658454053026fdfced3a2e",
+        "textures/tail.png": "7e9a02783ee602f0a9c103d766bec93e8d6c02ec5b3431ef6190aa16cb52ce29",
+        "textures/wing.png": "0802729a5fcc2a25b39b27da4fcdb0b0fb1dccab0a3043daad88081bd486c461"
+      }
+    },
+    {
+      "id": "rigid_demo_walker",
+      "kind": "species",
+      "backend": "rigid_voxels",
+      "active_render_path": "rigid_parts",
+      "parts": 10,
+      "texture_stems": [
+        "body",
+        "ear",
+        "face",
+        "leg",
+        "muzzle",
+        "tail"
+      ],
+      "errors": [],
+      "files_sha256": {
+        "creature.json": "bd1ecae572ada2aa5f9acfdf744ce4ae68d71f94326d1d9e1f10b2743e39951b",
+        "rigid_model.json": "2f6d3e7f780ac3d474b475c6e7c38fa008b55dcad660c0e230e4e3dc4b5dc2b8",
+        "textures/body.png": "5aa5c06d4bb6884d031b6056b25e777d0dc7790806d5ebd23a67598280600d42",
+        "textures/ear.png": "78346fe081e26bd828e15f7b32adca0cf5ffe3c0a78b07dfed08beabad15b33a",
+        "textures/face.png": "0720f6c90b8fc11cc150c84f14608c983072c4976c8506bb1f73baa89666be0f",
+        "textures/leg.png": "51942a6d7c30fff4a3a01dd2e66f8a4669bfbb7aa7394723049edefb4dae6734",
+        "textures/muzzle.png": "8ade06cd151c2323b8da4f35155c4748d45cba1b7d068028918bf10758706057",
+        "textures/tail.png": "a9396b74bca0fd59853c03ee2baf6aa70b1d1c3a28cdcc8d55588797c82ff2c2"
+      }
+    },
+    {
+      "id": "sheep",
+      "kind": "species",
+      "backend": "bone_skeleton",
+      "geometry_id": "geometry.sheep.sheared.v1.8",
+      "bones": 7,
+      "cubes": 16,
+      "texture_size": [
+        128,
+        128
+      ],
+      "box_uv_overlaps": [],
+      "ignored_legacy_fallback_parts": 11,
+      "errors": [],
+      "files_sha256": {
+        "creature.json": "c8ce099f3ab963984fc7018c7acd41b5d62e0fb21ab0efa26f0b9a1dd5c4e041",
+        "geometry.geo.json": "f78a8800847d97c6093594663a30af4ce596c34c0ff5ce7ddd0428be6b521b01",
+        "textures/diffuse.png": "f605da204e6400eb5978e94d51e8e0ef3cbf23b65d19ed82d84a45423e3b0b99"
+      }
+    },
+    {
+      "id": "skeleton",
+      "kind": "species",
+      "backend": "bone_skeleton",
+      "geometry_id": "geometry.skeleton.v1.8",
+      "bones": 10,
+      "cubes": 11,
+      "texture_size": [
+        64,
+        64
+      ],
+      "box_uv_overlaps": [],
+      "ignored_legacy_fallback_parts": 6,
+      "errors": [],
+      "files_sha256": {
+        "creature.json": "6422e25ca657a3929b94699b7a5c6246b2ff47eac21c56f3f3d7e65bfd270071",
+        "geometry.geo.json": "125830e38aab7b08082a83ab51d8711810a81e6bf4194beb3151ffa1dfe60f34",
+        "textures/diffuse.png": "f88fd6d1f3911526e3225e7bbdd241f08dd77047cef3aad9cf9c9fb2a699937c"
+      }
+    },
+    {
+      "id": "spider",
+      "kind": "species",
+      "backend": "bone_skeleton",
+      "geometry_id": "geometry.spider.v1.8",
+      "bones": 11,
+      "cubes": 29,
+      "texture_size": [
+        128,
+        128
+      ],
+      "box_uv_overlaps": [],
+      "ignored_legacy_fallback_parts": 8,
+      "errors": [],
+      "files_sha256": {
+        "creature.json": "7061965df177a26777d4dc58225e2e83d461757ae4e270162426e43f26a595d2",
+        "geometry.geo.json": "bc55a1cd0852b4205d7a3824a76104ee5b3ad7782e0b45dca22259b7f61fa7ef",
+        "textures/diffuse.png": "5dc36955d87bd307a4231162bbea1db8df888aa80c05696afef99f2510197e55"
+      }
+    },
+    {
+      "id": "squid",
+      "kind": "species",
+      "backend": "bone_skeleton",
+      "geometry_id": "geometry.squid",
+      "bones": 17,
+      "cubes": 18,
+      "texture_size": [
+        128,
+        128
+      ],
+      "box_uv_overlaps": [],
+      "ignored_legacy_fallback_parts": 4,
+      "errors": [],
+      "files_sha256": {
+        "creature.json": "534a786f74f239839c18471f68b3af7e083dd8cffd9cca5f757a0789f3216474",
+        "geometry.geo.json": "ad5a4d670e7ce5e72b7f1cc8c9cbb6be91ddc8f674da11936df161786de29844",
+        "textures/diffuse.png": "3d7b58d6cdd06480d2302948564b2b272114ccc157e4d21ec1954807e8c6ca57"
+      }
+    },
+    {
+      "id": "tortoise",
+      "kind": "species",
+      "backend": "bone_skeleton",
+      "geometry_id": "geometry.turtle",
+      "bones": 7,
+      "cubes": 9,
+      "texture_size": [
+        128,
+        128
+      ],
+      "box_uv_overlaps": [],
+      "ignored_legacy_fallback_parts": 3,
+      "errors": [],
+      "files_sha256": {
+        "creature.json": "0106da47422dc2b99cb52b38f37149a9623f7a86b1a57ab200a22954a205ebdd",
+        "geometry.geo.json": "edd520ecd498be96c8f4f23b62c7de06ba061d65654fe2f98071521afe1441fe",
+        "textures/diffuse.png": "797adc78b87ca33aa9009345d9192bbcec5d7c57ca87e4b587a56da81c051503"
+      }
+    },
+    {
+      "id": "trout",
+      "kind": "species",
+      "backend": "bone_skeleton",
+      "geometry_id": "geometry.salmon",
+      "bones": 8,
+      "cubes": 11,
+      "texture_size": [
+        64,
+        64
+      ],
+      "box_uv_overlaps": [],
+      "ignored_legacy_fallback_parts": 5,
+      "errors": [],
+      "files_sha256": {
+        "creature.json": "473f9b9aab93ab1d06af627f311ecfd58860d0a3e8c3fd3a39c96f2724d479b8",
+        "geometry.geo.json": "14405c1783ed656217e16afdcc59a0fa66d057b4b8525c0e1bef99f8b68a1042",
+        "textures/diffuse.png": "3a15a4d2e90e7d94b8558f9be7e9f8cec8df871fda37b332efe267cb1bd7335d"
+      }
+    },
+    {
+      "id": "wolf",
+      "kind": "species",
+      "backend": "bone_skeleton",
+      "geometry_id": "geometry.wolf",
+      "bones": 8,
+      "cubes": 16,
+      "texture_size": [
+        64,
+        64
+      ],
+      "box_uv_overlaps": [],
+      "ignored_legacy_fallback_parts": 11,
+      "errors": [],
+      "files_sha256": {
+        "creature.json": "958ba270e2e739f7f3a588c716897c49778356de5af23e17ac0434a544f81d1f",
+        "geometry.geo.json": "e9c55381ab8887cc540d1e3d3bc1aeb2a5e6c8118d97866be6c7b0cbd4e8bf28",
+        "textures/diffuse.png": "d7f181f935e74ae014b801eb79e54b54fd600e4f3b09952106dffbfbe131ee2d"
+      }
+    },
+    {
+      "id": "zombie",
+      "kind": "species",
+      "backend": "bone_skeleton",
+      "geometry_id": "geometry.zombie.v1.8",
+      "bones": 10,
+      "cubes": 6,
+      "texture_size": [
+        128,
+        128
+      ],
+      "box_uv_overlaps": [],
+      "ignored_legacy_fallback_parts": 0,
+      "errors": [],
+      "files_sha256": {
+        "creature.json": "7a9e92cd3350b7ae52ab090b61cf5a5bf6225cdc583176f0abf4ae2af3e69cdb",
+        "geometry.geo.json": "9b9b6bc1bb9ca101ab348fca3b48579f042dff7ea8754b85d3ed82e23c9bb74a",
+        "textures/diffuse.png": "ab90870be8e7d41c48e3be45cc7855f781168a42822d0d753b2bf6b37bcab114"
+      }
+    },
+    {
+      "id": "human_adventurer",
+      "kind": "skin",
+      "backend": "skin",
+      "base_species": "human",
+      "texture_stems": [
+        "arms",
+        "diffuse",
+        "face",
+        "legs",
+        "torso"
+      ],
+      "errors": [],
+      "files_sha256": {
+        "skin.json": "f7c57832ff71f54ceda745f57c346a4b9cb3eee69684ccdd4d78c17056d9710f",
+        "textures/arms.png": "9c23cb22062a65d9233ad465f41ab11490138efe44e3dccc0c9e9535b65618b8",
+        "textures/diffuse.png": "9c23cb22062a65d9233ad465f41ab11490138efe44e3dccc0c9e9535b65618b8",
+        "textures/face.png": "9c23cb22062a65d9233ad465f41ab11490138efe44e3dccc0c9e9535b65618b8",
+        "textures/legs.png": "9c23cb22062a65d9233ad465f41ab11490138efe44e3dccc0c9e9535b65618b8",
+        "textures/torso.png": "9c23cb22062a65d9233ad465f41ab11490138efe44e3dccc0c9e9535b65618b8"
+      }
+    },
+    {
+      "id": "human_guard",
+      "kind": "skin",
+      "backend": "skin",
+      "base_species": "human",
+      "texture_stems": [
+        "arms",
+        "diffuse",
+        "face",
+        "legs",
+        "torso"
+      ],
+      "errors": [],
+      "files_sha256": {
+        "skin.json": "a56342854773ac083df28d70da2bdd4703c8359b95aa4f74eb6b74383940c92a",
+        "textures/arms.png": "e77ea8dca8156ca79cf7046723a5198e91762992f3340ba52f2d4e72a2e49002",
+        "textures/diffuse.png": "e77ea8dca8156ca79cf7046723a5198e91762992f3340ba52f2d4e72a2e49002",
+        "textures/face.png": "e77ea8dca8156ca79cf7046723a5198e91762992f3340ba52f2d4e72a2e49002",
+        "textures/legs.png": "e77ea8dca8156ca79cf7046723a5198e91762992f3340ba52f2d4e72a2e49002",
+        "textures/torso.png": "e77ea8dca8156ca79cf7046723a5198e91762992f3340ba52f2d4e72a2e49002"
+      }
+    },
+    {
+      "id": "sheep_wool_black",
+      "kind": "skin",
+      "backend": "skin",
+      "base_species": "sheep",
+      "texture_stems": [
+        "body",
+        "diffuse",
+        "ear",
+        "face",
+        "leg",
+        "tail"
+      ],
+      "errors": [],
+      "files_sha256": {
+        "skin.json": "4eb58aa8fead3c707da2cd3d7d330d38ed7a1e234face1ac0f4a195e30f58aef",
+        "textures/body.png": "edccdb33cdfb8a432257b0bfea096112bc5b09ad0acb43e8c3e7f6a20928b175",
+        "textures/diffuse.png": "edccdb33cdfb8a432257b0bfea096112bc5b09ad0acb43e8c3e7f6a20928b175",
+        "textures/ear.png": "edccdb33cdfb8a432257b0bfea096112bc5b09ad0acb43e8c3e7f6a20928b175",
+        "textures/face.png": "edccdb33cdfb8a432257b0bfea096112bc5b09ad0acb43e8c3e7f6a20928b175",
+        "textures/leg.png": "edccdb33cdfb8a432257b0bfea096112bc5b09ad0acb43e8c3e7f6a20928b175",
+        "textures/tail.png": "edccdb33cdfb8a432257b0bfea096112bc5b09ad0acb43e8c3e7f6a20928b175"
+      }
+    },
+    {
+      "id": "sheep_wool_golden",
+      "kind": "skin",
+      "backend": "skin",
+      "base_species": "sheep",
+      "texture_stems": [
+        "body",
+        "diffuse",
+        "ear",
+        "face",
+        "leg",
+        "tail"
+      ],
+      "errors": [],
+      "files_sha256": {
+        "skin.json": "6f8e8996cde01f88de3deb1791ae6f20580f1110341f515bb141df58f6c5471c",
+        "textures/body.png": "02333733d2609d36ad95ee591686cbc1f42a93539cabfad61aa428ed4b2d8ac7",
+        "textures/diffuse.png": "02333733d2609d36ad95ee591686cbc1f42a93539cabfad61aa428ed4b2d8ac7",
+        "textures/ear.png": "02333733d2609d36ad95ee591686cbc1f42a93539cabfad61aa428ed4b2d8ac7",
+        "textures/face.png": "02333733d2609d36ad95ee591686cbc1f42a93539cabfad61aa428ed4b2d8ac7",
+        "textures/leg.png": "02333733d2609d36ad95ee591686cbc1f42a93539cabfad61aa428ed4b2d8ac7",
+        "textures/tail.png": "02333733d2609d36ad95ee591686cbc1f42a93539cabfad61aa428ed4b2d8ac7"
+      }
+    },
+    {
+      "id": "wolf_snow",
+      "kind": "skin",
+      "backend": "skin",
+      "base_species": "wolf",
+      "texture_stems": [
+        "body",
+        "diffuse",
+        "face",
+        "leg"
+      ],
+      "errors": [],
+      "files_sha256": {
+        "skin.json": "0620889590158909f4170abfdad5b3e1fb199db3076c0b35937f82db32fe0490",
+        "textures/body.png": "8d852f4354b8ad8773554d5b074db556ba972fc278b5b295a71e9741312ddeba",
+        "textures/diffuse.png": "8d852f4354b8ad8773554d5b074db556ba972fc278b5b295a71e9741312ddeba",
+        "textures/face.png": "8d852f4354b8ad8773554d5b074db556ba972fc278b5b295a71e9741312ddeba",
+        "textures/leg.png": "8d852f4354b8ad8773554d5b074db556ba972fc278b5b295a71e9741312ddeba"
+      }
+    }
+  ]
+}

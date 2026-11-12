@@ -1,0 +1,49 @@
+{
+  "captured_at_utc": "2026-11-11T21:46:23.152098+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\review_2026_11_10\\baseline\\models",
+  "files_sha256": {
+    "creatures\\penguin\\creature.json": "0578c5f9e65b1e3bf56b797433f5ad086bc9000abc6fb3bd7551ef4e9792966a",
+    "creatures\\penguin\\LICENSE.txt": "21600c3265b05b98b1a92d4ffaa3ec9508a0b621eb46cf0ee60c5018d1ae5158",
+    "creatures\\penguin\\model.bin": "4175609289e97b5fc16bff3dae1dc352a15e247598ac97593f69a7ef896ae9e0",
+    "creatures\\penguin\\model.gltf": "508f8e79a473ddc2aa76ddf717e9d074948f861300a5a1b3c6f0646b2fb52449",
+    "creatures\\penguin\\textures\\body.png": "c9df5c72cccc69efe447603e921ff77d1c95ace52770c667efbe3a4131341dd7",
+    "creatures\\penguin\\textures\\face.png": "ecca98c46d1bbd518740aa88fdfa3183fa7e4ef0230720d0bfe2782d83b16276",
+    "creatures\\penguin\\textures\\icon.png": "ebbbfdbda75b015dfdb544bb3f8bb5d12489551453b55c4e31a1addcc45e89df",
+    "creatures\\penguin\\textures\\leg.png": "94fc54c4bdd30f43e279aa21233a365e474523173bc880c6e988c4ad9f0c50e9"
+  },
+  "qa_models_override": true,
+  "exe_sha256": "26f7f77d36a7ab28661db03ae468c309ae1f08ca9303ad59d4189bf41758b2aa",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "envelope_original",
+  "qa_camera": "close",
+  "native_matrix": false,
+  "native_equipment_matrix": false,
+  "native_equipment_texture_probe": false,
+  "native_resource_cache_probe": false,
+  "native_resource_reload_probe": false,
+  "native_fp_matrix": false,
+  "native_save_probe": false,
+  "native_envelope_variant": "baseline",
+  "native_transition_probe": false,
+  "native_posed_culling_probe": false,
+  "envelope_profile_sha256": "88621d6115d5fe9bb611aa2c6f9e5bd110e29009a2c2610afd4713403f73b71a",
+  "fp_shaders_sha256": {},
+  "equipment_material": "copper",
+  "world_gear_fixture": false,
+  "equipment_files_sha256": {},
+  "world_species": [
+    "penguin"
+  ],
+  "preview_species": [
+    "penguin"
+  ],
+  "qa_water_placement": false,
+  "qa_lava_fixture": false,
+  "world": "World_254",
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

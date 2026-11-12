@@ -1,0 +1,102 @@
+{
+  "passed": true,
+  "state": "unapproved_proposal",
+  "scope": "Own geometry/rig/texture exact, equal-elapsed local limb channels, C0 seams and sampled native transitions; not art/stride/sliding/world/performance acceptance",
+  "source_geometry": {
+    "triangles": 360,
+    "min_triangle_area": 0.000244140625,
+    "constant_uv_triangles": 172,
+    "model_texel_density_p05": 0.0,
+    "model_texel_density_median": 9.263114434894703
+  },
+  "candidate_geometry": {
+    "triangles": 360,
+    "min_triangle_area": 0.000244140625,
+    "constant_uv_triangles": 172,
+    "model_texel_density_p05": 0.0,
+    "model_texel_density_median": 9.263114434894703
+  },
+  "macroloops": [
+    {
+      "clip": "walk",
+      "stride_cycles": 7,
+      "stride_period_seconds_at_unit_travel": 0.3500000014901161,
+      "sway_period_seconds_at_unit_travel": 2.450000047683716,
+      "nonroot_rotation_max_error_degrees": 6.137676548113681e-05,
+      "unchanged_translation_max_error_blocks": 0.0,
+      "C0_translation_seam_blocks": 0.0
+    },
+    {
+      "clip": "run",
+      "stride_cycles": 9,
+      "stride_period_seconds_at_unit_travel": 0.2749999985098839,
+      "sway_period_seconds_at_unit_travel": 2.475000023841858,
+      "nonroot_rotation_max_error_degrees": 0.00010409037987152455,
+      "unchanged_translation_max_error_blocks": 0.0,
+      "C0_translation_seam_blocks": 0.0
+    }
+  ],
+  "unchanged_idle_action_samplers": 6,
+  "unchanged_idle_action_native_envelope_png": 33,
+  "transition_frames": 2156,
+  "supported_frames": 2112,
+  "supported_min_y": -1.1175870895385742e-08,
+  "ordinary_sampled_full_mesh_floor": {
+    "own_before": {
+      "walk": {
+        "samples": 2049,
+        "minimum_mesh_y": -1.5018104713410141e-05,
+        "maximum_mesh_floor_gap": 0.0003849702689244436
+      },
+      "run": {
+        "samples": 2049,
+        "minimum_mesh_y": -2.8819647402575366e-05,
+        "maximum_mesh_floor_gap": 0.0007939211171736037
+      }
+    },
+    "candidate": {
+      "walk": {
+        "samples": 2049,
+        "minimum_mesh_y": -1.5108453518826448e-05,
+        "maximum_mesh_floor_gap": 0.0004524631303373626
+      },
+      "run": {
+        "samples": 2049,
+        "minimum_mesh_y": -3.574734422306415e-05,
+        "maximum_mesh_floor_gap": 0.0007854378692052494
+      }
+    }
+  },
+  "world_route": {
+    "scope": "One ordinary motor flat-ground QA Walk/pause route, not foot stance/sliding/AI/terrain acceptance",
+    "log_sha256": "f7cdcebf67154f63866ba5715a44523fa8f5978e2c8a3adc27eaf3b744b5b1f7",
+    "records": 509,
+    "grounded_walk": 299,
+    "idle_pause": 210,
+    "frozen_frames": 0,
+    "blocked_frames": 0,
+    "world_x_range": [
+      -14.0,
+      -12.930953979492188
+    ],
+    "world_y_range": [
+      63.5,
+      63.5
+    ]
+  },
+  "builder_sha256": "f78e1681ef9ad9d5f681d06b1cf9eb6b274bb57798ec5b4a3063997ed014f6c1",
+  "source_hashes": {
+    "tools\\creature_recipes\\badger.yaml": "df75feda370e82e61e8b72cbddc7c5adc65aa1a3251c35c4357719b0db7d9fba",
+    "models\\creatures\\badger\\model.gltf": "95ecd5d538250578257ba9c1ce03e99072e7532e5c3e0ceffae2b108324f16e7",
+    "models\\creatures\\badger\\model.bin": "55cc3e55c2393445ca6ec17a18d71cad63ad2aafc2a9c0a7abcdc9b0b5f31d54",
+    "models\\creatures\\badger\\creature.json": "7fc1c6ece1d377efba3861c22239d9f942e31a454f4e5f636e38e6fb442a6224"
+  },
+  "candidate_hashes": {
+    "creature.json": "7fc1c6ece1d377efba3861c22239d9f942e31a454f4e5f636e38e6fb442a6224",
+    "LICENSE.txt": "31d82bab9cd11d2b0a21a856ba729beef4f5c40daf18d5c119e02de3a7569f42",
+    "model.bin": "193b010b19c1b5a9d45345876d78ba0b3be1520ad938100bbe19b24ff285894a",
+    "model.gltf": "937ad2f56cce6438f1dfed477600189ad0aba0efe9659a1b095ff3f7535dba00",
+    "textures\\body.png": "8de2d9867c33435e76687366fea4e2c0740e160dfeddac66f6e41f6676f91200",
+    "textures\\icon.png": "965c77646f7fbda199f4b18df94da95c114666c1a5013ff841d83fe13735941a"
+  }
+}

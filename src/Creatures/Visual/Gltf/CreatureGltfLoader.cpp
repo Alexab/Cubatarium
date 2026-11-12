@@ -1,4 +1,5 @@
 #include "Creatures/Visual/Gltf/CreatureGltfLoader.h"
+#include "Creatures/Visual/Gltf/GltfConservativeRenderRadius.h"
 
 #include "Creatures/Visual/CreatureMeshGpuHash.h"
 
@@ -519,6 +520,7 @@ CreatureGltfLoader::LoadFromFile(const std::string &gltfPath)
     asset->bindMinY = bindMinY;
   }
 
+  asset->conservativeRenderRadius=ComputeGltfConservativeRenderRadius(*asset);
   return asset;
 }
 

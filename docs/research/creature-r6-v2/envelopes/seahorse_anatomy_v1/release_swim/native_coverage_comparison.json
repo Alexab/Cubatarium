@@ -1,0 +1,32 @@
+{
+  "scope": "Native shared-scale Idle projection area, not volume/art gate",
+  "views": {
+    "front": {
+      "pixels": {
+        "original": 1398,
+        "before": 1262,
+        "current": 1270
+      },
+      "before_original_ratio": 0.9027181688125894,
+      "candidate_original_ratio": 0.9084406294706724
+    },
+    "side": {
+      "pixels": {
+        "original": 1931,
+        "before": 1583,
+        "current": 1733
+      },
+      "before_original_ratio": 0.8197824961160021,
+      "candidate_original_ratio": 0.8974624546866908
+    },
+    "oblique": {
+      "pixels": {
+        "original": 2196,
+        "before": 1744,
+        "current": 1856
+      },
+      "before_original_ratio": 0.7941712204007286,
+      "candidate_original_ratio": 0.8451730418943534
+    }
+  }
+}

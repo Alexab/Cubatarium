@@ -1,0 +1,71 @@
+{
+  "schema": "creature-motion-v5-direct-visual-review.v1",
+  "decision": "accepted_R5_revision_only",
+  "r6_acceptance": "pending",
+  "reviewed_by": "Codex direct native sheet/UI/world review",
+  "directly_viewed_sheets": [
+    {
+      "id": "badger",
+      "kind": "motion",
+      "file": "sheets/badger_motion.png",
+      "sha256": "7dfe03aaab2349e979c26f6443be37c460d081649894750b0bd579b073be30a5"
+    },
+    {
+      "id": "badger",
+      "kind": "front_side",
+      "file": "sheets/badger_views.png",
+      "sha256": "09ceca6a2f8cac51af69f326ce585f6ea1906af343104c39295043285416deae"
+    },
+    {
+      "id": "treeman",
+      "kind": "motion",
+      "file": "sheets/treeman_motion.png",
+      "sha256": "6eb755bfdaf8e840147af8990975511718882b9324d209c65600836894787c8d"
+    },
+    {
+      "id": "treeman",
+      "kind": "front_side",
+      "file": "sheets/treeman_views.png",
+      "sha256": "1355646a044becb27a5386eca06c4f4560e8fbf3f45b44237b3276dc0bbb0f47"
+    },
+    {
+      "id": "lobster",
+      "kind": "motion",
+      "file": "sheets/lobster_motion.png",
+      "sha256": "d2d7c3d431ec43f17a5af8033c0902945a6f13a808b3678f430ee204064d0480"
+    },
+    {
+      "id": "lobster",
+      "kind": "front_side",
+      "file": "sheets/lobster_views.png",
+      "sha256": "2e622550ad40697b02c34ce280c68611bf0fc2a24fa845baf84ee6741836a98d"
+    },
+    {
+      "id": "seahorse",
+      "kind": "motion",
+      "file": "sheets/seahorse_motion.png",
+      "sha256": "9edc5f710a2b6a765f6074f2b5ebe25b965bef57700bfd59e9d3bbc739cc078f"
+    },
+    {
+      "id": "seahorse",
+      "kind": "front_side",
+      "file": "sheets/seahorse_views.png",
+      "sha256": "ea389f8a8789e4807a9eb79844de1bb8a659e6dbee164f2c724285ad684a851e"
+    }
+  ],
+  "directly_viewed_other_images": [
+    {
+      "file": "ui_native_sheet.png",
+      "sha256": "dc92ba598b0746f2b6bd9be7f38dfbd3da7d4835af8a106691692918e75d51a2"
+    },
+    {
+      "file": "world/world_contact_sheet.png",
+      "sha256": "f5bd941a2c859ebc470a7bd6c074952fd2601f658086b04e87141f5e180fae9b"
+    },
+    {
+      "file": "runtime_envelope_current/frame_002.png",
+      "sha256": "18593f9746f11ae92d8ef0d944ebc0eee69291e20c81050d9d0b24626f3e78c4"
+    }
+  ],
+  "notes": "All8 paired sheets,16-view native UI sheet,four-world sheet and treeman combined world frame002 directly inspected before explicit revision_review acceptance."
+}

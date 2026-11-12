@@ -1,0 +1,43 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "Explicit assisted R5 seahorse anterior trunk anatomy revision, not complete R6/user approval",
+  "r6_state": "pending",
+  "species": {
+    "seahorse": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct original/own-before/candidate native sheets, three full-turn sheets byte-exact across Release rebuild, actual open-water route contact sheet and full frame",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "0705f8f0ddceec24e54cc0324529779bd2146b578930688654599c52ff58e190",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "threeway_idle.png",
+          "sha256": "3b653bbff7472eb8a1f6d21d5c49f1c8753b0c00343b0dc35792a4fecfd80368"
+        },
+        "motion": {
+          "path": "threeway_walk.png",
+          "sha256": "763f7f0e9de793f52e7e0516077e3c22057b5cf4d2de03eeedce4d03226bca23"
+        },
+        "runtime": {
+          "path": "world_swim/runtime_swim_candidate/frame_008.png",
+          "sha256": "ba3479027d687a18e2cd60fd25eb36996a3070d9aa76e201f91c17f03f5d4c31"
+        },
+        "ui": {
+          "path": "fullturn_0.png",
+          "sha256": "ca3035d59a4174480f33a2408db56490a0ae75a84ed2e0099c2a08ea0406939c"
+        }
+      },
+      "notes": "Accept fuller lower anterior trunk, depth5 to8 with original posterior edge and upper neck section retained by side_profile taper. All17 joints, hierarchy, inverse binds, JOINTS/WEIGHTS,42 sampler arrays,240 triangles unchanged. Seven tail articulations and prior65% uncurl motion retained; fins/crown/head unchanged. Own UV refit and surface rebake, no reference pixels/geometry in generator. Actual free Swim proven by ordinary input route with swim-up requests; initial level-input-only bottom Tread run remains failed.",
+      "skin_scope": "No authored compatible seahorse skin. Native preview full-turn inspected.",
+      "limits": "Assistant R5 revision only, not full original motion range, photoreal anatomy or user approval. CPU transition probe is4 free-fluid cases/44frames and has no supported route/floor verdict. World input depth controller pulses ordinary swim-up and does not prove autonomous hover/AI realism. All61 R6 remain pending; terrain/habitat/camera/GPU fades/control/pack/performance/package open."
+    }
+  }
+}

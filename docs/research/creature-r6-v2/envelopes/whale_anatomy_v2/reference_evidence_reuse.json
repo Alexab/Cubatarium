@@ -1,0 +1,14 @@
+[
+  {
+    "from": "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\envelopes\\whale_anatomy_v1",
+    "context": "context_envelope_original.json",
+    "context_sha256": "aba1d841ec226fdb784429eacb6bd96ff51e6004f8e58815aecf618e870c9a59",
+    "native_manifest_sha256": "c7cc19a1886468edbe326cfd09f1f0ed58765b63d03b57900d939c9901e39b9a"
+  },
+  {
+    "from": "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\envelopes\\whale_anatomy_v1",
+    "context": "context_own_before.json",
+    "context_sha256": "ae53e38e9233bb999555a406d266022637dc74751c016f67ab139b1c022cc182",
+    "native_manifest_sha256": "d235a41a2989da91f7aca6b9995a89a1529387d85a1de7badeb90387d265bdd3"
+  }
+]

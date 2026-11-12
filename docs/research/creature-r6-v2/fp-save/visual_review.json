@@ -1,0 +1,135 @@
+{
+  "schema": "creature-fp-authored-arm-review.v1",
+  "reviewed_at_utc": "2026-11-11T15:39:28.278680+00:00",
+  "decision": "accepted_authored_arm_shape_uv_subset",
+  "r6_final_acceptance": "pending",
+  "full_fp_presentation_acceptance": "pending",
+  "exe_sha256": "6a1c454f5d4d3f0a22d34d75c4d1ec8eb8aa98d922df9150580d8dce8a6811cf",
+  "scope": "Six B resources: idle four loadouts and complete sampled dual walk/attack sheets. World user/legacy selection exercised by offscreen actual FP renderer. Not all 936 frames individually reviewed, actual world camera/terrain, all presets/inertia, save/reload or performance acceptance.",
+  "observations": [
+    "Each side now uses its own authored arm UV and uniform source proportions; skeleton remains visibly thin instead of the generic 4x12x4 box.",
+    "Idle main/off/dual hand colors and cuff edges follow the current own atlas; held models keep their previous presentation and sampled trajectories.",
+    "Source-correctness improves, while the inherited low idle framing remains. Right arm/blade leaves the frame for part of the inherited attack cycle in both versions; this is not a new regression and full FP presentation is not accepted here.",
+    "No visible new snap in the inspected walk/attack cycles; exact root comparisons supplement these sampled observations."
+  ],
+  "direct_sheets": [
+    {
+      "path": "sheets/human_idle_comparison.png",
+      "sha256": "7672c3ef2cdacf663f60ba93b2d20d5ab4fa2313995ea6e978fd44b6c656290d",
+      "resource": "human",
+      "scope": "Four idle loadout pairs"
+    },
+    {
+      "path": "sheets/human_walk_comparison.png",
+      "sha256": "57417c7597ce8fc6949207856d4777807472c814ee8f883335e96f7c2c38bbd6",
+      "resource": "human",
+      "scope": "Dual loadout 8-phase walk pair"
+    },
+    {
+      "path": "sheets/human_attack_comparison.png",
+      "sha256": "544a378ee6326aaa28a0b5430f58d19fa4f7b97b91fb9f94919d5afffa5b54e1",
+      "resource": "human",
+      "scope": "Dual loadout 17-phase attack pair"
+    },
+    {
+      "path": "sheets/human_adventurer_idle_comparison.png",
+      "sha256": "ea377b0742bac0d09d89b9c3b42b4180bd9b1d3333fe87a28d82a7844c7f6a64",
+      "resource": "human_adventurer",
+      "scope": "Four idle loadout pairs"
+    },
+    {
+      "path": "sheets/human_adventurer_walk_comparison.png",
+      "sha256": "ef37ee0e708b235f4357f7ffe69f30e6603aa4f57f0d642055319fc6bd12a4ab",
+      "resource": "human_adventurer",
+      "scope": "Dual loadout 8-phase walk pair"
+    },
+    {
+      "path": "sheets/human_adventurer_attack_comparison.png",
+      "sha256": "7221d6c051c947a305d7702ff0ddce0c4c3514a922b92bd93ab1b79f16442f8d",
+      "resource": "human_adventurer",
+      "scope": "Dual loadout 17-phase attack pair"
+    },
+    {
+      "path": "sheets/human_guard_idle_comparison.png",
+      "sha256": "a6ac39636f2e7309b4ad64544b181612c090517b232c312b3ae52598089fa9c5",
+      "resource": "human_guard",
+      "scope": "Four idle loadout pairs"
+    },
+    {
+      "path": "sheets/human_guard_walk_comparison.png",
+      "sha256": "4fb892d249966a20907678cf7478a81d98a42e87aafac370ad3144fb202c1a21",
+      "resource": "human_guard",
+      "scope": "Dual loadout 8-phase walk pair"
+    },
+    {
+      "path": "sheets/human_guard_attack_comparison.png",
+      "sha256": "cdf11aad0364f32979b30deddd0a7838360c9314257f9e3e485102aa5607f36e",
+      "resource": "human_guard",
+      "scope": "Dual loadout 17-phase attack pair"
+    },
+    {
+      "path": "sheets/bot_idle_comparison.png",
+      "sha256": "e012c343cc43126d9b9450ae532f3ca01d4761c2e7dd9f46c5eb22374669fed2",
+      "resource": "bot",
+      "scope": "Four idle loadout pairs"
+    },
+    {
+      "path": "sheets/bot_walk_comparison.png",
+      "sha256": "cd8183c7ce74eeb6cc9106d003cb40c12b47adda6d227bdc85e029be835ba9d8",
+      "resource": "bot",
+      "scope": "Dual loadout 8-phase walk pair"
+    },
+    {
+      "path": "sheets/bot_attack_comparison.png",
+      "sha256": "1ec8731a2e791ed3e4b75cceaf4571db5556f312b71d3c616850c8a8ac52b123",
+      "resource": "bot",
+      "scope": "Dual loadout 17-phase attack pair"
+    },
+    {
+      "path": "sheets/zombie_idle_comparison.png",
+      "sha256": "4c8e6ef7ff462bbb8f27f7d2b8dfe2d9b1280037d0915c0b1f4b5b3afdde0dda",
+      "resource": "zombie",
+      "scope": "Four idle loadout pairs"
+    },
+    {
+      "path": "sheets/zombie_walk_comparison.png",
+      "sha256": "79c27f59220265945b1f69a8619ac22fb321a62cff731650057412da5fde34bc",
+      "resource": "zombie",
+      "scope": "Dual loadout 8-phase walk pair"
+    },
+    {
+      "path": "sheets/zombie_attack_comparison.png",
+      "sha256": "14f5a3afc3018eb40f3812cd26f802821aba452f80c853998c32a97717b22d0d",
+      "resource": "zombie",
+      "scope": "Dual loadout 17-phase attack pair"
+    },
+    {
+      "path": "sheets/skeleton_idle_comparison.png",
+      "sha256": "b70c97ae234041a1fcc788a01549a61d0bc8fd892477f92d011ea343a8976a4c",
+      "resource": "skeleton",
+      "scope": "Four idle loadout pairs"
+    },
+    {
+      "path": "sheets/skeleton_walk_comparison.png",
+      "sha256": "5d868e8fc2483ac064d8b938cf2a5b020260a5d445a6ef28ddc5fa504ba02764",
+      "resource": "skeleton",
+      "scope": "Dual loadout 8-phase walk pair"
+    },
+    {
+      "path": "sheets/skeleton_attack_comparison.png",
+      "sha256": "9cd31da15add916dba1f3e4d09a3d9a9fe223aebd6c7cb10eb5b1375000de82c",
+      "resource": "skeleton",
+      "scope": "Dual loadout 17-phase attack pair"
+    }
+  ],
+  "audit_sha256": "320dca509bc3dfdf6dbdf3ccacf2f076d3a950b847f57c373a7455ae6d00b6e2",
+  "body_parity_sha256": "e34f6525c3dd833a9b96ce5c3d0ee17f899b7a9fc3b09b321ee239cff0957df1",
+  "inherited_body_art": "../resource-reload/visual_review.json",
+  "save_acceptance": "pending; no SaveCreatures/LoadCreatures or SaveUsers/LoadUsers roundtrip executed in this stage",
+  "direct_world_frame": {
+    "path": "runtime_fp_final/frame_002.png",
+    "sha256": "9ba977d61a7a3b3a0026487c2c8bc752db3bdbf840a68474e7d452ac2e806dd3",
+    "seconds_after_fp_manifest": 4.175541639328003,
+    "observation": "World wolf remains visible with expected own gray body/head/limbs after FP diagnostic cache clears. This is third-person QA world view, not actual world first-person camera acceptance."
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "captured_at_utc": "2026-11-10T17:27:07.572993+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_small_v2\\models",
+  "files_sha256": {
+    "creatures\\rat\\creature.json": "ef7fd5bc6de1f7d0da342a537663afb2298e100b48ca81aa2cb801185c0ef478",
+    "creatures\\rat\\LICENSE.txt": "b51b10611019871ae9546c7ac04615a9f3bda1f1c3f9afc8d48dbb14895db8e0",
+    "creatures\\rat\\manifest.json": "b8e11581cfdd28bd619953420240a7dc6e5c6da3099d251a31f4c3064e01abd3",
+    "creatures\\rat\\model.bin": "42c53570dab76ca402d999cbfe0c12a5b9022a7421eb8e553d1d6d6aa0b1dda1",
+    "creatures\\rat\\model.gltf": "dd2631f6027fee1ec2e63f6c1dd5852d8550ff0d10a3aeb0d50719088c19085a",
+    "creatures\\rat\\textures\\body.png": "e53f7470d8c4663e2937cd4582caefd5e6159db8000892e04f1af7a575c047f6",
+    "creatures\\rat\\textures\\icon.png": "ed867e12f0ebcb580dfde23c6fc20b0f7988ec7b4be1e08363316c977581f687",
+    "creatures\\kitten\\creature.json": "ec3556e90132c01dc3ce824344ed95406e468ae778a129af44b83598b1e33ec4",
+    "creatures\\kitten\\LICENSE.txt": "9d88911a2802990ed455747a23371865835620754134fb87331da32fbf2fe011",
+    "creatures\\kitten\\manifest.json": "505232bcbef344118a8d0278f931409a73e860e114e22c14692e30cd671c4ecb",
+    "creatures\\kitten\\model.bin": "0874220fe9cc216eb4f1a5e9b87425402b6819bf93c1191c73dabc2369f43cb6",
+    "creatures\\kitten\\model.gltf": "4f8e654a1335733f2d082a1ff22cb6a4014097f017c9896750a063288c1646ea",
+    "creatures\\kitten\\textures\\body.png": "551cd79d23b69e511daa8270749365a37dfc872aeae983337be1483bab363819",
+    "creatures\\kitten\\textures\\icon.png": "144a098a038651993cb2d327e3b23576f8122aa14181297883cd1f18821bd496",
+    "creatures\\hedgehog\\creature.json": "e8590c3503dcfe9b38b39e2ed61f073e7805d9e2a81597240f7b40f14beb5404",
+    "creatures\\hedgehog\\LICENSE.txt": "672c3064c4dedaf20f5b8130e643bb273e5a08bc1616ccfb34d1b2789d48c699",
+    "creatures\\hedgehog\\manifest.json": "3af139461cd6c17d6e504744f5c96e210ab429dc7db05d2082c7cf5b90495c6b",
+    "creatures\\hedgehog\\model.bin": "ea632bedb75f0e7d59406396cab7daa2f508a7e5f8623449077de61c427000c5",
+    "creatures\\hedgehog\\model.gltf": "c725cb6eeb6158521e7c3ee893d94662b65849fe19c15bfdc6c35dbd4de5dccb",
+    "creatures\\hedgehog\\textures\\body.png": "99d559b059286509e3974dfd52f67b25bb30347e660716344703b2fd35165472",
+    "creatures\\hedgehog\\textures\\icon.png": "8b4a4a9e2bc2c37cd1874a08e8b9b6f6e90cc6aaf923eba569a6d668e3849da9"
+  },
+  "exe_sha256": "09736f903f04b3779cc7b598fbbac55bf82fa1bf5ac6558655470cc04c1318cc",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "wave",
+  "performance_gate": "disabled"
+}

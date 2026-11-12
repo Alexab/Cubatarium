@@ -56,7 +56,7 @@
     "texture_layout": "rigid_crop",
     "default_texture": "body",
     "icon": {
-      "mode": "species_texture",
+      "mode": "parts_preview",
       "color": [
         0.7058823529411765,
         0.39215686274509803,
@@ -69,7 +69,7 @@
       "textures": [
         "body"
       ],
-      "model_scale": 0.768,
+      "model_scale": 0.43,
       "model_yaw_offset_deg": 0
     },
     "animation": {
@@ -85,7 +85,8 @@
           "start": 200,
           "end": 300,
           "loop": true,
-          "speed": 3.3333333333333335
+          "speed": 3.3333333333333335,
+          "ground_distance_per_cycle": 0.405
         },
         "die": {
           "start": 200,

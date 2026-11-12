@@ -1,0 +1,91 @@
+{
+  "passed": true,
+  "scope": "Original17 + live own13 +4 historical own snapshots; metrics unchanged",
+  "resources": [
+    {
+      "id": "badger",
+      "original_verified": true,
+      "own_verified": "models/creatures/badger"
+    },
+    {
+      "id": "dirt_monster",
+      "original_verified": true,
+      "own_verified": "models/creatures/dirt_monster"
+    },
+    {
+      "id": "dungeon_master",
+      "original_verified": true,
+      "own_verified": "models/creatures/dungeon_master"
+    },
+    {
+      "id": "golem",
+      "original_verified": true,
+      "own_verified": "models/creatures/golem"
+    },
+    {
+      "id": "land_guard",
+      "original_verified": true,
+      "own_verified": "models/creatures/land_guard"
+    },
+    {
+      "id": "lobster",
+      "original_verified": true,
+      "own_verified": "assetgen_output/creatures/lobster_anatomy_pre_publish/models/creatures/lobster"
+    },
+    {
+      "id": "oerkki",
+      "original_verified": true,
+      "own_verified": "assetgen_output/creatures/oerkki_anatomy_pre_publish/models/creatures/oerkki"
+    },
+    {
+      "id": "orc",
+      "original_verified": true,
+      "own_verified": "models/creatures/orc"
+    },
+    {
+      "id": "owl",
+      "original_verified": true,
+      "own_verified": "models/creatures/owl"
+    },
+    {
+      "id": "penguin",
+      "original_verified": true,
+      "own_verified": "assetgen_output/creatures/penguin_belly_pre_publish/models/creatures/penguin"
+    },
+    {
+      "id": "puffin",
+      "original_verified": true,
+      "own_verified": "models/creatures/puffin"
+    },
+    {
+      "id": "sand_monster",
+      "original_verified": true,
+      "own_verified": "models/creatures/sand_monster"
+    },
+    {
+      "id": "seahorse",
+      "original_verified": true,
+      "own_verified": "assetgen_output/creatures/seahorse_anatomy_pre_publish/models/creatures/seahorse"
+    },
+    {
+      "id": "stone_monster",
+      "original_verified": true,
+      "own_verified": "models/creatures/stone_monster"
+    },
+    {
+      "id": "treeman",
+      "original_verified": true,
+      "own_verified": "models/creatures/treeman"
+    },
+    {
+      "id": "wasp",
+      "original_verified": true,
+      "own_verified": "models/creatures/wasp"
+    },
+    {
+      "id": "whale",
+      "original_verified": true,
+      "own_verified": "models/creatures/whale"
+    }
+  ]
+}

@@ -1,0 +1,142 @@
+{
+  "schema": "creature-motion-v5-invariant-audit.v1",
+  "passed": true,
+  "scope": "Rig nodes/IBM, branch centrelines, valid UV/skin/triangles, actual CPU transition floor/envelope; not art/stride/performance acceptance",
+  "resources": [
+    {
+      "id": "badger",
+      "nodes_skin_ibm_definition_unchanged": true,
+      "source_mesh": {
+        "triangles": 360,
+        "min_triangle_area": 0.000244140625,
+        "constant_uv_triangles": 172,
+        "model_texel_density_p05": 0.0,
+        "model_texel_density_median": 9.263114434894703
+      },
+      "candidate_mesh": {
+        "triangles": 360,
+        "min_triangle_area": 0.000244140625,
+        "constant_uv_triangles": 172,
+        "model_texel_density_p05": 0.0,
+        "model_texel_density_median": 9.263114434894703
+      },
+      "source_sha256": {
+        "model.gltf": "60f9bed10d5bc102b50c9a810b08be31c4912e009ef84677ce1fec19ea6e1440",
+        "model.bin": "6e349956d73d2f3f278e57e1a409c6bff50f238edb68354e92befafbec414b90",
+        "creature.json": "7fc1c6ece1d377efba3861c22239d9f942e31a454f4e5f636e38e6fb442a6224"
+      },
+      "source_recipe_sha256": "b4d8c0b121864693d9b56ed6c544958821e9430e089abc22ddfe4c9c1fc8f551",
+      "candidate_sha256": {
+        "model.gltf": "95ecd5d538250578257ba9c1ce03e99072e7532e5c3e0ceffae2b108324f16e7",
+        "model.bin": "55cc3e55c2393445ca6ec17a18d71cad63ad2aafc2a9c0a7abcdc9b0b5f31d54"
+      },
+      "textures_sha256": {
+        "body.png": "8de2d9867c33435e76687366fea4e2c0740e160dfeddac66f6e41f6676f91200",
+        "icon.png": "965c77646f7fbda199f4b18df94da95c114666c1a5013ff841d83fe13735941a"
+      },
+      "supported_transition_min_y": -5.587935447692871e-09
+    },
+    {
+      "id": "treeman",
+      "nodes_skin_ibm_definition_unchanged": true,
+      "source_mesh": {
+        "triangles": 456,
+        "min_triangle_area": 0.00039062462747097015,
+        "constant_uv_triangles": 128,
+        "model_texel_density_p05": 0.0,
+        "model_texel_density_median": 13.618376664684742
+      },
+      "candidate_mesh": {
+        "triangles": 456,
+        "min_triangle_area": 0.00039062462747097015,
+        "constant_uv_triangles": 128,
+        "model_texel_density_p05": 0.0,
+        "model_texel_density_median": 14.302700184570888
+      },
+      "source_sha256": {
+        "model.gltf": "6e3f8c6acf19bbe32f7ad4df2d56d7e05dfbae6f8c3e18bb5eff538877e509af",
+        "model.bin": "16e10b8f6267c74203fbb574db2f2edcc21506563e543ce4dd8f796159b623de",
+        "creature.json": "a8b51b987b8e662c76891c1052dd4dbbf2e8647b7c299ed565693e1ed8d156fd"
+      },
+      "source_recipe_sha256": "942e04185c4ce225e2d88125e85d1c0dbabafc8e7cabc5b9b1479b15600bef6d",
+      "candidate_sha256": {
+        "model.gltf": "6e93406291ef05e20c548b735386bd001c314729f29ac1a1c8fd1cf1d2d83870",
+        "model.bin": "b3369aaa171ce71b6eaf4b9dc2c42a5cb7e24be2b0ee2ccc8a551023f751be65"
+      },
+      "textures_sha256": {
+        "body.png": "2f1b2f5c6411b00741daf407551bff301584635e1c2f7ae1c35177457301464a",
+        "icon.png": "08774a7f25cad74a169890b5655a4546045e6b606f9d1544d4b9c36db119af21"
+      },
+      "branch_sections_checked": 24,
+      "branch_centreline_max_error_px": 1.7763568394002505e-15,
+      "supported_transition_min_y": 9.998679161071777e-06
+    },
+    {
+      "id": "lobster",
+      "nodes_skin_ibm_definition_unchanged": true,
+      "source_mesh": {
+        "triangles": 672,
+        "min_triangle_area": 0.0004687494656536728,
+        "constant_uv_triangles": 320,
+        "model_texel_density_p05": 0.0,
+        "model_texel_density_median": 9.0453817954291
+      },
+      "candidate_mesh": {
+        "triangles": 672,
+        "min_triangle_area": 0.0004687494656536728,
+        "constant_uv_triangles": 320,
+        "model_texel_density_p05": 0.0,
+        "model_texel_density_median": 9.0453817954291
+      },
+      "source_sha256": {
+        "model.gltf": "6fbc689ce8940fc611fd1f7deb6159aa112760d42866bf37c3c3920f0973065a",
+        "model.bin": "d358e4087dab55115b56307deee0ebc91668b123760044bc726d2c54c11a8e05",
+        "creature.json": "57daa5fccdde3217ea517446a47f940970a27fb0c9c7776f3114c69065aedbf1"
+      },
+      "source_recipe_sha256": "18d426599539898cdf6a55058d57b49f95a11f9c0a8fc6ddd767955c4adc4204",
+      "candidate_sha256": {
+        "model.gltf": "2696980bdac47a143a4f8fd6d2fb0f6ba92cbcbdc9c3504dd33483156c82c574",
+        "model.bin": "f6027bc70df05af1a36518e1ab1f61a4ac8819f3fc4f235ac68ca415608be675"
+      },
+      "textures_sha256": {
+        "body.png": "dea26457e1f5413a1da2649ccf24da54adb50f6b16561c66f2912eebe8b3871e",
+        "icon.png": "86ca59e0b25d03670d2cef49c9160533c848a99a535ec75b55b5c2a2f9560c17"
+      },
+      "supported_transition_min_y": 0.0
+    },
+    {
+      "id": "seahorse",
+      "nodes_skin_ibm_definition_unchanged": true,
+      "source_mesh": {
+        "triangles": 240,
+        "min_triangle_area": 0.0006249999860301614,
+        "constant_uv_triangles": 80,
+        "model_texel_density_p05": 0.0,
+        "model_texel_density_median": 9.237604307034012
+      },
+      "candidate_mesh": {
+        "triangles": 240,
+        "min_triangle_area": 0.0006249999860301614,
+        "constant_uv_triangles": 80,
+        "model_texel_density_p05": 0.0,
+        "model_texel_density_median": 9.237604307034012
+      },
+      "source_sha256": {
+        "model.gltf": "4d17ce3cf990a16bf23af9d575b5a8e0c7a3de0de43638d26465716675ade826",
+        "model.bin": "182dfa17d4c5a3d382f4ec2f50fb2843fb7c1ef71f107c5fed1ceac7e54a38d0",
+        "creature.json": "32155db030f593c5874b242352d036e29b5893b2c492b80ad39f10ce80255db2"
+      },
+      "source_recipe_sha256": "3bbaa944a195c7fce93772d3344e54a84bc5d454987569f95ab92e1dd7bcc836",
+      "candidate_sha256": {
+        "model.gltf": "4d17ce3cf990a16bf23af9d575b5a8e0c7a3de0de43638d26465716675ade826",
+        "model.bin": "196b72d5d5f01d9394b41cce901c390d84c99dcfbe9e31b51bb9cf28669d3a24"
+      },
+      "textures_sha256": {
+        "body.png": "53f15609eae1426a950d4f6f420fb8631187265042a3523a2d5a26b8db2670a1",
+        "icon.png": "43231bd03e79c65f0be663fdf1ca58ea27e182134bc8f5ee5c14783ffec8210a"
+      },
+      "supported_transition_min_y": null
+    }
+  ],
+  "native_transition_frames": 5456
+}

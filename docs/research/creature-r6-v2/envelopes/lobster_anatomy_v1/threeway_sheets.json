@@ -1,0 +1,22 @@
+{
+  "scope": "Verified native composition only; not artistic acceptance",
+  "sheets": [
+    {
+      "path": "threeway_idle.png",
+      "sha256": "2ab032c5b233846391f45a7d47042c7b255aa448a77ffc7d9f4e977ff4b61422"
+    },
+    {
+      "path": "threeway_walk.png",
+      "sha256": "8fcaaffb0cf67669c88da3dfe65cf600a3b7ff5ea10914ec5e503ed37ec11b61"
+    },
+    {
+      "path": "threeway_action.png",
+      "sha256": "b7806c5988ff900199c77ec97e746be8877e508a0b356129a57466984acbf774"
+    }
+  ],
+  "contexts_sha256": {
+    "context_envelope_original.json": "d23f751887515f4262ea2df36ff176ed5007bb170637db73fbd663784d6b4236",
+    "context_own_before.json": "e56c52e4169aeef7ca18d70057dc7edd25cd79d40f62944176cdf68158e972da",
+    "context_envelope_current.json": "d3ce01a40d17222124d279dd693c7cdfa25add3e2992df945e10a4415d7b2e66"
+  }
+}

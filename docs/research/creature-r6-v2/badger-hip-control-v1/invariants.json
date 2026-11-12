@@ -1,0 +1,22 @@
+{
+  "scope": "Exported hip-controller geometry/motion audit; never an art/stance approval.",
+  "acceptance": "pending",
+  "geometry_bind_uv_weights_png_exact": true,
+  "all_original_rotations_exact": true,
+  "old_joint_bind_world_exact": true,
+  "mesh": {
+    "triangles": 360,
+    "min_triangle_area": 0.000244140625,
+    "constant_uv_triangles": 172,
+    "model_texel_density_p05": 0.0,
+    "model_texel_density_median": 9.263114434894703
+  },
+  "max_controller_target_error_degrees": 0.0005961345354674278,
+  "max_upper_body_rotation_error_degrees": 0.0,
+  "exported_walk_floor_samples": 8193,
+  "floor_world_min": 7.496213415961184e-06,
+  "floor_world_max": 0.00043486022384711664,
+  "analyzer_sha256": "6dbd03080ddbfd385eda972e950a14d25efee37ae0b6ba609e1678e59c4d7142",
+  "gltf_sha256": "85efb8fc0c0bef118a5ee88eb083117176b72b0674baf12429253ce6a1670bb9",
+  "bin_sha256": "2c2794888ebfdcede24e941a3867a801d99c37016675b27ea01e1cf6cac0fef4"
+}

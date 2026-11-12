@@ -1,0 +1,8 @@
+{
+  "passed": true,
+  "scope": "Same pilot inputs/shaders/profile, exact sampled native RGBA and retained transition data; not world stride/performance/art acceptance",
+  "png_count": 165,
+  "transition_data_equal": true,
+  "reference_exe": "81283a1c5b148e659eaa66e9f4be9e14cbf2730ad70b3e50a1f6a59535076018",
+  "candidate_exe": "1507b3e843d54a29e7e8150d04da3d353f870828362ed4371461c87b6a574755"
+}

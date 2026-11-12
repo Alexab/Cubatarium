@@ -1,0 +1,112 @@
+{
+  "schema": "creature-culling-direct-visual-review.v1",
+  "art_acceptance": "pending",
+  "new_sheets_directly_viewed": [
+    {
+      "id": "dirt_monster",
+      "kind": "front_side",
+      "file": "sheets/dirt_monster_views.png",
+      "sha256": "611d39459b4bd99c9c712fd1f13026e38a2dde67fa45de22b8a84301981c8bee"
+    },
+    {
+      "id": "dungeon_master",
+      "kind": "front_side",
+      "file": "sheets/dungeon_master_views.png",
+      "sha256": "f5f7804e69eb9618c084ec7a2d40a6ccda8c1bc6c7e52f2f6d1547ec4c3c2319"
+    },
+    {
+      "id": "golem",
+      "kind": "front_side",
+      "file": "sheets/golem_views.png",
+      "sha256": "f36cfc36f8f0683ee4677c7a0304dd4cdb189197e48f1032cb82fcf11188814e"
+    },
+    {
+      "id": "land_guard",
+      "kind": "front_side",
+      "file": "sheets/land_guard_views.png",
+      "sha256": "4948544ff7c90c72675d0bcc6c571844e34052d1dfe471b024e640a8e805795d"
+    },
+    {
+      "id": "lobster",
+      "kind": "front_side",
+      "file": "sheets/lobster_views.png",
+      "sha256": "4a7f63a4cd4c91930add7f2fbcc27f62a76f443a0f1aa36f26b90c257b0a3fea"
+    },
+    {
+      "id": "oerkki",
+      "kind": "front_side",
+      "file": "sheets/oerkki_views.png",
+      "sha256": "904e77b647b9a9d3f1e599f36243f17d4fc8af9d36a546d88009b0c941af8b58"
+    },
+    {
+      "id": "orc",
+      "kind": "front_side",
+      "file": "sheets/orc_views.png",
+      "sha256": "782082e5aeff74b6633c972dc43c70342b76c1f63bee3b2a424237a2f9455bc4"
+    },
+    {
+      "id": "owl",
+      "kind": "front_side",
+      "file": "sheets/owl_views.png",
+      "sha256": "261d496e26d2b1af74507f6603aa7454be776909d1abe1039cf22d6f68066ac0"
+    },
+    {
+      "id": "penguin",
+      "kind": "front_side",
+      "file": "sheets/penguin_views.png",
+      "sha256": "900701eb54047f811ae646de532b8b1532e55b4497f52dc54d4ef85b8b5f56fd"
+    },
+    {
+      "id": "puffin",
+      "kind": "front_side",
+      "file": "sheets/puffin_views.png",
+      "sha256": "50e4ef1a6a42205cdc05adc0eef4dd035cc224b966c35164ca8f948cc6cfa41f"
+    },
+    {
+      "id": "sand_monster",
+      "kind": "front_side",
+      "file": "sheets/sand_monster_views.png",
+      "sha256": "2b01eae01700771cff0ce99a886ae3dd97339d9962343999000ee8d03ef36b60"
+    },
+    {
+      "id": "seahorse",
+      "kind": "front_side",
+      "file": "sheets/seahorse_views.png",
+      "sha256": "1e8bdc3927c07be61c78310973d8495df54b8ad8bde203d8a0e255b1c4934f04"
+    },
+    {
+      "id": "stone_monster",
+      "kind": "front_side",
+      "file": "sheets/stone_monster_views.png",
+      "sha256": "591592444f877fbeea3e40094610ccd91fc4b797ab5a46f017f28469f3449378"
+    },
+    {
+      "id": "wasp",
+      "kind": "front_side",
+      "file": "sheets/wasp_views.png",
+      "sha256": "e4ea7aa242617a36bfcce4df6f14a40caf5df081d2a2271f0ba3fb50c3c4790a"
+    },
+    {
+      "id": "whale",
+      "kind": "front_side",
+      "file": "sheets/whale_views.png",
+      "sha256": "10f429dcc848bd495e6be9f31360b000c18557e012936d4445e8304445aafe17"
+    }
+  ],
+  "historical_directly_viewed_count": 19,
+  "historical_review_sha256": "e4aa7aa55b84ea32d5aeaa9e2490904f10ffad0f8f19d80d04775cf4e88b2db5",
+  "total_distinct_species_view_kinds_reviewed_across_versions": 34,
+  "historical_current_model_pixels_exact_count": 2472,
+  "world_sheet_directly_viewed": true,
+  "world_sheet_sha256": "b5fc508f1e2890f663e9a5c17eb1f8a1807323158a920dedbcc59b64dac907b8",
+  "world_badger_frame001_directly_viewed": true,
+  "world_badger_frame002_rejected_for_art_review": "close camera too near model; not accepted as world visual evidence",
+  "open_art_actions": [
+    "treeman mass",
+    "orc secondary body roll",
+    "published lobster claw lift",
+    "published seahorse tail excursion",
+    "puffin continuous world flight pitch verification"
+  ],
+  "scope": "Static native sheets and world stills, not continuous playback or final art/contact/performance acceptance"
+}

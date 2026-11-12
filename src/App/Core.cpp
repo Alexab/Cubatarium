@@ -22,6 +22,7 @@
 #endif
 #include "Core/StallTimer.h"
 #include "App/Core.h"
+#include "App/CreatureQaAssetRoot.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "App/LegacyConfigAdapter.h"
 #include "App/Platform/Log.h"
@@ -556,24 +557,25 @@ void UCore::LoadConfig(const std::string &config_file_name)
     WorldInstance->SetBlockDefinitionStorage(blockDefinitions);
 
     auto creatureDefinitions = std::make_shared<UCreatureDefinitionStorage>();
-    creatureDefinitions->Load((WorkDir / "models" / "creatures").string());
+    const auto creatureModels = CreatureModelsRoot(WorkDir);
+    creatureDefinitions->Load((creatureModels / "creatures").string());
     CreatureBoneSkeletonCache::Instance().SetCreaturesRoot(
-        (WorkDir / "models" / "creatures").string());
+        (creatureModels / "creatures").string());
     CreatureGltfCache::Instance().SetCreaturesRoot(
-        (WorkDir / "models" / "creatures").string());
+        (creatureModels / "creatures").string());
     WorldInstance->SetCreatureDefinitionStorage(creatureDefinitions);
     StallStageMark("LoadConfig.creature-defs");
 
     auto skinDefinitions = std::make_shared<USkinDefinitionStorage>();
-    skinDefinitions->Load((WorkDir / "models" / "skins").string());
+    skinDefinitions->Load((creatureModels / "skins").string());
     WorldInstance->SetSkinDefinitionStorage(skinDefinitions);
     StallStageMark("LoadConfig.skin-defs");
 
     CreatureTextureStorageInstance =
         std::make_shared<UCreatureTextureStorage>();
     CreatureTextureStorageInstance->LoadFromCreatureAndSkinRoots(
-        (WorkDir / "models" / "creatures").string(),
-        (WorkDir / "models" / "skins").string());
+        (creatureModels / "creatures").string(),
+        (creatureModels / "skins").string());
 
     StallStageMark("LoadConfig.creature-textures");
     const ResourcePackSelection defaultPacks =

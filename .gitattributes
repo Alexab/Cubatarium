@@ -9,3 +9,14 @@
 *.json text eol=crlf
 *.jsonl text eol=lf
 *.sh text eol=lf
+
+# Creature release provenance hashes exact bytes; preserve generated payloads and evidence.
+/models/creatures/** -text
+/models/creatures/_sources/** text eol=crlf
+/models/skins/** -text
+/docs/research/creature*/** -text
+/tools/creaturegen/*.py -text
+/tools/creature_recipes/*.yaml -text
+/LICENSE -text
+/tools/creature_palettes.yaml -text
+/tools/requirements-creaturegen.txt -text

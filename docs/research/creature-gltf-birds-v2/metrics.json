@@ -1,0 +1,134 @@
+{
+  "penguin": {
+    "baseline": {
+      "extent_blocks": [
+        0.369426,
+        0.699964,
+        0.494875
+      ],
+      "min_y": 0.001254
+    },
+    "candidate": {
+      "extent_blocks": [
+        0.398438,
+        0.703125,
+        0.515625
+      ],
+      "min_y": 0.0
+    },
+    "candidate_bones": 12,
+    "candidate_clips": [
+      "walk",
+      "idle",
+      "fly"
+    ],
+    "clip_timing": {
+      "idle": {
+        "asset_duration_sec": 4.0,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 4.0
+      },
+      "walk": {
+        "asset_duration_sec": 0.24,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 0.24
+      },
+      "fly": {
+        "asset_duration_sec": 0.5,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 0.5
+      }
+    },
+    "payload_sha256": {
+      "creature.json": "b951a645e9fd9b882e8486c25e0289f8223b39916c08f6986ddbb207ee684df1",
+      "model.gltf": "54185405177575fbcc568a5d4d3b0db24a6183e09d9e3229ea4edc5fa149fa73",
+      "model.bin": "9777f7a114abdc7fef379c69968735fd0c329c43e61e247e8ad891b10ca50ac9"
+    },
+    "contact": {
+      "walk": {
+        "sample_count": 65,
+        "min_geometry_y_blocks": -0.000211,
+        "max_min_geometry_y_blocks": 0.004658,
+        "owned_effectors": {
+          "foot_left": {
+            "min_y_blocks": -0.000211,
+            "max_min_y_blocks": 0.052291
+          },
+          "foot_right": {
+            "min_y_blocks": -0.000211,
+            "max_min_y_blocks": 0.052291
+          }
+        }
+      }
+    }
+  },
+  "owl": {
+    "baseline": {
+      "extent_blocks": [
+        0.457505,
+        1.18075,
+        0.539747
+      ],
+      "min_y": 0.383236
+    },
+    "candidate": {
+      "extent_blocks": [
+        0.475,
+        1.1875,
+        0.564062
+      ],
+      "min_y": 0.0
+    },
+    "candidate_bones": 14,
+    "candidate_clips": [
+      "walk",
+      "idle",
+      "fly",
+      "glide"
+    ],
+    "clip_timing": {
+      "idle": {
+        "asset_duration_sec": 4.0,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 4.0
+      },
+      "walk": {
+        "asset_duration_sec": 0.24,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 0.24
+      },
+      "fly": {
+        "asset_duration_sec": 0.5,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 0.5
+      },
+      "glide": {
+        "asset_duration_sec": 0.9,
+        "runtime_speed": 1,
+        "effective_period_at_unit_travel_scale_sec": 0.9
+      }
+    },
+    "payload_sha256": {
+      "creature.json": "ba85554d5bcc13fb48637023d50b57f906a39ca60568c114288777bad830533e",
+      "model.gltf": "0bf958f832729f0ff701011557ceb8058692750b51115415a10312893384fb37",
+      "model.bin": "4d45920e91b40811c1e81cd5e25eaa51f986ca0e34d5353814bdc36b79a091be"
+    },
+    "contact": {
+      "walk": {
+        "sample_count": 65,
+        "min_geometry_y_blocks": -0.000185,
+        "max_min_geometry_y_blocks": 0.001425,
+        "owned_effectors": {
+          "foot_left": {
+            "min_y_blocks": -0.000185,
+            "max_min_y_blocks": 0.043479
+          },
+          "foot_right": {
+            "min_y_blocks": -0.000185,
+            "max_min_y_blocks": 0.043479
+          }
+        }
+      }
+    }
+  }
+}

@@ -137,7 +137,7 @@
       }
     ],
     "icon": {
-      "mode": "species_texture",
+      "mode": "parts_preview",
       "color": [
         0.5098039215686274,
         0.5490196078431373,
@@ -149,9 +149,9 @@
     "geometry_file": "geometry.geo.json",
     "texture": "diffuse",
     "texture_size": [
-      64,
-      32
+      128,
+      128
     ],
-    "animation_profile": "aquatic"
+    "animation_profile": "dolphin"
   }
 }

@@ -1,0 +1,83 @@
+{
+  "sand_monster": {
+    "baseline": {
+      "extent_blocks": [
+        0.5936254560947418,
+        1.8647528886795044,
+        0.3946565091609955
+      ],
+      "palette_joints": 18,
+      "weighted_joints": 1,
+      "clips": [
+        "idle",
+        "walk",
+        "run",
+        "punch"
+      ]
+    },
+    "candidate": {
+      "palette_joints": 17,
+      "weighted_joints": 17,
+      "clips": [
+        "idle",
+        "walk",
+        "run",
+        "punch"
+      ]
+    }
+  },
+  "stone_monster": {
+    "baseline": {
+      "extent_blocks": [
+        0.8045886754989624,
+        1.724323034286499,
+        0.41880838572978973
+      ],
+      "palette_joints": 7,
+      "weighted_joints": 1,
+      "clips": [
+        "idle",
+        "walk",
+        "run",
+        "punch"
+      ]
+    },
+    "candidate": {
+      "palette_joints": 17,
+      "weighted_joints": 17,
+      "clips": [
+        "idle",
+        "walk",
+        "run",
+        "punch"
+      ]
+    }
+  },
+  "dirt_monster": {
+    "baseline": {
+      "extent_blocks": [
+        0.8045886754989624,
+        1.724323034286499,
+        0.41880838572978973
+      ],
+      "palette_joints": 7,
+      "weighted_joints": 1,
+      "clips": [
+        "idle",
+        "walk",
+        "run",
+        "punch"
+      ]
+    },
+    "candidate": {
+      "palette_joints": 17,
+      "weighted_joints": 17,
+      "clips": [
+        "idle",
+        "walk",
+        "run",
+        "punch"
+      ]
+    }
+  }
+}

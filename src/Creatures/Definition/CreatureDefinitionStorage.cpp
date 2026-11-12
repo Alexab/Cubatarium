@@ -7,11 +7,13 @@
 #include "Creatures/Stats/CreatureStatsJson.h"
 #include "Creatures/Visual/CreatureRigidModelLoader.h"
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <glm/glm.hpp>
 #include <iostream>
 #include <nlohmann/json.hpp>
+#include <stdexcept>
 
 namespace cutum
 {
@@ -28,6 +30,10 @@ CreatureAnimationClipDef ReadClipDef(const nlohmann::json &clipJson)
   // intentionally ignored: clips always play whole-file (audit V14).
   clip.loop = clipJson.value("loop", clip.loop);
   clip.speed = clipJson.value("speed", clip.speed);
+  clip.groundDistancePerCycle=clipJson.value("ground_distance_per_cycle",0.f);
+  if(!std::isfinite(clip.groundDistancePerCycle) || clip.groundDistancePerCycle<0.f ||
+     (clip.groundDistancePerCycle>0.f && !clip.loop))
+    throw std::runtime_error("ground_distance_per_cycle requires a finite nonnegative distance and a looped clip");
   return clip;
 }
 
@@ -38,6 +44,7 @@ void UCreatureDefinitionStorage::Load(const std::string &folder)
   {
     std::unique_lock lock(DefinitionsMutex);
     Definitions.clear();
+      Revision.fetch_add(1, std::memory_order_relaxed);
   }
   if (!std::filesystem::exists(folder))
   {
@@ -91,6 +98,7 @@ namespace
 void ParseVisualSpec(const nlohmann::json &vis, CreatureDefinition &def,
                       const std::string &path)
 {
+  def.visual.sourceDirectory=std::filesystem::absolute(path).parent_path().lexically_normal().string();
   def.visual.backend = vis.value("backend", def.visual.backend);
   def.visual.fallbackBackend = vis.value("fallback_backend", "");
   const CreatureVisualBackend parsedBackend =
@@ -139,7 +147,10 @@ void ParseVisualSpec(const nlohmann::json &vis, CreatureDefinition &def,
       {
         if (clipJson.is_object())
         {
-          def.visual.Animation.clips[clipId] = ReadClipDef(clipJson);
+          auto clip=ReadClipDef(clipJson);
+          if(clip.groundDistancePerCycle>0.f && parsedBackend!=CreatureVisualBackend::GltfSkeleton)
+            throw std::runtime_error("ground_distance_per_cycle currently requires gltf_skeleton");
+          def.visual.Animation.clips[clipId] = clip;
         }
       }
     }

@@ -1,0 +1,1231 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R6 glTF format cleanup and exact renderer parity; full R6 not achieved",
+  "species": {
+    "badger": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "71dead5980366ad2345b969e435e5988dedeec59c3178571ae50e0f9bc89f93d",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "badger.png",
+          "sha256": "ccccd54c5ed5a31edca98ee648a0b8234327f605d8018f8cc3cc6356f12f1002"
+        },
+        "motion": {
+          "path": "native_approved_badger.png",
+          "sha256": "56b93869366d8d0791e1f11b37674ef5e02f692a9dc1e28bfa2f8356c623d243"
+        },
+        "runtime": {
+          "path": "runtime_candidate_all_gltf/frame_002.png",
+          "sha256": "2dab28f9a7f78b86307c1633884cf6378b6d84d78488e9c8e285b28cea6001d7"
+        },
+        "ui": {
+          "path": "native_candidate/badger_12.png",
+          "sha256": "df3e845f480511c85d357c3766d8081add4002aa26fa8d93fffbdea30d2dab28"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/badger/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "butterfly": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "5e169864a4681fd88e30908923dca948cb8db00efde5ddc580dc7a08aca4ac3b",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "butterfly.png",
+          "sha256": "870dc5972ae4b03caf189eee0bc5a47863887253c52b6956bf65ee9d517eff0c"
+        },
+        "motion": {
+          "path": "native_approved_butterfly.png",
+          "sha256": "0ac4b73347ff48d44205ceac8bce388b86370f526ee21248a88bf6942728d233"
+        },
+        "runtime": {
+          "path": "../../creature-gltf-side-uv-v2/runtime_final_butterfly/frame_002.png",
+          "sha256": "beddf10f84d4766b1eda1af516ef8d312f3d77b6edee3c03ff1f27b771b6a17b"
+        },
+        "ui": {
+          "path": "native_candidate/butterfly_12.png",
+          "sha256": "19db31b1b34b65992722936f92624c09b99fda83828bb59de2c5f1b4fb4b76c2"
+        }
+      },
+      "inherited_review": "docs/research/creature-gltf-side-uv-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "crab": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "c98e822323524629202e858db7639f39d13bcb3dff81f3e57dfb57d11308e195",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "crab.png",
+          "sha256": "ea5365f34e7837e2042bd1252b445959f46b72f5c82db171a5628526efed1f57"
+        },
+        "motion": {
+          "path": "native_approved_crab.png",
+          "sha256": "10c7187bf18ee031cb2e9630b093fa758c5d21ac8cc927965a8f0c9db1a1f58b"
+        },
+        "runtime": {
+          "path": "../../creature-marine-invertebrates-v2/runtime_corrected_crab/frame_002.png",
+          "sha256": "fed1c06b72754a9bafdc18c48ed17e456ab726790f62691bee1b525fbe9cc10a"
+        },
+        "ui": {
+          "path": "native_candidate/crab_12.png",
+          "sha256": "560fe549927984c02029cc338a69352837c07759eb7b032339eeeee17ed34bf0"
+        }
+      },
+      "inherited_review": "docs/research/creature-marine-invertebrates-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "dirt_monster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "130260e7f50d5521b2029b23f60b983971f7bb56b7a0b82c8a0d2e74914ab10e",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "dirt_monster.png",
+          "sha256": "68a1cb47a5983ccf99147d892b9efdcae6d4bfeee65ab57b64ab04d6689a4373"
+        },
+        "motion": {
+          "path": "native_approved_dirt_monster.png",
+          "sha256": "6692c0101bc91cd8e03bc777c9c12657820591ec7d4ac387a52336c8d72e2614"
+        },
+        "runtime": {
+          "path": "../../creature-elemental-bipeds-v2/runtime_cadence_dirt_monster/frame_002.png",
+          "sha256": "003c4dbf4a0c8a5b261fdb376fea874f4b849bb0936c3cb5296e1942adaf366e"
+        },
+        "ui": {
+          "path": "native_candidate/dirt_monster_12.png",
+          "sha256": "c34c0cc4bcbba8475c5d6b24b763c1a30ecb535df6b44116c519a0e9ae8e072d"
+        }
+      },
+      "inherited_review": "docs/research/creature-elemental-bipeds-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "dungeon_master": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "e413c6af709a899f0243ee41d41d521d3f8e0288106f2d546397f4f43cc74dc0",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "dungeon_master.png",
+          "sha256": "db514790cc16f8fe77495a099dcc8a0f40a6c7c1b0b8a914bab8dde53714e022"
+        },
+        "motion": {
+          "path": "native_approved_dungeon_master.png",
+          "sha256": "f27b44528f350a57410fbde26d7f7687028502a767909d95248a6bbfa62554d6"
+        },
+        "runtime": {
+          "path": "../../creature-guardians-v2/runtime_final_dungeon_master/frame_002.png",
+          "sha256": "4c4237b8c6aababc948715c6bd5cff4f64c2540bedb888b35cd5404cf2e03531"
+        },
+        "ui": {
+          "path": "native_candidate/dungeon_master_12.png",
+          "sha256": "291879b7c88d599d029cd8e558f10ec8cf84743324e6e5168606d09f4a860775"
+        }
+      },
+      "inherited_review": "docs/research/creature-guardians-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "golem": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "ce021f4ca204f44beebab0792db420cf1cc8a23ec0d89ab4868d479688de04da",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "golem.png",
+          "sha256": "950ef1ab4151c764b3ced24c5ca27b1b4fe6894bb72ffa91f7a4c5dad94c0791"
+        },
+        "motion": {
+          "path": "native_approved_golem.png",
+          "sha256": "2e16e0ec0e0bfaf93f1b19e34aafcddcd5be771335626914fd022d9cf4ece644"
+        },
+        "runtime": {
+          "path": "../../creature-arboreal-v2/runtime_final_golem/frame_002.png",
+          "sha256": "f046dbb83f23e40a75a164bceebfa4ee7acb8c2895d745867ff2091f3cab7642"
+        },
+        "ui": {
+          "path": "native_candidate/golem_12.png",
+          "sha256": "2d925fc38f0ddf0dd2edd7090f6d3e84bb74d571d70c1c817cf41bdad2cf4118"
+        }
+      },
+      "inherited_review": "docs/research/creature-arboreal-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "hedgehog": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "b3107424a8a03e454c3fc1471d2441a73dc857c29e43f88cd7dab5312482fec6",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "hedgehog.png",
+          "sha256": "d940e11b82b603349ce2d935bca101c64d560c505ef94336b2f8fb34e4d934d6"
+        },
+        "motion": {
+          "path": "native_approved_hedgehog.png",
+          "sha256": "bf82d3eb6bf4186300ac1d63a8dc4e61a9a73877e5ad1ba48a5623bbbcb69706"
+        },
+        "runtime": {
+          "path": "../ground/runtime_final_hedgehog/frame_002.png",
+          "sha256": "76191cc655598f1e50db75e206f3abad2503fb30e200f1e8fe7e416c729b1c87"
+        },
+        "ui": {
+          "path": "native_candidate/hedgehog_12.png",
+          "sha256": "4d5bea70b93f5799774d656d9955b2f53ba52ae9b589d8392e27ae010f1a6270"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/ground/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "hermitcrab": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "9ed41e74669fe8ce7ca5e62fef3cd6f3ea2290d68b7c28597a0d85ca98875180",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "hermitcrab.png",
+          "sha256": "cc7e6d9fb1f74d0e70bcb1019e713c7907174af63a7dbafca2ba07635373536f"
+        },
+        "motion": {
+          "path": "native_approved_hermitcrab.png",
+          "sha256": "9ec3c2321e12780ff38e4ec02027ccfd0fd3c2473654b336317ab4c288c9a1e4"
+        },
+        "runtime": {
+          "path": "../../creature-gltf-side-uv-v2/runtime_water_hermitcrab/frame_002.png",
+          "sha256": "f6801170070c3304e5912a8f7d420ad25b189904b25cee2bb488779ca8f7ac2c"
+        },
+        "ui": {
+          "path": "native_candidate/hermitcrab_12.png",
+          "sha256": "eabef66c89dd96dbaa639ee252f1f64040cb511ab073106f569bb53ab9664988"
+        }
+      },
+      "inherited_review": "docs/research/creature-gltf-side-uv-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "kitten": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "ea8742c06e9bb2651d82c3c62ec22d8087c53bbcfd62f6694dfe8fae5621f751",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "kitten.png",
+          "sha256": "fc026363c5f4f2779c92a447ffcab02365b067d7df31409b77debe9d16a1b1e7"
+        },
+        "motion": {
+          "path": "native_approved_kitten.png",
+          "sha256": "fbe8f25b1f8dbae4a3b764a65e04f1016db16fedf8e112f4a72dd84a1111d9e8"
+        },
+        "runtime": {
+          "path": "../ground/runtime_final_kitten/frame_002.png",
+          "sha256": "91c7e6587f4e0c1d43e7e2f4e7a50555de2837e58549e9402f264d4aa912430b"
+        },
+        "ui": {
+          "path": "native_candidate/kitten_12.png",
+          "sha256": "b32c85c08f0effad078f16a9a741c1ea8cd76497bb4a3fae48a6a179c87a32ba"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/ground/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "land_guard": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "a24f1e005054aa36a99e51e45f71a193983ceaff9876ac188464c494cdf89255",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "land_guard.png",
+          "sha256": "f119e0459758a9fc6d4517c23698db82b8651bdfb9380684f736927fdef4f0a5"
+        },
+        "motion": {
+          "path": "native_approved_land_guard.png",
+          "sha256": "5284c6c3a5df440f2173df3f4ac8386813cd1526b56f91aa633b2b295180fbaa"
+        },
+        "runtime": {
+          "path": "../../creature-guardians-v2/runtime_final_land_guard/frame_002.png",
+          "sha256": "eff4401937ab21c7d50d5b437ca08d60d9735e1cd0f09ad93acead7d779d8364"
+        },
+        "ui": {
+          "path": "native_candidate/land_guard_12.png",
+          "sha256": "5429aa2592c64329845690b759c81e3dbda20ad1ce7ba4926757ad66ef1c7c8f"
+        }
+      },
+      "inherited_review": "docs/research/creature-guardians-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "lava_flan": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "1976f3c97764e166729985f90aaf145af96736cca6cb90b8aa47551873ca79cb",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "lava_flan.png",
+          "sha256": "88cd02647bae5286f7fc9a1aa5426d9887b54bf0aed00fbc7ee6e6e09ee83f71"
+        },
+        "motion": {
+          "path": "native_approved_lava_flan.png",
+          "sha256": "5d0ad210c9fc14887ce07e650c192f81a3c0a67b605b054f52c0496c688da85c"
+        },
+        "runtime": {
+          "path": "../../creature-crystal-lava-v2/runtime_flow_lava_flan/frame_002.png",
+          "sha256": "06195e01c2a6ee3dab5cd6242668a27a25cfc6af29c5076f56ba5b843933c648"
+        },
+        "ui": {
+          "path": "native_candidate/lava_flan_12.png",
+          "sha256": "1645f49231f54786c32ae82dba78f295afd3fecf9c0ee7b1a2e9b6124acd2e8f"
+        }
+      },
+      "inherited_review": "docs/research/creature-crystal-lava-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "lobster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "5c416b40183bf432d2b4730d3b364832d78bdbe117dffffdcbaa5196b7a6d7e7",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "lobster.png",
+          "sha256": "7229625e39698aa1709fff74d7dc9832e3b065a43bdef5f8570faeb2a552eee9"
+        },
+        "motion": {
+          "path": "native_approved_lobster.png",
+          "sha256": "b76aab2223db5bc4ed6ef6a1ffba8e78ec43611ed99357de35390b9dfdcfd5ea"
+        },
+        "runtime": {
+          "path": "../../creature-marine-invertebrates-v2/runtime_corrected_lobster/frame_002.png",
+          "sha256": "e065e5dfc681cc21e15c144ea8b46811cbaa933549bc08dedee1baeb2d9f8878"
+        },
+        "ui": {
+          "path": "native_candidate/lobster_12.png",
+          "sha256": "5b01ee53b6704bf05481ac5046b3ba968fd3aa7e5863186c1cc278ed489fbc0c"
+        }
+      },
+      "inherited_review": "docs/research/creature-marine-invertebrates-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "manatee": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "16f562da839cfdf876f6f5a2e0251ba27e8af82f7f9433e8f99826a720d02ee4",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "manatee.png",
+          "sha256": "97a66a55d8fdc97d6e0541cbba704a0ee9cc536fb66d74110a2e9cde6ab6718d"
+        },
+        "motion": {
+          "path": "native_approved_manatee.png",
+          "sha256": "40529f29377528210451f630019dc99f942cf889f140e846b2bc676ecb34f561"
+        },
+        "runtime": {
+          "path": "../../creature-marine-mammals-v2/runtime_final_water_manatee/frame_002.png",
+          "sha256": "d55d88921f6588cfdd9eb3fe728420d3563d712d392b8248839a0b19a921195f"
+        },
+        "ui": {
+          "path": "native_candidate/manatee_12.png",
+          "sha256": "52f8e2a948eb94717cbe6015b8f38581572e9fd71c15fde7bf237754e60485e3"
+        }
+      },
+      "inherited_review": "docs/research/creature-marine-mammals-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "mese_monster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "cfdd6496c2e93207ba343778f9a8b179ba221bcea5aaf91292a80a4e05f55f2f",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "mese_monster.png",
+          "sha256": "d185d9a734342454811c5b94f2a244f4b8f44a30e27878811ca58746d96b66a0"
+        },
+        "motion": {
+          "path": "native_approved_mese_monster.png",
+          "sha256": "3ec45c0cd588cbe8307ae2e0472dc313ab78d3b0b1b22f531efcc33be3cc974c"
+        },
+        "runtime": {
+          "path": "../../creature-crystal-lava-v2/runtime_current_mese_monster/frame_002.png",
+          "sha256": "b0ad539fe3a074e6e5bc500e137f8b9464dd72c8b79d68f33b0dd653fea7f241"
+        },
+        "ui": {
+          "path": "native_candidate/mese_monster_12.png",
+          "sha256": "c9de2694f9ed9629377653f5e6b43d5f4f9aeb4c228506aecb56b181709115b3"
+        }
+      },
+      "inherited_review": "docs/research/creature-crystal-lava-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "octopus": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "36413feb8f036fe4f15f2c44d195c04fa113bba5da3c2b6d6cdfda5babe97e50",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "octopus.png",
+          "sha256": "6063834580f19a84b83da08d1bb73978bd9728b9727e7f067301022332f65bcb"
+        },
+        "motion": {
+          "path": "native_approved_octopus.png",
+          "sha256": "f7a4a968bc2d10c43ab1fa07fbe0a56e9d2521deb95e9d6a9b9330a8d57b9b96"
+        },
+        "runtime": {
+          "path": "../../creature-marine-invertebrates-v2/runtime_corrected_octopus/frame_002.png",
+          "sha256": "20775aea5da415b5422f0f723956c52287d1622e6a8ccab21b98e38e45778651"
+        },
+        "ui": {
+          "path": "native_candidate/octopus_12.png",
+          "sha256": "5a0a31aafd402782ca82414f627684fc65b29b37f0fc362ecd02d545ef25e9ff"
+        }
+      },
+      "inherited_review": "docs/research/creature-marine-invertebrates-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "oerkki": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "8a00cbf9a418cf9bd6015702fb3e55123fcb69dafd06a1949d0cb595da86e969",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "oerkki.png",
+          "sha256": "1be5bef5717f950c149f8565368225067c048fa73219f85cbd349f5ad1f7f8e7"
+        },
+        "motion": {
+          "path": "native_approved_oerkki.png",
+          "sha256": "6d85db6bd1625db348bf2e2b971eb493bb91b017f9c764f8dde5dbeea7b3ce7d"
+        },
+        "runtime": {
+          "path": "../../creature-warriors-v2/runtime_contact_oerkki/frame_002.png",
+          "sha256": "1be5c96156b5d0677d747303c7c7474f644ef25dfd26d7ecd37591f4b40abfc4"
+        },
+        "ui": {
+          "path": "native_candidate/oerkki_12.png",
+          "sha256": "ba173b7cc1b3e5e4f53ced0851d16ce04a22d7aaab8ddd4565e86d73d0afb6da"
+        }
+      },
+      "inherited_review": "docs/research/creature-warriors-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "ogre": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "40999cb24773500f579774412d685900d3991b1842f19f241a3e97685738a106",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "ogre.png",
+          "sha256": "a984e9b8f6b7fb66e6b4acc13bf9d36902d842fa6b1c33529c0b5a9cd9aa01b2"
+        },
+        "motion": {
+          "path": "native_approved_ogre.png",
+          "sha256": "eefa152e1b99956eb9222cdabd5fa4f4c2e3b9b4f247377fc53b7866703edca0"
+        },
+        "runtime": {
+          "path": "../../creature-warriors-v2/runtime_contact_ogre/frame_002.png",
+          "sha256": "973e450dde8ae79ebe60a0877c63f9237ab5ccdb7edd542112ec37fa2641217d"
+        },
+        "ui": {
+          "path": "native_candidate/ogre_12.png",
+          "sha256": "111bc5286ee330fad3c2b4c298d6037796d19c75408e99d34c6c747b2b9f83cc"
+        }
+      },
+      "inherited_review": "docs/research/creature-warriors-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "orc": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "4636f62da7bbb36a627d7b781369ca42143ac8cabc75fc565f87dffdf2dd9dc6",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "orc.png",
+          "sha256": "34834ef80fa486d3194705cb804f58a32893d333b27c2ce71fd2335e29c292c5"
+        },
+        "motion": {
+          "path": "native_approved_orc.png",
+          "sha256": "e58eb987e2382e30683a246e8267b72389b5f9bd1b7b69162df8446d79cd87c7"
+        },
+        "runtime": {
+          "path": "../../creature-warriors-v2/runtime_contact_orc/frame_002.png",
+          "sha256": "2fdc183e08fef78160e871ebb1be0fccba5bd6ffc0d550b5cb0c3572d476c43c"
+        },
+        "ui": {
+          "path": "native_candidate/orc_12.png",
+          "sha256": "4ec36c3ec0434fca49091691364a8c5431c010978397e4deb5ae85633f72abb2"
+        }
+      },
+      "inherited_review": "docs/research/creature-warriors-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "owl": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "7b26c0e50d1df5977ce86e9f70560b4837efcee7c1e84262d97642ba353457ec",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "owl.png",
+          "sha256": "186ea56438ab8db7bf01f446c5835d00bd7db1f3d0c355409c9eb3ad4a143523"
+        },
+        "motion": {
+          "path": "native_approved_owl.png",
+          "sha256": "0c08b26f56ab14efaae60953b1f4fd348d8d26524fda48163c851d097e644961"
+        },
+        "runtime": {
+          "path": "../../creature-gltf-side-uv-v2/runtime_final_owl/frame_002.png",
+          "sha256": "e9562329a970a43e6182edae9d0ada6af9f0dd81687d0af280c132210a847842"
+        },
+        "ui": {
+          "path": "native_candidate/owl_12.png",
+          "sha256": "e787283f9633691e3b8ac3d6872fbc5e207c05b40abba17b86a0f82e3f06a817"
+        }
+      },
+      "inherited_review": "docs/research/creature-gltf-side-uv-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "panda": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "b08c8c957559ad39fe4943915bfb10c786346bca0303e1f939274afaf517540c",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "panda.png",
+          "sha256": "11c56ecec26159217a73d50e1fdcbefc56c1f5dd27b3458051bc04c85b1bbb0d"
+        },
+        "motion": {
+          "path": "native_approved_panda.png",
+          "sha256": "62122324e9909c0ff34bc4694aac5e181484655fec9772b12296b5805b22054f"
+        },
+        "runtime": {
+          "path": "../ground/runtime_final_panda/frame_002.png",
+          "sha256": "df565d941e91f56f1dc7a219cf46c13028e835ec8c4457c3fdfe984cd0f1866e"
+        },
+        "ui": {
+          "path": "native_candidate/panda_12.png",
+          "sha256": "295dcdd5ae440ec4393805a3b0a07e8aa80a2c299d33f31503ff8f1c3db5a77d"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/ground/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "penguin": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "56bc1875071fd1baf2c0059402805a72dfc321b4384f4c8e0d0ab826fc2db6a9",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "penguin.png",
+          "sha256": "110d0cad1c642b78c1ece0e15d577a460c32a6af1f878382437262e2949e3e83"
+        },
+        "motion": {
+          "path": "native_approved_penguin.png",
+          "sha256": "11ee322e935dc25721a085ffd7ca4e6094f007fa54884ab3670210d5be7a2213"
+        },
+        "runtime": {
+          "path": "../ground/runtime_final_penguin/frame_002.png",
+          "sha256": "fd5939e3e06dfd9fc6b4130486cd266d8cc0fa2cce23008d054239cb1fb93732"
+        },
+        "ui": {
+          "path": "native_candidate/penguin_12.png",
+          "sha256": "73ab217bc81a7356d65c2f3e9d8943054fc11298be9aea085da49fc0d7e5ce6d"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/ground/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "puffin": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "0267e1217f5cdd6bba4dacd9a827eca7237071b7c555b5bdb63bcdc6045d43ec",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "puffin.png",
+          "sha256": "434ef2ccde12ec2be3bfd09046d207ac48670dcce20b23439690b6b2a0ebb0ed"
+        },
+        "motion": {
+          "path": "native_approved_puffin.png",
+          "sha256": "d716a9faaa63aa860db2c3d7ff3211442cd11e1f1770a610c4f87afb66e39593"
+        },
+        "runtime": {
+          "path": "../../creature-gltf-side-uv-v2/runtime_final_puffin/frame_002.png",
+          "sha256": "6cb8f1016fab669acc9832de651012594336446f27c4d8fc8048838557d6c59c"
+        },
+        "ui": {
+          "path": "native_candidate/puffin_12.png",
+          "sha256": "32f4cfc01e920f24ea8c200ad98867e7d46f86e55c66ba443a6fa87033dbbb65"
+        }
+      },
+      "inherited_review": "docs/research/creature-gltf-side-uv-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "rat": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "48225552d6485cf8a32de8096968f13be799c452a257f7ef087ee3021dd1338a",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "rat.png",
+          "sha256": "4e3b7a1ffc3b520612f44edaa7ffe9100e23a1af2ac7b6ae1c758706bfb10d7f"
+        },
+        "motion": {
+          "path": "native_approved_rat.png",
+          "sha256": "61a0b19641d9c3afdae8637a1e73be8e544f123db4a3d7b49133248eaf9495ef"
+        },
+        "runtime": {
+          "path": "../ground/runtime_final_rat/frame_002.png",
+          "sha256": "07023a82a001aa50dca07a89d256f82aed88f1a192ef75eb1580f54b5e3afd45"
+        },
+        "ui": {
+          "path": "native_candidate/rat_12.png",
+          "sha256": "91726435fa3ab4b52b83c4db582d17c99327c2d1224d8a29b48aae61c0000bd0"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/ground/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "sand_monster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "ee1d7a3ef3f9feb383a67d4686503fef172f64ce27494c67243654274e911f01",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sand_monster.png",
+          "sha256": "043007475bb1c4b4bb86afd48427f8ea1ae7c3028aa0af8ffbf8c75286548131"
+        },
+        "motion": {
+          "path": "native_approved_sand_monster.png",
+          "sha256": "576c03252a98629342b441c8fbba4f301be3d1906000f8b0a7529c87c5370750"
+        },
+        "runtime": {
+          "path": "../../creature-elemental-bipeds-v2/runtime_cadence_sand_monster/frame_002.png",
+          "sha256": "d6381ac446fbd2dad113c67cdaac338aa52cc2d4e421c4286ceecbff889934ba"
+        },
+        "ui": {
+          "path": "native_candidate/sand_monster_12.png",
+          "sha256": "b703d8e199649a576078ab7c7cd6c3bc3a6541dc7a44bfb02fa8cbbe904889d3"
+        }
+      },
+      "inherited_review": "docs/research/creature-elemental-bipeds-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "seahorse": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "1d4d3d3f2162df949b1527c5191e859b97d7156410ab97e7fa46b2542e4f5f42",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "seahorse.png",
+          "sha256": "80dfa9d2f6a3aee96811668f686a7a3a41c229a97707ff02d9435a06bce49104"
+        },
+        "motion": {
+          "path": "native_approved_seahorse.png",
+          "sha256": "c13fc9c5f91601049565ead74fa5ffdf0688019ac0edce77500fffb004def3e7"
+        },
+        "runtime": {
+          "path": "../../creature-aquatic-fish-v2/runtime_final_seahorse/frame_002.png",
+          "sha256": "4d58f0673f2055750ddc5517d629f1f780ae37d9860cb9a9678548aaba9900aa"
+        },
+        "ui": {
+          "path": "native_candidate/seahorse_12.png",
+          "sha256": "33c9fed946d4dedefab16abd04cc94799fba38eb4adb426c089c9de72d660bbe"
+        }
+      },
+      "inherited_review": "docs/research/creature-aquatic-fish-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "seal": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "359313c528a83d3272e12be0400d4aa1213506245fc4fc674098c41e62ca6b9e",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "seal.png",
+          "sha256": "8323ba4abb31d3121804d5d37fb7d9f258cd21fff17185d0e2c79e70d55c07d9"
+        },
+        "motion": {
+          "path": "native_approved_seal.png",
+          "sha256": "e79e34e6373bb5edc4db97f929d8a24ec67232521e6f2cb046a6cdb28ea35e52"
+        },
+        "runtime": {
+          "path": "../../creature-marine-mammals-v2/runtime_final_land_seal/frame_002.png",
+          "sha256": "7176baf1127f8f0b8cc07ebe55a48afe2451b6d8cd5b49dbb0223fde99a4532f"
+        },
+        "ui": {
+          "path": "native_candidate/seal_12.png",
+          "sha256": "2800fc43ab990a1a3cb2c55d62e796792b3c255773cdf803c8fdf3447030f0df"
+        }
+      },
+      "inherited_review": "docs/research/creature-marine-mammals-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "shark": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "a863a391fd2d5dbaaece1e0ed2d4e4a1d0aa666141ea5941198583fb2ebdf9b4",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "shark.png",
+          "sha256": "1da72da3f6bd10a0fef3704f72b63b6a26895693c3a9609f29f5c90c9c20adb7"
+        },
+        "motion": {
+          "path": "native_approved_shark.png",
+          "sha256": "b72802007858daf6593feaaa4db3f52863c8239616b0e909617ef98af90fef51"
+        },
+        "runtime": {
+          "path": "../../creature-aquatic-fish-v2/runtime_final_shark/frame_002.png",
+          "sha256": "55caecdd641eb35f96e9663aa3fead9ddf7d0b032e629896e11e8f3392440098"
+        },
+        "ui": {
+          "path": "native_candidate/shark_12.png",
+          "sha256": "72c85c5437abf304f13fc04918c312fbb2d699c717dbb3785411fcd3a19e7fd5"
+        }
+      },
+      "inherited_review": "docs/research/creature-aquatic-fish-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "stingray": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "a4457fcc60e69c6bbf8ad77432f1f3669b60d54f646658580c6f99aaffb7794e",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "stingray.png",
+          "sha256": "718149e5aa929cee2c195d1f86da8b1ea135f3be0ea0c862ec917848fd35243e"
+        },
+        "motion": {
+          "path": "native_approved_stingray.png",
+          "sha256": "f5c04ffbcb68ef9307261bf5651f67948eb91440e0a7ec47288bcfc9d84b7915"
+        },
+        "runtime": {
+          "path": "../../creature-gltf-side-uv-v2/runtime_final_stingray/frame_002.png",
+          "sha256": "8afa7726af30e0fa68d7cfea6e3e192f13255ef00e46628710e876b2bf7f8568"
+        },
+        "ui": {
+          "path": "native_candidate/stingray_12.png",
+          "sha256": "312480285e751ff2ac41aed9ee7cc1367807d3f89fea3f92d9b65261755d9c1a"
+        }
+      },
+      "inherited_review": "docs/research/creature-gltf-side-uv-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "stone_monster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "289756b4c31a604d6cce4ce351b1f64327c17ffc0f72019bde8215968a77eedb",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "stone_monster.png",
+          "sha256": "945136d5952ce90cfb803d352b0e816fcc45101d84078116ef1db83499ffe062"
+        },
+        "motion": {
+          "path": "native_approved_stone_monster.png",
+          "sha256": "37b627d1fd3a30fb4bd2ae78bc3214fdcc66d43404ca2ad93e911c33dffdc914"
+        },
+        "runtime": {
+          "path": "../../creature-elemental-bipeds-v2/runtime_cadence_stone_monster/frame_002.png",
+          "sha256": "a3c7ee580d5d236d7ef86ec5c2f77359800298ac55161cc623406086111f8e48"
+        },
+        "ui": {
+          "path": "native_candidate/stone_monster_12.png",
+          "sha256": "2d822f82f9e4962ca058d1f5146ef0c4da291ad0944ae85ed856323e5ab1b7e6"
+        }
+      },
+      "inherited_review": "docs/research/creature-elemental-bipeds-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "tree_monster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "8aec2c008dd5c10b82b3d1a6bc7dd2eb2e273e80e2843305cc76628e70c1b272",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "tree_monster.png",
+          "sha256": "bd6c9f04028cd1f939452124fb65afc1f716a5b7f7b508bc083059a8a21fb622"
+        },
+        "motion": {
+          "path": "native_approved_tree_monster.png",
+          "sha256": "ea89c052410fcc24e35d909ac905f619bc8bef3351fbdadb774cb1946c8d2986"
+        },
+        "runtime": {
+          "path": "../../creature-arboreal-v2/runtime_final_tree_monster/frame_002.png",
+          "sha256": "ae53018b04210990df29f15e1132cc56a6000b68ff1bbb64e0ae32b622a02e18"
+        },
+        "ui": {
+          "path": "native_candidate/tree_monster_12.png",
+          "sha256": "db4f8f78827c87cf84d36ee223b5c522daf7578153b315bf361880f3f6daaa32"
+        }
+      },
+      "inherited_review": "docs/research/creature-arboreal-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "treeman": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "ac5d42689b347a820f9b2dac0444df3570ed11b800a6643aaee120c126cfe15b",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "treeman.png",
+          "sha256": "371da055e2cf8a99de8b768c1178b86cbd8c400a21c6ca9c2cef8f17505584fe"
+        },
+        "motion": {
+          "path": "native_approved_treeman.png",
+          "sha256": "e2326ffd9aedcbdedc8081e4ee59389245db1ad78efbcf34412021af81bb0d29"
+        },
+        "runtime": {
+          "path": "../../creature-arboreal-v2/runtime_final_treeman/frame_002.png",
+          "sha256": "575abbb390211d63808dd6352c20a0db84777eef3e1cbe02c3790ef3782d6a3c"
+        },
+        "ui": {
+          "path": "native_candidate/treeman_12.png",
+          "sha256": "b9ea27553c387cae7847326bab2c5f83f3f379943003b9889ae549f336ebd7ef"
+        }
+      },
+      "inherited_review": "docs/research/creature-arboreal-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "warthog": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "9f177dce7913b6acb38d1a1af87ea7f282eeb3e08ab98f4fab0b3954e0da779a",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "warthog.png",
+          "sha256": "5e69ec531d9e94b7f11c5f86c9da86c3752370bbb8fce1d42a377b52b3bddf57"
+        },
+        "motion": {
+          "path": "native_approved_warthog.png",
+          "sha256": "8618f534843b560bc92867006f7571e11b6a0059f57c1c0ee3d68cfc95df4e3f"
+        },
+        "runtime": {
+          "path": "../ground/runtime_dense_warthog/frame_002.png",
+          "sha256": "f4e069bf56f483d54498dfc26d17eaf725bc1fe1358f73ff7ef55f7cf342af63"
+        },
+        "ui": {
+          "path": "native_candidate/warthog_12.png",
+          "sha256": "ad73bac6a81dd86e8c31b01efa097d3495784dcc9ca756773a636ddb51740040"
+        }
+      },
+      "inherited_review": "docs/research/creature-r6-v2/ground/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "wasp": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "dff53363210f7ea1b3061e2c0bcdc6c26e246dc6e0bdfa834487525b53f9c928",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "wasp.png",
+          "sha256": "ffa2f2a961ca890faff335861c268ae0541173daae06fbc4b9e9a35fd650e949"
+        },
+        "motion": {
+          "path": "native_approved_wasp.png",
+          "sha256": "90c469c5778933b922f4cc20e06c8defc544c2bc1fc18c1315757836f966286f"
+        },
+        "runtime": {
+          "path": "../../creature-gltf-side-uv-v2/runtime_final_wasp/frame_002.png",
+          "sha256": "b77c13f280458bda6bcf3e1c353a3475ed9e7064fe6d86fb41b093acb2acc93e"
+        },
+        "ui": {
+          "path": "native_candidate/wasp_12.png",
+          "sha256": "24d83adce9d0c5658da0aab2f327d0835be4b4854c96bcdafbbe5cbad3cefd7e"
+        }
+      },
+      "inherited_review": "docs/research/creature-gltf-side-uv-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "water_dragon": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "aa1b4144ef41b3d2156caf1f2311e6e00795993883cac8e78b46060339f14eab",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "water_dragon.png",
+          "sha256": "e3886bea8eb45391ac1c80a77c462c7738998ca23506661a8b53c64129169c02"
+        },
+        "motion": {
+          "path": "native_approved_water_dragon.png",
+          "sha256": "8610f44335ce98c9365d2e8fc714e864b9b76fb7e61fd80800ccaed25d953bc4"
+        },
+        "runtime": {
+          "path": "../../creature-large-aquatic-v2/runtime_final_water_dragon/frame_002.png",
+          "sha256": "ad3a50311d5522c6fba0e0476800fd3ef6b9b0524fcf39851ea81a80c8ffcf07"
+        },
+        "ui": {
+          "path": "native_candidate/water_dragon_12.png",
+          "sha256": "5d01aeb460ac3caf3aa905d5100a5713648bf034c1b13c7577d1fb571cc5a7ac"
+        }
+      },
+      "inherited_review": "docs/research/creature-large-aquatic-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    },
+    "whale": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: prior individual R5 art review retained by exact 1015-frame native equivalence; direct overview and badger world inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "9aceb460b4e9c2d70a1c36e04a7d81a1b523c338095d61c7dcf6d78b1b34e1a6",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "whale.png",
+          "sha256": "7d87094dd4b75d14ce964c14ae325018033770fa3664b78dfb9093fa01ef9533"
+        },
+        "motion": {
+          "path": "native_approved_whale.png",
+          "sha256": "5deaf3498ad31cf5da142c04680eab92cc74ecab3e5580f64550ade2cd3fcc39"
+        },
+        "runtime": {
+          "path": "../../creature-large-aquatic-v2/runtime_final_whale/frame_002.png",
+          "sha256": "0a8ef85d992c46e8ebc3af03cefada05dbb3def06f24d4b9ab0aa7f4c6139504"
+        },
+        "ui": {
+          "path": "native_candidate/whale_12.png",
+          "sha256": "6ac1ebcf818aef20daf4f5513d541af77377852063d6df47e18f2093eb1a4555"
+        }
+      },
+      "inherited_review": "docs/research/creature-large-aquatic-v2/review.json",
+      "notes": "Only zero-weight joint indices canonicalized and standard material/image/nearest-sampler bindings added. All geometry, UV, weights, active joint indices, animation/bind data, texture bytes and runtime creature.json identical to accepted production. Current Release renderer produced 29/29 pixel-identical frames for this species, 1015/1015 total. Khronos validator 35 assets: zero errors/warnings/infos, including declared body PNGs. World evidence for non-badger species is explicitly inherited from prior individual acceptance: this format probe actually spawns only badger and renders all 35 through native preview. Full R6 habitats/routes/cache/compatibility/package/performance/current all-61 reproducibility still pending."
+    }
+  }
+}

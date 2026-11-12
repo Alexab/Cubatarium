@@ -1,0 +1,108 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R5 arboreal and stone anatomy restoration; full R6 remains pending",
+  "species": {
+    "tree_monster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct comparison, full native animation, world and 64px UI inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "5ccd77b3c6ad3aba1b5de4f212fee51a237602cf286c696912d70574351206f5",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "tree_monster.png",
+          "sha256": "435be13dc7dda6155040b8d22edc3952692f3386a7184a907e5254a724d92118"
+        },
+        "motion": {
+          "path": "native_approved_tree_monster.png",
+          "sha256": "ea89c052410fcc24e35d909ac905f619bc8bef3351fbdadb774cb1946c8d2986"
+        },
+        "runtime": {
+          "path": "runtime_final_tree_monster/frame_002.png",
+          "sha256": "ae53018b04210990df29f15e1132cc56a6000b68ff1bbb64e0ae32b622a02e18"
+        },
+        "ui": {
+          "path": "native_candidate/tree_monster_12.png",
+          "sha256": "db4f8f78827c87cf84d36ee223b5c522daf7578153b315bf361880f3f6daaa32"
+        }
+      },
+      "notes": "Own authored geometry, UV, material fields, rig and clips; no reference mesh/pixels copied. Original tree crown/rooted anatomy or hunched long-armed stone anatomy preserved at original world scale. All original idle/walk/run/punch retained. 513-phase full-skin contact, stance direction/reference speed, wood shared sections and eight twig fingers, or rigid stone vertices tested. Original gameplay bounds and behavior preserved. Native Release actors actually spawned. Full R6 routes, compatibility, all-61 provenance regeneration and performance not yet accepted."
+    },
+    "treeman": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct comparison, full native animation, world and 64px UI inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "54a6257200ca18314c7f21bf58a55f4521787002ca9ed59aa1cfee63b4bcb8dc",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "treeman.png",
+          "sha256": "42cdf687a036904511e6bd5c5d640869abafbec43cb9fd18afafff536d12332a"
+        },
+        "motion": {
+          "path": "native_approved_treeman.png",
+          "sha256": "e2326ffd9aedcbdedc8081e4ee59389245db1ad78efbcf34412021af81bb0d29"
+        },
+        "runtime": {
+          "path": "runtime_final_treeman/frame_002.png",
+          "sha256": "575abbb390211d63808dd6352c20a0db84777eef3e1cbe02c3790ef3782d6a3c"
+        },
+        "ui": {
+          "path": "native_candidate/treeman_12.png",
+          "sha256": "b9ea27553c387cae7847326bab2c5f83f3f379943003b9889ae549f336ebd7ef"
+        }
+      },
+      "notes": "Own authored geometry, UV, material fields, rig and clips; no reference mesh/pixels copied. Original tree crown/rooted anatomy or hunched long-armed stone anatomy preserved at original world scale. All original idle/walk/run/punch retained. 513-phase full-skin contact, stance direction/reference speed, wood shared sections and eight twig fingers, or rigid stone vertices tested. Original gameplay bounds and behavior preserved. Native Release actors actually spawned. Full R6 routes, compatibility, all-61 provenance regeneration and performance not yet accepted."
+    },
+    "golem": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct comparison, full native animation, world and 64px UI inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "7f5b772c9fefe1872fa3f3b76e5908bc4ac3a86229d607eb9960c02947c56d03",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "golem.png",
+          "sha256": "fbd9f881e249973cfb14a315e28cd4f33799f46741d6b81ee9c25925fba76157"
+        },
+        "motion": {
+          "path": "native_approved_golem.png",
+          "sha256": "2e16e0ec0e0bfaf93f1b19e34aafcddcd5be771335626914fd022d9cf4ece644"
+        },
+        "runtime": {
+          "path": "runtime_final_golem/frame_002.png",
+          "sha256": "f046dbb83f23e40a75a164bceebfa4ee7acb8c2895d745867ff2091f3cab7642"
+        },
+        "ui": {
+          "path": "native_candidate/golem_12.png",
+          "sha256": "2d925fc38f0ddf0dd2edd7090f6d3e84bb74d571d70c1c817cf41bdad2cf4118"
+        }
+      },
+      "notes": "Own authored geometry, UV, material fields, rig and clips; no reference mesh/pixels copied. Original tree crown/rooted anatomy or hunched long-armed stone anatomy preserved at original world scale. All original idle/walk/run/punch retained. 513-phase full-skin contact, stance direction/reference speed, wood shared sections and eight twig fingers, or rigid stone vertices tested. Original gameplay bounds and behavior preserved. Native Release actors actually spawned. Full R6 routes, compatibility, all-61 provenance regeneration and performance not yet accepted."
+    }
+  }
+}

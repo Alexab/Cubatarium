@@ -1,0 +1,27 @@
+{
+  "captured_at_utc": "2026-11-11T01:53:10.230371+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\r6_ground_v2\\models",
+  "files_sha256": {
+    "creatures\\warthog\\creature.json": "b2431f96eec334f2114ae263f87d521d8b96a66802c9c4f1572e84bb6a5ffdde",
+    "creatures\\warthog\\LICENSE.txt": "86f3dd813a29614b4a0bfbddc18fba9e009edd9e2e7c28de179b655ae89b4e16",
+    "creatures\\warthog\\manifest.json": "121ed0bbf6d3f44d5e4ad876d9f736a99436d8eeae9e2535d3c84e86d68d0709",
+    "creatures\\warthog\\model.bin": "58c3f4cf76cdcb9c7de142ed79416b31d9c67a5c8957d7662246bcc7ace623db",
+    "creatures\\warthog\\model.gltf": "b42cc4f2d0cef8141c81f5824bd7fe92e396ca5089bb7d47b2dd97eba97ae984",
+    "creatures\\warthog\\textures\\body.png": "df64deee3be0db434d02032e4b5585abbcb880bff64adf57c66bd807e2b81d4b",
+    "creatures\\warthog\\textures\\icon.png": "71db9038b3da638469fce531a5eb0b7f16c5b67e804afb69076fb8e393872fcd"
+  },
+  "qa_models_override": true,
+  "exe_sha256": "07639445569a24154eab1befef0c945ff37ed6cb13d5ec16877c6818df7db329",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "final_warthog",
+  "qa_camera": "close",
+  "qa_water_placement": false,
+  "qa_lava_fixture": false,
+  "world": "World_254",
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

@@ -29,7 +29,9 @@ def export_geometry(model: Model, identifier: str) -> dict:
         bones.append(entry)
     width, height = model.texture_size
     return {
-        "format_version": "1.12.0",
+        # Keyed geometry.<id>, texturewidth and box UVs use the legacy 1.8
+        # schema. 1.12 declares minecraft:geometry[]/description instead.
+        "format_version": "1.8.0",
         identifier: {
             "texturewidth": width,
             "textureheight": height,

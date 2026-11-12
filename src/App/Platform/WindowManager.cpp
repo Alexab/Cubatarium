@@ -10,6 +10,7 @@
 #include "Core/Progress/IUProgressSink.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
+#include "Creatures/Diagnostics/CreaturePassTimingProbe.h"
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Influence/InfluenceApplier.h"
 #include "Creatures/Influence/InfluenceResolver.h"
@@ -1078,6 +1079,7 @@ void UWindowManager::Run()
         interval = Core->GetUiSettings().PerfLogIntervalSec;
       }
       UFrameStageWatchdog::Scope stage("window.perf_emit");
+      CreaturePassTimingProbe::CompleteWindowFrame(frame_wall_ms, swap_wait_ms);
       UFramePerfMonitor::OnInGameFrame(*World, swap_wait_ms, interval,
                                        frame_wall_ms);
     }
@@ -1089,6 +1091,7 @@ void UWindowManager::Run()
     FlightCapture->Shutdown();
     FlightCapture.reset();
   }
+  CreaturePassTimingProbe::ShutdownSession();
   UFramePerfMonitor::Shutdown();
 }
 

@@ -1,0 +1,36 @@
+{
+  "captured_at_utc": "2026-11-10T23:35:43.436089+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\review_2026_11_10\\baseline\\models",
+  "files_sha256": {
+    "creatures\\dungeon_master\\creature.json": "441dd63a2eae719ec1945cc7c2ea8ac965281c52e6ff710120080f2e94f6bd15",
+    "creatures\\dungeon_master\\LICENSE.txt": "56ea57dd1e9e3c2306f4680867c99e29d1a3c738b4710ff023ea3783b8d0e8df",
+    "creatures\\dungeon_master\\model.bin": "b468e07920d87ba82615ff3b6aac6906bcbd911ac66156e647c4b131e868c00c",
+    "creatures\\dungeon_master\\model.gltf": "fcfedb275ef588582976aa63e3dfa6e2ded13f3539d86f606db585eb30a47282",
+    "creatures\\dungeon_master\\textures\\arm.png": "60e843c49073be3a4b8adf74b3cdb98323e496860c7b485430336cc891f392d7",
+    "creatures\\dungeon_master\\textures\\body.png": "441497129d240f0aa130eae88f6fb288c9174b7de60472677f1d5463382fda91",
+    "creatures\\dungeon_master\\textures\\face.png": "10b025ccc67f36c1709b181b3f0a4817926ed212492f0c6a9264622d8ef585b0",
+    "creatures\\dungeon_master\\textures\\icon.png": "bb1cd6f1de7bf8ea0c832d750d1693b8e3df2bea987211067743a4bb8d15b69d",
+    "creatures\\dungeon_master\\textures\\leg.png": "87a4ea9a8eaccdff2bb4da21bde34623c3645dee6eb13fdb67231aea85fc53f7",
+    "creatures\\land_guard\\creature.json": "4caacaa97eb8a54dee9f05e561bd98d7ef162ea63d7ccdbc4d86b7a959f034d1",
+    "creatures\\land_guard\\LICENSE.txt": "545a478bd585027c37a5e9f392aa9a21c0cfe0d5d03348455fee68eadac0f2e1",
+    "creatures\\land_guard\\model.bin": "b468e07920d87ba82615ff3b6aac6906bcbd911ac66156e647c4b131e868c00c",
+    "creatures\\land_guard\\model.gltf": "060f1859601d05febbcbe64728beb1de5b085dcde91c6aa755d29216cc21d7d0",
+    "creatures\\land_guard\\textures\\arm.png": "6cb2a9a51b9629d316f8c9b1ec18661f288d9d85638e5d4e8832040045019f9d",
+    "creatures\\land_guard\\textures\\body.png": "9c32f65a5c5303a60adbfb9db54202b072f322e84f30a32644ff6ef0d117b934",
+    "creatures\\land_guard\\textures\\face.png": "924c6366b2705efdeab741ce508ef065d08ce3ebd23c92d3cd411fde47606b92",
+    "creatures\\land_guard\\textures\\icon.png": "d77069cb2e611fb0bccaff57c4db9c930015b4aafbe156f23220d4b995586303",
+    "creatures\\land_guard\\textures\\leg.png": "3b463693579e6e9250fafd21f8d96a05135939aceb3dad2b1fb189d101675c6d"
+  },
+  "qa_models_override": true,
+  "exe_sha256": "43bb4bf75f6f14d792169bcc31453103515469d7f530f3f566e7121249a0a900",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "guardians_baseline",
+  "qa_camera": "grid",
+  "qa_water_placement": false,
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

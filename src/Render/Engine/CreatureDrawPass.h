@@ -4,6 +4,7 @@
 #include "App/Settings/RenderSettings.h"
 #include "Render/Engine/CreatureLightCache.h"
 #include "Creatures/Visual/CreatureDrawContext.h"
+#include "Creatures/Diagnostics/CreaturePassTimingProbe.h"
 #include "Creatures/Visual/CreatureDrawQueue.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureRenderStats.h"
@@ -108,6 +109,7 @@ private:
   std::shared_ptr<UShaderProgram> creatureShader;
   std::shared_ptr<UShaderProgram> creatureSkinnedShader;
   CreatureRenderStats Stats;
+  CreaturePassTimingProbe TimingProbe;
   CreatureDrawQueue Queue;
   float ActiveHitFlash01{0.f};
   glm::vec2 ActiveLight{1.0f, 0.0f};

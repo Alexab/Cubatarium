@@ -1,0 +1,109 @@
+{
+  "scope": "Disposable complete clone, fixed noon/clear weather, original world untouched",
+  "source": "E:\\Work\\Home\\Cubatarium\\bin\\worlds\\World_254",
+  "destination": "E:\\Work\\Home\\Cubatarium\\bin\\worlds\\CreatureQaPerf_HintV1",
+  "original_world_data_sha256": "69ab4c757f03962fdd56c58041fac7bec4c379e99b033e4a68132da32673d0ec",
+  "fixture_world_data_sha256": "feb94d5a55c0f8beb09f924d150c78ad3b23458edf908c98feadc0d6fbe7a0a4",
+  "environment": {
+    "celestial": {
+      "bodies": [
+        {
+          "angular_size_deg": 5.0,
+          "color": [
+            1.0,
+            0.9399999976158142,
+            0.8199999928474426
+          ],
+          "id": "sun_main",
+          "intensity": 1.0,
+          "orbit_inclination_deg": 23.0,
+          "orbit_longitude_deg": 0.0,
+          "orbit_period_days": 1.0,
+          "orbit_phase": 0.0,
+          "type": "sun"
+        },
+        {
+          "angular_size_deg": 3.799999952316284,
+          "color": [
+            1.0,
+            0.800000011920929,
+            0.6200000047683716
+          ],
+          "id": "sun_secondary",
+          "intensity": 0.5199999809265137,
+          "orbit_inclination_deg": 37.0,
+          "orbit_longitude_deg": 48.0,
+          "orbit_period_days": 1.600000023841858,
+          "orbit_phase": 0.2199999988079071,
+          "type": "sun"
+        },
+        {
+          "angular_size_deg": 4.199999809265137,
+          "color": [
+            0.7200000286102295,
+            0.7799999713897705,
+            0.8999999761581421
+          ],
+          "id": "moon_main",
+          "intensity": 0.3499999940395355,
+          "orbit_inclination_deg": 18.0,
+          "orbit_longitude_deg": 8.0,
+          "orbit_period_days": 1.0,
+          "orbit_phase": 0.5,
+          "type": "moon"
+        },
+        {
+          "angular_size_deg": 3.200000047683716,
+          "color": [
+            0.6399999856948853,
+            0.7200000286102295,
+            0.8799999952316284
+          ],
+          "id": "moon_secondary",
+          "intensity": 0.2199999988079071,
+          "orbit_inclination_deg": 29.0,
+          "orbit_longitude_deg": -34.0,
+          "orbit_period_days": 1.899999976158142,
+          "orbit_phase": 0.07999999821186066,
+          "type": "moon"
+        }
+      ],
+      "horizon_fade": 0.15000000596046448
+    },
+    "cloud_coverage": 0.20000000298023224,
+    "cloud_coverage_override": -1.0,
+    "day_length_minutes": 20.0,
+    "lighting": {
+      "debug": false,
+      "min_ambient": 0.11999999731779099,
+      "weather_overlay": true,
+      "weather_particles": true
+    },
+    "lighting_version": 1,
+    "star_visibility": 1.0,
+    "star_visibility_override": -1.0,
+    "time_frozen": true,
+    "time_of_day": 0.25,
+    "weather": "clear",
+    "weather_auto": {
+      "auto_change": false,
+      "auto_enabled": false,
+      "auto_episode_mode": "none",
+      "auto_manual_override": false,
+      "auto_remaining_sec": 0.0,
+      "dry_clear_fraction": 0.550000011920929,
+      "dry_fraction": 0.699999988079071,
+      "episode_max_minutes": 12.0,
+      "episode_min_minutes": 3.0,
+      "field_algorithm_version": 1,
+      "field_simulation_time_sec": 0.0,
+      "min_dry_minutes": 1.0,
+      "min_precip_minutes": 2.0,
+      "precip_fraction": 0.30000001192092896,
+      "precip_heavy_fraction": 0.3499999940395355,
+      "transition_seconds": 45.0,
+      "weather_simulation_time_sec": 0.0
+    },
+    "weather_target": "clear"
+  }
+}

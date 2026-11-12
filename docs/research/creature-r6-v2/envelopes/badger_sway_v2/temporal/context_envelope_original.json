@@ -1,0 +1,56 @@
+{
+  "captured_at_utc": "2026-11-12T02:53:18.886371+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\review_2026_11_10\\baseline\\models",
+  "files_sha256": {
+    "creatures\\badger\\creature.json": "bdcb33ab7bd81099ae7081a5a0bb7967ef71f71b193e6b86505018e82f1787f2",
+    "creatures\\badger\\LICENSE.txt": "6ba07bfdf915c5d951b6baf21eb05fd19105ebf8e8a67fe509a666540e0b6cb1",
+    "creatures\\badger\\model.bin": "0bd40cf026aeaa3098b3836dec464c05267000256c755a1e9600fff29918f984",
+    "creatures\\badger\\model.gltf": "ea795b4f52a0b8659b184572ef5ef08890d52f6571a858eb6e8d71a49662f559",
+    "creatures\\badger\\textures\\body.png": "a296a1befcdb47d22a4ae7be4e45d00ae6feb33621e1e42a314f5369dfb69757",
+    "creatures\\badger\\textures\\face.png": "85342f6a7f7193bcb02e09e15be2987e850668ef11e1c82efe489b40c97bbb0d",
+    "creatures\\badger\\textures\\icon.png": "b61c8c2f4b955a52956cf6aefbfd301537f16ecdcbc9ab433ee5d79ffc2e32fa",
+    "creatures\\badger\\textures\\leg.png": "0cd5f57519cbba8642870d89c4f471b4833622feec690796f820837bf310a312",
+    "creatures\\badger\\textures\\tail.png": "e6de145ed3f46950a7f4924df66b753e31d5ed8b70e59647e80028290f0ddaed"
+  },
+  "qa_models_override": true,
+  "exe_sha256": "81283a1c5b148e659eaa66e9f4be9e14cbf2730ad70b3e50a1f6a59535076018",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "envelope_original",
+  "qa_camera": "close",
+  "native_matrix": false,
+  "native_equipment_matrix": false,
+  "native_equipment_texture_probe": false,
+  "native_resource_cache_probe": false,
+  "native_resource_reload_probe": false,
+  "native_fp_matrix": false,
+  "native_save_probe": false,
+  "native_envelope_variant": "baseline",
+  "native_transition_probe": false,
+  "native_fluid_transition_probe": false,
+  "world_motion": null,
+  "world_motion_expected_fluid_state": null,
+  "world_seconds": 8.0,
+  "world_capture_interval_seconds": 3.0,
+  "native_posed_culling_probe": false,
+  "envelope_profile_sha256": "acc8a106b473e4afc21659fe806435078f20f577457dcd3e133b81f5e149e34a",
+  "fp_shaders_sha256": {},
+  "equipment_material": "copper",
+  "world_gear_fixture": false,
+  "equipment_files_sha256": {},
+  "world_species": [
+    "badger"
+  ],
+  "preview_species": [
+    "badger"
+  ],
+  "qa_water_placement": false,
+  "qa_lava_fixture": false,
+  "world": "World_254",
+  "qa_primary_state": null,
+  "pass_timing": false,
+  "performance_gate": "disabled"
+}

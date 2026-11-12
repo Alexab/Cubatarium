@@ -8,6 +8,7 @@
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/BlockQuery.h"
 #include "World/Chunks/TerrainColumnUtil.h"
+#include "World/Chunks/KnownAirTerrainSlice.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/World.h"
 #include "World/IO/ChunkStorageService.h"
@@ -15,45 +16,6 @@
 
 namespace cutum
 {
-namespace
-{
-bool IsKnownAirTerrainSlice(const UWorld &world, glm::ivec3 chunk_coord)
-{
-  const int max_world_y = world.GetProceduralSettings().MaxHeight;
-  const int min_world_y = world.GetProceduralSettings().MinHeight;
-  const int min_cy = FloorDiv(min_world_y, CHUNK_SIZE);
-  const int max_cy = FloorDiv(max_world_y, CHUNK_SIZE);
-  if (chunk_coord.y < min_cy || chunk_coord.y > max_cy)
-  {
-    return true;
-  }
-
-  // A missing slice is air only when terrain generation has completed the
-  // whole column and the slice is above its highest resident non-air slice.
-  // Incomplete columns retain the conservative unloaded witness.
-  const glm::ivec3 ground_coord(chunk_coord.x, 0, chunk_coord.z);
-  if (!world.IsTerrainColumnCompleteFast(ground_coord))
-  {
-    return false;
-  }
-  const std::string &world_folder = world.GetWorldFolderPath();
-  if (world_folder.empty())
-  {
-    return false;
-  }
-  const UChunkStorageService &storage = world.GetChunkStorage();
-  if (storage.IsColumnSavePending(ground_coord))
-  {
-    return false;
-  }
-  const int highest_resident_cy = GetHighestNonAirChunkSlice(
-      world.GetBlockWorld(), ground_coord, max_world_y, min_world_y);
-  const int highest_on_disk_cy =
-      storage.GetHighestChunkSliceOnDisk(world_folder, ground_coord);
-  return chunk_coord.y > std::max(highest_resident_cy, highest_on_disk_cy);
-}
-} // namespace
-
 OpaqueVoxelRayWitness TraceOpaqueVoxelRay(const UWorld &world,
                                           const glm::vec3 &origin,
                                           const glm::vec3 &direction,

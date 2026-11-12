@@ -1,0 +1,20 @@
+{
+  "qa_models_env": false,
+  "models_root": "E:\\Work\\Home\\Cubatarium\\bin\\models",
+  "exe_sha256": "e0ed6a9dba7294059dbd7eb1738362692b28d95b578e39e6892594a76eb4f1d3",
+  "files_sha256": {
+    "creatures\\puffin\\creature.json": "6a3c1e28b526fa7d84c380ea1648e0d502a033e681411357d587cc9a10ca3e86",
+    "creatures\\puffin\\LICENSE.txt": "0397580c6d94803d7b903c3f48556a33762849dd38b0f5d69ebfcd2b6d878f94",
+    "creatures\\puffin\\model.bin": "fd66bdb9f8df68d1da56cc1677a6fd85ae1352895fa9f4393788b1c28e380f91",
+    "creatures\\puffin\\model.gltf": "3b6cb8b5be019756ab2888f06bb2512f5d069c36d75c987054123bb8d77be7cd",
+    "creatures\\puffin\\textures\\body.png": "cddb29c42e07ae9c0c557b36d7d46bf55e6d74fd21a1272dfce4f12cada10262",
+    "creatures\\puffin\\textures\\icon.png": "1224c14ece14799e79e2defe29df5bca4bf45e4fc64670408bf9c3b061891be2",
+    "creatures\\wasp\\creature.json": "68f6055ba3195fbf4f06b8af654f59e7fbfdece2e0064f7d92a5ee417afe9828",
+    "creatures\\wasp\\LICENSE.txt": "f3878303d9430e6ebe083672d4bc556fee6f1e4e1f80baa65786ce5671cd4d59",
+    "creatures\\wasp\\model.bin": "b676f59e8dc30f908dbe1b9a164afcce4b25187c53fa3a59c001b367c1e13b63",
+    "creatures\\wasp\\model.gltf": "69a5b3f4719566d1e62fb5d7cc8e323a33f202b04d933e77db947fe8839de45e",
+    "creatures\\wasp\\textures\\body.png": "d74a7aca42a0ee1ef2454e56d791bd8e9fdbccd44643613b9001e74b74e475db",
+    "creatures\\wasp\\textures\\icon.png": "6d8eb12de6bd79c7f96c86511c888dca02008c2199ac96aa6a03cdec93f3d281"
+  },
+  "performance_gate": "disabled"
+}

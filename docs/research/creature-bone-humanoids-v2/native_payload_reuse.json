@@ -1,0 +1,9 @@
+{
+  "capture_context": "context_wave.json",
+  "payload_and_runtime_definitions_unchanged": true,
+  "changed_files_only_provenance": [
+    "creatures\\bot\\manifest.json",
+    "creatures\\skeleton\\manifest.json"
+  ],
+  "note": "Generator provenance refreshed after unrelated material branches were added; all rendered payload bytes and creature.json remain identical to the inspected native capture."
+}

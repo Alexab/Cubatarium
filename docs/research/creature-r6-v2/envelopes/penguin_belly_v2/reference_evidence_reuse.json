@@ -1,0 +1,14 @@
+[
+  {
+    "from": "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\envelopes\\penguin_belly_v1",
+    "context": "context_envelope_original.json",
+    "context_sha256": "d0e58713d11d51cace3ecd1fa9b45f89f520d7a86f2244d2ae46d56c0ffa25e3",
+    "native_manifest_sha256": "47300ba6c07a5ce4ff395f5095dd9ccdb0eca1a7fe3b0303d61a5da43811233d"
+  },
+  {
+    "from": "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\envelopes\\penguin_belly_v1",
+    "context": "context_own_before.json",
+    "context_sha256": "40316e65d474568ee3308b8fc4a49098a981e4cbae1721cbd6e1ccc8f4d90c09",
+    "native_manifest_sha256": "e2ea296db75fda934e25c5204bce564344f56d6dcde9f83c69f506e0d11b5b07"
+  }
+]

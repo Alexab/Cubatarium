@@ -1,0 +1,65 @@
+{
+  "scope": "Diagnostic crops of actual independent world captures; own before/current, not original reference; phases not aligned",
+  "sources": [
+    {
+      "path": "docs\\research\\creature-r6-v2\\world-pass-perf-v1\\visual_before\\runtime_world_before\\frame_002.png",
+      "sha256": "a8ecb0af218dd6d288e3aaaf74856227264c5d4d4b2872b8d1113a867d56c3e5",
+      "crop": [
+        320,
+        160,
+        960,
+        560
+      ]
+    },
+    {
+      "path": "docs\\research\\creature-r6-v2\\world-pass-perf-v1\\visual_before\\runtime_world_before\\frame_003.png",
+      "sha256": "a89c940aab4be8f26b1f9fdff046845e8c2b7a7e00d9b63769f275494bd44d36",
+      "crop": [
+        320,
+        160,
+        960,
+        560
+      ]
+    },
+    {
+      "path": "docs\\research\\creature-r6-v2\\world-pass-perf-v1\\visual_before\\runtime_world_before\\frame_004.png",
+      "sha256": "37ef1d0d82efb17599c78e46ebadbed1d78ddeb4ca6881d4e7cfc8f88e10e845",
+      "crop": [
+        320,
+        160,
+        960,
+        560
+      ]
+    },
+    {
+      "path": "docs\\research\\creature-r6-v2\\world-pass-perf-v1\\visual_current\\runtime_world_current\\frame_002.png",
+      "sha256": "ce633ecdb5072be032141b6caacf61a32f75b34b9176a77365e2bae16c06ba2a",
+      "crop": [
+        320,
+        160,
+        960,
+        560
+      ]
+    },
+    {
+      "path": "docs\\research\\creature-r6-v2\\world-pass-perf-v1\\visual_current\\runtime_world_current\\frame_003.png",
+      "sha256": "bda6d385de225431c1733443a6dcde6ba940fe1fa7340072d389ac4e5f40e548",
+      "crop": [
+        320,
+        160,
+        960,
+        560
+      ]
+    },
+    {
+      "path": "docs\\research\\creature-r6-v2\\world-pass-perf-v1\\visual_current\\runtime_world_current\\frame_004.png",
+      "sha256": "fe8fdc93a2968664df7b0e29961f316d82d0b97559272cbd6fd46243a8a0faf2",
+      "crop": [
+        320,
+        160,
+        960,
+        560
+      ]
+    }
+  ]
+}

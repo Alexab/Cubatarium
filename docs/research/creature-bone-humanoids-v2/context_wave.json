@@ -1,0 +1,25 @@
+{
+  "captured_at_utc": "2026-11-10T15:32:45.181626+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\bone_humanoids_v2\\models",
+  "files_sha256": {
+    "creatures\\bot\\creature.json": "cf9faeddeb299d770d6af23d60d364c27c47b57b0d62a38e0cec9170ef2181c9",
+    "creatures\\bot\\geometry.geo.json": "4379f4442f68d4d6a6a649643d96951f420f3a2c13cef39b80efa8c52def739e",
+    "creatures\\bot\\manifest.json": "aaf9e6534a36c9e8aa237966ec76c05808c5728a7994dd78facdf07a7f4ab27c",
+    "creatures\\bot\\textures\\diffuse.png": "63aaac2717ca38083e96c5a9fb370f4ea1f017aa5ab553969e5fecb5ebbb1f8f",
+    "creatures\\bot\\textures\\icon.png": "6db5e7f9e0539d853fc309ff664b27b2c677d2186a8bad92d54d7f9a8d844c2b",
+    "creatures\\skeleton\\creature.json": "6422e25ca657a3929b94699b7a5c6246b2ff47eac21c56f3f3d7e65bfd270071",
+    "creatures\\skeleton\\geometry.geo.json": "4544c7e607bd5f2f7e5363d814ed060179951b3970daaa98aad525d8573761da",
+    "creatures\\skeleton\\LICENSE.txt": "dd352e1d9031d470355f806f6575b91a14e35d7ebda3063c12207688f7787a52",
+    "creatures\\skeleton\\manifest.json": "0eaccbf0e3f1e31c8f342836f43b527221b977f2fe7d262489bf81b7077d997b",
+    "creatures\\skeleton\\textures\\diffuse.png": "f88fd6d1f3911526e3225e7bbdd241f08dd77047cef3aad9cf9c9fb2a699937c",
+    "creatures\\skeleton\\textures\\icon.png": "0e19daa905ba64a5a33600c6a2b812aeab44b007a3aaa9433f243d4880320e5c"
+  },
+  "exe_sha256": "ec9d5c680b7e3bf960314b6183046b30fe7bafed49809cc937dc288941e579e2",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "wave",
+  "performance_gate": "disabled"
+}

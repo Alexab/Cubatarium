@@ -1,0 +1,19 @@
+{
+  "schema": "creature-save-restart-parity.v1",
+  "passed": true,
+  "all_native_json_bytes_identical": true,
+  "files_sha256": {
+    "legacy_expected.json": "f9f51a05aee494ff2f8f276586e6f939a5138254481bc00132010339caebe59a",
+    "legacy_input.json": "f5002b7be58f256978da58c62e2f1aca79029fd3e432c4d47e8a4331a5067d6e",
+    "legacy_saved_once.json": "21aa5aa66d6056d35295fc788d64a16f5fee99c79c1a196bb208f252cee65f84",
+    "legacy_saved_twice.json": "21aa5aa66d6056d35295fc788d64a16f5fee99c79c1a196bb208f252cee65f84",
+    "manifest.json": "f9ae6f88188e71e904c9984ab2271baf203cb3586cd3f01f80461e74dfb13f03",
+    "v2_expected.json": "d58241d64af58192743a725e6e9ebb588366ac7fc69d3e10ba027747beb85c59",
+    "v2_input.json": "bc0d572caeab14bb151fdd8f268806fe04a2a8745c9961523b62f55df21e1099",
+    "v2_saved_once.json": "0c13a14dc5833a486ff102295914ba77639df2094864a9bb94b4be5adea04f28",
+    "v2_saved_twice.json": "0c13a14dc5833a486ff102295914ba77639df2094864a9bb94b4be5adea04f28"
+  },
+  "runs": 2,
+  "resources_per_run": 128,
+  "loads_per_run": 256
+}

@@ -1,0 +1,108 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R5 elemental bipeds; R6 full compatibility/routes/performance/reproducibility remains pending",
+  "species": {
+    "sand_monster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct final native/comparison/world/icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "4f39847c08107a167c2a338a080a24b00d0f6d2f16fb681dc3192ecf6ceff71d",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sand_monster.png",
+          "sha256": "1c0ae97a85e218b99a79f2b2b1ec5bd059e7fae50bb09b7f2ac5f79c53e43089"
+        },
+        "motion": {
+          "path": "native_approved_sand_monster.png",
+          "sha256": "576c03252a98629342b441c8fbba4f301be3d1906000f8b0a7529c87c5370750"
+        },
+        "runtime": {
+          "path": "runtime_cadence_sand_monster/frame_002.png",
+          "sha256": "d6381ac446fbd2dad113c67cdaac338aa52cc2d4e421c4286ceecbff889934ba"
+        },
+        "ui": {
+          "path": "native_candidate/sand_monster_12.png",
+          "sha256": "b703d8e199649a576078ab7c7cd6c3bc3a6541dc7a44bfb02fa8cbbe904889d3"
+        }
+      },
+      "notes": "Own authored geometry/UV/pixels/rig/clips. Original narrow/tall sand and broader stone/dirt silhouettes retained. Geological material fields replace copied block tiles. First pale stone patches and oversized eyes refined before acceptance. 17 genuinely weighted joints, knees/elbows/feet/hands/spine/head/jaw. Split proximal/distal limb cubes preserve both attachment rings under full skinning. Required idle/walk/run/punch retained; no original die capability to remove. Stance direction, swing clearance, loop, contact and actual forward strike tested. Walk/Run playback calibrated to actual foot retreat at runtime walk reference; full engine travelScale clamp range and other species cadence audit remain R6. Gameplay bounds/speeds/habitat unchanged. Native originals also captured; sand baseline black faces reproduce in Release and are not copied. No R6 or performance PASS claimed."
+    },
+    "stone_monster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct final native/comparison/world/icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "035acd1786ea7944468634538a8d64c5ad181bff9e7fd0302e8c364be0683b2e",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "stone_monster.png",
+          "sha256": "5eb016d21be01b061845536942178f9dc90679b863813466d5d64e4eabeb5828"
+        },
+        "motion": {
+          "path": "native_approved_stone_monster.png",
+          "sha256": "37b627d1fd3a30fb4bd2ae78bc3214fdcc66d43404ca2ad93e911c33dffdc914"
+        },
+        "runtime": {
+          "path": "runtime_cadence_stone_monster/frame_002.png",
+          "sha256": "a3c7ee580d5d236d7ef86ec5c2f77359800298ac55161cc623406086111f8e48"
+        },
+        "ui": {
+          "path": "native_candidate/stone_monster_12.png",
+          "sha256": "2d822f82f9e4962ca058d1f5146ef0c4da291ad0944ae85ed856323e5ab1b7e6"
+        }
+      },
+      "notes": "Own authored geometry/UV/pixels/rig/clips. Original narrow/tall sand and broader stone/dirt silhouettes retained. Geological material fields replace copied block tiles. First pale stone patches and oversized eyes refined before acceptance. 17 genuinely weighted joints, knees/elbows/feet/hands/spine/head/jaw. Split proximal/distal limb cubes preserve both attachment rings under full skinning. Required idle/walk/run/punch retained; no original die capability to remove. Stance direction, swing clearance, loop, contact and actual forward strike tested. Walk/Run playback calibrated to actual foot retreat at runtime walk reference; full engine travelScale clamp range and other species cadence audit remain R6. Gameplay bounds/speeds/habitat unchanged. Native originals also captured; sand baseline black faces reproduce in Release and are not copied. No R6 or performance PASS claimed."
+    },
+    "dirt_monster": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct final native/comparison/world/icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "3d35684f87cfe6020895b33c80c589f0bf4088a07e9bbc390e131a54161de8c8",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "dirt_monster.png",
+          "sha256": "21a1e1c496e4fa0ad4e9dc144f096ffc79bec9bf5c73fbab3b204503dddbd0fa"
+        },
+        "motion": {
+          "path": "native_approved_dirt_monster.png",
+          "sha256": "6692c0101bc91cd8e03bc777c9c12657820591ec7d4ac387a52336c8d72e2614"
+        },
+        "runtime": {
+          "path": "runtime_cadence_dirt_monster/frame_002.png",
+          "sha256": "003c4dbf4a0c8a5b261fdb376fea874f4b849bb0936c3cb5296e1942adaf366e"
+        },
+        "ui": {
+          "path": "native_candidate/dirt_monster_12.png",
+          "sha256": "c34c0cc4bcbba8475c5d6b24b763c1a30ecb535df6b44116c519a0e9ae8e072d"
+        }
+      },
+      "notes": "Own authored geometry/UV/pixels/rig/clips. Original narrow/tall sand and broader stone/dirt silhouettes retained. Geological material fields replace copied block tiles. First pale stone patches and oversized eyes refined before acceptance. 17 genuinely weighted joints, knees/elbows/feet/hands/spine/head/jaw. Split proximal/distal limb cubes preserve both attachment rings under full skinning. Required idle/walk/run/punch retained; no original die capability to remove. Stance direction, swing clearance, loop, contact and actual forward strike tested. Walk/Run playback calibrated to actual foot retreat at runtime walk reference; full engine travelScale clamp range and other species cadence audit remain R6. Gameplay bounds/speeds/habitat unchanged. Native originals also captured; sand baseline black faces reproduce in Release and are not copied. No R6 or performance PASS claimed."
+    }
+  }
+}

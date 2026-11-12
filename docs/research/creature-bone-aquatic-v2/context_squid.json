@@ -1,0 +1,20 @@
+{
+  "captured_at_utc": "2026-11-10T17:08:24.108404+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\bone_aquatic_v2\\models",
+  "files_sha256": {
+    "creatures\\squid\\creature.json": "534a786f74f239839c18471f68b3af7e083dd8cffd9cca5f757a0789f3216474",
+    "creatures\\squid\\geometry.geo.json": "f80575f7b3c8666b5b89e710a59c19b0f4a8a70fb69cddf11f56f7871d8bf732",
+    "creatures\\squid\\LICENSE.txt": "fd9d8238e66d64d2b31845ed38bb30e56bda68514485699247ddb3200a7358ca",
+    "creatures\\squid\\manifest.json": "040b5b49bf97e12d347d1f95ba80c14265f9c2aad8db187a3cc745238a64f3d3",
+    "creatures\\squid\\textures\\diffuse.png": "3d7b58d6cdd06480d2302948564b2b272114ccc157e4d21ec1954807e8c6ca57",
+    "creatures\\squid\\textures\\icon.png": "db46fe90456b9bd64511d125c9d6617db987fac20bba38f88192f5ed720f2379"
+  },
+  "exe_sha256": "09736f903f04b3779cc7b598fbbac55bf82fa1bf5ac6558655470cc04c1318cc",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "squid",
+  "performance_gate": "disabled"
+}

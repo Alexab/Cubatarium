@@ -1,0 +1,499 @@
+{
+  "schema": "creature-native-matrix-visual-review.v1",
+  "reviewed_by": "Codex; direct changed-sheet image inspection, not user sign-off",
+  "scope": "Ground-clearance change: 16 changed paired sheets directly viewed; 45 paired sheets byte-identical to prior directly viewed matrix. Not full state/world/stride/performance acceptance.",
+  "baseline_label": "baseline_catalog",
+  "current_label": "current_catalog",
+  "exe_sha256": "045f73b11330bdeaab24774648ab363b67cf4d7d9029f0d37f1c04b37dc1ce01",
+  "inherited_review": "../matrix/visual_review.json",
+  "resources": {
+    "cow": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Рога/уши/морда и собственные пятна прежние, две фазы копыт читаются без растяжения или отсоединения от корпуса.",
+      "sheet": "sheets_current_catalog/cow.png",
+      "sha256": "61558ee344d166dab7c03fda781962183e147075d732e2913c70e5b769d2732f",
+      "inspection_this_pass": "direct_full_sheet"
+    },
+    "badger": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Низкий вытянутый корпус, контрастная лицевая маска, короткие лапы и хвост читаются со всех сторон. Две фазы не повторяют прежнее качание всего корпуса.",
+      "sheet": "sheets_current_catalog/badger.png",
+      "sha256": "5402eef70a4fd667cb8df07606d14a6256ac7d70c01b735daf57d1be45f12907",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "rigid_demo_walker": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Сохранён низкий четырёхлапый силуэт; морда, уши, хвост и собственный рисунок отделены. Ранее обрезанные боковые/верхние ракурсы теперь целые.",
+      "sheet": "sheets_current_catalog/rigid_demo_walker.png",
+      "sha256": "c307256b982a2a4a789b04a29864d8bab150b1b8723bcd04c317c528668dc491",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "human": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Собственные лицо, жилет и сапоги прежние; длины рук/ног и противофаза сохранены. Equipment/FP и Run stress отдельно.",
+      "sheet": "sheets_current_catalog/human.png",
+      "sha256": "6027c77b909eb0ba23625d5f11c5bb92d346e5298d2ff283464beec5bb462a81",
+      "inspection_this_pass": "direct_full_sheet"
+    },
+    "stingray": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Плоский ромбовидный диск, длинный тонкий хвост, отдельная светлая нижняя сторона. Противоположные фазы плавников видимы без распада цепей.",
+      "sheet": "sheets_current_catalog/stingray.png",
+      "sha256": "3679728eee49dd313d41c33f3f952c094565a5bcc1799e5ecea9f5a69ae5631a",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "hermitcrab": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Раковина со спиральным мотивом, вынесенная голова/клешни и нижние ноги сохраняют чтение рака-отшельника. Самостоятельная светлая раковина вместо исходного рисунка; маршруты дна отдельно.",
+      "sheet": "sheets_current_catalog/hermitcrab.png",
+      "sha256": "1189a10602699a078b7efeacc2e49b79816df417707554bbc7f8db051063d0f9",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "butterfly": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Собственные тёплые крылья с глазчатыми мотивами, тело и усики читаются сверху/снизу. Крылья реально дают противоположные взмахи; исходный runtime butterfly не разрешал primary clip. Повторно просмотрен лист после cycle-fit исходного root-only glTF: референс теперь целиком в кадре; текущий визуал побайтно прежний.",
+      "sheet": "sheets_current_catalog/butterfly.png",
+      "sha256": "238fdf5b7ecb0fb00a3e972d5331d3f93016d1c4f6888bba6d78c4dafb0cb091",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "rigid_demo_flyer": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Сохранены два крыла и компактный корпус, добавлено собственное лицо. Крылья примыкают к корпусу и поворачиваются у корней в противоположных фазах.",
+      "sheet": "sheets_current_catalog/rigid_demo_flyer.png",
+      "sha256": "c31bfb2669bedbf3c08130e506753d8b2136c800b31ad6a6dd97ba785f561609",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "fire_spirit": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Узнаваемый собственный огонёк с прозрачным контуром и центром вместо исходного прямоугольника. Sprite статичен как исходный backend; top/bottom пусты из-за плоской вертикальной геометрии, не missing resource.",
+      "sheet": "sheets_current_catalog/fire_spirit.png",
+      "sha256": "81ca4b3721adb9c38aed4474b86066b3619e4dfb4223405c26171581f75008d7",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "rigid_demo_swimmer": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Сохранён вытянутый водный корпус с боковыми плавниками и хвостом; собственная морда/нижняя сторона. Хвост меняет направление между фазами.",
+      "sheet": "sheets_current_catalog/rigid_demo_swimmer.png",
+      "sha256": "e3b46f8cd8d6b854d99faef6af637d38f87cea08903277ef03f72878f5ee2224",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "zombie": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Зелёное лицо, рваные края куртки и обе фазы рук/ног сохранены; коррекция не укорачивает суставы. Высокая амплитуда Run ratio1.5 остаётся отдельной диагностикой.",
+      "sheet": "sheets_current_catalog/zombie.png",
+      "sha256": "09c5df0c570726ec3e206bc6dcf03035edb4992ac946c4d8a2066659d0ce6178",
+      "inspection_this_pass": "direct_full_sheet"
+    },
+    "bunny": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Высокие уши, мордочка, заячьи задние лапы и короткий светлый хвост сохранены; боковые и нижние фазы читаемы, обрезание устранено.",
+      "sheet": "sheets_current_catalog/bunny.png",
+      "sha256": "2a735c767893c24bb8e9833dbf0d307055d5b9301265d741dc23e5aa9c486513",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "human_adventurer": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Коричневый жилет/зелёные брюки надеты на правильный humanoid, лицо и обе фазы шага целы.",
+      "sheet": "sheets_current_catalog/human_adventurer.png",
+      "sha256": "5e7cab1cd9a29ed1afdde3fed90550fe6122977697b229e07cc0880bb966e5e8",
+      "inspection_this_pass": "direct_full_sheet"
+    },
+    "human_guard": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Синяя одежда, светлая отделка и собственное лицо остаются правильным надетым вариантом во всех ракурсах.",
+      "sheet": "sheets_current_catalog/human_guard.png",
+      "sha256": "552a48c5f9dd29fc1aa9301e40752cb0d98918452308ab4b096fa4411490c0de",
+      "inspection_this_pass": "direct_full_sheet"
+    },
+    "sheep_wool_black": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Тёмные wool кластеры читаются отдельно от морды/ног; надетый coat и обе фазы целы.",
+      "sheet": "sheets_current_catalog/sheep_wool_black.png",
+      "sha256": "1b80443816b18e99a7d3f14a9dcc22e9c64d507c9b931d64d17a85591e05a087",
+      "inspection_this_pass": "direct_full_sheet"
+    },
+    "sheep_wool_golden": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Золотистая шерсть отделена от коричневых морды/ног; надетый coat и две фазы сохраняют объём.",
+      "sheet": "sheets_current_catalog/sheep_wool_golden.png",
+      "sha256": "d0124d31ed48316c868f9328f3a0a8b69de3195eaa63f33a2f3b5281acf62f41",
+      "inspection_this_pass": "direct_full_sheet"
+    },
+    "wolf_snow": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Светлый северный вариант сохраняет тот же волчий силуэт, тёмные глаза/нос, четыре лапы и низкий хвост; coat остаётся надетым во всех ракурсах.",
+      "sheet": "sheets_current_catalog/wolf_snow.png",
+      "sha256": "8c9eb13c18dcdb3ccee022a1fbe93996688304633a1dd7e5fb9f95ccd0bc4093",
+      "inspection_this_pass": "direct_full_sheet"
+    },
+    "sheep": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Светлые кластеры шерсти, тёмная морда и тонкие ноги прежние; две фазы сохраняют объём корпуса и присоединения конечностей.",
+      "sheet": "sheets_current_catalog/sheep.png",
+      "sha256": "58ed023d454cf8ac173b30d2f3832788a4e0cc52eaab6b5e4233e48051f6a707",
+      "inspection_this_pass": "direct_full_sheet"
+    },
+    "bee": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Полосатое брюшко, усики, шесть ног и отдельные светлые крылья читаются во всех ракурсах. Две фазы показывают разные взмахи, фактура собственная.",
+      "sheet": "sheets_current_catalog/bee.png",
+      "sha256": "12eb369e13e426d10f74741babdd7372db10be9a3825f4e25f5481a779387522",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "bot": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Фуражка, воротник, собственная одежда/лицо целы; обе фазы шага и humanoid пропорции прежние.",
+      "sheet": "sheets_current_catalog/bot.png",
+      "sha256": "6207acef194ab7d9c5477e7b72f23c95e94044f9373a6c930105ebe4e0af51b7",
+      "inspection_this_pass": "direct_full_sheet"
+    },
+    "chicken": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Гребешок, бородка, клюв, пальцы стоп и отдельные крылья целы; обе противоположные фазы шага сохранены.",
+      "sheet": "sheets_current_catalog/chicken.png",
+      "sha256": "4c610977859f049640ef1b0e15e17a4ff5b27389c95b4b795454012c1fe0eeff",
+      "inspection_this_pass": "direct_full_sheet"
+    },
+    "dolphin": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Узнаваемы длинная морда, спинной и грудные плавники, горизонтальный хвост и светлый низ. Цепь корпуса/хвоста целая при обеих фазах.",
+      "sheet": "sheets_current_catalog/dolphin.png",
+      "sha256": "d899136f5e0ff9ce28a50899109039778c3ee75010c3c743b66166b9eaffb186",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "fox": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Рыжий верх, белые грудь/кончик хвоста, чёрные лапы и вытянутый лисий силуэт сохранены; хвост остаётся над землёй.",
+      "sheet": "sheets_current_catalog/fox.png",
+      "sha256": "5bbc280434b53ca4c95e7b63d5730a5a951262323445e04d27e56c41039008f4",
+      "inspection_this_pass": "direct_full_sheet"
+    },
+    "pig": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Пятачок/уши, короткие копытные ноги и низкий длинный корпус прежние; обе фазы не разрывают плечевые/тазовые присоединения.",
+      "sheet": "sheets_current_catalog/pig.png",
+      "sha256": "1262a8358c1cc5d841c51f816aa92494fc3a3cbe3bfdb07bb56af9d06cad081a",
+      "inspection_this_pass": "direct_full_sheet"
+    },
+    "skeleton": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Череп, рёбра с реальными просветами, тонкие конечности и противофаза целы; alpha/дырки тела не залиты.",
+      "sheet": "sheets_current_catalog/skeleton.png",
+      "sha256": "de4a93947ca62a85629882d6088714ec7413f1f9a622117974d613d0e1f3954d",
+      "inspection_this_pass": "direct_full_sheet"
+    },
+    "spider": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Восемь разнесённых ног и две массы тела читаются сверху/снизу; глаза на передней стороне. Вместо исходных наложенных ног силуэт артикулирован, противофазы целые.",
+      "sheet": "sheets_current_catalog/spider.png",
+      "sha256": "0a6b5123f4d1a1a793f714ab3edccca1213ad06805de4c90fc276207cf071707",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "squid": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Мантийный корпус, боковые глаза, длинные щупальца и нижняя звезда сохранены; собственная оранжевая текстура. Две фазы щупалец различимы, части целые.",
+      "sheet": "sheets_current_catalog/squid.png",
+      "sha256": "2b6da62691c14b6c6712d3a20e166ccd0e934e5ca512b250b346cc505db7bf02",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "tortoise": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Низкий купол, собственная мозаика панциря, голова/ласты и светлый пластрон целы; противоположные положения ласт не растягивают shell.",
+      "sheet": "sheets_current_catalog/tortoise.png",
+      "sha256": "fc2e6630b83df2436567f8e064aaaa366acc3a33099355015002e03f64b2d1d0",
+      "inspection_this_pass": "direct_full_sheet"
+    },
+    "trout": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Узкий рыбный корпус, хвостовая вилка, плавники, светлый низ и собственная боковая полоса читаются с обеих сторон. Хвост меняет направление без разрыва.",
+      "sheet": "sheets_current_catalog/trout.png",
+      "sha256": "b3a72a108595cf0fdf756cd441000c1430a257b2e8b5c92fe004a2112ccb2fc0",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "wolf": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Четыре лапы, длинная морда, уши, низкий хвост и серый верх/светлая маска сохранены; противоположные фазы целые. Коррекция общей высоты не меняет угол/длину лап.",
+      "sheet": "sheets_current_catalog/wolf.png",
+      "sha256": "5eb55b90a8b908ed8b63d5fd2c6e9d5da70550f5fd9b46ec1811e1729e3587ff",
+      "inspection_this_pass": "direct_full_sheet"
+    },
+    "hedgehog": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Низкий округлый корпус, длинная светлая морда, маленькие лапы и геометрические иглы дают ежа; собственные кончики игл читаются сверху/сзади. В обеих фазах части целые.",
+      "sheet": "sheets_current_catalog/hedgehog.png",
+      "sha256": "66be6b9dd20e3e68aeb471f1cc3fe067279b816c9af70f345713bfbe2fe307e6",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "kitten": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Кошачьи уши, короткая морда, четыре лапы и длинный поднятый сегментированный хвост сохранены. Собственная серая шерсть и светлый низ не переезжают между сторонами.",
+      "sheet": "sheets_current_catalog/kitten.png",
+      "sha256": "16c174348e77b6f1ef4be7914f8e85d023487d2c36e5dce3d6868e91027b0726",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "rat": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Длинный голый хвост, большие розовые уши, острая морда и низкое тело читаются. Хвост изгибается в противофазах, живот/лапы целы снизу.",
+      "sheet": "sheets_current_catalog/rat.png",
+      "sha256": "9e2c0d3869b31e492b98a7acab693d651b1e110f0a4c87cd30dd88155bf6e86c",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "panda": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Массивное медвежье тело, круглые уши, четыре тёмные лапы и собственная лицевая маска читаются со всех сторон. Сохраняются суставы и противоположный шаг.",
+      "sheet": "sheets_current_catalog/panda.png",
+      "sha256": "a423394fe93f4fe83b3ab2ee18658b0a38c8f523956b5402b4f394372edf7aa0",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "warthog": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Длинная кабанья морда, светлые клыки, уши, гребень и маленький хвост читаются; собственные боковые пятна. Клыки не исчезают в боковых ракурсах, лапы целые.",
+      "sheet": "sheets_current_catalog/warthog.png",
+      "sha256": "cb546969e36ca6542aa76f6f6ed0dd065292d9bbe39419215145b9f3872e3429",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "penguin": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Вертикальный пингвиний силуэт, клюв, белый живот, тёмная спина, ласты и две стопы сохранены. Оба шага целые; Fly/Swim отдельно от этой Walk matrix.",
+      "sheet": "sheets_current_catalog/penguin.png",
+      "sha256": "7c2e60fb94a5e3d8d66280fedd75da46e55df06917c120678849a758c13379d5",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "owl": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Лицевой диск, короткий клюв, ушные перья, лапы и пятнистая грудь читаются; при Fly раскрываются полноценные крылья с собственным оперением. Передняя сторона корректна.",
+      "sheet": "sheets_current_catalog/owl.png",
+      "sha256": "9ba9acefafbd2c50afc259569f42b1353f22022403b9b1409998f2b2edd9e3bd",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "puffin": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Крупный цветной клюв, светлая маска, тёмные спина/крылья и оранжевые лапы дают тупика. Переход к обеим фазам Fly сохраняет тело и крылья без разрывов.",
+      "sheet": "sheets_current_catalog/puffin.png",
+      "sha256": "5f2070dcfc4eba8ee94e4538f65dd2bdc6115b7141c109eb9c3e3cd062d99951",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "wasp": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Выраженная талия, полосатое подвижное брюшко, усики, сегментированные лапы и две пары крыльев читаются. Собственные жилки/полосы не заменяют анатомию, обе фазы целые.",
+      "sheet": "sheets_current_catalog/wasp.png",
+      "sha256": "454d4703f2c57f445fd424f256540b3e52b5cd98580b2c12f06a166ee12ee1c3",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "shark": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Узнаваемы обтекаемый корпус, пасть, жабры, спинной плавник и вертикальная хвостовая вилка; собственный контраст спины/брюха. Две фазы хвоста целые.",
+      "sheet": "sheets_current_catalog/shark.png",
+      "sha256": "a38230f3232614182aaa1d1ab8e374e31023481e113079b4ebd84978850a7300",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "seahorse": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Вертикальная посадка, длинное рыло, гребень, рёберное брюшко и закрученный хвост сохранены; собственная охристая палитра. Хвостовая цепь целая сверху/снизу и в обеих фазах.",
+      "sheet": "sheets_current_catalog/seahorse.png",
+      "sha256": "81758b05a12d127d3cc8e535d5988d10d543ca0212b72cd21a2c44aa35b21ed9",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "manatee": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Массивный ламантиний корпус, широкая морда, грудные ласты и лопатообразный хвост читаются, исходные разрывы тела не повторяются. Светлый низ имеет отдельный рисунок.",
+      "sheet": "sheets_current_catalog/manatee.png",
+      "sha256": "2b7c563d696b79634f697406e38358f6468c2164dc7d6847649e0941efe4ce5f",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "seal": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Тюленья морда, низкий корпус, передние и парные задние ласты сохранены; собственные пятна и светлый низ. Walk matrix целая, Swim/береговые маршруты остаются отдельными.",
+      "sheet": "sheets_current_catalog/seal.png",
+      "sha256": "da623ce8b11bcbcf02df5788d260e13a6a7ae5b4714863f8d3513afc27e98420",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "whale": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Крупная голова/пасть, длинный корпус, грудные плавники, горизонтальная хвостовая лопасть и борозды светлого брюха читаются. Две фазы не разрывают хвост.",
+      "sheet": "sheets_current_catalog/whale.png",
+      "sha256": "c78c98326157c7bdcc4e6e7d49036e86961268117bafa03cda4820772bab9008",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "water_dragon": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Длинное вертикальное змеиное тело, рогатая голова, вытянутая морда и светлые брюшные пластины сохранены. Собственные чешуя/пятна читаются сзади, деформация цепи целая.",
+      "sheet": "sheets_current_catalog/water_dragon.png",
+      "sha256": "c531403aa569538474370883cda8cf797d222a35d8d0d56bc7d6b9c08cb4f4ac",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "crab": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Плоский панцирь, глаза на стебельках, две клешни и боковые ноги читаются сверху/снизу; собственная охристая текстура. Боковая ориентация клешней в yaw0 отмечена для отдельной проверки направления движения/дна, арт не маскируется.",
+      "sheet": "sheets_current_catalog/crab.png",
+      "sha256": "8e8ac2f321ce88e96e17d158d5f792372f4b9f38cc129dc5bc171599af64821c",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "lobster": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Длинные усики, клешни, многочисленные ходильные ноги, сегменты брюшка и хвостовой веер сохранены. Собственная синяя окраска и светлый низ, цепи целые в обеих фазах.",
+      "sheet": "sheets_current_catalog/lobster.png",
+      "sha256": "b5ea5666f5830da1c37859dee97029eb1453f6e688473d9318f505ccbc2cbcdf",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "octopus": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Округлая мантия, боковые глаза и восемь гнущихся рук с отдельной светлой стороной/присосками дают осьминога. Обе фазы сокращения целые; исходная прямоугольная bind-болванка не повторяется. Повторно просмотрен лист после cycle-fit исходного root-only glTF: референс теперь целиком в кадре; текущий визуал побайтно прежний.",
+      "sheet": "sheets_current_catalog/octopus.png",
+      "sha256": "43aae074719c901bba618157d43f94047aaee9ebfd679c23585526e726d756fe",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "stone_monster": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Сохранены высокий элементальный бипед, массивные руки/ноги и голова; собственные каменные слои/трещины и лицо читаются сзади/снизу. Обе фазы шага целые.",
+      "sheet": "sheets_current_catalog/stone_monster.png",
+      "sha256": "a78829d4cfc0b66b5bbc391cc586eccd7daf84f4d5aad16f7c171ae1627370da",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "dirt_monster": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Сохранён элементальный бипед; собственные земляные комья/светлые включения и глаза отличают материал от stone/sand. Обе фазы целые.",
+      "sheet": "sheets_current_catalog/dirt_monster.png",
+      "sha256": "0031ceced05c0f7a77a164ba5abd6983b87eb51354d4e273cf3eed2ea73f0a30",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "oerkki": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Тёмный вытянутый силуэт, длинные руки/пальцы и светлые глаза/когти читаются. Самостоятельная поверхность вместо исходной чёрной bind-болванки, шаг целый.",
+      "sheet": "sheets_current_catalog/oerkki.png",
+      "sha256": "cd616e6c3acfaf1cc37a4733adea73040154f3c0c7da7e56b95b747b9f1e7840",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "orc": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Зелёный широкоплечий воин с клыками, асимметричным наплечником, ремнём и сапогами; собственные материал/лицо. Шаг не качает весь корпус как исходный root.",
+      "sheet": "sheets_current_catalog/orc.png",
+      "sha256": "d05636ec65e2d1600009dfefdfd9b4e22a1ee97e8ad7bc944357e4c4dc2846ef",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "ogre": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Массивный светлый воин с наплечником, ремнём и длинной рукоятью молота сохранён. Оружие/руки/ноги не отрываются при обеих фазах, нижняя сторона целая.",
+      "sheet": "sheets_current_catalog/ogre.png",
+      "sha256": "6180f31dd512641012002b5391272f8fb3cbccfa6b776f2eda0953cc3156ffe6",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "dungeon_master": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Большой прямоугольный тяжёлый корпус, низкая голова, длинные руки и маленькие ступни сохраняют исходную массу. Собственные швы/лицо/когти читаются со всех сторон.",
+      "sheet": "sheets_current_catalog/dungeon_master.png",
+      "sha256": "55a7fa50e1febf6641b2d8ed09bead71afdb10a3a19bd74161530f71cb40a6f1",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "land_guard": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Сохранён широкий тяжёлый страж с низкой головой; мох/камень различимы сверху и на спине, ступни и руки целые в противоположных шагах.",
+      "sheet": "sheets_current_catalog/land_guard.png",
+      "sha256": "3d8c1786511963ab048cf2284f3e921acbd6f43c978f6ce652ca49b2bdb34961",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "golem": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Широкий каменный корпус, отдельные плечи/руки/ноги, низкая маска и жёсткие суставы дают голема. Собственные каменные полосы не теряют ориентацию сверху/снизу.",
+      "sheet": "sheets_current_catalog/golem.png",
+      "sha256": "087bb384bf6ca15e436110e78cf371f9e1f16f9a720cb238964f78a6964a5d2f",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "tree_monster": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Мёртвое древесное тело, ветвящаяся корона, лицо и корневые стопы сохраняют древесного монстра. Корона открытее исходной плотной кроны; это собственная ветвящаяся форма, не потеря rig; на полном листе ветви/пальцы целы.",
+      "sheet": "sheets_current_catalog/tree_monster.png",
+      "sha256": "a854e071c215c927c08c3690c6ffbc6ca2accc7a12822d37de7798528615d3bc",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "treeman": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Большая лиственная крона, тонкие древесные конечности, раздельные пальцы и корневые стопы сохранены. Собственные листья/кора, голова и руки целы в обеих фазах.",
+      "sheet": "sheets_current_catalog/treeman.png",
+      "sha256": "95193a2e8923195fa4d7ba1afbc26308c7065f7fe2522a75ad629952aae89973",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "mese_monster": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Сохранены парящие пропорции, два крыла, длинный хвост, жёлтая минеральная голова и челюсть. Собственные фиолетовые жилки/мембраны и все части читаются сверху/снизу; origin не притягивается к земле.",
+      "sheet": "sheets_current_catalog/mese_monster.png",
+      "sha256": "d3caffa461f82e926369701033ac1f214dfb59ba3f173be9506e71983627e663",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "lava_flan": {
+      "matrix_inspected": true,
+      "decision": "no_additional_blocking_issue_in_sampled_views",
+      "notes": "Сохранён вертикальный лавовый столб с головой/пастью и широкой базой. Собственные горячие потоки и трещины целые со всех сторон; две фазы squash различимы, реальная лава отдельно.",
+      "sheet": "sheets_current_catalog/lava_flan.png",
+      "sha256": "0e4bf2471c03458271fe812892c52840734606afdfe05c50d090e7b96899a2c2",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    },
+    "sand_monster": {
+      "matrix_inspected": true,
+      "decision": "corrected_and_reinspected",
+      "notes": "Матрица выявила бирюзовую макушку. Собственный accent заменён тёплым минеральным: ровно 30 atlas pixels верхней грани и 2 icon pixels; geometry/UV/weights/animations/alpha/creature.json прежние. Полная итоговая парная матрица и отдельные motion/UI/world открыты после исправления.",
+      "sheet": "sheets_current_catalog/sand_monster.png",
+      "sha256": "c0b04f3c7f1434d0b915f5ae7e59173ca763575587984cdcd0577afa94d8d3ad",
+      "inspection_this_pass": "inherited_after_exact_paired_sheet_byte_equivalence"
+    }
+  }
+}

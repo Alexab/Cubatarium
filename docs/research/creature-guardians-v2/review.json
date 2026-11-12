@@ -1,0 +1,74 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R5 low-headed guardian pair; full R6 routes/compatibility/performance/all-61 reproducibility still pending",
+  "species": {
+    "dungeon_master": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct final native/comparison/world/icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "342bb2c6a71d3a6d7772366f8a3755f59aeb96d4dd96868d4c8c77401dfd898c",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "dungeon_master.png",
+          "sha256": "2c930f3ecfb011fd841d86564f718a2242f6d3e5431f52ca2c1dcc78b5e49dd5"
+        },
+        "motion": {
+          "path": "native_approved_dungeon_master.png",
+          "sha256": "f27b44528f350a57410fbde26d7f7687028502a767909d95248a6bbfa62554d6"
+        },
+        "runtime": {
+          "path": "runtime_final_dungeon_master/frame_002.png",
+          "sha256": "4c4237b8c6aababc948715c6bd5cff4f64c2540bedb888b35cd5404cf2e03531"
+        },
+        "ui": {
+          "path": "native_candidate/dungeon_master_12.png",
+          "sha256": "291879b7c88d599d029cd8e558f10ec8cf84743324e6e5168606d09f4a860775"
+        }
+      },
+      "notes": "Own mesh, UV, pixels, rig and clips. Original long massive trunk, short legs, long arms and low projecting head restored. Brown dungeon master and green stony land guard remain recognizable with own surface fields; first overly pale/dotted master refined to darker coherent layers. 17 genuinely weighted joints versus original two, palette seven. Idle/walk/run/punch all retained; no original die to remove. 257-phase full-skinning contact includes inter-key phases: -0.00011 to +0.000448 block. Joint closure, parent attachment, stride/reference speed, entity-facing head, real master hand pullback then strike, guardian lifted forearm block and strike, rigid cuffs and recovery tested. Required anatomical dimensions explicitly reviewed; gameplay bounds/speeds/habitat preserved. Native original references also captured in current Release. No full R6 or performance PASS claimed."
+    },
+    "land_guard": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct final native/comparison/world/icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "bb48e338ceffc977bc7e0572d22aa3155b9e257002815f48483be980f3e3c8dd",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "land_guard.png",
+          "sha256": "21abd746bdb528e364ccced850bd8e02d43b14e883221793c34a81fc7c4fc5fb"
+        },
+        "motion": {
+          "path": "native_approved_land_guard.png",
+          "sha256": "5284c6c3a5df440f2173df3f4ac8386813cd1526b56f91aa633b2b295180fbaa"
+        },
+        "runtime": {
+          "path": "runtime_final_land_guard/frame_002.png",
+          "sha256": "eff4401937ab21c7d50d5b437ca08d60d9735e1cd0f09ad93acead7d779d8364"
+        },
+        "ui": {
+          "path": "native_candidate/land_guard_12.png",
+          "sha256": "5429aa2592c64329845690b759c81e3dbda20ad1ce7ba4926757ad66ef1c7c8f"
+        }
+      },
+      "notes": "Own mesh, UV, pixels, rig and clips. Original long massive trunk, short legs, long arms and low projecting head restored. Brown dungeon master and green stony land guard remain recognizable with own surface fields; first overly pale/dotted master refined to darker coherent layers. 17 genuinely weighted joints versus original two, palette seven. Idle/walk/run/punch all retained; no original die to remove. 257-phase full-skinning contact includes inter-key phases: -0.00011 to +0.000448 block. Joint closure, parent attachment, stride/reference speed, entity-facing head, real master hand pullback then strike, guardian lifted forearm block and strike, rigid cuffs and recovery tested. Required anatomical dimensions explicitly reviewed; gameplay bounds/speeds/habitat preserved. Native original references also captured in current Release. No full R6 or performance PASS claimed."
+    }
+  }
+}

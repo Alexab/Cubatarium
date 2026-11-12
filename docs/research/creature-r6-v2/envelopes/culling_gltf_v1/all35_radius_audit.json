@@ -1,0 +1,323 @@
+{
+  "passed": true,
+  "poses": 74186,
+  "resources": [
+    {
+      "covered": true,
+      "id": "badger",
+      "load_and_bound_ms": 4.8844,
+      "max_observed_radius": 0.9908551898692172,
+      "poses": 2245,
+      "radius": 1.3148164749145508,
+      "radius_over_observed": 1.326951191614683
+    },
+    {
+      "covered": true,
+      "id": "butterfly",
+      "load_and_bound_ms": 2.0776,
+      "max_observed_radius": 0.673866838750026,
+      "poses": 1156,
+      "radius": 0.704709529876709,
+      "radius_over_observed": 1.0457697119862641
+    },
+    {
+      "covered": true,
+      "id": "crab",
+      "load_and_bound_ms": 9.8607,
+      "max_observed_radius": 1.6007238567140374,
+      "poses": 2245,
+      "radius": 2.1292619705200195,
+      "radius_over_observed": 1.3301869411073588
+    },
+    {
+      "covered": true,
+      "id": "dirt_monster",
+      "load_and_bound_ms": 6.0884,
+      "max_observed_radius": 1.7801385065696678,
+      "poses": 2245,
+      "radius": 2.3771612644195557,
+      "radius_over_observed": 1.3353799469235417
+    },
+    {
+      "covered": true,
+      "id": "dungeon_master",
+      "load_and_bound_ms": 6.5478,
+      "max_observed_radius": 2.85187414449713,
+      "poses": 2245,
+      "radius": 4.393198013305664,
+      "radius_over_observed": 1.5404599890155095
+    },
+    {
+      "covered": true,
+      "id": "golem",
+      "load_and_bound_ms": 8.0212,
+      "max_observed_radius": 3.319371246168154,
+      "poses": 2245,
+      "radius": 4.533807277679443,
+      "radius_over_observed": 1.3658632739297303
+    },
+    {
+      "covered": true,
+      "id": "hedgehog",
+      "load_and_bound_ms": 4.8548,
+      "max_observed_radius": 0.7469750109361777,
+      "poses": 1156,
+      "radius": 1.158646583557129,
+      "radius_over_observed": 1.5511182657971472
+    },
+    {
+      "covered": true,
+      "id": "hermitcrab",
+      "load_and_bound_ms": 7.927,
+      "max_observed_radius": 1.3707156395638311,
+      "poses": 1156,
+      "radius": 1.5641826391220093,
+      "radius_over_observed": 1.1411430598542964
+    },
+    {
+      "covered": true,
+      "id": "kitten",
+      "load_and_bound_ms": 4.3852,
+      "max_observed_radius": 0.9314501809739502,
+      "poses": 1156,
+      "radius": 1.1978343725204468,
+      "radius_over_observed": 1.285988662612055
+    },
+    {
+      "covered": true,
+      "id": "land_guard",
+      "load_and_bound_ms": 6.8585,
+      "max_observed_radius": 2.9342910622004004,
+      "poses": 2245,
+      "radius": 4.35352897644043,
+      "radius_over_observed": 1.4836731885676517
+    },
+    {
+      "covered": true,
+      "id": "lava_flan",
+      "load_and_bound_ms": 4.4447,
+      "max_observed_radius": 1.2746161783367962,
+      "poses": 2245,
+      "radius": 1.5022151470184326,
+      "radius_over_observed": 1.1785627489670047
+    },
+    {
+      "covered": true,
+      "id": "lobster",
+      "load_and_bound_ms": 11.0998,
+      "max_observed_radius": 1.9087361277937476,
+      "poses": 2245,
+      "radius": 2.3772854804992676,
+      "radius_over_observed": 1.2454762320903427
+    },
+    {
+      "covered": true,
+      "id": "manatee",
+      "load_and_bound_ms": 4.2259,
+      "max_observed_radius": 1.586932871439701,
+      "poses": 2245,
+      "radius": 2.0813238620758057,
+      "radius_over_observed": 1.3115386917328027
+    },
+    {
+      "covered": true,
+      "id": "mese_monster",
+      "load_and_bound_ms": 10.9438,
+      "max_observed_radius": 2.8230903744221196,
+      "poses": 3686,
+      "radius": 3.398862600326538,
+      "radius_over_observed": 1.2039510428433513
+    },
+    {
+      "covered": true,
+      "id": "octopus",
+      "load_and_bound_ms": 9.833,
+      "max_observed_radius": 1.0749054269069753,
+      "poses": 1156,
+      "radius": 1.3676977157592773,
+      "radius_over_observed": 1.2723888832665098
+    },
+    {
+      "covered": true,
+      "id": "oerkki",
+      "load_and_bound_ms": 8.4202,
+      "max_observed_radius": 1.8951273498270482,
+      "poses": 2245,
+      "radius": 2.6919636726379395,
+      "radius_over_observed": 1.4204658451494627
+    },
+    {
+      "covered": true,
+      "id": "ogre",
+      "load_and_bound_ms": 6.6868,
+      "max_observed_radius": 4.628607684756775,
+      "poses": 2245,
+      "radius": 6.593257904052734,
+      "radius_over_observed": 1.4244581422975358
+    },
+    {
+      "covered": true,
+      "id": "orc",
+      "load_and_bound_ms": 6.9862,
+      "max_observed_radius": 2.787052384439065,
+      "poses": 2245,
+      "radius": 3.758815050125122,
+      "radius_over_observed": 1.348670398558597
+    },
+    {
+      "covered": true,
+      "id": "owl",
+      "load_and_bound_ms": 3.6778,
+      "max_observed_radius": 1.4438235623846005,
+      "poses": 2245,
+      "radius": 1.6912100315093994,
+      "radius_over_observed": 1.1713412050958765
+    },
+    {
+      "covered": true,
+      "id": "panda",
+      "load_and_bound_ms": 4.2558,
+      "max_observed_radius": 1.1844870112112618,
+      "poses": 2245,
+      "radius": 1.5769612789154053,
+      "radius_over_observed": 1.3313453537179758
+    },
+    {
+      "covered": true,
+      "id": "penguin",
+      "load_and_bound_ms": 2.8371,
+      "max_observed_radius": 1.0422975752238282,
+      "poses": 1156,
+      "radius": 1.288444995880127,
+      "radius_over_observed": 1.2361584891948347
+    },
+    {
+      "covered": true,
+      "id": "puffin",
+      "load_and_bound_ms": 3.4607,
+      "max_observed_radius": 1.3409640968601484,
+      "poses": 2245,
+      "radius": 1.5924931764602661,
+      "radius_over_observed": 1.1875733139977946
+    },
+    {
+      "covered": true,
+      "id": "rat",
+      "load_and_bound_ms": 4.4581,
+      "max_observed_radius": 0.8927211377968256,
+      "poses": 2245,
+      "radius": 1.220933198928833,
+      "radius_over_observed": 1.367653511534422
+    },
+    {
+      "covered": true,
+      "id": "sand_monster",
+      "load_and_bound_ms": 5.6433,
+      "max_observed_radius": 1.8993116978683935,
+      "poses": 2245,
+      "radius": 2.4252758026123047,
+      "radius_over_observed": 1.2769235325271797
+    },
+    {
+      "covered": true,
+      "id": "seahorse",
+      "load_and_bound_ms": 4.9578,
+      "max_observed_radius": 1.6958419648857792,
+      "poses": 1156,
+      "radius": 2.3564348220825195,
+      "radius_over_observed": 1.3895368028831823
+    },
+    {
+      "covered": true,
+      "id": "seal",
+      "load_and_bound_ms": 4.2164,
+      "max_observed_radius": 1.401944708325961,
+      "poses": 2245,
+      "radius": 1.848407506942749,
+      "radius_over_observed": 1.3184596339394168
+    },
+    {
+      "covered": true,
+      "id": "shark",
+      "load_and_bound_ms": 5.1601,
+      "max_observed_radius": 1.5292489065520491,
+      "poses": 3686,
+      "radius": 2.0539419651031494,
+      "radius_over_observed": 1.3431050735449663
+    },
+    {
+      "covered": true,
+      "id": "stingray",
+      "load_and_bound_ms": 6.2231,
+      "max_observed_radius": 1.653119908720883,
+      "poses": 2245,
+      "radius": 1.8144898414611816,
+      "radius_over_observed": 1.0976153828219033
+    },
+    {
+      "covered": true,
+      "id": "stone_monster",
+      "load_and_bound_ms": 5.5582,
+      "max_observed_radius": 1.7801385065696678,
+      "poses": 2245,
+      "radius": 2.3771612644195557,
+      "radius_over_observed": 1.3353799469235417
+    },
+    {
+      "covered": true,
+      "id": "treeman",
+      "load_and_bound_ms": 13.3577,
+      "max_observed_radius": 4.9900359179389095,
+      "poses": 2245,
+      "radius": 5.174231052398682,
+      "radius_over_observed": 1.0369125869009481
+    },
+    {
+      "covered": true,
+      "id": "tree_monster",
+      "load_and_bound_ms": 19.2485,
+      "max_observed_radius": 2.44354482785243,
+      "poses": 2245,
+      "radius": 2.5922110080718994,
+      "radius_over_observed": 1.0608403735936895
+    },
+    {
+      "covered": true,
+      "id": "warthog",
+      "load_and_bound_ms": 5.3191,
+      "max_observed_radius": 1.266573766919507,
+      "poses": 3686,
+      "radius": 1.7339009046554565,
+      "radius_over_observed": 1.3689695380890112
+    },
+    {
+      "covered": true,
+      "id": "wasp",
+      "load_and_bound_ms": 8.4663,
+      "max_observed_radius": 1.3436046752104502,
+      "poses": 2245,
+      "radius": 1.6239813566207886,
+      "radius_over_observed": 1.2086749819967861
+    },
+    {
+      "covered": true,
+      "id": "water_dragon",
+      "load_and_bound_ms": 3.7919,
+      "max_observed_radius": 2.8698329025190588,
+      "poses": 2245,
+      "radius": 3.2901456356048584,
+      "radius_over_observed": 1.1464589567974013
+    },
+    {
+      "covered": true,
+      "id": "whale",
+      "load_and_bound_ms": 4.2519,
+      "max_observed_radius": 1.5415449512066839,
+      "poses": 1156,
+      "radius": 2.0828535556793213,
+      "radius_over_observed": 1.3511468180340211
+    }
+  ],
+  "schema": "creature-gltf-render-envelope-audit.v1",
+  "scope": "Real CPU loader and skinning all asset clips33 phases plus cold-entry clip-pair fades; no GPU, terrain, world performance or art acceptance"
+}

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from copy import deepcopy
 
 
 @dataclass
@@ -11,6 +12,9 @@ class Cube:
     size: list[int]
     role: str
     uv: tuple[int, int] = (0, 0)
+    name: str = ""
+    shape: dict = field(default_factory=dict)
+    blend: dict = field(default_factory=dict)
 
     def top(self) -> int:
         return self.origin[1] + self.size[1]
@@ -30,6 +34,7 @@ class Bone:
 class Model:
     bones: list[Bone]
     texture_size: tuple[int, int] = (64, 64)
+    motion: dict = field(default_factory=dict)
 
     def cubes(self) -> list[Cube]:
         found: list[Cube] = []
@@ -88,26 +93,45 @@ def _tokens(recipe: dict) -> list[str]:
     return list(extras)
 
 
-def _pack(model: Model) -> None:
-    x = 1
-    y = 1
-    row_h = 0
-    width = 64
+def _pack(model: Model, layout: dict | None = None) -> None:
+    # Repack from the beginning when growing. Changing the width midway leaves
+    # poorly utilised atlases and can still overflow a very wide island.
+    layout = layout or {}
+    slots = layout.get("slots", {})
+    width = max(64, int(layout.get("minimum_size", 64)))
+    reserved_bottom = 0
     for cube in model.cubes():
-        fw = 2 * (cube.size[0] + cube.size[2]) + 1
-        fh = cube.size[1] + cube.size[2] + 1
-        if x + fw >= width:
-            x = 1
-            y += row_h + 1
-            row_h = 0
-        if y + fh >= width:
-            width *= 2
-        cube.uv = (x, y)
-        x += fw
-        row_h = max(row_h, fh)
-    height = max(width, y + row_h + 2)
-    # Box UV reads downward from the top of the atlas in the same pixel grid.
-    model.texture_size = (width, max(width, height))
+        if cube.name in slots:
+            u, v = slots[cube.name]
+            if min(u, v) < 0 or u+2*(cube.size[0]+cube.size[2]) > width:
+                raise ValueError("Invalid reserved runtime UV slot")
+            reserved_bottom = max(reserved_bottom, v+cube.size[1]+cube.size[2]+2)
+    while True:
+        x, y, row_h = 1, max(1, reserved_bottom), 0
+        placements = []
+        for cube in model.cubes():
+            if cube.name in slots:
+                placements.append((cube, tuple(slots[cube.name])))
+                continue
+            fw = 2 * (cube.size[0] + cube.size[2])
+            fh = cube.size[1] + cube.size[2]
+            if fw + 2 > width:
+                break
+            if x + fw + 1 > width:
+                x, y, row_h = 1, y + row_h + 2, 0
+            if y + fh + 1 > width:
+                break
+            placements.append((cube, (x, y)))
+            x += fw + 2
+            row_h = max(row_h, fh)
+        else:
+            for cube, uv in placements:
+                cube.uv = uv
+            model.texture_size = (width, width)
+            return
+        width *= 2
+        if width > 2048:
+            raise ValueError("Authored anatomy exceeds the atlas budget")
 
 
 def _quadruped(recipe: dict, names: dict[str, str] | None = None) -> Model:
@@ -634,6 +658,60 @@ def model_span_blocks(model: Model) -> float:
 def build_model(recipe: dict, target_px: int | None = None, concept_scale=None,
                 bounds: tuple[float, float, float] | None = None) -> Model:
     del target_px, bounds
+    if recipe.get("anatomy"):
+        bones = []
+        for entry in recipe["anatomy"]["bones"]:
+            cubes = []
+            for c in entry.get("cubes", []):
+                size = list(c["size"])
+                if len(size) != 3 or any(type(n) is not int or n <= 0 for n in size):
+                    raise ValueError(f"{recipe['id']}: authored cubes require positive integer texel dimensions")
+                shape = c.get("shape", {})
+                if "planform_y" in shape:
+                    heights = shape["planform_y"]
+                    if ("planform" not in shape or not isinstance(heights,list) or len(heights)!=2 or any(
+                            not isinstance(row,list) or len(row)!=4 or any(type(v) not in (int,float) or not 0<=v<=1 for v in row)
+                            for row in heights) or any(lo>=hi for lo,hi in zip(*heights))):
+                        raise ValueError(f"{recipe['id']}: planform_y requires four normalized lower/upper heights")
+                if "side_profile" in shape:
+                    q = shape["side_profile"]
+                    widths = shape.get("side_width", [1, 1])
+                    if (set(shape) - {"side_profile", "side_width"} or
+                            not isinstance(widths, list) or len(widths) != 2 or any(
+                                type(v) not in (int, float) or not 0 < v <= 2 for v in widths)):
+                        raise ValueError(f"{recipe['id']}: side_width requires positive bottom/top factors <= 2")
+                    if not isinstance(q, list) or len(q) != 4 or any(
+                            not isinstance(p, list) or len(p) != 2 or any(
+                                type(v) not in (int, float) or not 0 <= v <= 1 for v in p) for p in q):
+                        raise ValueError(f"{recipe['id']}: side_profile requires four normalized Y/Z corners")
+                    polygon = [q[i] for i in (0, 1, 3, 2)]
+                    turns = []
+                    for i in range(4):
+                        a, b, d = polygon[i], polygon[(i+1)%4], polygon[(i+2)%4]
+                        turns.append((b[0]-a[0])*(d[1]-b[1])-(b[1]-a[1])*(d[0]-b[0]))
+                    if min(turns) < 0 or max(turns) <= 0:
+                        raise ValueError(f"{recipe['id']}: side_profile must be convex with positive area")
+                cubes.append(Cube(list(c["origin"]), size, c["role"], name=c.get("name", ""),
+                                  shape=shape, blend=c.get("blend", {})))
+            bones.append(Bone(entry["name"], entry.get("parent"), list(entry["pivot"]), cubes,
+                              entry.get("mirror", False), entry.get("bind_rotation")))
+        names = [b.name for b in bones]
+        if len(names) != len(set(names)) or any(b.parent and b.parent not in names for b in bones):
+            raise ValueError(f"{recipe['id']}: duplicate bone or unknown parent")
+        by_name = {b.name:b for b in bones}
+        for bone in bones:
+            seen = set()
+            current = bone
+            while current:
+                if current.name in seen:
+                    raise ValueError(f"{recipe['id']}: cyclic anatomy hierarchy")
+                seen.add(current.name)
+                current = by_name.get(current.parent)
+        model = Model(bones, motion=deepcopy(recipe.get("motion", {})))
+        from creaturegen.motion import apply_ground_contact
+        apply_ground_contact(model)
+        _pack(model, recipe.get("atlas_layout"))
+        return model
     template = recipe.get("template") or "quadruped"
     builder = BUILDERS[template]
     model = builder(_scale_recipe(recipe, concept_scale))

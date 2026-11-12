@@ -1,0 +1,7 @@
+{
+  "passed": true,
+  "scope": "936 identical RGBA FP captures against previous authored-arm Release, not full world FP acceptance",
+  "frames": 936,
+  "reference": "docs\\research\\creature-r6-v2\\envelopes\\orc_sway_v1\\review\\production\\native_final",
+  "candidate": "docs\\research\\creature-r6-v2\\gltf-sampling-perf-v1\\production\\native_final"
+}

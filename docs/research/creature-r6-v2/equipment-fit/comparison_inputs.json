@@ -1,0 +1,54 @@
+{
+  "schema": "creature-equipment-comparison.v1",
+  "images": [
+    {
+      "path": "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\equipment-fit\\copper\\native_candidate\\equipment\\human_Run_1.500000_16_3.png",
+      "sha256": "a3155368301e50f1fda1ce5aebdc6d97664de27cba3e0ca2c6eae305e6c41ea5"
+    },
+    {
+      "path": "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\equipment-fit\\copper\\native_candidate\\equipment\\skeleton_Run_1.500000_16_3.png",
+      "sha256": "5842f9eea12eea74cf1a3438451a75408baf68c5218e5ba76cac41037ddec8ec"
+    },
+    {
+      "path": "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\equipment-fit\\final\\copper\\native_candidate\\equipment\\human_Run_1.500000_16_3.png",
+      "sha256": "9f2585bb4ec272db25378b0d9725eea2d800b02fb7b7a51524d59767f6f800e5"
+    },
+    {
+      "path": "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\equipment-fit\\final\\copper\\native_candidate\\equipment\\skeleton_Run_1.500000_16_3.png",
+      "sha256": "aca4f20caaf1e7f0dbb55ecc24f3e722be44d29ed600bcb3a986a03d7119d2ba"
+    },
+    {
+      "path": "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\equipment-fit\\iron\\native_candidate\\equipment\\human_Run_1.500000_16_3.png",
+      "sha256": "35280b2dada9c8444c4984757b11ec71528e2ae9c2d24c9458089612ef3b101a"
+    },
+    {
+      "path": "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\equipment-fit\\iron\\native_candidate\\equipment\\skeleton_Run_1.500000_16_3.png",
+      "sha256": "00440ffbee312fe5ec5f5b01e7c48ad96e787fad0a5a257d9dbeddef7c85dc96"
+    },
+    {
+      "path": "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\equipment-fit\\final\\iron\\native_candidate\\equipment\\human_Run_1.500000_16_3.png",
+      "sha256": "8f02a28dcb56187b94e27c09ff615429c7a5c39110a38d3cf3489b1797193e52"
+    },
+    {
+      "path": "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\equipment-fit\\final\\iron\\native_candidate\\equipment\\skeleton_Run_1.500000_16_3.png",
+      "sha256": "9cf7b65837752b878ce48c1f1f38232e8e04dbb7cbc5c1f52a358eeb0f4955c7"
+    },
+    {
+      "path": "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\equipment-fit\\leather\\native_candidate\\equipment\\human_Run_1.500000_16_3.png",
+      "sha256": "b85b3e11e87a08e044b0bcc8bef745a0e13bcfcefa50bdae5a8345b3e465c0ba"
+    },
+    {
+      "path": "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\equipment-fit\\leather\\native_candidate\\equipment\\skeleton_Run_1.500000_16_3.png",
+      "sha256": "32f944dfeb1c7fa3fb4609405fa34c13e340e40ae2b388f2c8149e07cb8e2196"
+    },
+    {
+      "path": "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\equipment-fit\\final\\leather\\native_candidate\\equipment\\human_Run_1.500000_16_3.png",
+      "sha256": "3d969c1986cbdb1415f077cf99b81247285577c8f4ff3998cc167d5182f64475"
+    },
+    {
+      "path": "E:\\Work\\Home\\Cubatarium\\docs\\research\\creature-r6-v2\\equipment-fit\\final\\leather\\native_candidate\\equipment\\skeleton_Run_1.500000_16_3.png",
+      "sha256": "452d09c5264febb9ec1460ddbde89b4ab7bb019326ea6175ee55390ae79d5633"
+    }
+  ],
+  "output_sha256": "effecd5a6bbbe3010dc8f20c3c6680a821e23532d847ae064ad0432f9481c373"
+}

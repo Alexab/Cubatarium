@@ -1,0 +1,244 @@
+{
+  "schema": "creature-quality-review.v1",
+  "scope": "R4 first bone coat wave and remaining three skins; global R6 compatibility/performance matrix pending",
+  "species": {
+    "pig": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct final baseline/candidate, real Release full-cycle motion, world and 64px icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "30271074966f3f080205e238cb27403a87aca951e484995ec0cbed155536d9b4",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "pig.png",
+          "sha256": "c216f62a5ecbe792c5bfe4f4c09088c3c2e7d2569ee83a03d22c0920e14e9116"
+        },
+        "motion": {
+          "path": "native_approved_pig.png",
+          "sha256": "0d2c33791f56fd060faf652362dd960de65d75f422a437dd114c1097a634b740"
+        },
+        "runtime": {
+          "path": "runtime_coats/frame_001.png",
+          "sha256": "14db2978ad1d426121c7cba3d7f4319222c52ae071d6a220f2e7dda340ada0d5"
+        },
+        "ui": {
+          "path": "ui.png",
+          "sha256": "13e2954a905faa0e769ed48868b9f0486e4a22456418b28c94ab07267d01fdd3"
+        }
+      },
+      "notes": "Familiar species anatomy and own material pattern. Original backend and procedural animation profiles retained. Sheep head/body proportions revised against baseline; fox ears reduced; wolf chest/leg/neck coplanar faces removed. Actual skeletal rest geometry frames the preview without changing gameplay bounds. Three skins explicitly built on the matching geometry and inspected separately in motion and world."
+    },
+    "sheep": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct final baseline/candidate, real Release full-cycle motion, world and 64px icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "b41774f922296c0d3492e6286553db85efbe639972e338c45d19dd88bbf2d20c",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheep.png",
+          "sha256": "5b7217027dc5ff19ef8ede90ffb0215fa345a635d3d87f9780518611c400b4f8"
+        },
+        "motion": {
+          "path": "native_approved_sheep.png",
+          "sha256": "1f2910f05bf4d710fe539d3eec382bd71d821941af94f587cb8a89beb0aa3b03"
+        },
+        "runtime": {
+          "path": "runtime_coats/frame_001.png",
+          "sha256": "14db2978ad1d426121c7cba3d7f4319222c52ae071d6a220f2e7dda340ada0d5"
+        },
+        "ui": {
+          "path": "ui.png",
+          "sha256": "13e2954a905faa0e769ed48868b9f0486e4a22456418b28c94ab07267d01fdd3"
+        }
+      },
+      "notes": "Familiar species anatomy and own material pattern. Original backend and procedural animation profiles retained. Sheep head/body proportions revised against baseline; fox ears reduced; wolf chest/leg/neck coplanar faces removed. Actual skeletal rest geometry frames the preview without changing gameplay bounds. Three skins explicitly built on the matching geometry and inspected separately in motion and world."
+    },
+    "wolf": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct final baseline/candidate, real Release full-cycle motion, world and 64px icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "d721d6f7bca9689b468a38373f75d07a83fc8dce1e4cf643b97666090d08efef",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "wolf.png",
+          "sha256": "9b3f07182020259a41a895232a4f9e422fa3fa40fb1242251c0eb23f9a7be70c"
+        },
+        "motion": {
+          "path": "native_approved_wolf.png",
+          "sha256": "bbe865d7bdea7357209e5391cb7a3bfb8d157a5b1c1674e12470c77c65e08cf2"
+        },
+        "runtime": {
+          "path": "runtime_coats/frame_001.png",
+          "sha256": "14db2978ad1d426121c7cba3d7f4319222c52ae071d6a220f2e7dda340ada0d5"
+        },
+        "ui": {
+          "path": "ui.png",
+          "sha256": "13e2954a905faa0e769ed48868b9f0486e4a22456418b28c94ab07267d01fdd3"
+        }
+      },
+      "notes": "Familiar species anatomy and own material pattern. Original backend and procedural animation profiles retained. Sheep head/body proportions revised against baseline; fox ears reduced; wolf chest/leg/neck coplanar faces removed. Actual skeletal rest geometry frames the preview without changing gameplay bounds. Three skins explicitly built on the matching geometry and inspected separately in motion and world."
+    },
+    "fox": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct final baseline/candidate, real Release full-cycle motion, world and 64px icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "eb5b12e3533a3bfb70fb5b553020876bdeb61cd6ab99dfdbf1ffdaad3cb9f256",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "fox.png",
+          "sha256": "e6bc6bfb69eef4ed81c9ffa2f7214800cf8c7ee97ce50db211cfebd863a285a6"
+        },
+        "motion": {
+          "path": "native_approved_fox.png",
+          "sha256": "667a378882633efda7bd013d66dca9745ed2c1b9eeaf069765d1e016341b9807"
+        },
+        "runtime": {
+          "path": "runtime_coats/frame_001.png",
+          "sha256": "14db2978ad1d426121c7cba3d7f4319222c52ae071d6a220f2e7dda340ada0d5"
+        },
+        "ui": {
+          "path": "ui.png",
+          "sha256": "13e2954a905faa0e769ed48868b9f0486e4a22456418b28c94ab07267d01fdd3"
+        }
+      },
+      "notes": "Familiar species anatomy and own material pattern. Original backend and procedural animation profiles retained. Sheep head/body proportions revised against baseline; fox ears reduced; wolf chest/leg/neck coplanar faces removed. Actual skeletal rest geometry frames the preview without changing gameplay bounds. Three skins explicitly built on the matching geometry and inspected separately in motion and world."
+    },
+    "sheep_wool_black": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct final baseline/candidate, real Release full-cycle motion, world and 64px icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "d1e20e7d08c6de8696b2b8f402efadbe48aa20c34d7d4f634336195c786e01bd",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheep_wool_black_comparison.png",
+          "sha256": "8a2cc6fe67226d6ca443d785045d14af79b2932dc8a3ecc0119e5daa4a47f655"
+        },
+        "motion": {
+          "path": "sheep_wool_black_motion.png",
+          "sha256": "ed2d2da1f4cad53063de657a077eb7ec4d6d4b2120fe8d7398a7d3bf1d14ba42"
+        },
+        "runtime": {
+          "path": "runtime_sheep_wool_black/frame_002.png",
+          "sha256": "163e24cd4db91970c320b06304588f35ba59c52d0cc113a1ad7163d177cbbdbd"
+        },
+        "ui": {
+          "path": "skins_ui.png",
+          "sha256": "2c18538700fa7aa505ed718c6ef96656669681ca79e9f6fb64fa6c2738f59318"
+        }
+      },
+      "notes": "Familiar species anatomy and own material pattern. Original backend and procedural animation profiles retained. Sheep head/body proportions revised against baseline; fox ears reduced; wolf chest/leg/neck coplanar faces removed. Actual skeletal rest geometry frames the preview without changing gameplay bounds. Three skins explicitly built on the matching geometry and inspected separately in motion and world."
+    },
+    "sheep_wool_golden": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct final baseline/candidate, real Release full-cycle motion, world and 64px icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "8b883ec980000ee79b2e64b52b241fde8ea97a4e8d06390ac8d627be27d5d87b",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "sheep_wool_golden_comparison.png",
+          "sha256": "47c5a5ff1ada5b7eea51c94a5aec4db395c3036a6c775c85af51fee98d2bd571"
+        },
+        "motion": {
+          "path": "sheep_wool_golden_motion.png",
+          "sha256": "091506f274571ed14e31481bd16ed3555a3aa25066f51b9a7f01abe2719aac46"
+        },
+        "runtime": {
+          "path": "runtime_sheep_wool_golden/frame_002.png",
+          "sha256": "2940b65cddb0c1433f13508f034db1c1a1d407967cd76704ec9fc8253addc1f2"
+        },
+        "ui": {
+          "path": "skins_ui.png",
+          "sha256": "2c18538700fa7aa505ed718c6ef96656669681ca79e9f6fb64fa6c2738f59318"
+        }
+      },
+      "notes": "Familiar species anatomy and own material pattern. Original backend and procedural animation profiles retained. Sheep head/body proportions revised against baseline; fox ears reduced; wolf chest/leg/neck coplanar faces removed. Actual skeletal rest geometry frames the preview without changing gameplay bounds. Three skins explicitly built on the matching geometry and inspected separately in motion and world."
+    },
+    "wolf_snow": {
+      "decision": "accepted",
+      "reviewed_by": "Codex: direct final baseline/candidate, real Release full-cycle motion, world and 64px icon inspection; not user sign-off",
+      "baseline_revision": "b35f00a75",
+      "bundle_sha256": "267d2907790a5e33c7fc98b2513e1ccb16dffe05367a6a306c6cec1d25177799",
+      "criteria": {
+        "recognizable_anatomy": true,
+        "texture_quality": true,
+        "rig_and_motion": true,
+        "world_scale": true,
+        "runtime": true,
+        "ui_and_skins": true,
+        "original_authorship": true
+      },
+      "artifacts": {
+        "comparison": {
+          "path": "wolf_snow_comparison.png",
+          "sha256": "90546cef208f14cc01a719db808dd2c50204e697a3f4331d7acad281571b28c4"
+        },
+        "motion": {
+          "path": "wolf_snow_motion.png",
+          "sha256": "70a240fed911e115a24ef696ff0a560d6f4d803fda0407bdba640f9bcbbaa656"
+        },
+        "runtime": {
+          "path": "runtime_wolf_snow/frame_002.png",
+          "sha256": "76da41ddc6e3ef5ef0e6f286b45d371a0f9f9be3ac59d1c45a7122d17754f1a6"
+        },
+        "ui": {
+          "path": "skins_ui.png",
+          "sha256": "2c18538700fa7aa505ed718c6ef96656669681ca79e9f6fb64fa6c2738f59318"
+        }
+      },
+      "notes": "Familiar species anatomy and own material pattern. Original backend and procedural animation profiles retained. Sheep head/body proportions revised against baseline; fox ears reduced; wolf chest/leg/neck coplanar faces removed. Actual skeletal rest geometry frames the preview without changing gameplay bounds. Three skins explicitly built on the matching geometry and inspected separately in motion and world."
+    }
+  }
+}

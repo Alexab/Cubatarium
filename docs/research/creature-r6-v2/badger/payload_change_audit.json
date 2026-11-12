@@ -1,0 +1,14 @@
+{
+  "old_bin_bytes": 36488,
+  "new_bin_bytes": 52600,
+  "unchanged_mesh_attributes": {
+    "POSITION": true,
+    "TEXCOORD_0": true,
+    "JOINTS_0": true,
+    "WEIGHTS_0": true
+  },
+  "unchanged_textures": {
+    "body.png": true,
+    "icon.png": true
+  }
+}

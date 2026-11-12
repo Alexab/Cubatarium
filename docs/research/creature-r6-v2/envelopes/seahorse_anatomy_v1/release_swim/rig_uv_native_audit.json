@@ -1,0 +1,51 @@
+{
+  "passed": true,
+  "scope": "Isolated candidate data invariants and native input consistency; not art/contact/performance acceptance",
+  "animation_sampler_arrays_exact": 42,
+  "nodes_skin_ibm_definition_joint_indices_weights_exact": true,
+  "before_geometry": {
+    "triangles": 240,
+    "min_triangle_area": 0.0006249999860301614,
+    "constant_uv_triangles": 80,
+    "model_texel_density_p05": 0.0,
+    "model_texel_density_median": 9.237604307034012
+  },
+  "candidate_geometry": {
+    "triangles": 240,
+    "min_triangle_area": 0.0006249999860301614,
+    "constant_uv_triangles": 80,
+    "model_texel_density_p05": 0.0,
+    "model_texel_density_median": 9.237604307034012
+  },
+  "sheets": [
+    {
+      "path": "threeway_idle.png",
+      "sha256": "3b653bbff7472eb8a1f6d21d5c49f1c8753b0c00343b0dc35792a4fecfd80368"
+    },
+    {
+      "path": "threeway_walk.png",
+      "sha256": "763f7f0e9de793f52e7e0516077e3c22057b5cf4d2de03eeedce4d03226bca23"
+    },
+    {
+      "path": "threeway_action.png",
+      "sha256": "ef72dedc5f7276a316c892a4f403a121a5531b3566367b2d34581ae98df6afc1"
+    }
+  ],
+  "payload_sha256": {
+    "creature.json": "32155db030f593c5874b242352d036e29b5893b2c492b80ad39f10ce80255db2",
+    "LICENSE.txt": "77fe7cb6dbcc6f6855ab400b1c37b5da2f323fd93797dc9aa7a539c15141032b",
+    "model.bin": "eabc8b60f228565397da82df4844c23496a3c9bde30d14fe7dae35957c204f90",
+    "model.gltf": "4d17ce3cf990a16bf23af9d575b5a8e0c7a3de0de43638d26465716675ade826",
+    "textures\\body.png": "122931bc0c3fd10d75d2234421ac930bd3c34d15ec1e74d51149c8539fe72f58",
+    "textures\\icon.png": "6b777bae00bd32d47ff6bbf42bcf985e44bb3317df70a64faca96064f8974644"
+  },
+  "sampled_native_cpu_transitions": {
+    "cases": 4,
+    "frames": 44,
+    "supported_frames": 0,
+    "supported_min_y": null,
+    "supported_route_scope": "omitted by native free-swimmer fixture; no floor acceptance",
+    "sha256": "515c56116d633029341cd285a2f003839041d0ddf05cc4cc5788ca6edd75d63b",
+    "scope": "Sampled retained UpdatePose; not terrain/stride or GPU fade acceptance"
+  }
+}

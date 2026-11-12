@@ -25,10 +25,14 @@ def _part_id(name: str, index: int) -> str:
         "leftArm": "arm_l",
         "body": "torso",
     }
-    return mapping.get(name, name if index == 0 else f"{name}_{index}")
+    base = mapping.get(name, name)
+    return base if index == 0 else f"{base}_{index}"
 
 
-def export_rigid(model: Model) -> dict:
+def export_rigid(model: Model, *, center_pivot_bones=()) -> dict:
+    center_pivot_bones=set(center_pivot_bones)
+    unknown=center_pivot_bones-{bone.name for bone in model.bones}
+    if unknown:raise ValueError(f'Unknown rigid center-pivot bones: {sorted(unknown)}')
     parts = []
     for bone in model.bones:
         for index, cube in enumerate(bone.cubes):
@@ -39,11 +43,17 @@ def export_rigid(model: Model) -> dict:
                 "id": _part_id(bone.name, index),
                 "offset": [round(v, 4) for v in center],
                 "size": [round(sx, 4), round(sy, 4), round(sz, 4)],
-                "texture": "face" if cube.role in ("face", "muzzle") else ("leg" if cube.role == "limb" else "body"),
+                "texture": ("ear" if "ear" in cube.name else
+                            "tail" if bone.name == "tail" else
+                            "face" if cube.role == "face" else
+                            "muzzle" if cube.role == "muzzle" else
+                            "leg" if cube.role == "limb" else
+                            cube.role if cube.role in ("horn", "wing", "belly", "shell") else "body"),
             }
             limb = _limb_for(bone.name)
             if limb:
                 part["limb"] = limb
+            if (limb or bone.name.startswith(("wing", "fin", "tail"))) and bone.name not in center_pivot_bones:
                 part["pivot"] = [round(component / 16.0, 4) for component in bone.pivot]
             parts.append(part)
     if not parts:

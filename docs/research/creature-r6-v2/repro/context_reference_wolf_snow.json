@@ -1,0 +1,37 @@
+{
+  "captured_at_utc": "2026-11-11T03:26:17.860461+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\bin\\models",
+  "files_sha256": {
+    "creatures\\wolf\\creature.json": "958ba270e2e739f7f3a588c716897c49778356de5af23e17ac0434a544f81d1f",
+    "creatures\\wolf\\geometry.geo.json": "7be066ab16a5e0a2c1ab3e36d0176a9f7fdf84a407895ee09757668385f6e7a5",
+    "creatures\\wolf\\LICENSE.txt": "47c844fdb14470ac8a25ca7e9257fae9fc7fbe9a9a7b6635581ea9ea53fa3096",
+    "creatures\\wolf\\textures\\diffuse.png": "d7f181f935e74ae014b801eb79e54b54fd600e4f3b09952106dffbfbe131ee2d",
+    "creatures\\wolf\\textures\\icon.png": "aba241537020cec6a0eb632875cc070dccd22e3156f175ce3452da4fe553477a",
+    "skins\\wolf_snow\\LICENSE.txt": "f07715f40a7a47e46c819a9404ade7a4e92c5771502643b3f7043acd64567678",
+    "skins\\wolf_snow\\skin.json": "0620889590158909f4170abfdad5b3e1fb199db3076c0b35937f82db32fe0490",
+    "skins\\wolf_snow\\textures\\body.png": "8d852f4354b8ad8773554d5b074db556ba972fc278b5b295a71e9741312ddeba",
+    "skins\\wolf_snow\\textures\\diffuse.png": "8d852f4354b8ad8773554d5b074db556ba972fc278b5b295a71e9741312ddeba",
+    "skins\\wolf_snow\\textures\\face.png": "8d852f4354b8ad8773554d5b074db556ba972fc278b5b295a71e9741312ddeba",
+    "skins\\wolf_snow\\textures\\leg.png": "8d852f4354b8ad8773554d5b074db556ba972fc278b5b295a71e9741312ddeba"
+  },
+  "qa_models_override": false,
+  "exe_sha256": "cd420654aabb559cd046529d39eca9c172121c942953066027622b27a7590044",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "reference_wolf_snow",
+  "qa_camera": "close",
+  "world_species": [
+    "wolf"
+  ],
+  "preview_species": [
+    "wolf"
+  ],
+  "qa_water_placement": false,
+  "qa_lava_fixture": false,
+  "world": "World_254",
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

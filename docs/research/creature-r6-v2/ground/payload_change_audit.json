@@ -1,0 +1,44 @@
+{
+  "hedgehog": {
+    "mesh_attributes_and_texture_bytes_identical": true,
+    "unchanged_named_animation_channels": 22,
+    "runtime_definition_identical": true,
+    "old_bin_bytes": 76340,
+    "new_bin_bytes": 88132
+  },
+  "kitten": {
+    "mesh_attributes_and_texture_bytes_identical": true,
+    "unchanged_named_animation_channels": 31,
+    "runtime_definition_identical": true,
+    "old_bin_bytes": 29464,
+    "new_bin_bytes": 41256
+  },
+  "panda": {
+    "mesh_attributes_and_texture_bytes_identical": true,
+    "unchanged_named_animation_channels": 33,
+    "runtime_definition_identical": true,
+    "old_bin_bytes": 38016,
+    "new_bin_bytes": 52880
+  },
+  "penguin": {
+    "mesh_attributes_and_texture_bytes_identical": true,
+    "unchanged_named_animation_channels": 15,
+    "runtime_definition_identical": true,
+    "old_bin_bytes": 21408,
+    "new_bin_bytes": 29104
+  },
+  "rat": {
+    "mesh_attributes_and_texture_bytes_identical": true,
+    "unchanged_named_animation_channels": 35,
+    "runtime_definition_identical": true,
+    "old_bin_bytes": 31992,
+    "new_bin_bytes": 47896
+  },
+  "warthog": {
+    "mesh_attributes_and_texture_bytes_identical": true,
+    "unchanged_named_animation_channels": 40,
+    "runtime_definition_identical": true,
+    "old_bin_bytes": 54580,
+    "new_bin_bytes": 77124
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "passed": true,
+  "scope": "One ordinary-input benthic world motor route, not all terrain/sliding/attack/AI acceptance",
+  "world_samples": 1036,
+  "sim_seconds": 18.654727935791016,
+  "state_counts": {
+    "swim": 1,
+    "tread": 622,
+    "idle": 413
+  },
+  "tread_moving_samples": 621,
+  "xz_travel_on_bottom": 5.0062713623046875,
+  "move_direction_samples": {
+    "1.0": 379,
+    "-1.0": 242
+  },
+  "frozen_or_solid_overlap": false,
+  "exe_sha256": "a0872e87a1551dbe7ac0cff1346b58176743d18eba13817cb7779473415df68f",
+  "inputs_sha256": {
+    "world_motion_tread_candidate.jsonl": "fb9cdaad2968947d6759ec38ed0f1c2a90d37f0bc4bfe07422ed5cbeb4fa183f",
+    "context_tread_candidate.json": "eaea76297f78253984df373222c902a85266d60e83e41705c6f7472aee12f77a",
+    "report_tread_candidate.json": "bcf72be02b9645c15dfdff3f8d8239a88e231d2dc71d77eb84c7fdef314ded34"
+  }
+}

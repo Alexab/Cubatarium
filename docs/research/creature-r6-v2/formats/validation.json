@@ -1,0 +1,38 @@
+{
+  "schema": "creature-format-validation-summary.v1",
+  "scope": "Format/header-only gate; full R6 pending",
+  "python_fidelity_tests_passed": 36,
+  "python_quality_tests_passed": 12,
+  "selected_release_cpp_tests_passed": 9,
+  "release_app_build": "passed; static 6 system DLL; exact required command",
+  "release_exe_sha256": "6aab56a8177b6095ebe35015aeec361aa1db55bdcfd7db30409ea5add54c8664",
+  "app_exe_unchanged_after_adding_opt_in_bone_motion_utility": true,
+  "header_only_geometry_changes": 17,
+  "repro_resources_byte_identical": 61,
+  "native_candidate_exact_rgba_pngs": 5290,
+  "normal_production_exact_rgba_pngs": 5290,
+  "br_resources_valid_per_published_root": 26,
+  "gltf_khronos": {
+    "assets": 35,
+    "errors": 0,
+    "warnings": 0,
+    "infos": 0
+  },
+  "ledger": {
+    "expected_species": 56,
+    "expected_skins": 5,
+    "exact_valid_r5_reviews": 61,
+    "published_payload_matches_staged": 61,
+    "bin_payload_matches_staged": 61,
+    "current_generator_source_inputs": 61,
+    "manifest_species_count": 56,
+    "manifest_skin_count": 5,
+    "valid_file_records": 61,
+    "runtime_global_manifest_matches": true,
+    "contracts_states": {
+      "accepted": 56
+    },
+    "unexpected_live_species": []
+  },
+  "r6_final_acceptance": false
+}

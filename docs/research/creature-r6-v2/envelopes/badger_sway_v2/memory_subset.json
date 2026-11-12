@@ -1,0 +1,161 @@
+{
+  "compiler": 194435229,
+  "pointer_bits": 64,
+  "resources": [
+    {
+      "accounted_vector_string_heap_bytes": 64508,
+      "bin_bytes": 53920,
+      "cases": [
+        {
+          "batch_average_microseconds_per_pose": {
+            "max": 1.9859375,
+            "min": 1.875,
+            "p50": 1.88046875,
+            "p95": 1.91796875,
+            "samples": 81
+          },
+          "clip": "walk",
+          "duration": 0.2800000011920929,
+          "fade": false,
+          "key_times": 389,
+          "max_keys_per_channel": 257,
+          "palette_signature": 9745699204310227686
+        },
+        {
+          "batch_average_microseconds_per_pose": {
+            "max": 2.625,
+            "min": 2.4890625,
+            "p50": 2.51484375,
+            "p95": 2.56640625,
+            "samples": 81
+          },
+          "clip": "walk",
+          "duration": 0.2800000011920929,
+          "fade": true,
+          "key_times": 389,
+          "max_keys_per_channel": 257,
+          "palette_signature": 2546373438812565056
+        },
+        {
+          "batch_average_microseconds_per_pose": {
+            "max": 3.2671875,
+            "min": 1.86875,
+            "p50": 1.88359375,
+            "p95": 1.91015625,
+            "samples": 81
+          },
+          "clip": "run",
+          "duration": 0.2199999988079071,
+          "fade": false,
+          "key_times": 389,
+          "max_keys_per_channel": 257,
+          "palette_signature": 8400919728106681312
+        },
+        {
+          "batch_average_microseconds_per_pose": {
+            "max": 3.25859375,
+            "min": 2.51171875,
+            "p50": 2.53359375,
+            "p95": 2.57421875,
+            "samples": 81
+          },
+          "clip": "run",
+          "duration": 0.2199999988079071,
+          "fade": true,
+          "key_times": 389,
+          "max_keys_per_channel": 257,
+          "palette_signature": 8570709496942435119
+        }
+      ],
+      "joints": 13,
+      "nodes": 14,
+      "path": "E:\\Work\\Home\\Cubatarium\\models\\creatures\\badger\\model.gltf",
+      "root_sampler_signature": 8526502935111378079,
+      "warm_loader_milliseconds": {
+        "max": 1.8691,
+        "min": 1.4839,
+        "p50": 1.5778,
+        "p95": 1.6593,
+        "samples": 13
+      }
+    },
+    {
+      "accounted_vector_string_heap_bytes": 160988,
+      "bin_bytes": 135136,
+      "cases": [
+        {
+          "batch_average_microseconds_per_pose": {
+            "max": 3.31640625,
+            "min": 2.40546875,
+            "p50": 2.44375,
+            "p95": 2.5046875,
+            "samples": 81
+          },
+          "clip": "walk",
+          "duration": 1.9600000381469727,
+          "fade": false,
+          "key_times": 2549,
+          "max_keys_per_channel": 1793,
+          "palette_signature": 7689484178684835735
+        },
+        {
+          "batch_average_microseconds_per_pose": {
+            "max": 3.56953125,
+            "min": 3.0109375,
+            "p50": 3.0421875,
+            "p95": 3.090625,
+            "samples": 81
+          },
+          "clip": "walk",
+          "duration": 1.9600000381469727,
+          "fade": true,
+          "key_times": 2549,
+          "max_keys_per_channel": 1793,
+          "palette_signature": 8781253790090367142
+        },
+        {
+          "batch_average_microseconds_per_pose": {
+            "max": 2.62734375,
+            "min": 2.49921875,
+            "p50": 2.53515625,
+            "p95": 2.5921875,
+            "samples": 81
+          },
+          "clip": "run",
+          "duration": 1.9800000190734863,
+          "fade": false,
+          "key_times": 2949,
+          "max_keys_per_channel": 2017,
+          "palette_signature": 14736104435770155681
+        },
+        {
+          "batch_average_microseconds_per_pose": {
+            "max": 3.49921875,
+            "min": 3.0921875,
+            "p50": 3.13828125,
+            "p95": 3.20078125,
+            "samples": 81
+          },
+          "clip": "run",
+          "duration": 1.9800000190734863,
+          "fade": true,
+          "key_times": 2949,
+          "max_keys_per_channel": 2017,
+          "palette_signature": 2974872667643214285
+        }
+      ],
+      "joints": 13,
+      "nodes": 14,
+      "path": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\badger_sway_v2\\models\\creatures\\badger\\model.gltf",
+      "root_sampler_signature": 4816920068292588020,
+      "warm_loader_milliseconds": {
+        "max": 3.418,
+        "min": 2.0627,
+        "p50": 2.1819,
+        "p95": 2.3277,
+        "samples": 13
+      }
+    }
+  ],
+  "scope": "Release actual CPU loader and warmed allocation-reusing pose sampler; warm I/O, batch-average p95, no world/GPU/total RSS acceptance"
+}

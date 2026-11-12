@@ -1,0 +1,49 @@
+{
+  "schema": "creature-proposal-world-flight-audit.v1",
+  "evidence_consistent": true,
+  "art_acceptance": "pending",
+  "scope": "Four8-second idle/no-travel native Release flights and116 preview PNG; not stride/contact/continuous-action/performance acceptance",
+  "resources": [
+    {
+      "id": "badger",
+      "context_sha256": "c464526c68caf4b22e60f7315cbc3295341933e4e726fc283b16f9b9f471535e",
+      "exe_sha256": "ef4925fcfe9b860d1625c04509be8f7b5963432953969a2452929ef1fbd4c7f5",
+      "preview_count": 29,
+      "world_frame_count": 3,
+      "ingame_frames": 218,
+      "direct_review_frame": "runtime_world_badger\\frame_002.png",
+      "direct_review_frame_sha256": "4938ef101d6e0c99e803b19564a07d3886fd55108ebafb2e5296879d753f16d1"
+    },
+    {
+      "id": "treeman",
+      "context_sha256": "f6ce74f7068cc44d20237033bfaf0a59e39be9faf838bf1304db5c6e84aebbe0",
+      "exe_sha256": "ef4925fcfe9b860d1625c04509be8f7b5963432953969a2452929ef1fbd4c7f5",
+      "preview_count": 29,
+      "world_frame_count": 3,
+      "ingame_frames": 145,
+      "direct_review_frame": "runtime_world_treeman\\frame_002.png",
+      "direct_review_frame_sha256": "9e7573d83d47b23d99604b00611ced6edd5355219dbca706f1047119d4113df7"
+    },
+    {
+      "id": "lobster",
+      "context_sha256": "bf1fe9fc4f0b4259a2e1896dde81d2f43d6c6f1ee659d26d1a4185194b362019",
+      "exe_sha256": "ef4925fcfe9b860d1625c04509be8f7b5963432953969a2452929ef1fbd4c7f5",
+      "preview_count": 29,
+      "world_frame_count": 3,
+      "ingame_frames": 156,
+      "direct_review_frame": "runtime_world_lobster\\frame_002.png",
+      "direct_review_frame_sha256": "730d99789af371152dc1a419a9faeda6edf5f3ca340e04b930326f1d9bc73e71"
+    },
+    {
+      "id": "seahorse",
+      "context_sha256": "68651a35620af43288a031cfdd0ce0260364b2502048c5a245fd4bf4d52b4959",
+      "exe_sha256": "ef4925fcfe9b860d1625c04509be8f7b5963432953969a2452929ef1fbd4c7f5",
+      "preview_count": 29,
+      "world_frame_count": 3,
+      "ingame_frames": 120,
+      "direct_review_frame": "runtime_world_seahorse\\frame_002.png",
+      "direct_review_frame_sha256": "5d925a0f60728c904630e5f747be858961a01223eb91372deebaea5a95facf02"
+    }
+  ],
+  "sheet_sha256": "262012a74afb105a132bdb0a554f264f1d41891f5f222dca0061cc2011b51238"
+}

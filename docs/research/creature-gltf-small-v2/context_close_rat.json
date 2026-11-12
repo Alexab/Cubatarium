@@ -1,0 +1,22 @@
+{
+  "captured_at_utc": "2026-11-10T17:44:13.083198+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\gltf_small_v2\\models",
+  "files_sha256": {
+    "creatures\\rat\\creature.json": "ef7fd5bc6de1f7d0da342a537663afb2298e100b48ca81aa2cb801185c0ef478",
+    "creatures\\rat\\LICENSE.txt": "b51b10611019871ae9546c7ac04615a9f3bda1f1c3f9afc8d48dbb14895db8e0",
+    "creatures\\rat\\manifest.json": "b8e11581cfdd28bd619953420240a7dc6e5c6da3099d251a31f4c3064e01abd3",
+    "creatures\\rat\\model.bin": "42c53570dab76ca402d999cbfe0c12a5b9022a7421eb8e553d1d6d6aa0b1dda1",
+    "creatures\\rat\\model.gltf": "dd2631f6027fee1ec2e63f6c1dd5852d8550ff0d10a3aeb0d50719088c19085a",
+    "creatures\\rat\\textures\\body.png": "e53f7470d8c4663e2937cd4582caefd5e6159db8000892e04f1af7a575c047f6",
+    "creatures\\rat\\textures\\icon.png": "ed867e12f0ebcb580dfde23c6fc20b0f7988ec7b4be1e08363316c977581f687"
+  },
+  "exe_sha256": "fadab253954d19ec21264ffe4b84b821d483e6909947e97cc19726927ecc284e",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "close_rat",
+  "qa_camera": "close",
+  "performance_gate": "disabled"
+}

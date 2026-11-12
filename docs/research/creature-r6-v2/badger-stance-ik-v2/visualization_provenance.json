@@ -1,0 +1,16 @@
+{
+  "world_report_sha256": "8d9a39b598fb2eca84df69887fb8bbccebb106c37124e2fc74dfb7997e9b901e",
+  "native_frames": [
+    10,
+    15,
+    20,
+    25
+  ],
+  "crop": [
+    390,
+    215,
+    850,
+    510
+  ],
+  "scope": "Diagnostic plots and native crop only; no scene or texture edits"
+}

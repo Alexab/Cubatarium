@@ -75,7 +75,7 @@
     "default_texture": "body",
     "rigid_model": "rigid_model.json",
     "icon": {
-      "mode": "species_texture",
+      "mode": "parts_preview",
       "color": [
         0.24,
         0.47,

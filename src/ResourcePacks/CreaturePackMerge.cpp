@@ -5,6 +5,8 @@
 #include "Creatures/Visual/CreatureRigidModelLoader.h"
 #include "Creatures/Visual/CreatureMeshGpuCache.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
+#include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
+#include "Creatures/Visual/Gltf/CreatureGltfCache.h"
 
 #include <filesystem>
 
@@ -18,8 +20,12 @@ void ApplyCreaturePackOverlays(UCreatureDefinitionStorage &defs,
                                const std::filesystem::path &baseSkinsRoot,
                                const std::vector<ResourcePackManifest> &packs)
 {
-  defs.Load(baseCreaturesRoot.string());
+  // Invalidate before parsing: rigid parts are read into definitions during
+  // Load, and retained B/G visuals must observe the same content generation.
   CreatureRigidModelCache::Instance().Clear();
+  CreatureBoneSkeletonCache::Instance().SetCreaturesRoot(baseCreaturesRoot.string());
+  CreatureGltfCache::Instance().SetCreaturesRoot(baseCreaturesRoot.string());
+  defs.Load(baseCreaturesRoot.string());
   // Pack overlays can replace models: their content hashes differ, but the
   // replaced entries would stay cached until engine shutdown — clear the
   // GPU mesh cache alongside the rigid cache (audit V8).

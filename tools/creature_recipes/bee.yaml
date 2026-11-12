@@ -2,7 +2,7 @@ id: bee
 backend: bone_skeleton
 family: meadow
 authoring_source: cubatarium-recipe
-recipe_version: 1
+recipe_version: 2
 palette_id: meadow
 pattern: bands
 template: aerial
@@ -27,7 +27,7 @@ silhouette:
   wing: 0.65
 marks:
 - stripes
-selected_concept: primary
+selected_concept: familiar_species_authored_rig
 concepts:
 - id: primary
   body_scale:
@@ -48,3 +48,297 @@ concepts:
   - 1.34
   note: longer mass
 seed: 18092780886813212396
+surface_style: apian
+anatomy:
+  bones:
+  - name: body
+    parent: null
+    pivot:
+    - 0
+    - 5
+    - 0
+    cubes:
+    - name: abdomen
+      origin:
+      - -4
+      - 2
+      - 0
+      size:
+      - 8
+      - 6
+      - 5
+      role: body
+    - name: thorax
+      origin:
+      - -3
+      - 3
+      - -4
+      size:
+      - 6
+      - 5
+      - 4
+      role: body
+  - name: head
+    parent: body
+    pivot:
+    - 0
+    - 5
+    - -4
+    cubes:
+    - name: head
+      origin:
+      - -3
+      - 3
+      - -8
+      size:
+      - 6
+      - 5
+      - 4
+      role: face
+    - name: antenna_l
+      origin:
+      - -2.3
+      - 7.8
+      - -6.5
+      size:
+      - 1
+      - 2
+      - 1
+      role: mark
+    - name: antenna_r
+      origin:
+      - 1.3
+      - 7.8
+      - -6.5
+      size:
+      - 1
+      - 2
+      - 1
+      role: mark
+  - name: stinger
+    parent: body
+    pivot:
+    - 0
+    - 5
+    - 5
+    cubes:
+    - name: stinger
+      origin:
+      - -0.5
+      - 4.5
+      - 5
+      size:
+      - 1
+      - 1
+      - 2
+      role: mark
+  - name: rightwing_bone
+    parent: body
+    pivot:
+    - -3
+    - 7.1
+    - -1
+    cubes:
+    - name: wing_rightwing_bone_0
+      origin:
+      - -6
+      - 7.1
+      - -3
+      size:
+      - 3
+      - 1
+      - 5
+      role: wing
+    - name: wing_rightwing_bone_1
+      origin:
+      - -9
+      - 7.1
+      - -4
+      size:
+      - 3
+      - 1
+      - 7
+      role: wing
+    - name: wing_rightwing_bone_2
+      origin:
+      - -12
+      - 7.1
+      - -3
+      size:
+      - 3
+      - 1
+      - 5
+      role: wing
+  - name: leg_right0
+    parent: body
+    pivot:
+    - -3.5
+    - 3
+    - -3
+    cubes:
+    - name: leg_right0
+      origin:
+      - -4.5
+      - 0
+      - -3.5
+      size:
+      - 1
+      - 3
+      - 1
+      role: limb
+  - name: leg_right1
+    parent: body
+    pivot:
+    - -3.5
+    - 3
+    - 0
+    cubes:
+    - name: leg_right1
+      origin:
+      - -4.5
+      - 0
+      - -0.5
+      size:
+      - 1
+      - 3
+      - 1
+      role: limb
+  - name: leg_right2
+    parent: body
+    pivot:
+    - -3.5
+    - 3
+    - 3
+    cubes:
+    - name: leg_right2
+      origin:
+      - -4.5
+      - 0
+      - 2.5
+      size:
+      - 1
+      - 3
+      - 1
+      role: limb
+  - name: leftwing_bone
+    parent: body
+    pivot:
+    - 3
+    - 7.1
+    - -1
+    cubes:
+    - name: wing_leftwing_bone_0
+      origin:
+      - 3
+      - 7.1
+      - -3
+      size:
+      - 3
+      - 1
+      - 5
+      role: wing
+    - name: wing_leftwing_bone_1
+      origin:
+      - 6
+      - 7.1
+      - -4
+      size:
+      - 3
+      - 1
+      - 7
+      role: wing
+    - name: wing_leftwing_bone_2
+      origin:
+      - 9
+      - 7.1
+      - -3
+      size:
+      - 3
+      - 1
+      - 5
+      role: wing
+  - name: leg_left0
+    parent: body
+    pivot:
+    - 3.5
+    - 3
+    - -3
+    cubes:
+    - name: leg_left0
+      origin:
+      - 3.5
+      - 0
+      - -3.5
+      size:
+      - 1
+      - 3
+      - 1
+      role: limb
+  - name: leg_left1
+    parent: body
+    pivot:
+    - 3.5
+    - 3
+    - 0
+    cubes:
+    - name: leg_left1
+      origin:
+      - 3.5
+      - 0
+      - -0.5
+      size:
+      - 1
+      - 3
+      - 1
+      role: limb
+  - name: leg_left2
+    parent: body
+    pivot:
+    - 3.5
+    - 3
+    - 3
+    cubes:
+    - name: leg_left2
+      origin:
+      - 3.5
+      - 0
+      - 2.5
+      size:
+      - 1
+      - 3
+      - 1
+      role: limb
+palette_overrides:
+  body:
+  - 209
+  - 164
+  - 61
+  face:
+  - 224
+  - 180
+  - 78
+  wing:
+  - 183
+  - 207
+  - 196
+  belly:
+  - 173
+  - 130
+  - 48
+  limb:
+  - 66
+  - 48
+  - 28
+  mark:
+  - 66
+  - 45
+  - 25
+  accent:
+  - 109
+  - 77
+  - 35
+  eye:
+  - 24
+  - 30
+  - 28
+animation_profile: aerial

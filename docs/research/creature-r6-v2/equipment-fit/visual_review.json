@@ -1,0 +1,524 @@
+{
+  "schema": "creature-r6-equipment-visual-review.v1",
+  "reviewed_at_utc": "2026-11-11T12:01:24.699125+00:00",
+  "decision": "accepted_sampled_anatomical_equipment_fit",
+  "r6_final_acceptance": "pending",
+  "scope": "Six humanoid resources, three sets: selected detail/yaw/full-cycle sheets and actual world zombie. Not an individual review of all 9072 PNG, FP, save/reload, all states/routes, cache/root reload, culling, packaging or performance acceptance.",
+  "observations": [
+    "Helmet follows anatomical head; bot visor no longer flattens crown.",
+    "Torso/upper limbs/greaves have separate fitted hollow panels; own low-frequency limb atlases remain readable at narrow widths.",
+    "Both authored-origin grips lie in palms; source skeletons/creature textures/animations are unchanged.",
+    "Side and rear panels checked at eight yaw angles and opposite/max-clearance run phases; original inventory material isolated from worn atlas by full model path."
+  ],
+  "resources": [
+    {
+      "id": "human",
+      "material": "copper",
+      "decision": "accepted_sampled_fit",
+      "context": "docs/research/creature-r6-v2/equipment-fit/final/copper/context_candidate_catalog.json",
+      "exe_sha256": "d699089f4382a4001117ae82742e13949d561c0ee8563ac10f70a88ded597412",
+      "reviewed": [
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/copper/sheets/human_deepest_clearance.png",
+          "sha256": "76a197e6ff8bfc923e696179889d3d4f76ce8de365ba55f2b54d46776a5104a8",
+          "observation": "direct prior sheet, exact current PNG/pose parity",
+          "observed_source": {
+            "path": "docs/research/creature-r6-v2/equipment-fit/shell/copper/sheets/human_deepest_clearance.png",
+            "sha256": "76a197e6ff8bfc923e696179889d3d4f76ce8de365ba55f2b54d46776a5104a8"
+          },
+          "parity_proof": "docs/research/creature-r6-v2/equipment-fit/final/copper/prior_art_parity.json"
+        },
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/copper/sheets/human_views_all.png",
+          "sha256": "7ec8aff6ae543486d39a9dcc76662bf2737295cf7f558f430f0d327e0712dcd6",
+          "observation": "direct prior sheet, exact current PNG/pose parity",
+          "observed_source": {
+            "path": "docs/research/creature-r6-v2/equipment-fit/shell/copper/sheets/human_views_all.png",
+            "sha256": "7ec8aff6ae543486d39a9dcc76662bf2737295cf7f558f430f0d327e0712dcd6"
+          },
+          "parity_proof": "docs/research/creature-r6-v2/equipment-fit/final/copper/prior_art_parity.json"
+        },
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/copper/sheets/human_Run_1.5.png",
+          "sha256": "8b9373ea0d15ac0b0ec8be3a52b41925552fce5376c79bb590fb17a526fb90f0",
+          "observation": "direct prior sheet, exact current PNG/pose parity",
+          "observed_source": {
+            "path": "docs/research/creature-r6-v2/equipment-fit/shell/copper/sheets/human_Run_1.5.png",
+            "sha256": "8b9373ea0d15ac0b0ec8be3a52b41925552fce5376c79bb590fb17a526fb90f0"
+          },
+          "parity_proof": "docs/research/creature-r6-v2/equipment-fit/final/copper/prior_art_parity.json"
+        }
+      ]
+    },
+    {
+      "id": "bot",
+      "material": "copper",
+      "decision": "accepted_sampled_fit",
+      "context": "docs/research/creature-r6-v2/equipment-fit/final/copper/context_candidate_catalog.json",
+      "exe_sha256": "d699089f4382a4001117ae82742e13949d561c0ee8563ac10f70a88ded597412",
+      "reviewed": [
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/copper/sheets/bot_deepest_clearance.png",
+          "sha256": "f7f79c76f40f045e61a6adc8cf0861e4e1ece70e7233630b0adcc205c63b93b6",
+          "observation": "direct prior sheet, exact current PNG/pose parity",
+          "observed_source": {
+            "path": "docs/research/creature-r6-v2/equipment-fit/shell/copper/sheets/bot_deepest_clearance.png",
+            "sha256": "f7f79c76f40f045e61a6adc8cf0861e4e1ece70e7233630b0adcc205c63b93b6"
+          },
+          "parity_proof": "docs/research/creature-r6-v2/equipment-fit/final/copper/prior_art_parity.json"
+        },
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/copper/sheets/bot_views_all.png",
+          "sha256": "dc4a56b7698079fa097b8fd0c9f7b350cb2674ac974b6783c045c0e12994bb1e",
+          "observation": "direct prior sheet, exact current PNG/pose parity",
+          "observed_source": {
+            "path": "docs/research/creature-r6-v2/equipment-fit/shell/copper/sheets/bot_views_all.png",
+            "sha256": "dc4a56b7698079fa097b8fd0c9f7b350cb2674ac974b6783c045c0e12994bb1e"
+          },
+          "parity_proof": "docs/research/creature-r6-v2/equipment-fit/final/copper/prior_art_parity.json"
+        }
+      ]
+    },
+    {
+      "id": "zombie",
+      "material": "copper",
+      "decision": "accepted_sampled_fit",
+      "context": "docs/research/creature-r6-v2/equipment-fit/final/copper/context_candidate_catalog.json",
+      "exe_sha256": "d699089f4382a4001117ae82742e13949d561c0ee8563ac10f70a88ded597412",
+      "reviewed": [
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/copper/sheets/zombie_deepest_clearance.png",
+          "sha256": "477f4a70809c991092a421cc8b41e5d557f821a94eafc367af379c6fcf9c0cbd",
+          "observation": "direct prior sheet, exact current PNG/pose parity",
+          "observed_source": {
+            "path": "docs/research/creature-r6-v2/equipment-fit/shell/copper/sheets/zombie_deepest_clearance.png",
+            "sha256": "477f4a70809c991092a421cc8b41e5d557f821a94eafc367af379c6fcf9c0cbd"
+          },
+          "parity_proof": "docs/research/creature-r6-v2/equipment-fit/final/copper/prior_art_parity.json"
+        },
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/copper/sheets/zombie_views_all.png",
+          "sha256": "8b9865faf141b46dfe618c855ca6c881c59f2efae9145c534788274ed8be44ca",
+          "observation": "direct prior sheet, exact current PNG/pose parity",
+          "observed_source": {
+            "path": "docs/research/creature-r6-v2/equipment-fit/shell/copper/sheets/zombie_views_all.png",
+            "sha256": "8b9865faf141b46dfe618c855ca6c881c59f2efae9145c534788274ed8be44ca"
+          },
+          "parity_proof": "docs/research/creature-r6-v2/equipment-fit/final/copper/prior_art_parity.json"
+        }
+      ]
+    },
+    {
+      "id": "skeleton",
+      "material": "copper",
+      "decision": "accepted_sampled_fit",
+      "context": "docs/research/creature-r6-v2/equipment-fit/final/copper/context_candidate_catalog.json",
+      "exe_sha256": "d699089f4382a4001117ae82742e13949d561c0ee8563ac10f70a88ded597412",
+      "reviewed": [
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/copper/sheets/skeleton_deepest_clearance.png",
+          "sha256": "261c19141a930c77ca049f6d5c7123af55e89cc917706c500b1d9a4469a7b2e0",
+          "observation": "direct prior sheet, exact current PNG/pose parity",
+          "observed_source": {
+            "path": "docs/research/creature-r6-v2/equipment-fit/shell/copper/sheets/skeleton_deepest_clearance.png",
+            "sha256": "261c19141a930c77ca049f6d5c7123af55e89cc917706c500b1d9a4469a7b2e0"
+          },
+          "parity_proof": "docs/research/creature-r6-v2/equipment-fit/final/copper/prior_art_parity.json"
+        },
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/copper/sheets/skeleton_views_all.png",
+          "sha256": "238be321351068862e43e7b4a3959961fe24b6c9094c1185acb428a5a23441a9",
+          "observation": "direct prior sheet, exact current PNG/pose parity",
+          "observed_source": {
+            "path": "docs/research/creature-r6-v2/equipment-fit/shell/copper/sheets/skeleton_views_all.png",
+            "sha256": "238be321351068862e43e7b4a3959961fe24b6c9094c1185acb428a5a23441a9"
+          },
+          "parity_proof": "docs/research/creature-r6-v2/equipment-fit/final/copper/prior_art_parity.json"
+        },
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/copper/sheets/skeleton_Run_1.5.png",
+          "sha256": "b1d82fd2b3a09b22ffd6682d9919fe0bc09f114ea7cc14887a36d61197e80b32",
+          "observation": "direct prior sheet, exact current PNG/pose parity",
+          "observed_source": {
+            "path": "docs/research/creature-r6-v2/equipment-fit/shell/copper/sheets/skeleton_Run_1.5.png",
+            "sha256": "b1d82fd2b3a09b22ffd6682d9919fe0bc09f114ea7cc14887a36d61197e80b32"
+          },
+          "parity_proof": "docs/research/creature-r6-v2/equipment-fit/final/copper/prior_art_parity.json"
+        }
+      ]
+    },
+    {
+      "id": "human_adventurer",
+      "material": "copper",
+      "decision": "accepted_sampled_fit",
+      "context": "docs/research/creature-r6-v2/equipment-fit/final/copper/context_candidate_catalog.json",
+      "exe_sha256": "d699089f4382a4001117ae82742e13949d561c0ee8563ac10f70a88ded597412",
+      "reviewed": [
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/copper/sheets/human_adventurer_deepest_clearance.png",
+          "sha256": "8c57808b236d8093f1d2e28e5b635e7572726a330e90fd2ae4fc41be5ed42851",
+          "observation": "direct prior sheet, exact current PNG/pose parity",
+          "observed_source": {
+            "path": "docs/research/creature-r6-v2/equipment-fit/shell/copper/sheets/human_adventurer_deepest_clearance.png",
+            "sha256": "8c57808b236d8093f1d2e28e5b635e7572726a330e90fd2ae4fc41be5ed42851"
+          },
+          "parity_proof": "docs/research/creature-r6-v2/equipment-fit/final/copper/prior_art_parity.json"
+        },
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/copper/sheets/human_adventurer_views_all.png",
+          "sha256": "b40ee114e206d987130ada8765a9f7e71c3f0963187b13f1139d866f32dca439",
+          "observation": "direct prior sheet, exact current PNG/pose parity",
+          "observed_source": {
+            "path": "docs/research/creature-r6-v2/equipment-fit/shell/copper/sheets/human_adventurer_views_all.png",
+            "sha256": "b40ee114e206d987130ada8765a9f7e71c3f0963187b13f1139d866f32dca439"
+          },
+          "parity_proof": "docs/research/creature-r6-v2/equipment-fit/final/copper/prior_art_parity.json"
+        }
+      ]
+    },
+    {
+      "id": "human_guard",
+      "material": "copper",
+      "decision": "accepted_sampled_fit",
+      "context": "docs/research/creature-r6-v2/equipment-fit/final/copper/context_candidate_catalog.json",
+      "exe_sha256": "d699089f4382a4001117ae82742e13949d561c0ee8563ac10f70a88ded597412",
+      "reviewed": [
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/copper/sheets/human_guard_deepest_clearance.png",
+          "sha256": "77943041b15491ff7bcbe90ba70e72eef10e4f9e45fd98dd52463b24489ab988",
+          "observation": "direct prior sheet, exact current PNG/pose parity",
+          "observed_source": {
+            "path": "docs/research/creature-r6-v2/equipment-fit/shell/copper/sheets/human_guard_deepest_clearance.png",
+            "sha256": "77943041b15491ff7bcbe90ba70e72eef10e4f9e45fd98dd52463b24489ab988"
+          },
+          "parity_proof": "docs/research/creature-r6-v2/equipment-fit/final/copper/prior_art_parity.json"
+        },
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/copper/sheets/human_guard_views_all.png",
+          "sha256": "52239916d3897d70ee6947061032ac67e95fa377b4f2ac4dd9a1a112d3de35d4",
+          "observation": "direct prior sheet, exact current PNG/pose parity",
+          "observed_source": {
+            "path": "docs/research/creature-r6-v2/equipment-fit/shell/copper/sheets/human_guard_views_all.png",
+            "sha256": "52239916d3897d70ee6947061032ac67e95fa377b4f2ac4dd9a1a112d3de35d4"
+          },
+          "parity_proof": "docs/research/creature-r6-v2/equipment-fit/final/copper/prior_art_parity.json"
+        }
+      ]
+    },
+    {
+      "id": "human",
+      "material": "iron",
+      "decision": "accepted_sampled_fit",
+      "context": "docs/research/creature-r6-v2/equipment-fit/final/iron/context_candidate_catalog.json",
+      "exe_sha256": "d699089f4382a4001117ae82742e13949d561c0ee8563ac10f70a88ded597412",
+      "reviewed": [
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/iron/sheets/human_deepest_clearance.png",
+          "sha256": "6b5c0083c5ee406eed8235557dccb3cc66c203946da0ce139b0ecf6a39c145ea",
+          "observation": "direct current sheet inspection"
+        },
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/iron/sheets/human_views_all.png",
+          "sha256": "3e94d820c1fa3bcf2cd246588c7baded807379d1a46d2045cea0e555da36cd88",
+          "observation": "direct current sheet inspection"
+        },
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/iron/sheets/human_Run_1.5.png",
+          "sha256": "6424d559bd43bcb8e8139e382df236d29df5fc6fc052f99197cb9a35c2947b98",
+          "observation": "direct current sheet inspection"
+        }
+      ]
+    },
+    {
+      "id": "bot",
+      "material": "iron",
+      "decision": "accepted_sampled_fit",
+      "context": "docs/research/creature-r6-v2/equipment-fit/final/iron/context_candidate_catalog.json",
+      "exe_sha256": "d699089f4382a4001117ae82742e13949d561c0ee8563ac10f70a88ded597412",
+      "reviewed": [
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/iron/sheets/bot_deepest_clearance.png",
+          "sha256": "62d484f9604af6838f4806589c067ba305d0d601fea5c5807544e10c0ca7ca57",
+          "observation": "direct current sheet inspection"
+        },
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/iron/sheets/bot_views_all.png",
+          "sha256": "1b266842387c7032f04d5eb203fb0a98fa8499fcb59897d052e407123be0b997",
+          "observation": "direct current sheet inspection"
+        }
+      ]
+    },
+    {
+      "id": "zombie",
+      "material": "iron",
+      "decision": "accepted_sampled_fit",
+      "context": "docs/research/creature-r6-v2/equipment-fit/final/iron/context_candidate_catalog.json",
+      "exe_sha256": "d699089f4382a4001117ae82742e13949d561c0ee8563ac10f70a88ded597412",
+      "reviewed": [
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/iron/sheets/zombie_deepest_clearance.png",
+          "sha256": "edc9ac72ddcede187b26002fa3f86a246d6025203a272f252e01a30af3992932",
+          "observation": "direct current sheet inspection"
+        },
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/iron/sheets/zombie_views_all.png",
+          "sha256": "f2804a397f8461d507577a1774216ae22f439ff68a36787899d485eb14600d49",
+          "observation": "direct current sheet inspection"
+        }
+      ]
+    },
+    {
+      "id": "skeleton",
+      "material": "iron",
+      "decision": "accepted_sampled_fit",
+      "context": "docs/research/creature-r6-v2/equipment-fit/final/iron/context_candidate_catalog.json",
+      "exe_sha256": "d699089f4382a4001117ae82742e13949d561c0ee8563ac10f70a88ded597412",
+      "reviewed": [
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/iron/sheets/skeleton_deepest_clearance.png",
+          "sha256": "cd4cff2f3a348745b6054cf2f2bab7e8b3e08532094fe7b690a468eb170969f4",
+          "observation": "direct current sheet inspection"
+        },
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/iron/sheets/skeleton_views_all.png",
+          "sha256": "6ca89fa8b78440d104a271f5c7f6cf01dd87786933f05accde3ed160f76d9238",
+          "observation": "direct current sheet inspection"
+        },
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/iron/sheets/skeleton_Run_1.5.png",
+          "sha256": "1cb3658f5a623a958c9e3eb9e671d534eb10d1b9c382f912f0dfcc68649851ed",
+          "observation": "direct current sheet inspection"
+        }
+      ]
+    },
+    {
+      "id": "human_adventurer",
+      "material": "iron",
+      "decision": "accepted_sampled_fit",
+      "context": "docs/research/creature-r6-v2/equipment-fit/final/iron/context_candidate_catalog.json",
+      "exe_sha256": "d699089f4382a4001117ae82742e13949d561c0ee8563ac10f70a88ded597412",
+      "reviewed": [
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/iron/sheets/human_adventurer_deepest_clearance.png",
+          "sha256": "5702675c460517b801c8f618ac9fa1aede0bca69c4d15609e34a0842bd4f86a8",
+          "observation": "direct current sheet inspection"
+        },
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/iron/sheets/human_adventurer_views_all.png",
+          "sha256": "e11f6e29457031f1c0c6548e68cd4a16cdebe2c468d531479b2389cbb4eeac7d",
+          "observation": "direct current sheet inspection"
+        }
+      ]
+    },
+    {
+      "id": "human_guard",
+      "material": "iron",
+      "decision": "accepted_sampled_fit",
+      "context": "docs/research/creature-r6-v2/equipment-fit/final/iron/context_candidate_catalog.json",
+      "exe_sha256": "d699089f4382a4001117ae82742e13949d561c0ee8563ac10f70a88ded597412",
+      "reviewed": [
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/iron/sheets/human_guard_deepest_clearance.png",
+          "sha256": "750d9b89cc42a2925b34687b5daa9c139d7b80c97e078dec7564ee18132de7ec",
+          "observation": "direct current sheet inspection"
+        },
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/iron/sheets/human_guard_views_all.png",
+          "sha256": "8deae2f2e75224ba46348b9355fc37de82bfbd945f60d7813c856ba9aa6c2a0f",
+          "observation": "direct current sheet inspection"
+        }
+      ]
+    },
+    {
+      "id": "human",
+      "material": "leather",
+      "decision": "accepted_sampled_fit",
+      "context": "docs/research/creature-r6-v2/equipment-fit/final/leather/context_candidate_catalog.json",
+      "exe_sha256": "d699089f4382a4001117ae82742e13949d561c0ee8563ac10f70a88ded597412",
+      "reviewed": [
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/leather/sheets/human_deepest_clearance.png",
+          "sha256": "5cc497b9720b050c32d8242576721740254c93a8903b737e0303778634d2d52a",
+          "observation": "direct current sheet inspection"
+        },
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/leather/sheets/human_views_all.png",
+          "sha256": "5fe012f53281ad10d4b8fd276b14b5f09b5ba5e96ff32eeca02c2ce16889cde7",
+          "observation": "direct current sheet inspection"
+        },
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/leather/sheets/human_Run_1.5.png",
+          "sha256": "3fbe228af2224970b6d25d3995777ab1de5b6f3503cf3e9da8cc91a2cea4d7d8",
+          "observation": "direct current sheet inspection"
+        }
+      ]
+    },
+    {
+      "id": "bot",
+      "material": "leather",
+      "decision": "accepted_sampled_fit",
+      "context": "docs/research/creature-r6-v2/equipment-fit/final/leather/context_candidate_catalog.json",
+      "exe_sha256": "d699089f4382a4001117ae82742e13949d561c0ee8563ac10f70a88ded597412",
+      "reviewed": [
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/leather/sheets/bot_deepest_clearance.png",
+          "sha256": "77e2b3059ee3ad85b8f80e24a4cc7863dbdda0c0515a074163120c71c0458c2f",
+          "observation": "direct current sheet inspection"
+        },
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/leather/sheets/bot_views_all.png",
+          "sha256": "eb83ba559e9b089769b72368fc1ebbaecb6dec4b3f08bfeea86137241bf435d2",
+          "observation": "direct current sheet inspection"
+        }
+      ]
+    },
+    {
+      "id": "zombie",
+      "material": "leather",
+      "decision": "accepted_sampled_fit",
+      "context": "docs/research/creature-r6-v2/equipment-fit/final/leather/context_candidate_catalog.json",
+      "exe_sha256": "d699089f4382a4001117ae82742e13949d561c0ee8563ac10f70a88ded597412",
+      "reviewed": [
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/leather/sheets/zombie_deepest_clearance.png",
+          "sha256": "1b2dd99dddab2f72d329f36ec3a0886d379b9f7fec536f8c4e78435037cce3a8",
+          "observation": "direct current sheet inspection"
+        },
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/leather/sheets/zombie_views_all.png",
+          "sha256": "1c1f149be8badd3907244bed42ce6656266f6ee7cfa06e6b9a79b62afda14f86",
+          "observation": "direct current sheet inspection"
+        }
+      ]
+    },
+    {
+      "id": "skeleton",
+      "material": "leather",
+      "decision": "accepted_sampled_fit",
+      "context": "docs/research/creature-r6-v2/equipment-fit/final/leather/context_candidate_catalog.json",
+      "exe_sha256": "d699089f4382a4001117ae82742e13949d561c0ee8563ac10f70a88ded597412",
+      "reviewed": [
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/leather/sheets/skeleton_deepest_clearance.png",
+          "sha256": "e8a6d3e2bb4fba6c21421bbec53d09bd5b2e045e521e6b5fdeee8097adf1ee4b",
+          "observation": "direct current sheet inspection"
+        },
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/leather/sheets/skeleton_views_all.png",
+          "sha256": "6ae680e8a22e265638d086ee1cc776c77013edc17ef0db52fe09f5439f445d7e",
+          "observation": "direct current sheet inspection"
+        },
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/leather/sheets/skeleton_Run_1.5.png",
+          "sha256": "d8a5ed52b70ad60e97faf59f8dd3462b707f6b4aff137c7be368b8981230b09d",
+          "observation": "direct current sheet inspection"
+        }
+      ]
+    },
+    {
+      "id": "human_adventurer",
+      "material": "leather",
+      "decision": "accepted_sampled_fit",
+      "context": "docs/research/creature-r6-v2/equipment-fit/final/leather/context_candidate_catalog.json",
+      "exe_sha256": "d699089f4382a4001117ae82742e13949d561c0ee8563ac10f70a88ded597412",
+      "reviewed": [
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/leather/sheets/human_adventurer_deepest_clearance.png",
+          "sha256": "5751f21291b87458374a734ab66824bba9a63a5660e64006606eeff26e88f68a",
+          "observation": "direct current sheet inspection"
+        },
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/leather/sheets/human_adventurer_views_all.png",
+          "sha256": "414efc8007c3c167963f41b3b32a0ef5b4c0434137590e5ae5f9d4908a46efe3",
+          "observation": "direct current sheet inspection"
+        }
+      ]
+    },
+    {
+      "id": "human_guard",
+      "material": "leather",
+      "decision": "accepted_sampled_fit",
+      "context": "docs/research/creature-r6-v2/equipment-fit/final/leather/context_candidate_catalog.json",
+      "exe_sha256": "d699089f4382a4001117ae82742e13949d561c0ee8563ac10f70a88ded597412",
+      "reviewed": [
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/leather/sheets/human_guard_deepest_clearance.png",
+          "sha256": "9363d1497650081e3470473444492f5009ff0194445b9abb85d05fb88eca4171",
+          "observation": "direct current sheet inspection"
+        },
+        {
+          "path": "docs/research/creature-r6-v2/equipment-fit/final/leather/sheets/human_guard_views_all.png",
+          "sha256": "6e794b5e135d2df6deaac0e22c9803da09c6509460daf195b9d684521309d4a7",
+          "observation": "direct current sheet inspection"
+        }
+      ]
+    }
+  ],
+  "additional_direct_held_only_sheets": [
+    {
+      "path": "docs/research/creature-r6-v2/equipment-fit/final/copper/sheets/human_views_main.png",
+      "sha256": "73c673ef2c3f88c805287dfb5cc16d6e4c94ec2190b185b2bf78cff2720ac4ff"
+    },
+    {
+      "path": "docs/research/creature-r6-v2/equipment-fit/final/copper/sheets/human_views_off.png",
+      "sha256": "2c3e2b787c4dbc11246f4a17c87b74b6caed8c3d40cd01209963910f1d1a9e06"
+    },
+    {
+      "path": "docs/research/creature-r6-v2/equipment-fit/final/copper/sheets/skeleton_views_main.png",
+      "sha256": "c64fcc9fb9269972cb4fee3ff07d3859c9c37368739f55184e78a7e08c59c8c3"
+    },
+    {
+      "path": "docs/research/creature-r6-v2/equipment-fit/final/copper/sheets/skeleton_views_off.png",
+      "sha256": "32d2d694f93134c0edcf49993b8cd0e682d029c52c4f7deab7423b6f7ba602e2"
+    }
+  ],
+  "world": [
+    {
+      "species": "zombie",
+      "material": "copper",
+      "observation": "direct current frame inspection; one actual Qa actor only",
+      "frame": {
+        "path": "docs/research/creature-r6-v2/equipment-fit/final/copper/runtime_candidate_catalog/frame_002.png",
+        "sha256": "7b25e4901e57567ffc9d6a91f9b2cc4f720d3c0fccc7ad37d052fe3d46b18f06"
+      },
+      "inventory": {
+        "path": "docs/research/creature-r6-v2/equipment-fit/final/copper/runtime_candidate_catalog/qa_equipment_inventory.json",
+        "sha256": "b410649891c90aca100bf1e5a059224aacf129065b160f557cf495704bf067f5"
+      }
+    },
+    {
+      "species": "zombie",
+      "material": "iron",
+      "observation": "direct current frame inspection; one actual Qa actor only",
+      "frame": {
+        "path": "docs/research/creature-r6-v2/equipment-fit/final/iron/runtime_candidate_catalog/frame_002.png",
+        "sha256": "5cec527a55d1ab88df01e252c00c6641079a4b0f912f23d0b3b4437a764140a0"
+      },
+      "inventory": {
+        "path": "docs/research/creature-r6-v2/equipment-fit/final/iron/runtime_candidate_catalog/qa_equipment_inventory.json",
+        "sha256": "804438ae191bd186db2f6336e91527663916f4467956fd324ea4bbb8e0b9e634"
+      }
+    },
+    {
+      "species": "zombie",
+      "material": "leather",
+      "observation": "direct current frame inspection; one actual Qa actor only",
+      "frame": {
+        "path": "docs/research/creature-r6-v2/equipment-fit/final/leather/runtime_candidate_catalog/frame_002.png",
+        "sha256": "32b51a41e65fc5bb619c68c568ec25d00f2c5fda6a1588758655c26a7fee01a8"
+      },
+      "inventory": {
+        "path": "docs/research/creature-r6-v2/equipment-fit/final/leather/runtime_candidate_catalog/qa_equipment_inventory.json",
+        "sha256": "fbe380857f8479a3e7ec61089808661a484a8b6b1dc4aa8ab7919b1e65cf39a6"
+      }
+    }
+  ],
+  "comparison": {
+    "path": "docs/research/creature-r6-v2/equipment-fit/comparison.png",
+    "sha256": "effecd5a6bbbe3010dc8f20c3c6680a821e23532d847ae064ad0432f9481c373"
+  },
+  "body_invariance": {
+    "path": "docs/research/creature-r6-v2/equipment-fit/final/body_parity.json",
+    "sha256": "2d48d150471cf69ce8600a830a931a4673c53f26980ee76b54894735612ea750"
+  }
+}

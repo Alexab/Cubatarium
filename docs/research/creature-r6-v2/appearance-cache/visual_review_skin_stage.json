@@ -1,0 +1,21 @@
+{
+  "schema": "creature-appearance-cache-visual-parity-review.v1",
+  "reviewed_at_utc": "2026-11-11T13:13:08.689383+00:00",
+  "decision": "inherited_sampled_art_via_exact_rgba",
+  "r6_final_acceptance": "pending",
+  "exe_sha256": "ea27f4b303b32dc38aa70f40f27f06025f8b2a73cc58e820cd66a3cbd77dbc4d",
+  "scope": "5290 exact preview RGBA preserve prior sampled body/equipment art observations. Directly inspected one world wolf frame. No full state/route/FP/save/performance acceptance.",
+  "parity_report": "skin_body_parity.json",
+  "parity_sha256": "375c7c294defca58f2f2e557909ca45e4fd8dd08906c2e4e73076aaf92d52f92",
+  "previous_art": [
+    "../bone-motion/visual_review.json",
+    "../equipment-fit/visual_review.json"
+  ],
+  "direct_world_frame": {
+    "path": "runtime_skin_catalog/frame_002.png",
+    "sha256": "ac42ab571fbb231f2e7a20ca245f1eeb7f996f699c28316b45d5ebe2dbb1b693",
+    "observation": "Recognizable wolf side/front body on beach; expected own texture and limb placement, no obvious missing mesh. Single frame does not establish full gait/contact/terrain acceptance."
+  },
+  "mesh_audit": "resource_cache_audit.json",
+  "skin_audit": "skin_ownership_audit.json"
+}

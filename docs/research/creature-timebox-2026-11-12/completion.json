@@ -1,0 +1,11 @@
+{
+  "status": "complete_bounded_scope",
+  "started_at_utc": "2026-11-12T07:27:24+00:00",
+  "completed_at_utc": "2026-11-12T08:28:50+00:00",
+  "elapsed_minutes": 61.43,
+  "timebox_minutes": 90,
+  "species": 56,
+  "skins": 5,
+  "full_r6_complete": false,
+  "remaining_work": "Explicitly excluded by user and documented in CREATURE_RELEASE_BACKLOG_2026-11-12_RU.md"
+}

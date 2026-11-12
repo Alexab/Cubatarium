@@ -1,0 +1,46 @@
+{
+  "captured_at_utc": "2026-11-11T19:02:33.060578+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\envelope_motion_v4\\models",
+  "files_sha256": {
+    "creatures\\lobster\\creature.json": "57daa5fccdde3217ea517446a47f940970a27fb0c9c7776f3114c69065aedbf1",
+    "creatures\\lobster\\LICENSE.txt": "4da2b1982a864f2c2eae074a37b13b44b83df3d25669dd07c2c9f5fe70c8a53a",
+    "creatures\\lobster\\model.bin": "f6027bc70df05af1a36518e1ab1f61a4ac8819f3fc4f235ac68ca415608be675",
+    "creatures\\lobster\\model.gltf": "2696980bdac47a143a4f8fd6d2fb0f6ba92cbcbdc9c3504dd33483156c82c574",
+    "creatures\\lobster\\textures\\body.png": "dea26457e1f5413a1da2649ccf24da54adb50f6b16561c66f2912eebe8b3871e",
+    "creatures\\lobster\\textures\\icon.png": "86ca59e0b25d03670d2cef49c9160533c848a99a535ec75b55b5c2a2f9560c17"
+  },
+  "qa_models_override": true,
+  "exe_sha256": "ef4925fcfe9b860d1625c04509be8f7b5963432953969a2452929ef1fbd4c7f5",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "world_lobster",
+  "qa_camera": "close",
+  "native_matrix": false,
+  "native_equipment_matrix": false,
+  "native_equipment_texture_probe": false,
+  "native_resource_cache_probe": false,
+  "native_resource_reload_probe": false,
+  "native_fp_matrix": false,
+  "native_save_probe": false,
+  "native_envelope_variant": null,
+  "native_transition_probe": false,
+  "envelope_profile_sha256": null,
+  "fp_shaders_sha256": {},
+  "equipment_material": "copper",
+  "world_gear_fixture": false,
+  "equipment_files_sha256": {},
+  "world_species": [
+    "lobster"
+  ],
+  "preview_species": [
+    "lobster"
+  ],
+  "qa_water_placement": true,
+  "qa_lava_fixture": false,
+  "world": "World_254",
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

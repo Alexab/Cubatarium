@@ -1,0 +1,461 @@
+{
+  "passed": true,
+  "scope": "Own refit invariants, sampled floor/joint-centre attachment and translation fault injection; not surface watertightness, world terrain, stride or artistic acceptance",
+  "joints": 51,
+  "bind_nodes_refit": [
+    "lower_left0",
+    "foot_left0",
+    "lower_left1",
+    "foot_left1",
+    "lower_left2",
+    "foot_left2",
+    "lower_left3",
+    "foot_left3",
+    "moving_finger_left",
+    "lower_right0",
+    "foot_right0",
+    "lower_right1",
+    "foot_right1",
+    "lower_right2",
+    "foot_right2",
+    "lower_right3",
+    "foot_right3",
+    "moving_finger_right"
+  ],
+  "angular_channels_byte_exact": 90,
+  "all_names_parents_channel_targets_and_key_times_preserved": true,
+  "bind_identity_max_error": 2.622604367008563e-08,
+  "changed_translation_channels": [
+    {
+      "clip": "idle",
+      "bone": "foot_left0"
+    },
+    {
+      "clip": "idle",
+      "bone": "foot_left1"
+    },
+    {
+      "clip": "idle",
+      "bone": "foot_left2"
+    },
+    {
+      "clip": "idle",
+      "bone": "foot_left3"
+    },
+    {
+      "clip": "idle",
+      "bone": "foot_right0"
+    },
+    {
+      "clip": "idle",
+      "bone": "foot_right1"
+    },
+    {
+      "clip": "idle",
+      "bone": "foot_right2"
+    },
+    {
+      "clip": "idle",
+      "bone": "foot_right3"
+    },
+    {
+      "clip": "walk",
+      "bone": "foot_left0"
+    },
+    {
+      "clip": "walk",
+      "bone": "foot_left1"
+    },
+    {
+      "clip": "walk",
+      "bone": "foot_left2"
+    },
+    {
+      "clip": "walk",
+      "bone": "foot_left3"
+    },
+    {
+      "clip": "walk",
+      "bone": "foot_right0"
+    },
+    {
+      "clip": "walk",
+      "bone": "foot_right1"
+    },
+    {
+      "clip": "walk",
+      "bone": "foot_right2"
+    },
+    {
+      "clip": "walk",
+      "bone": "foot_right3"
+    },
+    {
+      "clip": "die",
+      "bone": "body"
+    }
+  ],
+  "foot_joint_y_max_error_blocks": 2.1335365954300302e-05,
+  "body_root_y_max_error_blocks": 0.0,
+  "attachment_sections": 18,
+  "attachment_center_max_error_blocks": 5.9604645526338425e-09,
+  "fault_old_translation_regression_blocks": 0.07500000000000002,
+  "contact_257": {
+    "idle": {
+      "semantics": "authored_ground_contact",
+      "sample_count": 257,
+      "min_geometry_y_blocks": -1e-06,
+      "max_min_geometry_y_blocks": 0.0,
+      "owned_effectors": {
+        "foot_left0": {
+          "min_y_blocks": -1e-06,
+          "max_min_y_blocks": 0.003
+        },
+        "foot_left1": {
+          "min_y_blocks": -1e-06,
+          "max_min_y_blocks": 0.003
+        },
+        "foot_left2": {
+          "min_y_blocks": -1e-06,
+          "max_min_y_blocks": 0.003
+        },
+        "foot_left3": {
+          "min_y_blocks": -1e-06,
+          "max_min_y_blocks": 0.003
+        },
+        "foot_right0": {
+          "min_y_blocks": -1e-06,
+          "max_min_y_blocks": 0.003
+        },
+        "foot_right1": {
+          "min_y_blocks": -1e-06,
+          "max_min_y_blocks": 0.003
+        },
+        "foot_right2": {
+          "min_y_blocks": -1e-06,
+          "max_min_y_blocks": 0.003
+        },
+        "foot_right3": {
+          "min_y_blocks": -1e-06,
+          "max_min_y_blocks": 0.003
+        }
+      }
+    },
+    "walk": {
+      "semantics": "authored_ground_contact",
+      "sample_count": 257,
+      "min_geometry_y_blocks": -5e-05,
+      "max_min_geometry_y_blocks": 0.0,
+      "owned_effectors": {
+        "foot_left0": {
+          "min_y_blocks": -5e-05,
+          "max_min_y_blocks": 0.0225
+        },
+        "foot_left1": {
+          "min_y_blocks": -5e-05,
+          "max_min_y_blocks": 0.0225
+        },
+        "foot_left2": {
+          "min_y_blocks": -5e-05,
+          "max_min_y_blocks": 0.0225
+        },
+        "foot_left3": {
+          "min_y_blocks": -5e-05,
+          "max_min_y_blocks": 0.0225
+        },
+        "foot_right0": {
+          "min_y_blocks": -5e-05,
+          "max_min_y_blocks": 0.0225
+        },
+        "foot_right1": {
+          "min_y_blocks": -5e-05,
+          "max_min_y_blocks": 0.0225
+        },
+        "foot_right2": {
+          "min_y_blocks": -5e-05,
+          "max_min_y_blocks": 0.0225
+        },
+        "foot_right3": {
+          "min_y_blocks": -5e-05,
+          "max_min_y_blocks": 0.0225
+        }
+      }
+    },
+    "punch": {
+      "semantics": "authored_ground_contact",
+      "sample_count": 257,
+      "min_geometry_y_blocks": -0.0,
+      "max_min_geometry_y_blocks": 0.0,
+      "owned_effectors": {
+        "foot_left0": {
+          "min_y_blocks": 0.0,
+          "max_min_y_blocks": 0.071822
+        },
+        "foot_left1": {
+          "min_y_blocks": 0.0,
+          "max_min_y_blocks": 0.047882
+        },
+        "foot_left2": {
+          "min_y_blocks": 0.0,
+          "max_min_y_blocks": 0.023941
+        },
+        "foot_left3": {
+          "min_y_blocks": -0.0,
+          "max_min_y_blocks": 0.0
+        },
+        "foot_right0": {
+          "min_y_blocks": 0.0,
+          "max_min_y_blocks": 0.071822
+        },
+        "foot_right1": {
+          "min_y_blocks": 0.0,
+          "max_min_y_blocks": 0.047882
+        },
+        "foot_right2": {
+          "min_y_blocks": 0.0,
+          "max_min_y_blocks": 0.023941
+        },
+        "foot_right3": {
+          "min_y_blocks": -0.0,
+          "max_min_y_blocks": 0.0
+        }
+      }
+    },
+    "die": {
+      "semantics": "authored_ground_contact",
+      "sample_count": 257,
+      "min_geometry_y_blocks": -0.000243,
+      "max_min_geometry_y_blocks": 0.0,
+      "owned_effectors": {
+        "body": {
+          "min_y_blocks": 0.07125,
+          "max_min_y_blocks": 0.250551
+        },
+        "head": {
+          "min_y_blocks": 0.1,
+          "max_min_y_blocks": 0.280862
+        },
+        "eye_left": {
+          "min_y_blocks": 0.175,
+          "max_min_y_blocks": 0.325958
+        },
+        "mandible_left": {
+          "min_y_blocks": 0.0875,
+          "max_min_y_blocks": 0.312488
+        },
+        "antenna_base_left": {
+          "min_y_blocks": 0.175,
+          "max_min_y_blocks": 0.326102
+        },
+        "antenna_tip_left": {
+          "min_y_blocks": 0.18125,
+          "max_min_y_blocks": 0.284133
+        },
+        "upper_left0": {
+          "min_y_blocks": 0.11875,
+          "max_min_y_blocks": 0.273166
+        },
+        "lower_left0": {
+          "min_y_blocks": 0.127835,
+          "max_min_y_blocks": 0.228474
+        },
+        "foot_left0": {
+          "min_y_blocks": -0.000243,
+          "max_min_y_blocks": 0.0
+        },
+        "upper_left1": {
+          "min_y_blocks": 0.11875,
+          "max_min_y_blocks": 0.27549
+        },
+        "lower_left1": {
+          "min_y_blocks": 0.130377,
+          "max_min_y_blocks": 0.229859
+        },
+        "foot_left1": {
+          "min_y_blocks": -0.000243,
+          "max_min_y_blocks": 0.0
+        },
+        "upper_left2": {
+          "min_y_blocks": 0.11875,
+          "max_min_y_blocks": 0.27549
+        },
+        "lower_left2": {
+          "min_y_blocks": 0.130377,
+          "max_min_y_blocks": 0.229859
+        },
+        "foot_left2": {
+          "min_y_blocks": -0.000243,
+          "max_min_y_blocks": 0.0
+        },
+        "upper_left3": {
+          "min_y_blocks": 0.11875,
+          "max_min_y_blocks": 0.273166
+        },
+        "lower_left3": {
+          "min_y_blocks": 0.127835,
+          "max_min_y_blocks": 0.228474
+        },
+        "foot_left3": {
+          "min_y_blocks": -0.000243,
+          "max_min_y_blocks": 0.0
+        },
+        "claw_upper_left": {
+          "min_y_blocks": 0.1125,
+          "max_min_y_blocks": 0.257995
+        },
+        "forearm_left": {
+          "min_y_blocks": 0.1125,
+          "max_min_y_blocks": 0.193389
+        },
+        "palm_left": {
+          "min_y_blocks": 0.003054,
+          "max_min_y_blocks": 0.0875
+        },
+        "moving_finger_left": {
+          "min_y_blocks": 0.026984,
+          "max_min_y_blocks": 0.102713
+        },
+        "eye_right": {
+          "min_y_blocks": 0.175,
+          "max_min_y_blocks": 0.413758
+        },
+        "mandible_right": {
+          "min_y_blocks": 0.0875,
+          "max_min_y_blocks": 0.36061
+        },
+        "antenna_base_right": {
+          "min_y_blocks": 0.175,
+          "max_min_y_blocks": 0.413914
+        },
+        "antenna_tip_right": {
+          "min_y_blocks": 0.18125,
+          "max_min_y_blocks": 0.441837
+        },
+        "upper_right0": {
+          "min_y_blocks": 0.11875,
+          "max_min_y_blocks": 0.437568
+        },
+        "lower_right0": {
+          "min_y_blocks": 0.19375,
+          "max_min_y_blocks": 0.579485
+        },
+        "foot_right0": {
+          "min_y_blocks": 0.0,
+          "max_min_y_blocks": 0.624619
+        },
+        "upper_right1": {
+          "min_y_blocks": 0.11875,
+          "max_min_y_blocks": 0.440017
+        },
+        "lower_right1": {
+          "min_y_blocks": 0.19375,
+          "max_min_y_blocks": 0.581878
+        },
+        "foot_right1": {
+          "min_y_blocks": 0.0,
+          "max_min_y_blocks": 0.624619
+        },
+        "upper_right2": {
+          "min_y_blocks": 0.11875,
+          "max_min_y_blocks": 0.440017
+        },
+        "lower_right2": {
+          "min_y_blocks": 0.19375,
+          "max_min_y_blocks": 0.581878
+        },
+        "foot_right2": {
+          "min_y_blocks": 0.0,
+          "max_min_y_blocks": 0.624619
+        },
+        "upper_right3": {
+          "min_y_blocks": 0.11875,
+          "max_min_y_blocks": 0.437568
+        },
+        "lower_right3": {
+          "min_y_blocks": 0.19375,
+          "max_min_y_blocks": 0.579485
+        },
+        "foot_right3": {
+          "min_y_blocks": 0.0,
+          "max_min_y_blocks": 0.624619
+        },
+        "claw_upper_right": {
+          "min_y_blocks": 0.1125,
+          "max_min_y_blocks": 0.422567
+        },
+        "forearm_right": {
+          "min_y_blocks": 0.1125,
+          "max_min_y_blocks": 0.495098
+        },
+        "palm_right": {
+          "min_y_blocks": 0.0875,
+          "max_min_y_blocks": 0.507389
+        },
+        "moving_finger_right": {
+          "min_y_blocks": 0.1,
+          "max_min_y_blocks": 0.596542
+        },
+        "tail0": {
+          "min_y_blocks": 0.1125,
+          "max_min_y_blocks": 0.262725
+        },
+        "tail1": {
+          "min_y_blocks": 0.1125,
+          "max_min_y_blocks": 0.274144
+        },
+        "tail2": {
+          "min_y_blocks": 0.125,
+          "max_min_y_blocks": 0.290648
+        },
+        "tail3": {
+          "min_y_blocks": 0.125,
+          "max_min_y_blocks": 0.302067
+        },
+        "tail4": {
+          "min_y_blocks": 0.1375,
+          "max_min_y_blocks": 0.318571
+        },
+        "tail5": {
+          "min_y_blocks": 0.1375,
+          "max_min_y_blocks": 0.32999
+        },
+        "telson": {
+          "min_y_blocks": 0.15,
+          "max_min_y_blocks": 0.335286
+        },
+        "uropod_left": {
+          "min_y_blocks": 0.15,
+          "max_min_y_blocks": 0.260055
+        },
+        "uropod_right": {
+          "min_y_blocks": 0.15,
+          "max_min_y_blocks": 0.392171
+        }
+      }
+    }
+  },
+  "before_geometry": {
+    "triangles": 672,
+    "min_triangle_area": 0.0004687494656536728,
+    "constant_uv_triangles": 320,
+    "model_texel_density_p05": 0.0,
+    "model_texel_density_median": 9.0453817954291
+  },
+  "candidate_geometry": {
+    "triangles": 672,
+    "min_triangle_area": 0.0004687494656536728,
+    "constant_uv_triangles": 128,
+    "model_texel_density_p05": 0.0,
+    "model_texel_density_median": 13.943317908510718
+  },
+  "source_recipe_sha256": "4951d839379531b121533479c07db58dd138ff46aaa2dd93db1d26187150f69f",
+  "candidate_recipe_sha256": "4d5d657759cfb41dff60e9fcfb61d4803e33603873f1e4caeff487627beecd9d",
+  "payload_sha256": {
+    "creature.json": "57daa5fccdde3217ea517446a47f940970a27fb0c9c7776f3114c69065aedbf1",
+    "LICENSE.txt": "4da2b1982a864f2c2eae074a37b13b44b83df3d25669dd07c2c9f5fe70c8a53a",
+    "model.bin": "14b94d7dda53db436900af2c8e6d2410a0fced1ef30c051d802ba02deb354d13",
+    "model.gltf": "3a351126dc4505cbf0e18749edd579d8a5630235194cfa8178efb970882b7504",
+    "textures\\body.png": "072a91acfb9e34c3893e60149df2174d029cdbf010645aaf94a88a2a4ae979f1",
+    "textures\\icon.png": "5da9b190eed70ba306a35b56d2457d354e7752a550e7c4947db3a4ea632942d4"
+  }
+}

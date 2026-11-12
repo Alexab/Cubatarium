@@ -1,0 +1,47 @@
+{
+  "captured_at_utc": "2026-11-11T21:50:45.705229+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\penguin_belly_v2\\models",
+  "files_sha256": {
+    "creatures\\penguin\\creature.json": "3d175d036833d74657173bf4cedf704f6002179280008be352a84568305d5d83",
+    "creatures\\penguin\\LICENSE.txt": "236d88332f317db9be8e6949940e931c3b5972d852ff269eb87e0a78e6e22def",
+    "creatures\\penguin\\model.bin": "59efe9ebf9a07cf27977791685a81758d7570f04dfcc03b55a04e8cb16a7bace",
+    "creatures\\penguin\\model.gltf": "6bcf70d7a8e681ee5132171890ad20231d844795d20b558173dd92b463dfb7c0",
+    "creatures\\penguin\\textures\\body.png": "0c8e0e66b0541ac58949484c98bc14bd82383757c9f67b413ef2d22ee240c706",
+    "creatures\\penguin\\textures\\icon.png": "8d92e959d3ea45e580fb3d8c810b49a7e749f8d2c9e8b7c9a5479d7bd3e123d9"
+  },
+  "qa_models_override": true,
+  "exe_sha256": "26f7f77d36a7ab28661db03ae468c309ae1f08ca9303ad59d4189bf41758b2aa",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "envelope_current",
+  "qa_camera": "close",
+  "native_matrix": false,
+  "native_equipment_matrix": false,
+  "native_equipment_texture_probe": false,
+  "native_resource_cache_probe": false,
+  "native_resource_reload_probe": false,
+  "native_fp_matrix": false,
+  "native_save_probe": false,
+  "native_envelope_variant": "current",
+  "native_transition_probe": true,
+  "native_posed_culling_probe": false,
+  "envelope_profile_sha256": "88621d6115d5fe9bb611aa2c6f9e5bd110e29009a2c2610afd4713403f73b71a",
+  "fp_shaders_sha256": {},
+  "equipment_material": "copper",
+  "world_gear_fixture": false,
+  "equipment_files_sha256": {},
+  "world_species": [
+    "penguin"
+  ],
+  "preview_species": [
+    "penguin"
+  ],
+  "qa_water_placement": false,
+  "qa_lava_fixture": false,
+  "world": "World_254",
+  "qa_primary_state": null,
+  "performance_gate": "disabled"
+}

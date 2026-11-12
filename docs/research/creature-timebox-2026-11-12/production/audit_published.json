@@ -1,0 +1,1047 @@
+{
+  "schema": "creature-save-independent-audit.v1",
+  "passed": true,
+  "scope": "Real isolated entity LoadCreatures/SaveCreatures; synthetic supported legacy/v2 inputs; not users, whole-world cooperative saves, terrain recovery or art acceptance",
+  "exe_sha256": "6a997c20969b72006636ed7c5cd9a5c035ac5d55bee224bff49e2bfb1537bd57",
+  "context_sha256": "2aac6d12de1b3d58e697c0c3fc1360c3b51fe3aacee955268358b29ee9d7254c",
+  "native_files_sha256": {
+    "native\\save\\legacy_expected.json": "f9f51a05aee494ff2f8f276586e6f939a5138254481bc00132010339caebe59a",
+    "native\\save\\legacy_input.json": "f5002b7be58f256978da58c62e2f1aca79029fd3e432c4d47e8a4331a5067d6e",
+    "native\\save\\legacy_saved_once.json": "21aa5aa66d6056d35295fc788d64a16f5fee99c79c1a196bb208f252cee65f84",
+    "native\\save\\legacy_saved_twice.json": "21aa5aa66d6056d35295fc788d64a16f5fee99c79c1a196bb208f252cee65f84",
+    "native\\save\\manifest.json": "752ae4f681b8744cd0c9ba9c63ab8c38f6d5773bd092f2cb6692f26c808fbdc8",
+    "native\\save\\v2_expected.json": "d58241d64af58192743a725e6e9ebb588366ac7fc69d3e10ba027747beb85c59",
+    "native\\save\\v2_input.json": "bc0d572caeab14bb151fdd8f268806fe04a2a8745c9961523b62f55df21e1099",
+    "native\\save\\v2_saved_once.json": "0c13a14dc5833a486ff102295914ba77639df2094864a9bb94b4be5adea04f28",
+    "native\\save\\v2_saved_twice.json": "0c13a14dc5833a486ff102295914ba77639df2094864a9bb94b4be5adea04f28"
+  },
+  "resources_checked": 128,
+  "actual_loads": 256,
+  "world_actors_unchanged": true,
+  "cases": [
+    {
+      "kind": "legacy",
+      "id": 100000,
+      "resource": "badger",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100001,
+      "resource": "bee",
+      "backend": "bone_skeleton",
+      "draws": 18,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100002,
+      "resource": "bot",
+      "backend": "bone_skeleton",
+      "draws": 20,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100003,
+      "resource": "bunny",
+      "backend": "bone_skeleton",
+      "draws": 14,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100004,
+      "resource": "butterfly",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100005,
+      "resource": "chicken",
+      "backend": "bone_skeleton",
+      "draws": 16,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100006,
+      "resource": "cow",
+      "backend": "bone_skeleton",
+      "draws": 18,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100007,
+      "resource": "crab",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100008,
+      "resource": "dirt_monster",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100009,
+      "resource": "dolphin",
+      "backend": "bone_skeleton",
+      "draws": 16,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100010,
+      "resource": "dungeon_master",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100011,
+      "resource": "fire_spirit",
+      "backend": "sprite",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100012,
+      "resource": "fox",
+      "backend": "bone_skeleton",
+      "draws": 16,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100013,
+      "resource": "golem",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100014,
+      "resource": "hedgehog",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100015,
+      "resource": "hermitcrab",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100016,
+      "resource": "human",
+      "backend": "bone_skeleton",
+      "draws": 18,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100017,
+      "resource": "kitten",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100018,
+      "resource": "land_guard",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100019,
+      "resource": "lava_flan",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100020,
+      "resource": "lobster",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100021,
+      "resource": "manatee",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100022,
+      "resource": "mese_monster",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100023,
+      "resource": "octopus",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100024,
+      "resource": "oerkki",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100025,
+      "resource": "ogre",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100026,
+      "resource": "orc",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100027,
+      "resource": "owl",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100028,
+      "resource": "panda",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100029,
+      "resource": "penguin",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100030,
+      "resource": "pig",
+      "backend": "bone_skeleton",
+      "draws": 15,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100031,
+      "resource": "puffin",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100032,
+      "resource": "rat",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100033,
+      "resource": "rigid_demo_flyer",
+      "backend": "rigid_voxels",
+      "draws": 5,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100034,
+      "resource": "rigid_demo_swimmer",
+      "backend": "rigid_voxels",
+      "draws": 5,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100035,
+      "resource": "rigid_demo_walker",
+      "backend": "rigid_voxels",
+      "draws": 10,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100036,
+      "resource": "sand_monster",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100037,
+      "resource": "seahorse",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100038,
+      "resource": "seal",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100039,
+      "resource": "shark",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100040,
+      "resource": "sheep",
+      "backend": "bone_skeleton",
+      "draws": 16,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100041,
+      "resource": "skeleton",
+      "backend": "bone_skeleton",
+      "draws": 23,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100042,
+      "resource": "spider",
+      "backend": "bone_skeleton",
+      "draws": 29,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100043,
+      "resource": "squid",
+      "backend": "bone_skeleton",
+      "draws": 18,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100044,
+      "resource": "stingray",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100045,
+      "resource": "stone_monster",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100046,
+      "resource": "tortoise",
+      "backend": "bone_skeleton",
+      "draws": 9,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100047,
+      "resource": "tree_monster",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100048,
+      "resource": "treeman",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100049,
+      "resource": "trout",
+      "backend": "bone_skeleton",
+      "draws": 11,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100050,
+      "resource": "warthog",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100051,
+      "resource": "wasp",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100052,
+      "resource": "water_dragon",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100053,
+      "resource": "whale",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100054,
+      "resource": "wolf",
+      "backend": "bone_skeleton",
+      "draws": 16,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100055,
+      "resource": "zombie",
+      "backend": "bone_skeleton",
+      "draws": 18,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100056,
+      "resource": "human_adventurer",
+      "backend": "bone_skeleton",
+      "draws": 18,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100057,
+      "resource": "human_guard",
+      "backend": "bone_skeleton",
+      "draws": 18,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100058,
+      "resource": "sheep_wool_black",
+      "backend": "bone_skeleton",
+      "draws": 16,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100059,
+      "resource": "sheep_wool_golden",
+      "backend": "bone_skeleton",
+      "draws": 16,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100060,
+      "resource": "wolf_snow",
+      "backend": "bone_skeleton",
+      "draws": 16,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100061,
+      "resource": "legacy_scout",
+      "backend": "bone_skeleton",
+      "draws": 16,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100062,
+      "resource": "legacy_drifter",
+      "backend": "bone_skeleton",
+      "draws": 16,
+      "passed": true
+    },
+    {
+      "kind": "legacy",
+      "id": 100063,
+      "resource": "legacy_brute",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100000,
+      "resource": "badger",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100001,
+      "resource": "bee",
+      "backend": "bone_skeleton",
+      "draws": 18,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100002,
+      "resource": "bot",
+      "backend": "bone_skeleton",
+      "draws": 20,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100003,
+      "resource": "bunny",
+      "backend": "bone_skeleton",
+      "draws": 14,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100004,
+      "resource": "butterfly",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100005,
+      "resource": "chicken",
+      "backend": "bone_skeleton",
+      "draws": 16,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100006,
+      "resource": "cow",
+      "backend": "bone_skeleton",
+      "draws": 18,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100007,
+      "resource": "crab",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100008,
+      "resource": "dirt_monster",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100009,
+      "resource": "dolphin",
+      "backend": "bone_skeleton",
+      "draws": 16,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100010,
+      "resource": "dungeon_master",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100011,
+      "resource": "fire_spirit",
+      "backend": "sprite",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100012,
+      "resource": "fox",
+      "backend": "bone_skeleton",
+      "draws": 16,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100013,
+      "resource": "golem",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100014,
+      "resource": "hedgehog",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100015,
+      "resource": "hermitcrab",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100016,
+      "resource": "human",
+      "backend": "bone_skeleton",
+      "draws": 18,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100017,
+      "resource": "kitten",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100018,
+      "resource": "land_guard",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100019,
+      "resource": "lava_flan",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100020,
+      "resource": "lobster",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100021,
+      "resource": "manatee",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100022,
+      "resource": "mese_monster",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100023,
+      "resource": "octopus",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100024,
+      "resource": "oerkki",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100025,
+      "resource": "ogre",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100026,
+      "resource": "orc",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100027,
+      "resource": "owl",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100028,
+      "resource": "panda",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100029,
+      "resource": "penguin",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100030,
+      "resource": "pig",
+      "backend": "bone_skeleton",
+      "draws": 15,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100031,
+      "resource": "puffin",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100032,
+      "resource": "rat",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100033,
+      "resource": "rigid_demo_flyer",
+      "backend": "rigid_voxels",
+      "draws": 5,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100034,
+      "resource": "rigid_demo_swimmer",
+      "backend": "rigid_voxels",
+      "draws": 5,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100035,
+      "resource": "rigid_demo_walker",
+      "backend": "rigid_voxels",
+      "draws": 10,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100036,
+      "resource": "sand_monster",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100037,
+      "resource": "seahorse",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100038,
+      "resource": "seal",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100039,
+      "resource": "shark",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100040,
+      "resource": "sheep",
+      "backend": "bone_skeleton",
+      "draws": 16,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100041,
+      "resource": "skeleton",
+      "backend": "bone_skeleton",
+      "draws": 23,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100042,
+      "resource": "spider",
+      "backend": "bone_skeleton",
+      "draws": 29,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100043,
+      "resource": "squid",
+      "backend": "bone_skeleton",
+      "draws": 18,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100044,
+      "resource": "stingray",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100045,
+      "resource": "stone_monster",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100046,
+      "resource": "tortoise",
+      "backend": "bone_skeleton",
+      "draws": 9,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100047,
+      "resource": "tree_monster",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100048,
+      "resource": "treeman",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100049,
+      "resource": "trout",
+      "backend": "bone_skeleton",
+      "draws": 11,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100050,
+      "resource": "warthog",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100051,
+      "resource": "wasp",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100052,
+      "resource": "water_dragon",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100053,
+      "resource": "whale",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100054,
+      "resource": "wolf",
+      "backend": "bone_skeleton",
+      "draws": 16,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100055,
+      "resource": "zombie",
+      "backend": "bone_skeleton",
+      "draws": 18,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100056,
+      "resource": "human_adventurer",
+      "backend": "bone_skeleton",
+      "draws": 18,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100057,
+      "resource": "human_guard",
+      "backend": "bone_skeleton",
+      "draws": 18,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100058,
+      "resource": "sheep_wool_black",
+      "backend": "bone_skeleton",
+      "draws": 16,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100059,
+      "resource": "sheep_wool_golden",
+      "backend": "bone_skeleton",
+      "draws": 16,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100060,
+      "resource": "wolf_snow",
+      "backend": "bone_skeleton",
+      "draws": 16,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100061,
+      "resource": "legacy_scout",
+      "backend": "bone_skeleton",
+      "draws": 16,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100062,
+      "resource": "legacy_drifter",
+      "backend": "bone_skeleton",
+      "draws": 16,
+      "passed": true
+    },
+    {
+      "kind": "v2",
+      "id": 100063,
+      "resource": "legacy_brute",
+      "backend": "gltf_skeleton",
+      "draws": 1,
+      "passed": true
+    }
+  ]
+}

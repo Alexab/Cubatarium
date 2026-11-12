@@ -1,0 +1,11 @@
+{
+  "decision": "rejected_for_publication",
+  "reason": "Taller hull partly buries original blowhole cap. Independent exported-section audit rejects negative cap clearance; v2 raises cap0.5texel while keeping base embedded.",
+  "section_audit_rc": 1,
+  "directly_viewed": [
+    "fullturn_0.png",
+    "fullturn_1.png",
+    "runtime_envelope_current/frame_002.png"
+  ],
+  "limits": "Rig/UV/transition probes pass but do not override the cap-exposure defect."
+}

@@ -1,0 +1,20 @@
+{
+  "captured_at_utc": "2026-11-10T16:52:12.536607+00:00",
+  "models_root": "E:\\Work\\Home\\Cubatarium\\assetgen_output\\creatures\\bone_spider_v2\\models",
+  "files_sha256": {
+    "creatures\\spider\\creature.json": "7061965df177a26777d4dc58225e2e83d461757ae4e270162426e43f26a595d2",
+    "creatures\\spider\\geometry.geo.json": "4cae96b181d8201f49e2f079dca2d9ed86fa1683abcb9f7d522102549b4a02a4",
+    "creatures\\spider\\LICENSE.txt": "373de8bef205cede1ebb0631c68309708595979788ddad6020761d2c3756076d",
+    "creatures\\spider\\manifest.json": "e9d3fce6a01521b9d31730adf151db07c3a79bea4df374ed8e6836d1fb187daf",
+    "creatures\\spider\\textures\\diffuse.png": "5dc36955d87bd307a4231162bbea1db8df888aa80c05696afef99f2510197e55",
+    "creatures\\spider\\textures\\icon.png": "86b27f810661636e34aa71e613f500a9e2ceb6cf80d7ccfd03e5102f32c998f8"
+  },
+  "exe_sha256": "a7575e6dd5dff5d55c39735ff6dbb9e13b70b6e8be7499e7c2730ffaf507516c",
+  "shaders_sha256": {
+    "bin\\shaders\\fshader_creature.glsl": "42d6e0a0974aac7d34842d2a42caa705931eb60c005c6495c2fe98bbab0c179d",
+    "bin\\shaders\\fshader_creature_skinned.glsl": "7ce84ae039cbf2a6089ffaacd28506199432f72ef4e7b8bb5f888e0c71d9930e",
+    "bin\\shaders\\vshader_creature_skinned.glsl": "db13e1cc1302ebdf9409bbe6a8e2d4e9dcd28c9f11586a51283d912361ecb0c4"
+  },
+  "profile": "wave",
+  "performance_gate": "disabled"
+}
