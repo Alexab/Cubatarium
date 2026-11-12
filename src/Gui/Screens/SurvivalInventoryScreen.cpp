@@ -289,13 +289,13 @@ void USurvivalInventoryScreen::RebuildGrid()
       slot->SetIconTexture(tex);
     }
 
-    if (entry.count > 1)
-    {
-      slot->SetCornerHint("x" + std::to_string(entry.count));
-    }
-    else if (entry.count < 0)
+    if (entry.count < 0)
     {
       slot->SetCornerHint("inf");
+    }
+    else if (entry.count > 0)
+    {
+      slot->SetCornerHint(std::to_string(entry.count));
     }
 
     const InventoryEntryRef entryCopy = entry;

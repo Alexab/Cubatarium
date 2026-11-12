@@ -969,6 +969,14 @@ void UCreativePaletteScreen::AppendGridSlotsChunk()
       }
       slot->SetIconTexture(tex);
     }
+    if (view.ref.count < 0)
+    {
+      slot->SetCornerHint("inf");
+    }
+    else if (view.ref.count > 0)
+    {
+      slot->SetCornerHint(std::to_string(view.ref.count));
+    }
     InventoryEntryRef entry = view.ref;
 
     SlotAddress address;

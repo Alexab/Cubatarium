@@ -600,9 +600,9 @@ void UCharacterSheetScreen::RefreshLabels()
       {
         const auto &carried = snap.carriedItems[i];
         BagSlots[i]->SetIconTexture(Icons->GetItemIconTexture(carried.id));
-        BagSlots[i]->SetCornerHint(carried.count > 1
-                                       ? "x" + std::to_string(carried.count)
-                                       : "");
+        BagSlots[i]->SetCornerHint(carried.count < 0
+                                       ? "inf"
+                                       : std::to_string(carried.count));
         BagSlots[i]->SetVisible(true);
       }
       else
