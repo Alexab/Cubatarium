@@ -3,6 +3,7 @@
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
 #include "Game/Economy/ResourceEconomy.h"
+#include "Game/ModePolicy.h"
 #include "World/Items/WorldItemSystem.h"
 #include "Game/WorldGameMode.h"
 #include "Items/ItemDefinitionStorage.h"
@@ -91,7 +92,8 @@ bool UBlockBreakService::Complete(UWorld &world)
     }
   }
 
-  if (!blockTypeName.empty())
+  if (!blockTypeName.empty() &&
+      ModePolicy::DropsBlocksOnBreak(world.GetGameMode()))
   {
     const glm::vec3 dropPos(static_cast<float>(pos.x) + 0.5f,
                             static_cast<float>(pos.y) + 0.5f,

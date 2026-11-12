@@ -16,6 +16,7 @@
 #include "Creatures/Core/Creature.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
 #include "World/Core/World.h"
+#include "World/Items/WorldItemSystem.h"
 #include "Version.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
 
@@ -131,6 +132,7 @@ void UWorldLifecycleFacade::CreateNewWorldWithCurrentSettings(UCore &core)
                                  " seed=" + std::to_string(core.WorldSeed));
   try
   {
+    WorldItemSystem::Instance().Clear();
     core.WorldInstance->Create(new_world_name);
     core.WorldInstance->ApplyEnvironmentConfig(core.DefaultEnvironmentConfig, true);
     if (!core.DefaultEnvironmentConfig.WeatherAuto.AutoChange)
@@ -166,6 +168,9 @@ void UWorldLifecycleFacade::LoadWorld(UCore &core, const std::string &world_name
   try
   {
     core.ActiveWorldFolder = core.WorldFolderPath(world_name);
+    // Ground drops never persist in saves; stale ones from a previous world
+    // must not leak into the newly loaded one.
+    WorldItemSystem::Instance().Clear();
     core.WorldInstance->Load(core.ActiveWorldFolder.string());
     core.ApplyRuntimeStreamingToWorld();
     if (!core.DefaultUserName.empty())

@@ -18,6 +18,8 @@ namespace
 {
 constexpr float kPickupRadius = 1.75f;
 constexpr float kTtlSeconds = 180.f;
+constexpr std::size_t kMaxWorldItems = 512;
+constexpr float kBobAmplitude = 0.04f;
 }
 
 WorldItemSystem &WorldItemSystem::Instance()
@@ -40,6 +42,10 @@ int WorldItemSystem::Spawn(const glm::vec3 &position, const std::string &itemId,
   item.isBlock = isBlock;
   item.position = position + glm::vec3(0.f, 0.35f, 0.f);
   item.ttl = kTtlSeconds;
+  if (Items.size() >= kMaxWorldItems)
+  {
+    Items.erase(Items.begin()); // evict the oldest drop
+  }
   Items.push_back(std::move(item));
   return Items.back().id;
 }
@@ -57,7 +63,6 @@ void WorldItemSystem::Tick(UWorld &world, float dt)
   for (auto it = Items.begin(); it != Items.end();)
   {
     it->age += dt;
-    it->position.y += std::sin(it->age * 3.f) * 0.002f;
     if (it->age >= it->ttl)
     {
       it = Items.erase(it);
@@ -89,7 +94,10 @@ void WorldItemSystem::Draw(UWorld &world, UGeometryEngine &engine,
   (void)world;
   for (const WorldItem &item : Items)
   {
-    glm::mat4 model = glm::translate(glm::mat4(1.f), item.position);
+    // Bob is a render-time offset only: game state keeps the true spawn point.
+    const glm::vec3 renderPos =
+        item.position + glm::vec3(0.f, kBobAmplitude * std::sin(item.age * 3.f), 0.f);
+    glm::mat4 model = glm::translate(glm::mat4(1.f), renderPos);
     model = glm::rotate(model, item.age * 0.8f, glm::vec3(0.f, 1.f, 0.f));
     const float s = item.isBlock ? 0.35f : 0.28f;
     model = glm::scale(model, glm::vec3(s));
