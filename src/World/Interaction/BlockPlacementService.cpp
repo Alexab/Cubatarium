@@ -108,16 +108,6 @@ bool UBlockPlacementService::PlaceBlockFromHeldItem(
   const InventoryEntryRef *active = inv.GetActiveEntryRef();
   if (active && !active->empty && active->kind == InventoryEntryKind::Item)
   {
-    auto &storage = inv.GetStorageMutable();
-    auto sit = storage.find(active->Id);
-    if (sit != storage.end() && sit->second > 0)
-    {
-      sit->second -= 1;
-      if (sit->second == 0)
-      {
-        storage.erase(sit);
-      }
-    }
     auto &bars = inv.GetHotbarsMutable();
     const size_t bar = inv.GetActiveBarIndex();
     const size_t slot = inv.GetActiveSlotIndex();
@@ -125,14 +115,31 @@ bool UBlockPlacementService::PlaceBlockFromHeldItem(
         !bars[bar].slots[slot].empty)
     {
       auto &entry = bars[bar].slots[slot].entry;
-      if (entry.count > 1)
+      if (entry.count < 0)
       {
-        entry.count -= 1;
+        // Unlimited creative stack stays in hand and in storage.
       }
       else
       {
-        bars[bar].slots[slot].empty = true;
-        bars[bar].slots[slot].entry = InventoryEntryRef{};
+        auto &storage = inv.GetStorageMutable();
+        auto sit = storage.find(active->Id);
+        if (sit != storage.end() && sit->second > 0)
+        {
+          sit->second -= 1;
+          if (sit->second == 0)
+          {
+            storage.erase(sit);
+          }
+        }
+        if (entry.count > 1)
+        {
+          entry.count -= 1;
+        }
+        else
+        {
+          bars[bar].slots[slot].empty = true;
+          bars[bar].slots[slot].entry = InventoryEntryRef{};
+        }
       }
     }
   }

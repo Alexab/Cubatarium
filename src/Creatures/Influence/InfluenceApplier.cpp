@@ -158,6 +158,10 @@ void ConsumeRangedAmmo(UWorld &world, UCreature &source, const std::string &capa
       {
         continue;
       }
+      if (slot.entry.count < 0)
+      {
+        return;
+      }
       if (slot.entry.count > 1)
       {
         --slot.entry.count;
@@ -304,6 +308,11 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
     // Consume one from storage and active hotbar when the use is edible.
     if (pred.UseConsumes)
     {
+      InventoryEntryRef *active = source->GetInventory().GetActiveEntryRef();
+      const bool unlimitedHand =
+          active && !active->empty && active->count < 0;
+      if (!unlimitedHand)
+      {
       auto &storage = source->GetInventory().GetStorageMutable();
       const auto it = storage.find(pred.UseItemId);
       if (it != storage.end() && it->second > 0)
@@ -314,10 +323,10 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
           storage.erase(it);
         }
       }
-      if (InventoryEntryRef *active = source->GetInventory().GetActiveEntryRef())
+      if (active)
       {
         if (!active->empty && active->kind == InventoryEntryKind::Item &&
-            active->Id == pred.UseItemId)
+            active->Id == pred.UseItemId && active->count >= 0)
         {
           if (active->count > 1)
           {
@@ -330,6 +339,7 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
             source->GetInventory().ClearHotbarSlot(bar, slot);
           }
         }
+      }
       }
     }
 
