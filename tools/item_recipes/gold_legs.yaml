@@ -1,0 +1,10 @@
+id: gold_legs
+family: armor_legs
+material: gold
+palette: gold
+recipe_version: 1
+seed: 1
+wield_scale: 1.0
+silhouette: armor_legs
+traits:
+  - legs

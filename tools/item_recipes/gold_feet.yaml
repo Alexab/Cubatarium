@@ -1,0 +1,10 @@
+id: gold_feet
+family: armor_feet
+material: gold
+palette: gold
+recipe_version: 1
+seed: 1
+wield_scale: 1.0
+silhouette: armor_feet
+traits:
+  - feet

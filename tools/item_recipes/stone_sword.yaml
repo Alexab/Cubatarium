@@ -1,0 +1,10 @@
+id: stone_sword
+family: sword
+material: stone
+palette: stone
+recipe_version: 1
+seed: 1
+wield_scale: 1.35
+silhouette: sword
+traits:
+  - blade_guard

@@ -1,0 +1,10 @@
+id: leather_feet
+family: armor_feet
+material: leather
+palette: leather
+recipe_version: 1
+seed: 1
+wield_scale: 1.0
+silhouette: armor_feet
+traits:
+  - feet

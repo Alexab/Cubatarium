@@ -36,7 +36,7 @@
   },
   "model": "models/items/wood_shield/model.gltf",
   "visual": {
-    "wield_scale": 1.5,
+    "wield_scale": 1.1,
     "use": {
       "block": "raise_shield"
     }

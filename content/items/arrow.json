@@ -1,11 +1,13 @@
 {
   "id": "arrow",
   "displayName": "Arrow",
-  "types": ["misc"],
+  "types": [
+    "misc"
+  ],
   "stack_max": 64,
   "wear_end": "destroy",
-  "model": "models/items/wood_spear/model.gltf",
+  "model": "models/items/arrow/model.gltf",
   "visual": {
-    "wield_scale": 0.8
+    "wield_scale": 0.9
   }
 }

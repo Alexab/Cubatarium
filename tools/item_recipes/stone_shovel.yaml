@@ -1,0 +1,10 @@
+id: stone_shovel
+family: shovel
+material: stone
+palette: stone
+recipe_version: 1
+seed: 1
+wield_scale: 1.45
+silhouette: shovel
+traits:
+  - scoop

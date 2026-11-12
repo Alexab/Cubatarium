@@ -1,0 +1,10 @@
+id: gold_sword
+family: sword
+material: gold
+palette: gold
+recipe_version: 1
+seed: 1
+wield_scale: 1.35
+silhouette: sword
+traits:
+  - blade_guard

@@ -34,7 +34,7 @@
   },
   "model": "models/items/copper_shovel/model.gltf",
   "visual": {
-    "wield_scale": 1.5,
+    "wield_scale": 1.45,
     "swing": {
       "dig": "dig_tool",
       "melee": "dig_tool"

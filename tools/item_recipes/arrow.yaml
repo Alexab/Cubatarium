@@ -1,0 +1,11 @@
+id: arrow
+family: arrow
+material: iron
+palette: arrow
+recipe_version: 1
+seed: 1
+wield_scale: 0.9
+silhouette: arrow
+traits:
+  - tip
+  - fletching

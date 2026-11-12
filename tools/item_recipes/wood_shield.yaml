@@ -1,0 +1,11 @@
+id: wood_shield
+family: shield
+material: wood
+palette: shield_wood
+recipe_version: 1
+seed: 1
+wield_scale: 1.1
+silhouette: shield
+traits:
+  - board
+  - boss

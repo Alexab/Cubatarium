@@ -5,7 +5,7 @@ palette: wood
 recipe_version: 1
 seed: 1
 wield_scale: 1.5
-silhouette: transverse_pick_head
+silhouette: pickaxe
 traits:
-  - lashed_binding
-  - chisel_prongs
+  - transverse_head
+  - binding

@@ -2,7 +2,9 @@
   "id": "iron_shield",
   "format": "gltf",
   "license": "CC0-1.0",
-  "source": "kaykit_fantasy_weapons",
-  "upstream_file": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/shield_B.gltf",
-  "url": "https://kaylousberg.itch.io/fantasy-weapons-bits"
+  "authoring_source": "cubatarium-recipe",
+  "family": "shield",
+  "material": "iron",
+  "recipe_version": 1,
+  "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
 }

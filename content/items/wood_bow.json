@@ -29,7 +29,7 @@
     "require_los": true
   },
   "visual": {
-    "wield_scale": 1.4,
+    "wield_scale": 1.2,
     "use": {
       "ranged": "draw_bow"
     },

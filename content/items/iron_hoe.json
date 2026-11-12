@@ -23,6 +23,6 @@
   },
   "model": "models/items/iron_hoe/model.gltf",
   "visual": {
-    "wield_scale": 1.25
+    "wield_scale": 1.45
   }
 }

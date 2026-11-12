@@ -1,0 +1,10 @@
+id: copper_hoe
+family: hoe
+material: copper
+palette: copper
+recipe_version: 1
+seed: 1
+wield_scale: 1.45
+silhouette: hoe
+traits:
+  - perp_blade
