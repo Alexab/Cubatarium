@@ -17,6 +17,7 @@ public:
   UGuiTabBar(const GuiTheme *theme);
 
   void SetTabs(std::vector<std::string> labels);
+  void SetTabEnabled(std::vector<bool> enabled);
   int GetActiveTab() const { return ActiveTab; }
   void SetActiveTab(int tab);
   void SetOnTabChanged(std::function<void(int)> handler);
@@ -29,6 +30,7 @@ public:
 private:
   const GuiTheme *Theme;
   std::vector<std::string> Labels;
+  std::vector<bool> Enabled;
   int ActiveTab{0};
   std::function<void(int)> OnTabChanged;
 };

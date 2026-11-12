@@ -784,35 +784,11 @@ void UCreativePaletteScreen::Update(double dt)
 
   if (SubTabs)
   {
-    const auto Types = Catalog->GetTypeIds(Kind);
-    std::vector<std::string> labels;
-    for (const auto &Id : Types)
+    const std::string previousType = ActiveTypeId;
+    SyncTypeTabs();
+    if (ActiveTypeId != previousType)
     {
-      labels.push_back(Catalog->GetTypeDisplayName(Id));
-    }
-    if (labels.empty())
-    {
-      labels.push_back("Misc");
-    }
-    SubTabs->SetTabs(labels);
-    if (!Types.empty())
-    {
-      auto it = std::find(Types.begin(), Types.end(), ActiveTypeId);
-      if (it == Types.end())
-      {
-        ActiveTypeId = Types.front();
-        SubTabs->SetActiveTab(0);
-      }
-      else
-      {
-        SubTabs->SetActiveTab(
-            static_cast<int>(std::distance(Types.begin(), it)));
-      }
-    }
-    else
-    {
-      ActiveTypeId.clear();
-      SubTabs->SetActiveTab(0);
+      Built = false;
     }
   }
 
@@ -827,7 +803,63 @@ void UCreativePaletteScreen::Update(double dt)
   UpdateTooltip();
 }
 
-void UCreativePaletteScreen::SyncPreviewDock()
+void UCreativePaletteScreen::SyncTypeTabs()
+{
+  if (!SubTabs || !Catalog || !Session)
+  {
+    return;
+  }
+  const auto types = Catalog->GetTypeIds(Kind);
+  std::vector<std::string> labels;
+  std::vector<bool> enabled;
+  labels.reserve(types.size());
+  enabled.reserve(types.size());
+  const InventoryMode mode = CurrentListingMode();
+  for (const std::string &id : types)
+  {
+    labels.push_back(Catalog->GetTypeDisplayName(id));
+    enabled.push_back(!Session->GetEntries(Kind, id, mode).empty());
+  }
+  if (labels.empty())
+  {
+    labels.push_back("Misc");
+    enabled.push_back(true);
+  }
+  SubTabs->SetTabs(labels);
+  SubTabs->SetTabEnabled(enabled);
+
+  int active = -1;
+  for (size_t i = 0; i < types.size(); ++i)
+  {
+    if (types[i] == ActiveTypeId && enabled[i])
+    {
+      active = static_cast<int>(i);
+      break;
+    }
+  }
+  if (active < 0)
+  {
+    for (size_t i = 0; i < enabled.size(); ++i)
+    {
+      if (enabled[i])
+      {
+        active = static_cast<int>(i);
+        if (i < types.size())
+        {
+          ActiveTypeId = types[i];
+        }
+        Built = false;
+        break;
+      }
+    }
+  }
+  if (active < 0)
+  {
+    active = 0;
+    ActiveTypeId.clear();
+  }
+  SubTabs->SetActiveTab(active);
+}
 {
   if (!PreviewDock)
   {
