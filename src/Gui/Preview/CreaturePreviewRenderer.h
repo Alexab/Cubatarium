@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <cstdint>
 #include "Creatures/Locomotion/LocomotionTypes.h"
+#include "Creatures/Visual/WornEquipmentDrawer.h"
 
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
@@ -23,7 +24,6 @@ class USkinDefinitionStorage;
 class UCreatureTextureStorage;
 class UShaderManager;
 class CreatureDrawQueue;
-struct WornArmorPreviewSlot;
 struct CreatureGltfMeshAsset;
 
 class UCreaturePreviewRenderer
