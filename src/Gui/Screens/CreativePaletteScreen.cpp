@@ -860,6 +860,8 @@ void UCreativePaletteScreen::SyncTypeTabs()
   }
   SubTabs->SetActiveTab(active);
 }
+
+void UCreativePaletteScreen::SyncPreviewDock()
 {
   if (!PreviewDock)
   {
