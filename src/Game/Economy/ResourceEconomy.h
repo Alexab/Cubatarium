@@ -23,6 +23,17 @@ struct ResourceEconomyService
   static bool ConsumeOnPlace(WorldGameMode mode, UCreatureInventory &inv,
                               const InventoryEntryRef &activeEntry);
 
+  /// Consumes `units` of `itemId` (of `kind`) from storage and re-syncs every
+  /// hotbar mirror so HUD counts stay true when the item is held in several
+  /// slots. Creative consumes nothing and returns true; an unlimited (-1)
+  /// hand stack or storage entry stays untouched. Without any storage backing
+  /// (legacy ghost mirror) only the slot copies are consumed. Returns false
+  /// only when storage exists but cannot back the request — callers must not
+  /// apply the use effect in that case.
+  static bool ConsumeUnits(WorldGameMode mode, UCreatureInventory &inv,
+                           InventoryEntryKind kind, const std::string &itemId,
+                           int units = 1);
+
   /// Grants a dropped stack. `kind` selects the hotbar entry written into an empty hand.
   static void GrantBlockDrop(WorldGameMode mode, UCreatureInventory &inv,
                               const std::string &blockTypeName,

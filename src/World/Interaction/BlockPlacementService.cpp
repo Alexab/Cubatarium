@@ -108,40 +108,12 @@ bool UBlockPlacementService::PlaceBlockFromHeldItem(
   const InventoryEntryRef *active = inv.GetActiveEntryRef();
   if (active && !active->empty && active->kind == InventoryEntryKind::Item)
   {
-    auto &bars = inv.GetHotbarsMutable();
-    const size_t bar = inv.GetActiveBarIndex();
-    const size_t slot = inv.GetActiveSlotIndex();
-    if (bar < bars.size() && slot < bars[bar].slots.size() &&
-        !bars[bar].slots[slot].empty)
-    {
-      auto &entry = bars[bar].slots[slot].entry;
-      if (entry.count < 0)
-      {
-        // Unlimited creative stack stays in hand and in storage.
-      }
-      else
-      {
-        auto &storage = inv.GetStorageMutable();
-        auto sit = storage.find(active->Id);
-        if (sit != storage.end() && sit->second > 0)
-        {
-          sit->second -= 1;
-          if (sit->second == 0)
-          {
-            storage.erase(sit);
-          }
-        }
-        if (entry.count > 1)
-        {
-          entry.count -= 1;
-        }
-        else
-        {
-          bars[bar].slots[slot].empty = true;
-          bars[bar].slots[slot].entry = InventoryEntryRef{};
-        }
-      }
-    }
+    // The block is already placed: consume through the shared economy path so
+    // storage and every hotbar mirror stay in sync (unlimited stacks and the
+    // creative gate are handled inside).
+    (void)ResourceEconomyService::ConsumeUnits(world.GetGameMode(), inv,
+                                               InventoryEntryKind::Item,
+                                               active->Id, 1);
   }
   world.UpdateIntersection(position, front);
   return true;

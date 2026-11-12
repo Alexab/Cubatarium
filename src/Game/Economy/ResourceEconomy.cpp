@@ -53,47 +53,90 @@ bool ResourceEconomyService::ConsumeOnPlace(WorldGameMode mode,
     return false;
   }
 
+  return ConsumeUnits(mode, inv, activeEntry.kind, activeEntry.Id, 1);
+}
+
+bool ResourceEconomyService::ConsumeUnits(WorldGameMode mode,
+                                          UCreatureInventory &inv,
+                                          InventoryEntryKind kind,
+                                          const std::string &itemId,
+                                          int units)
+{
+  if (itemId.empty() || units <= 0)
+  {
+    return false;
+  }
+
   if (!ModePolicy::ConsumesResourcesOnPlace(mode))
   {
     return true; // Creative: no consume.
   }
 
-  auto &storage = inv.GetStorageMutable();
-  const auto it = storage.find(activeEntry.Id);
-  if (it == storage.end() || it->second <= 0)
-  {
-    return false;
-  }
-
-  // Defensive: if storage is accidentally unlimited (-1), do not modify.
-  if (it->second < 0)
+  // Unlimited (-1) hand stack: the copy in hand never runs out, so neither
+  // storage nor mirrors are touched.
+  if (const InventoryEntryRef *active = inv.GetActiveEntryRef();
+      active && !active->empty && active->kind == kind &&
+      active->Id == itemId && active->count < 0)
   {
     return true;
   }
 
-  const int next = it->second - 1;
-  if (next <= 0)
+  auto &storage = inv.GetStorageMutable();
+  const auto it = storage.find(itemId);
+  int next = 0;
+  bool backed = false;
+  if (it != storage.end())
   {
-    storage.erase(it);
-  }
-  else
-  {
-    it->second = next;
+    // Defensive: if storage is accidentally unlimited (-1), do not modify.
+    if (it->second < 0)
+    {
+      return true;
+    }
+    if (it->second < units)
+    {
+      return false; // storage cannot back the request; consume nothing
+    }
+    next = it->second - units;
+    backed = true;
+    if (next <= 0)
+    {
+      storage.erase(it);
+    }
+    else
+    {
+      it->second = next;
+    }
   }
 
-  // Sync hotbar counts for matching stacks.
+  // Sync every hotbar mirror of this stack, not just the active slot, so the
+  // HUD stays true when the same item is held in several slots.
   auto &bars = inv.GetHotbarsMutable();
   for (size_t bi = 0; bi < bars.size(); ++bi)
   {
     for (size_t si = 0; si < bars[bi].slots.size(); ++si)
     {
       auto &slot = bars[bi].slots[si];
-      if (slot.empty || slot.entry.kind != activeEntry.kind ||
-          slot.entry.Id != activeEntry.Id)
+      if (slot.empty || slot.entry.kind != kind || slot.entry.Id != itemId)
       {
         continue;
       }
-      if (next <= 0)
+      if (!backed)
+      {
+        // Legacy ghost mirror without storage: consume from the slot copy.
+        if (slot.entry.count < 0)
+        {
+          continue;
+        }
+        if (slot.entry.count > units)
+        {
+          slot.entry.count -= units;
+        }
+        else
+        {
+          inv.ClearHotbarSlot(bi, si);
+        }
+      }
+      else if (next <= 0)
       {
         inv.ClearHotbarSlot(bi, si);
       }

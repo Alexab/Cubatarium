@@ -65,7 +65,8 @@ void ApplyArmorWearForHit(UWorld &world, UCreature &target,
           }
           else
           {
-            inv.EquipArmor(pick, armor, *items);
+            // Worn-copy refresh: do not consume a spare from storage.
+            inv.EquipArmor(pick, armor, *items, /*consumeFromStorage=*/false);
           }
         }
       }
@@ -114,7 +115,8 @@ void ApplyShieldWearForBlock(UWorld &world, UCreature &target,
   }
   else
   {
-    inv.EquipOffhand(off, *items);
+    // Worn-copy refresh: do not consume a spare from storage.
+    inv.EquipOffhand(off, *items, /*consumeFromStorage=*/false);
   }
 }
 
@@ -305,42 +307,14 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
     }
     v.ClampCurrents();
 
-    // Consume one from storage and active hotbar when the use is edible.
+    // Consume one from storage and every hotbar mirror when the use is
+    // edible (unlimited stacks and the creative gate live in the helper).
     if (pred.UseConsumes)
     {
-      InventoryEntryRef *active = source->GetInventory().GetActiveEntryRef();
-      const bool unlimitedHand =
-          active && !active->empty && active->count < 0;
-      if (!unlimitedHand)
-      {
-      auto &storage = source->GetInventory().GetStorageMutable();
-      const auto it = storage.find(pred.UseItemId);
-      if (it != storage.end() && it->second > 0)
-      {
-        --it->second;
-        if (it->second <= 0)
-        {
-          storage.erase(it);
-        }
-      }
-      if (active)
-      {
-        if (!active->empty && active->kind == InventoryEntryKind::Item &&
-            active->Id == pred.UseItemId && active->count >= 0)
-        {
-          if (active->count > 1)
-          {
-            --active->count;
-          }
-          else
-          {
-            const size_t bar = source->GetInventory().GetActiveBarIndex();
-            const size_t slot = source->GetInventory().GetActiveSlotIndex();
-            source->GetInventory().ClearHotbarSlot(bar, slot);
-          }
-        }
-      }
-      }
+      (void)ResourceEconomyService::ConsumeUnits(mode,
+                                                 source->GetInventory(),
+                                                 InventoryEntryKind::Item,
+                                                 pred.UseItemId, 1);
     }
 
     source->ResetInfluenceCooldown();
@@ -395,8 +369,11 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
           {
             for (const CreatureDropEntry &drop : killed->drops)
             {
-              WorldItemSystem::Instance().Spawn(
-                  target->GetBodyOrigin(), drop.itemId, drop.count, false);
+              if (ModePolicy::DropsBlocksOnBreak(mode))
+              {
+                WorldItemSystem::Instance().Spawn(
+                    target->GetBodyOrigin(), drop.itemId, drop.count, false);
+              }
             }
           }
         }
