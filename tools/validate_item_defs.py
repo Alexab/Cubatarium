@@ -9,6 +9,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTENT = ROOT / "content" / "items"
+MANIFEST = ROOT / "tools" / "item_model_manifest.json"
+
+from item_critical_ids import CRITICAL_IDS  # noqa: E402 - shared set
 KNOWN_TYPES = {
     "mining",
     "cutting",
@@ -22,62 +25,6 @@ KNOWN_TYPES = {
     "legs",
     "feet",
     "tool",
-}
-
-# Keep in sync with tools/audit_item_visuals.py CRITICAL_IDS.
-CRITICAL_IDS = {
-    "apple",
-    "arrow",
-    "bread",
-    "copper_axe",
-    "copper_chest",
-    "copper_feet",
-    "copper_head",
-    "copper_hoe",
-    "copper_legs",
-    "copper_pickaxe",
-    "copper_shovel",
-    "copper_sword",
-    "gold_axe",
-    "gold_chest",
-    "gold_feet",
-    "gold_head",
-    "gold_hoe",
-    "gold_legs",
-    "gold_pickaxe",
-    "gold_shovel",
-    "gold_sword",
-    "hand",
-    "iron_axe",
-    "iron_chest",
-    "iron_feet",
-    "iron_head",
-    "iron_hoe",
-    "iron_legs",
-    "iron_pickaxe",
-    "iron_shield",
-    "iron_shovel",
-    "iron_sword",
-    "leather",
-    "leather_chest",
-    "leather_feet",
-    "leather_head",
-    "leather_legs",
-    "raw_meat",
-    "stone_axe",
-    "stone_hoe",
-    "stone_pickaxe",
-    "stone_shovel",
-    "stone_sword",
-    "waterskin",
-    "wood_axe",
-    "wood_bow",
-    "wood_hoe",
-    "wood_pickaxe",
-    "wood_shield",
-    "wood_shovel",
-    "wood_sword",
-    "wood_torch",
 }
 
 
@@ -115,8 +62,10 @@ def is_critical(data: dict, item_id: str) -> bool:
 
 def main() -> int:
     errors: list[str] = []
+    def_ids: set[str] = set()
     for path in sorted(CONTENT.glob("*.json")):
         data = json.loads(path.read_text(encoding="utf-8"))
+        def_ids.add(data.get("id") or path.stem)
         item_id = data.get("id") or path.stem
         if item_id != path.stem:
             errors.append(f"{path.name}: id={item_id} != filename")
@@ -165,6 +114,13 @@ def main() -> int:
                 )
         if is_critical(data, item_id) and data.get("hidden"):
             errors.append(f"{item_id}: critical item must not be hidden")
+    # Manifest ids must stay a subset of live defs: re-running the CC0 import
+    # pipeline must never resurrect pruned items.
+    if MANIFEST.is_file():
+        manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        for mid in manifest.get("items", {}):
+            if mid not in def_ids:
+                errors.append(f"manifest item without def: {mid}")
     if errors:
         print("validate_item_defs FAILED:")
         for e in errors:
