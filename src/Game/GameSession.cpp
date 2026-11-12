@@ -484,6 +484,79 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
     return true;
   }
 
+  if (target.surface == SlotSurface::CharacterDoll)
+  {
+    UCreatureInventory *inv = GetControlledInventory(World.get());
+    UItemDefinitionStorage *items =
+        World ? World->GetItemDefinitionStorage() : nullptr;
+    const ItemDefinition *def =
+        items && entry.kind == InventoryEntryKind::Item ? items->Get(entry.Id)
+                                                         : nullptr;
+    int armorSlot = -1;
+    if (def)
+    {
+      for (const std::string &name : def->Armor.Slots)
+      {
+        if (name == "head")
+          armorSlot = 0;
+        else if (name == "chest")
+          armorSlot = 1;
+        else if (name == "legs")
+          armorSlot = 2;
+        else if (name == "feet")
+          armorSlot = 3;
+        if (armorSlot >= 0)
+        {
+          break;
+        }
+      }
+    }
+    if (!inv || !items)
+    {
+      CancelDrag();
+      return false;
+    }
+    if (armorSlot < 0)
+    {
+      const size_t hand = GetSelectedSlot(0);
+      if (!CanAssignToHotbar(entry, 0, hand) || !AssignSlot(0, hand, entry))
+      {
+        CancelDrag();
+        return false;
+      }
+      if (source.surface == SlotSurface::CharacterOffhand)
+      {
+        inv->UnequipOffhand();
+      }
+      else if (source.surface == SlotSurface::CharacterArmor)
+      {
+        inv->UnequipArmor(source.slot, *items);
+      }
+      SelectSlot(0, hand);
+      CancelDrag();
+      return true;
+    }
+    if (!inv->EquipArmor(static_cast<size_t>(armorSlot), entry, *items))
+    {
+      CancelDrag();
+      return false;
+    }
+    if (source.surface == SlotSurface::Hotbar)
+    {
+      inv->ClearHotbarSlot(source.bar, source.slot);
+    }
+    else if (source.surface == SlotSurface::CharacterArmor)
+    {
+      inv->UnequipArmor(source.slot, *items);
+    }
+    else if (source.surface == SlotSurface::CharacterOffhand)
+    {
+      inv->UnequipOffhand();
+    }
+    CancelDrag();
+    return true;
+  }
+
   if (target.surface == SlotSurface::CharacterOffhand)
   {
     UCreatureInventory *inv = GetControlledInventory(World.get());

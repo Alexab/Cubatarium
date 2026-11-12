@@ -43,6 +43,7 @@ public:
   bool PickMainSlot(int x, int y) const;
   /// Hit-test offhand slot (Tool2).
   bool PickOffhandSlot(int x, int y) const;
+  bool PickDoll(int x, int y) const;
 
 private:
   void Relayout();

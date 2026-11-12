@@ -1767,6 +1767,12 @@ bool UApplication::ResolveSlotAt(int x, int y, SlotAddress &out)
       out.surface = SlotSurface::CharacterOffhand;
       return true;
     }
+    if (CharacterSheetScreen->PickDoll(x, y))
+    {
+      out = SlotAddress{};
+      out.surface = SlotSurface::CharacterDoll;
+      return true;
+    }
     if (CharacterSheetScreen->PickMainSlot(x, y) && GameSession)
     {
       out = SlotAddress{};

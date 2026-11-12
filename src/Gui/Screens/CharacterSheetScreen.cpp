@@ -157,13 +157,29 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
           session->BeginDragFromSlot(address, entry);
         }
       });
+      slot->SetOnClick([this, address, armorIndex]() {
+        auto *session = dynamic_cast<UGameSession *>(Stats);
+        if (!session)
+        {
+          return;
+        }
+        const InventoryEntryRef entry = session->GetArmorEntryRef(armorIndex);
+        if (entry.empty)
+        {
+          return;
+        }
+        session->BeginDragFromSlot(address, entry);
+        SlotAddress bag;
+        bag.surface = SlotSurface::PaletteGrid;
+        session->DropOnSlot(bag);
+      });
       ArmorSlots.push_back(slot.get());
       DollPanel->AddChild(std::move(slot));
     }
     for (int i = 0; i < 2; ++i)
     {
       auto slot = std::make_unique<UGuiSlot>(&theme);
-      slot->SetLabel(i == 0 ? "Main (=hotbar)" : "Offhand");
+      slot->SetLabel(i == 0 ? "Hand" : "Off");
       slot->SetIconTexture(0);
       if (i == 0)
       {
@@ -190,8 +206,21 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
           {
             return;
           }
-          const size_t slot = session->GetSelectedSlot(0);
-          session->ApplyPendingAssignment(0, slot);
+          SlotAddress address;
+          address.surface = SlotSurface::Hotbar;
+          address.bar = 0;
+          address.slot = session->GetSelectedSlot(0);
+          const InventoryEntryRef entry =
+              session->GetHotbarEntryRef(address.bar, address.slot);
+          if (!entry.empty)
+          {
+            session->BeginDragFromSlot(address, entry);
+            SlotAddress bag;
+            bag.surface = SlotSurface::PaletteGrid;
+            session->DropOnSlot(bag);
+            return;
+          }
+          session->ApplyPendingAssignment(0, address.slot);
         });
       }
       else
@@ -210,6 +239,22 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
             session->BeginDragFromSlot(address, entry);
           }
         });
+        slot->SetOnClick([this, address]() {
+          auto *session = dynamic_cast<UGameSession *>(Stats);
+          if (!session)
+          {
+            return;
+          }
+          const InventoryEntryRef entry = session->GetOffhandEntryRef();
+          if (entry.empty)
+          {
+            return;
+          }
+          session->BeginDragFromSlot(address, entry);
+          SlotAddress bag;
+          bag.surface = SlotSurface::PaletteGrid;
+          session->DropOnSlot(bag);
+        });
       }
       ToolSlots.push_back(slot.get());
       DollPanel->AddChild(std::move(slot));
@@ -227,6 +272,60 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
     {
       auto slot = std::make_unique<UGuiSlot>(&theme);
       slot->SetIconTexture(0);
+      const size_t bagIndex = static_cast<size_t>(i);
+      slot->SetOnBeginDrag([this, bagIndex]() {
+        auto *session = dynamic_cast<UGameSession *>(Stats);
+        if (!session)
+        {
+          return;
+        }
+        const CharacterStatsSnapshot snap = session->GetCharacterStatsSnapshot();
+        if (bagIndex >= snap.carriedItems.size())
+        {
+          return;
+        }
+        InventoryEntryRef entry;
+        entry.empty = false;
+        entry.kind = InventoryEntryKind::Item;
+        entry.Id = snap.carriedItems[bagIndex].id;
+        entry.count = snap.carriedItems[bagIndex].count;
+        SlotAddress address;
+        address.surface = SlotSurface::PaletteGrid;
+        address.entryId = entry.Id;
+        session->BeginDragFromSlot(address, entry);
+      });
+      slot->SetOnClick([this, bagIndex]() {
+        auto *session = dynamic_cast<UGameSession *>(Stats);
+        if (!session)
+        {
+          return;
+        }
+        const CharacterStatsSnapshot snap = session->GetCharacterStatsSnapshot();
+        if (bagIndex >= snap.carriedItems.size())
+        {
+          return;
+        }
+        InventoryEntryRef entry;
+        entry.empty = false;
+        entry.kind = InventoryEntryKind::Item;
+        entry.Id = snap.carriedItems[bagIndex].id;
+        entry.count = snap.carriedItems[bagIndex].count;
+        SlotAddress address;
+        address.surface = SlotSurface::PaletteGrid;
+        address.entryId = entry.Id;
+        session->BeginDragFromSlot(address, entry);
+        SlotAddress doll;
+        doll.surface = SlotSurface::CharacterDoll;
+        if (!session->DropOnSlot(doll))
+        {
+          session->BeginDragFromSlot(address, entry);
+          SlotAddress hand;
+          hand.surface = SlotSurface::Hotbar;
+          hand.bar = 0;
+          hand.slot = session->GetSelectedSlot(0);
+          session->DropOnSlot(hand);
+        }
+      });
       BagSlots.push_back(slot.get());
       BagPanel->AddChild(std::move(slot));
     }
@@ -478,6 +577,11 @@ bool UCharacterSheetScreen::PickOffhandSlot(int x, int y) const
     return false;
   }
   return PointInBounds(x, y, ToolSlots[1]->GetBounds());
+}
+
+bool UCharacterSheetScreen::PickDoll(int x, int y) const
+{
+  return PreviewViewport && PointInBounds(x, y, PreviewViewport->GetBounds());
 }
 
 void UCharacterSheetScreen::RefreshLabels()

@@ -2,6 +2,7 @@
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiTheme.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace cutum
@@ -48,10 +49,11 @@ void UGuiSlot::Draw(UGuiRenderer &renderer)
   }
   else if (!Label.empty())
   {
+    const int maxW = std::max(4, Bounds.W - Theme->Padding);
     std::string text = Label;
-    if (text.size() > 8)
+    while (text.size() > 1 && renderer.MeasureTextWidth(text) > maxW)
     {
-      text = text.substr(0, 8);
+      text.pop_back();
     }
     renderer.DrawTextCenteredInRect(Bounds, text, Theme->TextSecondary);
   }
@@ -72,7 +74,13 @@ void UGuiSlot::Draw(UGuiRenderer &renderer)
   {
     const glm::vec3 textColor =
         Selected ? glm::vec3(0.95f, 0.95f, 0.95f) : Theme->TextSecondary;
-    renderer.DrawText(CornerHint, Bounds.X + Theme->Padding / 2,
+    const int maxW = std::max(4, Bounds.W - Theme->Padding);
+    std::string hint = CornerHint;
+    while (hint.size() > 1 && renderer.MeasureTextWidth(hint) > maxW)
+    {
+      hint.pop_back();
+    }
+    renderer.DrawText(hint, Bounds.X + Theme->Padding / 2,
                       Bounds.Y + Theme->Padding / 4, textColor);
   }
 
