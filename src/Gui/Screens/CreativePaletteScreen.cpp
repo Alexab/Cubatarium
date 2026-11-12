@@ -809,50 +809,72 @@ void UCreativePaletteScreen::SyncTypeTabs()
   {
     return;
   }
-  const auto types = Catalog->GetTypeIds(Kind);
-  std::vector<std::string> labels;
-  std::vector<bool> enabled;
-  labels.reserve(types.size());
-  enabled.reserve(types.size());
+  // Recompute per-type emptiness only when something relevant changed: the
+  // signature covers the storage the Owned listing reads from. Running
+  // GetEntries for every type on every frame rebuilt the whole catalog view
+  // needlessly.
   const InventoryMode mode = CurrentListingMode();
-  for (const std::string &id : types)
+  const size_t signature = Session->GetInventorySignature();
+  if (!TypeTabsCacheValid || TypeTabSignature != signature ||
+      TypeTabKind != Kind || TypeTabMode != mode)
   {
-    labels.push_back(Catalog->GetTypeDisplayName(id));
-    enabled.push_back(!Session->GetEntries(Kind, id, mode).empty());
+    const auto types = Catalog->GetTypeIds(Kind);
+    std::vector<std::string> labels;
+    std::vector<bool> enabled;
+    labels.reserve(types.size());
+    enabled.reserve(types.size());
+    for (const std::string &id : types)
+    {
+      labels.push_back(Catalog->GetTypeDisplayName(id));
+      enabled.push_back(!Session->GetEntries(Kind, id, mode).empty());
+    }
+    if (labels.empty())
+    {
+      labels.push_back("Misc");
+      enabled.push_back(true);
+    }
+    TypeTabTypes = std::move(types);
+    TypeTabLabels = std::move(labels);
+    TypeTabEnabled = std::move(enabled);
+    TypeTabSignature = signature;
+    TypeTabKind = Kind;
+    TypeTabMode = mode;
+    TypeTabsCacheValid = true;
+    TypeTabsUiDirty = true;
   }
-  if (labels.empty())
+
+  if (TypeTabsUiDirty)
   {
-    labels.push_back("Misc");
-    enabled.push_back(true);
+    SubTabs->SetTabs(TypeTabLabels);
+    SubTabs->SetTabEnabled(TypeTabEnabled);
+    TypeTabsUiDirty = false;
   }
-  SubTabs->SetTabs(labels);
-  SubTabs->SetTabEnabled(enabled);
 
   int previous = 0;
-  for (size_t i = 0; i < types.size(); ++i)
+  for (size_t i = 0; i < TypeTabTypes.size(); ++i)
   {
-    if (types[i] == ActiveTypeId)
+    if (TypeTabTypes[i] == ActiveTypeId)
     {
       previous = static_cast<int>(i);
       break;
     }
   }
   int active = -1;
-  if (previous >= 0 && previous < static_cast<int>(enabled.size()) &&
-      enabled[static_cast<size_t>(previous)] &&
-      previous < static_cast<int>(types.size()) &&
-      types[static_cast<size_t>(previous)] == ActiveTypeId)
+  if (previous >= 0 && previous < static_cast<int>(TypeTabEnabled.size()) &&
+      TypeTabEnabled[static_cast<size_t>(previous)] &&
+      previous < static_cast<int>(TypeTabTypes.size()) &&
+      TypeTabTypes[static_cast<size_t>(previous)] == ActiveTypeId)
   {
     active = previous;
   }
-  if (active < 0 && !enabled.empty())
+  if (active < 0 && !TypeTabEnabled.empty())
   {
-    active = NearestEnabledIndex(previous, enabled);
-    if (active >= 0 && active < static_cast<int>(enabled.size()) &&
-        enabled[static_cast<size_t>(active)] &&
-        active < static_cast<int>(types.size()))
+    active = NearestEnabledIndex(previous, TypeTabEnabled);
+    if (active >= 0 && active < static_cast<int>(TypeTabEnabled.size()) &&
+        TypeTabEnabled[static_cast<size_t>(active)] &&
+        active < static_cast<int>(TypeTabTypes.size()))
     {
-      ActiveTypeId = types[static_cast<size_t>(active)];
+      ActiveTypeId = TypeTabTypes[static_cast<size_t>(active)];
       Built = false;
     }
   }

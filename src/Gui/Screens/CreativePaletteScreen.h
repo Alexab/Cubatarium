@@ -122,6 +122,16 @@ private:
   bool Visible{false};
   bool Built{false};
   bool HotbarStripBuilt{false};
+  // Per-frame type-tab cache (see SyncTypeTabs): emptiness of the catalog
+  // groups is only recomputed when the inventory signature changes.
+  bool TypeTabsCacheValid{false};
+  bool TypeTabsUiDirty{false};
+  size_t TypeTabSignature{0};
+  ContentKind TypeTabKind{ContentKind::Block};
+  InventoryMode TypeTabMode{InventoryMode::Creative};
+  std::vector<std::string> TypeTabTypes;
+  std::vector<std::string> TypeTabLabels;
+  std::vector<bool> TypeTabEnabled;
 };
 
 } // namespace cutum
