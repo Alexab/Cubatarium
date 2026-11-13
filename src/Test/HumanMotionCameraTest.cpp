@@ -20,6 +20,13 @@ int main(int argc,char **argv) {
  Require(loaded.has_value(),"load generated rig");const auto &g=*loaded;
  Require(g.humanRigVersion==2 && g.modelScale==.9f,"versioned human scale");
  BoneSkeletonHierarchy rig(g);
+ for(float direction:{-1.f,1.f}) {
+  HumanMotionState counter;counter.distancePhase=1.57079633f;HumanMotionInput walk;
+  walk.facts.onGround=true;walk.facts.horizontalSpeed=3.f;walk.facts.actualVelocity={0,0,direction*3.f};
+  walk.facts.supportValid[0]=walk.facts.supportValid[1]=true;
+  const auto pose=HumanMotionController::Compute(walk,counter,0.f);
+  Require(pose.bones.at("rightArm").rotation.x*pose.bones.at("rightLeg").rotation.x<0.f,"arm counter-swing follows forward and backward steps");
+ }
  for(int fps:{30,60,144}) {
   HumanMotionState state;HumanMotionInput input;input.facts.onGround=true;
   input.facts.supportValid[0]=input.facts.supportValid[1]=true;

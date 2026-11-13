@@ -65,7 +65,9 @@ public:
     set("spine",{-27.f*crouch-(f.state==LocomotionState::Run?9.f:0.f),0,0});
     set("head",{27.f*crouch+(f.state==LocomotionState::Run?9.f:0.f),0,0});
     float arm=(f.state==LocomotionState::Run?38.f:24.f)*move*(1.f-.5f*crouch);
-    set("rightArm",{27.f*crouch-cycle*arm,0,-2});set("leftArm",{27.f*crouch+cycle*arm,0,2});
+    const auto localVelocity=glm::inverse(glm::quat(glm::vec3(0,glm::radians(in.yawDeg),0)))*f.actualVelocity;
+    const float armDirection=localVelocity.z<-.05f?-1.f:1.f;
+    set("rightArm",{27.f*crouch-cycle*arm*armDirection,0,-2});set("leftArm",{27.f*crouch+cycle*arm*armDirection,0,2});
     set("rightForearm",{f.state==LocomotionState::Run?60.f:10.f,0,0});
     set("leftForearm",{f.state==LocomotionState::Run?60.f:10.f,0,0});
     set("rightLeg",{cycle*25.f*move-35.f*crouch,0,0});
