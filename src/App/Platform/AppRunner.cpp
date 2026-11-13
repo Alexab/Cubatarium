@@ -11,6 +11,9 @@
 #include "App/Platform/SampleProfiler.h"
 #include "App/Platform/AppRunner.h"
 #include "App/Platform/CreatureQaCapture.h"
+#if !defined(__ANDROID__)
+#include "App/Platform/HumanMotionQa.h"
+#endif
 #include "App/Platform/CreatureQaWorldUserProbe.h"
 #include "Game/CreatureVisualQaPlacement.h"
 
@@ -2656,6 +2659,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                   }
                 }
               }
+              TickHumanMotionQa(*world,*camera,window,ingame_sec);
               if (!start_focus_captured && ingame_sec >= 2.0)
               {
                 const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(

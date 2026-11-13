@@ -342,8 +342,11 @@ def main():
             if not reload_path.is_file() or reload_path.stat().st_mtime_ns<capture_started_ns:
                 raise RuntimeError('Resource reload probe missing or stale')
             reload=json.loads(reload_path.read_text())
-            if not reload['passed'] or len(reload['resources'])!=61 or len(reload['texture_stages'])!=11 or len(reload['mesh_stages'])!=5:
+            if not reload['passed'] or len(reload['resources'])!=61 or len(reload['texture_stages'])!=12 or len(reload['mesh_stages'])!=5:
                 raise RuntimeError('Resource reload, recovery or pack priority failed')
+            legacy=reload.get('legacy_human_fallback',{})
+            if not legacy.get('passed') or len(legacy.get('resources',[]))!=3 or not all(r['passed'] and r['draws']==6 for r in legacy['resources']):
+                raise RuntimeError('Legacy human appearance fallback failed')
             if not all(s['passed'] for s in reload['texture_stages']+reload['mesh_stages']) or not all(r['passed'] for r in reload['rigid_recovery']):
                 raise RuntimeError('Resource reload subcase failed')
         if args.envelope_profile:

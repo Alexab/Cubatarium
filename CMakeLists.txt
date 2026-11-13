@@ -39,6 +39,7 @@ function(cubatarium_add_test)
     endif()
 endfunction()
 
+
 # MSVC desktop static CRT (/MT). Skip for GNU-style Clang on Windows (e.g. linux-ninja preset).
 set(CUBATARIUM_MSVC_DESKTOP FALSE)
 if(WIN32)
@@ -3436,3 +3437,12 @@ foreach(_test_target IN LISTS _cutum_directory_targets)
       $<TARGET_OBJECTS:platform_worker_job_kind_test_support>)
   endif()
 endforeach()
+
+cubatarium_add_test(NAME human_motion_camera_test
+    SOURCES src/Test/HumanMotionCameraTest.cpp
+            src/Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonLoader.cpp
+            src/Creatures/Visual/BoneSkeleton/BoneSkeletonHierarchy.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+add_test(NAME human_motion_camera_test COMMAND $<TARGET_FILE:human_motion_camera_test>
+    "${CMAKE_SOURCE_DIR}/models/creatures/human/appearance/male_short.geo.json")
+set_tests_properties(human_motion_camera_test PROPERTIES LABELS "unit;player;camera")
