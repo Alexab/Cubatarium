@@ -79,6 +79,20 @@ int main()
 {
   using namespace cutum;
   int failures = 0;
+  {
+    HumanAppearance invalid;
+    invalid.bodyVariant="bad";invalid.hairstyleId="../../bad";invalid.hairColorId="";invalid.Normalize();
+    Expect(invalid.Key()=="male/short/chestnut","unknown appearance values normalize",failures);
+    const auto legacy=nlohmann::json::object().get<HumanAppearance>();
+    Expect(legacy.Key()=="male/short/chestnut","legacy appearance defaults",failures);
+    for(auto body:HumanAppearance::Bodies)for(auto hair:HumanAppearance::Hairstyles)for(auto color:HumanAppearance::Colors) {
+      HumanAppearance look;look.bodyVariant=body;look.hairstyleId=hair;look.hairColorId=color;
+      nlohmann::json saved=look;
+      Expect(saved.get<HumanAppearance>().Key()==look.Key(),"all 60 selections round trip",failures);
+    }
+    const auto malformed=nlohmann::json::parse(R"({"body_variant":3,"hairstyle_id":null,"hair_color_id":false})").get<HumanAppearance>();
+    Expect(malformed.Key()==legacy.Key(),"malformed optional fields preserve defaults",failures);
+  }
   UTempCatalog catalog;
 
   UCreatureDefinitionStorage species;
@@ -243,6 +257,31 @@ int main()
            "loading an empty catalog removes previous definitions", failures);
     Expect(species.Revision.load() > previousRevision,
            "empty catalog replacement invalidates cached appearances", failures);
+  }
+
+  {
+    Expect(species.LoadFile(catalog.WriteCreature("human",R"({"id":"human","visual":{"backend":"bone_skeleton","geometry":"geometry.human"}})")),"human fixture",failures);
+    const auto root=catalog.Root/"creatures"/"human";
+    std::filesystem::create_directories(root/"appearance");std::filesystem::create_directories(root/"textures");
+    const auto geometry=root/"appearance"/"female_long.geo.json";
+    const auto atlas=root/"textures"/"appearance_female_ginger.png";
+    std::ofstream(geometry)<<"{}";std::ofstream(atlas)<<"fixture";
+    HumanAppearance look;look.bodyVariant="female";look.hairstyleId="long";look.hairColorId="ginger";
+    auto resolved=ResolveCreatureAppearance(species,skins,"human","",look);
+    Expect(resolved.geometryFileOverride=="appearance/female_long.geo.json","selected human geometry",failures);
+    Expect(resolved.skinTextureOverrides["diffuse"]=="human/appearance_female_ginger","independent human atlas",failures);
+    const auto different=ResolveCreatureAppearance(species,skins,"human","",HumanAppearance{});
+    Expect(different.appearanceKey!=resolved.appearanceKey,"different selections have distinct cache keys",failures);
+    const auto pack=catalog.Root/"legacy_pack"/"human"/"textures";
+    std::filesystem::create_directories(pack);std::ofstream(pack/"diffuse.png")<<"legacy fixture";
+    const auto revision=species.Revision.load();species.LoadOverlay((catalog.Root/"legacy_pack").string());
+    Expect(species.Revision.load()>revision,"texture-only pack invalidates resolved appearance cache",failures);
+    Expect(ResolveCreatureAppearance(species,skins,"human","",look).geometryFileOverride.empty(),"legacy atlas overlay retains matching base UV geometry",failures);
+    std::ofstream(pack/"appearance_male_chestnut.png")<<"new fixture";
+    species.LoadOverlay((catalog.Root/"legacy_pack").string());
+    Expect(!ResolveCreatureAppearance(species,skins,"human","",look).geometryFileOverride.empty(),"new atlas overlay enables player customization",failures);
+    std::filesystem::remove(atlas);
+    Expect(ResolveCreatureAppearance(species,skins,"human","",look).geometryFileOverride.empty(),"missing atlas falls back with matching base geometry",failures);
   }
 
   if (failures != 0)

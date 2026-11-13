@@ -20,6 +20,7 @@ inline Json State(const UCreature &c)
     {"spawn_source",CreatureSpawnSourceToString(c.GetSpawnSource())},{"yaw",c.GetYaw()},
     {"pitch",c.GetPitch()},{"footprint_swapped",c.IsFootprintSwapped()},
     {"movement_mode",c.GetMovementMode()==CreatureMovementMode::Flying?"flying":"walking"}};
+  if(c.GetTypeId()=="human")out["human_appearance"]=c.GetHumanAppearance();
   WriteCreatureBodyOrigin(out,c.GetBodyOrigin());
   c.GetInventory().SerializeToJson(out);CreatureStatsJson::Write(out,c.GetVitals(),c.GetAttributes());
   return out;
@@ -96,6 +97,7 @@ inline void ExportCreatureQaSaveProbe(UCore &core,UWorld &world,const std::files
       params.AllowFlight=ModePolicy::AllowsFlight(world.GetGameMode(),def->habitat);
       params.Source=legacy?CreatureSpawnSource::LegacySave:CreatureSpawnSource::Qa;
       auto creature=UCreatureFactory::Build(*def,params);creature->UpdateFootprintOrientation(world);
+      if(!legacy && r.species=="human") {HumanAppearance look;look.bodyVariant="female";look.hairstyleId="long";look.hairColorId="ginger";creature->SetHumanAppearance(look);}
       auto &v=creature->GetVitals();v.health=v.maxHealth*.75f;v.satiety=v.maxSatiety*.625f;
       v.thirst=v.maxThirst*.5f;v.fatigue=v.maxFatigue*.25f;v.breath=v.maxBreath*.875f;
       auto &inv=creature->GetInventory();inv.AddItem("wood_sword",3);inv.AddItem("wood_torch",7);

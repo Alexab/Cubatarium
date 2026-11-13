@@ -80,7 +80,7 @@ void UCreatureVisualBoneSkeleton::UpdatePose(
   BodyOrigin = creature.GetFeetPosition();
   BodyYawDeg = ComputeBodyYawDeg(creature, animDef);
   SpeciesId = animDef.Id;
-  const std::string geoFile = animDef.visual.boneSkeleton.geometryFile.empty()
+  const std::string geoFile = !Appearance.geometryFileOverride.empty() ? Appearance.geometryFileOverride : animDef.visual.boneSkeleton.geometryFile.empty()
                                   ? "geometry.geo.json"
                                   : animDef.visual.boneSkeleton.geometryFile;
   GeometryId = animDef.visual.boneSkeleton.geometryId;
@@ -169,6 +169,9 @@ void UCreatureVisualBoneSkeleton::SubmitDraw(const CreatureDrawContext &ctx,
   CreatureDrawQueue &queue = *ctx.Queue;
   for (size_t boneIdx = 0; boneIdx < MeshAsset->boneMeshes.size(); ++boneIdx)
   {
+    const auto &headGear = PoseCreature->GetInventory().GetEquippedArmor(0);
+    if (MeshAsset->geometry.bones[boneIdx].name == "hair" &&
+        (Appearance.hideHair || (!headGear.empty && !headGear.broken && !headGear.Id.empty() && headGear.wear < 1.f))) continue;
     const glm::mat4 boneMat = bodyMat * CachedBoneMatrices[boneIdx];
     const BoneSkeletonBoneMeshCpu &boneMesh = MeshAsset->boneMeshes[boneIdx];
     for (const BoneSkeletonCubeMeshCpu &cube : boneMesh.cubes)
@@ -190,7 +193,10 @@ void UCreatureVisualBoneSkeleton::SubmitDraw(const CreatureDrawContext &ctx,
   {
     for (size_t boneIdx = 0; boneIdx < MeshAsset->boneMeshes.size(); ++boneIdx)
     {
-      const glm::mat4 boneMat = bodyMat * CachedBoneMatrices[boneIdx];
+      const auto &headGear = PoseCreature->GetInventory().GetEquippedArmor(0);
+    if (MeshAsset->geometry.bones[boneIdx].name == "hair" &&
+        (Appearance.hideHair || (!headGear.empty && !headGear.broken && !headGear.Id.empty() && headGear.wear < 1.f))) continue;
+    const glm::mat4 boneMat = bodyMat * CachedBoneMatrices[boneIdx];
       const BoneSkeletonBoneMeshCpu &boneMesh = MeshAsset->boneMeshes[boneIdx];
       for (const BoneSkeletonCubeMeshCpu &cube : boneMesh.cubes)
       {

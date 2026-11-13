@@ -84,6 +84,17 @@ void UCreatureDefinitionStorage::LoadOverlay(const std::string &folder)
     {
       ++overlayCount;
     }
+    const auto textures=entry.path()/"textures";
+    if(std::filesystem::is_regular_file(textures/"diffuse.png")) {
+      const bool newAtlases=std::filesystem::is_regular_file(textures/"appearance_male_chestnut.png") ||
+          std::filesystem::is_regular_file(textures/"appearance_female_chestnut.png");
+      std::unique_lock lock(DefinitionsMutex);
+      const auto found=Definitions.find(entry.path().filename().string());
+      if(found!=Definitions.end() && found->first=="human") {
+        found->second.visual.humanAppearanceEnabled=newAtlases;
+        Revision.fetch_add(1,std::memory_order_relaxed);
+      }
+    }
   }
   if (overlayCount > 0)
   {

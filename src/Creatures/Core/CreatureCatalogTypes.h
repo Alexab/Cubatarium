@@ -257,6 +257,8 @@ struct CreatureSpriteSpec
 
 struct CreatureVisualSpec
 {
+  // Runtime overlay metadata; legacy atlas packs use their original geometry/UVs.
+  bool humanAppearanceEnabled{true};
   /// Runtime locator of the definition's folder; never serialized into assets.
   std::string sourceDirectory;
   std::string backend{"rigid_voxels"};
@@ -298,6 +300,9 @@ struct ResolvedCreatureAppearance
   // Validated against the species by ResolveCreatureAppearance. Backends
   // must not bypass ownership or the player's effective selection.
   std::string effectiveSkinId;
+  std::string geometryFileOverride;
+  std::string appearanceKey;
+  bool hideHair{false};
   std::unordered_map<std::string, std::string> skinTextureOverrides;
   glm::vec4 wireframeColor{1.f, 1.f, 1.f, 1.f};
   std::string visualBackend{"rigid_voxels"};

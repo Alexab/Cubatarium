@@ -18,6 +18,7 @@ struct SkinCatalogInfo
 
 struct SkinDefinition
 {
+  bool humanAppearanceEnabled{true};
   std::string Id;
   std::string displayName;
   std::string creatureId;

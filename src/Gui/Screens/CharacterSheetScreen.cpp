@@ -4,6 +4,7 @@
 #include "Gui/Interfaces/IUCharacterStatsViewModel.h"
 #include "Gui/Layout/GuiLayout.h"
 #include "Gui/Widgets/GuiLabel.h"
+#include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiPreviewViewport.h"
 #include "Gui/Widgets/GuiSlot.h"
@@ -13,11 +14,16 @@
 #include "Gui/Interfaces/IUHotbarViewModel.h"
 #include "Gui/Interfaces/IUGuiIconSource.h"
 #include "Game/GameSession.h"
+#include "World/Core/World.h"
+#include "World/Persistence/WorldPersistence.h"
+#include "Creatures/Player/User.h"
 #include "Game/Inventory/SlotInteraction.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <sstream>
+#include <fstream>
+#include <stdexcept>
 
 #include "Render/GlIncludes.h"
 
@@ -66,6 +72,7 @@ std::string UCharacterSheetScreen::FormatBar(const char *name, float cur,
 
 void UCharacterSheetScreen::SetVisible(bool visible)
 {
+  if(visible != Visible) { EditingAppearance=false; ResetAppearanceDraft(); }
   Visible = visible;
   if (Root)
   {
@@ -106,6 +113,7 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
   Window = window.get();
 
   auto body = std::make_unique<UGuiPanel>(&theme);
+  BodyPanel=body.get();
   body->SetDrawBackground(false);
 
   auto meta = std::make_unique<UGuiLabel>(&theme, "");
@@ -116,6 +124,29 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
   ModeLabel = mode.get();
   ModeLabel->SetUseSecondaryColor(true);
   body->AddChild(std::move(mode));
+
+  auto toggle=std::make_unique<UGuiButton>(&theme,"Appearance");
+  AppearanceToggle=toggle.get();
+  toggle->SetOnClick([this]{ EditingAppearance=!EditingAppearance;ResetAppearanceDraft();Relayout();RefreshLabels(); });
+  body->AddChild(std::move(toggle));
+  auto customization=std::make_unique<UGuiPanel>(&theme);
+  AppearancePanel=customization.get();
+  for(int row=0;row<6;++row) {
+    auto button=std::make_unique<UGuiButton>(&theme,"");
+    AppearanceButtons.push_back(button.get());
+    button->SetOnClick([this,row]{
+      auto cycle=[](auto options,std::string& value){size_t i=0;while(i<options.size()&&value!=options[i])++i;value=options[(i+1)%options.size()];};
+      if(row==0) cycle(HumanAppearance::Bodies,DraftAppearance.bodyVariant);
+      if(row==1) { const std::array<const char*,3> outfits{"","human_adventurer","human_guard"};cycle(outfits,DraftSkin); }
+      if(row==2) cycle(HumanAppearance::Hairstyles,DraftAppearance.hairstyleId);
+      if(row==3) cycle(HumanAppearance::Colors,DraftAppearance.hairColorId);
+      if(row==4 && Stats && !Stats->ApplyHumanAppearance(DraftAppearance,DraftSkin)) return;
+      if(row>=4) {EditingAppearance=false;ResetAppearanceDraft();Relayout();}
+      RefreshAppearanceControls();RefreshLabels();
+    });
+    customization->AddChild(std::move(button));
+  }
+  body->AddChild(std::move(customization));
 
   // Paper-doll panel (preview + equipment).
   {
@@ -391,11 +422,13 @@ void UCharacterSheetScreen::Relayout()
   const int y = std::max(8, (ViewportH - sheetH) / 2);
   Window->SetBounds({x, y, sheetW, sheetH});
   const GuiRect client = Window->GetClientArea();
+  if(BodyPanel) BodyPanel->SetBounds(client);
 
   int cy = client.Y + 4;
   if (TitleMeta)
   {
-    TitleMeta->SetBounds({client.X + 8, cy, client.W - 16, kLineH});
+    TitleMeta->SetBounds({client.X + 8, cy, client.W - 160, kLineH});
+    AppearanceToggle->SetBounds({client.X+client.W-150,cy,140,24});
     cy += kLineH;
   }
   if (ModeLabel)
@@ -409,7 +442,7 @@ void UCharacterSheetScreen::Relayout()
   const int contentH = client.Y + client.H - cy - 8;
   const int dollW = WideLayout ? std::min(380, (client.W * 46) / 100)
                               : std::max(200, client.W - 16);
-  const int dollH = WideLayout ? (contentH * 62) / 100 : std::min(contentH / 2, 300);
+  const int dollH = WideLayout ? (EditingAppearance ? contentH : (contentH * 62) / 100) : std::min(contentH / 2, 300);
   const int dollX = client.X + 8;
   const int bagX = WideLayout ? dollX + dollW + gap : dollX;
   const int bagY = WideLayout ? cy : cy + dollH + gap;
@@ -439,6 +472,15 @@ void UCharacterSheetScreen::Relayout()
     }
   }
 
+  if(AppearancePanel) {
+    AppearancePanel->SetBounds({bagX,bagY,bagW,bagH});
+    AppearancePanel->SetVisible(EditingAppearance);
+    if(EditingAppearance) {BagPanel->SetVisible(false);StatsPanel->SetVisible(false);}
+    else BagPanel->SetVisible(true);
+    const int rowHeight=std::min(34,std::max(22,(bagH-16)/6));
+    for(size_t i=0;i<AppearanceButtons.size();++i)
+      AppearanceButtons[i]->SetBounds({bagX+8,bagY+8+int(i)*rowHeight,bagW-16,rowHeight-4});
+  }
   // --- Paper-doll interior ---
   //        [Head]
   // [Chest][PREVIEW][Legs]
@@ -497,6 +539,14 @@ void UCharacterSheetScreen::Relayout()
         {feetX + (kSlotSize + kSlotGap), bottomY, kSlotSize, kSlotSize});
   }
 
+  if(EditingAppearance && PreviewViewport) {
+    const int side=std::max(72,std::min(dollW-24,dollH-24));
+    PreviewViewport->SetBounds({dollX+(dollW-side)/2,cy+(dollH-side)/2,side,side});
+  }
+  if(EquipmentHeader)EquipmentHeader->SetVisible(!EditingAppearance);
+  for(auto* slot:ArmorSlots)slot->SetVisible(!EditingAppearance);
+  for(auto* slot:ToolSlots)slot->SetVisible(!EditingAppearance);
+
   // Stats sit under the doll on wide screens (same absolute coordinates).
   const int statsX = dollX;
   const int statsW = dollW;
@@ -550,6 +600,7 @@ void UCharacterSheetScreen::Relayout()
 
 bool UCharacterSheetScreen::PickArmorSlot(int x, int y, size_t &outSlot) const
 {
+  if(EditingAppearance)return false;
   for (size_t i = 0; i < ArmorSlots.size(); ++i)
   {
     if (ArmorSlots[i] && PointInBounds(x, y, ArmorSlots[i]->GetBounds()))
@@ -563,6 +614,7 @@ bool UCharacterSheetScreen::PickArmorSlot(int x, int y, size_t &outSlot) const
 
 bool UCharacterSheetScreen::PickMainSlot(int x, int y) const
 {
+  if(EditingAppearance)return false;
   if (ToolSlots.empty() || !ToolSlots[0])
   {
     return false;
@@ -572,6 +624,7 @@ bool UCharacterSheetScreen::PickMainSlot(int x, int y) const
 
 bool UCharacterSheetScreen::PickOffhandSlot(int x, int y) const
 {
+  if(EditingAppearance)return false;
   if (ToolSlots.size() < 2 || !ToolSlots[1])
   {
     return false;
@@ -720,8 +773,75 @@ void UCharacterSheetScreen::RefreshLabels()
 
   PreviewValid = snap.valid && !snap.typeId.empty();
   PreviewTypeId = snap.typeId;
-  PreviewSkinId = snap.skinId;
+  PreviewSkinId = EditingAppearance ? DraftSkin : snap.skinId;
+  RefreshAppearanceControls();
   RenderCharacterPreview();
+}
+
+void UCharacterSheetScreen::RunAppearanceQa(const std::string &reportPath) {
+  if(!Stats || Stats->GetCharacterStatsSnapshot().typeId!="human")throw std::runtime_error("Appearance UI QA requires controlled human");
+  const auto original=Stats->GetCharacterStatsSnapshot();
+  SetVisible(true);AppearanceToggle->Activate();
+  AppearanceButtons[0]->Activate();AppearanceButtons[1]->Activate();
+  AppearanceButtons[2]->Activate();AppearanceButtons[2]->Activate();AppearanceButtons[3]->Activate();
+  const auto desired=DraftAppearance;const auto outfit=DraftSkin;
+  const bool draftIsolated=Stats->GetCharacterStatsSnapshot().humanAppearance.Key()==original.humanAppearance.Key() && Stats->GetCharacterStatsSnapshot().skinId==original.skinId;
+  const bool previewWorks=PreviewTexture!=0;
+  AppearanceButtons[4]->Activate();
+  auto applied=Stats->GetCharacterStatsSnapshot();
+  const bool appliedOk=applied.humanAppearance.Key()==desired.Key() && applied.skinId==outfit;
+  bool userSaved=false;
+  if(auto* session=dynamic_cast<UGameSession*>(Stats)) {
+    const auto world=session->GetWorld();
+    const std::string path=reportPath+".users.json";
+    UWorldPersistence persistence;persistence.SaveUsers(*world,path);
+    nlohmann::json saved;std::ifstream in(path);in>>saved;
+    const auto& row=saved.at(world->GetCurrentUserName());
+    userSaved=row.at("human_appearance").get<HumanAppearance>().Key()==desired.Key() && row.value("selected_skin_id","")==outfit && world->GetCurrentUser()->GetHumanAppearance().Key()==desired.Key();
+  }
+  AppearanceToggle->Activate();AppearanceButtons[2]->Activate();AppearanceButtons[5]->Activate();
+  const bool cancelled=Stats->GetCharacterStatsSnapshot().humanAppearance.Key()==desired.Key() && Stats->GetCharacterStatsSnapshot().skinId==outfit;
+  nlohmann::json layouts=nlohmann::json::array();
+  AppearanceToggle->Activate();
+  for(auto size:std::array<std::pair<int,int>,2>{{{1280,720},{640,480}}}) {
+    OnViewportChanged(size.first,size.second);bool valid=true;
+    for(auto* b:AppearanceButtons) {
+      const auto rect=b->GetBounds();
+      valid=valid && rect.W>0 && rect.H>0 && rect.X>=0 && rect.Y>=0 && rect.X+rect.W<=size.first && rect.Y+rect.H<=size.second &&
+        Root->HitTestFocusable(rect.X+rect.W/2,rect.Y+rect.H/2)==b;
+    }
+    layouts.push_back({{"width",size.first},{"height",size.second},{"controls_reachable",valid}});
+  }
+  const bool restored=Stats->ApplyHumanAppearance(original.humanAppearance,original.skinId);
+  EditingAppearance=false;ResetAppearanceDraft();
+  OnViewportChanged(1280,720);RefreshLabels();
+  AppearanceToggle->Activate();
+  AppearanceButtons[0]->Activate();AppearanceButtons[2]->Activate();AppearanceButtons[2]->Activate();
+  bool passed=draftIsolated && previewWorks && appliedOk && cancelled && restored && userSaved;
+  for(const auto& layout:layouts)passed=passed && layout["controls_reachable"].get<bool>();
+  nlohmann::json report={{"passed",passed},{"draft_isolated",draftIsolated},{"preview_rendered",previewWorks},{"apply",appliedOk},{"cancel",cancelled},{"original_selection_restored",restored},{"user_save_serialized",userSaved},{"layouts",layouts}};
+  std::ofstream file(reportPath);file<<report.dump(2)<<'\n';file.close();
+  if(!passed)throw std::runtime_error("Appearance UI QA failed");
+}
+
+void UCharacterSheetScreen::ResetAppearanceDraft() {
+  if(!Stats)return;
+  const auto snap=Stats->GetCharacterStatsSnapshot();
+  DraftAppearance=snap.humanAppearance;DraftSkin=snap.skinId;
+}
+void UCharacterSheetScreen::RefreshAppearanceControls() {
+  if(!Stats || !AppearanceToggle)return;
+  const bool human=Stats->GetCharacterStatsSnapshot().typeId=="human";
+  AppearanceToggle->SetVisible(human);
+  if(!human && EditingAppearance) {EditingAppearance=false;Relayout();}
+  if(AppearanceButtons.size()!=6)return;
+  AppearanceButtons[0]->SetLabel(DraftAppearance.bodyVariant=="female" ? "Body: female" : "Body: male");
+  AppearanceButtons[1]->SetLabel(DraftSkin=="human_guard" ? "Outfit: guard" : DraftSkin=="human_adventurer" ? "Outfit: traveler" : "Outfit: default");
+  const std::array<const char*,6> hair{"No hair","Short","Bob","Long","Ponytail","Curly"};
+  const std::array<const char*,5> color{"Black","Chestnut","Brown","Blond","Ginger"};
+  for(size_t i=0;i<hair.size();++i)if(DraftAppearance.hairstyleId==HumanAppearance::Hairstyles[i])AppearanceButtons[2]->SetLabel(std::string("Hairstyle: ")+hair[i]);
+  for(size_t i=0;i<color.size();++i)if(DraftAppearance.hairColorId==HumanAppearance::Colors[i])AppearanceButtons[3]->SetLabel(std::string("Hair color: ")+color[i]);
+  AppearanceButtons[4]->SetLabel("Apply");AppearanceButtons[5]->SetLabel("Cancel");
 }
 
 void UCharacterSheetScreen::RenderCharacterPreview()
@@ -789,7 +909,9 @@ void UCharacterSheetScreen::RenderCharacterPreview()
 
   const float yaw = PreviewViewport->GetYaw();
   const float pitch = PreviewViewport->GetPitch();
+  const auto look=EditingAppearance ? DraftAppearance : Stats->GetCharacterStatsSnapshot().humanAppearance;
   const bool sameCache =
+      look.Key()==LastCachedAppearance &&
       PreviewTexture != 0 && size == LastPreviewSize &&
       PreviewTypeId == LastCachedTypeId && PreviewSkinId == LastCachedSkinId &&
       armorKey == LastCachedArmorKey && wieldKey == LastCachedWieldKey &&
@@ -802,7 +924,7 @@ void UCharacterSheetScreen::RenderCharacterPreview()
 
   const GLuint tex = CreaturePreview->RenderToUniqueTexture(
       PreviewTypeId, PreviewSkinId, size, yaw, pitch, 0.f, false, &armorSlots,
-      mainId.empty() ? nullptr : &mainId, offId.empty() ? nullptr : &offId);
+      mainId.empty() ? nullptr : &mainId, offId.empty() ? nullptr : &offId, &look);
   if (tex == 0)
   {
     return;
@@ -819,6 +941,7 @@ void UCharacterSheetScreen::RenderCharacterPreview()
   LastPreviewSize = size;
   LastCachedTypeId = PreviewTypeId;
   LastCachedSkinId = PreviewSkinId;
+  LastCachedAppearance = look.Key();
   LastCachedArmorKey = armorKey;
   LastCachedWieldKey = wieldKey;
 }

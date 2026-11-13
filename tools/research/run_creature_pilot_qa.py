@@ -187,12 +187,12 @@ def main():
                 equipment_files[path.relative_to(runtime).as_posix()]=hashlib.sha256(path.read_bytes()).hexdigest()
             presets=runtime/'content/item_visual_presets.json'
             if presets.is_file():record(presets)
-            equipment_ids=set(args.equipment_material+'_'+slot for slot in ('head','chest','arms','hands','legs','feet'))
+            equipment_ids=set(args.equipment_material+'_'+slot for slot in ('head','chest','legs','feet'))
             equipment_ids.update(('wood_sword','wood_torch'))
             if args.equipment_matrix or args.posed_culling_probe:
-                equipment_ids.update(material+'_'+slot for material in ('copper','iron','leather') for slot in ('chest','arms','legs'))
+                equipment_ids.update(material+'_'+slot for material in ('copper','iron','leather') for slot in ('chest','legs'))
             if args.posed_culling_probe:
-                equipment_ids.update(material+'_'+slot for material in ('copper','iron','leather') for slot in ('head','chest','arms','hands','legs','feet'))
+                equipment_ids.update(material+'_'+slot for material in ('copper','iron','leather') for slot in ('head','chest','legs','feet'))
             for iid in sorted(equipment_ids):
                 definition=runtime/'content/items'/f'{iid}.json';record(definition)
                 data=json.loads(definition.read_text(encoding='utf-8-sig'))
@@ -404,7 +404,7 @@ def main():
             if not manifest.is_file() or manifest.stat().st_mtime_ns<capture_started_ns:
                 raise RuntimeError('FP capture manifest missing or stale')
             matrix=json.loads(manifest.read_text())
-            if not matrix['passed'] or len(matrix['resources'])!=9 or not matrix['controlled_inventory_unchanged'] or not matrix['user_selection_restored']:
+            if not matrix['passed'] or {r['id'] for r in matrix['resources']}!={'human','bot','zombie','skeleton','human_adventurer','human_guard','user_adventurer','user_guard','legacy_guard','human_female','human_female_adventurer','human_female_guard'} or not matrix['controlled_inventory_unchanged'] or not matrix['user_selection_restored']:
                 raise RuntimeError('FP world appearance/selection or inventory preservation failed')
             for resource in matrix['resources']:
                 if len(resource['frames'])!=104 or not resource['appearance_resolved']:

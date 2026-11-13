@@ -5729,6 +5729,7 @@ void UWorldPersistence::LoadUsers(UWorld &world, const std::string &file_name)
           world.Environment.SetPlayerCreatureId(saved_id);
         }
       }
+      if(user_data.contains("human_appearance")) user->SetHumanAppearance(user_data["human_appearance"].get<HumanAppearance>());
       if (user_data.contains("selected_skin_id"))
       {
         user->SetSelectedSkinId(
@@ -5833,6 +5834,7 @@ void UWorldPersistence::LoadUsers(UWorld &world, const std::string &file_name)
           player_creature->GetVitals().ClampCurrents();
         }
         player_creature->SetOrientation(ModelYawFromCameraYaw(yaw), pitch);
+        player_creature->SetHumanAppearance(user->GetHumanAppearance());
         if (!user->GetSelectedSkinId().empty())
         {
           player_creature->SetSkinId(user->GetSelectedSkinId());
@@ -5886,6 +5888,7 @@ void UWorldPersistence::SaveUsers(UWorld &world, const std::string &file_name)
     user_json["yaw"] = yaw;
     user_json["pitch"] = pitch;
     user_json["player_creature_id"] = user->GetPlayerCreatureId();
+    user_json["human_appearance"]=user->GetHumanAppearance();
     if (!user->GetSelectedSkinId().empty())
     {
       user_json["selected_skin_id"] = user->GetSelectedSkinId();

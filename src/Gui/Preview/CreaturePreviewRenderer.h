@@ -1,6 +1,8 @@
 #ifndef CREATURE_PREVIEW_RENDERER_H
 #define CREATURE_PREVIEW_RENDERER_H
 
+#include "Creatures/Core/HumanAppearance.h"
+
 #include <array>
 #include <functional>
 #include <memory>
@@ -87,7 +89,8 @@ public:
       bool animateWalk = false,
       const std::array<WornArmorPreviewSlot, kWornArmorSlotCount> *armor = nullptr,
       const std::string *mainItemId = nullptr,
-      const std::string *offhandItemId = nullptr);
+      const std::string *offhandItemId = nullptr,
+      const HumanAppearance *human = nullptr);
 
   GLuint CreateSolidColorTexture(int size, float r, float g, float b, float a);
 
@@ -121,7 +124,8 @@ private:
                         const std::array<WornArmorPreviewSlot, kWornArmorSlotCount> *armor =
                             nullptr,
                         const std::string *mainItemId = nullptr,
-                        const std::string *offhandItemId = nullptr);
+                        const std::string *offhandItemId = nullptr,
+      const HumanAppearance *human = nullptr);
 
   std::shared_ptr<UCreatureDefinitionStorage> Species;
   std::shared_ptr<USkinDefinitionStorage> Skins;

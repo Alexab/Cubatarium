@@ -154,7 +154,7 @@ private:
   /// Mesh FP arms (box UV atlas path). Full GPU skinning remains optional.
   bool TryDrawLegacyAtlasArms(const glm::mat4 &mvpBase, bool leftHand,
                           GLuint skinAtlas);
-  void PrepareArmSource(const CreatureDefinition *definition);
+  void PrepareArmSource(const CreatureDefinition *definition, const ResolvedCreatureAppearance *appearance);
   bool TryDrawAuthoredArm(const glm::mat4 &mvpBase,bool leftHand,GLuint skinAtlas);
 
   std::shared_ptr<const CreatureBoneSkeletonMeshAsset> ArmSource;

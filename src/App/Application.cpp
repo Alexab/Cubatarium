@@ -2220,6 +2220,13 @@ void UApplication::Update(double dt)
     {
       WorldGenScreen->Update(dt);
     }
+    static bool appearanceUiQaDone=false;
+    if(!appearanceUiQaDone && CharacterSheetScreen && World && World->GetControlledCreature()) {
+      if(const char* path=std::getenv("CUBA_PLAYER_APPEARANCE_UI_QA")) {
+        appearanceUiQaDone=true;CharacterSheetOpen=true;
+        CharacterSheetScreen->RunAppearanceQa(path);SyncCursorVisibility();
+      }
+    }
     if (CharacterSheetOpen && CharacterSheetScreen)
     {
       CharacterSheetScreen->Update(dt);

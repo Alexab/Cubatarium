@@ -104,6 +104,7 @@ public:
     return ActiveWorldDifficulty;
   }
   CharacterStatsSnapshot GetCharacterStatsSnapshot() const override;
+  bool ApplyHumanAppearance(const HumanAppearance &, const std::string &) override;
 
   CommandResult Execute(const std::vector<std::string> &args) override;
   void AddChatLine(const std::string &line) override;

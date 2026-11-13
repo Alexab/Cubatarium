@@ -506,7 +506,7 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
                                                 bool animateWalk,
                                                 const std::array<WornArmorPreviewSlot, kWornArmorSlotCount> *armor,
                                                 const std::string *mainItemId,
-                                                const std::string *offhandItemId)
+                                                const std::string *offhandItemId, const HumanAppearance *human)
 {
   if (!Species || !Skins || !Textures || !Shader || viewportSize <= 0)
   {
@@ -549,6 +549,7 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
       previewCreature.SetSkinId(skinId);
     }
 
+    if(human) previewCreature.SetHumanAppearance(*human);
     CreatureLocomotionFacts facts;
     facts.animPhase = animTimeSec * def->visual.Animation.walkCycleHz *
                       6.283185307179586f;
@@ -556,6 +557,9 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
     {
       facts.state = AnimationPreviewState.value_or(LocomotionState::Walk);
       facts.horizontalSpeed = def->locomotion.walkSpeed * AnimationPreviewSpeedRatio;
+      if(facts.state==LocomotionState::Crouch)facts.stanceBlend=1.f;
+      if(facts.state==LocomotionState::Jump) {facts.onGround=false;facts.verticalSpeed=2.f;}
+      if(facts.state==LocomotionState::Swim) {facts.onGround=false;facts.inFluid=true;}
     }
     else
     {
@@ -563,8 +567,9 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
     }
 
     std::unique_ptr<IUCreatureVisual> visual = CreateCreatureVisual(*def);
-    visual->SetAppearance(
-        ResolveCreatureAppearance(*Species, *Skins, speciesId, skinId));
+    auto appearance = ResolveCreatureAppearance(*Species, *Skins, speciesId, skinId, previewCreature.GetHumanAppearance());
+    appearance.hideHair = armor && !(*armor)[0].ItemId.empty();
+    visual->SetAppearance(appearance);
     // Fresh visual each render: advance its animation clock by the preview
     // anim time in one step.
     UCreaturePosePresenterRegistry presenters;
@@ -591,7 +596,7 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
     bool geometryFit = false;
     if (backend != CreatureVisualBackend::GltfSkeleton)
     {
-      const std::string key = speciesId + "|" + skinId + "|" + ToString(facts.state) +
+      const std::string key = speciesId + "|" + skinId + "|" + previewCreature.GetHumanAppearance().Key() + (appearance.hideHair ? "|helmet|" : "|") + ToString(facts.state) +
           (animateWalk ? "|cycle|" : "|rest|") + std::to_string(AnimationPreviewSpeedRatio) + "|" + std::to_string(Species->Revision.load()) +
           "|" + std::to_string(Skins->Revision.load());
       auto cached = ProceduralBoundsCache.find(key);
@@ -819,7 +824,7 @@ GLuint UCreaturePreviewRenderer::RenderToUniqueTexture(
     const std::string &speciesId, const std::string &skinId, int size,
     float yawDeg, float pitchDeg, float animTimeSec, bool animateWalk,
     const std::array<WornArmorPreviewSlot, kWornArmorSlotCount> *armor,
-    const std::string *mainItemId, const std::string *offhandItemId)
+    const std::string *mainItemId, const std::string *offhandItemId, const HumanAppearance *human)
 {
   if (speciesId.empty() || !Shader)
   {
@@ -858,7 +863,7 @@ GLuint UCreaturePreviewRenderer::RenderToUniqueTexture(
 
   if (!DrawSpeciesParts(speciesId, skinId, clamped, yawDeg, pitchDeg,
                         animTimeSec, animateWalk, armor, mainItemId,
-                        offhandItemId))
+                        offhandItemId, human))
   {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glDeleteTextures(1, &tex);

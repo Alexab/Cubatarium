@@ -17,11 +17,11 @@ inline std::pair<glm::vec3,glm::vec3> CreatureWearRegion(
   {
   case 0: center.y=high.y-extent.y*.12f;size+=glm::vec3(.10f,0.f,.10f);size.y=extent.y*.65f;break;
   case 1: size+=glm::vec3(.06f,.02f,.06f);break;
-  case 2: size.y=extent.y*.65f;center.y=high.y-size.y*.5f;size+=glm::vec3(.06f,.02f,.06f);break;
-  case 3: size.y=extent.y*.25f;center.y=low.y+size.y*.5f;size+=glm::vec3(.06f,.02f,.06f);break;
+  // Current four-slot inventory uses 2=legs,3=feet. Keep the historical
+  // region aliases for callers with six-slot authoring metadata.
+  case 2:
   case 4: size.y=extent.y*.70f;center.y=high.y-size.y*.5f;size+=glm::vec3(.06f,0.f,.06f);break;
-  // Keep the moving sole within 2 mm of the body's foot envelope. A large
-  // forward toe pad would enter the floor when the whole rigid leg swings.
+  case 3:
   case 5: size.y=extent.y*.30f;center.y=low.y+size.y*.5f;size+=glm::vec3(.004f,0.f,.004f);break;
   }
   return {center-size*.5f,center+size*.5f};

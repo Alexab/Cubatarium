@@ -1,6 +1,8 @@
 #ifndef USER_H
 #define USER_H
 
+#include "Creatures/Core/HumanAppearance.h"
+
 #include <glm/glm.hpp>
 #include <string>
 
@@ -37,7 +39,12 @@ public:
   const std::string &GetSelectedSkinId() const;
   void SetSelectedSkinId(const std::string &skinId);
 
+  const HumanAppearance &GetHumanAppearance() const { return HumanLook; }
+  void SetHumanAppearance(HumanAppearance value) { value.Normalize(); HumanLook = std::move(value); }
+
 private:
+  HumanAppearance HumanLook;
+
   glm::vec3 Position{};
   glm::vec3 ViewDirection{};
   float CameraYaw{-90.0f};

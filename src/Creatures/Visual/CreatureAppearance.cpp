@@ -1,4 +1,5 @@
 #include "Creatures/Visual/CreatureAppearance.h"
+#include <filesystem>
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
@@ -73,7 +74,7 @@ ResolvedCreatureAppearance
 ResolveCreatureAppearance(const UCreatureDefinitionStorage &species,
                           const USkinDefinitionStorage &skins,
                           const std::string &speciesId,
-                          const std::string &skinId)
+                          const std::string &skinId, const HumanAppearance &human)
 {
   ResolvedCreatureAppearance result;
   const CreatureDefinition *def = species.Get(speciesId);
@@ -121,6 +122,19 @@ ResolveCreatureAppearance(const UCreatureDefinitionStorage &species,
       CreatureVisualBackend::RigidVoxels)
   {
     ResolvePartsFromSpecies(*def, result);
+  }
+  if (speciesId == "human" && def->visual.humanAppearanceEnabled && (!skin || skin->humanAppearanceEnabled)) {
+    auto look=human;look.Normalize();result.appearanceKey=look.Key();
+    const std::string geometry="appearance/"+look.bodyVariant+"_"+look.hairstyleId+".geo.json";
+    const std::string stem="appearance_"+look.bodyVariant+"_"+look.hairColorId;
+    const auto root=std::filesystem::path(def->visual.sourceDirectory);
+    const auto textureRoot=skin ? root.parent_path().parent_path()/"skins"/result.effectiveSkinId : root;
+    // Custom packs without the new matched geometry/atlas pair retain their base appearance.
+    if (std::filesystem::is_regular_file(root/geometry) &&
+        std::filesystem::is_regular_file(textureRoot/"textures"/(stem+".png"))) {
+      result.geometryFileOverride=geometry;
+      result.skinTextureOverrides["diffuse"]=skin ? "skin/"+result.effectiveSkinId+"/"+stem : "human/"+stem;
+    }
   }
   return result;
 }

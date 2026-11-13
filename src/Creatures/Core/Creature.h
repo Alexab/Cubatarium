@@ -1,6 +1,8 @@
 #ifndef CREATURE_H
 #define CREATURE_H
 
+#include "Creatures/Core/HumanAppearance.h"
+
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureIntent.h"
 #include "Creatures/Core/CreatureInventory.h"
@@ -253,7 +255,10 @@ public:
     Locomotion.SetCapabilities(caps);
   }
 
+  const HumanAppearance &GetHumanAppearance() const { return HumanLook; }
+  void SetHumanAppearance(HumanAppearance value) { value.Normalize(); HumanLook = std::move(value); }
 protected:
+  HumanAppearance HumanLook;
   CreatureId Id;
   std::string TypeId;
   CreatureSpawnSource SpawnSource{CreatureSpawnSource::CreativeManual};

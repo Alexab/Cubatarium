@@ -40,6 +40,9 @@ inline void ExportCreatureQaFpFrames(UCore &core,UWorld &world,
   const Variant variants[]={
     {"human","human","","",""},{"bot","bot","","",""},
     {"zombie","zombie","","",""},{"skeleton","skeleton","","",""},
+    {"human_female","human","","",""},
+    {"human_female_adventurer","human","human_adventurer","",""},
+    {"human_female_guard","human","human_guard","",""},
     {"human_adventurer","human","human_adventurer","",""},
     {"human_guard","human","human_guard","",""},
     {"user_adventurer","human","","human_adventurer",""},
@@ -84,11 +87,13 @@ inline void ExportCreatureQaFpFrames(UCore &core,UWorld &world,
     user->SetSelectedSkinId(variant.selected);user->SetSelectedAppearanceTypeId(variant.legacy);
     UCreature actor(999999,variant.species,glm::vec3(0.f),glm::vec3(0.f,def->eyeHeight,0.f));
     actor.SetPlayerCharacter(true);actor.SetSkinId(variant.raw);
+    HumanAppearance look;if(std::string(variant.id).find("female")!=std::string::npos)look.bodyVariant="female";
+    actor.SetHumanAppearance(look);
     const auto appearance=world.GetResolvedAppearanceShared(actor);
     const std::string expectedSkin=std::string(variant.raw).empty()?
       (std::string(variant.selected).empty()?variant.legacy:variant.selected):variant.raw;
-    const auto expectedTexture=core.GetCreatureTextureStorage()->GetTexture(expectedSkin.empty()?
-      std::string(variant.species)+"/diffuse":"skin/"+expectedSkin+"/diffuse");
+    const auto atlasKey=appearance->skinTextureOverrides.find("diffuse");
+    const auto expectedTexture=core.GetCreatureTextureStorage()->GetTexture(atlasKey!=appearance->skinTextureOverrides.end() ? atlasKey->second : std::string(variant.species)+"/diffuse");
     const bool resolved=appearance && appearance->effectiveSkinId==expectedSkin && expectedTexture!=0;
     passed=passed && resolved;
     Json resource={{"id",variant.id},{"species",variant.species},{"raw_skin",variant.raw},
@@ -174,7 +179,9 @@ inline void ExportCreatureQaFpFrames(UCore &core,UWorld &world,
       FpViewmodelDrawAudit audit;FpViewmodelDrawParams params;
       params.FramebufferW=width;params.FramebufferH=height;params.TargetFramebuffer=fbo;
       params.SpeciesId=definition.Id;params.Definition=&definition;
-      params.Appearance=std::make_shared<const ResolvedCreatureAppearance>(ResolveCreatureAppearance(*defs,*skins,definition.Id,""));
+      auto resolved=ResolveCreatureAppearance(*defs,*skins,definition.Id,"");
+      resolved.geometryFileOverride.clear(); // This fixture deliberately replaces the definition locator.
+      params.Appearance=std::make_shared<const ResolvedCreatureAppearance>(resolved);
       params.Audit=&audit;renderer.DrawWorldOverlay(params);
       Json arms=Json::array();std::vector<uint64_t> hashes;
       for(const auto &arm:audit.Arms)

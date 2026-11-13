@@ -1014,6 +1014,22 @@ void UGameSession::SyncToWorldDifficulty(WorldDifficulty difficulty)
   }
 }
 
+bool UGameSession::ApplyHumanAppearance(const HumanAppearance &value, const std::string &skin) {
+  if(!World) return false;
+  auto *actor=World->GetControlledCreature();
+  auto user=World->GetCurrentUser();
+  if(!actor || !user || actor->GetTypeId()!="human") return false;
+  if(!skin.empty()) {
+    auto defs=World->GetSkinDefinitionStorage();
+    const auto *def=defs ? defs->Get(skin) : nullptr;
+    if(!def || def->creatureId!="human") return false;
+  }
+  actor->SetHumanAppearance(value);actor->SetSkinId(skin);
+  user->SetHumanAppearance(value);user->SetSelectedSkinId(skin);
+  user->SetSelectedAppearanceTypeId(skin);
+  return true;
+}
+
 CharacterStatsSnapshot UGameSession::GetCharacterStatsSnapshot() const
 {
   CharacterStatsSnapshot snap;
@@ -1031,6 +1047,8 @@ CharacterStatsSnapshot UGameSession::GetCharacterStatsSnapshot() const
   snap.valid = true;
   snap.typeId = creature->GetTypeId();
   snap.skinId = creature->GetSkinId();
+  if(const auto resolved=World->GetResolvedAppearanceShared(*creature))snap.skinId=resolved->effectiveSkinId;
+  snap.humanAppearance = creature->GetHumanAppearance();
   snap.vitals = creature->GetVitals();
   snap.attributes = creature->GetAttributes();
 

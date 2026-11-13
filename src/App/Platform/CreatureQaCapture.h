@@ -2,6 +2,7 @@
 #define CREATURE_QA_CAPTURE_H
 
 #include "App/Core.h"
+#include "App/Platform/PlayerAppearanceQaCapture.h"
 #include "App/Platform/CreatureQaMatrixCapture.h"
 #include "App/Platform/CreatureQaEquipmentCapture.h"
 #include "App/Platform/CreatureQaResourceCacheProbe.h"
@@ -184,6 +185,7 @@ inline void ExportCreatureQaFrames(UCore &core, UWorld &world,
     }
   }
   ExportCreatureQaMatrixFrames(preview, ids, directory);
+  ExportPlayerAppearanceQa(preview, directory);
   ExportCreatureQaEquipmentFrames(preview, ids, directory);
   ExportCreatureQaResourceCacheProbe(preview, ids, directory);
   ExportCreatureQaTextureMappingProbe(preview, ids, directory);

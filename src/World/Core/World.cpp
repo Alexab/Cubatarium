@@ -15011,6 +15011,7 @@ bool UWorld::AddUser(const std::string &Name)
   if (UPlayer *player = dynamic_cast<UPlayer *>(GetCreature(pid)))
   {
     player->BindUser(user);
+    player->SetHumanAppearance(user->GetHumanAppearance());
     if (!user->GetSelectedSkinId().empty())
     {
       player->SetSkinId(user->GetSelectedSkinId());

@@ -2,6 +2,7 @@
 #define CREATUREAPPEARANCE_H
 
 #include "Creatures/Core/CreatureCatalogTypes.h"
+#include "Creatures/Core/HumanAppearance.h"
 #include <string>
 
 namespace cutum
@@ -14,7 +15,8 @@ ResolvedCreatureAppearance
 ResolveCreatureAppearance(const UCreatureDefinitionStorage &species,
                           const USkinDefinitionStorage &skins,
                           const std::string &speciesId,
-                          const std::string &skinId);
+                          const std::string &skinId,
+                          const HumanAppearance &human = {});
 
 } // namespace cutum
 

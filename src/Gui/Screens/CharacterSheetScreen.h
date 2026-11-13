@@ -2,6 +2,7 @@
 #define CHARACTER_SHEET_SCREEN_H
 
 #include "Gui/Core/GuiScreenBase.h"
+#include "Creatures/Core/HumanAppearance.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -18,6 +19,7 @@ class UGuiSlot;
 class UGuiWindow;
 class UGuiPanel;
 class UGuiLabel;
+class UGuiButton;
 class IUGuiIconSource;
 struct GuiTheme;
 
@@ -36,6 +38,8 @@ public:
 
   void SetVisible(bool visible);
   void Toggle();
+  /// Opt-in native QA exercises the same buttons and session commands as user input.
+  void RunAppearanceQa(const std::string &reportPath);
 
   /// Hit-test armor slots for inventory drag routing (0..5), returns false if miss.
   bool PickArmorSlot(int x, int y, size_t &outSlot) const;
@@ -56,6 +60,7 @@ private:
   IUGuiIconSource *Icons{nullptr};
   UGuiWindow *Window{nullptr};
 
+  UGuiPanel *BodyPanel{nullptr};
   UGuiPanel *DollPanel{nullptr};
   UGuiPanel *StatsPanel{nullptr};
   UGuiLabel *EquipmentHeader{nullptr};
@@ -67,6 +72,15 @@ private:
   std::vector<UGuiSlot *> ToolSlots;
   UGuiPanel *BagPanel{nullptr};
   std::vector<UGuiSlot *> BagSlots;
+  UGuiPanel *AppearancePanel{nullptr};
+  UGuiButton *AppearanceToggle{nullptr};
+  std::vector<UGuiButton*> AppearanceButtons;
+  bool EditingAppearance{false};
+  HumanAppearance DraftAppearance;
+  std::string DraftSkin;
+  std::string LastCachedAppearance;
+  void ResetAppearanceDraft();
+  void RefreshAppearanceControls();
   bool WideLayout{true};
   GLuint PreviewTexture{0};
   bool PreviewValid{false};

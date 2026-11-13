@@ -784,6 +784,7 @@ UWorldEnvironment::GetResolvedAppearanceShared(const UCreature &creature) const
   AppearanceKeyScratch.assign(creature.GetTypeId());
   AppearanceKeyScratch += '\x1f';
   AppearanceKeyScratch += *skinId;
+  if (creature.GetTypeId()=="human") AppearanceKeyScratch += '\x1f' + creature.GetHumanAppearance().Key();
   if (const auto it = CreatureAppearanceCache.find(AppearanceKeyScratch);
       it != CreatureAppearanceCache.end())
   {
@@ -793,7 +794,7 @@ UWorldEnvironment::GetResolvedAppearanceShared(const UCreature &creature) const
   const USkinDefinitionStorage &skinStorage = skins ? *skins : kNoSkins;
   auto resolved = std::make_shared<const ResolvedCreatureAppearance>(
       ResolveCreatureAppearance(*CreatureDefinitions, skinStorage,
-                                creature.GetTypeId(), *skinId));
+                                creature.GetTypeId(), *skinId, creature.GetHumanAppearance()));
   CreatureAppearanceCache[AppearanceKeyScratch] = resolved;
   return resolved;
 }
@@ -1192,6 +1193,7 @@ void UWorldEnvironment::LoadCreatures(const std::string &file_name)
       buildParams.SavedState = &c;
       buildParams.AllowPlayerRole = false;
       auto creature = UCreatureFactory::Build(*def, buildParams);
+      if(creature && c.contains("human_appearance")) creature->SetHumanAppearance(c["human_appearance"].get<HumanAppearance>());
       // Cooperative loading restores entities before it reads terrain chunks.
       // Only resolve collision/habitat now if this entity's chunk is present;
       // otherwise retain its saved position and retry as streaming loads it.
@@ -1270,6 +1272,7 @@ void UWorldEnvironment::SaveCreatures(const std::string &file_name)
     json item;
     item["id"] = creature.GetId();
     item["type"] = creature.GetTypeId();
+    if(creature.GetTypeId()=="human") item["human_appearance"]=creature.GetHumanAppearance();
     WriteCreatureSpawnSource(item, creature.GetSpawnSource());
     if (!creature.GetSkinId().empty())
     {

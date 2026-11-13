@@ -124,7 +124,8 @@ def build_item(item_id: str, *, publish: bool = True) -> Path:
         }
         if slot == "feet":
             wear["bones"] = ["rightLeg", "leftLeg"]
-            wear["offset"] = [0, -0.35, 0.05]
+            # bone_volume already places the sole; an extra legacy offset detaches boots.
+            wear["offset"] = [0, 0, 0]
         (staging / "wear.json").write_text(
             json.dumps(wear, indent=2) + "\n", encoding="utf-8"
         )

@@ -1118,14 +1118,14 @@ bool UFpViewmodelRenderer::TryDrawLegacyAtlasArms(const glm::mat4 &mvpBase,
   return true;
 }
 
-void UFpViewmodelRenderer::PrepareArmSource(const CreatureDefinition *definition)
+void UFpViewmodelRenderer::PrepareArmSource(const CreatureDefinition *definition, const ResolvedCreatureAppearance *appearance)
 {
   if(!definition || ParseCreatureVisualBackend(definition->visual.backend)!=CreatureVisualBackend::BoneSkeleton)
   {ArmSource.reset();ArmRequestSeen=false;return;}
   const auto &spec=definition->visual.boneSkeleton;
   auto &cache=CreatureBoneSkeletonCache::Instance();const auto revision=cache.GetRevision();
   static const std::string defaultFile="geometry.geo.json";
-  const auto &file=spec.geometryFile.empty()?defaultFile:spec.geometryFile;
+  const auto &file=appearance && !appearance->geometryFileOverride.empty()?appearance->geometryFileOverride:spec.geometryFile.empty()?defaultFile:spec.geometryFile;
   if(ArmRequestSeen && ArmRevision==revision && ArmSpecies==definition->Id && ArmFile==file &&
      ArmGeometry==spec.geometryId && ArmDirectory==definition->visual.sourceDirectory)return;
   ArmRequestSeen=true;ArmRevision=revision;ArmSpecies=definition->Id;ArmFile=file;
@@ -1262,7 +1262,7 @@ void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
   const GLuint skinAtlas =
       ResolvePlayerSkin(params.SpeciesId, params.Appearance.get());
   if(ActiveAudit)ActiveAudit->SkinTexture=skinAtlas;
-  PrepareArmSource(params.Definition);
+  PrepareArmSource(params.Definition, params.Appearance.get());
 
   Shader->Use();
   Shader->SetInt("texture0", 0);
