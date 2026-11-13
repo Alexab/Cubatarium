@@ -1842,6 +1842,8 @@ void UApplication::DrawDragGhost(int width, int height)
 
 void UApplication::NotifyFpSwing(FpSwingKind kind)
 {
+  if(World)if(auto *actor=World->GetControlledCreature())
+    if(actor->GetTypeId()=="human")actor->HumanMotion.actionRemaining=.28f;
   if (FpViewmodelRenderer)
   {
     FpViewmodelRenderer->NotifySwing(kind);

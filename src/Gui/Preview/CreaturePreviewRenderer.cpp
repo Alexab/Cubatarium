@@ -550,7 +550,12 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
     }
 
     if(human) previewCreature.SetHumanAppearance(*human);
+    if(speciesId=="human") {
+      if(mainItemId && !mainItemId->empty())previewCreature.GetInventory().AssignToHotbar(0,0,{InventoryEntryKind::Item,*mainItemId,1,false});
+      if(offhandItemId && !offhandItemId->empty())previewCreature.GetInventory().EquipOffhand({InventoryEntryKind::Item,*offhandItemId,1,false});
+    }
     CreatureLocomotionFacts facts;
+    facts.supportValid[0]=facts.supportValid[1]=true;
     facts.animPhase = animTimeSec * def->visual.Animation.walkCycleHz *
                       6.283185307179586f;
     if (animateWalk)
@@ -559,13 +564,26 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
       facts.horizontalSpeed = def->locomotion.walkSpeed * AnimationPreviewSpeedRatio;
       if(facts.state==LocomotionState::Crouch)facts.stanceBlend=1.f;
       if(facts.state==LocomotionState::Jump) {facts.onGround=false;facts.verticalSpeed=2.f;}
-      if(facts.state==LocomotionState::Swim) {facts.onGround=false;facts.inFluid=true;}
+      if(facts.state==LocomotionState::Swim) {facts.onGround=false;facts.inFluid=true;facts.swimming=true;}
     }
     else
     {
       facts.state = LocomotionState::Idle;
     }
 
+    if(facts.state==LocomotionState::Fly || facts.state==LocomotionState::Hover) {facts.mode=CreatureMovementMode::Flying;facts.onGround=false;}
+    if(speciesId=="human" && facts.state==LocomotionState::Hover)facts.horizontalSpeed=0.f;
+    if(speciesId=="human" && facts.state==LocomotionState::Tread) {
+      facts.onGround=false;facts.inFluid=true;facts.swimming=true;facts.horizontalSpeed=0.f;
+    }
+    if(facts.state==LocomotionState::Fall) {facts.onGround=false;facts.verticalSpeed=-6.f;}
+    facts.actualVelocity={0.f,facts.verticalSpeed,facts.horizontalSpeed};
+    auto seedHumanPreview=[&](const CreatureLocomotionFacts &f,bool sampling=false) {
+      previewCreature.HumanMotion={};previewCreature.HumanMotion.distancePhase=f.animPhase;
+      previewCreature.HumanMotion.idlePhase=sampling?f.animPhase:animTimeSec*2.5f;
+      if(f.state==LocomotionState::Action)previewCreature.HumanMotion.actionRemaining=.14f;
+    };
+    seedHumanPreview(facts);
     std::unique_ptr<IUCreatureVisual> visual = CreateCreatureVisual(*def);
     auto appearance = ResolveCreatureAppearance(*Species, *Skins, speciesId, skinId, previewCreature.GetHumanAppearance());
     appearance.hideHair = armor && !(*armor)[0].ItemId.empty();
@@ -579,8 +597,7 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
     {
       presented = presenter->Compute(facts, *def, 0.f);
     }
-    visual->UpdatePose(previewCreature, facts, presented, *def,
-                       animTimeSec);
+    visual->UpdatePose(previewCreature, facts, presented, *def, 0.f);
 
     RenderSettings previewSettings;
     CreatureDrawQueue queue;
@@ -588,6 +605,7 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
     ctx.Queue = &queue;
     ctx.Textures = Textures.get();
     ctx.Settings = &previewSettings;
+    ctx.SkipWieldedItems=true;
 
     // Collision bounds can be shorter than ears or a raised head. Fit the
     // rendered rest geometry without changing gameplay bounds or world scale.
@@ -615,6 +633,7 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
           CreaturePoseParams sampledPose;
           if (auto *presenter = presenters.Get(def->locomotionArchetype))
             sampledPose = presenter->Compute(sampledFacts, *def, 0.f);
+          seedHumanPreview(sampledFacts,true);
           visual->UpdatePose(previewCreature, sampledFacts, sampledPose, *def, 0.f);
           visual->SubmitDraw(boundsContext, glm::mat4(1.f));
           boundsQueue.Flush(bounds);
@@ -622,7 +641,8 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
         }
         if (bounds.any)
           cached = ProceduralBoundsCache.emplace(key, std::make_pair(bounds.low, bounds.high)).first;
-        visual->UpdatePose(previewCreature, facts, presented, *def, animTimeSec);
+        seedHumanPreview(facts);
+        visual->UpdatePose(previewCreature, facts, presented, *def, 0.f);
       }
       if (cached != ProceduralBoundsCache.end())
       {

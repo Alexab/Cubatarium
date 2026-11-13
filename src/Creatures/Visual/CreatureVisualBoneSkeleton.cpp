@@ -14,6 +14,7 @@
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonModelSpace.h"
 #include "Game/Inventory/InventoryTypes.h"
 #include "Pose/BoneSkeleton/BoneSkeletonPoseEngine.h"
+#include "Pose/HumanMotionController.h"
 #include "Pose/BoneSkeleton/SkeletalAnimationProfiles.h"
 #include "Render/Engine/GeometryEngine.h"
 #include <glm/gtc/matrix_transform.hpp>
@@ -33,7 +34,7 @@ bool UCreatureVisualBoneSkeleton::GetWorldBoneTransform(
   if (bone == MeshAsset->geometry.boneIndexByName.end() ||
       bone->second >= CachedBoneMatrices.size()) return false;
   const glm::mat4 root = BuildCreatureRootMatrix(BodyOrigin, BodyYawDeg, 0.f,
-      []() { return BoneSkeletonEntityConventionMatrix(); });
+      []() { return BoneSkeletonEntityConventionMatrix(); }, MeshAsset ? MeshAsset->geometry.modelScale : 1.f);
   out = root * CachedBoneMatrices[bone->second];
   return true;
 }
@@ -114,7 +115,15 @@ void UCreatureVisualBoneSkeleton::UpdatePose(
     }
   }
 
-  BonePose = BoneSkeletonPoseEngine::Compute(facts, animDef, dt);
+  const bool humanV2 = animDef.Id == "human" && MeshAsset && MeshAsset->geometry.humanRigVersion == 2;
+  if (humanV2) {
+    HumanMotionInput input;input.facts=facts;input.feet=BodyOrigin;input.yawDeg=BodyYawDeg;
+    const auto *active=creature.GetInventory().GetActiveEntryRef();
+    input.rightHandBusy=active && !active->empty && !active->Id.empty();
+    const auto &off=creature.GetInventory().GetEquippedOffhand();
+    input.leftHandBusy=!off.empty && !off.Id.empty();
+    BonePose=HumanMotionController::Compute(input,creature.HumanMotion,dt,creature.IsPossessed());
+  } else BonePose = BoneSkeletonPoseEngine::Compute(facts, animDef, dt);
   CachedBoneMatrices.clear();
   if (MeshAsset && Hierarchy)
   {
@@ -126,14 +135,15 @@ void UCreatureVisualBoneSkeleton::UpdatePose(
     }
   }
 
-  const bool groundClearance = UsesBoneGroundClearance(facts, animDef,
+  const bool groundClearance = !humanV2 && UsesBoneGroundClearance(facts, animDef,
       SkeletalAnimationProfiles::ResolveProfileId(animDef));
   const float requiredLift = groundClearance && MeshAsset
       ? ComputeBoneGroundClearance(*MeshAsset, CachedBoneMatrices) : 0.f;
   // The common root also carries equipment. Bone matrices, pivots, authored
   // rotations and physics/collider position remain untouched. On takeoff the
   // small clearance offset decays instead of snapping off in one frame.
-  BodyOrigin.y += GroundClearance.Update(requiredLift, groundClearance, dt);
+  if(humanV2)GroundClearance={}; // Human IK owns contact; a legacy-pack lift must not leak back.
+  else BodyOrigin.y += GroundClearance.Update(requiredLift, groundClearance, dt);
 
   PoseCreature = &creature;
 }
@@ -164,7 +174,7 @@ void UCreatureVisualBoneSkeleton::SubmitDraw(const CreatureDrawContext &ctx,
 
   const glm::mat4 bodyMat =
       BuildCreatureRootMatrix(BodyOrigin, BodyYawDeg, 0.f, []()
-                              { return BoneSkeletonEntityConventionMatrix(); });
+                              { return BoneSkeletonEntityConventionMatrix(); }, MeshAsset ? MeshAsset->geometry.modelScale : 1.f);
 
   CreatureDrawQueue &queue = *ctx.Queue;
   for (size_t boneIdx = 0; boneIdx < MeshAsset->boneMeshes.size(); ++boneIdx)
@@ -243,7 +253,7 @@ void UCreatureVisualBoneSkeleton::SubmitDraw(const CreatureDrawContext &ctx,
           {return GetBoneLocalBounds(name,low,high);};
       WornEquipmentDrawer::SubmitFromCreature(*ctx.Queue, *PoseCreature,
                                               viewProj, bodyMat, boneLookup, bounds);
-      WornEquipmentDrawer::SubmitWieldedFromCreature(
+      if(!ctx.SkipWieldedItems)WornEquipmentDrawer::SubmitWieldedFromCreature(
           *ctx.Queue, *PoseCreature, ctx.Items, viewProj, bodyMat, boneLookup, bounds);
     }
   }

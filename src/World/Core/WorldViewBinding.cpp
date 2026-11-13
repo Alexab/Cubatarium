@@ -10,6 +10,7 @@
 #include "Audio/MaterialSoundMap.h"
 #include "Creatures/Combat/CreatureCombat.h"
 #include "Creatures/Core/Creature.h"
+#include "Pose/HumanMotionController.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Diagnostics/CreatureQaWorldMotion.h"
 #include "World/Chunks/KnownAirTerrainSlice.h"
@@ -243,7 +244,7 @@ void UWorldViewBinding::WarmupVisibleListAtCamera(UWorld &world)
   const glm::mat4 view = camera->GetViewMatrix();
   const glm::mat4 proj = camera->GetProjection();
   const glm::mat4 vp = proj * view;
-  world.MeshService->WarmupVisibleListFromViewProj(vp, camera->GetPosition());
+  world.MeshService->WarmupVisibleListFromViewProj(vp, camera->GetRenderPosition());
 }
 
 void UWorldViewBinding::EnsurePlayerOnGround(UWorld &world)
@@ -798,7 +799,7 @@ bool UWorld::SyncControlledBodyFromCamera(UCreature *controlled,
   // Camera locomotion is the source of truth for the controlled player;
   // sync body origin / facts from the camera controller (not UpdateControlled).
   const glm::vec3 eye = camera->GetPosition();
-  float feetY = FeetYFromEye(eye, controlled->GetEyeOffset().y);
+  float feetY = FeetYFromEye(eye, controlled->GetTypeId()=="human" ? camera->GetPlayerCapsule().eyeHeight : controlled->GetEyeOffset().y);
   // Standing on a creature: the feet are anchored to its back, not to the
   // block column below - snapping to terrain here pulled the body (and the
   // mount detection that reads it) down into the mount every other frame.
@@ -812,6 +813,8 @@ bool UWorld::SyncControlledBodyFromCamera(UCreature *controlled,
       feetY = *gy;
     }
   }
+  const glm::vec3 previousBody = controlled->GetBodyOrigin();
+  const glm::vec3 previousVelocity=controlled->GetLocomotionFacts().actualVelocity;
   controlled->SetBodyOrigin(glm::vec3(eye.x, feetY, eye.z));
   controlled->GetLocomotion().SetStanceBlendForView(camera->GetStanceBlend());
   controlled->GetLocomotion().SyncFeetAnchorFromView(feetY,
@@ -850,6 +853,23 @@ bool UWorld::SyncControlledBodyFromCamera(UCreature *controlled,
   controlled->RebuildLocomotionFactsFromController(
       camLoc, controlled->GetLocomotion().GetCapabilities(),
       static_cast<float>(camera->GetDeltaTime()), horizontalSpeed, this);
+  if (controlled->GetTypeId() == "human")
+  {
+    const float dt = static_cast<float>(camera->GetDeltaTime());
+    const glm::vec3 delta = controlled->GetBodyOrigin() - previousBody;
+    // Movement is fixed-step. Dividing by render time made 144 FPS alternate
+    // zero and oversized speeds, flickering Run/Idle on frames without a step.
+    const float simulatedDt=camera->GetLastPhysicsSubsteps()/60.f;
+    glm::vec3 velocity=HumanMotionController::MeasureVelocity(delta,simulatedDt,previousVelocity);
+    if(!camera->GetFreeMove() && !camLoc.IsSwimming()) {
+      if(camLoc.IsOnGround() || std::abs(velocity.y-camLoc.GetVerticalVelocity())>2.f)velocity.y=0.f;
+    }
+    if(camLoc.IsOnGround() && !camLoc.IsSwimming() && !camera->GetFreeMove()) {
+      const float stride=(camState==LocomotionState::Run?1.35f:1.15f)*(1.f-.55f*camera->GetStanceBlend());
+      controlled->HumanMotion.audioPhase+=glm::length(glm::vec2(velocity.x,velocity.z))*simulatedDt*6.2831853f/stride;
+    }
+    controlled->SetHumanMotionFacts(velocity, camLoc.IsSwimming() && !camera->GetFreeMove(), this, dt);
+  }
   EmitCreatureFootstepAudio(*this, *controlled);
   return true;
 }

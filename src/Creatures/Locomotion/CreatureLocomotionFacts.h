@@ -30,6 +30,14 @@ struct CreatureLocomotionFacts
   bool onGround{true};
   bool inFluid{false};
   bool onFluidBottom{false};
+  float supportY[2]{0.f,0.f};
+  bool supportValid[2]{false,false};
+  glm::vec3 actualVelocity{0.f};
+  bool swimming{false};
+  bool headSubmerged{false};
+  float waterSurfaceY{0.f};
+  float swimClearance{1.f};
+  unsigned liquidKind{0};
   float horizontalSpeed{0.0f};
   float verticalSpeed{0.0f};
   float stanceBlend{0.0f};

@@ -23,6 +23,7 @@ struct CreatureDrawContext
   glm::vec3 CameraPosition{0.f};
   /// Item definitions for worn-equipment rendering (world path).
   const UItemDefinitionStorage *Items{nullptr};
+  bool SkipWieldedItems{false}; // Preview supplies its own item overlay.
 };
 
 } // namespace cutum
