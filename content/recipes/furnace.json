@@ -1,0 +1,17 @@
+{
+  "id": "furnace",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "stone",
+      "count": 8
+    }
+  ],
+  "output": {
+    "id": "furnace",
+    "count": 1
+  },
+  "station": "crafting_table",
+  "category": "Stations",
+  "seconds": 0
+}

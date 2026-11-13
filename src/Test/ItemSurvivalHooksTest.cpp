@@ -45,15 +45,15 @@ int main()
     UCreatureInventory creative;
     creative.InitCreativeDefaults();
     ResourceEconomyService::GrantItemDrop(WorldGameMode::Creative, creative,
-                                           "raw_meat", 1);
+                                          "raw_meat", 1);
     Expect(creative.GetStorage().count("raw_meat") == 0,
            "creative skips meat drop");
 
     UCreatureInventory survival;
     ResourceEconomyService::GrantItemDrop(WorldGameMode::Survival, survival,
-                                           "raw_meat", 1);
+                                          "raw_meat", 1);
     ResourceEconomyService::GrantItemDrop(WorldGameMode::Survival, survival,
-                                           "leather", 1);
+                                          "leather", 1);
     Expect(survival.GetStorage().at("raw_meat") == 1, "survival meat grant");
     Expect(survival.GetStorage().at("leather") == 1, "survival leather grant");
   }
@@ -79,22 +79,25 @@ int main()
     const CreatureDefinition *def = storage.Get("cow_drop_probe");
     Expect(def != nullptr, "def present");
     Expect(def && def->drops.size() == 2, "two drops");
-    Expect(def && def->drops[0].itemId == "raw_meat" && def->drops[0].count == 1,
+    Expect(def && def->drops[0].itemId == "raw_meat" &&
+               def->drops[0].count == 1,
            "meat drop");
     Expect(def && def->drops[1].itemId == "leather" && def->drops[1].count == 1,
            "leather drop");
 
-    // Simulate killer grant from parsed drops (same path InfluenceApplier uses).
+    // Simulate killer grant from parsed drops (same path InfluenceApplier
+    // uses).
     UCreatureInventory killer;
     for (const CreatureDropEntry &drop : def->drops)
     {
       ResourceEconomyService::GrantItemDrop(WorldGameMode::Survival, killer,
-                                             drop.itemId, drop.count);
+                                            drop.itemId, drop.count);
     }
     Expect(killer.GetStorage().at("raw_meat") == 1, "killer received meat");
     Expect(killer.GetStorage().at("leather") == 1, "killer received leather");
 
-    // Unequipped RemoveCreature analogue: no automatic grant without killer loop.
+    // Unequipped RemoveCreature analogue: no automatic grant without killer
+    // loop.
     UCreatureInventory empty;
     Expect(empty.GetStorage().empty(), "no grant without killer path");
   }
@@ -105,18 +108,24 @@ int main()
     nlohmann::json data = nlohmann::json::object();
     data["equipped_armor"] = nlohmann::json::array(
         {nlohmann::json{{"id", "leather_head"}, {"count", 1}, {"empty", false}},
-         nlohmann::json{{"id", "leather_chest"}, {"count", 1}, {"empty", false}},
+         nlohmann::json{
+             {"id", "leather_chest"}, {"count", 1}, {"empty", false}},
          nlohmann::json{{"id", "legacy_arms"}, {"count", 1}, {"empty", false}},
          nlohmann::json{{"id", "legacy_hands"}, {"count", 1}, {"empty", false}},
          nlohmann::json{{"id", "leather_legs"}, {"count", 1}, {"empty", false}},
-         nlohmann::json{{"id", "leather_feet"}, {"count", 1}, {"empty", false}}});
+         nlohmann::json{
+             {"id", "leather_feet"}, {"count", 1}, {"empty", false}}});
     inv.DeserializeFromJson(data);
     Expect(inv.GetEquippedArmor(0).Id == "leather_head", "migrated head");
     Expect(inv.GetEquippedArmor(1).Id == "leather_chest", "migrated chest");
     Expect(inv.GetEquippedArmor(2).Id == "leather_legs", "migrated legs");
     Expect(inv.GetEquippedArmor(3).Id == "leather_feet", "migrated feet");
-    Expect(inv.GetRecovery().size() == 2 && inv.GetRecovery()[0].Id == "legacy_arms", "arms recovered");
-    Expect(inv.GetRecovery().size() == 2 && inv.GetRecovery()[1].Id == "legacy_hands", "hands recovered");
+    Expect(inv.GetRecovery().size() == 2 &&
+               inv.GetRecovery()[0].Id == "legacy_arms",
+           "arms recovered");
+    Expect(inv.GetRecovery().size() == 2 &&
+               inv.GetRecovery()[1].Id == "legacy_hands",
+           "hands recovered");
   }
 
   if (Failures != 0)

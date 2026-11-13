@@ -40,6 +40,8 @@ int main()
   auto first = inv.GetSlot(0), second = inv.GetSlot(1);
   Expect(first.instanceId != second.instanceId, "independent identities");
   Expect(inv.EquipArmor(0, first, defs), "equip owned instance");
+  Expect(inv.GetEquippedArmorGroups().Get("fleshy") < 100,
+         "armor reduces damage multiplier");
   Expect(inv.GetSlot(0).empty && inv.GetEquippedArmor(0).wear == .65f,
          "moves exact state out of bag");
   Expect(!inv.EquipArmor(2, second, defs), "wrong slot rejected");

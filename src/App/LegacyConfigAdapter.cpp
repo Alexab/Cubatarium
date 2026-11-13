@@ -18,7 +18,11 @@ void ReadLegacyUiSettings(const nlohmann::json &ui, UiSettings &out)
   out.PaletteKey = ui.value("palette_key", "b");
   out.WorldGenKey = ui.value("worldgen_key", "g");
   out.InventoryKey = ui.value("inventory_key", "e");
-  out.HotbarCount = std::clamp(ui.value("hotbar_count", 1), 1, 2);
+  out.HotbarCount = std::clamp(ui.value("hotbar_count", 1), 1, 4);
+  out.CharacterKey = ui.value("character_key", "c");
+  out.CraftKey = ui.value("craft_key", "k");
+  out.GrabKey = ui.value("grab_key", "v");
+  out.ThrowKey = ui.value("throw_key", "r");
 
   std::string schemeStr = "classic";
   if (ui.contains("control_scheme") && ui["control_scheme"].is_string())
@@ -47,6 +51,10 @@ void WriteLegacyUiSettings(nlohmann::json &ui, const UiSettings &settings)
   ui["palette_key"] = settings.PaletteKey;
   ui["worldgen_key"] = settings.WorldGenKey;
   ui["inventory_key"] = settings.InventoryKey;
+  ui["character_key"] = settings.CharacterKey;
+  ui["craft_key"] = settings.CraftKey;
+  ui["grab_key"] = settings.GrabKey;
+  ui["throw_key"] = settings.ThrowKey;
   ui["hotbar_count"] = settings.HotbarCount;
   const std::string scheme = ControlSchemeToString(settings.ControlScheme);
   ui["control_scheme"] = scheme;

@@ -27,7 +27,24 @@ models/items/<id>.json   # parts_v1 fallback (kept)
 
 ## Shipped catalog
 
-Base tools (wood/stone/iron × sword/axe/pickaxe/shovel) plus hammer/knife/bow; leather + iron armor sets; expanded free-tier catalog (copper tools/armor, spears, shields, utility tools, Kenney upgraded tools). See `tools/item_model_manifest.json`.
+The active catalog contains 70 original generated items: five tool families × five
+materials; four armor slots × leather/copper/iron/gold; weapons, finite containers,
+utility, food and processing materials. Active manifest: `models/items/MANIFEST.json`.
+Recipes and materials live in `tools/item_recipes/` and `tools/item_materials.yaml`.
+No Minecraft assets were imported. See the [completion report](research/items-completion-2026-11-13/README.md).
+
+Generation, validation and publication are distinct:
+
+```
+python tools/itemgen.py build --id iron_pickaxe --staging-only
+python tools/itemgen.py validate --id iron_pickaxe
+python tools/itemgen.py publish --id iron_pickaxe
+```
+
+Publishing preserves authored worn/grip sidecars. QA rasterizes real triangles,
+UV and textures; it no longer replaces geometry with bounds. Icon, FP, TP and
+ground presentation scales are independent from physical dimensions.
+World drops and thrown items use their actual models; block units use the block atlas.
 
 First-person wield: glTF when present, else `parts[]` / block cubes (`DrawWorldOverlay`, clear-Z, FOV 72°). Scale via `visual.wield_scale` (category defaults). Swing/use from `content/item_visual_presets.json`. Perspective only.
 
@@ -37,7 +54,7 @@ Worn armor: attached to human `bone_skeleton` bones (`hat`, `body`, `*Arm`, `*Le
 
 Tooling: `tools/audit_item_visuals.py`, `tools/apply_item_visual_defaults.py`, `tools/validate_item_defs.py`, `tools/parts_to_gltf.py`.
 
-## Upstream CC0 sources (import)
+## Historical / optional upstream CC0 import tooling
 
 | Pack | License | URL | Use |
 |------|---------|-----|------|
@@ -62,7 +79,7 @@ python tools/parts_to_gltf.py --retarget-content
 python tools/validate_item_defs.py
 ```
 
-Manifest: [`tools/item_model_manifest.json`](../tools/item_model_manifest.json). Cache: [`third_party/asset_cache/README.md`](../third_party/asset_cache/README.md) (gitignored extracts).
+Historical import manifest: [`tools/item_model_manifest.json`](../tools/item_model_manifest.json). Cache: [`third_party/asset_cache/README.md`](../third_party/asset_cache/README.md) (gitignored extracts).
 
 ## Attribution
 

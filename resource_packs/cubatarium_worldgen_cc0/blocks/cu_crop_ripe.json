@@ -1,0 +1,40 @@
+{
+  "name": "cu_crop_ripe",
+  "displayName": "Grain ripe",
+  "hardness": 0.05,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "oddly_breakable_by_hand": 3
+    }
+  },
+  "types": [
+    "natural",
+    "plants"
+  ],
+  "textures": [
+    "cu_crop_ripe",
+    "cu_crop_ripe",
+    "cu_crop_ripe",
+    "cu_crop_ripe",
+    "cu_crop_ripe",
+    "cu_crop_ripe"
+  ],
+  "render": {
+    "transparent": true,
+    "style": "cross",
+    "double_sided": true,
+    "shape": "tuft"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  },
+  "license": "CC0-1.0",
+  "provenance": {
+    "author": "Cubatarium",
+    "source_kind": "Original procedural crop texture"
+  },
+  "id": 2531
+}

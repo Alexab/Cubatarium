@@ -5,12 +5,14 @@
 #include "Game/ModePolicy.h"
 #include "World/Core/World.h"
 #include <algorithm>
+#include <cmath>
 #include <vector>
 
 namespace cutum
 {
 
-void StatusEffectSystem::ApplyStatus(UCreature &target, const std::string &def_id)
+void StatusEffectSystem::ApplyStatus(UCreature &target,
+                                     const std::string &def_id)
 {
   const StatusEffectDef *def = UStatusEffectCatalog::Get().Find(def_id);
   if (!def)
@@ -46,6 +48,21 @@ void StatusEffectSystem::ApplyStatus(UCreature &target, const std::string &def_i
   list.push_back(created);
 }
 
+CreatureAttributes
+StatusEffectSystem::GetEffectiveAttributes(const UCreature &c)
+{
+  auto attrs = c.GetAttributes();
+  UStatusEffectCatalog::Get().EnsureBuiltins();
+  for (const auto &effect : c.GetStatusEffects())
+    if (effect.RemainingSec > 0)
+      if (const auto *def = UStatusEffectCatalog::Get().Find(effect.DefId))
+      {
+        attrs.strength += def->StrengthDelta * effect.Stacks;
+        attrs.agility += def->AgilityDelta * effect.Stacks;
+      }
+  attrs.ClampAll();
+  return attrs;
+}
 float StatusEffectSystem::GetMoveSpeedMultiplier(const UCreature &creature)
 {
   float mul = 1.f;
@@ -56,7 +73,8 @@ float StatusEffectSystem::GetMoveSpeedMultiplier(const UCreature &creature)
     {
       continue;
     }
-    mul *= def->MoveSpeedMul;
+    if (inst.RemainingSec > 0)
+      mul *= std::pow(def->MoveSpeedMul, inst.Stacks);
   }
   return mul;
 }

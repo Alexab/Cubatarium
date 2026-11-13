@@ -8,10 +8,10 @@
 #include "Creatures/Environment/CreatureSpawnPlacement.h"
 #include "Creatures/Player/User.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
-#include "Game/GameSession.h"
 #include "Game/Crafting/RecipeRegistry.h"
-#include "Game/WorldDifficulty.h"
+#include "Game/GameSession.h"
 #include "Game/ModePolicy.h"
+#include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Items/ToolCapabilities.h"
@@ -84,8 +84,8 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
       {
         if (args.size() < 3 || args[1] != "inventory")
         {
-          return CommandResult{
-              false, "Usage: cheat inventory creative <on|off>"};
+          return CommandResult{false,
+                               "Usage: cheat inventory creative <on|off>"};
         }
         if (args[2] != "creative")
         {
@@ -97,8 +97,8 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
           enable = args[3] == "on" || args[3] == "1" || args[3] == "true";
         }
         session.SetCheatCreativeInventory(enable);
-        return CommandResult{
-            true, enable ? "Creative inventory cheat ON" : "Creative inventory cheat OFF"};
+        return CommandResult{true, enable ? "Creative inventory cheat ON"
+                                          : "Creative inventory cheat OFF"};
       });
 
   registry.Register(
@@ -107,8 +107,8 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
       {
         if (args.size() < 2)
         {
-          return CommandResult{
-              false, "Usage: difficulty <peaceful|easy|normal|hard>"};
+          return CommandResult{false,
+                               "Usage: difficulty <peaceful|easy|normal|hard>"};
         }
         const std::string key = Lower(args[1]);
         if (key != "peaceful" && key != "easy" && key != "normal" &&
@@ -121,8 +121,7 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
         if (!ModePolicy::AllowsDifficultyCommand(session.GetWorldDifficulty(),
                                                  difficulty))
         {
-          return CommandResult{false,
-                               "Hardcore difficulty cannot be changed"};
+          return CommandResult{false, "Hardcore difficulty cannot be changed"};
         }
         session.SyncToWorldDifficulty(difficulty);
         return CommandResult{true, std::string("Difficulty: ") +
@@ -498,7 +497,8 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
                         if (world->GetItemDefinitionStorage() &&
                             world->GetItemDefinitionStorage()->Get(id))
                         {
-                          inv->SetItemDefinitions(world->GetItemDefinitionStorage());
+                          inv->SetItemDefinitions(
+                              world->GetItemDefinitionStorage());
                           inv->AddToInventory(id);
                           InventoryEntryRef entry;
                           entry.empty = false;
@@ -509,8 +509,10 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
                           entry.broken = false;
                           const size_t bar = inv->GetActiveBarIndex();
                           const size_t slot = inv->GetActiveSlotIndex();
-                          if (inv->IsCreative()) inv->AssignToHotbar(bar, slot, entry);
-                          else inv->AssignOwned(bar, slot, entry);
+                          if (inv->IsCreative())
+                            inv->AssignToHotbar(bar, slot, entry);
+                          else
+                            inv->AssignOwned(bar, slot, entry);
                           return CommandResult{true, "Gave tool " + id};
                         }
                         inv->AddToInventory(id);
@@ -552,25 +554,26 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
         return CommandResult{true, "Crafted " + recipe->Output.Id};
       });
 
-  registry.Register(
-      "repair",
-      [world](const std::vector<std::string> &args)
-      {
-        (void)args;
-        UCreature *creature = world->GetControlledCreature();
-        if (!creature)
-        {
-          return CommandResult{false, "No controlled creature"};
-        }
-        UItemDefinitionStorage *items = world->GetItemDefinitionStorage();
-        if (!items)
-        {
-          return CommandResult{false, "No item definitions"};
-        }
-        std::string reason;
-        const bool ok = creature->GetInventory().RepairActive(*items, reason);
-        return CommandResult{ok, ok ? "Repaired" : reason};
-      });
+  registry.Register("repair",
+                    [world](const std::vector<std::string> &args)
+                    {
+                      (void)args;
+                      UCreature *creature = world->GetControlledCreature();
+                      if (!creature)
+                      {
+                        return CommandResult{false, "No controlled creature"};
+                      }
+                      UItemDefinitionStorage *items =
+                          world->GetItemDefinitionStorage();
+                      if (!items)
+                      {
+                        return CommandResult{false, "No item definitions"};
+                      }
+                      std::string reason;
+                      const bool ok =
+                          creature->GetInventory().RepairActive(*items, reason);
+                      return CommandResult{ok, ok ? "Repaired" : reason};
+                    });
 
   registry.Register(
       "tp",
@@ -623,8 +626,7 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
         }
         if (!ModePolicy::AllowsFlight(world->GetGameMode(), habitat))
         {
-          return CommandResult{false,
-                               "Creative fly disabled in Survival mode"};
+          return CommandResult{false, "Creative fly disabled in Survival mode"};
         }
         auto camera = world->GetCurrentUserCamera();
         if (!camera)
@@ -855,9 +857,8 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
       {
         if (args.size() < 2 || args[1] != "inspect")
         {
-          return CommandResult{
-              false,
-              "Usage: block inspect | block inspect clear | block inspect path"};
+          return CommandResult{false, "Usage: block inspect | block inspect "
+                                      "clear | block inspect path"};
         }
         if (args.size() >= 3 && args[2] == "clear")
         {
@@ -880,9 +881,8 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
           return CommandResult{false, "No block under crosshair"};
         }
         return CommandResult{
-            true,
-            "Block inspect logged (#" + std::to_string(sample) + ") -> " +
-                UBlockInspectDiagnostics::DefaultLogPath().string()};
+            true, "Block inspect logged (#" + std::to_string(sample) + ") -> " +
+                      UBlockInspectDiagnostics::DefaultLogPath().string()};
       });
 
   registry.Register(
@@ -911,8 +911,7 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
         {
           if (args.size() < 3)
           {
-            return CommandResult{
-                false, "Usage: creature_diag verbose on|off"};
+            return CommandResult{false, "Usage: creature_diag verbose on|off"};
           }
           const std::string mode = Lower(args[2]);
           if (mode == "on" || mode == "1" || mode == "true")
@@ -949,9 +948,10 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
             return CommandResult{false, "dump failed"};
           }
           return CommandResult{
-              true, "dumped ring (" +
-                        std::to_string(UCreatureMovementDiagnostics::GetRingSize()) +
-                        " samples)"};
+              true,
+              "dumped ring (" +
+                  std::to_string(UCreatureMovementDiagnostics::GetRingSize()) +
+                  " samples)"};
         }
         if (sub == "focus")
         {
@@ -1001,15 +1001,15 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
               return CommandResult{false, "No nearby creatures"};
             }
             UCreatureMovementDiagnostics::SetFocusId(best_id);
-            return CommandResult{
-                true, "creature_diag focus=" + std::to_string(best_id)};
+            return CommandResult{true, "creature_diag focus=" +
+                                           std::to_string(best_id)};
           }
           try
           {
             const uint64_t id = static_cast<uint64_t>(std::stoull(args[2]));
             UCreatureMovementDiagnostics::SetFocusId(id);
-            return CommandResult{
-                true, "creature_diag focus=" + std::to_string(id)};
+            return CommandResult{true,
+                                 "creature_diag focus=" + std::to_string(id)};
           }
           catch (...)
           {
@@ -1017,9 +1017,8 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
           }
         }
         return CommandResult{
-            false,
-            "Usage: creature_diag on|off|clear|path|dump|flush|verbose "
-            "on|off|focus <id|nearest|clear>"};
+            false, "Usage: creature_diag on|off|clear|path|dump|flush|verbose "
+                   "on|off|focus <id|nearest|clear>"};
       });
 }
 

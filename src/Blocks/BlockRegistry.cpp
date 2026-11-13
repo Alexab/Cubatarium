@@ -1,10 +1,10 @@
 #include "Blocks/BlockRegistry.h"
-#include "World/Physics/FluidPermeabilityUtil.h"
-#include "World/Physics/MaterialReactionRulesRegistry.h"
-#include <algorithm>
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Render/Textures/TextureCube.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
+#include "World/Physics/FluidPermeabilityUtil.h"
+#include "World/Physics/MaterialReactionRulesRegistry.h"
+#include <algorithm>
 
 namespace cutum
 {
@@ -419,6 +419,20 @@ int UBlockRegistry::GetLightEmission(BlockId Id) const
       return std::clamp(def->Lighting.Emission, 0, 15);
     }
   }
+  return 0;
+}
+
+uint32_t UBlockRegistry::GetBlockAtlasTexture(BlockId id) const
+{
+#ifndef CUTUM_PHYSICS_LIGHT_REGISTRY
+  if (Textures)
+  {
+    const auto &map = Textures->GetTextures();
+    auto it = map.find(size_t(id));
+    if (it != map.end())
+      return it->second.GetTexture();
+  }
+#endif
   return 0;
 }
 

@@ -10,8 +10,9 @@
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Influence/DigSessionState.h"
-#include "World/Interaction/BlockBreakService.h"
 #include "Creatures/Player/PlayerCapsule.h"
+#include "Game/WorldDifficulty.h"
+#include "Game/WorldGameMode.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/StreamingAltitudePolicy.h"
 #include "World/Collision/WorldCollision.h"
@@ -22,28 +23,27 @@
 #include "World/Environment/EnvironmentConfig.h"
 #include "World/Environment/WeatherField.h"
 #include "World/Environment/WorldEnvironment.h"
-#include "World/View/WorldViewSettings.h"
-#include "Game/WorldDifficulty.h"
-#include "Game/WorldGameMode.h"
 #include "World/IO/ChunkStorageTypes.h"
+#include "World/Interaction/BlockBreakService.h"
 #include "World/Math/CollisionVolume.h"
 #include "World/Math/GridMath.h"
 #include "World/Physics/PhysicsProfile.h"
 #include "World/Physics/PhysicsTelemetry.h"
 #include "World/Streaming/ColumnEmergeState.h"
-#include "World/Streaming/RelightInstallPlanner.h"
 #include "World/Streaming/ColumnRecord.h"
-#include "World/Streaming/WorldBorderPolicy.h"
-#include "World/Streaming/EnterVisualGate.h"
 #include "World/Streaming/EnterSessionPhase.h"
+#include "World/Streaming/EnterVisualGate.h"
+#include "World/Streaming/RelightInstallPlanner.h"
 #include "World/Streaming/VisibleBlackAttribution.h"
+#include "World/Streaming/WorldBorderPolicy.h"
+#include "World/View/WorldViewSettings.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenSets.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include <algorithm>
-#include <chrono>
 #include <array>
+#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <glm/glm.hpp>
@@ -52,10 +52,10 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <tuple>
-#include <mutex>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -65,7 +65,8 @@ namespace cutum
 
 struct RuntimeOverlayFlushResult;
 
-/// Draw readiness SoT (TD-ARCH-028). Telemetry unfinished/holes derive from this.
+/// Draw readiness SoT (TD-ARCH-028). Telemetry unfinished/holes derive from
+/// this.
 struct ColumnRenderableState
 {
   enum class BlockReason : uint8_t
@@ -332,7 +333,8 @@ public:
   void ApplyGameModeLocomotionPolicy();
 
   void Create(const std::string &world_name);
-  /// Create world data for CLI/tools without building render meshes or view readiness.
+  /// Create world data for CLI/tools without building render meshes or view
+  /// readiness.
   void CreateHeadless(const std::string &world_name);
   void Load(const std::string &world_folder_path);
   void Save(const std::string &world_folder_path);
@@ -356,8 +358,9 @@ public:
   void CancelCooperativeOperation();
   bool BlocksAsyncRelightDrain() const;
 
-  /// Drop loaded terrain/mesh work before replacing the world (SaveThenCreate/Load).
-  /// Does NOT latch BackgroundQuiesceFinished (that breaks cooperative create).
+  /// Drop loaded terrain/mesh work before replacing the world
+  /// (SaveThenCreate/Load). Does NOT latch BackgroundQuiesceFinished (that
+  /// breaks cooperative create).
   void AbandonTerrainForWorldReplace();
 
   std::shared_ptr<UUser> GetUser(const std::string &Name);
@@ -405,8 +408,8 @@ public:
   /// 2s quiesce join. Terrain is persisted by the streaming layer / coop
   /// saves; call only when streaming+persisted (see WorldLifecycleFacade).
   void SaveSessionSnapshotMetadataOnly(const std::string &world_folder_path);
-  void QuiesceBackgroundWork(
-      std::chrono::milliseconds async_timeout = std::chrono::milliseconds(2000));
+  void QuiesceBackgroundWork(std::chrono::milliseconds async_timeout =
+                                 std::chrono::milliseconds(2000));
   void BeginBackgroundQuiesce(UBackgroundQuiesceState &state);
   /// @return true when quiesce finished.
   bool TickBackgroundQuiesce(UBackgroundQuiesceState &state,
@@ -525,7 +528,8 @@ public:
     bool async_mesh_blocker_completed{false};
     bool visual_warmup{false};
   };
-  void SampleEnterGameMeshWarmupBlockers(EnterGameMeshWarmupBlockers &out) const;
+  void
+  SampleEnterGameMeshWarmupBlockers(EnterGameMeshWarmupBlockers &out) const;
   /// Era29: underfeet LitDrawable / SoftDefer empty / PendingLight still owed.
   bool NeedsEnterGameVisualWarmup() const;
   /// Era42: PendingLight (global) + FullyDark in RD+1 around spawn focus.
@@ -536,9 +540,11 @@ public:
   bool IsColumnVisualReady(glm::ivec2 col_chunk_xz) const;
   /// Era49: count columns in radius that are not VisualReady.
   int CountUnreadyColumns(glm::ivec3 center_chunk, int radius_chunks) const;
-  /// Era48: visibility debt clear + no stale FullyDark in ring + underfeet present.
+  /// Era48: visibility debt clear + no stale FullyDark in ring + underfeet
+  /// present.
   bool IsEnterVisibilityReady() const;
-  /// Enter underfeet r≤1: lit/true-dark slice AND opaque-ready draw (not SoftDefer hole).
+  /// Enter underfeet r≤1: lit/true-dark slice AND opaque-ready draw (not
+  /// SoftDefer hole).
   bool IsEnterUnderfeetPresentReady() const;
   /// Era42: priority-enqueue RD/PendingLight + elevated Capture/apply on bar.
   int TickEnterFovLitPass(int capture_budget = -1);
@@ -546,7 +552,8 @@ public:
   bool IsSpawnMeshRingReady() const;
   /// Current player camera column has a complete streamed terrain result.
   bool IsEnterFocusTerrainReady() const;
-  /// SRBR-P0.2: first blocking miss in spawn ring presentable band (HasMissing SoT).
+  /// SRBR-P0.2: first blocking miss in spawn ring presentable band (HasMissing
+  /// SoT).
   bool FindFirstSpawnRingMissingGreedy(glm::ivec3 &out_coord) const;
   int CountPostLoadRingNotReady() const;
   int GetEnterGameMeshBurstFrames() const { return EnterGameMeshBurstFrames; }
@@ -574,8 +581,12 @@ public:
     return LastEnterSettleReason;
   }
   void SetLastEnterSettleReason(const char *reason);
-  /// Enter-load session (Loading screen until InGame). Freezes cruise heal producers.
-  EnterSessionPhase GetEnterSessionPhase() const { return EnterSessionPhaseValue; }
+  /// Enter-load session (Loading screen until InGame). Freezes cruise heal
+  /// producers.
+  EnterSessionPhase GetEnterSessionPhase() const
+  {
+    return EnterSessionPhaseValue;
+  }
   void SetEnterSessionPhase(EnterSessionPhase phase)
   {
     EnterSessionPhaseValue = phase;
@@ -592,7 +603,8 @@ public:
     return static_cast<int>(EnterLitDebtSnapshot.size());
   }
   bool IsCreateSpawnWarmupSettled() const;
-  /// Era34 P0: near-FOV (r≤2) create-bar debt; sets underfeet LitDrawable ready.
+  /// Era34 P0: near-FOV (r≤2) create-bar debt; sets underfeet LitDrawable
+  /// ready.
   int CountCreateNearFovWarmupDebt(bool *out_underfeet_lit_ready) const;
   void DrainSpawnRadiusMeshWarmup(int budget);
   void RefreshPersistedTerrainAfterSave();
@@ -610,6 +622,7 @@ public:
   bool PlaceActiveObjectByView();
   bool DelObjectByView();
   bool DelBlockAt(glm::ivec3 blockPos);
+  bool ReplaceBlockAt(glm::ivec3 blockPos, const std::string &type);
 
   void StartBreakSession(glm::ivec3 blockPos, float pendingWearDelta = 0.f,
                          std::string pendingToolId = {});
@@ -682,6 +695,7 @@ public:
 
   UCreature *GetCreature(CreatureId Id);
   const UCreature *GetCreature(CreatureId Id) const;
+  bool GetControlledViewRay(glm::vec3 &eye, glm::vec3 &forward) const;
   UCreature *GetControlledCreature();
   const UCreature *GetControlledCreature() const;
   UCreature *GetPlayerCreature();
@@ -707,11 +721,10 @@ public:
                                             float radius) const override;
   std::vector<CreatureNeighborView>
   QueryCreatureNeighborsOverlappingVolume(const CollisionVolume &vol,
-                                           CreatureId skip_id) const;
+                                          CreatureId skip_id) const;
   /// Rider mount under the given feet position: (creature id, back Y).
   std::optional<std::pair<CreatureId, float>>
-  FindMountCreatureUnder(const glm::vec3 &feetPos,
-                         const glm::vec3 &halfExtents,
+  FindMountCreatureUnder(const glm::vec3 &feetPos, const glm::vec3 &halfExtents,
                          CreatureId skipId) const;
   std::vector<CreatureNeighborView>
   QueryCreatureNeighborsInRadius(const glm::vec3 &center, float radius,
@@ -743,11 +756,10 @@ public:
   /// ledge / wall lip landings).
   bool IsValidStandFootprint(const glm::vec3 &eyePos, const PlayerCapsule &cap,
                              float feetY) const;
-  CreatureId SpawnCreature(const std::string &speciesId,
-                           const glm::vec3 &bodyOrigin,
-                           const std::string &skinId = "",
-                           CreatureSpawnSource source =
-                               CreatureSpawnSource::CreativeManual);
+  CreatureId SpawnCreature(
+      const std::string &speciesId, const glm::vec3 &bodyOrigin,
+      const std::string &skinId = "",
+      CreatureSpawnSource source = CreatureSpawnSource::CreativeManual);
   bool SpawnCreatureByView(const std::string &speciesId);
   bool CanSpawnCreatureByView(const std::string &speciesId);
   std::string GetCreatureSpawnBlockedHint(const std::string &speciesId);
@@ -767,6 +779,7 @@ public:
   void RemoveCreature(CreatureId Id);
   /// See UWorldEnvironment::GetCreatureGeneration.
   uint64_t GetCreatureGeneration() const;
+  void SyncPhysicalCreatureIndex() { Environment.SyncCreatureSpatialIndex(); }
   void ForEachCreature(const std::function<void(UCreature &)> &fn);
   void ForEachCreature(const std::function<void(const UCreature &)> &fn) const;
   std::string ResolveAnimationTypeId(const UCreature &creature) const;
@@ -858,9 +871,9 @@ public:
                                     bool hasFeetBlock);
   bool SyncControlledBodyFromCamera(UCreature *controlled,
                                     const std::shared_ptr<UCamera> &camera);
-  void TickNpcCreatureIntents(float dt, bool tick_world_ai,
-                              CreatureId mountId = 0,
-                              const glm::vec3 &mountOriginBefore = glm::vec3(0.f));
+  void
+  TickNpcCreatureIntents(float dt, bool tick_world_ai, CreatureId mountId = 0,
+                         const glm::vec3 &mountOriginBefore = glm::vec3(0.f));
   void ResolveControlledCreatureInfluence(float dt);
   void TickSurvivalSystems(float dt);
   void UpdateIntersection(const glm::vec3 &position, const glm::vec3 &front);
@@ -886,7 +899,8 @@ public:
   void SetLastSwapWaitMs(double ms) { LastSwapWaitMs = ms; }
   double GetLastSwapWaitMs() const { return LastSwapWaitMs; }
 
-  /// Per-frame phase timings (ms) for unaccounted breakdown in FramePerfMonitor.
+  /// Per-frame phase timings (ms) for unaccounted breakdown in
+  /// FramePerfMonitor.
   void SetLastInputMs(double ms) { LastInputMs = ms; }
   void SetLastAppUpdateMs(double ms) { LastAppUpdateMs = ms; }
   void SetLastWorldTickMs(double ms) { LastWorldTickMs = ms; }
@@ -937,7 +951,10 @@ public:
   {
     return PhysicsTelemetryData;
   }
-  PhysicsTelemetry &GetPhysicsTelemetryMutable() { return PhysicsTelemetryData; }
+  PhysicsTelemetry &GetPhysicsTelemetryMutable()
+  {
+    return PhysicsTelemetryData;
+  }
   const PhysicsBudgets &GetPhysicsBudgets() const
   {
     return PhysicsBudgetConfig;
@@ -1075,7 +1092,10 @@ public:
     NearWaterUnfinishedFog = enabled;
   }
   float GetAltitudeAboveTerrain() const { return AltitudeAboveTerrain; }
-  void SetAltitudeAboveTerrain(float altitude) { AltitudeAboveTerrain = altitude; }
+  void SetAltitudeAboveTerrain(float altitude)
+  {
+    AltitudeAboveTerrain = altitude;
+  }
   void UpdateFrameHitchDiagnostics(double draw_scene_mks,
                                    double view_update_mks);
   void SetChunkWriteFormat(ChunkWriteFormat format);
@@ -1097,8 +1117,8 @@ public:
   bool AllowsAsyncLighting() const;
   void RefreshStreamerSettings();
   void TickEnvironment(float dtSeconds);
-  BiomeEnvironmentSample SampleBiomeEnvironmentAt(
-      const glm::vec3 &position) const;
+  BiomeEnvironmentSample
+  SampleBiomeEnvironmentAt(const glm::vec3 &position) const;
   /// Registry id (e.g. "forest") of the dominant biome at `position`.
   std::string DominantBiomeIdAt(const glm::vec3 &position) const;
   /// True between dusk and dawn (DayNightFactor below half).
@@ -1120,9 +1140,10 @@ public:
     double simulation_time_sec{0.0};
   };
   WeatherCoverageFieldRequest MakeWeatherCoverageFieldRequest() const;
-  static void ComputeWeatherCoverageField(
-      const WeatherCoverageFieldRequest &request, const glm::vec2 &center,
-      float world_size, int resolution, std::vector<uint8_t> &out_pixels);
+  static void
+  ComputeWeatherCoverageField(const WeatherCoverageFieldRequest &request,
+                              const glm::vec2 &center, float world_size,
+                              int resolution, std::vector<uint8_t> &out_pixels);
   const EnvironmentState &GetEnvironmentState() const
   {
     return EnvironmentStateData;
@@ -1211,7 +1232,8 @@ public:
     LightingRelightDeferred = deferred;
   }
   bool IsLightingRelightDeferred() const { return LightingRelightDeferred; }
-  /// Idle lit-but-dirty catch-up: MarkRelit dirties primary only (no seam flood).
+  /// Idle lit-but-dirty catch-up: MarkRelit dirties primary only (no seam
+  /// flood).
   void SetSuppressRelightSeamDirty(bool suppress)
   {
     SuppressRelightSeamDirty = suppress;
@@ -1244,12 +1266,11 @@ public:
                             bool include_block_light = true);
   void RelightPlayerEdit(const std::vector<glm::ivec3> &block_positions,
                          int min_world_y);
-  void EnqueueAsyncTerrainColumnRelight(int world_x, int world_z, int min_y,
-                                        int max_y, bool include_skylight = true,
-                                        bool include_block_light = true,
-                                        bool finalize_pending_gate = true,
-                                        bool visible_draw_gate_repair = false,
-                                        const char *audit_source = "unspecified");
+  void EnqueueAsyncTerrainColumnRelight(
+      int world_x, int world_z, int min_y, int max_y,
+      bool include_skylight = true, bool include_block_light = true,
+      bool finalize_pending_gate = true, bool visible_draw_gate_repair = false,
+      const char *audit_source = "unspecified");
   void EnqueueAsyncChunkSkylightRelight(glm::ivec3 chunk_coord,
                                         int frontier_iterations = 1);
   void EnqueueAsyncChunkRelight(glm::ivec3 chunk_coord, bool include_skylight,
@@ -1266,8 +1287,8 @@ public:
   bool IsAsyncRelightColumnInFlight(glm::ivec2 ground_xz) const;
   bool IsTerrainColumnRelightQueued(glm::ivec2 ground_xz) const;
   /// Add exact FIFO/ColumnFlow ownership to opt-in renderer draw-gate traces.
-  void PopulateRendererRelightQueueTrace(
-      glm::ivec2 chunk_column, VisualBlackTraceRecord &trace) const;
+  void PopulateRendererRelightQueueTrace(glm::ivec2 chunk_column,
+                                         VisualBlackTraceRecord &trace) const;
   /// Drop column inflight marks when the async builder has no jobs (stale set).
   void ReconcileAsyncRelightColumnInFlight();
   uint64_t GetRelightDiscardedLateCount() const;
@@ -1288,7 +1309,8 @@ public:
   /// Clear PendingLight after mesh committed for lit focus columns.
   int ClearPendingLightAfterMeshCommitted(int max_columns = 8);
   /// Drop StickyRemeshAfterLight columns outside radius (cruise prune).
-  int PruneStickyRemeshOutside(glm::ivec3 focus_ground_chunk, int radius_chunks);
+  int PruneStickyRemeshOutside(glm::ivec3 focus_ground_chunk,
+                               int radius_chunks);
   struct AdmitFocusMarkRange
   {
     glm::ivec2 column;
@@ -1305,7 +1327,8 @@ public:
                                glm::vec2 forward_xz = glm::vec2(0.0f),
                                const glm::ivec2 *only_column = nullptr,
                                int only_cy = kNoChunkSlice);
-  /// R3 M4: ColumnFlow-owned MarkDirty — scan only; marks applied in ColumnFlow.
+  /// R3 M4: ColumnFlow-owned MarkDirty — scan only; marks applied in
+  /// ColumnFlow.
   void ClearAdmitFocusMarkBuffer();
   const std::vector<AdmitFocusMarkRange> &GetAdmitFocusMarkBuffer() const
   {
@@ -1322,9 +1345,10 @@ public:
   /// Near-focus columns waiting for first light before first mesh (plan A).
   void NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y,
                                   const char *audit_source = nullptr);
-  /// FZ2.2-O1: idempotent Note — skip inflight/already-Noted; counts dups in telem.
+  /// FZ2.2-O1: idempotent Note — skip inflight/already-Noted; counts dups in
+  /// telem.
   bool TryNotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y,
-                                    const char *audit_source = nullptr);
+                                     const char *audit_source = nullptr);
   /// Era23 I-V5: NotePendingLight + priority FIFO on void enqueue (ColumnFlow).
   void EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz);
   void ClearPendingLightBeforeMesh(glm::ivec2 ground_xz);
@@ -1346,7 +1370,8 @@ public:
     return PendingLightBeforeMesh.size();
   }
   int GetPendingTerrainRelightFifoCount() const;
-  /// Drop farthest PendingLight columns that already have mesh (not cold holes).
+  /// Drop farthest PendingLight columns that already have mesh (not cold
+  /// holes).
   int TrimPendingLightBeforeMesh(glm::ivec3 focus_ground_horiz, int soft_cap);
   int TrimFarRelightFifoFarthest(glm::ivec3 focus_ground_horiz, int soft_cap);
   int CountPendingLightBeforeMeshNear(glm::ivec3 focus_ground_horiz,
@@ -1368,9 +1393,10 @@ public:
                                    int max_cols) const;
   /// Nearest drawable columns blocked by stale light or unapplied OpenSky.
   /// Includes columns with existing repair owners and reports the Y range.
-  int CollectDrawGateRelightTargets(
-      glm::ivec3 focus_ground_chunk, int radius_chunks,
-      std::vector<DrawGateRelightTarget> &out, int max_cols) const;
+  int CollectDrawGateRelightTargets(glm::ivec3 focus_ground_chunk,
+                                    int radius_chunks,
+                                    std::vector<DrawGateRelightTarget> &out,
+                                    int max_cols) const;
   /// Queue one exact mesh-only repair after the draw gate observes that its
   /// resident slice has a current settled field and stale baked light.
   bool QueueSettledDrawGateMeshRepair(glm::ivec3 chunk_coord,
@@ -1389,19 +1415,19 @@ public:
                                    std::vector<glm::ivec2> &out,
                                    int max_cols) const;
   /// N04 autopsy I3a: ticketed FullyDark stalled (Contains ∧ ¬Progress) on mid
-  /// ring → MarkDirty (not Priority). Cap max_dirty chunks; returns dirty count.
+  /// ring → MarkDirty (not Priority). Cap max_dirty chunks; returns dirty
+  /// count.
   int RemeshTicketedFullyDarkStalledNearFocus(glm::ivec3 focus_ground_horiz,
-                                             int radius_chunks,
-                                             int max_dirty);
+                                              int radius_chunks, int max_dirty);
   /// "(cx,cz),..." for PendingLightBeforeMesh inside focus (max_cols cap).
   std::string FormatPendingLightFocusColumns(glm::ivec3 focus_ground_horiz,
                                              int radius_chunks,
                                              int max_cols = 12) const;
   /// Focus columns with GreedyMesh and PendingLightBeforeMesh (sticky black).
-  int CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
-                                  int radius_chunks,
-                                  std::size_t *out_scanned_columns = nullptr,
-                                  std::size_t *out_y_slice_checks = nullptr) const;
+  int CountBlackStickyFocusMeshes(
+      glm::ivec3 focus_ground_chunk, int radius_chunks,
+      std::size_t *out_scanned_columns = nullptr,
+      std::size_t *out_y_slice_checks = nullptr) const;
   int CountProvisionalLightPreviewFocusMeshes(
       glm::ivec3 focus_ground_chunk, int radius_chunks,
       std::size_t *out_scanned_mesh_entries = nullptr) const;
@@ -1409,12 +1435,15 @@ public:
   /// black), independent of StickyRemeshAfterLight.
   /// out_no_ticket = VB ∧ ¬Contains ∧ ¬Progress ∧ ¬Sticky.
   /// out_progress = VB ∧ (Contains ∨ Progress ∨ Sticky).
-  /// out_stalled = VB ∧ Contains ∧ ¬Progress ∧ ¬Sticky (queued, no mesh/light work yet).
-  /// ticketed_consume_scan: skip columns without ticket/progress/sticky (FZ2.5-Perf3).
-  VisibleBlackFocusCounts CountVisibleBlackFocusMeshes(
-      glm::ivec3 focus_ground_chunk, int radius_chunks,
-      bool ticketed_consume_scan = false, int vb_stable_frames = 0) const;
-  /// Legacy wrapper — fills optional out params from CountVisibleBlackFocusMeshes.
+  /// out_stalled = VB ∧ Contains ∧ ¬Progress ∧ ¬Sticky (queued, no mesh/light
+  /// work yet). ticketed_consume_scan: skip columns without
+  /// ticket/progress/sticky (FZ2.5-Perf3).
+  VisibleBlackFocusCounts
+  CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk, int radius_chunks,
+                               bool ticketed_consume_scan = false,
+                               int vb_stable_frames = 0) const;
+  /// Legacy wrapper — fills optional out params from
+  /// CountVisibleBlackFocusMeshes.
   int CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
                                    int radius_chunks, int *out_no_ticket,
                                    int *out_progress, int *out_stalled,
@@ -1425,18 +1454,19 @@ public:
   /// FZ2.6-P1: do not re-ticket until GPU mesh applied for column.
   bool ShouldDeferRepairReticketUntilGpuApplied(glm::ivec2 ground_xz) const;
   /// PendingLight columns that already have a greedy mesh (dark preview).
-  int CountPendingDarkFocusMeshes(glm::ivec3 focus_ground_chunk,
-                                  int radius_chunks,
-                                  std::size_t *out_scanned_columns = nullptr,
-                                  std::size_t *out_y_slice_checks = nullptr) const;
+  int CountPendingDarkFocusMeshes(
+      glm::ivec3 focus_ground_chunk, int radius_chunks,
+      std::size_t *out_scanned_columns = nullptr,
+      std::size_t *out_y_slice_checks = nullptr) const;
   /// Re-queue priority relight for PendingLightBeforeMesh columns under focus.
   int PromotePendingLightRelightsNear(glm::ivec3 focus_ground_horiz,
                                       int radius_chunks);
   /// Promote terrain-column FIFO near focus (ColumnFlow PromoteRelight only).
   int PromoteNearTerrainColumnRelights(glm::ivec3 focus_ground_horiz,
                                        int radius_chunks);
-  void PromotePendingLightBeforeMesh(const std::vector<glm::ivec3> &relit_chunks,
-                                     bool priority_mesh);
+  void
+  PromotePendingLightBeforeMesh(const std::vector<glm::ivec3> &relit_chunks,
+                                bool priority_mesh);
 
   void SetColumnEmergeState(glm::ivec3 ground, ColumnEmergeState state);
   ColumnEmergeState GetColumnEmergeState(glm::ivec3 ground) const;
@@ -1446,13 +1476,16 @@ public:
   /// Run the bounded demand-store upkeep independently of telemetry census.
   void MaintainChunkRenderDemandStore();
   void MaintainChunkRenderDemandStore(double now_ms);
-  /// True when column has left the light gate (LitReady / Meshing / RenderReady).
+  /// True when column has left the light gate (LitReady / Meshing /
+  /// RenderReady).
   bool IsColumnLitReady(glm::ivec3 ground) const;
   /// True when column may unlock outer streaming rings (LitReady+).
   bool IsColumnVisualReadyForRing(glm::ivec3 ground) const;
-  /// Strict visible contract: no pending light, stable mesh, render-safe column.
+  /// Strict visible contract: no pending light, stable mesh, render-safe
+  /// column.
   bool IsColumnRenderReady(glm::ivec3 ground) const;
-  /// R4.6.1: Streamer TerrainCompleteCache on ring probes (fallback raw complete).
+  /// R4.6.1: Streamer TerrainCompleteCache on ring probes (fallback raw
+  /// complete).
   bool IsTerrainColumnCompleteFast(glm::ivec3 ground) const;
   /// P2: single cy-slice may draw when meshed/Pending even if siblings missing.
   bool IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const;
@@ -1475,7 +1508,8 @@ public:
   int AdmitUnfinishedVisualDemand(int max_n = 8);
   /// A36 S6 / A37 H6: symptom Kick — OFF unless CUBA_KICK_UNFINISHED=1.
   void KickUnfinishedVisualRemesh(int max_n = 4);
-  /// Cruise wall P3: invalidate unfinished ring cache (focus shift / mesh events).
+  /// Cruise wall P3: invalidate unfinished ring cache (focus shift / mesh
+  /// events).
   void InvalidateUnfinishedVisualCache() const;
   void NoteUnfinishedColumnDirty(glm::ivec2 col) const;
   /// Harvest per-frame unfinished cache counters into telem.
@@ -1516,7 +1550,8 @@ public:
   uint64_t GetStreamingFrameEpoch() const { return StreamingFrameEpoch; }
   const UWorldStreaming *GetStreamingService() const { return Streaming.get(); }
   void AdvanceStreamingFrameEpoch() { ++StreamingFrameEpoch; }
-  /// Split unfinished focus by movement/view forward (dot>=0 ahead, else behind).
+  /// Split unfinished focus by movement/view forward (dot>=0 ahead, else
+  /// behind).
   void CountUnfinishedVisualByFacing(glm::ivec3 focus_ground_chunk,
                                      int radius_chunks, glm::vec2 forward_xz,
                                      int &out_ahead, int &out_behind) const;
@@ -1529,7 +1564,8 @@ public:
   /// Supplemental async relight FIFO drain (adds to RelightDrainMs). Used by
   /// MeshEmerge cold-hole same-tick promote→drain so SoftDefer can lift.
   void DrainRelightQueuesBudget(int max_player_jobs, int max_bg_columns);
-  /// Idle sync relight for focus pending columns that already have preview mesh.
+  /// Idle sync relight for focus pending columns that already have preview
+  /// mesh.
   int DrainIdleFocusPendingLight(glm::ivec3 focus_ground_horiz,
                                  int radius_chunks, int max_columns);
   /// Break-glass for frozen pending focus light. With AsyncRelight: priority
@@ -1642,7 +1678,8 @@ private:
   void EnsureAsyncRelightBuilder();
   void CancelAsyncRelightWork();
   /// primary_grounds: column XZ whose light job completed — only these clear
-  /// PendingLightBeforeMesh (when finalize_pending_gate). Neighbors remesh seams.
+  /// PendingLightBeforeMesh (when finalize_pending_gate). Neighbors remesh
+  /// seams.
   void MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                               bool priority_mesh,
                               const std::vector<glm::ivec2> &primary_grounds,
@@ -1651,16 +1688,15 @@ private:
                               bool visible_draw_gate_repair = false);
   /// FZ2.7-B3: apply planner output (MarkRelit refactor).
   void ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &column,
-                             const glm::ivec3 &ground, bool finalize_gate);
+                           const glm::ivec3 &ground, bool finalize_gate);
   void EnsurePlayerOnGround();
   void MarkBlockChunkDirty(glm::ivec3 blockPos,
                            bool sync_neighbor_chunks = false,
                            bool sync_light_ring = false);
-  void
-  MarkBlocksChunkDirtyBatch(const std::vector<glm::ivec3> &block_positions,
-                            bool sync_neighbor_chunks = false,
-                            bool sync_light_ring = false,
-                            bool collect_break_diag = false);
+  void MarkBlocksChunkDirtyBatch(const std::vector<glm::ivec3> &block_positions,
+                                 bool sync_neighbor_chunks = false,
+                                 bool sync_light_ring = false,
+                                 bool collect_break_diag = false);
   void MarkBlockChunkDirtyFromPhysics(glm::ivec3 blockPos);
   void MarkFluidChangeDirty(glm::ivec3 blockPos);
   void MarkFluidFloodMeshDirty(glm::ivec3 blockPos,
@@ -1674,9 +1710,10 @@ private:
   void MarkColumnMeshDirty(int world_x, int world_z, int min_y, int max_y);
   void MarkTerrainChunkMeshDirty(glm::ivec3 groundChunkCoord, int min_y,
                                  int max_y);
-  void MarkTerrainChunkMeshDirtySeamed(glm::ivec3 groundChunkCoord, int min_y,
-                                       int max_y,
-                                       bool include_horizontal_neighbors = true);
+  void
+  MarkTerrainChunkMeshDirtySeamed(glm::ivec3 groundChunkCoord, int min_y,
+                                  int max_y,
+                                  bool include_horizontal_neighbors = true);
   void SaveMovementDiagnostics(const std::string &file_name) const;
   void ResetMeshLoadDiagnostics();
   void TickMeshLoadDiagnostics();
@@ -1812,7 +1849,8 @@ private:
   int EnterVisualWorkPeak{0};
   EnterVisualGate EnterVisualGateCtrl;
   /// Near columns: light must apply before first mesh dirty.
-  std::unordered_map<glm::ivec2, PendingRelightMeshColumnRange, GroundColumnHash>
+  std::unordered_map<glm::ivec2, PendingRelightMeshColumnRange,
+                     GroundColumnHash>
       PendingLightBeforeMesh;
   /// Lit columns awaiting remesh after MarkRelit (GreedyMesh present, stale).
   std::unordered_set<glm::ivec2, GroundColumnHash> StickyRemeshAfterLight;
@@ -1834,9 +1872,10 @@ private:
   bool SpawnAreaPreparedByCooperativeLoad{false};
   bool ShutdownPrepared{false};
   bool BackgroundQuiesceFinished{false};
-  void PrepareForShutdownWithBudgets(std::chrono::milliseconds quiesce_budget,
-                                     std::chrono::milliseconds abandon_budget,
-                                     std::chrono::milliseconds mesh_idle_budget);
+  void
+  PrepareForShutdownWithBudgets(std::chrono::milliseconds quiesce_budget,
+                                std::chrono::milliseconds abandon_budget,
+                                std::chrono::milliseconds mesh_idle_budget);
   int RenderDistanceChunks{4};
   int EffectiveRenderDistance{4};
   /// Fog-only RD (pull-in); 0 → use EffectiveRenderDistance via getter.
@@ -1935,7 +1974,8 @@ private:
     int camera_band_peak_no_drawable_n{0};
     int camera_band_peak_unowned_n{0};
   } UnfinishedVisualCache;
-  /// Last unfinished count produced by Streaming (Coordinator reuses — no 2nd O(R²)).
+  /// Last unfinished count produced by Streaming (Coordinator reuses — no 2nd
+  /// O(R²)).
   mutable int LastUnfinishedVisualSample{0};
   mutable bool LastUnfinishedVisualSampleValid{false};
   mutable VisibleBlackFocusSample LastVisibleBlackFocusSample{};
@@ -1945,7 +1985,8 @@ private:
   /// Perf-root P2: per-frame memo for IsChunkSliceRenderReady (draw path).
   mutable uint64_t SliceReadyMemoEpoch{UINT64_MAX};
   mutable std::unordered_map<glm::ivec3, bool, IVec3Hash> SliceReadyMemo;
-  /// Phase5 S2: same-frame memo for NeedsEnterGameMeshWarmup (enter phase only).
+  /// Phase5 S2: same-frame memo for NeedsEnterGameMeshWarmup (enter phase
+  /// only).
   mutable uint64_t EnterWarmupSampleEpoch{UINT64_MAX};
   mutable bool CachedNeedsEnterMeshWarmup{false};
   /// Phase5 S2: cadence memo for NeedsSpawnRingCatchUp (cruise ring walk).

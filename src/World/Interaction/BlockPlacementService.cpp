@@ -51,23 +51,21 @@ bool UBlockPlacementService::AddObjectByView(UWorld &world,
   const InventoryEntryRef *activeEntry =
       controlled->GetInventory().GetActiveEntryRef();
   if (!activeEntry || activeEntry->empty ||
-      activeEntry->kind != InventoryEntryKind::Block ||
-      activeEntry->Id.empty())
+      activeEntry->kind != InventoryEntryKind::Block || activeEntry->Id.empty())
   {
     return false;
   }
   const std::string &blockType = activeEntry->Id;
   const InventoryEntryRef entryCopy = *activeEntry;
   if (!ResourceEconomyService::CanPlace(world.GetGameMode(),
-                                         controlled->GetInventory(),
-                                         entryCopy))
+                                        controlled->GetInventory(), entryCopy))
   {
     return false;
   }
 
-  PlayerCapsule cap =
-      world.ViewBinding ? world.ViewBinding->ResolvePlacementCapsule(world)
-                        : PlayerCapsule::Standing();
+  PlayerCapsule cap = world.ViewBinding
+                          ? world.ViewBinding->ResolvePlacementCapsule(world)
+                          : PlayerCapsule::Standing();
 
   float max_distance = 8.0f;
   glm::vec3 player_eye = position;
@@ -82,11 +80,13 @@ bool UBlockPlacementService::AddObjectByView(UWorld &world,
   {
     return false;
   }
+  auto trial = controlled->GetInventory();
+  if (!ResourceEconomyService::ConsumeOnPlace(world.GetGameMode(), trial,
+                                              entryCopy))
+    return false;
   if (world.AddObject(blockType, BlockCenter(*resolved.place_block_pos)))
   {
-    (void)ResourceEconomyService::ConsumeOnPlace(world.GetGameMode(),
-                                                  controlled->GetInventory(),
-                                                  entryCopy);
+    controlled->GetInventory() = std::move(trial);
     PostPlaceAudio(world, *resolved.place_block_pos);
     world.UpdateIntersection(position, front);
     return true;
@@ -94,18 +94,28 @@ bool UBlockPlacementService::AddObjectByView(UWorld &world,
   return false;
 }
 
-bool UBlockPlacementService::PlaceBlockFromHeldItem(
-    UWorld &world, const glm::vec3 &position, const glm::vec3 &front,
-    const std::string &blockId)
+bool UBlockPlacementService::PlaceBlockFromHeldItem(UWorld &world,
+                                                    const glm::vec3 &position,
+                                                    const glm::vec3 &front,
+                                                    const std::string &blockId)
 {
   UCreature *controlled = world.GetControlledCreature();
   if (!controlled || blockId.empty())
   {
     return false;
   }
-  PlayerCapsule cap =
-      world.ViewBinding ? world.ViewBinding->ResolvePlacementCapsule(world)
-                        : PlayerCapsule::Standing();
+  auto &inventory = controlled->GetInventory();
+  const auto *source = inventory.GetActiveEntryRef();
+  if (!source || source->empty || source->kind != InventoryEntryKind::Item ||
+      controlled->CarryHandCount > 0)
+    return false;
+  auto trial = inventory;
+  if (!ResourceEconomyService::ConsumeUnits(
+          world.GetGameMode(), trial, InventoryEntryKind::Item, source->Id, 1))
+    return false;
+  PlayerCapsule cap = world.ViewBinding
+                          ? world.ViewBinding->ResolvePlacementCapsule(world)
+                          : PlayerCapsule::Standing();
   float max_distance = 8.0f;
   glm::vec3 player_eye = position;
   if (auto camera = world.GetCurrentUserCamera())
@@ -123,24 +133,15 @@ bool UBlockPlacementService::PlaceBlockFromHeldItem(
   {
     return false;
   }
+  inventory = std::move(trial);
   PostPlaceAudio(world, *resolved.place_block_pos);
-  auto &inv = controlled->GetInventory();
-  const InventoryEntryRef *active = inv.GetActiveEntryRef();
-  if (active && !active->empty && active->kind == InventoryEntryKind::Item)
-  {
-    // The block is already placed: consume through the shared economy path so
-    // storage and every hotbar mirror stay in sync (unlimited stacks and the
-    // creative gate are handled inside).
-    (void)ResourceEconomyService::ConsumeUnits(world.GetGameMode(), inv,
-                                               InventoryEntryKind::Item,
-                                               active->Id, 1);
-  }
   world.UpdateIntersection(position, front);
   return true;
 }
 
-bool UBlockPlacementService::PlaceActiveObjectByView(
-    UWorld &world, const glm::vec3 &position, const glm::vec3 &front)
+bool UBlockPlacementService::PlaceActiveObjectByView(UWorld &world,
+                                                     const glm::vec3 &position,
+                                                     const glm::vec3 &front)
 {
   auto user = world.GetCurrentUser();
   if (!user)

@@ -72,6 +72,10 @@ def load_primitives(item_dir: Path) -> list[dict]:
             if len(indices) % 3 or not np.isfinite(positions).all():
                 raise ValueError('invalid triangle payload')
             uv = accessor(prim['attributes']['TEXCOORD_0']) if 'TEXCOORD_0' in prim['attributes'] else np.zeros((len(pos), 2))
+            if indices.size and (indices.min()<0 or indices.max()>=len(positions)):
+                raise ValueError('triangle index outside vertex buffer')
+            if uv.shape!=(len(pos),2) or not np.isfinite(uv).all():
+                raise ValueError('invalid UV payload')
             mat = gltf.get('materials', [{}])[prim.get('material', 0)]
             pbr = mat.get('pbrMetallicRoughness', {})
             factor = np.asarray(pbr.get('baseColorFactor', [1, 1, 1, 1]))

@@ -4,8 +4,9 @@
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
 #include "Game/Inventory/InventoryTypes.h"
-#include "Game/WorldGameMode.h"
 #include "Game/ModePolicy.h"
+#include "Game/Survival/SurvivalSystems.h"
+#include "Game/WorldGameMode.h"
 #include "Items/FpViewmodelRenderer.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Items/ItemUseRegistry.h"
@@ -13,8 +14,9 @@
 #include "Render/Camera/Camera.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "World/Core/World.h"
-#include "World/Interaction/BlockPlacementService.h"
 #include "World/Diagnostics/BlockInspectDiagnostics.h"
+#include "World/Interaction/BlockPlacementService.h"
+#include "World/Items/WorldItemSystem.h"
 #include "World/Raycast/BlockRaycast.h"
 #if defined(__ANDROID__)
 #include "App/Platform/TouchInputBridge.h"
@@ -98,8 +100,8 @@ bool TryBlockInspectClick(const BlockInputContext &ctx)
   {
     return false;
   }
-  const int sample =
-      UBlockInspectDiagnostics::CaptureFromCrosshair(*ctx.World, ctx.Geometries);
+  const int sample = UBlockInspectDiagnostics::CaptureFromCrosshair(
+      *ctx.World, ctx.Geometries);
   if (sample < 0)
   {
     if (ctx.Geometries)
@@ -167,17 +169,16 @@ bool TryOpenWorkstationUi(const BlockInputContext &ctx)
   {
     return false;
   }
-  const auto hit = RaycastSolidBlocks(ctx.World->GetBlockWorld(),
-                                      ctx.World->GetBlockRegistry(),
-                                      camera->GetPosition(), camera->GetFront(),
-                                      8.0f);
+  const auto hit = RaycastSolidBlocks(
+      ctx.World->GetBlockWorld(), ctx.World->GetBlockRegistry(),
+      camera->GetPosition(), camera->GetFront(), 8.0f);
   if (!hit)
   {
     return false;
   }
   const BlockId id = ctx.World->GetBlockWorld().GetBlock(hit->blockPos);
   const std::string &name = ctx.World->GetBlockRegistry().GetTypeNameById(id);
-  if (name == "crafting_table")
+  if (name == "crafting_table" || name == "furnace" || name == "furnace_lit")
   {
     ctx.App->OpenCraftingScreen();
     return true;
@@ -193,6 +194,10 @@ bool TryOpenWorkstationUi(const BlockInputContext &ctx)
 
 void UBlockInputController::TryUseActiveSlot(const BlockInputContext &ctx)
 {
+  if (ctx.World)
+    if (auto *c = ctx.World->GetControlledCreature();
+        c && (c->CarryHandCount > 0 || c->BowCharge > 0))
+      return;
   if (!ctx.World)
   {
     return;
@@ -231,7 +236,7 @@ void UBlockInputController::TryUseActiveSlot(const BlockInputContext &ctx)
       return;
     }
     const auto target = ctx.World->PickCreatureByView(camera->GetPosition(),
-                                                    camera->GetFront(), 8.0f);
+                                                      camera->GetFront(), 8.0f);
     std::string error;
     if (target && ctx.World->TryApplySkin(*target, Active->Id, &error))
     {
@@ -247,6 +252,19 @@ void UBlockInputController::TryUseActiveSlot(const BlockInputContext &ctx)
   }
   case InventoryEntryKind::Item:
   {
+    if (auto *actor = ctx.World->GetControlledCreature())
+      if (auto camera = ctx.World->GetCurrentUserCamera())
+      {
+        std::string reason;
+        if (USurvivalSystems::Instance().Use(*ctx.World, *actor,
+                                             camera->GetPosition(),
+                                             camera->GetFront(), reason))
+        {
+          if (ctx.Geometries)
+            ctx.Geometries->ShowTransientMessage(reason, 2.f);
+          break;
+        }
+      }
     // Consumables (eat/drink) via Use influence channel.
     UCreature *controlled = ctx.World->GetControlledCreature();
     const UItemDefinitionStorage *items = ctx.World->GetItemDefinitionStorage();
@@ -261,25 +279,28 @@ void UBlockInputController::TryUseActiveSlot(const BlockInputContext &ctx)
           if (camera)
           {
             // Data-driven target block; empty means the item id itself.
-            const std::string blockId = def->Use.PlaceBlockId.empty()
-                                            ? def->Id
-                                            : def->Use.PlaceBlockId;
+            const std::string blockId =
+                def->Use.PlaceBlockId.empty() ? def->Id : def->Use.PlaceBlockId;
             placed = UBlockPlacementService::PlaceBlockFromHeldItem(
-                *ctx.World, camera->GetPosition(), camera->GetFront(),
-                blockId);
+                *ctx.World, camera->GetPosition(), camera->GetFront(), blockId);
           }
           break;
         }
         if (use.Action == ItemUseAction::Eat ||
             use.Action == ItemUseAction::Drink)
         {
+          if (!UseReady)
+          {
+            if (ctx.Geometries)
+              ctx.Geometries->ShowTransientMessage(
+                  "Hold right mouse to use; release to finish", 2.f);
+            return;
+          }
           PlayerInteractionRouter::SetUseIntent(*controlled);
           if (ctx.App)
           {
-            const std::string preset =
-                DefaultUsePreset(*def, use.Action == ItemUseAction::Drink
-                                           ? "drink"
-                                           : "eat");
+            const std::string preset = DefaultUsePreset(
+                *def, use.Action == ItemUseAction::Drink ? "drink" : "eat");
             ctx.App->NotifyFpUseVisual(preset, false);
           }
         }
@@ -316,6 +337,12 @@ void UBlockInputController::TryInstantBreak(const BlockInputContext &ctx)
 void UBlockInputController::CancelPointerInteraction(
     const BlockInputContext &ctx)
 {
+  DrawingBow.clear();
+  DrawingUse.clear();
+  UseReady = false;
+  if (ctx.World)
+    if (auto *c = ctx.World->GetControlledCreature())
+      c->BowCharge = 0;
   LeftHeld = false;
   DigStartedForHold = false;
   if (ctx.World)
@@ -341,6 +368,10 @@ void UBlockInputController::OnQuickTap(const BlockInputContext &ctx)
 
 void UBlockInputController::HandleLeftPress(const BlockInputContext &ctx)
 {
+  if (ctx.World)
+    if (auto *c = ctx.World->GetControlledCreature();
+        c && (c->CarryHandCount > 0 || c->BowCharge > 0))
+      return;
   if (!ctx.Ui || !ctx.World)
   {
     return;
@@ -351,13 +382,16 @@ void UBlockInputController::HandleLeftPress(const BlockInputContext &ctx)
     return;
   }
 
-  // Survival: LMB with ranged weapon → Ranged Intent; else melee creature; else dig.
+  // Survival: LMB with ranged weapon → Ranged Intent; else melee creature; else
+  // dig.
   if (auto camera = ctx.World->GetCurrentUserCamera())
   {
     if (UCreature *self = ctx.World->GetControlledCreature())
     {
-      const UItemDefinitionStorage *items = ctx.World->GetItemDefinitionStorage();
-      const InventoryEntryRef *active = self->GetInventory().GetActiveEntryRef();
+      const UItemDefinitionStorage *items =
+          ctx.World->GetItemDefinitionStorage();
+      const InventoryEntryRef *active =
+          self->GetInventory().GetActiveEntryRef();
       if (items && active && !active->empty &&
           active->kind == InventoryEntryKind::Item && !active->broken)
       {
@@ -365,28 +399,6 @@ void UBlockInputController::HandleLeftPress(const BlockInputContext &ctx)
         {
           if (def->Ranged.Enabled)
           {
-            if (PlayerInteractionRouter::TryRouteRangedFromView(
-                    *ctx.World, *self, camera->GetPosition(),
-                    camera->GetFront(), def->Ranged.RangeBlocks,
-                    def->Ranged.RequireLos))
-            {
-              if (ctx.App)
-              {
-                ctx.App->NotifyFpUseVisual(
-                    DefaultUsePreset(*def, "ranged"), false);
-              }
-              LeftDownTime = std::chrono::steady_clock::now();
-              LeftHeld = true;
-              return;
-            }
-            // No target: still play draw, no dig with bow.
-            if (ctx.App)
-            {
-              ctx.App->NotifyFpUseVisual(DefaultUsePreset(*def, "ranged"),
-                                         false);
-            }
-            LeftDownTime = std::chrono::steady_clock::now();
-            LeftHeld = true;
             return;
           }
         }
@@ -455,8 +467,7 @@ void UBlockInputController::HandleLeftRelease(float holdSeconds,
       ClearDigIntent(*ctx.World);
       DigStartedForHold = false;
     }
-    else if (!DigStartedForHold &&
-             ctx.World->GetIsBlockIntersectionExists() &&
+    else if (!DigStartedForHold && ctx.World->GetIsBlockIntersectionExists() &&
              !ShouldBlockBreakByMovement(ctx))
     {
       // Long press release without Tick having started dig yet.
@@ -468,7 +479,8 @@ void UBlockInputController::HandleLeftRelease(float holdSeconds,
     return;
   }
 
-  // Classic: release ends break if still in progress (completed breaks already cleared).
+  // Classic: release ends break if still in progress (completed breaks already
+  // cleared).
   if (ctx.World->HasBreakSession())
   {
     ctx.World->CancelBreakSession();
@@ -486,6 +498,40 @@ void UBlockInputController::HandleRightPress(glm::vec2 pos,
   RightDragExceeded = false;
   RightLookActive = false;
 
+  if (ctx.World)
+    if (auto *c = ctx.World->GetControlledCreature())
+    {
+      if (c->CarryHandCount > 0)
+        return;
+      auto *active = c->GetInventory().GetActiveEntryRef();
+      auto *defs = ctx.World->GetItemDefinitionStorage();
+      auto *bow = active && defs ? defs->Get(active->Id) : nullptr;
+      if (bow && (bow->Use.Action == ItemUseActionKind::Eat ||
+                  bow->Use.Action == ItemUseActionKind::Drink))
+      {
+        DrawingUse = active->Id;
+        UseInstance = active->instanceId;
+        UseDuration = bow->Use.Duration;
+        UseDownTime = std::chrono::steady_clock::now();
+        if (ctx.App)
+          ctx.App->NotifyFpUseVisual(
+              DefaultUsePreset(*bow, bow->Use.Action == ItemUseActionKind::Eat
+                                         ? "eat"
+                                         : "drink"),
+              true);
+        return;
+      }
+      if (bow && bow->Ranged.Enabled && !active->broken)
+      {
+        DrawingBow = active->Id;
+        BowDownTime = std::chrono::steady_clock::now();
+        c->BowCharge = .001f;
+        c->SetBlocking(false);
+        if (ctx.App)
+          ctx.App->NotifyFpUseVisual(DefaultUsePreset(*bow, "ranged"), true);
+        return;
+      }
+    }
   // Offhand shield: RMB hold = block (overrides look when shield equipped).
   if (ctx.World)
   {
@@ -529,6 +575,52 @@ void UBlockInputController::HandleRightPress(glm::vec2 pos,
 
 void UBlockInputController::HandleRightRelease(const BlockInputContext &ctx)
 {
+  if (!DrawingUse.empty())
+  {
+    if (ctx.World)
+      if (auto *c = ctx.World->GetControlledCreature())
+      {
+        auto *e = c->GetInventory().GetActiveEntryRef();
+        if (e && e->Id == DrawingUse && e->instanceId == UseInstance &&
+            !c->CarryHandCount &&
+            std::chrono::duration<float>(std::chrono::steady_clock::now() -
+                                         UseDownTime)
+                    .count() >= UseDuration)
+        {
+          UseReady = true;
+          TryUseActiveSlot(ctx);
+          UseReady = false;
+        }
+      }
+    DrawingUse.clear();
+    RightPressed = false;
+    RightLookActive = false;
+    if (ctx.App)
+      ctx.App->ClearFpHeldVisual();
+    return;
+  }
+
+  if (!DrawingBow.empty())
+  {
+    if (ctx.World)
+      if (auto *c = ctx.World->GetControlledCreature())
+      {
+        auto *e = c->GetInventory().GetActiveEntryRef();
+        auto camera = ctx.World->GetCurrentUserCamera();
+        if (e && e->Id == DrawingBow && camera && !c->CarryHandCount)
+          WorldItemSystem::Instance().FireArrow(
+              *ctx.World, *c, camera->GetPosition(), camera->GetFront(),
+              c->BowCharge);
+        c->BowCharge = 0;
+      }
+    DrawingBow.clear();
+    RightPressed = false;
+    RightLookActive = false;
+    if (ctx.App)
+      ctx.App->ClearFpHeldVisual();
+    return;
+  }
+
   if (!ctx.Ui || !ctx.World)
   {
     RightPressed = false;
@@ -665,6 +757,33 @@ void UBlockInputController::OnKeyDelete(const BlockInputContext &ctx)
 
 void UBlockInputController::Tick(float dt, const BlockInputContext &ctx)
 {
+  if (ctx.World)
+    if (auto *c = ctx.World->GetControlledCreature())
+    {
+      if (!DrawingBow.empty())
+      {
+        auto *e = c->GetInventory().GetActiveEntryRef();
+        if (!e || e->Id != DrawingBow || c->CarryHandCount > 0)
+        {
+          DrawingBow.clear();
+          c->BowCharge = 0;
+        }
+        else
+          c->BowCharge =
+              std::clamp(std::chrono::duration<float>(
+                             std::chrono::steady_clock::now() - BowDownTime)
+                                 .count() /
+                             1.1f,
+                         .001f, 1.f);
+        return;
+      }
+      if (c->CarryHandCount > 0)
+      {
+        CancelPointerInteraction(ctx);
+        return;
+      }
+    }
+
   if (!ctx.Ui || !ctx.World)
   {
     return;

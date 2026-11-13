@@ -4,8 +4,8 @@
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Visual/CreatureDrawRequest.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
-#include "Creatures/Visual/CreatureTextureStorage.h"
 #include "Creatures/Visual/CreatureTextureResolver.h"
+#include "Creatures/Visual/CreatureTextureStorage.h"
 #include "Render/Engine/GeometryEngine.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <optional>
@@ -63,7 +63,9 @@ CreaturePartMesh MeshForPart(const ResolvedCreaturePart &part,
     }
   }
   else if (layout == CreatureTextureLayout::RigidCrop &&
-           UsesRigidFaceTexture(part.baseTextureAssetKey.empty() ? part.textureAssetKey : part.baseTextureAssetKey))
+           UsesRigidFaceTexture(part.baseTextureAssetKey.empty()
+                                    ? part.textureAssetKey
+                                    : part.baseTextureAssetKey))
   {
     return CreaturePartMesh::RigidHead;
   }
@@ -185,6 +187,8 @@ void UCreatureVisualRigid::UpdatePose(const UCreature &creature,
   CrouchUpperDrop = CrouchUpperBodyDrop(creature, blend);
   SizeBlocks = creature.GetBounds().currentSizeBlocks;
   PartPoses = pose.Parts;
+  if (creature.ExternalMotion)
+    PartPoses.clear();
 }
 
 void UCreatureVisualRigid::SubmitDraw(const CreatureDrawContext &ctx,
@@ -218,14 +222,14 @@ void UCreatureVisualRigid::SubmitDraw(const CreatureDrawContext &ctx,
     if (IsLegLimb(part) && torsoBottomY)
     {
       const glm::vec3 pivot = DefaultLegPivot(part, *torsoBottomY);
-      return BuildLimbPartModel(BodyOrigin, BodyYawDeg, pivot, part.offsetBlocks,
-                                part.sizeBlocks, partPose);
+      return BuildLimbPartModel(BodyOrigin, BodyYawDeg, pivot,
+                                part.offsetBlocks, part.sizeBlocks, partPose);
     }
     if (IsArmLimb(part))
     {
       const glm::vec3 pivot = DefaultArmPivot(part);
-      return BuildLimbPartModel(BodyOrigin, BodyYawDeg, pivot, part.offsetBlocks,
-                                part.sizeBlocks, partPose);
+      return BuildLimbPartModel(BodyOrigin, BodyYawDeg, pivot,
+                                part.offsetBlocks, part.sizeBlocks, partPose);
     }
     return BuildRigidPartModel(BodyOrigin, BodyYawDeg, offset, part.sizeBlocks,
                                partPose);

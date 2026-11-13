@@ -1,18 +1,21 @@
-#include "Core/StallTimer.h"
 #include "App/Application.h"
-#include "Creatures/Visual/CreatureAppearance.h"
+#include "Core/StallTimer.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
+#include "Creatures/Visual/CreatureAppearance.h"
 #include "Game/Inventory/HotbarInput.h"
 #include "Game/Inventory/SlotInteraction.h"
+#include "Gui/Widgets/GuiButton.h"
+#include "Gui/Widgets/GuiTextInput.h"
+#include "Test/Native/ItemsInventoryQa.h"
+#include "World/Core/RuntimeTuning.h"
 #include "World/Diagnostics/EnterLitDiagnostics.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
-#include "World/Core/RuntimeTuning.h"
 
-#include "App/Platform/Log.h"
 #include "App/Core.h"
 #include "App/Platform/CursorCapture.h"
-#include "Blocks/BlockDefinitionStorage.h"
+#include "App/Platform/Log.h"
 #include "Audio/AudioApi.h"
+#include "Blocks/BlockDefinitionStorage.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Camera/CameraPerspective.h"
 #ifdef __ANDROID__
@@ -22,52 +25,49 @@
 #ifndef __ANDROID__
 #include "App/Platform/WindowManager.h"
 #endif
-#include "Creatures/Player/User.h"
-#include "Game/GameSession.h"
-#include "Gui/Cache/CreatureIconCache.h"
-#include "Gui/Cache/InventoryIconService.h"
-#include "Items/FpViewmodelRenderer.h"
-#include "Items/ItemDefinitionStorage.h"
-#include "Creatures/Visual/WornEquipmentDrawer.h"
+#include "App/Platform/Log.h"
+#include "App/WorldOperationRunner.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
+#include "Creatures/Player/User.h"
 #include "Creatures/Stats/CreatureVitals.h"
+#include "Creatures/Visual/WornEquipmentDrawer.h"
+#include "Game/GameSession.h"
 #include "Game/ModePolicy.h"
+#include "Gui/Cache/CreatureIconCache.h"
+#include "Gui/Cache/InventoryIconService.h"
 #include "Gui/Cache/ItemIconCache.h"
 #include "Gui/Cache/ObjectIconCache.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiIconSource.h"
-#include "Gui/Preview/ContentPreviewRenderer.h"
-#include "Gui/Preview/CreaturePreviewRenderer.h"
-#include "Gui/Preview/ItemPreviewRenderer.h"
 #include "Gui/Core/GuiMetrics.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiScale.h"
 #include "Gui/Core/GuiTypes.h"
 #include "Gui/Interfaces/IUGuiClipboard.h"
 #include "Gui/Interfaces/IUGuiIconSource.h"
-#include "Gui/Screens/WorldProgressScreen.h"
-#include "App/Platform/Log.h"
-#include "App/WorldOperationRunner.h"
-#include "Gui/Screens/CreativePaletteScreen.h"
-#include "Gui/Screens/SurvivalInventoryScreen.h"
-#include "Gui/Screens/DeathScreen.h"
-#include "Gui/Screens/CraftingScreen.h"
+#include "Gui/Preview/ContentPreviewRenderer.h"
+#include "Gui/Preview/CreaturePreviewRenderer.h"
+#include "Gui/Preview/ItemPreviewRenderer.h"
 #include "Gui/Screens/AnvilScreen.h"
 #include "Gui/Screens/CharacterSheetScreen.h"
-#include "Gui/Screens/WorldResourcePacksScreen.h"
+#include "Gui/Screens/CraftingScreen.h"
+#include "Gui/Screens/CreativePaletteScreen.h"
+#include "Gui/Screens/DeathScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
 #include "Gui/Screens/LoadWorldScreen.h"
 #include "Gui/Screens/MainMenuScreen.h"
 #include "Gui/Screens/NewWorldScreen.h"
 #include "Gui/Screens/SettingsScreen.h"
+#include "Gui/Screens/SurvivalInventoryScreen.h"
+#include "Gui/Screens/WorldProgressScreen.h"
+#include "Gui/Screens/WorldResourcePacksScreen.h"
 #include "Gui/Widgets/GuiPopupMenu.h"
 #include "Gui/Widgets/GuiSlot.h"
 #include "Gui/Widgets/GuiWidget.h"
-#include "WorldGen/Core/WorldGenRefs.h"
-#include "WorldGen/Features/ObjectFeatureConfig.h"
-#include "WorldGen/Core/WorldGenPack.h"
+#include "Items/FpViewmodelRenderer.h"
+#include "Items/ItemDefinitionStorage.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Engine/TextRenderer.h"
@@ -77,6 +77,9 @@
 #include "World/Core/WorldLoadDiagnostics.h"
 #include "World/Objects/ObjectLibrary.h"
 #include "World/View/WorldViewSettings.h"
+#include "WorldGen/Core/WorldGenPack.h"
+#include "WorldGen/Core/WorldGenRefs.h"
+#include "WorldGen/Features/ObjectFeatureConfig.h"
 
 #ifndef __ANDROID__
 #include <GLFW/glfw3.h>
@@ -178,29 +181,27 @@ UApplication::UApplication(
   if (World)
   {
     World->SetOnBlockRegistryChanged([this]() { RefreshBlockCatalog(); });
-    World->SetOnCreatureCatalogChanged([this]()
-                                       {
-                                         RefreshCreatureCatalog();
-                                         if (IconSource)
-                                         {
-                                           IconSource->ClearCreatureIconCache();
-                                         }
-                                         if (CreaturePreviewRenderer)
-                                         {
-                                           CreaturePreviewRenderer->Invalidate();
-                                         }
-                                         if (PaletteScreen)
-                                         {
-                                           PaletteScreen->InvalidateGrid();
-                                         }
-                                       });
+    World->SetOnCreatureCatalogChanged(
+        [this]()
+        {
+          RefreshCreatureCatalog();
+          if (IconSource)
+          {
+            IconSource->ClearCreatureIconCache();
+          }
+          if (CreaturePreviewRenderer)
+          {
+            CreaturePreviewRenderer->Invalidate();
+          }
+          if (PaletteScreen)
+          {
+            PaletteScreen->InvalidateGrid();
+          }
+        });
   }
 }
 
-UApplication::~UApplication()
-{
-  PrepareForShutdown();
-}
+UApplication::~UApplication() { PrepareForShutdown(); }
 
 void UApplication::PrepareForShutdown()
 {
@@ -264,15 +265,21 @@ void UApplication::Startup(const std::string &configPath)
     const std::string typesPath = "content/types.json";
     if (!UWorldGenRefs::LoadFromFile("content/worldgen_refs.json"))
     {
-      CubatariumLogInfo("App", "worldgen_refs.json not loaded — using legacy block name resolution");
+      CubatariumLogInfo(
+          "App",
+          "worldgen_refs.json not loaded — using legacy block name resolution");
     }
-    if (!UObjectFeatureConfigStorage::LoadFromFile("content/object_features.json"))
+    if (!UObjectFeatureConfigStorage::LoadFromFile(
+            "content/object_features.json"))
     {
-      CubatariumLogInfo("App", "object_features.json not loaded — legacy tree placement only");
+      CubatariumLogInfo(
+          "App",
+          "object_features.json not loaded — legacy tree placement only");
     }
     if (!UWorldGenPack::LoadPackId("default"))
     {
-      CubatariumLogInfo("App", "worldgen pack not loaded — built-in biome defaults only");
+      CubatariumLogInfo(
+          "App", "worldgen pack not loaded — built-in biome defaults only");
     }
     GameSession->InitializeCatalog(typesPath, *Core);
   }
@@ -369,7 +376,7 @@ void UApplication::ScheduleQuit()
 }
 
 void UApplication::BeginShutdownOperation(const bool saveSession,
-                                        const bool closeAfter)
+                                          const bool closeAfter)
 {
   if (!Core || !World || State == AppState::Loading)
   {
@@ -389,13 +396,13 @@ void UApplication::BeginShutdownOperation(const bool saveSession,
                         {
                           GameSession->SaveCommandHistory();
                         }
-                          if (Core)
-                          {
-                            // World terrain already saved by ShutdownSave.
-                            // SaveSystem→SaveWorld would re-enter snapshot/
-                            // InitChunkScheduler and can hang on worker join.
-                            Core->SaveConfigFile();
-                          }
+                        if (Core)
+                        {
+                          // World terrain already saved by ShutdownSave.
+                          // SaveSystem→SaveWorld would re-enter snapshot/
+                          // InitChunkScheduler and can hang on worker join.
+                          Core->SaveConfigFile();
+                        }
                         if (ShutdownCloseAfter)
                         {
                           RequestQuit();
@@ -451,7 +458,7 @@ void UApplication::ShowWorldProgressScreen()
 }
 
 void UApplication::BeginWorldOperation(WorldRunnerRequest request,
-                                     std::function<void()> onComplete)
+                                       std::function<void()> onComplete)
 {
   if (!Core || !World)
   {
@@ -557,14 +564,11 @@ void UApplication::RequestQuit()
 #endif
 }
 
-void UApplication::ShowMainMenu()
-{
-  ScreenNav.ShowMainMenu();
-}
+void UApplication::ShowMainMenu() { ScreenNav.ShowMainMenu(); }
 
 void UApplication::SetHotbarCountSetting(int count)
 {
-  Ui.HotbarCount = std::clamp(count, 1, 2);
+  Ui.HotbarCount = std::clamp(count, 1, 4);
   if (Core)
   {
     AppSettingsSnapshot app = Core->GetAppSettings();
@@ -587,30 +591,15 @@ void UApplication::ReturnToMainMenu()
   ScreenNav.ReturnToMainMenu();
 }
 
-void UApplication::ShowSettings()
-{
-  ScreenNav.ShowSettings();
-}
+void UApplication::ShowSettings() { ScreenNav.ShowSettings(); }
 
-void UApplication::ShowWorldSettings()
-{
-  ScreenNav.ShowWorldSettings();
-}
+void UApplication::ShowWorldSettings() { ScreenNav.ShowWorldSettings(); }
 
-void UApplication::ShowNewWorld()
-{
-  ScreenNav.ShowNewWorld();
-}
+void UApplication::ShowNewWorld() { ScreenNav.ShowNewWorld(); }
 
-void UApplication::ShowLoadWorld()
-{
-  ScreenNav.ShowLoadWorld();
-}
+void UApplication::ShowLoadWorld() { ScreenNav.ShowLoadWorld(); }
 
-void UApplication::SaveWorldSessionIfNeeded()
-{
-  SaveActiveWorldIfNeeded();
-}
+void UApplication::SaveWorldSessionIfNeeded() { SaveActiveWorldIfNeeded(); }
 
 void UApplication::SaveActiveWorldIfNeeded()
 {
@@ -731,7 +720,8 @@ void UApplication::SaveAppAndTemplateSettings(
   Core->SetProceduralTemplate(procedural);
   Core->SaveConfigFile();
   Ui = Core->GetUiSettings();
-  UpdateUiScale(LastFramebufferWidth, LastFramebufferHeight, LastPlatformMetrics);
+  UpdateUiScale(LastFramebufferWidth, LastFramebufferHeight,
+                LastPlatformMetrics);
   if (Geometry)
   {
     Geometry->SetShowHud(Ui.LegacyHud);
@@ -770,7 +760,8 @@ void UApplication::CreateNewWorldWithSettings(
     const ProceduralSettings &settings, const ResourcePackSelection &selection,
     const WorldViewSettings &view)
 {
-  CreateNewWorldWithSettings(settings, selection, view, WorldGameMode::Creative);
+  CreateNewWorldWithSettings(settings, selection, view,
+                             WorldGameMode::Creative);
 }
 
 void UApplication::CreateNewWorldWithSettings(
@@ -829,8 +820,7 @@ UApplication::PeekWorldResourcePacks(const std::string &worldName) const
               : std::vector<std::string>{};
 }
 
-ResourcePackSelection
-UApplication::GetCurrentWorldResourcePackSelection() const
+ResourcePackSelection UApplication::GetCurrentWorldResourcePackSelection() const
 {
   return Core ? Core->GetCurrentWorldResourcePackSelection()
               : ResourcePackSelection{};
@@ -856,7 +846,8 @@ WorldViewSettings UApplication::GetCurrentWorldViewSettings() const
   return Core ? Core->GetCurrentWorldViewSettings() : WorldViewSettings{};
 }
 
-bool UApplication::ApplyViewSettingsToCurrentWorld(const WorldViewSettings &view)
+bool UApplication::ApplyViewSettingsToCurrentWorld(
+    const WorldViewSettings &view)
 {
   if (!Core)
   {
@@ -886,10 +877,9 @@ bool UApplication::ApplyWorldSettings(const ResourcePackSelection &selection,
 
   const ResourcePackSelection current =
       Core->GetCurrentWorldResourcePackSelection();
-  const bool packs_changed =
-      packs.Primary != current.Primary ||
-      packs.Secondary != current.Secondary ||
-      packs.WorldgenOwner != current.WorldgenOwner;
+  const bool packs_changed = packs.Primary != current.Primary ||
+                             packs.Secondary != current.Secondary ||
+                             packs.WorldgenOwner != current.WorldgenOwner;
 
   if (packs_changed)
   {
@@ -978,12 +968,12 @@ void UApplication::ShowInGameHud()
 #endif
 
   GameSession->InitCommandHistory(GetExecutableDirectory() /
-                                   "console_history.txt");
+                                  "console_history.txt");
 
   IUGuiIconSource *icons = IconSource.get();
   UContentPreviewRenderer *preview = ContentPreviewRenderer.get();
-  auto hud = std::make_unique<UInGameHudScreen>(
-      GameSession.get(), &GuiContext->GetTheme(), icons);
+  auto hud = std::make_unique<UInGameHudScreen>(GameSession.get(),
+                                                &GuiContext->GetTheme(), icons);
 #if defined(__ANDROID__)
   if (TouchBridge)
   {
@@ -1099,15 +1089,14 @@ void UApplication::ShowInGameHud()
   PaletteScreen->Build(*GuiContext);
   PaletteScreen->SetVisible(false);
 
-  SurvivalInventoryScreen =
-      std::make_unique<USurvivalInventoryScreen>(
-          &GameSession->GetContentCatalog(), GameSession.get(), icons);
+  SurvivalInventoryScreen = std::make_unique<USurvivalInventoryScreen>(
+      &GameSession->GetContentCatalog(), GameSession.get(), icons);
   SurvivalInventoryScreen->OnAttach(*GuiContext);
   SurvivalInventoryScreen->Build(*GuiContext);
   SurvivalInventoryScreen->SetVisible(false);
 
-  CraftingScreen = std::make_unique<UCraftingScreen>(
-      GameSession.get(), World.get(), icons);
+  CraftingScreen =
+      std::make_unique<UCraftingScreen>(GameSession.get(), World.get(), icons);
   CraftingScreen->OnAttach(*GuiContext);
   CraftingScreen->Build(*GuiContext);
   CraftingScreen->SetVisible(false);
@@ -1123,8 +1112,7 @@ void UApplication::ShowInGameHud()
   DeathScreen->SetOnRespawn(
       [this]()
       {
-        if (!World ||
-            !ModePolicy::AllowsPlayerRespawn(World->GetDifficulty()))
+        if (!World || !ModePolicy::AllowsPlayerRespawn(World->GetDifficulty()))
         {
           return;
         }
@@ -1174,15 +1162,11 @@ void UApplication::ShowInGameHud()
         SyncCursorVisibility();
       });
   DeathScreen->SetOnReturnToMenu(
-      [this]()
-      {
-        SaveIfNeededAndProceed([this]() { ReturnToMainMenu(); });
-      });
+      [this]() { SaveIfNeededAndProceed([this]() { ReturnToMainMenu(); }); });
   DeathScreen->SetVisible(false);
 
-  CharacterSheetScreen =
-      std::make_unique<UCharacterSheetScreen>(
-          GameSession.get(), CreaturePreviewRenderer.get(), icons);
+  CharacterSheetScreen = std::make_unique<UCharacterSheetScreen>(
+      GameSession.get(), CreaturePreviewRenderer.get(), icons);
   CharacterSheetScreen->OnAttach(*GuiContext);
   CharacterSheetScreen->Build(*GuiContext);
   CharacterSheetScreen->SetVisible(false);
@@ -1198,16 +1182,18 @@ void UApplication::ShowInGameHud()
 
 bool UApplication::UsesUiPointer() const
 {
-  return State == AppState::MainMenu || State == AppState::Loading || FreeCursor ||
-         ConsoleOpen || PaletteOpen || WorldGenOpen || CharacterSheetOpen ||
-         SurvivalInventoryOpen || CraftingOpen || AnvilOpen || DeathScreenOpen;
+  return State == AppState::MainMenu || State == AppState::Loading ||
+         FreeCursor || ConsoleOpen || PaletteOpen || WorldGenOpen ||
+         CharacterSheetOpen || SurvivalInventoryOpen || CraftingOpen ||
+         AnvilOpen || DeathScreenOpen;
 }
 
 bool UApplication::BlocksGameMouseLook() const
 {
   return State == AppState::InGame &&
          (FreeCursor || ConsoleOpen || PaletteOpen || WorldGenOpen ||
-          CharacterSheetOpen || SurvivalInventoryOpen || CraftingOpen || AnvilOpen || DeathScreenOpen);
+          CharacterSheetOpen || SurvivalInventoryOpen || CraftingOpen ||
+          AnvilOpen || DeathScreenOpen);
 }
 
 AppCursorPolicy UApplication::GetCursorPolicy() const
@@ -1302,11 +1288,10 @@ void UApplication::OnGameplayViewProjectionChanged()
   // isometric free-cursor aim).
   LastCursorPolicy = AppCursorPolicy::CapturedHidden;
 
-  const bool iso =
-      World->GetViewSettings().Projection ==
-          WorldProjectionMode::OrthographicIsometric ||
-      (World->GetCurrentUserCamera() &&
-       World->GetCurrentUserCamera()->IsIsometricProjection());
+  const bool iso = World->GetViewSettings().Projection ==
+                       WorldProjectionMode::OrthographicIsometric ||
+                   (World->GetCurrentUserCamera() &&
+                    World->GetCurrentUserCamera()->IsIsometricProjection());
 
 #ifndef __ANDROID__
   if (Window && iso && State == AppState::InGame && !UsesUiPointer())
@@ -1510,12 +1495,22 @@ void UApplication::FinishInventoryPointerGesture(const GuiMouseEvent &event)
 {
   const int pointerIndex = NormalizeOverlayPointer(event.PointerId);
 
-  if (GameSession && GameSession->IsDragging())
+  const bool completedDrag = GameSession && GameSession->IsDragging();
+  SlotAddress releaseTarget;
+  const bool sameSource =
+      completedDrag && ResolveSlotAt(event.X, event.Y, releaseTarget) &&
+      (releaseTarget.surface == GameSession->GetDrag().source.surface &&
+       releaseTarget.bar == GameSession->GetDrag().source.bar &&
+       releaseTarget.slot == GameSession->GetDrag().source.slot);
+  const bool buttonAction =
+      dynamic_cast<UGuiButton *>(OverlayPressedWidget) != nullptr;
+  if (completedDrag && !sameSource && !buttonAction)
   {
     SlotAddress target;
     if (ResolveSlotAt(event.X, event.Y, target))
     {
-      if (!GameSession->DropOnSlot(target))
+      if (!GameSession->DropOnSlot(
+              target, event.Button == GuiMouseButton::Right ? 1 : -1))
       {
         GameSession->CancelDrag();
         GameSession->ClearPendingAssignment();
@@ -1529,7 +1524,12 @@ void UApplication::FinishInventoryPointerGesture(const GuiMouseEvent &event)
 
   if (OverlayPressedWidget)
   {
+    if (completedDrag && !sameSource)
+      if (auto *slot = dynamic_cast<UGuiSlot *>(OverlayPressedWidget))
+        slot->ClearPressState();
     OverlayPressedWidget->OnMouseUp(event);
+    if (sameSource && GameSession->IsDragging())
+      GameSession->CancelDrag();
     if (auto *slot = dynamic_cast<UGuiSlot *>(OverlayPressedWidget))
     {
       slot->ClearPressState();
@@ -1627,6 +1627,19 @@ bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
     {
       return nullptr;
     }
+    std::function<void(UGuiWidget *)> focusText = [&](UGuiWidget *node)
+    {
+      if (auto *input = dynamic_cast<UGuiTextInput *>(node))
+        input->SetFocused(node == hit);
+      for (const auto &child : node->GetChildren())
+        focusText(child.get());
+    };
+    focusText(root);
+    if (auto *input = dynamic_cast<UGuiTextInput *>(hit))
+    {
+      return input->PointerDown(event, GuiContext->GetRenderer()) ? hit
+                                                                  : nullptr;
+    }
     if (!root->OnMouseDown(event))
     {
       return nullptr;
@@ -1677,10 +1690,10 @@ bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
     }
     if (SurvivalInventoryOpen && SurvivalInventoryScreen)
     {
-      if (UGuiWidget *hit =
-              routeRootDown(SurvivalInventoryScreen->GetRoot()))
+      if (UGuiWidget *hit = routeRootDown(SurvivalInventoryScreen->GetRoot()))
       {
-        OverlayCaptures[pointerIndex] = OverlayPointerCapture::SurvivalInventory;
+        OverlayCaptures[pointerIndex] =
+            OverlayPointerCapture::SurvivalInventory;
         OverlayPressedWidget = hit;
         return true;
       }
@@ -1749,8 +1762,7 @@ bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
 bool UApplication::ResolveSlotAt(int x, int y, SlotAddress &out)
 {
   // Hotbar targets first so Tools grid never swallows drops meant for hotbar.
-  if (PaletteOpen && PaletteScreen &&
-      PaletteScreen->PickHotbarStrip(x, y, out))
+  if (PaletteOpen && PaletteScreen && PaletteScreen->PickHotbarStrip(x, y, out))
   {
     return true;
   }
@@ -1760,6 +1772,15 @@ bool UApplication::ResolveSlotAt(int x, int y, SlotAddress &out)
   }
   if (CharacterSheetOpen && CharacterSheetScreen)
   {
+    size_t bagSlot = 0;
+    if (CharacterSheetScreen->PickBackpackSlot(x, y, bagSlot))
+    {
+      out = {};
+      out.surface = SlotSurface::Hotbar;
+      out.bar = bagSlot / 10;
+      out.slot = bagSlot % 10;
+      return true;
+    }
     size_t armorSlot = 0;
     if (CharacterSheetScreen->PickArmorSlot(x, y, armorSlot))
     {
@@ -1798,8 +1819,7 @@ bool UApplication::ResolveSlotAt(int x, int y, SlotAddress &out)
 
 void UApplication::DrawDragGhost(int width, int height)
 {
-  if (!GameSession || !GameSession->IsDragging() || !IconSource ||
-      !GuiContext)
+  if (!GameSession || !GameSession->IsDragging() || !IconSource || !GuiContext)
   {
     return;
   }
@@ -1842,8 +1862,10 @@ void UApplication::DrawDragGhost(int width, int height)
 
 void UApplication::NotifyFpSwing(FpSwingKind kind)
 {
-  if(World)if(auto *actor=World->GetControlledCreature())
-    if(actor->GetTypeId()=="human")actor->HumanMotion.actionRemaining=.28f;
+  if (World)
+    if (auto *actor = World->GetControlledCreature())
+      if (actor->GetTypeId() == "human")
+        actor->HumanMotion.actionRemaining = .28f;
   if (FpViewmodelRenderer)
   {
     FpViewmodelRenderer->NotifySwing(kind);
@@ -1955,6 +1977,55 @@ void UApplication::OpenAnvilScreen()
   SyncCursorVisibility();
 }
 
+void UApplication::UpdateNativeItemsQa(double dt)
+{
+  static bool itemsQaDone = false;
+  if (!itemsQaDone && World && World->GetControlledCreature())
+    if (const char *path = std::getenv("CUBA_ITEMS_INVENTORY_QA"))
+    {
+      itemsQaDone = true;
+      RunItemsInventoryQa(*World, path);
+      GameSession->SyncToWorldGameMode(World->GetGameMode());
+      if (CharacterSheetScreen)
+      {
+        CharacterSheetScreen->RunInventoryQa(std::string(path) + ".ui.json");
+        CharacterSheetOpen = true;
+        CharacterSheetScreen->SetSection(0);
+        CharacterSheetScreen->SetVisible(true);
+        SyncCursorVisibility();
+      }
+    }
+  if (itemsQaDone && World && std::getenv("CUBA_ITEMS_CARRY_VISUAL_QA"))
+  {
+    static float visualTime = 0;
+    visualTime += float(dt);
+    CharacterSheetOpen = false;
+    if (CharacterSheetScreen)
+      CharacterSheetScreen->SetVisible(false);
+    MinimalOverlayForBench = false;
+    TickItemsCarryVisualQa(*World, visualTime);
+  }
+  else if (itemsQaDone && CharacterSheetScreen &&
+           std::getenv("CUBA_ITEMS_INVENTORY_QA"))
+  {
+    static float qaTime = 0;
+    qaTime += float(dt);
+    CharacterSheetScreen->SetSection(std::min(3, int(qaTime / 6.f)));
+  }
+  static bool appearanceUiQaDone = false;
+  if (!appearanceUiQaDone && CharacterSheetScreen && World &&
+      World->GetControlledCreature())
+  {
+    if (const char *path = std::getenv("CUBA_PLAYER_APPEARANCE_UI_QA"))
+    {
+      appearanceUiQaDone = true;
+      CharacterSheetOpen = true;
+      CharacterSheetScreen->RunAppearanceQa(path);
+      SyncCursorVisibility();
+    }
+  }
+}
+
 void UApplication::Update(double dt)
 {
   // Audio listener: one tiny guarded copy per frame, no engine calls here.
@@ -1986,10 +2057,9 @@ void UApplication::Update(double dt)
     {
       AudioAmbienceCooldown = 0.0;
       AudioAmbienceSnapshot ambience{};
-      const glm::vec3 probe =
-          World->GetCurrentUserCamera()
-              ? World->GetCurrentUserCamera()->GetPosition()
-              : World->GetSpawnPoint();
+      const glm::vec3 probe = World->GetCurrentUserCamera()
+                                  ? World->GetCurrentUserCamera()->GetPosition()
+                                  : World->GetSpawnPoint();
       std::snprintf(ambience.BiomeId, sizeof(ambience.BiomeId), "%s",
                     World->DominantBiomeIdAt(probe).c_str());
       std::snprintf(ambience.WeatherName, sizeof(ambience.WeatherName), "%s",
@@ -2035,11 +2105,13 @@ void UApplication::Update(double dt)
         constexpr int kGpuWarmupMinFrames = 3;
         // Era20: smaller per-frame mesh budget; GPU upload only on last ready
         // frame so EnterGameAfterWorldChange ≠ mega WarmupGreedy spike.
-        // Era29: slightly higher streaming budget — SoftDefer/PendingLight on bar.
+        // Era29: slightly higher streaming budget — SoftDefer/PendingLight on
+        // bar.
         constexpr int kGpuWarmupMeshBudget = EnterWarmupMeshBudgetDefault();
         const int gate_iterations =
             std::max(1, URuntimeTuning::Get().EnterGateMeshDrainIterations);
-        const int remaining = WorldOpRunner->EnterGameGpuWarmupFramesRemaining();
+        const int remaining =
+            WorldOpRunner->EnterGameGpuWarmupFramesRemaining();
         const int frame = kGpuWarmupMaxFrames - remaining;
         EnterWarmupStepSample step_sample{};
         const auto &phys_before = World->GetPhysicsTelemetry();
@@ -2139,9 +2211,8 @@ void UApplication::Update(double dt)
           {
             World->WarmupVisibleListAtCamera();
             if (ShouldWarmupGreedyGpuDuringEnter(
-                    remaining,
-                    World->IsSpawnAreaPreparedByCooperativeLoad(), frame,
-                    kGpuWarmupMinFrames))
+                    remaining, World->IsSpawnAreaPreparedByCooperativeLoad(),
+                    frame, kGpuWarmupMinFrames))
             {
               Geometry->WarmupGreedyGpuFromWorld();
               LogWorldLoadDiag("gpu_warmup_draw", *World);
@@ -2184,6 +2255,7 @@ void UApplication::Update(double dt)
         }
       }
 #endif
+      HudScreen->SetInteractionKeys(Ui.GrabKey, Ui.ThrowKey);
       HudScreen->Update(dt);
     }
     if (ConsoleScreen)
@@ -2222,13 +2294,7 @@ void UApplication::Update(double dt)
     {
       WorldGenScreen->Update(dt);
     }
-    static bool appearanceUiQaDone=false;
-    if(!appearanceUiQaDone && CharacterSheetScreen && World && World->GetControlledCreature()) {
-      if(const char* path=std::getenv("CUBA_PLAYER_APPEARANCE_UI_QA")) {
-        appearanceUiQaDone=true;CharacterSheetOpen=true;
-        CharacterSheetScreen->RunAppearanceQa(path);SyncCursorVisibility();
-      }
-    }
+    UpdateNativeItemsQa(dt);
     if (CharacterSheetOpen && CharacterSheetScreen)
     {
       CharacterSheetScreen->Update(dt);
@@ -2322,8 +2388,7 @@ void UApplication::UpdateUiScale(int fb_w, int fb_h,
   PlatformUiMetrics metrics = platform;
   metrics.ScreenWidthPx = fb_w;
   metrics.ScreenHeightPx = fb_h;
-  const float effective =
-      ResolveEffectiveUiScale(Ui.UiScaleUser, metrics);
+  const float effective = ResolveEffectiveUiScale(Ui.UiScaleUser, metrics);
   SetUiScale(effective);
 }
 
@@ -2333,8 +2398,7 @@ void UApplication::ApplyLiveUiScale(float user_scale)
   PlatformUiMetrics metrics = LastPlatformMetrics;
   metrics.ScreenWidthPx = LastFramebufferWidth;
   metrics.ScreenHeightPx = LastFramebufferHeight;
-  const float effective =
-      ResolveEffectiveUiScale(Ui.UiScaleUser, metrics);
+  const float effective = ResolveEffectiveUiScale(Ui.UiScaleUser, metrics);
   SetUiScale(effective);
 }
 
@@ -2393,7 +2457,8 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
   }
   else
   {
-    CubatariumLogError("App", "RenderFrame skipped viewport: zero framebuffer size");
+    CubatariumLogError("App",
+                       "RenderFrame skipped viewport: zero framebuffer size");
     return;
   }
   if (State == AppState::MainMenu || State == AppState::Loading)
@@ -2401,7 +2466,7 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
     glClearColor(0.05f, 0.05f, 0.08f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     GuiContext->Render(width, height, ViewportInsetLeft, ViewportInsetTop,
-                        ViewportInsetRight, ViewportInsetBottom);
+                       ViewportInsetRight, ViewportInsetBottom);
     return;
   }
 
@@ -2447,8 +2512,7 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
       }
       World->SetLastRenderEquipmentSetupMs(
           std::chrono::duration<double, std::milli>(
-              std::chrono::high_resolution_clock::now() -
-              equipment_setup_begin)
+              std::chrono::high_resolution_clock::now() - equipment_setup_begin)
               .count());
       const auto geometry_paint_begin =
           std::chrono::high_resolution_clock::now();
@@ -2473,7 +2537,8 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
     {
       // Explicit candidate-only visual probe. Does not equip or save items.
       InventoryEntryRef main{InventoryEntryKind::Item, "wood_sword", 1, false};
-      InventoryEntryRef offhand{InventoryEntryKind::Item, "wood_torch", 1, false};
+      InventoryEntryRef offhand{InventoryEntryKind::Item, "wood_torch", 1,
+                                false};
       FpViewmodelDrawParams fpParams;
       fpParams.FramebufferW = width;
       fpParams.FramebufferH = height;
@@ -2484,12 +2549,16 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
       {
         fpParams.Definition = definitions->Get("human");
         if (const auto skins = World->GetSkinDefinitionStorage())
-          fpParams.Appearance = std::make_shared<const ResolvedCreatureAppearance>(
-              ResolveCreatureAppearance(*definitions, *skins, "human", qaSkin));
+          fpParams.Appearance =
+              std::make_shared<const ResolvedCreatureAppearance>(
+                  ResolveCreatureAppearance(*definitions, *skins, "human",
+                                            qaSkin));
       }
       FpViewmodelRenderer->DrawWorldOverlay(fpParams);
     }
-    else if (ShouldDrawFpViewmodel(view))
+    else if (ShouldDrawFpViewmodel(view) && World->GetCurrentUserCamera() &&
+             World->GetCurrentUserCamera()->GetPerspective() ==
+                 CameraPerspective::FirstPerson)
     {
       if (const UCreature *creature = World->GetControlledCreature())
       {
@@ -2497,8 +2566,14 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
         FpViewmodelDrawParams fpParams;
         fpParams.FramebufferW = width;
         fpParams.FramebufferH = height;
-        fpParams.Active = inv.GetActiveEntryRef();
-        fpParams.Offhand = &inv.GetEquippedOffhand();
+        fpParams.CarryHands = creature->CarryHandCount;
+        fpParams.ThrowCharge = creature->ThrowCharge;
+        fpParams.BowCharge = creature->BowCharge;
+        fpParams.Active =
+            creature->CarryHandCount ? nullptr : inv.GetActiveEntryRef();
+        fpParams.Offhand = (creature->CarryHandCount || creature->BowCharge > 0)
+                               ? nullptr
+                               : &inv.GetEquippedOffhand();
         fpParams.SpeciesId = creature->GetTypeId();
         fpParams.Appearance = World->GetResolvedAppearanceShared(*creature);
         if (const auto definitions = World->GetCreatureDefinitionStorage())
@@ -2516,8 +2591,7 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
   }
 
   const auto gui_begin = std::chrono::high_resolution_clock::now();
-  const bool hitch_gui =
-      World && (World->GetWallFrameDelta() * 1000.0) > 24.0;
+  const bool hitch_gui = World && (World->GetWallFrameDelta() * 1000.0) > 24.0;
   if (State == AppState::InGame && IconSource && !MinimalOverlayForBench &&
       !hitch_gui)
   {
@@ -2537,8 +2611,7 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
   if (ConsoleOpen && ConsoleScreen && ConsoleScreen->GetRoot())
   {
     notifyViewport(ConsoleScreen.get());
-    GuiContext->RenderOverlay(*ConsoleScreen->GetRoot(), width, height,
-                               false);
+    GuiContext->RenderOverlay(*ConsoleScreen->GetRoot(), width, height, false);
   }
   if (OverlayPopup && OverlayPopup->IsOpen())
   {
@@ -2558,7 +2631,7 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
   {
     notifyViewport(SurvivalInventoryScreen.get());
     GuiContext->RenderOverlay(*SurvivalInventoryScreen->GetRoot(), width,
-                               height, false);
+                              height, false);
   }
   if (CraftingOpen && CraftingScreen && CraftingScreen->GetRoot())
   {
@@ -2580,7 +2653,7 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
   {
     notifyViewport(CharacterSheetScreen.get());
     GuiContext->RenderOverlay(*CharacterSheetScreen->GetRoot(), width, height,
-                               false);
+                              false);
   }
   if (WorldGenOpen && WorldGenScreen && WorldGenScreen->GetRoot())
   {
@@ -2628,16 +2701,16 @@ bool UApplication::WantsCaptureKeyboard() const
     return true;
   }
   return ConsoleOpen || PaletteOpen || WorldGenOpen || CharacterSheetOpen ||
-         SurvivalInventoryOpen || CraftingOpen || AnvilOpen || DeathScreenOpen ||
-         GuiContext->WantsCaptureKeyboard();
+         SurvivalInventoryOpen || CraftingOpen || AnvilOpen ||
+         DeathScreenOpen || GuiContext->WantsCaptureKeyboard();
 }
 
 bool UApplication::AllowsWorldMousePlacement() const
 {
   return State == AppState::InGame && !ConsoleOpen && !PaletteOpen &&
-         !WorldGenOpen && !CharacterSheetOpen && !SurvivalInventoryOpen && !CraftingOpen && !AnvilOpen &&
-         !DeathScreenOpen && !HardcoreSpectating &&
-         !(World && World->IsHardcoreDead());
+         !WorldGenOpen && !CharacterSheetOpen && !SurvivalInventoryOpen &&
+         !CraftingOpen && !AnvilOpen && !DeathScreenOpen &&
+         !HardcoreSpectating && !(World && World->IsHardcoreDead());
 }
 
 bool UApplication::RouteKey(int key, int Action, int Mods)

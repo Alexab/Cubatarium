@@ -3,16 +3,19 @@
   "shapeless": true,
   "inputs": [
     {
-      "id": "mtg_steelblock",
+      "id": "stone",
       "count": 1
     },
     {
-      "id": "stone",
+      "id": "iron_ingot",
       "count": 1
     }
   ],
   "output": {
     "id": "flint_and_steel",
     "count": 1
-  }
+  },
+  "station": "crafting_table",
+  "category": "Utility",
+  "seconds": 0
 }

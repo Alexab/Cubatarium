@@ -3,12 +3,19 @@
   "shapeless": true,
   "inputs": [
     {
-      "id": "mtg_copperblock",
+      "id": "copper_ingot",
       "count": 4
+    },
+    {
+      "id": "cord",
+      "count": 1
     }
   ],
   "output": {
     "id": "copper_feet",
     "count": 1
-  }
+  },
+  "station": "crafting_table",
+  "category": "Armor",
+  "seconds": 0
 }

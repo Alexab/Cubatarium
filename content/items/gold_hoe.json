@@ -8,8 +8,7 @@
   "wear_end": "destroy",
   "repair": {
     "materials": [
-      "mtg_goldblock",
-      "gold"
+      "gold_ingot"
     ],
     "amount": 0.25
   },
@@ -45,6 +44,24 @@
       0,
       -0.08,
       0
-    ]
+    ],
+    "presentations": {
+      "icon_scale": 1.0,
+      "fp_scale": 1.0,
+      "tp_scale": 1.0,
+      "ground_scale": 1.0
+    }
+  },
+  "physical": {
+    "mass": 4.5,
+    "size": [
+      0.2975,
+      0.725,
+      0.06
+    ],
+    "hardness": 1
+  },
+  "use": {
+    "interaction": "till"
   }
 }

@@ -1,8 +1,8 @@
 #ifndef APPLICATION_H
 #define APPLICATION_H
 
-#include "App/Navigation/ScreenNavigator.h"
 #include "App/Input/InputRouter.h"
+#include "App/Navigation/ScreenNavigator.h"
 #include "App/Platform/CursorCapture.h"
 #include "App/Settings/AppSettingsSnapshot.h"
 #include "App/Settings/AppState.h"
@@ -15,15 +15,15 @@
 #include "Gui/Core/GuiMetrics.h"
 #include "Gui/Interfaces/IUGuiClipboard.h"
 #include "Gui/Interfaces/IUGuiMenuHost.h"
-#include "Gui/Screens/ConsoleScreen.h"
-#include "Gui/Screens/CreativePaletteScreen.h"
-#include "Gui/Screens/SurvivalInventoryScreen.h"
-#include "Gui/Screens/CraftingScreen.h"
 #include "Gui/Screens/AnvilScreen.h"
-#include "Gui/Screens/DeathScreen.h"
 #include "Gui/Screens/CharacterSheetScreen.h"
-#include "Gui/Screens/WorldGenPaletteScreen.h"
+#include "Gui/Screens/ConsoleScreen.h"
+#include "Gui/Screens/CraftingScreen.h"
+#include "Gui/Screens/CreativePaletteScreen.h"
+#include "Gui/Screens/DeathScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
+#include "Gui/Screens/SurvivalInventoryScreen.h"
+#include "Gui/Screens/WorldGenPaletteScreen.h"
 #include "Gui/Screens/WorldProgressScreen.h"
 #include "Gui/Widgets/GuiPopupMenu.h"
 #include "ResourcePacks/ResourcePackResolver.h"
@@ -95,7 +95,8 @@ public:
   void BeginShutdownOperation(bool saveSession, bool closeAfter);
   void PrepareForShutdown();
   void SetWindow(GLFWwindow *window) { Window = window; }
-  /// Flight-sim / benches: skip HUD + icon warmup so wall gates measure stream/mesh.
+  /// Flight-sim / benches: skip HUD + icon warmup so wall gates measure
+  /// stream/mesh.
   void SetMinimalOverlayForBench(bool enabled)
   {
     MinimalOverlayForBench = enabled;
@@ -106,6 +107,7 @@ public:
   void HandleWindowFocus(bool focused);
 
   void Update(double dt);
+  void UpdateNativeItemsQa(double dt);
   void ProcessInput();
   void RenderFrame(int width, int height, double viewDuration);
   void NotifyFpSwing(FpSwingKind kind);

@@ -199,6 +199,7 @@ set(SOURCES
     src/Items/ItemWieldRenderer.cpp
     src/Items/FpViewmodelRenderer.cpp
     src/Items/ItemGltfTextureCache.cpp
+    src/Game/Survival/SurvivalSystems.cpp
     src/World/Items/WorldItemSystem.cpp
     src/Items/ItemToolInfluenceProvider.cpp
     src/Items/ItemVisualPresetLibrary.cpp
@@ -1206,6 +1207,10 @@ cubatarium_add_test(NAME armor_equipment_test
         src/Items/ToolCapabilities.cpp
         src/Test/ArmorEquipmentTest.cpp
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME throw_math_test SOURCES src/Test/ThrowMathTest.cpp LIBRARIES glm::glm)
+add_test(NAME throw_math_test COMMAND $<TARGET_FILE:throw_math_test>)
+set_tests_properties(throw_math_test PROPERTIES LABELS "unit;items")
 
 cubatarium_add_test(NAME inventory_transactions_test
     SOURCES
@@ -3465,7 +3470,7 @@ cubatarium_add_test(NAME human_motion_camera_test
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 add_test(NAME human_motion_camera_test COMMAND $<TARGET_FILE:human_motion_camera_test>
     "${CMAKE_SOURCE_DIR}/models/creatures/human/appearance/male_short.geo.json")
-set_tests_properties(human_motion_camera_test PROPERTIES LABELS "unit;player;camera")
+set_tests_properties(human_motion_camera_test PROPERTIES LABELS "unit;player;camera;items")
 
 # Slot/economy regressions are required in Release CI, not merely built.
 foreach(_item_test inventory_transactions_test armor_equipment_test resource_economy_test

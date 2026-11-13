@@ -48,7 +48,7 @@ UWorldCreatureActivitySink::GetCreatureView(CreatureId Id) const
   view.Id = creature->GetId();
   view.bodyOrigin = creature->GetBodyOrigin();
   view.typeId = creature->GetTypeId();
-  view.possessed = creature->IsPossessed();
+  view.possessed = creature->IsPossessed() || creature->ExternalMotion;
   view.isPlayerCharacter = creature->IsPlayerCharacter();
   if (const CreatureDefinition *def =
           World.GetCreatureDefinition(creature->GetTypeId()))
@@ -79,9 +79,8 @@ UWorldCreatureActivitySink::GetBehaviorSnapshot(CreatureId Id) const
       storage ? storage->Revision.load(std::memory_order_relaxed) : 0;
   const int perception = creature->GetAttributes().perception;
   if (const auto it = gBehaviorSnapshotCache.find(Id);
-      it != gBehaviorSnapshotCache.end() &&
-      it->second.creature == creature && it->second.def == def &&
-      it->second.perception == perception &&
+      it != gBehaviorSnapshotCache.end() && it->second.creature == creature &&
+      it->second.def == def && it->second.perception == perception &&
       it->second.defsRevision == revision)
   {
     // Live box, not the species box: it turns with the body (X/Z swap).
@@ -95,8 +94,7 @@ UWorldCreatureActivitySink::GetBehaviorSnapshot(CreatureId Id) const
   snapshot.locomotion = def->locomotion;
   snapshot.habitat = def->habitat;
   snapshot.boundsSize = creature->GetBounds().profile.restSizeBlocks;
-  const float perceptionMul =
-      0.5f + static_cast<float>(perception) / 20.f;
+  const float perceptionMul = 0.5f + static_cast<float>(perception) / 20.f;
   snapshot.behavior.aggroRadius *= perceptionMul;
 
   if (gBehaviorSnapshotCache.size() >= kSnapshotCacheMaxEntries)

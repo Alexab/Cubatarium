@@ -1,21 +1,21 @@
 #include "Gui/Screens/CreativePaletteScreen.h"
 #include "Content/ContentTypeRegistry.h"
-#include "Game/ModePolicy.h"
 #include "Game/GameSession.h"
 #include "Game/Inventory/SlotInteraction.h"
+#include "Game/ModePolicy.h"
 #include "Gui/Core/GuiContext.h"
+#include "Gui/Core/GuiRenderer.h"
 #include "Gui/Interfaces/IUContentCatalog.h"
 #include "Gui/Interfaces/IUGuiIconSource.h"
 #include "Gui/Layout/DockedOverlayLayout.h"
+#include "Gui/Layout/GuiLayout.h"
 #include "Gui/Layout/GuiTooltipLayout.h"
 #include "Gui/Preview/ContentPreviewDock.h"
 #include "Gui/Preview/ContentPreviewRenderer.h"
-#include "Gui/Core/GuiRenderer.h"
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiScrollView.h"
-#include "Gui/Layout/GuiLayout.h"
 #include "Gui/Widgets/GuiSlot.h"
 #include "Gui/Widgets/GuiTabBar.h"
 #include "Items/ItemDefinitionStorage.h"
@@ -28,10 +28,9 @@
 namespace cutum
 {
 
-UCreativePaletteScreen::UCreativePaletteScreen(IUContentCatalog *catalog,
-                                               UGameSession *session,
-                                               IUGuiIconSource *icons,
-                                               UContentPreviewRenderer *previewRenderer)
+UCreativePaletteScreen::UCreativePaletteScreen(
+    IUContentCatalog *catalog, UGameSession *session, IUGuiIconSource *icons,
+    UContentPreviewRenderer *previewRenderer)
     : Catalog(catalog), Session(session), Icons(icons),
       PreviewRenderer(previewRenderer)
 {
@@ -254,8 +253,7 @@ void UCreativePaletteScreen::Build(UGuiContext &ctx)
   auto mainTabs = std::make_unique<UGuiTabBar>(Theme);
   mainTabs->SetTabs({"Blocks", "Objects", "Creatures", "Skins", "Tools"});
   MainTabs = mainTabs.get();
-  mainTabs->SetOnTabChanged(
-      [this](int tab) { ApplyMainTab(tab); });
+  mainTabs->SetOnTabChanged([this](int tab) { ApplyMainTab(tab); });
 
   auto subTabs = std::make_unique<UGuiTabBar>(Theme);
   SubTabs = subTabs.get();
@@ -314,8 +312,7 @@ void UCreativePaletteScreen::Build(UGuiContext &ctx)
   panel->AddChild(std::move(scroll));
   rootShell->AddChild(std::move(panel));
 
-  PreviewDock =
-      std::make_unique<UContentPreviewDock>(Theme, PreviewRenderer);
+  PreviewDock = std::make_unique<UContentPreviewDock>(Theme, PreviewRenderer);
   rootShell->AddChild(PreviewDock->ReleasePanel());
 
   Root = std::move(rootShell);
@@ -337,9 +334,9 @@ void UCreativePaletteScreen::RelayoutPanel()
   {
     return;
   }
-  DockedLayout layout = DockedOverlayLayout::Compute(
-      ViewportW, ViewportH, GetContentOffsetX(), GetContentOffsetY(), 70, 28,
-      *Theme);
+  DockedLayout layout =
+      DockedOverlayLayout::Compute(ViewportW, ViewportH, GetContentOffsetX(),
+                                   GetContentOffsetY(), 70, 28, *Theme);
   const int slotSize = Theme->HotbarSlotSize;
   const int hotbarReserve =
       slotSize + Theme->HotbarMarginBottom + Theme->Padding * 2;
@@ -353,8 +350,7 @@ void UCreativePaletteScreen::RelayoutPanel()
     layout.preview.H = maxPanelH;
     layout.preview.Y = layout.main.Y;
   }
-  const int maxBottom =
-      GetContentOffsetY() + ViewportH - hotbarReserve;
+  const int maxBottom = GetContentOffsetY() + ViewportH - hotbarReserve;
   if (layout.main.Y + layout.main.H > maxBottom)
   {
     layout.main.Y = maxBottom - layout.main.H;
@@ -374,12 +370,14 @@ void UCreativePaletteScreen::RelayoutPanel()
   if (CatalogButton)
   {
     CatalogButton->SetVisible(CatalogAllowed);
-    CatalogButton->SetLabel(Listing == PaletteListing::Catalog ? "[Cat]" : "Cat");
+    CatalogButton->SetLabel(Listing == PaletteListing::Catalog ? "[Cat]"
+                                                               : "Cat");
     CatalogButton->SetBounds({panelRect.X - modeW, panelRect.Y, modeW - 6, 40});
   }
   if (BackpackButton)
   {
-    BackpackButton->SetLabel(Listing == PaletteListing::Backpack ? "[Bag]" : "Bag");
+    BackpackButton->SetLabel(Listing == PaletteListing::Backpack ? "[Bag]"
+                                                                 : "Bag");
     BackpackButton->SetBounds(
         {panelRect.X - modeW, panelRect.Y + 46, modeW - 6, 40});
   }
@@ -397,27 +395,25 @@ void UCreativePaletteScreen::RelayoutPanel()
   const int tabH = Theme->TabBarHeight;
   if (MainTabs)
   {
-    MainTabs->SetBounds(
-        {panelX + pad, panelY + pad, panelW - pad * 2, tabH});
+    MainTabs->SetBounds({panelX + pad, panelY + pad, panelW - pad * 2, tabH});
   }
   if (SubTabs)
   {
-    SubTabs->SetBounds({panelX + pad, panelY + pad + tabH + pad, panelW - pad * 2,
-                        tabH});
+    SubTabs->SetBounds(
+        {panelX + pad, panelY + pad + tabH + pad, panelW - pad * 2, tabH});
   }
   const int hintH = Theme->FontSizeBody + 4;
   if (UsageHintLabel)
   {
     UsageHintLabel->SetVisible(true);
-    UsageHintLabel->SetBounds(
-        {panelX + pad, panelY + pad + tabH + pad + tabH + pad / 2,
-         panelW - pad * 2, hintH});
+    UsageHintLabel->SetBounds({panelX + pad,
+                               panelY + pad + tabH + pad + tabH + pad / 2,
+                               panelW - pad * 2, hintH});
   }
   if (Scroll)
   {
     const int hintGap = hintH + pad / 2;
-    const int scrollTop =
-        panelY + pad + tabH + pad + tabH + pad + hintGap;
+    const int scrollTop = panelY + pad + tabH + pad + tabH + pad + hintGap;
     const int scrollH = std::max(0, panelH - (scrollTop - panelY) - pad);
     Scroll->SetBounds({panelX + pad, scrollTop, panelW - pad * 2, scrollH});
     if (Built)
@@ -482,7 +478,8 @@ void UCreativePaletteScreen::EnsureHotbarStrip()
   auto divider = std::make_unique<UGuiPanel>(Theme);
   divider->SetDrawBackground(true);
   divider->SetZOrder(49);
-  HotbarStripDivider = static_cast<UGuiPanel *>(RootShell->AddChild(std::move(divider)));
+  HotbarStripDivider =
+      static_cast<UGuiPanel *>(RootShell->AddChild(std::move(divider)));
   HotbarStripBuilt = true;
   LayoutHotbarStrip();
 }
@@ -498,12 +495,11 @@ void UCreativePaletteScreen::LayoutHotbarStrip()
   const int gap = Theme->HotbarSlotGap;
   const int sectionGap = gap * 3 + std::max(2, Theme->BorderThickness * 2);
   const int slotCount = static_cast<int>(HotbarStripSlots.size());
-  const int totalW =
-      slotCount * slotSize + std::max(0, slotCount - 1) * gap +
-      (slotCount > 5 ? sectionGap - gap : 0);
+  const int totalW = slotCount * slotSize + std::max(0, slotCount - 1) * gap +
+                     (slotCount > 5 ? sectionGap - gap : 0);
   const int startX = GetContentOffsetX() + (ViewportW - totalW) / 2;
-  const int rowY = GetContentOffsetY() + ViewportH - Theme->HotbarMarginBottom -
-                   slotSize;
+  const int rowY =
+      GetContentOffsetY() + ViewportH - Theme->HotbarMarginBottom - slotSize;
   if (HotbarStripLabel)
   {
     HotbarStripLabel->SetBounds(
@@ -615,7 +611,8 @@ void UCreativePaletteScreen::UpdateTooltip()
   std::string text;
   int tipX = PointerX;
   int tipY = PointerY;
-  auto labelAt = [this](size_t index) -> std::string {
+  auto labelAt = [this](size_t index) -> std::string
+  {
     if (index < GridEntryLabels.size() && !GridEntryLabels[index].empty())
     {
       return GridEntryLabels[index];
@@ -700,7 +697,7 @@ void UCreativePaletteScreen::UpdateTooltip()
                          ViewportH};
   const int textW = MeasureTooltipTextWidth(text, *Theme, Renderer);
   LayoutTooltipNearPointer(*TooltipLabel, text, tipX, tipY, viewport, *Theme,
-                             textW);
+                           textW);
 }
 
 void UCreativePaletteScreen::Update(double dt)
@@ -902,8 +899,7 @@ void UCreativePaletteScreen::SyncPreviewDock()
   std::string label = SelectedEntryId;
   for (size_t i = 0; i < GridEntryIds.size(); ++i)
   {
-    if (GridEntryIds[i] == SelectedEntryId &&
-        i < GridEntryLabels.size())
+    if (GridEntryIds[i] == SelectedEntryId && i < GridEntryLabels.size())
     {
       label = GridEntryLabels[i];
       break;
@@ -932,10 +928,8 @@ void UCreativePaletteScreen::RebuildGrid()
   GridEntryLabels.clear();
   GridSpawnHints.clear();
 
-  const std::string groupId =
-      ActiveTypeId.empty() ? "misc" : ActiveTypeId;
-  GridPendingViews =
-      Session->GetEntries(Kind, groupId, CurrentListingMode());
+  const std::string groupId = ActiveTypeId.empty() ? "misc" : ActiveTypeId;
+  GridPendingViews = Session->GetEntries(Kind, groupId, CurrentListingMode());
   GridBuiltCount = 0;
 
   // UX tail: materialize the first chunk only; Update appends the rest per

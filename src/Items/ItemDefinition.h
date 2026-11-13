@@ -1,6 +1,7 @@
 #ifndef ITEM_DEFINITION_H
 #define ITEM_DEFINITION_H
 
+#include "Game/Physics/ThrowMath.h"
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -79,6 +80,8 @@ enum class ItemUseActionKind
 
 struct ItemUseDef
 {
+  std::string Interaction;
+  float Duration{.8f};
   ItemUseActionKind Action{ItemUseActionKind::None};
   /// World block placed by the place_block action; empty = use the item id.
   std::string PlaceBlockId;
@@ -104,6 +107,7 @@ struct ItemVisualUseMap
 
 struct ItemVisualDef
 {
+  float IconScale{1}, FpScale{1}, TpScale{1}, GroundScale{1};
   /// Multiplier after AABB fit; 0 = use category default at resolve time.
   float WieldScale{0.f};
   float WieldOffset[3]{0.f, 0.f, 0.f};
@@ -143,6 +147,7 @@ struct ItemDefinition
   ItemArmorDef Armor;
   ToolCapabilitiesDef Tool;
   ItemUseDef Use;
+  PhysicalProfile Physical;
   ItemVisualDef Visual;
   ItemRangedDef Ranged;
   ItemBlockDef Block;

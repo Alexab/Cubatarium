@@ -72,18 +72,22 @@ public:
                          const InventoryEntryRef &entry);
   bool IsDragging() const;
   const DragState &GetDrag() const { return Drag; }
-  bool DropOnSlot(const SlotAddress &target);
+  bool DropOnSlot(const SlotAddress &target, int units = -1);
+  void InventoryClick(size_t slot, bool half, bool quick, bool collect);
+  void DiscardInventory();
+  void SortInventory();
+  void RecoverInventory(size_t index = static_cast<size_t>(-1));
   void CancelDrag();
   InventoryEntryRef GetHotbarEntryRef(size_t barIndex, size_t slotIndex) const;
   InventoryEntryRef GetArmorEntryRef(size_t armorSlot) const;
   InventoryEntryRef GetOffhandEntryRef() const;
 
   std::vector<InventoryGroupView> GetGroups(ContentKind tab) const override;
-  std::vector<InventoryEntryView> GetEntries(ContentKind tab,
-                                             const std::string &groupId) const override;
   std::vector<InventoryEntryView>
-  GetEntries(ContentKind tab, const std::string &groupId,
-             InventoryMode mode) const;
+  GetEntries(ContentKind tab, const std::string &groupId) const override;
+  std::vector<InventoryEntryView> GetEntries(ContentKind tab,
+                                             const std::string &groupId,
+                                             InventoryMode mode) const;
   /// Cheap change signature of the controlled creature's storage, for
   /// per-frame UI caches (e.g. owned-group emptiness). 0 when no creature.
   size_t GetInventorySignature() const;
@@ -94,17 +98,24 @@ public:
   bool CanSpawnCreatureByView(const std::string &speciesId) const;
   std::string GetCreatureSpawnBlockedHint(const std::string &speciesId) const;
   InventoryMode GetInventoryMode() const override;
-  void SetCheatCreativeInventory(bool enabled) { CheatCreativeInventory = enabled; }
+  void SetCheatCreativeInventory(bool enabled)
+  {
+    CheatCreativeInventory = enabled;
+  }
   bool GetCheatCreativeInventory() const { return CheatCreativeInventory; }
   void SyncToWorldGameMode(WorldGameMode mode);
   void SyncToWorldDifficulty(WorldDifficulty difficulty);
-  WorldGameMode GetWorldGameMode() const override { return ActiveWorldGameMode; }
+  WorldGameMode GetWorldGameMode() const override
+  {
+    return ActiveWorldGameMode;
+  }
   WorldDifficulty GetWorldDifficulty() const override
   {
     return ActiveWorldDifficulty;
   }
   CharacterStatsSnapshot GetCharacterStatsSnapshot() const override;
-  bool ApplyHumanAppearance(const HumanAppearance &, const std::string &) override;
+  bool ApplyHumanAppearance(const HumanAppearance &,
+                            const std::string &) override;
 
   CommandResult Execute(const std::vector<std::string> &args) override;
   void AddChatLine(const std::string &line) override;

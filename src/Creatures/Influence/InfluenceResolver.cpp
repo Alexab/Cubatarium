@@ -78,6 +78,14 @@ bool TryResolveUse(UWorld &world, UCreature &source, InfluencePrediction &pred)
     pred.Cancelled = true;
     return true;
   }
+  if (def->Use.Interaction == "container" &&
+      (active->contentsId != "water" || active->contentsUnits <= 0) &&
+      !source.GetInventory().IsCreative())
+  {
+    pred.Cancelled = true;
+    pred.CancelReason = "empty_container";
+    return true;
+  }
   pred.UseSelf = true;
   // Food is consumed; waterskin-style drink tools are reusable.
   pred.UseConsumes = ItemUseConsumes(use.Action);
@@ -108,8 +116,7 @@ bool TryResolveDig(UWorld &world, UCreature &source, WorldGameMode mode,
   }
 
   pred.DigBlockPos = intent.Influence.TargetBlockPos;
-  const BlockId block_id =
-      world.GetBlockWorld().GetBlock(pred.DigBlockPos);
+  const BlockId block_id = world.GetBlockWorld().GetBlock(pred.DigBlockPos);
   const UBlockDefinitionStorage *blocks =
       world.GetBlockRegistry().GetDefinitions();
   const BlockDefinition *block = blocks ? blocks->GetById(block_id) : nullptr;
@@ -201,59 +208,59 @@ float ApplyAttackDamageModifiers(UWorld &world, UCreature &source,
                                  InfluenceTargetDelta &delta)
 {
   float damage = baseDamage;
-if (target.IsPlayerCharacter())
-{
-  const auto definitions = world.GetCreatureDefinitionStorage();
-  const CreatureDefinition *sourceDefinition =
-      definitions ? definitions->Get(source.GetTypeId()) : nullptr;
-  if (sourceDefinition &&
-      std::find(sourceDefinition->catalog.tags.begin(),
-                sourceDefinition->catalog.tags.end(), "hostile") !=
-          sourceDefinition->catalog.tags.end())
+  if (target.IsPlayerCharacter())
   {
-    damage *= ModePolicy::HostileDamageMultiplier(world.GetDifficulty());
-  }
-}
-{
-  const UItemDefinitionStorage *items = world.GetItemDefinitionStorage();
-  const InventoryEntryRef &off = target.GetInventory().GetEquippedOffhand();
-  if (items && !off.empty && !off.broken &&
-      off.kind == InventoryEntryKind::Item)
-  {
-    if (const ItemDefinition *shield = items->Get(off.Id))
+    const auto definitions = world.GetCreatureDefinitionStorage();
+    const CreatureDefinition *sourceDefinition =
+        definitions ? definitions->Get(source.GetTypeId()) : nullptr;
+    if (sourceDefinition &&
+        std::find(sourceDefinition->catalog.tags.begin(),
+                  sourceDefinition->catalog.tags.end(),
+                  "hostile") != sourceDefinition->catalog.tags.end())
     {
-      if (shield->Block.Enabled)
+      damage *= ModePolicy::HostileDamageMultiplier(world.GetDifficulty());
+    }
+  }
+  {
+    const UItemDefinitionStorage *items = world.GetItemDefinitionStorage();
+    const InventoryEntryRef &off = target.GetInventory().GetEquippedOffhand();
+    if (target.CarryHandCount == 0 && target.BowCharge <= 0 && items &&
+        !off.empty && !off.broken && off.kind == InventoryEntryKind::Item)
+    {
+      if (const ItemDefinition *shield = items->Get(off.Id))
       {
-        bool frontal = true;
-        const glm::vec3 toAtk =
-            glm::normalize(source.GetBodyOrigin() - target.GetBodyOrigin());
-        const float yawRad = glm::radians(target.GetYaw());
-        const glm::vec3 forward{std::sin(yawRad), 0.f, std::cos(yawRad)};
-        const float cosAng = glm::dot(forward, toAtk);
-        const float halfAng =
-            glm::radians(std::max(1.f, shield->Block.AngleDeg) * 0.5f);
-        frontal = cosAng >= std::cos(halfAng);
-        if (target.IsBlocking() && frontal)
+        if (shield->Block.Enabled)
         {
-          damage *= std::clamp(shield->Block.DamageMul, 0.f, 1.f);
-          delta.ShieldBlocked = true;
-        }
-        else
-        {
-          damage *= std::clamp(shield->Block.PassiveDamageMul, 0.f, 1.f);
+          bool frontal = true;
+          const glm::vec3 toAtk =
+              glm::normalize(source.GetBodyOrigin() - target.GetBodyOrigin());
+          const float yawRad = glm::radians(target.GetYaw());
+          const glm::vec3 forward{std::sin(yawRad), 0.f, std::cos(yawRad)};
+          const float cosAng = glm::dot(forward, toAtk);
+          const float halfAng =
+              glm::radians(std::max(1.f, shield->Block.AngleDeg) * 0.5f);
+          frontal = cosAng >= std::cos(halfAng);
+          if (target.IsBlocking() && frontal)
+          {
+            damage *= std::clamp(shield->Block.DamageMul, 0.f, 1.f);
+            delta.ShieldBlocked = true;
+          }
+          else
+          {
+            damage *= std::clamp(shield->Block.PassiveDamageMul, 0.f, 1.f);
+          }
         }
       }
     }
   }
-}
   return damage;
 }
 
 } // namespace
 
-InfluencePrediction InfluenceResolver::Resolve(
-    UWorld &world, UCreature &source, WorldGameMode mode,
-    const IUToolInfluenceProvider *tools)
+InfluencePrediction
+InfluenceResolver::Resolve(UWorld &world, UCreature &source, WorldGameMode mode,
+                           const IUToolInfluenceProvider *tools)
 {
   InfluencePrediction pred;
   pred.SourceId = source.GetId();
@@ -272,8 +279,7 @@ InfluencePrediction InfluenceResolver::Resolve(
     return pred;
   }
 
-  if (channel != InfluenceChannel::Dig &&
-      !ModePolicy::AllowsCombatDamage(mode))
+  if (channel != InfluenceChannel::Dig && !ModePolicy::AllowsCombatDamage(mode))
   {
     pred.CancelReason = "creative";
     pred.Cancelled = true;

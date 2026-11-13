@@ -4,11 +4,18 @@
   "inputs": [
     {
       "id": "leather",
-      "count": 8
+      "count": 5
+    },
+    {
+      "id": "cord",
+      "count": 1
     }
   ],
   "output": {
     "id": "leather_chest",
     "count": 1
-  }
+  },
+  "station": "crafting_table",
+  "category": "Armor",
+  "seconds": 0
 }

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "App/Settings/AudioSettings.h"
-#include "App/Settings/UiSettings.h"
 #include "App/Settings/RenderSettings.h"
+#include "App/Settings/UiSettings.h"
 #include "Gui/Core/GuiScreenBase.h"
 #include "Gui/Core/GuiTypes.h"
 #include "Gui/Layout/GuiLayout.h"
@@ -35,6 +35,8 @@ public:
 
 private:
   void Relayout();
+  void BuildKeyBindings(UGuiPanel &app, const GuiTheme &theme,
+                        const UiSettings &ui);
   void ShowTab(int tab);
   void OnSave();
   int MeasureAppPageHeight(const GuiRect &area) const;
@@ -59,7 +61,8 @@ private:
   std::unique_ptr<UWorldGenSettingsForm> WorldForm;
   std::unique_ptr<UResourcePackPickerForm> PackForm;
 
-  /// Audio tab rows: [Master, Music, Ambient, Sfx, UI] label / % value / slider.
+  /// Audio tab rows: [Master, Music, Ambient, Sfx, UI] label / % value /
+  /// slider.
   UGuiCheckbox *AudioEnabledBox{nullptr};
   UGuiLabel *AudioRowLabels[5]{};
   UGuiLabel *AudioValueLabels[5]{};
@@ -72,6 +75,8 @@ private:
   UGuiLabel *RenderDistLabel{nullptr};
   UGuiLabel *ConsoleKeyLabel{nullptr};
   UGuiLabel *PaletteKeyLabel{nullptr};
+  UGuiLabel *GrabKeyLabel{nullptr}, *ThrowKeyLabel{nullptr},
+      *CraftKeyLabel{nullptr};
   UGuiLabel *HotbarCountLabel{nullptr};
   UGuiLabel *HotbarCountValueLabel{nullptr};
   UGuiLabel *UiScaleLabel{nullptr};
@@ -106,6 +111,8 @@ private:
   UGuiCheckbox *CreatureNamesBox{nullptr};
   UGuiTextInput *ConsoleKeyInput{nullptr};
   UGuiTextInput *PaletteKeyInput{nullptr};
+  UGuiTextInput *GrabKeyInput{nullptr}, *ThrowKeyInput{nullptr},
+      *CraftKeyInput{nullptr};
   UGuiButton *HotbarMinusButton{nullptr};
   UGuiButton *HotbarPlusButton{nullptr};
   int HotbarCount{1};

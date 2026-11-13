@@ -27,7 +27,22 @@
       0,
       0,
       0
-    ]
+    ],
+    "presentations": {
+      "icon_scale": 1.0,
+      "fp_scale": 1.0,
+      "tp_scale": 1.0,
+      "ground_scale": 1.0
+    }
   },
-  "model": "models/items/apple/model.gltf"
+  "model": "models/items/apple/model.gltf",
+  "physical": {
+    "mass": 1,
+    "size": [
+      0.22,
+      0.29,
+      0.22
+    ],
+    "hardness": 1
+  }
 }

@@ -2,8 +2,20 @@
   "id": "stone_sword",
   "shapeless": true,
   "inputs": [
-    { "id": "stone", "count": 2 },
-    { "id": "wood", "count": 1 }
+    {
+      "id": "stone",
+      "count": 2
+    },
+    {
+      "id": "stick",
+      "count": 2
+    }
   ],
-  "output": { "id": "stone_sword", "count": 1 }
+  "output": {
+    "id": "stone_sword",
+    "count": 1
+  },
+  "station": "crafting_table",
+  "category": "Tools",
+  "seconds": 0
 }

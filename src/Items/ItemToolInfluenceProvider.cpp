@@ -41,9 +41,8 @@ bool UItemToolInfluenceProvider::TryGetCapability(
         out.Channel = InfluenceChannel::Ranged;
         out.FullIntervalSec = def->Tool.FullPunchInterval;
         out.PunchAttackUses = def->Tool.PunchAttackUses;
-        out.RangeBlocks = def->Ranged.RangeBlocks > 0.f
-                              ? def->Ranged.RangeBlocks
-                              : 16.f;
+        out.RangeBlocks =
+            def->Ranged.RangeBlocks > 0.f ? def->Ranged.RangeBlocks : 16.f;
         out.Damage.Ratings.clear();
         if (!def->Tool.Damage.Groups.empty())
         {
@@ -62,6 +61,9 @@ bool UItemToolInfluenceProvider::TryGetCapability(
             std::max(1, def->Tool.Damage.FleshyOrMelee()));
         out.Id = def->Id;
         out.Channel = InfluenceChannel::Melee;
+        if (std::find(def->Types.begin(), def->Types.end(), "piercing") !=
+            def->Types.end())
+          out.RangeBlocks = 3.6f;
         out.FullIntervalSec = def->Tool.FullPunchInterval;
         out.PunchAttackUses = def->Tool.PunchAttackUses;
         out.Damage.Ratings.clear();

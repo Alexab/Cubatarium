@@ -54,6 +54,12 @@ private:
 
   std::chrono::steady_clock::time_point LeftDownTime{};
   bool LeftHeld{false};
+  std::string DrawingBow, DrawingUse;
+  uint64_t UseInstance{0};
+  float UseDuration{.8f};
+  bool UseReady{false};
+  std::chrono::steady_clock::time_point UseDownTime{};
+  std::chrono::steady_clock::time_point BowDownTime{};
   bool DigStartedForHold{false};
   glm::vec2 RightDownPos{0.0f};
   bool RightPressed{false};

@@ -8,8 +8,8 @@
 #include "Creatures/Visual/Gltf/CreatureGltfLoader.h"
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
 #include "Items/ItemDefinitionStorage.h"
-#include "Render/GlIncludes.h"
 #include "Render/Engine/ShaderManager.h"
+#include "Render/GlIncludes.h"
 #include "Render/Pipeline/GlStateMask.h"
 #include "Render/Pipeline/GlStateScope.h"
 
@@ -42,36 +42,35 @@ struct Rgb
   unsigned char b{56};
 };
 
-  Rgb ToolRgb(const std::string &id)
+Rgb ToolRgb(const std::string &id)
+{
+  // Rough palette to make rotation silhouettes readable even without textures.
+  if (id.find("leather") != std::string::npos)
   {
-    // Rough palette to make rotation silhouettes readable even without textures.
-    if (id.find("leather") != std::string::npos)
-    {
-      return Rgb{120, 78, 48};
-    }
-    if (id.find("iron") != std::string::npos)
-    {
-      return Rgb{185, 190, 200};
-    }
-    if (id.find("stone") != std::string::npos)
-    {
-      return Rgb{140, 140, 132};
-    }
-    if (id.find("gold") != std::string::npos)
-    {
-      return Rgb{225, 170, 60};
-    }
-    if (id.find("diamond") != std::string::npos)
-    {
-      return Rgb{120, 210, 255};
-    }
-    if (id.find("wood") != std::string::npos)
-    {
-      return Rgb{158, 107, 56};
-    }
+    return Rgb{120, 78, 48};
+  }
+  if (id.find("iron") != std::string::npos)
+  {
+    return Rgb{185, 190, 200};
+  }
+  if (id.find("stone") != std::string::npos)
+  {
+    return Rgb{140, 140, 132};
+  }
+  if (id.find("gold") != std::string::npos)
+  {
+    return Rgb{225, 170, 60};
+  }
+  if (id.find("diamond") != std::string::npos)
+  {
+    return Rgb{120, 210, 255};
+  }
+  if (id.find("wood") != std::string::npos)
+  {
     return Rgb{158, 107, 56};
   }
-
+  return Rgb{158, 107, 56};
+}
 
 } // namespace
 
@@ -91,8 +90,8 @@ bool UItemPreviewRenderer::Initialize()
     return false;
   }
 
-  Shader = ShaderManager->CreateShader("gui_prefab_icon", "shaders/vshader.glsl",
-                                       "shaders/fshader.glsl");
+  Shader = ShaderManager->CreateShader(
+      "gui_prefab_icon", "shaders/vshader.glsl", "shaders/fshader.glsl");
   if (!Shader || !Shader->IsValid())
   {
     return false;
@@ -183,19 +182,126 @@ bool UItemPreviewRenderer::InitCubeMesh()
   // Must match UContentPreviewRenderer cube mesh for shader compatibility.
   const float cubeShift = 1.0f / 6.0f;
   const float vertices[] = {
-      -0.5f, -0.5f, 0.5f,  0.0f, 1.0f,  0.5f,  -0.5f, 0.5f,  cubeShift, 1.0f,
-      -0.5f, 0.5f,  0.5f,  0.0f, 0.0f,  0.5f,  0.5f,  0.5f,  cubeShift, 0.0f,
-      0.5f,  -0.5f, 0.5f,  cubeShift, 1.0f,  0.5f,  -0.5f, -0.5f, cubeShift * 2.0f,
-      1.0f,  0.5f,  0.5f,  0.5f,  cubeShift, 0.0f,  0.5f,  0.5f,  -0.5f, cubeShift * 2.0f,
-      0.0f,  0.5f,  -0.5f, -0.5f, cubeShift * 2.0f, 1.0f, -0.5f, -0.5f, -0.5f,
-      cubeShift * 3.0f, 1.0f, 0.5f, 0.5f, -0.5f, cubeShift * 2.0f, 0.0f, -0.5f, 0.5f,
-      -0.5f, cubeShift * 3.0f, 0.0f, -0.5f, -0.5f, -0.5f, cubeShift * 3.0f, 1.0f,
-      -0.5f, -0.5f, 0.5f,  cubeShift * 4.0f, 1.0f, -0.5f, 0.5f, -0.5f, cubeShift * 3.0f,
-      0.0f,  -0.5f, 0.5f,  0.5f, cubeShift * 4.0f, 0.0f, -0.5f, 0.5f, 0.5f,
-      cubeShift * 4.0f, 0.0f, 0.5f,  0.5f, 0.5f, cubeShift * 5.0f, 0.0f, -0.5f, 0.5f,
-      -0.5f, cubeShift * 4.0f, 1.0f, 0.5f, 0.5f, -0.5f, cubeShift * 5.0f, 1.0f,
-      -0.5f, -0.5f, -0.5f, cubeShift * 5.0f, 0.0f, 0.5f, -0.5f, -0.5f, 1.0f, 0.0f,
-      -0.5f, -0.5f, 0.5f,  cubeShift * 5.0f, 1.0f, 0.5f, -0.5f, 0.5f, 1.0f, 1.0f,
+      -0.5f,
+      -0.5f,
+      0.5f,
+      0.0f,
+      1.0f,
+      0.5f,
+      -0.5f,
+      0.5f,
+      cubeShift,
+      1.0f,
+      -0.5f,
+      0.5f,
+      0.5f,
+      0.0f,
+      0.0f,
+      0.5f,
+      0.5f,
+      0.5f,
+      cubeShift,
+      0.0f,
+      0.5f,
+      -0.5f,
+      0.5f,
+      cubeShift,
+      1.0f,
+      0.5f,
+      -0.5f,
+      -0.5f,
+      cubeShift * 2.0f,
+      1.0f,
+      0.5f,
+      0.5f,
+      0.5f,
+      cubeShift,
+      0.0f,
+      0.5f,
+      0.5f,
+      -0.5f,
+      cubeShift * 2.0f,
+      0.0f,
+      0.5f,
+      -0.5f,
+      -0.5f,
+      cubeShift * 2.0f,
+      1.0f,
+      -0.5f,
+      -0.5f,
+      -0.5f,
+      cubeShift * 3.0f,
+      1.0f,
+      0.5f,
+      0.5f,
+      -0.5f,
+      cubeShift * 2.0f,
+      0.0f,
+      -0.5f,
+      0.5f,
+      -0.5f,
+      cubeShift * 3.0f,
+      0.0f,
+      -0.5f,
+      -0.5f,
+      -0.5f,
+      cubeShift * 3.0f,
+      1.0f,
+      -0.5f,
+      -0.5f,
+      0.5f,
+      cubeShift * 4.0f,
+      1.0f,
+      -0.5f,
+      0.5f,
+      -0.5f,
+      cubeShift * 3.0f,
+      0.0f,
+      -0.5f,
+      0.5f,
+      0.5f,
+      cubeShift * 4.0f,
+      0.0f,
+      -0.5f,
+      0.5f,
+      0.5f,
+      cubeShift * 4.0f,
+      0.0f,
+      0.5f,
+      0.5f,
+      0.5f,
+      cubeShift * 5.0f,
+      0.0f,
+      -0.5f,
+      0.5f,
+      -0.5f,
+      cubeShift * 4.0f,
+      1.0f,
+      0.5f,
+      0.5f,
+      -0.5f,
+      cubeShift * 5.0f,
+      1.0f,
+      -0.5f,
+      -0.5f,
+      -0.5f,
+      cubeShift * 5.0f,
+      0.0f,
+      0.5f,
+      -0.5f,
+      -0.5f,
+      1.0f,
+      0.0f,
+      -0.5f,
+      -0.5f,
+      0.5f,
+      cubeShift * 5.0f,
+      1.0f,
+      0.5f,
+      -0.5f,
+      0.5f,
+      1.0f,
+      1.0f,
   };
 
   const unsigned int indices[] = {
@@ -217,7 +323,7 @@ bool UItemPreviewRenderer::InitCubeMesh()
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-                         reinterpret_cast<void *>(3 * sizeof(float)));
+                        reinterpret_cast<void *>(3 * sizeof(float)));
   glEnableVertexAttribArray(1);
 
   glBindVertexArray(0);
@@ -249,7 +355,7 @@ bool UItemPreviewRenderer::EnsureFboSize(int size)
   glGenRenderbuffers(1, &DepthRbo);
   glBindRenderbuffer(GL_RENDERBUFFER, DepthRbo);
   glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, clamped,
-                         clamped);
+                        clamped);
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
                             GL_RENDERBUFFER, DepthRbo);
 
@@ -332,8 +438,9 @@ bool UItemPreviewRenderer::TryLoadPartsFromModelJson(
   {
     Part p;
     p.textureStem = partJson.value("texture", "");
-    const glm::vec3 off = ReadVec3(partJson.value("offset", nlohmann::json::array()),
-                                   glm::vec3{0.f, 0.f, 0.f});
+    const glm::vec3 off =
+        ReadVec3(partJson.value("offset", nlohmann::json::array()),
+                 glm::vec3{0.f, 0.f, 0.f});
     const glm::vec3 sz =
         ReadVec3(partJson.value("size", nlohmann::json::array()),
                  glm::vec3{1.f, 1.f, 1.f});
@@ -361,7 +468,8 @@ bool UItemPreviewRenderer::TryDrawGltfModel(const std::string &itemId,
   }
 
   std::string gltfRel = modelRel;
-  auto endsWithIgnoreCase = [](const std::string &s, const char *suf) {
+  auto endsWithIgnoreCase = [](const std::string &s, const char *suf)
+  {
     const size_t n = std::char_traits<char>::length(suf);
     if (s.size() < n)
     {
@@ -369,10 +477,10 @@ bool UItemPreviewRenderer::TryDrawGltfModel(const std::string &itemId,
     }
     for (size_t i = 0; i < n; ++i)
     {
-      const char a = static_cast<char>(std::tolower(static_cast<unsigned char>(
-          s[s.size() - n + i])));
-      const char b = static_cast<char>(std::tolower(static_cast<unsigned char>(
-          suf[i])));
+      const char a = static_cast<char>(
+          std::tolower(static_cast<unsigned char>(s[s.size() - n + i])));
+      const char b =
+          static_cast<char>(std::tolower(static_cast<unsigned char>(suf[i])));
       if (a != b)
       {
         return false;
@@ -380,8 +488,8 @@ bool UItemPreviewRenderer::TryDrawGltfModel(const std::string &itemId,
     }
     return true;
   };
-  const bool isGltf =
-      endsWithIgnoreCase(modelRel, ".gltf") || endsWithIgnoreCase(modelRel, ".glb");
+  const bool isGltf = endsWithIgnoreCase(modelRel, ".gltf") ||
+                      endsWithIgnoreCase(modelRel, ".glb");
   if (!isGltf)
   {
     // Convention: models/items/<id>/model.gltf next to or instead of .json
@@ -443,10 +551,11 @@ bool UItemPreviewRenderer::TryDrawGltfModel(const std::string &itemId,
   const glm::vec3 ext = maxV - minV;
   const float maxExtent =
       std::max(1e-5f, std::max(ext.x, std::max(ext.y, ext.z)));
-  const float scale = 1.2f / maxExtent;
-  const glm::mat4 modelMat =
-      glm::scale(glm::mat4(1.f), glm::vec3(scale)) *
-      glm::translate(glm::mat4(1.f), -center);
+  const auto *definition = Items ? Items->Get(itemId) : nullptr;
+  const float scale =
+      1.2f / maxExtent * (definition ? definition->Visual.IconScale : 1.f);
+  const glm::mat4 modelMat = glm::scale(glm::mat4(1.f), glm::vec3(scale)) *
+                             glm::translate(glm::mat4(1.f), -center);
   const glm::mat4 mvp = projection * view * modelMat;
 
   if (ScratchMeshVao == 0)
@@ -482,14 +591,15 @@ bool UItemPreviewRenderer::TryDrawGltfModel(const std::string &itemId,
     Shader->SetMat4("mvp_matrix", mvp);
     glBindVertexArray(ScratchMeshVao);
     glBindBuffer(GL_ARRAY_BUFFER, ScratchMeshVbo);
-    glBufferData(GL_ARRAY_BUFFER,
-                 static_cast<GLsizeiptr>(mesh.interleavedPosUv.size() *
-                                         sizeof(float)),
-                 mesh.interleavedPosUv.data(), GL_STREAM_DRAW);
+    glBufferData(
+        GL_ARRAY_BUFFER,
+        static_cast<GLsizeiptr>(mesh.interleavedPosUv.size() * sizeof(float)),
+        mesh.interleavedPosUv.data(), GL_STREAM_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ScratchMeshEbo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 static_cast<GLsizeiptr>(mesh.indices.size() * sizeof(unsigned)),
-                 mesh.indices.data(), GL_STREAM_DRAW);
+    glBufferData(
+        GL_ELEMENT_ARRAY_BUFFER,
+        static_cast<GLsizeiptr>(mesh.indices.size() * sizeof(unsigned)),
+        mesh.indices.data(), GL_STREAM_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
@@ -576,8 +686,8 @@ GLuint UItemPreviewRenderer::GetOrCreateColorTexture(const std::string &itemId)
 }
 
 GLuint UItemPreviewRenderer::RenderToUniqueTexture(const std::string &itemId,
-                                                     int size, float yawDeg,
-                                                     float pitchDeg)
+                                                   int size, float yawDeg,
+                                                   float pitchDeg)
 {
   if (!Shader || !Items || itemId.empty())
   {
@@ -639,8 +749,8 @@ GLuint UItemPreviewRenderer::RenderToUniqueTexture(const std::string &itemId,
   }
   if (parts.empty())
   {
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                           GL_TEXTURE_2D, ColorTex, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                           ColorTex, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glDeleteTextures(1, &tex);
@@ -658,8 +768,11 @@ GLuint UItemPreviewRenderer::RenderToUniqueTexture(const std::string &itemId,
   }
   const glm::vec3 center = (minV + maxV) * 0.5f;
   const glm::vec3 ext = maxV - minV;
-  const float maxExtent = std::max(1e-5f, std::max(ext.x, std::max(ext.y, ext.z)));
-  const float scale = 1.2f / maxExtent;
+  const float maxExtent =
+      std::max(1e-5f, std::max(ext.x, std::max(ext.y, ext.z)));
+  const auto *definition = Items ? Items->Get(itemId) : nullptr;
+  const float scale =
+      1.2f / maxExtent * (definition ? definition->Visual.IconScale : 1.f);
 
   Shader->Use();
   Shader->SetInt("texture0", 0);
@@ -695,4 +808,3 @@ GLuint UItemPreviewRenderer::RenderToUniqueTexture(const std::string &itemId,
 }
 
 } // namespace cutum
-

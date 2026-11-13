@@ -50,6 +50,8 @@ struct GuiMouseEvent
   bool Pressed{false};
   /// Android touch pointer index; -1 on desktop (matches any capture).
   int PointerId{-1};
+  int Mods{0};
+  int ClickCount{1};
 };
 
 inline bool GuiPointerMatches(int eventPointerId, int capturePointerId)

@@ -1,14 +1,15 @@
 #include "World/Interaction/BlockBreakService.h"
+#include "Game/Survival/SurvivalSystems.h"
 
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
 #include "Game/Economy/ResourceEconomy.h"
 #include "Game/ModePolicy.h"
-#include "World/Items/WorldItemSystem.h"
 #include "Game/WorldGameMode.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Items/ToolCapabilities.h"
 #include "World/Core/World.h"
+#include "World/Items/WorldItemSystem.h"
 #include "World/Math/BlockTypes.h"
 
 namespace cutum
@@ -17,6 +18,9 @@ namespace cutum
 void UBlockBreakService::Start(glm::ivec3 blockPos, float pendingWearDelta,
                                std::string pendingToolId)
 {
+  SourceOwner = 0;
+  SourceInstance = 0;
+  SourceSlot = 0;
   DigSessionState session;
   session.Start(blockPos);
   session.pendingWearDelta = pendingWearDelta;
@@ -53,54 +57,49 @@ bool UBlockBreakService::Complete(UWorld &world)
   const std::string tool_id = Session->pendingToolId;
   Session.reset();
 
-  world.GetPhysicsTelemetryMutable().BreakCompleteN++;
-
   const BlockId removedId = world.GetBlockWorld().GetBlock(pos);
-  const std::string blockTypeName =
-      (removedId != BLOCK_AIR)
-          ? world.GetBlockRegistry().GetTypeNameById(removedId)
-          : std::string{};
-
-  if (wear_delta > 0.f && !tool_id.empty())
+  if (removedId == BLOCK_AIR)
+    return false;
+  const auto blockTypeName =
+      world.GetBlockRegistry().GetTypeNameById(removedId);
+  auto *actor = world.GetControlledCreature();
+  if (SourceOwner && (!actor || actor->GetId() != SourceOwner))
+    return false;
+  std::optional<UCreatureInventory> trial;
+  if (actor)
   {
-    if (UItemDefinitionStorage *items = world.GetItemDefinitionStorage())
+    auto &inv = actor->GetInventory();
+    const auto *active = inv.GetActiveEntryRef();
+    if (SourceOwner &&
+        (inv.GetActiveBarIndex() * 10 + inv.GetActiveSlotIndex() !=
+             SourceSlot ||
+         (active ? active->instanceId : 0) != SourceInstance))
+      return false;
+    trial = inv;
+    if (wear_delta > 0 && !tool_id.empty())
     {
-      if (UCreature *creature = world.GetControlledCreature())
-      {
-        const bool wear_enabled =
-            IsToolWearEnabled(world.GetGameMode(), world.GetDifficulty());
-        auto &bars = creature->GetInventory().GetHotbarsMutable();
-        const size_t bar = creature->GetInventory().GetActiveBarIndex();
-        const size_t slot = creature->GetInventory().GetActiveSlotIndex();
-        if (bar < bars.size() && slot < bars[bar].slots.size())
-        {
-          auto &entry = bars[bar].slots[slot].entry;
-          if (!bars[bar].slots[slot].empty &&
-              entry.kind == InventoryEntryKind::Item && entry.Id == tool_id)
-          {
-            if (const ItemDefinition *def = items->Get(tool_id))
-            {
-              if (ApplyItemWear(entry, *def, wear_delta, wear_enabled))
-              {
-                bars[bar].slots[slot].empty = true;
-                bars[bar].slots[slot].entry = InventoryEntryRef{};
-              }
-            }
-          }
-        }
-      }
+      auto *entry = trial->GetActiveEntryRef();
+      auto *items = world.GetItemDefinitionStorage();
+      auto *def = items ? items->Get(tool_id) : nullptr;
+      if (!entry || entry->Id != tool_id || entry->broken || !def)
+        return false;
+      ApplyItemWear(
+          *entry, *def, wear_delta,
+          IsToolWearEnabled(world.GetGameMode(), world.GetDifficulty()));
     }
   }
-
+  world.GetPhysicsTelemetryMutable().BreakCompleteN++;
+  if (!world.DelBlockAt(pos))
+  {
+    world.GetPhysicsTelemetryMutable().BreakCompleteN--;
+    return false;
+  }
+  if (actor && trial)
+    actor->GetInventory() = std::move(*trial);
   if (!blockTypeName.empty() &&
       ModePolicy::DropsBlocksOnBreak(world.GetGameMode()))
-  {
-    const glm::vec3 dropPos(static_cast<float>(pos.x) + 0.5f,
-                            static_cast<float>(pos.y) + 0.5f,
-                            static_cast<float>(pos.z) + 0.5f);
-    WorldItemSystem::Instance().Spawn(dropPos, blockTypeName, 1, true);
-  }
-  return world.DelBlockAt(pos);
+    USurvivalSystems::Instance().BlockDrops(world, pos, blockTypeName);
+  return true;
 }
 
 float UBlockBreakService::GetProgress() const

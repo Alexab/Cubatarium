@@ -1,8 +1,9 @@
 #ifndef CHARACTER_SHEET_SCREEN_H
 #define CHARACTER_SHEET_SCREEN_H
 
-#include "Gui/Core/GuiScreenBase.h"
 #include "Creatures/Core/HumanAppearance.h"
+#include "Gui/Core/GuiScreenBase.h"
+#include "Gui/Core/GuiTypes.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -20,6 +21,9 @@ class UGuiWindow;
 class UGuiPanel;
 class UGuiLabel;
 class UGuiButton;
+class UGuiTabBar;
+class UGuiTextInput;
+class UGuiScrollView;
 class IUGuiIconSource;
 struct GuiTheme;
 
@@ -31,6 +35,9 @@ public:
                                  IUGuiIconSource *icons = nullptr);
   ~UCharacterSheetScreen() override;
 
+  bool RouteTextKey(const GuiKeyEvent &);
+  bool RouteTextChar(const GuiCharEvent &);
+  bool IsSearchFocused() const;
   void Build(UGuiContext &ctx) override;
   void Update(double dt) override;
   void OnViewportChanged(int width, int height) override;
@@ -38,10 +45,21 @@ public:
 
   void SetVisible(bool visible);
   void Toggle();
-  /// Opt-in native QA exercises the same buttons and session commands as user input.
+  void SetSection(int section);
+  bool PickBackpackSlot(int x, int y, size_t &slot) const;
+  bool IsEditingText() const;
+  /// Opt-in native QA exercises the same buttons and session commands as user
+  /// input.
+  void SetPointerPosition(int x, int y)
+  {
+    PointerX = x;
+    PointerY = y;
+  }
+  void RunInventoryQa(const std::string &reportPath);
   void RunAppearanceQa(const std::string &reportPath);
 
-  /// Hit-test armor slots for inventory drag routing (0..5), returns false if miss.
+  /// Hit-test armor slots for inventory drag routing (0..5), returns false if
+  /// miss.
   bool PickArmorSlot(int x, int y, size_t &outSlot) const;
   /// Hit-test Main (= active hotbar / right hand).
   bool PickMainSlot(int x, int y) const;
@@ -51,6 +69,7 @@ public:
 
 private:
   void Relayout();
+  void BuildEquipmentPanel(UGuiPanel &body, const GuiTheme &theme);
   void RefreshLabels();
   void RenderCharacterPreview();
   static std::string FormatBar(const char *name, float cur, float max);
@@ -60,6 +79,18 @@ private:
   IUGuiIconSource *Icons{nullptr};
   UGuiWindow *Window{nullptr};
 
+  int Section{1};
+  bool RecoveryMode{false};
+  size_t RecoveryOffset{0};
+  UGuiTabBar *Sections{nullptr};
+  UGuiTextInput *Search{nullptr};
+  UGuiButton *SortButton{nullptr}, *RecoveryButton{nullptr},
+      *DropButton{nullptr};
+  UGuiLabel *InventoryHint{nullptr};
+  UGuiLabel *Tooltip{nullptr};
+  int PointerX{-1}, PointerY{-1};
+  UGuiScrollView *StatsScroll{nullptr};
+  std::vector<UGuiLabel *> EffectLabels;
   UGuiPanel *BodyPanel{nullptr};
   UGuiPanel *DollPanel{nullptr};
   UGuiPanel *StatsPanel{nullptr};
@@ -74,7 +105,7 @@ private:
   std::vector<UGuiSlot *> BagSlots;
   UGuiPanel *AppearancePanel{nullptr};
   UGuiButton *AppearanceToggle{nullptr};
-  std::vector<UGuiButton*> AppearanceButtons;
+  std::vector<UGuiButton *> AppearanceButtons;
   bool EditingAppearance{false};
   HumanAppearance DraftAppearance;
   std::string DraftSkin;

@@ -69,6 +69,16 @@ def bake_atlas(
         if material in ("wood", "torch", "bow", "arrow", "shield_wood", "organic", "bread"):
             for stripe in range(2, TILE - 2, 3):
                 draw.line((x0 + 1, y0 + stripe, x1 - 1, y0 + stripe), fill=_shade(base, -18) + (255,))
+        elif material.startswith("raw_") or material in ("coal", "charcoal"):
+            # Unprocessed materials keep fractured mineral grain, never forged stamps.
+            for spot in ((2,4),(6,8),(11,3),(4,12),(12,11),(8,14)):
+                draw.rectangle((x0+spot[0],y0+spot[1],x0+spot[0]+1,y0+spot[1]+1),fill=_shade(base,-24)+(255,))
+                draw.point((x0+spot[0]+1,y0+spot[1]),fill=_shade(base,20)+(255,))
+        elif material in ("plant_fiber","cord","wool","grain","cooked_meat"):
+            for stripe in range(2,TILE-2,3):
+                draw.line((x0+stripe,y0+2,x0+stripe+1,y1-2),fill=_shade(base,-14)+(255,))
+            if material=="cooked_meat":
+                for stripe in (4,9):draw.line((x0+2,y0+stripe,x1-2,y0+stripe+2),fill=_shade(base,-36)+(255,))
         elif material in ("stone",):
             for spot in ((3, 4), (8, 9), (11, 3), (5, 12)):
                 draw.point((x0 + spot[0], y0 + spot[1]), fill=_shade(base, -40) + (255,))

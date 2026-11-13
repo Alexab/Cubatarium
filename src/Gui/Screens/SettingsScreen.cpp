@@ -2,7 +2,6 @@
 #include "App/Settings/AppSettingsSnapshot.h"
 #include "App/Settings/GraphicsQualityProfile.h"
 #include "App/Settings/UiSettings.h"
-#include "ResourcePacks/ResourcePackResolver.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiScale.h"
@@ -16,8 +15,9 @@
 #include "Gui/Widgets/GuiSlider.h"
 #include "Gui/Widgets/GuiTextInput.h"
 #include "Gui/Widgets/GuiWindow.h"
-#include "Gui/Widgets/WorldGenSettingsForm.h"
 #include "Gui/Widgets/ResourcePackPickerForm.h"
+#include "Gui/Widgets/WorldGenSettingsForm.h"
+#include "ResourcePacks/ResourcePackResolver.h"
 #include <algorithm>
 #include <cmath>
 
@@ -109,15 +109,16 @@ void USettingsScreen::OnSave()
   {
     app.Render.BatchCache = BatchCacheBox->IsChecked();
   }
-  // Reseed fog/sky from quality preset, then re-apply meshing / lighting toggles.
+  // Reseed fog/sky from quality preset, then re-apply meshing / lighting
+  // toggles.
   {
     const bool greedy = app.Render.GreedyMeshing;
     const bool face = app.Render.FaceQuads;
     const bool frustum = app.Render.FrustumCulling;
     const bool batch = app.Render.BatchCache;
     const bool android_gpu = SelectedAndroidGpuEnabled;
-    const bool async_mesh =
-        AsyncMeshingBox ? AsyncMeshingBox->IsChecked() : app.Render.AsyncMeshing;
+    const bool async_mesh = AsyncMeshingBox ? AsyncMeshingBox->IsChecked()
+                                            : app.Render.AsyncMeshing;
     app.Render = RenderSettings::FromPreset(SelectedGraphicsQuality);
     app.Render.GreedyMeshing = greedy;
     app.Render.FaceQuads = face;
@@ -152,8 +153,15 @@ void USettingsScreen::OnSave()
   {
     app.Ui.PaletteKey = PaletteKeyInput->GetText();
   }
-  app.Ui.HotbarCount = std::clamp(HotbarCount, 1, 2);
-  app.Ui.UiScaleUser = std::clamp(UiScaleUser, kGuiMinUserScale, kGuiMaxUserScale);
+  if (GrabKeyInput && GrabKeyInput->GetText().size() == 1)
+    app.Ui.GrabKey = GrabKeyInput->GetText();
+  if (ThrowKeyInput && ThrowKeyInput->GetText().size() == 1)
+    app.Ui.ThrowKey = ThrowKeyInput->GetText();
+  if (CraftKeyInput && CraftKeyInput->GetText().size() == 1)
+    app.Ui.CraftKey = CraftKeyInput->GetText();
+  app.Ui.HotbarCount = std::clamp(HotbarCount, 1, 4);
+  app.Ui.UiScaleUser =
+      std::clamp(UiScaleUser, kGuiMinUserScale, kGuiMaxUserScale);
   app.Ui.ControlScheme = SelectedControlScheme;
   if (AudioEnabledBox)
   {
@@ -203,6 +211,27 @@ void USettingsScreen::ShowTab(int tab)
   }
 }
 
+void USettingsScreen::BuildKeyBindings(UGuiPanel &app, const GuiTheme &theme,
+                                       const UiSettings &ui)
+{
+  auto binding = [&](const char *name, const std::string &value,
+                     UGuiLabel *&label, UGuiTextInput *&input)
+  {
+    auto l = std::make_unique<UGuiLabel>(&theme, name);
+    label = l.get();
+    app.AddChild(std::move(l));
+    auto v = std::make_unique<UGuiTextInput>(&theme);
+    v->SetText(value);
+    input = v.get();
+    app.AddChild(std::move(v));
+  };
+  binding("Console key:", ui.ConsoleKey, ConsoleKeyLabel, ConsoleKeyInput);
+  binding("Palette key:", ui.PaletteKey, PaletteKeyLabel, PaletteKeyInput);
+  binding("Grab / place key:", ui.GrabKey, GrabKeyLabel, GrabKeyInput);
+  binding("Windup / throw key:", ui.ThrowKey, ThrowKeyLabel, ThrowKeyInput);
+  binding("Recipe book key:", ui.CraftKey, CraftKeyLabel, CraftKeyInput);
+}
+
 void USettingsScreen::Build(UGuiContext &ctx)
 {
   int w = ctx.GetRenderer().GetWindowWidth();
@@ -218,7 +247,7 @@ void USettingsScreen::Build(UGuiContext &ctx)
       Host ? Host->LoadAppSettingsSnapshot() : AppSettingsSnapshot{};
   const ProceduralSettings procSnap =
       Host ? Host->LoadProceduralTemplate() : ProceduralSettings{};
-  HotbarCount = std::clamp(appSnap.Ui.HotbarCount, 1, 2);
+  HotbarCount = std::clamp(appSnap.Ui.HotbarCount, 1, 4);
   UiScaleUser =
       std::clamp(appSnap.Ui.UiScaleUser, kGuiMinUserScale, kGuiMaxUserScale);
   SelectedControlScheme = appSnap.Ui.ControlScheme;
@@ -250,13 +279,12 @@ void USettingsScreen::Build(UGuiContext &ctx)
   UGuiPanel &app = frame->AddScrollPage();
   AppPanel = &app;
 
-  auto uiScaleLbl =
-      std::make_unique<UGuiLabel>(&theme, "Interface scale:");
+  auto uiScaleLbl = std::make_unique<UGuiLabel>(&theme, "Interface scale:");
   UiScaleLabel = uiScaleLbl.get();
   app.AddChild(std::move(uiScaleLbl));
   auto uiScaleValue = std::make_unique<UGuiLabel>(
-      &theme, std::to_string(static_cast<int>(std::lround(UiScaleUser * 100))) +
-                  "%");
+      &theme,
+      std::to_string(static_cast<int>(std::lround(UiScaleUser * 100))) + "%");
   uiScaleValue->SetTextAlign(GuiTextAlign::Center);
   UiScaleValueLabel = uiScaleValue.get();
   app.AddChild(std::move(uiScaleValue));
@@ -345,30 +373,15 @@ void USettingsScreen::Build(UGuiContext &ctx)
   LegacyHudBox = hud.get();
   hud->SetChecked(appSnap.Ui.LegacyHud);
   app.AddChild(std::move(hud));
-  auto perf =
-      std::make_unique<UGuiCheckbox>(&theme, "Show debug overlay");
+  auto perf = std::make_unique<UGuiCheckbox>(&theme, "Show debug overlay");
   ShowPerformanceBox = perf.get();
   perf->SetChecked(appSnap.Ui.ShowPerformance);
   app.AddChild(std::move(perf));
-  auto names =
-      std::make_unique<UGuiCheckbox>(&theme, "Show creature names");
+  auto names = std::make_unique<UGuiCheckbox>(&theme, "Show creature names");
   CreatureNamesBox = names.get();
   names->SetChecked(appSnap.Render.CreatureNameLabels);
   app.AddChild(std::move(names));
-  auto consoleLbl = std::make_unique<UGuiLabel>(&theme, "Console key:");
-  ConsoleKeyLabel = consoleLbl.get();
-  app.AddChild(std::move(consoleLbl));
-  auto ckIn = std::make_unique<UGuiTextInput>(&theme);
-  ConsoleKeyInput = ckIn.get();
-  ckIn->SetText(appSnap.Ui.ConsoleKey);
-  app.AddChild(std::move(ckIn));
-  auto paletteLbl = std::make_unique<UGuiLabel>(&theme, "Palette key:");
-  PaletteKeyLabel = paletteLbl.get();
-  app.AddChild(std::move(paletteLbl));
-  auto pkIn = std::make_unique<UGuiTextInput>(&theme);
-  PaletteKeyInput = pkIn.get();
-  pkIn->SetText(appSnap.Ui.PaletteKey);
-  app.AddChild(std::move(pkIn));
+  BuildKeyBindings(app, theme, appSnap.Ui);
   auto hotbarLbl = std::make_unique<UGuiLabel>(&theme, "Hotbar count:");
   HotbarCountLabel = hotbarLbl.get();
   app.AddChild(std::move(hotbarLbl));
@@ -393,7 +406,7 @@ void USettingsScreen::Build(UGuiContext &ctx)
   hotbarPlus->SetOnClick(
       [this]()
       {
-        HotbarCount = std::min(2, HotbarCount + 1);
+        HotbarCount = std::min(4, HotbarCount + 1);
         if (HotbarCountValueLabel)
         {
           HotbarCountValueLabel->SetText(std::to_string(HotbarCount));
@@ -407,19 +420,19 @@ void USettingsScreen::Build(UGuiContext &ctx)
   ControlSchemeLabel = controlSchemeLbl.get();
   app.AddChild(std::move(controlSchemeLbl));
   auto profileBtn = std::make_unique<UGuiButton>(
-      &theme,
-      SelectedControlScheme == ControlScheme::Cubatarium ? "Cubatarium" : "Classic");
+      &theme, SelectedControlScheme == ControlScheme::Cubatarium ? "Cubatarium"
+                                                                 : "Classic");
   profileBtn->SetOnClick(
       [this]()
       {
         SelectedControlScheme = SelectedControlScheme == ControlScheme::Classic
-                            ? ControlScheme::Cubatarium
-                            : ControlScheme::Classic;
+                                    ? ControlScheme::Cubatarium
+                                    : ControlScheme::Classic;
         if (ControlSchemeButton)
         {
           ControlSchemeButton->SetLabel(
               SelectedControlScheme == ControlScheme::Cubatarium ? "Cubatarium"
-                                                         : "Classic");
+                                                                 : "Classic");
         }
       });
   ControlSchemeButton = profileBtn.get();
@@ -449,7 +462,8 @@ void USettingsScreen::Build(UGuiContext &ctx)
   LightingModeLabel = lightingLbl.get();
   app.AddChild(std::move(lightingLbl));
   auto lightingBtn = std::make_unique<UGuiButton>(
-      &theme, GraphicsQualityProfile::LightingDisplayName(SelectedLightingMode));
+      &theme,
+      GraphicsQualityProfile::LightingDisplayName(SelectedLightingMode));
   lightingBtn->SetOnClick(
       [this]()
       {
@@ -458,7 +472,8 @@ void USettingsScreen::Build(UGuiContext &ctx)
         if (LightingModeButton)
         {
           LightingModeButton->SetLabel(
-              GraphicsQualityProfile::LightingDisplayName(SelectedLightingMode));
+              GraphicsQualityProfile::LightingDisplayName(
+                  SelectedLightingMode));
         }
         if (AsyncRelightBox)
         {
@@ -487,11 +502,11 @@ void USettingsScreen::Build(UGuiContext &ctx)
   app.AddChild(std::move(asyncRelight));
 
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
-  auto androidGpuBox = std::make_unique<UGuiCheckbox>(
-      &theme, "GPU render (restart world)");
+  auto androidGpuBox =
+      std::make_unique<UGuiCheckbox>(&theme, "GPU render (restart world)");
   androidGpuBox->SetChecked(SelectedAndroidGpuEnabled);
-  androidGpuBox->SetOnChanged(
-      [this](bool checked) { SelectedAndroidGpuEnabled = checked; });
+  androidGpuBox->SetOnChanged([this](bool checked)
+                              { SelectedAndroidGpuEnabled = checked; });
   AndroidGpuBox = androidGpuBox.get();
   app.AddChild(std::move(androidGpuBox));
 #endif
@@ -525,9 +540,9 @@ void USettingsScreen::Build(UGuiContext &ctx)
         }
       });
 
-  auto addVolumeSlider =
-      [&theme, &audioPage, this](const char *labelText, int row,
-                                 float AudioSettings::*field)
+  auto addVolumeSlider = [&theme, &audioPage, this](const char *labelText,
+                                                    int row,
+                                                    float AudioSettings::*field)
   {
     auto label = std::make_unique<UGuiLabel>(&theme, labelText);
     AudioRowLabels[row] = label.get();
@@ -723,6 +738,9 @@ USettingsScreen::BuildAppGridItems(const GuiGridSpec &spec) const
   ++row;
   addLabeledField(ConsoleKeyLabel, ConsoleKeyInput);
   addLabeledField(PaletteKeyLabel, PaletteKeyInput);
+  addLabeledField(GrabKeyLabel, GrabKeyInput);
+  addLabeledField(ThrowKeyLabel, ThrowKeyInput);
+  addLabeledField(CraftKeyLabel, CraftKeyInput);
 
   items.push_back({HotbarCountLabel, row, 0, 1, 1, labelH});
   if (cols > 1)
@@ -843,7 +861,8 @@ int USettingsScreen::MeasureWorldPageHeight(const GuiRect &area) const
   {
     return 0;
   }
-  return WorldForm->MeasureGridHeight(area, BuildTwoColumnSpec(GetMetrics(), area.W));
+  return WorldForm->MeasureGridHeight(area,
+                                      BuildTwoColumnSpec(GetMetrics(), area.W));
 }
 
 void USettingsScreen::LayoutWorldPage(const GuiRect &area) const

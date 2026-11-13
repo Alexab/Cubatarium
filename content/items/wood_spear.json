@@ -2,7 +2,8 @@
   "id": "wood_spear",
   "displayName": "Wood Spear",
   "types": [
-    "combat"
+    "combat",
+    "piercing"
   ],
   "stack_max": 1,
   "wear_end": "destroy",
@@ -19,7 +20,16 @@
       0,
       -0.05,
       0
-    ]
+    ],
+    "swing": {
+      "melee": "spear_thrust"
+    },
+    "presentations": {
+      "icon_scale": 1.0,
+      "fp_scale": 1.0,
+      "tp_scale": 1.0,
+      "ground_scale": 1.0
+    }
   },
   "tool": {
     "full_punch_interval": 1.1,
@@ -28,5 +38,15 @@
       "melee": 4
     },
     "punch_attack_uses": 80
-  }
+  },
+  "physical": {
+    "mass": 0.8,
+    "size": [
+      0.16,
+      0.765,
+      0.05
+    ],
+    "hardness": 0.7
+  },
+  "use": {}
 }

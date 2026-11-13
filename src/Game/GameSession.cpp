@@ -1,8 +1,6 @@
 #include "Game/GameSession.h"
-#include "Audio/AudioApi.h"
-#include "Game/ModePolicy.h"
-#include "Game/Interfaces/IUGameContent.h"
 #include "App/Application.h"
+#include "Audio/AudioApi.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Commands/WorldCommands.h"
 #include "Content/ContentType.h"
@@ -11,13 +9,17 @@
 #include "Creatures/Core/CreatureInventory.h"
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
+#include "Creatures/Influence/StatusEffectSystem.h"
 #include "Creatures/Player/Player.h"
 #include "Creatures/Player/User.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
+#include "Game/Interfaces/IUGameContent.h"
+#include "Game/ModePolicy.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Render/Camera/Camera.h"
 #include "ResourcePacks/BlockNameUtil.h"
 #include "World/Core/World.h"
+#include "World/Items/WorldItemSystem.h"
 #include "World/Objects/ObjectLibrary.h"
 #include "WorldGen/Core/WorldGenContentReload.h"
 
@@ -186,7 +188,8 @@ size_t UGameSession::GetBarCount() const
     return 0;
   }
   inv->EnsureHotbarCount(static_cast<size_t>(GetHotbarCountSetting()));
-  return std::min(inv->GetHotbarCount(), static_cast<size_t>(GetHotbarCountSetting()));
+  return std::min(inv->GetHotbarCount(),
+                  static_cast<size_t>(GetHotbarCountSetting()));
 }
 
 std::array<HotbarSlotView, 10> UGameSession::GetBarSlots(size_t barIndex) const
@@ -236,6 +239,9 @@ void UGameSession::SelectSlot(size_t barIndex, size_t slotIndex)
 {
   if (UCreatureInventory *inv = GetControlledInventory(World.get()))
   {
+    if (World && (inv->GetActiveBarIndex() != barIndex ||
+                  inv->GetActiveSlotIndex() != slotIndex))
+      World->CancelBreakSession();
     inv->SetActiveSlot(barIndex, slotIndex);
   }
 }
@@ -326,7 +332,8 @@ bool UGameSession::OnPrimaryHotbarKey(int slotIndex)
     return ApplyPendingAssignment(0, static_cast<size_t>(slotIndex));
   }
   auto *inv = GetControlledInventory(World.get());
-  SelectSlot(inv ? inv->GetActiveBarIndex() : 0, static_cast<size_t>(slotIndex));
+  SelectSlot(inv ? inv->GetActiveBarIndex() : 0,
+             static_cast<size_t>(slotIndex));
   return true;
 }
 
@@ -386,39 +393,50 @@ void UGameSession::BeginDragFromSlot(const SlotAddress &source,
 
 bool UGameSession::IsDragging() const { return Drag.Active; }
 
-void UGameSession::CancelDrag()
-{
-  Drag = DragState{};
-}
+void UGameSession::CancelDrag() { Drag = DragState{}; }
 
-bool UGameSession::DropOnSlot(const SlotAddress &target)
+bool UGameSession::DropOnSlot(const SlotAddress &target, int units)
 {
-  if (!Drag.Active || target.surface == SlotSurface::None) { CancelDrag(); return false; }
+  if (!Drag.Active || target.surface == SlotSurface::None)
+  {
+    CancelDrag();
+    return false;
+  }
   const DragState drag = Drag;
   CancelDrag();
   auto *inventory = GetControlledInventory(World.get());
   const auto *items = World ? World->GetItemDefinitionStorage() : nullptr;
-  if (!inventory || !items) return false;
-  if (SameSlotAddress(target, drag.source)) return true;
+  if (!inventory || !items)
+    return false;
+  if (SameSlotAddress(target, drag.source))
+    return true;
   auto trial = *inventory;
   auto destination = target;
   const auto entry = drag.entry;
   if (destination.surface == SlotSurface::CharacterDoll)
   {
-    const auto *def = entry.kind == InventoryEntryKind::Item ? items->Get(entry.Id) : nullptr;
+    const auto *def =
+        entry.kind == InventoryEntryKind::Item ? items->Get(entry.Id) : nullptr;
     if (def && !def->Armor.Slots.empty())
     {
       const char *names[] = {"head", "chest", "legs", "feet"};
-      for (size_t i = 0; i < 4; ++i) if (def->Armor.Slots.front() == names[i])
-        { destination.surface = SlotSurface::CharacterArmor; destination.slot = i; break; }
+      for (size_t i = 0; i < 4; ++i)
+        if (def->Armor.Slots.front() == names[i])
+        {
+          destination.surface = SlotSurface::CharacterArmor;
+          destination.slot = i;
+          break;
+        }
     }
     if (destination.surface == SlotSurface::CharacterDoll)
     {
       destination.surface = SlotSurface::Hotbar;
-      destination.bar = trial.GetActiveBarIndex(); destination.slot = trial.GetActiveSlotIndex();
+      destination.bar = trial.GetActiveBarIndex();
+      destination.slot = trial.GetActiveSlotIndex();
     }
   }
-  const auto releaseSource = [&]() {
+  const auto releaseSource = [&]()
+  {
     if (drag.source.surface == SlotSurface::CharacterArmor)
     {
       trial.UnequipArmor(drag.source.slot, *items);
@@ -426,7 +444,8 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
     }
     if (drag.source.surface == SlotSurface::CharacterOffhand)
     {
-      trial.UnequipOffhand(*items); return trial.GetEquippedOffhand().empty;
+      trial.UnequipOffhand(*items);
+      return trial.GetEquippedOffhand().empty;
     }
     return true;
   };
@@ -434,37 +453,170 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
   if (destination.surface == SlotSurface::Hotbar)
   {
     if (drag.source.surface == SlotSurface::Hotbar)
-      ok = static_cast<bool>(trial.Move(drag.source.bar * 10 + drag.source.slot,
-                                       destination.bar * 10 + destination.slot));
+    {
+      const size_t from = drag.source.bar * 10 + drag.source.slot;
+      const auto actual = trial.GetSlot(from);
+      if (actual.instanceId != entry.instanceId || actual.empty)
+        return false;
+      int amount = units > 0 ? std::min(units, entry.count) : entry.count;
+      auto result = trial.Move(from, destination.bar * 10 + destination.slot,
+                               actual.count == amount ? -1 : amount);
+      ok = result.transferred > 0;
+      if (ok && amount < entry.count && !trial.GetSlot(from).empty)
+      {
+        Drag = drag;
+        Drag.entry = trial.GetSlot(from);
+        Drag.entry.count = entry.count - result.transferred;
+      }
+    }
     else if (releaseSource())
-      ok = trial.IsCreative() ? trial.AssignToHotbar(destination.bar, destination.slot, entry)
-                              : trial.AssignOwned(destination.bar, destination.slot, entry);
-    if (ok) trial.SetActiveSlot(destination.bar, destination.slot);
+      ok = trial.IsCreative()
+               ? trial.AssignToHotbar(destination.bar, destination.slot, entry)
+               : trial.AssignOwned(destination.bar, destination.slot, entry);
+    if (ok)
+      trial.SetActiveSlot(destination.bar, destination.slot);
   }
   else if (destination.surface == SlotSurface::CharacterArmor)
   {
-    if (releaseSource()) ok = trial.EquipArmor(destination.slot, entry, *items);
+    if (releaseSource())
+      ok = trial.EquipArmor(destination.slot, entry, *items);
   }
   else if (destination.surface == SlotSurface::CharacterOffhand)
   {
-    if (releaseSource()) ok = trial.EquipOffhand(entry, *items);
+    if (releaseSource())
+      ok = trial.EquipOffhand(entry, *items);
   }
   else if (destination.surface == SlotSurface::PaletteGrid)
   {
     if (drag.source.surface == SlotSurface::Hotbar)
     {
-      if (trial.IsCreative()) { trial.ClearHotbarSlot(drag.source.bar, drag.source.slot); ok = true; }
-      else for (size_t i = 10; i < UCreatureInventory::kSlotCount; ++i)
-        if (trial.GetSlot(i).empty) { ok = static_cast<bool>(trial.Move(drag.source.bar * 10 + drag.source.slot, i)); break; }
+      if (trial.IsCreative())
+      {
+        trial.ClearHotbarSlot(drag.source.bar, drag.source.slot);
+        ok = true;
+      }
+      else
+        for (size_t i = 10; i < UCreatureInventory::kSlotCount; ++i)
+          if (trial.GetSlot(i).empty)
+          {
+            ok = static_cast<bool>(
+                trial.Move(drag.source.bar * 10 + drag.source.slot, i));
+            break;
+          }
     }
-    else ok = releaseSource();
+    else
+      ok = releaseSource();
   }
-  if (ok) { *inventory = std::move(trial); PostInventoryClickAudio(AudioEventKind::UiClick); }
+  if (ok)
+  {
+    *inventory = std::move(trial);
+    PostInventoryClickAudio(AudioEventKind::UiClick);
+  }
   return ok;
 }
 
-std::vector<InventoryGroupView>
-UGameSession::GetGroups(ContentKind tab) const
+void UGameSession::InventoryClick(size_t slot, bool half, bool quick,
+                                  bool collect)
+{
+  auto *inv = GetControlledInventory(World.get());
+  if (!inv || slot >= 40)
+    return;
+  SlotAddress address;
+  address.surface = SlotSurface::Hotbar;
+  address.bar = slot / 10;
+  address.slot = slot % 10;
+  if (collect && IsDragging() && SameSlotAddress(Drag.source, address))
+  {
+    CancelDrag();
+    inv->CollectMatching(slot);
+    return;
+  }
+  if (IsDragging())
+  {
+    DropOnSlot(address, half ? 1 : -1);
+    return;
+  }
+  const auto entry = inv->GetSlot(slot);
+  if (entry.empty)
+    return;
+  if (collect)
+  {
+    inv->CollectMatching(slot);
+    return;
+  }
+  if (quick)
+  {
+    const auto *items = World->GetItemDefinitionStorage();
+    const auto *def =
+        entry.kind == InventoryEntryKind::Item ? items->Get(entry.Id) : nullptr;
+    if (def && !def->Armor.Slots.empty())
+    {
+      const char *names[] = {"head", "chest", "legs", "feet"};
+      for (size_t i = 0; i < 4; ++i)
+        if (def->Armor.Slots.front() == names[i])
+        {
+          inv->EquipArmor(i, entry, *items);
+          return;
+        }
+    }
+    inv->QuickMove(slot);
+    return;
+  }
+  auto selection = entry;
+  if (half && selection.count > 0)
+    selection.count = (selection.count + 1) / 2;
+  BeginDragFromSlot(address, selection);
+}
+void UGameSession::DiscardInventory()
+{
+  auto *inv = GetControlledInventory(World.get());
+  auto *actor = World ? World->GetControlledCreature() : nullptr;
+  if (!inv || !actor)
+    return;
+  size_t index = inv->GetActiveBarIndex() * 10 + inv->GetActiveSlotIndex();
+  int count = 1;
+  if (Drag.Active)
+  {
+    if (Drag.source.surface != SlotSurface::Hotbar)
+      return;
+    index = Drag.source.bar * 10 + Drag.source.slot;
+    count = std::max(1, Drag.entry.count);
+  }
+  const auto actual = inv->GetSlot(index);
+  if (actual.kind != InventoryEntryKind::Item &&
+      actual.kind != InventoryEntryKind::Block)
+    return;
+  InventoryEntryRef out;
+  if (!inv->Take(index, count, out))
+    return;
+  auto cam = World->GetCurrentUserCamera();
+  WorldItemSystem::Instance().SpawnStack(
+      actor->GetEyePosition() + (cam ? cam->GetFront() * .9f : glm::vec3(0)),
+      out, inv->IsCreative());
+  CancelDrag();
+}
+void UGameSession::SortInventory()
+{
+  CancelDrag();
+  if (auto *inv = GetControlledInventory(World.get()))
+    inv->Sort();
+}
+void UGameSession::RecoverInventory(size_t index)
+{
+  CancelDrag();
+  if (auto *inv = GetControlledInventory(World.get()))
+  {
+    if (index != static_cast<size_t>(-1))
+    {
+      inv->Recover(index);
+      return;
+    }
+    for (size_t i = inv->GetRecovery().size(); i-- > 0;)
+      inv->Recover(i);
+  }
+}
+
+std::vector<InventoryGroupView> UGameSession::GetGroups(ContentKind tab) const
 {
   return GetGroups(tab, GetInventoryMode());
 }
@@ -504,15 +656,22 @@ UGameSession::GetEntries(ContentKind tab, const std::string &groupId) const
 size_t UGameSession::GetInventorySignature() const
 {
   const auto *inv = GetControlledInventory(World.get());
-  if (!inv) return 0;
+  if (!inv)
+    return 0;
   size_t signature = inv->IsCreative() ? 1 : 0;
-  auto mix = [&](size_t value) { signature ^= value + 0x9e3779b9u + (signature << 6) + (signature >> 2); };
-  for (const auto &row : inv->GetOwnedHotbars()) for (const auto &slot : row.slots)
-  {
-    const auto &e = slot.entry;
-    mix(e.instanceId); mix(std::hash<std::string>{}(e.Id)); mix(static_cast<size_t>(e.count));
-    mix(std::hash<float>{}(e.wear)); mix(e.broken); mix(static_cast<size_t>(e.contentsUnits));
-  }
+  auto mix = [&](size_t value)
+  { signature ^= value + 0x9e3779b9u + (signature << 6) + (signature >> 2); };
+  for (const auto &row : inv->GetOwnedHotbars())
+    for (const auto &slot : row.slots)
+    {
+      const auto &e = slot.entry;
+      mix(e.instanceId);
+      mix(std::hash<std::string>{}(e.Id));
+      mix(static_cast<size_t>(e.count));
+      mix(std::hash<float>{}(e.wear));
+      mix(e.broken);
+      mix(static_cast<size_t>(e.contentsUnits));
+    }
   return signature;
 }
 
@@ -558,7 +717,8 @@ UGameSession::GetEntries(ContentKind tab, const std::string &groupId,
     {
       for (const auto &row : creatureInv->GetOwnedHotbars())
         for (const auto &slot : row.slots)
-          if (!slot.empty && !slot.entry.empty && slot.entry.kind == ref.kind && slot.entry.Id == e.Id)
+          if (!slot.empty && !slot.entry.empty && slot.entry.kind == ref.kind &&
+              slot.entry.Id == e.Id)
             result.push_back({slot.entry, e.displayName});
       continue;
     }
@@ -751,8 +911,9 @@ InventoryMode UGameSession::GetInventoryMode() const
   {
     return InventoryMode::Creative;
   }
-  return World->GetGameMode() == WorldGameMode::Creative ? InventoryMode::Creative
-                                                         : InventoryMode::Owned;
+  return World->GetGameMode() == WorldGameMode::Creative
+             ? InventoryMode::Creative
+             : InventoryMode::Owned;
 }
 
 void UGameSession::SyncToWorldGameMode(WorldGameMode mode)
@@ -762,7 +923,8 @@ void UGameSession::SyncToWorldGameMode(WorldGameMode mode)
   if (World)
   {
     World->SetGameMode(mode);
-    if (auto *inv = GetControlledInventory(World.get())) inv->SetCreative(mode == WorldGameMode::Creative);
+    if (auto *inv = GetControlledInventory(World.get()))
+      inv->SetCreative(mode == WorldGameMode::Creative);
     World->ApplyGameModeLocomotionPolicy();
     if (mode == WorldGameMode::Survival && previous == WorldGameMode::Creative)
     {
@@ -793,18 +955,26 @@ void UGameSession::SyncToWorldDifficulty(WorldDifficulty difficulty)
   }
 }
 
-bool UGameSession::ApplyHumanAppearance(const HumanAppearance &value, const std::string &skin) {
-  if(!World) return false;
-  auto *actor=World->GetControlledCreature();
-  auto user=World->GetCurrentUser();
-  if(!actor || !user || actor->GetTypeId()!="human") return false;
-  if(!skin.empty()) {
-    auto defs=World->GetSkinDefinitionStorage();
-    const auto *def=defs ? defs->Get(skin) : nullptr;
-    if(!def || def->creatureId!="human") return false;
+bool UGameSession::ApplyHumanAppearance(const HumanAppearance &value,
+                                        const std::string &skin)
+{
+  if (!World)
+    return false;
+  auto *actor = World->GetControlledCreature();
+  auto user = World->GetCurrentUser();
+  if (!actor || !user || actor->GetTypeId() != "human")
+    return false;
+  if (!skin.empty())
+  {
+    auto defs = World->GetSkinDefinitionStorage();
+    const auto *def = defs ? defs->Get(skin) : nullptr;
+    if (!def || def->creatureId != "human")
+      return false;
   }
-  actor->SetHumanAppearance(value);actor->SetSkinId(skin);
-  user->SetHumanAppearance(value);user->SetSelectedSkinId(skin);
+  actor->SetHumanAppearance(value);
+  actor->SetSkinId(skin);
+  user->SetHumanAppearance(value);
+  user->SetSelectedSkinId(skin);
   user->SetSelectedAppearanceTypeId(skin);
   return true;
 }
@@ -826,11 +996,21 @@ CharacterStatsSnapshot UGameSession::GetCharacterStatsSnapshot() const
   snap.valid = true;
   snap.typeId = creature->GetTypeId();
   snap.skinId = creature->GetSkinId();
-  if(const auto resolved=World->GetResolvedAppearanceShared(*creature))snap.skinId=resolved->effectiveSkinId;
+  if (const auto resolved = World->GetResolvedAppearanceShared(*creature))
+    snap.skinId = resolved->effectiveSkinId;
   snap.humanAppearance = creature->GetHumanAppearance();
   snap.vitals = creature->GetVitals();
-  snap.attributes = creature->GetAttributes();
+  snap.attributes = StatusEffectSystem::GetEffectiveAttributes(*creature);
 
+  snap.effects = creature->GetStatusEffects();
+  snap.movementMultiplier =
+      StatusEffectSystem::GetMoveSpeedMultiplier(*creature);
+  snap.protection = creature->GetArmorGroups();
+  snap.activeRow = creature->GetInventory().GetActiveBarIndex();
+  snap.activeSlot = creature->GetInventory().GetActiveSlotIndex();
+  for (size_t i = 0; i < 40; ++i)
+    snap.slots[i] = creature->GetInventory().GetSlot(i);
+  snap.recovery = creature->GetInventory().GetRecovery();
   // Equipped armor (0..5) + active tool items (2 slots).
   const UCreatureInventory &inv = creature->GetInventory();
   for (size_t i = 0; i < UCreatureInventory::kArmorSlotCount; ++i)

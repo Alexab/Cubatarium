@@ -102,3 +102,48 @@ arrow:
   accent: [220, 210, 180]
   edge: [88, 148, 56]
   binding: [118, 78, 42]
+
+# Original survival materials: rough ore and organic fibers.
+coal:
+  head: [46, 47, 53]
+  edge: [68, 67, 70]
+  binding: [34, 35, 41]
+charcoal:
+  head: [53, 45, 43]
+  edge: [76, 61, 51]
+  binding: [32, 29, 29]
+plant_fiber:
+  head: [130, 139, 81]
+  binding: [141, 150, 95]
+  accent: [182, 180, 109]
+cord:
+  head: [158, 131, 92]
+  binding: [164, 141, 105]
+  accent: [187, 158, 113]
+wool:
+  head: [222, 220, 204]
+  binding: [201, 198, 177]
+  accent: [242, 237, 218]
+grain:
+  head: [208, 168, 75]
+  binding: [161, 124, 61]
+  accent: [231, 191, 93]
+cooked_meat:
+  head: [128, 68, 42]
+  accent: [186, 117, 66]
+  binding: [85, 44, 31]
+raw_copper:
+  head: [88, 86, 86]
+  binding: [66, 63, 64]
+  edge: &id001 [187, 112, 71]
+  accent: *id001
+raw_iron:
+  head: [88, 86, 86]
+  binding: [66, 63, 64]
+  edge: &id002 [174, 166, 150]
+  accent: *id002
+raw_gold:
+  head: [88, 86, 86]
+  binding: [66, 63, 64]
+  edge: &id003 [212, 173, 74]
+  accent: *id003

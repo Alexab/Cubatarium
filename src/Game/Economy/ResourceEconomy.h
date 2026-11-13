@@ -14,14 +14,13 @@ namespace cutum
 struct ResourceEconomyService
 {
   /// True when the active entry is available for placement in current mode.
-  static bool CanPlace(WorldGameMode mode,
-                        const UCreatureInventory &inv,
-                        const InventoryEntryRef &activeEntry);
+  static bool CanPlace(WorldGameMode mode, const UCreatureInventory &inv,
+                       const InventoryEntryRef &activeEntry);
 
   /// Consumes one unit from inventory/storage if allowed.
   /// Returns false when placement should be rejected.
   static bool ConsumeOnPlace(WorldGameMode mode, UCreatureInventory &inv,
-                              const InventoryEntryRef &activeEntry);
+                             const InventoryEntryRef &activeEntry);
 
   /// Atomically consumes real physical slots (active stack first). Creative
   /// bypasses costs; missing or insufficient stock is rejected without changes.
@@ -29,18 +28,18 @@ struct ResourceEconomyService
                            InventoryEntryKind kind, const std::string &itemId,
                            int units = 1);
 
-  /// Grants a dropped stack. `kind` selects the hotbar entry written into an empty hand.
-  static void GrantBlockDrop(WorldGameMode mode, UCreatureInventory &inv,
-                              const std::string &blockTypeName,
-                              int count = 1,
-                              InventoryEntryKind kind = InventoryEntryKind::Block);
+  /// Grants a dropped stack. `kind` selects the hotbar entry written into an
+  /// empty hand.
+  static void
+  GrantBlockDrop(WorldGameMode mode, UCreatureInventory &inv,
+                 const std::string &blockTypeName, int count = 1,
+                 InventoryEntryKind kind = InventoryEntryKind::Block);
 
   /// Grants a creature/item drop into inventory (same Creative gate as blocks).
   static void GrantItemDrop(WorldGameMode mode, UCreatureInventory &inv,
-                             const std::string &itemId, int count = 1);
+                            const std::string &itemId, int count = 1);
 };
 
 } // namespace cutum
 
 #endif
-

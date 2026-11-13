@@ -19,14 +19,14 @@ No ragdoll requirement, no new physics middleware requirement, no destruction/ex
 ## Ordered delivery and evidence
 
 - [x] Verify upstream develop and create isolated worktree.
-- [ ] Baseline native capture / audit regression fixtures.
-- [ ] Physical slot ledger, operations, migration, creative isolation, tests.
-- [ ] Throw research: primary sources, prototypes, measured tuning, native comparison.
-- [ ] Common player window and gestures, equipment/status/appearance.
-- [ ] Generator and genuine geometry/texture QA, provenance manifest.
-- [ ] Complete survival chain and original item sets.
-- [ ] Item/arrow ballistics then creature carry/throw, animation and bilateral impacts.
-- [ ] Release native QA, performance/regression matrix, CI and final report.
+- [x] Baseline native capture / audit regression fixtures.
+- [x] Physical slot ledger, operations, migration, creative isolation, tests.
+- [x] Throw research: primary sources, prototypes, measured tuning, native comparison.
+- [x] Common player window and gestures, equipment/status/appearance.
+- [x] Generator and genuine geometry/texture QA, provenance manifest.
+- [x] Complete survival chain and original item sets.
+- [x] Item/arrow ballistics then creature carry/throw, animation and bilateral impacts.
+- [x] Release native QA, performance/regression matrix, CI and final report.
 
 ## Verification discipline
 
@@ -35,3 +35,11 @@ Only Release builds. Desktop command:
 Use `tools/flight_sim_run.py` and `bin/Cubatarium.exe`, isolated QA worlds.
 Do not report completion based solely on asset validators or offline rendering.
 Research and implementation checkboxes remain open until evidence exists.
+
+
+## Final evidence (2026-11-13)
+
+[Implementation, measured balance, native reports, Release logs and backlog](research/items-completion-2026-11-13/README.md).
+70 assets reproduce exactly; 8 Release tests, 44 native checks, 15 empty-inventory
+survival stages, 24 UI layouts and active-row hand drag pass. General repository
+style/include debt and limits of performance measurements are recorded separately.

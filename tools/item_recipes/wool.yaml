@@ -1,0 +1,25 @@
+id: wool
+family: material
+material: leather
+palette: wool
+recipe_version: 2
+parts:
+- role: head
+  offset:
+  - 0
+  - 0
+  - 0
+  size:
+  - 0.28
+  - 0.25
+  - 0.25
+- role: binding
+  offset:
+  - 0
+  - 0
+  - 0
+  size:
+  - 0.32
+  - 0.045
+  - 0.29
+provenance: Original Cubatarium recipe geometry and procedural texture

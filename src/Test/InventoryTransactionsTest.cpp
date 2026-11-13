@@ -71,12 +71,20 @@ int main()
   inv.SetActiveSlot(0, 1);
   std::string repairReason;
   const auto repairBefore = Snapshot(inv);
-  Expect(!inv.RepairActive(defs, repairReason), "missing repair material rejected");
+  Expect(!inv.RepairActive(defs, repairReason),
+         "missing repair material rejected");
   Expect(repairBefore == Snapshot(inv), "failed repair has no side effects");
   inv.AddItem(defs.Get("iron_pickaxe")->Repair.Materials.front(), 1);
-  Expect(inv.RepairActive(defs, repairReason), "repair consumes material atomically");
-  Expect(inv.GetSlot(1).instanceId == fresh.instanceId && inv.GetSlot(1).wear == 0.f,
+  Expect(inv.RepairActive(defs, repairReason),
+         "repair consumes material atomically");
+  Expect(inv.GetSlot(1).instanceId == fresh.instanceId &&
+             inv.GetSlot(1).wear == 0.f,
          "repair preserves instance identity");
+  UCreatureInventory otherOwner;
+  otherOwner.SetItemDefinitions(&defs);
+  otherOwner.Insert(Item("iron_pickaxe"));
+  Expect(otherOwner.GetSlot(0).instanceId != fresh.instanceId,
+         "instance identity is unique across owners");
   const auto preCraft = Snapshot(inv);
   Expect(!recipes.TryCraft(inv, duplicate),
          "aggregate duplicate ingredient costs");
@@ -132,6 +140,24 @@ int main()
   migrated.SetCreative(false);
   Expect(migrated.Count(InventoryEntryKind::Item, "iron_pickaxe") == 1,
          "mode round trip restores belongings");
+  UCreatureInventory gestures;
+  gestures.SetItemDefinitions(&defs);
+  gestures.Insert(Item("apple", 24));
+  gestures.Move(0, 20, 4);
+  gestures.CollectMatching(20);
+  Expect(gestures.GetSlot(20).count == 16 &&
+             gestures.Count(InventoryEntryKind::Item, "apple") == 24,
+         "collect respects stack limit and conserves count");
+  gestures.SetActiveSlot(0, 0);
+  gestures.QuickMove(0);
+  Expect(gestures.Count(InventoryEntryKind::Item, "apple") == 24 &&
+             gestures.GetSlot(0).empty,
+         "quick transfer conserves ownership");
+  RecipeDefinition station = craft;
+  station.Station = "furnace";
+  const auto stationBefore = Snapshot(inv);
+  Expect(!recipes.TryCraft(inv, station) && Snapshot(inv) == stationBefore,
+         "station requirement is atomic");
   std::cout << "inventory_transactions_test failures=" << failures << '\n';
   return failures ? 1 : 0;
 }

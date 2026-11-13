@@ -1,0 +1,25 @@
+{
+  "id": "gold_ingot",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "raw_gold",
+      "count": 1
+    },
+    {
+      "id": "fuel",
+      "count": 1,
+      "alternatives": [
+        "coal",
+        "charcoal"
+      ]
+    }
+  ],
+  "output": {
+    "id": "gold_ingot",
+    "count": 1
+  },
+  "station": "furnace",
+  "category": "Materials",
+  "seconds": 3
+}

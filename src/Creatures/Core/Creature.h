@@ -8,11 +8,11 @@
 #include "Creatures/Core/CreatureIntent.h"
 #include "Creatures/Core/CreatureInventory.h"
 #include "Creatures/Core/CreatureSpawnSource.h"
+#include "Creatures/Influence/InfluenceTypes.h"
+#include "Creatures/Influence/StatusEffectTypes.h"
 #include "Creatures/Locomotion/CreatureLocomotionController.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
-#include "Creatures/Influence/InfluenceTypes.h"
-#include "Creatures/Influence/StatusEffectTypes.h"
 #include "Creatures/Stats/CreatureAttributes.h"
 #include "Creatures/Stats/CreatureVitals.h"
 #include <algorithm>
@@ -36,8 +36,13 @@ public:
             glm::vec3 eyeOffset);
   virtual ~UCreature();
 
+  bool ExternalMotion{false};
+  int CarryHandCount{0};
+  float ThrowCharge{0.f};
+  float BowCharge{0.f};
   mutable HumanMotionState HumanMotion; // Transient; never serialized.
-  void SetHumanMotionFacts(glm::vec3 velocity, bool swimming, const UWorld *world, float dt);
+  void SetHumanMotionFacts(glm::vec3 velocity, bool swimming,
+                           const UWorld *world, float dt);
   CreatureId GetId() const { return Id; }
   const std::string &GetTypeId() const { return TypeId; }
   CreatureSpawnSource GetSpawnSource() const { return SpawnSource; }
@@ -98,17 +103,20 @@ public:
     const ArmorGroups &eq = Inventory.GetEquippedArmorGroups();
     for (const auto &pair : eq.Ratings)
     {
-      total.Ratings[pair.first] += pair.second;
+      total.Ratings[pair.first] = total.Get(pair.first) * pair.second / 100;
     }
     const InventoryEntryRef &off = Inventory.GetEquippedOffhand();
-    if (!off.empty && !off.broken && off.kind == InventoryEntryKind::Item)
+    if (CarryHandCount == 0 && BowCharge <= 0 && !off.empty && !off.broken &&
+        off.kind == InventoryEntryKind::Item)
     {
       // Offhand groups resolved lazily via optional storage pointer is not
       // available here; Inventory exposes cached offhand groups when set.
       const ArmorGroups &offGroups = Inventory.GetOffhandArmorGroups();
       for (const auto &pair : offGroups.Ratings)
       {
-        total.Ratings[pair.first] += pair.second;
+        total.Ratings[pair.first] = total.Get(pair.first) *
+                                    (100 - std::clamp(pair.second, 0, 100)) /
+                                    100;
       }
     }
     return total;
@@ -152,7 +160,8 @@ public:
   }
   void TickHealthBar(float dt)
   {
-    HealthBarVisibleSec = std::max(0.f, HealthBarVisibleSec - std::max(0.f, dt));
+    HealthBarVisibleSec =
+        std::max(0.f, HealthBarVisibleSec - std::max(0.f, dt));
     DamageMemorySec = std::max(0.f, DamageMemorySec - std::max(0.f, dt));
   }
   float GetHealthBarVisibleSec() const { return HealthBarVisibleSec; }
@@ -161,7 +170,10 @@ public:
   CreatureId GetLastAttackerId() const { return LastAttackerId; }
   float GetDamageMemorySec() const { return DamageMemorySec; }
 
-  std::vector<StatusEffectInstance> &GetStatusEffects() { return StatusEffects; }
+  std::vector<StatusEffectInstance> &GetStatusEffects()
+  {
+    return StatusEffects;
+  }
   const std::vector<StatusEffectInstance> &GetStatusEffects() const
   {
     return StatusEffects;
@@ -193,15 +205,17 @@ public:
   }
   void SetWalkCycleHz(float hz) { WalkCycleHz = hz; }
   /// Not simulated this frame (terrain chunk unloaded): present standing.
-  void SettleFrozenLocomotion() { SettleFrozenLocomotionFacts(LocomotionFacts); }
+  void SettleFrozenLocomotion()
+  {
+    SettleFrozenLocomotionFacts(LocomotionFacts);
+  }
   void RebuildLocomotionFacts(const CreatureLocomotionRawInput &input,
                               const CreatureLocomotionCapabilities &caps,
                               const UWorld *world = nullptr);
   void RebuildLocomotionFactsFromController(
       const UCreatureLocomotionController &controller,
       const CreatureLocomotionCapabilities &caps, float dt,
-      float horizontalSpeedOverride = -1.0f,
-      const UWorld *world = nullptr);
+      float horizontalSpeedOverride = -1.0f, const UWorld *world = nullptr);
 
   /// Role flags (audit 5.2: the ICreatureRoleHandler strategy layer stored
   /// nothing but copies of these two bits and is gone).
@@ -227,12 +241,12 @@ public:
   void RunMotorStep(UWorld &world, glm::vec3 &eye,
                     const CreatureInput &verticalInput, const glm::vec3 &wish,
                     float speed, float dt);
-  void EnforceHabitatAfterMove(
-      UWorld &world, CreatureHabitat habitat,
-      const glm::vec3 &bodyOriginBefore,
-      const UCreatureLocomotionController &locomotionBefore,
-      const glm::vec3 &diagIntentDir, float diagIntentSpeed,
-      const glm::vec3 &wish);
+  void
+  EnforceHabitatAfterMove(UWorld &world, CreatureHabitat habitat,
+                          const glm::vec3 &bodyOriginBefore,
+                          const UCreatureLocomotionController &locomotionBefore,
+                          const glm::vec3 &diagIntentDir, float diagIntentSpeed,
+                          const glm::vec3 &wish);
   void ApplyIdleFluidSink(UWorld &world, CreatureHabitat habitat,
                           const glm::vec3 &wish, float dt,
                           const CreatureInput &verticalInput);
@@ -259,7 +273,12 @@ public:
   }
 
   const HumanAppearance &GetHumanAppearance() const { return HumanLook; }
-  void SetHumanAppearance(HumanAppearance value) { value.Normalize(); HumanLook = std::move(value); }
+  void SetHumanAppearance(HumanAppearance value)
+  {
+    value.Normalize();
+    HumanLook = std::move(value);
+  }
+
 protected:
   HumanAppearance HumanLook;
   CreatureId Id;

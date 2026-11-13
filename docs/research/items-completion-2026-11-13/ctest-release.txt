@@ -1,0 +1,28 @@
+Internal ctest changing into directory: E:/Work/Home/Cubatarium-items-inventory/build/desktop-msvc
+Test project E:/Work/Home/Cubatarium-items-inventory/build/desktop-msvc
+    Start  12: throw_math_test
+1/8 Test  #12: throw_math_test ..................   Passed    0.01 sec
+    Start  13: inventory_transactions_test
+2/8 Test  #13: inventory_transactions_test ......   Passed    0.03 sec
+    Start  20: item_survival_hooks_test
+3/8 Test  #20: item_survival_hooks_test .........   Passed    0.01 sec
+    Start 104: armor_equipment_test
+4/8 Test #104: armor_equipment_test .............   Passed    0.02 sec
+    Start 129: inventory_mode_test
+5/8 Test #129: inventory_mode_test ..............   Passed    0.01 sec
+    Start 131: recipe_registry_test
+6/8 Test #131: recipe_registry_test .............   Passed    0.02 sec
+    Start 132: resource_economy_test
+7/8 Test #132: resource_economy_test ............   Passed    0.02 sec
+    Start 205: human_motion_camera_test
+8/8 Test #205: human_motion_camera_test .........   Passed    0.04 sec
+
+100% tests passed, 0 tests failed out of 8
+
+Label Time Summary:
+camera    =   0.04 sec*proc (1 test)
+items     =   0.16 sec*proc (8 tests)
+player    =   0.04 sec*proc (1 test)
+unit      =   0.16 sec*proc (8 tests)
+
+Total Test time (real) =   0.21 sec

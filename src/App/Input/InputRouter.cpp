@@ -2,11 +2,12 @@
 
 #include "App/Application.h"
 #include "App/Settings/AppState.h"
+#include "Creatures/Core/Creature.h"
 #include "Game/GameSession.h"
-#include "Game/ModePolicy.h"
-#include "Game/WorldGameMode.h"
 #include "Game/Inventory/HotbarInput.h"
 #include "Game/Inventory/SlotInteraction.h"
+#include "Game/ModePolicy.h"
+#include "Game/WorldGameMode.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Screens/ConsoleScreen.h"
@@ -15,6 +16,7 @@
 #include "Render/Camera/Camera.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "World/Core/World.h"
+#include "World/Items/WorldItemSystem.h"
 #ifndef __ANDROID__
 #include "App/Platform/CursorCapture.h"
 #include "App/Platform/WindowManager.h"
@@ -72,10 +74,66 @@ GuiKeyEvent UInputRouter::MakeGuiKeyEvent(int key, int action, int mods)
   return event;
 }
 
+bool UInputRouter::RoutePhysicalActions(UApplication &app, int key, int action)
+{
+  if (app.State == AppState::InGame && app.World)
+  {
+    if (auto *actor = app.World->GetControlledCreature())
+    {
+      auto &physics = WorldItemSystem::Instance();
+      auto camera = app.World->GetCurrentUserCamera();
+      const bool overlay = app.ConsoleOpen || app.PaletteOpen ||
+                           app.CharacterSheetOpen || app.CraftingOpen ||
+                           app.AnvilOpen || app.WorldGenOpen;
+      if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS &&
+          actor->ThrowCharge > 0)
+      {
+        physics.CancelCharge(*actor);
+        return true;
+      }
+      if (KeyNameIs(app.Ui.ThrowKey, key) && action == GLFW_RELEASE &&
+          actor->ThrowCharge > 0)
+      {
+        if (!overlay && camera)
+          physics.Release(*app.World, *actor, camera->GetFront());
+        else
+          physics.CancelCharge(*actor);
+        return true;
+      }
+      if (!overlay && camera && action == GLFW_PRESS &&
+          (KeyNameIs(app.Ui.GrabKey, key) || KeyNameIs(app.Ui.ThrowKey, key)))
+      {
+        std::string reason;
+        bool ok = KeyNameIs(app.Ui.GrabKey, key)
+                      ? physics.Grab(*app.World, *actor, camera->GetPosition(),
+                                     camera->GetFront(), reason)
+                      : physics.BeginThrow(*app.World, *actor, reason);
+        if (!ok && app.Geometry)
+          app.Geometry->ShowTransientMessage(reason, 2.f);
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
 {
 
   GuiKeyEvent event = MakeGuiKeyEvent(key, action, mods);
+  if (key != GLFW_KEY_ESCAPE && app.CharacterSheetOpen &&
+      app.CharacterSheetScreen && app.CharacterSheetScreen->IsSearchFocused())
+  {
+    app.CharacterSheetScreen->RouteTextKey(event);
+    return true;
+  }
+  if (key != GLFW_KEY_ESCAPE && app.CraftingOpen && app.CraftingScreen &&
+      app.CraftingScreen->IsSearchFocused())
+  {
+    app.CraftingScreen->RouteTextKey(event);
+    return true;
+  }
 
   if (app.World && app.World->IsHardcoreDead() && !app.DeathScreenOpen)
   {
@@ -92,11 +150,15 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
     return !spectatorCameraKey;
   }
 
+  if (RoutePhysicalActions(app, key, action))
+    return true;
+
   if (action == GLFW_PRESS && app.State == AppState::InGame)
   {
     if (key == GLFW_KEY_ESCAPE)
     {
-      if (app.ConsoleOpen && app.ConsoleScreen && app.ConsoleScreen->IsPopupOpen())
+      if (app.ConsoleOpen && app.ConsoleScreen &&
+          app.ConsoleScreen->IsPopupOpen())
       {
         if (app.OverlayPopup)
         {
@@ -294,74 +356,31 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
       app.SyncCursorVisibility();
       return true;
     }
+    if (!app.ConsoleOpen && KeyNameIs(app.Ui.CraftKey, key))
+    {
+      app.OpenCraftingScreen();
+      return true;
+    }
     if (!app.ConsoleOpen && KeyNameIs(app.Ui.InventoryKey, key))
     {
-      const bool allowCreativePalette = app.World &&
-                                         ModePolicy::AllowsCreativePalette(
-                                             app.World->GetGameMode());
-
-      // Survival mode: InventoryKey toggles backpack UI.
-      if (!allowCreativePalette)
+      app.CharacterSheetOpen = !app.CharacterSheetOpen;
+      app.PaletteOpen = false;
+      app.WorldGenOpen = false;
+      if (app.PaletteScreen)
+        app.PaletteScreen->SetVisible(false);
+      if (app.WorldGenScreen)
+        app.WorldGenScreen->SetVisible(false);
+      if (app.CharacterSheetScreen)
       {
-        if (app.PaletteOpen && app.PaletteScreen)
-        {
-          app.PaletteOpen = false;
-          app.PaletteScreen->SetVisible(false);
-          app.GuiContext->ClearInputState();
-        }
-        else if (app.PaletteScreen)
-        {
-          app.PaletteOpen = true;
-          app.SurvivalInventoryOpen = false;
-          app.WorldGenOpen = false;
-          if (app.WorldGenScreen)
-          {
-            app.WorldGenScreen->SetVisible(false);
-          }
-          if (app.SurvivalInventoryScreen)
-          {
-            app.SurvivalInventoryScreen->SetVisible(false);
-          }
-          app.PaletteScreen->SetCatalogAllowed(false);
-          app.PaletteScreen->SetVisible(true);
-        }
-        app.SyncCursorVisibility();
-        return true;
+        app.CharacterSheetScreen->SetVisible(app.CharacterSheetOpen);
+        if (app.CharacterSheetOpen)
+          app.CharacterSheetScreen->SetSection(0);
       }
-
-      // Creative mode: InventoryKey toggles the creative palette.
-      if (app.PaletteOpen)
-      {
-        app.PaletteOpen = false;
-        if (app.PaletteScreen)
-        {
-          app.PaletteScreen->SetVisible(false);
-        }
-        app.GuiContext->ClearInputState();
-      }
-      else
-      {
-        app.PaletteOpen = true;
-        app.WorldGenOpen = false;
-        if (app.WorldGenScreen)
-        {
-          app.WorldGenScreen->SetVisible(false);
-        }
-        if (app.PaletteScreen)
-        {
-          // Restore last main tab (default Blocks on first open).
-          app.PaletteScreen->SetVisible(true);
-        }
-      }
-#if defined(__ANDROID__)
-      if (app.PaletteOpen && app.HudScreen)
-      {
-        app.HudScreen->ReleaseTouchCaptures();
-      }
-#endif
+      app.GuiContext->ClearInputState();
       app.SyncCursorVisibility();
       return true;
     }
+
     if (!app.ConsoleOpen && KeyNameIs(app.Ui.WorldGenKey, key))
     {
       app.WorldGenOpen = !app.WorldGenOpen;
@@ -412,6 +431,8 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
       if (app.CharacterSheetScreen)
       {
         app.CharacterSheetScreen->SetVisible(app.CharacterSheetOpen);
+        if (app.CharacterSheetOpen)
+          app.CharacterSheetScreen->SetSection(1);
       }
       app.SyncCursorVisibility();
       return true;
@@ -429,6 +450,29 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
         if ((mods & GLFW_MOD_ALT) != 0)
         {
           return true;
+        }
+        if (app.CharacterSheetOpen && app.CharacterSheetScreen)
+        {
+          if (app.CharacterSheetScreen->IsEditingText())
+            return app.GuiContext->RouteKey(event);
+          size_t source = 0;
+          if (app.CharacterSheetScreen->PickBackpackSlot(
+                  app.DragCursorX, app.DragCursorY, source))
+          {
+            const auto entry =
+                app.GameSession->GetHotbarEntryRef(source / 10, source % 10);
+            SlotAddress from;
+            from.surface = SlotSurface::Hotbar;
+            from.bar = source / 10;
+            from.slot = source % 10;
+            SlotAddress to;
+            to.surface = SlotSurface::Hotbar;
+            to.bar = app.GameSession->GetCharacterStatsSnapshot().activeRow;
+            to.slot = static_cast<size_t>(hotbarSlot);
+            app.GameSession->BeginDragFromSlot(from, entry);
+            app.GameSession->DropOnSlot(to);
+            return true;
+          }
         }
         app.GameSession->OnPrimaryHotbarKey(hotbarSlot);
         return true;
@@ -476,7 +520,6 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
     return true;
   }
   return false;
-
 }
 
 bool UInputRouter::RouteChar(UApplication &app, unsigned int codepoint)
@@ -492,12 +535,18 @@ bool UInputRouter::RouteChar(UApplication &app, unsigned int codepoint)
     app.ConsoleScreen->RouteChar(GuiCharEvent{codepoint});
     return true;
   }
+  if (app.CharacterSheetOpen && app.CharacterSheetScreen &&
+      app.CharacterSheetScreen->IsSearchFocused())
+    return app.CharacterSheetScreen->RouteTextChar(GuiCharEvent{codepoint});
+  if (app.CraftingOpen && app.CraftingScreen &&
+      app.CraftingScreen->IsSearchFocused())
+    return app.CraftingScreen->RouteTextChar(GuiCharEvent{codepoint});
   app.SuppressConsoleToggleChar = false;
   return app.GuiContext->RouteChar(GuiCharEvent{codepoint});
-
 }
 
-bool UInputRouter::RouteMouseButton(UApplication &app, int button, bool pressed, int x, int y, int pointer_id)
+bool UInputRouter::RouteMouseButton(UApplication &app, int button, bool pressed,
+                                    int x, int y, int pointer_id)
 {
 
   GuiMouseEvent event;
@@ -508,12 +557,24 @@ bool UInputRouter::RouteMouseButton(UApplication &app, int button, bool pressed,
                  : button == GLFW_MOUSE_BUTTON_MIDDLE ? GuiMouseButton::Middle
                                                       : GuiMouseButton::Left;
   event.Pressed = pressed;
+#ifndef __ANDROID__
+  if (app.Window &&
+      (glfwGetKey(app.Window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+       glfwGetKey(app.Window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS))
+    event.Mods |= GLFW_MOD_SHIFT;
+  if (app.Window &&
+      (glfwGetKey(app.Window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
+       glfwGetKey(app.Window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS))
+    event.Mods |= GLFW_MOD_CONTROL;
+#endif
 
-  if (app.PaletteOpen && app.PaletteScreen && event.Button == GuiMouseButton::Left)
+  if (app.PaletteOpen && app.PaletteScreen &&
+      event.Button == GuiMouseButton::Left)
   {
     app.PaletteScreen->SetPointerPressed(pressed);
   }
-  if (app.WorldGenOpen && app.WorldGenScreen && event.Button == GuiMouseButton::Left)
+  if (app.WorldGenOpen && app.WorldGenScreen &&
+      event.Button == GuiMouseButton::Left)
   {
     app.WorldGenScreen->SetPointerPressed(pressed);
   }
@@ -522,7 +583,11 @@ bool UInputRouter::RouteMouseButton(UApplication &app, int button, bool pressed,
   {
     app.DragCursorX = x;
     app.DragCursorY = y;
-    if (event.Button == GuiMouseButton::Left && !pressed)
+    if (app.CharacterSheetScreen)
+      app.CharacterSheetScreen->SetPointerPosition(x, y);
+    if ((event.Button == GuiMouseButton::Left ||
+         (app.CharacterSheetOpen && event.Button == GuiMouseButton::Right)) &&
+        !pressed)
     {
       if ((app.GameSession && app.GameSession->IsDragging()) ||
           app.OverlayPressedWidget || app.HasAnyOverlayCapture())
@@ -533,13 +598,14 @@ bool UInputRouter::RouteMouseButton(UApplication &app, int button, bool pressed,
     }
     if ((app.OverlayPopup && app.OverlayPopup->IsOpen()) || app.ConsoleOpen)
     {
-      if (app.ConsoleScreen &&
-          app.ConsoleScreen->RouteMouseButton(event, app.GuiContext->GetRenderer()))
+      if (app.ConsoleScreen && app.ConsoleScreen->RouteMouseButton(
+                                   event, app.GuiContext->GetRenderer()))
       {
         return true;
       }
     }
-    if (event.Button == GuiMouseButton::Left)
+    if (event.Button == GuiMouseButton::Left ||
+        (app.CharacterSheetOpen && event.Button == GuiMouseButton::Right))
     {
       if (app.TryRouteInGameOverlay(event, pressed))
       {
@@ -556,10 +622,10 @@ bool UInputRouter::RouteMouseButton(UApplication &app, int button, bool pressed,
 
   return pressed ? app.GuiContext->RouteMouseDown(event)
                  : app.GuiContext->RouteMouseUp(event);
-
 }
 
-bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y, int pointer_id)
+bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y,
+                                  int pointer_id)
 {
 
   GuiMouseEvent event;
@@ -582,6 +648,8 @@ bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y, int pointer_i
   {
     app.DragCursorX = x;
     app.DragCursorY = y;
+    if (app.CharacterSheetScreen)
+      app.CharacterSheetScreen->SetPointerPosition(x, y);
     // Deliver move to the pressed overlay leaf so GuiSlot can BeginDrag.
     if (app.OverlayPressedWidget &&
         !(app.GameSession && app.GameSession->IsDragging()))
@@ -594,7 +662,8 @@ bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y, int pointer_i
       return true;
     }
     const int pointerIndex = app.NormalizeOverlayPointer(pointer_id);
-    const UApplication::OverlayPointerCapture capture = app.OverlayCaptures[pointerIndex];
+    const UApplication::OverlayPointerCapture capture =
+        app.OverlayCaptures[pointerIndex];
     if (capture != UApplication::OverlayPointerCapture::None)
     {
       auto routeCapturedMove = [&](UGuiWidget *root) -> bool
@@ -614,13 +683,15 @@ bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y, int pointer_i
         }
         break;
       case UApplication::OverlayPointerCapture::WorldGen:
-        if (app.WorldGenOpen && routeCapturedMove(app.WorldGenScreen->GetRoot()))
+        if (app.WorldGenOpen &&
+            routeCapturedMove(app.WorldGenScreen->GetRoot()))
         {
           return true;
         }
         break;
       case UApplication::OverlayPointerCapture::Hud:
-        if (routeCapturedMove(app.HudScreen ? app.HudScreen->GetRoot() : nullptr))
+        if (routeCapturedMove(app.HudScreen ? app.HudScreen->GetRoot()
+                                            : nullptr))
         {
           return true;
         }
@@ -706,10 +777,10 @@ bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y, int pointer_i
     return handled;
   }
   return app.GuiContext->RouteMouseMove(event);
-
 }
 
-bool UInputRouter::RouteScroll(UApplication &app, double xoffset, double yoffset, int mouse_x, int mouse_y)
+bool UInputRouter::RouteScroll(UApplication &app, double xoffset,
+                               double yoffset, int mouse_x, int mouse_y)
 {
 
   if (app.State == AppState::InGame)
@@ -717,8 +788,22 @@ bool UInputRouter::RouteScroll(UApplication &app, double xoffset, double yoffset
     GuiScrollEvent event{xoffset, yoffset};
     auto routeScroll = [&](UGuiWidget *root) -> bool
     { return root && root->ScrollAtPoint(mouse_x, mouse_y, event); };
+    if (app.CharacterSheetOpen)
+    {
+      routeScroll(app.CharacterSheetScreen ? app.CharacterSheetScreen->GetRoot()
+                                           : nullptr);
+      return true;
+    }
+    if (app.CraftingOpen)
+    {
+      routeScroll(app.CraftingScreen ? app.CraftingScreen->GetRoot() : nullptr);
+      return true;
+    }
+    if (app.AnvilOpen)
+      return true;
     if (app.WorldGenOpen &&
-        routeScroll(app.WorldGenScreen ? app.WorldGenScreen->GetRoot() : nullptr))
+        routeScroll(app.WorldGenScreen ? app.WorldGenScreen->GetRoot()
+                                       : nullptr))
     {
       return true;
     }
@@ -746,10 +831,9 @@ bool UInputRouter::RouteScroll(UApplication &app, double xoffset, double yoffset
           constexpr size_t kSlots = 10;
           const size_t current = app.GameSession->GetSelectedSlot(0);
           const int delta = yoffset > 0.0 ? -1 : 1;
-          const size_t next =
-              static_cast<size_t>((static_cast<int>(current) + delta +
-                                   static_cast<int>(kSlots)) %
-                                  static_cast<int>(kSlots));
+          const size_t next = static_cast<size_t>(
+              (static_cast<int>(current) + delta + static_cast<int>(kSlots)) %
+              static_cast<int>(kSlots));
           app.GameSession->SelectSlot(0, next);
           return true;
         }
@@ -758,8 +842,7 @@ bool UInputRouter::RouteScroll(UApplication &app, double xoffset, double yoffset
     return false;
   }
   return app.GuiContext->RouteScroll(GuiScrollEvent{xoffset, yoffset}, mouse_x,
-                                  mouse_y);
-
+                                     mouse_y);
 }
 
 } // namespace cutum

@@ -1,0 +1,17 @@
+{
+  "id": "cord",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "plant_fiber",
+      "count": 3
+    }
+  ],
+  "output": {
+    "id": "cord",
+    "count": 2
+  },
+  "station": "",
+  "category": "Materials",
+  "seconds": 0
+}

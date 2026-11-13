@@ -33,6 +33,8 @@ public:
   const InventoryEntryRef &GetSlot(size_t slot) const;
   InventoryEntryRef *GetSlotMutable(size_t slot);
   void Sort();
+  InventoryOperationResult QuickMove(size_t slot);
+  void CollectMatching(size_t slot);
   const std::vector<InventoryEntryRef> &GetRecovery() const { return Recovery; }
   InventoryOperationResult Recover(size_t index);
   const std::vector<std::string> &GetMigrationWarnings() const

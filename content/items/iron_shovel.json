@@ -9,8 +9,7 @@
   "model": "models/items/iron_shovel/model.gltf",
   "repair": {
     "materials": [
-      "mtg_steelblock",
-      "iron"
+      "iron_ingot"
     ],
     "amount": 0.25
   },
@@ -49,6 +48,22 @@
       0,
       0.08,
       0
-    ]
-  }
+    ],
+    "presentations": {
+      "icon_scale": 1.0,
+      "fp_scale": 1.0,
+      "tp_scale": 1.0,
+      "ground_scale": 1.0
+    }
+  },
+  "physical": {
+    "mass": 2.6,
+    "size": [
+      0.17,
+      0.9325,
+      0.05
+    ],
+    "hardness": 1
+  },
+  "use": {}
 }

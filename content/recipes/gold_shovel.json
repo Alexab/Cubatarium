@@ -3,16 +3,19 @@
   "shapeless": true,
   "inputs": [
     {
-      "id": "mtg_goldblock",
+      "id": "gold_ingot",
       "count": 1
     },
     {
-      "id": "wood",
+      "id": "stick",
       "count": 2
     }
   ],
   "output": {
     "id": "gold_shovel",
     "count": 1
-  }
+  },
+  "station": "crafting_table",
+  "category": "Tools",
+  "seconds": 0
 }

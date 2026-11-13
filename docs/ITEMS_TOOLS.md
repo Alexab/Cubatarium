@@ -8,21 +8,32 @@ Data-driven tools for player / bot / mobs (shared `UCreature` inventory + attrib
 - Catalog groups: `itemTypes` in [`content/types.json`](../content/types.json) (`mining`, `cutting`, `digging`, `combat`, `utility`, `armor`, `misc`)
 - Palette tab: **Tools** (5th tab). Key **B** opens **Blocks**, not Tools — use inventory key / last tab or switch to Tools manually.
 
-### How to equip (palette / hotbar)
+### Inventory, equipment and controls
 
-There is **no separate “equip to hand” action**. The **active hotbar slot** *is* the right hand (FP viewmodel / dig / place). Character sheet **Main** mirrors that slot.
+`E` opens the common player backpack, `C` equipment, `B` the creative catalog,
+`K` the station-aware recipe book. The player window also includes Status and
+Appearance. Inventory has 40 real slots in four rows; the number of visible
+HUD panels does not change capacity. The selected slot is the active hand.
+Four armor positions and the offhand own moved instances, not copies.
 
-The same palette is used in **Creative and Survival** (mode-agnostic UI). Drag/assign does not branch on game mode.
+Creative and Survival keep separate loadouts. Creative catalog creation uses
+an authorized operation; it does not create Survival property. Survival displays
+owned stacks and instances with their actual wear and contents.
 
-1. Open palette → **Blocks**, **Tools**, **Objects**, etc. Use the bottom **Hotbar** strip (`Hotbar (drop here)`).
-2. Pick a sub-tab when present (e.g. Mining / Utility / Armor).
-3. **Click** an entry to assign it to the **currently selected hotbar slot**, or **drag** onto the Hotbar strip (or HUD hotbar). Releasing over the catalog grid cancels the drag (does not assign).
-4. Hotbar keys `1–9` / `0` (or wheel in Perspective) select the active hand slot (block or tool).
-5. Successful palette assign grants `Storage[id]=1` if missing or zero; `-1` means unlimited and is left unchanged.
-6. **Armor**: open character sheet (**C**), drag armor from Tools → Armor onto paper-doll slots (Head/Chest/…).
-7. **Offhand**: on the character sheet, drag an Item or Block onto **Offhand** — left FP hand.
+- Left click: take/place/merge/swap. Right: half-stack/place one.
+- Shift-click: quick transfer/equip. Double click: collect matching stacks.
+- Ctrl-click: pin. Hover plus `1–0`: exchange with the active row.
+- Search highlights in place. Explicit Sort preserves pinned/equipped positions.
+- Cancel/close preserves the carried stack. Recovery allows withdrawal only.
+- Armor drag onto slots or the character is retained. Cosmetic outfit is independent.
 
-Or: `/give <item_id>` into the active hotbar slot.
+`V` grabs/places eligible physical cargo, hold/release `R` winds up/throws,
+Escape cancels windup. One unit is detached from a stack. Creature identity,
+health, effects and possessions survive carry/flight/save. Mass and dimensions
+limit one/two-handed carry and speed; an occupied shield does not block.
+These actions and the recipe book key are configurable.
+
+Full mechanics and acceptance: [completion report](research/items-completion-2026-11-13/README.md).
 
 ### Item JSON (summary)
 
@@ -37,10 +48,12 @@ Or: `/give <item_id>` into the active hotbar slot.
 | `tool.full_punch_interval` | Melee cooldown |
 | `tool.punch_attack_uses` | Wear denominator for melee hits |
 | `visual.*` | FP/TP wield scale, offset, euler, swing/use preset ids |
-| `ranged.*` | Hitscan bow: enabled, range, ammo_id |
+| `ranged.*` | Charged physical bow: enabled, ammo_id, damage profile |
+| `physical.*` | Conditional mass, collision dimensions, contact hardness |
+| `visual.presentations.*` | Independent icon/FP/TP/ground scale |
 | `block.*` | Shield: enabled, damage_mul, angle, passive mul |
 
-Hand is a built-in hidden def (`hand`) with weak `oddly_breakable_by_hand` / `crumbly` caps.
+Hand is a built-in hidden def (`hand`) with weak `oddly_breakable_by_hand` / `crumbly` / weak `choppy` caps for the wood bootstrap.
 
 ### Critical vs hideable
 
@@ -52,8 +65,8 @@ Hand is a built-in hidden def (`hand`) with weak `oddly_breakable_by_hand` / `cr
 - Armor (4 slots): `leather/copper/iron/gold_{head,chest,legs,feet}`
 - Food / thirst: `apple`, `bread`, `raw_meat`, `leather`, `waterskin`
 
-Duplicate pack roles (hammers, spears, daggers, `tool_*_upgraded`, utility filler,
-`arms`/`hands` armor) were removed in the tools_visual catalog collapse.
+Duplicate imported roles were removed in tools_visual. The original `wood_spear`,
+two shields and utilities remain; the catalog now has 70 physical item definitions.
 
 Audit: `python tools/audit_item_visuals.py` → `bin/iter_reports/item_visual_audit.json`.
 Validate: `python tools/validate_item_defs.py`.
@@ -100,8 +113,8 @@ Hardness gates unbreakable (`hardness <= 0` in Survival). On groupcap match, dur
 
 ## Shield / bow controls
 
-- **Bow** (`wood_bow`): Survival LMB hitscan up to `ranged.range` blocks; `require_los` blocks solid occluders; consumes `arrow` from storage/hotbar.
-- **Shield** (offhand): passive `armor.armor_groups` + `block.passive_damage_mul`; hold **RMB** to block (`block.damage_mul`, front arc); blocked hits wear offhand via `block.block_uses` (else `punch_attack_uses`). FP plays `raise_shield`.
+- **Bow** (`wood_bow`): hold RMB to draw, release to launch a physical arrow. Ammo and bow wear commit together; failed launch spends nothing. Swept collision stops arrows at walls/creatures.
+- **Shield** (offhand): passive `armor.armor_groups` + `block.passive_damage_mul`; hold **RMB** to block (`block.damage_mul`, front arc); blocked hits wear offhand via `block.block_uses` (else `punch_attack_uses`). FP plays `raise_shield`. Carrying cargo or drawing a bow suppresses shield use.
 
 ## Influence handshake
 

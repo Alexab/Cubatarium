@@ -1,0 +1,25 @@
+{
+  "id": "bread",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "grain",
+      "count": 3
+    },
+    {
+      "id": "fuel",
+      "count": 1,
+      "alternatives": [
+        "coal",
+        "charcoal"
+      ]
+    }
+  ],
+  "output": {
+    "id": "bread",
+    "count": 1
+  },
+  "station": "furnace",
+  "category": "Food",
+  "seconds": 3
+}

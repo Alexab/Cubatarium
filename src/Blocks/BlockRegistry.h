@@ -35,8 +35,8 @@ public:
   {
     return Definitions;
   }
-  std::shared_ptr<const BlockDefinitionCatalog> GetDefinitionsCatalogSnapshot()
-      const;
+  std::shared_ptr<const BlockDefinitionCatalog>
+  GetDefinitionsCatalogSnapshot() const;
 
   BlockId GetIdByTypeName(const std::string &Name) const;
   BlockId GetPackBlockIdByTypeName(const std::string &Name) const;
@@ -58,6 +58,7 @@ public:
   const BlockAnimationSpec &Animation(BlockId Id) const;
   int GetLightEmission(BlockId Id) const;
   size_t GetTextureId(BlockId Id) const;
+  uint32_t GetBlockAtlasTexture(BlockId Id) const;
   /// True when the block has a merged cube descriptor and loaded GPU texture.
   bool HasRenderableTexture(BlockId Id) const;
 

@@ -15,10 +15,7 @@ UGuiSlot::UGuiSlot(const GuiTheme *theme) : Theme(theme)
   Bounds.H = size;
 }
 
-int UGuiSlot::SlotSizePx() const
-{
-  return Theme ? Theme->HotbarSlotSize : 48;
-}
+int UGuiSlot::SlotSizePx() const { return Theme ? Theme->HotbarSlotSize : 48; }
 
 int UGuiSlot::DragThresholdPx() const
 {
@@ -135,9 +132,18 @@ bool UGuiSlot::OnMouseUp(const GuiMouseEvent &event)
   const int dx = event.X - PressX;
   const int dy = event.Y - PressY;
   const int threshold = DragThresholdPx();
-  const bool isClickGesture =
-      (dx * dx + dy * dy) <= (threshold * threshold);
-  if (isClickGesture && OnClick)
+  const bool isClickGesture = (dx * dx + dy * dy) <= (threshold * threshold);
+  if (isClickGesture && !DragStarted && Bounds.Contains(event.X, event.Y) &&
+      OnActivate)
+  {
+    auto click = event;
+    const auto now = std::chrono::steady_clock::now();
+    click.ClickCount = now - LastClick < std::chrono::milliseconds(300) ? 2 : 1;
+    LastClick = now;
+    OnActivate(click);
+  }
+  else if (isClickGesture && !DragStarted &&
+           event.Button == GuiMouseButton::Left && OnClick)
   {
     OnClick();
   }

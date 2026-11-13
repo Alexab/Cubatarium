@@ -2,6 +2,8 @@
 #include "Audio/AudioApi.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Items/ToolCapabilities.h"
+#include <atomic>
+#include <chrono>
 #include <climits>
 #include <cmath>
 #include <limits>
@@ -93,10 +95,21 @@ InventoryEntryRef UCreatureInventory::Prepare(InventoryEntryRef e)
   if (e.empty || e.Id.empty() || e.count == 0)
     return {};
   e.empty = false;
+  static std::atomic<uint64_t> serial{
+      uint64_t(std::chrono::duration_cast<std::chrono::milliseconds>(
+                   std::chrono::system_clock::now().time_since_epoch())
+                   .count())
+      << 16};
+  const uint64_t floor = std::max(
+      NextInstanceId, e.instanceId ? e.instanceId + 1 : NextInstanceId);
+  uint64_t seen = serial.load(std::memory_order_relaxed);
+  while (seen < floor &&
+         !serial.compare_exchange_weak(seen, floor, std::memory_order_relaxed))
+  {
+  }
   if (e.instanceId == 0)
-    e.instanceId = NextInstanceId++;
-  else
-    NextInstanceId = std::max(NextInstanceId, e.instanceId + 1);
+    e.instanceId = serial.fetch_add(1, std::memory_order_relaxed);
+  NextInstanceId = std::max(NextInstanceId, e.instanceId + 1);
   return e;
 }
 int UCreatureInventory::StackLimit(const InventoryEntryRef &e) const
@@ -532,7 +545,12 @@ void UCreatureInventory::RefreshEquipment(const UItemDefinitionStorage &items)
                         ArmorId(i)) == d->Armor.Slots.end())
       continue;
     for (const auto &p : d->Armor.ArmorGroups)
-      EquippedArmorGroups.Ratings[p.first] += p.second;
+    {
+      auto [rating, inserted] =
+          EquippedArmorGroups.Ratings.emplace(p.first, 100);
+      rating->second = static_cast<int>(
+          std::lround(rating->second * std::clamp(p.second, 0, 100) / 100.f));
+    }
   }
   const auto &off = Offhand();
   const auto *d = !off.empty && !off.broken ? items.Get(off.Id) : nullptr;
@@ -696,6 +714,40 @@ bool UCreatureInventory::RepairActive(const UItemDefinitionStorage &items,
   reason.clear();
   return true;
 }
+InventoryOperationResult UCreatureInventory::QuickMove(size_t slot)
+{
+  if (slot >= kSlotCount || GetSlot(slot).empty)
+    return {0, 0, "empty_slot"};
+  const auto original = GetSlot(slot);
+  const size_t activeRow = GetActiveBarIndex();
+  int moved = 0;
+  for (int pass = 0; pass < 2; ++pass)
+    for (size_t to = 0; to < kSlotCount; ++to)
+    {
+      if (GetSlot(slot).empty)
+        break;
+      if (slot / 10 == activeRow ? to / 10 == activeRow : to / 10 != activeRow)
+        continue;
+      if (pass == 0 &&
+          (GetSlot(to).empty || !CanMerge(GetSlot(slot), GetSlot(to))))
+        continue;
+      if (pass == 1 && !GetSlot(to).empty)
+        continue;
+      auto result = Move(slot, to);
+      moved += result.transferred;
+    }
+  return {moved, std::max(0, original.count - moved),
+          moved ? "" : "inventory_full"};
+}
+void UCreatureInventory::CollectMatching(size_t slot)
+{
+  if (slot >= kSlotCount || GetSlot(slot).empty ||
+      StackLimit(GetSlot(slot)) <= 1)
+    return;
+  for (size_t from = 0; from < kSlotCount; ++from)
+    if (from != slot && CanMerge(GetSlot(from), GetSlot(slot)))
+      Move(from, slot);
+}
 void UCreatureInventory::Sort()
 {
   std::vector<InventoryEntryRef> movable;
@@ -727,7 +779,8 @@ InventoryOperationResult UCreatureInventory::Recover(size_t index)
   if (r.remainder)
   {
     Recovery[index].count = r.remainder;
-    if (r.transferred > 0) Recovery[index].instanceId = NextInstanceId++;
+    if (r.transferred > 0)
+      Recovery[index].instanceId = NextInstanceId++;
   }
   else
     Recovery.erase(Recovery.begin() + index);

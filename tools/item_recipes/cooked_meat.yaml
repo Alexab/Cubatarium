@@ -1,0 +1,25 @@
+id: cooked_meat
+family: material
+material: wood
+palette: cooked_meat
+recipe_version: 2
+parts:
+- role: head
+  offset:
+  - 0
+  - 0
+  - 0
+  size:
+  - 0.26
+  - 0.12
+  - 0.18
+- role: accent
+  offset:
+  - 0
+  - 0.065
+  - 0
+  size:
+  - 0.12
+  - 0.025
+  - 0.12
+provenance: Original Cubatarium recipe geometry and procedural texture

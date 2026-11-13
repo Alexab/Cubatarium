@@ -1,4 +1,6 @@
 #include "Render/Engine/CreatureDrawPass.h"
+#include "Blocks/BlockRegistry.h"
+#include "Core/StallTimer.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
@@ -7,28 +9,26 @@
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Creatures/Stats/CreatureVitals.h"
 #include "Creatures/Visual/CreatureBonePaletteGpu.h"
+#include "Creatures/Visual/CreatureDrawContext.h"
 #include "Creatures/Visual/CreatureMeshGpuCache.h"
 #include "Creatures/Visual/CreatureVisibility.h"
-#include "Creatures/Visual/CreatureDrawContext.h"
 #include "Creatures/Visual/CreatureVisual.h"
 #include "Pose/CreaturePoseParams.h"
 #include "Pose/IUCreaturePosePresenter.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Camera/CameraPerspective.h"
 #include "Render/Camera/Frustum.h"
-#include "Core/StallTimer.h"
 #include "Render/Engine/DistanceFog.h"
 #include "Render/Engine/EnvironmentLight.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/TextRenderer.h"
-#include "World/Chunks/ChunkManager.h"
-#include "World/Items/WorldItemSystem.h"
-#include "World/Lighting/LightUtil.h"
 #include "Render/GlIncludes.h"
 #include "World/Chunks/Chunk.h"
-#include "Blocks/BlockRegistry.h"
+#include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/World.h"
+#include "World/Items/WorldItemSystem.h"
+#include "World/Lighting/LightUtil.h"
 #include "World/Raycast/BlockRaycast.h"
 #include <algorithm>
 #include <chrono>
@@ -241,8 +241,8 @@ bool UCreatureDrawPass::InitBillboardBuffers()
     return true;
   }
   const float vertices[] = {
-      -0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.5f, -0.5f, 0.0f, 1.0f, 1.0f,
-      0.5f, 0.5f, 0.0f, 1.0f, 0.0f, -0.5f, 0.5f, 0.0f, 0.0f, 0.0f,
+      -0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.5f,  -0.5f, 0.0f, 1.0f, 1.0f,
+      0.5f,  0.5f,  0.0f, 1.0f, 0.0f, -0.5f, 0.5f,  0.0f, 0.0f, 0.0f,
   };
   const unsigned int indices[] = {0, 1, 2, 0, 2, 3};
   glGenVertexArrays(1, &creatureBillboardVAO);
@@ -310,9 +310,9 @@ void UCreatureDrawPass::DrawTexturedPart(const glm::mat4 &mvp, GLuint texture,
   glBindTexture(GL_TEXTURE_2D, texture);
   creatureShader->Use();
   creatureShader->SetInt("texture0", 0);
-  creatureShader->SetVec4(
-      "uTint", glm::vec4(1.0f + ActiveHitFlash01, 1.0f + ActiveHitFlash01,
-                         1.0f + ActiveHitFlash01, 1.0f));
+  creatureShader->SetVec4("uTint", glm::vec4(1.0f + ActiveHitFlash01,
+                                             1.0f + ActiveHitFlash01,
+                                             1.0f + ActiveHitFlash01, 1.0f));
   creatureShader->SetMat4("mvp_matrix", mvp);
   creatureShader->SetVec2("uCreatureLight", ActiveLight);
   creatureShader->SetFloat("uCreatureFogFactor", ActiveFog);
@@ -396,9 +396,9 @@ void UCreatureDrawPass::DrawBoneSkeletonMesh(
   glBindTexture(GL_TEXTURE_2D, texture);
   creatureShader->Use();
   creatureShader->SetInt("texture0", 0);
-  creatureShader->SetVec4(
-      "uTint", glm::vec4(1.0f + ActiveHitFlash01, 1.0f + ActiveHitFlash01,
-                         1.0f + ActiveHitFlash01, 1.0f));
+  creatureShader->SetVec4("uTint", glm::vec4(1.0f + ActiveHitFlash01,
+                                             1.0f + ActiveHitFlash01,
+                                             1.0f + ActiveHitFlash01, 1.0f));
   creatureShader->SetMat4("mvp_matrix", mvp);
   creatureShader->SetVec2("uCreatureLight", ActiveLight);
   creatureShader->SetFloat("uCreatureFogFactor", ActiveFog);
@@ -503,9 +503,8 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
   // visual render distance (near water, streaming holes). Cull creatures at
   // that same horizon and fade them with the same fog — they used to draw
   // crisp beyond the fog wall (user report).
-  float maxDistBlocks =
-      static_cast<float>(world.GetEffectiveRenderDistance()) *
-      static_cast<float>(CHUNK_SIZE);
+  float maxDistBlocks = static_cast<float>(world.GetEffectiveRenderDistance()) *
+                        static_cast<float>(CHUNK_SIZE);
   DistanceFogParams creatureFog;
   bool creatureFogEnabled = false;
   if (render.DistanceFog)
@@ -527,7 +526,8 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
   ++FrameCounter;
   LightingActive = true;
   ApplyCreatureLightUniforms(world, LightingActive);
-  // Env overrides for QA runs (CUBA_CREATURE_LABELS=1, CUBA_CREATURE_LOCAL_LIGHT=0).
+  // Env overrides for QA runs (CUBA_CREATURE_LABELS=1,
+  // CUBA_CREATURE_LOCAL_LIGHT=0).
   static const bool envLabels = std::getenv("CUBA_CREATURE_LABELS") != nullptr;
   static const char *envLocal = std::getenv("CUBA_CREATURE_LOCAL_LIGHT");
   const bool localLight =
@@ -549,7 +549,8 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
         ++Stats.CreaturesConsidered;
         const bool controlled_first_person =
             creature.GetId() == controlledId &&
-            (camera->GetPerspective() == CameraPerspective::FirstPerson || camera->ShouldHideLocalBody()) &&
+            (camera->GetPerspective() == CameraPerspective::FirstPerson ||
+             camera->ShouldHideLocalBody()) &&
             !camera->IsIsometricProjection();
 
         auto draw_debug_bounds = [&]()
@@ -566,9 +567,9 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
         }
 
         const glm::vec3 sizeBlocks = creature.GetBounds().profile.maxSizeBlocks;
-        if (!CreatureBoundsIntersectsFrustum(
-                frustum, creature.GetBodyOrigin(), sizeBlocks, cameraPos,
-                maxDistBlocks, false))
+        if (!CreatureBoundsIntersectsFrustum(frustum, creature.GetBodyOrigin(),
+                                             sizeBlocks, cameraPos,
+                                             maxDistBlocks, false))
         {
           ++Stats.CreaturesCulled;
           return;
@@ -581,29 +582,34 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
           fallback.Id = animType;
           def = &fallback;
         }
-        const glm::vec3 collisionCenter=BoundsCollisionCenter(creature.GetBodyOrigin(),sizeBlocks);
-        glm::vec3 visualLow=collisionCenter-BoundsHalfExtents(sizeBlocks);
-        glm::vec3 visualHigh=collisionCenter+BoundsHalfExtents(sizeBlocks);
-        bool hasConservativeEnvelope=false;
-        const size_t firstRequest=Queue.Size();
-        bool alreadySubmitted=false;
-        if(auto *visual=creature.GetVisual())
+        const glm::vec3 collisionCenter =
+            BoundsCollisionCenter(creature.GetBodyOrigin(), sizeBlocks);
+        glm::vec3 visualLow = collisionCenter - BoundsHalfExtents(sizeBlocks);
+        glm::vec3 visualHigh = collisionCenter + BoundsHalfExtents(sizeBlocks);
+        bool hasConservativeEnvelope = false;
+        const size_t firstRequest = Queue.Size();
+        bool alreadySubmitted = false;
+        if (auto *visual = creature.GetVisual())
         {
-          visual->SetAppearanceShared(world.GetResolvedAppearanceShared(creature));
-          hasConservativeEnvelope=visual->GetConservativeWorldBounds(creature,*def,visualLow,visualHigh);
+          visual->SetAppearanceShared(
+              world.GetResolvedAppearanceShared(creature));
+          hasConservativeEnvelope = visual->GetConservativeWorldBounds(
+              creature, *def, visualLow, visualHigh);
         }
-        if(render.FrustumCulling && hasConservativeEnvelope && !CreatureAabbIntersectsFrustum(frustum,visualLow,visualHigh))
+        if (render.FrustumCulling && hasConservativeEnvelope &&
+            !CreatureAabbIntersectsFrustum(frustum, visualLow, visualHigh))
         {
           ++Stats.CreaturesCulled;
           return;
         }
-        if(render.FrustumCulling && !hasConservativeEnvelope)
+        if (render.FrustumCulling && !hasConservativeEnvelope)
         {
           // B/R/sprite: test actual posed body + equipment requests, never a
           // collision proxy or last frame's palette. Pose is advanced once.
-          SubmitCreatureVisual(world,creature,*def,dt,drawContext,viewProj);
-          alreadySubmitted=true;
-          if(!Queue.RangeIntersectsClip(firstRequest))
+          SubmitCreatureVisual(world, creature, *def, dt, drawContext,
+                               viewProj);
+          alreadySubmitted = true;
+          if (!Queue.RangeIntersectsClip(firstRequest))
           {
             Queue.DiscardSince(firstRequest);
             ++Stats.CreaturesCulled;
@@ -613,9 +619,9 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
         ++Stats.CreaturesDrawn;
         glm::vec2 light(1.0f, 0.0f);
         {
-          const auto lightBegin =
-              lightBench ? std::chrono::steady_clock::now()
-                         : std::chrono::steady_clock::time_point{};
+          const auto lightBegin = lightBench
+                                      ? std::chrono::steady_clock::now()
+                                      : std::chrono::steady_clock::time_point{};
           light = SampleCreatureLight(world, creature, dt, localLight);
           if (lightBench)
           {
@@ -625,15 +631,18 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
             ++lightSamples;
           }
         }
-        if(!alreadySubmitted)SubmitCreatureVisual(world, creature, *def, dt, drawContext, viewProj);
+        if (!alreadySubmitted)
+          SubmitCreatureVisual(world, creature, *def, dt, drawContext,
+                               viewProj);
         Queue.StampLight(firstRequest, light);
         if (creatureFogEnabled)
         {
           // Same distance metric and curve as the terrain fog fragment
           // shader: horizontal distance when the settings request it, then
           // the weather-scaled density exponent.
-          const glm::vec3 fogCenter = BoundsCollisionCenter(
-              creature.GetBodyOrigin(), creature.GetBounds().profile.maxSizeBlocks);
+          const glm::vec3 fogCenter =
+              BoundsCollisionCenter(creature.GetBodyOrigin(),
+                                    creature.GetBounds().profile.maxSizeBlocks);
           const glm::vec3 toCam = fogCenter - cameraPos;
           const float fogDist = render.DistanceFogHorizontal
                                     ? glm::length(glm::vec2(toCam.x, toCam.z))
@@ -642,24 +651,22 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
               std::max(creatureFog.End - creatureFog.Start, 0.001f);
           float fogFactor =
               std::clamp((fogDist - creatureFog.Start) / fogRange, 0.0f, 1.0f);
-          const float envMul =
-              world.GetEnvironmentState().WeatherFogMultiplier;
-          fogFactor = std::pow(fogFactor, std::max(creatureFog.Density *
-                                                       std::max(envMul, 0.05f),
-                                                   0.1f));
+          const float envMul = world.GetEnvironmentState().WeatherFogMultiplier;
+          fogFactor = std::pow(
+              fogFactor,
+              std::max(creatureFog.Density * std::max(envMul, 0.05f), 0.1f));
           Queue.StampFog(firstRequest, fogFactor);
         }
 
         if (labels && !creature.IsPlayerCharacter() &&
-            (debugLabels ||
-             glm::distance(creature.GetBodyOrigin(), cameraPos) <=
-                 kNameLabelMaxDistance))
+            (debugLabels || glm::distance(creature.GetBodyOrigin(),
+                                          cameraPos) <= kNameLabelMaxDistance))
         {
           // The debug label reports the collision box.
           const glm::vec3 size = creature.GetCollisionSize();
           PendingLabel label;
-          label.World = creature.GetBodyOrigin() +
-                        glm::vec3(0.0f, size.y + 0.6f, 0.0f);
+          label.World =
+              creature.GetBodyOrigin() + glm::vec3(0.0f, size.y + 0.6f, 0.0f);
           bool labelVisible = true;
           if (debugLabels)
           {
@@ -686,8 +693,7 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
                 labelDist > 0.01f &&
                 RaycastSolidBlocks(world.GetBlockWorld(),
                                    world.GetBlockRegistry(), cameraPos,
-                                   toLabel / labelDist,
-                                   labelDist)
+                                   toLabel / labelDist, labelDist)
                     .has_value();
             if (occluded)
             {
@@ -696,10 +702,9 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
             else
             {
               const CreatureDefinition *labelDef = def;
-              label.Text =
-                  (labelDef && !labelDef->displayName.empty())
-                      ? labelDef->displayName
-                      : creature.GetTypeId();
+              label.Text = (labelDef && !labelDef->displayName.empty())
+                               ? labelDef->displayName
+                               : creature.GetTypeId();
             }
           }
           if (labelVisible)
@@ -735,8 +740,7 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
     {
       Pass.DrawSkinnedMesh(mvp, texture, mesh, boneMatrices);
     }
-    void DrawBoxWireframe(const glm::mat4 &mvp,
-                          const glm::vec4 &color) override
+    void DrawBoxWireframe(const glm::mat4 &mvp, const glm::vec4 &color) override
     {
       Engine.DrawBoxWireframe(mvp, color);
     }
@@ -757,6 +761,8 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
     UGeometryEngine &Engine;
   } sink(*this, engine);
   TimingProbe.BeginGpuDraw();
+  WorldItemSystem::Instance().Draw(world, engine.GetCreatureDrawQueue(),
+                                   viewProj);
   Queue.Flush(sink);
   TimingProbe.EndGpuDraw();
 
@@ -792,7 +798,6 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
   {
     DrawCreatureLabels(world, viewProj, engine);
   }
-  WorldItemSystem::Instance().Draw(world, engine, viewProj);
   TimingProbe.EndFrame(Stats);
 }
 
@@ -868,9 +873,9 @@ glm::vec2 UCreatureDrawPass::SampleCreatureLight(UWorld &world,
       const glm::ivec3 local = cell - chunkCoord * CHUNK_SIZE;
       const uint8_t packed = chunk->GetLightPackedLocal(local);
       UCreatureLightCache::SetTarget(
-          state, glm::vec2(static_cast<float>(UnpackSky(packed)) / kMaxLightLevel,
-                           static_cast<float>(UnpackBlock(packed)) /
-                               kMaxLightLevel));
+          state,
+          glm::vec2(static_cast<float>(UnpackSky(packed)) / kMaxLightLevel,
+                    static_cast<float>(UnpackBlock(packed)) / kMaxLightLevel));
     }
     // Not loaded or not lit yet: keep the previous target.
   }
@@ -923,9 +928,11 @@ void UCreatureDrawPass::DrawCreatureLabels(UWorld &world,
   }
 }
 
-void UCreatureDrawPass::SubmitCreatureVisual(
-    UWorld &world, UCreature &creature, const CreatureDefinition &def,
-    float dt, const CreatureDrawContext &ctx, const glm::mat4 &viewProj)
+void UCreatureDrawPass::SubmitCreatureVisual(UWorld &world, UCreature &creature,
+                                             const CreatureDefinition &def,
+                                             float dt,
+                                             const CreatureDrawContext &ctx,
+                                             const glm::mat4 &viewProj)
 {
   IUCreatureVisual *visual = creature.GetVisual();
   if (!visual)
@@ -938,8 +945,7 @@ void UCreatureDrawPass::SubmitCreatureVisual(
   // Procedural pose parameters are only consumed by the rigid backend;
   // skeleton/gltf backends derive pose from locomotion facts themselves.
   const LocomotionArchetype poseArchetype =
-      ResolveCreaturePoseArchetype(def.visual.rig.templateId,
-                                   facts.archetype);
+      ResolveCreaturePoseArchetype(def.visual.rig.templateId, facts.archetype);
   if (ParseCreatureVisualBackend(def.visual.backend) ==
       CreatureVisualBackend::RigidVoxels)
   {
@@ -950,10 +956,14 @@ void UCreatureDrawPass::SubmitCreatureVisual(
     }
   }
   const bool timePose = TimingProbe.Enabled();
-  const auto poseBegin = timePose ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
+  const auto poseBegin = timePose ? std::chrono::steady_clock::now()
+                                  : std::chrono::steady_clock::time_point{};
   visual->UpdatePose(creature, facts, pose, def, dt);
-  if (timePose) TimingProbe.RecordPose(facts.state,
-    std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-poseBegin).count());
+  if (timePose)
+    TimingProbe.RecordPose(facts.state,
+                           std::chrono::duration<double, std::milli>(
+                               std::chrono::steady_clock::now() - poseBegin)
+                               .count());
   ActiveHitFlash01 = creature.GetHitFlash01();
   visual->SubmitDraw(ctx, viewProj);
   ActiveHitFlash01 = 0.f;
@@ -969,9 +979,10 @@ void UCreatureDrawPass::DrawCreatureHealthBar(const UCreature &creature,
     return;
   }
   const CreatureVitals &vitals = creature.GetVitals();
-  const float ratio = vitals.maxHealth > 0.f
-                          ? std::clamp(vitals.health / vitals.maxHealth, 0.f, 1.f)
-                          : 0.f;
+  const float ratio =
+      vitals.maxHealth > 0.f
+          ? std::clamp(vitals.health / vitals.maxHealth, 0.f, 1.f)
+          : 0.f;
   const glm::vec3 bodyOrigin = creature.GetBodyOrigin();
   const glm::vec3 sizeBlocks = creature.GetBounds().currentSizeBlocks;
   const float topY =
@@ -1018,8 +1029,7 @@ void UCreatureDrawPass::DrawCreatureDebugBounds(const UCreature &creature,
   const glm::vec3 center = BoundsCollisionCenter(bodyOrigin, sizeBlocks);
   glm::mat4 model = glm::translate(glm::mat4(1.0f), center);
   model = glm::scale(model, sizeBlocks);
-  engine.DrawBoxWireframe(viewProj * model,
-                          glm::vec4(0.2f, 0.85f, 1.0f, 1.0f));
+  engine.DrawBoxWireframe(viewProj * model, glm::vec4(0.2f, 0.85f, 1.0f, 1.0f));
 
   // Ground-contact marker under the feet (green when grounded).
   const int gx = static_cast<int>(std::floor(bodyOrigin.x));

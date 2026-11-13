@@ -1,9 +1,10 @@
 #include "World/Persistence/WorldPersistence.h"
-#include "Game/WorldMetadataJson.h"
-#include "Core/Environment.h"
+#include "App/Platform/Log.h"
 #include "Blocks/BlockRegistry.h"
+#include "Core/Environment.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
+#include "Creatures/Core/CreaturePersistenceJson.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Player/Player.h"
 #include "Creatures/Player/PlayerCapsule.h"
@@ -11,34 +12,33 @@
 #include "Creatures/Stats/CreatureStatsJson.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureVisualFactory.h"
-#include "Game/WorldDifficulty.h"
 #include "Game/ModePolicy.h"
+#include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
+#include "Game/WorldMetadataJson.h"
 #include "Render/Camera/Camera.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/ChunkStreamer.h"
+#include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Core/RuntimeTuning.h"
+#include "World/Core/World.h"
+#include "World/Diagnostics/JobStageTrace.h"
+#include "World/Lighting/ChunkLighting.h"
+#include "World/Math/BlockTypes.h"
+#include "World/Math/GridMath.h"
+#include "World/Mesh/WorldMeshService.h"
+#include "World/Streaming/ChunkRenderDemand.h"
+#include "World/Streaming/ColumnEmergeState.h"
+#include "World/Streaming/ColumnFlowExecutor.h"
+#include "World/Streaming/ColumnFlowScheduler.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/NearFovWorkPriority.h"
 #include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
-#include "World/Core/RuntimeTuning.h"
-#include "World/Core/World.h"
-#include "World/Diagnostics/JobStageTrace.h"
-#include "World/Mesh/WorldMeshService.h"
-#include "World/Streaming/ChunkRenderDemand.h"
-#include "World/Chunks/Chunk.h"
-#include "World/Chunks/TerrainColumnUtil.h"
-#include "World/Lighting/ChunkLighting.h"
-#include "App/Platform/Log.h"
-#include "World/Streaming/ColumnEmergeState.h"
-#include "World/Streaming/ColumnFlowExecutor.h"
-#include "World/Streaming/ColumnFlowScheduler.h"
 #include "World/Streaming/WorldColumnRequestId.h"
-#include "World/Math/GridMath.h"
-#include "World/Math/BlockTypes.h"
 #include <algorithm>
 #include <cstdlib>
 #include <queue>
@@ -48,8 +48,8 @@
 
 #include "World/Environment/EnvironmentConfig.h"
 #include "World/Math/GridMath.h"
-#include "World/View/WorldViewSettings.h"
 #include "World/Streaming/WorldStreaming.h"
+#include "World/View/WorldViewSettings.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenSets.h"
@@ -133,8 +133,7 @@ bool ColumnSurfaceBandHasUnsettledOrStaleDarkFace(const UWorld &world,
       continue;
     }
     if (!world.HasCurrentChunkSliceLightSettlement(coord) ||
-        mesh.GetCache().ChunkHasStaleDarkFaces(
-            coord, world.GetBlockWorld()))
+        mesh.GetCache().ChunkHasStaleDarkFaces(coord, world.GetBlockWorld()))
     {
       return true;
     }
@@ -173,10 +172,10 @@ void LogWorldColumnSource(const char *source, const char *outcome,
   {
     return;
   }
-  const std::string message =
-      std::string("source=") + source + " outcome=" + outcome + " coord=(" +
-      std::to_string(ground.x) + ",0," + std::to_string(ground.z) + ") " +
-      details;
+  const std::string message = std::string("source=") + source +
+                              " outcome=" + outcome + " coord=(" +
+                              std::to_string(ground.x) + ",0," +
+                              std::to_string(ground.z) + ") " + details;
   CubatariumLogInfo("WorldColumnSource", message);
 }
 
@@ -187,10 +186,10 @@ void LogWorldColumnSave(const char *outcome, glm::ivec3 coord,
   {
     return;
   }
-  const std::string message =
-      std::string("outcome=") + outcome + " coord=(" +
-      std::to_string(coord.x) + "," + std::to_string(coord.y) + "," +
-      std::to_string(coord.z) + ") " + details;
+  const std::string message = std::string("outcome=") + outcome + " coord=(" +
+                              std::to_string(coord.x) + "," +
+                              std::to_string(coord.y) + "," +
+                              std::to_string(coord.z) + ") " + details;
   if (always)
   {
     CubatariumLogError("WorldColumnSave", message);
@@ -336,10 +335,9 @@ void UWorldPersistence::SetColumnLightComplete(glm::ivec2 ground_xz,
       {
         CubatariumLogInfo(
             "RelightAudit",
-            "light_flags event=set column=(" +
-                std::to_string(ground_xz.x) + "," +
-                std::to_string(ground_xz.y) + ") reason=" +
-                std::string(reason ? reason : "unspecified") +
+            "light_flags event=set column=(" + std::to_string(ground_xz.x) +
+                "," + std::to_string(ground_xz.y) +
+                ") reason=" + std::string(reason ? reason : "unspecified") +
                 " revision=" + std::to_string(LightCompleteRevision));
       }
     }
@@ -361,10 +359,9 @@ void UWorldPersistence::ClearColumnLightComplete(glm::ivec2 ground_xz,
     {
       CubatariumLogInfo(
           "RelightAudit",
-          "light_flags event=clear column=(" +
-              std::to_string(ground_xz.x) + "," +
-              std::to_string(ground_xz.y) + ") reason=" +
-              std::string(reason ? reason : "unspecified") +
+          "light_flags event=clear column=(" + std::to_string(ground_xz.x) +
+              "," + std::to_string(ground_xz.y) +
+              ") reason=" + std::string(reason ? reason : "unspecified") +
               " revision=" + std::to_string(LightCompleteRevision));
     }
   }
@@ -383,8 +380,8 @@ void UWorldPersistence::LoadColumnLightFlags()
       CubatariumLogInfo(
           "RelightAudit",
           "light_flags event=load outcome=" + std::string(outcome) +
-              " world=" + WorldFolderPath + " complete_n=" +
-              std::to_string(LightCompleteColumns.size()));
+              " world=" + WorldFolderPath +
+              " complete_n=" + std::to_string(LightCompleteColumns.size()));
     }
   };
   if (WorldFolderPath.empty())
@@ -429,8 +426,8 @@ void UWorldPersistence::LoadColumnLightFlags()
 }
 
 void UWorldPersistence::SaveColumnLightFlagsIfDirty(
-    double *snapshot_ms, double *enqueue_ms,
-    std::size_t *complete_columns_n, uint64_t *saved_revision)
+    double *snapshot_ms, double *enqueue_ms, std::size_t *complete_columns_n,
+    uint64_t *saved_revision)
 {
   if (!LightCompleteDirty || WorldFolderPath.empty() ||
       LightCompleteSaveInFlight ||
@@ -474,14 +471,13 @@ void UWorldPersistence::SaveColumnLightFlagsIfDirty(
   {
     CubatariumLogInfo(
         "RelightAudit",
-        "light_flags event=save_queued world=" +
-            LightCompleteSaveWorldFolder + " revision=" +
-            std::to_string(LightCompleteSaveRevision) + " complete_n=" +
-            std::to_string(complete_columns.size()));
+        "light_flags event=save_queued world=" + LightCompleteSaveWorldFolder +
+            " revision=" + std::to_string(LightCompleteSaveRevision) +
+            " complete_n=" + std::to_string(complete_columns.size()));
   }
-  AsyncChunkIo->RequestSaveColumnLightFlags(
-      LightCompleteSaveWorldFolder, LightCompleteSaveRevision,
-      std::move(complete_columns));
+  AsyncChunkIo->RequestSaveColumnLightFlags(LightCompleteSaveWorldFolder,
+                                            LightCompleteSaveRevision,
+                                            std::move(complete_columns));
   if (enqueue_ms)
   {
     *enqueue_ms = std::chrono::duration<double, std::milli>(
@@ -525,10 +521,10 @@ void UWorldPersistence::ProcessColumnLightFlagSaveResults(
           "RelightAudit",
           "light_flags event=save_result outcome=" +
               std::string(result.success ? "success" : "failure") +
-              " world=" + result.worldFolder + " revision=" +
-              std::to_string(result.revision) + " current_revision=" +
-              std::to_string(LightCompleteRevision) + " queue_wait_ms=" +
-              std::to_string(result.worker_queue_wait_ms) +
+              " world=" + result.worldFolder +
+              " revision=" + std::to_string(result.revision) +
+              " current_revision=" + std::to_string(LightCompleteRevision) +
+              " queue_wait_ms=" + std::to_string(result.worker_queue_wait_ms) +
               " worker_ms=" + std::to_string(result.worker_service_ms) +
               (result.error.empty() ? "" : " error=" + result.error));
     }
@@ -564,8 +560,7 @@ void UWorldPersistence::ProcessColumnLightFlagSaveResults(
           std::min<unsigned int>(LightCompleteSaveFailures - 1, 6);
       const auto retry_delay = std::chrono::milliseconds(
           std::min<int>(30000, 250 * (1 << exponent)));
-      LightCompleteSaveRetryAt =
-          std::chrono::steady_clock::now() + retry_delay;
+      LightCompleteSaveRetryAt = std::chrono::steady_clock::now() + retry_delay;
     }
   }
 }
@@ -596,17 +591,18 @@ bool UWorldPersistence::FlushColumnLightFlagsForWorldSwitch()
     const auto now = std::chrono::steady_clock::now();
     if (LightCompleteSaveInFlight)
     {
-      const auto remaining = std::chrono::duration_cast<
-          std::chrono::milliseconds>(deadline - now);
+      const auto remaining =
+          std::chrono::duration_cast<std::chrono::milliseconds>(deadline - now);
       (void)AsyncChunkIo->WaitForColumnLightFlagsSaveIdleFor(
           std::min(remaining, std::chrono::milliseconds(100)));
     }
     else if (LightCompleteSaveRetryAt > now)
     {
-      const auto remaining = std::chrono::duration_cast<
-          std::chrono::milliseconds>(deadline - now);
-      const auto retry_wait = std::chrono::duration_cast<
-          std::chrono::milliseconds>(LightCompleteSaveRetryAt - now);
+      const auto remaining =
+          std::chrono::duration_cast<std::chrono::milliseconds>(deadline - now);
+      const auto retry_wait =
+          std::chrono::duration_cast<std::chrono::milliseconds>(
+              LightCompleteSaveRetryAt - now);
       std::this_thread::sleep_for(std::min(
           remaining, std::min(retry_wait, std::chrono::milliseconds(100))));
     }
@@ -626,8 +622,10 @@ void UWorldPersistence::EnqueueTerrainColumnRelight(int world_x, int world_z,
                                   world_context);
 }
 
-void UWorldPersistence::EnqueueBoundaryDependencyRelight(
-    UWorld &world, int world_x, int world_z, int min_y, int max_y)
+void UWorldPersistence::EnqueueBoundaryDependencyRelight(UWorld &world,
+                                                         int world_x,
+                                                         int world_z, int min_y,
+                                                         int max_y)
 {
   const glm::ivec2 ground_xz(FloorDiv(world_x, CHUNK_SIZE),
                              FloorDiv(world_z, CHUNK_SIZE));
@@ -637,9 +635,8 @@ void UWorldPersistence::EnqueueBoundaryDependencyRelight(
 
   const glm::ivec3 focus =
       UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
-  const int distance =
-      std::max(std::abs(ground_xz.x - focus.x),
-               std::abs(ground_xz.y - focus.z));
+  const int distance = std::max(std::abs(ground_xz.x - focus.x),
+                                std::abs(ground_xz.y - focus.z));
   // Direct neighbors near the active view need prompt repair. Far work still
   // uses the normal bounded FIFO/deferred path.
   const bool priority = distance <= 1;
@@ -650,8 +647,7 @@ void UWorldPersistence::EnqueueBoundaryDependencyRelight(
 
 void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
     int world_x, int world_z, const bool priority, int min_y, int max_y,
-    const bool visible_admission, const char *producer,
-    UWorld *world_context)
+    const bool visible_admission, const char *producer, UWorld *world_context)
 {
   const glm::ivec2 key(world_x, world_z);
   // Block-space key → column xz for light_complete invalidation.
@@ -689,11 +685,9 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
         break;
       }
     }
-    const char *queue = priority_index >= 0
-                            ? "priority"
-                            : (fifo_index >= 0 ? "fifo" : "none");
-    const int queue_index =
-        priority_index >= 0 ? priority_index : fifo_index;
+    const char *queue =
+        priority_index >= 0 ? "priority" : (fifo_index >= 0 ? "fifo" : "none");
+    const int queue_index = priority_index >= 0 ? priority_index : fifo_index;
     const auto queued_band = PendingTerrainColumnRelightYBands.find(key);
     const bool has_queued_band =
         queued_band != PendingTerrainColumnRelightYBands.end();
@@ -705,27 +699,26 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
     CubatariumLogInfo(
         "RelightAudit",
         "relight_admission event=queue_request outcome=" +
-            std::string(outcome ? outcome : "unspecified") + " source=" +
-            std::string(producer ? producer : "unspecified") + " column=(" +
-            std::to_string(ground_xz.x) + "," +
+            std::string(outcome ? outcome : "unspecified") +
+            " source=" + std::string(producer ? producer : "unspecified") +
+            " column=(" + std::to_string(ground_xz.x) + "," +
             std::to_string(ground_xz.y) + ") block_key=(" +
             std::to_string(key.x) + "," + std::to_string(key.y) +
             ") requested_band=" + std::to_string(min_y) + ":" +
             std::to_string(max_y) + " queued_band=" +
-            (has_queued_band
-                 ? std::to_string(queued_band->second.x) + ":" +
-                       std::to_string(queued_band->second.y)
-                 : std::string("none")) +
-            " priority=" + std::to_string(priority) + " visible=" +
-            std::to_string(visible_admission) + " fifo_n=" +
-            std::to_string(GetPendingTerrainColumnRelightCount()) +
+            (has_queued_band ? std::to_string(queued_band->second.x) + ":" +
+                                   std::to_string(queued_band->second.y)
+                             : std::string("none")) +
+            " priority=" + std::to_string(priority) +
+            " visible=" + std::to_string(visible_admission) +
+            " fifo_n=" + std::to_string(GetPendingTerrainColumnRelightCount()) +
             " horiz=" + std::to_string(horiz) + " keyed=" +
             std::to_string(PendingTerrainColumnRelightKeys.count(key)) +
-            " queue=" + queue + " queue_index=" +
-            std::to_string(queue_index) + " deferred_far=" +
+            " queue=" + queue + " queue_index=" + std::to_string(queue_index) +
+            " deferred_far=" +
             std::to_string(DeferredFarRelightColumns.count(ground_xz)) +
-            " pending=" + std::to_string(pending_light) + " lit_ready=" +
-            std::to_string(lit_ready));
+            " pending=" + std::to_string(pending_light) +
+            " lit_ready=" + std::to_string(lit_ready));
   };
   // Apply the settled/no-op guard before FIFO admission, not only when the
   // queue is full. Otherwise normal-capacity producers can repeatedly capture
@@ -737,20 +730,17 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
     const int world_min_y = world_context->ProceduralTemplate.MinHeight;
     const int world_max_y = world_context->ProceduralTemplate.MaxHeight;
     int no_op_min_y = std::clamp(min_y, world_min_y, world_max_y);
-    const int requested_max_y =
-        max_y >= no_op_min_y ? max_y : world_max_y;
-    int no_op_max_y =
-        std::clamp(requested_max_y, no_op_min_y, world_max_y);
+    const int requested_max_y = max_y >= no_op_min_y ? max_y : world_max_y;
+    int no_op_max_y = std::clamp(requested_max_y, no_op_min_y, world_max_y);
     const auto deferred = DeferredFarRelightColumns.find(ground_xz);
     if (deferred != DeferredFarRelightColumns.end())
     {
       const int deferred_min_y =
           std::clamp(deferred->second.y_band.x, world_min_y, world_max_y);
-      const int deferred_max_y =
-          deferred->second.y_band.y >= deferred_min_y
-              ? std::clamp(deferred->second.y_band.y, deferred_min_y,
-                           world_max_y)
-              : world_max_y;
+      const int deferred_max_y = deferred->second.y_band.y >= deferred_min_y
+                                     ? std::clamp(deferred->second.y_band.y,
+                                                  deferred_min_y, world_max_y)
+                                     : world_max_y;
       no_op_min_y = std::min(no_op_min_y, deferred_min_y);
       no_op_max_y = std::max(no_op_max_y, deferred_max_y);
     }
@@ -761,14 +751,13 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
         glm::ivec3(ground_xz.x, 0, ground_xz.y));
     const bool band_needs_relight =
         !pending_light && column_lit_ready &&
-        ColumnSurfaceBandHasUnsettledOrStaleDarkFace(
-            *world_context, ground_xz, no_op_min_y, no_op_max_y);
-    if (ShouldSkipNoOpTerrainRelightEnqueue(
-            pending_light, column_lit_ready, band_needs_relight))
+        ColumnSurfaceBandHasUnsettledOrStaleDarkFace(*world_context, ground_xz,
+                                                     no_op_min_y, no_op_max_y);
+    if (ShouldSkipNoOpTerrainRelightEnqueue(pending_light, column_lit_ready,
+                                            band_needs_relight))
     {
       ++world_context->GetPhysicsTelemetryMutable().RelightSkippedNoOpEnqueueN;
-      const bool cleared_deferred =
-          deferred != DeferredFarRelightColumns.end();
+      const bool cleared_deferred = deferred != DeferredFarRelightColumns.end();
       if (cleared_deferred)
       {
         ClearDeferredFarRelightColumn(ground_xz, "already_satisfied");
@@ -778,25 +767,24 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
         CubatariumLogInfo(
             "RelightAudit",
             "relight_admission event=noop_skip source=" +
-                std::string(producer ? producer : "unspecified") +
-                " column=(" + std::to_string(ground_xz.x) + "," +
-                std::to_string(ground_xz.y) + ") band=" +
-                std::to_string(no_op_min_y) + ":" +
-                std::to_string(no_op_max_y) + " pending=" +
-                std::to_string(pending_light) + " lit_ready=" +
-                std::to_string(column_lit_ready) + " band_needs=" +
-                std::to_string(band_needs_relight) +
+                std::string(producer ? producer : "unspecified") + " column=(" +
+                std::to_string(ground_xz.x) + "," +
+                std::to_string(ground_xz.y) +
+                ") band=" + std::to_string(no_op_min_y) + ":" +
+                std::to_string(no_op_max_y) +
+                " pending=" + std::to_string(pending_light) +
+                " lit_ready=" + std::to_string(column_lit_ready) +
+                " band_needs=" + std::to_string(band_needs_relight) +
                 " cleared_deferred=" + std::to_string(cleared_deferred));
       }
       return;
     }
   }
-  // Phase 5.7R5: unified FIFO admit — new enqueues outside nh≤1 blocked under BP.
-  // Already-keyed columns may still Promote (drain-owner / pin repair).
+  // Phase 5.7R5: unified FIFO admit — new enqueues outside nh≤1 blocked under
+  // BP. Already-keyed columns may still Promote (drain-owner / pin repair).
   if (PendingTerrainColumnRelightKeys.count(key) == 0)
   {
-    const int fifo_n =
-        static_cast<int>(PendingTerrainColumnRelightKeys.size());
+    const int fifo_n = static_cast<int>(PendingTerrainColumnRelightKeys.size());
     int horiz = 0;
     if (RelightFifoTrimFocusValid)
     {
@@ -824,19 +812,18 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
         if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
         {
           const auto merged = DeferredFarRelightColumns.find(ground_xz);
-          const glm::ivec2 band =
-              merged != DeferredFarRelightColumns.end()
-                  ? merged->second.y_band
-                  : glm::ivec2(min_y, max_y);
+          const glm::ivec2 band = merged != DeferredFarRelightColumns.end()
+                                      ? merged->second.y_band
+                                      : glm::ivec2(min_y, max_y);
           CubatariumLogInfo(
               "RelightAudit",
               "relight_admission event=deferred_owner_skip source=" +
                   std::string(producer ? producer : "unspecified") +
                   " column=(" + std::to_string(ground_xz.x) + "," +
                   std::to_string(ground_xz.y) + ") fifo_n=" +
-                  std::to_string(fifo_n) + " horiz=" +
-                  std::to_string(horiz) + " band=" +
-                  std::to_string(band.x) + ":" + std::to_string(band.y));
+                  std::to_string(fifo_n) + " horiz=" + std::to_string(horiz) +
+                  " band=" + std::to_string(band.x) + ":" +
+                  std::to_string(band.y));
         }
         return;
       }
@@ -881,9 +868,8 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
             audit_min_y = std::min(audit_min_y, deferred_min_y);
             audit_max_y = std::max(audit_max_y, deferred_max_y);
           }
-          band_needs_relight =
-              ColumnSurfaceBandHasUnsettledOrStaleDarkFace(
-                  *world_context, ground_xz, audit_min_y, audit_max_y);
+          band_needs_relight = ColumnSurfaceBandHasUnsettledOrStaleDarkFace(
+              *world_context, ground_xz, audit_min_y, audit_max_y);
           const int min_cy = FloorDiv(audit_min_y, CHUNK_SIZE);
           const int max_cy = FloorDiv(audit_max_y, CHUNK_SIZE);
           const UChunkManager &chunks =
@@ -948,15 +934,14 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
         CubatariumLogInfo(
             "RelightAudit",
             "relight_fifo event=deny source=" +
-                std::string(producer ? producer : "unspecified") +
-                " column=(" + std::to_string(ground_xz.x) + "," +
+                std::string(producer ? producer : "unspecified") + " column=(" +
+                std::to_string(ground_xz.x) + "," +
                 std::to_string(ground_xz.y) + ") block_key=(" +
                 std::to_string(key.x) + "," + std::to_string(key.y) +
                 ") band=" + std::to_string(min_y) + ":" +
                 std::to_string(max_y) + " priority=" +
-                std::to_string(priority) + " horiz=" +
-                std::to_string(horiz) + " fifo_n=" + std::to_string(fifo_n) +
-                " priority_n=" +
+                std::to_string(priority) + " horiz=" + std::to_string(horiz) +
+                " fifo_n=" + std::to_string(fifo_n) + " priority_n=" +
                 std::to_string(PendingTerrainColumnRelightsPriority.size()) +
                 " deferred_far_n=" +
                 std::to_string(DeferredFarRelightColumns.size()) +
@@ -972,17 +957,15 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
                 std::to_string(band_needs_relight) + " dark_face_cy=" +
                 (dark_face_cy.empty() ? std::string("none") : dark_face_cy) +
                 " unsettled_dark_face_cy=" +
-                (unsettled_dark_face_cy.empty()
-                     ? std::string("none")
-                     : unsettled_dark_face_cy) +
+                (unsettled_dark_face_cy.empty() ? std::string("none")
+                                                : unsettled_dark_face_cy) +
                 " stale_dark_face_checked_cy=" +
                 (stale_dark_face_checked_cy.empty()
                      ? std::string("none")
                      : stale_dark_face_checked_cy) +
                 " stale_dark_face=" +
-                (stale_dark_face_witness.empty()
-                     ? std::string("none")
-                     : stale_dark_face_witness));
+                (stale_dark_face_witness.empty() ? std::string("none")
+                                                 : stale_dark_face_witness));
       }
       // A FIFO admission denial is backpressure, not completion. Keep the
       // exact column/band in DeferredFar so PendingLight cannot outlive every
@@ -1023,9 +1006,8 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
   const bool is_pin = ShouldProtectRelightFifoPinKey(
       ground_xz.x, ground_xz.y, RelightFifoPinValid, pin_cx, pin_cz);
   const bool force_priority =
-      priority ||
-      ShouldForcePinColumnPriority(is_pin, RelightEnqueueMissHoriz_,
-                                   RelightEnqueueWitnessHoldN_);
+      priority || ShouldForcePinColumnPriority(is_pin, RelightEnqueueMissHoriz_,
+                                               RelightEnqueueWitnessHoldN_);
   if (force_priority)
   {
     if (is_pin)
@@ -1084,8 +1066,7 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
 
 bool UWorldPersistence::EnqueueVisibleRelight(
     int world_x, int world_z, int min_y, int max_y, glm::ivec3 focus_ground,
-    int max_horiz,
-    const std::vector<glm::ivec2> &protected_visible_columns,
+    int max_horiz, const std::vector<glm::ivec2> &protected_visible_columns,
     uint8_t *outcome, int *out_victim_horiz, const char *producer)
 {
   // Outcome: 1=normal admission, 2=no replaceable victim,
@@ -1169,9 +1150,9 @@ bool UWorldPersistence::EnqueueVisibleRelight(
     if (RelightFifoPinValid && pin_key != key &&
         PendingTerrainColumnRelightKeys.count(pin_key) != 0)
     {
-      auto pin_it = std::find(PendingTerrainColumnRelightsPriority.begin(),
-                              PendingTerrainColumnRelightsPriority.end(),
-                              pin_key);
+      auto pin_it =
+          std::find(PendingTerrainColumnRelightsPriority.begin(),
+                    PendingTerrainColumnRelightsPriority.end(), pin_key);
       if (pin_it == PendingTerrainColumnRelightsPriority.end())
       {
         pin_it = std::find(PendingTerrainColumnRelights.begin(),
@@ -1244,16 +1225,14 @@ bool UWorldPersistence::EnqueueVisibleRelight(
   std::deque<glm::ivec2> *victim_queue = nullptr;
   auto victim_it = PendingTerrainColumnRelights.end();
   int victim_horiz = horiz;
-  const auto find_farthest_unpinned_victim =
-      [&](std::deque<glm::ivec2> &queue)
+  const auto find_farthest_unpinned_victim = [&](std::deque<glm::ivec2> &queue)
   {
     for (auto it = queue.begin(); it != queue.end(); ++it)
     {
       const int cx = FloorDiv(it->x, CHUNK_SIZE);
       const int cz = FloorDiv(it->y, CHUNK_SIZE);
-      const int candidate_horiz =
-          std::max(std::abs(cx - focus_ground.x),
-                   std::abs(cz - focus_ground.z));
+      const int candidate_horiz = std::max(std::abs(cx - focus_ground.x),
+                                           std::abs(cz - focus_ground.z));
       if (candidate_horiz <= victim_horiz ||
           ShouldProtectRelightFifoPinKey(cx, cz, RelightFifoPinValid,
                                          RelightFifoPinCx, RelightFifoPinCz) ||
@@ -1277,8 +1256,7 @@ bool UWorldPersistence::EnqueueVisibleRelight(
     // the capture dequeue promotes these directly when it is ready to consume
     // another item. This preserves visible work without growing/churning the
     // priority deque.
-    constexpr int kVisibleRelightReserve =
-        kVisibleDrawGateRelightTargetLimit;
+    constexpr int kVisibleRelightReserve = kVisibleDrawGateRelightTargetLimit;
     if (ShouldAdmitRelightFifoEnqueue(
             fifo_n, horiz, /*fifo_backpressure=*/16 + kVisibleRelightReserve))
     {
@@ -1299,8 +1277,8 @@ bool UWorldPersistence::EnqueueVisibleRelight(
     if (DeferredVisibleDrawGateRelightYBands.size() <
         static_cast<size_t>(kVisibleRelightReserve))
     {
-      DeferredVisibleDrawGateRelightYBands.emplace(
-          key, glm::ivec2(min_y, max_y));
+      DeferredVisibleDrawGateRelightYBands.emplace(key,
+                                                   glm::ivec2(min_y, max_y));
       clear_deferred_far();
       if (outcome)
       {
@@ -1322,9 +1300,9 @@ bool UWorldPersistence::EnqueueVisibleRelight(
       const glm::ivec2 deferred_key = it->first;
       const int deferred_cx = FloorDiv(deferred_key.x, CHUNK_SIZE);
       const int deferred_cz = FloorDiv(deferred_key.y, CHUNK_SIZE);
-      if (ShouldProtectRelightFifoPinKey(
-              deferred_cx, deferred_cz, RelightFifoPinValid,
-              RelightFifoPinCx, RelightFifoPinCz) ||
+      if (ShouldProtectRelightFifoPinKey(deferred_cx, deferred_cz,
+                                         RelightFifoPinValid, RelightFifoPinCx,
+                                         RelightFifoPinCz) ||
           PendingTerrainColumnRelightKeys.count(deferred_key) != 0)
       {
         continue;
@@ -1343,8 +1321,8 @@ bool UWorldPersistence::EnqueueVisibleRelight(
       const glm::ivec2 victim = farthest_deferred->first;
       DeferredVisibleDrawGateRelightYBands.erase(farthest_deferred);
       PendingVisibleDrawGateRelightYBands.erase(victim);
-      DeferredVisibleDrawGateRelightYBands.emplace(
-          key, glm::ivec2(min_y, max_y));
+      DeferredVisibleDrawGateRelightYBands.emplace(key,
+                                                   glm::ivec2(min_y, max_y));
       clear_deferred_far();
       if (outcome)
       {
@@ -1388,8 +1366,7 @@ bool UWorldPersistence::EnqueueVisibleRelight(
 
 bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
     int world_x, int world_z, int min_y, int max_y, glm::ivec3 focus_ground,
-    int max_horiz,
-    const std::vector<glm::ivec2> &protected_visible_columns,
+    int max_horiz, const std::vector<glm::ivec2> &protected_visible_columns,
     uint8_t *outcome, int *out_victim_horiz, const char *producer)
 {
   return EnqueueVisibleRelight(world_x, world_z, min_y, max_y, focus_ground,
@@ -1397,8 +1374,8 @@ bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
                                out_victim_horiz, producer);
 }
 
-void UWorldPersistence::NoteVisibleFirstMeshRelight(
-    glm::ivec2 world_block_key, int min_y, int max_y)
+void UWorldPersistence::NoteVisibleFirstMeshRelight(glm::ivec2 world_block_key,
+                                                    int min_y, int max_y)
 {
   if (max_y < min_y)
   {
@@ -1425,28 +1402,26 @@ void UWorldPersistence::ClearVisibleFirstMeshRelightIfNotQueued(
   }
 }
 
-bool UWorldPersistence::TryEnqueueTerrainColumnRelight(UWorld &world, int world_x,
-                                                       int world_z,
+bool UWorldPersistence::TryEnqueueTerrainColumnRelight(UWorld &world,
+                                                       int world_x, int world_z,
                                                        const bool priority,
                                                        int min_y, int max_y)
 {
   const glm::ivec2 ground_xz(FloorDiv(world_x, CHUNK_SIZE),
-                               FloorDiv(world_z, CHUNK_SIZE));
-  const int max_y_eff =
-      max_y >= 0 ? max_y : world.ProceduralTemplate.MaxHeight;
+                             FloorDiv(world_z, CHUNK_SIZE));
+  const int max_y_eff = max_y >= 0 ? max_y : world.ProceduralTemplate.MaxHeight;
   const int band_min = std::clamp(min_y, world.ProceduralTemplate.MinHeight,
                                   world.ProceduralTemplate.MaxHeight);
   const int band_max = std::clamp(std::max(band_min, max_y_eff), band_min,
                                   world.ProceduralTemplate.MaxHeight);
   const bool pending_light = world.IsPendingLightBeforeMesh(ground_xz);
-  const bool column_lit_ready = world.IsColumnLitReady(
-      glm::ivec3(ground_xz.x, 0, ground_xz.y));
-  const bool band_needs_relight =
-      !pending_light && column_lit_ready &&
-      ColumnSurfaceBandHasUnsettledOrStaleDarkFace(
-          world, ground_xz, band_min, band_max);
-  if (ShouldSkipNoOpTerrainRelightEnqueue(
-          pending_light, column_lit_ready, band_needs_relight))
+  const bool column_lit_ready =
+      world.IsColumnLitReady(glm::ivec3(ground_xz.x, 0, ground_xz.y));
+  const bool band_needs_relight = !pending_light && column_lit_ready &&
+                                  ColumnSurfaceBandHasUnsettledOrStaleDarkFace(
+                                      world, ground_xz, band_min, band_max);
+  if (ShouldSkipNoOpTerrainRelightEnqueue(pending_light, column_lit_ready,
+                                          band_needs_relight))
   {
     ++world.GetPhysicsTelemetryMutable().RelightSkippedNoOpEnqueueN;
     return false;
@@ -1511,25 +1486,22 @@ void UWorldPersistence::DeferFarRelightColumn(glm::ivec2 ground_xz, int min_y,
         break;
       }
     }
-    const char *queue = priority_index >= 0
-                            ? "priority"
-                            : (fifo_index >= 0 ? "fifo" : "none");
-    const int queue_index =
-        priority_index >= 0 ? priority_index : fifo_index;
+    const char *queue =
+        priority_index >= 0 ? "priority" : (fifo_index >= 0 ? "fifo" : "none");
+    const int queue_index = priority_index >= 0 ? priority_index : fifo_index;
     CubatariumLogInfo(
         "RelightAudit",
         "deferred_far owner=defer column=(" + std::to_string(ground_xz.x) +
-            "," + std::to_string(ground_xz.y) + ") reason=" +
-            std::string(reason ? reason : "unspecified") +
+            "," + std::to_string(ground_xz.y) +
+            ") reason=" + std::string(reason ? reason : "unspecified") +
             " outcome=" + (inserted ? "insert" : "merge") +
             " band=" + std::to_string(it->second.y_band.x) + ":" +
             std::to_string(it->second.y_band.y) +
-            " priority=" + std::to_string(it->second.priority) +
-            " keyed=" +
+            " priority=" + std::to_string(it->second.priority) + " keyed=" +
             std::to_string(PendingTerrainColumnRelightKeys.count(glm::ivec2(
                 ground_xz.x * CHUNK_SIZE, ground_xz.y * CHUNK_SIZE))) +
-            " queue=" + queue + " queue_index=" +
-            std::to_string(queue_index) + " priority_n=" +
+            " queue=" + queue + " queue_index=" + std::to_string(queue_index) +
+            " priority_n=" +
             std::to_string(PendingTerrainColumnRelightsPriority.size()) +
             " fifo_n=" + std::to_string(PendingTerrainColumnRelights.size()) +
             " deferred_far_n=" +
@@ -1538,7 +1510,7 @@ void UWorldPersistence::DeferFarRelightColumn(glm::ivec2 ground_xz, int min_y,
 }
 
 void UWorldPersistence::ClearDeferredFarRelightColumn(glm::ivec2 ground_xz,
-                                                     const char *reason)
+                                                      const char *reason)
 {
   const auto it = DeferredFarRelightColumns.find(ground_xz);
   if (it == DeferredFarRelightColumns.end())
@@ -1550,8 +1522,8 @@ void UWorldPersistence::ClearDeferredFarRelightColumn(glm::ivec2 ground_xz,
     CubatariumLogInfo(
         "RelightAudit",
         "deferred_far owner=clear column=(" + std::to_string(ground_xz.x) +
-            "," + std::to_string(ground_xz.y) + ") reason=" +
-            std::string(reason ? reason : "unspecified") +
+            "," + std::to_string(ground_xz.y) +
+            ") reason=" + std::string(reason ? reason : "unspecified") +
             " band=" + std::to_string(it->second.y_band.x) + ":" +
             std::to_string(it->second.y_band.y) + " priority=" +
             std::to_string(it->second.priority) + " deferred_far_n=" +
@@ -1592,7 +1564,8 @@ void UWorldPersistence::PreserveRelightFifoVictimAsDeferred(
   {
     merge_band(it->second);
   }
-  if (const auto it = PendingVisibleFirstMeshRelightYBands.find(world_block_key);
+  if (const auto it =
+          PendingVisibleFirstMeshRelightYBands.find(world_block_key);
       it != PendingVisibleFirstMeshRelightYBands.end())
   {
     merge_band(it->second);
@@ -1650,8 +1623,7 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
   glm::ivec2 aged_service_coord{};
   DeferredFarRelightEntry aged_service_entry{};
   int aged_service_horiz = -1;
-  auto oldest_aged_service_time =
-      std::chrono::steady_clock::time_point::max();
+  auto oldest_aged_service_time = std::chrono::steady_clock::time_point::max();
   const auto admission_now = std::chrono::steady_clock::now();
   std::vector<glm::ivec2> to_erase;
   to_erase.reserve(DeferredFarRelightColumns.size());
@@ -1678,20 +1650,19 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
     // discard the same band as a no-op after it had occupied queue capacity.
     const int band_min =
         std::max(world.ProceduralTemplate.MinHeight, kv.second.y_band.x);
-    const int band_max = std::max(
-        band_min, kv.second.y_band.y >= band_min
-                      ? kv.second.y_band.y
-                      : world.ProceduralTemplate.MaxHeight);
+    const int band_max =
+        std::max(band_min, kv.second.y_band.y >= band_min
+                               ? kv.second.y_band.y
+                               : world.ProceduralTemplate.MaxHeight);
     const glm::ivec3 ground(ground_xz.x, 0, ground_xz.y);
     const bool pending_light = world.IsPendingLightBeforeMesh(ground_xz);
     const bool column_lit_ready = world.IsColumnLitReady(ground);
     const bool band_needs_relight =
         !pending_light && column_lit_ready &&
-        ColumnSurfaceBandHasUnsettledOrStaleDarkFace(
-            world, ground_xz, band_min, band_max);
-    if (PendingBoundaryDependencyRelightKeys.count(
-            glm::ivec2(ground_xz.x * CHUNK_SIZE,
-                       ground_xz.y * CHUNK_SIZE)) == 0 &&
+        ColumnSurfaceBandHasUnsettledOrStaleDarkFace(world, ground_xz, band_min,
+                                                     band_max);
+    if (PendingBoundaryDependencyRelightKeys.count(glm::ivec2(
+            ground_xz.x * CHUNK_SIZE, ground_xz.y * CHUNK_SIZE)) == 0 &&
         ShouldSkipNoOpTerrainRelightEnqueue(pending_light, column_lit_ready,
                                             band_needs_relight))
     {
@@ -1701,14 +1672,14 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
       {
         CubatariumLogInfo(
             "RelightAudit",
-            "deferred_far_skip coord=(" + std::to_string(ground_xz.x) +
-                "," + std::to_string(ground_xz.y) +
+            "deferred_far_skip coord=(" + std::to_string(ground_xz.x) + "," +
+                std::to_string(ground_xz.y) +
                 ") reason=already_satisfied band=" +
                 std::to_string(kv.second.y_band.x) + ":" +
-                std::to_string(kv.second.y_band.y) + " pending=" +
-                std::to_string(pending_light) + " lit_ready=" +
-                std::to_string(column_lit_ready) + " band_needs=" +
-                std::to_string(band_needs_relight));
+                std::to_string(kv.second.y_band.y) +
+                " pending=" + std::to_string(pending_light) +
+                " lit_ready=" + std::to_string(column_lit_ready) +
+                " band_needs=" + std::to_string(band_needs_relight));
       }
       continue;
     }
@@ -1720,14 +1691,12 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
     {
       ++fifo_blocked;
       const auto &entry = kv.second;
-      if (entry.first_deferred_at !=
-              std::chrono::steady_clock::time_point{} &&
+      if (entry.first_deferred_at != std::chrono::steady_clock::time_point{} &&
           admission_now - entry.first_deferred_at >=
               kDeferredFarRelightAgeServiceDelay)
       {
-        const bool older =
-            !have_aged_service_candidate ||
-            entry.first_deferred_at < oldest_aged_service_time;
+        const bool older = !have_aged_service_candidate ||
+                           entry.first_deferred_at < oldest_aged_service_time;
         const bool same_age_but_better =
             have_aged_service_candidate &&
             entry.first_deferred_at == oldest_aged_service_time &&
@@ -1772,7 +1741,8 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
       enqueue_caused_fifo_drop =
           RelightFifoOverflowDroppedN > fifo_dropped_before;
     }
-    const bool accepted = IsTerrainColumnRelightQueued(world_key) || async_owned;
+    const bool accepted =
+        IsTerrainColumnRelightQueued(world_key) || async_owned;
     if (!accepted)
     {
       ++enqueue_rejected;
@@ -1782,7 +1752,7 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
       continue;
     }
     world.TryNotePendingLightBeforeMesh(glm::ivec3(ground_xz.x, 0, ground_xz.y),
-                                     band.x, band.y, __FUNCTION__);
+                                        band.x, band.y, __FUNCTION__);
     to_erase.push_back(ground_xz);
     ++admitted;
   }
@@ -1794,17 +1764,16 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
           std::chrono::steady_clock::time_point{} ||
       admission_now - LastDeferredFarAgeServiceAttemptAt >=
           kDeferredFarRelightAgeServiceInterval;
-  const glm::ivec2 aged_service_world_key(
-      aged_service_coord.x * CHUNK_SIZE, aged_service_coord.y * CHUNK_SIZE);
+  const glm::ivec2 aged_service_world_key(aged_service_coord.x * CHUNK_SIZE,
+                                          aged_service_coord.y * CHUNK_SIZE);
   const bool aged_service_previous_is_same =
       LastDeferredFarAgeServiceWorldKeyValid &&
       LastDeferredFarAgeServiceWorldKey == aged_service_world_key;
   const bool aged_service_previous_waiting =
-      have_aged_service_candidate &&
-      LastDeferredFarAgeServiceWorldKeyValid &&
+      have_aged_service_candidate && LastDeferredFarAgeServiceWorldKeyValid &&
       !aged_service_previous_is_same &&
-      GetTerrainColumnRelightQueueInfo(
-          LastDeferredFarAgeServiceWorldKey).in_deque;
+      GetTerrainColumnRelightQueueInfo(LastDeferredFarAgeServiceWorldKey)
+          .in_deque;
   if (aged_service_previous_waiting)
   {
     ++aged_service_waiting_previous;
@@ -1831,9 +1800,8 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
     if (accepted)
     {
       const bool pin_in_flight =
-          RelightFifoPinValid && world.IsAsyncRelightColumnInFlight(
-                                     glm::ivec2(RelightFifoPinCx,
-                                                RelightFifoPinCz));
+          RelightFifoPinValid && world.IsAsyncRelightColumnInFlight(glm::ivec2(
+                                     RelightFifoPinCx, RelightFifoPinCz));
       PrioritizeTerrainColumnRelight(world_key, pin_in_flight);
       world.TryNotePendingLightBeforeMesh(
           glm::ivec3(aged_service_coord.x, 0, aged_service_coord.y),
@@ -1846,11 +1814,10 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
       LastDeferredFarAgeServiceWorldKey = world_key;
       LastDeferredFarAgeServiceWorldKeyValid = true;
     }
-    if (audit_admission &&
-        (last_aged_service_detail_audit ==
-             std::chrono::steady_clock::time_point{} ||
-         admission_now - last_aged_service_detail_audit >=
-             kDeferredFarRelightAgeServiceInterval))
+    if (audit_admission && (last_aged_service_detail_audit ==
+                                std::chrono::steady_clock::time_point{} ||
+                            admission_now - last_aged_service_detail_audit >=
+                                kDeferredFarRelightAgeServiceInterval))
     {
       last_aged_service_detail_audit = admission_now;
       const auto queue_info = GetTerrainColumnRelightQueueInfo(world_key);
@@ -1858,20 +1825,20 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
       const glm::ivec2 pin_coord(RelightFifoPinCx, RelightFifoPinCz);
       const bool pin_in_flight =
           pin_valid && world.IsAsyncRelightColumnInFlight(pin_coord);
-      const auto age_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                              admission_now -
-                              aged_service_entry.first_deferred_at)
-                              .count();
+      const auto age_ms =
+          std::chrono::duration_cast<std::chrono::milliseconds>(
+              admission_now - aged_service_entry.first_deferred_at)
+              .count();
       CubatariumLogInfo(
           "RelightAudit",
           std::string("deferred_far_age_service coord=(") +
               std::to_string(aged_service_coord.x) + "," +
-              std::to_string(aged_service_coord.y) + ") age_ms=" +
-              std::to_string(age_ms) + " focus=(" +
+              std::to_string(aged_service_coord.y) +
+              ") age_ms=" + std::to_string(age_ms) + " focus=(" +
               std::to_string(focus_ground.x) + "," +
-              std::to_string(focus_ground.z) + ") horiz=" +
-              std::to_string(aged_service_horiz) + " fifo=" +
-              std::to_string(aged_service_fifo_before) + "->" +
+              std::to_string(focus_ground.z) +
+              ") horiz=" + std::to_string(aged_service_horiz) +
+              " fifo=" + std::to_string(aged_service_fifo_before) + "->" +
               std::to_string(GetPendingTerrainColumnRelightCount()) +
               " async=" + (async_owned ? "1" : "0") +
               " queued_before=" + (queued_before ? "1" : "0") +
@@ -1881,9 +1848,8 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
               " queue_index=" + std::to_string(queue_info.queue_index) +
               " queue_size=" + std::to_string(queue_info.queue_size) +
               " pin_valid=" + (pin_valid ? "1" : "0") + " pin=(" +
-              std::to_string(pin_coord.x) + "," +
-              std::to_string(pin_coord.y) + ") pin_inflight=" +
-              (pin_in_flight ? "1" : "0"));
+              std::to_string(pin_coord.x) + "," + std::to_string(pin_coord.y) +
+              ") pin_inflight=" + (pin_in_flight ? "1" : "0"));
     }
   }
   for (const glm::ivec2 &key : to_erase)
@@ -1907,17 +1873,16 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
         "RelightAudit",
         std::string("deferred_far_admit focus=(") +
             std::to_string(focus_ground.x) + "," +
-            std::to_string(focus_ground.z) + ") pending=" +
-            std::to_string(deferred_before) + "->" +
-            std::to_string(DeferredFarRelightColumns.size()) + " fifo=" +
-            std::to_string(fifo_before) + "->" +
+            std::to_string(focus_ground.z) +
+            ") pending=" + std::to_string(deferred_before) + "->" +
+            std::to_string(DeferredFarRelightColumns.size()) +
+            " fifo=" + std::to_string(fifo_before) + "->" +
             std::to_string(GetPendingTerrainColumnRelightCount()) +
             " pin=" + std::to_string(pin_horiz) +
             " in_range=" + std::to_string(in_range) +
             " outside=" + std::to_string(outside_range) +
             " fifo_blocked=" + std::to_string(fifo_blocked) +
-            " age_service_admitted=" +
-            std::to_string(aged_service_admitted) +
+            " age_service_admitted=" + std::to_string(aged_service_admitted) +
             " age_service_wait_previous=" +
             std::to_string(aged_service_waiting_previous) +
             " queued=" + std::to_string(already_queued) +
@@ -1927,8 +1892,8 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
             " trimmed=" + std::to_string(enqueue_trimmed) +
             " admitted=" + std::to_string(admitted) + " nearest=(" +
             std::to_string(nearest_coord.x) + "," +
-            std::to_string(nearest_coord.y) + ")/h=" +
-            std::to_string(nearest_horiz));
+            std::to_string(nearest_coord.y) +
+            ")/h=" + std::to_string(nearest_horiz));
   }
   return admitted;
 }
@@ -1968,8 +1933,7 @@ int UWorldPersistence::TakeRelightFifoProtectBlock()
   return n;
 }
 
-void UWorldPersistence::PromoteTerrainColumnRelight(
-    glm::ivec2 world_block_key)
+void UWorldPersistence::PromoteTerrainColumnRelight(glm::ivec2 world_block_key)
 {
   // Queue keys are world-block coordinates; the protected pin is a chunk
   // coordinate. Compare in one coordinate space or every non-origin column
@@ -2025,7 +1989,7 @@ bool UWorldPersistence::PrioritizeTerrainColumnRelight(
   };
 
   const glm::ivec2 pin_key(RelightFifoPinCx * CHUNK_SIZE,
-                            RelightFifoPinCz * CHUNK_SIZE);
+                           RelightFifoPinCz * CHUNK_SIZE);
   const bool target_is_pin = RelightFifoPinValid && pin_key == world_block_key;
   const bool pin_queued = RelightFifoPinValid && !pin_in_flight &&
                           !target_is_pin &&
@@ -2050,8 +2014,7 @@ bool UWorldPersistence::PrioritizeTerrainColumnRelight(
 }
 
 bool UWorldPersistence::PrioritizeNearestTerrainColumnRelight(
-    UWorld &world, glm::ivec3 focus_ground, int radius_chunks,
-    int scan_cap)
+    UWorld &world, glm::ivec3 focus_ground, int radius_chunks, int scan_cap)
 {
   if (radius_chunks < 0 || scan_cap <= 0)
   {
@@ -2080,9 +2043,8 @@ bool UWorldPersistence::PrioritizeNearestTerrainColumnRelight(
     const glm::ivec2 world_key = entry.first;
     const glm::ivec2 column(FloorDiv(world_key.x, CHUNK_SIZE),
                             FloorDiv(world_key.y, CHUNK_SIZE));
-    const int distance =
-        std::max(std::abs(column.x - focus_ground.x),
-                 std::abs(column.y - focus_ground.z));
+    const int distance = std::max(std::abs(column.x - focus_ground.x),
+                                  std::abs(column.y - focus_ground.z));
     const int service_radius = target_service_radius(world_key);
     const bool already_queued =
         PendingTerrainColumnRelightKeys.count(world_key) != 0;
@@ -2094,8 +2056,7 @@ bool UWorldPersistence::PrioritizeNearestTerrainColumnRelight(
       expired_visible.push_back(world_key);
       continue;
     }
-    if (distance > service_radius ||
-        world.IsAsyncRelightColumnInFlight(column))
+    if (distance > service_radius || world.IsAsyncRelightColumnInFlight(column))
     {
       continue;
     }
@@ -2130,9 +2091,8 @@ bool UWorldPersistence::PrioritizeNearestTerrainColumnRelight(
     }
     const glm::ivec2 column(FloorDiv(world_key.x, CHUNK_SIZE),
                             FloorDiv(world_key.y, CHUNK_SIZE));
-    const int distance =
-        std::max(std::abs(column.x - focus_ground.x),
-                 std::abs(column.y - focus_ground.z));
+    const int distance = std::max(std::abs(column.x - focus_ground.x),
+                                  std::abs(column.y - focus_ground.z));
     if (distance > target_service_radius(world_key) ||
         world.IsAsyncRelightColumnInFlight(column))
     {
@@ -2163,9 +2123,8 @@ bool UWorldPersistence::PrioritizeNearestTerrainColumnRelight(
     }
     const glm::ivec2 column(FloorDiv(world_key.x, CHUNK_SIZE),
                             FloorDiv(world_key.y, CHUNK_SIZE));
-    const int distance =
-        std::max(std::abs(column.x - focus_ground.x),
-                 std::abs(column.y - focus_ground.z));
+    const int distance = std::max(std::abs(column.x - focus_ground.x),
+                                  std::abs(column.y - focus_ground.z));
     if (distance > target_service_radius(world_key) ||
         world.IsAsyncRelightColumnInFlight(column))
     {
@@ -2190,8 +2149,8 @@ bool UWorldPersistence::PrioritizeNearestTerrainColumnRelight(
         PendingTerrainColumnRelightKeys.count(visible_target) == 0)
     {
       EnqueueTerrainColumnRelightImpl(
-          visible_target.x, visible_target.y, /*priority=*/true,
-          visible_band.x, visible_band.y, /*visible_admission=*/true);
+          visible_target.x, visible_target.y, /*priority=*/true, visible_band.x,
+          visible_band.y, /*visible_admission=*/true);
       if (PendingTerrainColumnRelightKeys.count(visible_target) != 0)
       {
         ClearDeferredFarRelightColumn(
@@ -2205,9 +2164,8 @@ bool UWorldPersistence::PrioritizeNearestTerrainColumnRelight(
       }
     }
     const bool pin_in_flight =
-        RelightFifoPinValid && world.IsAsyncRelightColumnInFlight(
-                                   glm::ivec2(RelightFifoPinCx,
-                                              RelightFifoPinCz));
+        RelightFifoPinValid && world.IsAsyncRelightColumnInFlight(glm::ivec2(
+                                   RelightFifoPinCx, RelightFifoPinCz));
     return PrioritizeTerrainColumnRelight(visible_target, pin_in_flight);
   }
 
@@ -2224,7 +2182,7 @@ bool UWorldPersistence::PrioritizeNearestTerrainColumnRelight(
   {
     const glm::ivec2 key = PendingTerrainColumnRelightsPriority[i];
     const glm::ivec2 column(FloorDiv(key.x, CHUNK_SIZE),
-                           FloorDiv(key.y, CHUNK_SIZE));
+                            FloorDiv(key.y, CHUNK_SIZE));
     if (RelightFifoPinValid &&
         column == glm::ivec2(RelightFifoPinCx, RelightFifoPinCz))
     {
@@ -2234,9 +2192,8 @@ bool UWorldPersistence::PrioritizeNearestTerrainColumnRelight(
     {
       continue;
     }
-    const int distance =
-        std::max(std::abs(column.x - focus_ground.x),
-                 std::abs(column.y - focus_ground.z));
+    const int distance = std::max(std::abs(column.x - focus_ground.x),
+                                  std::abs(column.y - focus_ground.z));
     if (distance > radius_chunks)
     {
       continue;
@@ -2256,9 +2213,8 @@ bool UWorldPersistence::PrioritizeNearestTerrainColumnRelight(
 
   const glm::ivec2 target = PendingTerrainColumnRelightsPriority[best_index];
   const bool pin_in_flight =
-      RelightFifoPinValid && world.IsAsyncRelightColumnInFlight(
-                                 glm::ivec2(RelightFifoPinCx,
-                                            RelightFifoPinCz));
+      RelightFifoPinValid && world.IsAsyncRelightColumnInFlight(glm::ivec2(
+                                 RelightFifoPinCx, RelightFifoPinCz));
   return PrioritizeTerrainColumnRelight(target, pin_in_flight);
 }
 
@@ -2276,8 +2232,8 @@ int UWorldPersistence::PromoteNearTerrainColumnRelights(glm::ivec3 focus_ground,
     // Keys are block-space column origins (world_x, world_z).
     const int cx = FloorDiv(it->x, CHUNK_SIZE);
     const int cz = FloorDiv(it->y, CHUNK_SIZE);
-    const int dist = std::max(std::abs(cx - focus_ground.x),
-                              std::abs(cz - focus_ground.z));
+    const int dist =
+        std::max(std::abs(cx - focus_ground.x), std::abs(cz - focus_ground.z));
     if (dist > radius_chunks)
     {
       ++it;
@@ -2303,8 +2259,7 @@ void UWorldPersistence::EnqueuePlayerRelight(
     min_y = std::min(min_y, pos.y);
   }
   min_y -= CHUNK_SIZE;
-  PendingPlayerRelights.push_back(
-      PlayerRelightRequest{block_positions, min_y});
+  PendingPlayerRelights.push_back(PlayerRelightRequest{block_positions, min_y});
 }
 
 void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
@@ -2321,12 +2276,11 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     }
     const glm::ivec3 focus =
         UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
-    const glm::ivec2 front =
-        !PendingTerrainColumnRelightsPriority.empty()
-            ? PendingTerrainColumnRelightsPriority.front()
-            : (!PendingTerrainColumnRelights.empty()
-                   ? PendingTerrainColumnRelights.front()
-                   : glm::ivec2(-1));
+    const glm::ivec2 front = !PendingTerrainColumnRelightsPriority.empty()
+                                 ? PendingTerrainColumnRelightsPriority.front()
+                                 : (!PendingTerrainColumnRelights.empty()
+                                        ? PendingTerrainColumnRelights.front()
+                                        : glm::ivec2(-1));
     int boundary_markers_in_fifo = 0;
     int boundary_markers_in_deferred = 0;
     int boundary_markers_without_owner = 0;
@@ -2348,18 +2302,17 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
             " fifo=" + std::to_string(GetPendingTerrainColumnRelightCount()) +
             " boundary_markers=" +
             std::to_string(PendingBoundaryDependencyRelightKeys.size()) +
-            " boundary_in_fifo=" +
-            std::to_string(boundary_markers_in_fifo) +
+            " boundary_in_fifo=" + std::to_string(boundary_markers_in_fifo) +
             " boundary_in_deferred=" +
             std::to_string(boundary_markers_in_deferred) +
             " boundary_without_owner=" +
-            std::to_string(boundary_markers_without_owner) +
-            " fifo_front=(" + std::to_string(front.x) + "," +
-            std::to_string(front.y) + ") focus=(" +
-            std::to_string(focus.x) + "," + std::to_string(focus.z) +
-            ") pending_light=" +
+            std::to_string(boundary_markers_without_owner) + " fifo_front=(" +
+            std::to_string(front.x) + "," + std::to_string(front.y) +
+            ") focus=(" + std::to_string(focus.x) + "," +
+            std::to_string(focus.z) + ") pending_light=" +
             std::to_string(world.GetPendingLightBeforeMeshCount()) +
-            " inflight=" + std::to_string(world.GetAsyncRelightInFlightCount()) +
+            " inflight=" +
+            std::to_string(world.GetAsyncRelightInFlightCount()) +
             " completed=" + std::to_string(world.GetRelightCompletedSize()));
   };
   capture_telem.RelightCaptureStopReason = 0;
@@ -2392,10 +2345,10 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     }
     else
     {
-      SetRelightFifoPin(glm::ivec2(phys.MissCx, phys.MissCz),
-                        phys.FocusMissingMesh > 0 &&
-                            ShouldHoldPinnedRelightWitness(
-                                phys.MissHoriz, true, true));
+      SetRelightFifoPin(
+          glm::ivec2(phys.MissCx, phys.MissCz),
+          phys.FocusMissingMesh > 0 &&
+              ShouldHoldPinnedRelightWitness(phys.MissHoriz, true, true));
     }
   }
   auto harvest_fifo_overflow = [&world, this]()
@@ -2417,7 +2370,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   int drained_player = 0;
   while (!PendingPlayerRelights.empty() && drained_player < max_player_jobs)
   {
-    const PlayerRelightRequest request = std::move(PendingPlayerRelights.front());
+    const PlayerRelightRequest request =
+        std::move(PendingPlayerRelights.front());
     PendingPlayerRelights.pop_front();
     world.RelightPlayerEdit(request.block_positions, request.min_world_y);
     ++drained_player;
@@ -2433,15 +2387,14 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   world.ReconcileAsyncRelightColumnInFlight();
   const int max_y = world.ProceduralTemplate.MaxHeight;
   const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
-  const int surface_band_min =
-      RelightSurfaceBandMinY(focus_block.y, CHUNK_SIZE,
-                             world.ProceduralTemplate.MinHeight);
+  const int surface_band_min = RelightSurfaceBandMinY(
+      focus_block.y, CHUNK_SIZE, world.ProceduralTemplate.MinHeight);
   const int surface_band_max =
       RelightSurfaceBandMaxY(focus_block.y, CHUNK_SIZE, max_y, max_y,
                              world.ProceduralTemplate.MinHeight);
-  const bool async_bg =
-      world.ProceduralTemplate.AsyncRelight &&
-      !world.IsLightingRelightDeferred() && world.AllowsAsyncLighting();
+  const bool async_bg = world.ProceduralTemplate.AsyncRelight &&
+                        !world.IsLightingRelightDeferred() &&
+                        world.AllowsAsyncLighting();
   const glm::ivec3 focus_chunk =
       UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
   const glm::ivec3 focus_horiz(focus_chunk.x, 0, focus_chunk.z);
@@ -2483,8 +2436,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       async_bg ? std::clamp(world.ProceduralTemplate.RelightThreadCount, 1, 8) *
                      inflight_mult
                : 0;
-  capture_telem.RelightCaptureInFlightN =
-      world.GetAsyncRelightInFlightCount();
+  capture_telem.RelightCaptureInFlightN = world.GetAsyncRelightInFlightCount();
   capture_telem.RelightCaptureInFlightLimit = max_inflight;
 
   // Continuously re-order priority FIFO by effective distance + forward bias.
@@ -2514,9 +2466,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       {
         return d;
       }
-      const float bias =
-          std::max(0.0f, (dx / clen) * (fwd.x / flen) +
-                             (dz / clen) * (fwd.y / flen));
+      const float bias = std::max(0.0f, (dx / clen) * (fwd.x / flen) +
+                                            (dz / clen) * (fwd.y / flen));
       return d - bias_k * bias;
     };
     std::stable_sort(PendingTerrainColumnRelightsPriority.begin(),
@@ -2537,9 +2488,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   const glm::ivec2 miss_xz(phys_pin.MissCx, phys_pin.MissCz);
   const bool hold_nh2 =
       visual_holes && phys_pin.FocusMissingMesh > 0 &&
-      ShouldHoldPinnedRelightWitness(
-          phys_pin.MissHoriz, world.IsPendingLightBeforeMesh(miss_xz),
-          phys_pin.FocusMissingMesh > 0);
+      ShouldHoldPinnedRelightWitness(phys_pin.MissHoriz,
+                                     world.IsPendingLightBeforeMesh(miss_xz),
+                                     phys_pin.FocusMissingMesh > 0);
   if (hold_nh2)
   {
     soft_defer_hole = glm::ivec3(miss_xz.x, 0, miss_xz.y);
@@ -2601,9 +2552,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
                                              /*already_in_fifo=*/false,
                                              phys_pin.RelightWitnessHoldN / 60))
         {
-          EnqueueTerrainColumnRelight(
-              hole_key.x, hole_key.y, /*priority=*/true,
-              world.ProceduralTemplate.MinHeight, max_y, __FUNCTION__, &world);
+          EnqueueTerrainColumnRelight(hole_key.x, hole_key.y, /*priority=*/true,
+                                      world.ProceduralTemplate.MinHeight, max_y,
+                                      __FUNCTION__, &world);
           const auto again = std::find(prio.begin(), prio.end(), hole_key);
           if (again != prio.end() && again != prio.begin())
           {
@@ -2704,8 +2655,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     const int max_cy_pin = FloorDiv(max_y, CHUNK_SIZE);
     int pinned = 0;
     std::vector<std::pair<int, glm::ivec2>> near_empty;
-    near_empty.reserve(static_cast<size_t>((pin_max_horiz * 2 + 1) *
-                                           (pin_max_horiz * 2 + 1)));
+    near_empty.reserve(
+        static_cast<size_t>((pin_max_horiz * 2 + 1) * (pin_max_horiz * 2 + 1)));
     for (int dx = -pin_max_horiz; dx <= pin_max_horiz; ++dx)
     {
       for (int dz = -pin_max_horiz; dz <= pin_max_horiz; ++dz)
@@ -2744,17 +2695,17 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     // Pin farthest first so nearest ends at front after push_front.
     if (!hold_nh2)
     {
-    for (const auto &entry : near_empty)
-    {
-      if (pinned >= 4)
+      for (const auto &entry : near_empty)
       {
-        break;
+        if (pinned >= 4)
+        {
+          break;
+        }
+        const glm::ivec2 key(entry.second.x * CHUNK_SIZE,
+                             entry.second.y * CHUNK_SIZE);
+        pin_key(key);
+        ++pinned;
       }
-      const glm::ivec2 key(entry.second.x * CHUNK_SIZE,
-                           entry.second.y * CHUNK_SIZE);
-      pin_key(key);
-      ++pinned;
-    }
     }
     // Era40 / P1: pin FOV miss witness. Hold nh≤2 pending until MarkRelit.
     const auto &phys = world.GetPhysicsTelemetry();
@@ -2793,10 +2744,10 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
 
   int drained_bg = 0;
   int skipped_inflight = 0;
-  const bool moving =
-      world.GetLastMovementSpeed() >
-      world.ProceduralTemplate.MovementPrefetchThreshold;
-  // FP-E2.3: post-stop VB stuck — escalate priority insert after 20s no progress.
+  const bool moving = world.GetLastMovementSpeed() >
+                      world.ProceduralTemplate.MovementPrefetchThreshold;
+  // FP-E2.3: post-stop VB stuck — escalate priority insert after 20s no
+  // progress.
   if (!moving && (vb_no_ticket_n > 0 || vb_focus_n >= 20))
   {
     static int stop_vb_stuck_frames = 0;
@@ -2827,16 +2778,17 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     if (stop_vb_stuck_frames > 1200 || stop_vb_focus_plateau_frames > 600)
     {
       std::vector<glm::ivec2> stuck_cols;
-      world.CollectPendingLightFocusColumns(focus_horiz, focus_radius, stuck_cols,
+      world.CollectPendingLightFocusColumns(focus_horiz, focus_radius,
+                                            stuck_cols,
                                             /*max_cols=*/6);
       for (const glm::ivec2 &col : stuck_cols)
       {
         const glm::ivec2 col_key(col.x * CHUNK_SIZE, col.y * CHUNK_SIZE);
         if (!PendingTerrainColumnRelightKeys.count(col_key))
         {
-          EnqueueTerrainColumnRelight(
-              col_key.x, col_key.y, /*priority=*/true,
-              world.ProceduralTemplate.MinHeight, max_y, __FUNCTION__, &world);
+          EnqueueTerrainColumnRelight(col_key.x, col_key.y, /*priority=*/true,
+                                      world.ProceduralTemplate.MinHeight, max_y,
+                                      __FUNCTION__, &world);
         }
         else
         {
@@ -2856,8 +2808,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   if (async_bg && world.MeshService)
   {
     std::vector<DrawGateRelightTarget> draw_gate_targets;
-    const int draw_gate_radius = std::min(focus_radius,
-                                          RelightMissPinMaxHoriz());
+    const int draw_gate_radius =
+        std::min(focus_radius, RelightMissPinMaxHoriz());
     world.CollectDrawGateRelightTargets(focus_chunk, draw_gate_radius,
                                         draw_gate_targets,
                                         kVisibleDrawGateRelightTargetLimit);
@@ -2875,8 +2827,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
          target_it != draw_gate_targets.rend(); ++target_it)
     {
       const DrawGateRelightTarget &target = *target_it;
-      const glm::ivec2 draw_gate_target_key{
-          target.column.x * CHUNK_SIZE, target.column.y * CHUNK_SIZE};
+      const glm::ivec2 draw_gate_target_key{target.column.x * CHUNK_SIZE,
+                                            target.column.y * CHUNK_SIZE};
       // Avoid duplicate capture debt while the column is already being
       // repaired. A queued entry still receives the witness band so it can
       // survive the top-down remainder.
@@ -2901,10 +2853,10 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       else if (already_queued || !already_inflight)
       {
         target_pinned = EnqueueVisibleDrawGateRelight(
-            draw_gate_target_key.x, draw_gate_target_key.y,
-            target.min_world_y, target.max_world_y, focus_chunk,
-            draw_gate_radius, protected_visible_columns,
-            &draw_gate_admission_outcome, &draw_gate_victim_horiz);
+            draw_gate_target_key.x, draw_gate_target_key.y, target.min_world_y,
+            target.max_world_y, focus_chunk, draw_gate_radius,
+            protected_visible_columns, &draw_gate_admission_outcome,
+            &draw_gate_victim_horiz);
       }
       else
       {
@@ -2914,14 +2866,15 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       {
         draw_gate_target_pinned = true;
         if (std::find(draw_gate_target_keys.begin(),
-                      draw_gate_target_keys.end(), draw_gate_target_key) ==
-            draw_gate_target_keys.end())
+                      draw_gate_target_keys.end(),
+                      draw_gate_target_key) == draw_gate_target_keys.end())
         {
           draw_gate_target_keys.push_back(draw_gate_target_key);
         }
-        auto [band_it, inserted] = PendingVisibleDrawGateRelightYBands.try_emplace(
-            draw_gate_target_key,
-            glm::ivec2(target.min_world_y, target.max_world_y));
+        auto [band_it, inserted] =
+            PendingVisibleDrawGateRelightYBands.try_emplace(
+                draw_gate_target_key,
+                glm::ivec2(target.min_world_y, target.max_world_y));
         if (!inserted)
         {
           band_it->second.x = std::min(band_it->second.x, target.min_world_y);
@@ -2942,13 +2895,13 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         trace.camera_y = focus_block.y;
         trace.camera_z = focus_block.z;
         trace.draw_gate_ready = 0;
-        trace.draw_gate_repair_mode =
-            target.settled_mesh_repair ? 1u : 0u;
-        trace.flags = target_pinned ? 4u
-                      : (already_inflight && !already_queued ? 1u : 2u);
+        trace.draw_gate_repair_mode = target.settled_mesh_repair ? 1u : 0u;
+        trace.flags = target_pinned
+                          ? 4u
+                          : (already_inflight && !already_queued ? 1u : 2u);
         trace.cause = draw_gate_admission_outcome;
-        trace.face_debt_mask = static_cast<uint8_t>(std::clamp(
-            draw_gate_victim_horiz, 0, static_cast<int>(UINT8_MAX)));
+        trace.face_debt_mask = static_cast<uint8_t>(
+            std::clamp(draw_gate_victim_horiz, 0, static_cast<int>(UINT8_MAX)));
         trace.relight_y_band_defined = 1;
         trace.relight_band_min_y = target.min_world_y;
         trace.relight_band_max_y = target.max_world_y;
@@ -2957,9 +2910,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         {
           trace.world_epoch = demand->world_epoch;
           trace.demand_incarnation = demand->incarnation;
-          trace.attempt_id = demand->has_active_attempt
-                                 ? demand->active_attempt_id
-                                 : 0;
+          trace.attempt_id =
+              demand->has_active_attempt ? demand->active_attempt_id : 0;
           trace.desired_geom_rev = demand->desired_geom_rev;
           trace.desired_light_rev = demand->desired_light_rev;
           trace.demand_published_geom_rev = demand->published_geom_rev;
@@ -2968,9 +2920,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
           trace.has_settled_light = demand->has_settled_light ? 1u : 0u;
           trace.active_stage = static_cast<uint8_t>(demand->active_stage);
         }
-        if (const UChunk *chunk = world.GetBlockWorld()
-                                      .GetChunkManager()
-                                      .GetChunk(target.rejected_slice))
+        if (const UChunk *chunk =
+                world.GetBlockWorld().GetChunkManager().GetChunk(
+                    target.rejected_slice))
         {
           trace.non_air_blocks = chunk->GetNonAirCount();
           trace.chunk_content_revision = chunk->GetContentRevision();
@@ -2985,20 +2937,17 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
               (world.MeshService->HasInflightMeshBuild(target.rejected_slice)
                    ? 1u << 1
                    : 0u) |
-              (cache.IsRemeshAfterApplyPending(target.rejected_slice)
-                   ? 1u << 2
-                   : 0u) |
-              (cache.IsPendingGpuApply(target.rejected_slice) ? 1u << 3
-                                                               : 0u) |
-              (cache.IsPendingGpuQueued(target.rejected_slice) ? 1u << 4
-                                                                : 0u) |
+              (cache.IsRemeshAfterApplyPending(target.rejected_slice) ? 1u << 2
+                                                                      : 0u) |
+              (cache.IsPendingGpuApply(target.rejected_slice) ? 1u << 3 : 0u) |
+              (cache.IsPendingGpuQueued(target.rejected_slice) ? 1u << 4 : 0u) |
               (cache.IsPendingGpuKickedOrDispatched(target.rejected_slice)
                    ? 1u << 5
                    : 0u) |
               (cache.IsGpuExtractInFlight(target.rejected_slice) ? 1u << 6
-                                                                  : 0u) |
+                                                                 : 0u) |
               (cache.HasPendingCaptureWork(target.rejected_slice) ? 1u << 7
-                                                                   : 0u);
+                                                                  : 0u);
           trace.mesh_dirty_queue_kind = cache.GetDirtyQueueTrace(
               target.rejected_slice, trace.mesh_dirty_queue_index,
               trace.mesh_dirty_queue_size);
@@ -3039,10 +2988,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   // Phase B: budgets from RuntimeTuning / streaming_tune.json.
   // Era41b: enter FOV lit pass uses elevated Capture wall to feed workers.
   double capture_drain_budget_ms =
-      enter_fov_lit
-          ? static_cast<double>(tune.EnterFovLitCaptureDrainMs)
-          : (moving ? static_cast<double>(tune.CaptureDrainMovingMs)
-                    : static_cast<double>(tune.CaptureDrainIdleMs));
+      enter_fov_lit ? static_cast<double>(tune.EnterFovLitCaptureDrainMs)
+                    : (moving ? static_cast<double>(tune.CaptureDrainMovingMs)
+                              : static_cast<double>(tune.CaptureDrainIdleMs));
   // Narrow PendingLight bands are cheaper now; when focus still has missing
   // mesh plus light debt, allow a bit more Capture time so relight can clear
   // the gate instead of holding mesh_async at 0 for many seconds.
@@ -3083,14 +3031,15 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     const auto &telem = world.GetPhysicsTelemetry();
     int dynamic_cap = tune.CaptureMovingBgCap;
     // P5 / ColdSupply S1: raise above base 1 when Apply unit cheap; high PL
-    // ignores one-frame fifo_drop if pin stable. Do not lift RuntimeTuning base.
+    // ignores one-frame fifo_drop if pin stable. Do not lift RuntimeTuning
+    // base.
     if (ShouldAllowDynamicCaptureMovingBgCap(
             telem.RelightFifoDropNPrev, telem.RelightFifoPinDropNPrev,
             telem.RelightApplyMsPrev, telem.RelightApplyNPrev,
             pending_light_focus_n))
     {
-      dynamic_cap =
-          DynamicCaptureMovingBgCap(pending_light_focus_n, tune.CaptureMovingBgCap);
+      dynamic_cap = DynamicCaptureMovingBgCap(pending_light_focus_n,
+                                              tune.CaptureMovingBgCap);
     }
     bg_cap = ClampCaptureMovingBgCapWithHoles(bg_cap, moving, visual_holes,
                                               dynamic_cap);
@@ -3100,12 +3049,11 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   if (!enter_fov_lit)
   {
     const auto &telem = world.GetPhysicsTelemetry();
-    const int completed_n =
-        static_cast<int>(world.GetRelightCompletedSize());
+    const int completed_n = static_cast<int>(world.GetRelightCompletedSize());
     const int inflight_n = world.GetAsyncRelightInFlightCount();
-    const bool consume_mode = IsTicketedVbConsumeMode(
-        vb_no_ticket_n, telem.VisibleBlackFocusN,
-        telem.VisibleBlackStalledN, moving);
+    const bool consume_mode =
+        IsTicketedVbConsumeMode(vb_no_ticket_n, telem.VisibleBlackFocusN,
+                                telem.VisibleBlackStalledN, moving);
     const double unit_ms_prev =
         telem.RelightApplyNPrev > 0
             ? (telem.RelightApplyMsPrev /
@@ -3133,8 +3081,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     }
     // G1: moving cruise with FullyDarkPendingRepair debt — raise Capture so
     // Apply has completed work (stall→repair left consume on but bg stayed 1).
-    if (consume_mode && moving &&
-        telem.VisibleBlackFullyDarkRepairN >= 20)
+    if (consume_mode && moving && telem.VisibleBlackFullyDarkRepairN >= 20)
     {
       bg_cap = std::max(bg_cap, 2);
     }
@@ -3147,14 +3094,12 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       const bool soft_defer_or_miss =
           (visual_holes && focus_pending_mid) ||
           (visual_holes &&
-           ShouldPreferMissFinalizeBand(
-               world.GetPhysicsTelemetry().MissHoriz));
+           ShouldPreferMissFinalizeBand(world.GetPhysicsTelemetry().MissHoriz));
       bg_cap = SoftDeferCaptureFloorWhenDepthFull(
           soft_defer_or_miss, 0, completed_n, fifo_starve, telem.RelightFifoN,
           telem.RelightApplyNPrev);
     }
-    if (fifo_soft_cap > 0 &&
-        telem.RelightFifoN >= (fifo_soft_cap * 2) / 3 &&
+    if (fifo_soft_cap > 0 && telem.RelightFifoN >= (fifo_soft_cap * 2) / 3 &&
         completed_n < 2)
     {
       const double light_unit =
@@ -3183,8 +3128,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   {
     const auto &telem_hot = world.GetPhysicsTelemetry();
     const int fifo_soft = tune.RelightFifoSoftCap;
-    const int completed_hot =
-        static_cast<int>(world.GetRelightCompletedSize());
+    const int completed_hot = static_cast<int>(world.GetRelightCompletedSize());
     if (!ShouldBypassCaptureHotSoftDeferClamp(telem_hot.RelightFifoN, fifo_soft,
                                               completed_hot))
     {
@@ -3196,9 +3140,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     bg_cap = std::max(bg_cap, 2);
   }
   // FZ2.4-P0b: plateau after nt=0 — raise Capture admit to feed Apply.
-  if (!enter_fov_lit &&
-      ShouldSuppressPendingLightNote(vb_no_ticket_n, pending_light_focus_n,
-                                     world.GetPhysicsTelemetry().VisibleBlackFocusN))
+  if (!enter_fov_lit && ShouldSuppressPendingLightNote(
+                            vb_no_ticket_n, pending_light_focus_n,
+                            world.GetPhysicsTelemetry().VisibleBlackFocusN))
   {
     const auto &telem_pl = world.GetPhysicsTelemetry();
     const int fifo_soft = tune.RelightFifoSoftCap;
@@ -3213,7 +3157,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
             static_cast<int>(world.GetRelightCompletedSize())) &&
         !ShouldKillProducerBoostOnSimHot(telem_pl.SimMsPrev))
     {
-      bg_cap = std::max(bg_cap, std::max(2, EnterFovRelightCaptureBudget() / 2));
+      bg_cap =
+          std::max(bg_cap, std::max(2, EnterFovRelightCaptureBudget() / 2));
     }
   }
   // P11: final floor after all late clamps (hot SoftDefer / plateau).
@@ -3322,9 +3267,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       // Era40: miss rim (horiz<=4) also bypasses hot-frame Capture skip.
       const bool miss_rim_pin =
           visual_holes &&
-          ShouldPreferMissFinalizeBand(
-              world.GetPhysicsTelemetry().MissHoriz,
-              moving ? kVisualStageNearFovHoriz : kVisualStageLitDrawableHoriz);
+          ShouldPreferMissFinalizeBand(world.GetPhysicsTelemetry().MissHoriz,
+                                       moving ? kVisualStageNearFovHoriz
+                                              : kVisualStageLitDrawableHoriz);
       // Idle PendingLight progress (TD-ARCH-010): when holes=0 the SoftDefer
       // exception never fired and FIFO stalled. Allow one Capture/enqueue if
       // inflight is empty and wall is not catastrophic.
@@ -3335,15 +3280,14 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
               static_cast<double>(tune.CaptureIdlePendingMaxWallMs);
       const bool draw_gate_hot_bypass =
           async_bg && draw_gate_target_pinned &&
-          std::any_of(draw_gate_target_keys.begin(),
-                      draw_gate_target_keys.end(),
-                      [&](glm::ivec2 target_key)
-                      {
-                        return PendingTerrainColumnRelightKeys.count(
-                                   target_key) != 0 ||
-                               DeferredVisibleDrawGateRelightYBands.count(
-                                   target_key) != 0;
-                      });
+          std::any_of(
+              draw_gate_target_keys.begin(), draw_gate_target_keys.end(),
+              [&](glm::ivec2 target_key)
+              {
+                return PendingTerrainColumnRelightKeys.count(target_key) != 0 ||
+                       DeferredVisibleDrawGateRelightYBands.count(target_key) !=
+                           0;
+              });
       if (!enter_fov_lit && !soft_defer_hole && !miss_rim_pin &&
           !idle_pending_progress && !draw_gate_hot_bypass)
       {
@@ -3396,20 +3340,21 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
           "RelightAudit",
           "capture dequeue column=(" +
               std::to_string(FloorDiv(col.x, CHUNK_SIZE)) + "," +
-              std::to_string(FloorDiv(col.y, CHUNK_SIZE)) + ") queue=" +
-              (dequeued_priority ? "priority" : "fifo") +
+              std::to_string(FloorDiv(col.y, CHUNK_SIZE)) +
+              ") queue=" + (dequeued_priority ? "priority" : "fifo") +
               " remaining=" + std::to_string(queue_size_after_dequeue));
     }
     int relight_min = world.ProceduralTemplate.MinHeight;
     int relight_max = max_y;
     const auto band_it = PendingTerrainColumnRelightYBands.find(col);
-    bool queued_band_defined = band_it != PendingTerrainColumnRelightYBands.end();
+    bool queued_band_defined =
+        band_it != PendingTerrainColumnRelightYBands.end();
     glm::ivec2 queued_band(world.ProceduralTemplate.MinHeight, max_y);
     if (band_it != PendingTerrainColumnRelightYBands.end())
     {
       queued_band = band_it->second;
-      relight_min = std::max(world.ProceduralTemplate.MinHeight,
-                             band_it->second.x);
+      relight_min =
+          std::max(world.ProceduralTemplate.MinHeight, band_it->second.x);
       relight_max = std::min(max_y, band_it->second.y);
       PendingTerrainColumnRelightYBands.erase(band_it);
       if (relight_max < relight_min)
@@ -3441,15 +3386,15 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
           exact_draw_gate_band = true;
           if (queued_band_defined && queued_band != visible_band)
           {
-            retained_band_min = std::max(world.ProceduralTemplate.MinHeight,
-                                         queued_band.x);
+            retained_band_min =
+                std::max(world.ProceduralTemplate.MinHeight, queued_band.x);
             retained_band_max = std::min(max_y, queued_band.y);
           }
           else if (queued_band_defined &&
                    world.IsPendingLightBeforeMesh(ground_xz))
           {
-            retained_band_min = std::max(world.ProceduralTemplate.MinHeight,
-                                         queued_band.x);
+            retained_band_min =
+                std::max(world.ProceduralTemplate.MinHeight, queued_band.x);
             retained_band_max = std::min(max_y, queued_band.y);
           }
           else if (!queued_band_defined)
@@ -3482,14 +3427,16 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
           // Multiple visible slice demands can coalesce under one column key.
           // Preserve the full owned interval; the surface clamp would otherwise
           // silently replace a missing FirstMesh slice with the surface slice.
-          relight_min = queued_band_defined
-                            ? std::min(std::max(world.ProceduralTemplate.MinHeight,
-                                                queued_band.x),
-                                       exact_min)
-                            : exact_min;
-          relight_max = queued_band_defined
-                            ? std::max(std::min(max_y, queued_band.y), exact_max)
-                            : exact_max;
+          relight_min =
+              queued_band_defined
+                  ? std::min(std::max(world.ProceduralTemplate.MinHeight,
+                                      queued_band.x),
+                             exact_min)
+                  : exact_min;
+          relight_max =
+              queued_band_defined
+                  ? std::max(std::min(max_y, queued_band.y), exact_max)
+                  : exact_max;
         }
         else
         {
@@ -3506,10 +3453,10 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         !exact_boundary_dependency_band)
     {
       const auto col_band = RelightSurfaceBandForColumn(
-          focus_block.y, col_top_y, CHUNK_SIZE, max_y, relight_min,
-          relight_max, world.ProceduralTemplate.MinHeight);
-      surface_band_adjusted = col_band.first != relight_min ||
-                              col_band.second != relight_max;
+          focus_block.y, col_top_y, CHUNK_SIZE, max_y, relight_min, relight_max,
+          world.ProceduralTemplate.MinHeight);
+      surface_band_adjusted =
+          col_band.first != relight_min || col_band.second != relight_max;
       relight_min = col_band.first;
       relight_max = col_band.second;
     }
@@ -3523,8 +3470,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         relight_max = surface_band_max;
         surface_band_adjusted = true;
         ++telem.RelightSkippedUndergroundN;
-        world.TryNotePendingLightBeforeMesh(glm::ivec3(ground_xz.x, 0, ground_xz.y),
-                                         relight_min, relight_max, __FUNCTION__);
+        world.TryNotePendingLightBeforeMesh(
+            glm::ivec3(ground_xz.x, 0, ground_xz.y), relight_min, relight_max,
+            __FUNCTION__);
       }
       else
       {
@@ -3532,8 +3480,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         {
           CubatariumLogInfo(
               "RelightAudit",
-              "capture discard column=(" +
-                  std::to_string(ground_xz.x) + "," +
+              "capture discard column=(" + std::to_string(ground_xz.x) + "," +
                   std::to_string(ground_xz.y) +
                   ") reason=surface_band_no_relight_needed requested=" +
                   std::to_string(requested_relight_min) + ":" +
@@ -3549,9 +3496,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         return skipped_inflight < std::max(8, max_bg_columns * 4);
       }
     }
-    const int horiz_dist =
-        std::max(std::abs(ground_xz.x - focus_horiz.x),
-                 std::abs(ground_xz.y - focus_horiz.z));
+    const int horiz_dist = std::max(std::abs(ground_xz.x - focus_horiz.x),
+                                    std::abs(ground_xz.y - focus_horiz.z));
     // Top-down Y-band: Capture sky first; requeue remainder after enqueue.
     // SoftDefer keeps PendingLight until the final band — cold hole first-mesh
     // is unblocked via MeshLitGate hole-preview in TickMeshEmerge (not here).
@@ -3582,16 +3528,17 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     {
       telemetry_mismatch_frames = 0;
     }
-    const bool mismatch_finalize_kick = ShouldForceMissFinalizeOnTelemetryMismatch(
-        phys_miss.FocusMissingMesh > 0, phys_miss.VisualHoles > 0,
-        phys_miss.MissHoriz, telemetry_mismatch_frames) ||
+    const bool mismatch_finalize_kick =
+        ShouldForceMissFinalizeOnTelemetryMismatch(
+            phys_miss.FocusMissingMesh > 0, phys_miss.VisualHoles > 0,
+            phys_miss.MissHoriz, telemetry_mismatch_frames) ||
         ShouldForceMissFinalizeOnStandWitnessStuck(
-            !moving, phys_miss.FocusMissingMesh > 0, phys_miss.MissWitnessAgeFramesReport);
+            !moving, phys_miss.FocusMissingMesh > 0,
+            phys_miss.MissWitnessAgeFramesReport);
     const int finalize_ring =
         moving ? kVisualStageNearFovHoriz : kVisualStageLitDrawableHoriz;
     const bool miss_finalize_band =
-        enter_fov_lit ||
-        mismatch_finalize_kick ||
+        enter_fov_lit || mismatch_finalize_kick ||
         (visual_holes &&
          ShouldPreferMissFinalizeBand(horiz_dist, finalize_ring)) ||
         ShouldFinalizeRelightUnderPlPressure(pending_light_focus_n, horiz_dist,
@@ -3600,15 +3547,13 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         ShouldFinalizeRelightUnderVbSteadyPressure(
             vb_focus_n, pending_light_focus_n, horiz_dist);
     if (!exact_draw_gate_band && !exact_first_mesh_band && async_bg &&
-        band_cy > 0 &&
-        !miss_finalize_band)
+        band_cy > 0 && !miss_finalize_band)
     {
       const int band_h = band_cy * CHUNK_SIZE;
       const int span = relight_max - relight_min;
       if (span > band_h)
       {
-        const int band_min =
-            std::max(relight_min, relight_max - band_h + 1);
+        const int band_min = std::max(relight_min, relight_max - band_h + 1);
         if (band_min > relight_min)
         {
           remainder_min = relight_min;
@@ -3626,17 +3571,15 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       {
         const uint64_t epoch = world.GetStreamingFrameEpoch();
         const auto fit = RelightLastFinalizeEpoch_.find(ground_xz);
-        const bool band_needs =
-            ColumnSurfaceBandNeedsRelight(world, ground_xz, relight_min,
-                                          relight_max);
+        const bool band_needs = ColumnSurfaceBandNeedsRelight(
+            world, ground_xz, relight_min, relight_max);
         const auto &cap_telem = world.GetPhysicsTelemetry();
         const bool consume_mode = IsTicketedVbConsumeMode(
             cap_telem.VisibleBlackNoTicketN, cap_telem.VisibleBlackFocusN,
             cap_telem.VisibleBlackStalledN);
-        const bool plateau_suppress =
-            ShouldSuppressPendingLightNote(
-                cap_telem.VisibleBlackNoTicketN, pending_light_focus_n,
-                cap_telem.VisibleBlackFocusN);
+        const bool plateau_suppress = ShouldSuppressPendingLightNote(
+            cap_telem.VisibleBlackNoTicketN, pending_light_focus_n,
+            cap_telem.VisibleBlackFocusN);
         const bool consume_finalize_carve = consume_mode && band_needs;
         if (!exact_first_mesh_band && plateau_suppress &&
             cap_telem.RelightApplyNPrev == 0 &&
@@ -3647,8 +3590,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
           ++telem.RelightFinalizeDedupN;
         }
         else if (!exact_first_mesh_band &&
-                 fit != RelightLastFinalizeEpoch_.end() && epoch >= fit->second &&
-                 (epoch - fit->second) < 4 &&
+                 fit != RelightLastFinalizeEpoch_.end() &&
+                 epoch >= fit->second && (epoch - fit->second) < 4 &&
                  world.IsPendingLightBeforeMesh(ground_xz) && !band_needs &&
                  !consume_finalize_carve)
         {
@@ -3662,8 +3605,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       }
       telem.RelightCaptureFinalize = finalize_gate ? 1 : 0;
       const int span_y = std::max(0, relight_max - relight_min + 1);
-      telem.RelightCaptureBandCySpan =
-          (span_y + CHUNK_SIZE - 1) / CHUNK_SIZE;
+      telem.RelightCaptureBandCySpan = (span_y + CHUNK_SIZE - 1) / CHUNK_SIZE;
     }
     if (async_bg && world.IsAsyncRelightColumnInFlight(ground_xz))
     {
@@ -3698,8 +3640,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         {
           CubatariumLogInfo(
               "RelightAudit",
-              "capture requeue column=(" +
-                  std::to_string(ground_xz.x) + "," +
+              "capture requeue column=(" + std::to_string(ground_xz.x) + "," +
                   std::to_string(ground_xz.y) + ") reason=inflight queue=" +
                   std::to_string(PendingTerrainColumnRelightKeys.count(col)) +
                   " fifo=" +
@@ -3713,9 +3654,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     }
     if (frame_ms_so_far >= capture_hot_skip_ms && async_bg &&
         draw_gate_target_pinned &&
-        std::find(draw_gate_target_keys.begin(),
-                  draw_gate_target_keys.end(), col) !=
-            draw_gate_target_keys.end())
+        std::find(draw_gate_target_keys.begin(), draw_gate_target_keys.end(),
+                  col) != draw_gate_target_keys.end())
     {
       world.GetPhysicsTelemetryMutable().RelightCaptureHotSkipDrawGate = 1;
     }
@@ -3738,37 +3678,34 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       CubatariumLogInfo(
           "RelightAudit",
           "capture submit column=(" + std::to_string(ground_xz.x) + "," +
-              std::to_string(ground_xz.y) + ") band=" +
-              std::to_string(relight_min) + ":" + std::to_string(relight_max) +
-              " queued=" +
-              (queued_band_defined
-                   ? (std::to_string(queued_band.x) + ":" +
-                      std::to_string(queued_band.y))
-                   : std::string("none")) +
+              std::to_string(ground_xz.y) +
+              ") band=" + std::to_string(relight_min) + ":" +
+              std::to_string(relight_max) + " queued=" +
+              (queued_band_defined ? (std::to_string(queued_band.x) + ":" +
+                                      std::to_string(queued_band.y))
+                                   : std::string("none")) +
               " requested=" + std::to_string(requested_relight_min) + ":" +
               std::to_string(requested_relight_max) +
-              " surface_adjusted=" +
-              std::to_string(surface_band_adjusted) +
+              " surface_adjusted=" + std::to_string(surface_band_adjusted) +
               " focus_y=" + std::to_string(focus_block.y) +
               " column_top=" + std::to_string(col_top_y) +
               " finalize=" + std::to_string(finalize_gate) +
               " draw_gate=" + std::to_string(exact_draw_gate_band) +
-              " first_mesh_exact=" +
-              std::to_string(exact_first_mesh_band) + " boundary_exact=" +
+              " first_mesh_exact=" + std::to_string(exact_first_mesh_band) +
+              " boundary_exact=" +
               std::to_string(exact_boundary_dependency_band) +
               " horiz=" + std::to_string(horiz_dist) +
               " fifo=" + std::to_string(GetPendingTerrainColumnRelightCount()) +
-              " inflight=" + std::to_string(world.GetAsyncRelightInFlightCount()));
+              " inflight=" +
+              std::to_string(world.GetAsyncRelightInFlightCount()));
     }
     if (async_bg)
     {
-      world.EnqueueAsyncTerrainColumnRelight(col.x, col.y, relight_min,
-                                             relight_max, true, true,
-                                             finalize_gate,
-                                             exact_draw_gate_band,
-                                             exact_boundary_dependency_band
-                                                 ? "boundary_dependency"
-                                                 : "streaming_fifo");
+      world.EnqueueAsyncTerrainColumnRelight(
+          col.x, col.y, relight_min, relight_max, true, true, finalize_gate,
+          exact_draw_gate_band,
+          exact_boundary_dependency_band ? "boundary_dependency"
+                                         : "streaming_fifo");
       if (exact_boundary_dependency_band)
       {
         PendingBoundaryDependencyRelightKeys.erase(col);
@@ -3877,7 +3814,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   harvest_fifo_overflow();
 }
 
-void UWorldPersistence::DrainTerrainColumnRelights(UWorld &world, int max_columns)
+void UWorldPersistence::DrainTerrainColumnRelights(UWorld &world,
+                                                   int max_columns)
 {
   DrainRelightQueues(world, 0, max_columns);
 }
@@ -3894,13 +3832,12 @@ bool UWorldPersistence::IsTerrainColumnRelightQueued(
   return PendingTerrainColumnRelightKeys.count(world_block_key) != 0;
 }
 
-int UWorldPersistence::CancelTerrainColumnRelight(
-    glm::ivec2 world_block_key)
+int UWorldPersistence::CancelTerrainColumnRelight(glm::ivec2 world_block_key)
 {
   const glm::ivec2 ground_xz(FloorDiv(world_block_key.x, CHUNK_SIZE),
                              FloorDiv(world_block_key.y, CHUNK_SIZE));
-  world_block_key = glm::ivec2(ground_xz.x * CHUNK_SIZE,
-                               ground_xz.y * CHUNK_SIZE);
+  world_block_key =
+      glm::ivec2(ground_xz.x * CHUNK_SIZE, ground_xz.y * CHUNK_SIZE);
   int removed = 0;
   const auto remove_from_queue = [&](std::deque<glm::ivec2> &queue)
   {
@@ -3939,11 +3876,10 @@ int UWorldPersistence::CancelTerrainColumnRelight(
   }
   if (removed > 0 && IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
   {
-    CubatariumLogInfo(
-        "RelightAudit",
-        "cancel relight column=(" + std::to_string(ground_xz.x) + "," +
-            std::to_string(ground_xz.y) + ") removed=" +
-            std::to_string(removed));
+    CubatariumLogInfo("RelightAudit",
+                      "cancel relight column=(" + std::to_string(ground_xz.x) +
+                          "," + std::to_string(ground_xz.y) +
+                          ") removed=" + std::to_string(removed));
   }
   return removed;
 }
@@ -3975,13 +3911,15 @@ UWorldPersistence::GetTerrainColumnRelightQueueInfo(
     const auto it = std::find(queue.begin(), queue.end(), world_block_key);
     return it == queue.end() ? -1 : static_cast<int>(it - queue.begin());
   };
-  const int priority_index = find_position(PendingTerrainColumnRelightsPriority);
+  const int priority_index =
+      find_position(PendingTerrainColumnRelightsPriority);
   if (priority_index >= 0)
   {
     out.priority = true;
     out.in_deque = true;
     out.queue_index = priority_index;
-    out.queue_size = static_cast<int>(PendingTerrainColumnRelightsPriority.size());
+    out.queue_size =
+        static_cast<int>(PendingTerrainColumnRelightsPriority.size());
   }
   else
   {
@@ -4047,15 +3985,15 @@ int UWorldPersistence::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground,
     glm::ivec2 key{0};
     bool operator<(const HeapEntry &o) const { return dist < o.dist; }
   };
-  auto push_unprotected = [&](const std::deque<glm::ivec2> &q,
-                              std::priority_queue<HeapEntry> &heap)
+  auto push_unprotected =
+      [&](const std::deque<glm::ivec2> &q, std::priority_queue<HeapEntry> &heap)
   {
     for (const glm::ivec2 &key : q)
     {
       const int cx = FloorDiv(key.x, CHUNK_SIZE);
       const int cz = FloorDiv(key.y, CHUNK_SIZE);
-      const int dist =
-          std::max(std::abs(cx - focus_ground.x), std::abs(cz - focus_ground.z));
+      const int dist = std::max(std::abs(cx - focus_ground.x),
+                                std::abs(cz - focus_ground.z));
       if (ShouldProtectRelightFifoTrimVictim(
               cx, cz, RelightFifoPinValid, RelightFifoPinCx, RelightFifoPinCz,
               true, focus_ground.x, focus_ground.z, protect) ||
@@ -4081,8 +4019,8 @@ int UWorldPersistence::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground,
       const glm::ivec2 victim = top.key;
       const int cx = FloorDiv(victim.x, CHUNK_SIZE);
       const int cz = FloorDiv(victim.y, CHUNK_SIZE);
-      const int dist =
-          std::max(std::abs(cx - focus_ground.x), std::abs(cz - focus_ground.z));
+      const int dist = std::max(std::abs(cx - focus_ground.x),
+                                std::abs(cz - focus_ground.z));
       if (ShouldProtectRelightFifoTrimVictim(
               cx, cz, RelightFifoPinValid, RelightFifoPinCx, RelightFifoPinCz,
               true, focus_ground.x, focus_ground.z, protect) ||
@@ -4157,8 +4095,8 @@ void UWorldPersistence::ClearPendingRelights(const char *reason)
     {
       CubatariumLogInfo(
           "RelightAudit",
-          "clear pending relight key reason=" + reason_text + " owner=" +
-              owner + " column=(" +
+          "clear pending relight key reason=" + reason_text +
+              " owner=" + owner + " column=(" +
               std::to_string(FloorDiv(world_key.x, CHUNK_SIZE)) + "," +
               std::to_string(FloorDiv(world_key.y, CHUNK_SIZE)) + ")");
     };
@@ -4172,12 +4110,11 @@ void UWorldPersistence::ClearPendingRelights(const char *reason)
     }
     for (const auto &entry : DeferredFarRelightColumns)
     {
-      CubatariumLogInfo(
-          "RelightAudit",
-          "clear pending relight key reason=" + reason_text +
-              " owner=deferred_far column=(" +
-              std::to_string(entry.first.x) + "," +
-              std::to_string(entry.first.y) + ")");
+      CubatariumLogInfo("RelightAudit",
+                        "clear pending relight key reason=" + reason_text +
+                            " owner=deferred_far column=(" +
+                            std::to_string(entry.first.x) + "," +
+                            std::to_string(entry.first.y) + ")");
     }
   }
   PendingPlayerRelights.clear();
@@ -4201,8 +4138,7 @@ int UWorldPersistence::GetPendingPlayerRelightCount() const
 }
 
 void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
-    UWorld &world, glm::ivec3 ground_coord,
-    PendingAsyncColumnLoadState state)
+    UWorld &world, glm::ivec3 ground_coord, PendingAsyncColumnLoadState state)
 {
   const auto finalize_started = std::chrono::steady_clock::now();
   if (ground_coord.y != 0)
@@ -4215,29 +4151,24 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     {
       return std::string{};
     }
-    const double finalize_prelog_ms = std::chrono::duration<double, std::milli>(
-                                          std::chrono::steady_clock::now() -
-                                          finalize_started)
-                                          .count();
+    const double finalize_prelog_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - finalize_started)
+            .count();
     return " timing_slices=" + std::to_string(state.timing_slice_count) +
-           " disk_discovery_ms=" +
-           std::to_string(state.disk_discovery_ms) +
+           " disk_discovery_ms=" + std::to_string(state.disk_discovery_ms) +
            " format_detect_ms=" + std::to_string(state.format_detect_ms) +
            " worker_queue_ms=" + std::to_string(state.worker_queue_ms) +
-           " worker_queue_max_ms=" +
-           std::to_string(state.worker_queue_max_ms) +
+           " worker_queue_max_ms=" + std::to_string(state.worker_queue_max_ms) +
            " file_open_ms=" + std::to_string(state.file_open_ms) +
            " file_read_ms=" + std::to_string(state.file_read_ms) +
            " file_read_max_ms=" + std::to_string(state.file_read_max_ms) +
            " disk_probe_ms=" + std::to_string(state.disk_probe_ms) +
-           " disk_probe_max_ms=" +
-           std::to_string(state.disk_probe_max_ms) +
+           " disk_probe_max_ms=" + std::to_string(state.disk_probe_max_ms) +
            " result_wait_ms=" + std::to_string(state.result_wait_ms) +
-           " result_wait_max_ms=" +
-           std::to_string(state.result_wait_max_ms) +
+           " result_wait_max_ms=" + std::to_string(state.result_wait_max_ms) +
            " deserialize_ms=" + std::to_string(state.deserialize_ms) +
-           " deserialize_max_ms=" +
-           std::to_string(state.deserialize_max_ms) +
+           " deserialize_max_ms=" + std::to_string(state.deserialize_max_ms) +
            " apply_ms=" + std::to_string(state.apply_ms) +
            " apply_max_ms=" + std::to_string(state.apply_max_ms) +
            " deserialize_apply_ms=" +
@@ -4276,17 +4207,15 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
                                          max_height, state.highest_cy_on_disk,
                                          min_height);
 
-  const bool has_disk =
-      state.highest_cy_on_disk != kNoChunkSliceOnDisk;
-  const bool complete = IsTerrainChunkComplete(
-      world.BlockWorld, ground_coord, max_height,
-      state.highest_cy_on_disk == kNoChunkSliceOnDisk
-          ? kNoTerrainChunkSlice
-          : state.highest_cy_on_disk,
-      min_height);
-  const bool should_retry =
-      has_disk &&
-      (state.had_disk_read_failure || state.had_invalid_token || !complete);
+  const bool has_disk = state.highest_cy_on_disk != kNoChunkSliceOnDisk;
+  const bool complete =
+      IsTerrainChunkComplete(world.BlockWorld, ground_coord, max_height,
+                             state.highest_cy_on_disk == kNoChunkSliceOnDisk
+                                 ? kNoTerrainChunkSlice
+                                 : state.highest_cy_on_disk,
+                             min_height);
+  const bool should_retry = has_disk && (state.had_disk_read_failure ||
+                                         state.had_invalid_token || !complete);
   const double load_ms =
       state.requested_at == std::chrono::steady_clock::time_point{}
           ? 0.0
@@ -4297,16 +4226,14 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
   if (should_retry && state.retry_generation < kMaxAsyncColumnLoadRetries)
   {
     LogWorldColumnSource(
-        "disk", "retry",
-        ground_coord,
+        "disk", "retry", ground_coord,
         "highest_cy=" + std::to_string(state.highest_cy_on_disk) +
             " demand_id=" + std::to_string(state.demand_id) +
             " retry=" + std::to_string(state.retry_generation + 1) +
             " read_failed=" + (state.had_disk_read_failure ? "1" : "0") +
             " token_invalid=" + (state.had_invalid_token ? "1" : "0") +
-            " complete=" + (complete ? "1" : "0") +
-            " elapsed_ms=" + std::to_string(load_ms) +
-            async_io_trace_details());
+            " complete=" + (complete ? "1" : "0") + " elapsed_ms=" +
+            std::to_string(load_ms) + async_io_trace_details());
     ClearTerrainColumnChunks(world.BlockWorld, ground_coord, max_height,
                              min_height);
     PendingAsyncColumnLoadState retry_state;
@@ -4339,8 +4266,7 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     PendingAsyncColumnLoadSlices[ground_coord] = retry_state;
     const glm::ivec3 focus =
         UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
-    const int sea_cy =
-        FloorDiv(world.ProceduralTemplate.SeaLevel, CHUNK_SIZE);
+    const int sea_cy = FloorDiv(world.ProceduralTemplate.SeaLevel, CHUNK_SIZE);
     std::vector<int> cy_order;
     cy_order.reserve(static_cast<size_t>(retry_state.remaining_results));
     auto push_cy = [&](int cy)
@@ -4359,8 +4285,7 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     {
       push_cy(sea_cy);
     }
-    const int focus_radius = std::max(focus.y - min_cy,
-                                      load_to_cy - focus.y);
+    const int focus_radius = std::max(focus.y - min_cy, load_to_cy - focus.y);
     for (int d = 1; d <= focus_radius; ++d)
     {
       push_cy(focus.y - d);
@@ -4374,10 +4299,10 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
         world.Streaming->GetChunkGenTokens().Current(ground_coord);
     for (int cy : cy_order)
     {
-      AsyncChunkIo->RequestLoad(glm::ivec3(ground_coord.x, cy, ground_coord.z),
-                                *ChunkStorage, *world.BlockRegistry,
-                                WorldFolderPath, token, retry_state.cancellation,
-                                retry_state.demand_id);
+      AsyncChunkIo->RequestLoad(
+          glm::ivec3(ground_coord.x, cy, ground_coord.z), *ChunkStorage,
+          *world.BlockRegistry, WorldFolderPath, token,
+          retry_state.cancellation, retry_state.demand_id);
     }
     return;
   }
@@ -4408,8 +4333,7 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
           " demand_id=" + std::to_string(state.demand_id) +
           " disk_light=" + (state.had_disk_light ? "1" : "0") +
           " retry=" + std::to_string(state.retry_generation) +
-          " elapsed_ms=" + std::to_string(load_ms) +
-          async_io_trace_details());
+          " elapsed_ms=" + std::to_string(load_ms) + async_io_trace_details());
 
   if (!world.Streaming || !world.Streaming->GetStreamer())
   {
@@ -4436,26 +4360,23 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
       // Mesh gate band = sea±2 CHUNK ∪ player when near (same as commit).
       const int sea = settings.SeaLevel;
       int dirty_min = std::max(settings.MinHeight, sea - CHUNK_SIZE);
-      int dirty_max =
-          std::min(settings.MaxHeight, sea + CHUNK_SIZE * 2);
+      int dirty_max = std::min(settings.MaxHeight, sea + CHUNK_SIZE * 2);
       if (near_focus)
       {
         const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
-        dirty_min =
-            std::min(dirty_min,
-                     std::max(settings.MinHeight,
-                              focus_block.y - CHUNK_SIZE));
-        dirty_max = std::max(
-            dirty_max,
-            std::min(settings.MaxHeight, focus_block.y + CHUNK_SIZE * 2));
+        dirty_min = std::min(dirty_min, std::max(settings.MinHeight,
+                                                 focus_block.y - CHUNK_SIZE));
+        dirty_max =
+            std::max(dirty_max, std::min(settings.MaxHeight,
+                                         focus_block.y + CHUNK_SIZE * 2));
       }
 
       // SoftDefer: finalize_pending_gate must line up with the mesh-gate band.
-      const int horiz =
-          std::max(std::abs(ground_coord.x - focus_ground.x),
-                   std::abs(ground_coord.z - focus_ground.z));
+      const int horiz = std::max(std::abs(ground_coord.x - focus_ground.x),
+                                 std::abs(ground_coord.z - focus_ground.z));
       const glm::ivec2 col_xz(ground_coord.x, ground_coord.z);
-      const auto note_commit_pl = [&](int dmin, int dmax) {
+      const auto note_commit_pl = [&](int dmin, int dmax)
+      {
         // FZ2.2-C1b/C1c: FullyDark-only + idempotent Note.
         if (!world.ColumnFullyDarkSolidDrawable(col_xz))
         {
@@ -4486,16 +4407,16 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
       if (URuntimeTuning::Get().Fz2LitRingSeed && near_focus &&
           horiz <= kVisualStageLitDrawableHoriz && world.IsEnterLitGateActive())
       {
-        const glm::ivec2 world_key(col_xz.x * CHUNK_SIZE, col_xz.y * CHUNK_SIZE);
+        const glm::ivec2 world_key(col_xz.x * CHUNK_SIZE,
+                                   col_xz.y * CHUNK_SIZE);
         if (!IsTerrainColumnRelightQueued(world_key) &&
             !world.IsAsyncRelightColumnInFlight(col_xz) &&
             !world.IsPendingLightBeforeMesh(col_xz) &&
             world.ColumnFullyDarkSolidDrawable(col_xz))
         {
-          EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
-                                      ground_coord.z * CHUNK_SIZE,
-                                      /*priority=*/true, dirty_min, dirty_max,
-                                      __FUNCTION__, &world);
+          EnqueueTerrainColumnRelight(
+              ground_coord.x * CHUNK_SIZE, ground_coord.z * CHUNK_SIZE,
+              /*priority=*/true, dirty_min, dirty_max, __FUNCTION__, &world);
           world.TryNotePendingLightBeforeMesh(ground_coord, dirty_min,
                                               dirty_max, __FUNCTION__);
         }
@@ -4512,30 +4433,29 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
             world.GetBlockWorld(), ground_coord, dirty_min, dirty_max);
       }
     }
-    else if (ShouldTrustDiskLightmap(
-                 state.had_disk_light,
-                 IsColumnLightComplete(glm::ivec2(ground_coord.x, ground_coord.z)),
-                 world.IsLightingRelightDeferred()))
+    else if (ShouldTrustDiskLightmap(state.had_disk_light,
+                                     IsColumnLightComplete(glm::ivec2(
+                                         ground_coord.x, ground_coord.z)),
+                                     world.IsLightingRelightDeferred()))
     {
       // Trusted disk lightmap: remesh only — no Capture FIFO refeed.
       // Bake-before-present: Dirty without LitReady until non-FullyDark
-      // drawable settle (no near_focus LitReady bypass — that caused VB/flicker).
-      // Seamed neighbors off: avoid 3x3 Dirty dual with neighbor FirstMesh/RAA.
+      // drawable settle (no near_focus LitReady bypass — that caused
+      // VB/flicker). Seamed neighbors off: avoid 3x3 Dirty dual with neighbor
+      // FirstMesh/RAA.
       ++world.GetPhysicsTelemetryMutable().DiskLightTrustedN;
       const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
-      int dirty_min = std::max(settings.MinHeight,
-                               focus_block.y - CHUNK_SIZE);
+      int dirty_min = std::max(settings.MinHeight, focus_block.y - CHUNK_SIZE);
       int dirty_max =
           std::min(settings.MaxHeight, focus_block.y + CHUNK_SIZE * 2);
       if (settings.FillWater)
       {
         dirty_min =
-            std::min(dirty_min,
-                     std::max(settings.MinHeight,
-                              settings.SeaLevel - CHUNK_SIZE));
-        dirty_max = std::max(
-            dirty_max,
-            std::min(settings.MaxHeight, settings.SeaLevel + CHUNK_SIZE * 2));
+            std::min(dirty_min, std::max(settings.MinHeight,
+                                         settings.SeaLevel - CHUNK_SIZE));
+        dirty_max =
+            std::max(dirty_max, std::min(settings.MaxHeight,
+                                         settings.SeaLevel + CHUNK_SIZE * 2));
       }
       world.GetMeshService().MarkTerrainChunkMeshDirtySeamed(
           ground_coord, dirty_min, dirty_max, false,
@@ -4600,19 +4520,17 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
       // Disk already lit: remesh visible band only (player ∪ sea), not full
       // 0..MaxHeight (that flooded Dirty on every column load).
       const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
-      int dirty_min = std::max(settings.MinHeight,
-                               focus_block.y - CHUNK_SIZE);
+      int dirty_min = std::max(settings.MinHeight, focus_block.y - CHUNK_SIZE);
       int dirty_max =
           std::min(settings.MaxHeight, focus_block.y + CHUNK_SIZE * 2);
       if (settings.FillWater)
       {
         dirty_min =
-            std::min(dirty_min,
-                     std::max(settings.MinHeight,
-                              settings.SeaLevel - CHUNK_SIZE));
-        dirty_max = std::max(
-            dirty_max,
-            std::min(settings.MaxHeight, settings.SeaLevel + CHUNK_SIZE * 2));
+            std::min(dirty_min, std::max(settings.MinHeight,
+                                         settings.SeaLevel - CHUNK_SIZE));
+        dirty_max =
+            std::max(dirty_max, std::min(settings.MaxHeight,
+                                         settings.SeaLevel + CHUNK_SIZE * 2));
       }
       world.GetMeshService().MarkTerrainChunkMeshDirtySeamed(
           ground_coord, dirty_min, dirty_max, near_focus,
@@ -4623,8 +4541,7 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
 }
 
 AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
-    UWorld &world, std::size_t max_slice_applies_override,
-    double max_apply_ms)
+    UWorld &world, std::size_t max_slice_applies_override, double max_apply_ms)
 {
   const auto tick_started = std::chrono::steady_clock::now();
   AsyncChunkIoTickMetrics metrics;
@@ -4652,10 +4569,10 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
        metrics.light_flags_result_queue_mutex_wait_ms >= 2.0 ||
        metrics.light_flags_result_queue_mutex_held_ms >= 2.0))
   {
-    const double other_ms = (std::max)(
-        0.0, metrics.light_flags_result_drain_ms -
-                 metrics.light_flags_result_queue_mutex_wait_ms -
-                 metrics.light_flags_result_queue_mutex_held_ms);
+    const double other_ms =
+        (std::max)(0.0, metrics.light_flags_result_drain_ms -
+                            metrics.light_flags_result_queue_mutex_wait_ms -
+                            metrics.light_flags_result_queue_mutex_held_ms);
     const std::string message =
         "detail=light_flags_result_drain elapsed_ms=" +
         std::to_string(metrics.light_flags_result_drain_ms) +
@@ -4698,11 +4615,10 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
     std::size_t applied_slices = 0;
     const auto apply_budget_expired = [&]()
     {
-      const bool expired =
-          applied_slices > 0 &&
-          std::chrono::duration<double, std::milli>(
-              std::chrono::steady_clock::now() - apply_started)
-                  .count() >= effective_apply_budget_ms;
+      const bool expired = applied_slices > 0 &&
+                           std::chrono::duration<double, std::milli>(
+                               std::chrono::steady_clock::now() - apply_started)
+                                   .count() >= effective_apply_budget_ms;
       metrics.apply_time_budget_hit = metrics.apply_time_budget_hit || expired;
       return expired;
     };
@@ -4715,9 +4631,8 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
       const bool has_pending_column =
           PendingAsyncColumnLoadSlices.find(ground) !=
           PendingAsyncColumnLoadSlices.end();
-      const int distance = (std::max)(
-          std::abs(load.coord.x - focus_chunk.x),
-          std::abs(load.coord.z - focus_chunk.z));
+      const int distance = (std::max)(std::abs(load.coord.x - focus_chunk.x),
+                                      std::abs(load.coord.z - focus_chunk.z));
       int age_bonus = 0;
       if (load.submittedAt != std::chrono::steady_clock::time_point{} &&
           result_selection_time > load.submittedAt)
@@ -4829,13 +4744,12 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
             ChunkStorage->DetectFormatOnDisk(WorldFolderPath, load.coord);
         if (trace_async_io)
         {
-          const double probe_ms = std::chrono::duration<double, std::milli>(
-                                      std::chrono::steady_clock::now() -
-                                      probe_started)
-                                      .count();
+          const double probe_ms =
+              std::chrono::duration<double, std::milli>(
+                  std::chrono::steady_clock::now() - probe_started)
+                  .count();
           state.disk_probe_ms += probe_ms;
-          state.disk_probe_max_ms =
-              std::max(state.disk_probe_max_ms, probe_ms);
+          state.disk_probe_max_ms = std::max(state.disk_probe_max_ms, probe_ms);
         }
       }
       const uint64_t current_sequence =
@@ -4948,9 +4862,9 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
       {
         deferred.push_back(std::move(completed_loads[i]));
       }
-      AsyncChunkIo->RequeueLoads(
-          std::move(deferred), &metrics.result_requeue_mutex_wait_ms,
-          &metrics.result_requeue_mutex_held_ms);
+      AsyncChunkIo->RequeueLoads(std::move(deferred),
+                                 &metrics.result_requeue_mutex_wait_ms,
+                                 &metrics.result_requeue_mutex_held_ms);
       metrics.result_requeue_ms =
           std::chrono::duration<double, std::milli>(
               std::chrono::steady_clock::now() - requeue_started)
@@ -5000,18 +4914,16 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
       {
         details += " error=" + save.error;
       }
-      details += " pending_columns=" +
-                 std::to_string(PendingAsyncColumnSaveSlices.size()) +
-                 " io_jobs=" +
-                 std::to_string(AsyncChunkIo->GetPendingJobCount()) +
-                 " io_active=" +
-                 std::to_string(AsyncChunkIo->GetActiveJobCount()) +
-                 " io_load_jobs=" +
-                 std::to_string(AsyncChunkIo->GetLoadPendingJobCount()) +
-                 " io_background_jobs=" +
-                 std::to_string(AsyncChunkIo->GetBackgroundPendingJobCount());
-      LogWorldColumnSave(outcome.c_str(), save.coord, details,
-                         !save.success);
+      details +=
+          " pending_columns=" +
+          std::to_string(PendingAsyncColumnSaveSlices.size()) +
+          " io_jobs=" + std::to_string(AsyncChunkIo->GetPendingJobCount()) +
+          " io_active=" + std::to_string(AsyncChunkIo->GetActiveJobCount()) +
+          " io_load_jobs=" +
+          std::to_string(AsyncChunkIo->GetLoadPendingJobCount()) +
+          " io_background_jobs=" +
+          std::to_string(AsyncChunkIo->GetBackgroundPendingJobCount());
+      LogWorldColumnSave(outcome.c_str(), save.coord, details, !save.success);
     }
     metrics.save_drain_ms =
         std::chrono::duration<double, std::milli>(
@@ -5019,10 +4931,10 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
             .count();
   }
   const auto light_flags_save_started = std::chrono::steady_clock::now();
-  SaveColumnLightFlagsIfDirty(
-      &metrics.light_flags_snapshot_ms, &metrics.light_flags_enqueue_ms,
-      &metrics.light_flags_complete_columns_n,
-      &metrics.light_flags_saved_revision);
+  SaveColumnLightFlagsIfDirty(&metrics.light_flags_snapshot_ms,
+                              &metrics.light_flags_enqueue_ms,
+                              &metrics.light_flags_complete_columns_n,
+                              &metrics.light_flags_saved_revision);
   metrics.light_flags_save_ms =
       std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - light_flags_save_started)
@@ -5039,24 +4951,20 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
     metrics.background_pending_jobs_n = background.pending;
     metrics.background_active_jobs_n = background.active;
     metrics.background_workers_n = background.workers;
-    metrics.load_result_queue_depth_n =
-        AsyncChunkIo->GetLoadResultQueueDepth();
-    metrics.save_result_queue_depth_n =
-        AsyncChunkIo->GetSaveResultQueueDepth();
+    metrics.load_result_queue_depth_n = AsyncChunkIo->GetLoadResultQueueDepth();
+    metrics.save_result_queue_depth_n = AsyncChunkIo->GetSaveResultQueueDepth();
     const AsyncChunkLoadQueuePushMetrics push_metrics =
         AsyncChunkIo->TakeLoadResultPushMetrics();
     metrics.load_result_push_mutex_wait_ms = push_metrics.mutex_wait_ms;
     metrics.load_result_push_mutex_held_ms = push_metrics.mutex_held_ms;
-    metrics.load_result_push_mutex_wait_max_ms =
-        push_metrics.mutex_wait_max_ms;
-    metrics.load_result_push_mutex_held_max_ms =
-        push_metrics.mutex_held_max_ms;
+    metrics.load_result_push_mutex_wait_max_ms = push_metrics.mutex_wait_max_ms;
+    metrics.load_result_push_mutex_held_max_ms = push_metrics.mutex_held_max_ms;
     metrics.load_result_push_n = push_metrics.push_count;
   }
-  metrics.queue_snapshot_ms = std::chrono::duration<double, std::milli>(
-                                  std::chrono::steady_clock::now() -
-                                  queue_snapshot_started)
-                                  .count();
+  metrics.queue_snapshot_ms =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - queue_snapshot_started)
+          .count();
   metrics.tick_wall_ms = std::chrono::duration<double, std::milli>(
                              std::chrono::steady_clock::now() - tick_started)
                              .count();
@@ -5097,23 +5005,19 @@ void UWorldPersistence::TraceAsyncChunkIoShutdownState() const
       "outcome=shutdown_state pending_save_columns=" +
       std::to_string(PendingAsyncColumnSaveSlices.size()) +
       " pending_disk_columns=" +
-      std::to_string(PendingAsyncColumnLoadSlices.size()) +
-      " io_jobs=" +
+      std::to_string(PendingAsyncColumnLoadSlices.size()) + " io_jobs=" +
       std::to_string(AsyncChunkIo ? AsyncChunkIo->GetPendingJobCount() : 0) +
       " io_active=" +
       std::to_string(AsyncChunkIo ? AsyncChunkIo->GetActiveJobCount() : 0) +
       " ready_saves=" +
-      std::to_string(AsyncChunkIo
-                         ? AsyncChunkIo->GetSaveResultQueueDepth()
-                         : 0) +
+      std::to_string(AsyncChunkIo ? AsyncChunkIo->GetSaveResultQueueDepth()
+                                  : 0) +
       " ready_loads=" +
-      std::to_string(AsyncChunkIo
-                         ? AsyncChunkIo->GetLoadResultQueueDepth()
-                         : 0) +
+      std::to_string(AsyncChunkIo ? AsyncChunkIo->GetLoadResultQueueDepth()
+                                  : 0) +
       " light_flags_in_flight=" +
       std::to_string(LightCompleteSaveInFlight ? 1 : 0) +
-      " light_flags_dirty=" +
-      std::to_string(LightCompleteDirty ? 1 : 0);
+      " light_flags_dirty=" + std::to_string(LightCompleteDirty ? 1 : 0);
   CubatariumLogInfo("WorldColumnSave", message);
 }
 
@@ -5183,15 +5087,14 @@ bool UWorldPersistence::AbortAsyncChunkIoFor(
     const double elapsed_ms =
         state.requested_at == std::chrono::steady_clock::time_point{}
             ? 0.0
-            : std::chrono::duration<double, std::milli>(
-                  abort_started - state.requested_at)
+            : std::chrono::duration<double, std::milli>(abort_started -
+                                                        state.requested_at)
                   .count();
-    LogWorldColumnSource(
-        "disk", "cancelled_abort", entry.first,
-        "demand_id=" + std::to_string(state.demand_id) +
-            " reason=abort_async_io remaining_slices=" +
-            std::to_string(state.remaining_results) +
-            " elapsed_ms=" + std::to_string(elapsed_ms));
+    LogWorldColumnSource("disk", "cancelled_abort", entry.first,
+                         "demand_id=" + std::to_string(state.demand_id) +
+                             " reason=abort_async_io remaining_slices=" +
+                             std::to_string(state.remaining_results) +
+                             " elapsed_ms=" + std::to_string(elapsed_ms));
   }
   if (cancelled_loads && AsyncChunkIo)
   {
@@ -5251,10 +5154,10 @@ void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
       ChunkStorage->GetHighestChunkSliceOnDisk(WorldFolderPath, ground_coord);
   if (trace_async_io)
   {
-    state.disk_discovery_ms = std::chrono::duration<double, std::milli>(
-                                  std::chrono::steady_clock::now() -
-                                  disk_discovery_started)
-                                  .count();
+    state.disk_discovery_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - disk_discovery_started)
+            .count();
   }
   if (state.highest_cy_on_disk == kNoChunkSliceOnDisk)
   {
@@ -5285,8 +5188,7 @@ void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
   // can start as soon as light finishes after finalize.
   const glm::ivec3 focus =
       UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
-  const int sea_cy =
-      FloorDiv(world.ProceduralTemplate.SeaLevel, CHUNK_SIZE);
+  const int sea_cy = FloorDiv(world.ProceduralTemplate.SeaLevel, CHUNK_SIZE);
   std::vector<int> cy_order;
   cy_order.reserve(static_cast<size_t>(state.remaining_results));
   auto push_cy = [&](int cy)
@@ -5305,8 +5207,8 @@ void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
   {
     push_cy(sea_cy);
   }
-  const int focus_radius = std::max(focus.y - min_cy,
-                                    state.highest_cy_on_disk - focus.y);
+  const int focus_radius =
+      std::max(focus.y - min_cy, state.highest_cy_on_disk - focus.y);
   for (int d = 1; d <= focus_radius; ++d)
   {
     push_cy(focus.y - d);
@@ -5361,18 +5263,16 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
         ground_coord, max_height, min_height, *ChunkStorage, WorldFolderPath);
     if (IsWorldColumnSaveTraceEnabled())
     {
-      LogWorldColumnSave("discard_incomplete_queued", ground_coord,
-                         "max_height=" + std::to_string(max_height) +
-                             " complete_ms=" +
-                             std::to_string(completeness_ms) +
-                             " cleanup_operation=full_column" +
-                             " total_ms=" +
-                             std::to_string(
-                                 std::chrono::duration<double, std::milli>(
-                                     std::chrono::steady_clock::now() -
-                                     request_started)
-                                     .count()) +
-                             " world_folder=" + WorldFolderPath);
+      LogWorldColumnSave(
+          "discard_incomplete_queued", ground_coord,
+          "max_height=" + std::to_string(max_height) +
+              " complete_ms=" + std::to_string(completeness_ms) +
+              " cleanup_operation=full_column" + " total_ms=" +
+              std::to_string(
+                  std::chrono::duration<double, std::milli>(
+                      std::chrono::steady_clock::now() - request_started)
+                      .count()) +
+              " world_folder=" + WorldFolderPath);
     }
     return;
   }
@@ -5386,9 +5286,8 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
           std::chrono::steady_clock::now() - disk_index_started)
           .count();
   const auto highest_non_air_started = std::chrono::steady_clock::now();
-  const int highest_non_air =
-      GetHighestNonAirChunkSlice(world.BlockWorld, ground_coord, max_height,
-                                 min_height);
+  const int highest_non_air = GetHighestNonAirChunkSlice(
+      world.BlockWorld, ground_coord, max_height, min_height);
   const double highest_non_air_ms =
       std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - highest_non_air_started)
@@ -5423,8 +5322,7 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
       std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - materialize_started)
           .count();
-  const int stale_slice_count =
-      std::max(0, max_cy - highest_to_save);
+  const int stale_slice_count = std::max(0, max_cy - highest_to_save);
   const int cleanup_operation_count = stale_slice_count > 0 ? 1 : 0;
   const auto pending_started = std::chrono::steady_clock::now();
   ChunkStorage->MarkColumnSavePending(ground_coord);
@@ -5450,9 +5348,9 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
   const auto cleanup_enqueue_started = std::chrono::steady_clock::now();
   if (cleanup_operation_count > 0)
   {
-    AsyncChunkIo->RequestRemoveChunkSlices(
-        ground_coord, highest_to_save + 1, max_cy, *ChunkStorage,
-        WorldFolderPath);
+    AsyncChunkIo->RequestRemoveChunkSlices(ground_coord, highest_to_save + 1,
+                                           max_cy, *ChunkStorage,
+                                           WorldFolderPath);
   }
   const double cleanup_enqueue_ms =
       std::chrono::duration<double, std::milli>(
@@ -5473,9 +5371,10 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
             " pending_setup_ms=" + std::to_string(pending_setup_ms) +
             " cleanup_enqueue_ms=" + std::to_string(cleanup_enqueue_ms) +
             " total_ms=" +
-            std::to_string(std::chrono::duration<double, std::milli>(
-                               std::chrono::steady_clock::now() - request_started)
-                               .count()) +
+            std::to_string(
+                std::chrono::duration<double, std::milli>(
+                    std::chrono::steady_clock::now() - request_started)
+                    .count()) +
             " world_folder=" + WorldFolderPath);
   }
 }
@@ -5662,10 +5561,9 @@ void UWorldPersistence::LoadInitialTerrainColumns(UWorld &world,
       LoadTerrainColumn(ground, world.BlockWorld, *world.BlockRegistry,
                         world.ProceduralTemplate.MaxHeight,
                         world.ProceduralTemplate.MinHeight);
-      if (!IsTerrainChunkComplete(world.BlockWorld, ground,
-                                  world.ProceduralTemplate.MaxHeight,
-                                  kNoTerrainChunkSlice,
-                                  world.ProceduralTemplate.MinHeight))
+      if (!IsTerrainChunkComplete(
+              world.BlockWorld, ground, world.ProceduralTemplate.MaxHeight,
+              kNoTerrainChunkSlice, world.ProceduralTemplate.MinHeight))
       {
         PurgeIncompleteTerrainColumn(world.BlockWorld, ground,
                                      world.ProceduralTemplate.MaxHeight,
@@ -5697,13 +5595,17 @@ void UWorldPersistence::LoadUsers(UWorld &world, const std::string &file_name)
     json d = json::parse(val);
     bool legacyInventory = false;
     for (const auto &saved : d)
-      legacyInventory |= saved.is_object() && saved.value("inventory_version", 0) < 3;
+      legacyInventory |=
+          saved.is_object() && saved.value("inventory_version", 0) < 3;
     if (legacyInventory)
     {
       std::error_code backupError;
       std::filesystem::copy_file(file_name, file_name + ".inventory-v2.bak",
-                                std::filesystem::copy_options::skip_existing, backupError);
-      if (backupError) throw std::runtime_error("Inventory backup failed: " + backupError.message());
+                                 std::filesystem::copy_options::skip_existing,
+                                 backupError);
+      if (backupError)
+        throw std::runtime_error("Inventory backup failed: " +
+                                 backupError.message());
     }
     world.Users.clear();
     for (auto i = d.begin(); i != d.end(); ++i)
@@ -5739,7 +5641,9 @@ void UWorldPersistence::LoadUsers(UWorld &world, const std::string &file_name)
           world.Environment.SetPlayerCreatureId(saved_id);
         }
       }
-      if(user_data.contains("human_appearance")) user->SetHumanAppearance(user_data["human_appearance"].get<HumanAppearance>());
+      if (user_data.contains("human_appearance"))
+        user->SetHumanAppearance(
+            user_data["human_appearance"].get<HumanAppearance>());
       if (user_data.contains("selected_skin_id"))
       {
         user->SetSelectedSkinId(
@@ -5845,6 +5749,7 @@ void UWorldPersistence::LoadUsers(UWorld &world, const std::string &file_name)
           player_creature->GetAttributes().ClampAll();
           player_creature->GetVitals().ClampCurrents();
         }
+        ReadCreatureEffects(user_data, player_creature->GetStatusEffects());
         player_creature->SetOrientation(ModelYawFromCameraYaw(yaw), pitch);
         player_creature->SetHumanAppearance(user->GetHumanAppearance());
         if (!user->GetSelectedSkinId().empty())
@@ -5900,7 +5805,7 @@ void UWorldPersistence::SaveUsers(UWorld &world, const std::string &file_name)
     user_json["yaw"] = yaw;
     user_json["pitch"] = pitch;
     user_json["player_creature_id"] = user->GetPlayerCreatureId();
-    user_json["human_appearance"]=user->GetHumanAppearance();
+    user_json["human_appearance"] = user->GetHumanAppearance();
     if (!user->GetSelectedSkinId().empty())
     {
       user_json["selected_skin_id"] = user->GetSelectedSkinId();
@@ -5914,6 +5819,7 @@ void UWorldPersistence::SaveUsers(UWorld &world, const std::string &file_name)
     if (UCreature *player_creature =
             world.GetCreature(user->GetPlayerCreatureId()))
     {
+      WriteCreatureEffects(user_json, player_creature->GetStatusEffects());
       player_creature->GetInventory().SerializeToJson(user_json);
       CreatureStatsJson::Write(user_json, player_creature->GetVitals(),
                                player_creature->GetAttributes());
@@ -6119,7 +6025,8 @@ void UWorldPersistence::LoadWorldData(UWorld &world,
         if (UWorld::WeatherTypeFromString(env["weather"].get<std::string>(),
                                           weather))
         {
-          world.SetWeatherInternal(weather, config.WeatherAuto.TransitionSeconds,
+          world.SetWeatherInternal(weather,
+                                   config.WeatherAuto.TransitionSeconds,
                                    config.WeatherRuntime.ManualOverride);
         }
       }

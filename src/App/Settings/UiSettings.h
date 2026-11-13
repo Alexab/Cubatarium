@@ -19,10 +19,13 @@ struct UiSettings
   /// Seconds between periodic [Perf] / perf_*.jsonl aggregates (InGame).
   float PerfLogIntervalSec{2.0f};
   std::string ConsoleKey{"grave"};
-  std::string PaletteKey{"b"};      // creative palette, Blocks tab
-  std::string WorldGenKey{"g"};     // world generation sets
-  std::string InventoryKey{"e"};    // creative palette toggle (last main tab; default Blocks)
-  std::string CharacterKey{"c"};    // character sheet overlay
+  std::string PaletteKey{"b"};   // creative palette, Blocks tab
+  std::string WorldGenKey{"g"};  // world generation sets
+  std::string InventoryKey{"e"}; // player window: backpack
+  std::string CharacterKey{"c"}; // player window: equipment
+  std::string CraftKey{"k"};
+  std::string GrabKey{"v"};
+  std::string ThrowKey{"r"};
   int HotbarCount{1};
 
   ControlScheme ControlScheme{ControlScheme::Classic};

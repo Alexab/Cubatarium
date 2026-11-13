@@ -1,0 +1,40 @@
+{
+  "id": "charcoal",
+  "displayName": "Charcoal",
+  "types": [
+    "misc",
+    "material"
+  ],
+  "stack_max": 32,
+  "wear_end": "indestructible",
+  "model": "models/items/charcoal/model.gltf",
+  "visual": {
+    "fit_axis": "longest",
+    "wield_euler_deg": [
+      -25,
+      0,
+      0
+    ],
+    "wield_offset": [
+      0,
+      0,
+      0
+    ],
+    "presentations": {
+      "icon_scale": 1.0,
+      "fp_scale": 1.0,
+      "tp_scale": 1.0,
+      "ground_scale": 1.0
+    }
+  },
+  "physical": {
+    "mass": 0.8,
+    "size": [
+      0.15,
+      0.28,
+      0.17
+    ],
+    "hardness": 0.7
+  },
+  "use": {}
+}

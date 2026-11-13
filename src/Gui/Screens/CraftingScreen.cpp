@@ -1,4 +1,11 @@
 #include "Gui/Screens/CraftingScreen.h"
+#include "Game/Survival/SurvivalSystems.h"
+#include "Gui/Widgets/GuiTabBar.h"
+#include "Gui/Widgets/GuiTextInput.h"
+#include "Items/ItemDefinitionStorage.h"
+#include <algorithm>
+#include <cctype>
+#include <cmath>
 
 #include "Creatures/Core/Creature.h"
 #include "Game/GameSession.h"
@@ -26,6 +33,18 @@ UCraftingScreen::UCraftingScreen(UGameSession *session, UWorld *world,
 
 UCraftingScreen::~UCraftingScreen() = default;
 
+bool UCraftingScreen::IsSearchFocused() const
+{
+  return Search && Search->IsFocused();
+}
+bool UCraftingScreen::RouteTextKey(const GuiKeyEvent &e)
+{
+  return IsSearchFocused() ? Search->OnKey(e) : false;
+}
+bool UCraftingScreen::RouteTextChar(const GuiCharEvent &e)
+{
+  return IsSearchFocused() ? Search->OnChar(e) : false;
+}
 void UCraftingScreen::Build(UGuiContext &ctx)
 {
   Theme = &ctx.GetTheme();
@@ -40,6 +59,34 @@ void UCraftingScreen::Build(UGuiContext &ctx)
   Title = title.get();
   Panel->AddChild(std::move(title));
 
+  auto search = std::make_unique<UGuiTextInput>(Theme);
+  Search = search.get();
+  Search->SetClipboard(ctx.GetClipboard());
+  Search->SetOnEdited([this] { RebuildList(); });
+  Panel->AddChild(std::move(search));
+  auto tabs = std::make_unique<UGuiTabBar>(Theme);
+  Categories = tabs.get();
+  Categories->SetTabs(
+      {"All", "Tools", "Armor", "Utility", "Food", "Materials", "Stations"});
+  Categories->SetOnTabChanged(
+      [this](int i)
+      {
+        Category = i;
+        RebuildList();
+      });
+  Panel->AddChild(std::move(tabs));
+  auto batch = std::make_unique<UGuiButton>(Theme, "Count: 1");
+  BatchButton = batch.get();
+  BatchButton->SetOnClick(
+      [this]
+      {
+        if (!PendingRecipe.empty())
+          return;
+        Batch = Batch == 1 ? 8 : 1;
+        BatchButton->SetLabel("Count: " + std::to_string(Batch));
+        RebuildList();
+      });
+  Panel->AddChild(std::move(batch));
   auto status = std::make_unique<UGuiLabel>(Theme, "");
   status->SetUseSecondaryColor(true);
   Status = status.get();
@@ -62,6 +109,11 @@ void UCraftingScreen::OnViewportChanged(int width, int height)
 void UCraftingScreen::SetVisible(bool visible)
 {
   Visible = visible;
+  if (!visible)
+  {
+    PendingRecipe.clear();
+    CraftRemaining = 0;
+  }
   if (Root)
   {
     Root->SetVisible(visible);
@@ -82,8 +134,49 @@ void UCraftingScreen::SetVisible(bool visible)
 
 void UCraftingScreen::Toggle() { SetVisible(!Visible); }
 
-void UCraftingScreen::Update(double /*dt*/)
+void UCraftingScreen::Update(double dt)
 {
+  if (!PendingRecipe.empty() && World)
+  {
+    auto *actor = World->GetControlledCreature();
+    const auto *recipe = Recipes.FindById(PendingRecipe);
+    if (!actor || actor->GetId() != CraftOwner || !recipe)
+    {
+      PendingRecipe.clear();
+      CraftRemaining = 0;
+    }
+    else
+    {
+      CraftRemaining -= float(dt);
+      StatusText = "Processing: " +
+                   std::to_string(std::max(0, int(std::ceil(CraftRemaining)))) +
+                   " s (close to cancel)";
+      if (CraftRemaining <= 0)
+      {
+        auto trial = actor->GetInventory();
+        bool ok = true;
+        std::string reason;
+        for (int i = 0; i < Batch && ok; ++i)
+          ok = Recipes.TryCraft(
+              trial, *recipe,
+              USurvivalSystems::Instance().NearStation(
+                  *World, actor->GetBodyOrigin(), recipe->Station),
+              &reason);
+        if (ok)
+        {
+          actor->GetInventory() = std::move(trial);
+          StatusText = "Crafted " +
+                       std::to_string(recipe->Output.Count * Batch) + " x " +
+                       recipe->Output.Id;
+        }
+        else
+          StatusText = reason;
+        PendingRecipe.clear();
+        RebuildList();
+      }
+    }
+  }
+
   if (Status && Status->GetText() != StatusText)
   {
     Status->SetText(StatusText);
@@ -104,8 +197,8 @@ void UCraftingScreen::Relayout()
   {
     return;
   }
-  const int w = 480;
-  const int h = 420;
+  const int w = std::min(ViewportW - 16, Scaled(940));
+  const int h = std::min(ViewportH - 16, Scaled(650));
   const int x = (ViewportW - w) / 2;
   const int y = (ViewportH - h) / 2;
   Panel->SetBounds({x, y, w, h});
@@ -113,13 +206,16 @@ void UCraftingScreen::Relayout()
   {
     Title->SetBounds({x + 16, y + 12, w - 32, 28});
   }
+  Search->SetBounds({x + 12, y + 44, w - Scaled(160) - 36, Scaled(30)});
+  BatchButton->SetBounds(
+      {x + w - Scaled(160) - 12, y + 44, Scaled(160), Scaled(30)});
+  Categories->SetBounds({x + 12, y + 48 + Scaled(30), w - 24, Scaled(30)});
   if (Status)
-  {
-    Status->SetBounds({x + 16, y + 44, w - 32, 22});
-  }
+    Status->SetBounds({x + 12, y + 52 + Scaled(60), w - 24, Scaled(24)});
   if (Scroll)
   {
-    Scroll->SetBounds({x + 12, y + 72, w - 24, h - 88});
+    Scroll->SetBounds(
+        {x + 12, y + 60 + Scaled(84), w - 24, h - 76 - Scaled(84)});
   }
 }
 
@@ -136,6 +232,21 @@ void UCraftingScreen::RebuildList()
   int y = 4;
   for (const RecipeDefinition &recipe : Recipes.GetRecipes())
   {
+    const char *categories[] = {"All",  "Tools",     "Armor",   "Utility",
+                                "Food", "Materials", "Stations"};
+    if (Category > 0 && recipe.Category != categories[Category])
+      continue;
+    auto lower = [](std::string v)
+    {
+      std::replace(v.begin(), v.end(), '_', ' ');
+      std::transform(v.begin(), v.end(), v.begin(),
+                     [](unsigned char c) { return char(std::tolower(c)); });
+      return v;
+    };
+    if (Search && !Search->GetText().empty() &&
+        lower(recipe.Id).find(lower(Search->GetText())) == std::string::npos)
+      continue;
+    const int rowW = std::max(260, std::min(ViewportW - 40, Scaled(916)));
     auto row = std::make_unique<UGuiPanel>(Theme);
     row->SetDrawBackground(false);
     UGuiPanel *rowPtr = row.get();
@@ -144,7 +255,11 @@ void UCraftingScreen::RebuildList()
     icon->SetBounds({4, 4, slotSize, slotSize});
     if (Icons)
     {
-      icon->SetIconTexture(Icons->GetItemIconTexture(recipe.Output.Id));
+      icon->SetIconTexture(
+          (World && World->GetItemDefinitionStorage() &&
+                   World->GetItemDefinitionStorage()->Get(recipe.Output.Id)
+               ? Icons->GetItemIconTexture(recipe.Output.Id)
+               : Icons->GetBlockIconTexture(recipe.Output.Id)));
     }
     if (recipe.Output.Count > 1)
     {
@@ -156,7 +271,8 @@ void UCraftingScreen::RebuildList()
     RecipeOutputIds.push_back(recipe.Output.Id);
 
     std::ostringstream label;
-    label << recipe.Id << "  (";
+    label << recipe.Output.Count << " x " << recipe.Output.Id << " ["
+          << (recipe.Station.empty() ? "Hand" : recipe.Station) << "]\n";
     for (size_t i = 0; i < recipe.Inputs.size(); ++i)
     {
       if (i > 0)
@@ -164,16 +280,44 @@ void UCraftingScreen::RebuildList()
         label << ", ";
       }
       label << recipe.Inputs[i].Count << "x " << recipe.Inputs[i].Id;
+      if (!recipe.Inputs[i].Alternatives.empty())
+      {
+        label << " (";
+        for (size_t n = 0; n < recipe.Inputs[i].Alternatives.size(); ++n)
+        {
+          if (n)
+            label << "/";
+          label << recipe.Inputs[i].Alternatives[n];
+        }
+        label << ")";
+      }
     }
-    label << ")";
+
+    bool available = false;
+    std::string unavailable = "No controlled creature";
+    if (World)
+      if (auto *actor = World->GetControlledCreature())
+      {
+        auto trial = actor->GetInventory();
+        available = true;
+        for (int n = 0; n < Batch && available; ++n)
+          available = Recipes.TryCraft(
+              trial, recipe,
+              USurvivalSystems::Instance().NearStation(
+                  *World, actor->GetBodyOrigin(), recipe.Station),
+              &unavailable);
+      }
+    label << "\n" << (available ? "Available" : unavailable);
     auto text = std::make_unique<UGuiLabel>(Theme, label.str());
     text->SetUseSecondaryColor(true);
-    text->SetBounds({slotSize + 12, 8, 260, 28});
+    text->SetBounds(
+        {slotSize + 12, 8, rowW - slotSize - Scaled(110), Scaled(76)});
     rowPtr->AddChild(std::move(text));
 
     const std::string recipeId = recipe.Id;
-    auto craft = std::make_unique<UGuiButton>(Theme, "Craft");
-    craft->SetBounds({380, 8, 72, 32});
+    auto craft =
+        std::make_unique<UGuiButton>(Theme, available ? "Craft" : "Need");
+    craft->SetBounds({rowW - Scaled(90), 8, Scaled(82), Scaled(32)});
     craft->SetOnClick(
         [this, recipeId]()
         {
@@ -194,20 +338,38 @@ void UCraftingScreen::RebuildList()
             StatusText = "Unknown recipe";
             return;
           }
-          if (!Recipes.TryCraft(creature->GetInventory(), *def))
+          if (!PendingRecipe.empty())
           {
-            StatusText = "Missing ingredients";
+            StatusText = "A recipe is already processing";
             return;
           }
-          StatusText = "Crafted " + def->Output.Id;
-          RebuildList();
+          auto *actor = World->GetControlledCreature();
+          auto trial = actor->GetInventory();
+          std::string reason;
+          bool possible = true;
+          for (int n = 0; n < Batch && possible; ++n)
+            possible = Recipes.TryCraft(
+                trial, *def,
+                USurvivalSystems::Instance().NearStation(
+                    *World, actor->GetBodyOrigin(), def->Station),
+                &reason);
+          if (!possible)
+          {
+            StatusText = reason;
+            return;
+          }
+          PendingRecipe = recipeId;
+          CraftOwner = actor->GetId();
+          CraftRemaining =
+              actor->GetInventory().IsCreative() ? 0 : def->Seconds * Batch;
+          StatusText = "Processing " + recipeId;
           Relayout();
         });
     rowPtr->AddChild(std::move(craft));
 
-    rowPtr->SetBounds({0, y, 460, slotSize + 12});
+    rowPtr->SetBounds({0, y, rowW, std::max(slotSize + 12, Scaled(88))});
     Scroll->Content().AddChild(std::move(row));
-    y += slotSize + 16;
+    y += std::max(slotSize + 16, Scaled(92));
   }
   Scroll->LayoutContent();
 }

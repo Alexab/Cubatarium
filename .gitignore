@@ -231,3 +231,8 @@ tools/debug_uv_overlays/
 
 # Local Windows installer diagnostic output.
 /packaging/windows/installer/stall_log.txt
+
+# Item/inventory native QA scratch; promoted evidence lives in docs/research.
+/bin/items_acceptance/
+/bin/items_carry_final/
+/bin/items_completion_captures*/

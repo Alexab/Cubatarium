@@ -3,16 +3,19 @@
   "shapeless": true,
   "inputs": [
     {
-      "id": "mtg_steelblock",
-      "count": 6
+      "id": "iron_ingot",
+      "count": 4
     },
     {
       "id": "wood",
-      "count": 1
+      "count": 2
     }
   ],
   "output": {
     "id": "iron_shield",
     "count": 1
-  }
+  },
+  "station": "crafting_table",
+  "category": "Utility",
+  "seconds": 0
 }

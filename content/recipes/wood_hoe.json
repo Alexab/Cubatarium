@@ -5,10 +5,17 @@
     {
       "id": "wood",
       "count": 2
+    },
+    {
+      "id": "stick",
+      "count": 2
     }
   ],
   "output": {
     "id": "wood_hoe",
     "count": 1
-  }
+  },
+  "station": "",
+  "category": "Tools",
+  "seconds": 0
 }

@@ -46,6 +46,22 @@
       0,
       -0.05,
       0
-    ]
-  }
+    ],
+    "presentations": {
+      "icon_scale": 1.0,
+      "fp_scale": 1.0,
+      "tp_scale": 1.0,
+      "ground_scale": 1.0
+    }
+  },
+  "physical": {
+    "mass": 1.8,
+    "size": [
+      0.16,
+      0.765,
+      0.05
+    ],
+    "hardness": 1
+  },
+  "use": {}
 }

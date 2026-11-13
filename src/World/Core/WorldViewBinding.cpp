@@ -1,19 +1,20 @@
-#include "Creatures/Locomotion/RiderCarry.h"
 #include "World/Core/WorldViewBinding.h"
-#include <iostream>
-#include <cstdlib>
+#include "Creatures/Locomotion/RiderCarry.h"
+#include "Game/Survival/SurvivalSystems.h"
 #include <algorithm>
+#include <cstdlib>
 #include <fstream>
+#include <iostream>
 
 #include "Activity/WorldCreatureActivitySink.h"
 #include "Audio/AudioApi.h"
 #include "Audio/MaterialSoundMap.h"
+#include "Core/FrameDeadline.h"
+#include "Core/FrameStageWatchdog.h"
 #include "Creatures/Combat/CreatureCombat.h"
 #include "Creatures/Core/Creature.h"
-#include "Pose/HumanMotionController.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Diagnostics/CreatureQaWorldMotion.h"
-#include "World/Chunks/KnownAirTerrainSlice.h"
 #include "Creatures/Influence/InfluenceApplier.h"
 #include "Creatures/Influence/InfluenceResolver.h"
 #include "Creatures/Influence/StatusEffectSystem.h"
@@ -23,26 +24,26 @@
 #include "Creatures/Player/User.h"
 #include "Creatures/Stats/CreatureVitalsSystem.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
-#include "Render/Camera/Camera.h"
 #include "Navigation/NavigationPathBudget.h"
+#include "Pose/HumanMotionController.h"
+#include "Render/Camera/Camera.h"
 #include "Render/Engine/ViewEngine.h"
 #include "World/Chunks/ChunkManager.h"
+#include "World/Chunks/KnownAirTerrainSlice.h"
 #include "World/Chunks/TerrainColumnUtil.h"
+#include "World/Core/RuntimeTuning.h"
 #include "World/Core/World.h"
-#include "World/Items/WorldItemSystem.h"
 #include "World/Diagnostics/CreatureTickTrace.h"
 #include "World/Diagnostics/JobStageTrace.h"
 #include "World/Diagnostics/MovementDiagnosticsRecorder.h"
+#include "World/Items/WorldItemSystem.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Streaming/EmptyBacklogPolicy.h"
-#include "World/Streaming/PhysicsStepPolicy.h"
 #include "World/Streaming/InputFirstPolicy.h"
+#include "World/Streaming/PhysicsStepPolicy.h"
 #include "World/Streaming/StreamIngressPolicy.h"
 #include "World/Streaming/WorldStreaming.h"
-#include "World/Core/RuntimeTuning.h"
-#include "Core/FrameDeadline.h"
-#include "Core/FrameStageWatchdog.h"
 
 #include <chrono>
 #include <optional>
@@ -82,8 +83,7 @@ void EmitCreatureFootstepAudio(UWorld &world, UCreature &creature)
   const glm::vec3 feet = creature.GetFeetPosition();
   glm::ivec3 underFeet = WorldPosToBlock(feet);
   underFeet.y -= 1;
-  const std::uint32_t materialId =
-      world.ResolveAudioMaterialAt(underFeet);
+  const std::uint32_t materialId = world.ResolveAudioMaterialAt(underFeet);
 
   UAudioEvent event;
   if (facts.inFluid)
@@ -117,7 +117,7 @@ void EmitCreatureFootstepAudio(UWorld &world, UCreature &creature)
     break;
   }
   // Louder steps when running, softer when sneaking.
-  event.Strength = event.RunState == 1 ? 1.2f
+  event.Strength = event.RunState == 1   ? 1.2f
                    : event.RunState == 2 ? 0.6f
                                          : 1.f;
   UAudioApi::Post(event);
@@ -244,7 +244,8 @@ void UWorldViewBinding::WarmupVisibleListAtCamera(UWorld &world)
   const glm::mat4 view = camera->GetViewMatrix();
   const glm::mat4 proj = camera->GetProjection();
   const glm::mat4 vp = proj * view;
-  world.MeshService->WarmupVisibleListFromViewProj(vp, camera->GetRenderPosition());
+  world.MeshService->WarmupVisibleListFromViewProj(vp,
+                                                   camera->GetRenderPosition());
 }
 
 void UWorldViewBinding::EnsurePlayerOnGround(UWorld &world)
@@ -533,7 +534,7 @@ void UWorld::RunLegacyPhysicsFrame()
     const glm::vec3 eyePos = camera->GetPosition();
     float feetY =
         FeetYFromEye(eyePos, controlled ? controlled->GetEyeOffset().y
-                                         : PlayerCapsule::Standing().eyeHeight);
+                                        : PlayerCapsule::Standing().eyeHeight);
     if (controlled)
     {
       feetY = BoundsFeetY(controlled->GetBodyOrigin());
@@ -546,8 +547,7 @@ void UWorld::RunLegacyPhysicsFrame()
 
   const bool streaming_red = IsStreamingPhysicsRed(
       PhysicsTelemetryData.PhaseBudgetOver != 0,
-      PhysicsTelemetryData.FocusMissingMesh != 0,
-      GetWallFrameDelta() * 1000.0);
+      PhysicsTelemetryData.FocusMissingMesh != 0, GetWallFrameDelta() * 1000.0);
   const bool tick_world_ai =
       ShouldTickWorldCreatures(streaming_red, GetWallFrameDelta() * 1000.0);
   const auto t_player = clock_t::now();
@@ -603,8 +603,7 @@ void UWorld::RunLegacyPhysicsFrame()
         mountOriginBefore = mountCreature->GetBodyOrigin();
         gMountYawBefore = mountCreature->GetYaw();
       }
-      camera->GetLocomotionController().SetMountSupport(
-          mountId, mount->second);
+      camera->GetLocomotionController().SetMountSupport(mountId, mount->second);
       Collision.SetRiderMountId(mountId);
     }
     else
@@ -651,7 +650,8 @@ void UWorld::RunLegacyPhysicsFrame()
   }
 
   PhysicsTelemetryData.CameraSyncMs =
-      std::chrono::duration<double, std::milli>(clock_t::now() - t_sync).count();
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_sync)
+          .count();
   PhysicsTelemetryData.PlayerLocomotionBlockMs =
       std::chrono::duration<double, std::milli>(clock_t::now() - t_player)
           .count();
@@ -677,10 +677,10 @@ void UWorld::RunLegacyPhysicsFrame()
   PhysicsTelemetryData.EnvironmentTickMs =
       std::chrono::duration<double, std::milli>(clock_t::now() - t_env).count();
 
+  USurvivalSystems::Instance().Tick(*this, creatureDt);
   WorldItemSystem::Instance().Tick(*this, creatureDt);
 
-  TickNpcCreatureIntents(creatureDt, tick_world_ai, mountId,
-                         mountOriginBefore);
+  TickNpcCreatureIntents(creatureDt, tick_world_ai, mountId, mountOriginBefore);
   if (mountId != 0 && camera)
   {
     // Riding counts as movement: user position/intersection follow the
@@ -695,7 +695,8 @@ void UWorld::RunLegacyPhysicsFrame()
 
   PhysicsTelemetryData.WorldAiAfterPlayerMs =
       std::chrono::duration<double, std::milli>(clock_t::now() - t_ai).count();
-  PhysicsTelemetryData.CreatureTickMs = PhysicsTelemetryData.WorldAiAfterPlayerMs;
+  PhysicsTelemetryData.CreatureTickMs =
+      PhysicsTelemetryData.WorldAiAfterPlayerMs;
 
   // After player facts sync so sprint/swim fatigue sees this frame's state.
   TickSurvivalSystems(dt);
@@ -730,9 +731,9 @@ void UWorld::RunLegacyPhysicsFrame()
     PhysicsTelemetryData.PhysicsAccumMs =
         static_cast<double>(camera->GetPhysicsAccumulatorSec()) * 1000.0;
   }
-  const double hitch_ms =
-      GetWallFrameDelta() > 0.0 ? GetWallFrameDelta() * 1000.0
-                                : PhysicsTelemetryData.MovementStepMs;
+  const double hitch_ms = GetWallFrameDelta() > 0.0
+                              ? GetWallFrameDelta() * 1000.0
+                              : PhysicsTelemetryData.MovementStepMs;
   SetLastMovementFrameMs(hitch_ms);
   UMovementDiagnosticsRecorder::Update(*this, camera, prevPlayerY);
 }
@@ -745,8 +746,8 @@ bool gPrevCollisionRingReady = true;
 bool gWasCollisionReady = true;
 } // namespace
 
-void UWorld::EnsureCollisionRingReadiness(const std::shared_ptr<UCamera> &camera,
-                                          const glm::ivec3 &feetBlock)
+void UWorld::EnsureCollisionRingReadiness(
+    const std::shared_ptr<UCamera> &camera, const glm::ivec3 &feetBlock)
 {
   glm::vec3 forward = camera->GetFront();
   forward.y = 0.0f;
@@ -765,9 +766,9 @@ void UWorld::UpdateCollisionReadinessGate(
     const std::shared_ptr<UCamera> &camera, const glm::ivec3 &feetBlock,
     bool hasFeetBlock)
 {
-  const bool collision_ready =
-      !hasFeetBlock || (camera && camera->GetFreeMove()) ||
-      IsCollisionReadyAtFeet(feetBlock);
+  const bool collision_ready = !hasFeetBlock ||
+                               (camera && camera->GetFreeMove()) ||
+                               IsCollisionReadyAtFeet(feetBlock);
   if (!collision_ready && camera)
   {
     PhysicsTelemetryData.CollisionReadyWaitMs +=
@@ -793,13 +794,15 @@ void UWorld::UpdateCollisionReadinessGate(
   }
 }
 
-bool UWorld::SyncControlledBodyFromCamera(UCreature *controlled,
-                                          const std::shared_ptr<UCamera> &camera)
+bool UWorld::SyncControlledBodyFromCamera(
+    UCreature *controlled, const std::shared_ptr<UCamera> &camera)
 {
   // Camera locomotion is the source of truth for the controlled player;
   // sync body origin / facts from the camera controller (not UpdateControlled).
   const glm::vec3 eye = camera->GetPosition();
-  float feetY = FeetYFromEye(eye, controlled->GetTypeId()=="human" ? camera->GetPlayerCapsule().eyeHeight : controlled->GetEyeOffset().y);
+  float feetY = FeetYFromEye(eye, controlled->GetTypeId() == "human"
+                                      ? camera->GetPlayerCapsule().eyeHeight
+                                      : controlled->GetEyeOffset().y);
   // Standing on a creature: the feet are anchored to its back, not to the
   // block column below - snapping to terrain here pulled the body (and the
   // mount detection that reads it) down into the mount every other frame.
@@ -814,7 +817,8 @@ bool UWorld::SyncControlledBodyFromCamera(UCreature *controlled,
     }
   }
   const glm::vec3 previousBody = controlled->GetBodyOrigin();
-  const glm::vec3 previousVelocity=controlled->GetLocomotionFacts().actualVelocity;
+  const glm::vec3 previousVelocity =
+      controlled->GetLocomotionFacts().actualVelocity;
   controlled->SetBodyOrigin(glm::vec3(eye.x, feetY, eye.z));
   controlled->GetLocomotion().SetStanceBlendForView(camera->GetStanceBlend());
   controlled->GetLocomotion().SyncFeetAnchorFromView(feetY,
@@ -859,16 +863,25 @@ bool UWorld::SyncControlledBodyFromCamera(UCreature *controlled,
     const glm::vec3 delta = controlled->GetBodyOrigin() - previousBody;
     // Movement is fixed-step. Dividing by render time made 144 FPS alternate
     // zero and oversized speeds, flickering Run/Idle on frames without a step.
-    const float simulatedDt=camera->GetLastPhysicsSubsteps()/60.f;
-    glm::vec3 velocity=HumanMotionController::MeasureVelocity(delta,simulatedDt,previousVelocity);
-    if(!camera->GetFreeMove() && !camLoc.IsSwimming()) {
-      if(camLoc.IsOnGround() || std::abs(velocity.y-camLoc.GetVerticalVelocity())>2.f)velocity.y=0.f;
+    const float simulatedDt = camera->GetLastPhysicsSubsteps() / 60.f;
+    glm::vec3 velocity = HumanMotionController::MeasureVelocity(
+        delta, simulatedDt, previousVelocity);
+    if (!camera->GetFreeMove() && !camLoc.IsSwimming())
+    {
+      if (camLoc.IsOnGround() ||
+          std::abs(velocity.y - camLoc.GetVerticalVelocity()) > 2.f)
+        velocity.y = 0.f;
     }
-    if(camLoc.IsOnGround() && !camLoc.IsSwimming() && !camera->GetFreeMove()) {
-      const float stride=(camState==LocomotionState::Run?1.35f:1.15f)*(1.f-.55f*camera->GetStanceBlend());
-      controlled->HumanMotion.audioPhase+=glm::length(glm::vec2(velocity.x,velocity.z))*simulatedDt*6.2831853f/stride;
+    if (camLoc.IsOnGround() && !camLoc.IsSwimming() && !camera->GetFreeMove())
+    {
+      const float stride = (camState == LocomotionState::Run ? 1.35f : 1.15f) *
+                           (1.f - .55f * camera->GetStanceBlend());
+      controlled->HumanMotion.audioPhase +=
+          glm::length(glm::vec2(velocity.x, velocity.z)) * simulatedDt *
+          6.2831853f / stride;
     }
-    controlled->SetHumanMotionFacts(velocity, camLoc.IsSwimming() && !camera->GetFreeMove(), this, dt);
+    controlled->SetHumanMotionFacts(
+        velocity, camLoc.IsSwimming() && !camera->GetFreeMove(), this, dt);
   }
   EmitCreatureFootstepAudio(*this, *controlled);
   return true;
@@ -918,9 +931,9 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
         rider->SetBodyOrigin(carried.body);
         if (std::abs(yawDelta) > 1e-3f)
         {
-          riderCamera->SetOrientation(
-              riderCamera->GetYaw() + CameraYawDeltaForMountYaw(yawDelta),
-              riderCamera->GetPitch());
+          riderCamera->SetOrientation(riderCamera->GetYaw() +
+                                          CameraYawDeltaForMountYaw(yawDelta),
+                                      riderCamera->GetPitch());
         }
       }
     }
@@ -929,6 +942,11 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
       [&](UCreature &creature)
       {
         ++creatures_total;
+        if (creature.ExternalMotion)
+        {
+          creature.ClearIntent();
+          return;
+        }
         creature.AdvanceInfluenceCooldown(dt);
         creature.TickHitFlash(dt);
         creature.TickHealthBar(dt);
@@ -952,14 +970,20 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
         {
           const CollisionVolume vol = creature.GetCollisionVolume();
           const UChunkManager &chunkManager = GetBlockWorld().GetChunkManager();
-          const auto centerChunk = UChunkManager::WorldToChunk(WorldPosToBlock(vol.center));
-          const auto belowChunk = UChunkManager::WorldToChunk(
-              WorldPosToBlock(vol.center - glm::vec3(0.f, vol.halfExtents.y + .5f, 0.f)));
+          const auto centerChunk =
+              UChunkManager::WorldToChunk(WorldPosToBlock(vol.center));
+          const auto belowChunk = UChunkManager::WorldToChunk(WorldPosToBlock(
+              vol.center - glm::vec3(0.f, vol.halfExtents.y + .5f, 0.f)));
           qaTerrain.centerResident = chunkManager.HasChunk(centerChunk);
           qaTerrain.belowResident = chunkManager.HasChunk(belowChunk);
-          const int minCy = FloorDiv(GetProceduralSettings().MinHeight, CHUNK_SIZE);
-          qaTerrain.centerKnownAir = !qaTerrain.centerResident && centerChunk.y >= minCy && IsKnownAirTerrainSlice(*this, centerChunk);
-          qaTerrain.belowKnownAir = !qaTerrain.belowResident && belowChunk.y >= minCy && IsKnownAirTerrainSlice(*this, belowChunk);
+          const int minCy =
+              FloorDiv(GetProceduralSettings().MinHeight, CHUNK_SIZE);
+          qaTerrain.centerKnownAir = !qaTerrain.centerResident &&
+                                     centerChunk.y >= minCy &&
+                                     IsKnownAirTerrainSlice(*this, centerChunk);
+          qaTerrain.belowKnownAir = !qaTerrain.belowResident &&
+                                    belowChunk.y >= minCy &&
+                                    IsKnownAirTerrainSlice(*this, belowChunk);
           if (!(qaTerrain.centerResident || qaTerrain.centerKnownAir) ||
               !(qaTerrain.belowResident || qaTerrain.belowKnownAir))
           {
@@ -980,7 +1004,10 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
           creature.ExecuteIntent(*this, dt);
           EmitCreatureFootstepAudio(*this, creature);
           if (CreatureQaWorldMotionEnabled())
-            RecordCreatureQaWorldMotion(creature, CheckBlockCollisionVolume(creature.GetCollisionVolume()), qaTerrain);
+            RecordCreatureQaWorldMotion(
+                creature,
+                CheckBlockCollisionVolume(creature.GetCollisionVolume()),
+                qaTerrain);
           Environment.UpdateCreatureInSpatialIndex(creature);
           carryRider(creature);
           return;
@@ -995,7 +1022,10 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
         creature.ExecuteIntent(*this, dt);
         EmitCreatureFootstepAudio(*this, creature);
         if (CreatureQaWorldMotionEnabled())
-          RecordCreatureQaWorldMotion(creature, CheckBlockCollisionVolume(creature.GetCollisionVolume()), qaTerrain);
+          RecordCreatureQaWorldMotion(
+              creature,
+              CheckBlockCollisionVolume(creature.GetCollisionVolume()),
+              qaTerrain);
         // Keep the spatial index live as bodies move (audit S7): per-move
         // upserts replace the full per-activity-tick rebuild; Upsert no-ops
         // when position and extents are unchanged.
@@ -1046,7 +1076,8 @@ void UWorld::ResolveControlledCreatureInfluence(float dt)
       else if (intent.Influence.Channel == InfluenceChannel::Melee &&
                intent.Influence.TargetId != 0)
       {
-        CreatureCombat::TryMeleeStrike(*this, *controlled_creature, GetGameMode());
+        CreatureCombat::TryMeleeStrike(*this, *controlled_creature,
+                                       GetGameMode());
         // One-shot: clear Melee Intent after resolve attempt so hold-LMB dig
         // does not spam; cooldown still gates actual hits.
         CreatureIntent cleared = intent;
@@ -1056,7 +1087,8 @@ void UWorld::ResolveControlledCreatureInfluence(float dt)
       else if (intent.Influence.Channel == InfluenceChannel::Ranged &&
                intent.Influence.TargetId != 0)
       {
-        CreatureCombat::TryRangedStrike(*this, *controlled_creature, GetGameMode());
+        CreatureCombat::TryRangedStrike(*this, *controlled_creature,
+                                        GetGameMode());
         CreatureIntent cleared = intent;
         cleared.Influence = InfluenceIntent{};
         controlled_creature->SetIntent(cleared);
@@ -1166,7 +1198,8 @@ void UWorld::TickWorldStreamingPhase()
       PhysicsTelemetryData.RelightApplyInstallMs;
   PhysicsTelemetryData.RelightApplyNPrev = PhysicsTelemetryData.RelightApplyN;
   PhysicsTelemetryData.ApplyBindingPrev = PhysicsTelemetryData.ApplyBinding;
-  PhysicsTelemetryData.RelightFifoDropNPrev = PhysicsTelemetryData.RelightFifoDropN;
+  PhysicsTelemetryData.RelightFifoDropNPrev =
+      PhysicsTelemetryData.RelightFifoDropN;
   PhysicsTelemetryData.RelightFifoPinDropNPrev =
       PhysicsTelemetryData.RelightFifoPinDropN;
   PhysicsTelemetryData.RelightDrainMs = 0.0;
@@ -1370,7 +1403,8 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.FmDirtyGpuWatchMaxAge = 0;
   PhysicsTelemetryData.FmDirtyGpuWatchTimeoutDelta = 0;
   PhysicsTelemetryData.GpuFinishWatchRimN = 0;
-  // I18 hotfix.2: IngressDebt* latched by ChunkEmergeCoordinator — do not zero here.
+  // I18 hotfix.2: IngressDebt* latched by ChunkEmergeCoordinator — do not zero
+  // here.
   PhysicsTelemetryData.PostRelightApplyMeshDrainFloor = 0;
   PhysicsTelemetryData.MeshDirtyScheduleSkipOutsideFocusFmN = 0;
   PhysicsTelemetryData.FmConsumerStarvedActive = 0;
@@ -1443,11 +1477,10 @@ void UWorld::TickWorldStreamingPhase()
         PhysicsTelemetryData.UnderfeetHasMesh != 0)
     {
       const bool protect = IsProtectRingFocusMiss(
-          PhysicsTelemetryData.FocusMissingMesh,
-          PhysicsTelemetryData.MissHoriz,
+          PhysicsTelemetryData.FocusMissingMesh, PhysicsTelemetryData.MissHoriz,
           /*underfeet_need=*/false);
-      const int latch = static_cast<int>(
-          protect ? IngressDebtLevel::ShedRim : IngressDebtLevel::ShedFar);
+      const int latch = static_cast<int>(protect ? IngressDebtLevel::ShedRim
+                                                 : IngressDebtLevel::ShedFar);
       PhysicsTelemetryData.IngressDebtLevel =
           std::max(PhysicsTelemetryData.IngressDebtLevel, latch);
     }
@@ -1489,16 +1522,14 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.AsyncIoMs = PhysicsTelemetryData.AsyncChunkSystemsMs;
   // Cruise wall P2: real phase time-slice with miss reserved ms.
   // Stream spends general_budget; emerge gets reserved + remain(general).
-  const double stream_elapsed_ms =
-      std::chrono::duration<double, std::milli>(t_after_stream - t_before_stream)
-          .count();
-  const bool miss_carve_out =
-      (PhysicsTelemetryData.FocusMissingMesh != 0 &&
-       PhysicsTelemetryData.MissHoriz <= 2) ||
-      PhysicsTelemetryData.FocusStickyRemesh > 0 ||
-      PhysicsTelemetryData.UnderfeetHasMesh == 0;
-  float reserved =
-      miss_carve_out ? std::max(0.0f, tune.MissReservedMs) : 0.0f;
+  const double stream_elapsed_ms = std::chrono::duration<double, std::milli>(
+                                       t_after_stream - t_before_stream)
+                                       .count();
+  const bool miss_carve_out = (PhysicsTelemetryData.FocusMissingMesh != 0 &&
+                               PhysicsTelemetryData.MissHoriz <= 2) ||
+                              PhysicsTelemetryData.FocusStickyRemesh > 0 ||
+                              PhysicsTelemetryData.UnderfeetHasMesh == 0;
+  float reserved = miss_carve_out ? std::max(0.0f, tune.MissReservedMs) : 0.0f;
   // Reserved cannot exceed phase wall (MissReserved default 8 vs phase 5).
   if (phase_budget > 0.0f && reserved > phase_budget)
   {
@@ -1508,7 +1539,8 @@ void UWorld::TickWorldStreamingPhase()
       phase_budget > 0.0f ? std::max(0.0f, phase_budget - reserved) : 0.0f;
   const double remain_general =
       general_budget > 0.0f
-          ? std::max(0.0, static_cast<double>(general_budget) - stream_elapsed_ms)
+          ? std::max(0.0,
+                     static_cast<double>(general_budget) - stream_elapsed_ms)
           : 0.0;
   double emerge_cap = static_cast<double>(reserved) + remain_general;
   if (miss_carve_out)
@@ -1533,10 +1565,12 @@ void UWorld::TickWorldStreamingPhase()
   {
     const float far_floor = std::max(0.0f, tune.MissEmergeFloorMs);
     emerge_cap = std::max(emerge_cap, static_cast<double>(far_floor));
-    // R3.8: input-first hard shed — do not grow emerge beyond floor after overrun.
+    // R3.8: input-first hard shed — do not grow emerge beyond floor after
+    // overrun.
     if (IsInputFirstSlaBroken(GetLastMovementFrameMs(), 0.0))
     {
-      emerge_cap = std::min(emerge_cap, static_cast<double>(std::max(far_floor, 8.0f)));
+      emerge_cap =
+          std::min(emerge_cap, static_cast<double>(std::max(far_floor, 8.0f)));
     }
   }
   PhysicsTelemetryData.PhaseMissCarveOut = miss_carve_out ? 1 : 0;
@@ -1544,8 +1578,7 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.EmergeBudgetCapMs = emerge_cap;
   if (emerge_cap > 0.0)
   {
-    GetMeshService().SetMeshEmergeTotalBudgetMs(
-        static_cast<float>(emerge_cap));
+    GetMeshService().SetMeshEmergeTotalBudgetMs(static_cast<float>(emerge_cap));
   }
   // Phase 5.1 T3: latch StreamMs before TickMeshEmerge so emerge phase-abort
   // sees stream spend (was written only after emerge → StreamMs==0 inside).
@@ -1667,12 +1700,10 @@ void UWorld::TickWorldStreamingPhase()
       GetMeshService().GetLastMeshDirtyScheduleSkipOutsideFocusFmN();
   PhysicsTelemetryData.FmConsumerStarvedActive =
       GetMeshService().GetLastFmConsumerStarvedActive();
-  PhysicsTelemetryData.FreeChunkLiveN =
-      GetMeshService().GetFreeChunkLiveN();
+  PhysicsTelemetryData.FreeChunkLiveN = GetMeshService().GetFreeChunkLiveN();
   PhysicsTelemetryData.MeshDirtyGpuMs =
       GetMeshService().GetLastMeshDirtyGpuMs();
-  PhysicsTelemetryData.MeshDirtyGpuN =
-      GetMeshService().GetLastMeshDirtyGpuN();
+  PhysicsTelemetryData.MeshDirtyGpuN = GetMeshService().GetLastMeshDirtyGpuN();
   PhysicsTelemetryData.MeshDirtySyncMs =
       GetMeshService().GetLastMeshDirtySyncMs();
   PhysicsTelemetryData.MeshDirtySyncN =
@@ -1699,9 +1730,8 @@ void UWorld::TickWorldStreamingPhase()
       GetMeshService().GetLastMeshDegradedCaptureN();
   if (PhysicsTelemetryData.FmDirtyEnqueueN > 0)
   {
-    PhysicsTelemetryData.DirtyFmN =
-        std::max(PhysicsTelemetryData.DirtyFmN,
-                 PhysicsTelemetryData.FmDirtyEnqueueN);
+    PhysicsTelemetryData.DirtyFmN = std::max(
+        PhysicsTelemetryData.DirtyFmN, PhysicsTelemetryData.FmDirtyEnqueueN);
   }
   PhysicsTelemetryData.FmDirtyDrainN =
       PhysicsTelemetryData.FmDirtyEnqueueN > 0

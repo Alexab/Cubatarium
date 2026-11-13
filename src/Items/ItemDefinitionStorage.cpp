@@ -1,6 +1,6 @@
 #include "Items/ItemDefinitionStorage.h"
-#include <atomic>
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
@@ -80,6 +80,11 @@ void UItemDefinitionStorage::EnsureHandDefinition()
   crumbly.Times[3] = 1.0f;
   crumbly.Times[2] = 1.8f;
   hand.Tool.GroupCaps["crumbly"] = crumbly;
+  ToolGroupCap wood;
+  wood.MaxLevel = 1;
+  wood.Uses = 0;
+  wood.Times = {{1, 8.f}, {2, 5.f}, {3, 3.f}};
+  hand.Tool.GroupCaps["choppy"] = wood;
   Definitions["hand"] = std::move(hand);
 }
 
@@ -135,8 +140,7 @@ void UItemDefinitionStorage::Load(const std::string &folder)
     return;
   }
   size_t loaded = 0;
-  for (const auto &entry :
-       std::filesystem::directory_iterator(folder))
+  for (const auto &entry : std::filesystem::directory_iterator(folder))
   {
     if (!entry.is_regular_file())
     {
@@ -162,8 +166,7 @@ void UItemDefinitionStorage::LoadOverlay(const std::string &folder)
     return;
   }
   size_t overlay_count = 0;
-  for (const auto &entry :
-       std::filesystem::directory_iterator(folder))
+  for (const auto &entry : std::filesystem::directory_iterator(folder))
   {
     if (!entry.is_regular_file() || entry.path().extension() != ".json")
     {
@@ -209,6 +212,16 @@ bool UItemDefinitionStorage::LoadFile(const std::string &path)
       def.DisplayName = data.value("display_name", def.DisplayName);
     }
     def.StackMax = data.value("stack_max", 1);
+    if (data.contains("physical"))
+    {
+      const auto &p = data["physical"];
+      def.Physical.mass = std::clamp(p.value("mass", 1.f), .01f, 100000.f);
+      def.Physical.hardness = std::clamp(p.value("hardness", 1.f), 0.f, 4.f);
+      if (p.contains("size") && p["size"].is_array() && p["size"].size() == 3)
+        for (int a = 0; a < 3; ++a)
+          def.Physical.size[a] =
+              std::clamp(p["size"][a].get<float>(), .02f, 100.f);
+    }
     def.WearEnd =
         ItemWearEndFromString(data.value("wear_end", std::string("destroy")));
     def.ModelPath = data.value("model", "");
@@ -227,8 +240,7 @@ bool UItemDefinitionStorage::LoadFile(const std::string &path)
           }
         }
       }
-      if (armor.contains("armor_groups") &&
-          armor["armor_groups"].is_object())
+      if (armor.contains("armor_groups") && armor["armor_groups"].is_object())
       {
         for (auto it = armor["armor_groups"].begin();
              it != armor["armor_groups"].end(); ++it)
@@ -272,13 +284,12 @@ bool UItemDefinitionStorage::LoadFile(const std::string &path)
     }
     if (data.contains("use_action") || data.contains("use"))
     {
-      const nlohmann::json use =
-          data.contains("use") && data["use"].is_object() ? data["use"]
-                                                          : nlohmann::json::object();
-      const std::string action =
-          data.contains("use_action")
-              ? data.value("use_action", std::string{})
-              : use.value("action", std::string{});
+      const nlohmann::json use = data.contains("use") && data["use"].is_object()
+                                     ? data["use"]
+                                     : nlohmann::json::object();
+      const std::string action = data.contains("use_action")
+                                     ? data.value("use_action", std::string{})
+                                     : use.value("action", std::string{});
       if (action == "eat")
       {
         def.Use.Action = ItemUseActionKind::Eat;
@@ -291,6 +302,8 @@ bool UItemDefinitionStorage::LoadFile(const std::string &path)
       {
         def.Use.Action = ItemUseActionKind::PlaceBlock;
       }
+      def.Use.Interaction = use.value("interaction", std::string{});
+      def.Use.Duration = std::clamp(use.value("duration", .8f), .1f, 10.f);
       def.Use.Satiety = use.value("satiety", data.value("satiety", 0.f));
       def.Use.Thirst = use.value("thirst", data.value("thirst", 0.f));
       def.Use.Health = use.value("health", data.value("health", 0.f));
@@ -326,8 +339,8 @@ bool UItemDefinitionStorage::LoadFile(const std::string &path)
                 def.Tool.Damage.Groups.end() &&
             def.Tool.Damage.Melee > 0.f)
         {
-          def.Tool.Damage.Groups["fleshy"] = std::max(
-              1, static_cast<int>(std::lround(def.Tool.Damage.Melee)));
+          def.Tool.Damage.Groups["fleshy"] =
+              std::max(1, static_cast<int>(std::lround(def.Tool.Damage.Melee)));
         }
       }
       if (tool.contains("groupcaps") && tool["groupcaps"].is_object())
@@ -345,6 +358,15 @@ bool UItemDefinitionStorage::LoadFile(const std::string &path)
     if (data.contains("visual") && data["visual"].is_object())
     {
       const auto &v = data["visual"];
+      if (v.contains("presentations"))
+      {
+        const auto &p = v["presentations"];
+        def.Visual.IconScale = std::clamp(p.value("icon_scale", 1.f), .1f, 3.f);
+        def.Visual.FpScale = std::clamp(p.value("fp_scale", 1.f), .1f, 3.f);
+        def.Visual.TpScale = std::clamp(p.value("tp_scale", 1.f), .1f, 3.f);
+        def.Visual.GroundScale =
+            std::clamp(p.value("ground_scale", 1.f), .1f, 3.f);
+      }
       if (v.contains("wield_scale") && v["wield_scale"].is_number())
       {
         def.Visual.WieldScale = v["wield_scale"].get<float>();
@@ -373,8 +395,7 @@ bool UItemDefinitionStorage::LoadFile(const std::string &path)
     {
       const auto &r = data["ranged"];
       def.Ranged.Enabled = r.value("enabled", false);
-      def.Ranged.RangeBlocks =
-          r.value("range", r.value("range_blocks", 16.f));
+      def.Ranged.RangeBlocks = r.value("range", r.value("range_blocks", 16.f));
       def.Ranged.AmmoId = r.value("ammo_id", r.value("ammo", std::string{}));
       def.Ranged.RequireLos = r.value("require_los", true);
     }

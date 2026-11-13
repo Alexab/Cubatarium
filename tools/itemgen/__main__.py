@@ -11,7 +11,7 @@ _TOOLS = Path(__file__).resolve().parents[1]
 if str(_TOOLS) not in sys.path:
     sys.path.insert(0, str(_TOOLS))
 
-from itemgen.pipeline import build_all, build_item, list_recipe_ids  # noqa: E402
+from itemgen.pipeline import build_all, build_item, list_recipe_ids, validate_item, publish_item  # noqa: E402
 from itemgen.preview import make_contact_sheet, make_family_sheet  # noqa: E402
 from itemgen.quality import MATERIALS, FAMILIES, run_audit  # noqa: E402
 
@@ -20,7 +20,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Cubatarium original item mesh generator")
     ap.add_argument(
         "command",
-        choices=["list", "build", "build-all", "preview", "preview-all", "audit"],
+        choices=["list", "build", "build-all", "validate", "publish", "preview", "preview-all", "audit"],
     )
     ap.add_argument("--id", help="item id for build/preview")
     ap.add_argument("--family", help="family for preview sheet")
@@ -30,6 +30,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "list":
         for item_id in list_recipe_ids():
             print(item_id)
+        return 0
+    if args.command in ("validate","publish"):
+        if not args.id:ap.error("--id required")
+        print(validate_item(args.id) if args.command=="validate" else publish_item(args.id))
         return 0
     if args.command == "build":
         if not args.id:

@@ -6,15 +6,15 @@
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
-| TD-ITEM-001 | foundation | Backpack grid for durable item instances | Hotbar-only v1; storage map is count-only | accepted backlog |
-| TD-ITEM-002 | foundation | Anvil UI / craft two tools → one | `/repair` covers v1 | accepted backlog |
 | TD-ITEM-007 | combat | Enchantments / tool modifiers beyond melee | Out of scope | wontfix-v1 |
-| TD-ITEM-019 | combat | Physics bow projectiles / stuck arrows | Hitscan shipped as TD-ITEM-008 | accepted backlog |
 
 ## Closed
 
 | ID | Closed in | Resolution |
 |----|-----------|------------|
+| TD-ITEM-001 | items-inventory-completion | 40 real slots, instance durability/contents, transactional gestures and recovery; native/UI regression |
+| TD-ITEM-002 | items-inventory-completion | Station-aware recipe book and anvil preview/cost/result with atomic repair |
+| TD-ITEM-019 | items-inventory-completion | Charged bow and swept physical arrows; wall/target/save tests |
 | TD-ITEM-003 | Wave 3 | Explicit `dig.groups`/`dig.level` on packs via `tools/apply_block_dig_groups.py`; InferDigGroups remains fallback only |
 | TD-ITEM-004 | tools visual | Mesh FP arms via atlas UV boxes in `TryDrawSkinnedArms`; full weighted skinning optional |
 | TD-ITEM-005 | tools visual | `SubmitWieldedFromCreature` on `rightItem`/`leftItem`; hidden when FP viewmodel on |
@@ -29,6 +29,13 @@
 | TD-ITEM-016 | qa | `tool_capabilities_test` covers wear gate + dig + destroy wear |
 | TD-ITEM-017 | character sheet | Paper-doll CharacterSheet + armor equip via `SlotSurface::CharacterArmor`; `armor_equipment_test` |
 | TD-ITEM-018 | wear visual | Worn armor meshes on `bone_skeleton` body (`WornEquipmentDrawer`) in world TP + character sheet preview; `wear.json` sockets |
+
+## Completion evidence and follow-up
+
+See [Release acceptance and remaining scope](research/items-completion-2026-11-13/README.md).
+Further work: species-specific carry IK, large inhabited-world mixed projectile/streaming
+stress runs, fishing, transport, navigation, enchantments and later material tiers.
+The existing global style/include audit debt is recorded with a develop comparison.
 
 ## Deep-refactor notes
 

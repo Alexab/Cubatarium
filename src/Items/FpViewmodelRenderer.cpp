@@ -3,13 +3,13 @@
 
 #include "App/Platform/IUPlatformPaths.h"
 #include "Blocks/BlockDefinitionStorage.h"
+#include "Creatures/Definition/CreatureDefinition.h"
+#include "Creatures/Visual/BoneSkeleton/BoneSkeletonHierarchy.h"
+#include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
+#include "Creatures/Visual/CreatureMeshGpuCache.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureTextureResolver.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
-#include "Creatures/Definition/CreatureDefinition.h"
-#include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
-#include "Creatures/Visual/BoneSkeleton/BoneSkeletonHierarchy.h"
-#include "Creatures/Visual/CreatureMeshGpuCache.h"
 #include "Creatures/Visual/Gltf/CreatureGltfLoader.h"
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
 #include "Game/Inventory/InventoryTypes.h"
@@ -66,7 +66,6 @@ constexpr int kArmUvV = 16;
 constexpr int kArmUvW = 4;
 constexpr int kArmUvH = 12;
 constexpr int kArmUvD = 4;
-
 
 // Tool JSON is Y-up (handle along +Y). Arm local hangs along -Y; after root
 // Rx(+88°) that is camera-forward. Mapping JSON +Y onto arm -Y made tools
@@ -226,7 +225,8 @@ bool UFpViewmodelRenderer::Initialize()
 
 void UFpViewmodelRenderer::Shutdown()
 {
-  auto delTex = [](GLuint &t) {
+  auto delTex = [](GLuint &t)
+  {
     if (t != 0)
     {
       glDeleteTextures(1, &t);
@@ -237,14 +237,16 @@ void UFpViewmodelRenderer::Shutdown()
   delTex(SleeveTex);
   delTex(MetalTex);
   delTex(WoodTex);
-  auto delBuf = [](GLuint &b) {
+  auto delBuf = [](GLuint &b)
+  {
     if (b != 0)
     {
       glDeleteBuffers(1, &b);
       b = 0;
     }
   };
-  auto delVao = [](GLuint &v) {
+  auto delVao = [](GLuint &v)
+  {
     if (v != 0)
     {
       glDeleteVertexArrays(1, &v);
@@ -260,7 +262,8 @@ void UFpViewmodelRenderer::Shutdown()
   ArmSkinTexW = 0;
   ArmSkinTexH = 0;
   Shader.reset();
-  ArmSource.reset();ArmRequestSeen=false;
+  ArmSource.reset();
+  ArmRequestSeen = false;
 }
 
 bool UFpViewmodelRenderer::InitCubeMesh()
@@ -271,19 +274,126 @@ bool UFpViewmodelRenderer::InitCubeMesh()
   }
   const float cubeShift = 1.0f / 6.0f;
   const float vertices[] = {
-      -0.5f, -0.5f, 0.5f,  0.0f, 1.0f,  0.5f,  -0.5f, 0.5f,  cubeShift, 1.0f,
-      -0.5f, 0.5f,  0.5f,  0.0f, 0.0f,  0.5f,  0.5f,  0.5f,  cubeShift, 0.0f,
-      0.5f,  -0.5f, 0.5f,  cubeShift, 1.0f,  0.5f,  -0.5f, -0.5f, cubeShift * 2.0f,
-      1.0f,  0.5f,  0.5f,  0.5f,  cubeShift, 0.0f,  0.5f,  0.5f,  -0.5f, cubeShift * 2.0f,
-      0.0f,  0.5f,  -0.5f, -0.5f, cubeShift * 2.0f, 1.0f, -0.5f, -0.5f, -0.5f,
-      cubeShift * 3.0f, 1.0f, 0.5f, 0.5f, -0.5f, cubeShift * 2.0f, 0.0f, -0.5f, 0.5f,
-      -0.5f, cubeShift * 3.0f, 0.0f, -0.5f, -0.5f, -0.5f, cubeShift * 3.0f, 1.0f,
-      -0.5f, -0.5f, 0.5f,  cubeShift * 4.0f, 1.0f, -0.5f, 0.5f, -0.5f, cubeShift * 3.0f,
-      0.0f,  -0.5f, 0.5f,  0.5f, cubeShift * 4.0f, 0.0f, -0.5f, 0.5f,  0.5f,
-      cubeShift * 4.0f, 0.0f, 0.5f,  0.5f, 0.5f, cubeShift * 5.0f, 0.0f, -0.5f, 0.5f,
-      -0.5f, cubeShift * 4.0f, 1.0f, 0.5f, 0.5f, -0.5f, cubeShift * 5.0f, 1.0f,
-      -0.5f, -0.5f, -0.5f, cubeShift * 5.0f, 0.0f, 0.5f, -0.5f, -0.5f, 1.0f, 0.0f,
-      -0.5f, -0.5f, 0.5f,  cubeShift * 5.0f, 1.0f, 0.5f, -0.5f, 0.5f, 1.0f, 1.0f,
+      -0.5f,
+      -0.5f,
+      0.5f,
+      0.0f,
+      1.0f,
+      0.5f,
+      -0.5f,
+      0.5f,
+      cubeShift,
+      1.0f,
+      -0.5f,
+      0.5f,
+      0.5f,
+      0.0f,
+      0.0f,
+      0.5f,
+      0.5f,
+      0.5f,
+      cubeShift,
+      0.0f,
+      0.5f,
+      -0.5f,
+      0.5f,
+      cubeShift,
+      1.0f,
+      0.5f,
+      -0.5f,
+      -0.5f,
+      cubeShift * 2.0f,
+      1.0f,
+      0.5f,
+      0.5f,
+      0.5f,
+      cubeShift,
+      0.0f,
+      0.5f,
+      0.5f,
+      -0.5f,
+      cubeShift * 2.0f,
+      0.0f,
+      0.5f,
+      -0.5f,
+      -0.5f,
+      cubeShift * 2.0f,
+      1.0f,
+      -0.5f,
+      -0.5f,
+      -0.5f,
+      cubeShift * 3.0f,
+      1.0f,
+      0.5f,
+      0.5f,
+      -0.5f,
+      cubeShift * 2.0f,
+      0.0f,
+      -0.5f,
+      0.5f,
+      -0.5f,
+      cubeShift * 3.0f,
+      0.0f,
+      -0.5f,
+      -0.5f,
+      -0.5f,
+      cubeShift * 3.0f,
+      1.0f,
+      -0.5f,
+      -0.5f,
+      0.5f,
+      cubeShift * 4.0f,
+      1.0f,
+      -0.5f,
+      0.5f,
+      -0.5f,
+      cubeShift * 3.0f,
+      0.0f,
+      -0.5f,
+      0.5f,
+      0.5f,
+      cubeShift * 4.0f,
+      0.0f,
+      -0.5f,
+      0.5f,
+      0.5f,
+      cubeShift * 4.0f,
+      0.0f,
+      0.5f,
+      0.5f,
+      0.5f,
+      cubeShift * 5.0f,
+      0.0f,
+      -0.5f,
+      0.5f,
+      -0.5f,
+      cubeShift * 4.0f,
+      1.0f,
+      0.5f,
+      0.5f,
+      -0.5f,
+      cubeShift * 5.0f,
+      1.0f,
+      -0.5f,
+      -0.5f,
+      -0.5f,
+      cubeShift * 5.0f,
+      0.0f,
+      0.5f,
+      -0.5f,
+      -0.5f,
+      1.0f,
+      0.0f,
+      -0.5f,
+      -0.5f,
+      0.5f,
+      cubeShift * 5.0f,
+      1.0f,
+      0.5f,
+      -0.5f,
+      0.5f,
+      1.0f,
+      1.0f,
   };
   const unsigned int indices[] = {
       0,  1,  2,  2,  1,  3,  4,  5,  6,  6,  5,  7,  8,  9,  10, 10, 9,  11,
@@ -296,7 +406,8 @@ bool UFpViewmodelRenderer::InitCubeMesh()
   glBindBuffer(GL_ARRAY_BUFFER, CubeVbo);
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, CubeEbo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
+               GL_STATIC_DRAW);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
@@ -369,7 +480,8 @@ bool UFpViewmodelRenderer::EnsureArmSkinMesh(int texW, int texH)
   glBindBuffer(GL_ARRAY_BUFFER, ArmSkinVbo);
   glBufferData(GL_ARRAY_BUFFER, sizeof(posUv), posUv, GL_STATIC_DRAW);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ArmSkinEbo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
+               GL_STATIC_DRAW);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
@@ -451,17 +563,17 @@ void UFpViewmodelRenderer::Update(float dt, float cameraYawDeg,
       {
         const float acc = 0.12f * (velX - gapX * 0.1f) * 0.001f;
         Motion.WieldOffsetX += (dYaw < 0.f) ? acc : -acc;
-        Motion.WieldOffsetX = std::clamp(
-            Motion.WieldOffsetX, kInertiaBaseX - kInertiaAmpX * 0.5f,
-            kInertiaBaseX + kInertiaAmpX * 0.5f);
+        Motion.WieldOffsetX =
+            std::clamp(Motion.WieldOffsetX, kInertiaBaseX - kInertiaAmpX * 0.5f,
+                       kInertiaBaseX + kInertiaAmpX * 0.5f);
       }
       if (velY > 1.f)
       {
         const float acc = 0.12f * (velY - gapY * 0.1f) * 0.001f;
         Motion.WieldOffsetY += (dPitch > 0.f) ? acc : -acc;
-        Motion.WieldOffsetY = std::clamp(
-            Motion.WieldOffsetY, kInertiaBaseY - kInertiaAmpY * 0.5f,
-            kInertiaBaseY + kInertiaAmpY * 0.5f);
+        Motion.WieldOffsetY =
+            std::clamp(Motion.WieldOffsetY, kInertiaBaseY - kInertiaAmpY * 0.5f,
+                       kInertiaBaseY + kInertiaAmpY * 0.5f);
       }
     }
     else
@@ -621,9 +733,8 @@ void UFpViewmodelRenderer::ApplyPresetToOffsets(float eased, float &ox,
     return;
   }
   const ItemVisualArmKeys &arm = Motion.Anim.Snapshot.Arm;
-  auto lerp2 = [eased](const float v[2], bool has) {
-    return has ? (v[0] + (v[1] - v[0]) * eased) : 0.f;
-  };
+  auto lerp2 = [eased](const float v[2], bool has)
+  { return has ? (v[0] + (v[1] - v[0]) * eased) : 0.f; };
   if (arm.HasTx)
   {
     ox += lerp2(arm.Tx, true);
@@ -676,10 +787,9 @@ glm::mat4 UFpViewmodelRenderer::BuildRootMatrix(bool mirrorX) const
     oz += 0.025f;
     const float t = std::sin(f * kPi);
     const glm::quat idle = glm::quat(1.f, 0.f, 0.f, 0.f);
-    const glm::quat punch = glm::angleAxis(glm::radians(-35.f * t),
-                                           glm::vec3(1.f, 0.f, 0.f)) *
-                            glm::angleAxis(glm::radians(20.f * t),
-                                           glm::vec3(0.f, 1.f, 0.f));
+    const glm::quat punch =
+        glm::angleAxis(glm::radians(-35.f * t), glm::vec3(1.f, 0.f, 0.f)) *
+        glm::angleAxis(glm::radians(20.f * t), glm::vec3(0.f, 1.f, 0.f));
     swing = glm::mat4_cast(glm::slerp(idle, punch, t));
   }
 
@@ -694,8 +804,9 @@ glm::mat4 UFpViewmodelRenderer::BuildRootMatrix(bool mirrorX) const
   const float basex = (mirrorX ? -0.40f : 0.40f) + ox;
   const float basey = -0.78f + oy;
   const float basez = -0.30f + oz;
-  glm::mat4 root = glm::translate(glm::mat4(1.f), glm::vec3(basex, basey, basez)) *
-                   glm::mat4_cast(orient) * swing;
+  glm::mat4 root =
+      glm::translate(glm::mat4(1.f), glm::vec3(basex, basey, basez)) *
+      glm::mat4_cast(orient) * swing;
   if (mirrorX)
   {
     root = root * glm::scale(glm::mat4(1.f), glm::vec3(-1.f, 1.f, 1.f));
@@ -748,7 +859,8 @@ void UFpViewmodelRenderer::DrawParts(const std::vector<Part> &parts,
     Shader->SetMat4("mvp_matrix", mvpBase * model);
     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
     if (ActiveAudit && p.useSkinAtlas)
-      ActiveAudit->Arms.push_back({DrawingLeftArm,"legacy_right_arm_atlas",tex,mvpBase*model,0});
+      ActiveAudit->Arms.push_back(
+          {DrawingLeftArm, "legacy_right_arm_atlas", tex, mvpBase * model, 0});
   }
   glBindVertexArray(0);
 }
@@ -824,8 +936,8 @@ UFpViewmodelRenderer::ToolParts(const std::string &itemId,
         ToolJsonSizeToArm(glm::vec3(0.07f, 0.38f, 0.07f)) * kToolWieldScale;
     parts.push_back(Part{socket.x + armOff.x, socket.y + armOff.y,
                          socket.z + armOff.z, std::max(0.04f, armSz.x),
-                         std::max(0.04f, armSz.y), std::max(0.04f, armSz.z), 185,
-                         190, 200});
+                         std::max(0.04f, armSz.y), std::max(0.04f, armSz.z),
+                         185, 190, 200});
   }
   return parts;
 }
@@ -990,10 +1102,11 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const std::string &itemId,
     fitExtent = std::max(1e-5f, fitExtent);
   }
   const float fitScale = kFpWieldTargetExtent / fitExtent;
-  const float wieldScale = DefaultWieldScale(*def);
+  const float wieldScale = DefaultWieldScale(*def) * def->Visual.FpScale;
   const glm::vec3 visualOff(poseOff[0], poseOff[1], poseOff[2]);
   // kToolWieldLeanDeg is an arm-local bias applied in `orient` below.
-  // poseEuler is the tool-local grip (family default or visual.wield_euler_deg).
+  // poseEuler is the tool-local grip (family default or
+  // visual.wield_euler_deg).
   const glm::mat4 visualRot =
       glm::rotate(glm::mat4(1.f), glm::radians(poseEuler[0]),
                   glm::vec3(1.f, 0.f, 0.f)) *
@@ -1037,7 +1150,8 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const std::string &itemId,
     {
       continue;
     }
-    GLuint tex = ItemGltfTextureCache::Instance().Get(absGltf, prim.textureStem);
+    GLuint tex =
+        ItemGltfTextureCache::Instance().Get(absGltf, prim.textureStem);
     if (tex == 0)
     {
       tex = fallbackTex;
@@ -1051,14 +1165,15 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const std::string &itemId,
     Shader->SetMat4("mvp_matrix", mvp);
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER,
-                 static_cast<GLsizeiptr>(mesh.interleavedPosUv.size() *
-                                         sizeof(float)),
-                 mesh.interleavedPosUv.data(), GL_STREAM_DRAW);
+    glBufferData(
+        GL_ARRAY_BUFFER,
+        static_cast<GLsizeiptr>(mesh.interleavedPosUv.size() * sizeof(float)),
+        mesh.interleavedPosUv.data(), GL_STREAM_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 static_cast<GLsizeiptr>(mesh.indices.size() * sizeof(unsigned)),
-                 mesh.indices.data(), GL_STREAM_DRAW);
+    glBufferData(
+        GL_ELEMENT_ARRAY_BUFFER,
+        static_cast<GLsizeiptr>(mesh.indices.size() * sizeof(unsigned)),
+        mesh.indices.data(), GL_STREAM_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
@@ -1072,7 +1187,8 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const std::string &itemId,
   return drew;
 }
 
-GLuint UFpViewmodelRenderer::ResolveBlockAtlas(const std::string &typeName) const
+GLuint
+UFpViewmodelRenderer::ResolveBlockAtlas(const std::string &typeName) const
 {
   if (!Blocks || !Textures || typeName.empty())
   {
@@ -1100,8 +1216,9 @@ GLuint UFpViewmodelRenderer::ResolveBlockAtlas(const std::string &typeName) cons
   return 0;
 }
 
-GLuint UFpViewmodelRenderer::ResolvePlayerSkin(const std::string &speciesId,
-                                               const ResolvedCreatureAppearance *appearance) const
+GLuint UFpViewmodelRenderer::ResolvePlayerSkin(
+    const std::string &speciesId,
+    const ResolvedCreatureAppearance *appearance) const
 {
   if (!CreatureTextures)
   {
@@ -1112,98 +1229,164 @@ GLuint UFpViewmodelRenderer::ResolvePlayerSkin(const std::string &speciesId,
 }
 
 bool UFpViewmodelRenderer::TryDrawLegacyAtlasArms(const glm::mat4 &mvpBase,
-                                              bool leftHand, GLuint skinAtlas)
+                                                  bool leftHand,
+                                                  GLuint skinAtlas)
 {
   // Compatibility fallback for definitions without authored arm geometry.
   DrawParts(leftHand ? ArmPartsLeft() : ArmPartsRight(), mvpBase, skinAtlas);
   return true;
 }
 
-void UFpViewmodelRenderer::PrepareArmSource(const CreatureDefinition *definition, const ResolvedCreatureAppearance *appearance)
+void UFpViewmodelRenderer::PrepareArmSource(
+    const CreatureDefinition *definition,
+    const ResolvedCreatureAppearance *appearance)
 {
-  if(!definition || ParseCreatureVisualBackend(definition->visual.backend)!=CreatureVisualBackend::BoneSkeleton)
-  {ArmSource.reset();ArmRequestSeen=false;return;}
-  const auto &spec=definition->visual.boneSkeleton;
-  auto &cache=CreatureBoneSkeletonCache::Instance();const auto revision=cache.GetRevision();
-  static const std::string defaultFile="geometry.geo.json";
-  const auto &file=appearance && !appearance->geometryFileOverride.empty()?appearance->geometryFileOverride:spec.geometryFile.empty()?defaultFile:spec.geometryFile;
-  if(ArmRequestSeen && ArmRevision==revision && ArmSpecies==definition->Id && ArmFile==file &&
-     ArmGeometry==spec.geometryId && ArmDirectory==definition->visual.sourceDirectory)return;
-  ArmRequestSeen=true;ArmRevision=revision;ArmSpecies=definition->Id;ArmFile=file;
-  ArmGeometry=spec.geometryId;ArmDirectory=definition->visual.sourceDirectory;
-  ArmSource=cache.Load(ArmSpecies,ArmFile,ArmGeometry,ArmDirectory);
-  for(int side=0;side<2;++side)
+  if (!definition || ParseCreatureVisualBackend(definition->visual.backend) !=
+                         CreatureVisualBackend::BoneSkeleton)
   {
-    ArmIndices[side]=static_cast<size_t>(-1);ArmSegments[side].clear();
-    if(!ArmSource)continue;
-    const auto found=ArmSource->geometry.boneIndexByName.find(side?"leftArm":"rightArm");
-    if(found==ArmSource->geometry.boneIndexByName.end())continue;
-    const auto index=found->second;
-    glm::vec3 low(std::numeric_limits<float>::max()),high(std::numeric_limits<float>::lowest());
-    BoneSkeletonHierarchy hierarchy(ArmSource->geometry);BoneSkeletonPose rest;
-    const auto shoulderInverse=glm::inverse(hierarchy.ComputeBoneMatrix(index,rest));
-    for(size_t i=0;i<ArmSource->boneMeshes.size();++i) {
-      size_t ancestor=i;
-      for(size_t depth=0;depth<ArmSource->geometry.bones.size();++depth) {
-        if(ancestor==index){ArmSegments[side].push_back({i,shoulderInverse*hierarchy.ComputeBoneMatrix(i,rest)});break;}
-        const auto parent=ArmSource->geometry.boneIndexByName.find(ArmSource->geometry.bones[ancestor].parent);
-        if(parent==ArmSource->geometry.boneIndexByName.end())break;ancestor=parent->second;
+    ArmSource.reset();
+    ArmRequestSeen = false;
+    return;
+  }
+  const auto &spec = definition->visual.boneSkeleton;
+  auto &cache = CreatureBoneSkeletonCache::Instance();
+  const auto revision = cache.GetRevision();
+  static const std::string defaultFile = "geometry.geo.json";
+  const auto &file = appearance && !appearance->geometryFileOverride.empty()
+                         ? appearance->geometryFileOverride
+                     : spec.geometryFile.empty() ? defaultFile
+                                                 : spec.geometryFile;
+  if (ArmRequestSeen && ArmRevision == revision &&
+      ArmSpecies == definition->Id && ArmFile == file &&
+      ArmGeometry == spec.geometryId &&
+      ArmDirectory == definition->visual.sourceDirectory)
+    return;
+  ArmRequestSeen = true;
+  ArmRevision = revision;
+  ArmSpecies = definition->Id;
+  ArmFile = file;
+  ArmGeometry = spec.geometryId;
+  ArmDirectory = definition->visual.sourceDirectory;
+  ArmSource = cache.Load(ArmSpecies, ArmFile, ArmGeometry, ArmDirectory);
+  for (int side = 0; side < 2; ++side)
+  {
+    ArmIndices[side] = static_cast<size_t>(-1);
+    ArmSegments[side].clear();
+    if (!ArmSource)
+      continue;
+    const auto found =
+        ArmSource->geometry.boneIndexByName.find(side ? "leftArm" : "rightArm");
+    if (found == ArmSource->geometry.boneIndexByName.end())
+      continue;
+    const auto index = found->second;
+    glm::vec3 low(std::numeric_limits<float>::max()),
+        high(std::numeric_limits<float>::lowest());
+    BoneSkeletonHierarchy hierarchy(ArmSource->geometry);
+    BoneSkeletonPose rest;
+    const auto shoulderInverse =
+        glm::inverse(hierarchy.ComputeBoneMatrix(index, rest));
+    for (size_t i = 0; i < ArmSource->boneMeshes.size(); ++i)
+    {
+      size_t ancestor = i;
+      for (size_t depth = 0; depth < ArmSource->geometry.bones.size(); ++depth)
+      {
+        if (ancestor == index)
+        {
+          ArmSegments[side].push_back(
+              {i, shoulderInverse * hierarchy.ComputeBoneMatrix(i, rest)});
+          break;
+        }
+        const auto parent = ArmSource->geometry.boneIndexByName.find(
+            ArmSource->geometry.bones[ancestor].parent);
+        if (parent == ArmSource->geometry.boneIndexByName.end())
+          break;
+        ancestor = parent->second;
       }
     }
-    bool any=false;
-    for(const auto &[segment,transform]:ArmSegments[side])
-    for(const auto &cube:ArmSource->boneMeshes[segment].cubes)
-      for(size_t v=0;v+4<cube.interleavedPosUv.size();v+=5)
-      {
-        const auto &values=cube.interleavedPosUv;
-        const glm::vec3 p(transform*cube.restLocalMatrix*glm::vec4(values[v],values[v+1],values[v+2],1.f));
-        low=glm::min(low,p);high=glm::max(high,p);any=true;
-      }
-    if(!any || high.y-low.y<1e-5f)continue;
+    bool any = false;
+    for (const auto &[segment, transform] : ArmSegments[side])
+      for (const auto &cube : ArmSource->boneMeshes[segment].cubes)
+        for (size_t v = 0; v + 4 < cube.interleavedPosUv.size(); v += 5)
+        {
+          const auto &values = cube.interleavedPosUv;
+          const glm::vec3 p(
+              transform * cube.restLocalMatrix *
+              glm::vec4(values[v], values[v + 1], values[v + 2], 1.f));
+          low = glm::min(low, p);
+          high = glm::max(high, p);
+          any = true;
+        }
+    if (!any || high.y - low.y < 1e-5f)
+      continue;
     // Retarget the authored arm's shoulder-to-palm extent into FP space.
     // Uniform scale preserves the skeleton's thin arm and cube proportions;
     // positions/UV/indices and per-cube rest transforms remain source data.
-    ArmScales[side]=.63f/(high.y-low.y);
-    const glm::vec3 shoulder((low.x+high.x)*.5f,high.y,(low.z+high.z)*.5f);
-    ArmFits[side]=glm::scale(glm::mat4(1.f),glm::vec3(ArmScales[side]))*
-      glm::translate(glm::mat4(1.f),-shoulder);
-    ArmIndices[side]=index;
+    ArmScales[side] = .63f / (high.y - low.y);
+    const glm::vec3 shoulder((low.x + high.x) * .5f, high.y,
+                             (low.z + high.z) * .5f);
+    ArmFits[side] = glm::scale(glm::mat4(1.f), glm::vec3(ArmScales[side])) *
+                    glm::translate(glm::mat4(1.f), -shoulder);
+    ArmIndices[side] = index;
   }
 }
 
-bool UFpViewmodelRenderer::TryDrawAuthoredArm(const glm::mat4 &mvpBase,bool leftHand,GLuint skinAtlas)
+bool UFpViewmodelRenderer::TryDrawAuthoredArm(const glm::mat4 &mvpBase,
+                                              bool leftHand, GLuint skinAtlas)
 {
-  const int side=leftHand?1:0;const auto index=ArmIndices[side];
-  if(!ArmSource || !skinAtlas || index>=ArmSource->boneMeshes.size())return false;
+  const int side = leftHand ? 1 : 0;
+  const auto index = ArmIndices[side];
+  if (!ArmSource || !skinAtlas || index >= ArmSource->boneMeshes.size())
+    return false;
   // The left source mesh already has its own authored UV/mirror policy.
   // Cancel the generic right-hand reflection only for this left arm. Held
   // items retain the established root, wield orientation and animation.
-  const glm::mat4 root=leftHand?mvpBase*glm::scale(glm::mat4(1.f),glm::vec3(-1.f,1.f,1.f)):mvpBase;
-  bool drew=false;
-  for(const auto &[segment,transform]:ArmSegments[side])
-  for(const auto &cube:ArmSource->boneMeshes[segment].cubes)
-  {
-    if(cube.interleavedPosUv.empty() || cube.indices.empty())continue;
-    const GLuint vao=CreatureMeshGpuCache::Instance().GetOrCreateSkeletalMeshVao(cube);
-    if(!vao)continue;
-    glActiveTexture(GL_TEXTURE0);glBindTexture(GL_TEXTURE_2D,skinAtlas);glBindVertexArray(vao);
-    const glm::mat4 mvp=root*ArmFits[side]*transform*cube.restLocalMatrix;
-    Shader->SetMat4("mvp_matrix",mvp);
-    glDrawElements(GL_TRIANGLES,static_cast<GLsizei>(cube.indices.size()),GL_UNSIGNED_INT,nullptr);
-    if(ActiveAudit)
+  const glm::mat4 root =
+      leftHand ? mvpBase * glm::scale(glm::mat4(1.f), glm::vec3(-1.f, 1.f, 1.f))
+               : mvpBase;
+  bool drew = false;
+  for (const auto &[segment, transform] : ArmSegments[side])
+    for (const auto &cube : ArmSource->boneMeshes[segment].cubes)
     {
-      uint64_t hash=14695981039346656037ull;
-      const auto *data=reinterpret_cast<const unsigned char *>(cube.interleavedPosUv.data());
-      for(size_t i=0;i<cube.interleavedPosUv.size()*sizeof(float);++i){hash^=data[i];hash*=1099511628211ull;}
-      GLint buffer=0;glGetVertexAttribiv(0,GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING,&buffer);
-      FpArmDrawAudit record{leftHand,"bone/"+ArmSource->boneMeshes[segment].boneName,skinAtlas,mvp,hash};
-      record.VertexBuffer=static_cast<GLuint>(buffer);record.VertexFloatCount=cube.interleavedPosUv.size();record.SourceScale=ArmScales[side];
-      record.RootMvp=mvpBase;
-      ActiveAudit->Arms.push_back(std::move(record));
+      if (cube.interleavedPosUv.empty() || cube.indices.empty())
+        continue;
+      const GLuint vao =
+          CreatureMeshGpuCache::Instance().GetOrCreateSkeletalMeshVao(cube);
+      if (!vao)
+        continue;
+      glActiveTexture(GL_TEXTURE0);
+      glBindTexture(GL_TEXTURE_2D, skinAtlas);
+      glBindVertexArray(vao);
+      const glm::mat4 mvp =
+          root * ArmFits[side] * transform * cube.restLocalMatrix;
+      Shader->SetMat4("mvp_matrix", mvp);
+      glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(cube.indices.size()),
+                     GL_UNSIGNED_INT, nullptr);
+      if (ActiveAudit)
+      {
+        uint64_t hash = 14695981039346656037ull;
+        const auto *data = reinterpret_cast<const unsigned char *>(
+            cube.interleavedPosUv.data());
+        for (size_t i = 0; i < cube.interleavedPosUv.size() * sizeof(float);
+             ++i)
+        {
+          hash ^= data[i];
+          hash *= 1099511628211ull;
+        }
+        GLint buffer = 0;
+        glGetVertexAttribiv(0, GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING, &buffer);
+        FpArmDrawAudit record{leftHand,
+                              "bone/" + ArmSource->boneMeshes[segment].boneName,
+                              skinAtlas, mvp, hash};
+        record.VertexBuffer = static_cast<GLuint>(buffer);
+        record.VertexFloatCount = cube.interleavedPosUv.size();
+        record.SourceScale = ArmScales[side];
+        record.RootMvp = mvpBase;
+        ActiveAudit->Arms.push_back(std::move(record));
+      }
+      drew = true;
     }
-    drew=true;
-  }
-  glBindVertexArray(0);return drew;
+  glBindVertexArray(0);
+  return drew;
 }
 
 void UFpViewmodelRenderer::DrawBlockCube(const std::string &typeName,
@@ -1220,11 +1403,11 @@ void UFpViewmodelRenderer::DrawBlockCube(const std::string &typeName,
   glBindVertexArray(CubeVao);
   const float s = 0.22f;
   const glm::mat4 tilt =
-      glm::rotate(glm::mat4(1.f), glm::radians(-18.f), glm::vec3(1.f, 0.f, 0.f)) *
+      glm::rotate(glm::mat4(1.f), glm::radians(-18.f),
+                  glm::vec3(1.f, 0.f, 0.f)) *
       glm::rotate(glm::mat4(1.f), glm::radians(28.f), glm::vec3(0.f, 1.f, 0.f));
-  const glm::mat4 model =
-      glm::translate(glm::mat4(1.f), socket) * tilt *
-      glm::scale(glm::mat4(1.f), glm::vec3(s, s, s));
+  const glm::mat4 model = glm::translate(glm::mat4(1.f), socket) * tilt *
+                          glm::scale(glm::mat4(1.f), glm::vec3(s, s, s));
   Shader->SetMat4("mvp_matrix", mvpBase * model);
   glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
   glBindVertexArray(0);
@@ -1251,10 +1434,11 @@ void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
   {
     FpViewmodelDrawAudit *&Slot;
     FpViewmodelDrawAudit *Previous;
-    ~AuditScope(){Slot=Previous;}
-  } auditScope{ActiveAudit,ActiveAudit};
-  ActiveAudit=params.Audit;
-  if(ActiveAudit)*ActiveAudit={};
+    ~AuditScope() { Slot = Previous; }
+  } auditScope{ActiveAudit, ActiveAudit};
+  ActiveAudit = params.Audit;
+  if (ActiveAudit)
+    *ActiveAudit = {};
   glBindFramebuffer(GL_FRAMEBUFFER, params.TargetFramebuffer);
   glViewport(0, 0, params.FramebufferW, params.FramebufferH);
   glClear(GL_DEPTH_BUFFER_BIT);
@@ -1269,12 +1453,12 @@ void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
                        static_cast<float>(params.FramebufferH);
   const glm::mat4 projection =
       glm::perspective(glm::radians(kFovDeg), aspect, kNear, kFar);
-  const glm::mat4 view =
-      glm::lookAt(kEye, kTarget, glm::vec3(0.f, 1.f, 0.f));
+  const glm::mat4 view = glm::lookAt(kEye, kTarget, glm::vec3(0.f, 1.f, 0.f));
   const glm::mat4 pv = projection * view;
   const GLuint skinAtlas =
       ResolvePlayerSkin(params.SpeciesId, params.Appearance.get());
-  if(ActiveAudit)ActiveAudit->SkinTexture=skinAtlas;
+  if (ActiveAudit)
+    ActiveAudit->SkinTexture = skinAtlas;
   PrepareArmSource(params.Definition, params.Appearance.get());
 
   Shader->Use();
@@ -1282,17 +1466,34 @@ void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
   Shader->SetInt("uAnimFrame", 0);
   Shader->SetInt("uAnimFrameCount", 1);
 
-  const glm::mat4 rootR = BuildRootMatrix(false);
-  DrawingLeftArm=false;
-  if (!TryDrawAuthoredArm(pv * rootR,false,skinAtlas) && !TryDrawLegacyAtlasArms(pv * rootR, false, skinAtlas))
+  glm::mat4 rootR = BuildRootMatrix(false);
+  if (params.CarryHands > 0)
+    rootR = glm::translate(glm::mat4(1),
+                           glm::vec3(-.12f, .28f + params.ThrowCharge * .12f,
+                                     -.10f + params.ThrowCharge * .08f)) *
+            rootR;
+  if (params.BowCharge > 0)
+    rootR =
+        glm::translate(rootR, glm::vec3(-.1f, .08f, .15f * params.BowCharge));
+  DrawingLeftArm = false;
+  if (!TryDrawAuthoredArm(pv * rootR, false, skinAtlas) &&
+      !TryDrawLegacyAtlasArms(pv * rootR, false, skinAtlas))
   {
     DrawParts(ArmPartsRight(), pv * rootR, skinAtlas);
   }
   DrawHeld(params.Active, kHandSocketR, pv * rootR);
 
-  const glm::mat4 rootL = BuildRootMatrix(true);
-  DrawingLeftArm=true;
-  if (!TryDrawAuthoredArm(pv * rootL,true,skinAtlas) && !TryDrawLegacyAtlasArms(pv * rootL, true, skinAtlas))
+  glm::mat4 rootL = BuildRootMatrix(true);
+  if (params.CarryHands == 2)
+    rootL = glm::translate(glm::mat4(1),
+                           glm::vec3(.12f, .28f + params.ThrowCharge * .12f,
+                                     -.10f + params.ThrowCharge * .08f)) *
+            rootL;
+  if (params.BowCharge > 0)
+    rootL = glm::translate(rootL, glm::vec3(.1f, .10f, -.18f));
+  DrawingLeftArm = true;
+  if (!TryDrawAuthoredArm(pv * rootL, true, skinAtlas) &&
+      !TryDrawLegacyAtlasArms(pv * rootL, true, skinAtlas))
   {
     DrawParts(ArmPartsLeft(), pv * rootL, skinAtlas);
   }

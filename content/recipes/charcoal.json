@@ -1,0 +1,17 @@
+{
+  "id": "charcoal",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "wood",
+      "count": 2
+    }
+  ],
+  "output": {
+    "id": "charcoal",
+    "count": 1
+  },
+  "station": "furnace",
+  "category": "Materials",
+  "seconds": 4
+}

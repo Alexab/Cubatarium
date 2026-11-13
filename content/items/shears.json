@@ -19,6 +19,24 @@
       0,
       0,
       0
-    ]
+    ],
+    "presentations": {
+      "icon_scale": 1.0,
+      "fp_scale": 1.0,
+      "tp_scale": 1.0,
+      "ground_scale": 1.0
+    }
+  },
+  "physical": {
+    "mass": 2.6,
+    "size": [
+      0.18,
+      0.805,
+      0.05
+    ],
+    "hardness": 1
+  },
+  "use": {
+    "interaction": "shear"
   }
 }

@@ -18,6 +18,8 @@ struct InfluenceApplyResult
 /// Mutate vitals from a prediction and emit InfluenceEvent.
 struct InfluenceApplier
 {
+  static void ApplyImpact(UWorld &world, uint64_t target, uint64_t thrower,
+                          float damage, glm::vec3 hitFrom);
   static InfluenceApplyResult Apply(UWorld &world, InfluencePrediction &pred,
                                     WorldGameMode mode, float dt = 0.f);
 };

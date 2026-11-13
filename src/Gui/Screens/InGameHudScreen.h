@@ -37,6 +37,11 @@ public:
   void Build(UGuiContext &ctx) override;
   void OnViewportChanged(int width, int height) override;
   void SetPointerPosition(int x, int y);
+  void SetInteractionKeys(std::string grab, std::string windup)
+  {
+    GrabHintKey = std::move(grab);
+    ThrowHintKey = std::move(windup);
+  }
 #if defined(__ANDROID__)
   void ConfigureTouchControls(class UTouchInputBridge *bridge,
                               std::function<void()> onMenu,
@@ -50,13 +55,15 @@ public:
   void ReleaseJoystickCaptureForPointer(int pointer_id);
   void ReleaseTouchCaptures();
   bool HitTestTouchControls(int x, int y) const;
-  void RenderTouchControlsOverlay(class UGuiContext &ctx, int width, int height);
+  void RenderTouchControlsOverlay(class UGuiContext &ctx, int width,
+                                  int height);
 #endif
   /// Обновить текстуры слотов; вызывать после отрисовки мира (FBO-иконки
   /// prefab).
   void SyncSlotIcons();
 
 private:
+  std::string GrabHintKey{"v"}, ThrowHintKey{"r"};
   void EnsureHotbarWidgets();
   void EnsureVitalWidgets();
   void EnsureModeBadge();
@@ -81,6 +88,8 @@ private:
   UGuiPanel *HotbarDivider{nullptr};
   UGuiLabel *Tooltip{nullptr};
   UGuiLabel *ModeBadge{nullptr};
+  UGuiLabel *CarryHint{nullptr};
+  float CarryHintDebt{0};
   UGuiLabel *HealthLabel{nullptr};
   UGuiLabel *SatietyLabel{nullptr};
   UGuiLabel *ThirstLabel{nullptr};

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import yaml
 
 from PIL import Image, ImageDraw
 
@@ -21,18 +22,21 @@ from itemgen.raster import render as _render
 def make_contact_sheet(item_id: str, out_dir: Path | None = None) -> Path:
     item_dir = MODELS / item_id
     parts = _load_parts_from_gltf(item_dir)
+    recipe_path=ROOT/"tools/item_recipes"/f"{item_id}.yaml"
+    recipe=yaml.safe_load(recipe_path.read_text()) if recipe_path.exists() else {}
+    inspection=recipe.get("inspection",{})
     modes = [
         ("silhouette", 35.0),
         ("color", 35.0),
         ("gray", 35.0),
-        ("inspection", 15.0),  # second asset inspection angle, not native FP
+        ("inspection", float(inspection.get("yaw",15.0))),  # second asset inspection angle, not native FP
     ]
     cell = 160
     sheet = Image.new("RGBA", (cell * 4, cell + 28), (18, 18, 22, 255))
     draw = ImageDraw.Draw(sheet)
     labels = ["silhouette", "color", "gray", "inspection"]
     for i, (mode, yaw) in enumerate(modes):
-        tile = _render(parts, mode="color" if mode == "inspection" else mode, size=cell, yaw=yaw)
+        tile = _render(parts, mode="color" if mode == "inspection" else mode, size=cell, yaw=yaw, pitch=float(inspection.get("pitch",-25.0)) if mode=="inspection" else -25.0)
         sheet.paste(tile, (i * cell, 28))
         draw.text((i * cell + 8, 6), labels[i], fill=(220, 220, 220, 255))
     draw.text((8, cell + 8), item_id, fill=(180, 180, 190, 255))

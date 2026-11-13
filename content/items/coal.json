@@ -1,0 +1,40 @@
+{
+  "id": "coal",
+  "displayName": "Coal",
+  "types": [
+    "misc",
+    "material"
+  ],
+  "stack_max": 32,
+  "wear_end": "indestructible",
+  "model": "models/items/coal/model.gltf",
+  "visual": {
+    "fit_axis": "longest",
+    "wield_euler_deg": [
+      -25,
+      0,
+      0
+    ],
+    "wield_offset": [
+      0,
+      0,
+      0
+    ],
+    "presentations": {
+      "icon_scale": 1.0,
+      "fp_scale": 1.0,
+      "tp_scale": 1.0,
+      "ground_scale": 1.0
+    }
+  },
+  "physical": {
+    "mass": 1.8,
+    "size": [
+      0.23,
+      0.195,
+      0.16
+    ],
+    "hardness": 1
+  },
+  "use": {}
+}

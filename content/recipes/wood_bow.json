@@ -3,12 +3,19 @@
   "shapeless": true,
   "inputs": [
     {
-      "id": "wood",
+      "id": "stick",
+      "count": 3
+    },
+    {
+      "id": "cord",
       "count": 3
     }
   ],
   "output": {
     "id": "wood_bow",
     "count": 1
-  }
+  },
+  "station": "crafting_table",
+  "category": "Utility",
+  "seconds": 0
 }

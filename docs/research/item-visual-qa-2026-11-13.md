@@ -5,7 +5,7 @@ Date: 2026-11-13. Actual triangle/UV rasterization; native FP/TP acceptance is s
 - Passed: **True**
 - Failures: 0
 - Warnings: 0
-- Items audited: 56
+- Items audited: 70
 
 ## Failures
 

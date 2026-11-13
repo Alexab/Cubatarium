@@ -1,0 +1,10 @@
+{
+  "id": "copper_ingot",
+  "format": "gltf",
+  "license": "CC0-1.0",
+  "authoring_source": "cubatarium-recipe",
+  "family": "material",
+  "material": "copper",
+  "recipe_version": 2,
+  "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+}

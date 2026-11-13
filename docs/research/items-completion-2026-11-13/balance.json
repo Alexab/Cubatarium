@@ -1,0 +1,116 @@
+{
+  "strength": 10,
+  "carrier_height": 1.8,
+  "gravity": 20,
+  "fixed_step": 0.016666666666666666,
+  "profiles": [
+    {
+      "id": "small_item",
+      "mass": 0.2,
+      "size": [
+        0.2,
+        0.2,
+        0.2
+      ],
+      "hands": 1,
+      "full_speed": 21.2572,
+      "ideal_range_45_same_height": 22.5935
+    },
+    {
+      "id": "iron_pickaxe",
+      "mass": 2.6,
+      "size": [
+        0.46,
+        0.83,
+        0.06
+      ],
+      "hands": 1,
+      "full_speed": 14.6107,
+      "ideal_range_45_same_height": 10.6736
+    },
+    {
+      "id": "wood_block",
+      "mass": 4,
+      "size": [
+        1,
+        1,
+        1
+      ],
+      "hands": 2,
+      "full_speed": 12.4451,
+      "ideal_range_45_same_height": 7.744
+    },
+    {
+      "id": "stone_block",
+      "mass": 12,
+      "size": [
+        1,
+        1,
+        1
+      ],
+      "hands": 2,
+      "full_speed": 8.8,
+      "ideal_range_45_same_height": 3.872
+    },
+    {
+      "id": "bulky_light",
+      "mass": 1,
+      "size": [
+        1.5,
+        1,
+        1
+      ],
+      "hands": 2,
+      "full_speed": 12.5935,
+      "ideal_range_45_same_height": 7.9299
+    },
+    {
+      "id": "compact_heavy",
+      "mass": 18,
+      "size": [
+        0.3,
+        0.3,
+        0.3
+      ],
+      "hands": 2,
+      "full_speed": 9.1744,
+      "ideal_range_45_same_height": 4.2085
+    },
+    {
+      "id": "rat",
+      "mass": 1.0049,
+      "size": [
+        0.33,
+        0.25,
+        0.87
+      ],
+      "hands": 1,
+      "full_speed": 16.5384,
+      "ideal_range_45_same_height": 13.6759
+    },
+    {
+      "id": "sheep",
+      "mass": 19.404,
+      "size": [
+        0.9,
+        1.1,
+        1.4
+      ],
+      "hands": 2,
+      "full_speed": 6.1041,
+      "ideal_range_45_same_height": 1.863
+    },
+    {
+      "id": "too_heavy",
+      "mass": 21,
+      "size": [
+        0.2,
+        0.2,
+        0.2
+      ],
+      "hands": 0,
+      "full_speed": 0,
+      "ideal_range_45_same_height": 0.0
+    }
+  ]
+}

@@ -2,6 +2,7 @@
 #include "Creatures/Influence/InfluenceCapability.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Game/WorldGameMode.h"
+#include "Items/ItemToolInfluenceProvider.h"
 #include "World/Core/World.h"
 #include "World/Raycast/BlockRaycast.h"
 #include <algorithm>
@@ -17,9 +18,9 @@ float PlayerInteractionRouter::MeleePickReachBlocks()
 }
 
 bool PlayerInteractionRouter::TryRouteMeleeFromView(UWorld &world,
-                                                   UCreature &controlled,
-                                                   const glm::vec3 &eye,
-                                                   const glm::vec3 &front)
+                                                    UCreature &controlled,
+                                                    const glm::vec3 &eye,
+                                                    const glm::vec3 &front)
 {
   if (world.GetGameMode() != WorldGameMode::Survival &&
       world.GetGameMode() != WorldGameMode::Creative)
@@ -29,8 +30,11 @@ bool PlayerInteractionRouter::TryRouteMeleeFromView(UWorld &world,
     // Minecraft parity.
     return false;
   }
+  InfluenceCapability cap;
+  UItemToolInfluenceProvider provider(world.GetItemDefinitionStorage());
+  provider.TryGetCapability(controlled, InfluenceChannel::Melee, cap);
   const auto target =
-      world.PickCreatureByView(eye, front, MeleePickReachBlocks());
+      world.PickCreatureByView(eye, front, cap.RangeBlocks + .35f);
   if (!target || *target == controlled.GetId())
   {
     return false;
@@ -97,12 +101,9 @@ void PlayerInteractionRouter::SetRangedIntent(UCreature &attacker,
   attacker.SetIntent(intent);
 }
 
-bool PlayerInteractionRouter::TryRouteRangedFromView(UWorld &world,
-                                                     UCreature &controlled,
-                                                     const glm::vec3 &eye,
-                                                     const glm::vec3 &front,
-                                                     float rangeBlocks,
-                                                     bool requireLos)
+bool PlayerInteractionRouter::TryRouteRangedFromView(
+    UWorld &world, UCreature &controlled, const glm::vec3 &eye,
+    const glm::vec3 &front, float rangeBlocks, bool requireLos)
 {
   if (world.GetGameMode() != WorldGameMode::Survival &&
       world.GetGameMode() != WorldGameMode::Creative)
@@ -130,9 +131,9 @@ bool PlayerInteractionRouter::TryRouteRangedFromView(UWorld &world,
       const float maxCheck = std::max(0.f, dist - 0.35f);
       if (maxCheck > 0.05f)
       {
-        if (const auto blockHit = RaycastSolidBlocks(
-                world.GetBlockWorld(), world.GetBlockRegistry(), eye, dir,
-                maxCheck))
+        if (const auto blockHit = RaycastSolidBlocks(world.GetBlockWorld(),
+                                                     world.GetBlockRegistry(),
+                                                     eye, dir, maxCheck))
         {
           return false;
         }

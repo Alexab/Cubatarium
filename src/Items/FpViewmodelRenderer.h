@@ -1,8 +1,8 @@
 #ifndef FP_VIEWMODEL_RENDERER_H
 #define FP_VIEWMODEL_RENDERER_H
 
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -48,6 +48,8 @@ struct FpViewmodelDrawAudit
 
 struct FpViewmodelDrawParams
 {
+  int CarryHands{0};
+  float ThrowCharge{0}, BowCharge{0};
   int FramebufferW{0};
   int FramebufferH{0};
   const InventoryEntryRef *Active{nullptr};
@@ -65,11 +67,12 @@ struct FpViewmodelDrawParams
 class UFpViewmodelRenderer
 {
 public:
-  UFpViewmodelRenderer(std::shared_ptr<UItemDefinitionStorage> items,
-                       std::shared_ptr<UBlockDefinitionStorage> blocks,
-                       std::shared_ptr<UTextureCubeStorage> textures,
-                       std::shared_ptr<UCreatureTextureStorage> creatureTextures,
-                       std::shared_ptr<UShaderManager> shaderManager);
+  UFpViewmodelRenderer(
+      std::shared_ptr<UItemDefinitionStorage> items,
+      std::shared_ptr<UBlockDefinitionStorage> blocks,
+      std::shared_ptr<UTextureCubeStorage> textures,
+      std::shared_ptr<UCreatureTextureStorage> creatureTextures,
+      std::shared_ptr<UShaderManager> shaderManager);
   ~UFpViewmodelRenderer();
 
   bool Initialize();
@@ -140,7 +143,7 @@ private:
   std::vector<Part> ArmPartsRight() const;
   std::vector<Part> ArmPartsLeft() const;
   std::vector<Part> ToolParts(const std::string &itemId,
-                               const glm::vec3 &socket) const;
+                              const glm::vec3 &socket) const;
   void DrawHeld(const InventoryEntryRef *entry, const glm::vec3 &socket,
                 const glm::mat4 &mvpBase);
   bool TryDrawGltfHeld(const std::string &itemId, const glm::vec3 &socket,
@@ -149,22 +152,24 @@ private:
                      const glm::mat4 &mvpBase);
   GLuint ResolveBlockAtlas(const std::string &typeName) const;
   GLuint ResolvePlayerSkin(const std::string &speciesId,
-                             const ResolvedCreatureAppearance *appearance) const;
+                           const ResolvedCreatureAppearance *appearance) const;
   glm::mat4 BuildRootMatrix(bool mirrorX) const;
   /// Mesh FP arms (box UV atlas path). Full GPU skinning remains optional.
   bool TryDrawLegacyAtlasArms(const glm::mat4 &mvpBase, bool leftHand,
+                              GLuint skinAtlas);
+  void PrepareArmSource(const CreatureDefinition *definition,
+                        const ResolvedCreatureAppearance *appearance);
+  bool TryDrawAuthoredArm(const glm::mat4 &mvpBase, bool leftHand,
                           GLuint skinAtlas);
-  void PrepareArmSource(const CreatureDefinition *definition, const ResolvedCreatureAppearance *appearance);
-  bool TryDrawAuthoredArm(const glm::mat4 &mvpBase,bool leftHand,GLuint skinAtlas);
 
   std::shared_ptr<const CreatureBoneSkeletonMeshAsset> ArmSource;
-  std::string ArmSpecies,ArmFile,ArmGeometry,ArmDirectory;
+  std::string ArmSpecies, ArmFile, ArmGeometry, ArmDirectory;
   uint64_t ArmRevision{0};
   bool ArmRequestSeen{false};
-  std::vector<std::pair<size_t,glm::mat4>> ArmSegments[2];
-  size_t ArmIndices[2]{static_cast<size_t>(-1),static_cast<size_t>(-1)};
-  glm::mat4 ArmFits[2]{glm::mat4(1.f),glm::mat4(1.f)};
-  float ArmScales[2]{1.f,1.f};
+  std::vector<std::pair<size_t, glm::mat4>> ArmSegments[2];
+  size_t ArmIndices[2]{static_cast<size_t>(-1), static_cast<size_t>(-1)};
+  glm::mat4 ArmFits[2]{glm::mat4(1.f), glm::mat4(1.f)};
+  float ArmScales[2]{1.f, 1.f};
 
   std::shared_ptr<UItemDefinitionStorage> Items;
   std::shared_ptr<UBlockDefinitionStorage> Blocks;

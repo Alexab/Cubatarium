@@ -6,12 +6,12 @@
 #include "Creatures/Influence/StatusEffectSystem.h"
 #include "Creatures/Stats/CreatureVitalsSystem.h"
 #include "Game/Economy/ResourceEconomy.h"
-#include "World/Items/WorldItemSystem.h"
 #include "Game/Inventory/InventoryTypes.h"
 #include "Game/ModePolicy.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Items/ToolCapabilities.h"
 #include "World/Core/World.h"
+#include "World/Items/WorldItemSystem.h"
 #include <algorithm>
 #include <cmath>
 #include <optional>
@@ -32,8 +32,8 @@ std::mt19937 &ApplierRng()
 }
 
 // Survival combat: wear a random equipped armor piece on a damaging hit.
-void ApplyArmorWearForHit(UWorld &world, UCreature &target,
-                          WorldGameMode mode, float amount)
+void ApplyArmorWearForHit(UWorld &world, UCreature &target, WorldGameMode mode,
+                          float amount)
 {
   if (ModePolicy::AllowsCombatDamage(mode) &&
       ModePolicy::AllowsToolWear(mode, world.GetDifficulty()))
@@ -53,9 +53,8 @@ void ApplyArmorWearForHit(UWorld &world, UCreature &target,
       }
       if (!worn.empty())
       {
-        const size_t pick =
-            worn[std::uniform_int_distribution<size_t>{
-                0, worn.size() - 1}(ApplierRng())];
+        const size_t pick = worn[std::uniform_int_distribution<size_t>{
+            0, worn.size() - 1}(ApplierRng())];
         InventoryEntryRef armor = inv.GetEquippedArmor(pick);
         if (const ItemDefinition *def = items->Get(armor.Id))
         {
@@ -107,7 +106,8 @@ void ApplyShieldWearForBlock(UWorld &world, UCreature &target,
 
 /// Consume one arrow from storage, then hotbar slots (negative storage
 /// counts are unlimited creative stock).
-void ConsumeRangedAmmo(UWorld &world, UCreature &source, const std::string &capabilityId)
+void ConsumeRangedAmmo(UWorld &world, UCreature &source,
+                       const std::string &capabilityId)
 {
   const UItemDefinitionStorage *items = world.GetItemDefinitionStorage();
   if (!items)
@@ -119,8 +119,9 @@ void ConsumeRangedAmmo(UWorld &world, UCreature &source, const std::string &capa
   {
     return;
   }
-  (void)ResourceEconomyService::ConsumeUnits(world.GetGameMode(), source.GetInventory(),
-      InventoryEntryKind::Item, bow->Ranged.AmmoId, 1);
+  (void)ResourceEconomyService::ConsumeUnits(
+      world.GetGameMode(), source.GetInventory(), InventoryEntryKind::Item,
+      bow->Ranged.AmmoId, 1);
 }
 
 void ApplyMeleeToolWear(UWorld &world, UCreature &source,
@@ -155,6 +156,64 @@ void ApplyMeleeToolWear(UWorld &world, UCreature &source,
 }
 
 } // namespace
+
+void InfluenceApplier::ApplyImpact(UWorld &world, uint64_t id, uint64_t thrower,
+                                   float damage, glm::vec3 hitFrom)
+{
+  auto *target = world.GetCreature(id);
+  if (!target || damage <= 0.f)
+    return;
+  const auto armor = target->GetArmorGroups();
+  if (armor.IsImmortal())
+    return;
+  damage *= std::clamp(armor.Get("fleshy") / 100.f, 0.f, 2.f);
+  const auto &off = target->GetInventory().GetEquippedOffhand();
+  const auto *items = world.GetItemDefinitionStorage();
+  const auto *shield = !off.empty && items ? items->Get(off.Id) : nullptr;
+  if (target->CarryHandCount == 0 && target->BowCharge <= 0 && shield &&
+      shield->Block.Enabled && !off.broken)
+  {
+    auto direction = hitFrom - target->GetBodyOrigin();
+    direction.y = 0;
+    const auto forward = glm::vec3(std::sin(glm::radians(target->GetYaw())), 0,
+                                   std::cos(glm::radians(target->GetYaw())));
+    bool frontal = glm::length(direction) > .001f &&
+                   glm::dot(glm::normalize(direction), forward) >=
+                       std::cos(glm::radians(shield->Block.AngleDeg * .5f));
+    if (frontal && target->IsBlocking())
+    {
+      damage *= shield->Block.DamageMul;
+      ApplyShieldWearForBlock(world, *target, world.GetGameMode());
+    }
+    else
+      damage *= shield->Block.PassiveDamageMul;
+  }
+  const auto position = target->GetBodyOrigin();
+  const auto *def = world.GetCreatureDefinition(target->GetTypeId());
+  InfluenceEvent impact;
+  impact.Kind = InfluenceEventKind::Applied;
+  impact.SourceId = thrower;
+  impact.CapabilityId = "physical_impact";
+  impact.Channel = InfluenceChannel::Melee;
+  impact.SourcePos = hitFrom;
+  impact.TargetPos = position;
+  impact.TargetIds.push_back(id);
+  impact.DamageDealt = damage;
+  impact.Effects.Target.FlashStrength = .6f;
+  impact.Effects.Target.DurationSec = .2f;
+  InfluenceEvents::Emit(impact);
+  if (CreatureVitalsSystem::ApplyDamage(
+          world, *target, damage, world.GetGameMode(), "influence", thrower))
+  {
+    if (def && world.GetGameMode() == WorldGameMode::Survival)
+      for (const auto &drop : def->drops)
+        WorldItemSystem::Instance().Spawn(position, drop.itemId, drop.count,
+                                          false);
+    world.RemoveCreature(id);
+    return;
+  }
+  ApplyArmorWearForHit(world, *target, world.GetGameMode(), damage);
+}
 
 InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
                                              InfluencePrediction &pred,
@@ -261,12 +320,27 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
 
   if (pred.Capability.Channel == InfluenceChannel::Use && pred.UseSelf)
   {
-    if (pred.UseConsumes && !ResourceEconomyService::ConsumeUnits(mode, source->GetInventory(),
-        InventoryEntryKind::Item, pred.UseItemId, 1)) return result;
+    if (const auto *defs = world.GetItemDefinitionStorage())
+      if (const auto *def = defs->Get(pred.UseItemId);
+          def && def->Use.Interaction == "container" &&
+          !source->GetInventory().IsCreative())
+      {
+        auto *active = source->GetInventory().GetActiveEntryRef();
+        if (!active || active->Id != pred.UseItemId ||
+            active->contentsId != "water" || active->contentsUnits <= 0)
+          return result;
+        if (--active->contentsUnits == 0)
+          active->contentsId.clear();
+      }
+    if (pred.UseConsumes && !ResourceEconomyService::ConsumeUnits(
+                                mode, source->GetInventory(),
+                                InventoryEntryKind::Item, pred.UseItemId, 1))
+      return result;
     CreatureVitals &v = source->GetVitals();
     if (pred.UseSatietyDelta != 0.f)
     {
-      v.satiety = std::clamp(v.satiety + pred.UseSatietyDelta, 0.f, v.maxSatiety);
+      v.satiety =
+          std::clamp(v.satiety + pred.UseSatietyDelta, 0.f, v.maxSatiety);
     }
     if (pred.UseThirstDelta != 0.f)
     {
@@ -304,10 +378,9 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
   {
     CreatureVitals &av = source->GetVitals();
     const float endMul =
-        1.f /
-        std::max(0.5f,
-                 0.5f + static_cast<float>(source->GetAttributes().endurance) /
-                            20.f);
+        1.f / std::max(0.5f, 0.5f + static_cast<float>(
+                                        source->GetAttributes().endurance) /
+                                        20.f);
     av.fatigue =
         std::min(av.maxFatigue, av.fatigue + pred.SourceFatigueDelta * endMul);
     av.ClampCurrents();

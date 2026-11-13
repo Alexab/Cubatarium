@@ -111,6 +111,24 @@
       "silhouette_hash": "20b01a3dfcb2",
       "gray_mean": 156.67
     },
+    "charcoal": {
+      "triangles": 24,
+      "has_diffuse_png": true,
+      "silhouette_hash": "71498960d39b",
+      "gray_mean": 34.61
+    },
+    "coal": {
+      "triangles": 24,
+      "has_diffuse_png": true,
+      "silhouette_hash": "3c9a54360a8b",
+      "gray_mean": 43.0
+    },
+    "cooked_meat": {
+      "triangles": 24,
+      "has_diffuse_png": true,
+      "silhouette_hash": "190d7c05a487",
+      "gray_mean": 56.59
+    },
     "copper_axe": {
       "triangles": 60,
       "has_diffuse_png": true,
@@ -141,6 +159,12 @@
       "silhouette_hash": "563ddc3bbb68",
       "gray_mean": 104.29
     },
+    "copper_ingot": {
+      "triangles": 36,
+      "has_diffuse_png": true,
+      "silhouette_hash": "2a7d52b79b5f",
+      "gray_mean": 99.97
+    },
     "copper_legs": {
       "triangles": 60,
       "has_diffuse_png": true,
@@ -164,6 +188,12 @@
       "has_diffuse_png": true,
       "silhouette_hash": "323dfe8b30ee",
       "gray_mean": 106.31
+    },
+    "cord": {
+      "triangles": 36,
+      "has_diffuse_png": true,
+      "silhouette_hash": "3b700e3f6d8a",
+      "gray_mean": 113.55
     },
     "flint_and_steel": {
       "triangles": 48,
@@ -201,6 +231,12 @@
       "silhouette_hash": "563ddc3bbb68",
       "gray_mean": 157.19
     },
+    "gold_ingot": {
+      "triangles": 36,
+      "has_diffuse_png": true,
+      "silhouette_hash": "2a7d52b79b5f",
+      "gray_mean": 154.73
+    },
     "gold_legs": {
       "triangles": 60,
       "has_diffuse_png": true,
@@ -224,6 +260,12 @@
       "has_diffuse_png": true,
       "silhouette_hash": "323dfe8b30ee",
       "gray_mean": 163.03
+    },
+    "grain": {
+      "triangles": 36,
+      "has_diffuse_png": true,
+      "silhouette_hash": "dc9ed50f2825",
+      "gray_mean": 142.01
     },
     "iron_axe": {
       "triangles": 60,
@@ -254,6 +296,12 @@
       "has_diffuse_png": true,
       "silhouette_hash": "563ddc3bbb68",
       "gray_mean": 155.46
+    },
+    "iron_ingot": {
+      "triangles": 36,
+      "has_diffuse_png": true,
+      "silhouette_hash": "2a7d52b79b5f",
+      "gray_mean": 149.04
     },
     "iron_legs": {
       "triangles": 60,
@@ -315,6 +363,30 @@
       "silhouette_hash": "a97d505995ed",
       "gray_mean": 75.59
     },
+    "plant_fiber": {
+      "triangles": 36,
+      "has_diffuse_png": true,
+      "silhouette_hash": "bfeef0557678",
+      "gray_mean": 122.61
+    },
+    "raw_copper": {
+      "triangles": 36,
+      "has_diffuse_png": true,
+      "silhouette_hash": "59bb3c21d751",
+      "gray_mean": 68.94
+    },
+    "raw_gold": {
+      "triangles": 36,
+      "has_diffuse_png": true,
+      "silhouette_hash": "59bb3c21d751",
+      "gray_mean": 72.31
+    },
+    "raw_iron": {
+      "triangles": 36,
+      "has_diffuse_png": true,
+      "silhouette_hash": "59bb3c21d751",
+      "gray_mean": 71.83
+    },
     "raw_meat": {
       "triangles": 36,
       "has_diffuse_png": true,
@@ -332,6 +404,12 @@
       "has_diffuse_png": true,
       "silhouette_hash": "323dfe8b30ee",
       "gray_mean": 158.9
+    },
+    "stick": {
+      "triangles": 24,
+      "has_diffuse_png": true,
+      "silhouette_hash": "0df4c078450f",
+      "gray_mean": 61.66
     },
     "stone_axe": {
       "triangles": 48,
@@ -422,6 +500,12 @@
       "has_diffuse_png": true,
       "silhouette_hash": "a450ae725373",
       "gray_mean": 85.89
+    },
+    "wool": {
+      "triangles": 24,
+      "has_diffuse_png": true,
+      "silhouette_hash": "5fbfa34727f9",
+      "gray_mean": 171.72
     }
   },
   "failures": [],

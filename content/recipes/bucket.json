@@ -3,12 +3,15 @@
   "shapeless": true,
   "inputs": [
     {
-      "id": "mtg_steelblock",
+      "id": "iron_ingot",
       "count": 3
     }
   ],
   "output": {
     "id": "bucket",
     "count": 1
-  }
+  },
+  "station": "crafting_table",
+  "category": "Utility",
+  "seconds": 0
 }

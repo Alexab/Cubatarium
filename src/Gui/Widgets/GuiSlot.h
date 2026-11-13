@@ -2,6 +2,7 @@
 #define GUI_SLOT_H
 
 #include "Gui/Widgets/GuiWidget.h"
+#include <chrono>
 #include <functional>
 #include <glm/glm.hpp>
 #include <string>
@@ -24,6 +25,10 @@ public:
   void SetBroken(bool broken) { Broken = broken; }
   void SetCornerHint(const std::string &hint) { CornerHint = hint; }
   void SetDimmed(bool dimmed) { Dimmed = dimmed; }
+  void SetOnActivate(std::function<void(const GuiMouseEvent &)> handler)
+  {
+    OnActivate = std::move(handler);
+  }
   void SetOnClick(std::function<void()> handler)
   {
     OnClick = std::move(handler);
@@ -65,6 +70,8 @@ private:
   int PressX{0};
   int PressY{0};
   std::function<void()> OnClick;
+  std::function<void(const GuiMouseEvent &)> OnActivate;
+  std::chrono::steady_clock::time_point LastClick{};
   std::function<void()> OnBeginDrag;
 };
 

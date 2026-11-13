@@ -1,0 +1,25 @@
+id: stick
+family: material
+material: wood
+palette: wood
+recipe_version: 2
+parts:
+- role: handle
+  offset:
+  - 0
+  - 0
+  - 0
+  size:
+  - 0.055
+  - 0.55
+  - 0.055
+- role: binding
+  offset:
+  - 0
+  - -0.15
+  - 0
+  size:
+  - 0.07
+  - 0.08
+  - 0.07
+provenance: Original Cubatarium recipe geometry and procedural texture

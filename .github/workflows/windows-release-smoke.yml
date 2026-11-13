@@ -98,6 +98,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python tools/audit_item_visuals.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tools/test_survival_chains.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python tools/test_itemgen_raster.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python tools/itemgen.py audit

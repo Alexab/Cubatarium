@@ -12,6 +12,7 @@ class UApplication;
 class UInputRouter
 {
 public:
+  static bool RoutePhysicalActions(UApplication &app, int key, int action);
   static GuiKeyEvent MakeGuiKeyEvent(int key, int action, int mods);
 
   bool RouteKey(UApplication &app, int key, int action, int mods);

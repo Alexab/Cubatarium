@@ -1,4 +1,5 @@
 #include "Gui/Screens/AnvilScreen.h"
+#include "Game/Survival/SurvivalSystems.h"
 
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
@@ -102,8 +103,8 @@ void UAnvilScreen::Relayout()
   {
     return;
   }
-  const int w = 360;
-  const int h = 240;
+  const int w = std::min(ViewportW - 16, Scaled(620));
+  const int h = std::min(ViewportH - 16, Scaled(330));
   const int x = (ViewportW - w) / 2;
   const int y = (ViewportH - h) / 2;
   Panel->SetBounds({x, y, w, h});
@@ -118,11 +119,13 @@ void UAnvilScreen::Relayout()
   }
   if (ItemLabel)
   {
-    ItemLabel->SetBounds({x + 24 + slotSize + 12, y + 64, w - slotSize - 60, 28});
+    ItemLabel->SetBounds(
+        {x + 24 + slotSize + 12, y + 56, w - slotSize - 60, Scaled(80)});
   }
   if (Status)
   {
-    Status->SetBounds({x + 24, y + 56 + slotSize + 12, w - 48, 22});
+    Status->SetBounds({x + 24, y + 56 + std::max(slotSize + 12, Scaled(90)),
+                       w - 48, Scaled(30)});
   }
   if (RepairBtn)
   {
@@ -173,6 +176,20 @@ void UAnvilScreen::Refresh()
   {
     oss << " (broken)";
   }
+  if (auto *defs = World->GetItemDefinitionStorage())
+    if (auto *def = defs->Get(active->Id);
+        def && !def->Repair.Materials.empty())
+    {
+      oss << "\nCost: 1 x ";
+      for (size_t i = 0; i < def->Repair.Materials.size(); ++i)
+      {
+        if (i)
+          oss << " or ";
+        oss << def->Repair.Materials[i];
+      }
+      oss << "\nWear after: "
+          << int(std::max(0.f, active->wear - def->Repair.Amount) * 100) << "%";
+    }
   ItemLabel->SetText(oss.str());
 }
 
@@ -190,8 +207,20 @@ void UAnvilScreen::TryRepair()
     StatusText = "Cannot repair";
     return;
   }
+  if (!USurvivalSystems::Instance().NearStation(
+          *World, creature->GetBodyOrigin(), "anvil") &&
+      !USurvivalSystems::Instance().NearStation(
+          *World, creature->GetBodyOrigin(), "anvil_slightly_damaged") &&
+      !USurvivalSystems::Instance().NearStation(
+          *World, creature->GetBodyOrigin(), "anvil_very_damaged"))
+  {
+    StatusText = "Requires nearby anvil";
+    return;
+  }
   std::string reason;
-  StatusText = creature->GetInventory().RepairActive(*items, reason) ? "Repaired" : reason;
+  StatusText = creature->GetInventory().RepairActive(*items, reason)
+                   ? "Repaired"
+                   : reason;
   Refresh();
 }
 

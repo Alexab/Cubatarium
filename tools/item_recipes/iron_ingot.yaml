@@ -1,0 +1,34 @@
+id: iron_ingot
+family: material
+material: iron
+palette: iron
+recipe_version: 2
+parts:
+- role: head
+  offset:
+  - 0
+  - 0
+  - 0
+  size:
+  - 0.32
+  - 0.11
+  - 0.16
+- role: accent
+  offset:
+  - 0
+  - 0.06
+  - 0
+  size:
+  - 0.16
+  - 0.015
+  - 0.09
+- role: binding
+  offset:
+  - 0.11
+  - 0
+  - 0
+  size:
+  - 0.025
+  - 0.12
+  - 0.17
+provenance: Original Cubatarium recipe geometry and procedural texture

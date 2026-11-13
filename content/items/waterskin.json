@@ -12,7 +12,8 @@
     "action": "drink",
     "thirst": 40,
     "satiety": 0,
-    "health": 0
+    "health": 0,
+    "interaction": "container"
   },
   "visual": {
     "wield_scale": 0.95,
@@ -29,7 +30,22 @@
       0,
       0,
       0
-    ]
+    ],
+    "presentations": {
+      "icon_scale": 1.0,
+      "fp_scale": 1.0,
+      "tp_scale": 1.0,
+      "ground_scale": 1.0
+    }
   },
-  "model": "models/items/waterskin/model.gltf"
+  "model": "models/items/waterskin/model.gltf",
+  "physical": {
+    "mass": 1,
+    "size": [
+      0.16,
+      0.315,
+      0.12
+    ],
+    "hardness": 1
+  }
 }

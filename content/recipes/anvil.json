@@ -1,0 +1,21 @@
+{
+  "id": "anvil",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "iron_ingot",
+      "count": 12
+    },
+    {
+      "id": "stone",
+      "count": 3
+    }
+  ],
+  "output": {
+    "id": "anvil",
+    "count": 1
+  },
+  "station": "crafting_table",
+  "category": "Stations",
+  "seconds": 0
+}

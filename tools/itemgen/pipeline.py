@@ -69,7 +69,7 @@ def build_item(item_id: str, *, publish: bool = True) -> Path:
     recipe = load_recipe(item_id)
     family = str(recipe["family"])
     material = str(recipe.get("material") or "iron")
-    parts = build_parts(family, material)
+    parts = list(recipe["parts"]) if recipe.get("parts") else build_parts(family, material)
     if recipe.get("parts"):
         # Optional authored override (full replace).
         parts = list(recipe["parts"])
@@ -131,38 +131,45 @@ def build_item(item_id: str, *, publish: bool = True) -> Path:
         )
 
     if publish:
-        dest = MODELS / item_id
-        dest.mkdir(parents=True, exist_ok=True)
-        published = {"model.gltf", "model.bin", "ATTRIBUTION.json", "LICENSE.txt",
-                     "textures"}
-        for name in ("model.gltf", "model.bin", "ATTRIBUTION.json", "LICENSE.txt"):
-            src = staging / name
-            if src.is_file():
-                (dest / name).write_bytes(src.read_bytes())
-        wear_src = staging / "wear.json"
-        if wear_src.is_file():
-            (dest / "wear.json").write_bytes(wear_src.read_bytes())
-            published.add("wear.json")
-        tex_src = staging / "textures" / "diffuse.png"
-        if tex_src.is_file():
-            tex_dest = _normalize_textures_dir(dest)
-            (tex_dest / "diffuse.png").write_bytes(tex_src.read_bytes())
-            # Drop stale texture siblings so the atlas stays the single file.
-            for child in tex_dest.iterdir():
-                if child.is_file() and child.name != "diffuse.png":
-                    child.unlink()
-        # Mirror-clean the destination: files left over from a previous
-        # publish (e.g. a wear.json of a family that changed) must not linger.
-        for child in list(dest.iterdir()):
-            if child.name in published:
-                continue
-            if child.is_dir():
-                shutil.rmtree(child)
-            else:
-                child.unlink()
-        _retarget_content(item_id, recipe)
-        return dest
+        return publish_item(item_id)
     return staging
+
+
+def validate_item(item_id: str) -> dict:
+    from itemgen.raster import load_primitives
+    primitives=load_primitives(STAGING/item_id)
+    return {"id":item_id,"primitives":len(primitives),"validated":True}
+
+
+def publish_item(item_id: str) -> Path:
+    validate_item(item_id)
+    recipe=load_recipe(item_id)
+    staging=STAGING/item_id
+    dest = MODELS / item_id
+    dest.mkdir(parents=True, exist_ok=True)
+    published = {"model.gltf", "model.bin", "ATTRIBUTION.json", "LICENSE.txt",
+                 "textures"}
+    for name in ("model.gltf", "model.bin", "ATTRIBUTION.json", "LICENSE.txt"):
+        src = staging / name
+        if src.is_file():
+            (dest / name).write_bytes(src.read_bytes())
+    wear_src = staging / "wear.json"
+    if wear_src.is_file():
+        if not (dest / "wear.json").exists() or recipe.get("replace_wear", False):
+            (dest / "wear.json").write_bytes(wear_src.read_bytes())
+        published.add("wear.json")
+    tex_src = staging / "textures" / "diffuse.png"
+    if tex_src.is_file():
+        tex_dest = _normalize_textures_dir(dest)
+        (tex_dest / "diffuse.png").write_bytes(tex_src.read_bytes())
+        # Drop stale texture siblings so the atlas stays the single file.
+        for child in tex_dest.iterdir():
+            if child.is_file() and child.name == "diffuse.generated-old.png":
+                child.unlink()
+    # Geometry publication does not own authored grips, worn variants or
+    # presentation sidecars. Retain them across deterministic regeneration.
+    _retarget_content(item_id, recipe)
+    return dest
 
 
 FAMILY_POSE = {

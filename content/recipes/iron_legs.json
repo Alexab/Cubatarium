@@ -3,12 +3,19 @@
   "shapeless": true,
   "inputs": [
     {
-      "id": "mtg_steelblock",
+      "id": "iron_ingot",
       "count": 7
+    },
+    {
+      "id": "cord",
+      "count": 1
     }
   ],
   "output": {
     "id": "iron_legs",
     "count": 1
-  }
+  },
+  "station": "crafting_table",
+  "category": "Armor",
+  "seconds": 0
 }

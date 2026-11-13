@@ -1,0 +1,17 @@
+{
+  "id": "crafting_table",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "wood",
+      "count": 4
+    }
+  ],
+  "output": {
+    "id": "crafting_table",
+    "count": 1
+  },
+  "station": "",
+  "category": "Stations",
+  "seconds": 0
+}

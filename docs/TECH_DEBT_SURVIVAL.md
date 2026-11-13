@@ -26,3 +26,12 @@
 - Creative ignores difficulty (vitals frozen).
 - Missing `difficulty` in `world_data.json` → `normal`.
 - TD-SURV-004 left Open: mid-session World Settings picker not added; console command is enough for v1.
+
+
+## Item-chain completion (2026-11-13)
+
+Natural resources, fuel/ingots, stations, finite water, till/seed/moisture/growth,
+food preparation and repair are implemented. A native empty-inventory scenario
+passes 15 stages through iron tools/armor/utilities and grown/baked bread.
+[Evidence and limits](research/items-completion-2026-11-13/README.md).
+Existing death, difficulty and Peaceful wear policies remain in force.

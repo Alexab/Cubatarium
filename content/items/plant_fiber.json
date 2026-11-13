@@ -1,0 +1,40 @@
+{
+  "id": "plant_fiber",
+  "displayName": "Plant Fiber",
+  "types": [
+    "misc",
+    "material"
+  ],
+  "stack_max": 32,
+  "wear_end": "indestructible",
+  "model": "models/items/plant_fiber/model.gltf",
+  "visual": {
+    "fit_axis": "longest",
+    "wield_euler_deg": [
+      -25,
+      0,
+      0
+    ],
+    "wield_offset": [
+      0,
+      0,
+      0
+    ],
+    "presentations": {
+      "icon_scale": 1.0,
+      "fp_scale": 1.0,
+      "tp_scale": 1.0,
+      "ground_scale": 1.0
+    }
+  },
+  "physical": {
+    "mass": 0.5,
+    "size": [
+      0.155,
+      0.3,
+      0.035
+    ],
+    "hardness": 0.7
+  },
+  "use": {}
+}
