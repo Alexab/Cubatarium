@@ -53,6 +53,10 @@ public:
 
   /// Eye world position (not Render camera position in 3rd person).
   glm::vec3 GetPosition() const;
+  glm::vec3 GetRenderPosition() const { return RenderPosition; }
+  bool ShouldHideLocalBody() const { return !IsIsometricProjection() && Perspective != CameraPerspective::FirstPerson && glm::distance(RenderPosition,Position)<.65f; }
+  void ResolveRenderCamera(const UWorld &world, float dt);
+  float GetCameraCollisionRadius() const;
   void SetPosition(const glm::vec3 &value);
   float GetYaw() const;
   float GetPitch() const;
@@ -211,6 +215,11 @@ private:
   int ViewportHeight{0};
 
   glm::vec3 Position;
+  glm::vec3 RenderPosition{0.f}, LastSafeCamera{0.f}, CameraPivot{0.f};
+  bool CameraSafe{false};
+  CameraPerspective ResolvedPerspective{CameraPerspective::FirstPerson};
+  const UWorld *CameraWorld{nullptr};
+  float CameraReturnDt{0.f};
   glm::vec3 Front;
   glm::vec3 Up;
   glm::vec3 Right;

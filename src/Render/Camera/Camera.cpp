@@ -1,4 +1,5 @@
 #include "Render/Camera/Camera.h"
+#include "Render/Camera/WorldCameraSweep.h"
 #include "Render/Camera/CameraBasisLogic.h"
 #include "Render/Camera/CameraLens.h"
 #include "Render/Camera/Control/IUGameplayViewController.h"
@@ -134,6 +135,7 @@ glm::vec3 UCamera::GetPosition() const { return Position; }
 
 void UCamera::SetPosition(const glm::vec3 &value)
 {
+  if(glm::distance(Position,value)>.5f)CameraSafe=false;
   Position = value;
   UpdatePose();
 }
@@ -207,7 +209,7 @@ bool UCamera::TryGetCenterViewRay(glm::vec3 &out_origin,
   {
     if (IsIsometricProjection())
     {
-      out_origin = GetViewController().ComputeCameraWorldPosition(*this);
+      out_origin = GetRenderPosition();
       const glm::vec3 target = GetViewController().ComputeLookTarget(*this);
       out_dir = target - out_origin;
       const float len = glm::length(out_dir);
@@ -217,8 +219,8 @@ bool UCamera::TryGetCenterViewRay(glm::vec3 &out_origin,
         return true;
       }
     }
-    out_origin = Position;
-    out_dir = Front;
+    out_origin = GetRenderPosition();
+    out_dir = glm::normalize(glm::vec3(glm::inverse(Pose)*glm::vec4(0,0,-1,0)));
     return true;
   }
   const float mouse_x = static_cast<float>(ViewportWidth) * 0.5f;
@@ -234,7 +236,7 @@ bool UCamera::TryGetViewRayAtScreen(float screen_x, float screen_y,
   {
     if (IsIsometricProjection())
     {
-      out_origin = GetViewController().ComputeCameraWorldPosition(*this);
+      out_origin = GetRenderPosition();
       const glm::vec3 target = GetViewController().ComputeLookTarget(*this);
       out_dir = target - out_origin;
       const float len = glm::length(out_dir);
@@ -244,8 +246,8 @@ bool UCamera::TryGetViewRayAtScreen(float screen_x, float screen_y,
         return true;
       }
     }
-    out_origin = Position;
-    out_dir = Front;
+    out_origin = GetRenderPosition();
+    out_dir = glm::normalize(glm::vec3(glm::inverse(Pose)*glm::vec4(0,0,-1,0)));
     return true;
   }
 
@@ -258,7 +260,7 @@ bool UCamera::TryGetViewRayAtScreen(float screen_x, float screen_y,
   {
     if (IsIsometricProjection())
     {
-      out_origin = GetViewController().ComputeCameraWorldPosition(*this);
+      out_origin = GetRenderPosition();
       const glm::vec3 target = GetViewController().ComputeLookTarget(*this);
       out_dir = target - out_origin;
       const float len = glm::length(out_dir);
@@ -268,8 +270,8 @@ bool UCamera::TryGetViewRayAtScreen(float screen_x, float screen_y,
         return true;
       }
     }
-    out_origin = Position;
-    out_dir = Front;
+    out_origin = GetRenderPosition();
+    out_dir = glm::normalize(glm::vec3(glm::inverse(Pose)*glm::vec4(0,0,-1,0)));
   }
   return true;
 }
@@ -879,8 +881,62 @@ WorldViewSettings UCamera::CaptureWorldViewSettings() const
 void UCamera::UpdatePose()
 {
   const IUGameplayViewController &controller = GetViewController();
-  const glm::vec3 camWorld = controller.ComputeCameraWorldPosition(*this);
-  const glm::vec3 target = controller.ComputeLookTarget(*this);
+  const glm::vec3 desired = controller.ComputeCameraWorldPosition(*this);
+  if(!CameraSafe || IsIsometricProjection() || Perspective==CameraPerspective::FirstPerson)RenderPosition=desired;
+  if(CameraWorld && !IsIsometricProjection() && Perspective!=CameraPerspective::FirstPerson) {
+    const float radius=CameraVolumeRadius(NearPlane,Fov,AspectRatio);
+    const auto &world=*CameraWorld;
+    const bool reset=!CameraSafe || ResolvedPerspective!=Perspective || glm::distance(CameraPivot,Position)>2.f;
+    const glm::vec3 boom=desired-Position;
+    auto safe=[&](glm::vec3 v){return SweepCameraVolume(world,v,v,radius)>=1.f;};
+    auto continuous=[&](glm::vec3 v) {
+      return safe(v) && (reset || SweepCameraVolume(world,LastSafeCamera,v,radius)>=1.f) &&
+        SweepCameraVolume(world,Position,v,radius)>=1.f;
+    };
+    const float allowed=SweepCameraVolume(world,Position,desired,radius);
+    glm::vec3 candidate=Position+boom*std::max(0.f,allowed-.001f);
+    if(!reset) {
+      const float distance=glm::distance(Position,candidate);
+      const float previous=glm::distance(Position,LastSafeCamera);
+      if(distance>previous)candidate=Position+glm::normalize(boom)*glm::mix(previous,distance,1.f-std::exp(-CameraReturnDt/.067f));
+      const float path=SweepCameraVolume(world,LastSafeCamera,candidate,radius);
+      if(path<1.f)candidate=LastSafeCamera+(candidate-LastSafeCamera)*std::max(0.f,path-.001f);
+      const float boomPath=SweepCameraVolume(world,Position,candidate,radius);
+      if(boomPath<1.f)candidate=Position+(candidate-Position)*std::max(0.f,boomPath-.001f);
+      // A second projection onto the boom can leave the safe inter-frame
+      // segment. Retract along the PREVIOUS certified boom before rotating
+      // around a corner or descending past a roof edge.
+      if(!continuous(candidate)) {
+        bool found=false;
+        for(float t:{.125f,.25f,.5f,.75f,1.f}) {
+          const glm::vec3 recovery=glm::mix(LastSafeCamera,CameraPivot,t);
+          if(continuous(recovery)){candidate=recovery;found=true;break;}
+        }
+        if(!found && safe(LastSafeCamera))candidate=LastSafeCamera;
+      }
+    }
+    if(!safe(candidate)) {
+      bool recovered=false;
+      for(float d:{.05f,.1f,.2f,.35f,.5f}) {
+        for(const auto direction:{glm::vec3(0,1,0),glm::vec3(0,-1,0),glm::vec3(1,0,0),glm::vec3(-1,0,0),glm::vec3(0,0,1),glm::vec3(0,0,-1)}) {
+          const auto test=Position+direction*d;
+          if(safe(test) && (reset || !safe(LastSafeCamera) || SweepCameraVolume(world,LastSafeCamera,test,radius)>=1.f))
+            {candidate=test;recovered=true;break;}
+        }
+        if(recovered)break;
+      }
+      if(!recovered && CameraSafe && safe(LastSafeCamera))candidate=LastSafeCamera;
+    }
+    if(safe(candidate)){LastSafeCamera=candidate;CameraSafe=true;}
+    RenderPosition=CameraSafe?LastSafeCamera:candidate;
+    if(SweepCameraVolume(world,Position,RenderPosition,radius)>=1.f)CameraPivot=Position;
+    ResolvedPerspective=Perspective;
+  } else if(IsIsometricProjection() || Perspective==CameraPerspective::FirstPerson) CameraSafe=false;
+  CameraReturnDt=0.f;
+  const glm::vec3 camWorld=RenderPosition;
+  glm::vec3 target = controller.ComputeLookTarget(*this);
+  if(!IsIsometricProjection() && Perspective==CameraPerspective::ThirdPersonFront)
+    target=glm::distance(camWorld,Position)>.01f?Position:Position+Front;
   const glm::vec3 up =
       IsIsometricProjection() ? WorldUp : Up;
   Pose = glm::lookAt(camWorld, target, up);
@@ -1048,6 +1104,8 @@ bool UCamera::DoMovement(const UWorld *world)
   }
   const PlayerInput input = BuildPlayerInput(ConsumeSpacePressedThisFrame());
 
+  // The physical motor only moves the eye. Collision resolution runs once
+  // at presentation, against the previous presented camera, not each substep.
   bool is_moved(false);
   SyncFreeMoveFromController();
   LastFreeMoveAtStart = GetFreeMove();
@@ -1181,7 +1239,14 @@ bool UCamera::DoMovement(const UWorld *world)
         ClampPlayerPhysicsCarry(PhysicsAccumulator, kFixedPhysicsDt);
   }
 
+  UpdatePose();
+  CameraWorld=nullptr;
   return is_moved;
 }
 
 } // namespace cutum
+
+namespace cutum {
+float UCamera::GetCameraCollisionRadius() const { return CameraVolumeRadius(NearPlane,Fov,AspectRatio); }
+void UCamera::ResolveRenderCamera(const UWorld &world,float dt) { CameraWorld=&world;CameraReturnDt=dt;UpdatePose();CameraWorld=nullptr; }
+}

@@ -2,6 +2,7 @@
 #define CREATURE_H
 
 #include "Creatures/Core/HumanAppearance.h"
+#include "Pose/HumanMotionTypes.h"
 
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureIntent.h"
@@ -35,6 +36,8 @@ public:
             glm::vec3 eyeOffset);
   virtual ~UCreature();
 
+  mutable HumanMotionState HumanMotion; // Transient; never serialized.
+  void SetHumanMotionFacts(glm::vec3 velocity, bool swimming, const UWorld *world, float dt);
   CreatureId GetId() const { return Id; }
   const std::string &GetTypeId() const { return TypeId; }
   CreatureSpawnSource GetSpawnSource() const { return SpawnSource; }

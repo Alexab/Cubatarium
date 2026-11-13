@@ -1,0 +1,22 @@
+Internal ctest changing into directory: E:/Work/Home/Cubatarium-player-motion/build/desktop-msvc
+Test project E:/Work/Home/Cubatarium-player-motion/build/desktop-msvc
+    Start  17: creature_equipment_fit_test
+1/5 Test  #17: creature_equipment_fit_test ..........   Passed    0.04 sec
+    Start  23: creature_appearance_test
+2/5 Test  #23: creature_appearance_test .............   Passed    0.11 sec
+    Start  39: player_clearance_test
+3/5 Test  #39: player_clearance_test ................   Passed    0.05 sec
+    Start 104: creature_bone_skeleton_loader_test
+4/5 Test #104: creature_bone_skeleton_loader_test ...   Passed    0.06 sec
+    Start 203: human_motion_camera_test
+5/5 Test #203: human_motion_camera_test .............   Passed    0.14 sec
+
+100% tests passed, 0 tests failed out of 5
+
+Label Time Summary:
+camera       =   0.14 sec*proc (1 test)
+creatures    =   0.20 sec*proc (3 tests)
+player       =   0.14 sec*proc (1 test)
+unit         =   0.40 sec*proc (5 tests)
+
+Total Test time (real) =   0.50 sec

@@ -39,8 +39,15 @@ inline void ExportPlayerAppearanceQa(UCreaturePreviewRenderer &preview,const std
  }
  for(auto body:HumanAppearance::Bodies) {
   HumanAppearance look;look.bodyVariant=body;
-  for(auto state:{LocomotionState::Walk,LocomotionState::Run,LocomotionState::Crouch,LocomotionState::Jump,LocomotionState::Swim,LocomotionState::Action})
+  for(auto state:{LocomotionState::Walk,LocomotionState::Run,LocomotionState::Crouch,LocomotionState::Jump,LocomotionState::Fall,LocomotionState::Fly,LocomotionState::Hover,LocomotionState::Swim,LocomotionState::Tread,LocomotionState::Action})
    for(int phase=1;phase<4;++phase)capture(look,"",std::string(body)+"_motion_"+ToString(state)+std::to_string(phase),45.f,state,phase*.125f);
+ }
+ for(auto body:HumanAppearance::Bodies)for(auto hair:HumanAppearance::Hairstyles) {
+  HumanAppearance look;look.bodyVariant=body;look.hairstyleId=hair;
+  for(auto state:{LocomotionState::Run,LocomotionState::Crouch,LocomotionState::Swim,LocomotionState::Fly,LocomotionState::Fall})
+   capture(look,"human_adventurer",std::string(body)+"_"+hair+"_key_"+ToString(state),45.f,state,.25f);
+  for(auto state:{LocomotionState::Run,LocomotionState::Crouch,LocomotionState::Swim})
+   capture(look,"human_guard",std::string(body)+"_"+hair+"_gear_"+ToString(state),45.f,state,.25f,true);
  }
  preview.SetTransparentBackground(false);preview.SetAnimationPreviewState(LocomotionState::Walk);
  std::ofstream out(folder/"manifest.json");out<<rows.dump(2)<<'\n';

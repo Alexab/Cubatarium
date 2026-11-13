@@ -175,6 +175,12 @@ inline void ExportCreatureQaResourceReloadProbe(UCreaturePreviewRenderer &previe
       for(const auto &buffer:model["buffers"])files.push_back(buffer["uri"].get<std::string>());
     }
     else if(!def.visual.rigidModelPath.empty())files.push_back(def.visual.rigidModelPath);
+    // Human appearance selects a matched optional mesh, not the legacy
+    // definition locator. A complete pack/recovery fixture must carry it.
+    const auto appearance=fs::path(def.visual.sourceDirectory)/"appearance";
+    if(def.Id=="human" && fs::exists(appearance))
+      for(const auto &file:fs::directory_iterator(appearance))
+        if(file.is_regular_file())files.push_back(fs::path("appearance")/file.path().filename());
     for(const auto &file:files)
       if(file.is_absolute() || file.lexically_normal().generic_string().find("..")!=std::string::npos)
         throw std::runtime_error("Unsafe diagnostic payload path");
@@ -257,6 +263,32 @@ inline void ExportCreatureQaResourceReloadProbe(UCreaturePreviewRenderer &previe
   ResourcePackSelection ba;ba.Secondary={"qa_reload_b","qa_reload_a"};packStage("pack_selection_ba",ba,"qa_reload_b");
   ResourcePackSelection tier;tier.Primary={"qa_reload_a"};tier.Secondary={"qa_reload_b"};packStage("pack_tier",tier,"qa_reload_b");
   packStage("pack_removed",{},"");packStage("pack_repeat",ab,"qa_reload_a");packStage("pack_final_base",{},"");
+
+  // Prove the limited legacy path separately from complete v2 packs. Its
+  // six rigid cubes and diffuse atlas intentionally differ from the v2 rig.
+  const auto humanAppearance=assetRoot/"resource_packs/qa_reload_a/creatures/human/appearance";
+  const auto hiddenAppearance=humanAppearance.parent_path()/"appearance_disabled";
+  fs::rename(humanAppearance,hiddenAppearance);
+  {
+    const auto packs=UResourcePackResolver{}.Resolve(ab,assetRoot,fixture/"no_writable_packs");
+    ApplyCreaturePackOverlays(definitions,textures,&skinDefinitions,creatures,skins,packs);
+    Json rows=Json::array();bool valid=true;
+    for(auto &actor:actors)if(actor.species=="human") {
+      const auto *def=definitions.Get(actor.species);
+      const auto resolved=ResolveCreatureAppearance(definitions,skinDefinitions,actor.species,actor.skin);
+      actor.definition=*def;actor.visual->SetAppearance(resolved);
+      actor.visual->UpdatePose(*actor.creature,actor.facts,CreaturePoseParams{},actor.definition,0.f);
+      const auto actual=Draw(actor,textures);
+      auto fresh=MakeActor(*def,resolved,actor.id,actor.skin,0.f);
+      const auto expected=Draw(fresh,textures);
+      const bool good=resolved.geometryFileOverride.empty() && actual.draws==6 && actual.hash==expected.hash &&
+        !actual.textures.empty() && std::all_of(actual.textures.begin(),actual.textures.end(),[](GLuint t){return t!=0;});
+      rows.push_back({{"id",actor.id},{"draws",actual.draws},{"fresh_draws",expected.draws},{"passed",good}});valid=valid && good;
+    }
+    report["legacy_human_fallback"]={{"resources",rows},{"passed",valid}};passed=passed && valid;
+  }
+  fs::rename(hiddenAppearance,humanAppearance);
+  packStage("legacy_restored_base",{},"");
 
   // Negative-cache recovery uses the root lookup, deliberately clearing the
   // definition locator. Files appearing alone must not trigger frame-by-frame

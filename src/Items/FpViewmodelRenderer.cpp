@@ -8,6 +8,7 @@
 #include "Creatures/Visual/CreatureTextureStorage.h"
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
+#include "Creatures/Visual/BoneSkeleton/BoneSkeletonHierarchy.h"
 #include "Creatures/Visual/CreatureMeshGpuCache.h"
 #include "Creatures/Visual/Gltf/CreatureGltfLoader.h"
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
@@ -1133,18 +1134,29 @@ void UFpViewmodelRenderer::PrepareArmSource(const CreatureDefinition *definition
   ArmSource=cache.Load(ArmSpecies,ArmFile,ArmGeometry,ArmDirectory);
   for(int side=0;side<2;++side)
   {
-    ArmIndices[side]=static_cast<size_t>(-1);
+    ArmIndices[side]=static_cast<size_t>(-1);ArmSegments[side].clear();
     if(!ArmSource)continue;
     const auto found=ArmSource->geometry.boneIndexByName.find(side?"leftArm":"rightArm");
     if(found==ArmSource->geometry.boneIndexByName.end())continue;
     const auto index=found->second;
     glm::vec3 low(std::numeric_limits<float>::max()),high(std::numeric_limits<float>::lowest());
+    BoneSkeletonHierarchy hierarchy(ArmSource->geometry);BoneSkeletonPose rest;
+    const auto shoulderInverse=glm::inverse(hierarchy.ComputeBoneMatrix(index,rest));
+    for(size_t i=0;i<ArmSource->boneMeshes.size();++i) {
+      size_t ancestor=i;
+      for(size_t depth=0;depth<ArmSource->geometry.bones.size();++depth) {
+        if(ancestor==index){ArmSegments[side].push_back({i,shoulderInverse*hierarchy.ComputeBoneMatrix(i,rest)});break;}
+        const auto parent=ArmSource->geometry.boneIndexByName.find(ArmSource->geometry.bones[ancestor].parent);
+        if(parent==ArmSource->geometry.boneIndexByName.end())break;ancestor=parent->second;
+      }
+    }
     bool any=false;
-    for(const auto &cube:ArmSource->boneMeshes[index].cubes)
+    for(const auto &[segment,transform]:ArmSegments[side])
+    for(const auto &cube:ArmSource->boneMeshes[segment].cubes)
       for(size_t v=0;v+4<cube.interleavedPosUv.size();v+=5)
       {
         const auto &values=cube.interleavedPosUv;
-        const glm::vec3 p(cube.restLocalMatrix*glm::vec4(values[v],values[v+1],values[v+2],1.f));
+        const glm::vec3 p(transform*cube.restLocalMatrix*glm::vec4(values[v],values[v+1],values[v+2],1.f));
         low=glm::min(low,p);high=glm::max(high,p);any=true;
       }
     if(!any || high.y-low.y<1e-5f)continue;
@@ -1168,13 +1180,14 @@ bool UFpViewmodelRenderer::TryDrawAuthoredArm(const glm::mat4 &mvpBase,bool left
   // items retain the established root, wield orientation and animation.
   const glm::mat4 root=leftHand?mvpBase*glm::scale(glm::mat4(1.f),glm::vec3(-1.f,1.f,1.f)):mvpBase;
   bool drew=false;
-  for(const auto &cube:ArmSource->boneMeshes[index].cubes)
+  for(const auto &[segment,transform]:ArmSegments[side])
+  for(const auto &cube:ArmSource->boneMeshes[segment].cubes)
   {
     if(cube.interleavedPosUv.empty() || cube.indices.empty())continue;
     const GLuint vao=CreatureMeshGpuCache::Instance().GetOrCreateSkeletalMeshVao(cube);
     if(!vao)continue;
     glActiveTexture(GL_TEXTURE0);glBindTexture(GL_TEXTURE_2D,skinAtlas);glBindVertexArray(vao);
-    const glm::mat4 mvp=root*ArmFits[side]*cube.restLocalMatrix;
+    const glm::mat4 mvp=root*ArmFits[side]*transform*cube.restLocalMatrix;
     Shader->SetMat4("mvp_matrix",mvp);
     glDrawElements(GL_TRIANGLES,static_cast<GLsizei>(cube.indices.size()),GL_UNSIGNED_INT,nullptr);
     if(ActiveAudit)
@@ -1183,7 +1196,7 @@ bool UFpViewmodelRenderer::TryDrawAuthoredArm(const glm::mat4 &mvpBase,bool left
       const auto *data=reinterpret_cast<const unsigned char *>(cube.interleavedPosUv.data());
       for(size_t i=0;i<cube.interleavedPosUv.size()*sizeof(float);++i){hash^=data[i];hash*=1099511628211ull;}
       GLint buffer=0;glGetVertexAttribiv(0,GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING,&buffer);
-      FpArmDrawAudit record{leftHand,"bone/"+ArmSource->boneMeshes[index].boneName,skinAtlas,mvp,hash};
+      FpArmDrawAudit record{leftHand,"bone/"+ArmSource->boneMeshes[segment].boneName,skinAtlas,mvp,hash};
       record.VertexBuffer=static_cast<GLuint>(buffer);record.VertexFloatCount=cube.interleavedPosUv.size();record.SourceScale=ArmScales[side];
       record.RootMvp=mvpBase;
       ActiveAudit->Arms.push_back(std::move(record));

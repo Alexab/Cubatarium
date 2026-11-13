@@ -104,6 +104,7 @@ void UCreatureLocomotionController::Reset()
   LocomotionState = LocomotionState::Idle;
   StanceBlend = 0.0f;
   UnsupportedFluidStreak = 0;
+  Swimming = false;
   FeetY = 0.0f;
   FeetAnchored = false;
   OnGround = true;
@@ -530,6 +531,7 @@ void UCreatureLocomotionController::UpdateLocomotion(const UWorld *world,
   {
     UnsupportedFluidStreak = 0;
   }
+  Swimming = false;
   const bool swimmingWater =
       fluid.inFluid && !isFoliage && UnsupportedFluidStreak >= 2;
   const bool climbingFoliage =
@@ -571,6 +573,7 @@ void UCreatureLocomotionController::UpdateLocomotion(const UWorld *world,
                              MountSupportId != skipCreatureId && !supported;
   if (swimmingFluid && !(mountSupported && VerticalVelocity <= 0.05f))
   {
+    Swimming = swimmingWater;
     UpdateSwimming(world, eyePos, input, dt, fluid, cap, skipCreatureId);
     return;
   }

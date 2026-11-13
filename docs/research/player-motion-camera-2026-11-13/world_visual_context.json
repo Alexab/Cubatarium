@@ -1,0 +1,128 @@
+{
+  "source": "E:\\Work\\Home\\Cubatarium-player-motion\\docs\\research\\player-motion-camera-2026-11-13\\raw_route_release\\motion.jsonl",
+  "capture_log": "E:\\Work\\Home\\Cubatarium-player-motion\\bin\\logs\\Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261113-150714.20100",
+  "queued_captures": 143,
+  "saved_captures": 70,
+  "selected_frames": [
+    {
+      "scenario": "idle",
+      "frame": "frame_004.png",
+      "capture_epoch": 1794571650.643455,
+      "time_association": "native enqueue timestamp; route origin aligned to final flushed row",
+      "sha256": "07ad6e15ee4055b9ec8bbb5eba73fbdfb2109f485bbc133d6dd1181760458742"
+    },
+    {
+      "scenario": "walk",
+      "frame": "frame_012.png",
+      "capture_epoch": 1794571652.817005,
+      "time_association": "native enqueue timestamp; route origin aligned to final flushed row",
+      "sha256": "048b9eabdb7f6b4b56994876434b4d11788110e47946d2a5bdfc5420d310725f"
+    },
+    {
+      "scenario": "run",
+      "frame": "frame_018.png",
+      "capture_epoch": 1794571654.441215,
+      "time_association": "native enqueue timestamp; route origin aligned to final flushed row",
+      "sha256": "491e7081a83fd3ee80a255d20cb97eb172f0908c82f8bb4a6d23aa5949a3c0cb"
+    },
+    {
+      "scenario": "crouch_walk",
+      "frame": "frame_025.png",
+      "capture_epoch": 1794571656.318915,
+      "time_association": "native enqueue timestamp; route origin aligned to final flushed row",
+      "sha256": "754f6159c99ebe2eede9096629ea88cf7e31178e9d2b6bf09419f782d9d9f4e1"
+    },
+    {
+      "scenario": "jump",
+      "frame": "frame_033.png",
+      "capture_epoch": 1794571658.450762,
+      "time_association": "native enqueue timestamp; route origin aligned to final flushed row",
+      "sha256": "7973d51ba1de66e07435384cb208040984735fbb82a266c03f8c016ebb67f099"
+    },
+    {
+      "scenario": "fall",
+      "frame": "frame_042.png",
+      "capture_epoch": 1794571660.825542,
+      "time_association": "native enqueue timestamp; route origin aligned to final flushed row",
+      "sha256": "82e450c708d1d47421d15d86d012f3f9b6290797fd9dc0aadd97f2870da479a7"
+    },
+    {
+      "scenario": "hover",
+      "frame": "frame_048.png",
+      "capture_epoch": 1794571662.406379,
+      "time_association": "native enqueue timestamp; route origin aligned to final flushed row",
+      "sha256": "fc533517fb78f2e74c846c11d2decb96f88e2a6d87fa87f5a7d9e52d66709a80"
+    },
+    {
+      "scenario": "fly_up",
+      "frame": "frame_056.png",
+      "capture_epoch": 1794571664.519126,
+      "time_association": "native enqueue timestamp; route origin aligned to final flushed row",
+      "sha256": "63b5d2a96c0578c99bdaa87f56131f493717ba5b91323a5ac7b1aa43c2c91cf1"
+    },
+    {
+      "scenario": "fly_down",
+      "frame": "frame_062.png",
+      "capture_epoch": 1794571666.092839,
+      "time_association": "native enqueue timestamp; route origin aligned to final flushed row",
+      "sha256": "0c0581406594e5b0841a663b7ff33741a45d4822a2e3c706871ca96061e15682"
+    },
+    {
+      "scenario": "fly_forward",
+      "frame": "frame_071.png",
+      "capture_epoch": 1794571668.521093,
+      "time_association": "native enqueue timestamp; route origin aligned to final flushed row",
+      "sha256": "8a5f7d5cc33b8c97edb131fda559093d42f4a3e7d53ff2700c642a9f61726565"
+    },
+    {
+      "scenario": "surface_idle",
+      "frame": "frame_079.png",
+      "capture_epoch": 1794571670.802785,
+      "time_association": "native enqueue timestamp; route origin aligned to final flushed row",
+      "sha256": "987bde58d091f3cfacc8c650dee5ecb700b6bf2ff6838e135318f5d455697a53"
+    },
+    {
+      "scenario": "surface_swim",
+      "frame": "frame_085.png",
+      "capture_epoch": 1794571672.437111,
+      "time_association": "native enqueue timestamp; route origin aligned to final flushed row",
+      "sha256": "b3f17832bbaa4bbe75981420eb81d8d025cc58435dd6183e9a6d358f1b7a730a"
+    },
+    {
+      "scenario": "submerged_idle",
+      "frame": "frame_093.png",
+      "capture_epoch": 1794571674.518523,
+      "time_association": "native enqueue timestamp; route origin aligned to final flushed row",
+      "sha256": "ab87ca7fb4109eb939fd349e8255dfa47d1694ada9adc2aa0535bf789ab03d8f"
+    },
+    {
+      "scenario": "swim_up",
+      "frame": "frame_100.png",
+      "capture_epoch": 1794571676.350925,
+      "time_association": "native enqueue timestamp; route origin aligned to final flushed row",
+      "sha256": "21f2df7258b63415eb2c197144da2db01bf58b4cb439e5492006addb4817347d"
+    },
+    {
+      "scenario": "swim_forward",
+      "frame": "frame_108.png",
+      "capture_epoch": 1794571678.430554,
+      "time_association": "native enqueue timestamp; route origin aligned to final flushed row",
+      "sha256": "c7979d09a2f517dab192376b0dc4d48d670a882d0ecf8c441d2f55a55306a4f9"
+    },
+    {
+      "scenario": "camera_back",
+      "frame": "frame_117.png",
+      "capture_epoch": 1794571680.854701,
+      "time_association": "native enqueue timestamp; route origin aligned to final flushed row",
+      "sha256": "55ed981372ab9af595be41979318460aadbf37f75e2f70cee1af258486fd9225"
+    },
+    {
+      "scenario": "camera_front",
+      "frame": "frame_132.png",
+      "capture_epoch": 1794571684.742846,
+      "time_association": "native enqueue timestamp; route origin aligned to final flushed row",
+      "sha256": "23ec45e3f64435ebdee1fc8ace6253201dccf372c9ec131ebbbac575ac1585f3"
+    }
+  ],
+  "clip": "native captures, cropped and sampled every second saved frame; no synthetic pose frames"
+}

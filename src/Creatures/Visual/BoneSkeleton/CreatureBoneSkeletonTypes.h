@@ -2,6 +2,7 @@
 #define CREATURE_BONE_SKELETON_TYPES_H
 
 #include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -37,6 +38,8 @@ struct BoneSkeletonBoneDef
 struct CreatureBoneSkeletonGeometry
 {
   std::string identifier;
+  int humanRigVersion{0}; // Unknown/old versions use the legacy profile.
+  float modelScale{1.f};
   glm::ivec2 textureSize{64, 32};
   glm::vec3 visibleBoundsOffsetBlocks{0.f};
   float visibleBoundsWidthBlocks{1.f};
@@ -48,6 +51,8 @@ struct CreatureBoneSkeletonGeometry
 struct BoneSkeletonBonePose
 {
   glm::vec3 rotationDeg{0.f};
+  glm::quat rotation{1.f,0.f,0.f,0.f};
+  bool quaternionRotation{false};
   glm::vec3 offsetBlocks{0.f};
 };
 

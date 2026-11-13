@@ -45,7 +45,7 @@ int ConsumeFootstepAudio(const CreatureLocomotionFacts &facts,
     crossing = -1; // grounded transition: landing
   }
 
-  if (moving && facts.onGround)
+  if (moving && facts.onGround && !facts.swimming && facts.mode!=CreatureMovementMode::Flying)
   {
     // Accumulate only actual forward phase motion (idle drift is skipped);
     // each half-cycle boundary is one footfall of the walk cycle.

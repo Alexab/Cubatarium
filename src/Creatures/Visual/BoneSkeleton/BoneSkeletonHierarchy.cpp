@@ -2,6 +2,7 @@
 
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonModelSpace.h"
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 namespace cutum
 {
@@ -13,7 +14,7 @@ namespace
 // (rotation around pivot because restLocal already offsets mesh from pivot).
 glm::mat4 BoneLocalMatrix(const glm::vec3 &pivotBlocks,
                           const glm::vec3 &bindRotationDeg,
-                          const glm::vec3 &poseRotationDeg,
+                          const glm::mat4 &poseRotation,
                           const glm::vec3 &animOffset)
 {
   glm::mat4 local =
@@ -22,31 +23,24 @@ glm::mat4 BoneLocalMatrix(const glm::vec3 &pivotBlocks,
   {
     local = local * BoneSkeletonEulerDegToMat(bindRotationDeg);
   }
-  if (glm::length(poseRotationDeg) > 0.001f)
-  {
-    local = local * BoneSkeletonEulerDegToMat(poseRotationDeg);
-  }
+  local = local * poseRotation;
   return local;
 }
 
 glm::mat4 BonePoseOnlyMatrix(const glm::vec3 &pivotBlocks,
-                             const glm::vec3 &rotationDeg,
+                             const glm::mat4 &rotation,
                              const glm::vec3 &animOffset)
 {
-  if (glm::length(rotationDeg) <= 0.001f && glm::length(animOffset) <= 0.001f)
-  {
-    return glm::mat4(1.f);
-  }
+
 
   glm::mat4 pose(1.f);
   if (glm::length(animOffset) > 0.001f)
   {
     pose = glm::translate(pose, animOffset);
   }
-  if (glm::length(rotationDeg) > 0.001f)
   {
     pose = glm::translate(pose, pivotBlocks);
-    pose = pose * BoneSkeletonEulerDegToMat(rotationDeg);
+    pose = pose * rotation;
     pose = glm::translate(pose, -pivotBlocks);
   }
   return pose;
@@ -121,11 +115,11 @@ glm::mat4 BoneSkeletonHierarchy::ComputeBoneMatrix(
 
   const glm::vec3 bindRot =
       BoneSkeletonBindPoseRotationDeg(bone.bindPoseRotationDeg) + bone.boneRotationDeg;
-  glm::vec3 poseRot{0.f};
+  glm::mat4 poseRot{1.f};
   glm::vec3 animOffset{0.f};
   if (const auto it = pose.bones.find(bone.name); it != pose.bones.end())
   {
-    poseRot = it->second.rotationDeg;
+    poseRot = it->second.quaternionRotation ? glm::mat4_cast(it->second.rotation) : BoneSkeletonEulerDegToMat(it->second.rotationDeg);
     animOffset = it->second.offsetBlocks;
   }
 
@@ -150,10 +144,7 @@ glm::mat4 BoneSkeletonHierarchy::ComputeBoneMatrix(
   {
     local = local * BoneSkeletonEulerDegToMat(bindRot);
   }
-  if (glm::length(poseRot) > 0.001f)
-  {
-    local = local * BoneSkeletonEulerDegToMat(poseRot);
-  }
+  local = local * poseRot;
   return parentMat * local;
 }
 
@@ -168,11 +159,11 @@ glm::mat4 BoneSkeletonHierarchy::ComputeBonePoseChain(
     chain = ComputeBonePoseChain(static_cast<size_t>(parentIdx), pose);
   }
 
-  glm::vec3 animRot{0.f};
+  glm::mat4 animRot{1.f};
   glm::vec3 animOffset{0.f};
   if (const auto it = pose.bones.find(bone.name); it != pose.bones.end())
   {
-    animRot = it->second.rotationDeg;
+    animRot = it->second.quaternionRotation ? glm::mat4_cast(it->second.rotation) : BoneSkeletonEulerDegToMat(it->second.rotationDeg);
     animOffset = it->second.offsetBlocks;
   }
 

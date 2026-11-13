@@ -11,7 +11,16 @@ class PlayerAppearanceTests(unittest.TestCase):
   for body in BODIES:
    for hair in HAIR:
     model=model_for(body,hair)
-    self.assertEqual([(b.name,b.parent,b.pivot) for b in base.bones],[(b.name,b.parent,b.pivot) for b in model.bones[:-1]])
+    by_name={b.name:b for b in model.bones}
+    for b in base.bones:
+     self.assertEqual(b.pivot,by_name[b.name].pivot,b.name)
+    for side in ('right','left'):
+     self.assertEqual(by_name[side+'Leg'].parent,'waist')
+     self.assertEqual(by_name[side+'Forearm'].parent,side+'Arm')
+     self.assertEqual(by_name[side+'Shin'].parent,side+'Leg')
+     self.assertEqual(by_name[side+'Item'].parent,side+'Hand')
+     self.assertEqual(by_name[side+'Foot'].parent,side+'Shin')
+    self.assertAlmostEqual(max(c.top() for b in model.bones if b.name!='hair' for c in b.cubes)*.9/16,1.8)
     self.assertEqual(model.bones[-1].parent,'head')
     if hair=='none':self.assertEqual(len(model.bones[-1].cubes),0)
     else:self.assertGreater(len(model.bones[-1].cubes),0)
@@ -28,6 +37,16 @@ class PlayerAppearanceTests(unittest.TestCase):
    for b in boxes[i+1:]:
     x,y=b.uv;bw,bh,bd=b.size
     self.assertFalse(u<x+2*(bw+bd) and x<u+2*(w+d) and v<y+bh+bd and y<v+h+d)
+ def test_segmented_forearms_keep_visible_skin(self):
+  recipe=pipeline.load_recipe('human');face=pipeline.palette_for_recipe(recipe,pipeline._load_palettes())['face']
+  for body in BODIES:
+   cube=next(b for b in model_for(body,'short').bones if b.name=='rightForearm').cubes[0]
+   u,v=cube.uv;w,h,d=cube.size
+   for outfit in ('human','human_adventurer','human_guard'):
+    folder=ROOT/'models'/('creatures' if outfit=='human' else 'skins')/outfit
+    with Image.open(folder/'textures'/f'appearance_{body}_chestnut.png') as image:
+     color=image.getpixel((u+d+w//2,v+d+h//2))[:3]
+     self.assertLess(max(abs(a-b)for a,b in zip(color,face)),25,(body,outfit,color,face))
  def test_deterministic_export_and_published_payload(self):
   with tempfile.TemporaryDirectory() as a,tempfile.TemporaryDirectory() as b:
    x=generate(Path(a));y=generate(Path(b));self.assertEqual(x,y);self.assertEqual(len(x['files']),42)

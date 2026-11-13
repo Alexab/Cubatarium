@@ -40,6 +40,7 @@ public:
   CreatureMovementMode GetMode() const { return Mode; }
   void SetMode(CreatureMovementMode mode);
 
+  bool IsSwimming() const { return Swimming; }
   bool IsOnGround() const { return OnGround; }
   /// NPC creatures stand on whatever their box rests on (HasBodySupport);
   /// the player camera keeps the center-footprint rule (HasGroundSupport).
@@ -138,6 +139,7 @@ private:
   float FeetY{0.0f};
   bool FeetAnchored{false};
   bool OnGround{false};
+  bool Swimming{false};
   float VerticalVelocity{0.0f};
   bool SpaceWasPressed{false};
   bool SuppressNextJump{false};

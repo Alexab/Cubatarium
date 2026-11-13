@@ -1674,7 +1674,7 @@ const std::vector<FaceInstance> &UWorldMeshService::PrepareFaceInstances(
     const glm::mat4 proj = camera->GetProjection();
     const glm::mat4 vp = proj * view;
     Cache.UpdateVisibleInstances(Frustum::FromViewProjection(vp), vp,
-                                 camera->GetPosition());
+                                 camera->GetRenderPosition());
   }
   return Cache.GetFaceInstances();
 }

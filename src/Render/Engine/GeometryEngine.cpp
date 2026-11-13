@@ -4137,7 +4137,7 @@ void UGeometryEngine::ApplyGreedyEnvironmentUniforms(
     if (const auto camera = WorldInstance->GetCurrentUserCamera())
     {
       const WeatherSample local_weather =
-          WorldInstance->SampleWeatherAt(camera->GetPosition());
+          WorldInstance->SampleWeatherAt(camera->GetRenderPosition());
       local_env.Cloudiness = local_weather.CloudCoverage;
       local_env.CloudCoverage = local_weather.CloudCoverage;
       local_env.PrecipitationIntensity = local_weather.PrecipitationIntensity;
@@ -4627,6 +4627,7 @@ void UGeometryEngine::Paint(int width_size, int height_size,
   }
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
+    camera->ResolveRenderCamera(*WorldInstance,static_cast<float>(camera->GetDeltaTime()));
     AnimationClock.Tick(static_cast<float>(camera->GetDeltaTime()));
   }
   (void)view_duration;
@@ -4739,7 +4740,7 @@ void UGeometryEngine::DrawCubeGeometry()
   if (!logged_first_paint_diag && WorldInstance)
   {
     logged_first_paint_diag = true;
-    LogWorldLoadDiag("first_paint", *WorldInstance, camera->GetPosition());
+    LogWorldLoadDiag("first_paint", *WorldInstance, camera->GetRenderPosition());
   }
   const uint64_t meshRevision = mesh_service->GetMeshRevision();
   const bool useGreedyMesh = Render.UseFaceQuadDraw();
@@ -4786,7 +4787,7 @@ void UGeometryEngine::DrawCubeGeometry()
               batch ? static_cast<uint32_t>(batch->indices.size()) : 0u;
           NoteRendererGateCandidate(
               *WorldInstance, mesh_cache, ref.chunkCoord,
-              camera->GetPosition(), renderer_path, index_count, 0u, ready);
+              camera->GetRenderPosition(), renderer_path, index_count, 0u, ready);
         }
         if (ready)
         {
@@ -4842,9 +4843,9 @@ void UGeometryEngine::DrawCubeGeometry()
       // also targeted the adjacent -155 window. Sample both windows twice as
       // often so a 16-block chunk cannot fall between probes; retain the
       // lower-cost cadence everywhere else.
-      const float probe_camera_x = camera->GetPosition().x;
+      const float probe_camera_x = camera->GetRenderPosition().x;
       const glm::ivec3 probe_focus = UChunkManager::WorldToChunk(
-          WorldPosToBlock(camera->GetPosition()));
+          WorldPosToBlock(camera->GetRenderPosition()));
       static bool have_last_probe_focus = false;
       static glm::ivec2 last_probe_focus(0);
       static uint64_t last_camera_band_peak_probe_epoch = 0;
@@ -4976,9 +4977,9 @@ void UGeometryEngine::DrawCubeGeometry()
       CUBA_ZONE("Scene.OpaqueDraw");
       g_capture_gpu_draw_state_for_pixel_probe =
           pixel_probe_capture.probe_id != 0 &&
-          PixelProbeGpuDrawStateWindowContains(camera->GetPosition());
+          PixelProbeGpuDrawStateWindowContains(camera->GetRenderPosition());
       DrawGreedyOpaqueBatches(draw.cache, opaqueCutoutRefs, vp,
-                              camera->GetPosition(), textures,
+                              camera->GetRenderPosition(), textures,
                               draw.meshRevision, draw.cullRevision);
       g_capture_gpu_draw_state_for_pixel_probe = false;
       {
@@ -5016,7 +5017,7 @@ void UGeometryEngine::DrawCubeGeometry()
                                         vp,
                                         draw.meshRevision,
                                         draw.cullRevision,
-                                        camera->GetPosition(),
+                                        camera->GetRenderPosition(),
                                         WorldInstance->GetBlockRegistry(),
                                         textures};
       g_capture_fluid_draw_witness_for_pixel_probe =
@@ -5031,7 +5032,7 @@ void UGeometryEngine::DrawCubeGeometry()
       const glm::mat4 coverage_vp = coverage_projection * coverage_view;
       NoteFrustumCoverageGaps(
           *WorldInstance, UnderwaterFogPass_, draw.cache,
-          Frustum::FromViewProjection(coverage_vp), camera->GetPosition(),
+          Frustum::FromViewProjection(coverage_vp), camera->GetRenderPosition(),
           draw.opaqueCutoutRefs, draw.transparentRefs, filtered_opaque,
           filtered_transparent, GreedyGpuOpaque, GreedyGpuCutout,
           GreedyGpuTransparent,
@@ -5409,7 +5410,7 @@ void UGeometryEngine::PrepareFrameRendering()
   if (weather_camera)
   {
     camera_weather =
-        WorldInstance->SampleWeatherAt(weather_camera->GetPosition());
+        WorldInstance->SampleWeatherAt(weather_camera->GetRenderPosition());
   }
   g_probe_fluid_map = &FluidMap();
   UnderwaterFogPass_.Update(*WorldInstance, Render, FluidMap(), BaseSkyColor,
@@ -5729,7 +5730,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   {
     if (auto camera = WorldInstance->GetCurrentUserCamera())
     {
-      camera_position = camera->GetPosition();
+      camera_position = camera->GetRenderPosition();
     }
   }
   greedyShader->Use();
@@ -5762,7 +5763,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   OpaqueDepthCapture.ApplyShaderUniforms(greedyShader, opaqueDepthGuard);
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
-    camera_position = camera->GetPosition();
+    camera_position = camera->GetRenderPosition();
     // alphaCutout here is shader discard mode (GPF5 merges solid+cutout), not
     // a dedicated cutout-only pass — still apply underwater fog to opaque.
     // Submerged camera: the transparent (fluid) pass needs the underwater fog
@@ -5858,7 +5859,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   {
     if (auto camera = WorldInstance->GetCurrentUserCamera())
     {
-      draw_witness_camera_position = camera->GetPosition();
+      draw_witness_camera_position = camera->GetRenderPosition();
     }
     else
     {
@@ -6485,7 +6486,7 @@ void UGeometryEngine::WarmupGreedyGpuFromWorld()
   const auto &textures = TextureCubeStorageInstance->GetTextures();
 
   DrawGreedyOpaqueBatches(draw.cache, filtered_opaque, vp,
-                          camera->GetPosition(), textures, draw.meshRevision,
+                          camera->GetRenderPosition(), textures, draw.meshRevision,
                           draw.cullRevision);
   DrawCrossInstancedBatches(draw.crossBatches, vp, textures, draw.meshRevision,
                             draw.cullRevision);
@@ -6495,7 +6496,7 @@ void UGeometryEngine::WarmupGreedyGpuFromWorld()
                                     vp,
                                     draw.meshRevision,
                                     draw.cullRevision,
-                                    camera->GetPosition(),
+                                    camera->GetRenderPosition(),
                                     WorldInstance->GetBlockRegistry(),
                                     textures};
   PrepareTransparent(tctx);
@@ -6599,7 +6600,7 @@ void UGeometryEngine::DrawCrossInstancedBatches(
   {
     // Submerged camera: underwater plants fog with the scene (W3.2) — the
   // shader still excludes cross quads while the camera is above water.
-  ApplyFogUniforms(crossInstancedShader, camera->GetPosition(),
+  ApplyFogUniforms(crossInstancedShader, camera->GetRenderPosition(),
                    cutum::ShouldApplyBelowSurfaceFogToPass(
                        /*transparent_pass=*/false, /*alpha_cutout=*/false,
                        UnderwaterFogPass_.GetUnderwaterFogSubmerged() > 0.5f));
@@ -7258,7 +7259,7 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
   {
     if (auto camera = WorldInstance->GetCurrentUserCamera())
     {
-      camera_position = camera->GetPosition();
+      camera_position = camera->GetRenderPosition();
     }
   }
   packedGreedyShader->Use();
@@ -7285,7 +7286,7 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
   {
     if (auto camera = WorldInstance->GetCurrentUserCamera())
     {
-      camera_position = camera->GetPosition();
+      camera_position = camera->GetRenderPosition();
       ApplyFogUniforms(
           packedGreedyShader, camera_position,
           cutum::ShouldApplyBelowSurfaceFogToPass(
@@ -7333,7 +7334,7 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
       NoteRendererGateCandidate(
           *WorldInstance, cache, chunk.chunkCoord,
           WorldInstance->GetCurrentUserCamera()
-              ? WorldInstance->GetCurrentUserCamera()->GetPosition()
+              ? WorldInstance->GetCurrentUserCamera()->GetRenderPosition()
               : glm::vec3(0.0f),
           transparent_pass ? 4u : 3u, 0u, slot->QuadCount, false);
       continue;
@@ -7351,7 +7352,7 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
       NoteRendererGateCandidate(
           *WorldInstance, cache, chunk.chunkCoord,
           WorldInstance->GetCurrentUserCamera()
-              ? WorldInstance->GetCurrentUserCamera()->GetPosition()
+              ? WorldInstance->GetCurrentUserCamera()->GetRenderPosition()
               : glm::vec3(0.0f),
           transparent_pass ? 4u : 3u, 0u, slot->QuadCount, true);
     }
@@ -7913,7 +7914,7 @@ void UGeometryEngine::DrawSkyGradient()
   {
     const glm::mat3 view_rot = glm::mat3(camera->GetViewMatrix());
     inv_view_rot = glm::transpose(view_rot);
-    camera_pos = camera->GetPosition();
+    camera_pos = camera->GetRenderPosition();
     inv_projection = glm::inverse(camera->GetProjection());
   }
   const WeatherSample sky_weather = WorldInstance->SampleWeatherAt(camera_pos);
@@ -8048,7 +8049,7 @@ void UGeometryEngine::RenderWeatherOverlay(int width, int height)
   ctx.Height = height;
   ctx.OverlayVao = overlayVAO;
   ctx.ViewProj = view_proj;
-  ctx.CameraPos = camera->GetPosition();
+  ctx.CameraPos = camera->GetRenderPosition();
   ctx.CameraRight = camera_right;
   ctx.CameraUp = camera_up;
   ctx.ElapsedSec = AnimationClock.ElapsedSeconds();
@@ -8265,7 +8266,7 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
     {
       if (auto camera = WorldInstance->GetCurrentUserCamera())
       {
-        return camera->GetPosition();
+        return camera->GetRenderPosition();
       }
       return glm::vec3(0.0f);
     }();
@@ -9234,7 +9235,7 @@ void UGeometryEngine::RenderBiomeDebugOverlay()
   {
     return;
   }
-  const glm::vec3 camPos = camera->GetPosition();
+  const glm::vec3 camPos = camera->GetRenderPosition();
   const int centerX = static_cast<int>(std::floor(camPos.x));
   const int centerZ = static_cast<int>(std::floor(camPos.z));
   constexpr int kRadius = 12;
