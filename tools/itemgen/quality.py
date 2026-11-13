@@ -11,8 +11,8 @@ from itemgen.preview import OUT, _load_parts_from_gltf, _render, make_contact_sh
 ROOT = Path(__file__).resolve().parents[2]
 MODELS = ROOT / "models" / "items"
 CONTENT = ROOT / "content" / "items"
-REPORT = ROOT / "docs" / "research" / "item-visual-qa-2026-11-12.md"
-JSON_REPORT = ROOT / "docs" / "research" / "item-visual-qa-2026-11-12.json"
+REPORT = ROOT / "docs" / "research" / "item-visual-qa-2026-11-13.md"
+JSON_REPORT = ROOT / "docs" / "research" / "item-visual-qa-2026-11-13.json"
 
 FAMILIES = ["pickaxe", "axe", "shovel", "hoe", "sword"]
 MATERIALS = ["wood", "stone", "copper", "iron", "gold"]
@@ -130,7 +130,7 @@ def run_audit() -> dict:
     lines = [
         "# Item visual QA (tools_visual)",
         "",
-        "Date: 2026-11-12. Offline contact sheets + silhouette/gray separation.",
+        "Date: 2026-11-13. Actual triangle/UV rasterization; native FP/TP acceptance is separate.",
         "",
         f"- Passed: **{findings['passed']}**",
         f"- Failures: {len(findings['failures'])}",
@@ -160,7 +160,7 @@ def run_audit() -> dict:
         "- Gray column must keep wood/stone/metal tiers separable without hue.",
         "- Every published item must ship `textures/diffuse.png` (no factor-only).",
         "",
-        "Per-item sheets: `docs/research/item-previews/<id>_contact.png`.",
+        "Per-item sheets: `docs/research/item-previews-v2/<id>_contact.png`.",
         "",
     ]
     REPORT.write_text("\n".join(lines), encoding="utf-8")

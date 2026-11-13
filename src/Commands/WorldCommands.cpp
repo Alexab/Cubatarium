@@ -498,6 +498,7 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
                         if (world->GetItemDefinitionStorage() &&
                             world->GetItemDefinitionStorage()->Get(id))
                         {
+                          inv->SetItemDefinitions(world->GetItemDefinitionStorage());
                           inv->AddToInventory(id);
                           InventoryEntryRef entry;
                           entry.empty = false;
@@ -508,7 +509,8 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
                           entry.broken = false;
                           const size_t bar = inv->GetActiveBarIndex();
                           const size_t slot = inv->GetActiveSlotIndex();
-                          inv->AssignToHotbar(bar, slot, entry);
+                          if (inv->IsCreative()) inv->AssignToHotbar(bar, slot, entry);
+                          else inv->AssignOwned(bar, slot, entry);
                           return CommandResult{true, "Gave tool " + id};
                         }
                         inv->AddToInventory(id);
@@ -565,32 +567,9 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
         {
           return CommandResult{false, "No item definitions"};
         }
-        auto &bars = creature->GetInventory().GetHotbarsMutable();
-        const size_t bar = creature->GetInventory().GetActiveBarIndex();
-        const size_t slot = creature->GetInventory().GetActiveSlotIndex();
-        if (bar >= bars.size() || slot >= bars[bar].slots.size() ||
-            bars[bar].slots[slot].empty)
-        {
-          return CommandResult{false, "Empty active slot"};
-        }
-        auto &entry = bars[bar].slots[slot].entry;
-        if (entry.kind != InventoryEntryKind::Item)
-        {
-          return CommandResult{false, "Active slot is not an item"};
-        }
-        const ItemDefinition *def = items->Get(entry.Id);
-        if (!def)
-        {
-          return CommandResult{false, "Unknown item"};
-        }
-        const std::string material =
-            def->Repair.Materials.empty() ? std::string{}
-                                          : def->Repair.Materials.front();
-        if (!TryRepairItem(entry, *def, material))
-        {
-          return CommandResult{false, "Repair failed"};
-        }
-        return CommandResult{true, "Repaired " + entry.Id};
+        std::string reason;
+        const bool ok = creature->GetInventory().RepairActive(*items, reason);
+        return CommandResult{ok, ok ? "Repaired" : reason};
       });
 
   registry.Register(

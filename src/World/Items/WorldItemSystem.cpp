@@ -45,7 +45,7 @@ int WorldItemSystem::Spawn(const glm::vec3 &position, const std::string &itemId,
   item.ttl = kTtlSeconds;
   if (Items.size() >= kMaxWorldItems)
   {
-    Items.erase(Items.begin()); // evict the oldest drop
+    return 0; // backpressure; never evict another player-owned payload
   }
   Items.push_back(std::move(item));
   return Items.back().id;
@@ -72,16 +72,13 @@ void WorldItemSystem::Tick(UWorld &world, float dt)
     if (player && glm::distance(playerPos, it->position) <= kPickupRadius)
     {
       auto &inv = player->GetInventory();
-      if (it->isBlock)
-      {
-        ResourceEconomyService::GrantBlockDrop(world.GetGameMode(), inv,
-                                                it->itemId, it->count);
-      }
-      else
-      {
-        ResourceEconomyService::GrantItemDrop(world.GetGameMode(), inv,
-                                               it->itemId, it->count);
-      }
+      inv.SetItemDefinitions(world.GetItemDefinitionStorage());
+      InventoryEntryRef pickup;
+      pickup.empty = false; pickup.Id = it->itemId; pickup.count = it->count;
+      pickup.kind = it->isBlock ? InventoryEntryKind::Block : InventoryEntryKind::Item;
+      const auto accepted = inv.Insert(pickup);
+      if (accepted.transferred == 0) { ++it; continue; }
+      it->count = accepted.remainder;
       UAudioEvent audio;
       audio.Kind = AudioEventKind::Pickup;
       audio.X = playerPos.x;
@@ -89,7 +86,8 @@ void WorldItemSystem::Tick(UWorld &world, float dt)
       audio.Z = playerPos.z;
       audio.EntityId = static_cast<std::uint32_t>(player->GetId());
       UAudioApi::Post(audio);
-      it = Items.erase(it);
+      if (it->count == 0) it = Items.erase(it);
+      else ++it;
       continue;
     }
     ++it;

@@ -1,60 +1,13 @@
 #include "Game/Crafting/RecipeRegistry.h"
 
 #include <filesystem>
+#include <climits>
 #include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
 
 namespace cutum
 {
-
-namespace
-{
-
-bool HasEnough(const UCreatureInventory &inv, const std::string &id, int count)
-{
-  if (count <= 0)
-  {
-    return true;
-  }
-  const auto &storage = inv.GetStorage();
-  const auto it = storage.find(id);
-  if (it == storage.end())
-  {
-    return false;
-  }
-  return it->second < 0 || it->second >= count;
-}
-
-bool Consume(UCreatureInventory &inv, const std::string &id, int count)
-{
-  if (count <= 0)
-  {
-    return true;
-  }
-  auto &storage = inv.GetStorageMutable();
-  const auto it = storage.find(id);
-  if (it == storage.end())
-  {
-    return false;
-  }
-  if (it->second < 0)
-  {
-    return true; // unlimited
-  }
-  if (it->second < count)
-  {
-    return false;
-  }
-  it->second -= count;
-  if (it->second <= 0)
-  {
-    storage.erase(it);
-  }
-  return true;
-}
-
-} // namespace
 
 bool URecipeRegistry::LoadFromDirectory(const std::string &dirPath)
 {
@@ -139,25 +92,34 @@ const RecipeDefinition *URecipeRegistry::FindById(const std::string &id) const
   return nullptr;
 }
 
-bool URecipeRegistry::TryCraft(UCreatureInventory &inv,
-                               const RecipeDefinition &recipe) const
+bool URecipeRegistry::TryCraft(UCreatureInventory &inv, const RecipeDefinition &recipe) const
 {
-  for (const auto &in : recipe.Inputs)
+  if (recipe.Output.Id.empty() || recipe.Output.Count <= 0) return false;
+  std::map<std::string, int> costs;
+  for (const auto &input : recipe.Inputs)
   {
-    if (!HasEnough(inv, in.Id, in.Count))
+    if (input.Id.empty() || input.Count <= 0 || costs[input.Id] > INT_MAX - input.Count) return false;
+    costs[input.Id] += input.Count;
+  }
+  auto trial = inv;
+  for (const auto &cost : costs)
+  {
+    const auto &stock = trial.GetStorage();
+    const auto it = stock.find(cost.first);
+    if (!trial.IsCreative() && (it == stock.end() || it->second < cost.second)) return false;
+    if (!trial.IsCreative())
     {
-      return false;
+      bool paid = false;
+      for (auto kind : {InventoryEntryKind::Item, InventoryEntryKind::Block})
+        if (trial.Count(kind, cost.first) >= cost.second) { paid = static_cast<bool>(trial.Consume(kind, cost.first, cost.second)); break; }
+      if (!paid) return false;
     }
   }
-  for (const auto &in : recipe.Inputs)
-  {
-    if (!Consume(inv, in.Id, in.Count))
-    {
-      return false;
-    }
-  }
-  inv.AddItem(recipe.Output.Id, recipe.Output.Count);
+  InventoryEntryRef output;
+  output.kind = trial.KindForId(recipe.Output.Id); output.Id = recipe.Output.Id;
+  output.count = recipe.Output.Count; output.empty = false;
+  if (!trial.Insert(output)) return false;
+  inv = std::move(trial);
   return true;
 }
-
 } // namespace cutum

@@ -115,8 +115,8 @@ int main()
     Expect(inv.GetEquippedArmor(1).Id == "leather_chest", "migrated chest");
     Expect(inv.GetEquippedArmor(2).Id == "leather_legs", "migrated legs");
     Expect(inv.GetEquippedArmor(3).Id == "leather_feet", "migrated feet");
-    Expect(inv.GetStorage().at("legacy_arms") == 1, "arms parked");
-    Expect(inv.GetStorage().at("legacy_hands") == 1, "hands parked");
+    Expect(inv.GetRecovery().size() == 2 && inv.GetRecovery()[0].Id == "legacy_arms", "arms recovered");
+    Expect(inv.GetRecovery().size() == 2 && inv.GetRecovery()[1].Id == "legacy_hands", "hands recovered");
   }
 
   if (Failures != 0)

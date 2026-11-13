@@ -27,6 +27,10 @@ function(cubatarium_add_test)
         message(FATAL_ERROR "cubatarium_add_test requires NAME")
     endif()
     add_executable(${CAT_NAME} ${CAT_SOURCES})
+    if("src/Creatures/Core/CreatureInventory.cpp" IN_LIST CAT_SOURCES)
+        target_sources(${CAT_NAME} PRIVATE
+            src/Audio/AudioApi.cpp src/Audio/AudioEventQueue.cpp)
+    endif()
     target_include_directories(${CAT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src)
     if(CAT_DEFINITIONS)
         target_compile_definitions(${CAT_NAME} PRIVATE ${CAT_DEFINITIONS})
@@ -1203,6 +1207,20 @@ cubatarium_add_test(NAME armor_equipment_test
         src/Test/ArmorEquipmentTest.cpp
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
+cubatarium_add_test(NAME inventory_transactions_test
+    SOURCES
+        src/Creatures/Core/CreatureInventory.cpp
+        src/Items/ItemDefinitionStorage.cpp
+        src/Items/ItemVisualPresetLibrary.cpp
+        src/Items/ToolCapabilities.cpp
+        src/Game/Crafting/RecipeRegistry.cpp
+        src/Test/InventoryTransactionsTest.cpp
+    DEFINITIONS CUBATARIUM_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+add_test(NAME inventory_transactions_test COMMAND $<TARGET_FILE:inventory_transactions_test>)
+set_tests_properties(inventory_transactions_test PROPERTIES LABELS "unit;items")
+target_compile_definitions(armor_equipment_test PRIVATE CUBATARIUM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+
 cubatarium_add_test(NAME creature_skinned_draw_test
     SOURCES
         src/Creatures/Visual/CreatureBonePaletteGpu.cpp
@@ -1566,6 +1584,8 @@ cubatarium_add_test(NAME resource_economy_test
         src/Game/Economy/ResourceEconomy.cpp
         src/Test/ResourceEconomyTest.cpp
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+target_compile_definitions(resource_economy_test PRIVATE CUBATARIUM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 
 cubatarium_add_test(NAME item_survival_hooks_test
     SOURCES
@@ -3446,3 +3466,12 @@ cubatarium_add_test(NAME human_motion_camera_test
 add_test(NAME human_motion_camera_test COMMAND $<TARGET_FILE:human_motion_camera_test>
     "${CMAKE_SOURCE_DIR}/models/creatures/human/appearance/male_short.geo.json")
 set_tests_properties(human_motion_camera_test PROPERTIES LABELS "unit;player;camera")
+
+# Slot/economy regressions are required in Release CI, not merely built.
+foreach(_item_test inventory_transactions_test armor_equipment_test resource_economy_test
+        recipe_registry_test inventory_mode_test item_survival_hooks_test)
+    if(NOT TEST ${_item_test})
+        add_test(NAME ${_item_test} COMMAND $<TARGET_FILE:${_item_test}>)
+    endif()
+    set_tests_properties(${_item_test} PROPERTIES LABELS "unit;items")
+endforeach()

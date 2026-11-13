@@ -121,7 +121,6 @@ public:
 private:
   std::vector<InventoryGroupView> GetGroups(ContentKind tab,
                                             InventoryMode mode) const;
-  void EnsureStorageForHotbarEntry(const InventoryEntryRef &entry);
 
   UApplication *Application;
   std::shared_ptr<UWorld> World;

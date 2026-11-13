@@ -1,0 +1,220 @@
+{
+  "schema": "throw-research-prototype.v1",
+  "status": "offline_only_native_pending",
+  "fixed_dt": 0.016666666666666666,
+  "gravity": 20.0,
+  "tuning_status": "candidate_not_native_accepted",
+  "profiles": [
+    {
+      "id": "small_item",
+      "mass": 0.2,
+      "size": [
+        0.2,
+        0.2,
+        0.2
+      ],
+      "hands": 1,
+      "speed": 21.2572,
+      "range_flat_45": 22.5931,
+      "candidate_wall_damage": 1.3286
+    },
+    {
+      "id": "compact_item",
+      "mass": 2.0,
+      "size": [
+        0.4,
+        0.3,
+        0.2
+      ],
+      "hands": 1,
+      "speed": 17.272,
+      "range_flat_45": 14.9156,
+      "candidate_wall_damage": 8.6797
+    },
+    {
+      "id": "bulky_light",
+      "mass": 2.0,
+      "size": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "hands": 2,
+      "speed": 14.3703,
+      "range_flat_45": 10.3252,
+      "candidate_wall_damage": 5.9252
+    },
+    {
+      "id": "wood_block",
+      "mass": 4.0,
+      "size": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "hands": 2,
+      "speed": 12.4451,
+      "range_flat_45": 7.7436,
+      "candidate_wall_damage": 8.7528
+    },
+    {
+      "id": "stone_block",
+      "mass": 12.0,
+      "size": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "hands": 2,
+      "speed": 8.8,
+      "range_flat_45": 3.8714,
+      "candidate_wall_damage": 12.3192
+    },
+    {
+      "id": "small_creature",
+      "mass": 2.0,
+      "size": [
+        0.45,
+        0.55,
+        0.5
+      ],
+      "hands": 1,
+      "speed": 16.7,
+      "range_flat_45": 13.9441,
+      "candidate_wall_damage": 8.0967
+    },
+    {
+      "id": "medium_creature",
+      "mass": 11.0,
+      "size": [
+        0.8,
+        0.8,
+        1.2
+      ],
+      "hands": 2,
+      "speed": 8.3535,
+      "range_flat_45": 3.4884,
+      "candidate_wall_damage": 10.0288
+    },
+    {
+      "id": "too_heavy",
+      "mass": 40.0,
+      "size": [
+        0.8,
+        0.8,
+        1.2
+      ],
+      "hands": 0,
+      "speed": 0.0,
+      "range_flat_45": 0,
+      "candidate_wall_damage": 0.0
+    },
+    {
+      "id": "too_large",
+      "mass": 2.0,
+      "size": [
+        3.0,
+        1.0,
+        1.0
+      ],
+      "hands": 0,
+      "speed": 0.0,
+      "range_flat_45": 0,
+      "candidate_wall_damage": 0.0
+    }
+  ],
+  "collision_cases": [
+    {
+      "render_fps": 30,
+      "speed": 10.0,
+      "hit": false,
+      "expected": false
+    },
+    {
+      "render_fps": 30,
+      "speed": 50.0,
+      "hit": true,
+      "expected": true
+    },
+    {
+      "render_fps": 30,
+      "speed": 100.0,
+      "hit": true,
+      "expected": true
+    },
+    {
+      "render_fps": 30,
+      "speed": 400.0,
+      "hit": true,
+      "expected": true
+    },
+    {
+      "render_fps": 60,
+      "speed": 10.0,
+      "hit": false,
+      "expected": false
+    },
+    {
+      "render_fps": 60,
+      "speed": 50.0,
+      "hit": true,
+      "expected": true
+    },
+    {
+      "render_fps": 60,
+      "speed": 100.0,
+      "hit": true,
+      "expected": true
+    },
+    {
+      "render_fps": 60,
+      "speed": 400.0,
+      "hit": true,
+      "expected": true
+    },
+    {
+      "render_fps": 144,
+      "speed": 10.0,
+      "hit": false,
+      "expected": false
+    },
+    {
+      "render_fps": 144,
+      "speed": 50.0,
+      "hit": true,
+      "expected": true
+    },
+    {
+      "render_fps": 144,
+      "speed": 100.0,
+      "hit": true,
+      "expected": true
+    },
+    {
+      "render_fps": 144,
+      "speed": 400.0,
+      "hit": true,
+      "expected": true
+    }
+  ],
+  "checks": {
+    "larger_same_mass_reduces_range": true,
+    "heavier_same_size_reduces_range": true,
+    "small_creature_one_hand": true,
+    "medium_creature_two_hands": true,
+    "heavy_rejected": true,
+    "large_rejected": true,
+    "rest_has_no_damage": true,
+    "gentle_contact_has_no_damage": true,
+    "hard_impact_damages_thrown_creature": true,
+    "thin_wall_sweeps": true,
+    "moving_target_relative_sweep": true,
+    "off_axis_miss": true
+  },
+  "passed": true,
+  "limitations": [
+    "No runtime scene, animation or locomotion validation",
+    "AABB linear sweep; rotating shapes require conservative proxy",
+    "Render-FPS rows verify shared fixed-step arithmetic only; no frame scheduler is exercised"
+  ]
+}

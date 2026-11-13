@@ -1,940 +1,964 @@
 #include "Creatures/Core/CreatureInventory.h"
 #include "Audio/AudioApi.h"
 #include "Items/ItemDefinitionStorage.h"
-#include <iostream>
-#include <nlohmann/json.hpp>
+#include "Items/ToolCapabilities.h"
+#include <climits>
+#include <cmath>
+#include <limits>
+#include <set>
+#include <tuple>
 
 namespace cutum
 {
-
 namespace
 {
-constexpr size_t kHotbarSlots = 10;
-
-/// Gear rustle on equip/unequip — a UI-bus sound, no spatialization.
-void PostEquipAudio(AudioEventKind kind)
+const char *ArmorId(size_t i)
 {
-  UAudioEvent audio;
-  audio.Kind = kind;
-  UAudioApi::Post(audio);
+  static const char *ids[]{"head", "chest", "legs", "feet"};
+  return i < 4 ? ids[i] : "";
 }
-
-constexpr size_t kArmorSlots = UCreatureInventory::kArmorSlotCount;
-
-const char *ArmorSlotId(size_t slot)
+const char *KindName(InventoryEntryKind k)
 {
-  static constexpr const char *ids[kArmorSlots] = {"head", "chest", "legs",
-                                                    "feet"};
-  if (slot >= kArmorSlots)
+  switch (k)
   {
-    return "";
-  }
-  return ids[slot];
-}
-
-InventoryEntryRef ParseArmorEntry(const nlohmann::json &ej)
-{
-  InventoryEntryRef entry{};
-  const bool empty =
-      ej.value("empty", ej.value("id", std::string()).empty());
-  entry.empty = empty;
-  if (!empty)
-  {
-    entry.kind = InventoryEntryKind::Item;
-    entry.Id = ej.value("id", "");
-    entry.count = ej.value("count", 1);
-    entry.wear = ej.value("wear", 0.f);
-    entry.broken = ej.value("broken", false);
-    entry.empty = entry.Id.empty();
-  }
-  return entry;
-}
-
-void RemapLegacyHotbarEntryId(InventoryEntryRef &entry)
-{
-  if (entry.kind != InventoryEntryKind::UCreature)
-  {
-    return;
-  }
-  if (entry.Id == "test_mob" || entry.Id == "scout")
-  {
-    entry.Id = "sheep";
-  }
-  else if (entry.Id == "brute")
-  {
-    entry.Id = "sand_monster";
-  }
-  else if (entry.Id == "drifter")
-  {
-    entry.Id = "wolf";
+  case InventoryEntryKind::Item:
+    return "item";
+  case InventoryEntryKind::Object:
+    return "object";
+  case InventoryEntryKind::UCreature:
+    return "creature";
+  case InventoryEntryKind::Skin:
+    return "skin";
+  default:
+    return "block";
   }
 }
-}
-
-void UCreatureInventory::AddItem(const std::string &Id, int count)
+InventoryEntryKind ReadKind(const std::string &s)
 {
-  Storage[Id] += count;
+  if (s == "item")
+    return InventoryEntryKind::Item;
+  if (s == "object")
+    return InventoryEntryKind::Object;
+  if (s == "creature")
+    return InventoryEntryKind::UCreature;
+  if (s == "skin")
+    return InventoryEntryKind::Skin;
+  return InventoryEntryKind::Block;
 }
-
-void UCreatureInventory::AddToInventory(const std::string &Id)
+nlohmann::json WriteEntry(const InventoryEntryRef &e)
 {
-  if (Storage[Id] < 0)
+  if (e.empty || e.Id.empty() || e.count == 0)
+    return {{"empty", true}};
+  return {{"empty", false},
+          {"kind", KindName(e.kind)},
+          {"id", e.Id},
+          {"count", e.count},
+          {"wear", e.wear},
+          {"broken", e.broken},
+          {"instance_id", e.instanceId},
+          {"contents_id", e.contentsId},
+          {"contents_units", e.contentsUnits},
+          {"pinned", e.pinned}};
+}
+InventoryEntryRef ReadEntry(const nlohmann::json &j)
+{
+  InventoryEntryRef e;
+  if (!j.is_object())
+    return e;
+  e.Id = j.value("id", std::string{});
+  e.empty = j.value("empty", e.Id.empty());
+  if (e.empty || e.Id.empty())
+    return {};
+  e.kind = ReadKind(j.value("kind", std::string{"item"}));
+  e.count = j.value("count", 1);
+  e.wear = j.value("wear", 0.f);
+  e.wear = std::isfinite(e.wear) ? std::clamp(e.wear, 0.f, 1.f) : 1.f;
+  e.broken = j.value("broken", false);
+  e.instanceId = j.value("instance_id", std::uint64_t{0});
+  e.contentsId = j.value("contents_id", std::string{});
+  e.contentsUnits = std::max(0, j.value("contents_units", 0));
+  e.pinned = j.value("pinned", false);
+  return e;
+}
+void GearSound(AudioEventKind kind)
+{
+  UAudioEvent e;
+  e.Kind = kind;
+  UAudioApi::Post(e);
+}
+} // namespace
+
+InventoryEntryRef UCreatureInventory::Prepare(InventoryEntryRef e)
+{
+  if (e.empty || e.Id.empty() || e.count == 0)
+    return {};
+  e.empty = false;
+  if (e.instanceId == 0)
+    e.instanceId = NextInstanceId++;
+  else
+    NextInstanceId = std::max(NextInstanceId, e.instanceId + 1);
+  return e;
+}
+int UCreatureInventory::StackLimit(const InventoryEntryRef &e) const
+{
+  if (e.kind == InventoryEntryKind::Item)
   {
-    return;
+    const auto *def = Items ? Items->Get(e.Id) : nullptr;
+    return def ? std::clamp(def->StackMax, 1, 999) : 1;
   }
-  Storage[Id]++;
+  return e.kind == InventoryEntryKind::Block ? 64 : 1;
 }
-
-void UCreatureInventory::InitCreativeDefaults()
+InventoryEntryKind UCreatureInventory::KindForId(const std::string &id) const
 {
-  static const char *kBlocks[] = {
-      "wood",      "grass",      "stone", "tree_birch", "pumpkin",
-      "sandstone", "stonebrick", "tnt",   "brick",      "bedrock",
-      "water",     "lava",       "fire"};
-  for (const char *Id : kBlocks)
-  {
-    Storage[Id] = -1;
-  }
+  return Items && Items->Get(id) ? InventoryEntryKind::Item
+                                 : InventoryEntryKind::Block;
 }
-
-void UCreatureInventory::MigrateCreativeStorageToSurvival()
+bool UCreatureInventory::CanMerge(const InventoryEntryRef &a,
+                                  const InventoryEntryRef &b)
 {
-  for (auto it = Storage.begin(); it != Storage.end();)
-  {
-    if (it->second < 0)
+  return !a.empty && !b.empty && a.kind == b.kind && a.Id == b.Id &&
+         a.wear == b.wear && a.broken == b.broken &&
+         a.contentsId == b.contentsId && a.contentsUnits == b.contentsUnits &&
+         !a.pinned && !b.pinned;
+}
+const InventoryEntryRef &UCreatureInventory::GetSlot(size_t i) const
+{
+  static const InventoryEntryRef empty;
+  if (i >= kSlotCount)
+    return empty;
+  const auto &s = GetHotbars()[i / 10].slots[i % 10];
+  return s.empty || s.entry.empty || s.entry.count == 0 ? empty : s.entry;
+}
+InventoryEntryRef *UCreatureInventory::GetSlotMutable(size_t i)
+{
+  if (i >= kSlotCount)
+    return nullptr;
+  return &GetHotbarsMutable()[i / 10].slots[i % 10].entry;
+}
+const std::map<std::string, int> &UCreatureInventory::GetStorage() const
+{
+  std::map<std::string, int> next;
+  for (const auto &row : GetHotbars())
+    for (const auto &s : row.slots)
     {
-      it = Storage.erase(it);
+      if (s.empty || s.entry.empty || s.entry.count == 0)
+        continue;
+      auto &n = next[s.entry.Id];
+      if (n < 0 || s.entry.count < 0)
+        n = -1;
+      else
+        n = static_cast<int>(std::min<long long>(
+            INT_MAX, static_cast<long long>(n) + s.entry.count));
     }
-    else
-    {
-      ++it;
-    }
-  }
-  for (auto &bar : Hotbars)
+  if (next != StorageView)
+    StorageView = std::move(next);
+  return StorageView;
+}
+int UCreatureInventory::Count(InventoryEntryKind kind,
+                              const std::string &id) const
+{
+  int n = 0;
+  for (size_t i = 0; i < kSlotCount; ++i)
   {
-    for (auto &slot : bar.slots)
-    {
-      if (slot.empty)
+    const auto &e = GetSlot(i);
+    if (e.empty || e.kind != kind || e.Id != id)
+      continue;
+    if (e.count < 0)
+      return -1;
+    n = static_cast<int>(
+        std::min<long long>(INT_MAX, static_cast<long long>(n) + e.count));
+  }
+  return n;
+}
+InventoryOperationResult UCreatureInventory::Insert(InventoryEntryRef e)
+{
+  if (e.empty || e.Id.empty() || e.count <= 0)
+    return {0, std::max(0, e.count), "invalid_stack"};
+  const int original = e.count;
+  const int limit = StackLimit(e);
+  auto &rows = GetHotbarsMutable();
+  if (limit > 1)
+    for (auto &row : rows)
+      for (auto &s : row.slots)
       {
+        if (s.empty || !CanMerge(s.entry, e) || s.entry.count < 0)
+          continue;
+        const int n = std::min(e.count, std::max(0, limit - s.entry.count));
+        s.entry.count += n;
+        e.count -= n;
+      }
+  bool first = true;
+  for (auto &row : rows)
+    for (auto &s : row.slots)
+    {
+      if (e.count == 0)
+        break;
+      if (!s.empty && !s.entry.empty && s.entry.count != 0)
+        continue;
+      auto part = e;
+      part.count = std::min(limit, e.count);
+      if (!first)
+        part.instanceId = 0;
+      part = Prepare(part);
+      s = {false, part};
+      e.count -= part.count;
+      first = false;
+    }
+  return {original - e.count, e.count, e.count ? "inventory_full" : ""};
+}
+InventoryOperationResult UCreatureInventory::Take(size_t i, int count,
+                                                  InventoryEntryRef &out)
+{
+  out = {};
+  if (i >= kSlotCount || count <= 0)
+    return {0, std::max(0, count), "invalid_slot"};
+  auto &s = GetHotbarsMutable()[i / 10].slots[i % 10];
+  if (s.empty || s.entry.empty || s.entry.count == 0)
+    return {0, count, "empty_slot"};
+  if (s.entry.count >= 0 && s.entry.count < count)
+    return {0, count, "insufficient_items"};
+  out = s.entry;
+  out.count = count;
+  if (Creative || s.entry.count < 0)
+  {
+    out.instanceId = 0;
+    out = Prepare(out);
+    return {count, 0, {}};
+  }
+  if (s.entry.count == count)
+    s = {};
+  else
+  {
+    s.entry.count -= count;
+    out.instanceId = 0;
+    out = Prepare(out);
+  }
+  return {count, 0, {}};
+}
+InventoryOperationResult UCreatureInventory::Move(size_t from, size_t to,
+                                                  int count)
+{
+  if (from >= kSlotCount || to >= kSlotCount)
+    return {0, 0, "invalid_slot"};
+  const auto source = GetSlot(from);
+  if (source.empty)
+    return {0, 0, "empty_slot"};
+  if (from == to)
+    return {};
+  const int wanted = count < 0 ? source.count : count;
+  if (wanted <= 0 && !Creative)
+    return {0, 0, "invalid_count"};
+  if (!Creative && wanted > source.count)
+    return {0, wanted, "insufficient_items"};
+  auto &rows = GetHotbarsMutable();
+  auto &a = rows[from / 10].slots[from % 10];
+  auto &b = rows[to / 10].slots[to % 10];
+  if (b.empty || b.entry.empty)
+  {
+    if (count < 0 || wanted == source.count || Creative)
+    {
+      b = a;
+      a = {};
+      return {source.count, 0, {}};
+    }
+    InventoryEntryRef part;
+    auto r = Take(from, wanted, part);
+    if (!r)
+      return r;
+    b = {false, part};
+    return r;
+  }
+  if (StackLimit(source) > 1 && CanMerge(source, b.entry) && source.count > 0 &&
+      b.entry.count > 0)
+  {
+    const int n = std::min(wanted, StackLimit(source) - b.entry.count);
+    if (n <= 0)
+      return {0, wanted, "stack_full"};
+    b.entry.count += n;
+    a.entry.count -= n;
+    if (a.entry.count == 0)
+      a = {};
+    return {n, wanted - n, wanted > n ? "stack_full" : ""};
+  }
+  if (count >= 0 && count != source.count)
+    return {0, wanted, "incompatible_stack"};
+  std::swap(a, b);
+  return {source.count, 0, {}};
+}
+InventoryOperationResult UCreatureInventory::Consume(InventoryEntryKind kind,
+                                                     const std::string &id,
+                                                     int count)
+{
+  if (count <= 0)
+    return {0, 0, "invalid_count"};
+  if (Creative)
+    return {count, 0, {}};
+  const int available = Count(kind, id);
+  if (available < count)
+    return {0, count, "insufficient_items"};
+  int left = count;
+  const size_t active = ActiveBarIndex * 10 + ActiveSlotIndex;
+  const auto consume = [&](size_t i)
+  {
+    auto &s = Hotbars[i / 10].slots[i % 10];
+    if (left <= 0 || s.empty || s.entry.empty || s.entry.kind != kind ||
+        s.entry.Id != id)
+      return;
+    const int n = std::min(left, s.entry.count);
+    s.entry.count -= n;
+    left -= n;
+    if (s.entry.count == 0)
+      s = {};
+  };
+  consume(active);
+  for (size_t i = 0; i < kSlotCount; ++i)
+    if (i != active)
+      consume(i);
+  return {count, 0, {}};
+}
+bool UCreatureInventory::AssignOwned(size_t bar, size_t slot,
+                                     const InventoryEntryRef &entry)
+{
+  if (bar >= 4 || slot >= 10 || entry.empty)
+    return false;
+  for (size_t i = 0; i < kSlotCount; ++i)
+  {
+    const auto &e = GetSlot(i);
+    if (e.empty || e.kind != entry.kind || e.Id != entry.Id)
+      continue;
+    if (entry.instanceId != 0 && e.instanceId != entry.instanceId)
+      continue;
+    return static_cast<bool>(Move(i, bar * 10 + slot));
+  }
+  return false;
+}
+void UCreatureInventory::AddItem(const std::string &id, int count)
+{
+  InventoryEntryRef e;
+  e.empty = false;
+  e.Id = id;
+  e.count = count;
+  e.kind = Items && Items->Get(id) ? InventoryEntryKind::Item
+                                   : InventoryEntryKind::Block;
+  const auto r = Insert(e);
+  if (r.remainder > 0)
+  {
+    e.count = r.remainder;
+    Recovery.push_back(Prepare(e));
+  }
+}
+void UCreatureInventory::SetItemDefinitions(const UItemDefinitionStorage *items)
+{
+  if (Items == items)
+    return;
+  Items = items;
+  if (!Items)
+    return;
+  std::vector<InventoryEntryRef> excess;
+  for (auto &row : Hotbars)
+    for (auto &s : row.slots)
+    {
+      if (s.empty || s.entry.empty)
+        continue;
+      if (s.entry.kind == InventoryEntryKind::Block && Items->Get(s.entry.Id))
+        s.entry.kind = InventoryEntryKind::Item;
+      if (s.entry.kind == InventoryEntryKind::Item && !Items->Get(s.entry.Id))
+      {
+        Recovery.push_back(s.entry);
+        s = {};
         continue;
       }
-      if (slot.entry.count < 0)
+      int limit = StackLimit(s.entry);
+      if (s.entry.count > limit)
       {
-        if (slot.entry.kind == InventoryEntryKind::Block ||
-            slot.entry.kind == InventoryEntryKind::Object)
-        {
-          slot.entry.count = 1;
-        }
-        else
-        {
-          slot.empty = true;
-          slot.entry = InventoryEntryRef{};
-        }
+        auto e = s.entry;
+        e.count -= limit;
+        e.instanceId = 0;
+        s.entry.count = limit;
+        excess.push_back(e);
       }
     }
+  for (auto e : excess)
+  {
+    const auto r = Insert(e);
+    if (r.remainder)
+    {
+      e.count = r.remainder;
+      Recovery.push_back(Prepare(e));
+    }
+  }
+  RefreshEquipment(*Items);
+}
+void UCreatureInventory::SetCreative(bool creative)
+{
+  Creative = creative;
+  if (Items)
+    RefreshEquipment(*Items);
+}
+void UCreatureInventory::InitCreativeDefaults()
+{
+  SetCreative(true);
+  if (CreativeHotbars[0].slots[1].empty)
+  {
+    InventoryEntryRef e;
+    e.Id = "wood";
+    e.kind = InventoryEntryKind::Block;
+    e.empty = false;
+    e.count = -1;
+    AssignToHotbar(0, 1, e);
+    SetActiveSlot(0, 1);
   }
 }
-
 void UCreatureInventory::EnsureDefaultHotbar()
 {
-  EnsureHotbarCount(1);
-
-  const auto woodIt = Storage.find("wood");
-  const bool creativeUnlimitedWood =
-      woodIt != Storage.end() && woodIt->second < 0;
-
-  // Creative-only stub: put unlimited wood in slot 1 when storage already has
-  // unlimited wood (InitCreativeDefaults). Survival starts with empty hands.
-  if (creativeUnlimitedWood)
-  {
-    bool hasBlock = false;
-    for (const auto &slot : GetHotbar(0).slots)
-    {
-      if (!slot.empty && slot.entry.kind == InventoryEntryKind::Block &&
-          !slot.entry.Id.empty())
-      {
-        hasBlock = true;
-        break;
-      }
-    }
-    if (!hasBlock && GetHotbar(0).slots[1].empty)
-    {
-      InventoryEntryRef wood;
-      wood.kind = InventoryEntryKind::Block;
-      wood.Id = "wood";
-      wood.empty = false;
-      wood.count = -1;
-      AssignToHotbar(0, 1, wood);
-    }
-  }
-
-  // Owned / survival: drop hotbar ghosts that are not backed by storage (any
-  // kind — Block, Object and Item alike), and convert leftover creative
-  // unlimited counts to owned stack sizes.
-  for (size_t slot = 0; slot < Hotbars[0].slots.size(); ++slot)
-  {
-    auto &s = Hotbars[0].slots[slot];
-    if (s.empty || s.entry.Id.empty())
-    {
-      continue;
-    }
-    const auto it = Storage.find(s.entry.Id);
-    if (it == Storage.end() || it->second == 0)
-    {
-      ClearHotbarSlot(0, slot);
-      continue;
-    }
-    if (s.entry.count < 0 && it->second >= 0)
-    {
-      s.entry.count = it->second;
-    }
-  }
-
-  bool hotbarEmpty = true;
-  size_t firstFilled = 0;
-  bool foundFilled = false;
-  for (size_t slot = 0; slot < GetHotbar(0).slots.size(); ++slot)
-  {
-    const auto &s = GetHotbar(0).slots[slot];
-    if (!s.empty && !s.entry.Id.empty())
-    {
-      hotbarEmpty = false;
-      if (!foundFilled)
-      {
-        firstFilled = slot;
-        foundFilled = true;
-      }
-    }
-  }
-
-  if (hotbarEmpty)
-  {
-    SetActiveSlot(0, 0);
-  }
-  else if (foundFilled)
-  {
-    const size_t active = GetActiveSlotIndex();
-    if (active >= GetHotbar(0).slots.size() ||
-        GetHotbar(0).slots[active].empty)
-    {
-      SetActiveSlot(0, firstFilled);
-    }
-  }
+  if (Creative && IsPrimaryHotbarEmpty())
+    InitCreativeDefaults();
 }
-
 bool UCreatureInventory::IsPrimaryHotbarEmpty() const
 {
-  if (Hotbars.empty())
-  {
-    return true;
-  }
-  for (const auto &slot : GetHotbar(0).slots)
-  {
-    if (!slot.empty && !slot.entry.Id.empty())
-    {
+  for (const auto &s : GetHotbar(0).slots)
+    if (!s.empty && !s.entry.empty)
       return false;
-    }
-  }
   return true;
 }
-
-void UCreatureInventory::SetObjectHotbar(
-    const std::vector<std::string> &object_names)
+void UCreatureInventory::SetObjectHotbar(const std::vector<std::string> &names)
 {
-  EnsureHotbarCount(2);
-  size_t idx = 0;
-  for (const std::string &Name : object_names)
+  for (size_t i = 0; i < std::min(size_t{10}, names.size()); ++i)
   {
-    if (idx >= kHotbarSlots)
-    {
-      break;
-    }
-    InventoryEntryRef entry;
-    entry.kind = InventoryEntryKind::Object;
-    entry.Id = Name;
-    entry.empty = false;
-    entry.count = 0;
-    AssignToHotbar(1, idx, entry);
-    ++idx;
+    InventoryEntryRef e;
+    e.Id = names[i];
+    e.kind = InventoryEntryKind::Object;
+    e.empty = false;
+    e.count = -1;
+    if (Creative)
+      AssignToHotbar(1, i, e);
   }
 }
-
 const HotbarBar &UCreatureInventory::GetHotbar(size_t bar) const
 {
-  static const HotbarBar kEmpty{};
-  if (bar >= Hotbars.size())
-  {
-    return kEmpty;
-  }
-  return Hotbars[bar];
+  static const HotbarBar empty;
+  return bar < 4 ? GetHotbars()[bar] : empty;
 }
-
+bool UCreatureInventory::AssignToHotbar(size_t bar, size_t slot,
+                                        const InventoryEntryRef &entry)
+{
+  if (bar >= 4 || slot >= 10)
+    return false;
+  auto e = Prepare(entry);
+  if (!e.empty && e.count > StackLimit(e) && !Creative)
+    return false;
+  if (Creative && !e.empty)
+    e.count = -1;
+  GetHotbarsMutable()[bar].slots[slot] = {e.empty, e};
+  return true;
+}
 void UCreatureInventory::ClearHotbarSlot(size_t bar, size_t slot)
 {
-  if (bar >= Hotbars.size() || slot >= kHotbarSlots)
-  {
-    return;
-  }
-  Hotbars[bar].slots[slot] = HotbarSlot{};
+  if (bar < 4 && slot < 10)
+    GetHotbarsMutable()[bar].slots[slot] = {};
 }
-
 bool UCreatureInventory::SetActiveSlot(size_t bar, size_t slot)
 {
-  if (bar >= Hotbars.size() || slot >= kHotbarSlots)
-  {
+  if (bar >= 4 || slot >= 10)
     return false;
-  }
   ActiveBarIndex = bar;
   ActiveSlotIndex = slot;
   return true;
 }
-
 size_t UCreatureInventory::GetActiveSlotIndex(size_t bar) const
 {
-  if (bar == ActiveBarIndex)
-  {
-    return ActiveSlotIndex;
-  }
-  return kHotbarSlots;
+  return bar == ActiveBarIndex ? ActiveSlotIndex : 10;
 }
-
-const std::string &UCreatureInventory::GetActiveBlockTypeName() const
-{
-  static const std::string kEmpty;
-  const InventoryEntryRef *Active = GetActiveEntryRef();
-  if (Active && !Active->empty && Active->kind == InventoryEntryKind::Block)
-  {
-    return Active->Id;
-  }
-  return kEmpty;
-}
-
-const std::string &UCreatureInventory::GetActiveObjectName() const
-{
-  static const std::string kEmpty;
-  const InventoryEntryRef *Active = GetActiveEntryRef();
-  if (Active && !Active->empty && Active->kind == InventoryEntryKind::Object)
-  {
-    return Active->Id;
-  }
-  return kEmpty;
-}
-
 const InventoryEntryRef *UCreatureInventory::GetActiveEntryRef() const
 {
-  if (Hotbars.empty() || ActiveBarIndex >= Hotbars.size())
-  {
-    return nullptr;
-  }
-  const auto &bar = Hotbars[ActiveBarIndex];
-  if (ActiveSlotIndex >= bar.slots.size())
-  {
-    return nullptr;
-  }
-  const auto &slot = bar.slots[ActiveSlotIndex];
-  if (slot.empty)
-  {
-    return nullptr;
-  }
-  return &slot.entry;
+  const auto &e = GetSlot(ActiveBarIndex * 10 + ActiveSlotIndex);
+  return e.empty ? nullptr : &e;
 }
-
 InventoryEntryRef *UCreatureInventory::GetActiveEntryRef()
 {
   return const_cast<InventoryEntryRef *>(
       static_cast<const UCreatureInventory *>(this)->GetActiveEntryRef());
 }
-
-const InventoryEntryRef &UCreatureInventory::GetEquippedArmor(size_t slot) const
+const std::string &UCreatureInventory::GetActiveBlockTypeName() const
 {
-  static InventoryEntryRef kEmpty;
-  if (slot >= kArmorSlots)
-  {
-    return kEmpty;
-  }
-  return EquippedArmor[slot];
+  static const std::string empty;
+  const auto *e = GetActiveEntryRef();
+  return e && e->kind == InventoryEntryKind::Block ? e->Id : empty;
 }
-
-bool UCreatureInventory::EquipArmor(size_t slot, const InventoryEntryRef &entry,
-                                     const UItemDefinitionStorage &items,
-                                     bool consumeFromStorage)
+const std::string &UCreatureInventory::GetActiveObjectName() const
 {
-  if (slot >= kArmorSlots)
-  {
-    return false;
-  }
-  if (entry.empty || entry.kind != InventoryEntryKind::Item || entry.Id.empty())
-  {
-    return false;
-  }
-
-  const ItemDefinition *def = items.Get(entry.Id);
-  if (!def || def->Armor.ArmorGroups.empty() || def->Armor.Slots.empty())
-  {
-    return false;
-  }
-  PostEquipAudio(AudioEventKind::Equip);
-
-  const char *slotId = ArmorSlotId(slot);
-  bool slotAllowed = false;
-  for (const std::string &s : def->Armor.Slots)
-  {
-    if (s == slotId)
-    {
-      slotAllowed = true;
-      break;
-    }
-  }
-  if (!slotAllowed)
-  {
-    return false;
-  }
-
-  InventoryEntryRef worn = entry;
-  worn.empty = false;
-  // The worn instance is a single copy; a bag/hotbar mirror may carry the
-  // whole stack count. Unlimited (-1) copies stay unlimited.
-  if (worn.count > 1)
-  {
-    worn.count = 1;
-  }
-
-  if (consumeFromStorage && worn.count > 0)
-  {
-    // The worn copy leaves the bag: decrement storage so it is not counted
-    // twice, then re-sync the hotbar mirrors.
-    const auto it = Storage.find(worn.Id);
-    if (it != Storage.end() && it->second > 0)
-    {
-      it->second -= 1;
-      if (it->second <= 0)
-      {
-        Storage.erase(it);
-      }
-      SyncItemMirrors(worn.kind, worn.Id);
-    }
-  }
-
-  EquippedArmor[slot] = worn;
-
-  // Recompute pre-aggregated armor groups.
-  EquippedArmorGroups.Ratings.clear();
-  for (size_t i = 0; i < kArmorSlots; ++i)
-  {
-    const InventoryEntryRef &e = EquippedArmor[i];
-    if (e.empty || e.kind != InventoryEntryKind::Item || e.Id.empty())
-    {
-      continue;
-    }
-    if (e.broken)
-    {
-      continue;
-    }
-    const ItemDefinition *ed = items.Get(e.Id);
-    if (!ed || ed->Armor.ArmorGroups.empty())
-    {
-      continue;
-    }
-    const char *sid = ArmorSlotId(i);
-    if (!ed->Armor.Slots.empty())
-    {
-      bool allowed = false;
-      for (const std::string &s : ed->Armor.Slots)
-      {
-        if (s == sid)
-        {
-          allowed = true;
-          break;
-        }
-      }
-      if (!allowed)
-      {
-        continue;
-      }
-    }
-    for (const auto &pair : ed->Armor.ArmorGroups)
-    {
-      EquippedArmorGroups.Ratings[pair.first] += pair.second;
-    }
-  }
-  return true;
+  static const std::string empty;
+  const auto *e = GetActiveEntryRef();
+  return e && e->kind == InventoryEntryKind::Object ? e->Id : empty;
 }
-
-void UCreatureInventory::UnequipArmor(size_t slot,
-                                       const UItemDefinitionStorage &items)
+const InventoryEntryRef &UCreatureInventory::GetEquippedArmor(size_t i) const
 {
-  if (slot >= kArmorSlots)
-  {
-    return;
-  }
-  const InventoryEntryRef worn = EquippedArmor[slot];
-  if (!worn.empty && !worn.Id.empty())
-  {
-    PostEquipAudio(AudioEventKind::Unequip);
-  }
-  EquippedArmor[slot] = InventoryEntryRef{};
-  // Non-broken gear returns to the bag (storage); broken items are destroyed.
-  if (!worn.empty && !worn.broken && !worn.Id.empty())
-  {
-    // Legacy worn copies may carry a stale mirror count; one copy was worn.
-    const int returned = worn.count > 1 ? 1 : worn.count;
-    if (returned > 0)
-    {
-      AddItem(worn.Id, returned);
-      SyncItemMirrors(worn.kind, worn.Id);
-    }
-  }
-  EquippedArmorGroups.Ratings.clear();
-  for (size_t i = 0; i < kArmorSlots; ++i)
-  {
-    const InventoryEntryRef &e = EquippedArmor[i];
-    if (e.empty || e.kind != InventoryEntryKind::Item || e.Id.empty())
-    {
-      continue;
-    }
-    if (e.broken)
-    {
-      continue;
-    }
-    const ItemDefinition *ed = items.Get(e.Id);
-    if (!ed || ed->Armor.ArmorGroups.empty())
-    {
-      continue;
-    }
-    const char *sid = ArmorSlotId(i);
-    if (!ed->Armor.Slots.empty())
-    {
-      bool allowed = false;
-      for (const std::string &s : ed->Armor.Slots)
-      {
-        if (s == sid)
-        {
-          allowed = true;
-          break;
-        }
-      }
-      if (!allowed)
-      {
-        continue;
-      }
-    }
-    for (const auto &pair : ed->Armor.ArmorGroups)
-    {
-      EquippedArmorGroups.Ratings[pair.first] += pair.second;
-    }
-  }
+  static const InventoryEntryRef empty;
+  return i < 4 ? Armor()[i] : empty;
 }
-
 const InventoryEntryRef &UCreatureInventory::GetEquippedOffhand() const
 {
-  return EquippedOffhand;
+  return Offhand();
 }
-
-void UCreatureInventory::RecalcOffhandArmorGroups(
-    const UItemDefinitionStorage *items)
+void UCreatureInventory::WearArmor(size_t slot, float delta,
+                                   const UItemDefinitionStorage &items)
 {
-  OffhandArmorGroups.Ratings.clear();
-  if (!items || EquippedOffhand.empty || EquippedOffhand.broken ||
-      EquippedOffhand.kind != InventoryEntryKind::Item)
-  {
+  if (slot >= 4)
     return;
-  }
-  const ItemDefinition *def = items->Get(EquippedOffhand.Id);
-  if (!def || def->Armor.ArmorGroups.empty())
-  {
-    return;
-  }
-  for (const auto &pair : def->Armor.ArmorGroups)
-  {
-    OffhandArmorGroups.Ratings[pair.first] += pair.second;
-  }
+  auto &e = Armor()[slot];
+  const auto *def = !e.empty ? items.Get(e.Id) : nullptr;
+  if (def)
+    ApplyItemWear(e, *def, delta, true);
+  RefreshEquipment(items);
 }
-
-bool UCreatureInventory::EquipOffhand(const InventoryEntryRef &entry)
+void UCreatureInventory::WearOffhand(float delta,
+                                     const UItemDefinitionStorage &items)
+{
+  auto &e = Offhand();
+  const auto *def = !e.empty ? items.Get(e.Id) : nullptr;
+  if (def)
+    ApplyItemWear(e, *def, delta, true);
+  RefreshEquipment(items);
+}
+void UCreatureInventory::RefreshEquipment(const UItemDefinitionStorage &items)
+{
+  EquippedArmorGroups.Ratings.clear();
+  OffhandArmorGroups.Ratings.clear();
+  for (size_t i = 0; i < 4; ++i)
+  {
+    const auto &e = Armor()[i];
+    const auto *d = !e.empty && !e.broken ? items.Get(e.Id) : nullptr;
+    if (!d || std::find(d->Armor.Slots.begin(), d->Armor.Slots.end(),
+                        ArmorId(i)) == d->Armor.Slots.end())
+      continue;
+    for (const auto &p : d->Armor.ArmorGroups)
+      EquippedArmorGroups.Ratings[p.first] += p.second;
+  }
+  const auto &off = Offhand();
+  const auto *d = !off.empty && !off.broken ? items.Get(off.Id) : nullptr;
+  if (d)
+    for (const auto &p : d->Armor.ArmorGroups)
+      OffhandArmorGroups.Ratings[p.first] += p.second;
+}
+bool UCreatureInventory::Equip(InventoryEntryRef &target,
+                               const InventoryEntryRef &entry, bool consume)
 {
   if (entry.empty || entry.Id.empty())
-  {
     return false;
-  }
-  if (entry.kind != InventoryEntryKind::Item &&
-      entry.kind != InventoryEntryKind::Block)
+  const auto copy = entry;
+  if (target.instanceId != 0 && target.instanceId == copy.instanceId)
   {
-    return false;
+    target = copy;
+    return true;
   }
-  EquippedOffhand = entry;
-  EquippedOffhand.empty = false;
-  // The worn instance is a single copy; unlimited (-1) stays unlimited.
-  if (EquippedOffhand.count > 1)
+  auto trial = *this;
+  InventoryEntryRef worn;
+  if (consume && !Creative)
   {
-    EquippedOffhand.count = 1;
-  }
-  OffhandArmorGroups.Ratings.clear();
-  return true;
-}
-
-bool UCreatureInventory::EquipOffhand(const InventoryEntryRef &entry,
-                                      const UItemDefinitionStorage &items,
-                                      bool consumeFromStorage)
-{
-  if (!EquipOffhand(entry))
-  {
-    return false;
-  }
-  if (consumeFromStorage && entry.count > 0)
-  {
-    // The worn copy leaves the bag: decrement storage and re-sync mirrors.
-    const auto it = Storage.find(entry.Id);
-    if (it != Storage.end() && it->second > 0)
+    bool found = false;
+    for (size_t i = 0; i < kSlotCount; ++i)
     {
-      it->second -= 1;
-      if (it->second <= 0)
-      {
-        Storage.erase(it);
-      }
-      SyncItemMirrors(entry.kind, entry.Id);
+      const auto &e = trial.GetSlot(i);
+      if (e.empty || e.Id != copy.Id || e.kind != copy.kind ||
+          (copy.instanceId && e.instanceId != copy.instanceId))
+        continue;
+      if (!trial.Take(i, 1, worn))
+        return false;
+      found = true;
+      break;
     }
+    if (!found)
+      return false;
   }
-  RecalcOffhandArmorGroups(&items);
+  else
+  {
+    worn = trial.Prepare(copy);
+    worn.count = 1;
+  }
+  const auto previous = target;
+  if (!previous.empty && !trial.Insert(previous))
+    return false;
+  Hotbars = std::move(trial.Hotbars);
+  CreativeHotbars = std::move(trial.CreativeHotbars);
+  NextInstanceId = trial.NextInstanceId;
+  target = worn;
+  GearSound(AudioEventKind::Equip);
   return true;
 }
-
+bool UCreatureInventory::EquipArmor(size_t i, const InventoryEntryRef &e,
+                                    const UItemDefinitionStorage &items,
+                                    bool consume)
+{
+  if (i >= 4 || e.kind != InventoryEntryKind::Item)
+    return false;
+  const auto *def = items.Get(e.Id);
+  if (!def || std::find(def->Armor.Slots.begin(), def->Armor.Slots.end(),
+                        ArmorId(i)) == def->Armor.Slots.end())
+    return false;
+  SetItemDefinitions(&items);
+  if (!Equip(Armor()[i], e, consume))
+    return false;
+  RefreshEquipment(items);
+  return true;
+}
+bool UCreatureInventory::ReturnEquipment(InventoryEntryRef &e)
+{
+  if (e.empty)
+    return true;
+  if (!Creative)
+  {
+    auto trial = *this;
+    if (!trial.Insert(e))
+      return false;
+    Hotbars = std::move(trial.Hotbars);
+    NextInstanceId = trial.NextInstanceId;
+  }
+  e = {};
+  GearSound(AudioEventKind::Unequip);
+  return true;
+}
+void UCreatureInventory::UnequipArmor(size_t i,
+                                      const UItemDefinitionStorage &items)
+{
+  if (i < 4)
+    ReturnEquipment(Armor()[i]);
+  RefreshEquipment(items);
+}
+bool UCreatureInventory::EquipOffhand(const InventoryEntryRef &e)
+{
+  if (e.kind != InventoryEntryKind::Item && e.kind != InventoryEntryKind::Block)
+    return false;
+  return Equip(Offhand(), e, false);
+}
+bool UCreatureInventory::EquipOffhand(const InventoryEntryRef &e,
+                                      const UItemDefinitionStorage &items,
+                                      bool consume)
+{
+  if (e.kind != InventoryEntryKind::Item && e.kind != InventoryEntryKind::Block)
+    return false;
+  SetItemDefinitions(&items);
+  if (!Equip(Offhand(), e, consume))
+    return false;
+  RefreshEquipment(items);
+  return true;
+}
 void UCreatureInventory::UnequipOffhand()
 {
-  EquippedOffhand = InventoryEntryRef{};
+  ReturnEquipment(Offhand());
   OffhandArmorGroups.Ratings.clear();
 }
-
 void UCreatureInventory::UnequipOffhand(const UItemDefinitionStorage &items)
 {
-  const InventoryEntryRef worn = EquippedOffhand;
-  UnequipOffhand();
-  // Non-broken gear returns to the bag (storage); broken items are destroyed.
-  if (!worn.empty && !worn.broken && !worn.Id.empty())
-  {
-    const int returned = worn.count > 1 ? 1 : worn.count;
-    if (returned > 0)
-    {
-      AddItem(worn.Id, returned);
-      SyncItemMirrors(worn.kind, worn.Id);
-    }
-  }
+  ReturnEquipment(Offhand());
+  RefreshEquipment(items);
 }
-
-void UCreatureInventory::SyncItemMirrors(InventoryEntryKind kind,
-                                         const std::string &id)
+bool UCreatureInventory::RepairActive(const UItemDefinitionStorage &items,
+                                      std::string &reason)
 {
-  if (id.empty())
+  const auto *e = GetActiveEntryRef();
+  const auto *d =
+      e && e->kind == InventoryEntryKind::Item ? items.Get(e->Id) : nullptr;
+  if (!d || d->Repair.Materials.empty() || (e->wear <= 0.f && !e->broken))
   {
-    return;
-  }
-  const auto it = Storage.find(id);
-  const int total = (it == Storage.end()) ? 0 : it->second;
-  for (auto &bar : Hotbars)
-  {
-    for (auto &slot : bar.slots)
-    {
-      if (slot.empty || slot.entry.kind != kind || slot.entry.Id != id)
-      {
-        continue;
-      }
-      if (total <= 0)
-      {
-        slot.empty = true;
-        slot.entry = InventoryEntryRef{};
-      }
-      else
-      {
-        slot.entry.count = total;
-      }
-    }
-  }
-}
-
-void UCreatureInventory::EnsureHotbarCount(size_t count)
-{
-  if (Hotbars.size() >= count)
-  {
-    return;
-  }
-  while (Hotbars.size() < count)
-  {
-    Hotbars.push_back(HotbarBar{});
-  }
-}
-
-bool UCreatureInventory::AssignToHotbar(size_t bar, size_t slot,
-                                        const InventoryEntryRef &entry)
-{
-  EnsureHotbarCount(bar + 1);
-  if (slot >= kHotbarSlots)
-  {
+    reason = "not_repairable";
     return false;
   }
-  Hotbars[bar].slots[slot].empty = entry.empty;
-  Hotbars[bar].slots[slot].entry = entry;
+  const auto id = e->instanceId;
+  auto trial = *this;
+  if (!Creative)
+  {
+    bool paid = false;
+    for (const auto &material : d->Repair.Materials)
+    {
+      const auto kind = items.Get(material) ? InventoryEntryKind::Item
+                                            : InventoryEntryKind::Block;
+      if (trial.Consume(kind, material))
+      {
+        paid = true;
+        break;
+      }
+    }
+    if (!paid)
+    {
+      reason = "missing_repair_material";
+      return false;
+    }
+  }
+  auto *fixed = trial.GetActiveEntryRef();
+  if (!fixed || fixed->instanceId != id)
+  {
+    reason = "repair_source_changed";
+    return false;
+  }
+  fixed->wear = std::max(0.f, fixed->wear - d->Repair.Amount);
+  fixed->broken = fixed->wear >= 1.f;
+  *this = std::move(trial);
+  reason.clear();
   return true;
 }
-
+void UCreatureInventory::Sort()
+{
+  std::vector<InventoryEntryRef> movable;
+  for (size_t i = 0; i < kSlotCount; ++i)
+    if (!GetSlot(i).empty && !GetSlot(i).pinned)
+      movable.push_back(GetSlot(i));
+  std::stable_sort(movable.begin(), movable.end(),
+                   [](const auto &a, const auto &b)
+                   {
+                     return std::tie(a.kind, a.Id, a.wear, a.instanceId) <
+                            std::tie(b.kind, b.Id, b.wear, b.instanceId);
+                   });
+  size_t next = 0;
+  for (size_t i = 0; i < kSlotCount; ++i)
+  {
+    if (GetSlot(i).pinned)
+      continue;
+    auto &s = GetHotbarsMutable()[i / 10].slots[i % 10];
+    s = next < movable.size() ? HotbarSlot{false, movable[next++]}
+                              : HotbarSlot{};
+  }
+}
+InventoryOperationResult UCreatureInventory::Recover(size_t index)
+{
+  if (index >= Recovery.size())
+    return {0, 0, "invalid_recovery_slot"};
+  auto e = Recovery[index];
+  const auto r = Insert(e);
+  if (r.remainder)
+  {
+    Recovery[index].count = r.remainder;
+    if (r.transferred > 0) Recovery[index].instanceId = NextInstanceId++;
+  }
+  else
+    Recovery.erase(Recovery.begin() + index);
+  return r;
+}
 void UCreatureInventory::SerializeToJson(nlohmann::json &out) const
 {
-  out["storage"] = Storage;
-  nlohmann::json bars = nlohmann::json::array();
-  for (const auto &bar : Hotbars)
-  {
-    nlohmann::json slots = nlohmann::json::array();
-    for (const auto &slot : bar.slots)
-    {
-      nlohmann::json s;
-      s["empty"] = slot.empty;
-      if (!slot.empty)
-      {
-        switch (slot.entry.kind)
-        {
-        case InventoryEntryKind::Block:
-          s["kind"] = "block";
-          break;
-        case InventoryEntryKind::Object:
-          s["kind"] = "object";
-          break;
-        case InventoryEntryKind::UCreature:
-          s["kind"] = "creature";
-          break;
-        case InventoryEntryKind::Skin:
-          s["kind"] = "skin";
-          break;
-        case InventoryEntryKind::Item:
-          s["kind"] = "item";
-          break;
-        }
-        s["id"] = slot.entry.Id;
-        s["count"] = slot.entry.count;
-        if (slot.entry.kind == InventoryEntryKind::Item)
-        {
-          s["wear"] = slot.entry.wear;
-          s["broken"] = slot.entry.broken;
-        }
-      }
-      slots.push_back(s);
-    }
-    bars.push_back(slots);
-  }
-  out["hotbars"] = bars;
+  out["inventory_version"] = 3;
+  out["inventory_creative"] = Creative;
+  out["next_instance_id"] = NextInstanceId;
   out["active_bar"] = ActiveBarIndex;
   out["active_slot"] = ActiveSlotIndex;
-
-  nlohmann::json equipped = nlohmann::json::array();
-  for (size_t i = 0; i < kArmorSlots; ++i)
+  const auto rows = [](const auto &bars)
   {
-    const InventoryEntryRef &e = EquippedArmor[i];
-    nlohmann::json s;
-    s["empty"] = e.empty;
-    if (!e.empty)
-    {
-      s["kind"] = "item";
-      s["id"] = e.Id;
-      s["wear"] = e.wear;
-      s["broken"] = e.broken;
-      s["count"] = e.count;
-    }
-    equipped.push_back(s);
-  }
-  out["equipped_armor"] = equipped;
-
+    auto a = nlohmann::json::array();
+    for (const auto &row : bars)
+      for (const auto &s : row.slots)
+        a.push_back(WriteEntry(s.entry));
+    return a;
+  };
+  out["owned_slots"] = rows(Hotbars);
+  out["creative_slots"] = rows(CreativeHotbars);
+  const auto armor = [](const auto &set)
   {
-    nlohmann::json oh;
-    oh["empty"] = EquippedOffhand.empty;
-    if (!EquippedOffhand.empty)
-    {
-      switch (EquippedOffhand.kind)
-      {
-      case InventoryEntryKind::Block:
-        oh["kind"] = "block";
-        break;
-      case InventoryEntryKind::Item:
-      default:
-        oh["kind"] = "item";
-        break;
-      }
-      oh["id"] = EquippedOffhand.Id;
-      oh["count"] = EquippedOffhand.count;
-      if (EquippedOffhand.kind == InventoryEntryKind::Item)
-      {
-        oh["wear"] = EquippedOffhand.wear;
-        oh["broken"] = EquippedOffhand.broken;
-      }
-    }
-    out["equipped_offhand"] = oh;
-  }
-
-  nlohmann::json groups = nlohmann::json::object();
-  for (const auto &pair : EquippedArmorGroups.Ratings)
-  {
-    groups[pair.first] = pair.second;
-  }
-  out["equipped_armor_groups"] = groups;
+    auto a = nlohmann::json::array();
+    for (const auto &e : set)
+      a.push_back(WriteEntry(e));
+    return a;
+  };
+  out["equipped_armor"] = armor(EquippedArmor);
+  out["creative_armor"] = armor(CreativeArmor);
+  out["equipped_offhand"] = WriteEntry(EquippedOffhand);
+  out["creative_offhand"] = WriteEntry(CreativeOffhand);
+  out["inventory_recovery"] = armor(Recovery);
+  out["inventory_migration_warnings"] = MigrationWarnings;
+  out.erase("storage");
+  out.erase("hotbars");
+  out.erase("equipped_armor_groups");
 }
-
-void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data,
-                                             size_t maxBarCount)
+void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data, size_t)
 {
-  Storage.clear();
-  if (data.contains("storage") && data["storage"].is_object())
+  const auto *defs = Items;
+  *this = UCreatureInventory{};
+  Items = defs;
+  auto readArmor = [&](const char *key, auto &set)
   {
-    for (auto it = data["storage"].begin(); it != data["storage"].end(); ++it)
-    {
-      Storage[it.key()] = it.value().get<int>();
-    }
-  }
-  Hotbars.clear();
-  if (data.contains("hotbars") && data["hotbars"].is_array())
+    if (!data.contains(key) || !data[key].is_array())
+      return;
+    for (size_t i = 0; i < std::min(set.size(), data[key].size()); ++i)
+      set[i] = Prepare(ReadEntry(data[key][i]));
+  };
+  if (data.value("inventory_version", 0) >= 3)
   {
-    for (const auto &barJson : data["hotbars"])
+    NextInstanceId = std::max(std::uint64_t{1},
+                              data.value("next_instance_id", std::uint64_t{1}));
+    auto readRows = [&](const char *key, auto &rows)
     {
-      if (Hotbars.size() >= maxBarCount)
+      if (!data.contains(key) || !data[key].is_array())
+        return;
+      size_t i = 0;
+      for (const auto &j : data[key])
       {
-        break;
+        auto e = Prepare(ReadEntry(j));
+        if (i < 40)
+          rows[i / 10].slots[i % 10] = {e.empty, e};
+        else if (!e.empty)
+          Recovery.push_back(e);
+        ++i;
       }
-      HotbarBar bar;
-      if (barJson.is_array())
+    };
+    readRows("owned_slots", Hotbars);
+    readRows("creative_slots", CreativeHotbars);
+    readArmor("equipped_armor", EquippedArmor);
+    readArmor("creative_armor", CreativeArmor);
+    EquippedOffhand = Prepare(
+        ReadEntry(data.value("equipped_offhand", nlohmann::json::object())));
+    CreativeOffhand = Prepare(
+        ReadEntry(data.value("creative_offhand", nlohmann::json::object())));
+    if (data.contains("inventory_recovery"))
+      for (const auto &j : data["inventory_recovery"])
       {
-        size_t si = 0;
-        for (const auto &slotJson : barJson)
+        auto e = Prepare(ReadEntry(j));
+        if (!e.empty)
+          Recovery.push_back(e);
+      }
+    MigrationWarnings =
+        data.value("inventory_migration_warnings", std::vector<std::string>{});
+    Creative = data.value("inventory_creative", false);
+  }
+  else
+  {
+    LegacyMigration = true;
+    std::map<std::string, InventoryEntryRef> prototypes;
+    std::map<std::string, int> quantities;
+    if (data.contains("storage") && data["storage"].is_object())
+      for (auto it = data["storage"].begin(); it != data["storage"].end(); ++it)
+        if (it.value().is_number_integer())
+          quantities[it.key()] = it.value().get<int>();
+    std::vector<std::pair<size_t, InventoryEntryRef>> placements;
+    size_t i = 0;
+    if (data.contains("hotbars") && data["hotbars"].is_array())
+      for (const auto &row : data["hotbars"])
+      {
+        if (!row.is_array())
+          continue;
+        for (const auto &j : row)
         {
-          if (si >= kHotbarSlots)
+          auto e = ReadEntry(j);
+          if (!e.empty)
           {
-            break;
+            if (e.kind == InventoryEntryKind::UCreature)
+            {
+              if (e.Id == "test_mob" || e.Id == "scout")
+                e.Id = "sheep";
+              else if (e.Id == "brute")
+                e.Id = "sand_monster";
+              else if (e.Id == "drifter")
+                e.Id = "wolf";
+            }
+            auto it = prototypes.find(e.Id);
+            if (it != prototypes.end() &&
+                (it->second.wear != e.wear || it->second.broken != e.broken))
+              MigrationWarnings.push_back("ambiguous_wear:" + e.Id);
+            if (it == prototypes.end() || e.wear > it->second.wear || e.broken)
+              prototypes[e.Id] = e;
+            if (!quantities.count(e.Id))
+              quantities[e.Id] = e.count < 0 ? -1 : std::max(1, e.count);
+            if (i < 40)
+              placements.push_back({i, e});
           }
-          const std::string id = slotJson.value("id", "");
-          const bool slotEmpty =
-              slotJson.contains("empty") ? slotJson["empty"].get<bool>() : id.empty();
-          bar.slots[si].empty = slotEmpty;
-          if (!bar.slots[si].empty)
-          {
-            const std::string kind = slotJson.value("kind", "block");
-            if (kind == "object")
-            {
-              bar.slots[si].entry.kind = InventoryEntryKind::Object;
-            }
-            else if (kind == "creature")
-            {
-              bar.slots[si].entry.kind = InventoryEntryKind::UCreature;
-            }
-            else if (kind == "skin")
-            {
-              bar.slots[si].entry.kind = InventoryEntryKind::Skin;
-            }
-            else if (kind == "item")
-            {
-              bar.slots[si].entry.kind = InventoryEntryKind::Item;
-            }
-            else
-            {
-              bar.slots[si].entry.kind = InventoryEntryKind::Block;
-            }
-            bar.slots[si].entry.Id = id;
-            bar.slots[si].entry.count = slotJson.value("count", 0);
-            bar.slots[si].entry.wear = slotJson.value("wear", 0.f);
-            bar.slots[si].entry.broken = slotJson.value("broken", false);
-            bar.slots[si].entry.empty = false;
-            RemapLegacyHotbarEntryId(bar.slots[si].entry);
-          }
-          ++si;
+          ++i;
         }
       }
-      Hotbars.push_back(bar);
-    }
-  }
-  if (Hotbars.empty())
-  {
-    Hotbars.resize(1);
-  }
-  ActiveBarIndex = std::min(data.value("active_bar", 0u),
-                            static_cast<unsigned>(Hotbars.size() - 1));
-  ActiveSlotIndex = data.value("active_slot", 0u);
-  if (ActiveSlotIndex >= kHotbarSlots)
-  {
-    ActiveSlotIndex = 0;
-  }
-
-  EquippedArmor = {};
-  EquippedArmorGroups.Ratings.clear();
-
-  if (data.contains("equipped_armor") && data["equipped_armor"].is_array())
-  {
-    const auto &arr = data["equipped_armor"];
-    // Legacy saves stored 6 slots: head,chest,arms,hands,legs,feet.
-    // Map 0→head, 1→chest, 4→legs, 5→feet; park arms/hands into storage.
-    if (arr.size() >= 6)
+    for (auto &q : quantities)
     {
-      EquippedArmor[0] = ParseArmorEntry(arr[0]);
-      EquippedArmor[1] = ParseArmorEntry(arr[1]);
-      EquippedArmor[2] = ParseArmorEntry(arr[4]);
-      EquippedArmor[3] = ParseArmorEntry(arr[5]);
-      for (size_t legacy : {2ull, 3ull})
+      auto e =
+          prototypes.count(q.first) ? prototypes[q.first] : InventoryEntryRef{};
+      e.Id = q.first;
+      e.empty = false;
+      e.instanceId = 0;
+      if (!prototypes.count(q.first))
+        e.kind = Items && Items->Get(q.first) ? InventoryEntryKind::Item
+                                              : InventoryEntryKind::Block;
+      if (q.second < 0)
       {
-        InventoryEntryRef parked = ParseArmorEntry(arr[legacy]);
-        if (!parked.empty && !parked.Id.empty())
+        for (const auto &p : placements)
+          if (p.second.Id == q.first)
+          {
+            auto c = e;
+            c.count = -1;
+            CreativeHotbars[p.first / 10].slots[p.first % 10] = {false,
+                                                                 Prepare(c)};
+          }
+        continue;
+      }
+      int left = q.second;
+      std::set<size_t> assigned;
+      for (const auto &p : placements)
+        if (left > 0 && p.second.Id == q.first && assigned.empty())
         {
-          AddItem(parked.Id, std::max(1, parked.count));
-          std::cerr << "UCreatureInventory: migrated legacy armor slot "
-                    << (legacy == 2 ? "arms" : "hands") << " item '"
-                    << parked.Id << "' into storage\n";
+          e.count = std::min(StackLimit(e), left);
+          Hotbars[p.first / 10].slots[p.first % 10] = {false, Prepare(e)};
+          left -= e.count;
+          assigned.insert(p.first);
+        }
+      if (left > 0)
+      {
+        e.count = left;
+        const auto r = Insert(e);
+        if (r.remainder)
+        {
+          e.count = r.remainder;
+          Recovery.push_back(Prepare(e));
         }
       }
     }
-    else
+    if (data.contains("equipped_armor") && data["equipped_armor"].is_array())
     {
-      const size_t n = std::min(static_cast<size_t>(arr.size()), kArmorSlots);
-      for (size_t i = 0; i < n; ++i)
+      const auto &a = data["equipped_armor"];
+      for (size_t s = 0; s < 4; ++s)
       {
-        EquippedArmor[i] = ParseArmorEntry(arr[i]);
+        size_t old = a.size() >= 6 && s >= 2 ? s + 2 : s;
+        if (old < a.size())
+          EquippedArmor[s] = Prepare(ReadEntry(a[old]));
       }
+      if (a.size() >= 6)
+        for (size_t s : {size_t{2}, size_t{3}})
+        {
+          auto e = Prepare(ReadEntry(a[s]));
+          if (!e.empty)
+            Recovery.push_back(e);
+        }
     }
+    EquippedOffhand = Prepare(
+        ReadEntry(data.value("equipped_offhand", nlohmann::json::object())));
   }
-
-  if (data.contains("equipped_armor_groups") &&
-      data["equipped_armor_groups"].is_object())
+  ActiveBarIndex = std::min(size_t{3}, data.value("active_bar", size_t{0}));
+  ActiveSlotIndex = std::min(size_t{9}, data.value("active_slot", size_t{0}));
+  // Repair duplicate identities and invalid owned counts without deleting
+  // payloads.
+  std::set<std::uint64_t> seen;
+  auto unique = [&](InventoryEntryRef &e)
   {
-    for (auto it = data["equipped_armor_groups"].begin();
-         it != data["equipped_armor_groups"].end(); ++it)
+    if (e.empty)
+      return;
+    if (!seen.insert(e.instanceId).second)
     {
-      if (it.value().is_number_integer() || it.value().is_number_unsigned())
-      {
-        EquippedArmorGroups.Ratings[it.key()] = it.value().get<int>();
-      }
-      else if (it.value().is_number_float())
-      {
-        EquippedArmorGroups.Ratings[it.key()] =
-            static_cast<int>(std::lround(it.value().get<float>()));
-      }
+      e.instanceId = 0;
+      e = Prepare(e);
+      seen.insert(e.instanceId);
     }
-  }
-
-  EquippedOffhand = InventoryEntryRef{};
-  if (data.contains("equipped_offhand") && data["equipped_offhand"].is_object())
-  {
-    const auto &oh = data["equipped_offhand"];
-    const bool empty =
-        oh.value("empty", oh.value("id", std::string()).empty());
-    EquippedOffhand.empty = empty;
-    if (!empty)
+  };
+  for (auto &row : Hotbars)
+    for (auto &s : row.slots)
     {
-      const std::string kind = oh.value("kind", "item");
-      if (kind == "block")
+      if (s.entry.count < 0)
       {
-        EquippedOffhand.kind = InventoryEntryKind::Block;
+        auto e = s.entry;
+        e.count = -1;
+        CreativeHotbars[&row - &Hotbars[0]].slots[&s - &row.slots[0]] = {false,
+                                                                         e};
+        s = {};
       }
-      else
-      {
-        EquippedOffhand.kind = InventoryEntryKind::Item;
-      }
-      EquippedOffhand.Id = oh.value("id", "");
-      EquippedOffhand.count = oh.value("count", 1);
-      EquippedOffhand.wear = oh.value("wear", 0.f);
-      EquippedOffhand.broken = oh.value("broken", false);
-      EquippedOffhand.empty = EquippedOffhand.Id.empty();
+      unique(s.entry);
     }
-  }
+  for (auto &e : EquippedArmor)
+    unique(e);
+  unique(EquippedOffhand);
+  for (auto &e : Recovery)
+    unique(e);
+  Items = nullptr;
+  SetItemDefinitions(defs);
 }
-
 } // namespace cutum

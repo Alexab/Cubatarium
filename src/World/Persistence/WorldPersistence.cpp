@@ -5694,8 +5694,18 @@ void UWorldPersistence::LoadUsers(UWorld &world, const std::string &file_name)
 
   try
   {
-    world.Users.clear();
     json d = json::parse(val);
+    bool legacyInventory = false;
+    for (const auto &saved : d)
+      legacyInventory |= saved.is_object() && saved.value("inventory_version", 0) < 3;
+    if (legacyInventory)
+    {
+      std::error_code backupError;
+      std::filesystem::copy_file(file_name, file_name + ".inventory-v2.bak",
+                                std::filesystem::copy_options::skip_existing, backupError);
+      if (backupError) throw std::runtime_error("Inventory backup failed: " + backupError.message());
+    }
+    world.Users.clear();
     for (auto i = d.begin(); i != d.end(); ++i)
     {
       const auto user_name = i.key();
@@ -5806,7 +5816,9 @@ void UWorldPersistence::LoadUsers(UWorld &world, const std::string &file_name)
         UCreatureInventory &inv = player_creature->GetInventory();
         const bool had_hotbars =
             user_data.contains("hotbars") && user_data["hotbars"].is_array();
+        inv.SetItemDefinitions(world.GetItemDefinitionStorage());
         inv.DeserializeFromJson(user_data, hotbar_count);
+        inv.SetCreative(world.GetGameMode() == WorldGameMode::Creative);
         if (inv.GetStorage().empty())
         {
           if (ModePolicy::ShouldInitCreativeDefaults(world.GetGameMode()))

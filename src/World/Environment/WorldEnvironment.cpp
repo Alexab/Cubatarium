@@ -579,6 +579,8 @@ CreatureId UWorldEnvironment::SpawnCreature(const std::string &speciesId,
   buildParams.AllowFlight =
       ModePolicy::AllowsFlight(Owner.GetGameMode(), def->habitat);
   Creatures[id] = UCreatureFactory::Build(*def, buildParams);
+  Creatures[id]->GetInventory().SetItemDefinitions(Owner.GetItemDefinitionStorage());
+  Creatures[id]->GetInventory().SetCreative(Owner.GetGameMode() == WorldGameMode::Creative);
   if (def->habitat == CreatureHabitat::Terrestrial)
   {
     SnapCreatureFeetToGround(*Creatures[id]);
@@ -1140,6 +1142,16 @@ void UWorldEnvironment::LoadCreatures(const std::string &file_name)
     {
       return;
     }
+    bool legacyInventory = false;
+    for (const auto &saved : data["creatures"])
+      legacyInventory |= saved.value("inventory_version", 0) < 3;
+    if (legacyInventory)
+    {
+      std::error_code backupError;
+      std::filesystem::copy_file(file_name, file_name + ".inventory-v2.bak",
+                                std::filesystem::copy_options::skip_existing, backupError);
+      if (backupError) throw std::runtime_error("Creature inventory backup failed: " + backupError.message());
+    }
     const int formatVersion = data.value("format_version", 0);
     if (formatVersion == 0)
     {
@@ -1240,6 +1252,8 @@ void UWorldEnvironment::LoadCreatures(const std::string &file_name)
       // Saved yaw: turn the collision box with the body before the index
       // sees it (a whale saved facing +X was restored 11 long along Z).
       creature->UpdateFootprintOrientation(Owner);
+      creature->GetInventory().SetItemDefinitions(Owner.GetItemDefinitionStorage());
+      creature->GetInventory().SetCreative(Owner.GetGameMode() == WorldGameMode::Creative);
       Creatures[id] = std::move(creature);
       ActivityDirector.OnCreatureAdded(id, def->behavior.Id, &def->behavior);
       NextCreatureId = std::max(NextCreatureId, id + 1);

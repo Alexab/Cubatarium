@@ -190,53 +190,8 @@ void UAnvilScreen::TryRepair()
     StatusText = "Cannot repair";
     return;
   }
-  auto &bars = creature->GetInventory().GetHotbarsMutable();
-  const size_t bar = creature->GetInventory().GetActiveBarIndex();
-  const size_t slot = creature->GetInventory().GetActiveSlotIndex();
-  if (bar >= bars.size() || slot >= bars[bar].slots.size() ||
-      bars[bar].slots[slot].empty)
-  {
-    StatusText = "Empty active slot";
-    return;
-  }
-  InventoryEntryRef &entry = bars[bar].slots[slot].entry;
-  if (entry.kind != InventoryEntryKind::Item)
-  {
-    StatusText = "Active slot is not an item";
-    return;
-  }
-  const ItemDefinition *def = items->Get(entry.Id);
-  if (!def)
-  {
-    StatusText = "Unknown item";
-    return;
-  }
-  std::string material;
-  if (!def->Repair.Materials.empty())
-  {
-    material = def->Repair.Materials.front();
-    auto &storage = creature->GetInventory().GetStorageMutable();
-    const auto it = storage.find(material);
-    if (it == storage.end() || (it->second >= 0 && it->second < 1))
-    {
-      StatusText = "Need material: " + material;
-      return;
-    }
-    if (it->second > 0)
-    {
-      it->second -= 1;
-      if (it->second <= 0)
-      {
-        storage.erase(it);
-      }
-    }
-  }
-  if (!TryRepairItem(entry, *def, material))
-  {
-    StatusText = "Repair failed";
-    return;
-  }
-  StatusText = "Repaired " + entry.Id;
+  std::string reason;
+  StatusText = creature->GetInventory().RepairActive(*items, reason) ? "Repaired" : reason;
   Refresh();
 }
 

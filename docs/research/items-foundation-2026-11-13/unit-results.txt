@@ -1,0 +1,22 @@
+Internal ctest changing into directory: E:/Work/Home/Cubatarium-items-inventory/build/desktop-msvc
+Test project E:/Work/Home/Cubatarium-items-inventory/build/desktop-msvc
+    Start  12: inventory_transactions_test
+1/6 Test  #12: inventory_transactions_test ......   Passed    0.10 sec
+    Start  19: item_survival_hooks_test
+2/6 Test  #19: item_survival_hooks_test .........   Passed    0.07 sec
+    Start 103: armor_equipment_test
+3/6 Test #103: armor_equipment_test .............   Passed    0.14 sec
+    Start 128: inventory_mode_test
+4/6 Test #128: inventory_mode_test ..............   Passed    0.04 sec
+    Start 130: recipe_registry_test
+5/6 Test #130: recipe_registry_test .............   Passed    0.07 sec
+    Start 131: resource_economy_test
+6/6 Test #131: resource_economy_test ............   Passed    0.09 sec
+
+100% tests passed, 0 tests failed out of 6
+
+Label Time Summary:
+items    =   0.51 sec*proc (6 tests)
+unit     =   0.51 sec*proc (6 tests)
+
+Total Test time (real) =   0.60 sec

@@ -1,0 +1,430 @@
+{
+  "families": {
+    "pickaxe": {
+      "sheet": "docs/research/item-previews-v2/family_pickaxe_sheet.png",
+      "silhouette_hashes": {
+        "wood": "9df479c1914c",
+        "stone": "514411ddf27c",
+        "copper": "650165882802",
+        "iron": "650165882802",
+        "gold": "650165882802"
+      },
+      "gray_means": {
+        "wood": 68.53,
+        "stone": 63.36,
+        "copper": 119.09,
+        "iron": 175.84,
+        "gold": 175.98
+      }
+    },
+    "axe": {
+      "sheet": "docs/research/item-previews-v2/family_axe_sheet.png",
+      "silhouette_hashes": {
+        "wood": "a83b3129e696",
+        "stone": "a83b3129e696",
+        "copper": "00f232756d7d",
+        "iron": "00f232756d7d",
+        "gold": "00f232756d7d"
+      },
+      "gray_means": {
+        "wood": 75.48,
+        "stone": 71.03,
+        "copper": 110.57,
+        "iron": 165.52,
+        "gold": 166.2
+      }
+    },
+    "shovel": {
+      "sheet": "docs/research/item-previews-v2/family_shovel_sheet.png",
+      "silhouette_hashes": {
+        "wood": "bf48c5b99d48",
+        "stone": "bf48c5b99d48",
+        "copper": "77d0e29f9c6a",
+        "iron": "77d0e29f9c6a",
+        "gold": "77d0e29f9c6a"
+      },
+      "gray_means": {
+        "wood": 76.89,
+        "stone": 69.39,
+        "copper": 110.81,
+        "iron": 168.66,
+        "gold": 169.16
+      }
+    },
+    "hoe": {
+      "sheet": "docs/research/item-previews-v2/family_hoe_sheet.png",
+      "silhouette_hashes": {
+        "wood": "5870ce7a4c5f",
+        "stone": "5870ce7a4c5f",
+        "copper": "563ddc3bbb68",
+        "iron": "563ddc3bbb68",
+        "gold": "563ddc3bbb68"
+      },
+      "gray_means": {
+        "wood": 67.84,
+        "stone": 63.18,
+        "copper": 104.29,
+        "iron": 155.46,
+        "gold": 157.19
+      }
+    },
+    "sword": {
+      "sheet": "docs/research/item-previews-v2/family_sword_sheet.png",
+      "silhouette_hashes": {
+        "wood": "eb145a800254",
+        "stone": "eb145a800254",
+        "copper": "323dfe8b30ee",
+        "iron": "323dfe8b30ee",
+        "gold": "323dfe8b30ee"
+      },
+      "gray_means": {
+        "wood": 78.46,
+        "stone": 70.92,
+        "copper": 106.31,
+        "iron": 158.9,
+        "gold": 163.03
+      }
+    }
+  },
+  "items": {
+    "apple": {
+      "triangles": 48,
+      "has_diffuse_png": true,
+      "silhouette_hash": "6e5c1e701a44",
+      "gray_mean": 58.98
+    },
+    "arrow": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "62751cd034f2",
+      "gray_mean": 123.01
+    },
+    "bread": {
+      "triangles": 36,
+      "has_diffuse_png": true,
+      "silhouette_hash": "31cffc04ff6d",
+      "gray_mean": 111.01
+    },
+    "bucket": {
+      "triangles": 48,
+      "has_diffuse_png": true,
+      "silhouette_hash": "20b01a3dfcb2",
+      "gray_mean": 156.67
+    },
+    "copper_axe": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "00f232756d7d",
+      "gray_mean": 110.57
+    },
+    "copper_chest": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "1d94248e03eb",
+      "gray_mean": 117.64
+    },
+    "copper_feet": {
+      "triangles": 72,
+      "has_diffuse_png": true,
+      "silhouette_hash": "92df00bfb806",
+      "gray_mean": 110.58
+    },
+    "copper_head": {
+      "triangles": 48,
+      "has_diffuse_png": true,
+      "silhouette_hash": "b95e047bd1ac",
+      "gray_mean": 111.06
+    },
+    "copper_hoe": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "563ddc3bbb68",
+      "gray_mean": 104.29
+    },
+    "copper_legs": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "a97d505995ed",
+      "gray_mean": 112.62
+    },
+    "copper_pickaxe": {
+      "triangles": 72,
+      "has_diffuse_png": true,
+      "silhouette_hash": "650165882802",
+      "gray_mean": 119.09
+    },
+    "copper_shovel": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "77d0e29f9c6a",
+      "gray_mean": 110.81
+    },
+    "copper_sword": {
+      "triangles": 72,
+      "has_diffuse_png": true,
+      "silhouette_hash": "323dfe8b30ee",
+      "gray_mean": 106.31
+    },
+    "flint_and_steel": {
+      "triangles": 48,
+      "has_diffuse_png": true,
+      "silhouette_hash": "a450ae725373",
+      "gray_mean": 166.88
+    },
+    "gold_axe": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "00f232756d7d",
+      "gray_mean": 166.2
+    },
+    "gold_chest": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "1d94248e03eb",
+      "gray_mean": 175.09
+    },
+    "gold_feet": {
+      "triangles": 72,
+      "has_diffuse_png": true,
+      "silhouette_hash": "92df00bfb806",
+      "gray_mean": 164.16
+    },
+    "gold_head": {
+      "triangles": 48,
+      "has_diffuse_png": true,
+      "silhouette_hash": "b95e047bd1ac",
+      "gray_mean": 165.15
+    },
+    "gold_hoe": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "563ddc3bbb68",
+      "gray_mean": 157.19
+    },
+    "gold_legs": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "a97d505995ed",
+      "gray_mean": 172.79
+    },
+    "gold_pickaxe": {
+      "triangles": 72,
+      "has_diffuse_png": true,
+      "silhouette_hash": "650165882802",
+      "gray_mean": 175.98
+    },
+    "gold_shovel": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "77d0e29f9c6a",
+      "gray_mean": 169.16
+    },
+    "gold_sword": {
+      "triangles": 72,
+      "has_diffuse_png": true,
+      "silhouette_hash": "323dfe8b30ee",
+      "gray_mean": 163.03
+    },
+    "iron_axe": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "00f232756d7d",
+      "gray_mean": 165.52
+    },
+    "iron_chest": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "1d94248e03eb",
+      "gray_mean": 171.04
+    },
+    "iron_feet": {
+      "triangles": 72,
+      "has_diffuse_png": true,
+      "silhouette_hash": "92df00bfb806",
+      "gray_mean": 162.84
+    },
+    "iron_head": {
+      "triangles": 48,
+      "has_diffuse_png": true,
+      "silhouette_hash": "b95e047bd1ac",
+      "gray_mean": 165.21
+    },
+    "iron_hoe": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "563ddc3bbb68",
+      "gray_mean": 155.46
+    },
+    "iron_legs": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "a97d505995ed",
+      "gray_mean": 171.98
+    },
+    "iron_pickaxe": {
+      "triangles": 72,
+      "has_diffuse_png": true,
+      "silhouette_hash": "650165882802",
+      "gray_mean": 175.84
+    },
+    "iron_shield": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "9d251dc061b9",
+      "gray_mean": 150.06
+    },
+    "iron_shovel": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "77d0e29f9c6a",
+      "gray_mean": 168.66
+    },
+    "iron_sword": {
+      "triangles": 72,
+      "has_diffuse_png": true,
+      "silhouette_hash": "323dfe8b30ee",
+      "gray_mean": 158.9
+    },
+    "leather": {
+      "triangles": 36,
+      "has_diffuse_png": true,
+      "silhouette_hash": "dc27d307e832",
+      "gray_mean": 68.36
+    },
+    "leather_chest": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "1d94248e03eb",
+      "gray_mean": 88.16
+    },
+    "leather_feet": {
+      "triangles": 72,
+      "has_diffuse_png": true,
+      "silhouette_hash": "92df00bfb806",
+      "gray_mean": 69.53
+    },
+    "leather_head": {
+      "triangles": 48,
+      "has_diffuse_png": true,
+      "silhouette_hash": "b95e047bd1ac",
+      "gray_mean": 69.55
+    },
+    "leather_legs": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "a97d505995ed",
+      "gray_mean": 75.59
+    },
+    "raw_meat": {
+      "triangles": 36,
+      "has_diffuse_png": true,
+      "silhouette_hash": "5c575169cc90",
+      "gray_mean": 75.94
+    },
+    "seeds": {
+      "triangles": 36,
+      "has_diffuse_png": true,
+      "silhouette_hash": "dc27d307e832",
+      "gray_mean": 68.36
+    },
+    "shears": {
+      "triangles": 72,
+      "has_diffuse_png": true,
+      "silhouette_hash": "323dfe8b30ee",
+      "gray_mean": 158.9
+    },
+    "stone_axe": {
+      "triangles": 48,
+      "has_diffuse_png": true,
+      "silhouette_hash": "a83b3129e696",
+      "gray_mean": 71.03
+    },
+    "stone_hoe": {
+      "triangles": 48,
+      "has_diffuse_png": true,
+      "silhouette_hash": "5870ce7a4c5f",
+      "gray_mean": 63.18
+    },
+    "stone_pickaxe": {
+      "triangles": 72,
+      "has_diffuse_png": true,
+      "silhouette_hash": "514411ddf27c",
+      "gray_mean": 63.36
+    },
+    "stone_shovel": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "bf48c5b99d48",
+      "gray_mean": 69.39
+    },
+    "stone_sword": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "eb145a800254",
+      "gray_mean": 70.92
+    },
+    "waterskin": {
+      "triangles": 48,
+      "has_diffuse_png": true,
+      "silhouette_hash": "20b01a3dfcb2",
+      "gray_mean": 72.63
+    },
+    "wood_axe": {
+      "triangles": 48,
+      "has_diffuse_png": true,
+      "silhouette_hash": "a83b3129e696",
+      "gray_mean": 75.48
+    },
+    "wood_bow": {
+      "triangles": 72,
+      "has_diffuse_png": true,
+      "silhouette_hash": "3eb923438880",
+      "gray_mean": 106.92
+    },
+    "wood_hoe": {
+      "triangles": 48,
+      "has_diffuse_png": true,
+      "silhouette_hash": "5870ce7a4c5f",
+      "gray_mean": 67.84
+    },
+    "wood_pickaxe": {
+      "triangles": 72,
+      "has_diffuse_png": true,
+      "silhouette_hash": "9df479c1914c",
+      "gray_mean": 68.53
+    },
+    "wood_shield": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "9d251dc061b9",
+      "gray_mean": 77.46
+    },
+    "wood_shovel": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "bf48c5b99d48",
+      "gray_mean": 76.89
+    },
+    "wood_spear": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "eb145a800254",
+      "gray_mean": 78.46
+    },
+    "wood_sword": {
+      "triangles": 60,
+      "has_diffuse_png": true,
+      "silhouette_hash": "eb145a800254",
+      "gray_mean": 78.46
+    },
+    "wood_torch": {
+      "triangles": 48,
+      "has_diffuse_png": true,
+      "silhouette_hash": "a450ae725373",
+      "gray_mean": 85.89
+    }
+  },
+  "failures": [],
+  "warnings": [],
+  "passed": true
+}

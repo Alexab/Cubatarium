@@ -1004,6 +1004,8 @@ void UCreativePaletteScreen::AppendGridSlotsChunk()
     {
       slot->SetCornerHint(std::to_string(view.ref.count));
     }
+    slot->SetWearProgress(view.ref.wear);
+    slot->SetBroken(view.ref.broken);
     InventoryEntryRef entry = view.ref;
 
     SlotAddress address;

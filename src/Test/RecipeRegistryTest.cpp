@@ -26,7 +26,7 @@ int main(int argc, char **argv)
   recipe.Output = RecipeIngredient{"wood_sword", 1};
 
   UCreatureInventory inv;
-  inv.GetStorageMutable()["wood"] = 2;
+  inv.AddItem("wood", 2);
 
   URecipeRegistry registry;
   Expect(registry.TryCraft(inv, recipe), "craft succeeds with ingredients");

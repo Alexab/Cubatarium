@@ -60,15 +60,7 @@ void ApplyArmorWearForHit(UWorld &world, UCreature &target,
         if (const ItemDefinition *def = items->Get(armor.Id))
         {
           const float armorWear = 0.01f * amount;
-          if (ApplyItemWear(armor, *def, armorWear, true))
-          {
-            inv.UnequipArmor(pick, *items);
-          }
-          else
-          {
-            // Worn-copy refresh: do not consume a spare from storage.
-            inv.EquipArmor(pick, armor, *items, /*consumeFromStorage=*/false);
-          }
+          inv.WearArmor(pick, armorWear, *items);
         }
       }
     }
@@ -110,15 +102,7 @@ void ApplyShieldWearForBlock(UWorld &world, UCreature &target,
     uses = 100;
   }
   const float shieldWear = 1.f / static_cast<float>(uses);
-  if (ApplyItemWear(off, *shield, shieldWear, true))
-  {
-    inv.UnequipOffhand(*items);
-  }
-  else
-  {
-    // Worn-copy refresh: do not consume a spare from storage.
-    inv.EquipOffhand(off, *items, /*consumeFromStorage=*/false);
-  }
+  inv.WearOffhand(shieldWear, *items);
 }
 
 /// Consume one arrow from storage, then hotbar slots (negative storage
@@ -135,48 +119,8 @@ void ConsumeRangedAmmo(UWorld &world, UCreature &source, const std::string &capa
   {
     return;
   }
-  auto &storage = source.GetInventory().GetStorageMutable();
-  const auto it = storage.find(bow->Ranged.AmmoId);
-  if (it != storage.end() && it->second < 0)
-  {
-    // Unlimited creative stock.
-    return;
-  }
-  if (it != storage.end() && it->second > 0)
-  {
-    --it->second;
-    if (it->second <= 0)
-    {
-      storage.erase(it);
-    }
-    return;
-  }
-  auto &hotbars = source.GetInventory().GetHotbarsMutable();
-  for (auto &bar : hotbars)
-  {
-    for (auto &slot : bar.slots)
-    {
-      if (slot.entry.empty || slot.entry.kind != InventoryEntryKind::Item ||
-          slot.entry.Id != bow->Ranged.AmmoId)
-      {
-        continue;
-      }
-      if (slot.entry.count < 0)
-      {
-        return;
-      }
-      if (slot.entry.count > 1)
-      {
-        --slot.entry.count;
-      }
-      else
-      {
-        slot.entry = InventoryEntryRef{};
-        slot.empty = true;
-      }
-      return;
-    }
-  }
+  (void)ResourceEconomyService::ConsumeUnits(world.GetGameMode(), source.GetInventory(),
+      InventoryEntryKind::Item, bow->Ranged.AmmoId, 1);
 }
 
 void ApplyMeleeToolWear(UWorld &world, UCreature &source,
@@ -317,6 +261,8 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
 
   if (pred.Capability.Channel == InfluenceChannel::Use && pred.UseSelf)
   {
+    if (pred.UseConsumes && !ResourceEconomyService::ConsumeUnits(mode, source->GetInventory(),
+        InventoryEntryKind::Item, pred.UseItemId, 1)) return result;
     CreatureVitals &v = source->GetVitals();
     if (pred.UseSatietyDelta != 0.f)
     {
@@ -331,16 +277,6 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
       v.health = std::clamp(v.health + pred.UseHealthDelta, 0.f, v.maxHealth);
     }
     v.ClampCurrents();
-
-    // Consume one from storage and every hotbar mirror when the use is
-    // edible (unlimited stacks and the creative gate live in the helper).
-    if (pred.UseConsumes)
-    {
-      (void)ResourceEconomyService::ConsumeUnits(mode,
-                                                 source->GetInventory(),
-                                                 InventoryEntryKind::Item,
-                                                 pred.UseItemId, 1);
-    }
 
     source->ResetInfluenceCooldown();
     InfluenceEvent ev;
