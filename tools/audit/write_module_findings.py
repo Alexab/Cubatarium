@@ -127,7 +127,7 @@ MODULES: dict[str, list[dict]] = {
                 15,
                 24
             ],
-            "evidence": "World.h includes Render/Mesh/ChunkMeshCache.h. World.cpp includes Render/Camera/*, Render/Engine/DistanceFog.h, Render/Primitives/Cube.h. UWorld owns UChunkMeshCache MeshCache member and drives frustum warmup.",
+            "evidence": "World.h includes Render/Mesh/ChunkMeshCache.h. World.cpp includes Render/Camera/*, World/View/DistanceFog.h, Render/Primitives/Cube.h. UWorld owns UChunkMeshCache MeshCache member and drives frustum warmup.",
             "action": "Introduce IWorldMeshSink or move mesh dirty API behind interface to invert dependency (World → abstraction ← Render).",
             "risk": "medium",
             "status": "open",
@@ -241,7 +241,7 @@ MODULES: dict[str, list[dict]] = {
             "module": "Render",
             "title": "StreamingHorizonBlocks deprecated API",
             "files": [
-                "src/Render/Engine/DistanceFog.h",
+                "src/World/View/DistanceFog.h",
                 "src/World/Core/World.cpp"
             ],
             "lines": [],

@@ -114,3 +114,16 @@
 | Module agents ×8 | done | 71 findings in audit/modules/ (manual pass 2026-06-27) |
 | Human gate | approved | P0 fixes applied; arch refactor phases 0–5 landed 2026-07 |
 | Remediation DoD | done | 2026-07-05: FluidSpread coordinator 183 LOC, audit_style 0, block migration script applied, QA runbook + CI surface-map test |
+
+
+## Items/inventory final audit
+
+[Evidence and scope](research/items-completion-2026-11-13/final-audit/README.md):
+style gate and include gate pass, no grandfathered size limits were increased,
+no include exceptions were added. Shared mesh/fluid/view contracts were relocated,
+GPU telemetry goes through the adapter, and native-only probes live under Test.
+The eight lexical/negative audit tests remain fail-closed for real violations.
+The existing legacy dependency inventory and large grandfathered functions remain
+architectural backlog. Twenty selected Release tests pass, including
+worldgen_vegetation_placement_test; TD-AUD-032 is a historical full-suite finding,
+not a claim that all listed failures were reproduced by this scoped run.

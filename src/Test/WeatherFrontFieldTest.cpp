@@ -22,7 +22,7 @@ int main()
   biome.PrecipitationMultiplier = 1.0f;
   biome.WindExposure = 1.0f;
 
-  cutum::WeatherFrontField field(0xC0B47AULL);
+  cutum::UWeatherFrontField field(0xC0B47AULL);
   const glm::vec3 sample_position(-1300.0f, 80.0f, 527.0f);
   const auto first =
       field.SampleAt(sample_position, biome, 48.0f, 0.00135f, 0.3f, 0.35f);
@@ -63,7 +63,7 @@ int main()
   const auto moved =
       field.SampleAt(sample_position, biome, 48.0f, 0.00135f, 0.3f, 0.35f);
   bool field_moved = false;
-  cutum::WeatherFrontField initial_field(0xC0B47AULL);
+  cutum::UWeatherFrontField initial_field(0xC0B47AULL);
   for (int z = -2048; z <= 2048 && !field_moved; z += 128)
   {
     for (int x = -2048; x <= 2048; x += 128)
@@ -79,7 +79,7 @@ int main()
   }
   Expect(field_moved, "weather field moves with simulation time");
 
-  cutum::WeatherFrontField restored(0xC0B47AULL);
+  cutum::UWeatherFrontField restored(0xC0B47AULL);
   restored.SetSimulationTimeSec(field.GetSimulationTimeSec());
   const auto replayed =
       restored.SampleAt(sample_position, biome, 48.0f, 0.00135f, 0.3f, 0.35f);
@@ -99,8 +99,7 @@ int main()
   biome.Temperature = 0.3f;
   const auto transition =
       restored.SampleAt(sample_position, biome, 48.0f, 0.00135f, 0.3f, 0.35f);
-  Expect(transition.SnowFraction > 0.45f &&
-             transition.SnowFraction < 0.55f,
+  Expect(transition.SnowFraction > 0.45f && transition.SnowFraction < 0.55f,
          "temperature threshold blends rain and snow continuously");
   return 0;
 }

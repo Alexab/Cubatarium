@@ -80,6 +80,7 @@ public:
   void ApplyPresentSettings();
 
 private:
+  void RecordFrameTiming(double swap_wait_ms, double frame_wall_ms);
   static void FramebufferSizeCallback(GLFWwindow *window, int width,
                                       int height);
   static void KeyCallback(GLFWwindow *window, int key, int scancode, int Action,

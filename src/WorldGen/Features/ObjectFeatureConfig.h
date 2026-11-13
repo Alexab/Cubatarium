@@ -110,7 +110,7 @@ struct FeatureDistributionProfile
 
 /// Runtime registry of authored feature behavior names. New algorithms add a
 /// strategy type here and a matching placement strategy in the worldgen layer.
-class ObjectFeatureTypeRegistry
+class UObjectFeatureTypeRegistry
 {
 public:
   static bool Register(const std::string &name, ObjectFeatureRuleMode mode);
@@ -155,7 +155,7 @@ public:
                      const std::function<bool(BlockId)> &isCaveRock) const = 0;
 };
 
-class CaveFeaturePlacementStrategyRegistry
+class UCaveFeaturePlacementStrategyRegistry
 {
 public:
   static bool
@@ -212,7 +212,7 @@ public:
 /// Runtime registry separates feature type names from their placement
 /// algorithms. New modes can register an implementation without adding another
 /// branch to the candidate-selection pipeline.
-class ObjectFeaturePlacementStrategyRegistry
+class UObjectFeaturePlacementStrategyRegistry
 {
 public:
   static bool

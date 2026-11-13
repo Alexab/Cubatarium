@@ -13,24 +13,24 @@ class IWorldGenBiomeSource
 public:
   virtual ~IWorldGenBiomeSource() = default;
   virtual BiomeWeightSet SampleSurfaceWeights(int x, int z, int coarseY,
-                                               int seaLevel,
-                                               int maxHeight) const = 0;
+                                              int seaLevel,
+                                              int maxHeight) const = 0;
   virtual BiomeId Sample3D(int x, int y, int z, int surfaceY, int seaLevel,
                            int maxHeight) const = 0;
-  virtual BiomeKey Sample3DKey(int x, int y, int z, int surfaceY,
-                               int seaLevel, int maxHeight) const = 0;
+  virtual BiomeKey Sample3DKey(int x, int y, int z, int surfaceY, int seaLevel,
+                               int maxHeight) const = 0;
 };
 
-class ProceduralClimateBiomeSource final : public IWorldGenBiomeSource
+class UProceduralClimateBiomeSource final : public IWorldGenBiomeSource
 {
 public:
-  explicit ProceduralClimateBiomeSource(const UBiomeSampler &sampler)
+  explicit UProceduralClimateBiomeSource(const UBiomeSampler &sampler)
       : Sampler(sampler)
   {
   }
 
   BiomeWeightSet SampleSurfaceWeights(int x, int z, int coarseY, int seaLevel,
-                                       int maxHeight) const override;
+                                      int maxHeight) const override;
   BiomeId Sample3D(int x, int y, int z, int surfaceY, int seaLevel,
                    int maxHeight) const override;
   BiomeKey Sample3DKey(int x, int y, int z, int surfaceY, int seaLevel,
@@ -49,7 +49,7 @@ public:
   }
 
   BiomeWeightSet SampleSurfaceWeights(int x, int z, int coarseY, int seaLevel,
-                                       int maxHeight) const override;
+                                      int maxHeight) const override;
   BiomeId Sample3D(int x, int y, int z, int surfaceY, int seaLevel,
                    int maxHeight) const override;
   BiomeKey Sample3DKey(int x, int y, int z, int surfaceY, int seaLevel,

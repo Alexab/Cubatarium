@@ -645,7 +645,7 @@ void UInGameHudScreen::UpdateModeBadge()
                                                    camera->GetFront(), 2.6f))
         if (auto *target = world->GetCreature(*id))
         {
-          auto profile = WorldItemSystem::Instance().Profile(*world, *target);
+          auto profile = UWorldItemSystem::Instance().Profile(*world, *target);
           auto hands = CarryHands(
               profile,
               StatusEffectSystem::GetEffectiveAttributes(*actor).strength,

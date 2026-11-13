@@ -220,7 +220,7 @@ def auto_resolved_ids() -> dict[str, str]:
     if "ULegacyChunkJsonLoader" in world_text:
         resolved["AUDIT-WORLD-001"] = "extracted to src/World/IO/LegacyChunkJsonLoader.*"
 
-    fog_h = REPO_ROOT / "src/Render/Engine/DistanceFog.h"
+    fog_h = REPO_ROOT / "src/World/View/DistanceFog.h"
     if fog_h.exists() and "StreamingHorizonBlocks" not in fog_h.read_text(
         encoding="utf-8", errors="ignore"
     ):

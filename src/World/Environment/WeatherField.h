@@ -32,12 +32,12 @@ struct WeatherSample
 /// Deterministic, seed-derived weather fronts. The field is advected through
 /// world space and needs only its algorithm version and simulation clock to
 /// resume after a save/load.
-class WeatherFrontField
+class UWeatherFrontField
 {
 public:
   static constexpr uint32_t kAlgorithmVersion = 2;
 
-  explicit WeatherFrontField(uint32_t seed = 0) : Seed(seed) {}
+  explicit UWeatherFrontField(uint32_t seed = 0) : Seed(seed) {}
   void SetSeed(uint32_t seed) { Seed = seed; }
   uint32_t GetSeed() const { return Seed; }
   void Tick(float dt_seconds);

@@ -1,11 +1,11 @@
 #include "WorldGen/Sampling/DensityFieldSampler.h"
 #include "WorldGen/Core/Noise.h"
-#include "WorldGen/Features/CaveDepthBand.h"
+#include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Features/CaveCarver.h"
+#include "WorldGen/Features/CaveDepthBand.h"
 #include "WorldGen/Features/RiverField.h"
 #include "WorldGen/Sampling/ClimateSampler.h"
 #include "WorldGen/Sampling/TerrainClimateMapper.h"
-#include "WorldGen/Core/WorldGenPack.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -28,16 +28,17 @@ uint64_t SamplingColumnKey(int x, int z)
          static_cast<uint32_t>(z);
 }
 
-class ScopedDensityProfilePhase
+class UScopedDensityProfilePhase
 {
 public:
-  ScopedDensityProfilePhase(bool enabled, double &target)
-      : Target(target), Start(enabled ? std::chrono::steady_clock::now()
-                                     : std::chrono::steady_clock::time_point{}),
+  UScopedDensityProfilePhase(bool enabled, double &target)
+      : Target(target),
+        Start(enabled ? std::chrono::steady_clock::now()
+                      : std::chrono::steady_clock::time_point{}),
         Enabled(enabled)
   {
   }
-  ~ScopedDensityProfilePhase()
+  ~UScopedDensityProfilePhase()
   {
     if (Enabled)
     {
@@ -60,8 +61,8 @@ float CombinedCaveDensityNoise(int x, int y, int z, uint32_t seed,
   const float wy = static_cast<float>(y);
   const float wz = static_cast<float>(z);
   const float cheese = FBM3D(wx * params.cheeseScale, wy * params.cheeseScale,
-                               wz * params.cheeseScale, seed + 3100, 2,
-                               params.persistence, params.lacunarity);
+                             wz * params.cheeseScale, seed + 3100, 2,
+                             params.persistence, params.lacunarity);
   const float spaghetti =
       FBM3D(wx * params.spaghettiScale, wy * params.spaghettiScale * 0.8f,
             wz * params.spaghettiScale, seed + 3200, 2, params.persistence,
@@ -87,13 +88,12 @@ float HorizontalSurfaceWobble(int x, int z, uint32_t seed, float scale,
 
 } // namespace
 
-UDensityFieldSampler::UDensityFieldSampler(uint32_t seed, int seaLevel,
-                                           int maxHeight, float terrainRoughness,
-                                           const DensityFieldParams &params,
-                                           const CaveParams &caves,
-                                           int minHeight)
-    : Seed(seed), SeaLevel(seaLevel), MaxHeight(maxHeight), MinHeight(minHeight),
-      TerrainRoughness(terrainRoughness), Params(params), Caves(caves)
+UDensityFieldSampler::UDensityFieldSampler(
+    uint32_t seed, int seaLevel, int maxHeight, float terrainRoughness,
+    const DensityFieldParams &params, const CaveParams &caves, int minHeight)
+    : Seed(seed), SeaLevel(seaLevel), MaxHeight(maxHeight),
+      MinHeight(minHeight), TerrainRoughness(terrainRoughness), Params(params),
+      Caves(caves)
 {
 }
 
@@ -144,7 +144,7 @@ DensityRouteParams UDensityFieldSampler::RouteAt(int x, int z) const
 
 DensityRouteParams UDensityFieldSampler::ComputeRouteAt(int x, int z) const
 {
-  ScopedDensityProfilePhase profile_phase(ProfilingEnabled, Profile.route_ms);
+  UScopedDensityProfilePhase profile_phase(ProfilingEnabled, Profile.route_ms);
   if (ProfilingEnabled)
   {
     ++Profile.route_calls;
@@ -158,14 +158,13 @@ DensityRouteParams UDensityFieldSampler::ComputeRouteAt(int x, int z) const
     // coastlines and ridges stop following the noise lattice.
     constexpr float kWarpScale = 0.0042f;
     constexpr float kWarpAmplitude = 22.0f;
-    wx += kWarpAmplitude *
-          SmoothFBM2D(static_cast<float>(x) * kWarpScale,
-                      static_cast<float>(z) * kWarpScale, Seed + 5410, 2, 0.5f,
-                      2.0f);
-    wz += kWarpAmplitude *
-          SmoothFBM2D(static_cast<float>(x) * kWarpScale + 71.0f,
-                      static_cast<float>(z) * kWarpScale - 43.0f, Seed + 5411,
-                      2, 0.5f, 2.0f);
+    wx += kWarpAmplitude * SmoothFBM2D(static_cast<float>(x) * kWarpScale,
+                                       static_cast<float>(z) * kWarpScale,
+                                       Seed + 5410, 2, 0.5f, 2.0f);
+    wz +=
+        kWarpAmplitude * SmoothFBM2D(static_cast<float>(x) * kWarpScale + 71.0f,
+                                     static_cast<float>(z) * kWarpScale - 43.0f,
+                                     Seed + 5411, 2, 0.5f, 2.0f);
   }
   const ClimateSample climate =
       SampleClimate(static_cast<int>(std::lround(wx)),
@@ -180,7 +179,8 @@ DensityRouteParams UDensityFieldSampler::ComputeRouteAt(int x, int z) const
       height.Loaded ? height.Rolling : HeightLayerPackConfig{0.012f, 3, 0.26f};
   const float land = Smoothstep(0.38f, 0.58f, climate.continentalness);
   const float lowErosion = 1.0f - Smoothstep(0.35f, 0.78f, climate.erosion);
-  const float peakValleys = std::clamp(PeaksAndValleys(climate.weirdness), 0.0f, 1.0f);
+  const float peakValleys =
+      std::clamp(PeaksAndValleys(climate.weirdness), 0.0f, 1.0f);
   const float mountainWeight = MountainClimateWeight(climate);
 
   const float broadNoise =
@@ -217,10 +217,10 @@ DensityRouteParams UDensityFieldSampler::ComputeRouteAt(int x, int z) const
   const float verticalRange = static_cast<float>(MaxHeight - SeaLevel);
   const float roughness = std::max(0.25f, TerrainRoughness);
 
-  float regionalAmplitude =
-      verticalRange * (0.035f + 0.035f * roughness) * (0.35f + 0.65f * lowErosion);
-  float rollingAmplitude =
-      verticalRange * (0.015f + 0.018f * roughness) * (0.55f + 0.45f * lowErosion);
+  float regionalAmplitude = verticalRange * (0.035f + 0.035f * roughness) *
+                            (0.35f + 0.65f * lowErosion);
+  float rollingAmplitude = verticalRange * (0.015f + 0.018f * roughness) *
+                           (0.55f + 0.45f * lowErosion);
   float broadAmplitude = verticalRange * 0.055f;
   float mountainUplift = verticalRange * 0.42f;
   float mountainRidgeAmplitude = verticalRange * 0.52f;
@@ -239,11 +239,12 @@ DensityRouteParams UDensityFieldSampler::ComputeRouteAt(int x, int z) const
     mountainUplift = verticalRange * 0.24f;
     mountainRidgeAmplitude = verticalRange * 0.30f;
     mountainTrough = verticalRange * 0.03f;
-    mountainShape = mountainWeight * mountainWeight * (3.0f - 2.0f * mountainWeight);
+    mountainShape =
+        mountainWeight * mountainWeight * (3.0f - 2.0f * mountainWeight);
   }
   route.baseHeightBlocks +=
-      land * (broadNoise * broadAmplitude +
-              regionalNoise * regionalAmplitude + rollingNoise * rollingAmplitude);
+      land * (broadNoise * broadAmplitude + regionalNoise * regionalAmplitude +
+              rollingNoise * rollingAmplitude);
   if (Params.routerV3)
   {
     // Mountains rise from inland high ground, not straight out of the sea:
@@ -257,20 +258,18 @@ DensityRouteParams UDensityFieldSampler::ComputeRouteAt(int x, int z) const
   route.baseHeightBlocks +=
       mountainShape *
       (mountainUplift +
-       std::pow(std::clamp(ridged, 0.0f, 1.0f), 2.0f) *
-           mountainRidgeAmplitude -
+       std::pow(std::clamp(ridged, 0.0f, 1.0f), 2.0f) * mountainRidgeAmplitude -
        mountainTrough);
   if (Params.riversEnabled && route.baseHeightBlocks > SeaLevel + 2 &&
       climate.continentalness > 0.40f)
   {
     const float channel = SampleRiverChannelStrength(
-        x, z, Seed, Params.riverNoiseScale, Params.riverWidth,
-        climate.erosion, climate.weirdness, v3 ? 36.0f : 10.0f);
+        x, z, Seed, Params.riverNoiseScale, Params.riverWidth, climate.erosion,
+        climate.weirdness, v3 ? 36.0f : 10.0f);
     const float wetness = Smoothstep(0.24f, 0.68f, climate.moisture);
     const float incision = channel * (0.2f + wetness * 0.8f);
-    const float river_floor =
-        std::max(static_cast<float>(MinHeight + 2),
-                 static_cast<float>(SeaLevel - 2));
+    const float river_floor = std::max(static_cast<float>(MinHeight + 2),
+                                       static_cast<float>(SeaLevel - 2));
     float cut = std::max(0.0f, route.baseHeightBlocks - river_floor) * incision;
     if (Params.routerV3)
     {
@@ -285,21 +284,19 @@ DensityRouteParams UDensityFieldSampler::ComputeRouteAt(int x, int z) const
   route.baseHeightBlocks =
       std::clamp(route.baseHeightBlocks, static_cast<float>(MinHeight),
                  static_cast<float>(MaxHeight));
-  route.noiseFactor =
-      (2.2f + roughness * 2.8f + mountainWeight * 4.0f) *
-      ErosionAmplitudeMultiplier(climate.erosion);
+  route.noiseFactor = (2.2f + roughness * 2.8f + mountainWeight * 4.0f) *
+                      ErosionAmplitudeMultiplier(climate.erosion);
   if (Params.routerV3)
   {
     // 3D noise is the "factor" of the router: tiny on lowlands, strong only
     // where the mountain weight is high.
-    route.noiseFactor =
-        (0.9f + roughness * 1.4f + mountainShape * 6.5f) *
-        ErosionAmplitudeMultiplier(climate.erosion);
+    route.noiseFactor = (0.9f + roughness * 1.4f + mountainShape * 6.5f) *
+                        ErosionAmplitudeMultiplier(climate.erosion);
   }
-  route.jaggedness = std::clamp(
-      0.3f + (1.0f - climate.erosion) * 0.35f + mountainWeight * 0.65f +
-          peakValleys * 0.15f,
-      0.2f, 1.35f);
+  route.jaggedness =
+      std::clamp(0.3f + (1.0f - climate.erosion) * 0.35f +
+                     mountainWeight * 0.65f + peakValleys * 0.15f,
+                 0.2f, 1.35f);
   return route;
 }
 
@@ -333,23 +330,23 @@ float UDensityFieldSampler::HorizontalWobbleAt(
 float UDensityFieldSampler::ComputeHorizontalWobbleAt(
     int x, int z, const DensityRouteParams &route) const
 {
-  ScopedDensityProfilePhase profile_phase(ProfilingEnabled, Profile.wobble_ms);
+  UScopedDensityProfilePhase profile_phase(ProfilingEnabled, Profile.wobble_ms);
   if (ProfilingEnabled)
   {
     ++Profile.wobble_calls;
   }
-  return HorizontalSurfaceWobble(
-      x, z, Seed, Params.noiseScale, std::max(1, Params.octaves),
-      Params.persistence, Params.lacunarity, route.noiseFactor,
-      route.jaggedness);
+  return HorizontalSurfaceWobble(x, z, Seed, Params.noiseScale,
+                                 std::max(1, Params.octaves),
+                                 Params.persistence, Params.lacunarity,
+                                 route.noiseFactor, route.jaggedness);
 }
 
 float UDensityFieldSampler::SampleTerrainDensityAt(
     int x, int y, int z, int octaves, const DensityRouteParams &route,
     float horizontal_wobble) const
 {
-  ScopedDensityProfilePhase profile_phase(ProfilingEnabled,
-                                          Profile.terrain_density_ms);
+  UScopedDensityProfilePhase profile_phase(ProfilingEnabled,
+                                           Profile.terrain_density_ms);
   if (ProfilingEnabled)
   {
     ++Profile.terrain_density_calls;
@@ -360,9 +357,8 @@ float UDensityFieldSampler::SampleTerrainDensityAt(
   const float wx = static_cast<float>(x) * scale;
   const float wy = static_cast<float>(y) * scale;
   const float wz = static_cast<float>(z) * scale;
-  const float terrain_noise =
-      FBM3D(wx, wy, wz, Seed + 5200, effective_octaves, Params.persistence,
-            Params.lacunarity);
+  const float terrain_noise = FBM3D(wx, wy, wz, Seed + 5200, effective_octaves,
+                                    Params.persistence, Params.lacunarity);
   return route.baseHeightBlocks + route.noiseFactor * terrain_noise * 0.55f +
          horizontal_wobble - static_cast<float>(y);
 }
@@ -384,7 +380,8 @@ float UDensityFieldSampler::ApplyCaveDensityOffset(int x, int y, int z,
   {
     return density;
   }
-  const float cave_noise = CombinedCaveDensityNoise(x, y, z, Seed + 3000, Caves);
+  const float cave_noise =
+      CombinedCaveDensityNoise(x, y, z, Seed + 3000, Caves);
   return density + cave_noise * Params.caveAmplitude;
 }
 
@@ -393,7 +390,7 @@ float UDensityFieldSampler::SampleTerrainDensity(int x, int y, int z,
 {
   const DensityRouteParams route = RouteAt(x, z);
   return SampleTerrainDensityAt(x, y, z, octaves, route,
-                                 HorizontalWobbleAt(x, z, route));
+                                HorizontalWobbleAt(x, z, route));
 }
 
 float UDensityFieldSampler::SampleDensity(int x, int y, int z,
@@ -402,8 +399,9 @@ float UDensityFieldSampler::SampleDensity(int x, int y, int z,
   return SampleDensity(PrepareColumn(x, z, surface_y, surface_y), y);
 }
 
-UDensityFieldSampler::Column UDensityFieldSampler::PrepareColumn(
-    int x, int z, int target_surface_y, int raw_surface_y) const
+UDensityFieldSampler::Column
+UDensityFieldSampler::PrepareColumn(int x, int z, int target_surface_y,
+                                    int raw_surface_y) const
 {
   if (ProfilingEnabled)
   {
@@ -425,11 +423,12 @@ UDensityFieldSampler::Column UDensityFieldSampler::PrepareColumn(
 
 float UDensityFieldSampler::SampleDensity(const Column &column, int y) const
 {
-  float density = SampleTerrainDensityAt(column.x, y, column.z, Params.octaves,
-                                         column.route,
-                                         column.horizontalWobble) +
-                  column.surfaceDensityOffset;
-  return ApplyCaveDensityOffset(column.x, y, column.z, column.surfaceY, density);
+  float density =
+      SampleTerrainDensityAt(column.x, y, column.z, Params.octaves,
+                             column.route, column.horizontalWobble) +
+      column.surfaceDensityOffset;
+  return ApplyCaveDensityOffset(column.x, y, column.z, column.surfaceY,
+                                density);
 }
 
 int UDensityFieldSampler::DensityScanTop(const DensityRouteParams &route,
@@ -444,7 +443,8 @@ int UDensityFieldSampler::DensityScanTop(const DensityRouteParams &route,
   // |FBM3D| <= sum(persistence^i) * max|Perlin3D|. Above the bound below the
   // density cannot be positive, so the downward surface scan may start there.
   constexpr float kPerlinMaxAbs = 1.5f; // conservative (improved Perlin <= 1)
-  const int effective_octaves = octaves > 0 ? octaves : std::max(1, Params.octaves);
+  const int effective_octaves =
+      octaves > 0 ? octaves : std::max(1, Params.octaves);
   float amplitude = 1.0f;
   float amplitude_sum = 0.0f;
   for (int i = 0; i < effective_octaves; ++i)
@@ -452,9 +452,9 @@ int UDensityFieldSampler::DensityScanTop(const DensityRouteParams &route,
     amplitude_sum += amplitude;
     amplitude *= Params.persistence;
   }
-  const float upper = route.baseHeightBlocks + horizontal_wobble +
-                      std::fabs(route.noiseFactor) * 0.55f * kPerlinMaxAbs *
-                          amplitude_sum;
+  const float upper =
+      route.baseHeightBlocks + horizontal_wobble +
+      std::fabs(route.noiseFactor) * 0.55f * kPerlinMaxAbs * amplitude_sum;
   if (!(upper < static_cast<float>(MaxHeight)))
   {
     return MaxHeight;
@@ -465,7 +465,8 @@ int UDensityFieldSampler::DensityScanTop(const DensityRouteParams &route,
 
 int UDensityFieldSampler::SurfaceYAt(int x, int z) const
 {
-  ScopedDensityProfilePhase profile_phase(ProfilingEnabled, Profile.surface_ms);
+  UScopedDensityProfilePhase profile_phase(ProfilingEnabled,
+                                           Profile.surface_ms);
   if (ProfilingEnabled)
   {
     ++Profile.surface_calls;
@@ -487,8 +488,7 @@ int UDensityFieldSampler::SurfaceYAt(int x, int z) const
     return terrain_surface;
   }
 
-  const Column column =
-      PrepareColumn(x, z, terrain_surface, terrain_surface);
+  const Column column = PrepareColumn(x, z, terrain_surface, terrain_surface);
   for (int y = terrain_surface; y >= MinHeight; --y)
   {
     if (SampleDensity(column, y) > 0.0f)
@@ -496,13 +496,13 @@ int UDensityFieldSampler::SurfaceYAt(int x, int z) const
       return y;
     }
   }
-  return std::clamp(static_cast<int>(std::lround(route.baseHeightBlocks)), MinHeight,
-                    MaxHeight);
+  return std::clamp(static_cast<int>(std::lround(route.baseHeightBlocks)),
+                    MinHeight, MaxHeight);
 }
 
 int UDensityFieldSampler::CoarseSurfaceYAt(int x, int z) const
 {
-  ScopedDensityProfilePhase profile_phase(ProfilingEnabled, Profile.coarse_ms);
+  UScopedDensityProfilePhase profile_phase(ProfilingEnabled, Profile.coarse_ms);
   if (ProfilingEnabled)
   {
     ++Profile.coarse_calls;
@@ -514,8 +514,9 @@ int UDensityFieldSampler::CoarseSurfaceYAt(int x, int z) const
   // first lattice point at or below the density upper bound.
   const int bound_top = DensityScanTop(route, wobble, coarse_octaves);
   const int coarse_top =
-      bound_top >= MaxHeight ? MaxHeight
-                             : MaxHeight - 2 * ((MaxHeight - bound_top + 1) / 2);
+      bound_top >= MaxHeight
+          ? MaxHeight
+          : MaxHeight - 2 * ((MaxHeight - bound_top + 1) / 2);
   for (int y = coarse_top; y >= MinHeight; y -= 2)
   {
     if (SampleTerrainDensityAt(x, y, z, coarse_octaves, route, wobble) > 0.0f)
@@ -523,8 +524,8 @@ int UDensityFieldSampler::CoarseSurfaceYAt(int x, int z) const
       return y;
     }
   }
-  return std::clamp(static_cast<int>(std::lround(route.baseHeightBlocks)), MinHeight,
-                    MaxHeight);
+  return std::clamp(static_cast<int>(std::lround(route.baseHeightBlocks)),
+                    MinHeight, MaxHeight);
 }
 
 } // namespace cutum

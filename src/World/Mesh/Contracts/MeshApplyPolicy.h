@@ -41,14 +41,11 @@ inline MeshApplyRevDecision ClassifyMeshApplyRevision(bool has_active,
   return MeshApplyRevDecision::Commit;
 }
 
-/// Era15 TD-ARCH-049 MeshResidency: when replacing a live GPU-resident mesh with
-/// CPU batches, publish the CPU drawable *before* FreeChunk. Free-first opens a
-/// one-frame hole whenever GPU was the sole drawable source (batches cleared on
-/// GPU commit). Industry: keep old mesh until replacement is ready.
-inline bool ShouldPublishCpuBatchesBeforeFreeGpu()
-{
-  return true;
-}
+/// Era15 TD-ARCH-049 MeshResidency: when replacing a live GPU-resident mesh
+/// with CPU batches, publish the CPU drawable *before* FreeChunk. Free-first
+/// opens a one-frame hole whenever GPU was the sole drawable source (batches
+/// cleared on GPU commit). Industry: keep old mesh until replacement is ready.
+inline bool ShouldPublishCpuBatchesBeforeFreeGpu() { return true; }
 
 /// True when FreeChunk-before-write would drop HasDrawable (GPU-only drawable).
 inline bool CpuReplaceFreeFirstWouldHole(bool gpu_drawable,
@@ -89,8 +86,8 @@ inline bool ShouldRetainUnderfeetGpuOnEmptyReplace(bool underfeet_lease,
 /// Hinterland (horiz > keep) still evicts. Hide-until-lit covers FullyDark —
 /// RemoveChunk dark GPU «ради дыр» collapses packed/pool on cruise (195810).
 inline bool ShouldKeepGpuSlotUntilBindInRing(bool had_gpu_drawable, int horiz,
-                                            int keep_horiz,
-                                            bool has_replacement_bound)
+                                             int keep_horiz,
+                                             bool has_replacement_bound)
 {
   if (!had_gpu_drawable || has_replacement_bound || keep_horiz < 0)
   {
@@ -102,14 +99,15 @@ inline bool ShouldKeepGpuSlotUntilBindInRing(bool had_gpu_drawable, int horiz,
 /// P4: keep packed/slice-ready draw (not just the SSBO) until BindCommitted.
 /// Pool can survive a cruise step while GpuPacked refs dump — same keep ring.
 inline bool ShouldKeepPackedDrawUntilBind(bool had_live_gpu_draw, int horiz,
-                                         int keep_horiz,
-                                         bool has_replacement_bound)
+                                          int keep_horiz,
+                                          bool has_replacement_bound)
 {
   return ShouldKeepGpuSlotUntilBindInRing(had_live_gpu_draw, horiz, keep_horiz,
                                           has_replacement_bound);
 }
 
-/// LitRing: lit GpuPacked stays until BindCommitted (never free into dark plug).
+/// LitRing: lit GpuPacked stays until BindCommitted (never free into dark
+/// plug).
 inline bool ShouldKeepLitPackedUntilBind(bool had_lit_drawable, int horiz,
                                          int keep_horiz,
                                          bool has_replacement_bound)
@@ -122,15 +120,16 @@ inline bool ShouldKeepLitPackedUntilBind(bool had_lit_drawable, int horiz,
 /// StaleVertexLight remesh (RemeshQ). Closeout C routed FullyDark→FM and mixed
 /// classes under HoleDrain (201330: dirty_fm~129 vs remesh~32, schedule_ok=1).
 inline bool ShouldRouteRemeshToFirstMeshQueue(bool has_drawable,
-                                             bool fully_dark_drawable)
+                                              bool fully_dark_drawable)
 {
   (void)fully_dark_drawable;
   return !has_drawable;
 }
 
-/// A10 RelightReplace Dirty sole-owner for published FullyDark / StaleVertexLight.
-/// When ON: secondary enter/RAA/seam Dirty pumps must not MarkDirty FullyDark —
-/// MarkRelit → RemeshQ is the sole producer. Rollback: Set(false).
+/// A10 RelightReplace Dirty sole-owner for published FullyDark /
+/// StaleVertexLight. When ON: secondary enter/RAA/seam Dirty pumps must not
+/// MarkDirty FullyDark — MarkRelit → RemeshQ is the sole producer. Rollback:
+/// Set(false).
 inline std::atomic<bool> &RelightReplaceDirtyOwnerFlag()
 {
   static std::atomic<bool> enabled{true};
@@ -147,8 +146,9 @@ inline void SetRelightReplaceDirtyOwnerEnabled(bool on)
 /// Skip secondary FullyDark Dirty when RelightReplace owner is ON.
 /// Optional mark_relit_progress_frames reserved for seam/audit experiments;
 /// default <0 keeps legacy always-skip when owner ON (ChunkMeshCache RAA).
-inline bool ShouldSkipSecondaryFullyDarkDirty(bool fully_dark_drawable,
-                                              int mark_relit_progress_frames = -1)
+inline bool
+ShouldSkipSecondaryFullyDarkDirty(bool fully_dark_drawable,
+                                  int mark_relit_progress_frames = -1)
 {
   (void)mark_relit_progress_frames;
   return IsRelightReplaceDirtyOwnerEnabled() && fully_dark_drawable;
@@ -157,7 +157,7 @@ inline bool ShouldSkipSecondaryFullyDarkDirty(bool fully_dark_drawable,
 /// N04 autopsy I3t: accepted light/geom-stale must not become sole live image
 /// while prior drawable exists — hold prior draw and Dirty-refresh instead.
 inline bool ShouldHoldPriorDrawOnAcceptedStale(bool accepted_input_stale,
-                                              bool had_prior_drawable)
+                                               bool had_prior_drawable)
 {
   return accepted_input_stale && had_prior_drawable;
 }
@@ -166,8 +166,8 @@ inline bool ShouldHoldPriorDrawOnAcceptedStale(bool accepted_input_stale,
 /// allocated). SoT 100303: overlay/fluid must NOT force resident-alone prior —
 /// that held empty spoofs and left SoftDefer holes.
 inline bool HadVisualPriorForI3tHold(bool has_drawable_greedy,
-                                    bool gpu_resident_flag,
-                                    bool pipeline_has_gpu_mesh)
+                                     bool gpu_resident_flag,
+                                     bool pipeline_has_gpu_mesh)
 {
   if (has_drawable_greedy)
   {
@@ -183,9 +183,9 @@ inline bool HadVisualPriorForI3tHold(bool has_drawable_greedy,
 /// SoT 100303: never I3t-hold without a drawable greedy — first-fill must
 /// publish. Weak resident/pipe prior alone is diagnostic-only (empty spoof).
 inline bool ShouldI3tHoldPriorOnAcceptedStale(bool accepted_input_stale,
-                                             bool has_drawable_greedy,
-                                             bool gpu_resident_flag,
-                                             bool pipeline_has_gpu_mesh)
+                                              bool has_drawable_greedy,
+                                              bool gpu_resident_flag,
+                                              bool pipeline_has_gpu_mesh)
 {
   if (!has_drawable_greedy)
   {
@@ -230,19 +230,15 @@ inline bool ShouldHoldInflightSupersedeUnderMissUndrawn(
   return soft_or_miss_undrawn && has_inflight_or_pending && !has_drawable;
 }
 
-/// FP-A2 / FP-D1 / I8-A1: HoleDrain cruise nh≤4 — do not park undrawn miss in RAA.
-/// Bypass only under hole pressure or empty FM queue — never blanket on low
-/// schedule_ok (that flooded Dirty without mesh completion, holes_rate 0.72).
-/// fm_consumer_starved: dirty_fm>0 but schedule under floor — must bypass RAA.
-inline bool ShouldBypassRaAParkForCruiseFirstMesh(bool hole_drain_mode,
-                                                    int horiz,
-                                                    bool fm_starvation = false,
-                                                    bool column_loaded_no_mesh =
-                                                        false,
-                                                    int schedule_ok_n = 999,
-                                                    int first_mesh_floor = 4,
-                                                    bool fm_consumer_starved =
-                                                        false)
+/// FP-A2 / FP-D1 / I8-A1: HoleDrain cruise nh≤4 — do not park undrawn miss in
+/// RAA. Bypass only under hole pressure or empty FM queue — never blanket on
+/// low schedule_ok (that flooded Dirty without mesh completion, holes_rate
+/// 0.72). fm_consumer_starved: dirty_fm>0 but schedule under floor — must
+/// bypass RAA.
+inline bool ShouldBypassRaAParkForCruiseFirstMesh(
+    bool hole_drain_mode, int horiz, bool fm_starvation = false,
+    bool column_loaded_no_mesh = false, int schedule_ok_n = 999,
+    int first_mesh_floor = 4, bool fm_consumer_starved = false)
 {
   if (horiz < 0 || horiz > 4)
   {
@@ -267,8 +263,10 @@ inline bool ShouldBypassRaAParkForCruiseFirstMesh(bool hole_drain_mode,
   return false;
 }
 
-/// FP-G1 arch: prior-frame enqueue minus prior-frame schedule drain (not same-frame).
-inline int ComputeFmDirtyEnqueueReserve(int enqueue_prior, int schedule_ok_prior)
+/// FP-G1 arch: prior-frame enqueue minus prior-frame schedule drain (not
+/// same-frame).
+inline int ComputeFmDirtyEnqueueReserve(int enqueue_prior,
+                                        int schedule_ok_prior)
 {
   int reserve = std::max(0, enqueue_prior - schedule_ok_prior);
   // M1-4: empty_fm_queue guard — keep FM enqueue path alive when both zero.
@@ -280,7 +278,8 @@ inline int ComputeFmDirtyEnqueueReserve(int enqueue_prior, int schedule_ok_prior
 }
 
 /// Phase 5.6.2: keep-ring FirstMesh reserve floor outside AbortDripN.
-/// Survives abort clamp so frontier empties / miss / SoftDefer / latch can enqueue.
+/// Survives abort clamp so frontier empties / miss / SoftDefer / latch can
+/// enqueue.
 inline int ComputeKeepRingFmDirtyEnqueueReserve(int base_reserve,
                                                 bool focus_missing,
                                                 int empty_backlog_n, bool latch,
@@ -296,7 +295,8 @@ inline int ComputeKeepRingFmDirtyEnqueueReserve(int base_reserve,
   return reserve;
 }
 
-/// Phase 5.6.2: presentable-band empty pressure (r<=work_r), not full RD inflate.
+/// Phase 5.6.2: presentable-band empty pressure (r<=work_r), not full RD
+/// inflate.
 inline int PresentableBandEmptyPressure(int unfinished_visual,
                                         int column_loaded_no_mesh,
                                         int chunk_not_ready, int work_radius,
@@ -306,9 +306,8 @@ inline int PresentableBandEmptyPressure(int unfinished_visual,
   {
     return 0;
   }
-  const bool in_band =
-      (miss_horiz >= 0 && miss_horiz <= work_radius) ||
-      (stuck_horiz >= 0 && stuck_horiz <= work_radius);
+  const bool in_band = (miss_horiz >= 0 && miss_horiz <= work_radius) ||
+                       (stuck_horiz >= 0 && stuck_horiz <= work_radius);
   if (!in_band && unfinished_visual <= 0 && column_loaded_no_mesh <= 0)
   {
     return 0;
@@ -321,17 +320,16 @@ inline int PresentableBandEmptyPressure(int unfinished_visual,
   {
     return backlog;
   }
-  // No miss/stuck pin in band: only count if backlog is small (keep-ring sized).
+  // No miss/stuck pin in band: only count if backlog is small (keep-ring
+  // sized).
   constexpr int kKeepRingBacklogCap = 9; // ~(2*r+1)^2/4 for r=4-ish
   return backlog > 0 && backlog <= kKeepRingBacklogCap ? backlog : 0;
 }
 
 /// Effective FirstMesh schedule cap after drain-aware reserve.
-inline int ComputeFirstMeshScheduleEffectiveCap(int first_mesh_cap_base,
-                                                  int fm_q, int reserve_n,
-                                                  int first_mesh_floor = 4,
-                                                  bool fm_consumer_starved = false,
-                                                  int schedule_ok_n = 0)
+inline int ComputeFirstMeshScheduleEffectiveCap(
+    int first_mesh_cap_base, int fm_q, int reserve_n, int first_mesh_floor = 4,
+    bool fm_consumer_starved = false, int schedule_ok_n = 0)
 {
   if (reserve_n <= 0)
   {
@@ -346,8 +344,7 @@ inline int ComputeFirstMeshScheduleEffectiveCap(int first_mesh_cap_base,
   // I10-D3: soften consumer-starved clamp — keep schedule_ok+1 throughput.
   if (fm_consumer_starved && schedule_ok_n >= 0)
   {
-    reserved_cap =
-        std::max(reserved_cap, std::min(schedule_ok_n + 1, fm_q));
+    reserved_cap = std::max(reserved_cap, std::min(schedule_ok_n + 1, fm_q));
   }
   // A29 U1: when starved with a large FM queue, never shrink below base.
   if (fm_consumer_starved && fm_q >= 32)

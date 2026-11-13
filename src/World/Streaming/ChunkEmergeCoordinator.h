@@ -54,6 +54,9 @@ public:
   void TickMeshEmerge(UWorld &world, const StreamingPressureCaps &pressure);
 
 private:
+  bool HasResidentChunk(glm::ivec3 chunk_coord);
+  void OnSoftDeferHeld(glm::ivec3 chunk_coord);
+  void ResetFaceDebtEpoch(UWorld &world);
   FrameBudget LastBudget{};
   void EnqueueFaceDebtRepair(glm::ivec3 coord);
   void DrainFaceDebtRepairs(UWorld &world, int budget);
@@ -95,7 +98,8 @@ private:
   /// Era39: sticky SoftDefer empty ownership until healed.
   std::unordered_set<glm::ivec3, IVec3Hash> SoftDeferEmptyOwned;
   /// Phase 5.7R3: last StreamingFrameEpoch SoftDefer underfeet MarkDirty.
-  std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> SoftDeferUnderfeetMarkEpoch;
+  std::unordered_map<glm::ivec3, uint64_t, IVec3Hash>
+      SoftDeferUnderfeetMarkEpoch;
   /// Era39: previous-frame SoftDefer empty set (hidden-neighbor seam).
   std::unordered_set<glm::ivec3, IVec3Hash> SoftDeferEmptyPrevSeen;
   /// Era34 P1: rotate SoftDefer empty ownership when cap saturates.
@@ -105,13 +109,13 @@ private:
   bool SoftDeferCallbacksInstalled{false};
   /// R06 E0: one sea-seam remesh dirty per peer column per emerge tick.
   std::unordered_set<uint64_t> SeaSeamRemeshCoalesceCols;
-  /// Sysreset v5: FaceDebt already-known peer remesh cap (shared with BecameKnown).
+  /// Sysreset v5: FaceDebt already-known peer remesh cap (shared with
+  /// BecameKnown).
   int FaceDebtAlreadyKnownRemeshN{0};
   /// Durable level-triggered retry for face debt, including late peer loads and
   /// accepted-empty peers that do not emit a first-drawable callback.
   std::deque<glm::ivec3> PendingFaceDebtRepairs_;
-  std::unordered_set<glm::ivec3, IVec3Hash>
-      PendingFaceDebtRepairSet_;
+  std::unordered_set<glm::ivec3, IVec3Hash> PendingFaceDebtRepairSet_;
   uint64_t FaceDebtWorldEpoch_{0};
   /// Prior-frame FM enqueue / schedule baselines (was function-static).
   int FmEnqueuePrior{0};

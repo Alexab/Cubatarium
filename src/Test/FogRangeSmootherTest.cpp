@@ -1,6 +1,6 @@
 // Fog distance smoothing: eases in/out, never overshoots, contracts faster
 // than it expands, and stays continuous in velocity.
-#include "Render/Engine/FogRangeSmoother.h"
+#include "World/View/FogRangeSmoother.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -87,11 +87,11 @@ int main()
   Expect(contract.max_speed <= params.ContractMaxSpeed + 0.1f,
          "contract speed cap");
   Expect(expand.max_speed <= params.ExpandMaxSpeed + 0.1f, "expand speed cap");
-  Expect(contract.max_accel <= std::max(params.ContractAccel,
-                                        params.ExpandAccel) + 0.5f,
+  Expect(contract.max_accel <=
+             std::max(params.ContractAccel, params.ExpandAccel) + 0.5f,
          "contract accel cap");
-  Expect(expand.max_accel <= std::max(params.ContractAccel,
-                                      params.ExpandAccel) + 0.5f,
+  Expect(expand.max_accel <=
+             std::max(params.ContractAccel, params.ExpandAccel) + 0.5f,
          "expand accel cap");
 
   // Eases in: speed after the first frame is tiny (no step onset).

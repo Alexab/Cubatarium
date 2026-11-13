@@ -121,9 +121,9 @@ public:
   void LoadWorldData(UWorld &world, const std::string &file_name);
   void SaveWorldData(UWorld &world, const std::string &file_name);
 
-  AsyncChunkIoTickMetrics
-  TickAsyncChunkIo(UWorld &world, std::size_t max_slice_applies = 0,
-                   double max_apply_ms = 0.0);
+  AsyncChunkIoTickMetrics TickAsyncChunkIo(UWorld &world,
+                                           std::size_t max_slice_applies = 0,
+                                           double max_apply_ms = 0.0);
   void FlushAsyncChunkIo(UWorld &world);
   bool TickDrainAsyncChunkIo(UWorld &world, int max_iterations);
   bool IsAsyncChunkIoQuiescent() const;
@@ -138,32 +138,26 @@ public:
   /// Queue a relight because an installed horizontal boundary light changed.
   /// This dependency is real work even when the target has no existing visual
   /// dark-face witness, so it bypasses only the settled/no-op admission guard.
-  void EnqueueBoundaryDependencyRelight(UWorld &world, int world_x,
-                                        int world_z, int min_y, int max_y);
+  void EnqueueBoundaryDependencyRelight(UWorld &world, int world_x, int world_z,
+                                        int min_y, int max_y);
   /// Admit bounded visible relight work with far-victim replacement/reserve
   /// when normal near-ring FIFO admission is backpressured.
-  bool EnqueueVisibleRelight(int world_x, int world_z, int min_y, int max_y,
-                             glm::ivec3 focus_ground, int max_horiz,
-                             const std::vector<glm::ivec2>
-                                 &protected_visible_columns,
-                             uint8_t *outcome = nullptr,
-                             int *victim_horiz = nullptr,
-                             const char *producer = nullptr);
+  bool EnqueueVisibleRelight(
+      int world_x, int world_z, int min_y, int max_y, glm::ivec3 focus_ground,
+      int max_horiz, const std::vector<glm::ivec2> &protected_visible_columns,
+      uint8_t *outcome = nullptr, int *victim_horiz = nullptr,
+      const char *producer = nullptr);
   /// Preserve an exact FirstMesh light band through surface-range selection.
   /// The key is the block-space XZ column origin used by the relight queues.
   void NoteVisibleFirstMeshRelight(glm::ivec2 world_block_key, int min_y,
                                    int max_y);
-  void ClearVisibleFirstMeshRelightIfNotQueued(
-      glm::ivec2 world_block_key);
+  void ClearVisibleFirstMeshRelightIfNotQueued(glm::ivec2 world_block_key);
   /// Compatibility entry point for renderer draw-gate callers.
-  bool EnqueueVisibleDrawGateRelight(int world_x, int world_z, int min_y,
-                                     int max_y, glm::ivec3 focus_ground,
-                                     int max_horiz,
-                                     const std::vector<glm::ivec2>
-                                         &protected_visible_columns,
-                                     uint8_t *outcome = nullptr,
-                                     int *victim_horiz = nullptr,
-                                     const char *producer = nullptr);
+  bool EnqueueVisibleDrawGateRelight(
+      int world_x, int world_z, int min_y, int max_y, glm::ivec3 focus_ground,
+      int max_horiz, const std::vector<glm::ivec2> &protected_visible_columns,
+      uint8_t *outcome = nullptr, int *victim_horiz = nullptr,
+      const char *producer = nullptr);
   /// F3b: enqueue only when column surface still needs relight.
   bool TryEnqueueTerrainColumnRelight(UWorld &world, int world_x, int world_z,
                                       bool priority = false, int min_y = 0,
@@ -184,7 +178,8 @@ public:
   int PromoteNearTerrainColumnRelights(glm::ivec3 focus_ground,
                                        int radius_chunks);
   void EnqueuePlayerRelight(const std::vector<glm::ivec3> &block_positions);
-  void DrainRelightQueues(UWorld &world, int max_player_jobs, int max_bg_columns);
+  void DrainRelightQueues(UWorld &world, int max_player_jobs,
+                          int max_bg_columns);
   void DrainTerrainColumnRelights(UWorld &world, int max_columns);
   int GetPendingTerrainColumnRelightCount() const;
   bool IsTerrainColumnRelightQueued(glm::ivec2 world_block_key) const;
@@ -192,10 +187,11 @@ public:
   /// Callers must invalidate its disk-light-complete flag when this abandons
   /// unfinished lighting so a later disk load recomputes it.
   int CancelTerrainColumnRelight(glm::ivec2 world_block_key);
-  TerrainColumnRelightQueueInfo GetTerrainColumnRelightQueueInfo(
-      glm::ivec2 world_block_key) const;
+  TerrainColumnRelightQueueInfo
+  GetTerrainColumnRelightQueueInfo(glm::ivec2 world_block_key) const;
   int GetPendingPlayerRelightCount() const;
-  /// Drop farthest far-FIFO columns until size <= soft_cap (priority untouched).
+  /// Drop farthest far-FIFO columns until size <= soft_cap (priority
+  /// untouched).
   int TrimFarRelightFifoFarthest(glm::ivec3 focus_ground, int soft_cap,
                                  int protect_horiz = -1);
   /// P1: miss / PromoteRelightHold column that far overflow must not pop.
@@ -210,8 +206,8 @@ public:
   void RequestAsyncTerrainColumnSave(UWorld &world, glm::ivec3 ground_coord);
   void CancelAsyncTerrainColumnLoad(glm::ivec3 ground_coord);
   int CancelAsyncTerrainColumnLoadsOutsideRadius(UWorld &world,
-                                                glm::ivec3 center,
-                                                int radius_chunks);
+                                                 glm::ivec3 center,
+                                                 int radius_chunks);
   bool IsTerrainColumnDiskLoadPending(glm::ivec3 ground_coord) const;
 
   int LoadTerrainColumn(glm::ivec3 coord, UBlockWorld &block_world,
@@ -223,7 +219,7 @@ public:
   /// Remove all disk slices for a ground column (used when incomplete in RAM
   /// must not leave a stale complete ocean/land file behind).
   void RemoveTerrainColumnFromDisk(glm::ivec3 ground_coord, int max_height,
-                                  int min_height = 0);
+                                   int min_height = 0);
   /// Clear in-memory column and delete its disk slices (load repair).
   void PurgeIncompleteTerrainColumn(UBlockWorld &block_world,
                                     glm::ivec3 ground_coord, int max_height,
@@ -238,12 +234,16 @@ public:
   void ClearColumnLightComplete(glm::ivec2 ground_xz,
                                 const char *reason = nullptr);
   void LoadColumnLightFlags();
-  void SaveColumnLightFlagsIfDirty(
-      double *snapshot_ms = nullptr, double *enqueue_ms = nullptr,
-      std::size_t *complete_columns_n = nullptr,
-      uint64_t *saved_revision = nullptr);
+  void SaveColumnLightFlagsIfDirty(double *snapshot_ms = nullptr,
+                                   double *enqueue_ms = nullptr,
+                                   std::size_t *complete_columns_n = nullptr,
+                                   uint64_t *saved_revision = nullptr);
 
 private:
+  void TraceDeniedRelightAdmission(glm::ivec2 ground_xz, int min_y, int max_y,
+                                   UWorld *world_context, const char *producer,
+                                   int fifo_n, int horiz, glm::ivec2 key,
+                                   bool priority);
   struct PendingAsyncColumnLoadState
   {
     uint64_t demand_id{0};
@@ -279,8 +279,8 @@ private:
 
   void FinalizeAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord,
                                       PendingAsyncColumnLoadState state);
-  void EnqueueTerrainColumnRelightImpl(int world_x, int world_z,
-                                       bool priority, int min_y, int max_y,
+  void EnqueueTerrainColumnRelightImpl(int world_x, int world_z, bool priority,
+                                       int min_y, int max_y,
                                        bool visible_admission,
                                        const char *producer = nullptr,
                                        UWorld *world_context = nullptr);
@@ -313,7 +313,8 @@ private:
   std::deque<glm::ivec2> PendingTerrainColumnRelights;
   std::deque<glm::ivec2> PendingTerrainColumnRelightsPriority;
   std::unordered_set<glm::ivec2, IVec2Hash> PendingTerrainColumnRelightKeys;
-  /// Optional Y band per pending column (min,max); missing => full 0..MaxHeight.
+  /// Optional Y band per pending column (min,max); missing => full
+  /// 0..MaxHeight.
   std::unordered_map<glm::ivec2, glm::ivec2, IVec2Hash>
       PendingTerrainColumnRelightYBands;
   /// Exact renderer-rejected Y band, kept separately from a coalesced column
@@ -342,8 +343,7 @@ private:
   };
   std::unordered_map<glm::ivec2, DeferredFarRelightEntry, IVec2Hash>
       DeferredFarRelightColumns;
-  std::chrono::steady_clock::time_point
-      LastDeferredFarAgeServiceAttemptAt{};
+  std::chrono::steady_clock::time_point LastDeferredFarAgeServiceAttemptAt{};
   glm::ivec2 LastDeferredFarAgeServiceWorldKey{};
   bool LastDeferredFarAgeServiceWorldKeyValid{false};
   /// Columns whose disk lightmap is trusted (lighting_complete).

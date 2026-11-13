@@ -1,13 +1,13 @@
-#include "Render/Mesh/FluidSurfaceColumnSlice.h"
+#include "World/Fluids/FluidSurfaceColumnSlice.h"
 
 #include "Blocks/BlockRegistry.h"
 #include "Core/FrameDeadline.h"
-#include "Render/Mesh/FluidColumnSummary.h"
 #include "Render/Mesh/GpuFluidColumnScan.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/FluidColumnSurfaceQuery.h"
 #include "World/Core/FluidSurfaceScanTuning.h"
+#include "World/Fluids/FluidColumnSummary.h"
 #include "World/Math/GridMath.h"
 
 #include <algorithm>
@@ -59,7 +59,8 @@ struct FluidPackCacheEntry
   std::vector<int16_t> tops;
   FluidSurfaceColumnSlice slice;
   bool has_slice{false};
-  /// A39 P4: PreferGpu rebuild scheduled (keep FluidSurfaceDirty until Install).
+  /// A39 P4: PreferGpu rebuild scheduled (keep FluidSurfaceDirty until
+  /// Install).
   bool prefer_gpu_retry{false};
 };
 
@@ -84,8 +85,9 @@ uint64_t HashFluidFlags(const std::vector<uint8_t> &flags)
 uint64_t CatalogRevOf(const UBlockRegistry &registry)
 {
   const auto catalog = registry.GetDefinitionsCatalogSnapshot();
-  return catalog ? static_cast<uint64_t>(reinterpret_cast<uintptr_t>(catalog.get()))
-                 : 0ull;
+  return catalog
+             ? static_cast<uint64_t>(reinterpret_cast<uintptr_t>(catalog.get()))
+             : 0ull;
 }
 
 uint64_t ContentRevOf(const UBlockWorld &world, glm::ivec3 groundChunkCoord,
@@ -187,7 +189,8 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
         }
         return false;
       }
-      // A38 R5 / A39 P4: mark Pending + PreferGpu retry (keep dirty until Install).
+      // A38 R5 / A39 P4: mark Pending + PreferGpu retry (keep dirty until
+      // Install).
       {
         FluidPackCacheEntry &pending = cache[groundChunkCoord];
         pending.world_epoch = gFluidPackWorldEpoch;
@@ -250,7 +253,8 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
   // Full-slice hit requires occupancy + fluid identity + world/catalog stamps.
   // Occupancy-only match must not reuse water→lava FluidId payloads.
   // Incomplete tiles: reject after world epoch bump or age timeout.
-  auto incomplete_ok = [&](const FluidPackCacheEntry &e) -> bool {
+  auto incomplete_ok = [&](const FluidPackCacheEntry &e) -> bool
+  {
     if (!e.incomplete)
     {
       return true;
@@ -266,10 +270,9 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
       cit->second.height == height && cit->second.y_min == y_min &&
       cit->second.content_rev == content_rev &&
       cit->second.catalog_rev == catalog_rev &&
-      !FluidMaterialIdentityChanged(cit->second.fluid_id_hash,
-                                    scan_fluid_id_hash,
-                                    cit->second.representative_fluid_id,
-                                    scan_representative) &&
+      !FluidMaterialIdentityChanged(
+          cit->second.fluid_id_hash, scan_fluid_id_hash,
+          cit->second.representative_fluid_id, scan_representative) &&
       cit->second.has_slice && incomplete_ok(cit->second))
   {
     slice = cit->second.slice;
@@ -406,7 +409,8 @@ BuildFluidSurfaceColumnSlice(const UBlockWorld &world, UBlockRegistry &registry,
   {
     return slice;
   }
-  // A37 H5: under hitch pressure without GPU path — return empty, no sync 16×16.
+  // A37 H5: under hitch pressure without GPU path — return empty, no sync
+  // 16×16.
   {
     const int scan_up = FluidSurfaceScanTuning::ScanUp;
     const int scan_down = FluidSurfaceScanTuning::ScanDown;
@@ -483,7 +487,8 @@ int DrainFluidSummaryCompletionsIntoPackCache(int max_n)
   };
   Ctx ctx{&FluidPackReuseCache()};
   return DrainFluidSummaryCompletions(
-      [](const FluidColumnSummary &sum, void *p) {
+      [](const FluidColumnSummary &sum, void *p)
+      {
         auto *c = static_cast<Ctx *>(p);
         glm::ivec3 key = sum.ground_chunk;
         key.y = 0;

@@ -30,6 +30,14 @@ int main()
   check(ImpactDamage(10, 2) == 0 && ImpactDamage(10, 0) == 0,
         "safe contact and rest do no damage");
   check(ImpactDamage(10, 1000) == 50, "damage capped");
+  const float nan = std::numeric_limits<float>::quiet_NaN();
+  check(CarryHands(small, 10, nan) == 0 && CarryHands(small, 10, 0) == 0,
+        "invalid carrier dimensions are refused");
+  check(ThrowSpeed(small, 10, nan) == 0,
+        "invalid windup cannot create a non-finite velocity");
+  check(ImpactDamage(nan, 10) == 0 && ImpactDamage(2, -10) == 0 &&
+            ImpactDamage(2, 10, nan) == 0,
+        "invalid impact inputs cannot damage vitals");
   auto fast = SweepBody({0, 0, 0}, {100, 0, 0}, glm::vec3(.1f), {5, 0, 0},
                         glm::vec3(.5f));
   check(fast && fast->time < .05f && fast->normal.x == -1,

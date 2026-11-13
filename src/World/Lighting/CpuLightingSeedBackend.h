@@ -7,10 +7,10 @@ namespace cutum
 
 class UWorld;
 
-class CpuLightingSeedBackend : public ILightingSeedBackend
+class UCpuLightingSeedBackend : public ILightingSeedBackend
 {
 public:
-  CpuLightingSeedBackend(UWorld &world, int relight_min, int relight_max);
+  UCpuLightingSeedBackend(UWorld &world, int relight_min, int relight_max);
   LightingSeedResult TrySeedColumnAtCommit(glm::ivec3 ground,
                                            double budget_ms) override;
 

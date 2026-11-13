@@ -65,8 +65,8 @@ public:
   void SetOnSoftDeferHeldFn(std::function<void(glm::ivec3)> fn);
   void SetOnLitDrawableCommittedFn(std::function<void(glm::ivec3)> fn);
   void SetOnFirstDrawableCoverageFn(std::function<void(glm::ivec3)> fn);
-  void SetOnBoundaryOverlayPublishedFn(
-      std::function<void(glm::ivec3, uint8_t)> fn);
+  void
+  SetOnBoundaryOverlayPublishedFn(std::function<void(glm::ivec3, uint8_t)> fn);
   void SetOnFaceDebtFn(std::function<void(glm::ivec3)> fn);
   void SetOnFaceDebtDirtyFn(std::function<void(glm::ivec3)> fn);
   void SetOnFaceDebtMaskFn(std::function<void(glm::ivec3, uint8_t)> fn);
@@ -80,7 +80,8 @@ public:
   void SetStarveRemeshKeepHoriz(int keep_h);
   void SetMeshWorkAdmission(const MeshWorkAdmission &adm);
   const MeshWorkAdmission &GetMeshWorkAdmission() const;
-  /// Era47: EnterLitGate GPU quiesce drain (PreferKick-only RAA, no Normal throttle).
+  /// Era47: EnterLitGate GPU quiesce drain (PreferKick-only RAA, no Normal
+  /// throttle).
   void SetEnterGpuQuiesceDrain(bool active);
   bool IsEnterGpuQuiesceDrain() const;
   void SetEnterLitQuiesce(bool active);
@@ -102,7 +103,8 @@ public:
   int DropFarFirstMeshDirtyBeyondRadius(glm::ivec3 center_chunk,
                                         int keep_radius,
                                         int keep_cy = kNoChunkSlice);
-  int ParkDirtyWithinHorizontalRadius(glm::ivec3 center_chunk, int radius_chunks);
+  int ParkDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
+                                      int radius_chunks);
   void SetSyncHoleFillRadius(int radius_chunks);
   void SetMaxOutsideFocusMeshPerFrame(int count);
   void SetMaxRearFocusMeshPerFrame(int count);
@@ -116,8 +118,7 @@ public:
   void MarkDirty(glm::ivec3 chunk_coord);
   void MarkDirty(glm::ivec3 chunk_coord, MeshRevisionBumpReason reason);
   void MarkDirtyPriority(glm::ivec3 chunk_coord);
-  void MarkDirtyPriority(glm::ivec3 chunk_coord,
-                         MeshRevisionBumpReason reason);
+  void MarkDirtyPriority(glm::ivec3 chunk_coord, MeshRevisionBumpReason reason);
   void RequeueDirtyPriority(glm::ivec3 chunk_coord,
                             MeshRevisionBumpReason reason);
   void QueueMeshDependencyInvalidations(
@@ -125,8 +126,8 @@ public:
       const std::vector<glm::ivec3> &changed_input_chunks,
       const char *cause = nullptr);
   void QueueMeshDependencyInvalidation(glm::ivec3 dependent_chunk);
-  void QueueMeshDependencyInvalidation(
-      glm::ivec3 dependent_chunk, MeshRevisionBumpReason reason);
+  void QueueMeshDependencyInvalidation(glm::ivec3 dependent_chunk,
+                                       MeshRevisionBumpReason reason);
   void QueueStaleLightRemesh(glm::ivec3 chunk_coord);
   int GetLastMeshDependencyQueuedN() const
   {
@@ -151,7 +152,8 @@ public:
   bool FindFirstDirtyInHorizontalRadius(glm::ivec3 center_chunk,
                                         int radius_chunks,
                                         glm::ivec3 &out_coord) const;
-  /// Invalidate fluid surface column cache when this block or a neighbor is liquid.
+  /// Invalidate fluid surface column cache when this block or a neighbor is
+  /// liquid.
   void NotifyFluidSurfaceDirtyAtBlock(const UBlockWorld &world,
                                       UBlockRegistry *registry,
                                       glm::ivec3 block_pos);
@@ -163,21 +165,24 @@ public:
   void MarkColumnMeshDirty(int world_x, int world_z, int min_y, int max_y);
   void MarkTerrainChunkMeshDirty(glm::ivec3 ground_chunk_coord, int min_y,
                                  int max_y);
+  void
+  MarkTerrainChunkMeshDirtySeamed(glm::ivec3 ground_chunk_coord, int min_y,
+                                  int max_y,
+                                  bool include_horizontal_neighbors = true);
   void MarkTerrainChunkMeshDirtySeamed(glm::ivec3 ground_chunk_coord, int min_y,
                                        int max_y,
-                                       bool include_horizontal_neighbors = true);
-  void MarkTerrainChunkMeshDirtySeamed(
-      glm::ivec3 ground_chunk_coord, int min_y, int max_y,
-      bool include_horizontal_neighbors, MeshRevisionBumpReason reason);
-  void MarkTerrainChunkMeshDirtyPriority(glm::ivec3 ground_chunk_coord, int min_y,
-                                         int max_y);
+                                       bool include_horizontal_neighbors,
+                                       MeshRevisionBumpReason reason);
+  void MarkTerrainChunkMeshDirtyPriority(glm::ivec3 ground_chunk_coord,
+                                         int min_y, int max_y);
   void MarkTerrainChunkMeshDirtySeamedPriority(
       glm::ivec3 ground_chunk_coord, int min_y, int max_y,
       bool include_horizontal_neighbors = true);
   void MarkTerrainChunkMeshDirtySeamedPriority(
       glm::ivec3 ground_chunk_coord, int min_y, int max_y,
       bool include_horizontal_neighbors, MeshRevisionBumpReason reason);
-  /// Dirty only solid slices in [min_y,max_y] that fail column-ready / not in-flight.
+  /// Dirty only solid slices in [min_y,max_y] that fail column-ready / not
+  /// in-flight.
   int MarkMissingSlicesDirtyPriority(const UBlockWorld &world,
                                      glm::ivec3 ground_chunk_coord, int min_y,
                                      int max_y);
@@ -349,7 +354,7 @@ public:
   /// True when a resident slice has unpublished geometry/coverage work or
   /// unresolved face coverage for the same incarnation.
   bool HasGeometryPublicationDebt(glm::ivec3 chunk_coord,
-                                 uint64_t incarnation) const;
+                                  uint64_t incarnation) const;
   /// True when a new mesh publication can make progress without waiting for a
   /// boundary-face repair owner. Active face debt may be backed by a published
   /// boundary overlay and is handled by ChunkEmergeCoordinator's face-debt
@@ -359,7 +364,8 @@ public:
   size_t GetSoftDeferHeldCount() const;
   /// Era24: SoftDeferHeld membership for Hide⇒Ticket ownership.
   bool IsSoftDeferHeld(glm::ivec3 chunk_coord) const;
-  /// Era22 I-S2: SoftDeferHeld slice in column (xz) for repair-progress honesty.
+  /// Era22 I-S2: SoftDeferHeld slice in column (xz) for repair-progress
+  /// honesty.
   bool HasSoftDeferHeldInColumn(glm::ivec2 ground_xz) const;
   bool IsGpuExtractInFlight(glm::ivec3 chunk_coord) const;
   /// Queued in PendingGpuApplies — orphaned GpuExtractInFlight alone is not.
@@ -379,11 +385,10 @@ public:
   uint64_t GetChunkMeshRevision(glm::ivec3 chunk_coord) const;
   bool HasInflightMeshBuild(glm::ivec3 chunk_coord) const;
   uint64_t GetInflightSourceRevision(glm::ivec3 chunk_coord) const;
-  bool HasMissingGreedyMeshInHorizontalRadius(const UBlockWorld &world,
-                                              glm::ivec3 center_ground_chunk,
-                                              int radius_chunks,
-                                              glm::ivec3 *missing_coord_out = nullptr,
-                                              bool *memo_hit_out = nullptr) const;
+  bool HasMissingGreedyMeshInHorizontalRadius(
+      const UBlockWorld &world, glm::ivec3 center_ground_chunk,
+      int radius_chunks, glm::ivec3 *missing_coord_out = nullptr,
+      bool *memo_hit_out = nullptr) const;
   bool FindNearestMissingGreedyMesh(const UBlockWorld &world,
                                     glm::ivec3 center_ground_chunk,
                                     int radius_chunks,
@@ -391,7 +396,10 @@ public:
   /// Track nearest sticky miss for moving Immediate escape (F3).
   void UpdateStickyNearestHole(glm::ivec3 coord, bool alive);
   int GetStickyNearestHoleFrames() const { return StickyNearestHoleFrames; }
-  glm::ivec3 GetStickyNearestHoleCoord() const { return StickyNearestHoleCoord; }
+  glm::ivec3 GetStickyNearestHoleCoord() const
+  {
+    return StickyNearestHoleCoord;
+  }
   const MeshRebuildTickStats &GetLastRebuildTickStats() const;
   uint64_t GetMeshRevision() const;
   uint64_t GetCullRevision() const;
@@ -440,7 +448,8 @@ public:
   void MarkChunksContainingBlockIds(const UBlockWorld &block_world,
                                     const std::vector<BlockId> &block_ids);
 
-  /// DigSeam: P2-demoted face Immediate → guaranteed remesh (manual 215711 X-ray).
+  /// DigSeam: P2-demoted face Immediate → guaranteed remesh (manual 215711
+  /// X-ray).
   void EnqueueDigSeam(glm::ivec3 chunk_coord);
   size_t GetDigSeamPendingCount() const { return DigSeam.Size(); }
   int GetLastDigSeamRemeshN() const { return LastDigSeamRemeshN; }
@@ -451,6 +460,9 @@ public:
   const std::vector<CrossInstanceBatch> &
   GetCrossRenderBatches(UBlockWorld &world, UBlockRegistry &registry,
                         const std::shared_ptr<UCamera> &camera);
+
+  void GetGpuAllocationCounters(size_t &freeSlots, size_t &boundSlots,
+                                size_t &maxSlots, uint64_t &stagingFailures);
 
 private:
   void NotifyChunkBlocksChanged(glm::ivec3 chunk_coord);

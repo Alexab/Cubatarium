@@ -1,30 +1,30 @@
 #include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/ColumnDesiredStage.h"
+#include "World/Streaming/ColumnEmergeState.h"
 #include "World/Streaming/ColumnRecordCoordinator.h"
 #include "World/Streaming/ColumnTicketMap.h"
-#include "World/Streaming/ColumnEmergeState.h"
 #include "World/Streaming/ColumnVisualState.h"
 
 #include "Core/FrameDeadline.h"
 #include "Render/Camera/Camera.h"
 #include "World/Core/World.h"
+#include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Streaming/ColumnEmergeState.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
-#include "World/Streaming/SoftDeferEmptyPolicy.h"
+#include "World/Streaming/NearFovWorkPriority.h"
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
-#include "World/Streaming/NearFovWorkPriority.h"
 #include "World/Streaming/RelightFifoPolicy.h"
+#include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/VisualStagePolicy.h"
-#include "World/Math/GridMath.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 
-#include <cstdlib>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <unordered_set>
 #include <vector>
 
@@ -36,10 +36,7 @@ namespace
 UColumnFlowExecutor gExecutor;
 } // namespace
 
-UColumnFlowExecutor &GetColumnFlowExecutor()
-{
-  return gExecutor;
-}
+UColumnFlowExecutor &GetColumnFlowExecutor() { return gExecutor; }
 
 void UColumnFlowExecutor::BeginFrame()
 {
@@ -51,7 +48,7 @@ void UColumnFlowExecutor::BeginFrame()
 
 bool UColumnFlowExecutor::ForgetColumnWork(glm::ivec2 column)
 {
-  bool forgot_work = scheduler_.RemoveColumn(column);
+  bool forgot_work = SchedulerState.RemoveColumn(column);
   const auto erase_column_cooldowns = [&](auto &entries)
   {
     for (auto it = entries.begin(); it != entries.end();)
@@ -106,8 +103,8 @@ void UColumnFlowExecutor::SetCaptureWitnessPin(glm::ivec2 column, bool valid,
   capture_pin_hold_ = hold;
 }
 
-glm::ivec2 UColumnFlowExecutor::ResolveRelightPromoteColumn(
-    glm::ivec2 fallback) const
+glm::ivec2
+UColumnFlowExecutor::ResolveRelightPromoteColumn(glm::ivec2 fallback) const
 {
   if (capture_pin_valid_ && capture_pin_hold_)
   {
@@ -143,9 +140,8 @@ bool UColumnFlowExecutor::SyncColumnJobStageFromWorld(UWorld &world,
   const auto &proc = world.GetProceduralSettings();
   const int min_cy = FloorDiv(proc.MinHeight, CHUNK_SIZE);
   const int max_cy = FloorDiv(proc.MaxHeight, CHUNK_SIZE);
-  const bool has_chunk =
-      world.GetBlockWorld().GetChunkManager().HasChunk(
-          glm::ivec3(column.x, min_cy, column.y));
+  const bool has_chunk = world.GetBlockWorld().GetChunkManager().HasChunk(
+      glm::ivec3(column.x, min_cy, column.y));
   if (!has_chunk)
   {
     SetColumnJobStage(column, ColumnJobStage::Absent);
@@ -167,7 +163,8 @@ bool UColumnFlowExecutor::SyncColumnJobStageFromWorld(UWorld &world,
     {
       meshing = true;
     }
-    if (mesh.GetCache().IsDeferMeshUntilLit(coord) || mesh.IsSoftDeferHeld(coord))
+    if (mesh.GetCache().IsDeferMeshUntilLit(coord) ||
+        mesh.IsSoftDeferHeld(coord))
     {
       pending_light = true;
     }
@@ -195,7 +192,8 @@ bool UColumnFlowExecutor::SyncColumnJobStageFromWorld(UWorld &world,
   truth.gpu_pending = gpu_pending;
   truth.render_ready = render_ready;
   // Q6: real published GPU residency token (slot+quads); never fabricate 1.
-  // mesh_rev feeds published.mesh_version only (SyncFromWorldTruth), not handle.
+  // mesh_rev feeds published.mesh_version only (SyncFromWorldTruth), not
+  // handle.
   if (render_ready)
   {
     for (int cy = min_cy; cy <= max_cy; ++cy)
@@ -215,8 +213,9 @@ bool UColumnFlowExecutor::SyncColumnJobStageFromWorld(UWorld &world,
       UColumnRecordCoordinator::SyncFromWorldTruth(rec, truth);
   const ColumnJobStage legacy = DeriveColumnJobStage(
       has_chunk, pending_light, lit_ready, meshing, gpu_pending, render_ready);
-  // Stage diffs counted once per SyncFocusRing (gauge). Do not LogShadowMismatch
-  // here — that exploded to ~10k+/flight (211857) and is not Decide* cutover SoT.
+  // Stage diffs counted once per SyncFocusRing (gauge). Do not
+  // LogShadowMismatch here — that exploded to ~10k+/flight (211857) and is not
+  // Decide* cutover SoT.
   SetColumnJobStage(column, from_record);
   return from_record != legacy;
 }
@@ -278,7 +277,8 @@ void UColumnFlowExecutor::CountFocusRingJobStages(
 void UColumnFlowExecutor::RequestPromoteRelight(glm::ivec2 near_column,
                                                 int priority)
 {
-  if (capture_pin_valid_ && capture_pin_hold_ && near_column != capture_pin_col_)
+  if (capture_pin_valid_ && capture_pin_hold_ &&
+      near_column != capture_pin_col_)
   {
     near_column = capture_pin_col_;
   }
@@ -345,14 +345,15 @@ void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
       decide_world_->IsPendingLightBeforeMesh(item.column) &&
       (!IsConcreteColumnWorkCy(item.cy) ||
        decide_world_->IsPendingLightBeforeMeshSlice(
-                          glm::ivec3(item.column.x, item.cy, item.column.y)));
+           glm::ivec3(item.column.x, item.cy, item.column.y)));
   if (targeted_first_mesh_waits_for_light)
   {
     // A targeted slice cannot pass the PendingLight draw/mesh gate. A wider
     // column debt does not block a slice with a current light settlement.
     return;
   }
-  if (item.kind == ColumnWorkKind::RelightThenMesh && decide_world_ != nullptr &&
+  if (item.kind == ColumnWorkKind::RelightThenMesh &&
+      decide_world_ != nullptr &&
       (decide_world_->IsTerrainColumnRelightQueued(item.column) ||
        decide_world_->IsAsyncRelightColumnInFlight(item.column)))
   {
@@ -367,7 +368,7 @@ void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
       decide_world_->IsPendingLightBeforeMesh(item.column) &&
       !decide_world_->IsTerrainColumnRelightQueued(item.column) &&
       !decide_world_->IsAsyncRelightColumnInFlight(item.column);
-  const bool new_ticket = !scheduler_.Contains(item.column, item.kind);
+  const bool new_ticket = !SchedulerState.Contains(item.column, item.kind);
   bool legacy_want = true;
   bool record_want = true;
   if (decide_world_ != nullptr)
@@ -376,8 +377,7 @@ void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
     switch (item.kind)
     {
     case ColumnWorkKind::FirstMesh:
-      record_want =
-          UColumnRecordCoordinator::RecordWantsFirstMeshEnqueue(rec);
+      record_want = UColumnRecordCoordinator::RecordWantsFirstMeshEnqueue(rec);
       break;
     case ColumnWorkKind::RelightThenMesh:
     case ColumnWorkKind::PromoteRelight:
@@ -418,8 +418,8 @@ void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
   }
   else if (item.kind == ColumnWorkKind::RemeshSeam)
   {
-    if (!UColumnRecordCoordinator::DecideSeamEnqueue(
-            legacy_want, record_want, item.column, new_ticket))
+    if (!UColumnRecordCoordinator::DecideSeamEnqueue(legacy_want, record_want,
+                                                     item.column, new_ticket))
     {
       return;
     }
@@ -428,19 +428,19 @@ void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
   const auto it = last_dispatch_frame_.find(key);
   const bool replace_blocked_first_mesh =
       item.kind == ColumnWorkKind::RelightThenMesh && actionable_relight_debt &&
-      scheduler_.Contains(item.column, ColumnWorkKind::FirstMesh);
+      SchedulerState.Contains(item.column, ColumnWorkKind::FirstMesh);
   if (it != last_dispatch_frame_.end() &&
       frame_counter_ - it->second < kEnqueueCooldownFrames &&
       !replace_blocked_first_mesh)
   {
     return;
   }
-  if (replace_blocked_first_mesh && scheduler_.ReplaceColumnTicket(
-                                        item, ColumnWorkKind::FirstMesh))
+  if (replace_blocked_first_mesh &&
+      SchedulerState.ReplaceColumnTicket(item, ColumnWorkKind::FirstMesh))
   {
     return;
   }
-  scheduler_.Enqueue(item);
+  SchedulerState.Enqueue(item);
   // Era17: do NOT arm last_dispatch at Enqueue — HasRepairTicket is Contains
   // only. last_dispatch_frame_ remains enqueue cooldown after Dispatch.
 }
@@ -450,8 +450,8 @@ void UColumnFlowExecutor::RunPromoteRelightNow(UWorld &world,
                                                int /*focus_radius*/)
 {
   (void)world;
-  RequestPromoteRelight(
-      glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 40);
+  RequestPromoteRelight(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+                        40);
 }
 
 bool UColumnFlowExecutor::HasRepairTicket(glm::ivec2 column) const
@@ -459,14 +459,14 @@ bool UColumnFlowExecutor::HasRepairTicket(glm::ivec2 column) const
   // Era17 I-H1: ticket SoT = live Flow queue membership only (not live-window).
   // Progress (Dirty/Inflight/PendingLight) is tracked separately via
   // UWorld::ColumnHasRepairProgress for NoTicket / Collect skip.
-  return scheduler_.ContainsColumn(column);
+  return SchedulerState.ContainsColumn(column);
 }
 
 bool UColumnFlowExecutor::HasTargetedRepairTicket(glm::ivec2 column) const
 {
-  return scheduler_.Contains(column, ColumnWorkKind::RelightThenMesh) ||
-         scheduler_.Contains(column, ColumnWorkKind::FirstMesh) ||
-         scheduler_.Contains(column, ColumnWorkKind::RemeshSeam);
+  return SchedulerState.Contains(column, ColumnWorkKind::RelightThenMesh) ||
+         SchedulerState.Contains(column, ColumnWorkKind::FirstMesh) ||
+         SchedulerState.Contains(column, ColumnWorkKind::RemeshSeam);
 }
 
 void UColumnFlowExecutor::DrainRemeshSeamBudget(UWorld &world, int max_columns)
@@ -476,19 +476,22 @@ void UColumnFlowExecutor::DrainRemeshSeamBudget(UWorld &world, int max_columns)
   {
     return;
   }
-  // One AdvanceColumn(RemeshSeam) == SyncIdle(1); budget N needs a single SyncIdle(N)
-  // because Enqueue dedupes (column,kind) and cannot queue N identical seams.
+  // One AdvanceColumn(RemeshSeam) == SyncIdle(1); budget N needs a single
+  // SyncIdle(N) because Enqueue dedupes (column,kind) and cannot queue N
+  // identical seams.
   if (max_columns > 0)
   {
     world.SyncIdleFocusGreedyRemesh(max_columns);
   }
 }
 
-void UColumnFlowExecutor::AdvanceColumn(UWorld &world, const ColumnWorkItem &work,
-                                   glm::ivec3 focus_ground_horiz,
-                                   int focus_radius, int admit_batch)
+void UColumnFlowExecutor::AdvanceColumn(UWorld &world,
+                                        const ColumnWorkItem &work,
+                                        glm::ivec3 focus_ground_horiz,
+                                        int focus_radius, int admit_batch)
 {
-  last_dispatch_frame_[MakeCooldownKey(work.column, work.kind)] = frame_counter_;
+  last_dispatch_frame_[MakeCooldownKey(work.column, work.kind)] =
+      frame_counter_;
   ColumnEmergeState requested = ColumnEmergeState::Meshing;
   switch (work.kind)
   {
@@ -507,9 +510,8 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world, const ColumnWorkItem &wor
   world.SetColumnEmergeState(ground, requested);
   // Closeout E0/E: TicketMap desire + one-inflight mirror on ColumnRecord.
   {
-    const int horiz =
-        std::max(std::abs(work.column.x - focus_ground_horiz.x),
-                 std::abs(work.column.y - focus_ground_horiz.z));
+    const int horiz = std::max(std::abs(work.column.x - focus_ground_horiz.x),
+                               std::abs(work.column.y - focus_ground_horiz.z));
     const ColumnTicketLevel ticket = TicketLevelForRing(horiz);
     const bool missing = work.kind == ColumnWorkKind::FirstMesh;
     const bool pending = work.kind == ColumnWorkKind::RelightThenMesh ||
@@ -534,8 +536,7 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world, const ColumnWorkItem &wor
       rec.pending.stage = ColumnJobStage::Meshing;
     }
   }
-  const glm::ivec2 *only =
-      work.scan_full_focus ? nullptr : &work.column;
+  const glm::ivec2 *only = work.scan_full_focus ? nullptr : &work.column;
   glm::vec2 forward_xz = world.GetLastMovementDirXz();
   // P1: idle / below prefetch — always camera look for FirstMesh FOV fill.
   const bool idle_like =
@@ -559,9 +560,8 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world, const ColumnWorkItem &wor
          world.GetAdmitFocusMarkBuffer())
     {
       const glm::ivec3 ground(item.column.x, 0, item.column.y);
-      const int marked =
-          world.GetMeshService().MarkMissingSlicesDirtyPriority(
-              world.GetBlockWorld(), ground, item.min_y, item.max_y);
+      const int marked = world.GetMeshService().MarkMissingSlicesDirtyPriority(
+          world.GetBlockWorld(), ground, item.min_y, item.max_y);
       world.GetPhysicsTelemetryMutable().AdmitMarkedN += marked;
       if (marked > 0)
       {
@@ -588,7 +588,7 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world, const ColumnWorkItem &wor
           MakeCooldownKey(work.column, ColumnWorkKind::RelightThenMesh);
       relight_retry_after_frame_[retry_key] =
           frame_counter_ + kEnqueueCooldownFrames;
-      scheduler_.Enqueue(work);
+      SchedulerState.Enqueue(work);
     }
     else
     {
@@ -601,7 +601,8 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world, const ColumnWorkItem &wor
     {
       // Era16: targeted column remesh — SyncIdle scans whole sticky set and
       // stormed emerge when every VisibleBlack ticket dispatched RemeshSeam.
-      // Era17: noop Remesh must not leave enqueue cooldown (re-derive next tick).
+      // Era17: noop Remesh must not leave enqueue cooldown (re-derive next
+      // tick).
       if (world.RemeshColumnSeamTicket(*only) <= 0)
       {
         last_dispatch_frame_.erase(MakeCooldownKey(work.column, work.kind));
@@ -632,7 +633,7 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world, const ColumnWorkItem &wor
           MakeCooldownKey(retry.column, ColumnWorkKind::RelightThenMesh);
       relight_retry_after_frame_[retry_key] =
           frame_counter_ + kEnqueueCooldownFrames;
-      scheduler_.Enqueue(retry);
+      SchedulerState.Enqueue(retry);
     }
     break;
   }
@@ -656,28 +657,29 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
   auto &telemetry = world.GetPhysicsTelemetryMutable();
   telemetry.ColumnFlowQueueLiveN =
       std::max(telemetry.ColumnFlowQueueLiveN,
-               static_cast<int>(scheduler_.LiveCount()));
+               static_cast<int>(SchedulerState.LiveCount()));
   telemetry.ColumnFlowQueueStaleHeapN =
       std::max(telemetry.ColumnFlowQueueStaleHeapN,
-               static_cast<int>(scheduler_.StaleCount()));
-  const int critical_units_at_entry =
-      UFrameDeadline::Get().CriticalUnitsUsed();
-  telemetry.ColumnFlowDrainRequestN = std::max(
-      telemetry.ColumnFlowDrainRequestN, n);
+               static_cast<int>(SchedulerState.StaleCount()));
+  const int critical_units_at_entry = UFrameDeadline::Get().CriticalUnitsUsed();
+  telemetry.ColumnFlowDrainRequestN =
+      std::max(telemetry.ColumnFlowDrainRequestN, n);
   telemetry.ColumnFlowCriticalUnitsAtEntryN = std::max(
       telemetry.ColumnFlowCriticalUnitsAtEntryN, critical_units_at_entry);
   telemetry.ColumnFlowLiveFirstMeshN = std::max(
       telemetry.ColumnFlowLiveFirstMeshN,
-      static_cast<int>(scheduler_.LiveCount(ColumnWorkKind::FirstMesh)));
-  telemetry.ColumnFlowLiveRelightN = std::max(
-      telemetry.ColumnFlowLiveRelightN,
-      static_cast<int>(scheduler_.LiveCount(ColumnWorkKind::RelightThenMesh)));
+      static_cast<int>(SchedulerState.LiveCount(ColumnWorkKind::FirstMesh)));
+  telemetry.ColumnFlowLiveRelightN =
+      std::max(telemetry.ColumnFlowLiveRelightN,
+               static_cast<int>(
+                   SchedulerState.LiveCount(ColumnWorkKind::RelightThenMesh)));
   telemetry.ColumnFlowLiveSeamN = std::max(
       telemetry.ColumnFlowLiveSeamN,
-      static_cast<int>(scheduler_.LiveCount(ColumnWorkKind::RemeshSeam)));
-  telemetry.ColumnFlowLivePromoteN = std::max(
-      telemetry.ColumnFlowLivePromoteN,
-      static_cast<int>(scheduler_.LiveCount(ColumnWorkKind::PromoteRelight)));
+      static_cast<int>(SchedulerState.LiveCount(ColumnWorkKind::RemeshSeam)));
+  telemetry.ColumnFlowLivePromoteN =
+      std::max(telemetry.ColumnFlowLivePromoteN,
+               static_cast<int>(
+                   SchedulerState.LiveCount(ColumnWorkKind::PromoteRelight)));
   int critical_units_reserved_by_flow = 0;
   int probed_by_kind[4]{};
   int deferred_by_kind[4]{};
@@ -686,7 +688,7 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
   std::vector<ColumnWorkItem> deferred;
   deferred.reserve(static_cast<size_t>(probe_budget));
   ColumnWorkItem work{};
-  while (drained < n && probed < probe_budget && scheduler_.DrainOne(work))
+  while (drained < n && probed < probe_budget && SchedulerState.DrainOne(work))
   {
     ++probed;
     const size_t kind_index = ColumnFlowKindIndex(work.kind);
@@ -728,8 +730,7 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
     // floor just because a different slice is also missing its first mesh.
     const bool relight_critical =
         work.kind == ColumnWorkKind::RelightThenMesh &&
-        (pt.VisibleBlackStalledN > 0 ||
-         pt.DrawOracleStaleVertexLightN > 0);
+        (pt.VisibleBlackStalledN > 0 || pt.DrawOracleStaleVertexLightN > 0);
     const bool critical =
         work.kind == ColumnWorkKind::FirstMesh || relight_critical;
     // M118 showed stale-light repairs queued with no local mesh job while the
@@ -769,56 +770,56 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
     if (kind_index < 4)
     {
       ++dispatched_by_kind[kind_index];
-      dispatch_ms_max_by_kind[kind_index] = std::max(
-          dispatch_ms_max_by_kind[kind_index], dispatch_ms);
+      dispatch_ms_max_by_kind[kind_index] =
+          std::max(dispatch_ms_max_by_kind[kind_index], dispatch_ms);
     }
     if (reserved_post_deadline_unit)
     {
       ++critical_units_reserved_by_flow;
       UFrameDeadline::NoteCriticalUnitFinished();
-      telemetry.ColumnFlowPostDeadlineUnitMsMax = std::max(
-          telemetry.ColumnFlowPostDeadlineUnitMsMax,
-          UFrameDeadline::Get().LastCriticalUnitMs());
+      telemetry.ColumnFlowPostDeadlineUnitMsMax =
+          std::max(telemetry.ColumnFlowPostDeadlineUnitMsMax,
+                   UFrameDeadline::Get().LastCriticalUnitMs());
     }
     ++drained;
   }
   for (const ColumnWorkItem &item : deferred)
   {
-    scheduler_.Enqueue(item);
+    SchedulerState.Enqueue(item);
   }
   telemetry.ColumnFlowProbedN = std::max(telemetry.ColumnFlowProbedN, probed);
-  telemetry.ColumnFlowCooldownDeferredN = std::max(
-      telemetry.ColumnFlowCooldownDeferredN, cooldown_deferred_n);
+  telemetry.ColumnFlowCooldownDeferredN =
+      std::max(telemetry.ColumnFlowCooldownDeferredN, cooldown_deferred_n);
   telemetry.ColumnFlowProbeBudgetHitN =
       std::max(telemetry.ColumnFlowProbeBudgetHitN,
                drained < n && probed >= probe_budget ? 1 : 0);
-  telemetry.ColumnFlowCriticalUnitsAtExitN = std::max(
-      telemetry.ColumnFlowCriticalUnitsAtExitN,
-      UFrameDeadline::Get().CriticalUnitsUsed());
-  telemetry.ColumnFlowProbedFirstMeshN = std::max(
-      telemetry.ColumnFlowProbedFirstMeshN, probed_by_kind[1]);
-  telemetry.ColumnFlowProbedRelightN = std::max(
-      telemetry.ColumnFlowProbedRelightN, probed_by_kind[0]);
-  telemetry.ColumnFlowProbedSeamN = std::max(
-      telemetry.ColumnFlowProbedSeamN, probed_by_kind[2]);
-  telemetry.ColumnFlowProbedPromoteN = std::max(
-      telemetry.ColumnFlowProbedPromoteN, probed_by_kind[3]);
-  telemetry.ColumnFlowDeferredFirstMeshN = std::max(
-      telemetry.ColumnFlowDeferredFirstMeshN, deferred_by_kind[1]);
-  telemetry.ColumnFlowDeferredRelightN = std::max(
-      telemetry.ColumnFlowDeferredRelightN, deferred_by_kind[0]);
-  telemetry.ColumnFlowDeferredSeamN = std::max(
-      telemetry.ColumnFlowDeferredSeamN, deferred_by_kind[2]);
-  telemetry.ColumnFlowDeferredPromoteN = std::max(
-      telemetry.ColumnFlowDeferredPromoteN, deferred_by_kind[3]);
-  telemetry.ColumnFlowDispatchedFirstMeshN = std::max(
-      telemetry.ColumnFlowDispatchedFirstMeshN, dispatched_by_kind[1]);
-  telemetry.ColumnFlowDispatchedRelightN = std::max(
-      telemetry.ColumnFlowDispatchedRelightN, dispatched_by_kind[0]);
-  telemetry.ColumnFlowDispatchedSeamN = std::max(
-      telemetry.ColumnFlowDispatchedSeamN, dispatched_by_kind[2]);
-  telemetry.ColumnFlowDispatchedPromoteN = std::max(
-      telemetry.ColumnFlowDispatchedPromoteN, dispatched_by_kind[3]);
+  telemetry.ColumnFlowCriticalUnitsAtExitN =
+      std::max(telemetry.ColumnFlowCriticalUnitsAtExitN,
+               UFrameDeadline::Get().CriticalUnitsUsed());
+  telemetry.ColumnFlowProbedFirstMeshN =
+      std::max(telemetry.ColumnFlowProbedFirstMeshN, probed_by_kind[1]);
+  telemetry.ColumnFlowProbedRelightN =
+      std::max(telemetry.ColumnFlowProbedRelightN, probed_by_kind[0]);
+  telemetry.ColumnFlowProbedSeamN =
+      std::max(telemetry.ColumnFlowProbedSeamN, probed_by_kind[2]);
+  telemetry.ColumnFlowProbedPromoteN =
+      std::max(telemetry.ColumnFlowProbedPromoteN, probed_by_kind[3]);
+  telemetry.ColumnFlowDeferredFirstMeshN =
+      std::max(telemetry.ColumnFlowDeferredFirstMeshN, deferred_by_kind[1]);
+  telemetry.ColumnFlowDeferredRelightN =
+      std::max(telemetry.ColumnFlowDeferredRelightN, deferred_by_kind[0]);
+  telemetry.ColumnFlowDeferredSeamN =
+      std::max(telemetry.ColumnFlowDeferredSeamN, deferred_by_kind[2]);
+  telemetry.ColumnFlowDeferredPromoteN =
+      std::max(telemetry.ColumnFlowDeferredPromoteN, deferred_by_kind[3]);
+  telemetry.ColumnFlowDispatchedFirstMeshN =
+      std::max(telemetry.ColumnFlowDispatchedFirstMeshN, dispatched_by_kind[1]);
+  telemetry.ColumnFlowDispatchedRelightN =
+      std::max(telemetry.ColumnFlowDispatchedRelightN, dispatched_by_kind[0]);
+  telemetry.ColumnFlowDispatchedSeamN =
+      std::max(telemetry.ColumnFlowDispatchedSeamN, dispatched_by_kind[2]);
+  telemetry.ColumnFlowDispatchedPromoteN =
+      std::max(telemetry.ColumnFlowDispatchedPromoteN, dispatched_by_kind[3]);
   telemetry.ColumnFlowDispatchFirstMeshMsMax = std::max(
       telemetry.ColumnFlowDispatchFirstMeshMsMax, dispatch_ms_max_by_kind[1]);
   telemetry.ColumnFlowDispatchRelightMsMax = std::max(
@@ -828,24 +829,20 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
   telemetry.ColumnFlowDispatchPromoteMsMax = std::max(
       telemetry.ColumnFlowDispatchPromoteMsMax, dispatch_ms_max_by_kind[3]);
   telemetry.ColumnFlowDeferredN += deferred_n;
-  telemetry.ColumnBumpDenied +=
-      static_cast<int>(scheduler_.DeniedCount());
-  scheduler_.ClearDeniedCount();
+  telemetry.ColumnBumpDenied += static_cast<int>(SchedulerState.DeniedCount());
+  SchedulerState.ClearDeniedCount();
   telemetry.ColumnFlowUpgradeN +=
-      static_cast<int>(scheduler_.UpgradeCount());
-  scheduler_.ClearUpgradeCount();
+      static_cast<int>(SchedulerState.UpgradeCount());
+  SchedulerState.ClearUpgradeCount();
   return drained;
 }
 
-void UColumnFlowExecutor::TickDerived(UWorld &world,
-                                      glm::ivec3 focus_ground_horiz,
-                                      int focus_radius, bool moving,
-                                      bool missing_visible_mesh,
-                                      bool visual_holes, bool idle_remesh_debt,
-                                      bool idle_focus_dirty_debt,
-                                      int /*pending_focus_n*/, int recover_n,
-                                      int admit_n, double /*last_frame_ms*/,
-                                      int pending_async, bool prep_over_budget)
+void UColumnFlowExecutor::TickDerived(
+    UWorld &world, glm::ivec3 focus_ground_horiz, int focus_radius, bool moving,
+    bool missing_visible_mesh, bool visual_holes, bool idle_remesh_debt,
+    bool idle_focus_dirty_debt, int /*pending_focus_n*/, int recover_n,
+    int admit_n, double /*last_frame_ms*/, int pending_async,
+    bool prep_over_budget)
 {
   BindDecideWorld(&world);
   ++frame_counter_;
@@ -856,14 +853,15 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
                                         pending_cols,
                                         std::max(64, recover_n * 4));
   world.CollectStickyRemeshFocusColumns(focus_ground_horiz, focus_radius,
-                                        sticky_cols, std::max(2, recover_n / 2));
+                                        sticky_cols,
+                                        std::max(2, recover_n / 2));
 
   // should_first_mesh FIRST: priority must beat RelightThenMesh (recover+50)
   // or DrainBudget spends the frame on Capture while the rim hole stays empty
   // (manual 131234 p09–12).
-  const bool hole_first_mesh =
-      admit_n > 0 && (missing_visible_mesh || visual_holes) &&
-      ((!moving && !idle_remesh_debt) || moving);
+  const bool hole_first_mesh = admit_n > 0 &&
+                               (missing_visible_mesh || visual_holes) &&
+                               ((!moving && !idle_remesh_debt) || moving);
   if (hole_first_mesh)
   {
     ColumnWorkItem item{};
@@ -897,10 +895,10 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     {
       break;
     }
-    const int horiz = std::max(std::abs(col.x - focus.x),
-                               std::abs(col.y - focus.y));
+    const int horiz =
+        std::max(std::abs(col.x - focus.x), std::abs(col.y - focus.y));
     if (horiz > orphan_reticket_radius ||
-        !scheduler_.Contains(col, ColumnWorkKind::FirstMesh) ||
+        !SchedulerState.Contains(col, ColumnWorkKind::FirstMesh) ||
         !world.IsPendingLightBeforeMesh(col) ||
         world.IsTerrainColumnRelightQueued(col) ||
         world.IsAsyncRelightColumnInFlight(col))
@@ -918,10 +916,8 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   // While missing FirstMesh, keep Relight priority below FirstMesh (≤99).
   if (!idle_remesh_debt && !idle_focus_dirty_debt && recover_n > 0)
   {
-    const int relight_hi =
-        missing_visible_mesh ? 55 : (recover_n + 50);
-    const int promote_hi =
-        missing_visible_mesh ? 45 : (recover_n + 20);
+    const int relight_hi = missing_visible_mesh ? 55 : (recover_n + 50);
+    const int promote_hi = missing_visible_mesh ? 45 : (recover_n + 20);
     int enq = 0;
     for (const glm::ivec2 &col : pending_cols)
     {
@@ -932,9 +928,8 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       const int horiz =
           std::max(std::abs(col.x - focus.x), std::abs(col.y - focus.y));
       Enqueue(col, ColumnWorkKind::RelightThenMesh,
-              ColumnFlowRelightPriorityUnderMiss(relight_hi - enq, horiz,
-                                                 focus_radius,
-                                                 missing_visible_mesh));
+              ColumnFlowRelightPriorityUnderMiss(
+                  relight_hi - enq, horiz, focus_radius, missing_visible_mesh));
       ++enq;
     }
     // One Promote/frame via coalesce — AdvanceColumn promotes focus radius.
@@ -954,21 +949,21 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   const int stale_n = world.GetPhysicsTelemetry().DarkFaceStaleNearN;
   const int dark_n = world.GetPhysicsTelemetry().DarkFaceNearN;
   const int void_n = world.GetPhysicsTelemetry().DarkFaceVoidNearN;
-  const int visible_black_n =
-      world.GetPhysicsTelemetry().VisibleBlackFocusN;
+  const int visible_black_n = world.GetPhysicsTelemetry().VisibleBlackFocusN;
   const int visible_black_no_ticket_n =
       world.GetPhysicsTelemetry().VisibleBlackNoTicketN;
   const int vb_stalled_n = world.GetPhysicsTelemetry().VisibleBlackStalledN;
-  // FP-B3 / FP-E0: ticketed VB consume — ring RelightThenMesh when VB debt high.
-  const bool vb_consume =
-      IsTicketedVbConsumeMode(visible_black_no_ticket_n, visible_black_n,
-                              vb_stalled_n, moving);
-  // Phase 5.7.3: under latch+debt, bias RelightThenMesh on R≤4 before hinterland FM.
+  // FP-B3 / FP-E0: ticketed VB consume — ring RelightThenMesh when VB debt
+  // high.
+  const bool vb_consume = IsTicketedVbConsumeMode(
+      visible_black_no_ticket_n, visible_black_n, vb_stalled_n, moving);
+  // Phase 5.7.3: under latch+debt, bias RelightThenMesh on R≤4 before
+  // hinterland FM.
   const bool latch_debt_bias =
       world.GetPhysicsTelemetry().EnterSettleSoftForceWithDebt != 0 &&
       world.GetPhysicsTelemetry().VisibilityDebt > 0;
-  // Phase 5.7R4: unified fifo owner — vb_consume may focus Relight; ring=0 under
-  // fifo>=16; latch+moving still underfeet-gated.
+  // Phase 5.7R4: unified fifo owner — vb_consume may focus Relight; ring=0
+  // under fifo>=16; latch+moving still underfeet-gated.
   const int miss_horiz = world.GetPhysicsTelemetry().MissHoriz;
   const int relight_fifo_n = world.GetPhysicsTelemetry().RelightFifoN;
   const bool fifo_pressure = RelightFifoBackpressured(relight_fifo_n);
@@ -977,37 +972,35 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       relight_fifo_n);
   if (vb_consume || latch_debt_bias)
   {
-  // Phase 5.7R5: under fifo pressure only UF/miss nh≤1 focus Relight (central
-  // EnqueueTerrainColumnRelight also admits only nh≤1).
-  const bool enqueue_focus_relight =
-      (!fifo_pressure || (missing_visible_mesh && miss_horiz <= 1)) &&
-      (vb_consume || !moving || allow_latch_relight_moving);
-  if (enqueue_focus_relight &&
-      !scheduler_.Contains(focus, ColumnWorkKind::RelightThenMesh))
-  {
-    Enqueue(focus, ColumnWorkKind::RelightThenMesh,
-            latch_debt_bias ? 96 : (moving ? 92 : 95));
-    world.GetPhysicsTelemetryMutable().TicketedVbConsumeN++;
-  }
+    // Phase 5.7R5: under fifo pressure only UF/miss nh≤1 focus Relight (central
+    // EnqueueTerrainColumnRelight also admits only nh≤1).
+    const bool enqueue_focus_relight =
+        (!fifo_pressure || (missing_visible_mesh && miss_horiz <= 1)) &&
+        (vb_consume || !moving || allow_latch_relight_moving);
+    if (enqueue_focus_relight &&
+        !SchedulerState.Contains(focus, ColumnWorkKind::RelightThenMesh))
+    {
+      Enqueue(focus, ColumnWorkKind::RelightThenMesh,
+              latch_debt_bias ? 96 : (moving ? 92 : 95));
+      world.GetPhysicsTelemetryMutable().TicketedVbConsumeN++;
+    }
     // Ring: fifo pressure OR latch+moving without allow → TopK=0.
-    const bool skip_ring =
-        fifo_pressure ||
-        (latch_debt_bias && moving && !allow_latch_relight_moving);
-    if (!skip_ring &&
-        (visible_black_no_ticket_n >= 10 || latch_debt_bias))
+    const bool skip_ring = fifo_pressure || (latch_debt_bias && moving &&
+                                             !allow_latch_relight_moving);
+    if (!skip_ring && (visible_black_no_ticket_n >= 10 || latch_debt_bias))
     {
       const glm::ivec3 fg = focus_ground_horiz;
       int ring_enq = 0;
-      // Phase 5.7R3/R4: latch+moving allow → TopK=1 Rscan=1; latch stand TopK=3.
-      // vb_consume without latch: keep prior caps but never under fifo_pressure.
+      // Phase 5.7R3/R4: latch+moving allow → TopK=1 Rscan=1; latch stand
+      // TopK=3. vb_consume without latch: keep prior caps but never under
+      // fifo_pressure.
       const int kRingTopK =
           latch_debt_bias
               ? (moving ? (allow_latch_relight_moving ? 1 : 0) : 3)
               : (missing_visible_mesh && moving
                      ? 1
                      : ((!moving && visible_black_n >= 25) ? 6 : 3));
-      const int kRingScan =
-          (latch_debt_bias && moving) ? 1 : 4;
+      const int kRingScan = (latch_debt_bias && moving) ? 1 : 4;
       for (int dz = -kRingScan; dz <= kRingScan && ring_enq < kRingTopK; ++dz)
       {
         for (int dx = -kRingScan; dx <= kRingScan && ring_enq < kRingTopK; ++dx)
@@ -1021,7 +1014,7 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
           {
             continue;
           }
-          if (scheduler_.Contains(col, ColumnWorkKind::RelightThenMesh))
+          if (SchedulerState.Contains(col, ColumnWorkKind::RelightThenMesh))
           {
             continue;
           }
@@ -1045,8 +1038,8 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     const bool carve_lit = ShouldCarveFocusLitCompletion(
         relight_fifo_n, missing_visible_mesh, miss_horiz, pending_light_near);
     if (carve_lit &&
-        !scheduler_.Contains(focus, ColumnWorkKind::RelightThenMesh) &&
-        !scheduler_.Contains(focus, ColumnWorkKind::FirstMesh))
+        !SchedulerState.Contains(focus, ColumnWorkKind::RelightThenMesh) &&
+        !SchedulerState.Contains(focus, ColumnWorkKind::FirstMesh))
     {
       Enqueue(focus, ColumnWorkKind::RelightThenMesh, 96);
     }
@@ -1061,31 +1054,26 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       cooldown_ok && !prep_over_budget &&
       (stale_n > 40 || (dark_n > 500 && stale_n > 0));
   const bool async_ok = pending_async < 48;
-  const bool pending_light =
-      world.GetPhysicsTelemetry().FocusPendingDark > 0;
-  // Era32 P1: lit_pending = sticky remesh-after-light only — NOT visible_black_n
-  // (VB must RelightThenMesh, not DesiredStage RemeshSeam).
-  const bool lit_pending =
-      world.GetPhysicsTelemetry().FocusStickyRemesh > 0;
+  const bool pending_light = world.GetPhysicsTelemetry().FocusPendingDark > 0;
+  // Era32 P1: lit_pending = sticky remesh-after-light only — NOT
+  // visible_black_n (VB must RelightThenMesh, not DesiredStage RemeshSeam).
+  const bool lit_pending = world.GetPhysicsTelemetry().FocusStickyRemesh > 0;
   const bool unlit_published =
       pending_light && !missing_visible_mesh &&
       (world.GetPhysicsTelemetry().FocusDarkMesh > 0 ||
        world.GetPhysicsTelemetry().DarkFaceVoidNearN > 0);
   const bool dark_drawable =
-      visible_black_n > 0 ||
-      world.GetPhysicsTelemetry().DarkFaceVoidNearN > 0;
+      visible_black_n > 0 || world.GetPhysicsTelemetry().DarkFaceVoidNearN > 0;
   const ColumnDesiredDecision desired = DeriveColumnDesiredStage(
       missing_visible_mesh, /*stale_focus=*/allow_stale_wave_base && async_ok,
       /*void_focus=*/!missing_visible_mesh && !moving && cooldown_ok &&
           (void_n > 200 || (void_n > 40 && stale_n > 40)),
       pending_light, lit_pending, unlit_published, dark_drawable);
-  const bool nearest_vb_heal =
-      async_ok && visible_black_n > 0;
+  const bool nearest_vb_heal = async_ok && visible_black_n > 0;
   const bool nearest_vb_no_ticket =
       ShouldEnqueueNearestVbNoTicket(visible_black_no_ticket_n > 0, async_ok);
-  const bool void_pressure =
-      ShouldReserveVoidRelightSlots(void_n, visible_black_n,
-                                    missing_visible_mesh);
+  const bool void_pressure = ShouldReserveVoidRelightSlots(
+      void_n, visible_black_n, missing_visible_mesh);
   const bool allow_stale_wave =
       desired.stage == ColumnDesiredStage::RemeshSeam ||
       world.GetPhysicsTelemetry().FocusStickyRemesh > 0 ||
@@ -1096,14 +1084,13 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       desired.stage == ColumnDesiredStage::RelightThenMesh ||
       (!missing_visible_mesh && !moving && cooldown_ok &&
        (void_n > 200 || (void_n > 40 && stale_n > 40)));
-  const int repair_cap_base =
-      !moving ? std::min(12, std::max(4, recover_n))
-              : std::min(6, std::max(2, recover_n / 2));
-  // FZ2.7-P15b (ex-P14 F4): moving VB orphan pressure — +2 RelightThenMesh budget.
-  const int repair_cap =
-      (moving && visible_black_no_ticket_n > 20)
-          ? std::min(8, repair_cap_base + 2)
-          : repair_cap_base;
+  const int repair_cap_base = !moving ? std::min(12, std::max(4, recover_n))
+                                      : std::min(6, std::max(2, recover_n / 2));
+  // FZ2.7-P15b (ex-P14 F4): moving VB orphan pressure — +2 RelightThenMesh
+  // budget.
+  const int repair_cap = (moving && visible_black_no_ticket_n > 20)
+                             ? std::min(8, repair_cap_base + 2)
+                             : repair_cap_base;
 
   // Era17 P1: continuous heal while VisibleBlackFocusN>0 (not only NoTicket).
   // Era19 P2: void→Relight only; stale→Remesh only; PendingLight skips Remesh.
@@ -1113,23 +1100,21 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   {
     const bool enter_fov_lit = world.IsEnterFovLitPassActive();
     // Era26 I-O1: under void_pressure use full focus radius (not VB clamp≤2).
-    int vb_radius = VoidRelightCollectRadius(
-        focus_radius, missing_visible_mesh, void_pressure,
-        visible_black_no_ticket_n > 0);
+    int vb_radius =
+        VoidRelightCollectRadius(focus_radius, missing_visible_mesh,
+                                 void_pressure, visible_black_no_ticket_n > 0);
     // FZ2.1-B2c: narrow enter collect ring to reduce no_ticket peak.
     if (enter_fov_lit)
     {
       vb_radius = std::min(vb_radius, 3);
     }
-    const int stale_cap =
-        nearest_vb_no_ticket
-            ? VisibleBlackNoTicketRepairCap(
-                  visible_black_no_ticket_n,
-                  repair_cap + (missing_visible_mesh ? 4 : 0), moving,
-                  enter_fov_lit)
-            : repair_cap;
-    const int void_base =
-        VoidRelightCollectCap(repair_cap, void_pressure);
+    const int stale_cap = nearest_vb_no_ticket
+                              ? VisibleBlackNoTicketRepairCap(
+                                    visible_black_no_ticket_n,
+                                    repair_cap + (missing_visible_mesh ? 4 : 0),
+                                    moving, enter_fov_lit)
+                              : repair_cap;
+    const int void_base = VoidRelightCollectCap(repair_cap, void_pressure);
     const int void_cap =
         nearest_vb_no_ticket
             ? VisibleBlackNoTicketVoidCap(
@@ -1160,39 +1145,39 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       pending_keys.reserve(pending_cols.size() * 2);
       for (const glm::ivec2 &c : pending_cols)
       {
-        pending_keys.insert((static_cast<uint64_t>(static_cast<uint32_t>(c.x))
-                             << 32) |
-                            static_cast<uint32_t>(c.y));
+        pending_keys.insert(
+            (static_cast<uint64_t>(static_cast<uint32_t>(c.x)) << 32) |
+            static_cast<uint32_t>(c.y));
       }
       std::unordered_set<uint64_t> void_keys;
       void_keys.reserve(void_dark_cols.size() * 2);
       for (const glm::ivec2 &c : void_dark_cols)
       {
-        void_keys.insert((static_cast<uint64_t>(static_cast<uint32_t>(c.x))
-                          << 32) |
-                         static_cast<uint32_t>(c.y));
+        void_keys.insert(
+            (static_cast<uint64_t>(static_cast<uint32_t>(c.x)) << 32) |
+            static_cast<uint32_t>(c.y));
       }
       stale_dark_cols.erase(
-          std::remove_if(stale_dark_cols.begin(), stale_dark_cols.end(),
-                         [&](const glm::ivec2 &c) {
-                           const uint64_t k =
-                               (static_cast<uint64_t>(
-                                    static_cast<uint32_t>(c.x))
-                                << 32) |
-                               static_cast<uint32_t>(c.y);
-                           if (!pending_keys.count(k))
-                           {
-                             return false;
-                           }
-                           const bool void_col = void_keys.count(k) > 0;
-                           if (ShouldSkipStaleRemeshForPendingVoid(true, void_col))
-                           {
-                             ++world.GetPhysicsTelemetryMutable()
-                                   .StageSkipRemeshPendingLight;
-                             return true;
-                           }
-                           return false;
-                         }),
+          std::remove_if(
+              stale_dark_cols.begin(), stale_dark_cols.end(),
+              [&](const glm::ivec2 &c)
+              {
+                const uint64_t k =
+                    (static_cast<uint64_t>(static_cast<uint32_t>(c.x)) << 32) |
+                    static_cast<uint32_t>(c.y);
+                if (!pending_keys.count(k))
+                {
+                  return false;
+                }
+                const bool void_col = void_keys.count(k) > 0;
+                if (ShouldSkipStaleRemeshForPendingVoid(true, void_col))
+                {
+                  ++world.GetPhysicsTelemetryMutable()
+                        .StageSkipRemeshPendingLight;
+                  return true;
+                }
+                return false;
+              }),
           stale_dark_cols.end());
     }
     // Void wins over stale for the same column (Relight only).
@@ -1202,33 +1187,32 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       void_keys.reserve(void_dark_cols.size() * 2);
       for (const glm::ivec2 &c : void_dark_cols)
       {
-        void_keys.insert((static_cast<uint64_t>(static_cast<uint32_t>(c.x))
-                          << 32) |
-                         static_cast<uint32_t>(c.y));
+        void_keys.insert(
+            (static_cast<uint64_t>(static_cast<uint32_t>(c.x)) << 32) |
+            static_cast<uint32_t>(c.y));
       }
       stale_dark_cols.erase(
-          std::remove_if(stale_dark_cols.begin(), stale_dark_cols.end(),
-                         [&](const glm::ivec2 &c) {
-                           const uint64_t k =
-                               (static_cast<uint64_t>(
-                                    static_cast<uint32_t>(c.x))
-                                << 32) |
-                               static_cast<uint32_t>(c.y);
-                           return void_keys.count(k) > 0;
-                         }),
+          std::remove_if(
+              stale_dark_cols.begin(), stale_dark_cols.end(),
+              [&](const glm::ivec2 &c)
+              {
+                const uint64_t k =
+                    (static_cast<uint64_t>(static_cast<uint32_t>(c.x)) << 32) |
+                    static_cast<uint32_t>(c.y);
+                return void_keys.count(k) > 0;
+              }),
           stale_dark_cols.end());
     }
     if (!stale_dark_cols.empty())
     {
-      EnqueueVisibleBlackRepairTickets(scheduler_, focus, stale_dark_cols);
+      EnqueueVisibleBlackRepairTickets(SchedulerState, focus, stale_dark_cols);
     }
     // FZ2-R6 / FZ2.2-C2a: second collect idle-only; C2c enter peak one-shot.
-    // FZ2.7-P15b (ex-P14 F4): also one moving second pass under no_ticket orphan.
-    // Phase 5.7R: drop FocusMissing any-no_ticket second-pass; rescan only if
-    // pass1 returned 0 (avoid double O(R²) Collect).
-    const bool second_pass_idle =
-        nearest_vb_no_ticket && async_ok && !moving &&
-        visible_black_no_ticket_n > 20;
+    // FZ2.7-P15b (ex-P14 F4): also one moving second pass under no_ticket
+    // orphan. Phase 5.7R: drop FocusMissing any-no_ticket second-pass; rescan
+    // only if pass1 returned 0 (avoid double O(R²) Collect).
+    const bool second_pass_idle = nearest_vb_no_ticket && async_ok && !moving &&
+                                  visible_black_no_ticket_n > 20;
     const bool second_pass_moving =
         nearest_vb_no_ticket && async_ok && moving &&
         visible_black_no_ticket_n > 20 &&
@@ -1245,15 +1229,15 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
                                          extra, remain);
       if (!extra.empty())
       {
-        EnqueueVisibleBlackRepairTickets(scheduler_, focus, extra);
+        EnqueueVisibleBlackRepairTickets(SchedulerState, focus, extra);
       }
     }
     else if (second_pass_enter_peak)
     {
       // FZ2.4-P1: enter peak second pass — cap remain≤1 (no full O(n) flood).
-      const int remain = std::min(
-          enter_fov_lit ? 4 : 1,
-          stale_cap - static_cast<int>(stale_dark_cols.size()));
+      const int remain =
+          std::min(enter_fov_lit ? 4 : 1,
+                   stale_cap - static_cast<int>(stale_dark_cols.size()));
       if (remain > 0)
       {
         std::vector<glm::ivec2> extra;
@@ -1261,13 +1245,13 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
                                            remain);
         if (!extra.empty())
         {
-          EnqueueVisibleBlackRepairTickets(scheduler_, focus, extra);
+          EnqueueVisibleBlackRepairTickets(SchedulerState, focus, extra);
         }
       }
     }
     if (!void_dark_cols.empty())
     {
-      EnqueueVoidDarkRelightTickets(scheduler_, focus, void_dark_cols);
+      EnqueueVoidDarkRelightTickets(SchedulerState, focus, void_dark_cols);
       // G1: Note+FIFO for every void ticket (collect already ≤void_cap ~2–4).
       // Previously only under void_pressure with note_cap=2 → FullyDarkStalled
       // while RelightThenMesh sat in the heap without PendingLight progress.
@@ -1320,12 +1304,10 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       }
       {
         const ColumnRecord *rec = world.GetColumnRecords().Find(col);
-        const bool has_pl_or_fifo =
-            world.IsPendingLightBeforeMesh(col) ||
-            (rec && rec->publish_progress_frames > 0);
-        if (rec &&
-            ColumnVisualForbidsTicketWithoutFifo(
-                rec->visual, /*has_repair_ticket=*/true, has_pl_or_fifo))
+        const bool has_pl_or_fifo = world.IsPendingLightBeforeMesh(col) ||
+                                    (rec && rec->publish_progress_frames > 0);
+        if (rec && ColumnVisualForbidsTicketWithoutFifo(
+                       rec->visual, /*has_repair_ticket=*/true, has_pl_or_fifo))
         {
           // NeedRelight/NeedRemesh without PL/fifo: schedule Dirty via Note.
           world.NoteColumnRepairNeeded(col);
@@ -1341,12 +1323,12 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     }
     if (!stale_dark_cols.empty())
     {
-      EnqueueStickyStaleRepairTickets(scheduler_, focus, /*sticky*/ {},
+      EnqueueStickyStaleRepairTickets(SchedulerState, focus, /*sticky*/ {},
                                       stale_dark_cols);
     }
     if (!void_dark_cols.empty())
     {
-      EnqueueVoidDarkRelightTickets(scheduler_, focus, void_dark_cols);
+      EnqueueVoidDarkRelightTickets(SchedulerState, focus, void_dark_cols);
       for (const glm::ivec2 &col : void_dark_cols)
       {
         if (world.IsPendingLightBeforeMesh(col))

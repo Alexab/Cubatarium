@@ -678,7 +678,7 @@ void UWorld::RunLegacyPhysicsFrame()
       std::chrono::duration<double, std::milli>(clock_t::now() - t_env).count();
 
   USurvivalSystems::Instance().Tick(*this, creatureDt);
-  WorldItemSystem::Instance().Tick(*this, creatureDt);
+  UWorldItemSystem::Instance().Tick(*this, creatureDt);
 
   TickNpcCreatureIntents(creatureDt, tick_world_ai, mountId, mountOriginBefore);
   if (mountId != 0 && camera)
@@ -864,7 +864,7 @@ bool UWorld::SyncControlledBodyFromCamera(
     // Movement is fixed-step. Dividing by render time made 144 FPS alternate
     // zero and oversized speeds, flickering Run/Idle on frames without a step.
     const float simulatedDt = camera->GetLastPhysicsSubsteps() / 60.f;
-    glm::vec3 velocity = HumanMotionController::MeasureVelocity(
+    glm::vec3 velocity = UHumanMotionController::MeasureVelocity(
         delta, simulatedDt, previousVelocity);
     if (!camera->GetFreeMove() && !camLoc.IsSwimming())
     {

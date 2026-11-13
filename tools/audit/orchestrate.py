@@ -210,7 +210,7 @@ def seed_module_findings() -> None:
                 "priority": "P2",
                 "module": "Render",
                 "title": "StreamingHorizonBlocks deprecated but still used",
-                "files": ["src/Render/Engine/DistanceFog.h", "src/World/Core/World.cpp"],
+                "files": ["src/World/View/DistanceFog.h", "src/World/Core/World.cpp"],
                 "evidence": "@deprecated on StreamingHorizonBlocks; UWorld::GetStreamingHorizonBlocks calls it",
                 "action": "migrate callers to FogHorizonBlocks/RenderHorizonBlocks",
                 "risk": "low",

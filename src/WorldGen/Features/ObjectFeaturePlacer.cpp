@@ -49,16 +49,17 @@ std::string ObjectFeatureRuleKey(ObjectFeaturePool pool, size_t ruleIndex,
          std::to_string(ruleIndex) + ":" + featureKey;
 }
 
-ObjectFeatureRuleProfile *BeginObjectFeatureRuleEvaluation(
-    ObjectFeaturePool pool, size_t ruleIndex, const std::string &featureKey)
+ObjectFeatureRuleProfile *
+BeginObjectFeatureRuleEvaluation(ObjectFeaturePool pool, size_t ruleIndex,
+                                 const std::string &featureKey)
 {
-  if (!ObjectFeatureDiagnosticsEnabled ||
-      pool != ObjectFeaturePool::Decoration)
+  if (!ObjectFeatureDiagnosticsEnabled || pool != ObjectFeaturePool::Decoration)
   {
     return nullptr;
   }
   ObjectFeatureRuleProfile &profile =
-      ObjectFeatureChunkRules[ObjectFeatureRuleKey(pool, ruleIndex, featureKey)];
+      ObjectFeatureChunkRules[ObjectFeatureRuleKey(pool, ruleIndex,
+                                                   featureKey)];
   profile.pool = "decoration";
   profile.ruleIndex = ruleIndex;
   profile.featureKey = featureKey;
@@ -85,10 +86,9 @@ struct ObjectFeatureEvaluationScope
       return;
     }
     ++Profile->evaluated;
-    Profile->evaluationMs +=
-        std::chrono::duration<double, std::milli>(
-            std::chrono::steady_clock::now() - Start)
-            .count();
+    Profile->evaluationMs += std::chrono::duration<double, std::milli>(
+                                 std::chrono::steady_clock::now() - Start)
+                                 .count();
   }
 };
 
@@ -202,11 +202,10 @@ int FloorDiv(int value, int divisor)
   return quotient;
 }
 
-bool PassesSpatialFloraCandidateGate(int x, int z, uint32_t seed, int spacing,
-                                     float densityMultiplier,
-                                     uint32_t rule_seed_offset,
-                                     uint32_t pool_seed_offset,
-                                     const FeatureDistributionProfile &distribution)
+bool PassesSpatialFloraCandidateGate(
+    int x, int z, uint32_t seed, int spacing, float densityMultiplier,
+    uint32_t rule_seed_offset, uint32_t pool_seed_offset,
+    const FeatureDistributionProfile &distribution)
 {
   const int effectiveSpacing = EffectiveSpacing(spacing, densityMultiplier);
   if (effectiveSpacing <= 0 || effectiveSpacing == INT_MAX)
@@ -225,15 +224,14 @@ bool PassesSpatialFloraCandidateGate(int x, int z, uint32_t seed, int spacing,
   // density by (jitterSpan / cellSize)^2, making flora substantially rarer
   // than its authored spacing. Sample the whole cell instead, with independent
   // deterministic hashes for the two axes.
-  const int candidateX = cellX * cellSize +
-                         static_cast<int>(cellHash %
-                                          static_cast<uint32_t>(cellSize));
+  const int candidateX =
+      cellX * cellSize +
+      static_cast<int>(cellHash % static_cast<uint32_t>(cellSize));
   const uint32_t zHash = FeatureHash(
-      cellX, cellZ,
-      seed + pool_seed_offset + rule_seed_offset + 0x68bc21ebU);
-  const int candidateZ = cellZ * cellSize +
-                         static_cast<int>(zHash %
-                                          static_cast<uint32_t>(cellSize));
+      cellX, cellZ, seed + pool_seed_offset + rule_seed_offset + 0x68bc21ebU);
+  const int candidateZ =
+      cellZ * cellSize +
+      static_cast<int>(zHash % static_cast<uint32_t>(cellSize));
   if (x != candidateX || z != candidateZ)
   {
     return false;
@@ -250,20 +248,19 @@ bool PassesSpatialFloraCandidateGate(int x, int z, uint32_t seed, int spacing,
   {
     // Share the broad field across all rules in the same feature pool so
     // species form coherent groves instead of competing patch patterns.
-    const float regionalNoise = NormalizedFBM2D(
-        static_cast<float>(x) * distribution.RegionalNoiseScale,
-        static_cast<float>(z) * distribution.RegionalNoiseScale,
-        seed + pool_seed_offset + 0x4f1bbcdcU, 2, 0.5f, 2.0f);
-    const float regional01 = Smoothstep(0.18f, 0.82f,
-                                        (regionalNoise + 1.0f) * 0.5f);
-    const float regionalMultiplier =
-        distribution.MinDensityMultiplier +
-        (distribution.MaxDensityMultiplier -
-         distribution.MinDensityMultiplier) *
-            regional01;
+    const float regionalNoise =
+        NormalizedFBM2D(static_cast<float>(x) * distribution.RegionalNoiseScale,
+                        static_cast<float>(z) * distribution.RegionalNoiseScale,
+                        seed + pool_seed_offset + 0x4f1bbcdcU, 2, 0.5f, 2.0f);
+    const float regional01 =
+        Smoothstep(0.18f, 0.82f, (regionalNoise + 1.0f) * 0.5f);
+    const float regionalMultiplier = distribution.MinDensityMultiplier +
+                                     (distribution.MaxDensityMultiplier -
+                                      distribution.MinDensityMultiplier) *
+                                         regional01;
     acceptance = static_cast<uint32_t>(std::clamp(
-        std::lround(static_cast<double>(acceptance) * regionalMultiplier),
-        0L, 10000L));
+        std::lround(static_cast<double>(acceptance) * regionalMultiplier), 0L,
+        10000L));
   }
   const uint32_t acceptanceHash = FeatureHash(
       cellX, cellZ, seed + pool_seed_offset + rule_seed_offset + 0x5bd1e995U);
@@ -305,24 +302,25 @@ uint64_t TreeVoxelKey(int x, int y, int z)
          static_cast<uint16_t>(z + 128);
 }
 
+static BlockId ResolveTreeMaterial(WorldGenContext &ctx,
+                                   const std::string &name,
+                                   const char *fallback)
+{
+  auto id =
+      ResolvePackScatterBlockId(ctx.Registry, ctx.WorldgenOwnerPackId, name);
+  return id == BLOCK_AIR ? ResolvePackScatterBlockId(
+                               ctx.Registry, ctx.WorldgenOwnerPackId, fallback)
+                         : id;
+}
+
 bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
                             const ObjectFeatureRule &rule, uint32_t seed)
 {
   const TreeSpeciesProfile &profile = rule.Tree;
-  BlockId trunk = ResolvePackScatterBlockId(
-      ctx.Registry, ctx.WorldgenOwnerPackId, profile.TrunkBlock);
-  BlockId leaves = ResolvePackScatterBlockId(
-      ctx.Registry, ctx.WorldgenOwnerPackId, profile.LeavesBlock);
-  if (trunk == BLOCK_AIR)
-  {
-    trunk = ResolvePackScatterBlockId(ctx.Registry, ctx.WorldgenOwnerPackId,
-                                      "tree_log");
-  }
-  if (leaves == BLOCK_AIR)
-  {
-    leaves = ResolvePackScatterBlockId(ctx.Registry, ctx.WorldgenOwnerPackId,
-                                       "tree_leaves");
-  }
+  const BlockId trunk =
+      ResolveTreeMaterial(ctx, profile.TrunkBlock, "tree_log");
+  const BlockId leaves =
+      ResolveTreeMaterial(ctx, profile.LeavesBlock, "tree_leaves");
   if (trunk == BLOCK_AIR || leaves == BLOCK_AIR ||
       !ctx.Registry.HasRenderableTexture(trunk) ||
       !ctx.Registry.HasRenderableTexture(leaves))
@@ -335,9 +333,8 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
     return false;
   }
 
-  if (IsTreeVegetationBlock(
-          ctx.Registry,
-          ctx.World.GetBlock(base - glm::ivec3(0, 1, 0))))
+  if (IsTreeVegetationBlock(ctx.Registry,
+                            ctx.World.GetBlock(base - glm::ivec3(0, 1, 0))))
   {
     return false;
   }
@@ -386,8 +383,8 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
     // holes and no free-floating branch blobs, so silhouettes stay compact
     // and species-specific.
     const int foliageR = std::clamp(std::max(radiusX, radiusZ) - 1, 2, 4);
-    const auto discOk = [](int dx, int dz, int rad, bool trimCorner,
-                           uint32_t cornerHash)
+    const auto discOk =
+        [](int dx, int dz, int rad, bool trimCorner, uint32_t cornerHash)
     {
       if (rad <= 0)
       {
@@ -445,8 +442,7 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
         }
         const int fullRad = std::min(foliageR, (k + 2) / 2);
         const int rad = skirt ? fullRad : 1;
-        addLayer(0, height - k, 0, rad, !skirt, 0x53505255U,
-                 skirt ? 40U : 0U);
+        addLayer(0, height - k, 0, rad, !skirt, 0x53505255U, skirt ? 40U : 0U);
       }
       break;
     }
@@ -530,274 +526,278 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
   }
   else
   {
-  for (int y = 0; y < height; ++y)
-  {
-    addVoxel(0, y, 0, trunk);
-  }
-
-  if (profile.RootChance > 0.0f)
-  {
-    const uint32_t rootHash = FeatureHash(base.x, base.z, seed + 0x524f4f54U);
-    if (static_cast<float>(rootHash % 10000U) / 10000.0f < profile.RootChance)
+    for (int y = 0; y < height; ++y)
     {
-      static constexpr int kRootX[4] = {1, 0, -1, 0};
-      static constexpr int kRootZ[4] = {0, 1, 0, -1};
-      const int rotation = static_cast<int>((rootHash >> 8U) % 4U);
-      const int rootLength = 1 + static_cast<int>((rootHash >> 12U) % 2U);
-      for (int arm = 0; arm < 4; ++arm)
-      {
-        if (((rootHash >> (arm + 16U)) & 1U) == 0U)
-        {
-          continue;
-        }
-        const int dir = (arm + rotation) % 4;
-        for (int distance = 1; distance <= rootLength; ++distance)
-        {
-          addVoxel(kRootX[dir] * distance, 0, kRootZ[dir] * distance, trunk);
-        }
-      }
-    }
-  }
-
-  const bool conicalCrown = profile.CrownShape == TreeCrownShape::Conical;
-  // Conifers carry foliage along the lower trunk. Broadleaf crowns remain
-  // centered near the top, while conical profiles taper from the lower crown
-  // base to the top of the trunk.
-  const int crownBase = conicalCrown
-                            ? std::max(1, height - crownHeight)
-                            : std::max(1, height - crownHeight / 2);
-  const int crownTop = conicalCrown
-                           ? std::max(crownBase, height - 1)
-                           : height + std::max(1, crownHeight / 2);
-  for (int y = crownBase; y <= crownTop; ++y)
-  {
-    const float t = static_cast<float>(y - crownBase) /
-                    static_cast<float>(std::max(1, crownTop - crownBase));
-    float shape = 1.0f;
-    switch (profile.CrownShape)
-    {
-    case TreeCrownShape::Conical:
-      shape = 1.0f - t * 0.82f;
-      break;
-    case TreeCrownShape::Umbrella:
-      shape = t < 0.62f ? 0.5f + t * 0.55f : 0.84f - (t - 0.62f) * 0.28f;
-      break;
-    case TreeCrownShape::Columnar:
-      shape = 0.76f + 0.12f * std::sin(t * 3.14159265f);
-      break;
-    case TreeCrownShape::Round:
-    default:
-    {
-      const float normalized = 2.0f * t - 1.0f;
-      shape = std::sqrt(std::max(0.08f, 1.0f - normalized * normalized));
-      break;
-    }
-    }
-    const int rx = std::max(1, static_cast<int>(std::lround(radiusX * shape)));
-    const int rz = std::max(1, static_cast<int>(std::lround(radiusZ * shape)));
-    for (int dz = -rz; dz <= rz; ++dz)
-    {
-      for (int dx = -rx; dx <= rx; ++dx)
-      {
-        const float ellipse =
-            static_cast<float>(dx * dx) / static_cast<float>(rx * rx) +
-            static_cast<float>(dz * dz) / static_cast<float>(rz * rz);
-        constexpr float kTau = 6.28318530718f;
-        const float angle =
-            std::atan2(static_cast<float>(dz), static_cast<float>(dx));
-        const int sector = static_cast<int>(
-            std::floor((angle + 3.14159265359f) * (16.0f / kTau)));
-        const uint32_t contourHash =
-            FeatureHash(sector, y - crownBase, seed + 0x43524f57U);
-        const float contour =
-            (static_cast<float>(contourHash % 2001U) / 1000.0f - 1.0f) *
-            profile.CrownIrregularity;
-        if (ellipse > 1.0f + contour)
-        {
-          continue;
-        }
-        uint32_t leafHash = FeatureHash(base.x + dx, base.z + dz,
-                                        seed + static_cast<uint32_t>(y * 7919));
-        leafHash ^= static_cast<uint32_t>(y) * 0x9e3779b9U;
-        const float leafRoll = static_cast<float>(leafHash % 10000U) / 10000.0f;
-        const bool crownTip = y == crownTop && dx == 0 && dz == 0;
-        if (!crownTip && leafRoll > leafDensity)
-        {
-          continue;
-        }
-        addVoxel(dx, y, dz, leaves);
-      }
-    }
-  }
-
-  // Rasterize branches as face-connected voxel paths. Diagonal branches use
-  // a short stair-step so adjacent wood blocks share a face instead of only
-  // touching at a corner, and occasional vertical steps keep the silhouette
-  // from becoming a flat horizontal spoke.
-  static constexpr int kBranchDirX[8] = {1, 1, 0, -1, -1, -1, 0, 1};
-  static constexpr int kBranchDirZ[8] = {0, 1, 1, 1, 0, -1, -1, -1};
-  const auto addConnectedBranch = [&](int direction, int startY, int length,
-                                      uint32_t branchSeed)
-  {
-    int x = 0;
-    int y = startY;
-    int z = 0;
-    const int dx = kBranchDirX[direction % 8];
-    const int dz = kBranchDirZ[direction % 8];
-    const bool diagonal = dx != 0 && dz != 0;
-    const bool xFirst = (branchSeed & 1U) == 0U;
-    for (int step = 1; step <= length; ++step)
-    {
-      if (!diagonal)
-      {
-        x += dx;
-        addVoxel(x, y, z, trunk);
-      }
-      else if (xFirst)
-      {
-        x += dx;
-        addVoxel(x, y, z, trunk);
-        z += dz;
-        addVoxel(x, y, z, trunk);
-      }
-      else
-      {
-        z += dz;
-        addVoxel(x, y, z, trunk);
-        x += dx;
-        addVoxel(x, y, z, trunk);
-      }
-      if (step % 2 == 0 && y + 1 < height)
-      {
-        ++y;
-        addVoxel(x, y, z, trunk);
-      }
+      addVoxel(0, y, 0, trunk);
     }
 
-    const int leafY = y;
-    for (int leafDy = -1; leafDy <= 1; ++leafDy)
+    if (profile.RootChance > 0.0f)
     {
-      for (int leafDz = -1; leafDz <= 1; ++leafDz)
+      const uint32_t rootHash = FeatureHash(base.x, base.z, seed + 0x524f4f54U);
+      if (static_cast<float>(rootHash % 10000U) / 10000.0f < profile.RootChance)
       {
-        for (int leafDx = -1; leafDx <= 1; ++leafDx)
+        static constexpr int kRootX[4] = {1, 0, -1, 0};
+        static constexpr int kRootZ[4] = {0, 1, 0, -1};
+        const int rotation = static_cast<int>((rootHash >> 8U) % 4U);
+        const int rootLength = 1 + static_cast<int>((rootHash >> 12U) % 2U);
+        for (int arm = 0; arm < 4; ++arm)
         {
-          if (std::abs(leafDx) + std::abs(leafDz) + std::abs(leafDy) <= 2)
-          {
-            addVoxel(x + leafDx, leafY + leafDy, z + leafDz, leaves);
-          }
-        }
-      }
-    }
-  };
-
-  // Add offset foliage clumps around the main crown so broadleaf silhouettes
-  // do not all read as one perfectly centered ellipsoid.
-  for (int lobe = 0; lobe < profile.CrownLobes; ++lobe)
-  {
-    const uint32_t lobeHash =
-        FeatureHash(base.x + lobe * 17, base.z - lobe * 29,
-                    seed + 0x4c4f4245U + static_cast<uint32_t>(lobe * 97));
-    const int direction = static_cast<int>((lobe * 3 + lobeHash % 8U) % 8U);
-    static constexpr int kLobeDirX[8] = {1, 1, 0, -1, -1, -1, 0, 1};
-    static constexpr int kLobeDirZ[8] = {0, 1, 1, 1, 0, -1, -1, -1};
-    const float offsetScale =
-        0.38f + static_cast<float>((lobeHash >> 8U) % 31U) / 100.0f;
-    const int centerX = static_cast<int>(std::lround(
-        static_cast<float>(kLobeDirX[direction]) * radiusX * offsetScale));
-    const int centerZ = static_cast<int>(std::lround(
-        static_cast<float>(kLobeDirZ[direction]) * radiusZ * offsetScale));
-    const int crownSpan = std::max(1, crownTop - crownBase);
-    const int centerY =
-        crownBase +
-        std::clamp(static_cast<int>(
-                       (static_cast<float>((lobeHash >> 16U) % 100U) / 100.0f) *
-                       crownSpan),
-                   0, crownSpan);
-    const int lobeRx =
-        std::max(1, static_cast<int>(std::lround(radiusX * 0.58f)));
-    const int lobeRz =
-        std::max(1, static_cast<int>(std::lround(radiusZ * 0.58f)));
-    const int lobeRy = std::max(1, crownHeight / 3);
-    for (int dy = -lobeRy; dy <= lobeRy; ++dy)
-    {
-      for (int dz = -lobeRz; dz <= lobeRz; ++dz)
-      {
-        for (int dx = -lobeRx; dx <= lobeRx; ++dx)
-        {
-          const float distance =
-              static_cast<float>(dx * dx) /
-                  static_cast<float>(lobeRx * lobeRx) +
-              static_cast<float>(dy * dy) /
-                  static_cast<float>(lobeRy * lobeRy) +
-              static_cast<float>(dz * dz) / static_cast<float>(lobeRz * lobeRz);
-          if (distance > 1.0f + profile.CrownIrregularity * 0.35f)
+          if (((rootHash >> (arm + 16U)) & 1U) == 0U)
           {
             continue;
           }
-          const uint32_t lobeLeafHash =
-              FeatureHash(base.x + centerX + dx, base.z + centerZ + dz,
-                          seed + static_cast<uint32_t>((centerY + dy) * 7919) +
-                              lobe * 313U);
-          if (static_cast<float>(lobeLeafHash % 10000U) / 10000.0f <=
-              leafDensity)
+          const int dir = (arm + rotation) % 4;
+          for (int distance = 1; distance <= rootLength; ++distance)
           {
-            addVoxel(centerX + dx, centerY + dy, centerZ + dz, leaves);
+            addVoxel(kRootX[dir] * distance, 0, kRootZ[dir] * distance, trunk);
           }
         }
       }
     }
-  }
 
-  if (conicalCrown)
-  {
-    const int tiers = profile.BranchCount;
-    for (int tier = 0; tier < tiers; ++tier)
+    const bool conicalCrown = profile.CrownShape == TreeCrownShape::Conical;
+    // Conifers carry foliage along the lower trunk. Broadleaf crowns remain
+    // centered near the top, while conical profiles taper from the lower crown
+    // base to the top of the trunk.
+    const int crownBase = conicalCrown ? std::max(1, height - crownHeight)
+                                       : std::max(1, height - crownHeight / 2);
+    const int crownTop = conicalCrown ? std::max(crownBase, height - 1)
+                                      : height + std::max(1, crownHeight / 2);
+    for (int y = crownBase; y <= crownTop; ++y)
     {
-      const uint32_t tierHash = FeatureHash(
-          base.x + tier * 13, base.z - tier * 7,
-          seed + 0x4252414eU + static_cast<uint32_t>(tier * 31));
-      const float tierT = static_cast<float>(tier + 1) /
-                          static_cast<float>(tiers + 1);
-      const int branchY = crownBase + static_cast<int>(std::lround(
-                                           tierT * (crownTop - crownBase)));
-      const float taper = 1.0f - tierT * 0.82f;
-      const int branchLength = std::max(
-          1, static_cast<int>(std::lround(
-                 static_cast<float>(std::max(radiusX, radiusZ)) * taper *
-                 (0.55f + static_cast<float>((tierHash >> 16U) % 31U) /
-                               100.0f))));
-      // Choose cardinal or diagonal directions per tier; the per-tree rotation
-      // varies the silhouette without breaking the ring-like growth pattern.
-      const int rotation = static_cast<int>((tierHash >> 8U) & 1U);
-      for (int arm = 0; arm < 4; ++arm)
+      const float t = static_cast<float>(y - crownBase) /
+                      static_cast<float>(std::max(1, crownTop - crownBase));
+      float shape = 1.0f;
+      switch (profile.CrownShape)
       {
-        const int direction = (arm * 2 + rotation) % 8;
-        addConnectedBranch(direction, branchY, branchLength, tierHash + arm);
+      case TreeCrownShape::Conical:
+        shape = 1.0f - t * 0.82f;
+        break;
+      case TreeCrownShape::Umbrella:
+        shape = t < 0.62f ? 0.5f + t * 0.55f : 0.84f - (t - 0.62f) * 0.28f;
+        break;
+      case TreeCrownShape::Columnar:
+        shape = 0.76f + 0.12f * std::sin(t * 3.14159265f);
+        break;
+      case TreeCrownShape::Round:
+      default:
+      {
+        const float normalized = 2.0f * t - 1.0f;
+        shape = std::sqrt(std::max(0.08f, 1.0f - normalized * normalized));
+        break;
+      }
+      }
+      const int rx =
+          std::max(1, static_cast<int>(std::lround(radiusX * shape)));
+      const int rz =
+          std::max(1, static_cast<int>(std::lround(radiusZ * shape)));
+      for (int dz = -rz; dz <= rz; ++dz)
+      {
+        for (int dx = -rx; dx <= rx; ++dx)
+        {
+          const float ellipse =
+              static_cast<float>(dx * dx) / static_cast<float>(rx * rx) +
+              static_cast<float>(dz * dz) / static_cast<float>(rz * rz);
+          constexpr float kTau = 6.28318530718f;
+          const float angle =
+              std::atan2(static_cast<float>(dz), static_cast<float>(dx));
+          const int sector = static_cast<int>(
+              std::floor((angle + 3.14159265359f) * (16.0f / kTau)));
+          const uint32_t contourHash =
+              FeatureHash(sector, y - crownBase, seed + 0x43524f57U);
+          const float contour =
+              (static_cast<float>(contourHash % 2001U) / 1000.0f - 1.0f) *
+              profile.CrownIrregularity;
+          if (ellipse > 1.0f + contour)
+          {
+            continue;
+          }
+          uint32_t leafHash = FeatureHash(
+              base.x + dx, base.z + dz, seed + static_cast<uint32_t>(y * 7919));
+          leafHash ^= static_cast<uint32_t>(y) * 0x9e3779b9U;
+          const float leafRoll =
+              static_cast<float>(leafHash % 10000U) / 10000.0f;
+          const bool crownTip = y == crownTop && dx == 0 && dz == 0;
+          if (!crownTip && leafRoll > leafDensity)
+          {
+            continue;
+          }
+          addVoxel(dx, y, dz, leaves);
+        }
       }
     }
-  }
-  else
-  {
-    for (int branch = 0; branch < profile.BranchCount; ++branch)
-    {
-      const uint32_t branchHash =
-          FeatureHash(base.x + branch * 13, base.z - branch * 7,
-                      seed + 0x4252414eU + static_cast<uint32_t>(branch * 31));
-      const int direction = static_cast<int>(branchHash % 8U);
-      const int branchY =
-          height / 2 +
-          static_cast<int>((branchHash >> 8U) %
-                           static_cast<uint32_t>(std::max(1, height / 3)));
-      const int branchLengthMax = std::max({2, radiusX, radiusZ});
-      const int branchLengthMin = std::max(1, branchLengthMax / 2);
-      const int branchLengthRange = branchLengthMax - branchLengthMin + 1;
-      const int length =
-          branchLengthMin + static_cast<int>((branchHash >> 16U) %
-                                             static_cast<uint32_t>(branchLengthRange));
-      addConnectedBranch(direction, branchY, length, branchHash);
-    }
-  }
 
+    // Rasterize branches as face-connected voxel paths. Diagonal branches use
+    // a short stair-step so adjacent wood blocks share a face instead of only
+    // touching at a corner, and occasional vertical steps keep the silhouette
+    // from becoming a flat horizontal spoke.
+    static constexpr int kBranchDirX[8] = {1, 1, 0, -1, -1, -1, 0, 1};
+    static constexpr int kBranchDirZ[8] = {0, 1, 1, 1, 0, -1, -1, -1};
+    const auto addConnectedBranch =
+        [&](int direction, int startY, int length, uint32_t branchSeed)
+    {
+      int x = 0;
+      int y = startY;
+      int z = 0;
+      const int dx = kBranchDirX[direction % 8];
+      const int dz = kBranchDirZ[direction % 8];
+      const bool diagonal = dx != 0 && dz != 0;
+      const bool xFirst = (branchSeed & 1U) == 0U;
+      for (int step = 1; step <= length; ++step)
+      {
+        if (!diagonal)
+        {
+          x += dx;
+          addVoxel(x, y, z, trunk);
+        }
+        else if (xFirst)
+        {
+          x += dx;
+          addVoxel(x, y, z, trunk);
+          z += dz;
+          addVoxel(x, y, z, trunk);
+        }
+        else
+        {
+          z += dz;
+          addVoxel(x, y, z, trunk);
+          x += dx;
+          addVoxel(x, y, z, trunk);
+        }
+        if (step % 2 == 0 && y + 1 < height)
+        {
+          ++y;
+          addVoxel(x, y, z, trunk);
+        }
+      }
+
+      const int leafY = y;
+      for (int leafDy = -1; leafDy <= 1; ++leafDy)
+      {
+        for (int leafDz = -1; leafDz <= 1; ++leafDz)
+        {
+          for (int leafDx = -1; leafDx <= 1; ++leafDx)
+          {
+            if (std::abs(leafDx) + std::abs(leafDz) + std::abs(leafDy) <= 2)
+            {
+              addVoxel(x + leafDx, leafY + leafDy, z + leafDz, leaves);
+            }
+          }
+        }
+      }
+    };
+
+    // Add offset foliage clumps around the main crown so broadleaf silhouettes
+    // do not all read as one perfectly centered ellipsoid.
+    for (int lobe = 0; lobe < profile.CrownLobes; ++lobe)
+    {
+      const uint32_t lobeHash =
+          FeatureHash(base.x + lobe * 17, base.z - lobe * 29,
+                      seed + 0x4c4f4245U + static_cast<uint32_t>(lobe * 97));
+      const int direction = static_cast<int>((lobe * 3 + lobeHash % 8U) % 8U);
+      static constexpr int kLobeDirX[8] = {1, 1, 0, -1, -1, -1, 0, 1};
+      static constexpr int kLobeDirZ[8] = {0, 1, 1, 1, 0, -1, -1, -1};
+      const float offsetScale =
+          0.38f + static_cast<float>((lobeHash >> 8U) % 31U) / 100.0f;
+      const int centerX = static_cast<int>(std::lround(
+          static_cast<float>(kLobeDirX[direction]) * radiusX * offsetScale));
+      const int centerZ = static_cast<int>(std::lround(
+          static_cast<float>(kLobeDirZ[direction]) * radiusZ * offsetScale));
+      const int crownSpan = std::max(1, crownTop - crownBase);
+      const int centerY =
+          crownBase +
+          std::clamp(
+              static_cast<int>(
+                  (static_cast<float>((lobeHash >> 16U) % 100U) / 100.0f) *
+                  crownSpan),
+              0, crownSpan);
+      const int lobeRx =
+          std::max(1, static_cast<int>(std::lround(radiusX * 0.58f)));
+      const int lobeRz =
+          std::max(1, static_cast<int>(std::lround(radiusZ * 0.58f)));
+      const int lobeRy = std::max(1, crownHeight / 3);
+      for (int dy = -lobeRy; dy <= lobeRy; ++dy)
+      {
+        for (int dz = -lobeRz; dz <= lobeRz; ++dz)
+        {
+          for (int dx = -lobeRx; dx <= lobeRx; ++dx)
+          {
+            const float distance = static_cast<float>(dx * dx) /
+                                       static_cast<float>(lobeRx * lobeRx) +
+                                   static_cast<float>(dy * dy) /
+                                       static_cast<float>(lobeRy * lobeRy) +
+                                   static_cast<float>(dz * dz) /
+                                       static_cast<float>(lobeRz * lobeRz);
+            if (distance > 1.0f + profile.CrownIrregularity * 0.35f)
+            {
+              continue;
+            }
+            const uint32_t lobeLeafHash = FeatureHash(
+                base.x + centerX + dx, base.z + centerZ + dz,
+                seed + static_cast<uint32_t>((centerY + dy) * 7919) +
+                    lobe * 313U);
+            if (static_cast<float>(lobeLeafHash % 10000U) / 10000.0f <=
+                leafDensity)
+            {
+              addVoxel(centerX + dx, centerY + dy, centerZ + dz, leaves);
+            }
+          }
+        }
+      }
+    }
+
+    if (conicalCrown)
+    {
+      const int tiers = profile.BranchCount;
+      for (int tier = 0; tier < tiers; ++tier)
+      {
+        const uint32_t tierHash =
+            FeatureHash(base.x + tier * 13, base.z - tier * 7,
+                        seed + 0x4252414eU + static_cast<uint32_t>(tier * 31));
+        const float tierT =
+            static_cast<float>(tier + 1) / static_cast<float>(tiers + 1);
+        const int branchY =
+            crownBase +
+            static_cast<int>(std::lround(tierT * (crownTop - crownBase)));
+        const float taper = 1.0f - tierT * 0.82f;
+        const int branchLength = std::max(
+            1, static_cast<int>(std::lround(
+                   static_cast<float>(std::max(radiusX, radiusZ)) * taper *
+                   (0.55f +
+                    static_cast<float>((tierHash >> 16U) % 31U) / 100.0f))));
+        // Choose cardinal or diagonal directions per tier; the per-tree
+        // rotation varies the silhouette without breaking the ring-like growth
+        // pattern.
+        const int rotation = static_cast<int>((tierHash >> 8U) & 1U);
+        for (int arm = 0; arm < 4; ++arm)
+        {
+          const int direction = (arm * 2 + rotation) % 8;
+          addConnectedBranch(direction, branchY, branchLength, tierHash + arm);
+        }
+      }
+    }
+    else
+    {
+      for (int branch = 0; branch < profile.BranchCount; ++branch)
+      {
+        const uint32_t branchHash = FeatureHash(
+            base.x + branch * 13, base.z - branch * 7,
+            seed + 0x4252414eU + static_cast<uint32_t>(branch * 31));
+        const int direction = static_cast<int>(branchHash % 8U);
+        const int branchY =
+            height / 2 +
+            static_cast<int>((branchHash >> 8U) %
+                             static_cast<uint32_t>(std::max(1, height / 3)));
+        const int branchLengthMax = std::max({2, radiusX, radiusZ});
+        const int branchLengthMin = std::max(1, branchLengthMax / 2);
+        const int branchLengthRange = branchLengthMax - branchLengthMin + 1;
+        const int length =
+            branchLengthMin +
+            static_cast<int>((branchHash >> 16U) %
+                             static_cast<uint32_t>(branchLengthRange));
+        addConnectedBranch(direction, branchY, length, branchHash);
+      }
+    }
   }
 
   int minY = base.y;
@@ -835,7 +835,7 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
     minY = std::min(minY, worldPos.y);
     maxY = std::max(maxY, worldPos.y);
   }
-  VoxelFeatureSink sink(ctx.World);
+  UVoxelFeatureSink sink(ctx.World);
   for (const auto &[relative, block] : accepted)
   {
     sink.WriteVoxel(base + relative, block);
@@ -880,9 +880,8 @@ bool TryPlaceProceduralShrub(WorldGenContext &ctx, glm::ivec3 base,
     return false;
   }
 
-  if (IsTreeVegetationBlock(
-          ctx.Registry,
-          ctx.World.GetBlock(base - glm::ivec3(0, 1, 0))))
+  if (IsTreeVegetationBlock(ctx.Registry,
+                            ctx.World.GetBlock(base - glm::ivec3(0, 1, 0))))
   {
     return false;
   }
@@ -1064,7 +1063,7 @@ bool TryPlaceProceduralShrub(WorldGenContext &ctx, glm::ivec3 base,
     return false;
   }
 
-  VoxelFeatureSink sink(ctx.World);
+  UVoxelFeatureSink sink(ctx.World);
   for (const auto &[relative, block] : accepted)
   {
     sink.WriteVoxel(base + relative, block);
@@ -1077,10 +1076,9 @@ PlacementSurfaceInfo ResolveColumnPlacementSurface(const WorldGenContext &ctx,
                                                    int x, int z,
                                                    int heightmapSurfaceY)
 {
-  return ResolvePlacementSurfaceY(ctx.World, ctx.Registry, x, z,
-                                  heightmapSurfaceY, ctx.Settings.MaxHeight,
-                                  ctx.Settings.SeaLevel,
-                                  ctx.Settings.MinHeight);
+  return ResolvePlacementSurfaceY(
+      ctx.World, ctx.Registry, x, z, heightmapSurfaceY, ctx.Settings.MaxHeight,
+      ctx.Settings.SeaLevel, ctx.Settings.MinHeight);
 }
 
 bool IsColumnReadyForPlantFeatures(const WorldGenContext &ctx, int x, int z,
@@ -1114,7 +1112,7 @@ bool PlaceObjectAtWaterSurface(WorldGenContext &ctx,
   {
     return false;
   }
-  VoxelFeatureSink sink(ctx.World);
+  UVoxelFeatureSink sink(ctx.World);
   const ObjectPlacementStats stats =
       PlaceObjectAt(ctx.World, ctx.Registry, *prefab, anchorWorldPos, false, {},
                     [&sink](glm::ivec3 position, BlockId block)
@@ -1150,7 +1148,7 @@ bool TryPlaceScatterBlocks(WorldGenContext &ctx, int x, int z, int surfaceY,
   int placed = 0;
   int minY = surfaceY;
   int maxY = surfaceY + 1;
-  VoxelFeatureSink sink(ctx.World);
+  UVoxelFeatureSink sink(ctx.World);
 
   for (int attempt = 0; attempt < rule.Scatter.Attempts; ++attempt)
   {
@@ -1182,9 +1180,8 @@ bool TryPlaceScatterBlocks(WorldGenContext &ctx, int x, int z, int surfaceY,
     {
       const int maxScanY = ComputeMaxScanY(surfaceY, ctx.Settings.SeaLevel,
                                            ctx.Settings.MaxHeight);
-      const int localSurface =
-          FindTopSolidSurfaceY(ctx.World, ctx.Registry, wx, wz, maxScanY,
-                               ctx.Settings.MinHeight);
+      const int localSurface = FindTopSolidSurfaceY(
+          ctx.World, ctx.Registry, wx, wz, maxScanY, ctx.Settings.MinHeight);
       if (localSurface <
           ctx.Settings.SeaLevel + WorldGenPlacementTuning::MinLandAboveSea)
       {
@@ -1229,7 +1226,7 @@ bool TryPlaceScatterBlocks(WorldGenContext &ctx, int x, int z, int surfaceY,
   return true;
 }
 
-class ScatterBlocksPlacementStrategy final
+class UScatterBlocksPlacementStrategy final
     : public IObjectFeaturePlacementStrategy
 {
 public:
@@ -1245,7 +1242,7 @@ public:
   }
 };
 
-class ProceduralTreePlacementStrategy final
+class UProceduralTreePlacementStrategy final
     : public IObjectFeaturePlacementStrategy
 {
 public:
@@ -1263,7 +1260,7 @@ public:
   }
 };
 
-class ProceduralShrubPlacementStrategy final
+class UProceduralShrubPlacementStrategy final
     : public IObjectFeaturePlacementStrategy
 {
 public:
@@ -1281,7 +1278,7 @@ public:
   }
 };
 
-class ObjectPrefabPlacementStrategy final
+class UObjectPrefabPlacementStrategy final
     : public IObjectFeaturePlacementStrategy
 {
 public:
@@ -1325,18 +1322,18 @@ void EnsureBuiltinFeaturePlacementStrategies()
   std::call_once(registered,
                  []
                  {
-                   ObjectFeaturePlacementStrategyRegistry::Register(
+                   UObjectFeaturePlacementStrategyRegistry::Register(
                        ObjectFeatureRuleMode::Object,
-                       std::make_shared<ObjectPrefabPlacementStrategy>());
-                   ObjectFeaturePlacementStrategyRegistry::Register(
+                       std::make_shared<UObjectPrefabPlacementStrategy>());
+                   UObjectFeaturePlacementStrategyRegistry::Register(
                        ObjectFeatureRuleMode::ScatterBlocks,
-                       std::make_shared<ScatterBlocksPlacementStrategy>());
-                   ObjectFeaturePlacementStrategyRegistry::Register(
+                       std::make_shared<UScatterBlocksPlacementStrategy>());
+                   UObjectFeaturePlacementStrategyRegistry::Register(
                        ObjectFeatureRuleMode::ProceduralTree,
-                       std::make_shared<ProceduralTreePlacementStrategy>());
-                   ObjectFeaturePlacementStrategyRegistry::Register(
+                       std::make_shared<UProceduralTreePlacementStrategy>());
+                   UObjectFeaturePlacementStrategyRegistry::Register(
                        ObjectFeatureRuleMode::ProceduralShrub,
-                       std::make_shared<ProceduralShrubPlacementStrategy>());
+                       std::make_shared<UProceduralShrubPlacementStrategy>());
                  });
 }
 
@@ -1370,13 +1367,12 @@ float SubBiomePoolWeightMultiplier(SubBiomeId subBiome, BiomeId biome,
   return 1.0f;
 }
 
-bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
-                        BiomeId biome,
-                        const std::vector<ObjectFeatureRule> &rules,
-                        ObjectFeaturePool pool, uint32_t pickSeedOffset,
-                        bool useChanceOnly, bool requireTreesEnabled,
-                        float densityMultiplier, const BiomeKey &biomeKey,
-                        const FeatureDistributionProfile *distribution = nullptr)
+bool TryPlaceObjectPool(
+    WorldGenContext &ctx, int x, int z, int surfaceY, BiomeId biome,
+    const std::vector<ObjectFeatureRule> &rules, ObjectFeaturePool pool,
+    uint32_t pickSeedOffset, bool useChanceOnly, bool requireTreesEnabled,
+    float densityMultiplier, const BiomeKey &biomeKey,
+    const FeatureDistributionProfile *distribution = nullptr)
 {
   if ((requireTreesEnabled && !ctx.Settings.EnableTrees) || rules.empty())
   {
@@ -1481,8 +1477,8 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
         rule.Mode == ObjectFeatureRuleMode::ScatterBlocks
             ? rule.Scatter.BlockName
             : rule.ObjectName;
-    ObjectFeatureRuleProfile *ruleProfile = BeginObjectFeatureRuleEvaluation(
-        pool, ruleIndex, ruleFeatureKey);
+    ObjectFeatureRuleProfile *ruleProfile =
+        BeginObjectFeatureRuleEvaluation(pool, ruleIndex, ruleFeatureKey);
     ObjectFeatureEvaluationScope evaluationScope(ruleProfile);
 
     // These gates depend only on the rule, column and immutable generation
@@ -1505,17 +1501,15 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
                              (pool == ObjectFeaturePool::Vegetation ||
                               pool == ObjectFeaturePool::GroundCover);
       const bool passes =
-          floraPool
-              ? PassesSpatialFloraCandidateGate(x, z, seed, rule.Spacing,
-                                                densityMultiplier,
-                                                rule.SeedOffset, pickSeedOffset,
-                                                v3Flora ? v3Distribution
-                                                : distribution
-                                                    ? *distribution
-                                                    : FeatureDistributionProfile{})
-              : PassesNoiseDensityGate(x, z, seed, rule.Spacing,
-                                       densityMultiplier, rule.SeedOffset,
-                                       pickSeedOffset);
+          floraPool ? PassesSpatialFloraCandidateGate(
+                          x, z, seed, rule.Spacing, densityMultiplier,
+                          rule.SeedOffset, pickSeedOffset,
+                          v3Flora        ? v3Distribution
+                          : distribution ? *distribution
+                                         : FeatureDistributionProfile{})
+                    : PassesNoiseDensityGate(x, z, seed, rule.Spacing,
+                                             densityMultiplier, rule.SeedOffset,
+                                             pickSeedOffset);
       if (!passes)
       {
         continue;
@@ -1551,9 +1545,8 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
       ecologySurfaceY = landSurface.topSolidY;
       if ((pool == ObjectFeaturePool::Vegetation ||
            pool == ObjectFeaturePool::GroundCover) &&
-          IsTreeVegetationBlock(
-              ctx.Registry,
-              ctx.World.GetBlock(glm::ivec3(x, ecologySurfaceY, z))))
+          IsTreeVegetationBlock(ctx.Registry, ctx.World.GetBlock(glm::ivec3(
+                                                  x, ecologySurfaceY, z))))
       {
         // Tree and ground-cover candidates must root in terrain, never on a
         // trunk or canopy left by an earlier feature pass.
@@ -1701,9 +1694,8 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
   }
   EnsureBuiltinFeaturePlacementStrategies();
   const auto strategy =
-      ObjectFeaturePlacementStrategyRegistry::Find(chosen->Mode);
-  if (!ObjectFeatureDiagnosticsEnabled ||
-      pool != ObjectFeaturePool::Decoration)
+      UObjectFeaturePlacementStrategyRegistry::Find(chosen->Mode);
+  if (!ObjectFeatureDiagnosticsEnabled || pool != ObjectFeaturePool::Decoration)
   {
     return strategy && strategy->Place(ctx, x, z, strategySurfaceY, *chosen);
   }
@@ -1712,8 +1704,9 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
       chosen->Mode == ObjectFeatureRuleMode::ScatterBlocks
           ? chosen->Scatter.BlockName
           : chosen->ObjectName;
-  ObjectFeatureRuleProfile &profile = ObjectFeatureChunkRules[ObjectFeatureRuleKey(
-      pool, chosenIndex, chosenKey)];
+  ObjectFeatureRuleProfile &profile =
+      ObjectFeatureChunkRules[ObjectFeatureRuleKey(pool, chosenIndex,
+                                                   chosenKey)];
   ++profile.placementAttempts;
   ObjectFeatureSelectedRules[chosenKey] =
       ObjectFeatureRuleKey(pool, chosenIndex, chosenKey);
@@ -1753,7 +1746,8 @@ const ObjectFeatureConfig &GetObjectFeatures(const WorldGenContext &ctx)
 
 } // namespace
 
-ObjectFeatureChunkDiagnosticsScope::ObjectFeatureChunkDiagnosticsScope(bool enabled)
+ObjectFeatureChunkDiagnosticsScope::ObjectFeatureChunkDiagnosticsScope(
+    bool enabled)
 {
   ObjectFeatureDiagnosticsEnabled = enabled;
   ObjectFeatureChunkRules.clear();
@@ -1868,7 +1862,7 @@ bool PlaceObjectAt(WorldGenContext &ctx, const std::string &prefabName,
   {
     return false;
   }
-  VoxelFeatureSink sink(ctx.World);
+  UVoxelFeatureSink sink(ctx.World);
   const ObjectPlacementStats stats = PlaceObjectAt(
       ctx.World, ctx.Registry, *prefab, anchorWorldPos, false,
       ObjectWorldGenPlacementOptions{maxScanY, ctx.Settings.SeaLevel},
@@ -2010,7 +2004,7 @@ bool TryPlaceStructureFeatures(WorldGenContext &ctx, int x, int z, int surfaceY,
 namespace
 {
 
-class MossPatchCavePlacementStrategy final
+class UMossPatchCavePlacementStrategy final
     : public ICaveFeaturePlacementStrategy
 {
 public:
@@ -2021,7 +2015,7 @@ public:
   {
     const int radius = std::max(0, rule.Radius);
     bool placed = false;
-    VoxelFeatureSink sink(ctx.World);
+    UVoxelFeatureSink sink(ctx.World);
     for (int dz = -radius; dz <= radius; ++dz)
     {
       for (int dx = -radius; dx <= radius; ++dx)
@@ -2050,7 +2044,7 @@ public:
   }
 };
 
-class StalagmiteCavePlacementStrategy final
+class UStalagmiteCavePlacementStrategy final
     : public ICaveFeaturePlacementStrategy
 {
 public:
@@ -2075,7 +2069,7 @@ public:
       return false;
     }
 
-    VoxelFeatureSink sink(ctx.World);
+    UVoxelFeatureSink sink(ctx.World);
     for (int dy = 1; dy <= height; ++dy)
     {
       sink.WriteVoxel(floorPosition + glm::ivec3(0, dy, 0), featureBlock);
@@ -2085,7 +2079,7 @@ public:
   }
 };
 
-class AmethystClusterCavePlacementStrategy final
+class UAmethystClusterCavePlacementStrategy final
     : public ICaveFeaturePlacementStrategy
 {
 public:
@@ -2101,7 +2095,7 @@ public:
       return false;
     }
 
-    VoxelFeatureSink sink(ctx.World);
+    UVoxelFeatureSink sink(ctx.World);
     sink.WriteVoxel(center, featureBlock);
     if (rule.Radius > 0 && (hash & 1U) != 0U)
     {
@@ -2124,15 +2118,15 @@ void EnsureBuiltinCaveFeatureStrategies()
       registered,
       []
       {
-        CaveFeaturePlacementStrategyRegistry::Register(
+        UCaveFeaturePlacementStrategyRegistry::Register(
             CaveFeatureKind::MossPatch,
-            std::make_shared<MossPatchCavePlacementStrategy>());
-        CaveFeaturePlacementStrategyRegistry::Register(
+            std::make_shared<UMossPatchCavePlacementStrategy>());
+        UCaveFeaturePlacementStrategyRegistry::Register(
             CaveFeatureKind::Stalagmite,
-            std::make_shared<StalagmiteCavePlacementStrategy>());
-        CaveFeaturePlacementStrategyRegistry::Register(
+            std::make_shared<UStalagmiteCavePlacementStrategy>());
+        UCaveFeaturePlacementStrategyRegistry::Register(
             CaveFeatureKind::AmethystCluster,
-            std::make_shared<AmethystClusterCavePlacementStrategy>());
+            std::make_shared<UAmethystClusterCavePlacementStrategy>());
       });
 }
 
@@ -2249,7 +2243,7 @@ bool TryPlaceCaveFeatures(
         continue;
       }
       const auto strategy =
-          CaveFeaturePlacementStrategyRegistry::Find(rule.Kind);
+          UCaveFeaturePlacementStrategyRegistry::Find(rule.Kind);
       if (strategy && strategy->Place(ctx, rule, floor_pos, feature_block, hash,
                                       current_chunk, is_cave_rock))
       {

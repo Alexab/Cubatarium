@@ -18,7 +18,6 @@
 #include "Render/Camera/Camera.h"
 #include "Render/Camera/CameraPerspective.h"
 #include "Render/Camera/Frustum.h"
-#include "Render/Engine/DistanceFog.h"
 #include "Render/Engine/EnvironmentLight.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/TextRenderer.h"
@@ -30,6 +29,7 @@
 #include "World/Items/WorldItemSystem.h"
 #include "World/Lighting/LightUtil.h"
 #include "World/Raycast/BlockRaycast.h"
+#include "World/View/DistanceFog.h"
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
@@ -470,6 +470,52 @@ void UCreatureDrawPass::DrawSkinnedMesh(
   ++Stats.CreatureDrawCalls;
 }
 
+static void RecordCreatureLightBench(bool lightBench, int lightSamples,
+                                     double lightSampleMs, bool localLight)
+{
+  if (lightBench && lightSamples > 0)
+  {
+    static int benchFrames = 0;
+    static double benchTotalMs = 0.0;
+    static int benchSamples = 0;
+    benchTotalMs += lightSampleMs;
+    benchSamples += lightSamples;
+    if (++benchFrames % 300 == 0)
+    {
+      char line[200];
+      std::snprintf(line, sizeof(line),
+                    "local=%d avg %.4f ms/frame, %.2f us/creature "
+                    "(%d creatures last frame)",
+                    localLight ? 1 : 0, benchTotalMs / 300.0,
+                    benchSamples > 0 ? benchTotalMs * 1000.0 / benchSamples
+                                     : 0.0,
+                    lightSamples);
+      StallLogLine("CreatureLightBench", line, 0.0);
+      benchTotalMs = 0.0;
+      benchSamples = 0;
+    }
+  }
+}
+
+void UCreatureDrawPass::FinishCreatureFrame(
+    UWorld &world, const glm::mat4 &viewProj, UGeometryEngine &engine,
+    bool labels, bool lightBench, int lightSamples, double lightSampleMs,
+    bool localLight)
+{
+  // Other users of the creature programs (GUI previews) draw unlit.
+  LightingActive = false;
+  ApplyCreatureLightUniforms(world, false);
+  ActiveLight = glm::vec2(1.0f, 0.0f);
+
+  RecordCreatureLightBench(lightBench, lightSamples, lightSampleMs, localLight);
+
+  if (labels)
+  {
+    DrawCreatureLabels(world, viewProj, engine);
+  }
+  TimingProbe.EndFrame(Stats);
+}
+
 void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
                                const RenderSettings &render)
 {
@@ -761,44 +807,13 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
     UGeometryEngine &Engine;
   } sink(*this, engine);
   TimingProbe.BeginGpuDraw();
-  WorldItemSystem::Instance().Draw(world, engine.GetCreatureDrawQueue(),
-                                   viewProj);
+  UWorldItemSystem::Instance().Draw(world, engine.GetCreatureDrawQueue(),
+                                    viewProj);
   Queue.Flush(sink);
   TimingProbe.EndGpuDraw();
 
-  // Other users of the creature programs (GUI previews) draw unlit.
-  LightingActive = false;
-  ApplyCreatureLightUniforms(world, false);
-  ActiveLight = glm::vec2(1.0f, 0.0f);
-
-  if (lightBench && lightSamples > 0)
-  {
-    static int benchFrames = 0;
-    static double benchTotalMs = 0.0;
-    static int benchSamples = 0;
-    benchTotalMs += lightSampleMs;
-    benchSamples += lightSamples;
-    if (++benchFrames % 300 == 0)
-    {
-      char line[200];
-      std::snprintf(line, sizeof(line),
-                    "local=%d avg %.4f ms/frame, %.2f us/creature "
-                    "(%d creatures last frame)",
-                    localLight ? 1 : 0, benchTotalMs / 300.0,
-                    benchSamples > 0 ? benchTotalMs * 1000.0 / benchSamples
-                                     : 0.0,
-                    lightSamples);
-      StallLogLine("CreatureLightBench", line, 0.0);
-      benchTotalMs = 0.0;
-      benchSamples = 0;
-    }
-  }
-
-  if (labels)
-  {
-    DrawCreatureLabels(world, viewProj, engine);
-  }
-  TimingProbe.EndFrame(Stats);
+  FinishCreatureFrame(world, viewProj, engine, labels, lightBench, lightSamples,
+                      lightSampleMs, localLight);
 }
 
 void UCreatureDrawPass::ApplyCreatureLightUniforms(const UWorld &world,

@@ -169,6 +169,8 @@ def publish_item(item_id: str) -> Path:
     # Geometry publication does not own authored grips, worn variants or
     # presentation sidecars. Retain them across deterministic regeneration.
     _retarget_content(item_id, recipe)
+    from itemgen.manifest import update_manifest
+    update_manifest(ROOT,item_id)
     return dest
 
 
@@ -213,7 +215,7 @@ def _retarget_content(item_id: str, recipe: dict[str, Any]) -> None:
         if key in recipe:
             visual[key] = recipe[key]
         else:
-            visual[key] = pose[key]
+            visual.setdefault(key, pose[key])
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 

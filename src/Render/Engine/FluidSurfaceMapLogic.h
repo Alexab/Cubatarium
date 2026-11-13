@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Render/Mesh/FluidSurfaceColumnSlice.h"
 #include "World/Core/RuntimeTuning.h"
+#include "World/Fluids/FluidSurfaceColumnSlice.h"
 #include "World/Math/GridMath.h"
 #include <algorithm>
-#include <cstdlib>
 #include <cstdint>
+#include <cstdlib>
 #include <vector>
 
 namespace cutum
@@ -16,23 +16,20 @@ class UBlockRegistry;
 inline bool ShouldRefreshFluidSurfaceWindow(int old_origin_x, int old_origin_z,
                                             int new_origin_x, int new_origin_z)
 {
-  const int threshold =
-      URuntimeTuning::Get().FluidSurfaceWindowMoveThreshold;
+  const int threshold = URuntimeTuning::Get().FluidSurfaceWindowMoveThreshold;
   return std::abs(new_origin_x - old_origin_x) >= threshold ||
          std::abs(new_origin_z - old_origin_z) >= threshold;
 }
 
-inline float FluidSurfaceStagingSentinel()
-{
-  return -1000.0f;
-}
+inline float FluidSurfaceStagingSentinel() { return -1000.0f; }
 
 /// Scroll CPU staging when the fluid window origin moves. Returns true if
 /// staging was rewritten (caller must patch newly exposed strips).
 inline bool ScrollFluidSurfaceStagingWindow(
     std::vector<float> &surfaceStaging, std::vector<uint8_t> &fluidIndexStaging,
     std::vector<float> &fluidBottomStaging, int sizeBlocks,
-    glm::ivec2 oldOriginBlock, glm::ivec2 newOriginBlock, float noSurfaceSentinel)
+    glm::ivec2 oldOriginBlock, glm::ivec2 newOriginBlock,
+    float noSurfaceSentinel)
 {
   const int shiftX = newOriginBlock.x - oldOriginBlock.x;
   const int shiftZ = newOriginBlock.y - oldOriginBlock.y;
@@ -104,8 +101,7 @@ inline bool FluidSurfaceChunkNeedsStripPatch(glm::ivec3 groundChunk,
   const int oldMaxZ = oldOriginBlock.y + sizeBlocks;
   const bool fullyInOld = chunkMinX >= oldOriginBlock.x &&
                           chunkMaxX <= oldMaxX &&
-                          chunkMinZ >= oldOriginBlock.y &&
-                          chunkMaxZ <= oldMaxZ;
+                          chunkMinZ >= oldOriginBlock.y && chunkMaxZ <= oldMaxZ;
   return !fullyInOld;
 }
 

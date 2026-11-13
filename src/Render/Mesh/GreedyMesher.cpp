@@ -5,7 +5,7 @@
 #include "Blocks/BlockRegistry.h"
 
 #include "Render/Mesh/ChunkMeshSnapshot.h"
-#include "Render/Mesh/MeshNeighborPolicy.h"
+#include "World/Mesh/Contracts/MeshNeighborPolicy.h"
 
 #include "World/Mesh/IUChunkMeshReader.h"
 
@@ -15,9 +15,9 @@
 
 #include "World/Core/BlockWorld.h"
 
+#include "World/Lighting/LightUtil.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Physics/FluidBlockResolver.h"
-#include "World/Lighting/LightUtil.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -101,8 +101,8 @@ public:
       const glm::ivec3 delta = chunk_coord - ChunkCoordValue;
       const int axis = delta.x != 0 ? 0 : (delta.y != 0 ? 1 : 2);
       const int sign = delta[axis] < 0 ? -1 : 1;
-      const int manhattan = std::abs(delta.x) + std::abs(delta.y) +
-                            std::abs(delta.z);
+      const int manhattan =
+          std::abs(delta.x) + std::abs(delta.y) + std::abs(delta.z);
       // Same policy as ChunkMeshSnapshot: an absent +Y slice is open air.
       if (manhattan == 1 && axis == 1 && sign > 0)
       {
@@ -192,8 +192,8 @@ private:
   const ChunkMeshSnapshot &Snapshot;
 };
 
-bool MeshIsLiquid(UBlockRegistry &registry, const BlockDefinitionCatalog *catalog,
-                  BlockId id)
+bool MeshIsLiquid(UBlockRegistry &registry,
+                  const BlockDefinitionCatalog *catalog, BlockId id)
 {
   if (catalog)
   {
@@ -246,8 +246,7 @@ bool CellHasRenderableFluid(IUChunkMeshReader &reader, UBlockRegistry &registry,
       return true;
     }
     if (raw != BLOCK_AIR && MeshIsFluidPermeable(registry, catalog, raw) &&
-        FluidCellHasActiveFluid(
-            PackFluidCellState(reader.GetFluid(world_pos))))
+        FluidCellHasActiveFluid(PackFluidCellState(reader.GetFluid(world_pos))))
     {
       return true;
     }
@@ -263,8 +262,7 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
 
   const glm::ivec3 neighbor_pos = block_pos + neighbor_offset;
 
-  if (ShouldSkipFaceForNeighbor(
-          reader.GetNeighborLoadState(neighbor_pos)))
+  if (ShouldSkipFaceForNeighbor(reader.GetNeighborLoadState(neighbor_pos)))
   {
     // Sysreset v2: Unknown (true unloaded) always hides — including liquid.
     // Void-emit into unloaded was the distant water-wall root. Overlay-missing
@@ -313,8 +311,7 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
       {
         return true;
       }
-      const BlockId raw =
-          reader.GetBlockIgnoringOverlay(neighbor_pos);
+      const BlockId raw = reader.GetBlockIgnoringOverlay(neighbor_pos);
       if (raw == face_id || MeshIsLiquid(registry, catalog, raw))
       {
         return true;
@@ -362,9 +359,8 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
     return false;
   }
 
-  const bool face_transparent =
-      catalog ? CatalogIsTransparent(catalog, face_id)
-              : registry.IsTransparent(face_id);
+  const bool face_transparent = catalog ? CatalogIsTransparent(catalog, face_id)
+                                        : registry.IsTransparent(face_id);
 
   const bool neighbor_transparent =
       catalog ? CatalogIsTransparent(catalog, neighbor)
@@ -421,13 +417,11 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
 
     const bool beyond_open =
 
-        (beyond == BLOCK_AIR ||
-         !MeshBlocksMovement(registry, catalog, beyond));
+        (beyond == BLOCK_AIR || !MeshBlocksMovement(registry, catalog, beyond));
 
     const bool before_solid =
 
-        (before != BLOCK_AIR &&
-         MeshBlocksMovement(registry, catalog, before));
+        (before != BLOCK_AIR && MeshBlocksMovement(registry, catalog, before));
 
     if (beyond_open && before_solid)
 
@@ -505,9 +499,9 @@ uint8_t FaceLightPacked(IUChunkMeshReader &reader, glm::ivec3 block_pos,
 }
 
 void AppendWaterloggedFluidQuads(IUChunkMeshReader &reader,
-                               UBlockRegistry &registry,
-                               const BlockDefinitionCatalog *catalog,
-                               std::vector<GreedyQuad> &quads, int max_mesh_y)
+                                 UBlockRegistry &registry,
+                                 const BlockDefinitionCatalog *catalog,
+                                 std::vector<GreedyQuad> &quads, int max_mesh_y)
 {
   const UBlockDefinitionStorage *definitions = registry.GetDefinitions();
   if (definitions == nullptr)
@@ -554,7 +548,8 @@ void AppendWaterloggedFluidQuads(IUChunkMeshReader &reader,
             {
               continue;
             }
-            const uint8_t packed = PackFluidCellState(reader.GetFluid(world_pos));
+            const uint8_t packed =
+                PackFluidCellState(reader.GetFluid(world_pos));
             if (!FluidCellHasActiveFluid(packed))
             {
               continue;
@@ -570,15 +565,17 @@ void AppendWaterloggedFluidQuads(IUChunkMeshReader &reader,
 
             glm::ivec3 neighbor_offset(0);
             neighbor_offset[axis] = sign;
-            if (WaterloggedNeighborHidesFace(reader, registry, catalog, fluid_id,
-                                               world_pos, neighbor_offset))
+            if (WaterloggedNeighborHidesFace(reader, registry, catalog,
+                                             fluid_id, world_pos,
+                                             neighbor_offset))
             {
               continue;
             }
 
             mask[v][u] = fluid_id;
             fluid_mask[v][u] = packed;
-            light_mask[v][u] = FaceLightPacked(reader, world_pos, neighbor_offset);
+            light_mask[v][u] =
+                FaceLightPacked(reader, world_pos, neighbor_offset);
           }
         }
 
@@ -670,9 +667,9 @@ int MaxMeshLocalY(IUChunkMeshReader &reader, UBlockRegistry &registry,
         const glm::ivec3 local(x, y, z);
         const BlockId id = reader.GetBlockLocal(local);
 
-        const BlockRenderStyle style =
-            catalog ? CatalogGetRenderStyle(catalog, id)
-                    : registry.GetRenderStyle(id);
+        const BlockRenderStyle style = catalog
+                                           ? CatalogGetRenderStyle(catalog, id)
+                                           : registry.GetRenderStyle(id);
         if (id != BLOCK_AIR && style != BlockRenderStyle::Cross)
 
         {
@@ -696,9 +693,9 @@ int MaxMeshLocalY(IUChunkMeshReader &reader, UBlockRegistry &registry,
   return max_y;
 }
 
-std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
-                                           UBlockRegistry &registry,
-                                           const BlockDefinitionCatalog *catalog)
+std::vector<GreedyQuad>
+BuildChunkMeshImpl(IUChunkMeshReader &reader, UBlockRegistry &registry,
+                   const BlockDefinitionCatalog *catalog)
 
 {
 
@@ -800,7 +797,8 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
             }
 
             mask[v][u] = id;
-            light_mask[v][u] = FaceLightPacked(reader, world_pos, neighbor_offset);
+            light_mask[v][u] =
+                FaceLightPacked(reader, world_pos, neighbor_offset);
 
             // Liquid quads carry the real packed fluid state (level bits feed
             // the W4 surface height); legacy sources that pack to 0 keep the
@@ -850,8 +848,7 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
                    light_mask[v][u + width] == light_mask[v][u] &&
 
                    fluid_mask[v][u + width] == fluid_mask[v][u] &&
-                   fluid_surface_mask[v][u + width] ==
-                       fluid_surface_mask[v][u])
+                   fluid_surface_mask[v][u + width] == fluid_surface_mask[v][u])
 
             {
 
@@ -942,9 +939,10 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
 
 } // namespace
 
-std::vector<GreedyQuad> UGreedyMesher::BuildChunkMesh(
-    const UBlockWorld &world, glm::ivec3 chunk_coord, UBlockRegistry &registry,
-    const BlockDefinitionCatalog *catalog)
+std::vector<GreedyQuad>
+UGreedyMesher::BuildChunkMesh(const UBlockWorld &world, glm::ivec3 chunk_coord,
+                              UBlockRegistry &registry,
+                              const BlockDefinitionCatalog *catalog)
 
 {
 

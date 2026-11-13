@@ -1,5 +1,6 @@
 #include "Creatures/Influence/BareHandToolInfluenceProvider.h"
 #include "Creatures/Core/Creature.h"
+#include "Creatures/Influence/StatusEffectSystem.h"
 #include "Items/ToolCapabilities.h"
 #include <algorithm>
 
@@ -14,9 +15,11 @@ bool UBareHandToolInfluenceProvider::TryGetCapability(
   {
     return false;
   }
-  const int fleshy = source.GetBareHandFleshyOverride() > 0
-                         ? source.GetBareHandFleshyOverride()
-                         : BareHandFleshyDamage(source.GetAttributes());
+  const int fleshy =
+      source.GetBareHandFleshyOverride() > 0
+          ? source.GetBareHandFleshyOverride()
+          : BareHandFleshyDamage(
+                StatusEffectSystem::GetEffectiveAttributes(source));
   out = InfluenceCapability::DefaultBareHand(fleshy);
   if (source.GetBareHandIntervalOverride() > 0.f)
   {

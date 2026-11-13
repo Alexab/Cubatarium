@@ -17,13 +17,14 @@ WorldGenContentSnapshot CaptureWorldGenContentSnapshot()
   return snap;
 }
 
-WorldGenContentPinScope::WorldGenContentPinScope(WorldGenContentSnapshot snapshot)
+UWorldGenContentPinScope::UWorldGenContentPinScope(
+    WorldGenContentSnapshot snapshot)
     : Snapshot(std::move(snapshot))
 {
   SetPinnedWorldGenContent(&Snapshot);
 }
 
-WorldGenContentPinScope::~WorldGenContentPinScope()
+UWorldGenContentPinScope::~UWorldGenContentPinScope()
 {
   if (GetPinnedWorldGenContent() == &Snapshot)
   {

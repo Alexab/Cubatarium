@@ -1,23 +1,24 @@
 #include "World/Lighting/CpuLightingSeedBackend.h"
-#include "World/Core/World.h"
+#include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkManager.h"
+#include "World/Core/World.h"
 #include "World/Lighting/GpuSkylightColumnSeed.h"
 #include "World/Math/GridMath.h"
-#include "Blocks/BlockRegistry.h"
 #include <chrono>
 
 namespace cutum
 {
 
-CpuLightingSeedBackend::CpuLightingSeedBackend(UWorld &world, int relight_min,
-                                               int relight_max)
+UCpuLightingSeedBackend::UCpuLightingSeedBackend(UWorld &world, int relight_min,
+                                                 int relight_max)
     : World(world), RelightMin(relight_min), RelightMax(relight_max)
 {
 }
 
 LightingSeedResult
-CpuLightingSeedBackend::TrySeedColumnAtCommit(glm::ivec3 ground, double budget_ms)
+UCpuLightingSeedBackend::TrySeedColumnAtCommit(glm::ivec3 ground,
+                                               double budget_ms)
 {
   if (budget_ms <= 0.0)
   {
@@ -57,10 +58,9 @@ CpuLightingSeedBackend::TrySeedColumnAtCommit(glm::ivec3 ground, double budget_m
         ++seeded;
       }
     }
-    const double elapsed =
-        std::chrono::duration<double, std::milli>(
-            std::chrono::high_resolution_clock::now() - t0)
-            .count();
+    const double elapsed = std::chrono::duration<double, std::milli>(
+                               std::chrono::high_resolution_clock::now() - t0)
+                               .count();
     return LightingSeedResult{attempted > 0 && seeded == attempted, elapsed};
   }
 
@@ -69,10 +69,9 @@ CpuLightingSeedBackend::TrySeedColumnAtCommit(glm::ivec3 ground, double budget_m
                              /*priority_mesh=*/true,
                              /*include_skylight=*/true,
                              /*include_block_light=*/true);
-  const double elapsed =
-      std::chrono::duration<double, std::milli>(
-          std::chrono::high_resolution_clock::now() - t0)
-          .count();
+  const double elapsed = std::chrono::duration<double, std::milli>(
+                             std::chrono::high_resolution_clock::now() - t0)
+                             .count();
   return LightingSeedResult{true, elapsed};
 }
 

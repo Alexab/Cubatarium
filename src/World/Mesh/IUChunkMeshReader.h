@@ -3,13 +3,14 @@
 
 #include "World/Math/BlockTypes.h"
 #include "World/Math/FluidCellState.h"
-#include "Render/Mesh/MeshNeighborPolicy.h"
+#include "World/Mesh/Contracts/MeshNeighborPolicy.h"
 #include <glm/glm.hpp>
 
 namespace cutum
 {
 
-/// Read-only voxel view for greedy chunk meshing (local chunk + neighbor shell).
+/// Read-only voxel view for greedy chunk meshing (local chunk + neighbor
+/// shell).
 class IUChunkMeshReader
 {
 public:

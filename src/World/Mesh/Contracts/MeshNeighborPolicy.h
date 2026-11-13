@@ -32,12 +32,12 @@ inline bool NeighborUnknownAlwaysHidesFace(NeighborLoadState state)
 /// for a later corrective remesh if a peer becomes resident.
 inline bool IsProvisionalMissingTopFace(int face) { return face == 3; }
 
-/// NeighborBecameKnown: coalesce seam remesh 1/column/frame when a face-neighbor
-/// flips to loaded/drawable (overlay Missing and/or FaceDebt toward publisher).
+/// NeighborBecameKnown: coalesce seam remesh 1/column/frame when a
+/// face-neighbor flips to loaded/drawable (overlay Missing and/or FaceDebt
+/// toward publisher).
 inline bool ShouldCoalesceNeighborBecameKnownSeam(
     bool neighbor_now_known, bool self_has_overlay_face_toward,
-    bool already_coalesced_this_frame,
-    bool self_has_face_debt_toward = false)
+    bool already_coalesced_this_frame, bool self_has_face_debt_toward = false)
 {
   if (!neighbor_now_known || already_coalesced_this_frame)
   {
@@ -99,9 +99,9 @@ inline bool NeighborShellAirRequiresLoadedChunk(NeighborLoadState state,
 
 /// Era39 + M09: neighbor_visually_drawable=false (SoftDefer / lit-gate hide)
 /// distinguishes Unlit (solid hidden) from Air (empty / air shell).
-inline NeighborLoadState ClassifyShellCell(bool neighbor_chunk_loaded,
-                                           BlockId block,
-                                           bool neighbor_visually_drawable = true)
+inline NeighborLoadState
+ClassifyShellCell(bool neighbor_chunk_loaded, BlockId block,
+                  bool neighbor_visually_drawable = true)
 {
   if (!neighbor_chunk_loaded)
   {

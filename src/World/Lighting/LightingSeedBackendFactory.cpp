@@ -11,11 +11,11 @@ SelectLightingSeedBackend(UWorld &world, int relight_min, int relight_max,
 {
   if (PreferGpuLightingSeed(caps))
   {
-    return std::make_unique<GpuLightingSeedBackend>(world, relight_min,
-                                                    relight_max);
+    return std::make_unique<UGpuLightingSeedBackend>(world, relight_min,
+                                                     relight_max);
   }
-  return std::make_unique<CpuLightingSeedBackend>(world, relight_min,
-                                                  relight_max);
+  return std::make_unique<UCpuLightingSeedBackend>(world, relight_min,
+                                                   relight_max);
 }
 
 } // namespace cutum

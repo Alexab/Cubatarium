@@ -113,10 +113,7 @@ def main():
             for y in range(17-height,14,3):draw.line((x-2,y,x+2,y+1),fill=color,width=1)
         (pack/'textures'/'blocks').mkdir(parents=True,exist_ok=True);im.save(pack/'textures'/'blocks'/f'{id}.png')
         write(pack/'blocks'/f'{id}.json',dict(name=id,displayName='Grain '+stage,hardness=.05,dig=dict(level=0,groups={'oddly_breakable_by_hand':3}),types=['natural','plants'],textures=[id]*6,render=dict(transparent=True,style='cross',double_sided=True,shape='tuft'),physics=dict(movement=dict(occupancy=0)),license='CC0-1.0',provenance=dict(author='Cubatarium',source_kind='Original procedural crop texture')))
-    manifest={'version':2,'generator':'itemgen-v2','provenance':'Original Cubatarium geometry and procedural textures; no Minecraft assets','items':{}}
-    for p in sorted((ROOT/'content/items').glob('*.json')):
-        id=p.stem;files=[p,*sorted((ROOT/'models/items'/id).rglob('*')),*[ROOT/'tools/item_recipes'/f'{id}.yaml']]
-        manifest['items'][id]={'dependencies':['tools/item_materials.yaml','tools/itemgen/builders.py','tools/itemgen/export_gltf.py','tools/itemgen/texturegen.py'],'sha256':{str(f.relative_to(ROOT)).replace('\\','/'):hashlib.sha256(f.read_bytes()).hexdigest() for f in files if f.is_file()}}
-    write(ROOT/'models/items/MANIFEST.json',manifest)
+    from itemgen.manifest import update_manifest
+    manifest=update_manifest(ROOT)
     print(f"Authored {len(manifest['items'])} items and survival recipes")
 if __name__=='__main__':main()

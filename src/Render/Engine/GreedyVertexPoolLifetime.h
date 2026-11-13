@@ -31,11 +31,10 @@ struct VertexPoolRetiredSlot
 };
 
 /// CPU-side retire → poll → reclaim queue (injectable fence poll for tests).
-class VertexPoolRetireQueue
+class UVertexPoolRetireQueue
 {
 public:
-  using PollFenceFn =
-      std::function<VertexPoolFencePoll(uint64_t fenceToken)>;
+  using PollFenceFn = std::function<VertexPoolFencePoll(uint64_t fenceToken)>;
 
   /// Free-time path: slot waits for draw fence (not tied to Free-time token).
   void FreePending(GreedyGpuPoolFreeSlot slot);

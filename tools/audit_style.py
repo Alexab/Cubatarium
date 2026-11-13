@@ -2,6 +2,7 @@
 """Audit coding style violations in src/. Exit 1 if any found."""
 
 import re
+from audit.cpp_lex import mask_cpp
 import sys
 from pathlib import Path
 
@@ -23,7 +24,7 @@ SKIP_INCLUDES = {
     "android_soft_keyboard.h",
 }
 
-CLASS_RE = re.compile(r"^class\s+([A-Z][a-z][A-Za-z0-9]*)", re.M)
+CLASS_RE = re.compile(r"^class\s+([A-Z][a-z][A-Za-z0-9]*)\b[^;{}]*\{", re.M)
 MEMBER_RE = re.compile(r"\b[a-z][a-zA-Z0-9]*_\b")
 BARE_INCLUDE_RE = re.compile(r'#include\s+"([^"/\\]+\.h)"')
 STRUCT_FIELD_RE = re.compile(r"^\s+([a-z][a-zA-Z0-9]*)\s*[\[{;]", re.M)
@@ -53,7 +54,7 @@ GRANDFATHERED_LONG_FUNCTIONS = {
     "src/Render/Mesh/ChunkMeshCache.cpp::UChunkMeshCache::ApplyMeshResult": 1030,
     "src/Commands/WorldCommands.cpp::RegisterWorldCommands": 996,
     "src/World/Streaming/ChunkEmergeCoordinator.cpp::UChunkEmergeCoordinator::InstallSoftDeferCallbacks": 951,
-    "src/World/Diagnostics/MeshAuditDiagnostics.cpp::UMeshAuditDiagnostics::Run": 930,
+    "src/World/Mesh/Diagnostics/MeshAuditDiagnostics.cpp::UMeshAuditDiagnostics::Run": 930,
     "src/World/Core/World.cpp::UWorld::CountUnfinishedVisualNear": 907,
     "src/Render/Engine/GreedyGpuPublication.cpp::UGreedyGpuBackend::ApplyPublicationDelta": 726,
     "src/World/Core/WorldViewBinding.cpp::UWorld::TickWorldStreamingPhase": 636,
@@ -85,7 +86,7 @@ GRANDFATHERED_LONG_FUNCTIONS = {
 
 
 def long_function_violations(fp: Path, text: str) -> list[str]:
-    lines = text.split("\n")
+    lines = mask_cpp(text).split("\n")
     n = len(lines)
     issues: list[str] = []
     i = 0
@@ -147,7 +148,7 @@ def struct_field_violations(text: str) -> list[str]:
         "namespace", "class", "struct", "enum", "return", "using", "template",
         "public", "private", "protected", "virtual", "override", "const",
         "static", "inline", "friend", "typedef", "if", "for", "while",
-        "continue", "break", "return",
+        "continue", "break", "return", "else",
     }
     for sm in STRUCT_BLOCK_RE.finditer(text):
         start = sm.end()
@@ -174,6 +175,7 @@ def audit_file(fp: Path) -> list[str]:
     if fp.name == "stb_image.h" or "ThirdParty" in str(fp):
         return []
     text = fp.read_text(encoding="utf-8", errors="ignore")
+    code = mask_cpp(text)
     rel = fp.relative_to(ROOT.parent)
     rel_posix = rel.as_posix()
     issues: list[str] = []
@@ -184,20 +186,20 @@ def audit_file(fp: Path) -> list[str]:
     )
 
     if not skip_class_prefix:
-        for m in CLASS_RE.finditer(text):
+        for m in CLASS_RE.finditer(code):
             name = m.group(1)
             if name.startswith("I") or name.startswith("U"):
                 continue
             issues.append(f"{rel}: class without U/I prefix: {name}")
 
     if fp.suffix == ".h":
-        for m in MEMBER_RE.finditer(text):
+        for m in MEMBER_RE.finditer(code):
             issues.append(f"{rel}: trailing_ member: {m.group(0)}")
 
-        for field in struct_field_violations(text):
+        for field in struct_field_violations(code):
             issues.append(f"{rel}: struct field not PascalCase: {field}")
 
-    for m in BARE_INCLUDE_RE.finditer(text):
+    for m in BARE_INCLUDE_RE.finditer(mask_cpp(text, strings=False)):
         inc = m.group(1).replace("\\", "/")
         if inc not in SKIP_INCLUDES:
             issues.append(f"{rel}: bare include: {inc}")

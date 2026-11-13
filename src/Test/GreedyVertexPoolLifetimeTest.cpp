@@ -59,7 +59,7 @@ cutum::GreedyGpuPoolFreeSlot MakeSlot(size_t vOff, size_t iOff, size_t vBytes,
 
 void TestRetirePollReclaim()
 {
-  cutum::VertexPoolRetireQueue queue;
+  cutum::UVertexPoolRetireQueue queue;
   gFenceStates.clear();
   gFenceStates[1] = MockFenceState::Pending;
   gFenceStates[2] = MockFenceState::Signaled;
@@ -84,7 +84,7 @@ void TestRetirePollReclaim()
 
 void TestFailedFenceNeverReclaims()
 {
-  cutum::VertexPoolRetireQueue queue;
+  cutum::UVertexPoolRetireQueue queue;
   gFenceStates.clear();
   gFenceStates[9] = MockFenceState::Failed;
 
@@ -99,7 +99,7 @@ void TestFailedFenceNeverReclaims()
 
 void TestDrawGenerationRetireNotFreeTime()
 {
-  cutum::VertexPoolRetireQueue queue;
+  cutum::UVertexPoolRetireQueue queue;
   gFenceStates.clear();
   gFenceStates[10] = MockFenceState::Pending;
 
@@ -123,7 +123,7 @@ void TestDrawGenerationRetireNotFreeTime()
 
 void TestReserveBlockedWhileRetiredPending()
 {
-  cutum::VertexPoolRetireQueue queue;
+  cutum::UVertexPoolRetireQueue queue;
   gFenceStates.clear();
   gFenceStates[20] = MockFenceState::Pending;
 

@@ -1413,6 +1413,25 @@ void UFpViewmodelRenderer::DrawBlockCube(const std::string &typeName,
   glBindVertexArray(0);
 }
 
+// Keep the authored arm length/scale while placing its grip at the payload's
+// projected contact. World and viewmodel FOVs can differ, hence the NDC
+// handoff.
+static glm::mat4 AlignCarryPalm(const glm::mat4 &root, const glm::mat4 &pv,
+                                const glm::vec3 &socket,
+                                const glm::vec2 &contact)
+{
+  const glm::vec4 palm = root * glm::vec4(socket, 1.f);
+  const glm::vec4 clip = pv * palm;
+  if (std::abs(clip.w) < .0001f)
+    return root;
+  glm::vec4 target =
+      glm::inverse(pv) * glm::vec4(contact, clip.z / clip.w, 1.f);
+  if (std::abs(target.w) < .0001f)
+    return root;
+  const glm::vec3 delta = glm::vec3(target) / target.w - glm::vec3(palm);
+  return glm::translate(glm::mat4(1.f), delta) * root;
+}
+
 void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
 {
   if (!Shader || params.FramebufferW <= 0 || params.FramebufferH <= 0)
@@ -1475,6 +1494,8 @@ void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
   if (params.BowCharge > 0)
     rootR =
         glm::translate(rootR, glm::vec3(-.1f, .08f, .15f * params.BowCharge));
+  if (params.CarryHands > 0 && params.HasCarryContacts)
+    rootR = AlignCarryPalm(rootR, pv, kHandSocketR, params.CarryRightNdc);
   DrawingLeftArm = false;
   if (!TryDrawAuthoredArm(pv * rootR, false, skinAtlas) &&
       !TryDrawLegacyAtlasArms(pv * rootR, false, skinAtlas))
@@ -1491,6 +1512,8 @@ void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
             rootL;
   if (params.BowCharge > 0)
     rootL = glm::translate(rootL, glm::vec3(.1f, .10f, -.18f));
+  if (params.CarryHands == 2 && params.HasCarryContacts)
+    rootL = AlignCarryPalm(rootL, pv, kHandSocketL, params.CarryLeftNdc);
   DrawingLeftArm = true;
   if (!TryDrawAuthoredArm(pv * rootL, true, skinAtlas) &&
       !TryDrawLegacyAtlasArms(pv * rootL, true, skinAtlas))

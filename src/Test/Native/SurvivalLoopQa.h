@@ -24,7 +24,7 @@ inline nlohmann::json RunSurvivalLoopQa(UWorld &world, glm::ivec3 floor)
   if (!actor || !camera)
     return result;
   auto &inv = actor->GetInventory();
-  auto &physics = WorldItemSystem::Instance();
+  auto &physics = UWorldItemSystem::Instance();
   auto &survival = USurvivalSystems::Instance();
   const auto original = actor->GetBodyOrigin();
   const auto eye = camera->GetPosition();

@@ -49,6 +49,8 @@ struct FpViewmodelDrawAudit
 struct FpViewmodelDrawParams
 {
   int CarryHands{0};
+  bool HasCarryContacts{false};
+  glm::vec2 CarryRightNdc{0.f}, CarryLeftNdc{0.f};
   float ThrowCharge{0}, BowCharge{0};
   int FramebufferW{0};
   int FramebufferH{0};

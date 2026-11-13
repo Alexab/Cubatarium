@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Render/Mesh/ChunkMeshSnapshot.h"
-#include "Render/Mesh/GreedyMesher.h"
-#include "Render/Mesh/MeshNeighborPolicy.h"
 #include "Blocks/BlockCatalogQueries.h"
 #include "Blocks/BlockRegistry.h"
+#include "Render/Mesh/ChunkMeshSnapshot.h"
+#include "Render/Mesh/GreedyMesher.h"
 #include "World/Lighting/LightUtil.h"
+#include "World/Mesh/Contracts/MeshNeighborPolicy.h"
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -23,9 +23,10 @@ namespace cutum
 /// remains unambiguous.
 inline constexpr size_t kGpuBlockTypePaletteCapacity = 1u << 10u;
 
-inline bool BuildGpuBlockTypePalette(
-    const ChunkMeshSnapshot &snapshot, std::vector<BlockId> &block_palette,
-    std::vector<uint16_t> &block_palette_indices)
+inline bool
+BuildGpuBlockTypePalette(const ChunkMeshSnapshot &snapshot,
+                         std::vector<BlockId> &block_palette,
+                         std::vector<uint16_t> &block_palette_indices)
 {
   block_palette.clear();
   block_palette_indices.clear();
@@ -70,9 +71,10 @@ inline bool BuildGpuBlockTypePalette(
   return true;
 }
 
-inline bool TryResolveGpuBlockTypePaletteIndex(
-    const std::vector<BlockId> &block_palette, uint32_t palette_index,
-    BlockId &out_block_id)
+inline bool
+TryResolveGpuBlockTypePaletteIndex(const std::vector<BlockId> &block_palette,
+                                   uint32_t palette_index,
+                                   BlockId &out_block_id)
 {
   if (palette_index == 0 || palette_index >= block_palette.size())
   {
@@ -82,8 +84,9 @@ inline bool TryResolveGpuBlockTypePaletteIndex(
   return out_block_id != BLOCK_AIR;
 }
 
-inline BlockId ResolveGpuBlockTypePaletteIndex(
-    const std::vector<BlockId> &block_palette, uint32_t palette_index)
+inline BlockId
+ResolveGpuBlockTypePaletteIndex(const std::vector<BlockId> &block_palette,
+                                uint32_t palette_index)
 {
   BlockId block_id = BLOCK_AIR;
   return TryResolveGpuBlockTypePaletteIndex(block_palette, palette_index,
@@ -130,8 +133,7 @@ inline bool IsGpuFaceExtractEligible(const BlockDefinitionCatalog *catalog,
 /// Legacy alias kept for callers that need the strict opaque-only check.
 inline bool IsOpaqueSolidForGpuExtract(UBlockRegistry &registry, BlockId id)
 {
-  return IsGpuFaceExtractEligible(registry, id) &&
-         !registry.IsTransparent(id);
+  return IsGpuFaceExtractEligible(registry, id) && !registry.IsTransparent(id);
 }
 
 inline bool IsOpaqueSolidForGpuExtract(const BlockDefinitionCatalog *catalog,
@@ -306,7 +308,8 @@ inline void BuildPaddedOccupancy(const ChunkMeshSnapshot &snap,
   }
 }
 
-/// Padded light: center plus the radius-2 shell used by FaceLightPacked fallback.
+/// Padded light: center plus the radius-2 shell used by FaceLightPacked
+/// fallback.
 inline void BuildPaddedLight(const ChunkMeshSnapshot &snap,
                              std::vector<uint8_t> &lights)
 {
@@ -417,7 +420,8 @@ ExtractOpaqueFacesCpu(const ChunkMeshSnapshot &snap, UBlockRegistry &registry)
             }
             GreedyQuad q;
             q.axis = axis;
-            // UGreedyMesher convention: slice = voxel coordinate; u/v = (axis+1)%3,(axis+2)%3.
+            // UGreedyMesher convention: slice = voxel coordinate; u/v =
+            // (axis+1)%3,(axis+2)%3.
             q.slice = (axis == 0 ? x : (axis == 1 ? y : z));
             if (axis == 0)
             {
@@ -587,7 +591,8 @@ DecodeFaceMasks(const ChunkMeshSnapshot &snap, UBlockRegistry &registry,
       continue;
     }
     // The face-mask SSBO uses the GPU occupancy layout x + n*z + n^2*y.
-    // Recover that voxel coordinate, then fetch its block in chunk storage order.
+    // Recover that voxel coordinate, then fetch its block in chunk storage
+    // order.
     const int x = static_cast<int>(i % n);
     const int y = static_cast<int>(i / (n * n));
     const int z = static_cast<int>((i / n) % n);

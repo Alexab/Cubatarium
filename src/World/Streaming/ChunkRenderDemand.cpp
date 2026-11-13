@@ -1,6 +1,6 @@
 #include "World/Streaming/ChunkRenderDemand.h"
 
-#include "Render/Mesh/ChunkMeshFace.h"
+#include "World/Math/ChunkMeshFace.h"
 
 #include <algorithm>
 #include <chrono>
@@ -156,8 +156,7 @@ void UChunkRenderDemandStore::TraceDemandTransition(
   span.result = result;
   span.had_active_attempt = before.has_active_attempt ? 1 : 0;
   span.has_active_attempt = after.has_active_attempt ? 1 : 0;
-  span.retained_awaiting_successor =
-      after.retained_awaiting_successor ? 1 : 0;
+  span.retained_awaiting_successor = after.retained_awaiting_successor ? 1 : 0;
   span.event_ms = DemandEventTimeMs(event_ms);
   UJobStageTrace::NoteDemandTransition(span);
 }
@@ -175,8 +174,7 @@ UChunkRenderDemandStore::Find(glm::ivec3 coord) const
   return it == Records_.end() ? nullptr : &it->second;
 }
 
-ChunkRenderDemandRecord &
-UChunkRenderDemandStore::GetOrCreate(glm::ivec3 coord)
+ChunkRenderDemandRecord &UChunkRenderDemandStore::GetOrCreate(glm::ivec3 coord)
 {
   ChunkRenderDemandRecord &rec = Records_[coord];
   rec.coord = coord;
@@ -184,8 +182,8 @@ UChunkRenderDemandStore::GetOrCreate(glm::ivec3 coord)
 }
 
 void UChunkRenderDemandStore::BindIdentity(glm::ivec3 coord,
-                                          uint64_t world_epoch,
-                                          uint64_t incarnation)
+                                           uint64_t world_epoch,
+                                           uint64_t incarnation)
 {
   // An unloaded / absent chunk has no incarnation to bind. World epoch zero is
   // valid in initial worlds, but a live chunk incarnation is always nonzero.
@@ -215,7 +213,7 @@ void UChunkRenderDemandStore::BindIdentity(glm::ivec3 coord,
     rec.world_epoch = world_epoch;
     rec.incarnation = incarnation;
     TraceDemandTransition(coord, before, rec,
-                         DemandTransitionKind::IdentityReset);
+                          DemandTransitionKind::IdentityReset);
   }
   rec.world_epoch = world_epoch;
   rec.incarnation = incarnation;
@@ -242,8 +240,8 @@ bool UChunkRenderDemandStore::CoverageSatisfied(
   {
     return true;
   }
-  const uint64_t need =
-      desired_coverage_gen != 0 ? desired_coverage_gen : rec.desired_coverage_gen;
+  const uint64_t need = desired_coverage_gen != 0 ? desired_coverage_gen
+                                                  : rec.desired_coverage_gen;
   return need == 0 || rec.published_coverage_gen >= need;
 }
 
@@ -266,22 +264,19 @@ bool UChunkRenderDemandStore::PublishedMeetsDesired(
          rec.published_light_rev == rec.desired_light_rev;
 }
 
-DemandResult UChunkRenderDemandStore::NoteDemand(glm::ivec3 coord,
-                                                uint64_t desired_geom_rev,
-                                                uint64_t desired_light_rev,
-                                                uint64_t desired_coverage_gen,
-                                                double now_ms,
-                                                uint64_t world_epoch,
-                                                uint64_t incarnation)
+DemandResult UChunkRenderDemandStore::NoteDemand(
+    glm::ivec3 coord, uint64_t desired_geom_rev, uint64_t desired_light_rev,
+    uint64_t desired_coverage_gen, double now_ms, uint64_t world_epoch,
+    uint64_t incarnation)
 {
   BindIdentity(coord, world_epoch, incarnation);
   ChunkRenderDemandRecord &rec = GetOrCreate(coord);
   const DemandSnapshot before = SnapshotDemand(rec);
-  const bool satisfied =
-      !rec.retained_awaiting_successor && desired_geom_rev > 0 &&
-      rec.published_geom_rev == desired_geom_rev &&
-      rec.published_light_rev == desired_light_rev &&
-      CoverageSatisfied(rec, desired_coverage_gen);
+  const bool satisfied = !rec.retained_awaiting_successor &&
+                         desired_geom_rev > 0 &&
+                         rec.published_geom_rev == desired_geom_rev &&
+                         rec.published_light_rev == desired_light_rev &&
+                         CoverageSatisfied(rec, desired_coverage_gen);
 
   if (satisfied)
   {
@@ -293,9 +288,8 @@ DemandResult UChunkRenderDemandStore::NoteDemand(glm::ivec3 coord,
                            rec.desired_light_rev == desired_light_rev &&
                            (desired_coverage_gen == 0 ||
                             rec.desired_coverage_gen == desired_coverage_gen);
-  if (same_desire &&
-      (rec.has_active_attempt || rec.desired_geom_rev != 0 ||
-       rec.desired_light_rev != 0))
+  if (same_desire && (rec.has_active_attempt || rec.desired_geom_rev != 0 ||
+                      rec.desired_light_rev != 0))
   {
     if (desired_coverage_gen > rec.desired_coverage_gen)
     {
@@ -303,8 +297,7 @@ DemandResult UChunkRenderDemandStore::NoteDemand(glm::ivec3 coord,
       if (rec.has_active_attempt)
       {
         TraceDemandTransition(coord, before, rec,
-                              DemandTransitionKind::TargetAdvanced,
-                              now_ms);
+                              DemandTransitionKind::TargetAdvanced, now_ms);
       }
     }
     if (rec.has_active_attempt)
@@ -343,12 +336,11 @@ DemandResult UChunkRenderDemandStore::NoteDemand(glm::ivec3 coord,
       before.desired_geom_rev != rec.desired_geom_rev ||
       before.desired_light_rev != rec.desired_light_rev ||
       before.desired_coverage_gen != rec.desired_coverage_gen;
-  TraceDemandTransition(
-      coord, before, rec,
-      before.has_active_attempt && target_changed
-          ? DemandTransitionKind::TargetAdvanced
-          : DemandTransitionKind::AttemptCreated,
-      now_ms);
+  TraceDemandTransition(coord, before, rec,
+                        before.has_active_attempt && target_changed
+                            ? DemandTransitionKind::TargetAdvanced
+                            : DemandTransitionKind::AttemptCreated,
+                        now_ms);
   return DemandResult::NewDemand;
 }
 
@@ -530,8 +522,8 @@ bool UChunkRenderDemandStore::HasOpenSkyRepairPublished(
     glm::ivec3 coord, uint64_t target_light_rev) const
 {
   const ChunkRenderDemandRecord *rec = Find(coord);
-  return rec && IsOpenSkyRepairPublished(
-                    coord, rec->open_sky_repair_event_id, target_light_rev);
+  return rec && IsOpenSkyRepairPublished(coord, rec->open_sky_repair_event_id,
+                                         target_light_rev);
 }
 
 void UChunkRenderDemandStore::NoteLightCalculationSettled(
@@ -560,8 +552,8 @@ void UChunkRenderDemandStore::NoteLightCalculationSettled(
   }
 }
 
-void UChunkRenderDemandStore::NoteLifecycleEvent(
-    glm::ivec3 coord, DemandTransitionKind kind)
+void UChunkRenderDemandStore::NoteLifecycleEvent(glm::ivec3 coord,
+                                                 DemandTransitionKind kind)
 {
   ChunkRenderDemandRecord *rec = Find(coord);
   if (!rec)
@@ -591,11 +583,11 @@ void UChunkRenderDemandStore::InvalidateLightCalculationSettlement(
 }
 
 bool UChunkRenderDemandStore::NoteInstallResult(glm::ivec3 coord,
-                                               InstallResult result,
-                                               uint64_t published_geom_rev,
-                                               uint64_t published_light_rev,
-                                               uint64_t attempt_id,
-                                               uint64_t published_coverage_gen)
+                                                InstallResult result,
+                                                uint64_t published_geom_rev,
+                                                uint64_t published_light_rev,
+                                                uint64_t attempt_id,
+                                                uint64_t published_coverage_gen)
 {
   ChunkRenderDemandRecord &rec = GetOrCreate(coord);
   const DemandSnapshot before = SnapshotDemand(rec);
@@ -609,8 +601,8 @@ bool UChunkRenderDemandStore::NoteInstallResult(glm::ivec3 coord,
                           static_cast<uint8_t>(result));
     return false;
   }
-  if (attempt_id != 0 && rec.has_active_attempt &&
-      rec.active_attempt_id != 0 && attempt_id != rec.active_attempt_id)
+  if (attempt_id != 0 && rec.has_active_attempt && rec.active_attempt_id != 0 &&
+      attempt_id != rec.active_attempt_id)
   {
     TraceDemandTransition(coord, before, rec,
                           DemandTransitionKind::StaleInstallIgnored, 0.0,
@@ -629,7 +621,8 @@ bool UChunkRenderDemandStore::NoteInstallResult(glm::ivec3 coord,
     {
       rec.published_light_rev = published_light_rev;
     }
-    // A37 H3 / A38 R1: coverage advances only with explicit published_coverage_gen.
+    // A37 H3 / A38 R1: coverage advances only with explicit
+    // published_coverage_gen.
     if (published_coverage_gen > 0)
     {
       rec.published_coverage_gen = published_coverage_gen;
@@ -699,8 +692,7 @@ bool UChunkRenderDemandStore::NoteInstallResult(glm::ivec3 coord,
 }
 
 void UChunkRenderDemandStore::NoteFaceDebt(glm::ivec3 chunk_xyz,
-                                          uint8_t face_mask,
-                                          uint64_t peer_gen)
+                                           uint8_t face_mask, uint64_t peer_gen)
 {
   if (face_mask == 0)
   {
@@ -710,8 +702,8 @@ void UChunkRenderDemandStore::NoteFaceDebt(glm::ivec3 chunk_xyz,
   const DemandSnapshot before = SnapshotDemand(rec);
   rec.peer_face_debt_mask =
       static_cast<uint8_t>(rec.peer_face_debt_mask | face_mask);
-  rec.face_debt_mask = static_cast<uint8_t>(
-      rec.peer_face_debt_mask | rec.overlay_face_debt_mask);
+  rec.face_debt_mask = static_cast<uint8_t>(rec.peer_face_debt_mask |
+                                            rec.overlay_face_debt_mask);
   if (peer_gen != 0)
   {
     for (int f = 0; f < 6; ++f)
@@ -728,8 +720,8 @@ void UChunkRenderDemandStore::NoteFaceDebt(glm::ivec3 chunk_xyz,
   UpdateCachedUnsatisfiedBreakdown(before, SnapshotDemand(rec));
 }
 
-void UChunkRenderDemandStore::NoteBoundaryOverlayDebt(
-    glm::ivec3 chunk_xyz, uint8_t face_mask)
+void UChunkRenderDemandStore::NoteBoundaryOverlayDebt(glm::ivec3 chunk_xyz,
+                                                      uint8_t face_mask)
 {
   if (face_mask == 0)
   {
@@ -739,11 +731,10 @@ void UChunkRenderDemandStore::NoteBoundaryOverlayDebt(
   const DemandSnapshot before = SnapshotDemand(rec);
   const uint8_t newly_missing = static_cast<uint8_t>(
       face_mask & static_cast<uint8_t>(~rec.overlay_face_debt_mask));
-  rec.overlay_face_debt_mask = static_cast<uint8_t>(
-      rec.overlay_face_debt_mask | face_mask);
+  rec.overlay_face_debt_mask =
+      static_cast<uint8_t>(rec.overlay_face_debt_mask | face_mask);
   rec.overlay_repair_attempted_mask = static_cast<uint8_t>(
-      rec.overlay_repair_attempted_mask &
-      static_cast<uint8_t>(~newly_missing));
+      rec.overlay_repair_attempted_mask & static_cast<uint8_t>(~newly_missing));
   for (int f = 0; f < 6; ++f)
   {
     if ((newly_missing & static_cast<uint8_t>(1u << f)) != 0)
@@ -753,8 +744,8 @@ void UChunkRenderDemandStore::NoteBoundaryOverlayDebt(
       rec.overlay_repair_target_light_rev[f] = 0;
     }
   }
-  rec.face_debt_mask = static_cast<uint8_t>(
-      rec.peer_face_debt_mask | rec.overlay_face_debt_mask);
+  rec.face_debt_mask = static_cast<uint8_t>(rec.peer_face_debt_mask |
+                                            rec.overlay_face_debt_mask);
   UpdateCachedUnsatisfiedBreakdown(before, SnapshotDemand(rec));
 }
 
@@ -771,8 +762,8 @@ void UChunkRenderDemandStore::NoteBoundaryOverlayPublished(
   rec->overlay_face_debt_mask = missing_face_mask;
   rec->overlay_repair_attempted_mask = static_cast<uint8_t>(
       rec->overlay_repair_attempted_mask & missing_face_mask);
-  rec->face_debt_mask = static_cast<uint8_t>(
-      rec->peer_face_debt_mask | rec->overlay_face_debt_mask);
+  rec->face_debt_mask = static_cast<uint8_t>(rec->peer_face_debt_mask |
+                                             rec->overlay_face_debt_mask);
   for (int f = 0; f < 6; ++f)
   {
     const uint8_t bit = static_cast<uint8_t>(1u << f);
@@ -782,8 +773,7 @@ void UChunkRenderDemandStore::NoteBoundaryOverlayPublished(
       rec->overlay_repair_peer_coverage_gen[f] = 0;
       rec->overlay_repair_target_light_rev[f] = 0;
     }
-    if ((missing_face_mask & bit) == 0 &&
-        (rec->peer_face_debt_mask & bit) == 0)
+    if ((missing_face_mask & bit) == 0 && (rec->peer_face_debt_mask & bit) == 0)
     {
       rec->waiting_peer_gen[f] = 0;
     }
@@ -832,8 +822,8 @@ bool UChunkRenderDemandStore::TryBeginBoundaryOverlayRepair(
   ChunkRenderDemandRecord *rec = Find(chunk_xyz);
   const uint8_t bit = static_cast<uint8_t>(1u << face);
 
-  rec->overlay_repair_attempted_mask = static_cast<uint8_t>(
-      rec->overlay_repair_attempted_mask | bit);
+  rec->overlay_repair_attempted_mask =
+      static_cast<uint8_t>(rec->overlay_repair_attempted_mask | bit);
   rec->overlay_repair_peer_incarnation[face] = peer_incarnation;
   rec->overlay_repair_peer_coverage_gen[face] = peer_coverage_gen;
   rec->overlay_repair_target_light_rev[face] = target_light_rev;
@@ -841,8 +831,8 @@ bool UChunkRenderDemandStore::TryBeginBoundaryOverlayRepair(
 }
 
 void UChunkRenderDemandStore::NoteFaceDebtSatisfied(glm::ivec3 chunk_xyz,
-                                                   uint8_t face_mask,
-                                                   uint64_t peer_gen)
+                                                    uint8_t face_mask,
+                                                    uint64_t peer_gen)
 {
   ChunkRenderDemandRecord *rec = Find(chunk_xyz);
   if (!rec)
@@ -883,8 +873,8 @@ void UChunkRenderDemandStore::NoteFaceDebtSatisfied(glm::ivec3 chunk_xyz,
   }
   rec->peer_face_debt_mask = static_cast<uint8_t>(
       rec->peer_face_debt_mask & static_cast<uint8_t>(~clear_mask));
-  rec->face_debt_mask = static_cast<uint8_t>(
-      rec->peer_face_debt_mask | rec->overlay_face_debt_mask);
+  rec->face_debt_mask = static_cast<uint8_t>(rec->peer_face_debt_mask |
+                                             rec->overlay_face_debt_mask);
   // A38 R1: closing all face debt publishes desired coverage (stop unlock).
   if (rec->face_debt_mask == 0 && rec->desired_coverage_gen > 0 &&
       rec->published_coverage_gen < rec->desired_coverage_gen)
@@ -937,14 +927,12 @@ UChunkRenderDemandStore::ReconcileMaintenance(int max_n, double now_ms)
         ++stats.mismatch_desired_vs_published;
       }
     }
-    if (rec.has_active_attempt &&
-        rec.active_stage == JobStage::Created &&
+    if (rec.has_active_attempt && rec.active_stage == JobStage::Created &&
         rec.last_progress_ms <= 0.0)
     {
       const double created = rec.attempt_created_ms;
-      const bool past_grace =
-          now_ms <= 0.0 || created <= 0.0 ||
-          (now_ms - created) >= kOrphanGraceMs;
+      const bool past_grace = now_ms <= 0.0 || created <= 0.0 ||
+                              (now_ms - created) >= kOrphanGraceMs;
       if (past_grace)
       {
         ++stats.orphan_active;
@@ -956,8 +944,8 @@ UChunkRenderDemandStore::ReconcileMaintenance(int max_n, double now_ms)
         rec.has_active_attempt = false;
         rec.active_stage = JobStage::Cancelled;
         TraceDemandTransition(rec.coord, before, rec,
-                              DemandTransitionKind::InstallCancelled,
-                              now_ms, /*result=*/16);
+                              DemandTransitionKind::InstallCancelled, now_ms,
+                              /*result=*/16);
         // The cancelled desire still leads publication (des > pub); without a
         // Dirty entry no producer ever reaches NoteDemand again and the record
         // freezes (PERF-0.30 witness: des_g climbing while pub_g stuck, queues
@@ -1026,7 +1014,7 @@ UChunkRenderDemandStore::ReconcileMaintenance(int max_n, double now_ms)
 }
 
 int UChunkRenderDemandStore::CancelOrphanActiveAttempts(int max_n,
-                                                       double now_ms)
+                                                        double now_ms)
 {
   if (max_n <= 0 || Records_.empty())
   {
@@ -1040,14 +1028,12 @@ int UChunkRenderDemandStore::CancelOrphanActiveAttempts(int max_n,
       break;
     }
     ChunkRenderDemandRecord &rec = kv.second;
-    if (rec.has_active_attempt &&
-        rec.active_stage == JobStage::Created &&
+    if (rec.has_active_attempt && rec.active_stage == JobStage::Created &&
         rec.last_progress_ms <= 0.0)
     {
       const double created = rec.attempt_created_ms;
-      const bool past_grace =
-          now_ms <= 0.0 || created <= 0.0 ||
-          (now_ms - created) >= kOrphanGraceMs;
+      const bool past_grace = now_ms <= 0.0 || created <= 0.0 ||
+                              (now_ms - created) >= kOrphanGraceMs;
       if (!past_grace)
       {
         continue;
@@ -1101,10 +1087,8 @@ void UChunkRenderDemandStore::SampleUnsatisfiedRecords(
   for (const auto &kv : Records_)
   {
     const ChunkRenderDemandRecord &rec = kv.second;
-    const bool open = rec.desired_geom_rev != 0 ||
-                      rec.desired_light_rev != 0 ||
-                      rec.desired_coverage_gen != 0 ||
-                      rec.face_debt_mask != 0;
+    const bool open = rec.desired_geom_rev != 0 || rec.desired_light_rev != 0 ||
+                      rec.desired_coverage_gen != 0 || rec.face_debt_mask != 0;
     if (!open)
     {
       continue;
@@ -1204,9 +1188,8 @@ int UChunkRenderDemandStore::ClassifyStopBlocker(
   // The parked debt still drives its repair when the peer publishes.
   if (rec.face_debt_mask != 0)
   {
-    const bool revs_behind =
-        rec.desired_geom_rev > rec.published_geom_rev ||
-        rec.desired_light_rev > rec.published_light_rev;
+    const bool revs_behind = rec.desired_geom_rev > rec.published_geom_rev ||
+                             rec.desired_light_rev > rec.published_light_rev;
     const bool coverage_behind =
         rec.desired_coverage_gen > rec.published_coverage_gen;
     if (revs_behind)
@@ -1285,8 +1268,7 @@ bool UChunkRenderDemandStore::StopConverged(
 {
   for (const auto &kv : Records_)
   {
-    if (ClassifyStopBlocker(kv.second, now_ms, peer_loaded, mesh_withheld) !=
-        0)
+    if (ClassifyStopBlocker(kv.second, now_ms, peer_loaded, mesh_withheld) != 0)
     {
       return false;
     }

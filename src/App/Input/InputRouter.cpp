@@ -80,7 +80,7 @@ bool UInputRouter::RoutePhysicalActions(UApplication &app, int key, int action)
   {
     if (auto *actor = app.World->GetControlledCreature())
     {
-      auto &physics = WorldItemSystem::Instance();
+      auto &physics = UWorldItemSystem::Instance();
       auto camera = app.World->GetCurrentUserCamera();
       const bool overlay = app.ConsoleOpen || app.PaletteOpen ||
                            app.CharacterSheetOpen || app.CraftingOpen ||

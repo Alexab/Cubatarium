@@ -1,17 +1,17 @@
 #ifndef WORLDSTREAMING_H
 #define WORLDSTREAMING_H
 
-#include "Render/Engine/FogRangeSmoother.h"
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "World/Chunks/ChunkLoadScheduler.h"
+#include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/ChunkStreamer.h"
 #include "World/Chunks/StreamingAltitudePolicy.h"
-#include "World/Streaming/StreamingPressure.h"
+#include "World/Math/GridMath.h"
 #include "World/Streaming/MemoryBudgetController.h"
 #include "World/Streaming/StreamIngressPolicy.h"
+#include "World/Streaming/StreamingPressure.h"
+#include "World/View/FogRangeSmoother.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
-#include "World/Chunks/ChunkManager.h"
-#include "World/Math/GridMath.h"
 #include <chrono>
 #include <climits>
 #include <cstdint>
@@ -35,8 +35,9 @@ public:
   UWorldStreaming();
   ~UWorldStreaming();
 
-  void EnsureStreamer(class UBlockWorld &blockWorld, class UBlockRegistry &registry,
-                      uint32_t seed, const ProceduralSettings &settings);
+  void EnsureStreamer(class UBlockWorld &blockWorld,
+                      class UBlockRegistry &registry, uint32_t seed,
+                      const ProceduralSettings &settings);
   bool HasStreamer() const { return Streamer != nullptr; }
   UChunkStreamer *GetStreamer() { return Streamer.get(); }
   const UChunkStreamer *GetStreamer() const { return Streamer.get(); }
@@ -52,7 +53,8 @@ public:
 
   void InitStreamerCallbacks(UWorld &world);
   void RefreshStreamerSettings(const ProceduralSettings &settings,
-                               int maxLoadOpsPerFrame, int maxUnloadOpsPerFrame);
+                               int maxLoadOpsPerFrame,
+                               int maxUnloadOpsPerFrame);
 
   void UpdateStreaming(UWorld &world, UWorldMeshService &meshService,
                        const RenderSettings &render, int renderDistanceChunks,
@@ -68,8 +70,7 @@ public:
                              std::chrono::milliseconds async_io_timeout =
                                  std::chrono::milliseconds(2000));
   void PauseChunkGeneration(
-      std::chrono::milliseconds worker_wait =
-          std::chrono::milliseconds(10000));
+      std::chrono::milliseconds worker_wait = std::chrono::milliseconds(10000));
   /// Cancel queued gen + bump tokens without waiting for in-flight populate.
   void CancelChunkGeneration(const char *reason = "cancelled_all");
   /// Process exit: cancel gen, brief wait, then drop or leak workers so
@@ -110,10 +111,11 @@ public:
   }
 
 private:
+  void RecordGpuAllocationTelemetry(UWorld &world);
+  bool PrepareChunkScheduler(UWorld &world);
   void InitChunkScheduler(UWorld &world);
   void RefreshStreamingPressure(
-      UWorld &world,
-      std::chrono::high_resolution_clock::time_point stream_t0,
+      UWorld &world, std::chrono::high_resolution_clock::time_point stream_t0,
       double stream_budget_ms);
 
   std::unique_ptr<UChunkStreamer> Streamer;

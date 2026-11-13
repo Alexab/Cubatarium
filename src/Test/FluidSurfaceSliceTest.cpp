@@ -1,9 +1,9 @@
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
-#include "Render/Mesh/FluidSurfaceColumnSlice.h"
 #include "Render/Mesh/GpuFluidColumnScan.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/FluidColumnSurfaceQuery.h"
+#include "World/Fluids/FluidSurfaceColumnSlice.h"
 #include "World/Math/GridMath.h"
 
 #include <cstdlib>
@@ -55,8 +55,7 @@ static std::shared_ptr<cutum::UBlockDefinitionStorage> MakeDefinitions()
 }
 
 static void FillFlatOcean(cutum::UBlockWorld &world, cutum::BlockId water_id,
-                          int sea_y, int min_x, int max_x, int min_z,
-                          int max_z)
+                          int sea_y, int min_x, int max_x, int min_z, int max_z)
 {
   for (int x = min_x; x <= max_x; ++x)
   {
@@ -128,7 +127,8 @@ int main()
   const cutum::FluidColumnSurface disjoint =
       cutum::FindFluidColumnSurfaceAt(world, registry, 7, 7, 12);
   Expect(disjoint.valid, "disjoint water column is valid");
-  Expect(disjoint.bottomBlockY == 15, "disjoint water bottom is surface segment only");
+  Expect(disjoint.bottomBlockY == 15,
+         "disjoint water bottom is surface segment only");
   Expect(disjoint.surfaceBlockY == 15, "disjoint water surface block y");
 
   for (int y = 11; y <= 14; ++y)

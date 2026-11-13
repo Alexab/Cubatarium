@@ -1,6 +1,6 @@
 #include "Render/Mesh/GpuMeshSlotAllocator.h"
 #include "Render/GlIncludes.h"
-#include "Render/Mesh/MeshPublishContract.h"
+#include "World/Mesh/Contracts/MeshPublishContract.h"
 #include "glog/logging.h"
 
 namespace cutum
@@ -164,9 +164,9 @@ void UGpuMeshSlotAllocator::FreeSlotByIndex(int slot_index)
   FreeList.push_back(slot_index);
 }
 
-bool UGpuMeshSlotAllocator::TryFreeSlotByIndex(int slot_index,
-                                               uint64_t fence_completed_generation,
-                                               uint64_t live_generation)
+bool UGpuMeshSlotAllocator::TryFreeSlotByIndex(
+    int slot_index, uint64_t fence_completed_generation,
+    uint64_t live_generation)
 {
   if (slot_index < 0 || slot_index >= static_cast<int>(MaxSlots))
   {
@@ -209,8 +209,7 @@ bool UGpuMeshSlotAllocator::HasSlot(glm::ivec3 chunk_coord) const
   return ChunkToSlot.find(chunk_coord) != ChunkToSlot.end();
 }
 
-const GpuMeshSlot *
-UGpuMeshSlotAllocator::GetSlot(glm::ivec3 chunk_coord) const
+const GpuMeshSlot *UGpuMeshSlotAllocator::GetSlot(glm::ivec3 chunk_coord) const
 {
   auto it = ChunkToSlot.find(chunk_coord);
   if (it == ChunkToSlot.end())
@@ -220,8 +219,7 @@ UGpuMeshSlotAllocator::GetSlot(glm::ivec3 chunk_coord) const
   return &Slots[static_cast<size_t>(it->second)];
 }
 
-const GpuMeshSlot *
-UGpuMeshSlotAllocator::GetSlotByIndex(int slot_index) const
+const GpuMeshSlot *UGpuMeshSlotAllocator::GetSlotByIndex(int slot_index) const
 {
   if (slot_index < 0 || slot_index >= static_cast<int>(MaxSlots))
   {
@@ -315,10 +313,9 @@ void UGpuMeshSlotAllocator::DrawOpaque() const
     return;
   }
   glBindBuffer(GL_DRAW_INDIRECT_BUFFER, IndirectBuffer);
-  glMultiDrawElementsIndirect(
-      GL_TRIANGLES, GL_UNSIGNED_INT, nullptr,
-      static_cast<GLsizei>(OpaqueCommands.size()),
-      sizeof(DrawIndirectCmd));
+  glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr,
+                              static_cast<GLsizei>(OpaqueCommands.size()),
+                              sizeof(DrawIndirectCmd));
   glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
 #endif
 }
@@ -331,12 +328,11 @@ void UGpuMeshSlotAllocator::DrawTransparent() const
     return;
   }
   glBindBuffer(GL_DRAW_INDIRECT_BUFFER, IndirectBuffer);
-  const void *offset = reinterpret_cast<const void *>(
-      OpaqueCommands.size() * sizeof(DrawIndirectCmd));
-  glMultiDrawElementsIndirect(
-      GL_TRIANGLES, GL_UNSIGNED_INT, offset,
-      static_cast<GLsizei>(TransparentCommands.size()),
-      sizeof(DrawIndirectCmd));
+  const void *offset = reinterpret_cast<const void *>(OpaqueCommands.size() *
+                                                      sizeof(DrawIndirectCmd));
+  glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, offset,
+                              static_cast<GLsizei>(TransparentCommands.size()),
+                              sizeof(DrawIndirectCmd));
   glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
 #endif
 }
@@ -374,9 +370,8 @@ void UGpuMeshSlotAllocator::DrawTransparentGles() const
   for (size_t i = 0; i < TransparentCommands.size(); ++i)
   {
     const size_t offset = (OpaqueCommands.size() + i) * sizeof(DrawIndirectCmd);
-    glDrawElementsIndirect(
-        GL_TRIANGLES, GL_UNSIGNED_INT,
-        reinterpret_cast<const void *>(offset));
+    glDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT,
+                           reinterpret_cast<const void *>(offset));
   }
   glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
 #endif

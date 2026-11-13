@@ -1,9 +1,9 @@
 #include "Render/Mesh/ChunkMeshRevisionRegistry.h"
-#include "Render/Mesh/MeshApplyPolicy.h"
+#include "World/Mesh/Contracts/MeshApplyPolicy.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
 
-#include <glm/glm.hpp>
 #include <cstdlib>
+#include <glm/glm.hpp>
 #include <iostream>
 
 static int failures = 0;
@@ -24,9 +24,9 @@ int main()
   using cutum::MeshApplyRevDecision;
   using cutum::ShouldDeferFreeChunkUntilPackedReplace;
   using cutum::ShouldKeepPriorGpuOnEmptyCpuReplace;
+  using cutum::ShouldPublishCpuBatchesBeforeFreeGpu;
   using cutum::ShouldRetainUnderfeetGpuOnEmptyReplace;
   using cutum::ShouldRouteRemeshToFirstMeshQueue;
-  using cutum::ShouldPublishCpuBatchesBeforeFreeGpu;
   using cutum::SoftDeferCaptureBlockedByRepairTicket;
   using cutum::UChunkMeshRevisionRegistry;
 
@@ -158,8 +158,8 @@ int main()
 
   // --- Phase 5.7.1 / 5.7R2 AntiFlicker discard → Dirty ---
   {
-    using cutum::ShouldSilentDropStaleMeshDiscard;
     using cutum::ShouldRequeueAfterMeshDiscard;
+    using cutum::ShouldSilentDropStaleMeshDiscard;
     Expect(ShouldSilentDropStaleMeshDiscard(true, false, false),
            "5.7.1/R: lit drawable discard silent-drop");
     Expect(ShouldSilentDropStaleMeshDiscard(false, true, false, 0),

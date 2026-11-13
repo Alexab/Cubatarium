@@ -2,13 +2,13 @@
 #define CREATUREDRAWPASS_H
 
 #include "App/Settings/RenderSettings.h"
-#include "Render/Engine/CreatureLightCache.h"
-#include "Creatures/Visual/CreatureDrawContext.h"
 #include "Creatures/Diagnostics/CreaturePassTimingProbe.h"
+#include "Creatures/Visual/CreatureDrawContext.h"
 #include "Creatures/Visual/CreatureDrawQueue.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureRenderStats.h"
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
+#include "Render/Engine/CreatureLightCache.h"
 #include "Render/Engine/ShaderManager.h"
 #include <glm/glm.hpp>
 #include <memory>
@@ -57,6 +57,10 @@ public:
   CreatureDrawQueue &GetDrawQueue() { return Queue; }
 
 private:
+  void FinishCreatureFrame(UWorld &world, const glm::mat4 &viewProj,
+                           UGeometryEngine &engine, bool labels,
+                           bool lightBench, int lightSamples,
+                           double lightSampleMs, bool localLight);
   void SubmitCreatureVisual(UWorld &world, UCreature &creature,
                             const CreatureDefinition &def, float dt,
                             const CreatureDrawContext &ctx,
@@ -109,7 +113,7 @@ private:
   std::shared_ptr<UShaderProgram> creatureShader;
   std::shared_ptr<UShaderProgram> creatureSkinnedShader;
   CreatureRenderStats Stats;
-  CreaturePassTimingProbe TimingProbe;
+  UCreaturePassTimingProbe TimingProbe;
   CreatureDrawQueue Queue;
   float ActiveHitFlash01{0.f};
   glm::vec2 ActiveLight{1.0f, 0.0f};

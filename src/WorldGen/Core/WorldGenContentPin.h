@@ -1,10 +1,10 @@
 #pragma once
 
-#include "WorldGen/Core/WorldGenRefs.h"
-#include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Core/WorldGenContentPinTls.h"
-#include "WorldGen/Sampling/BiomeDefinitionRegistry.h"
+#include "WorldGen/Core/WorldGenPack.h"
+#include "WorldGen/Core/WorldGenRefs.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
+#include "WorldGen/Sampling/BiomeDefinitionRegistry.h"
 #include <memory>
 
 namespace cutum
@@ -16,7 +16,7 @@ namespace cutum
 struct WorldGenContentSnapshot
 {
   std::shared_ptr<const WorldGenPack> Pack;
-  std::shared_ptr<const BiomeDefinitionRegistry> Biomes;
+  std::shared_ptr<const UBiomeDefinitionRegistry> Biomes;
   std::shared_ptr<const ObjectFeatureConfig> Features;
   std::shared_ptr<const WorldGenRefsCatalog> Refs;
 };
@@ -24,14 +24,15 @@ struct WorldGenContentSnapshot
 WorldGenContentSnapshot CaptureWorldGenContentSnapshot();
 
 /// RAII pin for worker threads. Nested pins are not supported.
-class WorldGenContentPinScope
+class UWorldGenContentPinScope
 {
 public:
-  explicit WorldGenContentPinScope(WorldGenContentSnapshot snapshot);
-  ~WorldGenContentPinScope();
+  explicit UWorldGenContentPinScope(WorldGenContentSnapshot snapshot);
+  ~UWorldGenContentPinScope();
 
-  WorldGenContentPinScope(const WorldGenContentPinScope &) = delete;
-  WorldGenContentPinScope &operator=(const WorldGenContentPinScope &) = delete;
+  UWorldGenContentPinScope(const UWorldGenContentPinScope &) = delete;
+  UWorldGenContentPinScope &
+  operator=(const UWorldGenContentPinScope &) = delete;
 
   const WorldGenContentSnapshot &Get() const { return Snapshot; }
 

@@ -11,6 +11,10 @@ from __future__ import annotations
 
 import re
 import sys
+try:
+    from .cpp_lex import mask_cpp
+except ImportError:
+    from cpp_lex import mask_cpp
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -49,7 +53,6 @@ ALLOWLIST_CPP: set[tuple[str, str]] = {
     ("src/World/Core/World.cpp", "Render/Backend/RenderBackendCaps.h"),
     ("src/World/Core/World.cpp", "Render/Backend/RenderBackendFactory.h"),
     ("src/World/Core/World.cpp", "Render/Camera/Camera.h"),
-    ("src/World/Core/World.cpp", "Render/Mesh/MeshApplyPolicy.h"),
     ("src/World/Diagnostics/BlockInspectDiagnostics.cpp", "Render/Camera/Camera.h"),
     ("src/World/Diagnostics/BlockInspectDiagnostics.cpp", "Render/Engine/GeometryEngine.h"),
     ("src/World/Diagnostics/EnterLitDiagnostics.cpp", "Render/Camera/Camera.h"),
@@ -72,12 +75,10 @@ ALLOWLIST_CPP: set[tuple[str, str]] = {
     ("src/World/Persistence/WorldPersistence.cpp", "Render/Camera/Camera.h"),
     ("src/World/Streaming/ChunkEmergeCoordinator.cpp", "Render/Camera/Camera.h"),
     ("src/World/Streaming/ChunkEmergeCoordinator.cpp", "Render/Mesh/GpuMeshPipeline.h"),
-    ("src/World/Streaming/ChunkEmergeCoordinator.cpp", "Render/Mesh/MeshApplyPolicy.h"),
     ("src/World/Streaming/ChunkEmergeCoordinator.cpp", "Render/Mesh/MeshCaptureWorker.h"),
     ("src/World/Streaming/ColumnFlowExecutor.cpp", "Render/Camera/Camera.h"),
     ("src/World/Streaming/WorldStreaming.cpp", "Render/Backend/RenderBackendCaps.h"),
     ("src/World/Streaming/WorldStreaming.cpp", "Render/Camera/Camera.h"),
-    ("src/World/Streaming/WorldStreaming.cpp", "Render/Mesh/MeshApplyPolicy.h"),
     ("src/World/View/WorldViewSettings.cpp", "Render/Camera/IsoViewPreset.h"),
     ("src/World/Core/WorldViewBinding.cpp", "Render/Camera/Camera.h"),
     ("src/World/Core/WorldViewBinding.cpp", "Render/Engine/ViewEngine.h"),
@@ -98,7 +99,7 @@ def scan_world_render_includes() -> list[dict[str, str | int]]:
             continue
         allowlist = ALLOWLIST_H if fp.suffix == ".h" else ALLOWLIST_CPP
         for line_no, line in enumerate(
-            fp.read_text(encoding="utf-8", errors="ignore").splitlines(), start=1
+            mask_cpp(fp.read_text(encoding="utf-8", errors="ignore"), strings=False).splitlines(), start=1
         ):
             match = INCLUDE_RE.search(line)
             if not match:
@@ -130,7 +131,7 @@ def scan_render_world_reverse() -> list[dict[str, str | int]]:
             continue
         rel = fp.relative_to(REPO_ROOT).as_posix()
         for line_no, line in enumerate(
-            fp.read_text(encoding="utf-8", errors="ignore").splitlines(), start=1
+            mask_cpp(fp.read_text(encoding="utf-8", errors="ignore"), strings=False).splitlines(), start=1
         ):
             match = INCLUDE_RE.search(line)
             if not match:
@@ -168,7 +169,7 @@ def main() -> int:
     print(
         f"check_include_rules: ok (World/Mesh adapter exempt; "
         f"{allow_count} allowlisted legacy include(s); "
-        f"reverse Render→World streaming/lighting edges={len(reverse)})"
+        f"reverse Render->World streaming/lighting edges={len(reverse)})"
     )
     if reverse:
         print("check_include_rules: reverse inventory (burn-down targets):")

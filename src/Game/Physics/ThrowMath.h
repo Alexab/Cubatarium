@@ -67,7 +67,8 @@ inline std::optional<SweepContact> SweepBody(glm::vec3 start, glm::vec3 delta,
 inline int CarryHands(const PhysicalProfile &p, int strength,
                       float height = 1.8f)
 {
-  if (!std::isfinite(p.size.x) || !std::isfinite(p.size.y) ||
+  if (!std::isfinite(height) || height <= 0 || strength <= 0 ||
+      !std::isfinite(p.size.x) || !std::isfinite(p.size.y) ||
       !std::isfinite(p.size.z) ||
       glm::any(glm::lessThanEqual(p.size, glm::vec3(0))))
     return 0;
@@ -85,7 +86,7 @@ inline int CarryHands(const PhysicalProfile &p, int strength,
 inline float ThrowSpeed(const PhysicalProfile &p, int strength, float charge,
                         float height = 1.8f)
 {
-  if (!CarryHands(p, strength, height))
+  if (!std::isfinite(charge) || !CarryHands(p, strength, height))
     return 0.f;
   float size = std::max({p.size.x, p.size.y, p.size.z});
   return (12.f + strength) / std::sqrt(1.f + p.mass / 4.f) /
@@ -94,6 +95,9 @@ inline float ThrowSpeed(const PhysicalProfile &p, int strength, float charge,
 }
 inline float ImpactDamage(float mass, float normalSpeed, float hardness = 1.f)
 {
+  if (!std::isfinite(mass) || mass <= 0 || !std::isfinite(normalSpeed) ||
+      normalSpeed <= 3 || !std::isfinite(hardness) || hardness <= 0)
+    return 0;
   return std::clamp(
       .015f * mass * std::max(0.f, normalSpeed * normalSpeed - 9.f) * hardness,
       0.f, 50.f);

@@ -56,15 +56,15 @@ inline float StepFogRangeSmoother(FogRangeSmootherState &state, float target,
   }
   const float delta = target - state.Value;
   const bool contracting = delta < 0.0f;
-  const float tau = std::max(
-      0.05f, contracting ? params.ContractTauSec : params.ExpandTauSec);
+  const float tau = std::max(0.05f, contracting ? params.ContractTauSec
+                                                : params.ExpandTauSec);
   const float max_speed =
       contracting ? params.ContractMaxSpeed : params.ExpandMaxSpeed;
   const float desired_velocity =
       std::clamp(delta / tau, -params.ContractMaxSpeed, params.ExpandMaxSpeed);
-  const float limited_desired =
-      contracting ? std::max(desired_velocity, -max_speed)
-                  : std::min(desired_velocity, max_speed);
+  const float limited_desired = contracting
+                                    ? std::max(desired_velocity, -max_speed)
+                                    : std::min(desired_velocity, max_speed);
   const float dv = limited_desired - state.Velocity;
   const bool speeding_up =
       (contracting && dv < 0.0f) || (!contracting && dv > 0.0f);

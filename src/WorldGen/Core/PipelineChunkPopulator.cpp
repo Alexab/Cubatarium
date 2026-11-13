@@ -1,25 +1,25 @@
-#include "WorldGen/Core/IUChunkPopulator.h"
+#include "App/Platform/Log.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Objects/ObjectLibrary.h"
 #include "World/Objects/ObjectUtil.h"
 #include "WorldGen/Core/BlockWorldColumnWriter.h"
+#include "WorldGen/Core/IUChunkPopulator.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/Noise.h"
+#include "WorldGen/Core/WorldGenBlockResolver.h"
 #include "WorldGen/Core/WorldGenContentPin.h"
 #include "WorldGen/Core/WorldGenPack.h"
-#include "WorldGen/Core/WorldGenBlockResolver.h"
 #include "WorldGen/Core/WorldGenStageId.h"
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
 #include "WorldGen/Features/RavineCarver.h"
 #include "WorldGen/Features/ValleyCarver.h"
 #include "WorldGen/Pipelines/ColumnGenerationService.h"
-#include "WorldGen/Stages/MudflowErosion.h"
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
 #include "WorldGen/Pipelines/WorldGenStageRunner.h"
+#include "WorldGen/Stages/MudflowErosion.h"
 #include "WorldGen/Stages/WorldGenStages.h"
-#include "App/Platform/Log.h"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -61,15 +61,16 @@ struct PopulateMetricSamples
 PopulateMetricSamples gPopulateSamples;
 ChunkPopulateSummary gPopulateSummary;
 
-void AppendPopulateMetric(std::vector<double> &samples, ChunkPopulateMetric &metric,
-                          double value)
+void AppendPopulateMetric(std::vector<double> &samples,
+                          ChunkPopulateMetric &metric, double value)
 {
   samples.push_back(value);
   metric.totalMs += value;
   metric.maxMs = std::max(metric.maxMs, value);
 }
 
-void FinalizePopulateMetric(std::vector<double> &samples, ChunkPopulateMetric &metric)
+void FinalizePopulateMetric(std::vector<double> &samples,
+                            ChunkPopulateMetric &metric)
 {
   metric.count = samples.size();
   if (samples.empty())
@@ -91,7 +92,8 @@ void FinalizePopulateSummary()
   FinalizePopulateMetric(gPopulateSamples.post, gPopulateSummary.post);
   FinalizePopulateMetric(gPopulateSamples.seal, gPopulateSummary.seal);
   FinalizePopulateMetric(gPopulateSamples.mudflow, gPopulateSummary.mudflow);
-  FinalizePopulateMetric(gPopulateSamples.pocketSeal, gPopulateSummary.pocketSeal);
+  FinalizePopulateMetric(gPopulateSamples.pocketSeal,
+                         gPopulateSummary.pocketSeal);
   FinalizePopulateMetric(gPopulateSamples.permeableSeal,
                          gPopulateSummary.permeableSeal);
   FinalizePopulateMetric(gPopulateSamples.permeableFloorScan,
@@ -195,7 +197,7 @@ EnsureThreadLocalPipeline(UBlockRegistry &registry, UObjectLibrary *prefabs,
   {
     state.world.Clear();
     RefreshThreadLocalPipelineContext(registry, prefabs, ownerPackId, settings,
-                                    state.pipeline.get());
+                                      state.pipeline.get());
   }
   return state.pipeline.get();
 }
@@ -236,11 +238,10 @@ int FloraFeatureBlockRank(const std::string &blockName)
 struct CaptureBufferScope
 {
   UBlockWorld &World;
-  explicit CaptureBufferScope(UBlockWorld &world, UChunkBuffer &buffer,
-                              glm::ivec3 ownerChunk,
-                              const UBlockRegistry &registry,
-                              const std::vector<std::pair<BlockId, int>>
-                                  &treeBlockRanks)
+  explicit CaptureBufferScope(
+      UBlockWorld &world, UChunkBuffer &buffer, glm::ivec3 ownerChunk,
+      const UBlockRegistry &registry,
+      const std::vector<std::pair<BlockId, int>> &treeBlockRanks)
       : World(world)
   {
     buffer.SetWorldGenOwnerChunk(ownerChunk, registry, treeBlockRanks);
@@ -254,9 +255,10 @@ struct CaptureBufferScope
 } // namespace
 
 /// Carry deterministic priorities for all flora voxels across chunk borders.
-std::vector<std::pair<BlockId, int>> CollectFloraFeatureBlockRanks(
-    UBlockRegistry &registry, UObjectLibrary *objects,
-    const std::string &ownerPackId, const ObjectFeatureConfig *features)
+std::vector<std::pair<BlockId, int>>
+CollectFloraFeatureBlockRanks(UBlockRegistry &registry, UObjectLibrary *objects,
+                              const std::string &ownerPackId,
+                              const ObjectFeatureConfig *features)
 {
   std::vector<std::pair<BlockId, int>> ranks;
   if (!features)
@@ -269,9 +271,9 @@ std::vector<std::pair<BlockId, int>> CollectFloraFeatureBlockRanks(
     {
       return;
     }
-    auto found = std::find_if(
-        ranks.begin(), ranks.end(),
-        [id](const std::pair<BlockId, int> &entry) { return entry.first == id; });
+    auto found = std::find_if(ranks.begin(), ranks.end(),
+                              [id](const std::pair<BlockId, int> &entry)
+                              { return entry.first == id; });
     if (found == ranks.end())
     {
       ranks.emplace_back(id, rank);
@@ -356,23 +358,28 @@ void ChunkPopulateDiagnostics::Record(const ChunkPopulateTiming &timing,
     return;
   }
   ++gPopulateSummary.completedCount;
-  AppendPopulateMetric(gPopulateSamples.total, gPopulateSummary.total, timing.totalMs);
+  AppendPopulateMetric(gPopulateSamples.total, gPopulateSummary.total,
+                       timing.totalMs);
   AppendPopulateMetric(gPopulateSamples.sample, gPopulateSummary.sample,
                        timing.sampleMs);
   AppendPopulateMetric(gPopulateSamples.terrain, gPopulateSummary.terrain,
                        timing.terrainMs);
-  AppendPopulateMetric(gPopulateSamples.carve, gPopulateSummary.carve, timing.carveMs);
-  AppendPopulateMetric(gPopulateSamples.post, gPopulateSummary.post, timing.postMs);
-  AppendPopulateMetric(gPopulateSamples.seal, gPopulateSummary.seal, timing.sealMs);
+  AppendPopulateMetric(gPopulateSamples.carve, gPopulateSummary.carve,
+                       timing.carveMs);
+  AppendPopulateMetric(gPopulateSamples.post, gPopulateSummary.post,
+                       timing.postMs);
+  AppendPopulateMetric(gPopulateSamples.seal, gPopulateSummary.seal,
+                       timing.sealMs);
   if (timing.detailEnabled)
   {
     ++gPopulateSummary.detailCount;
     AppendPopulateMetric(gPopulateSamples.mudflow, gPopulateSummary.mudflow,
                          timing.mudflowMs);
-    AppendPopulateMetric(gPopulateSamples.pocketSeal, gPopulateSummary.pocketSeal,
-                         timing.pocketSealMs);
+    AppendPopulateMetric(gPopulateSamples.pocketSeal,
+                         gPopulateSummary.pocketSeal, timing.pocketSealMs);
     AppendPopulateMetric(gPopulateSamples.permeableSeal,
-                         gPopulateSummary.permeableSeal, timing.permeableSealMs);
+                         gPopulateSummary.permeableSeal,
+                         timing.permeableSealMs);
     AppendPopulateMetric(gPopulateSamples.permeableFloorScan,
                          gPopulateSummary.permeableFloorScan,
                          timing.permeableFloorScanMs);
@@ -390,7 +397,8 @@ void ChunkPopulateDiagnostics::Record(const ChunkPopulateTiming &timing,
     for (size_t i = 0; i < timing.postStageMs.size(); ++i)
     {
       AppendPopulateMetric(gPopulateSamples.postStages[i],
-                           gPopulateSummary.postStages[i], timing.postStageMs[i]);
+                           gPopulateSummary.postStages[i],
+                           timing.postStageMs[i]);
     }
   }
   gPopulateSummary.mudflowColumns += timing.mudflowColumns;
@@ -398,7 +406,8 @@ void ChunkPopulateDiagnostics::Record(const ChunkPopulateTiming &timing,
   gPopulateSummary.pocketVoxelsFilled += timing.pocketVoxelsFilled;
   gPopulateSummary.permeableColumns += timing.permeableColumns;
   gPopulateSummary.permeableColumnsChanged += timing.permeableColumnsChanged;
-  gPopulateSummary.permeableFloorGroundChecks += timing.permeableFloorGroundChecks;
+  gPopulateSummary.permeableFloorGroundChecks +=
+      timing.permeableFloorGroundChecks;
   gPopulateSummary.permeableFloorSlotChecks += timing.permeableFloorSlotChecks;
   gPopulateSummary.permeableRestoreCells += timing.permeableRestoreCells;
   gPopulateSummary.permeableWaterlogCells += timing.permeableWaterlogCells;
@@ -428,13 +437,80 @@ UPipelineChunkPopulator::UPipelineChunkPopulator(
 {
 }
 
+static void FinishPopulationCacheStats(
+    UComposableWorldGenerator *composable,
+    CoarseHeightCacheStats &coarse_cache_stats,
+    UDensityFieldSampler::SamplingCacheStats &sampling_cache_stats)
+{
+  if (composable)
+  {
+    if (const UCoarseHeightCache *cache = composable->GetChunkCoarseCache())
+    {
+      coarse_cache_stats = cache->GetStats();
+    }
+    if (const UDensityFieldSampler *sampler = composable->GetDensitySampler())
+    {
+      sampling_cache_stats = sampler->GetSamplingCacheStats();
+    }
+    composable->EndChunkCoarseCache();
+  }
+}
+
+template <typename Request, typename Timing, typename CoarseStats,
+          typename SamplingStats>
+static void LogChunkPopulation(const Request &request, const Timing &timing,
+                               const CoarseStats &coarse_cache_stats,
+                               const SamplingStats &sampling_cache_stats,
+                               bool audit_seal)
+{
+  static thread_local double s_last_log_ms = 0.0;
+  static thread_local auto s_last_log_tp = std::chrono::steady_clock::now();
+  const auto now = std::chrono::steady_clock::now();
+  const double since_log =
+      std::chrono::duration<double, std::milli>(now - s_last_log_tp).count();
+  if (timing.totalMs >= 40.0 || since_log >= 5000.0)
+  {
+    CubatariumLogInfo(
+        "ChunkPopulate",
+        "chunk=(" + std::to_string(request.chunkCoord.x) + "," +
+            std::to_string(request.chunkCoord.y) + "," +
+            std::to_string(request.chunkCoord.z) +
+            ") total_ms=" + std::to_string(timing.totalMs) +
+            " sample_ms=" + std::to_string(timing.sampleMs) +
+            " terrain_ms=" + std::to_string(timing.terrainMs) +
+            " carve_ms=" + std::to_string(timing.carveMs) +
+            " post_ms=" + std::to_string(timing.postMs) +
+            " seal_ms=" + std::to_string(timing.sealMs) +
+            " coarse_hits=" + std::to_string(coarse_cache_stats.Hits) +
+            " coarse_misses=" + std::to_string(coarse_cache_stats.Misses) +
+            " coarse_out_of_range=" +
+            std::to_string(coarse_cache_stats.OutOfRange) + " route_hits=" +
+            std::to_string(sampling_cache_stats.RouteHits) + " route_misses=" +
+            std::to_string(sampling_cache_stats.RouteMisses) +
+            " wobble_hits=" + std::to_string(sampling_cache_stats.WobbleHits) +
+            " wobble_misses=" +
+            std::to_string(sampling_cache_stats.WobbleMisses) +
+            " sampling_out_of_range=" +
+            std::to_string(sampling_cache_stats.OutOfRange) +
+            (audit_seal
+                 ? (" mudflow_ms=" + std::to_string(timing.mudflowMs) +
+                    " pocket_ms=" + std::to_string(timing.pocketSealMs) +
+                    " permeable_ms=" + std::to_string(timing.permeableSealMs) +
+                    " reseal_ms=" + std::to_string(timing.pocketResealMs) +
+                    " prune_ms=" + std::to_string(timing.vegetationPruneMs))
+                 : std::string()));
+    s_last_log_tp = now;
+    s_last_log_ms = timing.totalMs;
+  }
+  (void)s_last_log_ms;
+}
+
 ChunkPopulateResult
 UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
 {
-  WorldGenContentSnapshot content = request.content.Pack
-                                        ? request.content
-                                        : CaptureWorldGenContentSnapshot();
-  WorldGenContentPinScope pin(std::move(content));
+  WorldGenContentSnapshot content =
+      request.content.Pack ? request.content : CaptureWorldGenContentSnapshot();
+  UWorldGenContentPinScope pin(std::move(content));
 
   const auto populate_start = std::chrono::steady_clock::now();
   ChunkPopulateTiming timing{};
@@ -471,13 +547,13 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
   ResetScatterChunkCounts();
   ObjectFeatureChunkDiagnosticsScope objectFeatureDiagnostics(audit_seal);
 
-  // D1: write gen scratch + transfer buffer together (no final world→buffer scan).
+  // D1: write gen scratch + transfer buffer together (no final world→buffer
+  // scan).
   result.buffer.Clear();
-  CaptureBufferScope capture_scope(genWorld, result.buffer, request.chunkCoord,
-                                   Registry,
-                                   CollectFloraFeatureBlockRanks(
-                                       Registry, objects, WorldgenOwnerPackId,
-                                       pin.Get().Features.get()));
+  CaptureBufferScope capture_scope(
+      genWorld, result.buffer, request.chunkCoord, Registry,
+      CollectFloraFeatureBlockRanks(Registry, objects, WorldgenOwnerPackId,
+                                    pin.Get().Features.get()));
 
   const int base_x = request.chunkCoord.x * CHUNK_SIZE;
   const int base_z = request.chunkCoord.z * CHUNK_SIZE;
@@ -521,9 +597,7 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
   if (composable)
   {
     const int blend_pad = std::clamp(
-        static_cast<int>(
-            std::lround(settings.Tuning.biomeBlendRadius)),
-        0, 16);
+        static_cast<int>(std::lround(settings.Tuning.biomeBlendRadius)), 0, 16);
     // blend + coast scan (4) + smoothing neighborhood margin
     const int pad = blend_pad + 8;
     composable->BeginChunkCoarseCache(base_x, base_z, pad);
@@ -545,7 +619,8 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
     if (composable)
     {
       UBlockWorldColumnWriter writer(genWorld, Registry);
-      const ComposableTerrainMode terrain_mode = composable->GetConfig().TerrainMode;
+      const ComposableTerrainMode terrain_mode =
+          composable->GetConfig().TerrainMode;
       if (terrain_mode == ComposableTerrainMode::Flat ||
           terrain_mode == ComposableTerrainMode::LegacyHash)
       {
@@ -587,27 +662,25 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
   if (composable)
   {
     const auto seal_cancelled = [&]() -> bool
-    {
-      return request.shouldCancel && request.shouldCancel();
-    };
-    const ComposableTerrainMode terrain_mode = composable->GetConfig().TerrainMode;
+    { return request.shouldCancel && request.shouldCancel(); };
+    const ComposableTerrainMode terrain_mode =
+        composable->GetConfig().TerrainMode;
     if (terrain_mode != ComposableTerrainMode::Flat &&
         terrain_mode != ComposableTerrainMode::LegacyHash)
     {
       WorldGenContext &ctx = composable->GetContext();
       const RavineSurfaceYCallback get_surface_y =
-          [composable, base_x, base_z, &samples,
-           &sample_valid](int hx, int hz)
-          {
-            const int lx = hx - base_x;
-            const int lz = hz - base_z;
-            if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE &&
-                sample_valid[lz][lx])
-            {
-              return samples[lz][lx].SurfaceY;
-            }
-            return composable->SurfaceYAt(hx, hz);
-          };
+          [composable, base_x, base_z, &samples, &sample_valid](int hx, int hz)
+      {
+        const int lx = hx - base_x;
+        const int lz = hz - base_z;
+        if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE &&
+            sample_valid[lz][lx])
+        {
+          return samples[lz][lx].SurfaceY;
+        }
+        return composable->SurfaceYAt(hx, hz);
+      };
 
       const auto carve_start = std::chrono::steady_clock::now();
       if (settings.Tuning.useAnalyticValleys)
@@ -645,8 +718,8 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
       {
         if (!(request.shouldCancel && request.shouldCancel()))
         {
-          CarveChunkRavines(ctx, base_x, base_z, settings.Seed, settings.Ravines,
-                            settings.SeaLevel, get_surface_y);
+          CarveChunkRavines(ctx, base_x, base_z, settings.Seed,
+                            settings.Ravines, settings.SeaLevel, get_surface_y);
         }
       }
       timing.carveMs = ElapsedMs(carve_start);
@@ -660,7 +733,8 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
                                      ? std::chrono::steady_clock::now()
                                      : std::chrono::steady_clock::time_point{};
         int moved = 0;
-        ApplyMudflowToChunk(composable->GetContext(), base_x, base_z, 2, &moved);
+        ApplyMudflowToChunk(composable->GetContext(), base_x, base_z, 2,
+                            &moved);
         timing.mudflowColumns += CHUNK_SIZE * CHUNK_SIZE;
         timing.mudflowVoxelsMoved += static_cast<uint64_t>(moved);
         if (audit_seal)
@@ -718,14 +792,15 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
     }
 
     const auto seal_start = std::chrono::steady_clock::now();
-    // Pocket seal on worker (with shouldCancel). Main only drains cheap ShoreAir.
+    // Pocket seal on worker (with shouldCancel). Main only drains cheap
+    // ShoreAir.
     if (settings.FillWater && !seal_cancelled())
     {
-      auto stage_start = audit_seal
-                             ? std::chrono::steady_clock::now()
-                             : std::chrono::steady_clock::time_point{};
+      auto stage_start = audit_seal ? std::chrono::steady_clock::now()
+                                    : std::chrono::steady_clock::time_point{};
       int filled = 0;
-      SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z, &filled);
+      SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z,
+                              &filled);
       timing.pocketVoxelsFilled = static_cast<uint64_t>(filled);
       if (audit_seal)
       {
@@ -758,7 +833,8 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
           stage_start = audit_seal ? std::chrono::steady_clock::now()
                                    : std::chrono::steady_clock::time_point{};
           filled = 0;
-          SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z, &filled);
+          SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z,
+                                  &filled);
           timing.resealVoxelsFilled = static_cast<uint64_t>(filled);
           if (audit_seal)
           {
@@ -794,63 +870,15 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
     timing.sealMs = ElapsedMs(seal_start);
   }
 
-  if (composable)
-  {
-    if (const UCoarseHeightCache *cache = composable->GetChunkCoarseCache())
-    {
-      coarse_cache_stats = cache->GetStats();
-    }
-    if (const UDensityFieldSampler *sampler = composable->GetDensitySampler())
-    {
-      sampling_cache_stats = sampler->GetSamplingCacheStats();
-    }
-    composable->EndChunkCoarseCache();
-  }
+  FinishPopulationCacheStats(composable, coarse_cache_stats,
+                             sampling_cache_stats);
   // result.buffer already mirrors genWorld via CaptureBufferScope (D1).
 
   timing.totalMs = ElapsedMs(populate_start);
   ChunkPopulateDiagnostics::Record(timing, result.discarded);
 
-  static thread_local double s_last_log_ms = 0.0;
-  static thread_local auto s_last_log_tp = std::chrono::steady_clock::now();
-  const auto now = std::chrono::steady_clock::now();
-  const double since_log =
-      std::chrono::duration<double, std::milli>(now - s_last_log_tp).count();
-  if (timing.totalMs >= 40.0 || since_log >= 5000.0)
-  {
-    CubatariumLogInfo(
-        "ChunkPopulate",
-        "chunk=(" + std::to_string(request.chunkCoord.x) + "," +
-            std::to_string(request.chunkCoord.y) + "," +
-            std::to_string(request.chunkCoord.z) + ") total_ms=" +
-            std::to_string(timing.totalMs) +
-            " sample_ms=" + std::to_string(timing.sampleMs) +
-            " terrain_ms=" + std::to_string(timing.terrainMs) +
-            " carve_ms=" + std::to_string(timing.carveMs) +
-            " post_ms=" + std::to_string(timing.postMs) +
-            " seal_ms=" + std::to_string(timing.sealMs) +
-            " coarse_hits=" + std::to_string(coarse_cache_stats.Hits) +
-            " coarse_misses=" + std::to_string(coarse_cache_stats.Misses) +
-            " coarse_out_of_range=" +
-            std::to_string(coarse_cache_stats.OutOfRange) +
-            " route_hits=" + std::to_string(sampling_cache_stats.RouteHits) +
-            " route_misses=" + std::to_string(sampling_cache_stats.RouteMisses) +
-            " wobble_hits=" + std::to_string(sampling_cache_stats.WobbleHits) +
-            " wobble_misses=" + std::to_string(sampling_cache_stats.WobbleMisses) +
-            " sampling_out_of_range=" +
-            std::to_string(sampling_cache_stats.OutOfRange) +
-            (audit_seal
-                 ? (" mudflow_ms=" + std::to_string(timing.mudflowMs) +
-                    " pocket_ms=" + std::to_string(timing.pocketSealMs) +
-                    " permeable_ms=" +
-                        std::to_string(timing.permeableSealMs) +
-                    " reseal_ms=" + std::to_string(timing.pocketResealMs) +
-                    " prune_ms=" + std::to_string(timing.vegetationPruneMs))
-                 : std::string()));
-    s_last_log_tp = now;
-    s_last_log_ms = timing.totalMs;
-  }
-  (void)s_last_log_ms;
+  LogChunkPopulation(request, timing, coarse_cache_stats, sampling_cache_stats,
+                     audit_seal);
 
   return result;
 }

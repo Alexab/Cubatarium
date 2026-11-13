@@ -6,8 +6,8 @@
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Objects/ObjectLibrary.h"
-#include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
+#include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Core/WorldGenRefs.h"
@@ -39,13 +39,14 @@ namespace fs = std::filesystem;
 namespace
 {
 
-constexpr const char *kTestName = "worldgen_vegetation_placement_integration_test";
+constexpr const char *kTestName =
+    "worldgen_vegetation_placement_integration_test";
 constexpr uint32_t kSeed = 410021u;
 
-class FixedSurfacePipeline final : public cutum::IUWorldGenPipeline
+class UFixedSurfacePipeline final : public cutum::IUWorldGenPipeline
 {
 public:
-  FixedSurfacePipeline(cutum::WorldGenContext context, int surfaceY)
+  UFixedSurfacePipeline(cutum::WorldGenContext context, int surfaceY)
       : IUWorldGenPipeline(context), SurfaceY(surfaceY)
   {
   }
@@ -73,7 +74,8 @@ static fs::path FindRepoRoot()
   for (int depth = 0; depth < 8; ++depth)
   {
     if (fs::exists(dir / "content" / "worldgen_refs.json") &&
-        fs::exists(dir / "resource_packs" / "minetest_default_16" / "pack.json"))
+        fs::exists(dir / "resource_packs" / "minetest_default_16" /
+                   "pack.json"))
     {
       return dir;
     }
@@ -92,7 +94,8 @@ LoadPackDefinitions(const fs::path &pack_root)
 {
   const std::optional<cutum::ResourcePackManifest> manifest =
       cutum::UResourcePack::LoadManifest(pack_root);
-  FluidTest::Expect(manifest.has_value(), kTestName, "pack manifest load failed");
+  FluidTest::Expect(manifest.has_value(), kTestName,
+                    "pack manifest load failed");
   const std::vector<cutum::ResourcePackBlock> blocks =
       cutum::UResourcePack::LoadBlocks(*manifest);
   FluidTest::Expect(!blocks.empty(), kTestName, "pack has no blocks");
@@ -170,15 +173,14 @@ static void TestConfiguredGroundCoverEcology(const fs::path &repo_root)
     }
     else if (rule.Scatter.BlockName == "mtg_fern_1")
     {
-      hasFern = rule.Ecology.HasMoistureRange &&
-                rule.Ecology.MoistureMin >= 0.6f;
+      hasFern =
+          rule.Ecology.HasMoistureRange && rule.Ecology.MoistureMin >= 0.6f;
     }
     else if (rule.Scatter.BlockName == "mtg_papyrus")
     {
       hasWaterEdgePapyrus =
           rule.Surface.Kind == cutum::SurfaceConstraintKind::NearWater &&
-          rule.Surface.NearWaterRadius == 7 &&
-          rule.Ecology.HasMoistureRange;
+          rule.Surface.NearWaterRadius == 7 && rule.Ecology.HasMoistureRange;
       hasSeaRelativePapyrusRange =
           rule.Ecology.ElevationRef ==
               cutum::FeatureEcologyProfile::ElevationReference::SeaLevel &&
@@ -225,16 +227,16 @@ static void TestConfiguredGroundCoverEcology(const fs::path &repo_root)
   cutum::FeatureEcologyProfile absolute;
   absolute.MinElevation = 45;
   absolute.MaxElevation = 54;
-  FluidTest::Expect(absolute.AllowsElevation(51, 63) &&
-                        !absolute.AllowsElevation(60, 63),
-                    kTestName,
-                    "legacy absolute ecology ranges keep their original meaning");
+  FluidTest::Expect(
+      absolute.AllowsElevation(51, 63) && !absolute.AllowsElevation(60, 63),
+      kTestName, "legacy absolute ecology ranges keep their original meaning");
 
   const fs::path legacyConfigPath =
       fs::temp_directory_path() / "cubatarium_legacy_feature_elevation.json";
   {
     std::ofstream legacyConfig(legacyConfigPath, std::ios::trunc);
-    legacyConfig << R"({"ground_cover":[{"mode":"scatter_blocks","block":"legacy_test_plant","biomes":["plains"],"ecology":{"elevation":[45,54]}}]})";
+    legacyConfig
+        << R"({"ground_cover":[{"mode":"scatter_blocks","block":"legacy_test_plant","biomes":["plains"],"ecology":{"elevation":[45,54]}}]})";
   }
   bool legacyArrayLoaded = false;
   if (cutum::UObjectFeatureConfigStorage::LoadFromFile(legacyConfigPath))
@@ -245,8 +247,8 @@ static void TestConfiguredGroundCoverEcology(const fs::path &repo_root)
       if (rule.Scatter.BlockName == "legacy_test_plant")
       {
         legacyArrayLoaded =
-            rule.Ecology.ElevationRef == cutum::FeatureEcologyProfile::
-                                            ElevationReference::AbsoluteY &&
+            rule.Ecology.ElevationRef ==
+                cutum::FeatureEcologyProfile::ElevationReference::AbsoluteY &&
             rule.Ecology.MinElevation == 45 &&
             rule.Ecology.MaxElevation == 54 &&
             rule.Ecology.AllowsElevation(51, 63) &&
@@ -254,8 +256,8 @@ static void TestConfiguredGroundCoverEcology(const fs::path &repo_root)
       }
     }
   }
-  cutum::UObjectFeatureConfigStorage::LoadFromFile(
-      repo_root / "content" / "object_features.json");
+  cutum::UObjectFeatureConfigStorage::LoadFromFile(repo_root / "content" /
+                                                   "object_features.json");
   std::error_code removeError;
   fs::remove(legacyConfigPath, removeError);
   FluidTest::Expect(legacyArrayLoaded, kTestName,
@@ -265,14 +267,9 @@ static void TestConfiguredGroundCoverEcology(const fs::path &repo_root)
 static void TestConfiguredTreeElevationBands()
 {
   const std::unordered_map<std::string, int> expectedMaxAboveSea = {
-      {"tree_acacia", 52},
-      {"tree_apple", 56},
-      {"tree_aspen", 68},
-      {"tree_jungle", 50},
-      {"tree_jungle_emergent", 55},
-      {"tree_pine", 96},
-      {"tree_pine_small", 90},
-      {"tree_pine_snowy", 105},
+      {"tree_acacia", 52},     {"tree_apple", 56},           {"tree_aspen", 68},
+      {"tree_jungle", 50},     {"tree_jungle_emergent", 55}, {"tree_pine", 96},
+      {"tree_pine_small", 90}, {"tree_pine_snowy", 105},
   };
   std::unordered_map<std::string, bool> checked;
   for (const auto &expected : expectedMaxAboveSea)
@@ -306,9 +303,9 @@ static void TestConfiguredTreeElevationBands()
   const bool allStaticTreeProfilesPresent =
       std::all_of(checked.begin(), checked.end(),
                   [](const auto &entry) { return entry.second; });
-  FluidTest::Expect(
-      allStaticTreeProfilesPresent, kTestName,
-      "all authored tree templates use sea-relative elevation and slope limits");
+  FluidTest::Expect(allStaticTreeProfilesPresent, kTestName,
+                    "all authored tree templates use sea-relative elevation "
+                    "and slope limits");
 }
 
 static void TestConfiguredNaturalFeatureElevationBands()
@@ -355,8 +352,8 @@ static void TestConfiguredNaturalFeatureElevationBands()
     if (rule.Mode == cutum::ObjectFeatureRuleMode::ScatterBlocks &&
         rule.Scatter.BlockName == "flower")
     {
-      flowerScatterLimited = hasSeaRelativeProfile(rule, -3, 42) &&
-                             rule.Ecology.MaxSlope == 9.0f;
+      flowerScatterLimited =
+          hasSeaRelativeProfile(rule, -3, 42) && rule.Ecology.MaxSlope == 9.0f;
     }
     else if (rule.Mode == cutum::ObjectFeatureRuleMode::Object &&
              rule.ObjectName == "flower_scatter_plains")
@@ -378,22 +375,23 @@ static void TestConfiguredNaturalFeatureElevationBands()
   FluidTest::Expect(cactusLimited, kTestName,
                     "cactus is restricted to warm, dry, low-slope ground");
   (void)flowerPatchLimited;
-  FluidTest::Expect(flowerScatterLimited && !duplicateFlowerRulePresent,
-                    kTestName,
-                    "plains flowers use one scatter rule with its ecological band");
+  FluidTest::Expect(
+      flowerScatterLimited && !duplicateFlowerRulePresent, kTestName,
+      "plains flowers use one scatter rule with its ecological band");
   FluidTest::Expect(sparsePineBushLimited, kTestName,
                     "sparse-forest pine bushes use the conifer ecology band");
 }
 
-static void TestChunkPopulatorPlacesTrees(cutum::UPipelineChunkPopulator &populator,
-                                          cutum::UBlockRegistry &registry,
-                                          cutum::UObjectLibrary &objects)
+static void
+TestChunkPopulatorPlacesTrees(cutum::UPipelineChunkPopulator &populator,
+                              cutum::UBlockRegistry &registry,
+                              cutum::UObjectLibrary &objects)
 {
   FluidTest::Expect(objects.Get("tree_pine") != nullptr, kTestName,
                     "tree_pine prefab loaded");
   FluidTest::Expect(
-      cutum::UObjectFeatureConfigStorage::Get().Vegetation.size() > 0, kTestName,
-      "vegetation rules loaded");
+      cutum::UObjectFeatureConfigStorage::Get().Vegetation.size() > 0,
+      kTestName, "vegetation rules loaded");
 
   cutum::ProceduralSettings settings = MakeVegetationSettings();
   // Profile 3 terrain (smooth noise, gentle shoreline) moved the old seed
@@ -411,14 +409,13 @@ static void TestChunkPopulatorPlacesTrees(cutum::UPipelineChunkPopulator &popula
       {
         // Vegetation grows around Y=40..140. Populate those vertical sections
         // so worldgen-owned tree voxels are applied to their owning chunks.
-        chunkOrder.emplace_back(kSpawnChunkX + cx, chunk_y,
-                                kSpawnChunkZ + cz);
+        chunkOrder.emplace_back(kSpawnChunkX + cx, chunk_y, kSpawnChunkZ + cz);
       }
     }
   }
   cutum::ChunkGenerationToken token;
-  const auto populate = [&](cutum::UBlockWorld &world,
-                            const std::vector<glm::ivec3> &order)
+  const auto populate =
+      [&](cutum::UBlockWorld &world, const std::vector<glm::ivec3> &order)
   {
     world.SetFluidDefinitions(registry.GetDefinitions());
     for (const glm::ivec3 &chunkCoord : order)
@@ -428,9 +425,8 @@ static void TestChunkPopulatorPlacesTrees(cutum::UPipelineChunkPopulator &popula
       request.token = token;
       request.settings = settings;
       request.objects = &objects;
-      request.columnOrigin = glm::ivec2(
-          kSpawnChunkX * cutum::CHUNK_SIZE + 8,
-          kSpawnChunkZ * cutum::CHUNK_SIZE + 8);
+      request.columnOrigin = glm::ivec2(kSpawnChunkX * cutum::CHUNK_SIZE + 8,
+                                        kSpawnChunkZ * cutum::CHUNK_SIZE + 8);
       request.hasColumnOrigin = true;
       const cutum::ChunkPopulateResult result = populator.Populate(request);
       result.buffer.ApplyTo(world);
@@ -440,9 +436,8 @@ static void TestChunkPopulatorPlacesTrees(cutum::UPipelineChunkPopulator &popula
   const auto snapshot = [](cutum::UBlockWorld &world)
   {
     std::vector<std::tuple<int, int, int, cutum::BlockId>> blocks;
-    world.ForEachBlock(
-        [&blocks](glm::ivec3 pos, cutum::BlockId id)
-        { blocks.emplace_back(pos.x, pos.y, pos.z, id); });
+    world.ForEachBlock([&blocks](glm::ivec3 pos, cutum::BlockId id)
+                       { blocks.emplace_back(pos.x, pos.y, pos.z, id); });
     std::sort(blocks.begin(), blocks.end());
     return blocks;
   };
@@ -470,9 +465,9 @@ static void TestChunkPopulatorPlacesTrees(cutum::UPipelineChunkPopulator &popula
               << " reverse=" << reverseBlocks.size()
               << " forward_only=" << forwardOnly.size()
               << " reverse_only=" << reverseOnly.size() << std::endl;
-    const auto printFirst = [](const char *label,
-                               const std::vector<std::tuple<int, int, int,
-                                                            cutum::BlockId>> &items)
+    const auto printFirst =
+        [](const char *label,
+           const std::vector<std::tuple<int, int, int, cutum::BlockId>> &items)
     {
       for (size_t i = 0; i < std::min<size_t>(items.size(), 12); ++i)
       {
@@ -488,12 +483,14 @@ static void TestChunkPopulatorPlacesTrees(cutum::UPipelineChunkPopulator &popula
                     "generated chunk area is independent of chunk apply order");
 
   static constexpr std::array<const char *, 16> treeBlockNames = {
-      "tree_log",          "mtg_tree",       "mtg_pine_tree",
-      "mtg_aspen_tree",    "mtg_acacia_tree", "mtg_jungletree",
-      "tree_leaves",       "mtg_leaves",     "leaves_spruce",
-      "leaves_spruce_light", "leaves_jungle",  "leaves_jungle_light",
-      "mtg_aspen_leaves",  "mtg_acacia_leaves", "mtg_jungleleaves",
-      "mtg_pine_needles"};
+      "tree_log",         "mtg_tree",
+      "mtg_pine_tree",    "mtg_aspen_tree",
+      "mtg_acacia_tree",  "mtg_jungletree",
+      "tree_leaves",      "mtg_leaves",
+      "leaves_spruce",    "leaves_spruce_light",
+      "leaves_jungle",    "leaves_jungle_light",
+      "mtg_aspen_leaves", "mtg_acacia_leaves",
+      "mtg_jungleleaves", "mtg_pine_needles"};
   int tree_blocks = 0;
   for (const char *name : treeBlockNames)
   {
@@ -529,10 +526,10 @@ static void TestWaterColumnFloorEarlyExit(cutum::UBlockRegistry &registry)
   }
   highestWorld.SetBlock(glm::ivec3(0, 4, 0), highestCtx.Blocks.Stone);
   cutum::SealFluidPermeableDecorInChunk(highestCtx, 0, 0);
-  FluidTest::Expect(highestWorld.IsAir(glm::ivec3(0, 3, 0)) &&
-                        highestWorld.GetBlock(glm::ivec3(0, 5, 0)) ==
-                            highestCtx.Blocks.Water,
-                    kTestName, "water-column seal retains the highest valid floor");
+  FluidTest::Expect(
+      highestWorld.IsAir(glm::ivec3(0, 3, 0)) &&
+          highestWorld.GetBlock(glm::ivec3(0, 5, 0)) == highestCtx.Blocks.Water,
+      kTestName, "water-column seal retains the highest valid floor");
 
   // Stone at sea level makes every lower floor invalid. It must not be
   // removed, and the air below it must not turn into water.
@@ -545,12 +542,12 @@ static void TestWaterColumnFloorEarlyExit(cutum::UBlockRegistry &registry)
   blockedWorld.SetBlock(glm::ivec3(0, 8, 0), blockedCtx.Blocks.Stone);
   cutum::FluidPermeableSealStats stats;
   cutum::SealFluidPermeableDecorInChunk(blockedCtx, 0, 0, nullptr, &stats);
-  FluidTest::Expect(blockedWorld.IsAir(glm::ivec3(0, 5, 0)) &&
-                        blockedWorld.GetBlock(glm::ivec3(0, 8, 0)) ==
-                            blockedCtx.Blocks.Stone,
-                    kTestName, "permanent water-column obstruction rejects lower floors");
-  FluidTest::Expect(stats.floorGroundChecks < 256 * 8,
-                    kTestName, "permanent obstruction avoids full lower-column scans");
+  FluidTest::Expect(
+      blockedWorld.IsAir(glm::ivec3(0, 5, 0)) &&
+          blockedWorld.GetBlock(glm::ivec3(0, 8, 0)) == blockedCtx.Blocks.Stone,
+      kTestName, "permanent water-column obstruction rejects lower floors");
+  FluidTest::Expect(stats.floorGroundChecks < 256 * 8, kTestName,
+                    "permanent obstruction avoids full lower-column scans");
 }
 
 static void TestSpatialFloraCandidateDensity(cutum::UBlockRegistry &registry)
@@ -604,8 +601,9 @@ static void TestSpatialFloraCandidateDensity(cutum::UBlockRegistry &registry)
 
   const int placedGrass = CountBlocksNamed(world, registry, "mtg_grass_1");
   std::cout << "spatial flora test placements=" << placedGrass << std::endl;
-  FluidTest::Expect(placedGrass >= 55, kTestName,
-                    "full-cell jitter preserves authored flora candidate density");
+  FluidTest::Expect(
+      placedGrass >= 55, kTestName,
+      "full-cell jitter preserves authored flora candidate density");
 }
 
 struct RegionalFloraRun
@@ -614,9 +612,9 @@ struct RegionalFloraRun
   std::vector<std::tuple<int, int, int>> Placements;
 };
 
-static RegionalFloraRun RunRegionalFloraFixture(
-    cutum::UBlockRegistry &registry,
-    const cutum::FeatureDistributionProfile &distribution)
+static RegionalFloraRun
+RunRegionalFloraFixture(cutum::UBlockRegistry &registry,
+                        const cutum::FeatureDistributionProfile &distribution)
 {
   cutum::ProceduralSettings settings = MakeVegetationSettings();
   settings.Seed = kSeed;
@@ -665,24 +663,22 @@ static RegionalFloraRun RunRegionalFloraFixture(
     }
   }
 
-  const cutum::BlockId grassId =
-      registry.GetIdByTypeName("mtg_grass_1");
+  const cutum::BlockId grassId = registry.GetIdByTypeName("mtg_grass_1");
   RegionalFloraRun result;
-  world.ForEachBlock([&](glm::ivec3 position, cutum::BlockId id)
-                     {
-                       if (id != grassId || position.y != kSurfaceY + 1 ||
-                           position.x < 0 || position.z < 0 ||
-                           position.x >= kRegionSize ||
-                           position.z >= kRegionSize)
-                       {
-                         return;
-                       }
-                       const int tileX = position.x / 64;
-                       const int tileZ = position.z / 64;
-                       ++result.TileCounts[static_cast<size_t>(tileZ * 3 + tileX)];
-                       result.Placements.emplace_back(position.x, position.y,
-                                                      position.z);
-                     });
+  world.ForEachBlock(
+      [&](glm::ivec3 position, cutum::BlockId id)
+      {
+        if (id != grassId || position.y != kSurfaceY + 1 || position.x < 0 ||
+            position.z < 0 || position.x >= kRegionSize ||
+            position.z >= kRegionSize)
+        {
+          return;
+        }
+        const int tileX = position.x / 64;
+        const int tileZ = position.z / 64;
+        ++result.TileCounts[static_cast<size_t>(tileZ * 3 + tileX)];
+        result.Placements.emplace_back(position.x, position.y, position.z);
+      });
   std::sort(result.Placements.begin(), result.Placements.end());
   return result;
 }
@@ -704,8 +700,7 @@ static double TileCountVariance(const std::array<int, 9> &counts)
   return variance / static_cast<double>(counts.size());
 }
 
-static void TestRegionalFloraDensityClustering(
-    cutum::UBlockRegistry &registry)
+static void TestRegionalFloraDensityClustering(cutum::UBlockRegistry &registry)
 {
   const cutum::FeatureDistributionProfile neutral{};
   cutum::FeatureDistributionProfile clustered;
@@ -718,20 +713,27 @@ static void TestRegionalFloraDensityClustering(
   const RegionalFloraRun repeat = RunRegionalFloraFixture(registry, clustered);
   FluidTest::Expect(first.Placements == repeat.Placements, kTestName,
                     "regional flora clusters repeat for the same seed");
-  FluidTest::Expect(
-      TileCountVariance(first.TileCounts) >
-          TileCountVariance(baseline.TileCounts) * 1.2,
-      kTestName,
-      "regional density creates broader ground-cover patches than the local field alone");
+  FluidTest::Expect(TileCountVariance(first.TileCounts) >
+                        TileCountVariance(baseline.TileCounts) * 1.2,
+                    kTestName,
+                    "regional density creates broader ground-cover patches "
+                    "than the local field alone");
 }
 
-static void TestBuiltinTreeTemplateLogsConnectToTrunk(
-    const cutum::UObjectLibrary &objects)
+static void
+TestBuiltinTreeTemplateLogsConnectToTrunk(const cutum::UObjectLibrary &objects)
 {
   static const std::array<const char *, 11> kTreeTemplates = {
-      "tree_acacia", "tree_apple", "tree_aspen", "tree_jungle",
-      "tree_jungle_emergent", "tree_large", "tree_pine",
-      "tree_pine_small", "tree_pine_snowy", "tree_pine_snowy_small",
+      "tree_acacia",
+      "tree_apple",
+      "tree_aspen",
+      "tree_jungle",
+      "tree_jungle_emergent",
+      "tree_large",
+      "tree_pine",
+      "tree_pine_small",
+      "tree_pine_snowy",
+      "tree_pine_snowy_small",
       "tree_small"};
 
   for (const char *name : kTreeTemplates)
@@ -794,8 +796,9 @@ static void TestBuiltinTreeTemplateLogsConnectToTrunk(
   }
 }
 
-static void TestStaticPlantPrefabsPlaceOnFlatGround(
-    cutum::UBlockRegistry &registry, cutum::UObjectLibrary &objects)
+static void
+TestStaticPlantPrefabsPlaceOnFlatGround(cutum::UBlockRegistry &registry,
+                                        cutum::UObjectLibrary &objects)
 {
   cutum::ProceduralSettings settings = MakeVegetationSettings();
   settings.SeaLevel = 63;
@@ -829,14 +832,11 @@ static void TestStaticPlantPrefabsPlaceOnFlatGround(
   }
 
   const bool flowerPatchPlaced = cutum::PlaceObjectAt(
-      ctx, "flower_patch_common", glm::ivec3(3, kSurfaceY + 1, 3),
-      kSurfaceY);
+      ctx, "flower_patch_common", glm::ivec3(3, kSurfaceY + 1, 3), kSurfaceY);
   const bool flowerScatterPlaced = cutum::PlaceObjectAt(
-      ctx, "flower_scatter_plains", glm::ivec3(9, kSurfaceY + 1, 3),
-      kSurfaceY);
+      ctx, "flower_scatter_plains", glm::ivec3(9, kSurfaceY + 1, 3), kSurfaceY);
   const bool tallGrassPlaced = cutum::PlaceObjectAt(
-      ctx, "tall_grass_patch", glm::ivec3(15, kSurfaceY + 1, 3),
-      kSurfaceY);
+      ctx, "tall_grass_patch", glm::ivec3(15, kSurfaceY + 1, 3), kSurfaceY);
 
   FluidTest::Expect(flowerPatchPlaced, kTestName,
                     "common rose patch places above supported grass");
@@ -844,8 +844,7 @@ static void TestStaticPlantPrefabsPlaceOnFlatGround(
                     "plains rose scatter places above supported grass");
   FluidTest::Expect(tallGrassPlaced, kTestName,
                     "non-solid tall-grass prefab places above supported grass");
-  FluidTest::Expect(CountBlocksNamed(world, registry, "rose") == 8,
-                    kTestName,
+  FluidTest::Expect(CountBlocksNamed(world, registry, "rose") == 8, kTestName,
                     "both rose prefabs write all configured rose voxels");
   FluidTest::Expect(CountBlocksNamed(world, registry, "tall_grass") == 5,
                     kTestName,
@@ -872,20 +871,17 @@ static void TestStaticPlantPrefabsPlaceOnFlatGround(
       }
     }
   }
-  unevenWorld.SetBlock(glm::ivec3(2, kSurfaceY + 1, 3),
-                       unevenCtx.Blocks.Grass);
+  unevenWorld.SetBlock(glm::ivec3(2, kSurfaceY + 1, 3), unevenCtx.Blocks.Grass);
 
-  const bool unevenFlowerPatchPlaced = cutum::PlaceObjectAt(
-      unevenCtx, "flower_patch_common", glm::ivec3(3, kSurfaceY + 1, 3),
-      kSurfaceY);
+  const bool unevenFlowerPatchPlaced =
+      cutum::PlaceObjectAt(unevenCtx, "flower_patch_common",
+                           glm::ivec3(3, kSurfaceY + 1, 3), kSurfaceY);
   FluidTest::Expect(unevenFlowerPatchPlaced, kTestName,
                     "flower patch adapts to one-block steps in terrain");
   const cutum::BlockId rose = registry.GetIdByTypeName("rose");
   const std::array<glm::ivec3, 5> expectedRosePositions = {
-      glm::ivec3(2, kSurfaceY + 2, 3),
-      glm::ivec3(3, kSurfaceY, 2),
-      glm::ivec3(3, kSurfaceY + 1, 3),
-      glm::ivec3(3, kSurfaceY + 1, 4),
+      glm::ivec3(2, kSurfaceY + 2, 3), glm::ivec3(3, kSurfaceY, 2),
+      glm::ivec3(3, kSurfaceY + 1, 3), glm::ivec3(3, kSurfaceY + 1, 4),
       glm::ivec3(4, kSurfaceY + 1, 3)};
   const bool allUnevenFlowersFollowGround =
       std::all_of(expectedRosePositions.begin(), expectedRosePositions.end(),
@@ -904,7 +900,8 @@ static void TestStaticPlantPrefabsPlaceOnFlatGround(
   {
     for (int x = -kRuleFixtureRadius - 3; x <= kRuleFixtureRadius + 3; ++x)
     {
-      defaultWorld.SetBlock(glm::ivec3(x, kSurfaceY, z), defaultCtx.Blocks.Grass);
+      defaultWorld.SetBlock(glm::ivec3(x, kSurfaceY, z),
+                            defaultCtx.Blocks.Grass);
     }
   }
   for (int z = -kRuleFixtureRadius; z <= kRuleFixtureRadius; ++z)
@@ -934,7 +931,7 @@ static void TestVanillaStyleTreesProfile3(cutum::UBlockRegistry &registry)
   settings.MaxHeight = 128;
   settings.WorldGenProfileVersion = 3;
   cutum::RegisterBuiltinObjectFeaturePlacementStrategies();
-  const auto strategy = cutum::ObjectFeaturePlacementStrategyRegistry::Find(
+  const auto strategy = cutum::UObjectFeaturePlacementStrategyRegistry::Find(
       cutum::ObjectFeatureRuleMode::ProceduralTree);
   FluidTest::Expect(strategy != nullptr, kTestName,
                     "profile 3 tree test finds the strategy");
@@ -982,8 +979,8 @@ static void TestVanillaStyleTreesProfile3(cutum::UBlockRegistry &registry)
           else if (block == leaves)
           {
             ++leafCount;
-            extent = std::max(extent, std::max(std::abs(position.x),
-                                               std::abs(position.z)));
+            extent = std::max(
+                extent, std::max(std::abs(position.x), std::abs(position.z)));
           }
         });
     FluidTest::Expect(!logs.empty() && leafCount >= 8, kTestName,
@@ -1059,8 +1056,9 @@ static void TestProceduralVegetationStrategies(cutum::UBlockRegistry &registry)
   tree.Tree.CrownIrregularity = 0.28f;
   tree.Tree.TrunkBlock = "mtg_tree";
   tree.Tree.LeavesBlock = "mtg_leaves";
-  const auto treeStrategy = cutum::ObjectFeaturePlacementStrategyRegistry::Find(
-      cutum::ObjectFeatureRuleMode::ProceduralTree);
+  const auto treeStrategy =
+      cutum::UObjectFeaturePlacementStrategyRegistry::Find(
+          cutum::ObjectFeatureRuleMode::ProceduralTree);
   FluidTest::Expect(treeStrategy != nullptr, kTestName,
                     "procedural tree strategy is registered");
   FluidTest::Expect(treeStrategy->Place(ctx, 0, 0, 51, tree), kTestName,
@@ -1077,9 +1075,8 @@ static void TestProceduralVegetationStrategies(cutum::UBlockRegistry &registry)
       {
         if (block == tree_trunk || block == tree_leaves)
         {
-          tree_extent = std::max(
-              tree_extent,
-              std::max(std::abs(position.x), std::abs(position.z)));
+          tree_extent = std::max(tree_extent, std::max(std::abs(position.x),
+                                                       std::abs(position.z)));
         }
       });
   bool oak_has_lateral_wood = false;
@@ -1124,7 +1121,8 @@ static void TestProceduralVegetationStrategies(cutum::UBlockRegistry &registry)
       {
         continue;
       }
-      const glm::ivec3 delta = oak_logs[candidateIndex] - oak_logs[currentIndex];
+      const glm::ivec3 delta =
+          oak_logs[candidateIndex] - oak_logs[currentIndex];
       if (std::abs(delta.x) + std::abs(delta.y) + std::abs(delta.z) == 1)
       {
         reachedOakLog[candidateIndex] = true;
@@ -1132,8 +1130,9 @@ static void TestProceduralVegetationStrategies(cutum::UBlockRegistry &registry)
       }
     }
   }
-  FluidTest::Expect(connectedOakLogCount == oak_logs.size(), kTestName,
-                    "procedural broadleaf trunk and branches are face-connected");
+  FluidTest::Expect(
+      connectedOakLogCount == oak_logs.size(), kTestName,
+      "procedural broadleaf trunk and branches are face-connected");
 
   cutum::ObjectFeatureRule pine;
   pine.Mode = cutum::ObjectFeatureRuleMode::ProceduralTree;
@@ -1151,8 +1150,7 @@ static void TestProceduralVegetationStrategies(cutum::UBlockRegistry &registry)
   pine.Tree.LeavesBlock = "mtg_pine_needles";
   FluidTest::Expect(treeStrategy->Place(ctx, 14, 14, 51, pine), kTestName,
                     "conical tree strategy places a pine profile");
-  const cutum::BlockId pine_trunk =
-      registry.GetIdByTypeName("mtg_pine_tree");
+  const cutum::BlockId pine_trunk = registry.GetIdByTypeName("mtg_pine_tree");
   const cutum::BlockId pine_needles =
       registry.GetIdByTypeName("mtg_pine_needles");
   int lowest_pine_foliage_y = std::numeric_limits<int>::max();
@@ -1196,12 +1194,13 @@ static void TestProceduralVegetationStrategies(cutum::UBlockRegistry &registry)
       }
     }
   }
-  FluidTest::Expect(treeStrategy->Place(ctx, -6, 8, 51, tree), kTestName,
-                    "tree keeps a viable silhouette when hillside voxels block its canopy");
-  FluidTest::Expect(CountBlocksNamed(world, registry, "mtg_tree") >
-                        trees_before_clipped_tree,
-                    kTestName,
-                    "clipped tree retains its central trunk instead of failing placement");
+  FluidTest::Expect(
+      treeStrategy->Place(ctx, -6, 8, 51, tree), kTestName,
+      "tree keeps a viable silhouette when hillside voxels block its canopy");
+  FluidTest::Expect(
+      CountBlocksNamed(world, registry, "mtg_tree") > trees_before_clipped_tree,
+      kTestName,
+      "clipped tree retains its central trunk instead of failing placement");
 
   cutum::ObjectFeatureRule shrub;
   shrub.Mode = cutum::ObjectFeatureRuleMode::ProceduralShrub;
@@ -1212,8 +1211,9 @@ static void TestProceduralVegetationStrategies(cutum::UBlockRegistry &registry)
   shrub.Shrub.LobeCount = 4;
   shrub.Shrub.StemBlock = "mtg_bush_stem";
   shrub.Shrub.LeavesBlock = "mtg_bush_leaves";
-  const auto shrubStrategy = cutum::ObjectFeaturePlacementStrategyRegistry::Find(
-      cutum::ObjectFeatureRuleMode::ProceduralShrub);
+  const auto shrubStrategy =
+      cutum::UObjectFeaturePlacementStrategyRegistry::Find(
+          cutum::ObjectFeatureRuleMode::ProceduralShrub);
   FluidTest::Expect(shrubStrategy != nullptr, kTestName,
                     "procedural shrub strategy is registered");
   FluidTest::Expect(shrubStrategy->Place(ctx, 12, 0, 51, shrub), kTestName,
@@ -1235,8 +1235,9 @@ static void TestProceduralVegetationStrategies(cutum::UBlockRegistry &registry)
       world.SetBlock(glm::ivec3(-6 + dx, 53, -5 + dz), grass);
     }
   }
-  FluidTest::Expect(shrubStrategy->Place(ctx, -6, -5, 51, shrub), kTestName,
-                    "shrub keeps viable foliage when hillside voxels block leaves");
+  FluidTest::Expect(
+      shrubStrategy->Place(ctx, -6, -5, 51, shrub), kTestName,
+      "shrub keeps viable foliage when hillside voxels block leaves");
   FluidTest::Expect(
       CountBlocksNamed(world, registry, "mtg_bush_stem") >
           stems_before_clipped_shrub,
@@ -1248,18 +1249,18 @@ static void TestWorldGenSetsSchemaV2Migration()
   using json = nlohmann::json;
   json legacy;
   legacy["schema_version"] = 1;
-  legacy["objects"]["vegetation"]["default"]["entries"] = json::array(
-      {{{"object", "tree_procedural_oak"},
-        {"weight", 5},
-        {"spacing", 39},
-        {"seed_offset", 4012},
-        {"biomes", {"forest", "plains"}}},
-       {{"object", "legacy_absolute_height"},
-        {"weight", 1},
-        {"spacing", 48},
-        {"seed_offset", 9001},
-        {"biomes", {"plains"}},
-        {"ecology", {{"elevation", {10, 20}}}}}});
+  legacy["objects"]["vegetation"]["default"]["entries"] =
+      json::array({{{"object", "tree_procedural_oak"},
+                    {"weight", 5},
+                    {"spacing", 39},
+                    {"seed_offset", 4012},
+                    {"biomes", {"forest", "plains"}}},
+                   {{"object", "legacy_absolute_height"},
+                    {"weight", 1},
+                    {"spacing", 48},
+                    {"seed_offset", 9001},
+                    {"biomes", {"plains"}},
+                    {"ecology", {{"elevation", {10, 20}}}}}});
   cutum::WorldGenSets sets;
   std::string error;
   FluidTest::Expect(cutum::ParseWorldGenSets(legacy, sets, error), kTestName,
@@ -1270,57 +1271,55 @@ static void TestWorldGenSetsSchemaV2Migration()
   const cutum::ObjectFeatureConfig &authored =
       cutum::UObjectFeatureConfigStorage::Get();
   cutum::UpgradeLegacyWorldGenSetMetadata(sets, authored, 2);
-  FluidTest::Expect(sets.SchemaVersion == 3, kTestName,
-                    "profile-2 world upgrades worldgen_sets to reference-aware schema");
+  FluidTest::Expect(
+      sets.SchemaVersion == 3, kTestName,
+      "profile-2 world upgrades worldgen_sets to reference-aware schema");
   const cutum::ObjectFeatureConfig resolved =
       cutum::ResolveObjectFeatures(sets, authored, 2);
-  const auto tree = std::find_if(
-      resolved.Vegetation.begin(), resolved.Vegetation.end(),
-      [](const cutum::ObjectFeatureRule &rule)
-      { return rule.ObjectName == "tree_procedural_oak"; });
-  FluidTest::Expect(tree != resolved.Vegetation.end() &&
-                        tree->Mode ==
-                            cutum::ObjectFeatureRuleMode::ProceduralTree &&
-                        tree->Tree.CrownLobes == 4 && tree->Weight == 5 &&
-                        tree->Spacing == 39 &&
-                        tree->Ecology.ElevationRef ==
-                            cutum::FeatureEcologyProfile::ElevationReference::SeaLevel &&
-                        tree->Ecology.MinElevation == -3 &&
-                        tree->Ecology.MaxElevation == 52,
-                    kTestName,
-                    "migration restores authored profile reference and mode, preserving saved frequency");
+  const auto tree =
+      std::find_if(resolved.Vegetation.begin(), resolved.Vegetation.end(),
+                   [](const cutum::ObjectFeatureRule &rule)
+                   { return rule.ObjectName == "tree_procedural_oak"; });
+  FluidTest::Expect(
+      tree != resolved.Vegetation.end() &&
+          tree->Mode == cutum::ObjectFeatureRuleMode::ProceduralTree &&
+          tree->Tree.CrownLobes == 4 && tree->Weight == 5 &&
+          tree->Spacing == 39 &&
+          tree->Ecology.ElevationRef ==
+              cutum::FeatureEcologyProfile::ElevationReference::SeaLevel &&
+          tree->Ecology.MinElevation == -3 && tree->Ecology.MaxElevation == 52,
+      kTestName,
+      "migration restores authored profile reference and mode, preserving "
+      "saved frequency");
 
-  const auto absoluteHeight = std::find_if(
-      resolved.Vegetation.begin(), resolved.Vegetation.end(),
-      [](const cutum::ObjectFeatureRule &rule)
-      { return rule.ObjectName == "legacy_absolute_height"; });
+  const auto absoluteHeight =
+      std::find_if(resolved.Vegetation.begin(), resolved.Vegetation.end(),
+                   [](const cutum::ObjectFeatureRule &rule)
+                   { return rule.ObjectName == "legacy_absolute_height"; });
   FluidTest::Expect(
       absoluteHeight != resolved.Vegetation.end() &&
           absoluteHeight->Ecology.ElevationRef ==
               cutum::FeatureEcologyProfile::ElevationReference::AbsoluteY &&
           absoluteHeight->Ecology.AllowsElevation(15, 63) &&
           !absoluteHeight->Ecology.AllowsElevation(73, 63),
-      kTestName,
-      "legacy elevation arrays continue to mean absolute world Y");
+      kTestName, "legacy elevation arrays continue to mean absolute world Y");
 
   json saved;
   cutum::WriteWorldGenSets(saved, sets);
-  FluidTest::Expect(saved["worldgen_sets"]["schema_version"] == 3 &&
-                        saved["worldgen_sets"]["objects"]["vegetation"]
-                                ["default"]["entries"][0]["mode"] ==
-                            "procedural_tree" &&
-                        saved["worldgen_sets"]["objects"]["vegetation"]
-                                ["default"]["entries"][0].contains(
-                                    "tree_profile") &&
-                        saved["worldgen_sets"]["objects"]["vegetation"]
-                                ["default"]["entries"][0]["ecology"]
-                                ["elevation"]["above_sea_level"] ==
-                            json::array({-3, 52}) &&
-                        saved["worldgen_sets"]["objects"]["vegetation"]
-                                ["default"]["entries"][1]["ecology"]
-                                ["elevation"] == json::array({10, 20}),
-                    kTestName,
-                    "schema-v3 save retains strategy, tree profile, and elevation reference");
+  FluidTest::Expect(
+      saved["worldgen_sets"]["schema_version"] == 3 &&
+          saved["worldgen_sets"]["objects"]["vegetation"]["default"]["entries"]
+               [0]["mode"] == "procedural_tree" &&
+          saved["worldgen_sets"]["objects"]["vegetation"]["default"]["entries"]
+               [0]
+                   .contains("tree_profile") &&
+          saved["worldgen_sets"]["objects"]["vegetation"]["default"]["entries"]
+               [0]["ecology"]["elevation"]["above_sea_level"] ==
+              json::array({-3, 52}) &&
+          saved["worldgen_sets"]["objects"]["vegetation"]["default"]["entries"]
+               [1]["ecology"]["elevation"] == json::array({10, 20}),
+      kTestName,
+      "schema-v3 save retains strategy, tree profile, and elevation reference");
 
   cutum::WorldGenSets roundTripped;
   FluidTest::Expect(
@@ -1328,11 +1327,11 @@ static void TestWorldGenSetsSchemaV2Migration()
       kTestName, "schema-v3 worldgen_sets parses after save");
   const cutum::ObjectFeatureConfig roundTrippedFeatures =
       cutum::ResolveObjectFeatures(roundTripped, authored, 2);
-  const auto roundTrippedTree = std::find_if(
-      roundTrippedFeatures.Vegetation.begin(),
-      roundTrippedFeatures.Vegetation.end(),
-      [](const cutum::ObjectFeatureRule &rule)
-      { return rule.ObjectName == "tree_procedural_oak"; });
+  const auto roundTrippedTree =
+      std::find_if(roundTrippedFeatures.Vegetation.begin(),
+                   roundTrippedFeatures.Vegetation.end(),
+                   [](const cutum::ObjectFeatureRule &rule)
+                   { return rule.ObjectName == "tree_procedural_oak"; });
   FluidTest::Expect(
       roundTrippedTree != roundTrippedFeatures.Vegetation.end() &&
           roundTrippedTree->Ecology.ElevationRef ==
@@ -1345,11 +1344,11 @@ static void TestWorldGenSetsSchemaV2Migration()
 
 static void TestDataDefinedBiomeAffectsSampling()
 {
-  const fs::path root = fs::temp_directory_path() /
-                        ("cubatarium_worldgen_biome_" +
-                         std::to_string(std::chrono::steady_clock::now()
-                                            .time_since_epoch()
-                                            .count()));
+  const fs::path root =
+      fs::temp_directory_path() /
+      ("cubatarium_worldgen_biome_" +
+       std::to_string(
+           std::chrono::steady_clock::now().time_since_epoch().count()));
   fs::create_directories(root / "biomes");
   {
     std::ofstream pack(root / "pack.json");
@@ -1376,14 +1375,14 @@ static void TestDataDefinedBiomeAffectsSampling()
                     kTestName, "data-defined biome pack loads");
   const auto pack = cutum::UWorldGenPack::GetSnapshot();
   const cutum::BiomeHandle handle = pack->BiomeRegistry->Find("azure_meadow");
-  FluidTest::Expect(handle.IsValid(), kTestName,
-                    "data-defined biome is registered without a C++ classifier");
+  FluidTest::Expect(
+      handle.IsValid(), kTestName,
+      "data-defined biome is registered without a C++ classifier");
   cutum::WorldGenTuning tuning;
   cutum::UBiomeSampler sampler(kSeed, tuning, 2);
-  FluidTest::Expect(sampler.At3DKey(17, 24, -31, 80, 48, 128) ==
-                        "crystal_caves",
-                    kTestName,
-                    "custom cave biome is selected by the 3D biome sampler");
+  FluidTest::Expect(
+      sampler.At3DKey(17, 24, -31, 80, 48, 128) == "crystal_caves", kTestName,
+      "custom cave biome is selected by the 3D biome sampler");
 
   cutum::ProceduralSettings settings;
   cutum::ApplyWorldGenPreset(settings, "balanced");
@@ -1409,24 +1408,22 @@ static void TestDataDefinedBiomeAffectsSampling()
       cutum::BiomeHandleForId(cutum::BiomeId::Plains);
   FluidTest::Expect(plainsHandle.IsValid(), kTestName,
                     "built-in biomes resolve to pack-scoped handles");
-  for (const cutum::BiomeId builtin : {
-           cutum::BiomeId::Plains, cutum::BiomeId::Forest,
-           cutum::BiomeId::Desert, cutum::BiomeId::Hills,
-           cutum::BiomeId::Tundra, cutum::BiomeId::Savanna,
-           cutum::BiomeId::Foothills, cutum::BiomeId::Scrubland,
-           cutum::BiomeId::ColdSteppe, cutum::BiomeId::Ocean,
-           cutum::BiomeId::Beach, cutum::BiomeId::Mountains,
-           cutum::BiomeId::SnowySlopes, cutum::BiomeId::JaggedPeaks,
-           cutum::BiomeId::LushCaves, cutum::BiomeId::DripstoneCaves,
-           cutum::BiomeId::DeepDark})
+  for (const cutum::BiomeId builtin :
+       {cutum::BiomeId::Plains, cutum::BiomeId::Forest, cutum::BiomeId::Desert,
+        cutum::BiomeId::Hills, cutum::BiomeId::Tundra, cutum::BiomeId::Savanna,
+        cutum::BiomeId::Foothills, cutum::BiomeId::Scrubland,
+        cutum::BiomeId::ColdSteppe, cutum::BiomeId::Ocean,
+        cutum::BiomeId::Beach, cutum::BiomeId::Mountains,
+        cutum::BiomeId::SnowySlopes, cutum::BiomeId::JaggedPeaks,
+        cutum::BiomeId::LushCaves, cutum::BiomeId::DripstoneCaves,
+        cutum::BiomeId::DeepDark})
   {
     FluidTest::Expect(cutum::BiomeHandleForId(builtin).IsValid(), kTestName,
                       "all built-in biome keys exist in the active snapshot");
   }
-  FluidTest::Expect(std::all_of(
-                        weights.entries.begin(), weights.entries.end(),
-                        [](const cutum::BiomeBlendEntry &entry)
-                        { return entry.biome.IsValid(); }),
+  FluidTest::Expect(std::all_of(weights.entries.begin(), weights.entries.end(),
+                                [](const cutum::BiomeBlendEntry &entry)
+                                { return entry.biome.IsValid(); }),
                     kTestName, "biome blends contain handles only");
   FluidTest::Expect(cutum::BiomeKeyForHandle(
                         cutum::DominantBiomeHandle(weights)) == "azure_meadow",
@@ -1447,14 +1444,11 @@ static void TestDataDefinedBiomeAffectsSampling()
     const auto *definition =
         cutum::UWorldGenPack::BiomeDefinitionFor("azure_meadow");
     std::cerr << "custom biome height diagnostic: weight="
-              << weights.Weight(handle)
-              << " base_offset="
+              << weights.Weight(handle) << " base_offset="
               << (definition ? definition->Height.baseOffsetBlocks : -999.0f)
               << " unified=" << settings.Tuning.useUnifiedHeightField
-              << " sea=" << settings.SeaLevel
-              << " min=" << settings.MinHeight
-              << " max=" << settings.MaxHeight
-              << " with=" << with_custom
+              << " sea=" << settings.SeaLevel << " min=" << settings.MinHeight
+              << " max=" << settings.MaxHeight << " with=" << with_custom
               << " without=" << without_custom << std::endl;
   }
   FluidTest::Expect(with_custom >= without_custom + 4, kTestName,
@@ -1479,7 +1473,8 @@ static void TestImageBiomeSourceStrategy()
                     "image source returns its map biome as the surface blend");
   FluidTest::Expect(source.Sample3DKey(x, 80, z, 80, 48, 128) ==
                         cutum::BiomeIdToString(expected),
-                    kTestName, "image source routes surface 3D keys to image map");
+                    kTestName,
+                    "image source routes surface 3D keys to image map");
   FluidTest::Expect(source.Sample3DKey(x, 24, z, 80, 48, 128) ==
                         caveSampler.At3DKey(x, 24, z, 80, 48, 128),
                     kTestName, "image source keeps the procedural cave source");
@@ -1501,9 +1496,9 @@ static void TestCaveFeaturePlacementStrategies(cutum::UBlockRegistry &registry)
   const cutum::BlockId stone = registry.GetIdByTypeName("stone");
   const cutum::BlockId mossVisual = cutum::ResolvePackScatterBlockId(
       registry, ctx.WorldgenOwnerPackId, "mtg_grass_1");
-  FluidTest::Expect(stone != cutum::BLOCK_AIR &&
-                        mossVisual != cutum::BLOCK_AIR,
-                    kTestName, "cave strategy test blocks resolve from the pack");
+  FluidTest::Expect(stone != cutum::BLOCK_AIR && mossVisual != cutum::BLOCK_AIR,
+                    kTestName,
+                    "cave strategy test blocks resolve from the pack");
   world.SetBlock(glm::ivec3(0, 8, 0), stone);
 
   cutum::ObjectFeatureConfig features;
@@ -1517,33 +1512,31 @@ static void TestCaveFeaturePlacementStrategies(cutum::UBlockRegistry &registry)
   features.CaveFeatures.push_back(moss);
   ctx.ObjectFeatures = &features;
 
-  const auto biomeAt = [](int, int, int, int) {
-    return cutum::BiomeId::LushCaves;
-  };
-  const auto biomeKeyAt = [](int, int, int, int) {
-    return cutum::BiomeKey("lush_caves");
-  };
-  FluidTest::Expect(cutum::TryPlaceCaveFeatures(ctx, 0, 0, 20, biomeAt,
-                                                biomeKeyAt),
-                    kTestName, "registered cave strategy places a moss floor");
+  const auto biomeAt = [](int, int, int, int)
+  { return cutum::BiomeId::LushCaves; };
+  const auto biomeKeyAt = [](int, int, int, int)
+  { return cutum::BiomeKey("lush_caves"); };
+  FluidTest::Expect(
+      cutum::TryPlaceCaveFeatures(ctx, 0, 0, 20, biomeAt, biomeKeyAt),
+      kTestName, "registered cave strategy places a moss floor");
   const cutum::BlockId placedBlock = world.GetBlock(glm::ivec3(0, 8, 0));
   const std::string placedMessage =
       "cave feature writes its resolved block through sink (expected=" +
-      std::to_string(static_cast<int>(mossVisual)) + ", actual=" +
-      std::to_string(static_cast<int>(placedBlock)) + ")";
-  FluidTest::Expect(
-      placedBlock == mossVisual, kTestName, placedMessage.c_str());
+      std::to_string(static_cast<int>(mossVisual)) +
+      ", actual=" + std::to_string(static_cast<int>(placedBlock)) + ")";
+  FluidTest::Expect(placedBlock == mossVisual, kTestName,
+                    placedMessage.c_str());
   FluidTest::Expect(world.GetBlock(glm::ivec3(0, 5, 0)) == cutum::BLOCK_AIR,
                     kTestName,
                     "unresolved cave rock aliases do not treat air as a floor");
-  FluidTest::Expect(
-      cutum::CaveFeaturePlacementStrategyRegistry::Find(
-          cutum::CaveFeatureKind::MossPatch) != nullptr &&
-          cutum::CaveFeaturePlacementStrategyRegistry::Find(
-              cutum::CaveFeatureKind::Stalagmite) != nullptr &&
-          cutum::CaveFeaturePlacementStrategyRegistry::Find(
-              cutum::CaveFeatureKind::AmethystCluster) != nullptr,
-      kTestName, "built-in cave feature strategies are registered");
+  FluidTest::Expect(cutum::UCaveFeaturePlacementStrategyRegistry::Find(
+                        cutum::CaveFeatureKind::MossPatch) != nullptr &&
+                        cutum::UCaveFeaturePlacementStrategyRegistry::Find(
+                            cutum::CaveFeatureKind::Stalagmite) != nullptr &&
+                        cutum::UCaveFeaturePlacementStrategyRegistry::Find(
+                            cutum::CaveFeatureKind::AmethystCluster) != nullptr,
+                    kTestName,
+                    "built-in cave feature strategies are registered");
 }
 
 static void TestScatterSurfaceConstraint(cutum::UBlockRegistry &registry)
@@ -1575,14 +1568,14 @@ static void TestScatterSurfaceConstraint(cutum::UBlockRegistry &registry)
   rule.Scatter.Radius = 0;
   rule.Surface.Kind = cutum::SurfaceConstraintKind::NearWater;
   rule.Surface.NearWaterRadius = 3;
-  const auto strategy = cutum::ObjectFeaturePlacementStrategyRegistry::Find(
+  const auto strategy = cutum::UObjectFeaturePlacementStrategyRegistry::Find(
       cutum::ObjectFeatureRuleMode::ScatterBlocks);
   FluidTest::Expect(strategy != nullptr, kTestName,
                     "scatter placement strategy is registered");
   FluidTest::Expect(strategy->Place(ctx, 0, 0, 51, rule), kTestName,
                     "near-water scatter placement is accepted");
-  FluidTest::Expect(world.GetBlock(glm::ivec3(0, 52, 0)) == papyrus,
-                    kTestName, "near-water scatter writes the plant block");
+  FluidTest::Expect(world.GetBlock(glm::ivec3(0, 52, 0)) == papyrus, kTestName,
+                    "near-water scatter writes the plant block");
   FluidTest::Expect(!strategy->Place(ctx, 10, 0, 51, rule), kTestName,
                     "near-water scatter placement rejects dry locations");
 }
@@ -1595,8 +1588,8 @@ static void TestCrossChunkTreeConflictStable(cutum::UBlockRegistry &registry)
                     kTestName, "custom tree conflict blocks resolve");
 
   const glm::ivec3 overlap(16, 8, 8);
-  const std::vector<std::pair<cutum::BlockId, int>> ranks = {
-      {trunk, 3}, {leaves, 1}};
+  const std::vector<std::pair<cutum::BlockId, int>> ranks = {{trunk, 3},
+                                                             {leaves, 1}};
   cutum::UChunkBuffer leftBuffer;
   leftBuffer.SetWorldGenOwnerChunk(glm::ivec3(0, 0, 0), registry, ranks);
   leftBuffer.SetBlock(overlap, trunk);
@@ -1616,8 +1609,8 @@ static void TestCrossChunkTreeConflictStable(cutum::UBlockRegistry &registry)
                     "cross-chunk procedural tree overlap resolves identically");
 }
 
-static void TestFloraRanksCoverDecorationAndStructures(
-    cutum::UBlockRegistry &registry)
+static void
+TestFloraRanksCoverDecorationAndStructures(cutum::UBlockRegistry &registry)
 {
   cutum::ObjectFeatureConfig config;
   cutum::ObjectFeatureRule decor;
@@ -1633,19 +1626,17 @@ static void TestFloraRanksCoverDecorationAndStructures(
       registry, nullptr, "minetest_default_16", &config);
   const auto findRank = [&ranks](cutum::BlockId id) -> int
   {
-    const auto it = std::find_if(
-        ranks.begin(), ranks.end(),
-        [id](const std::pair<cutum::BlockId, int> &entry)
-        { return entry.first == id; });
+    const auto it =
+        std::find_if(ranks.begin(), ranks.end(),
+                     [id](const std::pair<cutum::BlockId, int> &entry)
+                     { return entry.first == id; });
     return it == ranks.end() ? 0 : it->second;
   };
 
-  const cutum::BlockId decor_block =
-      cutum::ResolvePackScatterBlockId(registry, "minetest_default_16",
-                                       "log_jungle");
-  const cutum::BlockId structure_block =
-      cutum::ResolvePackScatterBlockId(registry, "minetest_default_16",
-                                       "mtg_mossycobble");
+  const cutum::BlockId decor_block = cutum::ResolvePackScatterBlockId(
+      registry, "minetest_default_16", "log_jungle");
+  const cutum::BlockId structure_block = cutum::ResolvePackScatterBlockId(
+      registry, "minetest_default_16", "mtg_mossycobble");
   FluidTest::Expect(decor_block != cutum::BLOCK_AIR &&
                         structure_block != cutum::BLOCK_AIR,
                     kTestName, "decoration/structure blocks resolve");
@@ -1655,8 +1646,7 @@ static void TestFloraRanksCoverDecorationAndStructures(
                     "structure scatter block carries a cross-chunk rank");
 }
 
-static void TestOceanFallbackSpawnStaysAboveSea(
-    cutum::UBlockRegistry &registry)
+static void TestOceanFallbackSpawnStaysAboveSea(cutum::UBlockRegistry &registry)
 {
   cutum::ProceduralSettings settings;
   settings.SeaLevel = 63;
@@ -1675,10 +1665,9 @@ static void TestOceanFallbackSpawnStaysAboveSea(
   {
     world.SetBlock(glm::ivec3(0, y, 0), water);
   }
-  FixedSurfacePipeline pipeline(context, 34);
+  UFixedSurfacePipeline pipeline(context, 34);
 
-  const glm::vec3 spawn =
-      pipeline.ResolvePlayerSpawnPosition(world, registry);
+  const glm::vec3 spawn = pipeline.ResolvePlayerSpawnPosition(world, registry);
   FluidTest::Expect(spawn.y >= 63.0f + 1.62f + 0.5f, kTestName,
                     "ocean-only fallback does not spawn below the sea surface");
 }
@@ -1697,25 +1686,24 @@ static void TestPackDefaultsRespectUserFieldsInProfile3()
   cutum::ProceduralSettings preserved = user;
   cutum::UWorldGenPack::ApplyPackCaveDefaults(preserved, true);
   cutum::UWorldGenPack::ApplyPackRavineDefaults(preserved, true);
-  FluidTest::Expect(preserved.Caves.maxDepthBelowSurface == 20 &&
-                        !preserved.Ravines.enabled &&
-                        preserved.Ravines.rarity == 999 &&
-                        preserved.Ravines.aquaticMaxDepth == 2 &&
-                        preserved.Ravines.fillWater,
-                    kTestName,
-                    "profile 3 keeps cave depth and ravine settings from the form");
-  FluidTest::Expect(preserved.Caves.densityCaveAmplitude !=
-                        user.Caves.densityCaveAmplitude,
-                    kTestName,
-                    "pack-only cave fields are still applied for profile 3");
+  FluidTest::Expect(
+      preserved.Caves.maxDepthBelowSurface == 20 &&
+          !preserved.Ravines.enabled && preserved.Ravines.rarity == 999 &&
+          preserved.Ravines.aquaticMaxDepth == 2 && preserved.Ravines.fillWater,
+      kTestName,
+      "profile 3 keeps cave depth and ravine settings from the form");
+  FluidTest::Expect(
+      preserved.Caves.densityCaveAmplitude != user.Caves.densityCaveAmplitude,
+      kTestName, "pack-only cave fields are still applied for profile 3");
   cutum::ProceduralSettings legacy = user;
   legacy.WorldGenProfileVersion = 2;
   cutum::UWorldGenPack::ApplyPackCaveDefaults(legacy, false);
   cutum::UWorldGenPack::ApplyPackRavineDefaults(legacy, false);
-  FluidTest::Expect(legacy.Caves.maxDepthBelowSurface != 20 &&
-                        legacy.Ravines.enabled && legacy.Ravines.rarity != 999,
-                    kTestName,
-                    "older profiles still take cave and ravine values from the pack");
+  FluidTest::Expect(
+      legacy.Caves.maxDepthBelowSurface != 20 && legacy.Ravines.enabled &&
+          legacy.Ravines.rarity != 999,
+      kTestName,
+      "older profiles still take cave and ravine values from the pack");
 }
 
 int main(int argc, char **argv)
@@ -1737,25 +1725,24 @@ int main(int argc, char **argv)
                     0.0035f) < 0.00001f &&
           std::fabs(featureConfig->GroundCoverDistribution.RegionalNoiseScale -
                     0.006f) < 0.00001f,
-      kTestName,
-      "regional density profiles load from object_features.json");
+      kTestName, "regional density profiles load from object_features.json");
   const bool allProceduralTreeProfilesHaveBranches =
       featureConfig &&
-      std::all_of(featureConfig->Vegetation.begin(),
-                  featureConfig->Vegetation.end(),
-                  [](const cutum::ObjectFeatureRule &rule)
-                  {
-                    return rule.Mode !=
-                               cutum::ObjectFeatureRuleMode::ProceduralTree ||
-                           rule.Tree.BranchCount > 0;
-                  });
+      std::all_of(
+          featureConfig->Vegetation.begin(), featureConfig->Vegetation.end(),
+          [](const cutum::ObjectFeatureRule &rule)
+          {
+            return rule.Mode != cutum::ObjectFeatureRuleMode::ProceduralTree ||
+                   rule.Tree.BranchCount > 0;
+          });
   FluidTest::Expect(allProceduralTreeProfilesHaveBranches, kTestName,
                     "configured procedural tree species enable branch growth");
   TestWorldGenSetsSchemaV2Migration();
   FluidTest::Expect(cutum::UWorldGenPack::LoadPackId("default"), kTestName,
                     "worldgen pack load failed");
-  FluidTest::Expect(cutum::UWorldGenPack::AquifersConfig().Loaded, kTestName,
-                    "aquifer configuration loads from the active worldgen pack");
+  FluidTest::Expect(
+      cutum::UWorldGenPack::AquifersConfig().Loaded, kTestName,
+      "aquifer configuration loads from the active worldgen pack");
   TestPackDefaultsRespectUserFieldsInProfile3();
   if (argc > 1 && std::string(argv[1]) == "--biome-profile-only")
   {
@@ -1767,7 +1754,8 @@ int main(int argc, char **argv)
   TestConfiguredTreeElevationBands();
   TestConfiguredNaturalFeatureElevationBands();
 
-  const fs::path pack_root = repo_root / "resource_packs" / "minetest_default_16";
+  const fs::path pack_root =
+      repo_root / "resource_packs" / "minetest_default_16";
   const auto definitions = LoadPackDefinitions(pack_root);
   cutum::UBlockRegistry registry(nullptr, definitions);
   constexpr const char *kOwnerPack = "minetest_default_16";
@@ -1814,11 +1802,11 @@ int main(int argc, char **argv)
   TestChunkPopulatorPlacesTrees(populator, registry, objects);
   TestProceduralVegetationStrategies(registry);
   FluidTest::Expect(
-      cutum::ObjectFeaturePlacementStrategyRegistry::Find(
+      cutum::UObjectFeaturePlacementStrategyRegistry::Find(
           cutum::ObjectFeatureRuleMode::Object) != nullptr &&
-          cutum::ObjectFeaturePlacementStrategyRegistry::Find(
+          cutum::UObjectFeaturePlacementStrategyRegistry::Find(
               cutum::ObjectFeatureRuleMode::ScatterBlocks) != nullptr &&
-          cutum::ObjectFeaturePlacementStrategyRegistry::Find(
+          cutum::UObjectFeaturePlacementStrategyRegistry::Find(
               cutum::ObjectFeatureRuleMode::ProceduralTree) != nullptr,
       kTestName, "built-in feature placement strategies are registered");
   TestScatterSurfaceConstraint(registry);

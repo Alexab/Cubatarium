@@ -40,6 +40,7 @@ Research and implementation checkboxes remain open until evidence exists.
 ## Final evidence (2026-11-13)
 
 [Implementation, measured balance, native reports, Release logs and backlog](research/items-completion-2026-11-13/README.md).
-70 assets reproduce exactly; 8 Release tests, 44 native checks, 15 empty-inventory
-survival stages, 24 UI layouts and active-row hand drag pass. General repository
-style/include debt and limits of performance measurements are recorded separately.
+70 assets reproduce exactly; 20 Release tests, 47 native checks, 15 empty-inventory
+survival stages, 24 UI layouts and active-row hand drag pass. Style/include gates now pass; eight auditor regressions and two publication
+regressions pass. Remaining configured legacy dependencies and measurement limits
+are recorded in the [final audit](research/items-completion-2026-11-13/final-audit/README.md).

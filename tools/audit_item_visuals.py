@@ -127,8 +127,11 @@ def audit_item(path: Path) -> dict:
 
 
 def main() -> int:
+    from itemgen.manifest import validate_manifest
+    manifest_errors=validate_manifest(ROOT)
     items = [audit_item(p) for p in sorted(CONTENT.glob("*.json"))]
     summary = {
+        "manifest_errors":manifest_errors,
         "count": len(items),
         "critical": sum(1 for i in items if i["critical"]),
         "with_issues": sum(1 for i in items if i["issues"]),
@@ -168,7 +171,8 @@ def main() -> int:
     if soft:
         print(f"critical soft notes ({len(soft)}): factor_only/embedded ok via cache")
     print(f"wrote {out_path.relative_to(ROOT)}")
-    return 1 if summary["critical_hard_issues"] else 0
+    for error in manifest_errors:print("manifest: "+error)
+    return 1 if summary["critical_hard_issues"] or manifest_errors else 0
 
 
 if __name__ == "__main__":

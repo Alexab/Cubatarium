@@ -4,24 +4,24 @@
 #include "Render/Camera/CullInputKey.h"
 #include "Render/Mesh/AsyncMeshBuilder.h"
 #include "Render/Mesh/BoundaryOverlay.h"
-#include "Render/Mesh/MeshCaptureWorker.h"
 #include "Render/Mesh/ChunkDirtySet.h"
 #include "Render/Mesh/ChunkMeshRevisionRegistry.h"
 #include "Render/Mesh/CrossInstanceBatch.h"
-#include "Render/Mesh/FluidSurfaceColumnSlice.h"
-#include "Render/Mesh/GpuPackedMeshTypes.h"
 #include "Render/Mesh/GpuMeshPipeline.h"
-#include "Render/Mesh/MeshCaptureStore.h"
+#include "Render/Mesh/GpuPackedMeshTypes.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
-#include "Render/Mesh/MeshPublishContract.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
+#include "Render/Mesh/MeshCaptureStore.h"
+#include "Render/Mesh/MeshCaptureWorker.h"
 #include "World/Chunks/ChunkManager.h"
-#include "World/Math/GridMath.h"
+#include "World/Fluids/FluidSurfaceColumnSlice.h"
 #include "World/Math/BlockTypes.h"
+#include "World/Math/GridMath.h"
+#include "World/Mesh/Contracts/MeshPublishContract.h"
 #include "World/Streaming/MeshWorkAdmission.h"
 #include "World/Streaming/StreamIngressPolicy.h"
-#include <array>
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <climits>
@@ -86,25 +86,24 @@ public:
   void MarkDirty(glm::ivec3 chunkCoord);
   void MarkDirty(glm::ivec3 chunkCoord, MeshRevisionBumpReason reason);
   void MarkDirtyPriority(glm::ivec3 chunkCoord);
-  void MarkDirtyPriority(glm::ivec3 chunkCoord,
-                         MeshRevisionBumpReason reason);
+  void MarkDirtyPriority(glm::ivec3 chunkCoord, MeshRevisionBumpReason reason);
   /// Re-admit an unfinished target without changing its mesh revision.
   /// Use only when a live render-demand record already owns this exact target.
   void RequeueDirtyPriority(glm::ivec3 chunkCoord,
-                           MeshRevisionBumpReason reason);
+                            MeshRevisionBumpReason reason);
   bool PrioritizeVisibleLightRepairRemesh(glm::ivec3 chunkCoord);
   bool PrioritizeScreenRayRepairRemesh(glm::ivec3 chunkCoord);
   void QueueMeshDependencyInvalidations(
       const UBlockWorld &world,
       const std::vector<glm::ivec3> &changed_input_chunks,
       const char *cause = nullptr);
-  PublishedLightHaloState GetPublishedLightHaloState(
-      glm::ivec3 chunk_coord, const UBlockWorld &world,
-      bool *cache_entry_present = nullptr,
-      bool *signature_stamp_valid = nullptr) const;
+  PublishedLightHaloState
+  GetPublishedLightHaloState(glm::ivec3 chunk_coord, const UBlockWorld &world,
+                             bool *cache_entry_present = nullptr,
+                             bool *signature_stamp_valid = nullptr) const;
   void QueueMeshDependencyInvalidation(glm::ivec3 dependent_chunk);
-  void QueueMeshDependencyInvalidation(
-      glm::ivec3 dependent_chunk, MeshRevisionBumpReason reason);
+  void QueueMeshDependencyInvalidation(glm::ivec3 dependent_chunk,
+                                       MeshRevisionBumpReason reason);
   void QueueStaleLightRemesh(glm::ivec3 chunk_coord,
                              const char *cause = nullptr);
   bool HasPendingStaleLightRemesh(glm::ivec3 chunk_coord) const
@@ -184,7 +183,8 @@ public:
   void InvalidateFluidSurfaceForColumn(glm::ivec3 ground_chunk_coord,
                                        bool include_neighbors = true);
   void RemoveChunk(glm::ivec3 chunkCoord);
-  /// Removes all Y slices for a terrain column with one greedy-list invalidation.
+  /// Removes all Y slices for a terrain column with one greedy-list
+  /// invalidation.
   void RemoveColumn(glm::ivec3 ground_coord, int min_cy, int max_cy);
   void RebuildDirtyChunks(UBlockWorld &world, UBlockRegistry &registry,
                           int max_drain_per_frame = 8,
@@ -215,8 +215,10 @@ public:
   {
     return LastFocusDirtyReconcileDelta_;
   }
-  /// Drop Dirty entries inside Chebyshev radius (spawn park while relight deferred).
-  int ParkDirtyWithinHorizontalRadius(glm::ivec3 center_chunk, int radius_chunks);
+  /// Drop Dirty entries inside Chebyshev radius (spawn park while relight
+  /// deferred).
+  int ParkDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
+                                      int radius_chunks);
   bool HasDirtyInColumnBand(glm::ivec2 ground_xz, int min_y, int max_y) const;
   bool HasPendingAsyncMeshWork() const;
   bool HasAsyncInflightInHorizontalRadius(glm::ivec3 center_ground_chunk,
@@ -230,7 +232,8 @@ public:
   void WaitForAsyncMeshIdle();
   bool WaitForAsyncMeshIdleFor(std::chrono::milliseconds timeout);
   void CancelAsyncMeshWork();
-  /// Cancel in-flight async mesh; coords stay in Dirty (except underfeet lease).
+  /// Cancel in-flight async mesh; coords stay in Dirty (except underfeet
+  /// lease).
   void CancelAsyncInFlightKeepDirty();
   void CancelAsyncInFlightKeepDirty(glm::ivec3 focus_ground_chunk,
                                     int keep_horiz_lease);
@@ -347,7 +350,10 @@ public:
   {
     return LastMeshScheduleRetryAfterCaptureN_;
   }
-  void ResetFrameCaptureRetryTelemetry() { LastMeshScheduleRetryAfterCaptureN_ = 0; }
+  void ResetFrameCaptureRetryTelemetry()
+  {
+    LastMeshScheduleRetryAfterCaptureN_ = 0;
+  }
   int GetLastMeshWorkerInflightN() const { return LastMeshWorkerInflightN_; }
   int GetLastMeshPendingCaptureReadyN() const
   {
@@ -509,7 +515,10 @@ public:
   void ReconcilePublishedMeshInputs(const UBlockWorld &world, int max_checks);
   uint64_t GetReconcileRedirtyCount() const { return ReconcileRedirtyN; }
   /// World used by the redundant-repair guard (set once by UWorld).
-  void SetRepairGuardWorld(const UBlockWorld *world) { RepairGuardWorld = world; }
+  void SetRepairGuardWorld(const UBlockWorld *world)
+  {
+    RepairGuardWorld = world;
+  }
   /// True when the satisfying published mesh was baked from exactly the current
   /// geometry inputs and light (content/incarnation of center + 6 face
   /// neighbors, light revision, neighbor light halos): rebuilding it would
@@ -550,8 +559,8 @@ public:
     return it != GreedyCache.end() ? it->second.PublishCount : 0;
   }
   /// Diagnostics only: published CPU batches of a chunk (nullptr if none).
-  const std::vector<GreedyMeshBatch> *DebugGetChunkBatches(
-      glm::ivec3 chunk_coord) const
+  const std::vector<GreedyMeshBatch> *
+  DebugGetChunkBatches(glm::ivec3 chunk_coord) const
   {
     const auto it = GreedyCache.find(chunk_coord);
     return it != GreedyCache.end() ? &it->second.batches : nullptr;
@@ -572,13 +581,10 @@ public:
     const auto it = GreedyCache.find(chunk_coord);
     return it != GreedyCache.end() && it->second.ProvisionalLightPreview;
   }
-  int CountProvisionalLightPreviewsNear(glm::ivec3 focus_chunk,
-                                        int radius_chunks, int min_cy,
-                                        int max_cy,
-                                        const std::function<bool(glm::ivec3)> &
-                                            is_dynamic_preview = {},
-                                        std::size_t *out_scanned_entries =
-                                            nullptr) const;
+  int CountProvisionalLightPreviewsNear(
+      glm::ivec3 focus_chunk, int radius_chunks, int min_cy, int max_cy,
+      const std::function<bool(glm::ivec3)> &is_dynamic_preview = {},
+      std::size_t *out_scanned_entries = nullptr) const;
   /// R06 R2: last-applied BoundaryOverlay still active (sticky closing faces).
   bool HasActiveBoundaryOverlay(glm::ivec3 chunk_coord) const;
   /// True if overlay missing-face bit for shell face 0..5 is set.
@@ -646,7 +652,8 @@ public:
   }
   /// Era22 I-S2: any SoftDeferHeld slice in column (xz).
   bool HasSoftDeferHeldInColumn(glm::ivec2 ground_xz) const;
-  /// Era51b: drop Dirty + RemeshAfterApply for enter SoftDefer terminal (ring clear).
+  /// Era51b: drop Dirty + RemeshAfterApply for enter SoftDefer terminal (ring
+  /// clear).
   void ClearDirtyAndRemeshAfterApply(glm::ivec3 chunk_coord);
   /// Prefetch immutable Capture into store (MarkRelit / commit). Main only.
   void PrefetchMeshCapture(const UBlockWorld &world, glm::ivec3 chunk_coord,
@@ -678,10 +685,10 @@ public:
   /// A21 P4: observational dark-face census (not sole remesh / LightValidity).
   /// Zero sky+block is legal; remesh from rev mismatch or explicit invalid.
   /// −Y bottoms are ignored (normally unlit).
-  static bool BatchesHaveFullyDarkFace(
-      const std::vector<GreedyMeshBatch> &batches);
-  static bool BatchesHaveLitDrawableFace(
-      const std::vector<GreedyMeshBatch> &batches);
+  static bool
+  BatchesHaveFullyDarkFace(const std::vector<GreedyMeshBatch> &batches);
+  static bool
+  BatchesHaveLitDrawableFace(const std::vector<GreedyMeshBatch> &batches);
   /// Mesh vertex light=0 but current world light at the face air neighbor
   /// is non-zero — stale bake (empty lightmap / missed MarkRelit remesh).
   struct StaleDarkWitness
@@ -694,8 +701,7 @@ public:
     uint8_t face_index{0};
     bool gpu_probe{false};
   };
-  bool ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
-                              const UBlockWorld &world,
+  bool ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord, const UBlockWorld &world,
                               StaleDarkWitness *witness = nullptr) const;
   bool ChunkHasStaleDarkFacesUncached(glm::ivec3 chunk_coord,
                                       const UBlockWorld &world,
@@ -704,7 +710,8 @@ public:
       StaleDarkMemo_;
   /// FZ2.7-B1: light revision baked into mesh at last commit (O(1) stale).
   /// Inline like GetMeshPublishRevs — GreedyGpuPublication links without
-  /// ChunkMeshCache.cpp (publication_audit / greedy_vertex_pool_production_test).
+  /// ChunkMeshCache.cpp (publication_audit /
+  /// greedy_vertex_pool_production_test).
   uint64_t GetMeshedLightRevision(glm::ivec3 chunk_coord) const
   {
     const auto it = GreedyCache.find(chunk_coord);
@@ -726,7 +733,8 @@ public:
     return it->second.PublishRevs;
   }
 
-  /// FZ2.7-B1b: single-pass mesh state for MarkRelit snapshot (one GreedyCache lookup).
+  /// FZ2.7-B1b: single-pass mesh state for MarkRelit snapshot (one GreedyCache
+  /// lookup).
   struct LitApplyMeshProbe
   {
     bool has_greedy{false};
@@ -769,11 +777,10 @@ public:
   /// passes see the same dirty set (opaque consume must not blind transparent).
   void BeginGpuPassDirtyFrame() const;
   bool GpuPassDirtyHitsChunk(glm::ivec3 chunk_coord) const;
-  bool HasMissingGreedyMeshInHorizontalRadius(const UBlockWorld &world,
-                                              glm::ivec3 center_ground_chunk,
-                                              int radius_chunks,
-                                              glm::ivec3 *missing_coord_out = nullptr,
-                                              bool *memo_hit_out = nullptr) const;
+  bool HasMissingGreedyMeshInHorizontalRadius(
+      const UBlockWorld &world, glm::ivec3 center_ground_chunk,
+      int radius_chunks, glm::ivec3 *missing_coord_out = nullptr,
+      bool *memo_hit_out = nullptr) const;
   bool FindNearestMissingGreedyMesh(const UBlockWorld &world,
                                     glm::ivec3 center_ground_chunk,
                                     int radius_chunks,
@@ -809,10 +816,7 @@ public:
   int GetVbFocusStableFrames() const { return VbFocusStableFrames_; }
   int GetVbFocusBlinkDelta() const { return VbFocusBlinkDelta_; }
   void SetEnterFovLitPressure(bool v) { EnterFovLitPressure_ = v; }
-  void SetColumnLoadedNoMeshPressure(int n)
-  {
-    ColumnLoadedNoMeshPressure_ = n;
-  }
+  void SetColumnLoadedNoMeshPressure(int n) { ColumnLoadedNoMeshPressure_ = n; }
   void SetFmDirtyEnqueueReserve(int n) { FmDirtyEnqueueReserveN_ = n; }
   int GetFmDirtyToGpuFinishMatchN() const { return FmDirtyToGpuFinishMatchN_; }
   int ConsumeFmDirtyToGpuFinishMatchN()
@@ -877,7 +881,8 @@ public:
     return MeshRevisions.Current(chunk_coord);
   }
   bool HasInflightMeshBuild(glm::ivec3 chunk_coord) const;
-  /// Drop stale async apply for this chunk (revision bump + clear RemeshAfterApply).
+  /// Drop stale async apply for this chunk (revision bump + clear
+  /// RemeshAfterApply).
   void InvalidateInFlightMeshBuild(glm::ivec3 chunk_coord);
   uint64_t GetInflightSourceRevision(glm::ivec3 chunk_coord) const;
   size_t GetInstanceCount() const { return Instances.size(); }
@@ -899,9 +904,9 @@ public:
   /// Fill one sphere per greedy chunk for GPU frustum compaction.
   void CollectGreedyCullSpheres(std::vector<CullSphereEntry> &out) const;
   /// Rebuild flat greedy refs for chunks marked visible (parallel to Collect).
-  void RebuildFlatGreedyFromVisibilityMask(const uint32_t *vis,
-                                           size_t vis_count,
-                                           const std::vector<CullSphereEntry> &entries);
+  void RebuildFlatGreedyFromVisibilityMask(
+      const uint32_t *vis, size_t vis_count,
+      const std::vector<CullSphereEntry> &entries);
 
   /// Bound once from RenderBackendFactory (non-owning).
   void SetCullBackend(IUChunkCull *cull) { CullBackend = cull; }
@@ -917,7 +922,8 @@ public:
   }
   void SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord, int radius_chunks,
                            uint64_t frame_epoch = 0);
-  /// preferred_cy: sea/surface slice; prefer_lower_cy=true when camera underwater.
+  /// preferred_cy: sea/surface slice; prefer_lower_cy=true when camera
+  /// underwater.
   void SetMeshVerticalPriority(int preferred_cy, bool prefer_lower_cy)
   {
     MeshVerticalPreferredCy = preferred_cy;
@@ -931,7 +937,8 @@ public:
     MeshForwardBiasK = bias_k;
     MeshForwardXz = forward_xz;
   }
-  /// When true for a chunk coord, SyncRebuildVisibleMissing skips rebuild (await light).
+  /// When true for a chunk coord, SyncRebuildVisibleMissing skips rebuild
+  /// (await light).
   void SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> fn)
   {
     DeferMeshUntilLit = std::move(fn);
@@ -977,8 +984,8 @@ public:
   }
   /// Notify after each accepted mesh publication, including intentional-empty
   /// coverage, so target-local boundary-overlay debt can be reconciled.
-  void SetOnBoundaryOverlayPublishedFn(
-      std::function<void(glm::ivec3, uint8_t)> fn)
+  void
+  SetOnBoundaryOverlayPublishedFn(std::function<void(glm::ivec3, uint8_t)> fn)
   {
     OnBoundaryOverlayPublished = std::move(fn);
   }
@@ -992,8 +999,7 @@ public:
   {
     OnFaceDebtDirty = std::move(fn);
   }
-  void NoteFaceDebt(glm::ivec3 chunk_coord,
-                     bool schedule_dirty = false) const
+  void NoteFaceDebt(glm::ivec3 chunk_coord, bool schedule_dirty = false) const
   {
     if (OnFaceDebt)
     {
@@ -1050,7 +1056,10 @@ public:
     OnPackedRepresentationSwitch = std::move(fn);
   }
   /// When true, skip outside-focus dirty trickle (near holes / pending light).
-  void SetStarveOutsideFocusMesh(bool starve) { StarveOutsideFocusMesh = starve; }
+  void SetStarveOutsideFocusMesh(bool starve)
+  {
+    StarveOutsideFocusMesh = starve;
+  }
   /// When true, skip remesh (already has greedy) until holes clear.
   void SetStarveRemeshForHoles(bool starve) { StarveRemeshForHoles = starve; }
   /// Keep remesh within this Chebyshev radius while StarveRemeshForHoles
@@ -1084,7 +1093,10 @@ public:
   /// no mid-flight RAA park that refeeds GPU.
   void SetEnterLitQuiesce(bool active) { EnterLitQuiesce = active; }
   bool IsEnterLitQuiesce() const { return EnterLitQuiesce; }
-  const MeshWorkAdmission &GetMeshWorkAdmission() const { return WorkAdmission; }
+  const MeshWorkAdmission &GetMeshWorkAdmission() const
+  {
+    return WorkAdmission;
+  }
   bool TryConsumeDirtyAdmit()
   {
     if (DirtyAdmitRemaining <= 0)
@@ -1146,7 +1158,8 @@ public:
                                         int radius_chunks,
                                         glm::ivec3 &out_coord) const;
   /// When >= 0, prefer scheduling within this Chebyshev distance. Chunks
-  /// farther may still schedule up to MeshScheduleOverflowPerFrame (soft prefer).
+  /// farther may still schedule up to MeshScheduleOverflowPerFrame (soft
+  /// prefer).
   void SetMeshScheduleMaxHorizontalDist(int radius_chunks)
   {
     MeshScheduleMaxHorizontalDist = radius_chunks;
@@ -1238,8 +1251,7 @@ public:
 
 private:
   void MarkDirtyPriorityImpl(glm::ivec3 chunkCoord,
-                             MeshRevisionBumpReason reason,
-                             bool bump_revision);
+                             MeshRevisionBumpReason reason, bool bump_revision);
 
   struct ChunkGreedyMesh
   {
@@ -1306,12 +1318,10 @@ private:
       const UBlockWorld &world, UBlockRegistry &registry, glm::ivec3 coord,
       uint64_t source_revision, GpuMeshProcessResult &&gpu_result,
       std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> cross_centers,
-      bool accepted_input_stale = false,
-      uint64_t source_light_revision = 0,
+      bool accepted_input_stale = false, uint64_t source_light_revision = 0,
       bool has_source_light_revision = false,
       BoundaryOverlayState boundary_overlay = {},
-      bool accepted_geom_stale = false,
-      JobStageSpan stage_trace = {},
+      bool accepted_geom_stale = false, JobStageSpan stage_trace = {},
       const std::array<ChunkInputStamp, kChunkMeshInputStampCount>
           *source_stamps = nullptr);
   int ProcessPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,
@@ -1345,9 +1355,10 @@ private:
     SnapshotAcquireDeferReason deferReason{SnapshotAcquireDeferReason::None};
     std::optional<ChunkMeshSnapshot> snapshot;
   };
-  SnapshotAcquireResult TryAcquireSnapshotForSchedule(
-      const UBlockWorld &world, UBlockRegistry &registry, glm::ivec3 coord,
-      uint64_t source_revision);
+  SnapshotAcquireResult TryAcquireSnapshotForSchedule(const UBlockWorld &world,
+                                                      UBlockRegistry &registry,
+                                                      glm::ivec3 coord,
+                                                      uint64_t source_revision);
   int RetryPendingCaptures(UBlockWorld &world, UBlockRegistry &registry,
                            int max_per_frame, int &scheduled);
   int ComputeCaptureRetryBudget(int max_schedule_per_frame,
@@ -1362,10 +1373,11 @@ private:
                                  UMeshCaptureWorker::CompletedCapture &&done);
   /// Main-thread capture+commit. Q7: reserves snapshot credits first; false if
   /// admission exhausted or band/deps fail (no allocate-then-drop).
-  bool CaptureAndCommitOnMain(const UBlockWorld &world,
-                              const UBlockRegistry *registry,
-                              glm::ivec3 coord, uint64_t source_revision,
-                              SnapshotAcquireDeferReason *defer_reason = nullptr);
+  bool
+  CaptureAndCommitOnMain(const UBlockWorld &world,
+                         const UBlockRegistry *registry, glm::ivec3 coord,
+                         uint64_t source_revision,
+                         SnapshotAcquireDeferReason *defer_reason = nullptr);
   void AgePendingCaptureEntries(const UBlockWorld *world = nullptr,
                                 const UBlockRegistry *registry = nullptr);
   bool IsWorkerCaptureSaturated() const;
@@ -1417,7 +1429,8 @@ private:
   /// Rolling capture cost estimate used to translate snapshot ms into a bounded
   /// refresh count. LastMeshSnapshotMs remains the authoritative time limit.
   double CaptureSnapshotCostEmaMs_{0.5};
-  /// A42b: reserved Capture refreshes for LightRepair remesh when FM spent budget.
+  /// A42b: reserved Capture refreshes for LightRepair remesh when FM spent
+  /// budget.
   int LightRepairCaptureReserveLeft{0};
   /// Keep one count-budget refresh for an active focus FirstMesh miss.
   int FirstMeshCaptureReserveLeft{0};
@@ -1601,8 +1614,8 @@ private:
       FluidSurfaceCache;
   std::unordered_set<glm::ivec3, IVec3Hash> FluidSurfaceDirty;
   void BumpMeshRevisionIfNeeded();
-  bool ShouldBumpChunkMeshRevisionOnDirty(
-      glm::ivec3 chunk_coord, MeshRevisionBumpReason reason) const;
+  bool ShouldBumpChunkMeshRevisionOnDirty(glm::ivec3 chunk_coord,
+                                          MeshRevisionBumpReason reason) const;
   void BumpChunkMeshRevision(glm::ivec3 chunk_coord,
                              MeshRevisionBumpReason reason);
   void ClearSatisfiedScreenRayRepairPin(glm::ivec3 chunk_coord);
@@ -1614,7 +1627,7 @@ private:
   bool ChunkHasLiveGpuDraw(glm::ivec3 chunk_coord) const;
   void ClearStaleGpuResidentFlags(glm::ivec3 chunk_coord);
   bool TryEvictFarthestGpuMeshForStagingSlot(const UBlockWorld &world,
-                                              UGpuMeshPipeline &pipeline);
+                                             UGpuMeshPipeline &pipeline);
   bool HasAnyValidatedDrawRefs() const;
   void RebuildFluidSurfaceSlice(const UBlockWorld &world,
                                 UBlockRegistry &registry,
@@ -1726,7 +1739,8 @@ private:
   bool EnterFovLitPressure_{false};
   int ColumnLoadedNoMeshPressure_{0};
   int FmDirtyEnqueueReserveN_{0};
-  /// I12-D1 / I13-C: FM dirty coords scheduled awaiting GpuFinish (age in frames).
+  /// I12-D1 / I13-C: FM dirty coords scheduled awaiting GpuFinish (age in
+  /// frames).
   std::unordered_map<glm::ivec3, int, IVec3Hash> FmDirtyGpuWatchAge_;
   static constexpr int kFmDirtyGpuWatchMaxAgeFrames = 120;
   int FmDirtyToGpuFinishMatchN_{0};

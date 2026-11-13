@@ -16,8 +16,7 @@ inline constexpr int kColumnWorkWholeColumnCy = kWholeColumnChunkSlice;
 
 inline bool IsConcreteColumnWorkCy(int cy)
 {
-  return cy != kColumnWorkWholeRemeshBandCy &&
-         cy != kColumnWorkWholeColumnCy;
+  return cy != kColumnWorkWholeRemeshBandCy && cy != kColumnWorkWholeColumnCy;
 }
 
 enum class ColumnWorkKind : uint8_t
@@ -50,14 +49,11 @@ struct ColumnCoord
 
   ColumnCoord() = default;
   explicit ColumnCoord(glm::ivec2 c) : x(c.x), z(c.y) {}
-  ColumnCoord(int x_, int z_) : x(x_), z(z_) {}
+  ColumnCoord(int X, int Z) : x(X), z(Z) {}
 
   glm::ivec2 IVec() const { return glm::ivec2(x, z); }
 
-  bool operator==(const ColumnCoord &o) const
-  {
-    return x == o.x && z == o.z;
-  }
+  bool operator==(const ColumnCoord &o) const { return x == o.x && z == o.z; }
 };
 
 struct ColumnCoordHash
@@ -87,17 +83,17 @@ public:
   bool RemoveColumn(glm::ivec2 column);
 
   /// Live tickets only (excludes superseded heap entries).
-  size_t LiveCount() const { return live_.size(); }
+  size_t LiveCount() const { return Live.size(); }
   size_t LiveCount(ColumnWorkKind kind) const
   {
     size_t count = 0;
-    for (const auto &entry : live_)
+    for (const auto &entry : Live)
     {
       count += entry.second.kind == kind ? 1U : 0U;
     }
     return count;
   }
-  size_t HeapCount() const { return static_cast<size_t>(heap_.size()); }
+  size_t HeapCount() const { return static_cast<size_t>(Heap.size()); }
   size_t StaleCount() const
   {
     return HeapCount() >= LiveCount() ? HeapCount() - LiveCount() : 0;
@@ -113,10 +109,9 @@ public:
   /// Copy the authoritative live ticket for diagnostics without draining it.
   bool GetLiveTicket(glm::ivec2 column, ColumnWorkItem &out) const;
 
-  template <typename Fn>
-  void ForEachOccupiedColumn(Fn &&fn) const
+  template <typename Fn> void ForEachOccupiedColumn(Fn &&fn) const
   {
-    for (const auto &kv : live_)
+    for (const auto &kv : Live)
     {
       fn(kv.first.IVec());
     }
@@ -160,8 +155,8 @@ private:
 
   void PushLive(const ColumnWorkItem &item);
 
-  std::priority_queue<HeapEntry, std::vector<HeapEntry>, Compare> heap_;
-  std::unordered_map<ColumnCoord, LiveTicket, ColumnCoordHash> live_;
+  std::priority_queue<HeapEntry, std::vector<HeapEntry>, Compare> Heap;
+  std::unordered_map<ColumnCoord, LiveTicket, ColumnCoordHash> Live;
   uint64_t next_generation_{1};
   uint64_t next_sequence_{1};
   uint64_t denied_n_{0};

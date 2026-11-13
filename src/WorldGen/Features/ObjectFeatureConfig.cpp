@@ -206,7 +206,7 @@ bool ParseRuleArray(const nlohmann::json &arr,
     ObjectFeatureRule rule;
     const std::string modeName = item.value("mode", "object");
     const std::optional<ObjectFeatureRuleMode> mode =
-        ObjectFeatureTypeRegistry::Find(modeName);
+        UObjectFeatureTypeRegistry::Find(modeName);
     if (!mode)
     {
       std::cerr << "ObjectFeatureConfig: unknown feature type '" << modeName
@@ -412,8 +412,8 @@ void ParseCaveFeatureArray(const nlohmann::json &arr,
 
 } // namespace
 
-bool ObjectFeatureTypeRegistry::Register(const std::string &name,
-                                         ObjectFeatureRuleMode mode)
+bool UObjectFeatureTypeRegistry::Register(const std::string &name,
+                                          ObjectFeatureRuleMode mode)
 {
   if (name.empty())
   {
@@ -424,7 +424,7 @@ bool ObjectFeatureTypeRegistry::Register(const std::string &name,
 }
 
 std::optional<ObjectFeatureRuleMode>
-ObjectFeatureTypeRegistry::Find(const std::string &name)
+UObjectFeatureTypeRegistry::Find(const std::string &name)
 {
   std::lock_guard<std::mutex> lock(FeatureTypeMutex());
   const auto it = FeatureTypeMap().find(name);
@@ -433,7 +433,7 @@ ObjectFeatureTypeRegistry::Find(const std::string &name)
              : std::optional<ObjectFeatureRuleMode>{it->second};
 }
 
-bool ObjectFeaturePlacementStrategyRegistry::Register(
+bool UObjectFeaturePlacementStrategyRegistry::Register(
     ObjectFeatureRuleMode mode,
     std::shared_ptr<const IObjectFeaturePlacementStrategy> strategy)
 {
@@ -446,14 +446,14 @@ bool ObjectFeaturePlacementStrategyRegistry::Register(
 }
 
 std::shared_ptr<const IObjectFeaturePlacementStrategy>
-ObjectFeaturePlacementStrategyRegistry::Find(ObjectFeatureRuleMode mode)
+UObjectFeaturePlacementStrategyRegistry::Find(ObjectFeatureRuleMode mode)
 {
   std::lock_guard<std::mutex> lock(PlacementStrategyMutex());
   const auto it = PlacementStrategies().find(mode);
   return it == PlacementStrategies().end() ? nullptr : it->second;
 }
 
-bool CaveFeaturePlacementStrategyRegistry::Register(
+bool UCaveFeaturePlacementStrategyRegistry::Register(
     CaveFeatureKind kind,
     std::shared_ptr<const ICaveFeaturePlacementStrategy> strategy)
 {
@@ -466,7 +466,7 @@ bool CaveFeaturePlacementStrategyRegistry::Register(
 }
 
 std::shared_ptr<const ICaveFeaturePlacementStrategy>
-CaveFeaturePlacementStrategyRegistry::Find(CaveFeatureKind kind)
+UCaveFeaturePlacementStrategyRegistry::Find(CaveFeatureKind kind)
 {
   std::lock_guard<std::mutex> lock(CavePlacementStrategyMutex());
   const auto it = CavePlacementStrategies().find(kind);

@@ -63,5 +63,5 @@ Example: sword has `damage.fleshy` for melee and `groupcaps.snappy` for leaves â
 | `Melee` | Punch / weapon vs creature |
 | `Dig` | Break block (session progress) |
 | `Use` | Eat and drink shipped; `place_block` places from the held item (torch). Social UI remains TD-INF-004 |
-| `Ranged` | Hitscan bow shipped (`wood_bow` + `arrow`). Aura still future |
+| `Ranged` | Charged physical bow/arrow; swept collisions call the shared impact damage path. Aura still future |
 | `None` | No influence this tick |

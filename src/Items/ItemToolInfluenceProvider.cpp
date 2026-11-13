@@ -1,5 +1,6 @@
 #include "Items/ItemToolInfluenceProvider.h"
 #include "Creatures/Core/Creature.h"
+#include "Creatures/Influence/StatusEffectSystem.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Items/ToolCapabilities.h"
 #include <algorithm>
@@ -87,7 +88,8 @@ bool UItemToolInfluenceProvider::TryGetCapability(
   out = InfluenceCapability::DefaultBareHand(
       source.GetBareHandFleshyOverride() > 0
           ? source.GetBareHandFleshyOverride()
-          : BareHandFleshyDamage(source.GetAttributes()));
+          : BareHandFleshyDamage(
+                StatusEffectSystem::GetEffectiveAttributes(source)));
   if (source.GetBareHandIntervalOverride() > 0.f)
   {
     out.FullIntervalSec = source.GetBareHandIntervalOverride();

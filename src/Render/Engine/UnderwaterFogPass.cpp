@@ -4,16 +4,16 @@
 
 #include "App/Platform/Log.h"
 #include "Render/Camera/Camera.h"
-#include "Render/Engine/DistanceFog.h"
 #include "Render/Engine/FluidUnderwaterFogLogic.h"
 #include "Render/Engine/HorizonFogColor.h"
 #include "Render/GlIncludes.h"
-#include "Render/Mesh/FluidSurfaceColumnSlice.h"
 #include "World/Core/World.h"
 #include "World/Environment/WeatherField.h"
+#include "World/Fluids/FluidSurfaceColumnSlice.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Streaming/OceanCruisePolicy.h"
+#include "World/View/DistanceFog.h"
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -117,9 +117,9 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
                 {
                   continue;
                 }
-                static constexpr glm::ivec3 kDirs[6] = {
-                    {1, 0, 0}, {-1, 0, 0}, {0, 1, 0},
-                    {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+                static constexpr glm::ivec3 kDirs[6] = {{1, 0, 0}, {-1, 0, 0},
+                                                        {0, 1, 0}, {0, -1, 0},
+                                                        {0, 0, 1}, {0, 0, -1}};
                 bool face_vs_air = false;
                 bool face_vs_other_transparent = false;
                 for (const glm::ivec3 &d : kDirs)
@@ -146,9 +146,8 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
                   continue;
                 }
                 float sy = 0.0f;
-                const bool sy_ok =
-                    surface_map.SampleSurfaceWorld(glm::ivec2(pos.x, pos.z),
-                                                   sy);
+                const bool sy_ok = surface_map.SampleSurfaceWorld(
+                    glm::ivec2(pos.x, pos.z), sy);
                 const bool surface =
                     !sy_ok || pos.y >= static_cast<int>(sy) - 1;
                 if (surface)
@@ -168,18 +167,16 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
               }
             }
           }
-          CubatariumLogInfo(
-              "WaterFog",
-              std::string("face_scan surface=") +
-                  std::to_string(surface_faces) + " internal=" +
-                  std::to_string(internal_faces) +
-                  " internal_samples=" + internal_samples);
+          CubatariumLogInfo("WaterFog",
+                            std::string("face_scan surface=") +
+                                std::to_string(surface_faces) +
+                                " internal=" + std::to_string(internal_faces) +
+                                " internal_samples=" + internal_samples);
         }
       }
       CubatariumLogInfo(
           "WaterFog",
-          std::string("diag submerged=") +
-              (camera_submerged ? "1" : "0") +
+          std::string("diag submerged=") + (camera_submerged ? "1" : "0") +
               " partial=" + (partial_submerge ? "1" : "0") +
               " map_valid=" + (map_ready ? "1" : "0") +
               " size_blocks=" + std::to_string(surface_map.GetSizeBlocks()) +

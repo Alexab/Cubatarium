@@ -1608,6 +1608,10 @@ public:
   friend class UBlockBreakService;
 
 private:
+  void TraceRelightWatchdog();
+  bool CanRecoverUnlitFocusMeshes(int max_columns) const;
+  bool HasMeshOrFirstMeshOwner(glm::ivec3 coord) const;
+  bool ColumnHasMeshOrGpuOwner(glm::ivec3 coord) const;
   void AdjustColumnEmergeTelemetryCount(ColumnEmergeState state, int delta);
 
   /// Track dark drawable slices that must receive a post-OpenSky publication.
@@ -1774,7 +1778,7 @@ private:
   bool FoliageClimbEnabled{true};
   RenderSettings Render;
   EnvironmentState EnvironmentStateData;
-  WeatherFrontField WeatherFrontFieldData;
+  UWeatherFrontField WeatherFrontFieldData;
   double LastChunkWeatherUpdateSec{-1.0};
   mutable bool CachedWeatherBiomeSampleValid{false};
   mutable glm::ivec2 CachedWeatherBiomeColumn{0};
@@ -1847,7 +1851,7 @@ private:
   std::unordered_set<glm::ivec2, GroundColumnHash> EnterVisualWorkSnapshot;
   bool EnterVisualWorkSnapshotCaptured{false};
   int EnterVisualWorkPeak{0};
-  EnterVisualGate EnterVisualGateCtrl;
+  UEnterVisualGate EnterVisualGateCtrl;
   /// Near columns: light must apply before first mesh dirty.
   std::unordered_map<glm::ivec2, PendingRelightMeshColumnRange,
                      GroundColumnHash>

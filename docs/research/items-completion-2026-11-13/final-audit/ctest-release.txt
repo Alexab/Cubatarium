@@ -1,0 +1,54 @@
+Internal ctest changing into directory: E:/Work/Home/Cubatarium-items-inventory/build/desktop-msvc
+Test project E:/Work/Home/Cubatarium-items-inventory/build/desktop-msvc
+      Start  11: influence_hit_math_test
+ 1/20 Test  #11: influence_hit_math_test ...................   Passed    0.01 sec
+      Start  12: throw_math_test
+ 2/20 Test  #12: throw_math_test ...........................   Passed    0.01 sec
+      Start  13: inventory_transactions_test
+ 3/20 Test  #13: inventory_transactions_test ...............   Passed    0.03 sec
+      Start  19: creature_equipment_fit_test
+ 4/20 Test  #19: creature_equipment_fit_test ...............   Passed    0.01 sec
+      Start  20: item_survival_hooks_test
+ 5/20 Test  #20: item_survival_hooks_test ..................   Passed    0.01 sec
+      Start  33: creature_influence_channels_test
+ 6/20 Test  #33: creature_influence_channels_test ..........   Passed    0.01 sec
+      Start  66: column_flow_scheduler_test
+ 7/20 Test  #66: column_flow_scheduler_test ................   Passed    0.01 sec
+      Start  70: miss_first_mesh_class_test
+ 8/20 Test  #70: miss_first_mesh_class_test ................   Passed    0.01 sec
+      Start  71: mesh_publish_contract_test
+ 9/20 Test  #71: mesh_publish_contract_test ................   Passed    0.01 sec
+      Start  85: seam_absent_neighbor_test
+10/20 Test  #85: seam_absent_neighbor_test .................   Passed    0.02 sec
+      Start  86: fog_range_smoother_test
+11/20 Test  #86: fog_range_smoother_test ...................   Passed    0.01 sec
+      Start 103: tool_capabilities_test
+12/20 Test #103: tool_capabilities_test ....................   Passed    0.01 sec
+      Start 104: armor_equipment_test
+13/20 Test #104: armor_equipment_test ......................   Passed    0.03 sec
+      Start 129: inventory_mode_test
+14/20 Test #129: inventory_mode_test .......................   Passed    0.01 sec
+      Start 130: influence_use_test
+15/20 Test #130: influence_use_test ........................   Passed    0.01 sec
+      Start 131: recipe_registry_test
+16/20 Test #131: recipe_registry_test ......................   Passed    0.02 sec
+      Start 132: resource_economy_test
+17/20 Test #132: resource_economy_test .....................   Passed    0.02 sec
+      Start 180: worldgen_vegetation_placement_test
+18/20 Test #180: worldgen_vegetation_placement_test ........   Passed    0.02 sec
+      Start 182: worldgen_fluid_vegetation_pipeline_test
+19/20 Test #182: worldgen_fluid_vegetation_pipeline_test ...   Passed    0.08 sec
+      Start 205: human_motion_camera_test
+20/20 Test #205: human_motion_camera_test ..................   Passed    0.04 sec
+
+100% tests passed, 0 tests failed out of 20
+
+Label Time Summary:
+camera       =   0.04 sec*proc (1 test)
+creatures    =   0.04 sec*proc (3 tests)
+items        =   0.18 sec*proc (8 tests)
+player       =   0.04 sec*proc (1 test)
+streaming    =   0.06 sec*proc (5 tests)
+unit         =   0.41 sec*proc (20 tests)
+
+Total Test time (real) =   0.47 sec

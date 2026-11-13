@@ -2,22 +2,18 @@
 
 #include "Render/Engine/FluidUnderwaterFogLogic.h"
 
-#include "Render/Mesh/FluidSurfaceColumnSlice.h"
 #include "Render/Mesh/GpuFluidColumnScan.h"
+#include "World/Fluids/FluidSurfaceColumnSlice.h"
 
 #include "World/Core/FluidColumnSurfaceQuery.h"
 
 #include "World/Core/RuntimeTuning.h"
-
-
 
 #include "Blocks/BlockDefinitionStorage.h"
 
 #include "Blocks/BlockRegistry.h"
 
 #include "World/Core/BlockWorld.h"
-
-
 
 #include <cmath>
 
@@ -35,17 +31,11 @@
 
 #include <chrono>
 
-
-
 namespace
 
 {
 
-
-
 constexpr const char *kTestName = "fluid_surface_map_logic_test";
-
-
 
 static void Expect(bool cond, const char *message)
 
@@ -58,12 +48,8 @@ static void Expect(bool cond, const char *message)
     std::cerr << kTestName << ": " << message << std::endl;
 
     std::exit(1);
-
   }
-
 }
-
-
 
 static std::shared_ptr<cutum::UBlockDefinitionStorage> MakeDefinitions()
 
@@ -106,10 +92,7 @@ static std::shared_ptr<cutum::UBlockDefinitionStorage> MakeDefinitions()
   definitions->ReplaceAll(std::move(by_id), std::move(name_to_id));
 
   return definitions;
-
 }
-
-
 
 static void TestSentinelAndTuningDefaults()
 
@@ -124,7 +107,8 @@ static void TestSentinelAndTuningDefaults()
   Expect(cutum::URuntimeTuning::Get().FluidSurfaceWindowMoveThreshold == 32,
          "window move threshold default");
 
-  Expect(cutum::URuntimeTuning::Get().FluidSurfaceScanUp == 32, "scan up default");
+  Expect(cutum::URuntimeTuning::Get().FluidSurfaceScanUp == 32,
+         "scan up default");
 
   Expect(cutum::URuntimeTuning::Get().FluidSurfaceScanDown == 64,
 
@@ -133,10 +117,7 @@ static void TestSentinelAndTuningDefaults()
   Expect(cutum::FluidSurfaceColumnSlice::kNoSurface == INT16_MIN,
 
          "column slice no-surface sentinel");
-
 }
-
-
 
 static void TestWindowMoveThreshold()
 
@@ -157,10 +138,7 @@ static void TestWindowMoveThreshold()
   Expect(cutum::ShouldRefreshFluidSurfaceWindow(0, 0, 0, 32),
 
          "z shift at threshold refreshes");
-
 }
-
-
 
 static void TestColumnScanFindsSurface()
 
@@ -178,8 +156,6 @@ static void TestColumnScanFindsSurface()
 
   world.SetBlock(glm::ivec3(0, 50, 0), kWater);
 
-
-
   const cutum::FluidColumnSurface high =
 
       cutum::FindFluidColumnSurfaceAt(world, registry, 0, 0, 45);
@@ -188,15 +164,11 @@ static void TestColumnScanFindsSurface()
 
          "scan finds topmost fluid block");
 
-
-
   const cutum::FluidColumnSurface below_hint =
 
       cutum::FindFluidColumnSurfaceAt(world, registry, 0, 0, 10, 8, 8);
 
   Expect(!below_hint.valid, "narrow scan misses fluid outside range");
-
-
 
   Expect(cutum::HasFluidSurfaceNear(world, registry, 0, 0, 45, 16),
 
@@ -205,10 +177,7 @@ static void TestColumnScanFindsSurface()
   Expect(!cutum::HasFluidSurfaceNear(world, registry, 64, 64, 45, 16),
 
          "proximity misses distant fluid column");
-
 }
-
-
 
 static void TestUnderwaterFogPolicyV3()
 
@@ -305,7 +274,6 @@ static void TestUnderwaterFogPolicyV3()
          "deep ocean floor is directly under fluid span");
 }
 
-
 static void TestChunkStagingParityWithPerCell()
 {
   constexpr cutum::BlockId kWater = 9;
@@ -351,8 +319,7 @@ static void TestChunkStagingParityWithPerCell()
       }
       cellSurface[i] = cutum::BlockTopY(column.surfaceBlockY);
       cellBottom[i] = static_cast<float>(column.bottomBlockY);
-      cellIndex[i] =
-          cutum::FluidSurfaceIndexForBlock(column.fluidId, registry);
+      cellIndex[i] = cutum::FluidSurfaceIndexForBlock(column.fluidId, registry);
     }
   }
 
@@ -414,8 +381,7 @@ static void TestChunkWindowRebuildBudget()
       }
       cellSurface[i] = cutum::BlockTopY(column.surfaceBlockY);
       cellBottom[i] = static_cast<float>(column.bottomBlockY);
-      cellIndex[i] =
-          cutum::FluidSurfaceIndexForBlock(column.fluidId, registry);
+      cellIndex[i] = cutum::FluidSurfaceIndexForBlock(column.fluidId, registry);
     }
   }
 
@@ -472,7 +438,8 @@ static void TestScrollStagingPreservesOverlap()
                                                 oldOrigin, newOrigin, sentinel),
          "scroll returns true on origin shift");
 
-  // World block (20, 10) was at staging (20,10); after origin +=16x it is at (4,10).
+  // World block (20, 10) was at staging (20,10); after origin +=16x it is at
+  // (4,10).
   const size_t scrolled =
       static_cast<size_t>(10) * kSize + static_cast<size_t>(4);
   Expect(std::abs(surface[scrolled] - 42.5f) < 0.001f,
@@ -480,13 +447,14 @@ static void TestScrollStagingPreservesOverlap()
   Expect(index[scrolled] == 3, "scrolled index preserves overlap texel");
   Expect(std::abs(bottom[scrolled] - 12.0f) < 0.001f,
          "scrolled bottom preserves overlap texel");
-  Expect(surface[marked] == sentinel || std::abs(surface[marked] - 42.5f) > 0.1f,
+  Expect(surface[marked] == sentinel ||
+             std::abs(surface[marked] - 42.5f) > 0.1f,
          "old edge slot vacated or rewritten");
   Expect(cutum::FluidSurfaceChunkNeedsStripPatch(glm::ivec3(3, 0, 0), oldOrigin,
                                                  newOrigin, kSize),
          "new right strip chunk needs patch");
-  Expect(!cutum::FluidSurfaceChunkNeedsStripPatch(glm::ivec3(1, 0, 0), oldOrigin,
-                                                  newOrigin, kSize),
+  Expect(!cutum::FluidSurfaceChunkNeedsStripPatch(glm::ivec3(1, 0, 0),
+                                                  oldOrigin, newOrigin, kSize),
          "fully interior old chunk does not need strip patch");
 }
 

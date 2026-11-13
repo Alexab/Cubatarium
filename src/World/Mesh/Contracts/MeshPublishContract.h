@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Render/Mesh/ArtifactManifest.h"
+#include "World/Mesh/Contracts/ArtifactManifest.h"
 
 #include <cstdint>
 
@@ -29,10 +29,11 @@ enum class PublicationValidation : uint8_t
 /// Validate candidate against expected source provenance + live draw epochs.
 /// Partially stubbed: production may call with zeroed optional epochs until
 /// full manifest plumbing lands; SourceMatches + light_valid still gate.
-inline PublicationValidation ValidatePublicationCandidate(
-    const ArtifactManifest &got, const ArtifactManifest &expected,
-    const PublicationEpochs &draw_epochs = {},
-    const PublicationEpochs &live_epochs = {})
+inline PublicationValidation
+ValidatePublicationCandidate(const ArtifactManifest &got,
+                             const ArtifactManifest &expected,
+                             const PublicationEpochs &draw_epochs = {},
+                             const PublicationEpochs &live_epochs = {})
 {
   if (expected.light_valid && !got.light_valid)
   {
@@ -61,8 +62,9 @@ inline bool PublicationCandidateAccepted(PublicationValidation v)
 }
 
 /// A34 empty-world: observational FullyDarkFace / dark vertices are MeshLitGate
-/// SoftDefer territory — never ArtifactManifest LightInvalid. Call after filling
-/// provenance revs so ValidatePublicationCandidate only sees SourceMismatch.
+/// SoftDefer territory — never ArtifactManifest LightInvalid. Call after
+/// filling provenance revs so ValidatePublicationCandidate only sees
+/// SourceMismatch.
 inline void ClearObservationalDarkFromLightValid(ArtifactManifest &got,
                                                  ArtifactManifest &expected)
 {
@@ -98,7 +100,7 @@ struct MeshPublishRevs
 };
 
 inline bool MeshPublishRevsMatch(const MeshPublishRevs &got,
-                                const MeshPublishRevs &expected)
+                                 const MeshPublishRevs &expected)
 {
   return got.geom_rev == expected.geom_rev &&
          got.light_rev == expected.light_rev &&
@@ -129,7 +131,8 @@ inline uint64_t MeshPublishMaterialStamp(const uint16_t *block_ids, size_t n,
 }
 
 /// Wrong-tex gate: blockId flip on Replace is Accept only when material stamp
-/// matches the CPU bake (stale upload Retain). Empty expected → first publish OK.
+/// matches the CPU bake (stale upload Retain). Empty expected → first publish
+/// OK.
 inline bool ShouldAcceptMaterialBlockIdFlip(const MeshPublishRevs &got,
                                             const MeshPublishRevs &expected,
                                             bool gpu_ready,
@@ -151,8 +154,7 @@ inline bool ShouldAcceptMaterialBlockIdFlip(const MeshPublishRevs &got,
 }
 
 /// Empty intentional publish is PublishedEmpty (not a silent Retain forever).
-inline MeshPublishAction DecideMeshPublishAction(bool accept,
-                                                 bool new_drawable,
+inline MeshPublishAction DecideMeshPublishAction(bool accept, bool new_drawable,
                                                  bool had_prior_drawable)
 {
   if (!accept)
@@ -176,9 +178,9 @@ inline bool MeshPublishLiveFreeDisjoint(bool is_live_draw, bool freeing_slot)
 /// A26 N2: deferred retirement — free only when generation matches fence gen
 /// and slot is not live. Stale free of a newer generation is rejected.
 inline bool ShouldDeferMeshRetirement(uint64_t free_generation,
-                                       uint64_t live_generation,
-                                       uint64_t fence_completed_generation,
-                                       bool still_live_draw)
+                                      uint64_t live_generation,
+                                      uint64_t fence_completed_generation,
+                                      bool still_live_draw)
 {
   if (still_live_draw)
   {
@@ -214,7 +216,8 @@ inline bool ShouldRejectStaleDrawCommands(const PublicationEpochs &draw,
   return false;
 }
 
-/// A28 T3: shell/cross residual publish sites share ArtifactManifest validation.
+/// A28 T3: shell/cross residual publish sites share ArtifactManifest
+/// validation.
 inline PublicationValidation ValidateCrossOrShellPublication(
     uint64_t got_geom_rev, uint64_t got_light_rev, bool light_valid,
     uint64_t expected_geom_rev, uint64_t expected_light_rev,
@@ -232,7 +235,8 @@ inline PublicationValidation ValidateCrossOrShellPublication(
 }
 
 /// A31 P1 / A35: mutually exclusive white/partial chunk defect class.
-/// Priority: legal dark → missing geometry → culled → light → seam → material → precision.
+/// Priority: legal dark → missing geometry → culled → light → seam → material →
+/// precision.
 enum class ChunkDefectClass : uint8_t
 {
   GeometryMissing = 0,
@@ -245,14 +249,10 @@ enum class ChunkDefectClass : uint8_t
   Unknown = 7,
 };
 
-inline ChunkDefectClass ClassifyChunkDefect(bool has_voxel_input,
-                                            bool has_published_artifact,
-                                            bool cull_excluded,
-                                            bool light_mismatch,
-                                            bool seam_peer_debt,
-                                            bool material_mismatch,
-                                            bool precision_breaks_with_distance,
-                                            bool legal_dark_confirmed)
+inline ChunkDefectClass ClassifyChunkDefect(
+    bool has_voxel_input, bool has_published_artifact, bool cull_excluded,
+    bool light_mismatch, bool seam_peer_debt, bool material_mismatch,
+    bool precision_breaks_with_distance, bool legal_dark_confirmed)
 {
   if (legal_dark_confirmed)
   {

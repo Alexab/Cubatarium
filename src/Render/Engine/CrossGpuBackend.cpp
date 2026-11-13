@@ -3,7 +3,7 @@
 #include "Render/Mesh/CrossInstanceBatch.h"
 #include "Render/Mesh/CrossMeshEmitter.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
-#include "Render/Mesh/MeshPublishContract.h"
+#include "World/Mesh/Contracts/MeshPublishContract.h"
 #include <cstddef>
 #include <glm/glm.hpp>
 #include <vector>
@@ -64,9 +64,10 @@ bool UCrossGpuBackend::EnsureTemplateMesh(BlockDecorShape shape)
 
   glBindVertexArray(mesh.vao);
   glBindBuffer(kArrayBuffer, mesh.vbo);
-  glBufferData(kArrayBuffer,
-               static_cast<GLsizeiptr>(vertices.size() * sizeof(GreedyMeshVertex)),
-               vertices.data(), GL_STATIC_DRAW);
+  glBufferData(
+      kArrayBuffer,
+      static_cast<GLsizeiptr>(vertices.size() * sizeof(GreedyMeshVertex)),
+      vertices.data(), GL_STATIC_DRAW);
   glBindBuffer(kElementArrayBuffer, mesh.ebo);
   glBufferData(kElementArrayBuffer,
                static_cast<GLsizeiptr>(indices.size() * sizeof(uint32_t)),
@@ -185,8 +186,7 @@ void UCrossGpuBackend::UploadInstances(CrossGpuBatch &gpu,
   gpu.blockId = batch.blockId;
   gpu.shape = batch.shape;
   gpu.instanceCount = batch.instances.size();
-  const size_t byte_size =
-      batch.instances.size() * sizeof(CrossInstanceGpu);
+  const size_t byte_size = batch.instances.size() * sizeof(CrossInstanceGpu);
   UploadBuffer(gpu.instanceVbo, gpu.instanceCapacityBytes, kArrayBuffer,
                batch.instances.data(), byte_size);
   EnsureBatchVao(gpu);

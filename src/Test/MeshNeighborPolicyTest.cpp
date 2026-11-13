@@ -1,6 +1,6 @@
-#include "Render/Mesh/MeshNeighborPolicy.h"
-#include "World/Streaming/SeaSeamRemeshPolicy.h"
+#include "World/Mesh/Contracts/MeshNeighborPolicy.h"
 #include "World/Streaming/FogPullInPolicy.h"
+#include "World/Streaming/SeaSeamRemeshPolicy.h"
 #include <iostream>
 
 static int Fail(const char *msg)
@@ -146,41 +146,42 @@ int main()
       return Fail("air-near-fluid still remeshes surface cy");
     }
     // SoT 111310 neutralize: sea-surface peer remesh is sticky-face only.
-    if (cutum::ShouldRemeshSeaSurfaceDarkPeer(
-            SeaSeamEyeContext::AirNearFluid, true, true, false, true))
+    if (cutum::ShouldRemeshSeaSurfaceDarkPeer(SeaSeamEyeContext::AirNearFluid,
+                                              true, true, false, true))
     {
       return Fail("sysreset: FullyDark peer without sticky must not remesh");
     }
-    if (cutum::ShouldRemeshSeaSurfaceDarkPeer(
-            SeaSeamEyeContext::Underwater, true, true, false, true))
+    if (cutum::ShouldRemeshSeaSurfaceDarkPeer(SeaSeamEyeContext::Underwater,
+                                              true, true, false, true))
     {
-      return Fail("sysreset: underwater FullyDark without sticky must not remesh");
+      return Fail(
+          "sysreset: underwater FullyDark without sticky must not remesh");
     }
-    if (!cutum::ShouldRemeshSeaSurfaceDarkPeer(
-            SeaSeamEyeContext::AirNearFluid, true, true, true, false))
+    if (!cutum::ShouldRemeshSeaSurfaceDarkPeer(SeaSeamEyeContext::AirNearFluid,
+                                               true, true, true, false))
     {
       return Fail("air-near-fluid sticky face peer must remesh");
     }
-    if (cutum::ShouldRemeshSeaSurfaceDarkPeer(
-            SeaSeamEyeContext::AirNearFluid, true, true, false, false))
+    if (cutum::ShouldRemeshSeaSurfaceDarkPeer(SeaSeamEyeContext::AirNearFluid,
+                                              true, true, false, false))
     {
       return Fail("air-near-fluid non-dark non-sticky must not remesh");
     }
-    if (cutum::ShouldRemeshSeaSurfaceDarkPeer(
-            SeaSeamEyeContext::Inland, true, true, false, true))
+    if (cutum::ShouldRemeshSeaSurfaceDarkPeer(SeaSeamEyeContext::Inland, true,
+                                              true, false, true))
     {
       return Fail("inland must not use dark heal broaden");
     }
-    if (cutum::ShouldRemeshSeaSurfaceDarkPeer(
-            SeaSeamEyeContext::AirNearFluid, true, false, true, true))
+    if (cutum::ShouldRemeshSeaSurfaceDarkPeer(SeaSeamEyeContext::AirNearFluid,
+                                              true, false, true, true))
     {
       return Fail("sticky remesh stays in surface_band");
     }
     int min_y = 0;
     int max_y = 0;
-    cutum::SeaSeamRemeshYRangeForPublisher(
-        62, 16, 256, /*publisher_cy=*/1, SeaSeamEyeContext::AirNearFluid, min_y,
-        max_y);
+    cutum::SeaSeamRemeshYRangeForPublisher(62, 16, 256, /*publisher_cy=*/1,
+                                           SeaSeamEyeContext::AirNearFluid,
+                                           min_y, max_y);
     if (min_y != 62 - 16)
     {
       return Fail("air-near-fluid Y range is surface (not publisher_cy)");
@@ -193,17 +194,16 @@ int main()
   {
     int min_y = 0;
     int max_y = 0;
-    cutum::SeaSeamRemeshYRangeForPublisher(
-        63, 16, 319, /*publisher_cy=*/-4,
-        cutum::SeaSeamEyeContext::Underwater, min_y, max_y,
-        /*min_height=*/-64);
+    cutum::SeaSeamRemeshYRangeForPublisher(63, 16, 319, /*publisher_cy=*/-4,
+                                           cutum::SeaSeamEyeContext::Underwater,
+                                           min_y, max_y,
+                                           /*min_height=*/-64);
     if (min_y != -64 || max_y != -49)
     {
       return Fail("negative-Y underwater remesh targets its signed chunk");
     }
     if (cutum::SeaSeamRemeshChunksPerPeerColumn(
-            63, 16, 319, -4,
-            cutum::SeaSeamEyeContext::Underwater, -64) != 1)
+            63, 16, 319, -4, cutum::SeaSeamEyeContext::Underwater, -64) != 1)
     {
       return Fail("negative-Y seam range counts one chunk slice");
     }
@@ -282,10 +282,10 @@ int main()
   {
     return Fail("fog hold decay only when miss cleared");
   }
-  if (!cutum::NeighborShellAirRequiresLoadedChunk(
-          cutum::NeighborLoadState::Air, true) ||
-      cutum::NeighborShellAirRequiresLoadedChunk(
-          cutum::NeighborLoadState::Air, false) ||
+  if (!cutum::NeighborShellAirRequiresLoadedChunk(cutum::NeighborLoadState::Air,
+                                                  true) ||
+      cutum::NeighborShellAirRequiresLoadedChunk(cutum::NeighborLoadState::Air,
+                                                 false) ||
       !cutum::NeighborShellAirRequiresLoadedChunk(
           cutum::NeighborLoadState::Unknown, false))
   {
@@ -306,13 +306,13 @@ int main()
       return Fail("inland surface min y KEEP");
     }
   }
-  if (!cutum::ShouldRemeshFaceDebtHolderWhenPeerDrawable(true, true, true, false,
-                                                        0, 2))
+  if (!cutum::ShouldRemeshFaceDebtHolderWhenPeerDrawable(true, true, true,
+                                                         false, 0, 2))
   {
     return Fail("FaceDebt already-known remesh");
   }
-  if (cutum::ShouldRemeshFaceDebtHolderWhenPeerDrawable(true, false, true, false,
-                                                       0, 2))
+  if (cutum::ShouldRemeshFaceDebtHolderWhenPeerDrawable(true, false, true,
+                                                        false, 0, 2))
   {
     return Fail("FaceDebt SoftDefer peer no remesh");
   }
@@ -322,7 +322,7 @@ int main()
     return Fail("FaceDebt SoftDeferEmpty peer no remesh");
   }
   if (cutum::ShouldRemeshFaceDebtHolderWhenPeerDrawable(true, true, true, false,
-                                                       2, 2))
+                                                        2, 2))
   {
     return Fail("FaceDebt remesh at cap");
   }

@@ -28,7 +28,7 @@ struct HumanMotionState
   bool initialized{false}, submerged{false}, wasGrounded{true};
   HumanMotionMode mode{HumanMotionMode::Ground};
   float distancePhase{0.f}, idlePhase{0.f}, landing{0.f},
-      previousVerticalSpeed{0.f};
+      PreviousVerticalSpeed{0.f};
   unsigned landingEvents{0};
   float audioPhase{0.f};
   float actionRemaining{0.f};

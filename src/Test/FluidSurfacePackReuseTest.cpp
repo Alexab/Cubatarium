@@ -1,8 +1,8 @@
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
-#include "Render/Mesh/FluidSurfaceColumnSlice.h"
 #include "Render/Mesh/GpuFluidColumnScan.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Fluids/FluidSurfaceColumnSlice.h"
 
 #include <cstdlib>
 #include <iostream>

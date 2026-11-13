@@ -117,11 +117,19 @@
       "passed": true
     },
     {
+      "name": "physical impacts respect the target's frontal shield arc",
+      "passed": true
+    },
+    {
       "name": "moving target is struck by an arrow",
       "passed": true
     },
     {
       "name": "bucket collects water and gains mass",
+      "passed": true
+    },
+    {
+      "name": "full bucket refuses another source atomically",
       "passed": true
     },
     {
@@ -175,6 +183,10 @@
     {
       "name": "empty-inventory survival integration",
       "passed": true
+    },
+    {
+      "name": "effective status attributes change real dig capability without mutating base stats",
+      "passed": true
     }
   ],
   "frame_rates": [
@@ -204,8 +216,8 @@
     }
   ],
   "passed": true,
-  "physics_512_active_bodies_60_steps_ms": 60.6901,
-  "physics_64_bodies_60_steps_ms": 7.6639,
+  "physics_512_active_bodies_60_steps_ms": 61.0259,
+  "physics_64_bodies_60_steps_ms": 10.1781,
   "survival_loop": {
     "crop_before_harvest": "cu_crop_ripe",
     "passed": true,

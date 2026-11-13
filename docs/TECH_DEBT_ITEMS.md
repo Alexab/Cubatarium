@@ -42,3 +42,10 @@ The existing global style/include audit debt is recorded with a develop comparis
 See [INTERACTION_ARCHITECTURE.md](INTERACTION_ARCHITECTURE.md): decision A (dual group tables) + C (Dig via Influence bus).
 
 Visual schema: `visual` / `ranged` / `block` on item JSON; presets in `content/item_visual_presets.json`.
+
+
+Final audit fixes: full-bucket source loss, directional physical shield hits,
+effective status attributes in capabilities, finite throw parameters, projected
+FP carry contacts, publication preserving authored poses, and automatic manifest
+hash verification. [Release acceptance](research/items-completion-2026-11-13/final-audit/README.md):
+20 CTest, 47 native checks, 24 window layouts, eight audit and two publication tests.

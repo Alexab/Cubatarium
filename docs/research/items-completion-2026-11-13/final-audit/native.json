@@ -1,0 +1,289 @@
+{
+  "checks": [
+    {
+      "name": "take exact worn instance for throw",
+      "passed": true
+    },
+    {
+      "name": "release charged item",
+      "passed": true
+    },
+    {
+      "name": "flight and save retain identity and durability",
+      "passed": true
+    },
+    {
+      "name": "wall CCD stops thrown tool",
+      "passed": true
+    },
+    {
+      "name": "grab a small creature",
+      "passed": true
+    },
+    {
+      "name": "held save retains creature ID and possessions",
+      "passed": true
+    },
+    {
+      "name": "hard impact damages thrown creature",
+      "passed": true
+    },
+    {
+      "name": "AI ownership restored after impact",
+      "passed": true
+    },
+    {
+      "name": "creature projectile damages both participants",
+      "passed": true
+    },
+    {
+      "name": "mutually lethal impact handles both creatures",
+      "passed": true
+    },
+    {
+      "name": "resting lethal contact creates no repeated drops",
+      "passed": true
+    },
+    {
+      "name": "two-hand creature grab",
+      "passed": true
+    },
+    {
+      "name": "gentle placement does no contact damage",
+      "passed": true
+    },
+    {
+      "name": "eligible hostile creature can be grabbed",
+      "passed": true
+    },
+    {
+      "name": "creature resistance releases ownership",
+      "passed": true
+    },
+    {
+      "name": "possession of held creature restores movement without duplication",
+      "passed": true
+    },
+    {
+      "name": "carrier death releases creature and returns AI ownership",
+      "passed": true
+    },
+    {
+      "name": "grab requires direct line of sight",
+      "passed": true
+    },
+    {
+      "name": "unloaded collision region pauses bodies without losing state",
+      "passed": true
+    },
+    {
+      "name": "oversized or heavy creature is refused without damage",
+      "passed": true
+    },
+    {
+      "name": "bow fires flying arrow",
+      "passed": true
+    },
+    {
+      "name": "arrow stops at wall",
+      "passed": true
+    },
+    {
+      "name": "bootstrap wood to sticks and wooden tool",
+      "passed": true
+    },
+    {
+      "name": "missing furnace fails atomically",
+      "passed": true
+    },
+    {
+      "name": "smelting converts raw ore and fuel",
+      "passed": true
+    },
+    {
+      "name": "hoe tills soil",
+      "passed": true
+    },
+    {
+      "name": "watered planted grain reaches maturity",
+      "passed": true
+    },
+    {
+      "name": "crop persistence round trip",
+      "passed": true
+    },
+    {
+      "name": "occupied shield does not protect against melee",
+      "passed": true
+    },
+    {
+      "name": "physical impacts respect the target's frontal shield arc",
+      "passed": true
+    },
+    {
+      "name": "moving target is struck by an arrow",
+      "passed": true
+    },
+    {
+      "name": "bucket collects water and gains mass",
+      "passed": true
+    },
+    {
+      "name": "full bucket refuses another source atomically",
+      "passed": true
+    },
+    {
+      "name": "bucket pours without losing its instance",
+      "passed": true
+    },
+    {
+      "name": "empty waterskin cannot restore thirst",
+      "passed": true
+    },
+    {
+      "name": "drink consumes finite water, preserves container",
+      "passed": true
+    },
+    {
+      "name": "water damps a physical body's fall",
+      "passed": true
+    },
+    {
+      "name": "body budget retains all property",
+      "passed": true
+    },
+    {
+      "name": "budget overflow is serialized without silent deletion",
+      "passed": true
+    },
+    {
+      "name": "missing carrier safely releases cargo and frees hands",
+      "passed": true
+    },
+    {
+      "name": "switching worn instances cancels dig without wear",
+      "passed": true
+    },
+    {
+      "name": "completed dig wears the exact source instance",
+      "passed": true
+    },
+    {
+      "name": "failed dig spends no durability",
+      "passed": true
+    },
+    {
+      "name": "native trajectory stable at 30/60/144 FPS",
+      "passed": true
+    },
+    {
+      "name": "long frame keeps a swept body and its exact instance",
+      "passed": true
+    },
+    {
+      "name": "empty-inventory survival integration",
+      "passed": true
+    },
+    {
+      "name": "effective status attributes change real dig capability without mutating base stats",
+      "passed": true
+    }
+  ],
+  "frame_rates": [
+    {
+      "fps": 30,
+      "position": [
+        -4.98187198161304e-08,
+        71.91500091552734,
+        -31.429664611816406
+      ]
+    },
+    {
+      "fps": 60,
+      "position": [
+        -4.98187198161304e-08,
+        71.91500091552734,
+        -31.429664611816406
+      ]
+    },
+    {
+      "fps": 144,
+      "position": [
+        -4.98187198161304e-08,
+        71.91500091552734,
+        -31.429664611816406
+      ]
+    }
+  ],
+  "passed": true,
+  "physics_512_active_bodies_60_steps_ms": 61.0259,
+  "physics_64_bodies_60_steps_ms": 10.1781,
+  "survival_loop": {
+    "crop_before_harvest": "cu_crop_ripe",
+    "passed": true,
+    "plant_reason": "Seeds planted",
+    "steps": [
+      {
+        "name": "empty inventory gathers natural wood by hand",
+        "passed": true
+      },
+      {
+        "name": "hand recipes produce sticks, wooden pick and workbench",
+        "passed": true
+      },
+      {
+        "name": "workbench placed through resource-consuming placement",
+        "passed": true
+      },
+      {
+        "name": "wooden pick mines stone; furnace and stone pick crafted",
+        "passed": true
+      },
+      {
+        "name": "furnace placed from its actual slot",
+        "passed": true
+      },
+      {
+        "name": "stone pick obtains ore and fuel",
+        "passed": true
+      },
+      {
+        "name": "ore and coal smelt into iron; upgrade pick",
+        "passed": true
+      },
+      {
+        "name": "iron pick supplies the complete iron baseline",
+        "passed": true
+      },
+      {
+        "name": "vegetation supplies seed and fiber; cord is craftable",
+        "passed": true
+      },
+      {
+        "name": "five iron tools and four armor slots craftable",
+        "passed": true
+      },
+      {
+        "name": "utilities, shield, anvil and bow use real resources",
+        "passed": true
+      },
+      {
+        "name": "anvil placement",
+        "passed": true
+      },
+      {
+        "name": "tilled, watered crop matures and is harvested",
+        "passed": true
+      },
+      {
+        "name": "harvest and fuel bake edible bread",
+        "passed": true
+      },
+      {
+        "name": "cooked harvest restores survival nutrition",
+        "passed": true
+      }
+    ],
+    "till_reason": "Used Iron Hoe"
+  }
+}

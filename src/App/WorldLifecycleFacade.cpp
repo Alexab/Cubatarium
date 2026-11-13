@@ -15,9 +15,9 @@
 #include "App/ResourcePackBootstrap.h"
 #include "Creatures/Core/Creature.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
+#include "Version.h"
 #include "World/Core/World.h"
 #include "World/Items/WorldItemSystem.h"
-#include "Version.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
 
 using json = nlohmann::json;
@@ -117,13 +117,13 @@ void UWorldLifecycleFacade::CreateWorldFromProceduralConfig(UCore &core)
 void UWorldLifecycleFacade::CreateNewWorldWithCurrentSettings(UCore &core)
 {
   const auto begin = std::chrono::steady_clock::now();
-  CubatariumLogInfo(
-      "World",
-      "create begin name=(pending) seed=" + std::to_string(core.WorldSeed));
+  CubatariumLogInfo("World", "create begin name=(pending) seed=" +
+                                 std::to_string(core.WorldSeed));
   const std::string new_world_name = SetupNewWorldForCreation(core);
   if (new_world_name.empty())
   {
-    CubatariumLogError("World", "create FAILED: resource packs / setup aborted");
+    CubatariumLogError("World",
+                       "create FAILED: resource packs / setup aborted");
     std::cerr << "CreateNewWorldWithCurrentSettings: aborted (resource packs)"
               << std::endl;
     return;
@@ -132,9 +132,10 @@ void UWorldLifecycleFacade::CreateNewWorldWithCurrentSettings(UCore &core)
                                  " seed=" + std::to_string(core.WorldSeed));
   try
   {
-    WorldItemSystem::Instance().Clear();
+    UWorldItemSystem::Instance().Clear();
     core.WorldInstance->Create(new_world_name);
-    core.WorldInstance->ApplyEnvironmentConfig(core.DefaultEnvironmentConfig, true);
+    core.WorldInstance->ApplyEnvironmentConfig(core.DefaultEnvironmentConfig,
+                                               true);
     if (!core.DefaultEnvironmentConfig.WeatherAuto.AutoChange)
     {
       core.WorldInstance->SetWeatherByName(core.DefaultWeather, 0.0f);
@@ -154,14 +155,14 @@ void UWorldLifecycleFacade::CreateNewWorldWithCurrentSettings(UCore &core)
   }
   catch (const std::exception &e)
   {
-    CubatariumLogError("World",
-                       std::string("create FAILED name=") + new_world_name +
-                           ": " + e.what());
+    CubatariumLogError("World", std::string("create FAILED name=") +
+                                    new_world_name + ": " + e.what());
     throw;
   }
 }
 
-void UWorldLifecycleFacade::LoadWorld(UCore &core, const std::string &world_name)
+void UWorldLifecycleFacade::LoadWorld(UCore &core,
+                                      const std::string &world_name)
 {
   const auto begin = std::chrono::steady_clock::now();
   CubatariumLogInfo("World", "load begin name=" + world_name);
@@ -170,7 +171,7 @@ void UWorldLifecycleFacade::LoadWorld(UCore &core, const std::string &world_name
     core.ActiveWorldFolder = core.WorldFolderPath(world_name);
     // Ground drops never persist in saves; stale ones from a previous world
     // must not leak into the newly loaded one.
-    WorldItemSystem::Instance().Clear();
+    UWorldItemSystem::Instance().Clear();
     core.WorldInstance->Load(core.ActiveWorldFolder.string());
     core.ApplyRuntimeStreamingToWorld();
     if (!core.DefaultUserName.empty())
@@ -355,7 +356,8 @@ void UWorldLifecycleFacade::RefreshWorldList(UCore &core)
   WorldListCachedForPath = core.WorldPath.string();
 }
 
-void UWorldLifecycleFacade::SaveWorld(UCore &core, const std::string &world_name)
+void UWorldLifecycleFacade::SaveWorld(UCore &core,
+                                      const std::string &world_name)
 {
   if (world_name.empty() && core.ActiveWorldFolder.empty())
   {
@@ -375,8 +377,7 @@ void UWorldLifecycleFacade::SaveWorld(UCore &core, const std::string &world_name
       core.WorldInstance->SetCatalogFingerprint(
           core.BlockMergeRegistryInstance->ComputeCatalogFingerprint());
     }
-    if (core.WorldInstance &&
-        core.WorldInstance->IsStreamingEnabled() &&
+    if (core.WorldInstance && core.WorldInstance->IsStreamingEnabled() &&
         UWorld::HasPersistedTerrainOnDisk(core.ActiveWorldFolder.string()))
     {
       // UX U5: the streaming+persisted snapshot blocked the caller for the
@@ -450,13 +451,15 @@ void UWorldLifecycleFacade::ApplyNewWorldCreationRequest(
   core.PendingNewWorldDifficulty = difficulty;
 }
 
-std::string UWorldLifecycleFacade::AllocateNextWorldName(const UCore &core) const
+std::string
+UWorldLifecycleFacade::AllocateNextWorldName(const UCore &core) const
 {
   int maxNumber = 0;
   if (std::filesystem::exists(core.WorldPath) &&
       std::filesystem::is_directory(core.WorldPath))
   {
-    for (const auto &entry : std::filesystem::directory_iterator(core.WorldPath))
+    for (const auto &entry :
+         std::filesystem::directory_iterator(core.WorldPath))
     {
       if (!entry.is_directory())
       {
@@ -478,7 +481,8 @@ std::string UWorldLifecycleFacade::AllocateNextWorldName(const UCore &core) cons
 std::string UWorldLifecycleFacade::SetupNewWorldForCreation(UCore &core)
 {
   ResourcePackSelection selection = core.PendingNewWorldPackSelection;
-  const std::vector<std::string> legacyPacks = core.PendingNewWorldResourcePacks;
+  const std::vector<std::string> legacyPacks =
+      core.PendingNewWorldResourcePacks;
   core.PendingNewWorldPackSelection = {};
   core.PendingNewWorldResourcePacks.clear();
   if (selection.Primary.empty())
@@ -490,17 +494,17 @@ std::string UWorldLifecycleFacade::SetupNewWorldForCreation(UCore &core)
   {
     selection = core.GetDefaultResourcePackSelection();
   }
-  selection.Primary =
-      core.ResourcePackBootstrap.NormalizeEnabledPackIds(core, selection.Primary);
-  selection.Secondary =
-      core.ResourcePackBootstrap.NormalizeEnabledPackIds(core, selection.Secondary);
+  selection.Primary = core.ResourcePackBootstrap.NormalizeEnabledPackIds(
+      core, selection.Primary);
+  selection.Secondary = core.ResourcePackBootstrap.NormalizeEnabledPackIds(
+      core, selection.Secondary);
   if (selection.Primary.empty())
   {
     selection = core.GetDefaultResourcePackSelection();
-    selection.Primary =
-        core.ResourcePackBootstrap.NormalizeEnabledPackIds(core, selection.Primary);
-    selection.Secondary =
-        core.ResourcePackBootstrap.NormalizeEnabledPackIds(core, selection.Secondary);
+    selection.Primary = core.ResourcePackBootstrap.NormalizeEnabledPackIds(
+        core, selection.Primary);
+    selection.Secondary = core.ResourcePackBootstrap.NormalizeEnabledPackIds(
+        core, selection.Secondary);
   }
   if (!selection.Primary.empty() &&
       std::find(selection.Primary.begin(), selection.Primary.end(),
@@ -597,16 +601,16 @@ bool UWorldLifecycleFacade::CreateWorldHeadless(UCore &core,
   ResourcePackSelection selection = core.GetDefaultResourcePackSelection();
   if (!args.PrimaryPacks.empty())
   {
-    selection.Primary =
-        core.ResourcePackBootstrap.NormalizeEnabledPackIds(core, args.PrimaryPacks);
+    selection.Primary = core.ResourcePackBootstrap.NormalizeEnabledPackIds(
+        core, args.PrimaryPacks);
     selection.WorldgenOwner = args.WorldgenOwnerPack.empty()
                                   ? selection.Primary.front()
                                   : args.WorldgenOwnerPack;
   }
-  selection.Primary =
-      core.ResourcePackBootstrap.NormalizeEnabledPackIds(core, selection.Primary);
-  selection.Secondary =
-      core.ResourcePackBootstrap.NormalizeEnabledPackIds(core, selection.Secondary);
+  selection.Primary = core.ResourcePackBootstrap.NormalizeEnabledPackIds(
+      core, selection.Primary);
+  selection.Secondary = core.ResourcePackBootstrap.NormalizeEnabledPackIds(
+      core, selection.Secondary);
   if (!core.ResourcePackBootstrap.ApplyResourcePacks(core, selection))
   {
     report.Error = "Failed to apply resource packs.";
@@ -634,9 +638,9 @@ bool UWorldLifecycleFacade::CreateWorldHeadless(UCore &core,
   core.WorldInstance->SetRenderDistanceChunks(core.RenderDistanceChunks);
   core.WorldInstance->SetStreamingEnabled(false);
 
-  const std::filesystem::path output_root = args.OutputRoot.is_absolute()
-                                                ? args.OutputRoot
-                                                : (core.ExeDir / args.OutputRoot);
+  const std::filesystem::path output_root =
+      args.OutputRoot.is_absolute() ? args.OutputRoot
+                                    : (core.ExeDir / args.OutputRoot);
   std::error_code ec;
   std::filesystem::create_directories(output_root, ec);
   core.ActiveWorldFolder = output_root / args.WorldName;
@@ -676,16 +680,15 @@ bool UWorldLifecycleFacade::CreateWorldHeadless(UCore &core,
     settings.AsyncChunkIo = core.ProceduralTemplate.AsyncChunkIo;
     settings.MaxChunkCommitsPerFrame =
         core.ProceduralTemplate.MaxChunkCommitsPerFrame;
-    core.WorldInstance->SetProceduralSettings(
-        settings, /*rebuildPipeline=*/false);
+    core.WorldInstance->SetProceduralSettings(settings,
+                                              /*rebuildPipeline=*/false);
     core.WorldInstance->Save(core.ActiveWorldFolder.string());
   }
   catch (const std::exception &e)
   {
     report.Error = e.what();
-    CubatariumLogError("World",
-                       std::string("create FAILED name=") + args.WorldName +
-                           ": " + e.what());
+    CubatariumLogError("World", std::string("create FAILED name=") +
+                                    args.WorldName + ": " + e.what());
     return false;
   }
 

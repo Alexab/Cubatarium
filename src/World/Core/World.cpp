@@ -29,10 +29,6 @@
 #include "Render/Backend/RenderBackendCaps.h"
 #include "Render/Backend/RenderBackendFactory.h"
 #include "Render/Camera/Camera.h"
-#include "Render/Mesh/ChunkMeshFace.h"
-#include "Render/Mesh/FluidColumnSummary.h"
-#include "Render/Mesh/FluidSurfaceColumnSlice.h"
-#include "Render/Mesh/MeshApplyPolicy.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
 #include "ResourcePacks/BlockNameUtil.h"
 #include "World/Chunks/Chunk.h"
@@ -47,6 +43,8 @@
 #include "World/Diagnostics/MovementDiagnosticsRecorder.h"
 #include "World/Environment/WeatherAutoController.h"
 #include "World/Environment/WeatherBiomeUtil.h"
+#include "World/Fluids/FluidColumnSummary.h"
+#include "World/Fluids/FluidSurfaceColumnSlice.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/Interaction/BlockBreakService.h"
 #include "World/Interaction/BlockPlacementService.h"
@@ -57,8 +55,10 @@
 #include "World/Lighting/LightChangeSet.h"
 #include "World/Lighting/LightingPipelineFactory.h"
 #include "World/Lighting/RelightResultInstall.h"
+#include "World/Math/ChunkMeshFace.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Math/GridMath.h"
+#include "World/Mesh/Contracts/MeshApplyPolicy.h"
 #include "World/Mesh/WorldMeshDirtyPolicy.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Objects/ObjectLibrary.h"
@@ -128,6 +128,111 @@ using json = nlohmann::json;
 
 namespace cutum
 {
+static void ResetFocusDataMeshCounts(FocusRingVisualCensus &census)
+{
+
+  census.resident_solid_slice_n = 0;
+  census.resident_air_slice_n = 0;
+  census.absent_slice_n = 0;
+  census.non_air_voxel_n = 0;
+  census.band_solid_slice_n = 0;
+  census.band_solid_mesh_n = 0;
+  census.band_solid_no_drawable_n = 0;
+  census.band_solid_satisfying_n = 0;
+  census.band_solid_accepted_empty_n = 0;
+  census.band_solid_pending_mesh_n = 0;
+  census.band_solid_pending_work_n = 0;
+  census.band_solid_dirty_n = 0;
+  census.band_solid_unowned_n = 0;
+  census.camera_band_solid_slice_n = 0;
+  census.camera_band_solid_no_drawable_n = 0;
+  census.camera_band_solid_satisfying_n = 0;
+  census.camera_band_solid_pending_work_n = 0;
+  census.camera_band_solid_dirty_n = 0;
+  census.camera_band_solid_oldest_dirty_age_frames = 0;
+  census.camera_band_oldest_dirty_cx = 0;
+  census.camera_band_oldest_dirty_cy = 0;
+  census.camera_band_oldest_dirty_cz = 0;
+  census.camera_band_solid_unowned_n = 0;
+  census.band_solid_unresolved_no_work_n = 0;
+  census.band_solid_draw_gate_closed_n = 0;
+  census.band_solid_draw_ready_n = 0;
+  census.band_solid_gpu_live_n = 0;
+}
+
+static uint16_t CountBoundaryNonAir(const UChunk &boundary_chunk, int face,
+                                    bool peer_side)
+{
+
+  uint16_t count = 0;
+  for (int a = 0; a < CHUNK_SIZE; ++a)
+  {
+    for (int b = 0; b < CHUNK_SIZE; ++b)
+    {
+      glm::ivec3 local{};
+      switch (face)
+      {
+      case 0:
+        local = {peer_side ? CHUNK_SIZE - 1 : 0, a, b};
+        break;
+      case 1:
+        local = {peer_side ? 0 : CHUNK_SIZE - 1, a, b};
+        break;
+      case 2:
+        local = {a, peer_side ? CHUNK_SIZE - 1 : 0, b};
+        break;
+      case 3:
+        local = {a, peer_side ? 0 : CHUNK_SIZE - 1, b};
+        break;
+      case 4:
+        local = {a, b, peer_side ? CHUNK_SIZE - 1 : 0};
+        break;
+      default:
+        local = {a, b, peer_side ? 0 : CHUNK_SIZE - 1};
+        break;
+      }
+      if (boundary_chunk.GetBlockLocal(local) != BLOCK_AIR)
+      {
+        ++count;
+      }
+    }
+  }
+  return count;
+}
+
+bool UWorld::HasMeshOrFirstMeshOwner(glm::ivec3 coord) const
+{
+
+  const glm::ivec2 column(coord.x, coord.z);
+  const auto &flow_scheduler = GetColumnFlowExecutor().Scheduler();
+  return MeshService->GetCache().IsChunkMeshDirty(coord) ||
+         MeshService->HasInflightMeshBuild(coord) ||
+         MeshService->IsPendingGpuApply(coord) ||
+         MeshService->IsGpuExtractInFlight(coord) ||
+         MeshService->GetCache().HasPendingCaptureWork(coord) ||
+         // A FirstMesh ticket owns a geometry-admission scan. Relight
+         // tickets only admit/promote light work; after a completed apply
+         // they do not guarantee that any slice was dirtied or meshed.
+         flow_scheduler.Contains(column, ColumnWorkKind::FirstMesh);
+}
+
+bool UWorld::ColumnHasMeshOrGpuOwner(glm::ivec3 coord) const
+{
+
+  if (MeshService->HasMeshSatisfyingColumnReady(coord))
+  {
+    return true;
+  }
+  // F3: published lit live GPU counts as presentable during pending remesh.
+  if (MeshService->GetCache().HasLiveGpuDraw(coord) &&
+      !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+  {
+    return true;
+  }
+  return MeshService->IsPendingGpuApply(coord) ||
+         MeshService->IsGpuExtractInFlight(coord);
+}
+
 namespace
 {
 
@@ -889,7 +994,7 @@ void UWorld::TickEnvironment(float dtSeconds)
   if (weather_auto_enabled)
   {
     weather_runtime.FieldAlgorithmVersion =
-        WeatherFrontField::kAlgorithmVersion;
+        UWeatherFrontField::kAlgorithmVersion;
     WeatherFrontFieldData.SetSeed(WorldSeed);
     WeatherFrontFieldData.SetSimulationTimeSec(
         weather_runtime.FieldSimulationTimeSec);
@@ -1130,7 +1235,7 @@ WeatherSample UWorld::SampleWeatherAt(const glm::vec3 &position) const
   const WeatherAutoRuntime &runtime = EnvironmentSettingsData.WeatherRuntime;
   if (IsWeatherAutoEnabled() && !runtime.ManualOverride)
   {
-    WeatherFrontField field(WorldSeed);
+    UWeatherFrontField field(WorldSeed);
     field.SetSimulationTimeSec(runtime.FieldSimulationTimeSec);
     const BiomeEnvironmentSample biome = SampleBiomeEnvironmentAt(position);
     const PackClimateConfig *climate = nullptr;
@@ -1252,7 +1357,7 @@ void UWorld::ComputeWeatherCoverageField(
     std::fill(out_pixels.begin(), out_pixels.end(), request.uniform_value);
     return;
   }
-  WeatherFrontField field(request.seed);
+  UWeatherFrontField field(request.seed);
   field.SetSimulationTimeSec(request.simulation_time_sec);
   const float step = world_size / static_cast<float>(resolution);
   const float half = world_size * 0.5f;
@@ -1464,14 +1569,17 @@ void UWorld::RelightPlayerEdit(const std::vector<glm::ivec3> &block_positions,
       std::chrono::duration<double, std::milli>(t1 - t0).count();
 }
 
+bool UWorld::CanRecoverUnlitFocusMeshes(int max_columns) const
+{
+  return MeshService && Persistence && !LightingRelightDeferred &&
+         max_columns > 0;
+}
+
 int UWorld::RecoverUnlitFocusMeshes(int max_columns,
                                     const glm::ivec2 *only_column)
 {
-  if (!MeshService || !Persistence || LightingRelightDeferred ||
-      max_columns <= 0)
-  {
+  if (!CanRecoverUnlitFocusMeshes(max_columns))
     return 0;
-  }
   const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
   const glm::ivec3 focus = UChunkManager::WorldToChunk(focus_block);
   const int radius = GetStreamingFocusRadius();
@@ -3704,21 +3812,6 @@ UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) const
       cy1 = max_cy;
     }
   }
-  auto column_mesh_or_gpu = [&](glm::ivec3 coord) -> bool
-  {
-    if (MeshService->HasMeshSatisfyingColumnReady(coord))
-    {
-      return true;
-    }
-    // F3: published lit live GPU counts as presentable during pending remesh.
-    if (MeshService->GetCache().HasLiveGpuDraw(coord) &&
-        !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
-    {
-      return true;
-    }
-    return MeshService->IsPendingGpuApply(coord) ||
-           MeshService->IsGpuExtractInFlight(coord);
-  };
 
   if (IsPendingLightBeforeMesh(ground_xz))
   {
@@ -3783,7 +3876,7 @@ UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) const
     for (int cy = cy0; cy <= cy1; ++cy)
     {
       const glm::ivec3 coord(ground.x, cy, ground.z);
-      if (column_mesh_or_gpu(coord))
+      if (ColumnHasMeshOrGpuOwner(coord))
       {
         has_mesh_or_gpu = true;
       }
@@ -3864,7 +3957,7 @@ UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) const
       has_mesh_or_gpu = true;
       saw_gpu_inflight_early = true;
     }
-    else if (column_mesh_or_gpu(coord))
+    else if (ColumnHasMeshOrGpuOwner(coord))
     {
       has_mesh_or_gpu = true;
     }
@@ -4133,41 +4226,12 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   auto refresh_data_mesh_census = [&]()
   {
     FocusRingVisualCensus &census = cache.readiness;
-    const auto clear_data_mesh_counts = [&]()
-    {
-      census.resident_solid_slice_n = 0;
-      census.resident_air_slice_n = 0;
-      census.absent_slice_n = 0;
-      census.non_air_voxel_n = 0;
-      census.band_solid_slice_n = 0;
-      census.band_solid_mesh_n = 0;
-      census.band_solid_no_drawable_n = 0;
-      census.band_solid_satisfying_n = 0;
-      census.band_solid_accepted_empty_n = 0;
-      census.band_solid_pending_mesh_n = 0;
-      census.band_solid_pending_work_n = 0;
-      census.band_solid_dirty_n = 0;
-      census.band_solid_unowned_n = 0;
-      census.camera_band_solid_slice_n = 0;
-      census.camera_band_solid_no_drawable_n = 0;
-      census.camera_band_solid_satisfying_n = 0;
-      census.camera_band_solid_pending_work_n = 0;
-      census.camera_band_solid_dirty_n = 0;
-      census.camera_band_solid_oldest_dirty_age_frames = 0;
-      census.camera_band_oldest_dirty_cx = 0;
-      census.camera_band_oldest_dirty_cy = 0;
-      census.camera_band_oldest_dirty_cz = 0;
-      census.camera_band_solid_unowned_n = 0;
-      census.band_solid_unresolved_no_work_n = 0;
-      census.band_solid_draw_gate_closed_n = 0;
-      census.band_solid_draw_ready_n = 0;
-      census.band_solid_gpu_live_n = 0;
-    };
+
     if (!UJobStageTrace::VisualBlackTraceEnabled() || !MeshService)
     {
       census.data_mesh_valid = false;
       census.data_mesh_sample_age_frames = 0;
-      clear_data_mesh_counts();
+      ResetFocusDataMeshCounts(census);
       return;
     }
     constexpr uint64_t kDataMeshCensusIntervalFrames = 24;
@@ -4201,7 +4265,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     cache.data_mesh_sample_camera_cy = camera_cy;
     census.data_mesh_valid = true;
     census.data_mesh_sample_age_frames = 0;
-    clear_data_mesh_counts();
+    ResetFocusDataMeshCounts(census);
 
     const int max_height = ProceduralTemplate.MaxHeight;
     const int max_cy = FloorDiv(max_height, CHUNK_SIZE);
@@ -4582,44 +4646,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
       }
       trace.stable_published_face_debt =
           HasStablePublishedFaceDebt(coord) ? 1 : 0;
-      const auto count_boundary_non_air =
-          [](const UChunk &boundary_chunk, int face, bool peer_side)
-      {
-        uint16_t count = 0;
-        for (int a = 0; a < CHUNK_SIZE; ++a)
-        {
-          for (int b = 0; b < CHUNK_SIZE; ++b)
-          {
-            glm::ivec3 local{};
-            switch (face)
-            {
-            case 0:
-              local = {peer_side ? CHUNK_SIZE - 1 : 0, a, b};
-              break;
-            case 1:
-              local = {peer_side ? 0 : CHUNK_SIZE - 1, a, b};
-              break;
-            case 2:
-              local = {a, peer_side ? CHUNK_SIZE - 1 : 0, b};
-              break;
-            case 3:
-              local = {a, peer_side ? 0 : CHUNK_SIZE - 1, b};
-              break;
-            case 4:
-              local = {a, b, peer_side ? CHUNK_SIZE - 1 : 0};
-              break;
-            default:
-              local = {a, b, peer_side ? 0 : CHUNK_SIZE - 1};
-              break;
-            }
-            if (boundary_chunk.GetBlockLocal(local) != BLOCK_AIR)
-            {
-              ++count;
-            }
-          }
-        }
-        return count;
-      };
+
       for (int face = 0; face < 6; ++face)
       {
         const uint8_t bit = static_cast<uint8_t>(1u << face);
@@ -4635,7 +4662,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
         if (focus_chunk)
         {
           trace.face_focus_boundary_non_air[face] =
-              count_boundary_non_air(*focus_chunk, face, false);
+              CountBoundaryNonAir(*focus_chunk, face, false);
         }
         const glm::ivec3 peer_coord = coord + ChunkMeshFaceNeighborDelta(face);
         const UChunk *peer_chunk =
@@ -4646,7 +4673,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
               static_cast<uint8_t>(trace.face_peer_loaded_mask | bit);
           trace.face_peer_incarnation[face] = peer_chunk->GetIncarnation();
           trace.face_peer_boundary_non_air[face] =
-              count_boundary_non_air(*peer_chunk, face, true);
+              CountBoundaryNonAir(*peer_chunk, face, true);
           if (peer_chunk->GetNonAirCount() > 0)
           {
             trace.face_peer_nonair_mask =
@@ -9299,31 +9326,8 @@ void UWorld::EnqueueAsyncChunkRelight(glm::ivec3 chunk_coord,
       AsyncRelight->EnqueueJob(BlockWorld, std::move(spec), *BlockRegistry));
 }
 
-int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
-                                     bool enqueue_background_frontier)
+void UWorld::TraceRelightWatchdog()
 {
-  if (!AsyncRelight || !BlockRegistry)
-  {
-    return 0;
-  }
-  int relight_apply_cap = max_per_frame;
-  const bool audit_relight =
-      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
-  if (audit_relight)
-  {
-    CubatariumLogInfo(
-        "RelightAudit",
-        "drain cap=" + std::to_string(max_per_frame) +
-            " inflight=" + std::to_string(AsyncRelight->GetInFlightCount()) +
-            " queued=" + std::to_string(AsyncRelight->GetQueuedJobCount()) +
-            " running=" + std::to_string(AsyncRelight->GetRunningJobCount()) +
-            " completed=" + std::to_string(AsyncRelight->GetCompletedSize()));
-  }
-  // Opt-in convergence watchdog (CUBATARIUM_RELIGHT_WATCHDOG=1). Unlike the
-  // per-drain audit it emits nothing while the pipeline makes progress, so it
-  // does not perturb the timing of the state it reports: once per interval it
-  // logs the raw pool counters so a frozen apply/depth state can be told
-  // apart from slow compute, starved workers, or undrained completed work.
   if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_WATCHDOG"))
   {
     static double s_last_report_ms = 0.0;
@@ -9429,6 +9433,34 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       }
     }
   }
+}
+
+int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
+                                     bool enqueue_background_frontier)
+{
+  if (!AsyncRelight || !BlockRegistry)
+  {
+    return 0;
+  }
+  int relight_apply_cap = max_per_frame;
+  const bool audit_relight =
+      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
+  if (audit_relight)
+  {
+    CubatariumLogInfo(
+        "RelightAudit",
+        "drain cap=" + std::to_string(max_per_frame) +
+            " inflight=" + std::to_string(AsyncRelight->GetInFlightCount()) +
+            " queued=" + std::to_string(AsyncRelight->GetQueuedJobCount()) +
+            " running=" + std::to_string(AsyncRelight->GetRunningJobCount()) +
+            " completed=" + std::to_string(AsyncRelight->GetCompletedSize()));
+  }
+  // Opt-in convergence watchdog (CUBATARIUM_RELIGHT_WATCHDOG=1). Unlike the
+  // per-drain audit it emits nothing while the pipeline makes progress, so it
+  // does not perturb the timing of the state it reports: once per interval it
+  // logs the raw pool counters so a frozen apply/depth state can be told
+  // apart from slow compute, starved workers, or undrained completed work.
+  TraceRelightWatchdog();
   const auto t0 = std::chrono::high_resolution_clock::now();
   int applied = 0;
   if (Persistence)
@@ -9669,20 +9701,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     ownerless_first_mesh_coords.reserve(result.chunks.size());
     std::unordered_map<glm::ivec2, glm::ivec2, GroundColumnHash>
         boundary_dependency_bands;
-    const auto has_mesh_or_first_mesh_owner = [&](glm::ivec3 coord)
-    {
-      const glm::ivec2 column(coord.x, coord.z);
-      const auto &flow_scheduler = GetColumnFlowExecutor().Scheduler();
-      return MeshService->GetCache().IsChunkMeshDirty(coord) ||
-             MeshService->HasInflightMeshBuild(coord) ||
-             MeshService->IsPendingGpuApply(coord) ||
-             MeshService->IsGpuExtractInFlight(coord) ||
-             MeshService->GetCache().HasPendingCaptureWork(coord) ||
-             // A FirstMesh ticket owns a geometry-admission scan. Relight
-             // tickets only admit/promote light work; after a completed apply
-             // they do not guarantee that any slice was dirtied or meshed.
-             flow_scheduler.Contains(column, ColumnWorkKind::FirstMesh);
-    };
+
     int audit_unsatisfied_solid_n = 0;
     int audit_ownerless_solid_n = 0;
     for (const RelightChunkLightData &chunk_data : result.chunks)
@@ -9883,7 +9902,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
             !MeshService->HasDrawableGreedyMesh(chunk_data.coord) &&
             !MeshService->HasMeshSatisfyingColumnReady(chunk_data.coord))
         {
-          if (!has_mesh_or_first_mesh_owner(chunk_data.coord))
+          if (!HasMeshOrFirstMeshOwner(chunk_data.coord))
           {
             // A validated light result can settle an unchanged slice without
             // including it in changed_coords. If that solid slice has never
@@ -10125,7 +10144,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
                              result.visible_draw_gate_repair);
       for (const glm::ivec3 &coord : ownerless_first_mesh_coords)
       {
-        const bool owner_before = has_mesh_or_first_mesh_owner(coord);
+        const bool owner_before = HasMeshOrFirstMeshOwner(coord);
         if (!owner_before)
         {
           // A no-delta relight may leave a FirstMesh target with geom_rev=0.
@@ -10348,7 +10367,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       {
         for (const glm::ivec3 &coord : ownerless_first_mesh_coords)
         {
-          if (has_mesh_or_first_mesh_owner(coord))
+          if (HasMeshOrFirstMeshOwner(coord))
           {
             ++ownerless_mesh_repair_owned_n;
           }

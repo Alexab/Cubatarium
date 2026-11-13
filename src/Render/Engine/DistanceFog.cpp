@@ -1,4 +1,4 @@
-#include "Render/Engine/DistanceFog.h"
+#include "World/View/DistanceFog.h"
 
 #include "World/Chunks/Chunk.h"
 
@@ -22,8 +22,7 @@ float RenderHorizonBlocks(int render_distance_chunks)
 float FogHorizonBlocks(int render_distance_chunks, int end_margin_blocks)
 {
   const float full = RenderHorizonBlocks(render_distance_chunks);
-  const float margin =
-      static_cast<float>(std::max(0, end_margin_blocks));
+  const float margin = static_cast<float>(std::max(0, end_margin_blocks));
   return std::max(kMinHorizonBlocks, full - margin);
 }
 
@@ -37,18 +36,16 @@ DistanceFogParams ComputeDistanceFog(int render_distance_chunks,
   const float ratio = effective_fog_start_ratio >= 0.0f
                           ? effective_fog_start_ratio
                           : start_ratio;
-  const float fog_blocks = effective_horizon_blocks >= 0.0f
-                               ? std::max(kMinHorizonBlocks,
-                                          effective_horizon_blocks)
-                               : FogHorizonBlocks(render_distance_chunks,
-                                                  end_margin_blocks);
+  const float fog_blocks =
+      effective_horizon_blocks >= 0.0f
+          ? std::max(kMinHorizonBlocks, effective_horizon_blocks)
+          : FogHorizonBlocks(render_distance_chunks, end_margin_blocks);
   const float clamped_ratio = std::clamp(ratio, 0.0f, 1.0f);
   DistanceFogParams params;
   params.End = fog_blocks;
   params.Start = effective_start_blocks >= 0.0f
                      ? std::max(effective_start_blocks, kMinFogStartBlocks)
-                     : std::max(fog_blocks * clamped_ratio,
-                                kMinFogStartBlocks);
+                     : std::max(fog_blocks * clamped_ratio, kMinFogStartBlocks);
   if (params.Start >= params.End)
   {
     params.Start = params.End * 0.85f;

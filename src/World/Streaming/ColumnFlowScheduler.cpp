@@ -28,18 +28,18 @@ void UColumnFlowScheduler::PushLive(const ColumnWorkItem &item)
   ticket.scan_full_focus = stamped.scan_full_focus;
   ticket.cy = stamped.cy;
   ticket.generation = stamped.generation;
-  live_[ColumnCoord(stamped.column)] = ticket;
+  Live[ColumnCoord(stamped.column)] = ticket;
   HeapEntry entry{};
   entry.item = stamped;
   entry.sequence = next_sequence_++;
-  heap_.push(entry);
+  Heap.push(entry);
 }
 
 void UColumnFlowScheduler::Enqueue(const ColumnWorkItem &item)
 {
   const ColumnCoord coord(item.column);
-  const auto it = live_.find(coord);
-  if (it == live_.end())
+  const auto it = Live.find(coord);
+  if (it == Live.end())
   {
     PushLive(item);
     return;
@@ -52,8 +52,7 @@ void UColumnFlowScheduler::Enqueue(const ColumnWorkItem &item)
     // Keep the higher priority; prefer a concrete cy (>=0) over whole-band.
     ColumnWorkItem refreshed = item;
     refreshed.priority = std::max(old.priority, item.priority);
-    if ((IsConcreteColumnWorkCy(old.cy) &&
-         !IsConcreteColumnWorkCy(item.cy)) ||
+    if ((IsConcreteColumnWorkCy(old.cy) && !IsConcreteColumnWorkCy(item.cy)) ||
         (old.cy == kColumnWorkWholeColumnCy &&
          item.cy == kColumnWorkWholeRemeshBandCy))
     {
@@ -83,12 +82,12 @@ void UColumnFlowScheduler::Enqueue(const ColumnWorkItem &item)
   ++denied_n_;
 }
 
-bool UColumnFlowScheduler::ReplaceColumnTicket(
-    const ColumnWorkItem &item, ColumnWorkKind expected_kind)
+bool UColumnFlowScheduler::ReplaceColumnTicket(const ColumnWorkItem &item,
+                                               ColumnWorkKind expected_kind)
 {
   const ColumnCoord coord(item.column);
-  const auto it = live_.find(coord);
-  if (it == live_.end() || it->second.kind != expected_kind)
+  const auto it = Live.find(coord);
+  if (it == Live.end() || it->second.kind != expected_kind)
   {
     return false;
   }
@@ -100,19 +99,19 @@ bool UColumnFlowScheduler::ReplaceColumnTicket(
 
 bool UColumnFlowScheduler::DrainOne(ColumnWorkItem &out)
 {
-  while (!heap_.empty())
+  while (!Heap.empty())
   {
-    HeapEntry entry = heap_.top();
-    heap_.pop();
+    HeapEntry entry = Heap.top();
+    Heap.pop();
     const ColumnCoord coord(entry.item.column);
-    const auto it = live_.find(coord);
-    if (it == live_.end() || it->second.generation != entry.item.generation)
+    const auto it = Live.find(coord);
+    if (it == Live.end() || it->second.generation != entry.item.generation)
     {
       // Stale / superseded heap residue.
       continue;
     }
     out = entry.item;
-    live_.erase(it);
+    Live.erase(it);
     return true;
   }
   return false;
@@ -120,16 +119,16 @@ bool UColumnFlowScheduler::DrainOne(ColumnWorkItem &out)
 
 void UColumnFlowScheduler::Clear()
 {
-  while (!heap_.empty())
+  while (!Heap.empty())
   {
-    heap_.pop();
+    Heap.pop();
   }
-  live_.clear();
+  Live.clear();
 }
 
 bool UColumnFlowScheduler::RemoveColumn(glm::ivec2 column)
 {
-  return live_.erase(ColumnCoord(column)) != 0;
+  return Live.erase(ColumnCoord(column)) != 0;
 }
 
 bool UColumnFlowScheduler::Contains(glm::ivec2 column,
@@ -141,8 +140,8 @@ bool UColumnFlowScheduler::Contains(glm::ivec2 column,
 bool UColumnFlowScheduler::Contains(glm::ivec2 column, ColumnWorkKind kind,
                                     bool scan_full_focus) const
 {
-  const auto it = live_.find(ColumnCoord(column));
-  if (it == live_.end())
+  const auto it = Live.find(ColumnCoord(column));
+  if (it == Live.end())
   {
     return false;
   }
@@ -152,14 +151,14 @@ bool UColumnFlowScheduler::Contains(glm::ivec2 column, ColumnWorkKind kind,
 
 bool UColumnFlowScheduler::ContainsColumn(glm::ivec2 column) const
 {
-  return live_.count(ColumnCoord(column)) != 0;
+  return Live.count(ColumnCoord(column)) != 0;
 }
 
 bool UColumnFlowScheduler::GetLiveTicket(glm::ivec2 column,
                                          ColumnWorkItem &out) const
 {
-  const auto it = live_.find(ColumnCoord(column));
-  if (it == live_.end())
+  const auto it = Live.find(ColumnCoord(column));
+  if (it == Live.end())
   {
     return false;
   }

@@ -1270,7 +1270,7 @@ void UWorldEnvironment::LoadCreatures(const std::string &file_name)
     {
       ControlledCreatureId = PlayerCreatureId;
     }
-    WorldItemSystem::Instance().Deserialize(data);
+    UWorldItemSystem::Instance().Deserialize(data);
     USurvivalSystems::Instance().Deserialize(data);
     SyncCreatureSpatialIndex();
   }
@@ -1321,7 +1321,7 @@ void UWorldEnvironment::SaveCreatures(const std::string &file_name)
   }
   root["creatures"] = arr;
   USurvivalSystems::Instance().Serialize(root);
-  WorldItemSystem::Instance().Serialize(root);
+  UWorldItemSystem::Instance().Serialize(root);
 
   // Atomic write: dump to a sibling temp file, then rename over the target so
   // a crash mid-save cannot truncate an existing creatures.json.

@@ -1,0 +1,656 @@
+{
+  "schema": "mesh_audit.v1",
+  "audited_chunks": 875,
+  "fluid_quads": 1605,
+  "internal_fluid_faces": 0,
+  "total_dark_top_cells": 1139,
+  "total_published_dark_field_lit_cells": 257,
+  "lily_pads": {
+    "bad_samples": [
+      {
+        "above": "water",
+        "below": "water",
+        "pos": [
+          6,
+          64,
+          -108
+        ]
+      },
+      {
+        "above": "water",
+        "below": "stone",
+        "pos": [
+          7,
+          64,
+          -108
+        ]
+      },
+      {
+        "above": "",
+        "below": "",
+        "pos": [
+          -48,
+          58,
+          -130
+        ]
+      }
+    ],
+    "fluid_in_cell": 0,
+    "height_over_sea": [
+      [
+        -5,
+        2
+      ],
+      [
+        1,
+        13
+      ]
+    ],
+    "ok_on_surface": 12,
+    "over_air": 1,
+    "over_land": 1,
+    "submerged": 2,
+    "total": 15,
+    "water_below_not_source": 0
+  },
+  "suspect_chunks": [
+    {
+      "async_inflight": false,
+      "chunk": [
+        4,
+        2,
+        -1
+      ],
+      "chunk_above_resident": true,
+      "chunk_below_resident": true,
+      "column_8_y_0_9": [
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ]
+      ],
+      "cpu_batch_count": 0,
+      "cpu_quads_by_face": {},
+      "cpu_vertex_count": 0,
+      "defer_mesh_until_lit": true,
+      "drawable_greedy_mesh": false,
+      "expected_by_local_y": {
+        "8": 4
+      },
+      "expected_top_faces": 4,
+      "gpu_resident": false,
+      "has_cpu_batches": false,
+      "has_greedy_mesh": false,
+      "mesh_dirty": true,
+      "meshed_light_revision": 0,
+      "mesher_missing_top_faces": 0,
+      "pending_light": true,
+      "provisional_preview": false,
+      "published_by_local_y": {},
+      "published_cpu_missing_top_faces": 0,
+      "published_sample_missing_local_xyz": [],
+      "revs": {
+        "chunk_mesh_rev": 2,
+        "content": 4248,
+        "incarnation": 1163,
+        "light_field": 0,
+        "pub_geom": 0,
+        "pub_light": 0
+      },
+      "sample_missing_local_xyz": [],
+      "slice_render_ready": false,
+      "softdefer_held": false,
+      "unknown_above_cells": 0
+    },
+    {
+      "async_inflight": false,
+      "chunk": [
+        -4,
+        4,
+        -9
+      ],
+      "chunk_above_resident": true,
+      "chunk_below_resident": true,
+      "column_8_y_0_9": [
+        [
+          0,
+          ""
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          362,
+          "dirt"
+        ],
+        [
+          377,
+          "grass"
+        ],
+        [
+          457,
+          "mtg_grass_1"
+        ],
+        [
+          0,
+          ""
+        ],
+        [
+          0,
+          ""
+        ]
+      ],
+      "cpu_batch_count": 0,
+      "cpu_quads_by_face": {},
+      "cpu_vertex_count": 0,
+      "defer_mesh_until_lit": true,
+      "drawable_greedy_mesh": false,
+      "expected_by_local_y": {
+        "0": 1,
+        "5": 18,
+        "6": 33,
+        "7": 31,
+        "8": 3
+      },
+      "expected_top_faces": 86,
+      "gpu_resident": false,
+      "has_cpu_batches": false,
+      "has_greedy_mesh": false,
+      "mesh_dirty": false,
+      "meshed_light_revision": 0,
+      "mesher_missing_top_faces": 0,
+      "pending_light": true,
+      "provisional_preview": false,
+      "published_by_local_y": {},
+      "published_cpu_missing_top_faces": 0,
+      "published_sample_missing_local_xyz": [],
+      "revs": {
+        "chunk_mesh_rev": 0,
+        "content": 1870,
+        "incarnation": 1342,
+        "light_field": 0,
+        "pub_geom": 0,
+        "pub_light": 0
+      },
+      "sample_missing_local_xyz": [],
+      "slice_render_ready": false,
+      "softdefer_held": false,
+      "unknown_above_cells": 0
+    },
+    {
+      "async_inflight": false,
+      "chunk": [
+        4,
+        2,
+        -7
+      ],
+      "chunk_above_resident": true,
+      "chunk_below_resident": true,
+      "column_8_y_0_9": [
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ]
+      ],
+      "cpu_batch_count": 0,
+      "cpu_quads_by_face": {},
+      "cpu_vertex_count": 0,
+      "defer_mesh_until_lit": true,
+      "drawable_greedy_mesh": false,
+      "expected_by_local_y": {
+        "11": 7,
+        "12": 4,
+        "14": 1
+      },
+      "expected_top_faces": 12,
+      "gpu_resident": false,
+      "has_cpu_batches": false,
+      "has_greedy_mesh": false,
+      "mesh_dirty": true,
+      "meshed_light_revision": 0,
+      "mesher_missing_top_faces": 0,
+      "pending_light": true,
+      "provisional_preview": false,
+      "published_by_local_y": {},
+      "published_cpu_missing_top_faces": 0,
+      "published_sample_missing_local_xyz": [],
+      "revs": {
+        "chunk_mesh_rev": 1,
+        "content": 4058,
+        "incarnation": 1202,
+        "light_field": 0,
+        "pub_geom": 0,
+        "pub_light": 0
+      },
+      "sample_missing_local_xyz": [],
+      "slice_render_ready": false,
+      "softdefer_held": false,
+      "unknown_above_cells": 0
+    },
+    {
+      "async_inflight": false,
+      "chunk": [
+        4,
+        3,
+        -7
+      ],
+      "chunk_above_resident": true,
+      "chunk_below_resident": true,
+      "column_8_y_0_9": [
+        [
+          2442,
+          "andesite"
+        ],
+        [
+          2442,
+          "andesite"
+        ],
+        [
+          2442,
+          "andesite"
+        ],
+        [
+          2442,
+          "andesite"
+        ],
+        [
+          2442,
+          "andesite"
+        ],
+        [
+          2450,
+          "tuff"
+        ],
+        [
+          2450,
+          "tuff"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ]
+      ],
+      "cpu_batch_count": 0,
+      "cpu_quads_by_face": {},
+      "cpu_vertex_count": 0,
+      "defer_mesh_until_lit": true,
+      "drawable_greedy_mesh": false,
+      "expected_by_local_y": {
+        "1": 1,
+        "7": 4
+      },
+      "expected_top_faces": 5,
+      "gpu_resident": false,
+      "has_cpu_batches": false,
+      "has_greedy_mesh": false,
+      "mesh_dirty": true,
+      "meshed_light_revision": 0,
+      "mesher_missing_top_faces": 0,
+      "pending_light": true,
+      "provisional_preview": false,
+      "published_by_local_y": {},
+      "published_cpu_missing_top_faces": 0,
+      "published_sample_missing_local_xyz": [],
+      "revs": {
+        "chunk_mesh_rev": 1,
+        "content": 4099,
+        "incarnation": 1195,
+        "light_field": 0,
+        "pub_geom": 0,
+        "pub_light": 0
+      },
+      "sample_missing_local_xyz": [],
+      "slice_render_ready": false,
+      "softdefer_held": false,
+      "unknown_above_cells": 0
+    },
+    {
+      "async_inflight": false,
+      "chunk": [
+        -4,
+        3,
+        -9
+      ],
+      "chunk_above_resident": true,
+      "chunk_below_resident": true,
+      "column_8_y_0_9": [
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ]
+      ],
+      "cpu_batch_count": 0,
+      "cpu_quads_by_face": {},
+      "cpu_vertex_count": 0,
+      "defer_mesh_until_lit": true,
+      "drawable_greedy_mesh": false,
+      "expected_by_local_y": {
+        "10": 4,
+        "11": 2
+      },
+      "expected_top_faces": 6,
+      "gpu_resident": false,
+      "has_cpu_batches": false,
+      "has_greedy_mesh": false,
+      "mesh_dirty": false,
+      "meshed_light_revision": 0,
+      "mesher_missing_top_faces": 0,
+      "pending_light": true,
+      "provisional_preview": false,
+      "published_by_local_y": {},
+      "published_cpu_missing_top_faces": 0,
+      "published_sample_missing_local_xyz": [],
+      "revs": {
+        "chunk_mesh_rev": 0,
+        "content": 5310,
+        "incarnation": 1343,
+        "light_field": 0,
+        "pub_geom": 0,
+        "pub_light": 0
+      },
+      "sample_missing_local_xyz": [],
+      "slice_render_ready": false,
+      "softdefer_held": false,
+      "unknown_above_cells": 0
+    },
+    {
+      "async_inflight": false,
+      "chunk": [
+        -4,
+        5,
+        -9
+      ],
+      "chunk_above_resident": false,
+      "chunk_below_resident": true,
+      "column_8_y_0_9": [
+        [
+          0,
+          ""
+        ],
+        [
+          0,
+          ""
+        ],
+        [
+          0,
+          ""
+        ],
+        [
+          0,
+          ""
+        ],
+        [
+          0,
+          ""
+        ],
+        [
+          0,
+          ""
+        ],
+        [
+          0,
+          ""
+        ],
+        [
+          0,
+          ""
+        ],
+        [
+          0,
+          ""
+        ],
+        [
+          0,
+          ""
+        ]
+      ],
+      "cpu_batch_count": 0,
+      "cpu_quads_by_face": {},
+      "cpu_vertex_count": 0,
+      "defer_mesh_until_lit": true,
+      "drawable_greedy_mesh": false,
+      "expected_by_local_y": {
+        "1": 1
+      },
+      "expected_top_faces": 1,
+      "gpu_resident": false,
+      "has_cpu_batches": false,
+      "has_greedy_mesh": false,
+      "mesh_dirty": false,
+      "meshed_light_revision": 0,
+      "mesher_missing_top_faces": 0,
+      "pending_light": true,
+      "provisional_preview": false,
+      "published_by_local_y": {},
+      "published_cpu_missing_top_faces": 0,
+      "published_sample_missing_local_xyz": [],
+      "revs": {
+        "chunk_mesh_rev": 0,
+        "content": 89,
+        "incarnation": 1346,
+        "light_field": 0,
+        "pub_geom": 0,
+        "pub_light": 0
+      },
+      "sample_missing_local_xyz": [],
+      "slice_render_ready": false,
+      "softdefer_held": false,
+      "unknown_above_cells": 0
+    },
+    {
+      "async_inflight": false,
+      "chunk": [
+        -6,
+        3,
+        -5
+      ],
+      "chunk_above_resident": false,
+      "chunk_below_resident": true,
+      "column_8_y_0_9": [
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ],
+        [
+          560,
+          "stone"
+        ]
+      ],
+      "cpu_batch_count": 0,
+      "cpu_quads_by_face": {},
+      "cpu_vertex_count": 0,
+      "defer_mesh_until_lit": false,
+      "drawable_greedy_mesh": false,
+      "expected_by_local_y": {
+        "15": 128
+      },
+      "expected_top_faces": 128,
+      "gpu_resident": false,
+      "has_cpu_batches": false,
+      "has_greedy_mesh": false,
+      "mesh_dirty": true,
+      "meshed_light_revision": 0,
+      "mesher_missing_top_faces": 0,
+      "pending_light": false,
+      "provisional_preview": false,
+      "published_by_local_y": {},
+      "published_cpu_missing_top_faces": 0,
+      "published_sample_missing_local_xyz": [],
+      "revs": {
+        "chunk_mesh_rev": 1,
+        "content": 4224,
+        "incarnation": 1500,
+        "light_field": 0,
+        "pub_geom": 0,
+        "pub_light": 0
+      },
+      "sample_missing_local_xyz": [],
+      "slice_render_ready": false,
+      "softdefer_held": false,
+      "unknown_above_cells": 0
+    }
+  ],
+  "classification": "in-flight readiness snapshot; not a full renderer/lighting acceptance gate",
+  "mesher_missing_top_faces": 0
+}

@@ -3,18 +3,18 @@
 
 #include "App/Core.h"
 #include "Core/FrameDeadline.h"
+#include "Render/Backend/GpuHotPathFallback.h"
 #include "Render/Engine/GreedyGpuBackend.h"
 #include "Render/Engine/MdiVertexPoolStore.h"
 #include "Render/Mesh/GpuFluidColumnScan.h"
+#include "Render/Mesh/GpuGreedyMesher.h"
 #include "Render/Mesh/GpuGreedyOpaqueEmit.h"
-#include "Render/Mesh/MeshPublishContract.h"
 #include "Render/Pipeline/GpuTransparentSort.h"
 #include "World/Core/RuntimeTuning.h"
 #include "World/Core/World.h"
 #include "World/Lighting/GpuBlocklightFlood.h"
-#include "Render/Backend/GpuHotPathFallback.h"
 #include "World/Lighting/GpuSkylightColumnSeed.h"
-#include "Render/Mesh/GpuGreedyMesher.h"
+#include "World/Mesh/Contracts/MeshPublishContract.h"
 #include "World/Physics/PhysicsTelemetry.h"
 #include "World/Streaming/StreamIngressPolicy.h"
 #include "World/Streaming/UnderfeetTelemetryPolicy.h"
@@ -33,6 +33,9 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
+
+// Psapi depends on the Win32 types declared above. Keep this SDK include group
+// separate.
 #include <psapi.h>
 #pragma comment(lib, "psapi.lib")
 #else
@@ -237,10 +240,8 @@ bool IsPerfLogEnabled()
     {
       return false;
     }
-    return std::strcmp(value, "0") != 0 &&
-           std::strcmp(value, "false") != 0 &&
-           std::strcmp(value, "off") != 0 &&
-           std::strcmp(value, "no") != 0;
+    return std::strcmp(value, "0") != 0 && std::strcmp(value, "false") != 0 &&
+           std::strcmp(value, "off") != 0 && std::strcmp(value, "no") != 0;
   }();
   return enabled;
 }
@@ -282,16 +283,15 @@ void OpenSessionLocked(Session &s)
   {
     // A21 P0.2: versioned schema — frame timings vs period aggregates are
     // distinct kinds. Do not compute P99 from period means.
-    s.Jsonl
-        << "{\"kind\":\"schema\",\"schema\":\"perf_jsonl.v2\","
-           "\"aggregation\":{\"period\":\"mean_over_interval\","
-           "\"spike\":\"single_frame\",\"blink\":\"event\","
-           "\"shutdown\":\"session_avg\",\"job_trace\":\"ring_span\"},"
-           "\"units\":{\"*_ms\":\"milliseconds\",\"*_n\":\"count\","
-           "\"camera_move_*_xz\":\"blocks per rendered update\","
-           "\"census\":\"point_in_time\"},"
-           "\"note\":\"period.wall_ms is interval mean; use spike/frame "
-           "for per-frame percentiles\"}\n";
+    s.Jsonl << "{\"kind\":\"schema\",\"schema\":\"perf_jsonl.v2\","
+               "\"aggregation\":{\"period\":\"mean_over_interval\","
+               "\"spike\":\"single_frame\",\"blink\":\"event\","
+               "\"shutdown\":\"session_avg\",\"job_trace\":\"ring_span\"},"
+               "\"units\":{\"*_ms\":\"milliseconds\",\"*_n\":\"count\","
+               "\"camera_move_*_xz\":\"blocks per rendered update\","
+               "\"census\":\"point_in_time\"},"
+               "\"note\":\"period.wall_ms is interval mean; use spike/frame "
+               "for per-frame percentiles\"}\n";
     s.Jsonl.flush();
     LOG(INFO) << "[Perf] session file=" << s.Path;
   }
@@ -441,10 +441,10 @@ struct FrameNumbers
   double async_chunk_io_result_selection_mutex_held_ms{0.0};
   double async_chunk_io_result_processing_ms{0.0};
   double async_chunk_io_world_apply_ms{0.0};
-   double async_chunk_io_column_finalize_ms{0.0};
-   double async_chunk_io_result_requeue_ms{0.0};
-   double async_chunk_io_result_requeue_mutex_wait_ms{0.0};
-   double async_chunk_io_result_requeue_mutex_held_ms{0.0};
+  double async_chunk_io_column_finalize_ms{0.0};
+  double async_chunk_io_result_requeue_ms{0.0};
+  double async_chunk_io_result_requeue_mutex_wait_ms{0.0};
+  double async_chunk_io_result_requeue_mutex_held_ms{0.0};
   double async_chunk_io_load_result_push_mutex_wait_ms{0.0};
   double async_chunk_io_load_result_push_mutex_held_ms{0.0};
   double async_chunk_io_load_result_push_mutex_wait_max_ms{0.0};
@@ -1300,8 +1300,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   FrameNumbers n;
   const PhysicsTelemetry &phys = world.GetPhysicsTelemetry();
   n.frame_epoch = world.GetStreamingFrameEpoch();
-  n.wall_ms = frame_wall_ms > 0.0 ? frame_wall_ms
-                                  : world.GetWallFrameDelta() * 1000.0;
+  n.wall_ms =
+      frame_wall_ms > 0.0 ? frame_wall_ms : world.GetWallFrameDelta() * 1000.0;
   n.phys_ms = phys.PhysicsStepMs;
   n.stream_ms = phys.StreamMs;
   n.mesh_emerge_ms = phys.MeshEmergeMs;
@@ -1313,19 +1313,16 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_emerge_post_capture_store_ms = phys.MeshEmergePostCaptureStoreMs;
   n.mesh_emerge_post_tail_snapshot_ms = phys.MeshEmergePostTailSnapshotMs;
   n.mesh_emerge_post_unattributed_ms = phys.MeshEmergePostUnattributedMs;
-  n.mesh_emerge_player_relight_burst_ms =
-      phys.MeshEmergePlayerRelightBurstMs;
+  n.mesh_emerge_player_relight_burst_ms = phys.MeshEmergePlayerRelightBurstMs;
   n.column_emerge_stage_sample_ms = phys.ColumnEmergeStageSampleMs;
   n.column_emerge_focus_jobs_ms = phys.ColumnEmergeFocusJobsMs;
   n.column_emerge_shadow_census_ms = phys.ColumnEmergeShadowCensusMs;
-  n.column_emerge_demand_breakdown_ms =
-      phys.ColumnEmergeDemandBreakdownMs;
+  n.column_emerge_demand_breakdown_ms = phys.ColumnEmergeDemandBreakdownMs;
   n.column_emerge_demand_stop_ms = phys.ColumnEmergeDemandStopMs;
   n.chunk_demand_maintenance_ms = phys.ChunkDemandMaintenanceMs;
   n.column_emerge_stage_sample_n =
       static_cast<double>(phys.ColumnEmergeStageSampleCount);
-  n.column_emerge_stage_sample_age_ms =
-      phys.ColumnEmergeStageSampleAgeMs;
+  n.column_emerge_stage_sample_age_ms = phys.ColumnEmergeStageSampleAgeMs;
   n.scene_ms = world.GetDurationDrawSceneMks() / 1000.0;
   n.view_ms = world.GetDurationViewUpdateMks() / 1000.0;
   // Era14: DoMovement is locomotion-only; stream/emerge live in
@@ -1376,13 +1373,12 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.place_complete_n = phys.PlaceCompleteN;
   n.place_emission_n = phys.PlaceEmissionN;
   n.edit_light_emission = phys.EditLightEmission;
-  n.edit_to_first_mesh_ms =
-      (phys.BreakCompleteN > 0 || phys.PlaceCompleteN > 0)
-          ? phys.EditToFirstMeshMs
-          : 0.0;
-  n.fast_relight_ms =
-      (phys.BreakCompleteN > 0 || phys.PlaceCompleteN > 0) ? phys.FastRelightMs
-                                                            : 0.0;
+  n.edit_to_first_mesh_ms = (phys.BreakCompleteN > 0 || phys.PlaceCompleteN > 0)
+                                ? phys.EditToFirstMeshMs
+                                : 0.0;
+  n.fast_relight_ms = (phys.BreakCompleteN > 0 || phys.PlaceCompleteN > 0)
+                          ? phys.FastRelightMs
+                          : 0.0;
   n.render_window_setup_ms = world.GetLastRenderWindowSetupMs();
   n.render_frame_setup_ms = world.GetLastRenderFrameSetupMs();
   n.render_equipment_setup_ms = world.GetLastRenderEquipmentSetupMs();
@@ -1401,9 +1397,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.stand_rim_imm_n = phys.StandRimImmN;
   n.render_total_ms = world.GetLastRenderTotalMs();
   const double render_phases_ms =
-      n.render_window_setup_ms + n.render_frame_setup_ms +
-      n.prepare_frame_ms + n.render_equipment_setup_ms + n.geometry_paint_ms +
-      n.fp_viewmodel_ms + n.gui_overlay_ms;
+      n.render_window_setup_ms + n.render_frame_setup_ms + n.prepare_frame_ms +
+      n.render_equipment_setup_ms + n.geometry_paint_ms + n.fp_viewmodel_ms +
+      n.gui_overlay_ms;
   n.render_unattributed_ms =
       (std::max)(0.0, n.render_total_ms - render_phases_ms);
   // sim_ms = main-loop work excluding swap. Era14: do_movement is locomotion;
@@ -1417,9 +1413,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   {
     n.unaccounted_ms = 0.0;
   }
-  n.world_extra_ms = (std::max)(
-      0.0, world.GetLastWorldTickMs() - n.do_movement_ms -
-               n.world_streaming_phase_ms);
+  n.world_extra_ms =
+      (std::max)(0.0, world.GetLastWorldTickMs() - n.do_movement_ms -
+                          n.world_streaming_phase_ms);
   n.residual_ms = n.unaccounted_ms - n.world_extra_ms;
   n.fluid_map_cpu_ms = world.GetLastFluidMapCpuMs();
   n.fluid_map_gpu_ms = world.GetLastFluidMapGpuMs();
@@ -1466,23 +1462,20 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
       phys.AsyncChunkIoLightFlagsWorkerQueueWaitMs;
   n.async_chunk_io_light_flags_worker_service_ms =
       phys.AsyncChunkIoLightFlagsWorkerServiceMs;
-  n.async_chunk_io_discard_cancelled_ms =
-      phys.AsyncChunkIoDiscardCancelledMs;
-   n.async_chunk_io_result_selection_ms =
-       phys.AsyncChunkIoResultSelectionMs;
-   n.async_chunk_io_result_selection_mutex_wait_ms =
-       phys.AsyncChunkIoResultSelectionMutexWaitMs;
-   n.async_chunk_io_result_selection_mutex_held_ms =
-       phys.AsyncChunkIoResultSelectionMutexHeldMs;
-  n.async_chunk_io_result_processing_ms =
-      phys.AsyncChunkIoResultProcessingMs;
+  n.async_chunk_io_discard_cancelled_ms = phys.AsyncChunkIoDiscardCancelledMs;
+  n.async_chunk_io_result_selection_ms = phys.AsyncChunkIoResultSelectionMs;
+  n.async_chunk_io_result_selection_mutex_wait_ms =
+      phys.AsyncChunkIoResultSelectionMutexWaitMs;
+  n.async_chunk_io_result_selection_mutex_held_ms =
+      phys.AsyncChunkIoResultSelectionMutexHeldMs;
+  n.async_chunk_io_result_processing_ms = phys.AsyncChunkIoResultProcessingMs;
   n.async_chunk_io_world_apply_ms = phys.AsyncChunkIoWorldApplyMs;
   n.async_chunk_io_column_finalize_ms = phys.AsyncChunkIoColumnFinalizeMs;
-   n.async_chunk_io_result_requeue_ms = phys.AsyncChunkIoResultRequeueMs;
-   n.async_chunk_io_result_requeue_mutex_wait_ms =
-       phys.AsyncChunkIoResultRequeueMutexWaitMs;
-   n.async_chunk_io_result_requeue_mutex_held_ms =
-       phys.AsyncChunkIoResultRequeueMutexHeldMs;
+  n.async_chunk_io_result_requeue_ms = phys.AsyncChunkIoResultRequeueMs;
+  n.async_chunk_io_result_requeue_mutex_wait_ms =
+      phys.AsyncChunkIoResultRequeueMutexWaitMs;
+  n.async_chunk_io_result_requeue_mutex_held_ms =
+      phys.AsyncChunkIoResultRequeueMutexHeldMs;
   n.async_chunk_io_load_result_push_mutex_wait_ms =
       phys.AsyncChunkIoLoadResultPushMutexWaitMs;
   n.async_chunk_io_load_result_push_mutex_held_ms =
@@ -1494,31 +1487,26 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.async_chunk_io_save_drain_ms = phys.AsyncChunkIoSaveDrainMs;
   n.async_chunk_io_light_flags_save_ms = phys.AsyncChunkIoLightFlagsSaveMs;
   n.async_chunk_io_load_result_push_n = phys.AsyncChunkIoLoadResultPushN;
-  n.async_chunk_io_cancelled_discard_n =
-      phys.AsyncChunkIoCancelledDiscardN;
-  n.async_chunk_io_ready_loads_before_n =
-      phys.AsyncChunkIoReadyLoadsBeforeN;
+  n.async_chunk_io_cancelled_discard_n = phys.AsyncChunkIoCancelledDiscardN;
+  n.async_chunk_io_ready_loads_before_n = phys.AsyncChunkIoReadyLoadsBeforeN;
   n.async_chunk_io_selected_loads_n = phys.AsyncChunkIoSelectedLoadsN;
   n.async_chunk_io_processed_loads_n = phys.AsyncChunkIoProcessedLoadsN;
   n.async_chunk_io_requeued_loads_n = phys.AsyncChunkIoRequeuedLoadsN;
   n.async_chunk_io_applied_slices_n = phys.AsyncChunkIoAppliedSlicesN;
   n.async_chunk_io_saves_processed_n = phys.AsyncChunkIoSavesProcessedN;
-  n.async_chunk_io_load_pending_jobs_n =
-      phys.AsyncChunkIoLoadPendingJobsN;
+  n.async_chunk_io_load_pending_jobs_n = phys.AsyncChunkIoLoadPendingJobsN;
   n.async_chunk_io_load_active_jobs_n = phys.AsyncChunkIoLoadActiveJobsN;
   n.async_chunk_io_load_workers_n = phys.AsyncChunkIoLoadWorkersN;
   n.async_chunk_io_background_pending_jobs_n =
       phys.AsyncChunkIoBackgroundPendingJobsN;
   n.async_chunk_io_background_active_jobs_n =
       phys.AsyncChunkIoBackgroundActiveJobsN;
-  n.async_chunk_io_background_workers_n =
-      phys.AsyncChunkIoBackgroundWorkersN;
+  n.async_chunk_io_background_workers_n = phys.AsyncChunkIoBackgroundWorkersN;
   n.async_chunk_io_load_result_queue_depth_n =
       phys.AsyncChunkIoLoadResultQueueDepthN;
   n.async_chunk_io_save_result_queue_depth_n =
       phys.AsyncChunkIoSaveResultQueueDepthN;
-  n.async_chunk_io_apply_time_budget_hit =
-      phys.AsyncChunkIoApplyTimeBudgetHit;
+  n.async_chunk_io_apply_time_budget_hit = phys.AsyncChunkIoApplyTimeBudgetHit;
   n.async_io_ms = phys.AsyncIoMs;
   n.relight_drain_ms = phys.RelightDrainMs;
   n.relight_capture_ms = phys.RelightCaptureMs;
@@ -1608,8 +1596,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_capture_store_hit_n = phys.MeshCaptureStoreHitN;
   n.mesh_capture_store_miss_n = phys.MeshCaptureStoreMissN;
   n.mesh_capture_store_entries_n = phys.MeshCaptureStoreEntriesN;
-  n.mesh_capture_store_stale_evictions_n =
-      phys.MeshCaptureStoreStaleEvictionsN;
+  n.mesh_capture_store_stale_evictions_n = phys.MeshCaptureStoreStaleEvictionsN;
   n.mesh_capture_store_capacity_evictions_n =
       phys.MeshCaptureStoreCapacityEvictionsN;
   n.mesh_capture_store_pressure_evictions_n =
@@ -1656,8 +1643,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.prep_isolated_miss_ms = phys.PrepIsolatedMissMs;
   n.prep_refresh_pressure_ms = phys.PrepRefreshPressureMs;
   n.prep_refresh_miss_ms = phys.PrepRefreshMissMs;
-  n.prep_refresh_miss_radius_query_ms =
-      phys.PrepRefreshMissRadiusQueryMs;
+  n.prep_refresh_miss_radius_query_ms = phys.PrepRefreshMissRadiusQueryMs;
   n.prep_refresh_screen_ray_probe_ms = phys.PrepRefreshScreenRayProbeMs;
   n.prep_refresh_find_nearest_ms = phys.PrepRefreshFindNearestMs;
   n.prep_refresh_miss_other_ms = phys.PrepRefreshMissOtherMs;
@@ -1795,17 +1781,14 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.focus_data_non_air_voxel_n = phys.FocusDataNonAirVoxelN;
   n.focus_data_band_solid_slice_n = phys.FocusDataBandSolidSliceN;
   n.focus_data_band_solid_mesh_n = phys.FocusDataBandSolidMeshN;
-  n.focus_data_band_solid_no_drawable_n =
-      phys.FocusDataBandSolidNoDrawableN;
-  n.focus_data_band_solid_satisfying_n =
-      phys.FocusDataBandSolidSatisfyingN;
+  n.focus_data_band_solid_no_drawable_n = phys.FocusDataBandSolidNoDrawableN;
+  n.focus_data_band_solid_satisfying_n = phys.FocusDataBandSolidSatisfyingN;
   n.focus_data_band_solid_accepted_empty_n =
       phys.FocusDataBandSolidAcceptedEmptyN;
   n.focus_data_band_solid_pending_mesh_n = phys.FocusDataBandSolidPendingMeshN;
   n.focus_data_band_solid_pending_work_n = phys.FocusDataBandSolidPendingWorkN;
   n.focus_data_band_solid_unowned_n = phys.FocusDataBandSolidUnownedN;
-  n.focus_data_camera_band_solid_slice_n =
-      phys.FocusDataCameraBandSolidSliceN;
+  n.focus_data_camera_band_solid_slice_n = phys.FocusDataCameraBandSolidSliceN;
   n.focus_data_camera_band_solid_no_drawable_n =
       phys.FocusDataCameraBandSolidNoDrawableN;
   n.focus_data_camera_band_solid_satisfying_n =
@@ -1834,8 +1817,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.column_flow_drain_request_n = phys.ColumnFlowDrainRequestN;
   n.column_flow_critical_units_at_entry_n =
       phys.ColumnFlowCriticalUnitsAtEntryN;
-  n.column_flow_critical_units_at_exit_n =
-      phys.ColumnFlowCriticalUnitsAtExitN;
+  n.column_flow_critical_units_at_exit_n = phys.ColumnFlowCriticalUnitsAtExitN;
   n.column_flow_live_first_mesh_n = phys.ColumnFlowLiveFirstMeshN;
   n.column_flow_live_relight_n = phys.ColumnFlowLiveRelightN;
   n.column_flow_live_seam_n = phys.ColumnFlowLiveSeamN;
@@ -1848,18 +1830,15 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.column_flow_deferred_relight_n = phys.ColumnFlowDeferredRelightN;
   n.column_flow_deferred_seam_n = phys.ColumnFlowDeferredSeamN;
   n.column_flow_deferred_promote_n = phys.ColumnFlowDeferredPromoteN;
-  n.column_flow_dispatched_first_mesh_n =
-      phys.ColumnFlowDispatchedFirstMeshN;
+  n.column_flow_dispatched_first_mesh_n = phys.ColumnFlowDispatchedFirstMeshN;
   n.column_flow_dispatched_relight_n = phys.ColumnFlowDispatchedRelightN;
   n.column_flow_dispatched_seam_n = phys.ColumnFlowDispatchedSeamN;
   n.column_flow_dispatched_promote_n = phys.ColumnFlowDispatchedPromoteN;
   n.column_flow_dispatch_first_mesh_ms_max =
       phys.ColumnFlowDispatchFirstMeshMsMax;
-  n.column_flow_dispatch_relight_ms_max =
-      phys.ColumnFlowDispatchRelightMsMax;
+  n.column_flow_dispatch_relight_ms_max = phys.ColumnFlowDispatchRelightMsMax;
   n.column_flow_dispatch_seam_ms_max = phys.ColumnFlowDispatchSeamMsMax;
-  n.column_flow_dispatch_promote_ms_max =
-      phys.ColumnFlowDispatchPromoteMsMax;
+  n.column_flow_dispatch_promote_ms_max = phys.ColumnFlowDispatchPromoteMsMax;
   n.column_lighting_n = phys.ColumnLightingN;
   n.column_meshing_n = phys.ColumnMeshingN;
   n.column_render_ready_n = phys.ColumnRenderReadyN;
@@ -1878,10 +1857,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.demand_unsat_face = phys.DemandUnsatFace;
   n.demand_unsat_coverage = phys.DemandUnsatCoverage;
   n.demand_unsat_retain = phys.DemandUnsatRetain;
-  n.visual_obligation_shadow_sample_n =
-      phys.VisualObligationShadowSampleN;
-  n.visual_obligation_shadow_mismatch_n =
-      phys.VisualObligationShadowMismatchN;
+  n.visual_obligation_shadow_sample_n = phys.VisualObligationShadowSampleN;
+  n.visual_obligation_shadow_mismatch_n = phys.VisualObligationShadowMismatchN;
   // A38 R6: primary defect class from period proxies (mutually exclusive).
   {
     using cutum::ChunkDefectClass;
@@ -1930,8 +1907,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.near_focus_hole_probe_ran = phys.NearFocusHoleProbeRan;
   n.near_focus_hole_probe_result = phys.NearFocusHoleProbeResult;
   n.near_focus_hole_probe_memo_hit = phys.NearFocusHoleProbeMemoHit;
-  n.near_focus_hole_probe_witness_valid =
-      phys.NearFocusHoleProbeWitnessValid;
+  n.near_focus_hole_probe_witness_valid = phys.NearFocusHoleProbeWitnessValid;
   n.near_focus_hole_probe_witness_cx = phys.NearFocusHoleProbeWitnessCx;
   n.near_focus_hole_probe_witness_cy = phys.NearFocusHoleProbeWitnessCy;
   n.near_focus_hole_probe_witness_cz = phys.NearFocusHoleProbeWitnessCz;
@@ -1943,8 +1919,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
       phys.NearFocusHoleProbeWitnessDrawable;
   n.near_focus_hole_probe_witness_satisfying =
       phys.NearFocusHoleProbeWitnessSatisfying;
-  n.near_focus_hole_probe_witness_dirty =
-      phys.NearFocusHoleProbeWitnessDirty;
+  n.near_focus_hole_probe_witness_dirty = phys.NearFocusHoleProbeWitnessDirty;
   n.near_focus_hole_probe_witness_build_in_flight =
       phys.NearFocusHoleProbeWitnessBuildInFlight;
   n.near_focus_hole_probe_witness_pending_gpu_apply =
@@ -1987,18 +1962,13 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
       phys.NearFocusTrackedWitnessFogHorizonBlocks;
   n.near_focus_tracked_witness_inside_fog =
       phys.NearFocusTrackedWitnessInsideFog;
-  n.near_focus_tracked_witness_outcome =
-      phys.NearFocusTrackedWitnessOutcome;
-  n.near_focus_tracked_witness_resident =
-      phys.NearFocusTrackedWitnessResident;
-  n.near_focus_tracked_witness_has_mesh =
-      phys.NearFocusTrackedWitnessHasMesh;
-  n.near_focus_tracked_witness_drawable =
-      phys.NearFocusTrackedWitnessDrawable;
+  n.near_focus_tracked_witness_outcome = phys.NearFocusTrackedWitnessOutcome;
+  n.near_focus_tracked_witness_resident = phys.NearFocusTrackedWitnessResident;
+  n.near_focus_tracked_witness_has_mesh = phys.NearFocusTrackedWitnessHasMesh;
+  n.near_focus_tracked_witness_drawable = phys.NearFocusTrackedWitnessDrawable;
   n.near_focus_tracked_witness_satisfying =
       phys.NearFocusTrackedWitnessSatisfying;
-  n.near_focus_tracked_witness_dirty =
-      phys.NearFocusTrackedWitnessDirty;
+  n.near_focus_tracked_witness_dirty = phys.NearFocusTrackedWitnessDirty;
   n.near_focus_tracked_witness_build_in_flight =
       phys.NearFocusTrackedWitnessBuildInFlight;
   n.near_focus_tracked_witness_pending_gpu_apply =
@@ -2019,8 +1989,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
       phys.NearFocusTrackedWitnessResolvedAfterFogTotal;
   n.near_focus_tracked_witness_exited_fog_unready_total =
       phys.NearFocusTrackedWitnessExitedFogUnreadyTotal;
-  n.near_focus_tracked_witness_sample_ms =
-      phys.NearFocusTrackedWitnessSampleMs;
+  n.near_focus_tracked_witness_sample_ms = phys.NearFocusTrackedWitnessSampleMs;
   n.near_focus_holes_latched = phys.NearFocusHolesLatched;
   n.unfinished_visual = phys.UnfinishedVisual;
   n.light_debt = phys.LightDebt;
@@ -2052,12 +2021,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.focus_proxy_repairable_geometry_debt =
       phys.FocusProxyRepairableGeometryDebt;
   n.miss_screen_ray_candidate = phys.MissScreenRayCandidate;
-  n.miss_screen_ray_selected_state_valid =
-      phys.MissScreenRaySelectedStateValid;
-  n.miss_screen_ray_selected_drawable =
-      phys.MissScreenRaySelectedDrawable;
-  n.miss_screen_ray_selected_satisfying =
-      phys.MissScreenRaySelectedSatisfying;
+  n.miss_screen_ray_selected_state_valid = phys.MissScreenRaySelectedStateValid;
+  n.miss_screen_ray_selected_drawable = phys.MissScreenRaySelectedDrawable;
+  n.miss_screen_ray_selected_satisfying = phys.MissScreenRaySelectedSatisfying;
   n.miss_screen_ray_selected_repairable_geometry_debt =
       phys.MissScreenRaySelectedRepairableGeometryDebt;
   n.focus_dark_mesh = phys.FocusDarkMesh;
@@ -2111,8 +2077,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_replace_hole_avoided = phys.MeshReplaceHoleAvoided;
   n.pub_reject_light_invalid = phys.PubRejectLightInvalid;
   n.pub_reject_source_mismatch = phys.PubRejectSourceMismatch;
-  n.pub_reject_source_mismatch_delta =
-      phys.PubRejectSourceMismatchDelta;
+  n.pub_reject_source_mismatch_delta = phys.PubRejectSourceMismatchDelta;
   n.pub_reject_other = phys.PubRejectOther;
   n.pub_accept_first_publish = phys.PubAcceptFirstPublish;
   n.pending_gpu_applies_n = phys.PendingGpuAppliesN;
@@ -2132,26 +2097,20 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_pipeline_async_inflight_n = phys.MeshPipelineAsyncInFlightN;
   n.mesh_pipeline_async_builder_inflight_n =
       phys.MeshPipelineAsyncBuilderInFlightN;
-  n.mesh_pipeline_gpu_extract_inflight_n =
-      phys.MeshPipelineGpuExtractInFlightN;
+  n.mesh_pipeline_gpu_extract_inflight_n = phys.MeshPipelineGpuExtractInFlightN;
   n.mesh_pipeline_capture_pending_n = phys.MeshPipelineCapturePendingN;
-  n.mesh_pipeline_completed_waiting_n =
-      phys.MeshPipelineCompletedWaitingN;
+  n.mesh_pipeline_completed_waiting_n = phys.MeshPipelineCompletedWaitingN;
   n.mesh_pipeline_outstanding_n = phys.MeshPipelineOutstandingN;
   n.mesh_pipeline_output_slots = phys.MeshPipelineOutputSlots;
   n.mesh_pipeline_output_headroom_n = phys.MeshPipelineOutputHeadroomN;
-  n.mesh_pipeline_backpressure_active =
-      phys.MeshPipelineBackpressureActive;
-  n.mesh_pipeline_backpressure_reason =
-      phys.MeshPipelineBackpressureReason;
-  n.mesh_pipeline_schedule_requested_n =
-      phys.MeshPipelineScheduleRequestedN;
+  n.mesh_pipeline_backpressure_active = phys.MeshPipelineBackpressureActive;
+  n.mesh_pipeline_backpressure_reason = phys.MeshPipelineBackpressureReason;
+  n.mesh_pipeline_schedule_requested_n = phys.MeshPipelineScheduleRequestedN;
   n.mesh_pipeline_admission_schedule_cap_n =
       phys.MeshPipelineAdmissionScheduleCapN;
   n.mesh_pipeline_available_schedule_cap_n =
       phys.MeshPipelineAvailableScheduleCapN;
-  n.mesh_pipeline_schedule_after_cap_n =
-      phys.MeshPipelineScheduleAfterCapN;
+  n.mesh_pipeline_schedule_after_cap_n = phys.MeshPipelineScheduleAfterCapN;
   n.mesh_pipeline_first_mesh_cap_n = phys.MeshPipelineFirstMeshCapN;
   n.mesh_pipeline_remesh_cap_n = phys.MeshPipelineRemeshCapN;
   n.gpu_kick_n = phys.GpuKickN;
@@ -2239,8 +2198,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
                              reinterpret_cast<PROCESS_MEMORY_COUNTERS *>(&pmc),
                              sizeof(pmc)))
     {
-      s.LastRssMb =
-          static_cast<double>(pmc.WorkingSetSize) / (1024.0 * 1024.0);
+      s.LastRssMb = static_cast<double>(pmc.WorkingSetSize) / (1024.0 * 1024.0);
       s.LastPrivateMb =
           static_cast<double>(pmc.PrivateUsage) / (1024.0 * 1024.0);
     }
@@ -2284,8 +2242,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.relight_apply_plateau_boost_n = phys.RelightApplyPlateauBoostN;
   n.mark_relit_skip_already_dirty_n = phys.MarkRelitSkipAlreadyDirtyN;
   n.mark_relit_skip_already_raa_n = phys.MarkRelitSkipAlreadyRaaN;
-  n.mark_relit_prefer_kick_n =
-      static_cast<int>(phys.MarkRelitPreferKickN);
+  n.mark_relit_prefer_kick_n = static_cast<int>(phys.MarkRelitPreferKickN);
   n.mark_relit_skip_inflight_n = phys.MarkRelitSkipInflightN;
   n.mark_relit_skip_enter_lit_quiesce_n = phys.MarkRelitSkipEnterLitQuiesceN;
   n.mark_relit_schedule_n = phys.MarkRelitScheduleN;
@@ -2335,8 +2292,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.pending_light_trim_memory_n = phys.PendingLightTrimMemoryN;
   n.relight_fifo_dropped = phys.RelightFifoDropped;
   n.relight_fifo_trim_deferred_total = phys.RelightFifoTrimDeferredTotal;
-  n.relight_fifo_overflow_dropped_total =
-      phys.RelightFifoOverflowDroppedTotal;
+  n.relight_fifo_overflow_dropped_total = phys.RelightFifoOverflowDroppedTotal;
   n.relight_false_clear_n = phys.RelightFalseClearN;
   n.gpu_pool_used_mb = phys.GpuPoolUsedMb;
   n.gpu_pool_cap_mb = phys.GpuPoolCapMb;
@@ -2352,8 +2308,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.opaque_mdi_cull_query_poll_ms = phys.OpaqueMdiCullQueryPollCpuMs;
   n.opaque_mdi_cull_post_submit_ms = phys.OpaqueMdiCullPostSubmitCpuMs;
   n.opaque_mdi_cull_stats_poll_ms = phys.OpaqueMdiCullStatsPollCpuMs;
-  n.opaque_mdi_cull_stats_fence_poll_ms =
-      phys.OpaqueMdiCullStatsFencePollCpuMs;
+  n.opaque_mdi_cull_stats_fence_poll_ms = phys.OpaqueMdiCullStatsFencePollCpuMs;
   n.opaque_mdi_cull_stats_buffer_read_ms =
       phys.OpaqueMdiCullStatsBufferReadCpuMs;
   n.opaque_mdi_cull_stats_arm_ms = phys.OpaqueMdiCullStatsArmCpuMs;
@@ -2477,1459 +2432,1339 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   return n;
 }
 
-void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
-                bool flush)
+void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind, bool flush)
 {
   if (!s.Jsonl.is_open())
   {
     return;
   }
   // A37 H0: warm protocol stamp so AF adequacy cache_mode can be warm honestly.
-  const bool warm_stamp =
-      (std::strcmp(kind, "period") == 0) &&
-      []() {
-        if (const char *env = std::getenv("CUBA_FLIGHT_WARM"))
-        {
-          return env[0] == '1' || env[0] == 't' || env[0] == 'T';
-        }
-        return false;
-      }();
-  s.Jsonl << "{\"kind\":\"" << kind << "\""
-          << ",\"frame_epoch\":" << n.frame_epoch
-          << (warm_stamp ? ",\"warm\":1" : "")
-          << ",\"wall_ms\":" << n.wall_ms << ",\"sim_ms\":" << n.sim_ms
-          << ",\"swap_wait_ms\":" << n.swap_wait_ms
-          << ",\"unaccounted_ms\":" << n.unaccounted_ms
-          << ",\"input_ms\":" << n.input_ms
-          << ",\"app_update_ms\":" << n.app_update_ms
-          << ",\"world_extra_ms\":" << n.world_extra_ms
-          << ",\"views_ms\":" << n.views_ms
-          << ",\"do_movement_ms\":" << n.do_movement_ms
-          << ",\"ensure_collision_ms\":" << n.ensure_collision_ms
-          << ",\"creature_tick_ms\":" << n.creature_tick_ms
-          << ",\"camera_move_ms\":" << n.camera_move_ms
-          << ",\"camera_ground_support_ms\":" << n.camera_ground_support_ms
-          << ",\"camera_locomotion_ms\":" << n.camera_locomotion_ms
-          << ",\"camera_horiz_move_ms\":" << n.camera_horiz_move_ms
-          << ",\"camera_move_requested_xz\":"
-          << n.camera_move_requested_xz
-          << ",\"camera_move_applied_xz\":" << n.camera_move_applied_xz
-          << ",\"camera_move_attempt_substeps\":"
-          << n.camera_move_attempt_substeps
-          << ",\"camera_move_blocked_substeps\":"
-          << n.camera_move_blocked_substeps
-          << ",\"camera_move_blocked_x_substeps\":"
-          << n.camera_move_blocked_x_substeps
-          << ",\"camera_move_blocked_z_substeps\":"
-          << n.camera_move_blocked_z_substeps
-          << ",\"camera_flight_ground_contacts\":"
-          << n.camera_flight_ground_contacts
-          << ",\"camera_free_move_share\":" << n.camera_free_move_share
-          << ",\"camera_sync_ms\":" << n.camera_sync_ms
-          << ",\"environment_tick_ms\":" << n.environment_tick_ms
-          << ",\"npc_intent_ms\":" << n.npc_intent_ms
-          << ",\"controlled_influence_ms\":" << n.controlled_influence_ms
-          << ",\"vitals_tick_ms\":" << n.vitals_tick_ms
-          << ",\"status_effects_tick_ms\":" << n.status_effects_tick_ms
-          << ",\"creatures_total\":" << n.creatures_total
-          << ",\"creatures_ai_ticked\":" << n.creatures_ai_ticked
-          << ",\"world_creatures_skipped\":" << n.world_creatures_skipped
-          << ",\"player_locomotion_block_ms\":" << n.player_locomotion_block_ms
-          << ",\"world_ai_after_player_ms\":" << n.world_ai_after_player_ms
-          << ",\"creatures_ai_budget\":" << n.creatures_ai_budget
-          << ",\"creatures_ai_deferred\":" << n.creatures_ai_deferred
-          << ",\"stream_speed_clamp_scale\":" << n.stream_speed_clamp_scale
-          << ",\"world_streaming_phase_ms\":" << n.world_streaming_phase_ms
-          << ",\"altitude_surface_query_ms\":"
-          << n.altitude_surface_query_ms
-          << ",\"block_input_ms\":" << n.block_input_ms
-          << ",\"tick_env_ms\":" << n.tick_env_ms
-          << ",\"physics_block_ms\":" << n.physics_block_ms
-          << ",\"physics_drain_ms\":" << n.physics_drain_ms
-          << ",\"physics_movement_ms\":" << n.physics_movement_ms
-          << ",\"physics_substeps\":" << n.physics_substeps
-          << ",\"break_complete_n\":" << n.break_complete_n
-          << ",\"break_inflight_race_n\":" << n.break_inflight_race_n
-          << ",\"break_dark_face_n\":" << n.break_dark_face_n
-          << ",\"place_complete_n\":" << n.place_complete_n
-          << ",\"place_emission_n\":" << n.place_emission_n
-          << ",\"edit_light_emission\":" << n.edit_light_emission
-          << ",\"edit_to_first_mesh_ms\":" << n.edit_to_first_mesh_ms
-          << ",\"fast_relight_ms\":" << n.fast_relight_ms
-          << ",\"render_window_setup_ms\":" << n.render_window_setup_ms
-          << ",\"render_frame_setup_ms\":" << n.render_frame_setup_ms
-          << ",\"render_equipment_setup_ms\":"
-          << n.render_equipment_setup_ms
-          << ",\"geometry_paint_ms\":" << n.geometry_paint_ms
-          << ",\"fp_viewmodel_ms\":" << n.fp_viewmodel_ms
-          << ",\"prepare_frame_ms\":" << n.prepare_frame_ms
-          << ",\"post_scene_ms\":" << n.post_scene_ms
-          << ",\"gui_overlay_ms\":" << n.gui_overlay_ms
-          << ",\"autosave_ms\":" << n.autosave_ms
-          << ",\"autosave_deferred_n\":" << n.autosave_deferred_n
-          << ",\"autosave_skipped_tick_n\":" << n.autosave_skipped_tick_n
-          << ",\"dig_seam_pending_n\":" << n.dig_seam_pending_n
-          << ",\"dig_seam_remesh_n\":" << n.dig_seam_remesh_n
-          << ",\"stale_repair_wave_n\":" << n.stale_repair_wave_n
-          << ",\"stand_rim_dirty_n\":" << n.stand_rim_dirty_n
-          << ",\"stand_rim_imm_n\":" << n.stand_rim_imm_n
-          << ",\"render_total_ms\":" << n.render_total_ms
-          << ",\"render_unattributed_ms\":" << n.render_unattributed_ms
-          << ",\"residual_ms\":" << n.residual_ms
-          << ",\"perf_collect_ms\":" << n.perf_collect_ms
-          << ",\"perf_emit_ms\":" << n.perf_emit_ms
-          << ",\"fluid_map_cpu_ms\":" << n.fluid_map_cpu_ms
-          << ",\"fluid_map_gpu_ms\":" << n.fluid_map_gpu_ms
-          << ",\"fluid_map_dirty\":" << n.fluid_map_dirty
-          << ",\"fluid_map_full_rebuild\":" << n.fluid_map_full_rebuild
-          << ",\"commit_apply_ms\":" << n.commit_apply_ms
-          << ",\"commit_seal_ms\":" << n.commit_seal_ms
-          << ",\"commit_physics_ms\":" << n.commit_physics_ms
-          << ",\"streamer_update_ms\":" << n.streamer_update_ms
-          << ",\"streamer_core_ms\":" << n.streamer_update_ms
-          << ",\"streamer_unload_ms\":" << n.streamer_unload_ms
-          << ",\"streamer_keep_shell_ms\":" << n.streamer_keep_shell_ms
-          << ",\"streamer_prefetch_ahead_ms\":" << n.streamer_prefetch_ahead_ms
-          << ",\"update_streaming_ms\":" << n.update_streaming_ms
-          << ",\"update_streaming_pre_core_ms\":"
-          << n.update_streaming_pre_core_ms
-          << ",\"update_streaming_post_core_ms\":"
-          << n.update_streaming_post_core_ms
-          << ",\"update_streaming_post_core_telemetry_ms\":"
-          << n.update_streaming_post_core_telemetry_ms
-          << ",\"visibility_debt_probe_ms\":"
-          << n.visibility_debt_probe_ms
-          << ",\"spawn_catchup_probe_ms\":"
-          << n.spawn_catchup_probe_ms
-          << ",\"async_chunk_systems_ms\":" << n.async_chunk_systems_ms
-          << ",\"async_chunk_pre_scheduler_ms\":"
-          << n.async_chunk_pre_scheduler_ms
-          << ",\"async_chunk_scheduler_tick_ms\":"
-          << n.async_chunk_scheduler_tick_ms
-          << ",\"async_chunk_post_scheduler_ms\":"
-          << n.async_chunk_post_scheduler_ms
-          << ",\"async_chunk_io_drain_ms\":" << n.async_chunk_io_drain_ms
-          << ",\"async_chunk_io_tick_wall_ms\":"
-          << n.async_chunk_io_tick_wall_ms
-          << ",\"async_chunk_io_unattributed_ms\":"
-          << n.async_chunk_io_unattributed_ms
-          << ",\"async_chunk_io_light_flags_result_drain_ms\":"
-          << n.async_chunk_io_light_flags_result_drain_ms
-          << ",\"async_chunk_io_queue_snapshot_ms\":"
-          << n.async_chunk_io_queue_snapshot_ms
-          << ",\"async_chunk_io_light_flags_snapshot_ms\":"
-          << n.async_chunk_io_light_flags_snapshot_ms
-          << ",\"async_chunk_io_light_flags_enqueue_ms\":"
-          << n.async_chunk_io_light_flags_enqueue_ms
-          << ",\"async_chunk_io_light_flags_complete_columns_n\":"
-          << n.async_chunk_io_light_flags_complete_columns_n
-          << ",\"async_chunk_io_light_flags_saved_revision\":"
-          << n.async_chunk_io_light_flags_saved_revision
-          << ",\"async_chunk_io_light_flags_last_result_revision\":"
-          << n.async_chunk_io_light_flags_last_result_revision
-          << ",\"async_chunk_io_light_flags_last_result_success\":"
-          << n.async_chunk_io_light_flags_last_result_success
-          << ",\"async_chunk_io_light_flags_last_result_worker_queue_wait_ms\":"
-          << n.async_chunk_io_light_flags_worker_queue_wait_ms
-          << ",\"async_chunk_io_light_flags_last_result_worker_service_ms\":"
-          << n.async_chunk_io_light_flags_worker_service_ms
-          << ",\"async_chunk_io_discard_cancelled_ms\":"
-          << n.async_chunk_io_discard_cancelled_ms
-          << ",\"async_chunk_io_result_selection_ms\":"
-          << n.async_chunk_io_result_selection_ms
-          << ",\"async_chunk_io_result_selection_mutex_wait_ms\":"
-          << n.async_chunk_io_result_selection_mutex_wait_ms
-          << ",\"async_chunk_io_result_selection_mutex_held_ms\":"
-          << n.async_chunk_io_result_selection_mutex_held_ms
-          << ",\"async_chunk_io_result_processing_ms\":"
-          << n.async_chunk_io_result_processing_ms
-          << ",\"async_chunk_io_world_apply_ms\":"
-          << n.async_chunk_io_world_apply_ms
-          << ",\"async_chunk_io_column_finalize_ms\":"
-          << n.async_chunk_io_column_finalize_ms
-          << ",\"async_chunk_io_result_requeue_ms\":"
-          << n.async_chunk_io_result_requeue_ms
-          << ",\"async_chunk_io_result_requeue_mutex_wait_ms\":"
-          << n.async_chunk_io_result_requeue_mutex_wait_ms
-          << ",\"async_chunk_io_result_requeue_mutex_held_ms\":"
-          << n.async_chunk_io_result_requeue_mutex_held_ms
-          << ",\"async_chunk_io_load_result_push_mutex_wait_ms\":"
-          << n.async_chunk_io_load_result_push_mutex_wait_ms
-          << ",\"async_chunk_io_load_result_push_mutex_held_ms\":"
-          << n.async_chunk_io_load_result_push_mutex_held_ms
-          << ",\"async_chunk_io_load_result_push_mutex_wait_max_ms\":"
-          << n.async_chunk_io_load_result_push_mutex_wait_max_ms
-          << ",\"async_chunk_io_load_result_push_mutex_held_max_ms\":"
-          << n.async_chunk_io_load_result_push_mutex_held_max_ms
-          << ",\"async_chunk_io_save_drain_ms\":"
-          << n.async_chunk_io_save_drain_ms
-          << ",\"async_chunk_io_light_flags_save_ms\":"
-          << n.async_chunk_io_light_flags_save_ms
-          << ",\"async_chunk_io_load_result_push_n\":"
-          << n.async_chunk_io_load_result_push_n
-          << ",\"async_chunk_io_cancelled_discard_n\":"
-          << n.async_chunk_io_cancelled_discard_n
-          << ",\"async_chunk_io_ready_loads_before_n\":"
-          << n.async_chunk_io_ready_loads_before_n
-          << ",\"async_chunk_io_selected_loads_n\":"
-          << n.async_chunk_io_selected_loads_n
-          << ",\"async_chunk_io_processed_loads_n\":"
-          << n.async_chunk_io_processed_loads_n
-          << ",\"async_chunk_io_requeued_loads_n\":"
-          << n.async_chunk_io_requeued_loads_n
-          << ",\"async_chunk_io_applied_slices_n\":"
-          << n.async_chunk_io_applied_slices_n
-          << ",\"async_chunk_io_saves_processed_n\":"
-          << n.async_chunk_io_saves_processed_n
-          << ",\"async_chunk_io_load_pending_jobs_n\":"
-          << n.async_chunk_io_load_pending_jobs_n
-          << ",\"async_chunk_io_load_active_jobs_n\":"
-          << n.async_chunk_io_load_active_jobs_n
-          << ",\"async_chunk_io_load_workers_n\":"
-          << n.async_chunk_io_load_workers_n
-          << ",\"async_chunk_io_background_pending_jobs_n\":"
-          << n.async_chunk_io_background_pending_jobs_n
-          << ",\"async_chunk_io_background_active_jobs_n\":"
-          << n.async_chunk_io_background_active_jobs_n
-          << ",\"async_chunk_io_background_workers_n\":"
-          << n.async_chunk_io_background_workers_n
-          << ",\"async_chunk_io_load_result_queue_depth_n\":"
-          << n.async_chunk_io_load_result_queue_depth_n
-          << ",\"async_chunk_io_save_result_queue_depth_n\":"
-          << n.async_chunk_io_save_result_queue_depth_n
-          << ",\"async_chunk_io_apply_time_budget_hit\":"
-          << n.async_chunk_io_apply_time_budget_hit
-          << ",\"async_io_ms\":" << n.async_io_ms
-          << ",\"relight_drain_ms\":" << n.relight_drain_ms
-          << ",\"relight_capture_ms\":" << n.relight_capture_ms
-          << ",\"relight_capture_lock_wait_ms\":"
-          << n.relight_capture_lock_wait_ms
-          << ",\"relight_snapshot_copy_ms\":"
-          << n.relight_snapshot_copy_ms
-          << ",\"relight_dependency_stamp_ms\":"
-          << n.relight_dependency_stamp_ms
-          << ",\"relight_submit_setup_ms\":"
-          << n.relight_submit_setup_ms
-          << ",\"relight_queue_submit_ms\":"
-          << n.relight_queue_submit_ms
-          << ",\"relight_apply_ms\":" << n.relight_apply_ms
-          << ",\"relight_apply_policy_ms\":"
-          << n.relight_apply_policy_ms
-          << ",\"relight_apply_validation_ms\":"
-          << n.relight_apply_validation_ms
-          << ",\"relight_apply_light_ms\":" << n.relight_apply_light_ms
-          << ",\"relight_apply_install_ms\":" << n.relight_apply_install_ms
-          << ",\"relight_drain_completed_ms\":" << n.relight_drain_completed_ms
-          << ",\"relight_merge_light_ms\":" << n.relight_merge_light_ms
-          << ",\"relight_light_chunks_n\":" << n.relight_light_chunks_n
-          << ",\"relight_light_skip_n\":" << n.relight_light_skip_n
-          << ",\"repair_reticket_deferred_n\":" << n.repair_reticket_deferred_n
-          << ",\"apply_binding\":" << n.apply_binding
-          << ",\"visible_black_focus_raw_n\":" << n.visible_black_focus_raw_n
-          << ",\"relight_fifo_drop_n\":" << n.relight_fifo_drop_n
-          << ",\"relight_fifo_overflow_drop_n\":"
-          << n.relight_fifo_overflow_drop_n
-          << ",\"relight_fifo_protect_block_n\":"
-          << n.relight_fifo_protect_block_n
-          << ",\"relight_fifo_pin_saved_n\":" << n.relight_fifo_pin_saved_n
-          << ",\"mesh_sync_ms\":" << n.mesh_sync_ms
-          << ",\"mesh_snapshot_ms\":" << n.mesh_snapshot_ms
-          << ",\"mesh_immediate_ms\":" << n.mesh_immediate_ms
-          << ",\"mesh_immediate_count\":" << n.mesh_immediate_count
-          << ",\"mesh_dirty_tick_ms\":" << n.mesh_dirty_tick_ms
-          << ",\"mesh_dirty_pre_prune_ms\":"
-          << n.mesh_dirty_pre_prune_ms
-          << ",\"mesh_dirty_prune_ms\":" << n.mesh_dirty_prune_ms
-          << ",\"mesh_dirty_prune_n\":" << n.mesh_dirty_prune_n
-          << ",\"mesh_dirty_sort_ms\":" << n.mesh_dirty_sort_ms
-          << ",\"mesh_dirty_drain_ms\":" << n.mesh_dirty_drain_ms
-          << ",\"mesh_dirty_drain_n\":" << n.mesh_dirty_drain_n
-          << ",\"mesh_dirty_schedule_ms\":" << n.mesh_dirty_schedule_ms
-          << ",\"mesh_dependency_queued_n\":"
-          << n.mesh_dependency_queued_n
-          << ",\"mesh_dependency_applied_n\":"
-          << n.mesh_dependency_applied_n
-          << ",\"mesh_dependency_backlog_n\":"
-          << n.mesh_dependency_backlog_n
-          << ",\"mesh_dirty_schedule_ok_n\":" << n.mesh_dirty_schedule_ok_n
-          << ",\"mesh_dirty_schedule_ok_fm_n\":"
-          << n.mesh_dirty_schedule_ok_fm_n
-          << ",\"mesh_dirty_schedule_ok_remesh_n\":"
-          << n.mesh_dirty_schedule_ok_remesh_n
-          << ",\"mesh_dirty_schedule_skip_n\":" << n.mesh_dirty_schedule_skip_n
-          << ",\"mesh_dirty_schedule_skip_pipeline_n\":"
-          << n.mesh_dirty_schedule_skip_pipeline_n
-          << ",\"mesh_dirty_schedule_skip_snapshot_n\":"
-          << n.mesh_dirty_schedule_skip_snapshot_n
-          << ",\"mesh_snapshot_defer_time_budget_n\":"
-          << n.mesh_snapshot_defer_time_budget_n
-          << ",\"mesh_snapshot_defer_refresh_budget_n\":"
-          << n.mesh_snapshot_defer_refresh_budget_n
-          << ",\"mesh_snapshot_budget_ms\":" << n.mesh_snapshot_budget_ms
-          << ",\"capture_snapshot_cost_ema_ms\":"
-          << n.capture_snapshot_cost_ema_ms
-          << ",\"mesh_snapshot_refresh_credits_initial_n\":"
-          << n.mesh_snapshot_refresh_credits_initial_n
-          << ",\"mesh_snapshot_refresh_credits_remaining_n\":"
-          << n.mesh_snapshot_refresh_credits_remaining_n
-          << ",\"first_mesh_capture_reserve_remaining_n\":"
-          << n.first_mesh_capture_reserve_remaining_n
-          << ",\"light_repair_capture_reserve_remaining_n\":"
-          << n.light_repair_capture_reserve_remaining_n
-          << ",\"mesh_snapshot_firstmesh_refresh_defers_n\":"
-          << n.mesh_snapshot_firstmesh_refresh_defers_n
-          << ",\"mesh_snapshot_remesh_refresh_defers_n\":"
-          << n.mesh_snapshot_remesh_refresh_defers_n
-          << ",\"mesh_snapshot_defer_pipeline_bytes_n\":"
-          << n.mesh_snapshot_defer_pipeline_bytes_n
-          << ",\"mesh_snapshot_defer_missing_band_n\":"
-          << n.mesh_snapshot_defer_missing_band_n
-          << ",\"mesh_snapshot_defer_dependency_n\":"
-          << n.mesh_snapshot_defer_dependency_n
-          << ",\"mesh_snapshot_defer_publication_n\":"
-          << n.mesh_snapshot_defer_publication_n
-          << ",\"mesh_snapshot_defer_store_commit_n\":"
-          << n.mesh_snapshot_defer_store_commit_n
-          << ",\"mesh_dirty_schedule_skip_softdefer_n\":"
-          << n.mesh_dirty_schedule_skip_softdefer_n
-          << ",\"mesh_dirty_schedule_skip_locked_n\":"
-          << n.mesh_dirty_schedule_skip_locked_n
-          << ",\"mesh_dirty_schedule_skip_orphan_n\":"
-          << n.mesh_dirty_schedule_skip_orphan_n
-          << ",\"mesh_dirty_schedule_skip_remesh_starve_n\":"
-          << n.mesh_dirty_schedule_skip_remesh_starve_n
-          << ",\"mesh_dirty_schedule_skip_other_n\":"
-          << n.mesh_dirty_schedule_skip_other_n
-          << ",\"mesh_dirty_schedule_skip_outside_focus_n\":"
-          << n.mesh_dirty_schedule_skip_outside_focus_n
-          << ",\"fm_consumer_starved_active\":" << n.fm_consumer_starved_active
-          << ",\"keep_ring_shrink_n\":" << n.keep_ring_shrink_n
-          << ",\"freechunk_live_n\":" << n.freechunk_live_n
-          << ",\"capture_bg_cap_n\":" << n.capture_bg_cap_n
-          << ",\"capture_band_cy\":" << n.capture_band_cy
-          << ",\"mesh_dirty_gpu_ms\":" << n.mesh_dirty_gpu_ms
-          << ",\"mesh_dirty_gpu_n\":" << n.mesh_dirty_gpu_n
-          << ",\"mesh_dirty_sync_ms\":" << n.mesh_dirty_sync_ms
-          << ",\"mesh_dirty_sync_n\":" << n.mesh_dirty_sync_n
-          << ",\"mesh_gpu_kick_ms\":" << n.mesh_gpu_kick_ms
-          << ",\"mesh_gpu_finish_ms\":" << n.mesh_gpu_finish_ms
-          << ",\"mesh_async_drain_ms\":" << n.mesh_async_drain_ms
-          << ",\"mesh_capture_store_hit_n\":" << n.mesh_capture_store_hit_n
-          << ",\"mesh_capture_store_miss_n\":" << n.mesh_capture_store_miss_n
-          << ",\"mesh_capture_store_entries_n\":"
-          << n.mesh_capture_store_entries_n
-          << ",\"mesh_capture_store_stale_evictions_n\":"
-          << n.mesh_capture_store_stale_evictions_n
-          << ",\"mesh_capture_store_capacity_evictions_n\":"
-          << n.mesh_capture_store_capacity_evictions_n
-          << ",\"mesh_capture_store_pressure_evictions_n\":"
-          << n.mesh_capture_store_pressure_evictions_n
-          << ",\"mesh_snapshot_pending_bytes\":"
-          << n.mesh_snapshot_pending_bytes
-          << ",\"dirty_touch_n\":" << n.dirty_touch_n
-          << ",\"dirty_revisit_same_n\":" << n.dirty_revisit_same_n
-          << ",\"dirty_fm_n\":" << n.dirty_fm_n
-          << ",\"dirty_remesh_n\":" << n.dirty_remesh_n
-          << ",\"prep_unfinished_calls_n\":" << n.prep_unfinished_calls_n
-          << ",\"prep_unfinished_full_n\":" << n.prep_unfinished_full_n
-          << ",\"prep_unfinished_incremental_n\":"
-          << n.prep_unfinished_incremental_n
-          << ",\"unfinished_cache_hit_n\":" << n.unfinished_cache_hit_n
-          << ",\"unfinished_cache_overflow_n\":" << n.unfinished_cache_overflow_n
-          << ",\"dirty_admit_budget_end\":" << n.dirty_admit_budget_end
-          << ",\"first_mesh_schedule_cap\":" << n.first_mesh_schedule_cap
-          << ",\"first_mesh_schedule_effective_cap\":"
-          << n.first_mesh_schedule_effective_cap
-          << ",\"fm_dirty_enqueue_reserve_n\":" << n.fm_dirty_enqueue_reserve_n
-          << ",\"remesh_schedule_cap\":" << n.remesh_schedule_cap
-          << ",\"schedule_lane_starve_reason\":" << n.schedule_lane_starve_reason
-          << ",\"remesh_protect_lit_settle_n\":" << n.remesh_protect_lit_settle_n
-          << ",\"relight_trim_far_n\":" << n.relight_trim_far_n
-          << ",\"player_x\":" << n.player_x << ",\"player_y\":" << n.player_y
-          << ",\"player_z\":" << n.player_z
-          << ",\"phase_budget_over\":" << n.phase_budget_over
-          << ",\"phase_miss_carve_out\":" << n.phase_miss_carve_out
-          << ",\"miss_reserved_ms\":" << n.miss_reserved_ms
-          << ",\"emerge_budget_ms\":" << n.emerge_budget_ms
-          << ",\"render_preset\":" << n.render_preset
-          << ",\"async_meshing\":" << n.async_meshing
-          << ",\"mesh_emerge_prep_ms\":" << n.mesh_emerge_prep_ms
-          << ",\"mesh_emerge_prep_missing_ms\":" << n.mesh_emerge_prep_missing_ms
-          << ",\"mesh_emerge_prep_unfinished_ms\":"
-          << n.mesh_emerge_prep_unfinished_ms
-          << ",\"mesh_emerge_prep_sticky_ms\":" << n.mesh_emerge_prep_sticky_ms
-          << ",\"mesh_emerge_prep_drop_dirty_ms\":"
-          << n.mesh_emerge_prep_drop_dirty_ms
-          << ",\"mesh_emerge_prep_other_ms\":" << n.mesh_emerge_prep_other_ms
-          << ",\"prep_admission_ms\":" << n.prep_admission_ms
-          << ",\"prep_schedule_clamp_ms\":" << n.prep_schedule_clamp_ms
-          << ",\"prep_softdefer_policy_ms\":" << n.prep_softdefer_policy_ms
-          << ",\"prep_isolated_miss_ms\":" << n.prep_isolated_miss_ms
-          << ",\"prep_refresh_pressure_ms\":" << n.prep_refresh_pressure_ms
-          << ",\"prep_refresh_miss_ms\":" << n.prep_refresh_miss_ms
-          << ",\"prep_refresh_miss_radius_query_ms\":"
-          << n.prep_refresh_miss_radius_query_ms
-          << ",\"prep_refresh_screen_ray_probe_ms\":"
-          << n.prep_refresh_screen_ray_probe_ms
-          << ",\"prep_refresh_find_nearest_ms\":"
-          << n.prep_refresh_find_nearest_ms
-          << ",\"prep_refresh_miss_other_ms\":"
-          << n.prep_refresh_miss_other_ms
-          << ",\"prep_refresh_pending_ms\":" << n.prep_refresh_pending_ms
-          << ",\"prep_refresh_sticky_ms\":" << n.prep_refresh_sticky_ms
-          << ",\"prep_refresh_unfinished_ms\":" << n.prep_refresh_unfinished_ms
-          << ",\"prep_refresh_vb_ms\":" << n.prep_refresh_vb_ms
-          << ",\"prep_refresh_darkface_ms\":" << n.prep_refresh_darkface_ms
-          << ",\"prep_refresh_facing_ms\":" << n.prep_refresh_facing_ms
-          << ",\"prep_refresh_underfeet_ms\":" << n.prep_refresh_underfeet_ms
-          << ",\"prep_refresh_dirty_ms\":" << n.prep_refresh_dirty_ms
-          << ",\"prep_refresh_pressure_eval_ms\":"
-          << n.prep_refresh_pressure_eval_ms
-          << ",\"prep_refresh_underfeet_probe_ms\":"
-          << n.prep_refresh_underfeet_probe_ms
-          << ",\"prep_refresh_ring_resync_ms\":"
-          << n.prep_refresh_ring_resync_ms
-          << ",\"prep_refresh_vb_raw_ms\":" << n.prep_refresh_vb_raw_ms
-          << ",\"prep_refresh_gap_ms\":" << n.prep_refresh_gap_ms
-          << ",\"prep_refresh_self_ms\":" << n.prep_refresh_self_ms
-          << ",\"mesh_emerge_prep_self_ms\":" << n.mesh_emerge_prep_self_ms
-          << ",\"scene_filter_ready_ms\":" << n.scene_filter_ready_ms
-          << ",\"scene_opaque_draw_ms\":" << n.scene_opaque_draw_ms
-          << ",\"scene_opaque_refresh_ms\":" << n.scene_opaque_refresh_ms
-          << ",\"scene_opaque_cull_ms\":" << n.scene_opaque_cull_ms
-          << ",\"opaque_cull_skipped\":" << n.opaque_cull_skipped
-          << ",\"gpu_compact_fail_open_n\":" << n.gpu_compact_fail_open_n
-          << ",\"scene_opaque_gpu_draw_ms\":" << n.scene_opaque_gpu_draw_ms
-          << ",\"scene_opaque_packed_ms\":" << n.scene_opaque_packed_ms
-          << ",\"scene_opaque_cross_ms\":" << n.scene_opaque_cross_ms
-          << ",\"scene_depth_capture_ms\":" << n.scene_depth_capture_ms
-          << ",\"scene_transparent_ms\":" << n.scene_transparent_ms
-          << ",\"scene_overlays_ms\":" << n.scene_overlays_ms
-          << ",\"scene_self_ms\":" << n.scene_self_ms
-          << ",\"prep_refresh_camera_complete_ms\":"
-          << n.prep_refresh_camera_complete_ms
-          << ",\"prep_refresh_body_ms\":" << n.prep_refresh_body_ms
-          << ",\"prep_refresh_setup_ms\":" << n.prep_refresh_setup_ms
-          << ",\"prep_refresh_setup_focus_ms\":" << n.prep_refresh_setup_focus_ms
-          << ",\"prep_refresh_setup_ring_ms\":" << n.prep_refresh_setup_ring_ms
-          << ",\"prep_refresh_setup_capture_ms\":"
-          << n.prep_refresh_setup_capture_ms
-          << ",\"prep_refresh_setup_probe_ms\":" << n.prep_refresh_setup_probe_ms
-          << ",\"prep_refresh_input_fill_ms\":"
-          << n.prep_refresh_input_fill_ms
-          << ",\"prep_refresh_diet_flags_ms\":"
-          << n.prep_refresh_diet_flags_ms
-          << ",\"prep_warmup_ms\":" << n.prep_warmup_ms
-          << ",\"prep_softdefer_pre_ms\":" << n.prep_softdefer_pre_ms
-          << ",\"prep_dirty_thrash_ms\":" << n.prep_dirty_thrash_ms
-          << ",\"prep_schedule_policy_ms\":" << n.prep_schedule_policy_ms
-          << ",\"prep_spawn_ring_query_ms\":" << n.prep_spawn_ring_query_ms
-          << ",\"prep_drop_remesh_ms\":" << n.prep_drop_remesh_ms
-          << ",\"prep_cancel_async_ms\":" << n.prep_cancel_async_ms
-          << ",\"prep_post_admit_drain_ms\":" << n.prep_post_admit_drain_ms
-          << ",\"prep_hole_force_ms\":" << n.prep_hole_force_ms
-          << ",\"prep_sched_other_ms\":" << n.prep_sched_other_ms
-          << ",\"prep_refresh_deadline_hit\":" << n.prep_refresh_deadline_hit
-          << ",\"prep_deadline_hit\":" << n.prep_deadline_hit
-          << ",\"prep_find_nearest_n\":" << n.prep_find_nearest_n
-          << ",\"prep_drain_idle_n\":" << n.prep_drain_idle_n
-          << ",\"prep_drop_remesh_n\":" << n.prep_drop_remesh_n
-          << ",\"prep_cancel_async_n\":" << n.prep_cancel_async_n
-          << ",\"prep_heavy_walk_n\":" << n.prep_heavy_walk_n
-          << ",\"focus_dirty_reconcile_delta\":" << n.focus_dirty_reconcile_delta
-          << ",\"rim_witness_latched\":" << n.rim_witness_latched
-          << ",\"rim_hole_pressure\":" << n.rim_hole_pressure
-          << ",\"rim_perf_diet\":" << n.rim_perf_diet
-          << ",\"miss_witness_retarget_n\":" << n.miss_witness_retarget_n
-          << ",\"stop_vb_drain_frames\":" << n.stop_vb_drain_frames
-          << ",\"stop_vb_budget_active\":" << n.stop_vb_budget_active
-          << ",\"stop_vb_stuck_frames\":" << n.stop_vb_stuck_frames
-          << ",\"miss_witness_age_frames\":" << n.miss_witness_age_frames
-          << ",\"miss_stuck_run_frames\":" << n.miss_stuck_run_frames
-          << ",\"miss_witness_remesh_n\":" << n.miss_witness_remesh_n
-          << ",\"miss_completion_stuck_frames\":"
-          << n.miss_completion_stuck_frames
-          << ",\"relight_apply_to_markrelit_n\":"
-          << n.relight_apply_to_markrelit_n
-          << ",\"markrelit_to_fm_dirty_n\":" << n.markrelit_to_fm_dirty_n
-          << ",\"fm_dirty_to_gpu_finish_n\":" << n.fm_dirty_to_gpu_finish_n
-          << ",\"fm_dirty_gpu_watch_n\":" << n.fm_dirty_gpu_watch_n
-          << ",\"fm_dirty_gpu_watch_max_age\":" << n.fm_dirty_gpu_watch_max_age
-          << ",\"fm_dirty_gpu_watch_timeout_delta\":"
-          << n.fm_dirty_gpu_watch_timeout_delta
-          << ",\"gpu_finish_watch_rim_n\":" << n.gpu_finish_watch_rim_n
-          << ",\"ingress_debt_level\":" << n.ingress_debt_level
-          << ",\"ingress_debt_streak\":" << n.ingress_debt_streak
-          << ",\"prep_column_flow_drain_ms\":" << n.prep_column_flow_drain_ms
-          << ",\"prep_sync_focus_ring_ms\":" << n.prep_sync_focus_ring_ms
-          << ",\"prep_recover_ms\":" << n.prep_recover_ms
-          << ",\"prep_refresh_has_missing_ms\":"
-          << n.prep_refresh_has_missing_ms
-          << ",\"markrelit_chain_progress_frames\":"
-          << n.markrelit_chain_progress_frames
-          << ",\"miss_sla_kick_n\":" << n.miss_sla_kick_n
-          << ",\"prep_pending_light_ms\":" << n.prep_pending_light_ms
-          << ",\"prep_black_sticky_ms\":" << n.prep_black_sticky_ms
-          << ",\"prep_dirty_count_ms\":" << n.prep_dirty_count_ms
-          << ",\"prep_softdefer_setup_ms\":" << n.prep_softdefer_setup_ms
-          << ",\"softdefer_empty_scan_ms\":" << n.softdefer_empty_scan_ms
-          << ",\"softdefer_empty_own_ms\":" << n.softdefer_empty_own_ms
-          << ",\"keep_cols\":" << n.keep_cols
-          << ",\"visual_cols\":" << n.visual_cols
-          << ",\"idle_prefetch_ms\":" << n.idle_prefetch_ms
-          << ",\"prefetch_visual_ops\":" << n.prefetch_visual_ops
-          << ",\"prefetch_keep_ops\":" << n.prefetch_keep_ops
-          << ",\"gen_backlog_total\":" << n.gen_backlog_total
-          << ",\"phys_ms\":" << n.phys_ms << ",\"stream_ms\":" << n.stream_ms
-          << ",\"mesh_emerge_ms\":" << n.mesh_emerge_ms
-          << ",\"mesh_emerge_coordinator_ms\":"
-          << n.mesh_emerge_coordinator_ms
-          << ",\"mesh_emerge_post_telemetry_ms\":"
-          << n.mesh_emerge_post_telemetry_ms
-          << ",\"mesh_emerge_post_stage_sample_ms\":"
-          << n.mesh_emerge_post_stage_sample_ms
-          << ",\"mesh_emerge_post_gpu_counts_ms\":"
-          << n.mesh_emerge_post_gpu_counts_ms
-          << ",\"mesh_emerge_post_mesh_snapshot_ms\":"
-          << n.mesh_emerge_post_mesh_snapshot_ms
-          << ",\"mesh_emerge_post_capture_store_ms\":"
-          << n.mesh_emerge_post_capture_store_ms
-          << ",\"mesh_emerge_post_tail_snapshot_ms\":"
-          << n.mesh_emerge_post_tail_snapshot_ms
-          << ",\"mesh_emerge_post_unattributed_ms\":"
-          << n.mesh_emerge_post_unattributed_ms
-          << ",\"mesh_emerge_player_relight_burst_ms\":"
-          << n.mesh_emerge_player_relight_burst_ms
-          << ",\"column_emerge_stage_sample_ms\":"
-          << n.column_emerge_stage_sample_ms
-          << ",\"column_emerge_focus_jobs_ms\":"
-          << n.column_emerge_focus_jobs_ms
-          << ",\"column_emerge_shadow_census_ms\":"
-          << n.column_emerge_shadow_census_ms
-          << ",\"column_emerge_demand_breakdown_ms\":"
-          << n.column_emerge_demand_breakdown_ms
-          << ",\"column_emerge_demand_stop_ms\":"
-          << n.column_emerge_demand_stop_ms
-          << ",\"chunk_demand_maintenance_ms\":"
-          << n.chunk_demand_maintenance_ms
-          << ",\"column_emerge_stage_sample_n\":"
-          << n.column_emerge_stage_sample_n
-          << ",\"column_emerge_stage_sample_age_ms\":"
-          << n.column_emerge_stage_sample_age_ms
-          << ",\"scene_ms\":" << n.scene_ms
-          << ",\"view_ms\":" << n.view_ms << ",\"flat_ms\":" << n.flat_ms
-          << ",\"gen_q\":" << n.gen_q << ",\"mesh_async\":" << n.mesh_async
-          << ",\"dirty\":" << n.dirty
-          << ",\"stream_loads\":" << n.stream_loads
-          << ",\"stream_async_queued\":" << n.stream_async_queued
-          << ",\"stream_unloads\":" << n.stream_unloads
-          << ",\"stream_saves\":" << n.stream_saves
-          << ",\"stream_unload_candidates\":"
-          << n.stream_unload_candidates
-          << ",\"stream_unload_vetoes\":" << n.stream_unload_vetoes
-          << ",\"stream_unload_active_work_invalidated\":"
-          << n.stream_unload_active_work_invalidated
-          << ",\"stream_ingress_ops\":" << n.stream_ingress_ops
-          << ",\"stream_disk_complete_n\":" << n.stream_disk_complete_n
-          << ",\"stream_gen_commit_n\":" << n.stream_gen_commit_n
-          << ",\"frontier_pressure\":" << n.frontier_pressure
-          << ",\"stream_ring_blocked\":" << n.stream_ring_blocked
-          << ",\"stream_near_skipped\":" << n.stream_near_skipped
-          << ",\"stream_load_candidates\":" << n.stream_load_candidates
-          << ",\"allow_proc_fill\":" << n.allow_proc_fill
-          << ",\"column_absent_in_rd_n\":" << n.column_absent_in_rd_n
-          << ",\"column_loaded_no_mesh_n\":" << n.column_loaded_no_mesh_n
-          << ",\"focus_visual_terrain_incomplete_n\":"
-          << n.focus_visual_terrain_incomplete_n
-          << ",\"focus_visual_pending_light_n\":"
-          << n.focus_visual_pending_light_n
-          << ",\"focus_visual_sticky_remesh_n\":"
-          << n.focus_visual_sticky_remesh_n
-          << ",\"focus_visual_stale_dark_n\":"
-          << n.focus_visual_stale_dark_n
-          << ",\"focus_visual_missing_mesh_n\":"
-          << n.focus_visual_missing_mesh_n
-          << ",\"focus_visual_gpu_in_flight_n\":"
-          << n.focus_visual_gpu_in_flight_n
-          << ",\"focus_visual_not_loaded_n\":"
-          << n.focus_visual_not_loaded_n
-          << ",\"focus_visual_not_ready_state_n\":"
-          << n.focus_visual_not_ready_state_n
-          << ",\"focus_visual_face_debt_n\":"
-          << n.focus_visual_face_debt_n
-          << ",\"focus_visual_ready_n\":" << n.focus_visual_ready_n
-          << ",\"focus_data_census_valid\":" << n.focus_data_census_valid
-          << ",\"focus_data_sample_age_frames\":"
-          << n.focus_data_sample_age_frames
-          << ",\"focus_data_solid_slice_n\":"
-          << n.focus_data_solid_slice_n
-          << ",\"focus_data_air_slice_n\":" << n.focus_data_air_slice_n
-          << ",\"focus_data_absent_slice_n\":"
-          << n.focus_data_absent_slice_n
-          << ",\"focus_data_non_air_voxel_n\":"
-          << n.focus_data_non_air_voxel_n
-          << ",\"focus_data_band_solid_slice_n\":"
-          << n.focus_data_band_solid_slice_n
-          << ",\"focus_data_band_solid_mesh_n\":"
-          << n.focus_data_band_solid_mesh_n
-          << ",\"focus_data_band_solid_no_drawable_n\":"
-          << n.focus_data_band_solid_no_drawable_n
-          << ",\"focus_data_band_solid_satisfying_n\":"
-          << n.focus_data_band_solid_satisfying_n
-          << ",\"focus_data_band_solid_accepted_empty_n\":"
-          << n.focus_data_band_solid_accepted_empty_n
-          << ",\"focus_data_band_solid_pending_mesh_n\":"
-          << n.focus_data_band_solid_pending_mesh_n
-          << ",\"focus_data_band_solid_pending_work_n\":"
-          << n.focus_data_band_solid_pending_work_n
-          << ",\"focus_data_band_solid_unowned_n\":"
-          << n.focus_data_band_solid_unowned_n
-          << ",\"focus_data_camera_band_solid_slice_n\":"
-          << n.focus_data_camera_band_solid_slice_n
-          << ",\"focus_data_camera_band_solid_no_drawable_n\":"
-          << n.focus_data_camera_band_solid_no_drawable_n
-          << ",\"focus_data_camera_band_solid_satisfying_n\":"
-          << n.focus_data_camera_band_solid_satisfying_n
-          << ",\"focus_data_camera_band_solid_pending_work_n\":"
-          << n.focus_data_camera_band_solid_pending_work_n
-          << ",\"focus_data_camera_band_solid_unowned_n\":"
-          << n.focus_data_camera_band_solid_unowned_n
-          << ",\"focus_data_band_solid_unresolved_no_work_n\":"
-          << n.focus_data_band_solid_unresolved_no_work_n
-          << ",\"focus_data_band_solid_draw_gate_closed_n\":"
-          << n.focus_data_band_solid_draw_gate_closed_n
-          << ",\"focus_data_band_solid_draw_ready_n\":"
-          << n.focus_data_band_solid_draw_ready_n
-          << ",\"focus_data_band_solid_gpu_live_n\":"
-          << n.focus_data_band_solid_gpu_live_n
-          << ",\"column_bump_denied\":" << n.column_bump_denied
-          << ",\"column_flow_upgrade_n\":" << n.column_flow_upgrade_n
-          << ",\"column_flow_drained_n\":" << n.column_flow_drained_n
-          << ",\"column_flow_deferred_n\":" << n.column_flow_deferred_n
-          << ",\"column_flow_queue_live_n\":"
-          << n.column_flow_queue_live_n
-          << ",\"column_flow_queue_stale_heap_n\":"
-          << n.column_flow_queue_stale_heap_n
-          << ",\"column_flow_probed_n\":" << n.column_flow_probed_n
-          << ",\"column_flow_cooldown_deferred_n\":"
-          << n.column_flow_cooldown_deferred_n
-          << ",\"column_flow_probe_budget_hit_n\":"
-          << n.column_flow_probe_budget_hit_n
-          << ",\"column_flow_post_deadline_unit_ms_max\":"
-          << n.column_flow_post_deadline_unit_ms_max
-          << ",\"column_flow_drain_request_n\":"
-          << n.column_flow_drain_request_n
-          << ",\"column_flow_critical_units_at_entry_n\":"
-          << n.column_flow_critical_units_at_entry_n
-          << ",\"column_flow_critical_units_at_exit_n\":"
-          << n.column_flow_critical_units_at_exit_n
-          << ",\"column_flow_live_first_mesh_n\":"
-          << n.column_flow_live_first_mesh_n
-          << ",\"column_flow_live_relight_n\":"
-          << n.column_flow_live_relight_n
-          << ",\"column_flow_live_seam_n\":"
-          << n.column_flow_live_seam_n
-          << ",\"column_flow_live_promote_n\":"
-          << n.column_flow_live_promote_n
-          << ",\"column_flow_probed_first_mesh_n\":"
-          << n.column_flow_probed_first_mesh_n
-          << ",\"column_flow_probed_relight_n\":"
-          << n.column_flow_probed_relight_n
-          << ",\"column_flow_probed_seam_n\":"
-          << n.column_flow_probed_seam_n
-          << ",\"column_flow_probed_promote_n\":"
-          << n.column_flow_probed_promote_n
-          << ",\"column_flow_deferred_first_mesh_n\":"
-          << n.column_flow_deferred_first_mesh_n
-          << ",\"column_flow_deferred_relight_n\":"
-          << n.column_flow_deferred_relight_n
-          << ",\"column_flow_deferred_seam_n\":"
-          << n.column_flow_deferred_seam_n
-          << ",\"column_flow_deferred_promote_n\":"
-          << n.column_flow_deferred_promote_n
-          << ",\"column_flow_dispatched_first_mesh_n\":"
-          << n.column_flow_dispatched_first_mesh_n
-          << ",\"column_flow_dispatched_relight_n\":"
-          << n.column_flow_dispatched_relight_n
-          << ",\"column_flow_dispatched_seam_n\":"
-          << n.column_flow_dispatched_seam_n
-          << ",\"column_flow_dispatched_promote_n\":"
-          << n.column_flow_dispatched_promote_n
-          << ",\"column_flow_dispatch_first_mesh_ms_max\":"
-          << n.column_flow_dispatch_first_mesh_ms_max
-          << ",\"column_flow_dispatch_relight_ms_max\":"
-          << n.column_flow_dispatch_relight_ms_max
-          << ",\"column_flow_dispatch_seam_ms_max\":"
-          << n.column_flow_dispatch_seam_ms_max
-          << ",\"column_flow_dispatch_promote_ms_max\":"
-          << n.column_flow_dispatch_promote_ms_max
-          << ",\"column_lighting_n\":" << n.column_lighting_n
-          << ",\"column_meshing_n\":" << n.column_meshing_n
-          << ",\"column_render_ready_n\":" << n.column_render_ready_n
-          << ",\"emerge_fsm_meshing_n\":" << n.emerge_fsm_meshing_n
-          << ",\"emerge_fsm_render_ready_n\":" << n.emerge_fsm_render_ready_n
-          << ",\"column_job_pending_light_n\":" << n.column_job_pending_light_n
-          << ",\"column_job_meshing_n\":" << n.column_job_meshing_n
-          << ",\"column_job_gpu_pending_n\":" << n.column_job_gpu_pending_n
-          << ",\"column_job_render_ready_n\":" << n.column_job_render_ready_n
-          << ",\"column_record_shadow_mismatch_n\":"
-          << n.column_record_shadow_mismatch_n
-          << ",\"column_record_shadow_stage_disagree_n\":"
-          << n.column_record_shadow_stage_disagree_n
-          << ",\"demand_stop_converged\":" << n.demand_stop_converged
-          << ",\"demand_unsat_geom\":" << n.demand_unsat_geom
-          << ",\"demand_unsat_light\":" << n.demand_unsat_light
-          << ",\"demand_unsat_face\":" << n.demand_unsat_face
-          << ",\"demand_unsat_coverage\":" << n.demand_unsat_coverage
-          << ",\"demand_unsat_retain\":" << n.demand_unsat_retain
-          << ",\"visual_obligation_shadow_sample_n\":"
-          << n.visual_obligation_shadow_sample_n
-          << ",\"visual_obligation_shadow_mismatch_n\":"
-          << n.visual_obligation_shadow_mismatch_n
-          << ",\"defect_class_primary\":" << n.defect_class_primary
-          << ",\"pending_light\":" << n.pending_light
-          << ",\"stream_pressure\":" << n.stream_pressure
-          << ",\"pending_light_focus\":" << n.pending_light_focus
-          << ",\"pending_light_focus_n\":" << n.pending_light_focus
-          << ",\"focus_cx\":" << n.focus_cx << ",\"focus_cz\":" << n.focus_cz
-          << ",\"underfeet_need\":" << n.underfeet_need
-          << ",\"underfeet_draw_ok\":" << n.underfeet_draw_ok
-          << ",\"underfeet_has_mesh\":" << n.underfeet_has_mesh
-          << ",\"underfeet_sticky\":" << n.underfeet_sticky
-          << ",\"underfeet_pending_light\":" << n.underfeet_pending_light
-          << ",\"underfeet_reason\":" << n.underfeet_reason
-          << ",\"underfeet_stage\":" << n.underfeet_stage
-          << ",\"underfeet_opaque_present\":" << n.underfeet_opaque_present
-          << ",\"underfeet_opaque_present_raw\":" << n.underfeet_opaque_present_raw
-          << ",\"underfeet_opaque_present_predicted\":"
-          << n.underfeet_opaque_present_predicted
-          << ",\"lighting_relight_deferred\":" << n.lighting_relight_deferred
-          << ",\"fog_pull_in_rd\":" << n.fog_pull_in_rd
-          << ",\"fog_pull_in_margin\":" << n.fog_pull_in_margin
-          << ",\"fog_pull_in_start_ratio\":" << n.fog_pull_in_start_ratio
-          << ",\"fog_presented_start_blocks\":"
-          << n.fog_presented_start_blocks
-          << ",\"fog_presented_horizon_blocks\":"
-          << n.fog_presented_horizon_blocks
-          << ",\"fog_hole_debt\":" << n.fog_hole_debt
-          << ",\"prior_lit_hold_n\":" << n.prior_lit_hold_n
-          << ",\"prior_lit_hold_age_max\":" << n.prior_lit_hold_age_max
-          << ",\"near_focus_holes\":" << n.near_focus_holes
-          << ",\"visual_holes\":" << n.visual_holes
-          << ",\"near_focus_hole_probe_ran\":"
-          << n.near_focus_hole_probe_ran
-          << ",\"near_focus_hole_probe_result\":"
-          << n.near_focus_hole_probe_result
-          << ",\"near_focus_hole_probe_memo_hit\":"
-          << n.near_focus_hole_probe_memo_hit
-          << ",\"near_focus_hole_probe_witness_valid\":"
-          << n.near_focus_hole_probe_witness_valid
-          << ",\"near_focus_hole_probe_witness_cx\":"
-          << n.near_focus_hole_probe_witness_cx
-          << ",\"near_focus_hole_probe_witness_cy\":"
-          << n.near_focus_hole_probe_witness_cy
-          << ",\"near_focus_hole_probe_witness_cz\":"
-          << n.near_focus_hole_probe_witness_cz
-          << ",\"near_focus_hole_probe_witness_resident\":"
-          << n.near_focus_hole_probe_witness_resident
-          << ",\"near_focus_hole_probe_witness_has_mesh\":"
-          << n.near_focus_hole_probe_witness_has_mesh
-          << ",\"near_focus_hole_probe_witness_drawable\":"
-          << n.near_focus_hole_probe_witness_drawable
-          << ",\"near_focus_hole_probe_witness_satisfying\":"
-          << n.near_focus_hole_probe_witness_satisfying
-          << ",\"near_focus_hole_probe_witness_dirty\":"
-          << n.near_focus_hole_probe_witness_dirty
-          << ",\"near_focus_hole_probe_witness_build_in_flight\":"
-          << n.near_focus_hole_probe_witness_build_in_flight
-          << ",\"near_focus_hole_probe_witness_pending_gpu_apply\":"
-          << n.near_focus_hole_probe_witness_pending_gpu_apply
-          << ",\"near_focus_hole_probe_witness_pending_gpu_queued\":"
-          << n.near_focus_hole_probe_witness_pending_gpu_queued
-          << ",\"near_focus_hole_probe_witness_soft_defer_held\":"
-          << n.near_focus_hole_probe_witness_soft_defer_held
-          << ",\"near_focus_hole_probe_witness_geometry_debt\":"
-          << n.near_focus_hole_probe_witness_geometry_debt
-          << ",\"near_focus_hole_probe_witness_repairable_debt\":"
-          << n.near_focus_hole_probe_witness_repairable_debt
-          << ",\"near_focus_hole_probe_witness_flow_ticket_valid\":"
-          << n.near_focus_hole_probe_witness_flow_ticket_valid
-          << ",\"near_focus_hole_probe_witness_flow_ticket_kind\":"
-          << n.near_focus_hole_probe_witness_flow_ticket_kind
-          << ",\"near_focus_hole_probe_witness_flow_ticket_priority\":"
-          << n.near_focus_hole_probe_witness_flow_ticket_priority
-          << ",\"near_focus_hole_probe_witness_column_job_stage\":"
-          << n.near_focus_hole_probe_witness_column_job_stage
-          << ",\"near_focus_hole_probe_witness_incarnation\":"
-          << n.near_focus_hole_probe_witness_incarnation
-          << ",\"near_focus_hole_probe_witness_content_revision\":"
-          << n.near_focus_hole_probe_witness_content_revision
-          << ",\"near_focus_hole_probe_witness_light_revision\":"
-          << n.near_focus_hole_probe_witness_light_revision
-          << ",\"near_focus_hole_probe_witness_mesh_revision\":"
-          << n.near_focus_hole_probe_witness_mesh_revision
-          << ",\"near_focus_hole_probe_witness_inflight_source_revision\":"
-          << n.near_focus_hole_probe_witness_inflight_source_revision
-          << ",\"near_focus_tracked_witness_valid\":"
-          << n.near_focus_tracked_witness_valid
-          << ",\"near_focus_tracked_witness_cx\":"
-          << n.near_focus_tracked_witness_cx
-          << ",\"near_focus_tracked_witness_cy\":"
-          << n.near_focus_tracked_witness_cy
-          << ",\"near_focus_tracked_witness_cz\":"
-          << n.near_focus_tracked_witness_cz
-          << ",\"near_focus_tracked_witness_age_frames\":"
-          << n.near_focus_tracked_witness_age_frames
-          << ",\"near_focus_tracked_witness_distance_blocks\":"
-          << n.near_focus_tracked_witness_distance_blocks
-          << ",\"near_focus_tracked_witness_fog_horizon_blocks\":"
-          << n.near_focus_tracked_witness_fog_horizon_blocks
-          << ",\"near_focus_tracked_witness_inside_fog\":"
-          << n.near_focus_tracked_witness_inside_fog
-          << ",\"near_focus_tracked_witness_outcome\":"
-          << n.near_focus_tracked_witness_outcome
-          << ",\"near_focus_tracked_witness_resident\":"
-          << n.near_focus_tracked_witness_resident
-          << ",\"near_focus_tracked_witness_has_mesh\":"
-          << n.near_focus_tracked_witness_has_mesh
-          << ",\"near_focus_tracked_witness_drawable\":"
-          << n.near_focus_tracked_witness_drawable
-          << ",\"near_focus_tracked_witness_satisfying\":"
-          << n.near_focus_tracked_witness_satisfying
-          << ",\"near_focus_tracked_witness_dirty\":"
-          << n.near_focus_tracked_witness_dirty
-          << ",\"near_focus_tracked_witness_build_in_flight\":"
-          << n.near_focus_tracked_witness_build_in_flight
-          << ",\"near_focus_tracked_witness_pending_gpu_apply\":"
-          << n.near_focus_tracked_witness_pending_gpu_apply
-          << ",\"near_focus_tracked_witness_geometry_debt\":"
-          << n.near_focus_tracked_witness_geometry_debt
-          << ",\"near_focus_tracked_witness_flow_ticket_valid\":"
-          << n.near_focus_tracked_witness_flow_ticket_valid
-          << ",\"near_focus_tracked_witness_column_job_stage\":"
-          << n.near_focus_tracked_witness_column_job_stage
-          << ",\"near_focus_tracked_witness_outcome_event\":"
-          << n.near_focus_tracked_witness_outcome_event
-          << ",\"near_focus_tracked_witness_resolved_before_fog_total\":"
-          << n.near_focus_tracked_witness_resolved_before_fog_total
-          << ",\"near_focus_tracked_witness_entered_fog_unready_total\":"
-          << n.near_focus_tracked_witness_entered_fog_unready_total
-          << ",\"near_focus_tracked_witness_resolved_after_fog_total\":"
-          << n.near_focus_tracked_witness_resolved_after_fog_total
-          << ",\"near_focus_tracked_witness_exited_fog_unready_total\":"
-          << n.near_focus_tracked_witness_exited_fog_unready_total
-          << ",\"near_focus_tracked_witness_sample_ms\":"
-          << n.near_focus_tracked_witness_sample_ms
-          << ",\"near_focus_holes_latched\":"
-          << n.near_focus_holes_latched
-          << ",\"unfinished_visual\":" << n.unfinished_visual
-          << ",\"light_debt\":" << n.light_debt
-          << ",\"focus_missing_mesh\":" << n.focus_missing_mesh
-          << ",\"miss_cx\":" << n.miss_cx
-          << ",\"miss_cy\":" << n.miss_cy
-          << ",\"miss_cz\":" << n.miss_cz
-          << ",\"miss_horiz\":" << n.miss_horiz
-          << ",\"focus_miss_flow_ticket_kind\":"
-          << n.focus_miss_flow_ticket_kind
-          << ",\"focus_miss_flow_ticket_priority\":"
-          << n.focus_miss_flow_ticket_priority
-          << ",\"focus_miss_column_job_stage\":"
-          << n.focus_miss_column_job_stage
-          << ",\"focus_miss_mesh_dirty\":"
-          << n.focus_miss_mesh_dirty
-          << ",\"focus_miss_build_in_flight\":"
-          << n.focus_miss_build_in_flight
-          << ",\"focus_miss_pending_gpu_apply\":"
-          << n.focus_miss_pending_gpu_apply
-          << ",\"focus_miss_drawable_mesh\":"
-          << n.focus_miss_drawable_mesh
-          << ",\"focus_miss_satisfying_mesh\":"
-          << n.focus_miss_satisfying_mesh
-          << ",\"focus_proxy_miss_cx\":" << n.focus_proxy_miss_cx
-          << ",\"focus_proxy_miss_cy\":" << n.focus_proxy_miss_cy
-          << ",\"focus_proxy_miss_cz\":" << n.focus_proxy_miss_cz
-          << ",\"focus_proxy_flow_ticket_kind\":"
-          << n.focus_proxy_flow_ticket_kind
-          << ",\"focus_proxy_flow_ticket_priority\":"
-          << n.focus_proxy_flow_ticket_priority
-          << ",\"focus_proxy_column_job_stage\":"
-          << n.focus_proxy_column_job_stage
-          << ",\"focus_proxy_mesh_dirty\":" << n.focus_proxy_mesh_dirty
-          << ",\"focus_proxy_build_in_flight\":"
-          << n.focus_proxy_build_in_flight
-          << ",\"focus_proxy_pending_gpu_apply\":"
-          << n.focus_proxy_pending_gpu_apply
-          << ",\"focus_proxy_drawable_mesh\":"
-          << n.focus_proxy_drawable_mesh
-          << ",\"focus_proxy_satisfying_mesh\":"
-          << n.focus_proxy_satisfying_mesh
-          << ",\"focus_proxy_geometry_debt\":"
-          << n.focus_proxy_geometry_debt
-          << ",\"focus_proxy_repairable_geometry_debt\":"
-          << n.focus_proxy_repairable_geometry_debt
-          << ",\"miss_screen_ray_candidate\":"
-          << n.miss_screen_ray_candidate
-          << ",\"miss_screen_ray_selected_state_valid\":"
-          << n.miss_screen_ray_selected_state_valid
-          << ",\"miss_screen_ray_selected_drawable\":"
-          << n.miss_screen_ray_selected_drawable
-          << ",\"miss_screen_ray_selected_satisfying\":"
-          << n.miss_screen_ray_selected_satisfying
-          << ",\"miss_screen_ray_selected_repairable_geometry_debt\":"
-          << n.miss_screen_ray_selected_repairable_geometry_debt
-          << ",\"focus_dark_mesh\":" << n.focus_dark_mesh
-          << ",\"focus_provisional_light_preview\":"
-          << n.focus_provisional_light_preview
-          << ",\"focus_pending_dark\":" << n.focus_pending_dark
-          << ",\"focus_sticky_remesh\":" << n.focus_sticky_remesh
-          << ",\"visible_black_focus_n\":" << n.visible_black_focus_n
-          << ",\"visible_black_no_ticket_n\":" << n.visible_black_no_ticket_n
-          << ",\"visible_black_progress_n\":" << n.visible_black_progress_n
-          << ",\"visible_black_stalled_n\":" << n.visible_black_stalled_n
-          << ",\"visible_black_stale_lit_n\":" << n.visible_black_stale_lit_n
-          << ",\"visible_black_fully_dark_repair_n\":"
-          << n.visible_black_fully_dark_repair_n
-          << ",\"visible_black_fully_dark_no_ticket_n\":"
-          << n.visible_black_fully_dark_no_ticket_n
-          << ",\"visible_black_fully_dark_stalled_n\":"
-          << n.visible_black_fully_dark_stalled_n
-          << ",\"visible_black_legal_dark_n\":" << n.visible_black_legal_dark_n
-          << ",\"visible_black_census_mismatch\":"
-          << n.visible_black_census_mismatch
-          << ",\"draw_oracle_missing_resident_n\":"
-          << n.draw_oracle_missing_resident_n
-          << ",\"draw_oracle_missing_command_n\":"
-          << n.draw_oracle_missing_command_n
-          << ",\"draw_oracle_false_neg_cull_n\":"
-          << n.draw_oracle_false_neg_cull_n
-          << ",\"draw_oracle_stale_vertex_light_n\":"
-          << n.draw_oracle_stale_vertex_light_n
-          << ",\"stale_vl_rev_n\":" << n.stale_vl_rev_n
-          << ",\"fully_dark_census_n\":" << n.fully_dark_census_n
-          << ",\"draw_oracle_legal_dark_n\":" << n.draw_oracle_legal_dark_n
-          << ",\"draw_oracle_correct_lit_proxy_n\":"
-          << n.draw_oracle_correct_lit_proxy_n
-          << ",\"draw_oracle_fully_dark_debt_n\":"
-          << n.draw_oracle_fully_dark_debt_n
-          << ",\"draw_oracle_fault_n\":" << n.draw_oracle_fault_n
-          << ",\"oldest_missing_resident_age_frames\":"
-          << n.oldest_missing_resident_age_frames
-          << ",\"oldest_stale_vertex_light_age_frames\":"
-          << n.oldest_stale_vertex_light_age_frames
-          << ",\"debt_age_grew_with_schedule_n\":"
-          << n.debt_age_grew_with_schedule_n
-          << ",\"focus_not_render_ready\":" << n.focus_not_render_ready
-          << ",\"focus_pressure\":" << n.focus_pressure
-          << ",\"focus_dirty_chunks\":" << n.focus_dirty_chunks
-          << ",\"focus_unfinished_ahead\":" << n.focus_unfinished_ahead
-          << ",\"focus_unfinished_behind\":" << n.focus_unfinished_behind
-          << ",\"mesh_discarded_late\":" << n.mesh_discarded_late
-          << ",\"mesh_discarded_late_epoch\":" << n.mesh_discarded_late_epoch
-          << ",\"mesh_discarded_late_job_mismatch\":"
-          << n.mesh_discarded_late_job_mismatch
-          << ",\"mesh_discarded_late_delta\":" << n.mesh_discarded_late_delta
-          << ",\"mesh_apply_stale\":" << n.mesh_apply_stale
-          << ",\"mesh_apply_stale_delta\":" << n.mesh_apply_stale_delta
-          << ",\"mesh_apply_stale_visual\":" << n.mesh_apply_stale_visual
-          << ",\"mesh_apply_stale_geom\":" << n.mesh_apply_stale_geom
-          << ",\"mesh_apply_stale_light\":" << n.mesh_apply_stale_light
-          << ",\"mesh_apply_stale_catalog\":" << n.mesh_apply_stale_catalog
-          << ",\"mesh_apply_stale_stamp_invalid\":"
-          << n.mesh_apply_stale_stamp_invalid
-          << ",\"mesh_apply_stale_geom_delta\":" << n.mesh_apply_stale_geom_delta
-          << ",\"mesh_apply_stale_light_delta\":"
-          << n.mesh_apply_stale_light_delta
-          << ",\"mesh_apply_stale_catalog_delta\":"
-          << n.mesh_apply_stale_catalog_delta
-          << ",\"mesh_apply_stale_stamp_invalid_delta\":"
-          << n.mesh_apply_stale_stamp_invalid_delta
-          << ",\"mesh_apply_stale_rev\":" << n.mesh_apply_stale_rev
-          << ",\"mesh_apply_stale_geom_accepted\":"
-          << n.mesh_apply_stale_geom_accepted
-          << ",\"mesh_apply_stale_light_accepted\":"
-          << n.mesh_apply_stale_light_accepted
-          << ",\"mesh_apply_stale_accepted_refresh\":"
-          << n.mesh_apply_stale_accepted_refresh
-          << ",\"i3t_hold_empty_spoof_n\":" << n.i3t_hold_empty_spoof_n
-          << ",\"mesh_apply_stale_geom_accepted_delta\":"
-          << n.mesh_apply_stale_geom_accepted_delta
-          << ",\"mesh_apply_stale_light_accepted_delta\":"
-          << n.mesh_apply_stale_light_accepted_delta
-          << ",\"mesh_apply_stale_accepted_refresh_delta\":"
-          << n.mesh_apply_stale_accepted_refresh_delta
-          << ",\"i3t_hold_empty_spoof_delta\":" << n.i3t_hold_empty_spoof_delta
-          << ",\"mesh_apply_superseded\":" << n.mesh_apply_superseded
-          << ",\"mesh_apply_superseded_delta\":"
-          << n.mesh_apply_superseded_delta
-          << ",\"mesh_apply_drop_no_active\":" << n.mesh_apply_drop_no_active
-          << ",\"mesh_apply_drop_no_active_delta\":"
-          << n.mesh_apply_drop_no_active_delta
-          << ",\"mesh_replace_hole_avoided\":" << n.mesh_replace_hole_avoided
-          << ",\"pub_reject_light_invalid\":" << n.pub_reject_light_invalid
-          << ",\"pub_reject_source_mismatch\":" << n.pub_reject_source_mismatch
-          << ",\"pub_reject_source_mismatch_delta\":"
-          << n.pub_reject_source_mismatch_delta
-          << ",\"pub_reject_other\":" << n.pub_reject_other
-          << ",\"pub_accept_first_publish\":" << n.pub_accept_first_publish
-          << ",\"pending_gpu_applies_n\":" << n.pending_gpu_applies_n
-          << ",\"pending_gpu_queued_n\":" << n.pending_gpu_queued_n
-          << ",\"pending_gpu_kicked_n\":" << n.pending_gpu_kicked_n
-          << ",\"gpu_mesh_slot_max_n\":" << n.gpu_mesh_slot_max_n
-          << ",\"gpu_mesh_slot_free_n\":" << n.gpu_mesh_slot_free_n
-          << ",\"gpu_mesh_slot_bound_n\":" << n.gpu_mesh_slot_bound_n
-          << ",\"gpu_mesh_slot_unbound_allocated_n\":"
-          << n.gpu_mesh_slot_unbound_allocated_n
-          << ",\"gpu_staging_allocation_failure_n\":"
-          << n.gpu_staging_allocation_failure_n
-          << ",\"gpu_staging_allocation_failure_delta\":"
-          << n.gpu_staging_allocation_failure_delta
-          << ",\"gpu_mesh_slot_eviction_n\":"
-          << n.gpu_mesh_slot_eviction_n
-          << ",\"gpu_mesh_slot_no_victim_n\":"
-          << n.gpu_mesh_slot_no_victim_n
-          << ",\"gpu_zero_quad_slot_release_n\":"
-          << n.gpu_zero_quad_slot_release_n
-          << ",\"mesh_pipeline_pending_gpu_n\":"
-          << n.mesh_pipeline_pending_gpu_n
-          << ",\"mesh_pipeline_async_inflight_n\":"
-          << n.mesh_pipeline_async_inflight_n
-          << ",\"mesh_pipeline_async_builder_inflight_n\":"
-          << n.mesh_pipeline_async_builder_inflight_n
-          << ",\"mesh_pipeline_gpu_extract_inflight_n\":"
-          << n.mesh_pipeline_gpu_extract_inflight_n
-          << ",\"mesh_pipeline_capture_pending_n\":"
-          << n.mesh_pipeline_capture_pending_n
-          << ",\"mesh_pipeline_completed_waiting_n\":"
-          << n.mesh_pipeline_completed_waiting_n
-          << ",\"mesh_pipeline_outstanding_n\":"
-          << n.mesh_pipeline_outstanding_n
-          << ",\"mesh_pipeline_output_slots\":"
-          << n.mesh_pipeline_output_slots
-          << ",\"mesh_pipeline_output_headroom_n\":"
-          << n.mesh_pipeline_output_headroom_n
-          << ",\"mesh_pipeline_backpressure_active\":"
-          << n.mesh_pipeline_backpressure_active
-          << ",\"mesh_pipeline_backpressure_reason\":"
-          << n.mesh_pipeline_backpressure_reason
-          << ",\"mesh_pipeline_schedule_requested_n\":"
-          << n.mesh_pipeline_schedule_requested_n
-          << ",\"mesh_pipeline_admission_schedule_cap_n\":"
-          << n.mesh_pipeline_admission_schedule_cap_n
-          << ",\"mesh_pipeline_available_schedule_cap_n\":"
-          << n.mesh_pipeline_available_schedule_cap_n
-          << ",\"mesh_pipeline_schedule_after_cap_n\":"
-          << n.mesh_pipeline_schedule_after_cap_n
-          << ",\"mesh_pipeline_first_mesh_cap_n\":"
-          << n.mesh_pipeline_first_mesh_cap_n
-          << ",\"mesh_pipeline_remesh_cap_n\":"
-          << n.mesh_pipeline_remesh_cap_n
-          << ",\"gpu_kick_n\":" << n.gpu_kick_n
-          << ",\"gpu_kick_debt_forced_n\":" << n.gpu_kick_debt_forced_n
-          << ",\"gpu_kick_defer_reason\":\"" << n.gpu_kick_defer_reason << "\""
-          << ",\"gpu_kick_post_drain_n\":" << n.gpu_kick_post_drain_n
-          << ",\"gpu_kick_skip_no_queued_n\":" << n.gpu_kick_skip_no_queued_n
-          << ",\"gpu_finish_n\":" << n.gpu_finish_n
-          << ",\"gpu_finish_not_ready_n\":" << n.gpu_finish_not_ready_n
-          << ",\"mesh_schedule_final\":" << n.mesh_schedule_final
-          << ",\"mesh_drain_final\":" << n.mesh_drain_final
-          << ",\"mesh_admission_mode\":" << n.mesh_admission_mode
-          << ",\"post_load_ring_not_ready\":" << n.post_load_ring_not_ready
-          << ",\"enter_game_warmup_missing_greedy\":"
-          << n.enter_game_warmup_missing_greedy
-          << ",\"softdefer_capture_floor_hits\":"
-          << n.softdefer_capture_floor_hits
-          << ",\"softdefer_capture_floor_hits_delta\":"
-          << n.softdefer_capture_floor_hits_delta
-          << ",\"softdefer_witness_retarget\":" << n.softdefer_witness_retarget
-          << ",\"softdefer_witness_retarget_delta\":"
-          << n.softdefer_witness_retarget_delta
-          << ",\"softdefer_ingress_witness_n\":" << n.softdefer_ingress_witness_n
-          << ",\"softdefer_capture_retarget_n\":"
-          << n.softdefer_capture_retarget_n
-          << ",\"softdefer_capture_retarget_blocked_n\":"
-          << n.softdefer_capture_retarget_blocked_n
-          << ",\"fm_dirty_enqueue_n\":" << n.fm_dirty_enqueue_n
-          << ",\"fm_dirty_enqueue_from_markrelit_n\":"
-          << n.fm_dirty_enqueue_from_markrelit_n
-          << ",\"fm_dirty_enqueue_from_columnflow_n\":"
-          << n.fm_dirty_enqueue_from_columnflow_n
-          << ",\"admit_candidates_n\":" << n.admit_candidates_n
-          << ",\"admit_marked_n\":" << n.admit_marked_n
-          << ",\"mesh_pending_capture_n\":" << n.mesh_pending_capture_n
-          << ",\"mesh_schedule_retry_after_capture_n\":"
-          << n.mesh_schedule_retry_after_capture_n
-          << ",\"mesh_worker_inflight_n\":" << n.mesh_worker_inflight_n
-          << ",\"mesh_pending_capture_ready_n\":"
-          << n.mesh_pending_capture_ready_n
-          << ",\"mesh_pending_capture_stale_n\":"
-          << n.mesh_pending_capture_stale_n
-          << ",\"mesh_pending_capture_max_age\":"
-          << n.mesh_pending_capture_max_age
-          << ",\"mesh_degraded_capture_n\":" << n.mesh_degraded_capture_n
-          << ",\"movement_speed\":" << n.movement_speed
-          << ",\"fm_dirty_drain_n\":" << n.fm_dirty_drain_n
-          << ",\"relight_fifo_priority_insert_n\":"
-          << n.relight_fifo_priority_insert_n
-          << ",\"ticketed_vb_consume_n\":" << n.ticketed_vb_consume_n
-          << ",\"admission_carve_out_frames\":"
-          << n.admission_carve_out_frames
-          << ",\"admission_carve_out\":" << n.admission_carve_out
-          << ",\"seed_at_commit_n\":" << n.seed_at_commit_n
-          << ",\"backpressure_level\":" << n.backpressure_level
-          << ",\"softdefer_witness_horiz\":" << n.softdefer_witness_horiz
-          << ",\"softdefer_capture_pin_age\":" << n.softdefer_capture_pin_age
-          << ",\"miss_owner_stable_frames\":" << n.miss_owner_stable_frames
-          << ",\"miss_owner_hop_n\":" << n.miss_owner_hop_n
-          << ",\"softdefer_capture_budget\":" << n.softdefer_capture_budget
-          << ",\"frame_budget_ms\":" << n.frame_budget_ms
-          << ",\"capture_over_budget\":" << n.capture_over_budget
-          << ",\"heal_deferred_for_miss\":" << n.heal_deferred_for_miss
-          << ",\"stage_skip_remesh_pending_light\":"
-          << n.stage_skip_remesh_pending_light
-          << ",\"softdefer_empty_placeholder_n\":"
-          << n.softdefer_empty_placeholder_n
-          << ",\"softdefer_empty_stuck_n\":" << n.softdefer_empty_stuck_n
-          << ",\"softdefer_empty_stuck_cx\":" << n.softdefer_empty_stuck_cx
-          << ",\"softdefer_empty_stuck_cy\":" << n.softdefer_empty_stuck_cy
-          << ",\"softdefer_empty_stuck_cz\":" << n.softdefer_empty_stuck_cz
-          << ",\"softdefer_empty_stuck_horiz\":"
-          << n.softdefer_empty_stuck_horiz
-          << ",\"softdefer_empty_age_max_frames\":"
-          << n.softdefer_empty_age_max_frames
-          << ",\"softdefer_empty_owned_n\":" << n.softdefer_empty_owned_n
-          << ",\"softdefer_owned_no_gpu_n\":" << n.softdefer_owned_no_gpu_n
-          << ",\"enter_settle_soft_force_with_debt\":"
-          << n.enter_settle_soft_force_with_debt
-          << ",\"mesh_warmup_timeout_dirty_residual\":"
-          << n.mesh_warmup_timeout_dirty_residual
-          << ",\"enter_soft_settle_blocked_dirty_residual\":"
-          << n.enter_soft_settle_blocked_dirty_residual
-          << ",\"enter_mesh_dirty_residual_n\":"
-          << n.enter_mesh_dirty_residual_n
-          << ",\"visibility_debt\":" << n.visibility_debt
-          << ",\"visibility_debt_hinterland\":" << n.visibility_debt_hinterland
-          << ",\"visibility_debt_sample_valid\":"
-          << n.visibility_debt_sample_valid
-          << ",\"visibility_debt_hinterland_sample_valid\":"
-          << n.visibility_debt_hinterland_sample_valid
-          << ",\"softdefer_empty_publish_avoided\":"
-          << n.softdefer_empty_publish_avoided
-          << ",\"softdefer_held_n\":" << n.softdefer_held_n
-          << ",\"softdefer_held_age_max\":" << n.softdefer_held_age_max
-          << ",\"empty_backlog_n\":" << n.empty_backlog_n
-          << ",\"phase_abort_heavy\":" << n.phase_abort_heavy
-          << ",\"skip_empty_emerge\":" << n.skip_empty_emerge
-          << ",\"abort_schedule_final\":" << n.abort_schedule_final
-          << ",\"abort_drain_final\":" << n.abort_drain_final
-          << ",\"rss_mb\":" << n.rss_mb << ",\"private_mb\":" << n.private_mb
-          << ",\"chunk_count\":" << n.chunk_count
-          << ",\"greedy_vertices\":" << n.greedy_vertices
-          << ",\"mesh_completed_n\":" << n.mesh_completed_n
-          << ",\"mesh_completed_cap\":" << n.mesh_completed_cap
-          << ",\"mesh_completed_discarded\":" << n.mesh_completed_discarded
-          << ",\"mesh_completed_discarded_delta\":"
-          << n.mesh_completed_discarded_delta
-          << ",\"relight_completed_n\":" << n.relight_completed_n
-          << ",\"relight_completed_cap\":" << n.relight_completed_cap
-          << ",\"relight_completed_discarded\":" << n.relight_completed_discarded
-          << ",\"relight_capture_col_horiz\":" << n.relight_capture_col_horiz
-          << ",\"relight_capture_finalize\":" << n.relight_capture_finalize
-          << ",\"relight_capture_hot_skip_draw_gate\":"
-          << n.relight_capture_hot_skip_draw_gate
-          << ",\"relight_capture_stop_reason\":"
-          << n.relight_capture_stop_reason
-          << ",\"cooperative_streaming_tick_blocked\":"
-          << n.cooperative_streaming_tick_blocked
-          << ",\"relight_inflight_n\":" << n.relight_inflight_n
-          << ",\"relight_capture_inflight_n\":"
-          << n.relight_capture_inflight_n
-          << ",\"relight_capture_inflight_limit\":"
-          << n.relight_capture_inflight_limit
-          << ",\"relight_capture_inflight_scan_n\":"
-          << n.relight_capture_inflight_scan_n
-          << ",\"relight_capture_band_cy_span\":" << n.relight_capture_band_cy_span
-          << ",\"relight_capture_full_n\":" << n.relight_capture_full_n
-          << ",\"relight_capture_neighbor_light_n\":"
-          << n.relight_capture_neighbor_light_n
-          << ",\"relight_witness_hold_n\":" << n.relight_witness_hold_n
-          << ",\"relight_apply_n\":" << n.relight_apply_n
-          << ",\"relight_apply_partial_n\":" << n.relight_apply_partial_n
-          << ",\"relight_apply_final_n\":" << n.relight_apply_final_n
-          << ",\"relight_deferred_far_pending\":" << n.relight_deferred_far_pending
-          << ",\"relight_deferred_far_enqueue_n\":" << n.relight_deferred_far_enqueue_n
-          << ",\"relight_deferred_far_age_admit_n\":" << n.relight_deferred_far_age_admit_n
-          << ",\"relight_note_skipped_dup_n\":" << n.relight_note_skipped_dup_n
-          << ",\"relight_finalize_dedup_n\":" << n.relight_finalize_dedup_n
-          << ",\"relight_note_suppressed_plateau_n\":"
-          << n.relight_note_suppressed_plateau_n
-          << ",\"relight_apply_plateau_boost_n\":"
-          << n.relight_apply_plateau_boost_n
-          << ",\"mark_relit_skip_already_dirty_n\":"
-          << n.mark_relit_skip_already_dirty_n
-          << ",\"mark_relit_skip_already_raa_n\":"
-          << n.mark_relit_skip_already_raa_n
-          << ",\"mark_relit_prefer_kick_n\":" << n.mark_relit_prefer_kick_n
-          << ",\"mark_relit_skip_inflight_n\":" << n.mark_relit_skip_inflight_n
-          << ",\"mark_relit_skip_enter_lit_quiesce_n\":"
-          << n.mark_relit_skip_enter_lit_quiesce_n
-          << ",\"mark_relit_schedule_n\":" << n.mark_relit_schedule_n
-          << ",\"mark_relit_h2_attempt_n\":" << n.mark_relit_h2_attempt_n
-          << ",\"mark_relit_h2_fire_n\":" << n.mark_relit_h2_fire_n
-          << ",\"mark_relit_h2_fail_no_ticket_n\":"
-          << n.mark_relit_h2_fail_no_ticket_n
-          << ",\"mark_relit_h2_fail_progress_n\":"
-          << n.mark_relit_h2_fail_progress_n
-          << ",\"mark_relit_hit_stalled_n\":" << n.mark_relit_hit_stalled_n
-          << ",\"mark_relit_force_stale_n\":" << n.mark_relit_force_stale_n
-          << ",\"stalled_sample_n\":" << n.stalled_sample_n
-          << ",\"stalled_sample_has_ticket_n\":"
-          << n.stalled_sample_has_ticket_n
-          << ",\"stalled_sample_pending_light_n\":"
-          << n.stalled_sample_pending_light_n
-          << ",\"mark_relit_enqueue_first_mesh_n\":"
-          << n.mark_relit_enqueue_first_mesh_n
-          << ",\"mark_relit_invoked_n\":" << n.mark_relit_invoked_n
-          << ",\"mark_missing_primary_n\":" << n.mark_missing_primary_n
-          << ",\"mark_relit_path_primary_consume_n\":"
-          << n.mark_relit_path_primary_consume_n
-          << ",\"stale_probe_n\":" << n.stale_probe_n
-          << ",\"mark_relit_total_ms\":" << n.mark_relit_total_ms
-          << ",\"mark_relit_setup_ms\":" << n.mark_relit_setup_ms
-          << ",\"mark_relit_primary_column_ms\":" << n.mark_relit_primary_column_ms
-          << ",\"mark_relit_snapshot_ms\":" << n.mark_relit_snapshot_ms
-          << ",\"mark_relit_plan_ms\":" << n.mark_relit_plan_ms
-          << ",\"mark_relit_exec_ms\":" << n.mark_relit_exec_ms
-          << ",\"mark_relit_mark_dirty_ms\":" << n.mark_relit_mark_dirty_ms
-          << ",\"mark_relit_band_ms\":" << n.mark_relit_band_ms
-          << ",\"mark_relit_flow_query_ms\":" << n.mark_relit_flow_query_ms
-          << ",\"mark_relit_neighbor_seam_ms\":" << n.mark_relit_neighbor_seam_ms
-          << ",\"mark_relit_prefetch_ms\":" << n.mark_relit_prefetch_ms
-          << ",\"mark_relit_orphan_ground_ms\":" << n.mark_relit_orphan_ground_ms
-          << ",\"mark_relit_empty_relit_ms\":" << n.mark_relit_empty_relit_ms
-          << ",\"mark_relit_bands_n\":" << n.mark_relit_bands_n
-          << ",\"mark_relit_suppress_enter_settled_n\":"
-          << n.mark_relit_suppress_enter_settled_n
-          << ",\"sticky_insert_stale_after_apply_n\":"
-          << n.sticky_insert_stale_after_apply_n
-          << ",\"sticky_insert_seam_n\":" << n.sticky_insert_seam_n
-          << ",\"sticky_insert_other_n\":" << n.sticky_insert_other_n
-          << ",\"sticky_erase_drawable_n\":" << n.sticky_erase_drawable_n
-          << ",\"sticky_erase_pending_clear_n\":" << n.sticky_erase_pending_clear_n
-          << ",\"sticky_erase_pruned_far_n\":" << n.sticky_erase_pruned_far_n
-          << ",\"sticky_erase_remesh_commit_n\":" << n.sticky_erase_remesh_commit_n
-          << ",\"sticky_erase_other_n\":" << n.sticky_erase_other_n
-          << ",\"dirty_n\":" << n.dirty_n
-          << ",\"pending_light_n\":" << n.pending_light_n
-          << ",\"relight_fifo_n\":" << n.relight_fifo_n
-          << ",\"dirty_dropped\":" << n.dirty_dropped
-          << ",\"pending_light_dropped\":" << n.pending_light_dropped
-          << ",\"pending_light_trim_emerge_n\":" << n.pending_light_trim_emerge_n
-          << ",\"pending_light_trim_memory_n\":" << n.pending_light_trim_memory_n
-          << ",\"relight_fifo_dropped\":" << n.relight_fifo_dropped
-          << ",\"relight_fifo_trim_deferred_total\":"
-          << n.relight_fifo_trim_deferred_total
-          << ",\"relight_fifo_overflow_evicted_total\":"
-          << n.relight_fifo_overflow_dropped_total
-          << ",\"relight_false_clear_n\":" << n.relight_false_clear_n
-          << ",\"gpu_pool_used_mb\":" << n.gpu_pool_used_mb
-          << ",\"gpu_pool_cap_mb\":" << n.gpu_pool_cap_mb
-          << ",\"gpu_draw_cmds\":" << n.gpu_draw_cmds
-          << ",\"gpu_cull_ms\":" << n.gpu_cull_ms
-          << ",\"gpu_cull_cpu_ms\":" << n.gpu_cull_cpu_ms
-          << ",\"gpu_cull_submit_cpu_ms\":" << n.gpu_cull_submit_cpu_ms
-          << ",\"gpu_cull_exec_ms\":" << n.gpu_cull_exec_ms
-          << ",\"opaque_mdi_cull_total_ms\":"
-          << n.opaque_mdi_cull_total_ms
-          << ",\"opaque_mdi_cull_aabb_probe_ms\":"
-          << n.opaque_mdi_cull_aabb_probe_ms
-          << ",\"opaque_mdi_cull_fallback_ms\":"
-          << n.opaque_mdi_cull_fallback_ms
-          << ",\"opaque_mdi_cull_setup_ms\":"
-          << n.opaque_mdi_cull_setup_ms
-          << ",\"opaque_mdi_cull_query_poll_ms\":"
-          << n.opaque_mdi_cull_query_poll_ms
-          << ",\"opaque_mdi_cull_post_submit_ms\":"
-          << n.opaque_mdi_cull_post_submit_ms
-          << ",\"opaque_mdi_cull_stats_poll_ms\":"
-          << n.opaque_mdi_cull_stats_poll_ms
-          << ",\"opaque_mdi_cull_stats_fence_poll_ms\":"
-          << n.opaque_mdi_cull_stats_fence_poll_ms
-          << ",\"opaque_mdi_cull_stats_buffer_read_ms\":"
-          << n.opaque_mdi_cull_stats_buffer_read_ms
-          << ",\"opaque_mdi_cull_stats_arm_ms\":"
-          << n.opaque_mdi_cull_stats_arm_ms
-          << ",\"opaque_mdi_cull_batch_state_ms\":"
-          << n.opaque_mdi_cull_batch_state_ms
-          << ",\"opaque_mdi_cull_post_submit_other_ms\":"
-          << n.opaque_mdi_cull_post_submit_other_ms
-          << ",\"opaque_mdi_cull_unattributed_ms\":"
-          << n.opaque_mdi_cull_unattributed_ms
-          << ",\"vertex_pool_fill\":" << n.vertex_pool_fill
-          << ",\"gpu_cull_indirect\":" << n.gpu_cull_indirect
-          << ",\"opaque_cmd_total\":" << n.opaque_cmd_total
-          << ",\"opaque_cmd_on\":" << n.opaque_cmd_on
-          << ",\"opaque_gpu_packed_n\":" << n.opaque_gpu_packed_n
-          << ",\"opaque_draw_n\":" << n.opaque_draw_n
-          << ",\"opaque_refs_cpu_vis\":" << n.opaque_refs_cpu_vis
-          << ",\"opaque_refs_render_ready\":" << n.opaque_refs_render_ready
-          << ",\"opaque_mdi_eligible\":" << n.opaque_mdi_eligible
-          << ",\"cross_batch_count\":" << n.cross_batch_count
-          << ",\"cpu_aabb_would_on\":" << n.cpu_aabb_would_on
-          << ",\"edit_immediate_n\":" << n.edit_immediate_n
-          << ",\"edit_dirty_n\":" << n.edit_dirty_n
-          << ",\"edit_neighbor_pending_frames\":"
-          << n.edit_neighbor_pending_frames
-          << ",\"pool_unsync_uploads\":" << n.pool_unsync_uploads
-          << ",\"pool_fence_wait_ms\":" << n.pool_fence_wait_ms
-          << ",\"pool_retired_pending_n\":" << n.pool_retired_pending_n
-          << ",\"pool_free_slot_n\":" << n.pool_free_slot_n
-          << ",\"pool_retired_reclaimed_n\":" << n.pool_retired_reclaimed_n
-          << ",\"pool_retired_reclaimed_delta\":"
-          << n.pool_retired_reclaimed_delta
-          << ",\"pool_fence_timeout_n\":" << n.pool_fence_timeout_n
-          << ",\"pool_fence_timeout_delta\":" << n.pool_fence_timeout_delta
-          << ",\"pool_reserve_bump_n\":" << n.pool_reserve_bump_n
-          << ",\"pool_reserve_bump_delta\":" << n.pool_reserve_bump_delta
-          << ",\"transparent_sort_rev_changed\":"
-          << n.transparent_sort_rev_changed
-          << ",\"transparent_upload_full_n\":" << n.transparent_upload_full_n
-          << ",\"transparent_cmd_reorder_n\":" << n.transparent_cmd_reorder_n
-          << ",\"transparent_order_only_fail_reason\":"
-          << n.transparent_order_only_fail_reason
-          << ",\"transparent_batch_n\":" << n.transparent_batch_n
-          << ",\"fluid_transparent_ref_n\":" << n.fluid_transparent_ref_n
-          << ",\"fluid_transparent_index_n\":" << n.fluid_transparent_index_n
-          << ",\"fluid_gpu_batch_n\":" << n.fluid_gpu_batch_n
-          << ",\"fluid_gpu_index_n\":" << n.fluid_gpu_index_n
-          << ",\"fluid_packed_range_n\":" << n.fluid_packed_range_n
-          << ",\"fluid_packed_quad_n\":" << n.fluid_packed_quad_n
-          << ",\"fluid_draw_call_n\":" << n.fluid_draw_call_n
-          << ",\"fluid_submitted_index_capacity_n\":"
-          << n.fluid_submitted_index_capacity_n
-          << ",\"fluid_shell_depth_call_n\":" << n.fluid_shell_depth_call_n
-          << ",\"fluid_color_pass_call_n\":" << n.fluid_color_pass_call_n
-          << ",\"chunk_meshed_culled0\":" << n.chunk_meshed_culled0
-          << ",\"chunk_meshed_unlit\":" << n.chunk_meshed_unlit
-          << ",\"chunk_meshed_unlit_hidden\":" << n.chunk_meshed_unlit_hidden
-          << ",\"chunk_meshed_unlit_preview\":" << n.chunk_meshed_unlit_preview
-          << ",\"chunk_not_ready\":" << n.chunk_not_ready
-          << ",\"dark_face_near_n\":" << n.dark_face_near_n
-          << ",\"dark_face_stale_near_n\":" << n.dark_face_stale_near_n
-          << ",\"dark_face_void_near_n\":" << n.dark_face_void_near_n
-          << ",\"dark_face_bx\":" << n.dark_face_bx
-          << ",\"dark_face_by\":" << n.dark_face_by
-          << ",\"dark_face_bz\":" << n.dark_face_bz
-          << ",\"dark_face_cx\":" << n.dark_face_cx
-          << ",\"dark_face_cy\":" << n.dark_face_cy
-          << ",\"dark_face_cz\":" << n.dark_face_cz
-          << ",\"dark_face_block_id\":" << n.dark_face_block_id
-          << ",\"dark_face_index\":" << n.dark_face_index
-          << ",\"dark_face_dist\":" << n.dark_face_dist
-          << ",\"gpu_mesh_vbo_dispatch\":" << n.gpu_mesh_vbo_dispatch
-          << ",\"gpu_light_seed_apply\":" << n.gpu_light_seed_apply
-          << ",\"gpu_mask_readback\":" << n.gpu_mask_readback
-          << ",\"gpu_transparent_sort_readback\":"
-          << n.gpu_transparent_sort_readback
-          << ",\"gpu_cull_stats_readback\":" << n.gpu_cull_stats_readback
-          << ",\"cull_stats_sync_read_n\":" << n.cull_stats_sync_read_n
-          << ",\"frame_deadline_remaining_ms\":"
-          << n.frame_deadline_remaining_ms
-          << ",\"publication_progress_unit_n\":"
-          << n.publication_progress_unit_n
-          << ",\"publication_overload_retain_n\":"
-          << n.publication_overload_retain_n
-          << ",\"publication_incomplete_material_n\":"
-          << n.publication_incomplete_material_n
-          << ",\"publication_oom_retain_n\":" << n.publication_oom_retain_n
-          << ",\"pubver_changed_without_fresh_n\":"
-          << n.pubver_changed_without_fresh_n
-          << ",\"pass_mesh_rev_lag_max\":" << n.pass_mesh_rev_lag_max
-          << ",\"pass_packed_without_mdi_resident_n\":"
-          << n.pass_packed_without_mdi_resident_n
-          << ",\"pass_mdi_stale_gpu_resident_n\":"
-          << n.pass_mdi_stale_gpu_resident_n
-          << ",\"pass_dual_backend_same_coord_n\":"
-          << n.pass_dual_backend_same_coord_n
-          << ",\"publication_material_block_id_flip_n\":"
-          << n.publication_material_block_id_flip_n
-          << ",\"gpu_blocklight_flood\":" << n.gpu_blocklight_flood
-          << ",\"gpu_fluid_readback\":" << n.gpu_fluid_readback
-          << ",\"gpu_light_readback\":" << n.gpu_light_readback
-          << ",\"gpu_opaque_emit_gpu\":" << n.gpu_opaque_emit_gpu
-          << ",\"gpu_transparent_sort_gpu\":" << n.gpu_transparent_sort_gpu
-          << ",\"gpu_fallback\":" << n.gpu_fallback
-          << ",\"gpu_fluid_scan_on\":" << n.gpu_fluid_scan_on
-          << ",\"backend_mesher\":\"" << n.backend_mesher << "\""
-          << ",\"backend_store\":\"" << n.backend_store << "\""
-          << ",\"backend_cull\":\"" << n.backend_cull << "\""
-          << ",\"backend_fluid\":\"" << n.backend_fluid << "\""
-          << ",\"backend_lighting_mode\":\"" << n.backend_lighting_mode << "\""
-          << ",\"caps_has_compute\":" << n.caps_has_compute
-          << ",\"caps_has_ssbo\":" << n.caps_has_ssbo
-          << ",\"caps_probe_completed\":" << n.caps_probe_completed
-          << ",\"android_gpu_user_pref\":" << n.android_gpu_user_pref
-          << ",\"android_gpu_effective\":" << n.android_gpu_effective
-          << ",\"android_gpu_deny_reason\":\"" << n.android_gpu_deny_reason
-          << "\""
-          << ",\"gl_version\":\"" << n.gl_version << "\""
-          << ",\"gl_renderer\":\"" << n.gl_renderer << "\""
-          << ",\"memory_pressure\":" << n.memory_pressure
-          << ",\"keep_margin_eff\":" << n.keep_margin_eff
-          << ",\"buffer_expand_events\":" << n.buffer_expand_events
-          << ",\"black_sticky\":" << n.focus_sticky_remesh
-          << ",\"visible_black_focus_n\":" << n.visible_black_focus_n
-          << ",\"visible_black_no_ticket_n\":" << n.visible_black_no_ticket_n
-          << ",\"visible_black_progress_n\":" << n.visible_black_progress_n
-          << ",\"visible_black_stalled_n\":" << n.visible_black_stalled_n
-          << ",\"visible_black_stale_lit_n\":" << n.visible_black_stale_lit_n
-          << ",\"visible_black_fully_dark_repair_n\":"
-          << n.visible_black_fully_dark_repair_n
-          << ",\"visible_black_fully_dark_no_ticket_n\":"
-          << n.visible_black_fully_dark_no_ticket_n
-          << ",\"visible_black_fully_dark_stalled_n\":"
-          << n.visible_black_fully_dark_stalled_n
-          << ",\"visible_black_legal_dark_n\":" << n.visible_black_legal_dark_n
-          << ",\"visible_black_census_mismatch\":"
-          << n.visible_black_census_mismatch
-          << ",\"draw_oracle_missing_resident_n\":"
-          << n.draw_oracle_missing_resident_n
-          << ",\"draw_oracle_missing_command_n\":"
-          << n.draw_oracle_missing_command_n
-          << ",\"draw_oracle_false_neg_cull_n\":"
-          << n.draw_oracle_false_neg_cull_n
-          << ",\"draw_oracle_stale_vertex_light_n\":"
-          << n.draw_oracle_stale_vertex_light_n
-          << ",\"stale_vl_rev_n\":" << n.stale_vl_rev_n
-          << ",\"fully_dark_census_n\":" << n.fully_dark_census_n
-          << ",\"draw_oracle_legal_dark_n\":" << n.draw_oracle_legal_dark_n
-          << ",\"draw_oracle_correct_lit_proxy_n\":"
-          << n.draw_oracle_correct_lit_proxy_n
-          << ",\"draw_oracle_fully_dark_debt_n\":"
-          << n.draw_oracle_fully_dark_debt_n
-          << ",\"draw_oracle_fault_n\":" << n.draw_oracle_fault_n
-          << ",\"oldest_missing_resident_age_frames\":"
-          << n.oldest_missing_resident_age_frames
-          << ",\"oldest_stale_vertex_light_age_frames\":"
-          << n.oldest_stale_vertex_light_age_frames
-          << ",\"debt_age_grew_with_schedule_n\":"
-          << n.debt_age_grew_with_schedule_n
-          << ",\"pending_cols\":\"" << n.pending_cols << "\""
-          << ",\"max_wall_ms\":" << n.max_wall_ms
-          << ",\"max_stream_ms\":" << n.max_stream_ms
-          << ",\"max_update_streaming_ms\":"
-          << n.max_update_streaming_ms
-          << ",\"max_update_streaming_pre_core_ms\":"
-          << n.max_update_streaming_pre_core_ms
-          << ",\"max_update_streaming_post_core_ms\":"
-          << n.max_update_streaming_post_core_ms
-          << ",\"max_altitude_surface_query_ms\":"
-          << n.max_altitude_surface_query_ms
-          << ",\"max_mesh_emerge_ms\":" << n.max_mesh_emerge_ms
-          << ",\"max_phys_ms\":" << n.max_phys_ms
-          << ",\"max_dirty\":" << n.max_dirty
-          << ",\"max_ring_blocked\":" << n.max_ring_blocked
-          << ",\"max_pending_light\":" << n.max_pending_light
-          << ",\"frames\":" << n.frames << ",\"spikes\":" << n.spikes << "}\n";
+  const bool warm_stamp = (std::strcmp(kind, "period") == 0) && []()
+  {
+    if (const char *env = std::getenv("CUBA_FLIGHT_WARM"))
+    {
+      return env[0] == '1' || env[0] == 't' || env[0] == 'T';
+    }
+    return false;
+  }();
+  s.Jsonl
+      << "{\"kind\":\"" << kind << "\""
+      << ",\"frame_epoch\":" << n.frame_epoch
+      << (warm_stamp ? ",\"warm\":1" : "") << ",\"wall_ms\":" << n.wall_ms
+      << ",\"sim_ms\":" << n.sim_ms << ",\"swap_wait_ms\":" << n.swap_wait_ms
+      << ",\"unaccounted_ms\":" << n.unaccounted_ms
+      << ",\"input_ms\":" << n.input_ms
+      << ",\"app_update_ms\":" << n.app_update_ms
+      << ",\"world_extra_ms\":" << n.world_extra_ms
+      << ",\"views_ms\":" << n.views_ms
+      << ",\"do_movement_ms\":" << n.do_movement_ms
+      << ",\"ensure_collision_ms\":" << n.ensure_collision_ms
+      << ",\"creature_tick_ms\":" << n.creature_tick_ms
+      << ",\"camera_move_ms\":" << n.camera_move_ms
+      << ",\"camera_ground_support_ms\":" << n.camera_ground_support_ms
+      << ",\"camera_locomotion_ms\":" << n.camera_locomotion_ms
+      << ",\"camera_horiz_move_ms\":" << n.camera_horiz_move_ms
+      << ",\"camera_move_requested_xz\":" << n.camera_move_requested_xz
+      << ",\"camera_move_applied_xz\":" << n.camera_move_applied_xz
+      << ",\"camera_move_attempt_substeps\":" << n.camera_move_attempt_substeps
+      << ",\"camera_move_blocked_substeps\":" << n.camera_move_blocked_substeps
+      << ",\"camera_move_blocked_x_substeps\":"
+      << n.camera_move_blocked_x_substeps
+      << ",\"camera_move_blocked_z_substeps\":"
+      << n.camera_move_blocked_z_substeps
+      << ",\"camera_flight_ground_contacts\":"
+      << n.camera_flight_ground_contacts
+      << ",\"camera_free_move_share\":" << n.camera_free_move_share
+      << ",\"camera_sync_ms\":" << n.camera_sync_ms
+      << ",\"environment_tick_ms\":" << n.environment_tick_ms
+      << ",\"npc_intent_ms\":" << n.npc_intent_ms
+      << ",\"controlled_influence_ms\":" << n.controlled_influence_ms
+      << ",\"vitals_tick_ms\":" << n.vitals_tick_ms
+      << ",\"status_effects_tick_ms\":" << n.status_effects_tick_ms
+      << ",\"creatures_total\":" << n.creatures_total
+      << ",\"creatures_ai_ticked\":" << n.creatures_ai_ticked
+      << ",\"world_creatures_skipped\":" << n.world_creatures_skipped
+      << ",\"player_locomotion_block_ms\":" << n.player_locomotion_block_ms
+      << ",\"world_ai_after_player_ms\":" << n.world_ai_after_player_ms
+      << ",\"creatures_ai_budget\":" << n.creatures_ai_budget
+      << ",\"creatures_ai_deferred\":" << n.creatures_ai_deferred
+      << ",\"stream_speed_clamp_scale\":" << n.stream_speed_clamp_scale
+      << ",\"world_streaming_phase_ms\":" << n.world_streaming_phase_ms
+      << ",\"altitude_surface_query_ms\":" << n.altitude_surface_query_ms
+      << ",\"block_input_ms\":" << n.block_input_ms
+      << ",\"tick_env_ms\":" << n.tick_env_ms
+      << ",\"physics_block_ms\":" << n.physics_block_ms
+      << ",\"physics_drain_ms\":" << n.physics_drain_ms
+      << ",\"physics_movement_ms\":" << n.physics_movement_ms
+      << ",\"physics_substeps\":" << n.physics_substeps
+      << ",\"break_complete_n\":" << n.break_complete_n
+      << ",\"break_inflight_race_n\":" << n.break_inflight_race_n
+      << ",\"break_dark_face_n\":" << n.break_dark_face_n
+      << ",\"place_complete_n\":" << n.place_complete_n
+      << ",\"place_emission_n\":" << n.place_emission_n
+      << ",\"edit_light_emission\":" << n.edit_light_emission
+      << ",\"edit_to_first_mesh_ms\":" << n.edit_to_first_mesh_ms
+      << ",\"fast_relight_ms\":" << n.fast_relight_ms
+      << ",\"render_window_setup_ms\":" << n.render_window_setup_ms
+      << ",\"render_frame_setup_ms\":" << n.render_frame_setup_ms
+      << ",\"render_equipment_setup_ms\":" << n.render_equipment_setup_ms
+      << ",\"geometry_paint_ms\":" << n.geometry_paint_ms
+      << ",\"fp_viewmodel_ms\":" << n.fp_viewmodel_ms
+      << ",\"prepare_frame_ms\":" << n.prepare_frame_ms
+      << ",\"post_scene_ms\":" << n.post_scene_ms
+      << ",\"gui_overlay_ms\":" << n.gui_overlay_ms
+      << ",\"autosave_ms\":" << n.autosave_ms
+      << ",\"autosave_deferred_n\":" << n.autosave_deferred_n
+      << ",\"autosave_skipped_tick_n\":" << n.autosave_skipped_tick_n
+      << ",\"dig_seam_pending_n\":" << n.dig_seam_pending_n
+      << ",\"dig_seam_remesh_n\":" << n.dig_seam_remesh_n
+      << ",\"stale_repair_wave_n\":" << n.stale_repair_wave_n
+      << ",\"stand_rim_dirty_n\":" << n.stand_rim_dirty_n
+      << ",\"stand_rim_imm_n\":" << n.stand_rim_imm_n
+      << ",\"render_total_ms\":" << n.render_total_ms
+      << ",\"render_unattributed_ms\":" << n.render_unattributed_ms
+      << ",\"residual_ms\":" << n.residual_ms
+      << ",\"perf_collect_ms\":" << n.perf_collect_ms
+      << ",\"perf_emit_ms\":" << n.perf_emit_ms
+      << ",\"fluid_map_cpu_ms\":" << n.fluid_map_cpu_ms
+      << ",\"fluid_map_gpu_ms\":" << n.fluid_map_gpu_ms
+      << ",\"fluid_map_dirty\":" << n.fluid_map_dirty
+      << ",\"fluid_map_full_rebuild\":" << n.fluid_map_full_rebuild
+      << ",\"commit_apply_ms\":" << n.commit_apply_ms
+      << ",\"commit_seal_ms\":" << n.commit_seal_ms
+      << ",\"commit_physics_ms\":" << n.commit_physics_ms
+      << ",\"streamer_update_ms\":" << n.streamer_update_ms
+      << ",\"streamer_core_ms\":" << n.streamer_update_ms
+      << ",\"streamer_unload_ms\":" << n.streamer_unload_ms
+      << ",\"streamer_keep_shell_ms\":" << n.streamer_keep_shell_ms
+      << ",\"streamer_prefetch_ahead_ms\":" << n.streamer_prefetch_ahead_ms
+      << ",\"update_streaming_ms\":" << n.update_streaming_ms
+      << ",\"update_streaming_pre_core_ms\":" << n.update_streaming_pre_core_ms
+      << ",\"update_streaming_post_core_ms\":"
+      << n.update_streaming_post_core_ms
+      << ",\"update_streaming_post_core_telemetry_ms\":"
+      << n.update_streaming_post_core_telemetry_ms
+      << ",\"visibility_debt_probe_ms\":" << n.visibility_debt_probe_ms
+      << ",\"spawn_catchup_probe_ms\":" << n.spawn_catchup_probe_ms
+      << ",\"async_chunk_systems_ms\":" << n.async_chunk_systems_ms
+      << ",\"async_chunk_pre_scheduler_ms\":" << n.async_chunk_pre_scheduler_ms
+      << ",\"async_chunk_scheduler_tick_ms\":"
+      << n.async_chunk_scheduler_tick_ms
+      << ",\"async_chunk_post_scheduler_ms\":"
+      << n.async_chunk_post_scheduler_ms
+      << ",\"async_chunk_io_drain_ms\":" << n.async_chunk_io_drain_ms
+      << ",\"async_chunk_io_tick_wall_ms\":" << n.async_chunk_io_tick_wall_ms
+      << ",\"async_chunk_io_unattributed_ms\":"
+      << n.async_chunk_io_unattributed_ms
+      << ",\"async_chunk_io_light_flags_result_drain_ms\":"
+      << n.async_chunk_io_light_flags_result_drain_ms
+      << ",\"async_chunk_io_queue_snapshot_ms\":"
+      << n.async_chunk_io_queue_snapshot_ms
+      << ",\"async_chunk_io_light_flags_snapshot_ms\":"
+      << n.async_chunk_io_light_flags_snapshot_ms
+      << ",\"async_chunk_io_light_flags_enqueue_ms\":"
+      << n.async_chunk_io_light_flags_enqueue_ms
+      << ",\"async_chunk_io_light_flags_complete_columns_n\":"
+      << n.async_chunk_io_light_flags_complete_columns_n
+      << ",\"async_chunk_io_light_flags_saved_revision\":"
+      << n.async_chunk_io_light_flags_saved_revision
+      << ",\"async_chunk_io_light_flags_last_result_revision\":"
+      << n.async_chunk_io_light_flags_last_result_revision
+      << ",\"async_chunk_io_light_flags_last_result_success\":"
+      << n.async_chunk_io_light_flags_last_result_success
+      << ",\"async_chunk_io_light_flags_last_result_worker_queue_wait_ms\":"
+      << n.async_chunk_io_light_flags_worker_queue_wait_ms
+      << ",\"async_chunk_io_light_flags_last_result_worker_service_ms\":"
+      << n.async_chunk_io_light_flags_worker_service_ms
+      << ",\"async_chunk_io_discard_cancelled_ms\":"
+      << n.async_chunk_io_discard_cancelled_ms
+      << ",\"async_chunk_io_result_selection_ms\":"
+      << n.async_chunk_io_result_selection_ms
+      << ",\"async_chunk_io_result_selection_mutex_wait_ms\":"
+      << n.async_chunk_io_result_selection_mutex_wait_ms
+      << ",\"async_chunk_io_result_selection_mutex_held_ms\":"
+      << n.async_chunk_io_result_selection_mutex_held_ms
+      << ",\"async_chunk_io_result_processing_ms\":"
+      << n.async_chunk_io_result_processing_ms
+      << ",\"async_chunk_io_world_apply_ms\":"
+      << n.async_chunk_io_world_apply_ms
+      << ",\"async_chunk_io_column_finalize_ms\":"
+      << n.async_chunk_io_column_finalize_ms
+      << ",\"async_chunk_io_result_requeue_ms\":"
+      << n.async_chunk_io_result_requeue_ms
+      << ",\"async_chunk_io_result_requeue_mutex_wait_ms\":"
+      << n.async_chunk_io_result_requeue_mutex_wait_ms
+      << ",\"async_chunk_io_result_requeue_mutex_held_ms\":"
+      << n.async_chunk_io_result_requeue_mutex_held_ms
+      << ",\"async_chunk_io_load_result_push_mutex_wait_ms\":"
+      << n.async_chunk_io_load_result_push_mutex_wait_ms
+      << ",\"async_chunk_io_load_result_push_mutex_held_ms\":"
+      << n.async_chunk_io_load_result_push_mutex_held_ms
+      << ",\"async_chunk_io_load_result_push_mutex_wait_max_ms\":"
+      << n.async_chunk_io_load_result_push_mutex_wait_max_ms
+      << ",\"async_chunk_io_load_result_push_mutex_held_max_ms\":"
+      << n.async_chunk_io_load_result_push_mutex_held_max_ms
+      << ",\"async_chunk_io_save_drain_ms\":" << n.async_chunk_io_save_drain_ms
+      << ",\"async_chunk_io_light_flags_save_ms\":"
+      << n.async_chunk_io_light_flags_save_ms
+      << ",\"async_chunk_io_load_result_push_n\":"
+      << n.async_chunk_io_load_result_push_n
+      << ",\"async_chunk_io_cancelled_discard_n\":"
+      << n.async_chunk_io_cancelled_discard_n
+      << ",\"async_chunk_io_ready_loads_before_n\":"
+      << n.async_chunk_io_ready_loads_before_n
+      << ",\"async_chunk_io_selected_loads_n\":"
+      << n.async_chunk_io_selected_loads_n
+      << ",\"async_chunk_io_processed_loads_n\":"
+      << n.async_chunk_io_processed_loads_n
+      << ",\"async_chunk_io_requeued_loads_n\":"
+      << n.async_chunk_io_requeued_loads_n
+      << ",\"async_chunk_io_applied_slices_n\":"
+      << n.async_chunk_io_applied_slices_n
+      << ",\"async_chunk_io_saves_processed_n\":"
+      << n.async_chunk_io_saves_processed_n
+      << ",\"async_chunk_io_load_pending_jobs_n\":"
+      << n.async_chunk_io_load_pending_jobs_n
+      << ",\"async_chunk_io_load_active_jobs_n\":"
+      << n.async_chunk_io_load_active_jobs_n
+      << ",\"async_chunk_io_load_workers_n\":"
+      << n.async_chunk_io_load_workers_n
+      << ",\"async_chunk_io_background_pending_jobs_n\":"
+      << n.async_chunk_io_background_pending_jobs_n
+      << ",\"async_chunk_io_background_active_jobs_n\":"
+      << n.async_chunk_io_background_active_jobs_n
+      << ",\"async_chunk_io_background_workers_n\":"
+      << n.async_chunk_io_background_workers_n
+      << ",\"async_chunk_io_load_result_queue_depth_n\":"
+      << n.async_chunk_io_load_result_queue_depth_n
+      << ",\"async_chunk_io_save_result_queue_depth_n\":"
+      << n.async_chunk_io_save_result_queue_depth_n
+      << ",\"async_chunk_io_apply_time_budget_hit\":"
+      << n.async_chunk_io_apply_time_budget_hit
+      << ",\"async_io_ms\":" << n.async_io_ms
+      << ",\"relight_drain_ms\":" << n.relight_drain_ms
+      << ",\"relight_capture_ms\":" << n.relight_capture_ms
+      << ",\"relight_capture_lock_wait_ms\":" << n.relight_capture_lock_wait_ms
+      << ",\"relight_snapshot_copy_ms\":" << n.relight_snapshot_copy_ms
+      << ",\"relight_dependency_stamp_ms\":" << n.relight_dependency_stamp_ms
+      << ",\"relight_submit_setup_ms\":" << n.relight_submit_setup_ms
+      << ",\"relight_queue_submit_ms\":" << n.relight_queue_submit_ms
+      << ",\"relight_apply_ms\":" << n.relight_apply_ms
+      << ",\"relight_apply_policy_ms\":" << n.relight_apply_policy_ms
+      << ",\"relight_apply_validation_ms\":" << n.relight_apply_validation_ms
+      << ",\"relight_apply_light_ms\":" << n.relight_apply_light_ms
+      << ",\"relight_apply_install_ms\":" << n.relight_apply_install_ms
+      << ",\"relight_drain_completed_ms\":" << n.relight_drain_completed_ms
+      << ",\"relight_merge_light_ms\":" << n.relight_merge_light_ms
+      << ",\"relight_light_chunks_n\":" << n.relight_light_chunks_n
+      << ",\"relight_light_skip_n\":" << n.relight_light_skip_n
+      << ",\"repair_reticket_deferred_n\":" << n.repair_reticket_deferred_n
+      << ",\"apply_binding\":" << n.apply_binding
+      << ",\"visible_black_focus_raw_n\":" << n.visible_black_focus_raw_n
+      << ",\"relight_fifo_drop_n\":" << n.relight_fifo_drop_n
+      << ",\"relight_fifo_overflow_drop_n\":" << n.relight_fifo_overflow_drop_n
+      << ",\"relight_fifo_protect_block_n\":" << n.relight_fifo_protect_block_n
+      << ",\"relight_fifo_pin_saved_n\":" << n.relight_fifo_pin_saved_n
+      << ",\"mesh_sync_ms\":" << n.mesh_sync_ms
+      << ",\"mesh_snapshot_ms\":" << n.mesh_snapshot_ms
+      << ",\"mesh_immediate_ms\":" << n.mesh_immediate_ms
+      << ",\"mesh_immediate_count\":" << n.mesh_immediate_count
+      << ",\"mesh_dirty_tick_ms\":" << n.mesh_dirty_tick_ms
+      << ",\"mesh_dirty_pre_prune_ms\":" << n.mesh_dirty_pre_prune_ms
+      << ",\"mesh_dirty_prune_ms\":" << n.mesh_dirty_prune_ms
+      << ",\"mesh_dirty_prune_n\":" << n.mesh_dirty_prune_n
+      << ",\"mesh_dirty_sort_ms\":" << n.mesh_dirty_sort_ms
+      << ",\"mesh_dirty_drain_ms\":" << n.mesh_dirty_drain_ms
+      << ",\"mesh_dirty_drain_n\":" << n.mesh_dirty_drain_n
+      << ",\"mesh_dirty_schedule_ms\":" << n.mesh_dirty_schedule_ms
+      << ",\"mesh_dependency_queued_n\":" << n.mesh_dependency_queued_n
+      << ",\"mesh_dependency_applied_n\":" << n.mesh_dependency_applied_n
+      << ",\"mesh_dependency_backlog_n\":" << n.mesh_dependency_backlog_n
+      << ",\"mesh_dirty_schedule_ok_n\":" << n.mesh_dirty_schedule_ok_n
+      << ",\"mesh_dirty_schedule_ok_fm_n\":" << n.mesh_dirty_schedule_ok_fm_n
+      << ",\"mesh_dirty_schedule_ok_remesh_n\":"
+      << n.mesh_dirty_schedule_ok_remesh_n
+      << ",\"mesh_dirty_schedule_skip_n\":" << n.mesh_dirty_schedule_skip_n
+      << ",\"mesh_dirty_schedule_skip_pipeline_n\":"
+      << n.mesh_dirty_schedule_skip_pipeline_n
+      << ",\"mesh_dirty_schedule_skip_snapshot_n\":"
+      << n.mesh_dirty_schedule_skip_snapshot_n
+      << ",\"mesh_snapshot_defer_time_budget_n\":"
+      << n.mesh_snapshot_defer_time_budget_n
+      << ",\"mesh_snapshot_defer_refresh_budget_n\":"
+      << n.mesh_snapshot_defer_refresh_budget_n
+      << ",\"mesh_snapshot_budget_ms\":" << n.mesh_snapshot_budget_ms
+      << ",\"capture_snapshot_cost_ema_ms\":" << n.capture_snapshot_cost_ema_ms
+      << ",\"mesh_snapshot_refresh_credits_initial_n\":"
+      << n.mesh_snapshot_refresh_credits_initial_n
+      << ",\"mesh_snapshot_refresh_credits_remaining_n\":"
+      << n.mesh_snapshot_refresh_credits_remaining_n
+      << ",\"first_mesh_capture_reserve_remaining_n\":"
+      << n.first_mesh_capture_reserve_remaining_n
+      << ",\"light_repair_capture_reserve_remaining_n\":"
+      << n.light_repair_capture_reserve_remaining_n
+      << ",\"mesh_snapshot_firstmesh_refresh_defers_n\":"
+      << n.mesh_snapshot_firstmesh_refresh_defers_n
+      << ",\"mesh_snapshot_remesh_refresh_defers_n\":"
+      << n.mesh_snapshot_remesh_refresh_defers_n
+      << ",\"mesh_snapshot_defer_pipeline_bytes_n\":"
+      << n.mesh_snapshot_defer_pipeline_bytes_n
+      << ",\"mesh_snapshot_defer_missing_band_n\":"
+      << n.mesh_snapshot_defer_missing_band_n
+      << ",\"mesh_snapshot_defer_dependency_n\":"
+      << n.mesh_snapshot_defer_dependency_n
+      << ",\"mesh_snapshot_defer_publication_n\":"
+      << n.mesh_snapshot_defer_publication_n
+      << ",\"mesh_snapshot_defer_store_commit_n\":"
+      << n.mesh_snapshot_defer_store_commit_n
+      << ",\"mesh_dirty_schedule_skip_softdefer_n\":"
+      << n.mesh_dirty_schedule_skip_softdefer_n
+      << ",\"mesh_dirty_schedule_skip_locked_n\":"
+      << n.mesh_dirty_schedule_skip_locked_n
+      << ",\"mesh_dirty_schedule_skip_orphan_n\":"
+      << n.mesh_dirty_schedule_skip_orphan_n
+      << ",\"mesh_dirty_schedule_skip_remesh_starve_n\":"
+      << n.mesh_dirty_schedule_skip_remesh_starve_n
+      << ",\"mesh_dirty_schedule_skip_other_n\":"
+      << n.mesh_dirty_schedule_skip_other_n
+      << ",\"mesh_dirty_schedule_skip_outside_focus_n\":"
+      << n.mesh_dirty_schedule_skip_outside_focus_n
+      << ",\"fm_consumer_starved_active\":" << n.fm_consumer_starved_active
+      << ",\"keep_ring_shrink_n\":" << n.keep_ring_shrink_n
+      << ",\"freechunk_live_n\":" << n.freechunk_live_n
+      << ",\"capture_bg_cap_n\":" << n.capture_bg_cap_n
+      << ",\"capture_band_cy\":" << n.capture_band_cy
+      << ",\"mesh_dirty_gpu_ms\":" << n.mesh_dirty_gpu_ms
+      << ",\"mesh_dirty_gpu_n\":" << n.mesh_dirty_gpu_n
+      << ",\"mesh_dirty_sync_ms\":" << n.mesh_dirty_sync_ms
+      << ",\"mesh_dirty_sync_n\":" << n.mesh_dirty_sync_n
+      << ",\"mesh_gpu_kick_ms\":" << n.mesh_gpu_kick_ms
+      << ",\"mesh_gpu_finish_ms\":" << n.mesh_gpu_finish_ms
+      << ",\"mesh_async_drain_ms\":" << n.mesh_async_drain_ms
+      << ",\"mesh_capture_store_hit_n\":" << n.mesh_capture_store_hit_n
+      << ",\"mesh_capture_store_miss_n\":" << n.mesh_capture_store_miss_n
+      << ",\"mesh_capture_store_entries_n\":" << n.mesh_capture_store_entries_n
+      << ",\"mesh_capture_store_stale_evictions_n\":"
+      << n.mesh_capture_store_stale_evictions_n
+      << ",\"mesh_capture_store_capacity_evictions_n\":"
+      << n.mesh_capture_store_capacity_evictions_n
+      << ",\"mesh_capture_store_pressure_evictions_n\":"
+      << n.mesh_capture_store_pressure_evictions_n
+      << ",\"mesh_snapshot_pending_bytes\":" << n.mesh_snapshot_pending_bytes
+      << ",\"dirty_touch_n\":" << n.dirty_touch_n
+      << ",\"dirty_revisit_same_n\":" << n.dirty_revisit_same_n
+      << ",\"dirty_fm_n\":" << n.dirty_fm_n
+      << ",\"dirty_remesh_n\":" << n.dirty_remesh_n
+      << ",\"prep_unfinished_calls_n\":" << n.prep_unfinished_calls_n
+      << ",\"prep_unfinished_full_n\":" << n.prep_unfinished_full_n
+      << ",\"prep_unfinished_incremental_n\":"
+      << n.prep_unfinished_incremental_n
+      << ",\"unfinished_cache_hit_n\":" << n.unfinished_cache_hit_n
+      << ",\"unfinished_cache_overflow_n\":" << n.unfinished_cache_overflow_n
+      << ",\"dirty_admit_budget_end\":" << n.dirty_admit_budget_end
+      << ",\"first_mesh_schedule_cap\":" << n.first_mesh_schedule_cap
+      << ",\"first_mesh_schedule_effective_cap\":"
+      << n.first_mesh_schedule_effective_cap
+      << ",\"fm_dirty_enqueue_reserve_n\":" << n.fm_dirty_enqueue_reserve_n
+      << ",\"remesh_schedule_cap\":" << n.remesh_schedule_cap
+      << ",\"schedule_lane_starve_reason\":" << n.schedule_lane_starve_reason
+      << ",\"remesh_protect_lit_settle_n\":" << n.remesh_protect_lit_settle_n
+      << ",\"relight_trim_far_n\":" << n.relight_trim_far_n
+      << ",\"player_x\":" << n.player_x << ",\"player_y\":" << n.player_y
+      << ",\"player_z\":" << n.player_z
+      << ",\"phase_budget_over\":" << n.phase_budget_over
+      << ",\"phase_miss_carve_out\":" << n.phase_miss_carve_out
+      << ",\"miss_reserved_ms\":" << n.miss_reserved_ms
+      << ",\"emerge_budget_ms\":" << n.emerge_budget_ms
+      << ",\"render_preset\":" << n.render_preset
+      << ",\"async_meshing\":" << n.async_meshing
+      << ",\"mesh_emerge_prep_ms\":" << n.mesh_emerge_prep_ms
+      << ",\"mesh_emerge_prep_missing_ms\":" << n.mesh_emerge_prep_missing_ms
+      << ",\"mesh_emerge_prep_unfinished_ms\":"
+      << n.mesh_emerge_prep_unfinished_ms
+      << ",\"mesh_emerge_prep_sticky_ms\":" << n.mesh_emerge_prep_sticky_ms
+      << ",\"mesh_emerge_prep_drop_dirty_ms\":"
+      << n.mesh_emerge_prep_drop_dirty_ms
+      << ",\"mesh_emerge_prep_other_ms\":" << n.mesh_emerge_prep_other_ms
+      << ",\"prep_admission_ms\":" << n.prep_admission_ms
+      << ",\"prep_schedule_clamp_ms\":" << n.prep_schedule_clamp_ms
+      << ",\"prep_softdefer_policy_ms\":" << n.prep_softdefer_policy_ms
+      << ",\"prep_isolated_miss_ms\":" << n.prep_isolated_miss_ms
+      << ",\"prep_refresh_pressure_ms\":" << n.prep_refresh_pressure_ms
+      << ",\"prep_refresh_miss_ms\":" << n.prep_refresh_miss_ms
+      << ",\"prep_refresh_miss_radius_query_ms\":"
+      << n.prep_refresh_miss_radius_query_ms
+      << ",\"prep_refresh_screen_ray_probe_ms\":"
+      << n.prep_refresh_screen_ray_probe_ms
+      << ",\"prep_refresh_find_nearest_ms\":" << n.prep_refresh_find_nearest_ms
+      << ",\"prep_refresh_miss_other_ms\":" << n.prep_refresh_miss_other_ms
+      << ",\"prep_refresh_pending_ms\":" << n.prep_refresh_pending_ms
+      << ",\"prep_refresh_sticky_ms\":" << n.prep_refresh_sticky_ms
+      << ",\"prep_refresh_unfinished_ms\":" << n.prep_refresh_unfinished_ms
+      << ",\"prep_refresh_vb_ms\":" << n.prep_refresh_vb_ms
+      << ",\"prep_refresh_darkface_ms\":" << n.prep_refresh_darkface_ms
+      << ",\"prep_refresh_facing_ms\":" << n.prep_refresh_facing_ms
+      << ",\"prep_refresh_underfeet_ms\":" << n.prep_refresh_underfeet_ms
+      << ",\"prep_refresh_dirty_ms\":" << n.prep_refresh_dirty_ms
+      << ",\"prep_refresh_pressure_eval_ms\":"
+      << n.prep_refresh_pressure_eval_ms
+      << ",\"prep_refresh_underfeet_probe_ms\":"
+      << n.prep_refresh_underfeet_probe_ms
+      << ",\"prep_refresh_ring_resync_ms\":" << n.prep_refresh_ring_resync_ms
+      << ",\"prep_refresh_vb_raw_ms\":" << n.prep_refresh_vb_raw_ms
+      << ",\"prep_refresh_gap_ms\":" << n.prep_refresh_gap_ms
+      << ",\"prep_refresh_self_ms\":" << n.prep_refresh_self_ms
+      << ",\"mesh_emerge_prep_self_ms\":" << n.mesh_emerge_prep_self_ms
+      << ",\"scene_filter_ready_ms\":" << n.scene_filter_ready_ms
+      << ",\"scene_opaque_draw_ms\":" << n.scene_opaque_draw_ms
+      << ",\"scene_opaque_refresh_ms\":" << n.scene_opaque_refresh_ms
+      << ",\"scene_opaque_cull_ms\":" << n.scene_opaque_cull_ms
+      << ",\"opaque_cull_skipped\":" << n.opaque_cull_skipped
+      << ",\"gpu_compact_fail_open_n\":" << n.gpu_compact_fail_open_n
+      << ",\"scene_opaque_gpu_draw_ms\":" << n.scene_opaque_gpu_draw_ms
+      << ",\"scene_opaque_packed_ms\":" << n.scene_opaque_packed_ms
+      << ",\"scene_opaque_cross_ms\":" << n.scene_opaque_cross_ms
+      << ",\"scene_depth_capture_ms\":" << n.scene_depth_capture_ms
+      << ",\"scene_transparent_ms\":" << n.scene_transparent_ms
+      << ",\"scene_overlays_ms\":" << n.scene_overlays_ms
+      << ",\"scene_self_ms\":" << n.scene_self_ms
+      << ",\"prep_refresh_camera_complete_ms\":"
+      << n.prep_refresh_camera_complete_ms
+      << ",\"prep_refresh_body_ms\":" << n.prep_refresh_body_ms
+      << ",\"prep_refresh_setup_ms\":" << n.prep_refresh_setup_ms
+      << ",\"prep_refresh_setup_focus_ms\":" << n.prep_refresh_setup_focus_ms
+      << ",\"prep_refresh_setup_ring_ms\":" << n.prep_refresh_setup_ring_ms
+      << ",\"prep_refresh_setup_capture_ms\":"
+      << n.prep_refresh_setup_capture_ms
+      << ",\"prep_refresh_setup_probe_ms\":" << n.prep_refresh_setup_probe_ms
+      << ",\"prep_refresh_input_fill_ms\":" << n.prep_refresh_input_fill_ms
+      << ",\"prep_refresh_diet_flags_ms\":" << n.prep_refresh_diet_flags_ms
+      << ",\"prep_warmup_ms\":" << n.prep_warmup_ms
+      << ",\"prep_softdefer_pre_ms\":" << n.prep_softdefer_pre_ms
+      << ",\"prep_dirty_thrash_ms\":" << n.prep_dirty_thrash_ms
+      << ",\"prep_schedule_policy_ms\":" << n.prep_schedule_policy_ms
+      << ",\"prep_spawn_ring_query_ms\":" << n.prep_spawn_ring_query_ms
+      << ",\"prep_drop_remesh_ms\":" << n.prep_drop_remesh_ms
+      << ",\"prep_cancel_async_ms\":" << n.prep_cancel_async_ms
+      << ",\"prep_post_admit_drain_ms\":" << n.prep_post_admit_drain_ms
+      << ",\"prep_hole_force_ms\":" << n.prep_hole_force_ms
+      << ",\"prep_sched_other_ms\":" << n.prep_sched_other_ms
+      << ",\"prep_refresh_deadline_hit\":" << n.prep_refresh_deadline_hit
+      << ",\"prep_deadline_hit\":" << n.prep_deadline_hit
+      << ",\"prep_find_nearest_n\":" << n.prep_find_nearest_n
+      << ",\"prep_drain_idle_n\":" << n.prep_drain_idle_n
+      << ",\"prep_drop_remesh_n\":" << n.prep_drop_remesh_n
+      << ",\"prep_cancel_async_n\":" << n.prep_cancel_async_n
+      << ",\"prep_heavy_walk_n\":" << n.prep_heavy_walk_n
+      << ",\"focus_dirty_reconcile_delta\":" << n.focus_dirty_reconcile_delta
+      << ",\"rim_witness_latched\":" << n.rim_witness_latched
+      << ",\"rim_hole_pressure\":" << n.rim_hole_pressure
+      << ",\"rim_perf_diet\":" << n.rim_perf_diet
+      << ",\"miss_witness_retarget_n\":" << n.miss_witness_retarget_n
+      << ",\"stop_vb_drain_frames\":" << n.stop_vb_drain_frames
+      << ",\"stop_vb_budget_active\":" << n.stop_vb_budget_active
+      << ",\"stop_vb_stuck_frames\":" << n.stop_vb_stuck_frames
+      << ",\"miss_witness_age_frames\":" << n.miss_witness_age_frames
+      << ",\"miss_stuck_run_frames\":" << n.miss_stuck_run_frames
+      << ",\"miss_witness_remesh_n\":" << n.miss_witness_remesh_n
+      << ",\"miss_completion_stuck_frames\":" << n.miss_completion_stuck_frames
+      << ",\"relight_apply_to_markrelit_n\":" << n.relight_apply_to_markrelit_n
+      << ",\"markrelit_to_fm_dirty_n\":" << n.markrelit_to_fm_dirty_n
+      << ",\"fm_dirty_to_gpu_finish_n\":" << n.fm_dirty_to_gpu_finish_n
+      << ",\"fm_dirty_gpu_watch_n\":" << n.fm_dirty_gpu_watch_n
+      << ",\"fm_dirty_gpu_watch_max_age\":" << n.fm_dirty_gpu_watch_max_age
+      << ",\"fm_dirty_gpu_watch_timeout_delta\":"
+      << n.fm_dirty_gpu_watch_timeout_delta
+      << ",\"gpu_finish_watch_rim_n\":" << n.gpu_finish_watch_rim_n
+      << ",\"ingress_debt_level\":" << n.ingress_debt_level
+      << ",\"ingress_debt_streak\":" << n.ingress_debt_streak
+      << ",\"prep_column_flow_drain_ms\":" << n.prep_column_flow_drain_ms
+      << ",\"prep_sync_focus_ring_ms\":" << n.prep_sync_focus_ring_ms
+      << ",\"prep_recover_ms\":" << n.prep_recover_ms
+      << ",\"prep_refresh_has_missing_ms\":" << n.prep_refresh_has_missing_ms
+      << ",\"markrelit_chain_progress_frames\":"
+      << n.markrelit_chain_progress_frames
+      << ",\"miss_sla_kick_n\":" << n.miss_sla_kick_n
+      << ",\"prep_pending_light_ms\":" << n.prep_pending_light_ms
+      << ",\"prep_black_sticky_ms\":" << n.prep_black_sticky_ms
+      << ",\"prep_dirty_count_ms\":" << n.prep_dirty_count_ms
+      << ",\"prep_softdefer_setup_ms\":" << n.prep_softdefer_setup_ms
+      << ",\"softdefer_empty_scan_ms\":" << n.softdefer_empty_scan_ms
+      << ",\"softdefer_empty_own_ms\":" << n.softdefer_empty_own_ms
+      << ",\"keep_cols\":" << n.keep_cols
+      << ",\"visual_cols\":" << n.visual_cols
+      << ",\"idle_prefetch_ms\":" << n.idle_prefetch_ms
+      << ",\"prefetch_visual_ops\":" << n.prefetch_visual_ops
+      << ",\"prefetch_keep_ops\":" << n.prefetch_keep_ops
+      << ",\"gen_backlog_total\":" << n.gen_backlog_total
+      << ",\"phys_ms\":" << n.phys_ms << ",\"stream_ms\":" << n.stream_ms
+      << ",\"mesh_emerge_ms\":" << n.mesh_emerge_ms
+      << ",\"mesh_emerge_coordinator_ms\":" << n.mesh_emerge_coordinator_ms
+      << ",\"mesh_emerge_post_telemetry_ms\":"
+      << n.mesh_emerge_post_telemetry_ms
+      << ",\"mesh_emerge_post_stage_sample_ms\":"
+      << n.mesh_emerge_post_stage_sample_ms
+      << ",\"mesh_emerge_post_gpu_counts_ms\":"
+      << n.mesh_emerge_post_gpu_counts_ms
+      << ",\"mesh_emerge_post_mesh_snapshot_ms\":"
+      << n.mesh_emerge_post_mesh_snapshot_ms
+      << ",\"mesh_emerge_post_capture_store_ms\":"
+      << n.mesh_emerge_post_capture_store_ms
+      << ",\"mesh_emerge_post_tail_snapshot_ms\":"
+      << n.mesh_emerge_post_tail_snapshot_ms
+      << ",\"mesh_emerge_post_unattributed_ms\":"
+      << n.mesh_emerge_post_unattributed_ms
+      << ",\"mesh_emerge_player_relight_burst_ms\":"
+      << n.mesh_emerge_player_relight_burst_ms
+      << ",\"column_emerge_stage_sample_ms\":"
+      << n.column_emerge_stage_sample_ms
+      << ",\"column_emerge_focus_jobs_ms\":" << n.column_emerge_focus_jobs_ms
+      << ",\"column_emerge_shadow_census_ms\":"
+      << n.column_emerge_shadow_census_ms
+      << ",\"column_emerge_demand_breakdown_ms\":"
+      << n.column_emerge_demand_breakdown_ms
+      << ",\"column_emerge_demand_stop_ms\":" << n.column_emerge_demand_stop_ms
+      << ",\"chunk_demand_maintenance_ms\":" << n.chunk_demand_maintenance_ms
+      << ",\"column_emerge_stage_sample_n\":" << n.column_emerge_stage_sample_n
+      << ",\"column_emerge_stage_sample_age_ms\":"
+      << n.column_emerge_stage_sample_age_ms << ",\"scene_ms\":" << n.scene_ms
+      << ",\"view_ms\":" << n.view_ms << ",\"flat_ms\":" << n.flat_ms
+      << ",\"gen_q\":" << n.gen_q << ",\"mesh_async\":" << n.mesh_async
+      << ",\"dirty\":" << n.dirty << ",\"stream_loads\":" << n.stream_loads
+      << ",\"stream_async_queued\":" << n.stream_async_queued
+      << ",\"stream_unloads\":" << n.stream_unloads
+      << ",\"stream_saves\":" << n.stream_saves
+      << ",\"stream_unload_candidates\":" << n.stream_unload_candidates
+      << ",\"stream_unload_vetoes\":" << n.stream_unload_vetoes
+      << ",\"stream_unload_active_work_invalidated\":"
+      << n.stream_unload_active_work_invalidated
+      << ",\"stream_ingress_ops\":" << n.stream_ingress_ops
+      << ",\"stream_disk_complete_n\":" << n.stream_disk_complete_n
+      << ",\"stream_gen_commit_n\":" << n.stream_gen_commit_n
+      << ",\"frontier_pressure\":" << n.frontier_pressure
+      << ",\"stream_ring_blocked\":" << n.stream_ring_blocked
+      << ",\"stream_near_skipped\":" << n.stream_near_skipped
+      << ",\"stream_load_candidates\":" << n.stream_load_candidates
+      << ",\"allow_proc_fill\":" << n.allow_proc_fill
+      << ",\"column_absent_in_rd_n\":" << n.column_absent_in_rd_n
+      << ",\"column_loaded_no_mesh_n\":" << n.column_loaded_no_mesh_n
+      << ",\"focus_visual_terrain_incomplete_n\":"
+      << n.focus_visual_terrain_incomplete_n
+      << ",\"focus_visual_pending_light_n\":" << n.focus_visual_pending_light_n
+      << ",\"focus_visual_sticky_remesh_n\":" << n.focus_visual_sticky_remesh_n
+      << ",\"focus_visual_stale_dark_n\":" << n.focus_visual_stale_dark_n
+      << ",\"focus_visual_missing_mesh_n\":" << n.focus_visual_missing_mesh_n
+      << ",\"focus_visual_gpu_in_flight_n\":" << n.focus_visual_gpu_in_flight_n
+      << ",\"focus_visual_not_loaded_n\":" << n.focus_visual_not_loaded_n
+      << ",\"focus_visual_not_ready_state_n\":"
+      << n.focus_visual_not_ready_state_n
+      << ",\"focus_visual_face_debt_n\":" << n.focus_visual_face_debt_n
+      << ",\"focus_visual_ready_n\":" << n.focus_visual_ready_n
+      << ",\"focus_data_census_valid\":" << n.focus_data_census_valid
+      << ",\"focus_data_sample_age_frames\":" << n.focus_data_sample_age_frames
+      << ",\"focus_data_solid_slice_n\":" << n.focus_data_solid_slice_n
+      << ",\"focus_data_air_slice_n\":" << n.focus_data_air_slice_n
+      << ",\"focus_data_absent_slice_n\":" << n.focus_data_absent_slice_n
+      << ",\"focus_data_non_air_voxel_n\":" << n.focus_data_non_air_voxel_n
+      << ",\"focus_data_band_solid_slice_n\":"
+      << n.focus_data_band_solid_slice_n
+      << ",\"focus_data_band_solid_mesh_n\":" << n.focus_data_band_solid_mesh_n
+      << ",\"focus_data_band_solid_no_drawable_n\":"
+      << n.focus_data_band_solid_no_drawable_n
+      << ",\"focus_data_band_solid_satisfying_n\":"
+      << n.focus_data_band_solid_satisfying_n
+      << ",\"focus_data_band_solid_accepted_empty_n\":"
+      << n.focus_data_band_solid_accepted_empty_n
+      << ",\"focus_data_band_solid_pending_mesh_n\":"
+      << n.focus_data_band_solid_pending_mesh_n
+      << ",\"focus_data_band_solid_pending_work_n\":"
+      << n.focus_data_band_solid_pending_work_n
+      << ",\"focus_data_band_solid_unowned_n\":"
+      << n.focus_data_band_solid_unowned_n
+      << ",\"focus_data_camera_band_solid_slice_n\":"
+      << n.focus_data_camera_band_solid_slice_n
+      << ",\"focus_data_camera_band_solid_no_drawable_n\":"
+      << n.focus_data_camera_band_solid_no_drawable_n
+      << ",\"focus_data_camera_band_solid_satisfying_n\":"
+      << n.focus_data_camera_band_solid_satisfying_n
+      << ",\"focus_data_camera_band_solid_pending_work_n\":"
+      << n.focus_data_camera_band_solid_pending_work_n
+      << ",\"focus_data_camera_band_solid_unowned_n\":"
+      << n.focus_data_camera_band_solid_unowned_n
+      << ",\"focus_data_band_solid_unresolved_no_work_n\":"
+      << n.focus_data_band_solid_unresolved_no_work_n
+      << ",\"focus_data_band_solid_draw_gate_closed_n\":"
+      << n.focus_data_band_solid_draw_gate_closed_n
+      << ",\"focus_data_band_solid_draw_ready_n\":"
+      << n.focus_data_band_solid_draw_ready_n
+      << ",\"focus_data_band_solid_gpu_live_n\":"
+      << n.focus_data_band_solid_gpu_live_n
+      << ",\"column_bump_denied\":" << n.column_bump_denied
+      << ",\"column_flow_upgrade_n\":" << n.column_flow_upgrade_n
+      << ",\"column_flow_drained_n\":" << n.column_flow_drained_n
+      << ",\"column_flow_deferred_n\":" << n.column_flow_deferred_n
+      << ",\"column_flow_queue_live_n\":" << n.column_flow_queue_live_n
+      << ",\"column_flow_queue_stale_heap_n\":"
+      << n.column_flow_queue_stale_heap_n
+      << ",\"column_flow_probed_n\":" << n.column_flow_probed_n
+      << ",\"column_flow_cooldown_deferred_n\":"
+      << n.column_flow_cooldown_deferred_n
+      << ",\"column_flow_probe_budget_hit_n\":"
+      << n.column_flow_probe_budget_hit_n
+      << ",\"column_flow_post_deadline_unit_ms_max\":"
+      << n.column_flow_post_deadline_unit_ms_max
+      << ",\"column_flow_drain_request_n\":" << n.column_flow_drain_request_n
+      << ",\"column_flow_critical_units_at_entry_n\":"
+      << n.column_flow_critical_units_at_entry_n
+      << ",\"column_flow_critical_units_at_exit_n\":"
+      << n.column_flow_critical_units_at_exit_n
+      << ",\"column_flow_live_first_mesh_n\":"
+      << n.column_flow_live_first_mesh_n
+      << ",\"column_flow_live_relight_n\":" << n.column_flow_live_relight_n
+      << ",\"column_flow_live_seam_n\":" << n.column_flow_live_seam_n
+      << ",\"column_flow_live_promote_n\":" << n.column_flow_live_promote_n
+      << ",\"column_flow_probed_first_mesh_n\":"
+      << n.column_flow_probed_first_mesh_n
+      << ",\"column_flow_probed_relight_n\":" << n.column_flow_probed_relight_n
+      << ",\"column_flow_probed_seam_n\":" << n.column_flow_probed_seam_n
+      << ",\"column_flow_probed_promote_n\":" << n.column_flow_probed_promote_n
+      << ",\"column_flow_deferred_first_mesh_n\":"
+      << n.column_flow_deferred_first_mesh_n
+      << ",\"column_flow_deferred_relight_n\":"
+      << n.column_flow_deferred_relight_n
+      << ",\"column_flow_deferred_seam_n\":" << n.column_flow_deferred_seam_n
+      << ",\"column_flow_deferred_promote_n\":"
+      << n.column_flow_deferred_promote_n
+      << ",\"column_flow_dispatched_first_mesh_n\":"
+      << n.column_flow_dispatched_first_mesh_n
+      << ",\"column_flow_dispatched_relight_n\":"
+      << n.column_flow_dispatched_relight_n
+      << ",\"column_flow_dispatched_seam_n\":"
+      << n.column_flow_dispatched_seam_n
+      << ",\"column_flow_dispatched_promote_n\":"
+      << n.column_flow_dispatched_promote_n
+      << ",\"column_flow_dispatch_first_mesh_ms_max\":"
+      << n.column_flow_dispatch_first_mesh_ms_max
+      << ",\"column_flow_dispatch_relight_ms_max\":"
+      << n.column_flow_dispatch_relight_ms_max
+      << ",\"column_flow_dispatch_seam_ms_max\":"
+      << n.column_flow_dispatch_seam_ms_max
+      << ",\"column_flow_dispatch_promote_ms_max\":"
+      << n.column_flow_dispatch_promote_ms_max
+      << ",\"column_lighting_n\":" << n.column_lighting_n
+      << ",\"column_meshing_n\":" << n.column_meshing_n
+      << ",\"column_render_ready_n\":" << n.column_render_ready_n
+      << ",\"emerge_fsm_meshing_n\":" << n.emerge_fsm_meshing_n
+      << ",\"emerge_fsm_render_ready_n\":" << n.emerge_fsm_render_ready_n
+      << ",\"column_job_pending_light_n\":" << n.column_job_pending_light_n
+      << ",\"column_job_meshing_n\":" << n.column_job_meshing_n
+      << ",\"column_job_gpu_pending_n\":" << n.column_job_gpu_pending_n
+      << ",\"column_job_render_ready_n\":" << n.column_job_render_ready_n
+      << ",\"column_record_shadow_mismatch_n\":"
+      << n.column_record_shadow_mismatch_n
+      << ",\"column_record_shadow_stage_disagree_n\":"
+      << n.column_record_shadow_stage_disagree_n
+      << ",\"demand_stop_converged\":" << n.demand_stop_converged
+      << ",\"demand_unsat_geom\":" << n.demand_unsat_geom
+      << ",\"demand_unsat_light\":" << n.demand_unsat_light
+      << ",\"demand_unsat_face\":" << n.demand_unsat_face
+      << ",\"demand_unsat_coverage\":" << n.demand_unsat_coverage
+      << ",\"demand_unsat_retain\":" << n.demand_unsat_retain
+      << ",\"visual_obligation_shadow_sample_n\":"
+      << n.visual_obligation_shadow_sample_n
+      << ",\"visual_obligation_shadow_mismatch_n\":"
+      << n.visual_obligation_shadow_mismatch_n
+      << ",\"defect_class_primary\":" << n.defect_class_primary
+      << ",\"pending_light\":" << n.pending_light
+      << ",\"stream_pressure\":" << n.stream_pressure
+      << ",\"pending_light_focus\":" << n.pending_light_focus
+      << ",\"pending_light_focus_n\":" << n.pending_light_focus
+      << ",\"focus_cx\":" << n.focus_cx << ",\"focus_cz\":" << n.focus_cz
+      << ",\"underfeet_need\":" << n.underfeet_need
+      << ",\"underfeet_draw_ok\":" << n.underfeet_draw_ok
+      << ",\"underfeet_has_mesh\":" << n.underfeet_has_mesh
+      << ",\"underfeet_sticky\":" << n.underfeet_sticky
+      << ",\"underfeet_pending_light\":" << n.underfeet_pending_light
+      << ",\"underfeet_reason\":" << n.underfeet_reason
+      << ",\"underfeet_stage\":" << n.underfeet_stage
+      << ",\"underfeet_opaque_present\":" << n.underfeet_opaque_present
+      << ",\"underfeet_opaque_present_raw\":" << n.underfeet_opaque_present_raw
+      << ",\"underfeet_opaque_present_predicted\":"
+      << n.underfeet_opaque_present_predicted
+      << ",\"lighting_relight_deferred\":" << n.lighting_relight_deferred
+      << ",\"fog_pull_in_rd\":" << n.fog_pull_in_rd
+      << ",\"fog_pull_in_margin\":" << n.fog_pull_in_margin
+      << ",\"fog_pull_in_start_ratio\":" << n.fog_pull_in_start_ratio
+      << ",\"fog_presented_start_blocks\":" << n.fog_presented_start_blocks
+      << ",\"fog_presented_horizon_blocks\":" << n.fog_presented_horizon_blocks
+      << ",\"fog_hole_debt\":" << n.fog_hole_debt
+      << ",\"prior_lit_hold_n\":" << n.prior_lit_hold_n
+      << ",\"prior_lit_hold_age_max\":" << n.prior_lit_hold_age_max
+      << ",\"near_focus_holes\":" << n.near_focus_holes
+      << ",\"visual_holes\":" << n.visual_holes
+      << ",\"near_focus_hole_probe_ran\":" << n.near_focus_hole_probe_ran
+      << ",\"near_focus_hole_probe_result\":" << n.near_focus_hole_probe_result
+      << ",\"near_focus_hole_probe_memo_hit\":"
+      << n.near_focus_hole_probe_memo_hit
+      << ",\"near_focus_hole_probe_witness_valid\":"
+      << n.near_focus_hole_probe_witness_valid
+      << ",\"near_focus_hole_probe_witness_cx\":"
+      << n.near_focus_hole_probe_witness_cx
+      << ",\"near_focus_hole_probe_witness_cy\":"
+      << n.near_focus_hole_probe_witness_cy
+      << ",\"near_focus_hole_probe_witness_cz\":"
+      << n.near_focus_hole_probe_witness_cz
+      << ",\"near_focus_hole_probe_witness_resident\":"
+      << n.near_focus_hole_probe_witness_resident
+      << ",\"near_focus_hole_probe_witness_has_mesh\":"
+      << n.near_focus_hole_probe_witness_has_mesh
+      << ",\"near_focus_hole_probe_witness_drawable\":"
+      << n.near_focus_hole_probe_witness_drawable
+      << ",\"near_focus_hole_probe_witness_satisfying\":"
+      << n.near_focus_hole_probe_witness_satisfying
+      << ",\"near_focus_hole_probe_witness_dirty\":"
+      << n.near_focus_hole_probe_witness_dirty
+      << ",\"near_focus_hole_probe_witness_build_in_flight\":"
+      << n.near_focus_hole_probe_witness_build_in_flight
+      << ",\"near_focus_hole_probe_witness_pending_gpu_apply\":"
+      << n.near_focus_hole_probe_witness_pending_gpu_apply
+      << ",\"near_focus_hole_probe_witness_pending_gpu_queued\":"
+      << n.near_focus_hole_probe_witness_pending_gpu_queued
+      << ",\"near_focus_hole_probe_witness_soft_defer_held\":"
+      << n.near_focus_hole_probe_witness_soft_defer_held
+      << ",\"near_focus_hole_probe_witness_geometry_debt\":"
+      << n.near_focus_hole_probe_witness_geometry_debt
+      << ",\"near_focus_hole_probe_witness_repairable_debt\":"
+      << n.near_focus_hole_probe_witness_repairable_debt
+      << ",\"near_focus_hole_probe_witness_flow_ticket_valid\":"
+      << n.near_focus_hole_probe_witness_flow_ticket_valid
+      << ",\"near_focus_hole_probe_witness_flow_ticket_kind\":"
+      << n.near_focus_hole_probe_witness_flow_ticket_kind
+      << ",\"near_focus_hole_probe_witness_flow_ticket_priority\":"
+      << n.near_focus_hole_probe_witness_flow_ticket_priority
+      << ",\"near_focus_hole_probe_witness_column_job_stage\":"
+      << n.near_focus_hole_probe_witness_column_job_stage
+      << ",\"near_focus_hole_probe_witness_incarnation\":"
+      << n.near_focus_hole_probe_witness_incarnation
+      << ",\"near_focus_hole_probe_witness_content_revision\":"
+      << n.near_focus_hole_probe_witness_content_revision
+      << ",\"near_focus_hole_probe_witness_light_revision\":"
+      << n.near_focus_hole_probe_witness_light_revision
+      << ",\"near_focus_hole_probe_witness_mesh_revision\":"
+      << n.near_focus_hole_probe_witness_mesh_revision
+      << ",\"near_focus_hole_probe_witness_inflight_source_revision\":"
+      << n.near_focus_hole_probe_witness_inflight_source_revision
+      << ",\"near_focus_tracked_witness_valid\":"
+      << n.near_focus_tracked_witness_valid
+      << ",\"near_focus_tracked_witness_cx\":"
+      << n.near_focus_tracked_witness_cx
+      << ",\"near_focus_tracked_witness_cy\":"
+      << n.near_focus_tracked_witness_cy
+      << ",\"near_focus_tracked_witness_cz\":"
+      << n.near_focus_tracked_witness_cz
+      << ",\"near_focus_tracked_witness_age_frames\":"
+      << n.near_focus_tracked_witness_age_frames
+      << ",\"near_focus_tracked_witness_distance_blocks\":"
+      << n.near_focus_tracked_witness_distance_blocks
+      << ",\"near_focus_tracked_witness_fog_horizon_blocks\":"
+      << n.near_focus_tracked_witness_fog_horizon_blocks
+      << ",\"near_focus_tracked_witness_inside_fog\":"
+      << n.near_focus_tracked_witness_inside_fog
+      << ",\"near_focus_tracked_witness_outcome\":"
+      << n.near_focus_tracked_witness_outcome
+      << ",\"near_focus_tracked_witness_resident\":"
+      << n.near_focus_tracked_witness_resident
+      << ",\"near_focus_tracked_witness_has_mesh\":"
+      << n.near_focus_tracked_witness_has_mesh
+      << ",\"near_focus_tracked_witness_drawable\":"
+      << n.near_focus_tracked_witness_drawable
+      << ",\"near_focus_tracked_witness_satisfying\":"
+      << n.near_focus_tracked_witness_satisfying
+      << ",\"near_focus_tracked_witness_dirty\":"
+      << n.near_focus_tracked_witness_dirty
+      << ",\"near_focus_tracked_witness_build_in_flight\":"
+      << n.near_focus_tracked_witness_build_in_flight
+      << ",\"near_focus_tracked_witness_pending_gpu_apply\":"
+      << n.near_focus_tracked_witness_pending_gpu_apply
+      << ",\"near_focus_tracked_witness_geometry_debt\":"
+      << n.near_focus_tracked_witness_geometry_debt
+      << ",\"near_focus_tracked_witness_flow_ticket_valid\":"
+      << n.near_focus_tracked_witness_flow_ticket_valid
+      << ",\"near_focus_tracked_witness_column_job_stage\":"
+      << n.near_focus_tracked_witness_column_job_stage
+      << ",\"near_focus_tracked_witness_outcome_event\":"
+      << n.near_focus_tracked_witness_outcome_event
+      << ",\"near_focus_tracked_witness_resolved_before_fog_total\":"
+      << n.near_focus_tracked_witness_resolved_before_fog_total
+      << ",\"near_focus_tracked_witness_entered_fog_unready_total\":"
+      << n.near_focus_tracked_witness_entered_fog_unready_total
+      << ",\"near_focus_tracked_witness_resolved_after_fog_total\":"
+      << n.near_focus_tracked_witness_resolved_after_fog_total
+      << ",\"near_focus_tracked_witness_exited_fog_unready_total\":"
+      << n.near_focus_tracked_witness_exited_fog_unready_total
+      << ",\"near_focus_tracked_witness_sample_ms\":"
+      << n.near_focus_tracked_witness_sample_ms
+      << ",\"near_focus_holes_latched\":" << n.near_focus_holes_latched
+      << ",\"unfinished_visual\":" << n.unfinished_visual
+      << ",\"light_debt\":" << n.light_debt
+      << ",\"focus_missing_mesh\":" << n.focus_missing_mesh
+      << ",\"miss_cx\":" << n.miss_cx << ",\"miss_cy\":" << n.miss_cy
+      << ",\"miss_cz\":" << n.miss_cz << ",\"miss_horiz\":" << n.miss_horiz
+      << ",\"focus_miss_flow_ticket_kind\":" << n.focus_miss_flow_ticket_kind
+      << ",\"focus_miss_flow_ticket_priority\":"
+      << n.focus_miss_flow_ticket_priority
+      << ",\"focus_miss_column_job_stage\":" << n.focus_miss_column_job_stage
+      << ",\"focus_miss_mesh_dirty\":" << n.focus_miss_mesh_dirty
+      << ",\"focus_miss_build_in_flight\":" << n.focus_miss_build_in_flight
+      << ",\"focus_miss_pending_gpu_apply\":" << n.focus_miss_pending_gpu_apply
+      << ",\"focus_miss_drawable_mesh\":" << n.focus_miss_drawable_mesh
+      << ",\"focus_miss_satisfying_mesh\":" << n.focus_miss_satisfying_mesh
+      << ",\"focus_proxy_miss_cx\":" << n.focus_proxy_miss_cx
+      << ",\"focus_proxy_miss_cy\":" << n.focus_proxy_miss_cy
+      << ",\"focus_proxy_miss_cz\":" << n.focus_proxy_miss_cz
+      << ",\"focus_proxy_flow_ticket_kind\":" << n.focus_proxy_flow_ticket_kind
+      << ",\"focus_proxy_flow_ticket_priority\":"
+      << n.focus_proxy_flow_ticket_priority
+      << ",\"focus_proxy_column_job_stage\":" << n.focus_proxy_column_job_stage
+      << ",\"focus_proxy_mesh_dirty\":" << n.focus_proxy_mesh_dirty
+      << ",\"focus_proxy_build_in_flight\":" << n.focus_proxy_build_in_flight
+      << ",\"focus_proxy_pending_gpu_apply\":"
+      << n.focus_proxy_pending_gpu_apply
+      << ",\"focus_proxy_drawable_mesh\":" << n.focus_proxy_drawable_mesh
+      << ",\"focus_proxy_satisfying_mesh\":" << n.focus_proxy_satisfying_mesh
+      << ",\"focus_proxy_geometry_debt\":" << n.focus_proxy_geometry_debt
+      << ",\"focus_proxy_repairable_geometry_debt\":"
+      << n.focus_proxy_repairable_geometry_debt
+      << ",\"miss_screen_ray_candidate\":" << n.miss_screen_ray_candidate
+      << ",\"miss_screen_ray_selected_state_valid\":"
+      << n.miss_screen_ray_selected_state_valid
+      << ",\"miss_screen_ray_selected_drawable\":"
+      << n.miss_screen_ray_selected_drawable
+      << ",\"miss_screen_ray_selected_satisfying\":"
+      << n.miss_screen_ray_selected_satisfying
+      << ",\"miss_screen_ray_selected_repairable_geometry_debt\":"
+      << n.miss_screen_ray_selected_repairable_geometry_debt
+      << ",\"focus_dark_mesh\":" << n.focus_dark_mesh
+      << ",\"focus_provisional_light_preview\":"
+      << n.focus_provisional_light_preview
+      << ",\"focus_pending_dark\":" << n.focus_pending_dark
+      << ",\"focus_sticky_remesh\":" << n.focus_sticky_remesh
+      << ",\"visible_black_focus_n\":" << n.visible_black_focus_n
+      << ",\"visible_black_no_ticket_n\":" << n.visible_black_no_ticket_n
+      << ",\"visible_black_progress_n\":" << n.visible_black_progress_n
+      << ",\"visible_black_stalled_n\":" << n.visible_black_stalled_n
+      << ",\"visible_black_stale_lit_n\":" << n.visible_black_stale_lit_n
+      << ",\"visible_black_fully_dark_repair_n\":"
+      << n.visible_black_fully_dark_repair_n
+      << ",\"visible_black_fully_dark_no_ticket_n\":"
+      << n.visible_black_fully_dark_no_ticket_n
+      << ",\"visible_black_fully_dark_stalled_n\":"
+      << n.visible_black_fully_dark_stalled_n
+      << ",\"visible_black_legal_dark_n\":" << n.visible_black_legal_dark_n
+      << ",\"visible_black_census_mismatch\":"
+      << n.visible_black_census_mismatch
+      << ",\"draw_oracle_missing_resident_n\":"
+      << n.draw_oracle_missing_resident_n
+      << ",\"draw_oracle_missing_command_n\":"
+      << n.draw_oracle_missing_command_n
+      << ",\"draw_oracle_false_neg_cull_n\":" << n.draw_oracle_false_neg_cull_n
+      << ",\"draw_oracle_stale_vertex_light_n\":"
+      << n.draw_oracle_stale_vertex_light_n
+      << ",\"stale_vl_rev_n\":" << n.stale_vl_rev_n
+      << ",\"fully_dark_census_n\":" << n.fully_dark_census_n
+      << ",\"draw_oracle_legal_dark_n\":" << n.draw_oracle_legal_dark_n
+      << ",\"draw_oracle_correct_lit_proxy_n\":"
+      << n.draw_oracle_correct_lit_proxy_n
+      << ",\"draw_oracle_fully_dark_debt_n\":"
+      << n.draw_oracle_fully_dark_debt_n
+      << ",\"draw_oracle_fault_n\":" << n.draw_oracle_fault_n
+      << ",\"oldest_missing_resident_age_frames\":"
+      << n.oldest_missing_resident_age_frames
+      << ",\"oldest_stale_vertex_light_age_frames\":"
+      << n.oldest_stale_vertex_light_age_frames
+      << ",\"debt_age_grew_with_schedule_n\":"
+      << n.debt_age_grew_with_schedule_n
+      << ",\"focus_not_render_ready\":" << n.focus_not_render_ready
+      << ",\"focus_pressure\":" << n.focus_pressure
+      << ",\"focus_dirty_chunks\":" << n.focus_dirty_chunks
+      << ",\"focus_unfinished_ahead\":" << n.focus_unfinished_ahead
+      << ",\"focus_unfinished_behind\":" << n.focus_unfinished_behind
+      << ",\"mesh_discarded_late\":" << n.mesh_discarded_late
+      << ",\"mesh_discarded_late_epoch\":" << n.mesh_discarded_late_epoch
+      << ",\"mesh_discarded_late_job_mismatch\":"
+      << n.mesh_discarded_late_job_mismatch
+      << ",\"mesh_discarded_late_delta\":" << n.mesh_discarded_late_delta
+      << ",\"mesh_apply_stale\":" << n.mesh_apply_stale
+      << ",\"mesh_apply_stale_delta\":" << n.mesh_apply_stale_delta
+      << ",\"mesh_apply_stale_visual\":" << n.mesh_apply_stale_visual
+      << ",\"mesh_apply_stale_geom\":" << n.mesh_apply_stale_geom
+      << ",\"mesh_apply_stale_light\":" << n.mesh_apply_stale_light
+      << ",\"mesh_apply_stale_catalog\":" << n.mesh_apply_stale_catalog
+      << ",\"mesh_apply_stale_stamp_invalid\":"
+      << n.mesh_apply_stale_stamp_invalid
+      << ",\"mesh_apply_stale_geom_delta\":" << n.mesh_apply_stale_geom_delta
+      << ",\"mesh_apply_stale_light_delta\":" << n.mesh_apply_stale_light_delta
+      << ",\"mesh_apply_stale_catalog_delta\":"
+      << n.mesh_apply_stale_catalog_delta
+      << ",\"mesh_apply_stale_stamp_invalid_delta\":"
+      << n.mesh_apply_stale_stamp_invalid_delta
+      << ",\"mesh_apply_stale_rev\":" << n.mesh_apply_stale_rev
+      << ",\"mesh_apply_stale_geom_accepted\":"
+      << n.mesh_apply_stale_geom_accepted
+      << ",\"mesh_apply_stale_light_accepted\":"
+      << n.mesh_apply_stale_light_accepted
+      << ",\"mesh_apply_stale_accepted_refresh\":"
+      << n.mesh_apply_stale_accepted_refresh
+      << ",\"i3t_hold_empty_spoof_n\":" << n.i3t_hold_empty_spoof_n
+      << ",\"mesh_apply_stale_geom_accepted_delta\":"
+      << n.mesh_apply_stale_geom_accepted_delta
+      << ",\"mesh_apply_stale_light_accepted_delta\":"
+      << n.mesh_apply_stale_light_accepted_delta
+      << ",\"mesh_apply_stale_accepted_refresh_delta\":"
+      << n.mesh_apply_stale_accepted_refresh_delta
+      << ",\"i3t_hold_empty_spoof_delta\":" << n.i3t_hold_empty_spoof_delta
+      << ",\"mesh_apply_superseded\":" << n.mesh_apply_superseded
+      << ",\"mesh_apply_superseded_delta\":" << n.mesh_apply_superseded_delta
+      << ",\"mesh_apply_drop_no_active\":" << n.mesh_apply_drop_no_active
+      << ",\"mesh_apply_drop_no_active_delta\":"
+      << n.mesh_apply_drop_no_active_delta
+      << ",\"mesh_replace_hole_avoided\":" << n.mesh_replace_hole_avoided
+      << ",\"pub_reject_light_invalid\":" << n.pub_reject_light_invalid
+      << ",\"pub_reject_source_mismatch\":" << n.pub_reject_source_mismatch
+      << ",\"pub_reject_source_mismatch_delta\":"
+      << n.pub_reject_source_mismatch_delta
+      << ",\"pub_reject_other\":" << n.pub_reject_other
+      << ",\"pub_accept_first_publish\":" << n.pub_accept_first_publish
+      << ",\"pending_gpu_applies_n\":" << n.pending_gpu_applies_n
+      << ",\"pending_gpu_queued_n\":" << n.pending_gpu_queued_n
+      << ",\"pending_gpu_kicked_n\":" << n.pending_gpu_kicked_n
+      << ",\"gpu_mesh_slot_max_n\":" << n.gpu_mesh_slot_max_n
+      << ",\"gpu_mesh_slot_free_n\":" << n.gpu_mesh_slot_free_n
+      << ",\"gpu_mesh_slot_bound_n\":" << n.gpu_mesh_slot_bound_n
+      << ",\"gpu_mesh_slot_unbound_allocated_n\":"
+      << n.gpu_mesh_slot_unbound_allocated_n
+      << ",\"gpu_staging_allocation_failure_n\":"
+      << n.gpu_staging_allocation_failure_n
+      << ",\"gpu_staging_allocation_failure_delta\":"
+      << n.gpu_staging_allocation_failure_delta
+      << ",\"gpu_mesh_slot_eviction_n\":" << n.gpu_mesh_slot_eviction_n
+      << ",\"gpu_mesh_slot_no_victim_n\":" << n.gpu_mesh_slot_no_victim_n
+      << ",\"gpu_zero_quad_slot_release_n\":" << n.gpu_zero_quad_slot_release_n
+      << ",\"mesh_pipeline_pending_gpu_n\":" << n.mesh_pipeline_pending_gpu_n
+      << ",\"mesh_pipeline_async_inflight_n\":"
+      << n.mesh_pipeline_async_inflight_n
+      << ",\"mesh_pipeline_async_builder_inflight_n\":"
+      << n.mesh_pipeline_async_builder_inflight_n
+      << ",\"mesh_pipeline_gpu_extract_inflight_n\":"
+      << n.mesh_pipeline_gpu_extract_inflight_n
+      << ",\"mesh_pipeline_capture_pending_n\":"
+      << n.mesh_pipeline_capture_pending_n
+      << ",\"mesh_pipeline_completed_waiting_n\":"
+      << n.mesh_pipeline_completed_waiting_n
+      << ",\"mesh_pipeline_outstanding_n\":" << n.mesh_pipeline_outstanding_n
+      << ",\"mesh_pipeline_output_slots\":" << n.mesh_pipeline_output_slots
+      << ",\"mesh_pipeline_output_headroom_n\":"
+      << n.mesh_pipeline_output_headroom_n
+      << ",\"mesh_pipeline_backpressure_active\":"
+      << n.mesh_pipeline_backpressure_active
+      << ",\"mesh_pipeline_backpressure_reason\":"
+      << n.mesh_pipeline_backpressure_reason
+      << ",\"mesh_pipeline_schedule_requested_n\":"
+      << n.mesh_pipeline_schedule_requested_n
+      << ",\"mesh_pipeline_admission_schedule_cap_n\":"
+      << n.mesh_pipeline_admission_schedule_cap_n
+      << ",\"mesh_pipeline_available_schedule_cap_n\":"
+      << n.mesh_pipeline_available_schedule_cap_n
+      << ",\"mesh_pipeline_schedule_after_cap_n\":"
+      << n.mesh_pipeline_schedule_after_cap_n
+      << ",\"mesh_pipeline_first_mesh_cap_n\":"
+      << n.mesh_pipeline_first_mesh_cap_n
+      << ",\"mesh_pipeline_remesh_cap_n\":" << n.mesh_pipeline_remesh_cap_n
+      << ",\"gpu_kick_n\":" << n.gpu_kick_n
+      << ",\"gpu_kick_debt_forced_n\":" << n.gpu_kick_debt_forced_n
+      << ",\"gpu_kick_defer_reason\":\"" << n.gpu_kick_defer_reason << "\""
+      << ",\"gpu_kick_post_drain_n\":" << n.gpu_kick_post_drain_n
+      << ",\"gpu_kick_skip_no_queued_n\":" << n.gpu_kick_skip_no_queued_n
+      << ",\"gpu_finish_n\":" << n.gpu_finish_n
+      << ",\"gpu_finish_not_ready_n\":" << n.gpu_finish_not_ready_n
+      << ",\"mesh_schedule_final\":" << n.mesh_schedule_final
+      << ",\"mesh_drain_final\":" << n.mesh_drain_final
+      << ",\"mesh_admission_mode\":" << n.mesh_admission_mode
+      << ",\"post_load_ring_not_ready\":" << n.post_load_ring_not_ready
+      << ",\"enter_game_warmup_missing_greedy\":"
+      << n.enter_game_warmup_missing_greedy
+      << ",\"softdefer_capture_floor_hits\":" << n.softdefer_capture_floor_hits
+      << ",\"softdefer_capture_floor_hits_delta\":"
+      << n.softdefer_capture_floor_hits_delta
+      << ",\"softdefer_witness_retarget\":" << n.softdefer_witness_retarget
+      << ",\"softdefer_witness_retarget_delta\":"
+      << n.softdefer_witness_retarget_delta
+      << ",\"softdefer_ingress_witness_n\":" << n.softdefer_ingress_witness_n
+      << ",\"softdefer_capture_retarget_n\":" << n.softdefer_capture_retarget_n
+      << ",\"softdefer_capture_retarget_blocked_n\":"
+      << n.softdefer_capture_retarget_blocked_n
+      << ",\"fm_dirty_enqueue_n\":" << n.fm_dirty_enqueue_n
+      << ",\"fm_dirty_enqueue_from_markrelit_n\":"
+      << n.fm_dirty_enqueue_from_markrelit_n
+      << ",\"fm_dirty_enqueue_from_columnflow_n\":"
+      << n.fm_dirty_enqueue_from_columnflow_n
+      << ",\"admit_candidates_n\":" << n.admit_candidates_n
+      << ",\"admit_marked_n\":" << n.admit_marked_n
+      << ",\"mesh_pending_capture_n\":" << n.mesh_pending_capture_n
+      << ",\"mesh_schedule_retry_after_capture_n\":"
+      << n.mesh_schedule_retry_after_capture_n
+      << ",\"mesh_worker_inflight_n\":" << n.mesh_worker_inflight_n
+      << ",\"mesh_pending_capture_ready_n\":" << n.mesh_pending_capture_ready_n
+      << ",\"mesh_pending_capture_stale_n\":" << n.mesh_pending_capture_stale_n
+      << ",\"mesh_pending_capture_max_age\":" << n.mesh_pending_capture_max_age
+      << ",\"mesh_degraded_capture_n\":" << n.mesh_degraded_capture_n
+      << ",\"movement_speed\":" << n.movement_speed
+      << ",\"fm_dirty_drain_n\":" << n.fm_dirty_drain_n
+      << ",\"relight_fifo_priority_insert_n\":"
+      << n.relight_fifo_priority_insert_n
+      << ",\"ticketed_vb_consume_n\":" << n.ticketed_vb_consume_n
+      << ",\"admission_carve_out_frames\":" << n.admission_carve_out_frames
+      << ",\"admission_carve_out\":" << n.admission_carve_out
+      << ",\"seed_at_commit_n\":" << n.seed_at_commit_n
+      << ",\"backpressure_level\":" << n.backpressure_level
+      << ",\"softdefer_witness_horiz\":" << n.softdefer_witness_horiz
+      << ",\"softdefer_capture_pin_age\":" << n.softdefer_capture_pin_age
+      << ",\"miss_owner_stable_frames\":" << n.miss_owner_stable_frames
+      << ",\"miss_owner_hop_n\":" << n.miss_owner_hop_n
+      << ",\"softdefer_capture_budget\":" << n.softdefer_capture_budget
+      << ",\"frame_budget_ms\":" << n.frame_budget_ms
+      << ",\"capture_over_budget\":" << n.capture_over_budget
+      << ",\"heal_deferred_for_miss\":" << n.heal_deferred_for_miss
+      << ",\"stage_skip_remesh_pending_light\":"
+      << n.stage_skip_remesh_pending_light
+      << ",\"softdefer_empty_placeholder_n\":"
+      << n.softdefer_empty_placeholder_n
+      << ",\"softdefer_empty_stuck_n\":" << n.softdefer_empty_stuck_n
+      << ",\"softdefer_empty_stuck_cx\":" << n.softdefer_empty_stuck_cx
+      << ",\"softdefer_empty_stuck_cy\":" << n.softdefer_empty_stuck_cy
+      << ",\"softdefer_empty_stuck_cz\":" << n.softdefer_empty_stuck_cz
+      << ",\"softdefer_empty_stuck_horiz\":" << n.softdefer_empty_stuck_horiz
+      << ",\"softdefer_empty_age_max_frames\":"
+      << n.softdefer_empty_age_max_frames
+      << ",\"softdefer_empty_owned_n\":" << n.softdefer_empty_owned_n
+      << ",\"softdefer_owned_no_gpu_n\":" << n.softdefer_owned_no_gpu_n
+      << ",\"enter_settle_soft_force_with_debt\":"
+      << n.enter_settle_soft_force_with_debt
+      << ",\"mesh_warmup_timeout_dirty_residual\":"
+      << n.mesh_warmup_timeout_dirty_residual
+      << ",\"enter_soft_settle_blocked_dirty_residual\":"
+      << n.enter_soft_settle_blocked_dirty_residual
+      << ",\"enter_mesh_dirty_residual_n\":" << n.enter_mesh_dirty_residual_n
+      << ",\"visibility_debt\":" << n.visibility_debt
+      << ",\"visibility_debt_hinterland\":" << n.visibility_debt_hinterland
+      << ",\"visibility_debt_sample_valid\":" << n.visibility_debt_sample_valid
+      << ",\"visibility_debt_hinterland_sample_valid\":"
+      << n.visibility_debt_hinterland_sample_valid
+      << ",\"softdefer_empty_publish_avoided\":"
+      << n.softdefer_empty_publish_avoided
+      << ",\"softdefer_held_n\":" << n.softdefer_held_n
+      << ",\"softdefer_held_age_max\":" << n.softdefer_held_age_max
+      << ",\"empty_backlog_n\":" << n.empty_backlog_n
+      << ",\"phase_abort_heavy\":" << n.phase_abort_heavy
+      << ",\"skip_empty_emerge\":" << n.skip_empty_emerge
+      << ",\"abort_schedule_final\":" << n.abort_schedule_final
+      << ",\"abort_drain_final\":" << n.abort_drain_final
+      << ",\"rss_mb\":" << n.rss_mb << ",\"private_mb\":" << n.private_mb
+      << ",\"chunk_count\":" << n.chunk_count
+      << ",\"greedy_vertices\":" << n.greedy_vertices
+      << ",\"mesh_completed_n\":" << n.mesh_completed_n
+      << ",\"mesh_completed_cap\":" << n.mesh_completed_cap
+      << ",\"mesh_completed_discarded\":" << n.mesh_completed_discarded
+      << ",\"mesh_completed_discarded_delta\":"
+      << n.mesh_completed_discarded_delta
+      << ",\"relight_completed_n\":" << n.relight_completed_n
+      << ",\"relight_completed_cap\":" << n.relight_completed_cap
+      << ",\"relight_completed_discarded\":" << n.relight_completed_discarded
+      << ",\"relight_capture_col_horiz\":" << n.relight_capture_col_horiz
+      << ",\"relight_capture_finalize\":" << n.relight_capture_finalize
+      << ",\"relight_capture_hot_skip_draw_gate\":"
+      << n.relight_capture_hot_skip_draw_gate
+      << ",\"relight_capture_stop_reason\":" << n.relight_capture_stop_reason
+      << ",\"cooperative_streaming_tick_blocked\":"
+      << n.cooperative_streaming_tick_blocked
+      << ",\"relight_inflight_n\":" << n.relight_inflight_n
+      << ",\"relight_capture_inflight_n\":" << n.relight_capture_inflight_n
+      << ",\"relight_capture_inflight_limit\":"
+      << n.relight_capture_inflight_limit
+      << ",\"relight_capture_inflight_scan_n\":"
+      << n.relight_capture_inflight_scan_n
+      << ",\"relight_capture_band_cy_span\":" << n.relight_capture_band_cy_span
+      << ",\"relight_capture_full_n\":" << n.relight_capture_full_n
+      << ",\"relight_capture_neighbor_light_n\":"
+      << n.relight_capture_neighbor_light_n
+      << ",\"relight_witness_hold_n\":" << n.relight_witness_hold_n
+      << ",\"relight_apply_n\":" << n.relight_apply_n
+      << ",\"relight_apply_partial_n\":" << n.relight_apply_partial_n
+      << ",\"relight_apply_final_n\":" << n.relight_apply_final_n
+      << ",\"relight_deferred_far_pending\":" << n.relight_deferred_far_pending
+      << ",\"relight_deferred_far_enqueue_n\":"
+      << n.relight_deferred_far_enqueue_n
+      << ",\"relight_deferred_far_age_admit_n\":"
+      << n.relight_deferred_far_age_admit_n
+      << ",\"relight_note_skipped_dup_n\":" << n.relight_note_skipped_dup_n
+      << ",\"relight_finalize_dedup_n\":" << n.relight_finalize_dedup_n
+      << ",\"relight_note_suppressed_plateau_n\":"
+      << n.relight_note_suppressed_plateau_n
+      << ",\"relight_apply_plateau_boost_n\":"
+      << n.relight_apply_plateau_boost_n
+      << ",\"mark_relit_skip_already_dirty_n\":"
+      << n.mark_relit_skip_already_dirty_n
+      << ",\"mark_relit_skip_already_raa_n\":"
+      << n.mark_relit_skip_already_raa_n
+      << ",\"mark_relit_prefer_kick_n\":" << n.mark_relit_prefer_kick_n
+      << ",\"mark_relit_skip_inflight_n\":" << n.mark_relit_skip_inflight_n
+      << ",\"mark_relit_skip_enter_lit_quiesce_n\":"
+      << n.mark_relit_skip_enter_lit_quiesce_n
+      << ",\"mark_relit_schedule_n\":" << n.mark_relit_schedule_n
+      << ",\"mark_relit_h2_attempt_n\":" << n.mark_relit_h2_attempt_n
+      << ",\"mark_relit_h2_fire_n\":" << n.mark_relit_h2_fire_n
+      << ",\"mark_relit_h2_fail_no_ticket_n\":"
+      << n.mark_relit_h2_fail_no_ticket_n
+      << ",\"mark_relit_h2_fail_progress_n\":"
+      << n.mark_relit_h2_fail_progress_n
+      << ",\"mark_relit_hit_stalled_n\":" << n.mark_relit_hit_stalled_n
+      << ",\"mark_relit_force_stale_n\":" << n.mark_relit_force_stale_n
+      << ",\"stalled_sample_n\":" << n.stalled_sample_n
+      << ",\"stalled_sample_has_ticket_n\":" << n.stalled_sample_has_ticket_n
+      << ",\"stalled_sample_pending_light_n\":"
+      << n.stalled_sample_pending_light_n
+      << ",\"mark_relit_enqueue_first_mesh_n\":"
+      << n.mark_relit_enqueue_first_mesh_n
+      << ",\"mark_relit_invoked_n\":" << n.mark_relit_invoked_n
+      << ",\"mark_missing_primary_n\":" << n.mark_missing_primary_n
+      << ",\"mark_relit_path_primary_consume_n\":"
+      << n.mark_relit_path_primary_consume_n
+      << ",\"stale_probe_n\":" << n.stale_probe_n
+      << ",\"mark_relit_total_ms\":" << n.mark_relit_total_ms
+      << ",\"mark_relit_setup_ms\":" << n.mark_relit_setup_ms
+      << ",\"mark_relit_primary_column_ms\":" << n.mark_relit_primary_column_ms
+      << ",\"mark_relit_snapshot_ms\":" << n.mark_relit_snapshot_ms
+      << ",\"mark_relit_plan_ms\":" << n.mark_relit_plan_ms
+      << ",\"mark_relit_exec_ms\":" << n.mark_relit_exec_ms
+      << ",\"mark_relit_mark_dirty_ms\":" << n.mark_relit_mark_dirty_ms
+      << ",\"mark_relit_band_ms\":" << n.mark_relit_band_ms
+      << ",\"mark_relit_flow_query_ms\":" << n.mark_relit_flow_query_ms
+      << ",\"mark_relit_neighbor_seam_ms\":" << n.mark_relit_neighbor_seam_ms
+      << ",\"mark_relit_prefetch_ms\":" << n.mark_relit_prefetch_ms
+      << ",\"mark_relit_orphan_ground_ms\":" << n.mark_relit_orphan_ground_ms
+      << ",\"mark_relit_empty_relit_ms\":" << n.mark_relit_empty_relit_ms
+      << ",\"mark_relit_bands_n\":" << n.mark_relit_bands_n
+      << ",\"mark_relit_suppress_enter_settled_n\":"
+      << n.mark_relit_suppress_enter_settled_n
+      << ",\"sticky_insert_stale_after_apply_n\":"
+      << n.sticky_insert_stale_after_apply_n
+      << ",\"sticky_insert_seam_n\":" << n.sticky_insert_seam_n
+      << ",\"sticky_insert_other_n\":" << n.sticky_insert_other_n
+      << ",\"sticky_erase_drawable_n\":" << n.sticky_erase_drawable_n
+      << ",\"sticky_erase_pending_clear_n\":" << n.sticky_erase_pending_clear_n
+      << ",\"sticky_erase_pruned_far_n\":" << n.sticky_erase_pruned_far_n
+      << ",\"sticky_erase_remesh_commit_n\":" << n.sticky_erase_remesh_commit_n
+      << ",\"sticky_erase_other_n\":" << n.sticky_erase_other_n
+      << ",\"dirty_n\":" << n.dirty_n
+      << ",\"pending_light_n\":" << n.pending_light_n
+      << ",\"relight_fifo_n\":" << n.relight_fifo_n
+      << ",\"dirty_dropped\":" << n.dirty_dropped
+      << ",\"pending_light_dropped\":" << n.pending_light_dropped
+      << ",\"pending_light_trim_emerge_n\":" << n.pending_light_trim_emerge_n
+      << ",\"pending_light_trim_memory_n\":" << n.pending_light_trim_memory_n
+      << ",\"relight_fifo_dropped\":" << n.relight_fifo_dropped
+      << ",\"relight_fifo_trim_deferred_total\":"
+      << n.relight_fifo_trim_deferred_total
+      << ",\"relight_fifo_overflow_evicted_total\":"
+      << n.relight_fifo_overflow_dropped_total
+      << ",\"relight_false_clear_n\":" << n.relight_false_clear_n
+      << ",\"gpu_pool_used_mb\":" << n.gpu_pool_used_mb
+      << ",\"gpu_pool_cap_mb\":" << n.gpu_pool_cap_mb
+      << ",\"gpu_draw_cmds\":" << n.gpu_draw_cmds
+      << ",\"gpu_cull_ms\":" << n.gpu_cull_ms
+      << ",\"gpu_cull_cpu_ms\":" << n.gpu_cull_cpu_ms
+      << ",\"gpu_cull_submit_cpu_ms\":" << n.gpu_cull_submit_cpu_ms
+      << ",\"gpu_cull_exec_ms\":" << n.gpu_cull_exec_ms
+      << ",\"opaque_mdi_cull_total_ms\":" << n.opaque_mdi_cull_total_ms
+      << ",\"opaque_mdi_cull_aabb_probe_ms\":"
+      << n.opaque_mdi_cull_aabb_probe_ms
+      << ",\"opaque_mdi_cull_fallback_ms\":" << n.opaque_mdi_cull_fallback_ms
+      << ",\"opaque_mdi_cull_setup_ms\":" << n.opaque_mdi_cull_setup_ms
+      << ",\"opaque_mdi_cull_query_poll_ms\":"
+      << n.opaque_mdi_cull_query_poll_ms
+      << ",\"opaque_mdi_cull_post_submit_ms\":"
+      << n.opaque_mdi_cull_post_submit_ms
+      << ",\"opaque_mdi_cull_stats_poll_ms\":"
+      << n.opaque_mdi_cull_stats_poll_ms
+      << ",\"opaque_mdi_cull_stats_fence_poll_ms\":"
+      << n.opaque_mdi_cull_stats_fence_poll_ms
+      << ",\"opaque_mdi_cull_stats_buffer_read_ms\":"
+      << n.opaque_mdi_cull_stats_buffer_read_ms
+      << ",\"opaque_mdi_cull_stats_arm_ms\":" << n.opaque_mdi_cull_stats_arm_ms
+      << ",\"opaque_mdi_cull_batch_state_ms\":"
+      << n.opaque_mdi_cull_batch_state_ms
+      << ",\"opaque_mdi_cull_post_submit_other_ms\":"
+      << n.opaque_mdi_cull_post_submit_other_ms
+      << ",\"opaque_mdi_cull_unattributed_ms\":"
+      << n.opaque_mdi_cull_unattributed_ms
+      << ",\"vertex_pool_fill\":" << n.vertex_pool_fill
+      << ",\"gpu_cull_indirect\":" << n.gpu_cull_indirect
+      << ",\"opaque_cmd_total\":" << n.opaque_cmd_total
+      << ",\"opaque_cmd_on\":" << n.opaque_cmd_on
+      << ",\"opaque_gpu_packed_n\":" << n.opaque_gpu_packed_n
+      << ",\"opaque_draw_n\":" << n.opaque_draw_n
+      << ",\"opaque_refs_cpu_vis\":" << n.opaque_refs_cpu_vis
+      << ",\"opaque_refs_render_ready\":" << n.opaque_refs_render_ready
+      << ",\"opaque_mdi_eligible\":" << n.opaque_mdi_eligible
+      << ",\"cross_batch_count\":" << n.cross_batch_count
+      << ",\"cpu_aabb_would_on\":" << n.cpu_aabb_would_on
+      << ",\"edit_immediate_n\":" << n.edit_immediate_n
+      << ",\"edit_dirty_n\":" << n.edit_dirty_n
+      << ",\"edit_neighbor_pending_frames\":" << n.edit_neighbor_pending_frames
+      << ",\"pool_unsync_uploads\":" << n.pool_unsync_uploads
+      << ",\"pool_fence_wait_ms\":" << n.pool_fence_wait_ms
+      << ",\"pool_retired_pending_n\":" << n.pool_retired_pending_n
+      << ",\"pool_free_slot_n\":" << n.pool_free_slot_n
+      << ",\"pool_retired_reclaimed_n\":" << n.pool_retired_reclaimed_n
+      << ",\"pool_retired_reclaimed_delta\":" << n.pool_retired_reclaimed_delta
+      << ",\"pool_fence_timeout_n\":" << n.pool_fence_timeout_n
+      << ",\"pool_fence_timeout_delta\":" << n.pool_fence_timeout_delta
+      << ",\"pool_reserve_bump_n\":" << n.pool_reserve_bump_n
+      << ",\"pool_reserve_bump_delta\":" << n.pool_reserve_bump_delta
+      << ",\"transparent_sort_rev_changed\":" << n.transparent_sort_rev_changed
+      << ",\"transparent_upload_full_n\":" << n.transparent_upload_full_n
+      << ",\"transparent_cmd_reorder_n\":" << n.transparent_cmd_reorder_n
+      << ",\"transparent_order_only_fail_reason\":"
+      << n.transparent_order_only_fail_reason
+      << ",\"transparent_batch_n\":" << n.transparent_batch_n
+      << ",\"fluid_transparent_ref_n\":" << n.fluid_transparent_ref_n
+      << ",\"fluid_transparent_index_n\":" << n.fluid_transparent_index_n
+      << ",\"fluid_gpu_batch_n\":" << n.fluid_gpu_batch_n
+      << ",\"fluid_gpu_index_n\":" << n.fluid_gpu_index_n
+      << ",\"fluid_packed_range_n\":" << n.fluid_packed_range_n
+      << ",\"fluid_packed_quad_n\":" << n.fluid_packed_quad_n
+      << ",\"fluid_draw_call_n\":" << n.fluid_draw_call_n
+      << ",\"fluid_submitted_index_capacity_n\":"
+      << n.fluid_submitted_index_capacity_n
+      << ",\"fluid_shell_depth_call_n\":" << n.fluid_shell_depth_call_n
+      << ",\"fluid_color_pass_call_n\":" << n.fluid_color_pass_call_n
+      << ",\"chunk_meshed_culled0\":" << n.chunk_meshed_culled0
+      << ",\"chunk_meshed_unlit\":" << n.chunk_meshed_unlit
+      << ",\"chunk_meshed_unlit_hidden\":" << n.chunk_meshed_unlit_hidden
+      << ",\"chunk_meshed_unlit_preview\":" << n.chunk_meshed_unlit_preview
+      << ",\"chunk_not_ready\":" << n.chunk_not_ready
+      << ",\"dark_face_near_n\":" << n.dark_face_near_n
+      << ",\"dark_face_stale_near_n\":" << n.dark_face_stale_near_n
+      << ",\"dark_face_void_near_n\":" << n.dark_face_void_near_n
+      << ",\"dark_face_bx\":" << n.dark_face_bx
+      << ",\"dark_face_by\":" << n.dark_face_by
+      << ",\"dark_face_bz\":" << n.dark_face_bz
+      << ",\"dark_face_cx\":" << n.dark_face_cx
+      << ",\"dark_face_cy\":" << n.dark_face_cy
+      << ",\"dark_face_cz\":" << n.dark_face_cz
+      << ",\"dark_face_block_id\":" << n.dark_face_block_id
+      << ",\"dark_face_index\":" << n.dark_face_index
+      << ",\"dark_face_dist\":" << n.dark_face_dist
+      << ",\"gpu_mesh_vbo_dispatch\":" << n.gpu_mesh_vbo_dispatch
+      << ",\"gpu_light_seed_apply\":" << n.gpu_light_seed_apply
+      << ",\"gpu_mask_readback\":" << n.gpu_mask_readback
+      << ",\"gpu_transparent_sort_readback\":"
+      << n.gpu_transparent_sort_readback
+      << ",\"gpu_cull_stats_readback\":" << n.gpu_cull_stats_readback
+      << ",\"cull_stats_sync_read_n\":" << n.cull_stats_sync_read_n
+      << ",\"frame_deadline_remaining_ms\":" << n.frame_deadline_remaining_ms
+      << ",\"publication_progress_unit_n\":" << n.publication_progress_unit_n
+      << ",\"publication_overload_retain_n\":"
+      << n.publication_overload_retain_n
+      << ",\"publication_incomplete_material_n\":"
+      << n.publication_incomplete_material_n
+      << ",\"publication_oom_retain_n\":" << n.publication_oom_retain_n
+      << ",\"pubver_changed_without_fresh_n\":"
+      << n.pubver_changed_without_fresh_n
+      << ",\"pass_mesh_rev_lag_max\":" << n.pass_mesh_rev_lag_max
+      << ",\"pass_packed_without_mdi_resident_n\":"
+      << n.pass_packed_without_mdi_resident_n
+      << ",\"pass_mdi_stale_gpu_resident_n\":"
+      << n.pass_mdi_stale_gpu_resident_n
+      << ",\"pass_dual_backend_same_coord_n\":"
+      << n.pass_dual_backend_same_coord_n
+      << ",\"publication_material_block_id_flip_n\":"
+      << n.publication_material_block_id_flip_n
+      << ",\"gpu_blocklight_flood\":" << n.gpu_blocklight_flood
+      << ",\"gpu_fluid_readback\":" << n.gpu_fluid_readback
+      << ",\"gpu_light_readback\":" << n.gpu_light_readback
+      << ",\"gpu_opaque_emit_gpu\":" << n.gpu_opaque_emit_gpu
+      << ",\"gpu_transparent_sort_gpu\":" << n.gpu_transparent_sort_gpu
+      << ",\"gpu_fallback\":" << n.gpu_fallback
+      << ",\"gpu_fluid_scan_on\":" << n.gpu_fluid_scan_on
+      << ",\"backend_mesher\":\"" << n.backend_mesher << "\""
+      << ",\"backend_store\":\"" << n.backend_store << "\""
+      << ",\"backend_cull\":\"" << n.backend_cull << "\""
+      << ",\"backend_fluid\":\"" << n.backend_fluid << "\""
+      << ",\"backend_lighting_mode\":\"" << n.backend_lighting_mode << "\""
+      << ",\"caps_has_compute\":" << n.caps_has_compute
+      << ",\"caps_has_ssbo\":" << n.caps_has_ssbo
+      << ",\"caps_probe_completed\":" << n.caps_probe_completed
+      << ",\"android_gpu_user_pref\":" << n.android_gpu_user_pref
+      << ",\"android_gpu_effective\":" << n.android_gpu_effective
+      << ",\"android_gpu_deny_reason\":\"" << n.android_gpu_deny_reason << "\""
+      << ",\"gl_version\":\"" << n.gl_version << "\""
+      << ",\"gl_renderer\":\"" << n.gl_renderer << "\""
+      << ",\"memory_pressure\":" << n.memory_pressure
+      << ",\"keep_margin_eff\":" << n.keep_margin_eff
+      << ",\"buffer_expand_events\":" << n.buffer_expand_events
+      << ",\"black_sticky\":" << n.focus_sticky_remesh
+      << ",\"visible_black_focus_n\":" << n.visible_black_focus_n
+      << ",\"visible_black_no_ticket_n\":" << n.visible_black_no_ticket_n
+      << ",\"visible_black_progress_n\":" << n.visible_black_progress_n
+      << ",\"visible_black_stalled_n\":" << n.visible_black_stalled_n
+      << ",\"visible_black_stale_lit_n\":" << n.visible_black_stale_lit_n
+      << ",\"visible_black_fully_dark_repair_n\":"
+      << n.visible_black_fully_dark_repair_n
+      << ",\"visible_black_fully_dark_no_ticket_n\":"
+      << n.visible_black_fully_dark_no_ticket_n
+      << ",\"visible_black_fully_dark_stalled_n\":"
+      << n.visible_black_fully_dark_stalled_n
+      << ",\"visible_black_legal_dark_n\":" << n.visible_black_legal_dark_n
+      << ",\"visible_black_census_mismatch\":"
+      << n.visible_black_census_mismatch
+      << ",\"draw_oracle_missing_resident_n\":"
+      << n.draw_oracle_missing_resident_n
+      << ",\"draw_oracle_missing_command_n\":"
+      << n.draw_oracle_missing_command_n
+      << ",\"draw_oracle_false_neg_cull_n\":" << n.draw_oracle_false_neg_cull_n
+      << ",\"draw_oracle_stale_vertex_light_n\":"
+      << n.draw_oracle_stale_vertex_light_n
+      << ",\"stale_vl_rev_n\":" << n.stale_vl_rev_n
+      << ",\"fully_dark_census_n\":" << n.fully_dark_census_n
+      << ",\"draw_oracle_legal_dark_n\":" << n.draw_oracle_legal_dark_n
+      << ",\"draw_oracle_correct_lit_proxy_n\":"
+      << n.draw_oracle_correct_lit_proxy_n
+      << ",\"draw_oracle_fully_dark_debt_n\":"
+      << n.draw_oracle_fully_dark_debt_n
+      << ",\"draw_oracle_fault_n\":" << n.draw_oracle_fault_n
+      << ",\"oldest_missing_resident_age_frames\":"
+      << n.oldest_missing_resident_age_frames
+      << ",\"oldest_stale_vertex_light_age_frames\":"
+      << n.oldest_stale_vertex_light_age_frames
+      << ",\"debt_age_grew_with_schedule_n\":"
+      << n.debt_age_grew_with_schedule_n << ",\"pending_cols\":\""
+      << n.pending_cols << "\""
+      << ",\"max_wall_ms\":" << n.max_wall_ms
+      << ",\"max_stream_ms\":" << n.max_stream_ms
+      << ",\"max_update_streaming_ms\":" << n.max_update_streaming_ms
+      << ",\"max_update_streaming_pre_core_ms\":"
+      << n.max_update_streaming_pre_core_ms
+      << ",\"max_update_streaming_post_core_ms\":"
+      << n.max_update_streaming_post_core_ms
+      << ",\"max_altitude_surface_query_ms\":"
+      << n.max_altitude_surface_query_ms
+      << ",\"max_mesh_emerge_ms\":" << n.max_mesh_emerge_ms
+      << ",\"max_phys_ms\":" << n.max_phys_ms
+      << ",\"max_dirty\":" << n.max_dirty
+      << ",\"max_ring_blocked\":" << n.max_ring_blocked
+      << ",\"max_pending_light\":" << n.max_pending_light
+      << ",\"frames\":" << n.frames << ",\"spikes\":" << n.spikes << "}\n";
   if (flush)
   {
     s.Jsonl.flush();
@@ -3945,18 +3780,18 @@ void LogLine(const FrameNumbers &n, const char *kind, int frames,
       << " stream_ms=" << n.stream_ms << " phys_ms=" << n.phys_ms
       << " mesh_emerge_ms=" << n.mesh_emerge_ms << " scene_ms=" << n.scene_ms
       << " Dirty=" << n.dirty << " GenQ=" << n.gen_q
-      << " MeshAsync=" << n.mesh_async << " ring_blocked=" << n.stream_ring_blocked
+      << " MeshAsync=" << n.mesh_async
+      << " ring_blocked=" << n.stream_ring_blocked
       << " near_skip=" << n.stream_near_skipped
       << " pending_light=" << n.pending_light
       << " stream_pressure=" << n.stream_pressure
-      << " pending_light_focus=" << n.pending_light_focus
-      << " focus=(" << n.focus_cx << "," << n.focus_cz << ")"
+      << " pending_light_focus=" << n.pending_light_focus << " focus=("
+      << n.focus_cx << "," << n.focus_cz << ")"
       << " underfeet=" << n.underfeet_need << " visual_holes=" << n.visual_holes
       << " unfinished=" << n.unfinished_visual
       << " not_render_ready=" << n.focus_not_render_ready
       << " pending_dark=" << n.focus_pending_dark
-      << " sticky=" << n.focus_sticky_remesh
-      << " holes=" << n.near_focus_holes;
+      << " sticky=" << n.focus_sticky_remesh << " holes=" << n.near_focus_holes;
   if (n.dark_face_near_n > 0)
   {
     oss << " dark_face_n=" << n.dark_face_near_n << " dark_block=("
@@ -4014,8 +3849,7 @@ void Accumulate(Session &s, const FrameNumbers &n)
   s.AccumColumnEmergeStageSampleMs += n.column_emerge_stage_sample_ms;
   s.AccumColumnEmergeFocusJobsMs += n.column_emerge_focus_jobs_ms;
   s.AccumColumnEmergeShadowCensusMs += n.column_emerge_shadow_census_ms;
-  s.AccumColumnEmergeDemandBreakdownMs +=
-      n.column_emerge_demand_breakdown_ms;
+  s.AccumColumnEmergeDemandBreakdownMs += n.column_emerge_demand_breakdown_ms;
   s.AccumColumnEmergeDemandStopMs += n.column_emerge_demand_stop_ms;
   s.AccumChunkDemandMaintenanceMs += n.chunk_demand_maintenance_ms;
   s.AccumColumnEmergeStageSampleCount += n.column_emerge_stage_sample_n;
@@ -4058,10 +3892,8 @@ void Accumulate(Session &s, const FrameNumbers &n)
   s.AccumCameraFreeMoveShare += n.camera_free_move_share;
   s.AccumPrepRefreshPressureMs += n.prep_refresh_pressure_ms;
   s.AccumPrepRefreshMissMs += n.prep_refresh_miss_ms;
-  s.AccumPrepRefreshMissRadiusQueryMs +=
-      n.prep_refresh_miss_radius_query_ms;
-  s.AccumPrepRefreshScreenRayProbeMs +=
-      n.prep_refresh_screen_ray_probe_ms;
+  s.AccumPrepRefreshMissRadiusQueryMs += n.prep_refresh_miss_radius_query_ms;
+  s.AccumPrepRefreshScreenRayProbeMs += n.prep_refresh_screen_ray_probe_ms;
   s.AccumPrepRefreshFindNearestMs += n.prep_refresh_find_nearest_ms;
   s.AccumPrepRefreshMissOtherMs += n.prep_refresh_miss_other_ms;
   s.AccumPrepRefreshPendingMs += n.prep_refresh_pending_ms;
@@ -4121,11 +3953,9 @@ void Accumulate(Session &s, const FrameNumbers &n)
   s.MaxUpdateStreamingMs =
       (std::max)(s.MaxUpdateStreamingMs, n.update_streaming_ms);
   s.MaxUpdateStreamingPreCoreMs =
-      (std::max)(s.MaxUpdateStreamingPreCoreMs,
-                 n.update_streaming_pre_core_ms);
-  s.MaxUpdateStreamingPostCoreMs =
-      (std::max)(s.MaxUpdateStreamingPostCoreMs,
-                 n.update_streaming_post_core_ms);
+      (std::max)(s.MaxUpdateStreamingPreCoreMs, n.update_streaming_pre_core_ms);
+  s.MaxUpdateStreamingPostCoreMs = (std::max)(s.MaxUpdateStreamingPostCoreMs,
+                                              n.update_streaming_post_core_ms);
   s.MaxAltitudeSurfaceQueryMs =
       (std::max)(s.MaxAltitudeSurfaceQueryMs, n.altitude_surface_query_ms);
   s.MaxMeshEmergeMs = (std::max)(s.MaxMeshEmergeMs, n.mesh_emerge_ms);
@@ -4162,14 +3992,11 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
   avg.fluid_map_gpu_ms = s.AccumFluidGpuMs * inv;
   avg.stream_ms = s.AccumStreamMs * inv;
   avg.mesh_emerge_ms = s.AccumMeshEmergeMs * inv;
-  avg.mesh_emerge_coordinator_ms =
-      s.AccumMeshEmergeCoordinatorMs * inv;
-  avg.mesh_emerge_post_telemetry_ms =
-      s.AccumMeshEmergePostTelemetryMs * inv;
+  avg.mesh_emerge_coordinator_ms = s.AccumMeshEmergeCoordinatorMs * inv;
+  avg.mesh_emerge_post_telemetry_ms = s.AccumMeshEmergePostTelemetryMs * inv;
   avg.mesh_emerge_post_stage_sample_ms =
       s.AccumMeshEmergePostStageSampleMs * inv;
-  avg.mesh_emerge_post_gpu_counts_ms =
-      s.AccumMeshEmergePostGpuCountsMs * inv;
+  avg.mesh_emerge_post_gpu_counts_ms = s.AccumMeshEmergePostGpuCountsMs * inv;
   avg.mesh_emerge_post_mesh_snapshot_ms =
       s.AccumMeshEmergePostMeshSnapshotMs * inv;
   avg.mesh_emerge_post_capture_store_ms =
@@ -4180,53 +4007,39 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
       s.AccumMeshEmergePostUnattributedMs * inv;
   avg.mesh_emerge_player_relight_burst_ms =
       s.AccumMeshEmergePlayerRelightBurstMs * inv;
-  avg.column_emerge_stage_sample_ms =
-      s.AccumColumnEmergeStageSampleMs * inv;
-  avg.column_emerge_focus_jobs_ms =
-      s.AccumColumnEmergeFocusJobsMs * inv;
-  avg.column_emerge_shadow_census_ms =
-      s.AccumColumnEmergeShadowCensusMs * inv;
+  avg.column_emerge_stage_sample_ms = s.AccumColumnEmergeStageSampleMs * inv;
+  avg.column_emerge_focus_jobs_ms = s.AccumColumnEmergeFocusJobsMs * inv;
+  avg.column_emerge_shadow_census_ms = s.AccumColumnEmergeShadowCensusMs * inv;
   avg.column_emerge_demand_breakdown_ms =
       s.AccumColumnEmergeDemandBreakdownMs * inv;
-  avg.column_emerge_demand_stop_ms =
-      s.AccumColumnEmergeDemandStopMs * inv;
-  avg.chunk_demand_maintenance_ms =
-      s.AccumChunkDemandMaintenanceMs * inv;
-  avg.column_emerge_stage_sample_n =
-      s.AccumColumnEmergeStageSampleCount * inv;
+  avg.column_emerge_demand_stop_ms = s.AccumColumnEmergeDemandStopMs * inv;
+  avg.chunk_demand_maintenance_ms = s.AccumChunkDemandMaintenanceMs * inv;
+  avg.column_emerge_stage_sample_n = s.AccumColumnEmergeStageSampleCount * inv;
   avg.column_emerge_stage_sample_age_ms =
       s.AccumColumnEmergeStageSampleAgeMs * inv;
   avg.world_streaming_phase_ms = s.AccumWorldStreamingPhaseMs * inv;
   avg.update_streaming_ms = s.AccumUpdateStreamingMs * inv;
-  avg.update_streaming_pre_core_ms =
-      s.AccumUpdateStreamingPreCoreMs * inv;
-  avg.update_streaming_post_core_ms =
-      s.AccumUpdateStreamingPostCoreMs * inv;
+  avg.update_streaming_pre_core_ms = s.AccumUpdateStreamingPreCoreMs * inv;
+  avg.update_streaming_post_core_ms = s.AccumUpdateStreamingPostCoreMs * inv;
   avg.update_streaming_post_core_telemetry_ms =
       s.AccumUpdateStreamingPostCoreTelemetryMs * inv;
   avg.altitude_surface_query_ms = s.AccumAltitudeSurfaceQueryMs * inv;
   avg.async_chunk_systems_ms = s.AccumAsyncChunkSystemsMs * inv;
-  avg.async_chunk_pre_scheduler_ms =
-      s.AccumAsyncChunkPreSchedulerMs * inv;
-  avg.async_chunk_scheduler_tick_ms =
-      s.AccumAsyncChunkSchedulerTickMs * inv;
-  avg.async_chunk_post_scheduler_ms =
-      s.AccumAsyncChunkPostSchedulerMs * inv;
+  avg.async_chunk_pre_scheduler_ms = s.AccumAsyncChunkPreSchedulerMs * inv;
+  avg.async_chunk_scheduler_tick_ms = s.AccumAsyncChunkSchedulerTickMs * inv;
+  avg.async_chunk_post_scheduler_ms = s.AccumAsyncChunkPostSchedulerMs * inv;
   avg.async_chunk_io_drain_ms = s.AccumAsyncChunkIoDrainMs * inv;
   avg.async_chunk_io_light_flags_snapshot_ms =
       s.AccumAsyncChunkIoLightFlagsSnapshotMs * inv;
   avg.async_chunk_io_light_flags_enqueue_ms =
       s.AccumAsyncChunkIoLightFlagsEnqueueMs * inv;
-  avg.relight_capture_lock_wait_ms =
-      s.AccumRelightCaptureLockWaitMs * inv;
+  avg.relight_capture_lock_wait_ms = s.AccumRelightCaptureLockWaitMs * inv;
   avg.relight_snapshot_copy_ms = s.AccumRelightSnapshotCopyMs * inv;
-  avg.relight_dependency_stamp_ms =
-      s.AccumRelightDependencyStampMs * inv;
+  avg.relight_dependency_stamp_ms = s.AccumRelightDependencyStampMs * inv;
   avg.relight_submit_setup_ms = s.AccumRelightSubmitSetupMs * inv;
   avg.relight_queue_submit_ms = s.AccumRelightQueueSubmitMs * inv;
   avg.relight_apply_policy_ms = s.AccumRelightApplyPolicyMs * inv;
-  avg.relight_apply_validation_ms =
-      s.AccumRelightApplyValidationMs * inv;
+  avg.relight_apply_validation_ms = s.AccumRelightApplyValidationMs * inv;
   avg.async_io_ms = s.AccumAsyncIoMs * inv;
   avg.scene_ms = s.AccumSceneMs * inv;
   avg.phys_ms = s.AccumPhysMs * inv;
@@ -4236,22 +4049,19 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
   avg.camera_move_applied_xz = s.AccumCameraMoveAppliedXz * inv;
   avg.camera_move_attempt_substeps = s.AccumCameraMoveAttemptSubsteps * inv;
   avg.camera_move_blocked_substeps = s.AccumCameraMoveBlockedSubsteps * inv;
-  avg.camera_move_blocked_x_substeps =
-      s.AccumCameraMoveBlockedXSubsteps * inv;
-  avg.camera_move_blocked_z_substeps =
-      s.AccumCameraMoveBlockedZSubsteps * inv;
-  avg.camera_flight_ground_contacts =
-      s.AccumCameraFlightGroundContacts * inv;
+  avg.camera_move_blocked_x_substeps = s.AccumCameraMoveBlockedXSubsteps * inv;
+  avg.camera_move_blocked_z_substeps = s.AccumCameraMoveBlockedZSubsteps * inv;
+  avg.camera_flight_ground_contacts = s.AccumCameraFlightGroundContacts * inv;
   avg.camera_free_move_share = s.AccumCameraFreeMoveShare * inv;
-  // R4.6.1: period avg/max for prep_refresh_* (was last-frame only → mid pressure=0).
+  // R4.6.1: period avg/max for prep_refresh_* (was last-frame only → mid
+  // pressure=0).
   avg.prep_refresh_pressure_ms = s.AccumPrepRefreshPressureMs * inv;
   avg.prep_refresh_miss_ms = s.AccumPrepRefreshMissMs * inv;
   avg.prep_refresh_miss_radius_query_ms =
       s.AccumPrepRefreshMissRadiusQueryMs * inv;
   avg.prep_refresh_screen_ray_probe_ms =
       s.AccumPrepRefreshScreenRayProbeMs * inv;
-  avg.prep_refresh_find_nearest_ms =
-      s.AccumPrepRefreshFindNearestMs * inv;
+  avg.prep_refresh_find_nearest_ms = s.AccumPrepRefreshFindNearestMs * inv;
   avg.prep_refresh_miss_other_ms = s.AccumPrepRefreshMissOtherMs * inv;
   avg.prep_refresh_pending_ms = s.AccumPrepRefreshPendingMs * inv;
   avg.prep_refresh_sticky_ms = s.AccumPrepRefreshStickyMs * inv;
@@ -4455,8 +4265,7 @@ void ResetAccum(Session &s)
   s.FrameCount = 0;
 }
 
-void WriteGpuDrawStateJson(std::ostream &out,
-                           const VisualBlackTraceRecord &r)
+void WriteGpuDrawStateJson(std::ostream &out, const VisualBlackTraceRecord &r)
 {
   if (!r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_valid)
   {
@@ -4465,8 +4274,7 @@ void WriteGpuDrawStateJson(std::ostream &out,
   }
   out << ",\"renderer_pixel_voxel_mesh_ray_gpu_draw_state\":{"
       << "\"matched\":"
-      << static_cast<int>(
-             r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_match)
+      << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_match)
       << ",\"submitted\":"
       << static_cast<int>(
              r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_submitted)
@@ -4577,8 +4385,7 @@ void WriteGpuDrawStateJson(std::ostream &out,
       << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_indirect_buffer
       << ",\"polygon_mode\":["
       << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_mode_front
-      << ','
-      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_mode_back
+      << ',' << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_mode_back
       << "]}";
 }
 
@@ -4608,10 +4415,9 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
 
   const auto collect_begin = std::chrono::steady_clock::now();
   FrameNumbers n = Compute(world, swap_wait_ms, frame_wall_ms, s);
-  n.perf_collect_ms =
-      std::chrono::duration<double, std::milli>(
-          std::chrono::steady_clock::now() - collect_begin)
-          .count();
+  n.perf_collect_ms = std::chrono::duration<double, std::milli>(
+                          std::chrono::steady_clock::now() - collect_begin)
+                          .count();
   const bool frame_visual_holes = n.visual_holes != 0;
   if (frame_visual_holes && !s.LastFrameVisualHoles)
   {
@@ -4629,19 +4435,17 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
   if (fog_trace_changed)
   {
     const PhysicsTelemetry &fog_phys = world.GetPhysicsTelemetry();
-    const double steady_ms = std::chrono::duration<double, std::milli>(
-                                 std::chrono::steady_clock::now()
-                                     .time_since_epoch())
-                                 .count();
+    const double steady_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now().time_since_epoch())
+            .count();
     s.Jsonl << "{\"kind\":\"fog_state_transition\""
             << ",\"frame_epoch\":" << n.frame_epoch
             << ",\"steady_ms\":" << std::setprecision(17) << steady_ms
-            << std::setprecision(6)
-            << ",\"fog_hole_debt\":" << n.fog_hole_debt
+            << std::setprecision(6) << ",\"fog_hole_debt\":" << n.fog_hole_debt
             << ",\"fog_pull_in_rd\":" << n.fog_pull_in_rd
             << ",\"fog_pull_in_margin\":" << n.fog_pull_in_margin
-            << ",\"fog_pull_in_start_ratio\":"
-            << n.fog_pull_in_start_ratio
+            << ",\"fog_pull_in_start_ratio\":" << n.fog_pull_in_start_ratio
             << ",\"fog_presented_start_blocks\":"
             << n.fog_presented_start_blocks
             << ",\"fog_presented_horizon_blocks\":"
@@ -4660,10 +4464,8 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
             << ",\"hold_frames\":" << fog_phys.FogHoleHoldFrames
             << ",\"debt_quiet_ms\":" << fog_phys.FogDebtQuietMs
             << ",\"visual_holes\":" << fog_phys.VisualHoles
-            << ",\"pending_gpu_applies\":"
-            << fog_phys.PendingGpuAppliesN
-            << ",\"stream_pressure\":" << fog_phys.StreamPressure
-            << "}\n";
+            << ",\"pending_gpu_applies\":" << fog_phys.PendingGpuAppliesN
+            << ",\"stream_pressure\":" << fog_phys.StreamPressure << "}\n";
   }
   s.HasLastFogTraceState = true;
   s.LastFogTraceHoleDebt = n.fog_hole_debt;
@@ -4701,10 +4503,9 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
   {
     const auto emit_begin = std::chrono::steady_clock::now();
     WriteJsonl(s, n, "spike", /*flush=*/false);
-    n.perf_emit_ms =
-        std::chrono::duration<double, std::milli>(
-            std::chrono::steady_clock::now() - emit_begin)
-            .count();
+    n.perf_emit_ms = std::chrono::duration<double, std::milli>(
+                         std::chrono::steady_clock::now() - emit_begin)
+                         .count();
     s.AccumPerfEmitMs += n.perf_emit_ms;
     ++s.SpikesWrittenThisPeriod;
     if (n.wall_ms > 250.0)
@@ -4713,7 +4514,8 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
     }
   }
 
-  if (n.underfeet_reason == 7 || (n.opaque_cmd_total > 0 && n.opaque_cmd_on == 0))
+  if (n.underfeet_reason == 7 ||
+      (n.opaque_cmd_total > 0 && n.opaque_cmd_on == 0))
   {
     LOG(INFO) << "[Perf] underfeet_diag reason=" << n.underfeet_reason
               << " stage=" << n.underfeet_stage
@@ -4726,16 +4528,16 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
               << " npc_ms=" << n.npc_intent_ms
               << " infl_ms=" << n.controlled_influence_ms
               << " vitals_ms=" << n.vitals_tick_ms
-              << " creatures=" << n.creatures_total
-              << "/" << n.creatures_ai_ticked
+              << " creatures=" << n.creatures_total << "/"
+              << n.creatures_ai_ticked
               << " world_skip=" << n.world_creatures_skipped
               << " clamp=" << n.stream_speed_clamp_scale
               << " opaque_present=" << n.underfeet_opaque_present
               << " opaque_cmd_total=" << n.opaque_cmd_total
               << " opaque_cmd_on=" << n.opaque_cmd_on
               << " opaque_packed=" << n.opaque_gpu_packed_n
-              << " opaque_draw=" << n.opaque_draw_n
-              << " focus=(" << n.focus_cx << "," << n.focus_cz << ")"
+              << " opaque_draw=" << n.opaque_draw_n << " focus=(" << n.focus_cx
+              << "," << n.focus_cz << ")"
               << " player=(" << n.player_x << "," << n.player_y << ","
               << n.player_z << ")"
               << " chunk_count=" << n.chunk_count
@@ -4822,8 +4624,7 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
           : 0;
   period.mesh_completed_discarded_delta =
       n.mesh_completed_discarded >= s.MeshCompletedDiscardedAtPeriodStart
-          ? n.mesh_completed_discarded -
-                s.MeshCompletedDiscardedAtPeriodStart
+          ? n.mesh_completed_discarded - s.MeshCompletedDiscardedAtPeriodStart
           : 0;
   period.softdefer_capture_floor_hits_delta =
       n.softdefer_capture_floor_hits >= s.SoftDeferCaptureFloorHitsAtPeriodStart
@@ -4848,10 +4649,9 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
   {
     WriteJsonl(s, period, "blink", /*flush=*/false);
   }
-  period.perf_emit_ms =
-      std::chrono::duration<double, std::milli>(
-          std::chrono::steady_clock::now() - emit_begin)
-          .count();
+  period.perf_emit_ms = std::chrono::duration<double, std::milli>(
+                            std::chrono::steady_clock::now() - emit_begin)
+                            .count();
   LogLine(period, "period", s.FrameCount, s.MaxWallMs);
   s.LastPeriodUnfinishedVisual = period_unfinished;
   s.MeshApplyStaleAtPeriodStart = n.mesh_apply_stale;
@@ -4860,7 +4660,8 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
   s.MeshApplyStaleCatalogAtPeriodStart = n.mesh_apply_stale_catalog;
   s.MeshApplyStaleStampInvalidAtPeriodStart = n.mesh_apply_stale_stamp_invalid;
   s.MeshApplyStaleGeomAcceptedAtPeriodStart = n.mesh_apply_stale_geom_accepted;
-  s.MeshApplyStaleLightAcceptedAtPeriodStart = n.mesh_apply_stale_light_accepted;
+  s.MeshApplyStaleLightAcceptedAtPeriodStart =
+      n.mesh_apply_stale_light_accepted;
   s.MeshApplyStaleAcceptedRefreshAtPeriodStart =
       n.mesh_apply_stale_accepted_refresh;
   s.I3tHoldEmptySpoofAtPeriodStart = n.i3t_hold_empty_spoof_n;
@@ -4877,6 +4678,110 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
   // period (GPU sync hitch ~2s on cruise).
   ResetAccum(s);
   s.LastEmit = now;
+}
+
+struct DemandTransitionDumpCtx
+{
+  std::ofstream *out;
+  const char *kind;
+};
+
+static void DumpDemandTransition(const DemandTransitionSpan &sp, void *p)
+{
+
+  auto *ctx = static_cast<DemandTransitionDumpCtx *>(p);
+  auto *out = ctx->out;
+  (*out)
+      << "{\"kind\":\"" << ctx->kind << "\""
+      << ",\"event\":\"" << UJobStageTrace::DemandTransitionName(sp.kind)
+      << "\""
+      << ",\"cx\":" << sp.cx << ",\"cy\":" << sp.cy << ",\"cz\":" << sp.cz
+      << ",\"frame_epoch\":" << sp.frame_epoch
+      << ",\"world_epoch\":" << sp.world_epoch
+      << ",\"incarnation\":" << sp.incarnation
+      << ",\"previous_attempt_id\":" << sp.previous_attempt_id
+      << ",\"attempt_id\":" << sp.attempt_id
+      << ",\"previous_desired_geom_rev\":" << sp.previous_desired_geom_rev
+      << ",\"desired_geom_rev\":" << sp.desired_geom_rev
+      << ",\"previous_desired_light_rev\":" << sp.previous_desired_light_rev
+      << ",\"desired_light_rev\":" << sp.desired_light_rev
+      << ",\"previous_desired_coverage_gen\":"
+      << sp.previous_desired_coverage_gen
+      << ",\"desired_coverage_gen\":" << sp.desired_coverage_gen
+      << ",\"previous_published_geom_rev\":" << sp.previous_published_geom_rev
+      << ",\"published_geom_rev\":" << sp.published_geom_rev
+      << ",\"previous_published_light_rev\":" << sp.previous_published_light_rev
+      << ",\"published_light_rev\":" << sp.published_light_rev
+      << ",\"settled_light_rev\":" << sp.settled_light_rev
+      << ",\"has_settled_light\":" << static_cast<int>(sp.has_settled_light)
+      << ",\"previous_published_coverage_gen\":"
+      << sp.previous_published_coverage_gen
+      << ",\"published_coverage_gen\":" << sp.published_coverage_gen
+      << ",\"mesh_revision_before\":" << sp.mesh_revision_before
+      << ",\"mesh_revision_after\":" << sp.mesh_revision_after
+      << ",\"mesh_revision_bump_reason\":\""
+      << UJobStageTrace::MeshRevisionBumpReasonName(
+             sp.mesh_revision_bump_reason)
+      << "\""
+      << ",\"face_debt_mask\":" << static_cast<int>(sp.face_debt_mask)
+      << ",\"overlay_face_debt_mask\":"
+      << static_cast<int>(sp.overlay_face_debt_mask)
+      << ",\"peer_face_debt_mask\":" << static_cast<int>(sp.peer_face_debt_mask)
+      << ",\"mesh_owner_flags\":" << sp.mesh_owner_flags
+      << ",\"mesh_dirty_queue_kind\":"
+      << static_cast<int>(sp.mesh_dirty_queue_kind)
+      << ",\"mesh_dirty_queue_index\":" << sp.mesh_dirty_queue_index
+      << ",\"mesh_dirty_queue_size\":" << sp.mesh_dirty_queue_size
+      << ",\"mesh_dirty_queue_age_frames\":" << sp.mesh_dirty_queue_age_frames
+      << ",\"has_active_mesh_source_revision\":"
+      << static_cast<int>(sp.has_active_mesh_source_revision)
+      << ",\"active_mesh_source_revision\":" << sp.active_mesh_source_revision
+      << ",\"has_pending_capture\":" << static_cast<int>(sp.has_pending_capture)
+      << ",\"pending_capture_source_revision\":"
+      << sp.pending_capture_source_revision << ",\"has_pending_capture_ready\":"
+      << static_cast<int>(sp.has_pending_capture_ready)
+      << ",\"pending_capture_ready_source_revision\":"
+      << sp.pending_capture_ready_source_revision
+      << ",\"async_builder_inflight\":"
+      << static_cast<int>(sp.async_builder_inflight)
+      << ",\"gpu_extract_inflight\":"
+      << static_cast<int>(sp.gpu_extract_inflight)
+      << ",\"pending_gpu_apply\":" << static_cast<int>(sp.pending_gpu_apply)
+      << ",\"pending_gpu_queued\":" << static_cast<int>(sp.pending_gpu_queued)
+      << ",\"pending_gpu_kicked_or_dispatched\":"
+      << static_cast<int>(sp.pending_gpu_kicked_or_dispatched)
+      << ",\"mesh_scheduled_this_frame\":"
+      << static_cast<int>(sp.mesh_scheduled_this_frame)
+      << ",\"previous_stage\":\""
+      << UJobStageTrace::StageName(sp.previous_stage) << "\""
+      << ",\"stage\":\"" << UJobStageTrace::StageName(sp.stage) << "\""
+      << ",\"result\":" << static_cast<int>(sp.result)
+      << ",\"had_active_attempt\":" << static_cast<int>(sp.had_active_attempt)
+      << ",\"has_active_attempt\":" << static_cast<int>(sp.has_active_attempt)
+      << ",\"retained_awaiting_successor\":"
+      << static_cast<int>(sp.retained_awaiting_successor)
+      << ",\"open_sky_repair_event_id\":" << sp.open_sky_repair_event_id
+      << ",\"open_sky_repair_target_light_rev\":"
+      << sp.open_sky_repair_target_light_rev
+      << ",\"open_sky_repair_baseline_geom_rev\":"
+      << sp.open_sky_repair_baseline_geom_rev
+      << ",\"open_sky_repair_baseline_attempt_id\":"
+      << sp.open_sky_repair_baseline_attempt_id
+      << ",\"open_sky_repair_baseline_published_attempt_id\":"
+      << sp.open_sky_repair_baseline_published_attempt_id
+      << ",\"open_sky_repair_pending\":"
+      << static_cast<int>(sp.open_sky_repair_pending)
+      << ",\"open_sky_repair_published\":"
+      << static_cast<int>(sp.open_sky_repair_published)
+      << ",\"open_sky_repair_published_geom_rev\":"
+      << sp.open_sky_repair_published_geom_rev
+      << ",\"open_sky_repair_published_light_rev\":"
+      << sp.open_sky_repair_published_light_rev
+      << ",\"open_sky_repair_published_attempt_id\":"
+      << sp.open_sky_repair_published_attempt_id << ",\"event_ms\":";
+  const std::streamsize previous_precision = out->precision();
+  (*out) << std::setprecision(17) << sp.event_ms
+         << std::setprecision(previous_precision) << "}\n";
 }
 
 void UFramePerfMonitor::Shutdown()
@@ -4903,7 +4808,8 @@ void UFramePerfMonitor::Shutdown()
         std::ofstream *out;
         const char *kind;
       };
-      const auto dumpTrace = [](const JobStageSpan &sp, void *p) {
+      const auto dumpTrace = [](const JobStageSpan &sp, void *p)
+      {
         auto *c = static_cast<DumpCtx *>(p);
         (*c->out) << "{\"kind\":\"" << c->kind << "\""
                   << ",\"cx\":" << sp.cx << ",\"cy\":" << sp.cy
@@ -4923,12 +4829,10 @@ void UFramePerfMonitor::Shutdown()
                   << ",\"desired_light_rev\":" << sp.desired_light_rev
                   << ",\"published_light_rev\":" << sp.published_light_rev
                   << ",\"desired_coverage_gen\":" << sp.desired_coverage_gen
-                  << ",\"published_coverage_gen\":"
-                  << sp.published_coverage_gen
+                  << ",\"published_coverage_gen\":" << sp.published_coverage_gen
                   << ",\"face_mask\":" << static_cast<int>(sp.face_mask)
                   << ",\"outcome\":" << static_cast<int>(sp.outcome)
-                  << ",\"cull_decision\":"
-                  << static_cast<int>(sp.cull_decision)
+                  << ",\"cull_decision\":" << static_cast<int>(sp.cull_decision)
                   << ",\"stage\":\"" << UJobStageTrace::StageName(sp.stage)
                   << "\""
                   << ",\"terminal_reason\":\""
@@ -4953,146 +4857,21 @@ void UFramePerfMonitor::Shutdown()
       UJobStageTrace::ForEachOpenSkyLifecycleNewest(
           UJobStageTrace::kOpenSkyLifecycleRingCapacity, dumpTrace,
           &openSkyLifecycleCtx);
-      struct DemandTransitionDumpCtx
-      {
-        std::ofstream *out;
-        const char *kind;
-      };
-      const auto dumpDemandTransition = [](const DemandTransitionSpan &sp,
-                                           void *p) {
-        auto *ctx = static_cast<DemandTransitionDumpCtx *>(p);
-        auto *out = ctx->out;
-        (*out) << "{\"kind\":\"" << ctx->kind << "\""
-               << ",\"event\":\""
-               << UJobStageTrace::DemandTransitionName(sp.kind) << "\""
-               << ",\"cx\":" << sp.cx << ",\"cy\":" << sp.cy
-               << ",\"cz\":" << sp.cz
-               << ",\"frame_epoch\":" << sp.frame_epoch
-               << ",\"world_epoch\":" << sp.world_epoch
-               << ",\"incarnation\":" << sp.incarnation
-               << ",\"previous_attempt_id\":" << sp.previous_attempt_id
-               << ",\"attempt_id\":" << sp.attempt_id
-               << ",\"previous_desired_geom_rev\":"
-               << sp.previous_desired_geom_rev
-               << ",\"desired_geom_rev\":" << sp.desired_geom_rev
-               << ",\"previous_desired_light_rev\":"
-               << sp.previous_desired_light_rev
-               << ",\"desired_light_rev\":" << sp.desired_light_rev
-               << ",\"previous_desired_coverage_gen\":"
-               << sp.previous_desired_coverage_gen
-               << ",\"desired_coverage_gen\":"
-               << sp.desired_coverage_gen
-               << ",\"previous_published_geom_rev\":"
-               << sp.previous_published_geom_rev
-               << ",\"published_geom_rev\":" << sp.published_geom_rev
-               << ",\"previous_published_light_rev\":"
-               << sp.previous_published_light_rev
-               << ",\"published_light_rev\":"
-               << sp.published_light_rev
-               << ",\"settled_light_rev\":" << sp.settled_light_rev
-               << ",\"has_settled_light\":"
-               << static_cast<int>(sp.has_settled_light)
-               << ",\"previous_published_coverage_gen\":"
-               << sp.previous_published_coverage_gen
-               << ",\"published_coverage_gen\":"
-               << sp.published_coverage_gen
-               << ",\"mesh_revision_before\":"
-               << sp.mesh_revision_before
-               << ",\"mesh_revision_after\":"
-               << sp.mesh_revision_after
-               << ",\"mesh_revision_bump_reason\":\""
-               << UJobStageTrace::MeshRevisionBumpReasonName(
-                      sp.mesh_revision_bump_reason)
-               << "\""
-               << ",\"face_debt_mask\":"
-               << static_cast<int>(sp.face_debt_mask)
-               << ",\"overlay_face_debt_mask\":"
-               << static_cast<int>(sp.overlay_face_debt_mask)
-               << ",\"peer_face_debt_mask\":"
-               << static_cast<int>(sp.peer_face_debt_mask)
-               << ",\"mesh_owner_flags\":" << sp.mesh_owner_flags
-               << ",\"mesh_dirty_queue_kind\":"
-               << static_cast<int>(sp.mesh_dirty_queue_kind)
-               << ",\"mesh_dirty_queue_index\":"
-               << sp.mesh_dirty_queue_index
-               << ",\"mesh_dirty_queue_size\":"
-               << sp.mesh_dirty_queue_size
-               << ",\"mesh_dirty_queue_age_frames\":"
-               << sp.mesh_dirty_queue_age_frames
-               << ",\"has_active_mesh_source_revision\":"
-               << static_cast<int>(sp.has_active_mesh_source_revision)
-               << ",\"active_mesh_source_revision\":"
-               << sp.active_mesh_source_revision
-               << ",\"has_pending_capture\":"
-               << static_cast<int>(sp.has_pending_capture)
-               << ",\"pending_capture_source_revision\":"
-               << sp.pending_capture_source_revision
-               << ",\"has_pending_capture_ready\":"
-               << static_cast<int>(sp.has_pending_capture_ready)
-               << ",\"pending_capture_ready_source_revision\":"
-               << sp.pending_capture_ready_source_revision
-               << ",\"async_builder_inflight\":"
-               << static_cast<int>(sp.async_builder_inflight)
-               << ",\"gpu_extract_inflight\":"
-               << static_cast<int>(sp.gpu_extract_inflight)
-               << ",\"pending_gpu_apply\":"
-               << static_cast<int>(sp.pending_gpu_apply)
-               << ",\"pending_gpu_queued\":"
-               << static_cast<int>(sp.pending_gpu_queued)
-               << ",\"pending_gpu_kicked_or_dispatched\":"
-               << static_cast<int>(sp.pending_gpu_kicked_or_dispatched)
-               << ",\"mesh_scheduled_this_frame\":"
-               << static_cast<int>(sp.mesh_scheduled_this_frame)
-               << ",\"previous_stage\":\""
-               << UJobStageTrace::StageName(sp.previous_stage) << "\""
-               << ",\"stage\":\""
-               << UJobStageTrace::StageName(sp.stage) << "\""
-               << ",\"result\":" << static_cast<int>(sp.result)
-               << ",\"had_active_attempt\":"
-               << static_cast<int>(sp.had_active_attempt)
-               << ",\"has_active_attempt\":"
-               << static_cast<int>(sp.has_active_attempt)
-               << ",\"retained_awaiting_successor\":"
-               << static_cast<int>(sp.retained_awaiting_successor)
-               << ",\"open_sky_repair_event_id\":"
-               << sp.open_sky_repair_event_id
-               << ",\"open_sky_repair_target_light_rev\":"
-               << sp.open_sky_repair_target_light_rev
-               << ",\"open_sky_repair_baseline_geom_rev\":"
-               << sp.open_sky_repair_baseline_geom_rev
-               << ",\"open_sky_repair_baseline_attempt_id\":"
-               << sp.open_sky_repair_baseline_attempt_id
-               << ",\"open_sky_repair_baseline_published_attempt_id\":"
-               << sp.open_sky_repair_baseline_published_attempt_id
-               << ",\"open_sky_repair_pending\":"
-               << static_cast<int>(sp.open_sky_repair_pending)
-               << ",\"open_sky_repair_published\":"
-               << static_cast<int>(sp.open_sky_repair_published)
-               << ",\"open_sky_repair_published_geom_rev\":"
-               << sp.open_sky_repair_published_geom_rev
-               << ",\"open_sky_repair_published_light_rev\":"
-               << sp.open_sky_repair_published_light_rev
-               << ",\"open_sky_repair_published_attempt_id\":"
-               << sp.open_sky_repair_published_attempt_id
-               << ",\"event_ms\":";
-        const std::streamsize previous_precision = out->precision();
-        (*out) << std::setprecision(17) << sp.event_ms
-               << std::setprecision(previous_precision) << "}\n";
-      };
-      DemandTransitionDumpCtx demandTransitionCtx{
-          &s.Jsonl, "demand_transition_trace"};
+
+      DemandTransitionDumpCtx demandTransitionCtx{&s.Jsonl,
+                                                  "demand_transition_trace"};
       UJobStageTrace::ForEachDemandTransitionNewest(
-          UJobStageTrace::kDemandTransitionRingCapacity,
-          dumpDemandTransition, &demandTransitionCtx);
+          UJobStageTrace::kDemandTransitionRingCapacity, DumpDemandTransition,
+          &demandTransitionCtx);
       DemandTransitionDumpCtx openSkyDemandTransitionCtx{
           &s.Jsonl, "open_sky_demand_transition_trace"};
       UJobStageTrace::ForEachOpenSkyDemandTransitionNewest(
           UJobStageTrace::kOpenSkyDemandTransitionRingCapacity,
-          dumpDemandTransition, &openSkyDemandTransitionCtx);
+          DumpDemandTransition, &openSkyDemandTransitionCtx);
       DumpCtx cullCtx{&s.Jsonl, "cull_trace"};
       UJobStageTrace::ForEachCullDecisionNewest(64, dumpTrace, &cullCtx);
-      const auto dumpVisualBlack = [](const VisualBlackTraceRecord &r,
-                                      void *p) {
+      const auto dumpVisualBlack = [](const VisualBlackTraceRecord &r, void *p)
+      {
         auto *out = static_cast<std::ofstream *>(p);
         const char *trace_kind = "visual_black_trace";
         switch (r.sample_kind)
@@ -5176,8 +4955,7 @@ void UFramePerfMonitor::Shutdown()
                  << ",\"resident_non_air_chunk_count\":"
                  << r.renderer_cpu_index_count
                  << ",\"exact_frustum_candidate_count\":"
-                 << r.renderer_gpu_quad_count
-                 << ",\"sampled_candidate_count\":"
+                 << r.renderer_gpu_quad_count << ",\"sampled_candidate_count\":"
                  << r.renderer_mdi_command_count
                  << ",\"sampled_drawable_count\":"
                  << r.renderer_mdi_visible_command_count
@@ -5198,21 +4976,17 @@ void UFramePerfMonitor::Shutdown()
           // One compact row per retained camera-band peak slice. This joins
           // exact render submission state to a conservative projected AABB.
           (*out) << "{\"kind\":\"camera_band_peak_render_probe\""
-                 << ",\"frame_epoch\":" << r.frame_epoch
-                 << ",\"peak_kind\":"
+                 << ",\"frame_epoch\":" << r.frame_epoch << ",\"peak_kind\":"
                  << static_cast<int>(r.camera_band_peak_kind)
                  << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
-                 << ",\"cz\":" << r.cz
-                 << ",\"focus_cx\":" << r.focus_cx
+                 << ",\"cz\":" << r.cz << ",\"focus_cx\":" << r.focus_cx
                  << ",\"focus_cz\":" << r.focus_cz
                  << ",\"camera_x\":" << r.camera_x
                  << ",\"camera_y\":" << r.camera_y
-                 << ",\"camera_z\":" << r.camera_z
-                 << ",\"target_resident\":"
+                 << ",\"camera_z\":" << r.camera_z << ",\"target_resident\":"
                  << static_cast<int>(r.renderer_target_resident)
                  << ",\"non_air_blocks\":" << r.non_air_blocks
-                 << ",\"chunk_content_revision\":"
-                 << r.chunk_content_revision
+                 << ",\"chunk_content_revision\":" << r.chunk_content_revision
                  << ",\"incarnation\":" << r.incarnation
                  << ",\"world_epoch\":" << r.world_epoch
                  << ",\"mesh_revision\":" << r.mesh_revision
@@ -5223,14 +4997,12 @@ void UFramePerfMonitor::Shutdown()
                  << ",\"projected_corner_count\":"
                  << static_cast<int>(r.renderer_projected_corner_count)
                  << ",\"viewport\":[" << r.renderer_viewport_width << ','
-                 << r.renderer_viewport_height << ']'
-                 << ",\"screen_rect\":["
+                 << r.renderer_viewport_height << ']' << ",\"screen_rect\":["
                  << r.renderer_projected_screen_min_x << ','
                  << r.renderer_projected_screen_min_y << ','
                  << r.renderer_projected_screen_max_x << ','
                  << r.renderer_projected_screen_max_y << ']'
-                 << ",\"renderer_state\":"
-                 << static_cast<int>(r.focus_state)
+                 << ",\"renderer_state\":" << static_cast<int>(r.focus_state)
                  << ",\"drawable\":" << ((r.renderer_gate_flags & 1u) ? 1 : 0)
                  << ",\"mesh_satisfying\":"
                  << ((r.renderer_gate_flags & (1u << 1)) ? 1 : 0)
@@ -5258,8 +5030,7 @@ void UFramePerfMonitor::Shutdown()
                  << static_cast<int>(r.renderer_mdi_resident_pass_flags)
                  << ",\"mdi_visible_pass_flags\":"
                  << static_cast<int>(r.renderer_mdi_visible_pass_flags)
-                 << ",\"mdi_command_count\":"
-                 << r.renderer_mdi_command_count
+                 << ",\"mdi_command_count\":" << r.renderer_mdi_command_count
                  << ",\"mdi_visible_command_count\":"
                  << r.renderer_mdi_visible_command_count
                  << ",\"mdi_index_count\":" << r.renderer_mdi_index_count
@@ -5273,9 +5044,8 @@ void UFramePerfMonitor::Shutdown()
                  << ",\"frame_epoch\":" << r.frame_epoch
                  << ",\"camera_x\":" << r.camera_x
                  << ",\"camera_y\":" << r.camera_y
-                 << ",\"camera_z\":" << r.camera_z
-                 << ",\"chunk\":[" << r.cx << ',' << r.cy << ',' << r.cz
-                 << "]"
+                 << ",\"camera_z\":" << r.camera_z << ",\"chunk\":[" << r.cx
+                 << ',' << r.cy << ',' << r.cz << "]"
                  << ",\"block\":[" << r.renderer_pixel_voxel_hit_x << ','
                  << r.renderer_pixel_voxel_hit_y << ','
                  << r.renderer_pixel_voxel_hit_z << ','
@@ -5290,104 +5060,91 @@ void UFramePerfMonitor::Shutdown()
         }
         if (r.sample_kind == 19)
         {
-          (*out) << "{\"kind\":\"fluid_draw_witness\""
-                 << ",\"frame_epoch\":" << r.frame_epoch
-                 << ",\"camera_x\":" << r.camera_x
-                 << ",\"camera_y\":" << r.camera_y
-                 << ",\"camera_z\":" << r.camera_z
-                 << ",\"chunk\":[" << r.cx << ',' << r.cy << ',' << r.cz
-                 << ']'
-                 << ",\"valid\":"
-                 << static_cast<int>(r.renderer_fluid_draw_witness_valid)
-                 << ",\"pass\":"
-                 << static_cast<int>(r.renderer_fluid_draw_witness_pass)
-                 << ",\"pass_ordinal\":"
-                 << static_cast<int>(
-                        r.renderer_fluid_draw_witness_pass_ordinal)
-                 << ",\"submit_path\":"
-                 << static_cast<int>(
-                        r.renderer_fluid_draw_witness_submit_path)
-                 << ",\"use_mdi\":"
-                 << static_cast<int>(r.renderer_fluid_draw_witness_use_mdi)
-                 << ",\"pooled\":"
-                 << static_cast<int>(r.renderer_fluid_draw_witness_pooled)
-                 << ",\"block_id\":"
-                 << r.renderer_fluid_draw_witness_block_id
-                 << ",\"pool_vbo\":"
-                 << r.renderer_fluid_draw_witness_pool_vbo
-                 << ",\"pool_ebo\":"
-                 << r.renderer_fluid_draw_witness_pool_ebo
-                 << ",\"pool_live_vbo\":"
-                 << r.renderer_fluid_draw_witness_pool_live_vbo
-                 << ",\"pool_live_ebo\":"
-                 << r.renderer_fluid_draw_witness_pool_live_ebo
-                 << ",\"vbo\":" << r.renderer_fluid_draw_witness_vbo
-                 << ",\"ebo\":" << r.renderer_fluid_draw_witness_ebo
-                 << ",\"vbo_is_buffer\":"
-                 << static_cast<int>(
-                        r.renderer_fluid_draw_witness_vbo_is_buffer)
-                 << ",\"ebo_is_buffer\":"
-                 << static_cast<int>(
-                        r.renderer_fluid_draw_witness_ebo_is_buffer)
-                 << ",\"vbo_bytes\":"
-                 << r.renderer_fluid_draw_witness_vbo_bytes
-                 << ",\"ebo_bytes\":"
-                 << r.renderer_fluid_draw_witness_ebo_bytes
-                 << ",\"vbo_bind_error\":"
-                 << r.renderer_fluid_draw_witness_vbo_bind_error
-                 << ",\"ebo_bind_error\":"
-                 << r.renderer_fluid_draw_witness_ebo_bind_error
-                 << ",\"vbo_query_error\":"
-                 << r.renderer_fluid_draw_witness_vbo_query_error
-                 << ",\"ebo_query_error\":"
-                 << r.renderer_fluid_draw_witness_ebo_query_error
-                 << ",\"gl_error_after_submit\":"
-                 << r.renderer_fluid_draw_witness_gl_error_after_submit
-                 << ",\"vao\":" << r.renderer_fluid_draw_witness_vao
-                 << ",\"array_buffer\":"
-                 << r.renderer_fluid_draw_witness_array_buffer
-                 << ",\"element_buffer\":"
-                 << r.renderer_fluid_draw_witness_element_buffer
-                 << ",\"draw_framebuffer\":"
-                 << r.renderer_fluid_draw_witness_draw_framebuffer
-                 << ",\"stencil_test\":"
-                 << static_cast<int>(r.renderer_fluid_draw_witness_stencil_test)
-                 << ",\"stencil_func\":"
-                 << r.renderer_fluid_draw_witness_stencil_func
-                 << ",\"stencil_ref\":"
-                 << r.renderer_fluid_draw_witness_stencil_ref
-                 << ",\"stencil_value_mask\":"
-                 << r.renderer_fluid_draw_witness_stencil_value_mask
-                 << ",\"stencil_write_mask\":"
-                 << r.renderer_fluid_draw_witness_stencil_write_mask
-                 << ",\"stencil_fail\":"
-                 << r.renderer_fluid_draw_witness_stencil_fail
-                 << ",\"stencil_depth_fail\":"
-                 << r.renderer_fluid_draw_witness_stencil_depth_fail
-                 << ",\"stencil_depth_pass\":"
-                 << r.renderer_fluid_draw_witness_stencil_depth_pass
-                 << ",\"depth_test\":"
-                 << static_cast<int>(r.renderer_fluid_draw_witness_depth_test)
-                 << ",\"depth_func\":"
-                 << r.renderer_fluid_draw_witness_depth_func
-                 << ",\"depth_write\":"
-                 << static_cast<int>(r.renderer_fluid_draw_witness_depth_write)
-                 << ",\"color_write_mask\":"
-                 << static_cast<int>(
-                        r.renderer_fluid_draw_witness_color_write_mask)
-                 << "}\n";
+          (*out)
+              << "{\"kind\":\"fluid_draw_witness\""
+              << ",\"frame_epoch\":" << r.frame_epoch
+              << ",\"camera_x\":" << r.camera_x
+              << ",\"camera_y\":" << r.camera_y
+              << ",\"camera_z\":" << r.camera_z << ",\"chunk\":[" << r.cx << ','
+              << r.cy << ',' << r.cz << ']' << ",\"valid\":"
+              << static_cast<int>(r.renderer_fluid_draw_witness_valid)
+              << ",\"pass\":"
+              << static_cast<int>(r.renderer_fluid_draw_witness_pass)
+              << ",\"pass_ordinal\":"
+              << static_cast<int>(r.renderer_fluid_draw_witness_pass_ordinal)
+              << ",\"submit_path\":"
+              << static_cast<int>(r.renderer_fluid_draw_witness_submit_path)
+              << ",\"use_mdi\":"
+              << static_cast<int>(r.renderer_fluid_draw_witness_use_mdi)
+              << ",\"pooled\":"
+              << static_cast<int>(r.renderer_fluid_draw_witness_pooled)
+              << ",\"block_id\":" << r.renderer_fluid_draw_witness_block_id
+              << ",\"pool_vbo\":" << r.renderer_fluid_draw_witness_pool_vbo
+              << ",\"pool_ebo\":" << r.renderer_fluid_draw_witness_pool_ebo
+              << ",\"pool_live_vbo\":"
+              << r.renderer_fluid_draw_witness_pool_live_vbo
+              << ",\"pool_live_ebo\":"
+              << r.renderer_fluid_draw_witness_pool_live_ebo
+              << ",\"vbo\":" << r.renderer_fluid_draw_witness_vbo
+              << ",\"ebo\":" << r.renderer_fluid_draw_witness_ebo
+              << ",\"vbo_is_buffer\":"
+              << static_cast<int>(r.renderer_fluid_draw_witness_vbo_is_buffer)
+              << ",\"ebo_is_buffer\":"
+              << static_cast<int>(r.renderer_fluid_draw_witness_ebo_is_buffer)
+              << ",\"vbo_bytes\":" << r.renderer_fluid_draw_witness_vbo_bytes
+              << ",\"ebo_bytes\":" << r.renderer_fluid_draw_witness_ebo_bytes
+              << ",\"vbo_bind_error\":"
+              << r.renderer_fluid_draw_witness_vbo_bind_error
+              << ",\"ebo_bind_error\":"
+              << r.renderer_fluid_draw_witness_ebo_bind_error
+              << ",\"vbo_query_error\":"
+              << r.renderer_fluid_draw_witness_vbo_query_error
+              << ",\"ebo_query_error\":"
+              << r.renderer_fluid_draw_witness_ebo_query_error
+              << ",\"gl_error_after_submit\":"
+              << r.renderer_fluid_draw_witness_gl_error_after_submit
+              << ",\"vao\":" << r.renderer_fluid_draw_witness_vao
+              << ",\"array_buffer\":"
+              << r.renderer_fluid_draw_witness_array_buffer
+              << ",\"element_buffer\":"
+              << r.renderer_fluid_draw_witness_element_buffer
+              << ",\"draw_framebuffer\":"
+              << r.renderer_fluid_draw_witness_draw_framebuffer
+              << ",\"stencil_test\":"
+              << static_cast<int>(r.renderer_fluid_draw_witness_stencil_test)
+              << ",\"stencil_func\":"
+              << r.renderer_fluid_draw_witness_stencil_func
+              << ",\"stencil_ref\":"
+              << r.renderer_fluid_draw_witness_stencil_ref
+              << ",\"stencil_value_mask\":"
+              << r.renderer_fluid_draw_witness_stencil_value_mask
+              << ",\"stencil_write_mask\":"
+              << r.renderer_fluid_draw_witness_stencil_write_mask
+              << ",\"stencil_fail\":"
+              << r.renderer_fluid_draw_witness_stencil_fail
+              << ",\"stencil_depth_fail\":"
+              << r.renderer_fluid_draw_witness_stencil_depth_fail
+              << ",\"stencil_depth_pass\":"
+              << r.renderer_fluid_draw_witness_stencil_depth_pass
+              << ",\"depth_test\":"
+              << static_cast<int>(r.renderer_fluid_draw_witness_depth_test)
+              << ",\"depth_func\":" << r.renderer_fluid_draw_witness_depth_func
+              << ",\"depth_write\":"
+              << static_cast<int>(r.renderer_fluid_draw_witness_depth_write)
+              << ",\"color_write_mask\":"
+              << static_cast<int>(
+                     r.renderer_fluid_draw_witness_color_write_mask)
+              << "}\n";
           return;
         }
         if (r.sample_kind == 18)
         {
           (*out) << "{\"kind\":\"camera_band_peak_scheduler_trace\""
                  << ",\"frame_epoch\":" << r.frame_epoch
-                 << ",\"world_epoch\":" << r.world_epoch
-                 << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
-                 << ",\"cz\":" << r.cz
+                 << ",\"world_epoch\":" << r.world_epoch << ",\"cx\":" << r.cx
+                 << ",\"cy\":" << r.cy << ",\"cz\":" << r.cz
                  << ",\"peak_kind\":"
-                 << static_cast<int>(r.camera_band_peak_kind)
-                 << ",\"phase\":"
+                 << static_cast<int>(r.camera_band_peak_kind) << ",\"phase\":"
                  << static_cast<int>(r.camera_band_peak_schedule_phase)
                  << ",\"focus_cx\":" << r.focus_cx
                  << ",\"focus_cz\":" << r.focus_cz
@@ -5397,18 +5154,14 @@ void UFramePerfMonitor::Shutdown()
                  << ",\"published_geom_rev\":" << r.published_geom_rev
                  << ",\"desired_geom_rev\":" << r.desired_geom_rev
                  << ",\"attempt_id\":" << r.attempt_id
-                 << ",\"active_stage\":"
-                 << static_cast<int>(r.active_stage)
+                 << ",\"active_stage\":" << static_cast<int>(r.active_stage)
                  << ",\"mesh_dirty_queue_kind\":"
                  << static_cast<int>(r.mesh_dirty_queue_kind)
-                 << ",\"mesh_dirty_queue_index\":"
-                 << r.mesh_dirty_queue_index
-                 << ",\"mesh_dirty_queue_size\":"
-                 << r.mesh_dirty_queue_size
+                 << ",\"mesh_dirty_queue_index\":" << r.mesh_dirty_queue_index
+                 << ",\"mesh_dirty_queue_size\":" << r.mesh_dirty_queue_size
                  << ",\"mesh_dirty_queue_age_frames\":"
                  << r.mesh_dirty_queue_age_frames
-                 << ",\"mesh_work_owner_flags\":"
-                 << r.mesh_work_owner_flags
+                 << ",\"mesh_work_owner_flags\":" << r.mesh_work_owner_flags
                  << ",\"flags\":" << r.flags
                  << ",\"cause\":" << static_cast<int>(r.cause)
                  << ",\"mesh_snapshot_defer_reason\":"
@@ -5419,30 +5172,24 @@ void UFramePerfMonitor::Shutdown()
                  << r.frontier_horiz_distance_chunks
                  << ",\"frontier_vertical_distance_chunks\":"
                  << r.frontier_vertical_distance_chunks
-                 << ",\"frontier_max_schedule\":"
-                 << r.frontier_max_schedule
+                 << ",\"frontier_max_schedule\":" << r.frontier_max_schedule
                  << ",\"frontier_first_mesh_cap_base\":"
                  << r.frontier_first_mesh_cap_base
-                 << ",\"frontier_first_mesh_cap\":"
-                 << r.frontier_first_mesh_cap
+                 << ",\"frontier_first_mesh_cap\":" << r.frontier_first_mesh_cap
                  << ",\"frontier_pre_first_mesh_limit\":"
                  << r.frontier_pre_first_mesh_limit
                  << ",\"frontier_scheduled_this_tick\":"
                  << r.frontier_scheduled_this_tick
                  << ",\"frontier_pipeline_inflight\":"
                  << r.frontier_pipeline_inflight
-                 << ",\"frontier_pipeline_cap\":"
-                 << r.frontier_pipeline_cap
-                 << ",\"frontier_soft_defer\":"
-                 << r.frontier_soft_defer
-                 << ",\"frontier_snapshot_ms\":"
-                 << r.frontier_snapshot_ms
+                 << ",\"frontier_pipeline_cap\":" << r.frontier_pipeline_cap
+                 << ",\"frontier_soft_defer\":" << r.frontier_soft_defer
+                 << ",\"frontier_snapshot_ms\":" << r.frontier_snapshot_ms
                  << ",\"frontier_snapshot_budget_ms\":"
                  << r.frontier_snapshot_budget_ms
                  << ",\"frontier_tick_elapsed_ms\":"
                  << r.frontier_tick_elapsed_ms
-                 << ",\"frontier_tick_budget_ms\":"
-                 << r.frontier_tick_budget_ms
+                 << ",\"frontier_tick_budget_ms\":" << r.frontier_tick_budget_ms
                  << ",\"frontier_snapshot_credits_left\":"
                  << r.frontier_snapshot_credits_left
                  << ",\"frontier_first_mesh_capture_reserve_left\":"
@@ -5470,8 +5217,7 @@ void UFramePerfMonitor::Shutdown()
                  << ",\"focus_cx\":" << r.focus_cx
                  << ",\"focus_cz\":" << r.focus_cz
                  << ",\"frame_epoch\":" << r.frame_epoch
-                 << ",\"terrain_age_frames\":"
-                 << r.mesh_dirty_queue_age_frames
+                 << ",\"terrain_age_frames\":" << r.mesh_dirty_queue_age_frames
                  << ",\"terrain_emerge_stage\":"
                  << static_cast<int>(r.column_emerge_stage)
                  << ",\"terrain_desired_stage\":" << r.desired_geom_rev
@@ -5485,8 +5231,7 @@ void UFramePerfMonitor::Shutdown()
         {
           (*out) << "{\"kind\":\"" << trace_kind << "\""
                  << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
-                 << ",\"cz\":" << r.cz
-                 << ",\"focus_cx\":" << r.focus_cx
+                 << ",\"cz\":" << r.cz << ",\"focus_cx\":" << r.focus_cx
                  << ",\"focus_cz\":" << r.focus_cz
                  << ",\"frame_epoch\":" << r.frame_epoch
                  << ",\"horiz_distance_chunks\":"
@@ -5506,21 +5251,17 @@ void UFramePerfMonitor::Shutdown()
           // it is emitted once per scheduler tick during opt-in flights.
           (*out) << "{\"kind\":\"first_mesh_frontier_trace\""
                  << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
-                 << ",\"cz\":" << r.cz
-                 << ",\"focus_cx\":" << r.focus_cx
+                 << ",\"cz\":" << r.cz << ",\"focus_cx\":" << r.focus_cx
                  << ",\"focus_cz\":" << r.focus_cz
                  << ",\"frame_epoch\":" << r.frame_epoch
                  << ",\"world_epoch\":" << r.world_epoch
                  << ",\"incarnation\":" << r.incarnation
                  << ",\"non_air_blocks\":" << r.non_air_blocks
-                 << ",\"mesh_dirty_queue_index\":"
-                 << r.mesh_dirty_queue_index
-                 << ",\"mesh_dirty_queue_size\":"
-                 << r.mesh_dirty_queue_size
+                 << ",\"mesh_dirty_queue_index\":" << r.mesh_dirty_queue_index
+                 << ",\"mesh_dirty_queue_size\":" << r.mesh_dirty_queue_size
                  << ",\"mesh_dirty_queue_age_frames\":"
                  << r.mesh_dirty_queue_age_frames
-                 << ",\"mesh_work_owner_flags\":"
-                 << r.mesh_work_owner_flags
+                 << ",\"mesh_work_owner_flags\":" << r.mesh_work_owner_flags
                  << ",\"mesh_revision\":" << r.mesh_revision
                  << ",\"published_geom_rev\":" << r.published_geom_rev
                  << ",\"published_light_rev\":" << r.published_light_rev
@@ -5532,40 +5273,32 @@ void UFramePerfMonitor::Shutdown()
                  << r.demand_published_geom_rev
                  << ",\"demand_published_light_rev\":"
                  << r.demand_published_light_rev
-                 << ",\"active_stage\":"
-                 << static_cast<int>(r.active_stage)
-                 << ",\"frontier_scan_limit\":"
-                 << r.frontier_scan_limit
+                 << ",\"active_stage\":" << static_cast<int>(r.active_stage)
+                 << ",\"frontier_scan_limit\":" << r.frontier_scan_limit
                  << ",\"frontier_focus_radius_chunks\":"
                  << r.frontier_focus_radius_chunks
                  << ",\"frontier_horiz_distance_chunks\":"
                  << r.frontier_horiz_distance_chunks
                  << ",\"frontier_vertical_distance_chunks\":"
                  << r.frontier_vertical_distance_chunks
-                 << ",\"frontier_max_schedule\":"
-                 << r.frontier_max_schedule
+                 << ",\"frontier_max_schedule\":" << r.frontier_max_schedule
                  << ",\"frontier_first_mesh_cap_base\":"
                  << r.frontier_first_mesh_cap_base
-                 << ",\"frontier_first_mesh_cap\":"
-                 << r.frontier_first_mesh_cap
+                 << ",\"frontier_first_mesh_cap\":" << r.frontier_first_mesh_cap
                  << ",\"frontier_pre_first_mesh_limit\":"
                  << r.frontier_pre_first_mesh_limit
                  << ",\"frontier_scheduled_this_tick\":"
                  << r.frontier_scheduled_this_tick
                  << ",\"frontier_pipeline_inflight\":"
                  << r.frontier_pipeline_inflight
-                 << ",\"frontier_pipeline_cap\":"
-                 << r.frontier_pipeline_cap
-                 << ",\"frontier_soft_defer\":"
-                 << r.frontier_soft_defer
-                 << ",\"frontier_snapshot_ms\":"
-                 << r.frontier_snapshot_ms
+                 << ",\"frontier_pipeline_cap\":" << r.frontier_pipeline_cap
+                 << ",\"frontier_soft_defer\":" << r.frontier_soft_defer
+                 << ",\"frontier_snapshot_ms\":" << r.frontier_snapshot_ms
                  << ",\"frontier_snapshot_budget_ms\":"
                  << r.frontier_snapshot_budget_ms
                  << ",\"frontier_tick_elapsed_ms\":"
                  << r.frontier_tick_elapsed_ms
-                 << ",\"frontier_tick_budget_ms\":"
-                 << r.frontier_tick_budget_ms
+                 << ",\"frontier_tick_budget_ms\":" << r.frontier_tick_budget_ms
                  << ",\"frontier_snapshot_credits_left\":"
                  << r.frontier_snapshot_credits_left
                  << ",\"frontier_first_mesh_capture_reserve_left\":"
@@ -5596,8 +5329,7 @@ void UFramePerfMonitor::Shutdown()
           // renderer fields for every slice.
           (*out) << "{\"kind\":\"" << trace_kind << "\""
                  << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
-                 << ",\"cz\":" << r.cz
-                 << ",\"focus_cx\":" << r.focus_cx
+                 << ",\"cz\":" << r.cz << ",\"focus_cx\":" << r.focus_cx
                  << ",\"focus_cz\":" << r.focus_cz
                  << ",\"camera_x\":" << r.camera_x
                  << ",\"camera_y\":" << r.camera_y
@@ -5612,8 +5344,7 @@ void UFramePerfMonitor::Shutdown()
                  << ",\"world_epoch\":" << r.world_epoch
                  << ",\"incarnation\":" << r.incarnation
                  << ",\"demand_incarnation\":" << r.demand_incarnation
-                 << ",\"chunk_content_revision\":"
-                 << r.chunk_content_revision
+                 << ",\"chunk_content_revision\":" << r.chunk_content_revision
                  << ",\"mesh_revision\":" << r.mesh_revision
                  << ",\"published_geom_rev\":" << r.published_geom_rev
                  << ",\"published_light_rev\":" << r.published_light_rev
@@ -5629,10 +5360,8 @@ void UFramePerfMonitor::Shutdown()
                  << r.demand_published_light_rev
                  << ",\"mesh_dirty_queue_kind\":"
                  << static_cast<int>(r.mesh_dirty_queue_kind)
-                 << ",\"mesh_dirty_queue_index\":"
-                 << r.mesh_dirty_queue_index
-                 << ",\"mesh_work_owner_flags\":"
-                 << r.mesh_work_owner_flags
+                 << ",\"mesh_dirty_queue_index\":" << r.mesh_dirty_queue_index
+                 << ",\"mesh_work_owner_flags\":" << r.mesh_work_owner_flags
                  << ",\"relight_owner_flags\":" << r.relight_owner_flags
                  << ",\"relight_queue_kind\":"
                  << static_cast<int>(r.relight_queue_kind)
@@ -5650,37 +5379,27 @@ void UFramePerfMonitor::Shutdown()
           // made a single flight trace hundreds of MiB.
           (*out) << "{\"kind\":\"screen_ray_candidate_trace\""
                  << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
-                 << ",\"cz\":" << r.cz
-                 << ",\"focus_cx\":" << r.focus_cx
+                 << ",\"cz\":" << r.cz << ",\"focus_cx\":" << r.focus_cx
                  << ",\"focus_cz\":" << r.focus_cz
                  << ",\"frame_epoch\":" << r.frame_epoch
                  << ",\"screen_ray_x\":" << r.screen_ray_x
                  << ",\"screen_ray_y\":" << r.screen_ray_y
-                 << ",\"screen_ray_origin_x\":"
-                 << r.screen_ray_origin_x
-                 << ",\"screen_ray_origin_y\":"
-                 << r.screen_ray_origin_y
-                 << ",\"screen_ray_origin_z\":"
-                 << r.screen_ray_origin_z
-                 << ",\"screen_ray_direction_x\":"
-                 << r.screen_ray_direction_x
-                 << ",\"screen_ray_direction_y\":"
-                 << r.screen_ray_direction_y
-                 << ",\"screen_ray_direction_z\":"
-                 << r.screen_ray_direction_z
-                 << ",\"screen_ray_distance\":"
-                 << r.screen_ray_distance
+                 << ",\"screen_ray_origin_x\":" << r.screen_ray_origin_x
+                 << ",\"screen_ray_origin_y\":" << r.screen_ray_origin_y
+                 << ",\"screen_ray_origin_z\":" << r.screen_ray_origin_z
+                 << ",\"screen_ray_direction_x\":" << r.screen_ray_direction_x
+                 << ",\"screen_ray_direction_y\":" << r.screen_ray_direction_y
+                 << ",\"screen_ray_direction_z\":" << r.screen_ray_direction_z
+                 << ",\"screen_ray_distance\":" << r.screen_ray_distance
                  << ",\"screen_ray_near_distance\":"
-                 << r.screen_ray_near_distance
-                 << ",\"screen_ray_perspective\":"
+                 << r.screen_ray_near_distance << ",\"screen_ray_perspective\":"
                  << static_cast<int>(r.screen_ray_perspective)
                  << ",\"screen_ray_block_x\":" << r.screen_ray_block_x
                  << ",\"screen_ray_block_y\":" << r.screen_ray_block_y
                  << ",\"screen_ray_block_z\":" << r.screen_ray_block_z
                  << ",\"screen_ray_column\":"
                  << static_cast<int>(r.screen_ray_column)
-                 << ",\"screen_ray_row\":"
-                 << static_cast<int>(r.screen_ray_row)
+                 << ",\"screen_ray_row\":" << static_cast<int>(r.screen_ray_row)
                  << ",\"screen_ray_state\":"
                  << static_cast<int>(r.screen_ray_state)
                  << ",\"screen_ray_known_air_steps\":"
@@ -5716,8 +5435,7 @@ void UFramePerfMonitor::Shutdown()
                  << ",\"renderer_pixel_light_trace_schema\":5"
                  << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
                  << ",\"cz\":" << r.cz
-                 << ",\"sample_kind\":"
-                 << static_cast<int>(r.sample_kind)
+                 << ",\"sample_kind\":" << static_cast<int>(r.sample_kind)
                  << ",\"focus_cx\":" << r.focus_cx
                  << ",\"focus_cz\":" << r.focus_cz
                  << ",\"camera_x\":" << r.camera_x
@@ -5728,625 +5446,609 @@ void UFramePerfMonitor::Shutdown()
                  << r.renderer_pixel_sample_time_ms
                  << ",\"renderer_pixel_sample_steady_ms\":";
           const std::streamsize previous_precision = out->precision();
-          (*out) << std::setprecision(17)
-                 << r.renderer_pixel_sample_steady_ms
+          (*out) << std::setprecision(17) << r.renderer_pixel_sample_steady_ms
                  << std::setprecision(previous_precision);
-          (*out) << ",\"world_epoch\":" << r.world_epoch
-                 << ",\"incarnation\":" << r.incarnation
-                 << ",\"renderer_pixel_probe_id\":"
-                 << r.renderer_pixel_probe_id
-                 << ",\"renderer_pixel_probe_trigger_flags\":"
-                 << static_cast<int>(r.renderer_pixel_probe_trigger_flags)
-                 << ",\"renderer_pixel_probe_event_frame_epoch\":"
-                 << r.renderer_pixel_probe_event_frame_epoch
-                 << ",\"renderer_pixel_x\":" << r.renderer_pixel_x
-                 << ",\"renderer_pixel_y\":" << r.renderer_pixel_y
-                 << ",\"renderer_pixel_rgba\":"
-                 << r.renderer_pixel_rgba
-                 << ",\"renderer_pixel_pretransparent_rgba\":"
-                 << r.renderer_pixel_pretransparent_rgba
-                 << ",\"renderer_pixel_stencil_index\":"
-                 << static_cast<int>(r.renderer_pixel_stencil_index)
-                 << ",\"renderer_pixel_pretransparent_depth\":"
-                 << r.renderer_pixel_pretransparent_depth
-                 << ",\"renderer_pixel_marker_mode\":"
-                 << (r.renderer_pixel_marker_visible != 2 ? "true" : "false")
-                 << ",\"renderer_pixel_marker_visible\":"
-                 << (r.renderer_pixel_marker_visible == 1 ? "true" : "false")
-                 << ",\"renderer_pixel_marker_coverage\":"
-                 << (r.renderer_pixel_marker_visible != 2
-                         ? static_cast<double>(
-                               r.renderer_pixel_surface_valid >> 1u) /
-                               127.0
-                         : -1.0)
-                 << ",\"renderer_pixel_shader_min_ambient\":"
-                 << r.renderer_pixel_shader_min_ambient
-                 << ",\"renderer_pixel_shader_day_factor\":"
-                 << r.renderer_pixel_shader_day_factor
-                 << ",\"renderer_pixel_shader_night_factor\":"
-                 << r.renderer_pixel_shader_night_factor
-                 << ",\"renderer_pixel_shader_sky_scale\":"
-                 << r.renderer_pixel_shader_sky_scale
-                 << ",\"renderer_pixel_shader_precipitation\":"
-                 << r.renderer_pixel_shader_precipitation
-                 << ",\"renderer_pixel_shader_wetness\":"
-                 << r.renderer_pixel_shader_wetness
-                 << ",\"renderer_pixel_shader_light_debug_mode\":"
-                 << r.renderer_pixel_shader_light_debug_mode
-                 << ",\"renderer_pixel_fog_state_valid\":"
-                 << static_cast<int>(r.renderer_pixel_fog_state_valid)
-                 << ",\"renderer_pixel_fog_enabled\":"
-                 << static_cast<int>(r.renderer_pixel_fog_enabled)
-                 << ",\"renderer_pixel_air_fog_enabled\":"
-                 << static_cast<int>(r.renderer_pixel_air_fog_enabled)
-                 << ",\"renderer_pixel_fog_horizontal\":"
-                 << static_cast<int>(r.renderer_pixel_fog_horizontal)
-                 << ",\"renderer_pixel_underwater_fog_enabled\":"
-                 << static_cast<int>(r.renderer_pixel_underwater_fog_enabled)
-                 << ",\"renderer_pixel_underwater_fog_submerged\":"
-                 << static_cast<int>(r.renderer_pixel_underwater_fog_submerged)
-                 << ",\"renderer_pixel_fog_submerged\":"
-                 << r.renderer_pixel_fog_submerged
-                 << ",\"renderer_pixel_fog_sy_valid\":"
-                 << r.renderer_pixel_fog_sy_valid
-                 << ",\"renderer_pixel_fog_sy\":"
-                 << r.renderer_pixel_fog_sy
-                 << ",\"renderer_pixel_fog_fragment_below\":"
-                 << r.renderer_pixel_fog_fragment_below
-                 << ",\"renderer_pixel_fog_factor\":"
-                 << r.renderer_pixel_fog_factor
-                 << ",\"renderer_pixel_fluid_face_neighbor_block\":"
-                 << r.renderer_pixel_fluid_face_neighbor_block
-                 << ",\"renderer_pixel_fluid_face_fluid_packed\":"
-                 << r.renderer_pixel_fluid_face_fluid_packed
-                 << ",\"renderer_pixel_camera_pos_x\":"
-                 << r.renderer_pixel_camera_pos_x
-                 << ",\"renderer_pixel_camera_pos_y\":"
-                 << r.renderer_pixel_camera_pos_y
-                 << ",\"renderer_pixel_camera_pos_z\":"
-                 << r.renderer_pixel_camera_pos_z
-                 << ",\"renderer_pixel_ray_origin_x\":"
-                 << r.renderer_pixel_ray_origin_x
-                 << ",\"renderer_pixel_ray_origin_y\":"
-                 << r.renderer_pixel_ray_origin_y
-                 << ",\"renderer_pixel_ray_origin_z\":"
-                 << r.renderer_pixel_ray_origin_z
-                 << ",\"renderer_pixel_ray_direction_x\":"
-                 << r.renderer_pixel_ray_direction_x
-                 << ",\"renderer_pixel_ray_direction_y\":"
-                 << r.renderer_pixel_ray_direction_y
-                 << ",\"renderer_pixel_ray_direction_z\":"
-                 << r.renderer_pixel_ray_direction_z
-                 << ",\"renderer_pixel_fog_start\":"
-                 << r.renderer_pixel_fog_start
-                 << ",\"renderer_pixel_fog_end\":"
-                 << r.renderer_pixel_fog_end
-                 << ",\"renderer_pixel_fog_min_blend\":"
-                 << r.renderer_pixel_fog_min_blend
-                 << ",\"renderer_pixel_fog_density\":"
-                 << r.renderer_pixel_fog_density
-                 << ",\"renderer_pixel_fog_env_multiplier\":"
-                 << r.renderer_pixel_fog_env_multiplier
-                 << ",\"renderer_pixel_fog_color_r\":"
-                 << r.renderer_pixel_fog_color_r
-                 << ",\"renderer_pixel_fog_color_g\":"
-                 << r.renderer_pixel_fog_color_g
-                 << ",\"renderer_pixel_fog_color_b\":"
-                 << r.renderer_pixel_fog_color_b
-                 << ",\"renderer_pixel_fog_target_color_r\":"
-                 << r.renderer_pixel_fog_target_color_r
-                 << ",\"renderer_pixel_fog_target_color_g\":"
-                 << r.renderer_pixel_fog_target_color_g
-                 << ",\"renderer_pixel_fog_target_color_b\":"
-                 << r.renderer_pixel_fog_target_color_b
-                 << ",\"renderer_pixel_underwater_fog_start\":"
-                 << r.renderer_pixel_underwater_fog_start
-                 << ",\"renderer_pixel_underwater_fog_end\":"
-                 << r.renderer_pixel_underwater_fog_end
-                 << ",\"renderer_pixel_underwater_fog_min_blend\":"
-                 << r.renderer_pixel_underwater_fog_min_blend
-                 << ",\"renderer_pixel_surface_valid\":"
-                 << static_cast<int>(r.renderer_pixel_surface_valid & 1u)
-                 << ",\"renderer_pixel_surface_x\":"
-                 << r.renderer_pixel_surface_x
-                 << ",\"renderer_pixel_surface_y\":"
-                 << r.renderer_pixel_surface_y
-                 << ",\"renderer_pixel_surface_z\":"
-                 << r.renderer_pixel_surface_z
-                 << ",\"renderer_pixel_opaque_surface_valid\":"
-                 << static_cast<int>(r.renderer_pixel_opaque_surface_valid)
-                 << ",\"renderer_pixel_opaque_surface_x\":"
-                 << r.renderer_pixel_opaque_surface_x
-                 << ",\"renderer_pixel_opaque_surface_y\":"
-                 << r.renderer_pixel_opaque_surface_y
-                 << ",\"renderer_pixel_opaque_surface_z\":"
-                 << r.renderer_pixel_opaque_surface_z
-                 << ",\"renderer_pixel_voxel_ray_state\":"
-                 << static_cast<int>(r.renderer_pixel_voxel_ray_state)
-                 << ",\"renderer_pixel_voxel_known_air_steps\":"
-                 << r.renderer_pixel_voxel_known_air_steps
-                 << ",\"renderer_pixel_voxel_ray_gap\":"
-                 << static_cast<int>(r.renderer_pixel_voxel_ray_gap)
-                 << ",\"renderer_pixel_voxel_unloaded_x\":"
-                 << r.renderer_pixel_voxel_unloaded_x
-                 << ",\"renderer_pixel_voxel_unloaded_y\":"
-                 << r.renderer_pixel_voxel_unloaded_y
-                 << ",\"renderer_pixel_voxel_unloaded_z\":"
-                 << r.renderer_pixel_voxel_unloaded_z
-                 << ",\"renderer_pixel_voxel_unloaded_chunk_x\":"
-                 << r.renderer_pixel_voxel_unloaded_chunk_x
-                 << ",\"renderer_pixel_voxel_unloaded_chunk_y\":"
-                 << r.renderer_pixel_voxel_unloaded_chunk_y
-                 << ",\"renderer_pixel_voxel_unloaded_chunk_z\":"
-                 << r.renderer_pixel_voxel_unloaded_chunk_z
-                 << ",\"renderer_pixel_voxel_unloaded_distance\":"
-                 << r.renderer_pixel_voxel_unloaded_distance
-                 << ",\"renderer_pixel_voxel_hit_x\":"
-                 << r.renderer_pixel_voxel_hit_x
-                 << ",\"renderer_pixel_voxel_hit_y\":"
-                 << r.renderer_pixel_voxel_hit_y
-                 << ",\"renderer_pixel_voxel_hit_z\":"
-                 << r.renderer_pixel_voxel_hit_z
-                 << ",\"renderer_pixel_voxel_hit_block_id\":"
-                 << r.renderer_pixel_voxel_hit_block_id
-                 << ",\"renderer_pixel_voxel_previous_block_id\":"
-                 << r.renderer_pixel_voxel_previous_block_id
-                 << ",\"renderer_pixel_voxel_entry_face\":"
-                 << static_cast<int>(r.renderer_pixel_voxel_entry_face)
-                 << ",\"renderer_pixel_voxel_hit_distance\":"
-                 << r.renderer_pixel_voxel_hit_distance
-                 << ",\"renderer_pixel_voxel_face_source_valid\":"
-                 << static_cast<int>(r.renderer_pixel_voxel_face_source_valid)
-                 << ",\"renderer_pixel_voxel_face_source_distance\":"
-                 << r.renderer_pixel_voxel_face_source_distance
-                 << ",\"renderer_pixel_voxel_mesh_ray_intersects\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_voxel_mesh_ray_intersects)
-                 << ",\"renderer_pixel_voxel_mesh_ray_interior\":"
-                 << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_interior)
-                 << ",\"renderer_pixel_voxel_mesh_ray_gap\":"
-                 << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_gap)
-                 << ",\"renderer_pixel_voxel_mesh_ray_distance\":"
-                 << r.renderer_pixel_voxel_mesh_ray_distance
-                 << ",\"renderer_pixel_voxel_mesh_ray_projected_valid\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_voxel_mesh_ray_projected_valid)
-                 << ",\"renderer_pixel_voxel_mesh_ray_projected_x\":"
-                 << r.renderer_pixel_voxel_mesh_ray_projected_x
-                 << ",\"renderer_pixel_voxel_mesh_ray_projected_y\":"
-                 << r.renderer_pixel_voxel_mesh_ray_projected_y
-                 << ",\"renderer_pixel_voxel_mesh_ray_projected_depth\":"
-                 << r.renderer_pixel_voxel_mesh_ray_projected_depth
-                 << ",\"renderer_pixel_voxel_mesh_ray_projected_delta_x\":"
-                 << r.renderer_pixel_voxel_mesh_ray_projected_delta_x
-                 << ",\"renderer_pixel_voxel_mesh_ray_projected_delta_y\":"
-                 << r.renderer_pixel_voxel_mesh_ray_projected_delta_y
-                 << ",\"renderer_pixel_voxel_mesh_ray_origin_projected_delta_x\":"
-                 << r.renderer_pixel_voxel_mesh_ray_origin_projected_delta_x
-                 << ",\"renderer_pixel_voxel_mesh_ray_origin_projected_delta_y\":"
-                 << r.renderer_pixel_voxel_mesh_ray_origin_projected_delta_y
-                 << ",\"renderer_pixel_voxel_mesh_ray_direction_projected_delta_x\":"
-                 << r.renderer_pixel_voxel_mesh_ray_direction_projected_delta_x
-                 << ",\"renderer_pixel_voxel_mesh_ray_direction_projected_delta_y\":"
-                 << r.renderer_pixel_voxel_mesh_ray_direction_projected_delta_y
-                 << ",\"renderer_pixel_voxel_mesh_ray_projected_depth_delta\":"
-                 << r.renderer_pixel_voxel_mesh_ray_projected_depth_delta
-                 << ",\"renderer_pixel_voxel_mesh_ray_projected_depth_would_pass\":"
-                 << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_projected_depth_would_pass)
-                 << ",\"renderer_pixel_voxel_mesh_ray_edge_margin\":"
-                 << r.renderer_pixel_voxel_mesh_ray_edge_margin;
+          (*out)
+              << ",\"world_epoch\":" << r.world_epoch
+              << ",\"incarnation\":" << r.incarnation
+              << ",\"renderer_pixel_probe_id\":" << r.renderer_pixel_probe_id
+              << ",\"renderer_pixel_probe_trigger_flags\":"
+              << static_cast<int>(r.renderer_pixel_probe_trigger_flags)
+              << ",\"renderer_pixel_probe_event_frame_epoch\":"
+              << r.renderer_pixel_probe_event_frame_epoch
+              << ",\"renderer_pixel_x\":" << r.renderer_pixel_x
+              << ",\"renderer_pixel_y\":" << r.renderer_pixel_y
+              << ",\"renderer_pixel_rgba\":" << r.renderer_pixel_rgba
+              << ",\"renderer_pixel_pretransparent_rgba\":"
+              << r.renderer_pixel_pretransparent_rgba
+              << ",\"renderer_pixel_stencil_index\":"
+              << static_cast<int>(r.renderer_pixel_stencil_index)
+              << ",\"renderer_pixel_pretransparent_depth\":"
+              << r.renderer_pixel_pretransparent_depth
+              << ",\"renderer_pixel_marker_mode\":"
+              << (r.renderer_pixel_marker_visible != 2 ? "true" : "false")
+              << ",\"renderer_pixel_marker_visible\":"
+              << (r.renderer_pixel_marker_visible == 1 ? "true" : "false")
+              << ",\"renderer_pixel_marker_coverage\":"
+              << (r.renderer_pixel_marker_visible != 2
+                      ? static_cast<double>(r.renderer_pixel_surface_valid >>
+                                            1u) /
+                            127.0
+                      : -1.0)
+              << ",\"renderer_pixel_shader_min_ambient\":"
+              << r.renderer_pixel_shader_min_ambient
+              << ",\"renderer_pixel_shader_day_factor\":"
+              << r.renderer_pixel_shader_day_factor
+              << ",\"renderer_pixel_shader_night_factor\":"
+              << r.renderer_pixel_shader_night_factor
+              << ",\"renderer_pixel_shader_sky_scale\":"
+              << r.renderer_pixel_shader_sky_scale
+              << ",\"renderer_pixel_shader_precipitation\":"
+              << r.renderer_pixel_shader_precipitation
+              << ",\"renderer_pixel_shader_wetness\":"
+              << r.renderer_pixel_shader_wetness
+              << ",\"renderer_pixel_shader_light_debug_mode\":"
+              << r.renderer_pixel_shader_light_debug_mode
+              << ",\"renderer_pixel_fog_state_valid\":"
+              << static_cast<int>(r.renderer_pixel_fog_state_valid)
+              << ",\"renderer_pixel_fog_enabled\":"
+              << static_cast<int>(r.renderer_pixel_fog_enabled)
+              << ",\"renderer_pixel_air_fog_enabled\":"
+              << static_cast<int>(r.renderer_pixel_air_fog_enabled)
+              << ",\"renderer_pixel_fog_horizontal\":"
+              << static_cast<int>(r.renderer_pixel_fog_horizontal)
+              << ",\"renderer_pixel_underwater_fog_enabled\":"
+              << static_cast<int>(r.renderer_pixel_underwater_fog_enabled)
+              << ",\"renderer_pixel_underwater_fog_submerged\":"
+              << static_cast<int>(r.renderer_pixel_underwater_fog_submerged)
+              << ",\"renderer_pixel_fog_submerged\":"
+              << r.renderer_pixel_fog_submerged
+              << ",\"renderer_pixel_fog_sy_valid\":"
+              << r.renderer_pixel_fog_sy_valid
+              << ",\"renderer_pixel_fog_sy\":" << r.renderer_pixel_fog_sy
+              << ",\"renderer_pixel_fog_fragment_below\":"
+              << r.renderer_pixel_fog_fragment_below
+              << ",\"renderer_pixel_fog_factor\":"
+              << r.renderer_pixel_fog_factor
+              << ",\"renderer_pixel_fluid_face_neighbor_block\":"
+              << r.renderer_pixel_fluid_face_neighbor_block
+              << ",\"renderer_pixel_fluid_face_fluid_packed\":"
+              << r.renderer_pixel_fluid_face_fluid_packed
+              << ",\"renderer_pixel_camera_pos_x\":"
+              << r.renderer_pixel_camera_pos_x
+              << ",\"renderer_pixel_camera_pos_y\":"
+              << r.renderer_pixel_camera_pos_y
+              << ",\"renderer_pixel_camera_pos_z\":"
+              << r.renderer_pixel_camera_pos_z
+              << ",\"renderer_pixel_ray_origin_x\":"
+              << r.renderer_pixel_ray_origin_x
+              << ",\"renderer_pixel_ray_origin_y\":"
+              << r.renderer_pixel_ray_origin_y
+              << ",\"renderer_pixel_ray_origin_z\":"
+              << r.renderer_pixel_ray_origin_z
+              << ",\"renderer_pixel_ray_direction_x\":"
+              << r.renderer_pixel_ray_direction_x
+              << ",\"renderer_pixel_ray_direction_y\":"
+              << r.renderer_pixel_ray_direction_y
+              << ",\"renderer_pixel_ray_direction_z\":"
+              << r.renderer_pixel_ray_direction_z
+              << ",\"renderer_pixel_fog_start\":" << r.renderer_pixel_fog_start
+              << ",\"renderer_pixel_fog_end\":" << r.renderer_pixel_fog_end
+              << ",\"renderer_pixel_fog_min_blend\":"
+              << r.renderer_pixel_fog_min_blend
+              << ",\"renderer_pixel_fog_density\":"
+              << r.renderer_pixel_fog_density
+              << ",\"renderer_pixel_fog_env_multiplier\":"
+              << r.renderer_pixel_fog_env_multiplier
+              << ",\"renderer_pixel_fog_color_r\":"
+              << r.renderer_pixel_fog_color_r
+              << ",\"renderer_pixel_fog_color_g\":"
+              << r.renderer_pixel_fog_color_g
+              << ",\"renderer_pixel_fog_color_b\":"
+              << r.renderer_pixel_fog_color_b
+              << ",\"renderer_pixel_fog_target_color_r\":"
+              << r.renderer_pixel_fog_target_color_r
+              << ",\"renderer_pixel_fog_target_color_g\":"
+              << r.renderer_pixel_fog_target_color_g
+              << ",\"renderer_pixel_fog_target_color_b\":"
+              << r.renderer_pixel_fog_target_color_b
+              << ",\"renderer_pixel_underwater_fog_start\":"
+              << r.renderer_pixel_underwater_fog_start
+              << ",\"renderer_pixel_underwater_fog_end\":"
+              << r.renderer_pixel_underwater_fog_end
+              << ",\"renderer_pixel_underwater_fog_min_blend\":"
+              << r.renderer_pixel_underwater_fog_min_blend
+              << ",\"renderer_pixel_surface_valid\":"
+              << static_cast<int>(r.renderer_pixel_surface_valid & 1u)
+              << ",\"renderer_pixel_surface_x\":" << r.renderer_pixel_surface_x
+              << ",\"renderer_pixel_surface_y\":" << r.renderer_pixel_surface_y
+              << ",\"renderer_pixel_surface_z\":" << r.renderer_pixel_surface_z
+              << ",\"renderer_pixel_opaque_surface_valid\":"
+              << static_cast<int>(r.renderer_pixel_opaque_surface_valid)
+              << ",\"renderer_pixel_opaque_surface_x\":"
+              << r.renderer_pixel_opaque_surface_x
+              << ",\"renderer_pixel_opaque_surface_y\":"
+              << r.renderer_pixel_opaque_surface_y
+              << ",\"renderer_pixel_opaque_surface_z\":"
+              << r.renderer_pixel_opaque_surface_z
+              << ",\"renderer_pixel_voxel_ray_state\":"
+              << static_cast<int>(r.renderer_pixel_voxel_ray_state)
+              << ",\"renderer_pixel_voxel_known_air_steps\":"
+              << r.renderer_pixel_voxel_known_air_steps
+              << ",\"renderer_pixel_voxel_ray_gap\":"
+              << static_cast<int>(r.renderer_pixel_voxel_ray_gap)
+              << ",\"renderer_pixel_voxel_unloaded_x\":"
+              << r.renderer_pixel_voxel_unloaded_x
+              << ",\"renderer_pixel_voxel_unloaded_y\":"
+              << r.renderer_pixel_voxel_unloaded_y
+              << ",\"renderer_pixel_voxel_unloaded_z\":"
+              << r.renderer_pixel_voxel_unloaded_z
+              << ",\"renderer_pixel_voxel_unloaded_chunk_x\":"
+              << r.renderer_pixel_voxel_unloaded_chunk_x
+              << ",\"renderer_pixel_voxel_unloaded_chunk_y\":"
+              << r.renderer_pixel_voxel_unloaded_chunk_y
+              << ",\"renderer_pixel_voxel_unloaded_chunk_z\":"
+              << r.renderer_pixel_voxel_unloaded_chunk_z
+              << ",\"renderer_pixel_voxel_unloaded_distance\":"
+              << r.renderer_pixel_voxel_unloaded_distance
+              << ",\"renderer_pixel_voxel_hit_x\":"
+              << r.renderer_pixel_voxel_hit_x
+              << ",\"renderer_pixel_voxel_hit_y\":"
+              << r.renderer_pixel_voxel_hit_y
+              << ",\"renderer_pixel_voxel_hit_z\":"
+              << r.renderer_pixel_voxel_hit_z
+              << ",\"renderer_pixel_voxel_hit_block_id\":"
+              << r.renderer_pixel_voxel_hit_block_id
+              << ",\"renderer_pixel_voxel_previous_block_id\":"
+              << r.renderer_pixel_voxel_previous_block_id
+              << ",\"renderer_pixel_voxel_entry_face\":"
+              << static_cast<int>(r.renderer_pixel_voxel_entry_face)
+              << ",\"renderer_pixel_voxel_hit_distance\":"
+              << r.renderer_pixel_voxel_hit_distance
+              << ",\"renderer_pixel_voxel_face_source_valid\":"
+              << static_cast<int>(r.renderer_pixel_voxel_face_source_valid)
+              << ",\"renderer_pixel_voxel_face_source_distance\":"
+              << r.renderer_pixel_voxel_face_source_distance
+              << ",\"renderer_pixel_voxel_mesh_ray_intersects\":"
+              << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_intersects)
+              << ",\"renderer_pixel_voxel_mesh_ray_interior\":"
+              << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_interior)
+              << ",\"renderer_pixel_voxel_mesh_ray_gap\":"
+              << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_gap)
+              << ",\"renderer_pixel_voxel_mesh_ray_distance\":"
+              << r.renderer_pixel_voxel_mesh_ray_distance
+              << ",\"renderer_pixel_voxel_mesh_ray_projected_valid\":"
+              << static_cast<int>(
+                     r.renderer_pixel_voxel_mesh_ray_projected_valid)
+              << ",\"renderer_pixel_voxel_mesh_ray_projected_x\":"
+              << r.renderer_pixel_voxel_mesh_ray_projected_x
+              << ",\"renderer_pixel_voxel_mesh_ray_projected_y\":"
+              << r.renderer_pixel_voxel_mesh_ray_projected_y
+              << ",\"renderer_pixel_voxel_mesh_ray_projected_depth\":"
+              << r.renderer_pixel_voxel_mesh_ray_projected_depth
+              << ",\"renderer_pixel_voxel_mesh_ray_projected_delta_x\":"
+              << r.renderer_pixel_voxel_mesh_ray_projected_delta_x
+              << ",\"renderer_pixel_voxel_mesh_ray_projected_delta_y\":"
+              << r.renderer_pixel_voxel_mesh_ray_projected_delta_y
+              << ",\"renderer_pixel_voxel_mesh_ray_origin_projected_delta_x\":"
+              << r.renderer_pixel_voxel_mesh_ray_origin_projected_delta_x
+              << ",\"renderer_pixel_voxel_mesh_ray_origin_projected_delta_y\":"
+              << r.renderer_pixel_voxel_mesh_ray_origin_projected_delta_y
+              << ",\"renderer_pixel_voxel_mesh_ray_direction_projected_delta_"
+                 "x\":"
+              << r.renderer_pixel_voxel_mesh_ray_direction_projected_delta_x
+              << ",\"renderer_pixel_voxel_mesh_ray_direction_projected_delta_"
+                 "y\":"
+              << r.renderer_pixel_voxel_mesh_ray_direction_projected_delta_y
+              << ",\"renderer_pixel_voxel_mesh_ray_projected_depth_delta\":"
+              << r.renderer_pixel_voxel_mesh_ray_projected_depth_delta
+              << ",\"renderer_pixel_voxel_mesh_ray_projected_depth_would_"
+                 "pass\":"
+              << static_cast<int>(
+                     r.renderer_pixel_voxel_mesh_ray_projected_depth_would_pass)
+              << ",\"renderer_pixel_voxel_mesh_ray_edge_margin\":"
+              << r.renderer_pixel_voxel_mesh_ray_edge_margin;
           WriteGpuDrawStateJson(*out, r);
-          (*out) << ",\"renderer_pixel_voxel_mesh_ray_gpu_witness_attempted\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_voxel_mesh_ray_gpu_witness_attempted)
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_batch_found\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_voxel_mesh_ray_gpu_batch_found)
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_compact_active\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_voxel_mesh_ray_gpu_compact_active)
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_readable\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_voxel_mesh_ray_gpu_command_readable)
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_match\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_voxel_mesh_ray_gpu_command_match)
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_indices_readable\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_voxel_mesh_ray_gpu_indices_readable)
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_indices_match\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_voxel_mesh_ray_gpu_indices_match)
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_vertices_readable\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_voxel_mesh_ray_gpu_vertices_readable)
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_vertices_match\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_voxel_mesh_ray_gpu_vertices_match)
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_batch_index\":"
-                 << r.renderer_pixel_voxel_mesh_ray_gpu_batch_index
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_slot\":"
-                 << r.renderer_pixel_voxel_mesh_ray_gpu_command_slot
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_source_index_offset\":"
-                 << r.renderer_pixel_voxel_mesh_ray_gpu_source_index_offset
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_source_index0\":"
-                 << r.renderer_pixel_voxel_mesh_ray_gpu_source_index0
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_source_index1\":"
-                 << r.renderer_pixel_voxel_mesh_ray_gpu_source_index1
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_source_index2\":"
-                 << r.renderer_pixel_voxel_mesh_ray_gpu_source_index2
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_actual_index0\":"
-                 << r.renderer_pixel_voxel_mesh_ray_gpu_actual_index0
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_actual_index1\":"
-                 << r.renderer_pixel_voxel_mesh_ray_gpu_actual_index1
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_actual_index2\":"
-                 << r.renderer_pixel_voxel_mesh_ray_gpu_actual_index2
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_vbo_byte_offset\":"
-                 << r.renderer_pixel_voxel_mesh_ray_gpu_vbo_byte_offset
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_ebo_byte_offset\":"
-                 << r.renderer_pixel_voxel_mesh_ray_gpu_ebo_byte_offset
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_count\":"
-                 << r.renderer_pixel_voxel_mesh_ray_gpu_command_count
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_instances\":"
-                 << r.renderer_pixel_voxel_mesh_ray_gpu_command_instances
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_first_index\":"
-                 << r.renderer_pixel_voxel_mesh_ray_gpu_command_first_index
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_base_vertex\":"
-                 << r.renderer_pixel_voxel_mesh_ray_gpu_command_base_vertex
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_vertex_position_max_delta\":"
-                 << r.renderer_pixel_voxel_mesh_ray_gpu_vertex_position_max_delta
-                 << ",\"renderer_pixel_voxel_face_batch_ref\":"
-                 << static_cast<int>(r.renderer_pixel_voxel_face_batch_ref)
-                 << ",\"renderer_pixel_voxel_face_gpu_command\":"
-                 << static_cast<int>(r.renderer_pixel_voxel_face_gpu_command)
-                 << ",\"renderer_pixel_voxel_face_gpu_pooled\":"
-                 << static_cast<int>(r.renderer_pixel_voxel_face_gpu_pooled)
-                 << ",\"renderer_pixel_voxel_face_gpu_index_count\":"
-                 << r.renderer_pixel_voxel_face_gpu_index_count
-                 << ",\"renderer_pixel_voxel_face_gpu_instances\":"
-                 << r.renderer_pixel_voxel_face_gpu_instances
-                 << ",\"renderer_pixel_voxel_face_texture_ready\":"
-                 << static_cast<int>(r.renderer_pixel_voxel_face_texture_ready)
-                 << ",\"renderer_pixel_voxel_face_texture_id\":"
-                 << r.renderer_pixel_voxel_face_texture_id
-                 << ",\"renderer_pixel_voxel_chunk_x\":"
-                 << r.renderer_pixel_voxel_chunk_x
-                 << ",\"renderer_pixel_voxel_chunk_y\":"
-                 << r.renderer_pixel_voxel_chunk_y
-                 << ",\"renderer_pixel_voxel_chunk_z\":"
-                 << r.renderer_pixel_voxel_chunk_z
-                 << ",\"renderer_pixel_voxel_chunk_pending_light\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_voxel_chunk_pending_light)
-                 << ",\"renderer_pixel_voxel_chunk_relight_queue_kind\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_voxel_chunk_relight_queue_kind)
-                 << ",\"renderer_pixel_voxel_chunk_flow_ticket_flags\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_voxel_chunk_flow_ticket_flags)
-                 << ",\"renderer_pixel_voxel_chunk_has_settled_light\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_voxel_chunk_has_settled_light)
-                 << ",\"renderer_pixel_voxel_chunk_settled_light_rev\":"
-                 << r.renderer_pixel_voxel_chunk_settled_light_rev
-                 << ",\"renderer_pixel_voxel_chunk_field_light_rev\":"
-                 << r.renderer_pixel_voxel_chunk_field_light_rev
-                 << ",\"renderer_pixel_voxel_chunk_nonair\":"
-                 << r.renderer_pixel_voxel_chunk_nonair
-                 << ",\"renderer_pixel_voxel_chunk_mesh_revision\":"
-                 << r.renderer_pixel_voxel_chunk_mesh_revision
-                 << ",\"renderer_pixel_voxel_chunk_published_geom_rev\":"
-                 << r.renderer_pixel_voxel_chunk_published_geom_rev
-                 << ",\"renderer_pixel_voxel_chunk_published_light_rev\":"
-                 << r.renderer_pixel_voxel_chunk_published_light_rev
-                 << ",\"renderer_pixel_voxel_chunk_render_flags\":"
-                 << static_cast<int>(r.renderer_pixel_voxel_chunk_render_flags)
-                 << ",\"renderer_pixel_voxel_chunk_ref_flags\":"
-                 << static_cast<int>(r.renderer_pixel_voxel_chunk_ref_flags)
-                 << ",\"renderer_pixel_voxel_chunk_mdi_command_count\":"
-                 << r.renderer_pixel_voxel_chunk_mdi_command_count
-                 << ",\"renderer_pixel_voxel_chunk_mdi_visible_command_count\":"
-                 << r.renderer_pixel_voxel_chunk_mdi_visible_command_count
-                 << ",\"renderer_pixel_voxel_chunk_mdi_index_count\":"
-                 << r.renderer_pixel_voxel_chunk_mdi_index_count
-                 << ",\"renderer_pixel_voxel_chunk_mdi_visible_index_count\":"
-                 << r.renderer_pixel_voxel_chunk_mdi_visible_index_count
-                 << ",\"renderer_pixel_voxel_chunk_gpu_slot_quad_count\":"
-                 << r.renderer_pixel_voxel_chunk_gpu_slot_quad_count
-                 << ",\"renderer_pixel_voxel_chunk_source_index_count\":"
-                 << r.renderer_pixel_voxel_chunk_source_index_count
-                 << ",\"renderer_pixel_voxel_chunk_packed_draw_selected\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_voxel_chunk_packed_draw_selected)
-                 << ",\"renderer_pixel_voxel_chunk_packed_draw_path_ready\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_voxel_chunk_packed_draw_path_ready)
-                 << ",\"renderer_pixel_voxel_chunk_packed_slot_present\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_voxel_chunk_packed_slot_present)
-                 << ",\"renderer_pixel_voxel_chunk_packed_slice_ready\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_voxel_chunk_packed_slice_ready)
-                 << ",\"renderer_pixel_voxel_chunk_packed_opaque_range_count\":"
-                 << r.renderer_pixel_voxel_chunk_packed_opaque_range_count
-                 << ",\"renderer_pixel_voxel_chunk_packed_texture_ready_range_count\":"
-                 << r.renderer_pixel_voxel_chunk_packed_texture_ready_range_count
-                 << ",\"renderer_pixel_voxel_chunk_packed_draw_call_count\":"
-                 << r.renderer_pixel_voxel_chunk_packed_draw_call_count
-                 << ",\"renderer_pixel_voxel_chunk_packed_drawn_quad_count\":"
-                 << r.renderer_pixel_voxel_chunk_packed_drawn_quad_count
-                 << ",\"renderer_pixel_voxel_chunk_packed_drawn_index_count\":"
-                 << r.renderer_pixel_voxel_chunk_packed_drawn_index_count
-                 << ",\"renderer_pixel_voxel_chunk_work_owner_flags\":"
-                 << r.renderer_pixel_voxel_chunk_work_owner_flags
-                 << ",\"renderer_pixel_voxel_chunk_dirty_queue_kind\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_voxel_chunk_dirty_queue_kind)
-                 << ",\"renderer_pixel_voxel_chunk_dirty_queue_age_frames\":"
-                 << r.renderer_pixel_voxel_chunk_dirty_queue_age_frames
-                 << ",\"renderer_pixel_voxel_chunk_demand_has_active_attempt\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_voxel_chunk_demand_has_active_attempt)
-                 << ",\"renderer_pixel_voxel_chunk_demand_active_stage\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_voxel_chunk_demand_active_stage)
-                 << ",\"renderer_pixel_voxel_chunk_demand_desired_geom_rev\":"
-                 << r.renderer_pixel_voxel_chunk_demand_desired_geom_rev
-                 << ",\"renderer_pixel_voxel_chunk_demand_desired_light_rev\":"
-                 << r.renderer_pixel_voxel_chunk_demand_desired_light_rev
-                 << ",\"renderer_pixel_fluid_triangle_match\":"
-                 << static_cast<int>(r.renderer_pixel_fluid_triangle_match)
-                  << ",\"renderer_pixel_ready_fluid_triangle_match\":"
-                  << static_cast<int>(
-                         r.renderer_pixel_ready_fluid_triangle_match)
-                 << ",\"renderer_pixel_fluid_triangle_distance\":"
-                 << r.renderer_pixel_fluid_triangle_distance
-                 << ",\"renderer_pixel_fluid_face_index\":"
-                 << r.renderer_pixel_fluid_face_index
-                 << ",\"renderer_pixel_fluid_block_id\":"
-                 << r.renderer_pixel_fluid_block_id
-                  << ",\"renderer_pixel_fluid_chunk_x\":" << r.cx
-                  << ",\"renderer_pixel_fluid_chunk_y\":" << r.cy
-                  << ",\"renderer_pixel_fluid_chunk_z\":" << r.cz
-                  << ",\"renderer_pixel_fluid_chunk_render_ready\":"
-                  << static_cast<int>(
-                         r.renderer_pixel_fluid_chunk_render_ready)
-                  << ",\"renderer_pixel_fluid_raw_ref_count\":"
-                  << r.renderer_pixel_fluid_raw_ref_count
-                  << ",\"renderer_pixel_fluid_ready_ref_count\":"
-                  << r.renderer_pixel_fluid_ready_ref_count
-                  << ",\"renderer_pixel_fluid_mdi_probe_checked\":"
-                  << static_cast<int>(
-                         r.renderer_pixel_fluid_mdi_probe_checked)
-                  << ",\"renderer_pixel_fluid_payload_check_attempted\":"
-                  << static_cast<int>(
-                         r.renderer_pixel_fluid_payload_check_attempted)
-                  << ",\"renderer_pixel_fluid_source_batch_index\":"
-                  << r.renderer_pixel_fluid_source_batch_index
-                  << ",\"renderer_pixel_fluid_gpu_batch_index\":"
-                  << r.renderer_pixel_fluid_gpu_batch_index
-                  << ",\"renderer_pixel_fluid_gpu_batch_vector_index\":"
-                  << r.renderer_pixel_fluid_gpu_batch_vector_index
-                  << ",\"renderer_pixel_fluid_gpu_compact_active\":"
-                  << static_cast<int>(
-                         r.renderer_pixel_fluid_gpu_compact_active)
-                  << ",\"renderer_pixel_fluid_gpu_vbo_byte_offset\":"
-                  << r.renderer_pixel_fluid_gpu_vbo_byte_offset
-                  << ",\"renderer_pixel_fluid_gpu_ebo_byte_offset\":"
-                  << r.renderer_pixel_fluid_gpu_ebo_byte_offset
-                  << ",\"renderer_pixel_fluid_gpu_vbo_buffer_bytes\":"
-                  << r.renderer_pixel_fluid_gpu_vbo_buffer_bytes
-                  << ",\"renderer_pixel_fluid_gpu_ebo_buffer_bytes\":"
-                  << r.renderer_pixel_fluid_gpu_ebo_buffer_bytes
-                  << ",\"renderer_pixel_fluid_source_vertex_count\":"
-                  << r.renderer_pixel_fluid_source_vertex_count
-                  << ",\"renderer_pixel_fluid_source_index_count\":"
-                  << r.renderer_pixel_fluid_source_index_count
-                  << ",\"renderer_pixel_fluid_gpu_vertex_count\":"
-                  << r.renderer_pixel_fluid_gpu_vertex_count
-                  << ",\"renderer_pixel_fluid_gpu_index_count\":"
-                  << r.renderer_pixel_fluid_gpu_index_count
-                  << ",\"renderer_pixel_fluid_gpu_index_count_gl\":"
-                  << r.renderer_pixel_fluid_gpu_index_count_gl
-                  << ",\"renderer_pixel_fluid_vertex_count_matches\":"
-                  << static_cast<int>(
-                         r.renderer_pixel_fluid_vertex_count_matches)
-                  << ",\"renderer_pixel_fluid_index_count_matches\":"
-                  << static_cast<int>(
-                         r.renderer_pixel_fluid_index_count_matches)
-                  << ",\"renderer_pixel_fluid_vertex_payload_matches\":"
-                  << static_cast<int>(
-                         r.renderer_pixel_fluid_vertex_payload_matches)
-                  << ",\"renderer_pixel_fluid_index_payload_matches\":"
-                  << static_cast<int>(
-                         r.renderer_pixel_fluid_index_payload_matches)
-                  << ",\"renderer_pixel_fluid_vertex_payload_readback_valid\":"
-                  << static_cast<int>(
-                         r.renderer_pixel_fluid_vertex_payload_readback_valid)
-                  << ",\"renderer_pixel_fluid_index_payload_readback_valid\":"
-                  << static_cast<int>(
-                         r.renderer_pixel_fluid_index_payload_readback_valid)
-                  << ",\"renderer_pixel_fluid_vertex_payload_first_mismatch_byte\":"
-                  << r.renderer_pixel_fluid_vertex_payload_first_mismatch_byte
-                  << ",\"renderer_pixel_fluid_index_payload_first_mismatch\":"
-                  << r.renderer_pixel_fluid_index_payload_first_mismatch
-                  << ",\"renderer_pixel_fluid_index_payload_source_value\":"
-                  << r.renderer_pixel_fluid_index_payload_source_value
-                  << ",\"renderer_pixel_fluid_index_payload_gpu_value\":"
-                  << r.renderer_pixel_fluid_index_payload_gpu_value
-                  << ",\"renderer_pixel_fluid_chunk_gate_flags\":"
-                  << r.renderer_gate_flags
-                  << ",\"renderer_pixel_fluid_chunk_gpu_resident\":"
-                  << static_cast<int>(r.renderer_gpu_resident_marker)
-                  << ",\"renderer_pixel_fluid_chunk_gpu_slot_quad_count\":"
-                  << r.renderer_gpu_slot_quad_count
-                  << ",\"renderer_pixel_fluid_chunk_mdi_resident_pass_flags\":"
-                  << static_cast<int>(r.renderer_mdi_resident_pass_flags)
-                  << ",\"renderer_pixel_fluid_chunk_mdi_visible_pass_flags\":"
-                  << static_cast<int>(r.renderer_mdi_visible_pass_flags)
-                  << ",\"renderer_pixel_fluid_chunk_mdi_command_count\":"
-                  << r.renderer_mdi_command_count
-                  << ",\"renderer_pixel_fluid_chunk_mdi_visible_command_count\":"
-                  << r.renderer_mdi_visible_command_count
-                  << ",\"renderer_pixel_fluid_chunk_mdi_first_block_id\":"
-                  << r.renderer_mdi_first_block_id
-                  << ",\"renderer_pixel_fluid_chunk_mdi_index_count\":"
-                  << r.renderer_mdi_index_count
-                  << ",\"renderer_pixel_fluid_chunk_mdi_visible_index_count\":"
-                  << r.renderer_mdi_visible_index_count
-                  << ",\"renderer_pixel_fluid_chunk_source_top_face_quads\":"
-                  << r.renderer_source_top_face_quads
-                  << ",\"renderer_pixel_fluid_chunk_texture_ready\":"
-                  << static_cast<int>(r.renderer_texture_ready)
-                  << ",\"renderer_pixel_fluid_chunk_mdi_payload_flags\":"
-                  << static_cast<int>(r.renderer_mdi_payload_flags)
-                  << ",\"renderer_pixel_fluid_chunk_mdi_command_flags\":"
-                  << static_cast<int>(r.renderer_mdi_command_flags)
-                  << ",\"renderer_mdi_command_instance_count\":"
-                  << r.renderer_mdi_command_instance_count
-                  << ",\"renderer_mdi_command_first_index\":"
-                  << r.renderer_mdi_command_first_index
-                  << ",\"renderer_mdi_command_base_vertex\":"
-                  << r.renderer_mdi_command_base_vertex
-                 << ",\"renderer_pixel_fluid_sky_light\":"
-                 << r.renderer_pixel_fluid_sky_light
-                 << ",\"renderer_pixel_fluid_block_light\":"
-                 << r.renderer_pixel_fluid_block_light
-                 << ",\"renderer_pixel_opaque_hit_distance\":"
-                 << r.renderer_pixel_opaque_hit_distance
-                 << ",\"renderer_pixel_opaque_chunk_x\":"
-                 << r.renderer_pixel_opaque_chunk_x
-                 << ",\"renderer_pixel_opaque_chunk_y\":"
-                 << r.renderer_pixel_opaque_chunk_y
-                 << ",\"renderer_pixel_opaque_chunk_z\":"
-                 << r.renderer_pixel_opaque_chunk_z
-                 << ",\"renderer_pixel_opaque_world_epoch\":"
-                 << r.renderer_pixel_opaque_world_epoch
-                 << ",\"renderer_pixel_opaque_incarnation\":"
-                 << r.renderer_pixel_opaque_incarnation
-                 << ",\"renderer_pixel_opaque_chunk_nonair\":"
-                 << r.renderer_pixel_opaque_chunk_nonair
-                 << ",\"renderer_pixel_opaque_chunk_content_revision\":"
-                 << r.renderer_pixel_opaque_chunk_content_revision
-                 << ",\"renderer_pixel_opaque_mesh_revision\":"
-                 << r.renderer_pixel_opaque_mesh_revision
-                 << ",\"renderer_pixel_opaque_published_geom_rev\":"
-                 << r.renderer_pixel_opaque_published_geom_rev
-                 << ",\"renderer_pixel_opaque_published_light_rev\":"
-                 << r.renderer_pixel_opaque_published_light_rev
-                 << ",\"renderer_pixel_opaque_meshed_light_rev\":"
-                 << r.renderer_pixel_opaque_meshed_light_rev
-                 << ",\"renderer_pixel_opaque_field_light_rev\":"
-                 << r.renderer_pixel_opaque_field_light_rev
-                 << ",\"renderer_pixel_opaque_source_index_count\":"
-                 << r.renderer_pixel_opaque_source_index_count
-                 << ",\"renderer_pixel_opaque_vertex_light_valid\":"
-                 << static_cast<int>(r.renderer_pixel_opaque_vertex_light_valid)
-                 << ",\"renderer_pixel_opaque_vertex_light_block_id\":"
-                 << r.renderer_pixel_opaque_vertex_light_block_id
-                 << ",\"renderer_pixel_opaque_vertex_light_face_index\":"
-                 << r.renderer_pixel_opaque_vertex_light_face_index
-                 << ",\"renderer_pixel_opaque_vertex_light_distance\":"
-                 << r.renderer_pixel_opaque_vertex_light_distance
-                 << ",\"renderer_pixel_opaque_vertex_sky_light\":"
-                 << r.renderer_pixel_opaque_vertex_sky_light
-                 << ",\"renderer_pixel_opaque_vertex_block_light\":"
-                 << r.renderer_pixel_opaque_vertex_block_light
-                 << ",\"renderer_pixel_opaque_vertex_light_preview\":"
-                 << r.renderer_pixel_opaque_vertex_light_preview
-                 << ",\"renderer_pixel_surface_preview_shader_override\":"
-                 << ((r.renderer_gate_flags & (1u << 22)) != 0 ? 1 : 0)
-                 << ",\"renderer_pixel_opaque_preview_shader_override\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_opaque_preview_shader_override)
-                 << ",\"renderer_pixel_opaque_live_face_light_valid\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_opaque_live_face_light_valid)
-                 << ",\"renderer_pixel_opaque_live_face_light_packed\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_opaque_live_face_light_packed)
-                 << ",\"renderer_pixel_opaque_live_face_light_source\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_opaque_live_face_light_source)
-                 << ",\"renderer_pixel_opaque_demand_present\":"
-                 << static_cast<int>(r.renderer_pixel_opaque_demand_present)
-                 << ",\"renderer_pixel_opaque_demand_has_active_attempt\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_opaque_demand_has_active_attempt)
-                 << ",\"renderer_pixel_opaque_demand_has_settled_light\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_opaque_demand_has_settled_light)
-                 << ",\"renderer_pixel_opaque_demand_active_stage\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_opaque_demand_active_stage)
-                 << ",\"renderer_pixel_opaque_demand_desired_geom_rev\":"
-                 << r.renderer_pixel_opaque_demand_desired_geom_rev
-                 << ",\"renderer_pixel_opaque_demand_published_geom_rev\":"
-                 << r.renderer_pixel_opaque_demand_published_geom_rev
-                 << ",\"renderer_pixel_opaque_demand_desired_light_rev\":"
-                 << r.renderer_pixel_opaque_demand_desired_light_rev
-                 << ",\"renderer_pixel_opaque_demand_published_light_rev\":"
-                 << r.renderer_pixel_opaque_demand_published_light_rev
-                 << ",\"renderer_pixel_opaque_demand_settled_light_rev\":"
-                 << r.renderer_pixel_opaque_demand_settled_light_rev
-                 << ",\"renderer_pixel_surface_demand_attempt_age_ms\":"
-                 << r.demand_attempt_age_ms
-                 << ",\"renderer_pixel_surface_demand_progress_age_ms\":"
-                 << r.demand_progress_age_ms
-                 << ",\"renderer_pixel_opaque_demand_attempt_age_ms\":"
-                 << r.renderer_pixel_opaque_demand_attempt_age_ms
-                 << ",\"renderer_pixel_opaque_demand_progress_age_ms\":"
-                 << r.renderer_pixel_opaque_demand_progress_age_ms
-                 << ",\"renderer_pixel_opaque_mesh_dirty_queue_kind\":"
-                 << static_cast<int>(r.mesh_dirty_queue_kind)
-                 << ",\"renderer_pixel_opaque_mesh_dirty_queue_index\":"
-                 << r.mesh_dirty_queue_index
-                 << ",\"renderer_pixel_opaque_mesh_dirty_queue_size\":"
-                 << r.mesh_dirty_queue_size
-                 << ",\"renderer_pixel_opaque_mesh_dirty_queue_age_frames\":"
-                 << r.mesh_dirty_queue_age_frames
-                 << ",\"renderer_pixel_opaque_mesh_work_owner_flags\":"
-                 << r.mesh_work_owner_flags
-                 << ",\"renderer_pixel_opaque_relight_owner_flags\":"
-                 << r.relight_owner_flags
-                 << ",\"renderer_pixel_opaque_relight_queue_kind\":"
-                 << static_cast<int>(r.relight_queue_kind)
-                 << ",\"renderer_pixel_opaque_relight_queue_index\":"
-                 << r.relight_queue_index
-                 << ",\"renderer_pixel_opaque_relight_queue_size\":"
-                 << r.relight_queue_size
-                 << ",\"renderer_pixel_opaque_column_emerge_stage\":"
-                 << static_cast<int>(r.column_emerge_stage)
-                 << ",\"renderer_pixel_opaque_ref_flags\":"
-                 << static_cast<int>(r.renderer_pixel_opaque_ref_flags)
-                 << ",\"renderer_pixel_opaque_drawable\":"
-                 << static_cast<int>(r.renderer_pixel_opaque_drawable)
-                 << ",\"renderer_pixel_opaque_draw_ready\":"
-                 << static_cast<int>(r.renderer_pixel_opaque_draw_ready)
-                 << ",\"renderer_pixel_opaque_live_gpu\":"
-                 << static_cast<int>(r.renderer_pixel_opaque_live_gpu)
-                 << ",\"renderer_pixel_opaque_mdi_resident_pass_flags\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_opaque_mdi_resident_pass_flags)
-                 << ",\"renderer_pixel_opaque_mdi_visible_pass_flags\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_opaque_mdi_visible_pass_flags)
-                 << ",\"renderer_pixel_opaque_mdi_index_count\":"
-                 << r.renderer_pixel_opaque_mdi_index_count
-                 << ",\"renderer_pixel_opaque_mdi_visible_index_count\":"
-                 << r.renderer_pixel_opaque_mdi_visible_index_count
-                 << ",\"renderer_pixel_opaque_column_flow_ticket_flags\":"
-                 << static_cast<int>(r.column_flow_ticket_flags)
-                 << ",\"renderer_pixel_opaque_stale_light_remesh_pending\":"
-                 << static_cast<int>(
-                        r.renderer_pixel_opaque_stale_light_remesh_pending)
-                 << "}\n";
+          (*out)
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_witness_attempted\":"
+              << static_cast<int>(
+                     r.renderer_pixel_voxel_mesh_ray_gpu_witness_attempted)
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_batch_found\":"
+              << static_cast<int>(
+                     r.renderer_pixel_voxel_mesh_ray_gpu_batch_found)
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_compact_active\":"
+              << static_cast<int>(
+                     r.renderer_pixel_voxel_mesh_ray_gpu_compact_active)
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_readable\":"
+              << static_cast<int>(
+                     r.renderer_pixel_voxel_mesh_ray_gpu_command_readable)
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_match\":"
+              << static_cast<int>(
+                     r.renderer_pixel_voxel_mesh_ray_gpu_command_match)
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_indices_readable\":"
+              << static_cast<int>(
+                     r.renderer_pixel_voxel_mesh_ray_gpu_indices_readable)
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_indices_match\":"
+              << static_cast<int>(
+                     r.renderer_pixel_voxel_mesh_ray_gpu_indices_match)
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_vertices_readable\":"
+              << static_cast<int>(
+                     r.renderer_pixel_voxel_mesh_ray_gpu_vertices_readable)
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_vertices_match\":"
+              << static_cast<int>(
+                     r.renderer_pixel_voxel_mesh_ray_gpu_vertices_match)
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_batch_index\":"
+              << r.renderer_pixel_voxel_mesh_ray_gpu_batch_index
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_slot\":"
+              << r.renderer_pixel_voxel_mesh_ray_gpu_command_slot
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_source_index_offset\":"
+              << r.renderer_pixel_voxel_mesh_ray_gpu_source_index_offset
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_source_index0\":"
+              << r.renderer_pixel_voxel_mesh_ray_gpu_source_index0
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_source_index1\":"
+              << r.renderer_pixel_voxel_mesh_ray_gpu_source_index1
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_source_index2\":"
+              << r.renderer_pixel_voxel_mesh_ray_gpu_source_index2
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_actual_index0\":"
+              << r.renderer_pixel_voxel_mesh_ray_gpu_actual_index0
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_actual_index1\":"
+              << r.renderer_pixel_voxel_mesh_ray_gpu_actual_index1
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_actual_index2\":"
+              << r.renderer_pixel_voxel_mesh_ray_gpu_actual_index2
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_vbo_byte_offset\":"
+              << r.renderer_pixel_voxel_mesh_ray_gpu_vbo_byte_offset
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_ebo_byte_offset\":"
+              << r.renderer_pixel_voxel_mesh_ray_gpu_ebo_byte_offset
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_count\":"
+              << r.renderer_pixel_voxel_mesh_ray_gpu_command_count
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_instances\":"
+              << r.renderer_pixel_voxel_mesh_ray_gpu_command_instances
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_first_index\":"
+              << r.renderer_pixel_voxel_mesh_ray_gpu_command_first_index
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_base_vertex\":"
+              << r.renderer_pixel_voxel_mesh_ray_gpu_command_base_vertex
+              << ",\"renderer_pixel_voxel_mesh_ray_gpu_vertex_position_max_"
+                 "delta\":"
+              << r.renderer_pixel_voxel_mesh_ray_gpu_vertex_position_max_delta
+              << ",\"renderer_pixel_voxel_face_batch_ref\":"
+              << static_cast<int>(r.renderer_pixel_voxel_face_batch_ref)
+              << ",\"renderer_pixel_voxel_face_gpu_command\":"
+              << static_cast<int>(r.renderer_pixel_voxel_face_gpu_command)
+              << ",\"renderer_pixel_voxel_face_gpu_pooled\":"
+              << static_cast<int>(r.renderer_pixel_voxel_face_gpu_pooled)
+              << ",\"renderer_pixel_voxel_face_gpu_index_count\":"
+              << r.renderer_pixel_voxel_face_gpu_index_count
+              << ",\"renderer_pixel_voxel_face_gpu_instances\":"
+              << r.renderer_pixel_voxel_face_gpu_instances
+              << ",\"renderer_pixel_voxel_face_texture_ready\":"
+              << static_cast<int>(r.renderer_pixel_voxel_face_texture_ready)
+              << ",\"renderer_pixel_voxel_face_texture_id\":"
+              << r.renderer_pixel_voxel_face_texture_id
+              << ",\"renderer_pixel_voxel_chunk_x\":"
+              << r.renderer_pixel_voxel_chunk_x
+              << ",\"renderer_pixel_voxel_chunk_y\":"
+              << r.renderer_pixel_voxel_chunk_y
+              << ",\"renderer_pixel_voxel_chunk_z\":"
+              << r.renderer_pixel_voxel_chunk_z
+              << ",\"renderer_pixel_voxel_chunk_pending_light\":"
+              << static_cast<int>(r.renderer_pixel_voxel_chunk_pending_light)
+              << ",\"renderer_pixel_voxel_chunk_relight_queue_kind\":"
+              << static_cast<int>(
+                     r.renderer_pixel_voxel_chunk_relight_queue_kind)
+              << ",\"renderer_pixel_voxel_chunk_flow_ticket_flags\":"
+              << static_cast<int>(
+                     r.renderer_pixel_voxel_chunk_flow_ticket_flags)
+              << ",\"renderer_pixel_voxel_chunk_has_settled_light\":"
+              << static_cast<int>(
+                     r.renderer_pixel_voxel_chunk_has_settled_light)
+              << ",\"renderer_pixel_voxel_chunk_settled_light_rev\":"
+              << r.renderer_pixel_voxel_chunk_settled_light_rev
+              << ",\"renderer_pixel_voxel_chunk_field_light_rev\":"
+              << r.renderer_pixel_voxel_chunk_field_light_rev
+              << ",\"renderer_pixel_voxel_chunk_nonair\":"
+              << r.renderer_pixel_voxel_chunk_nonair
+              << ",\"renderer_pixel_voxel_chunk_mesh_revision\":"
+              << r.renderer_pixel_voxel_chunk_mesh_revision
+              << ",\"renderer_pixel_voxel_chunk_published_geom_rev\":"
+              << r.renderer_pixel_voxel_chunk_published_geom_rev
+              << ",\"renderer_pixel_voxel_chunk_published_light_rev\":"
+              << r.renderer_pixel_voxel_chunk_published_light_rev
+              << ",\"renderer_pixel_voxel_chunk_render_flags\":"
+              << static_cast<int>(r.renderer_pixel_voxel_chunk_render_flags)
+              << ",\"renderer_pixel_voxel_chunk_ref_flags\":"
+              << static_cast<int>(r.renderer_pixel_voxel_chunk_ref_flags)
+              << ",\"renderer_pixel_voxel_chunk_mdi_command_count\":"
+              << r.renderer_pixel_voxel_chunk_mdi_command_count
+              << ",\"renderer_pixel_voxel_chunk_mdi_visible_command_count\":"
+              << r.renderer_pixel_voxel_chunk_mdi_visible_command_count
+              << ",\"renderer_pixel_voxel_chunk_mdi_index_count\":"
+              << r.renderer_pixel_voxel_chunk_mdi_index_count
+              << ",\"renderer_pixel_voxel_chunk_mdi_visible_index_count\":"
+              << r.renderer_pixel_voxel_chunk_mdi_visible_index_count
+              << ",\"renderer_pixel_voxel_chunk_gpu_slot_quad_count\":"
+              << r.renderer_pixel_voxel_chunk_gpu_slot_quad_count
+              << ",\"renderer_pixel_voxel_chunk_source_index_count\":"
+              << r.renderer_pixel_voxel_chunk_source_index_count
+              << ",\"renderer_pixel_voxel_chunk_packed_draw_selected\":"
+              << static_cast<int>(
+                     r.renderer_pixel_voxel_chunk_packed_draw_selected)
+              << ",\"renderer_pixel_voxel_chunk_packed_draw_path_ready\":"
+              << static_cast<int>(
+                     r.renderer_pixel_voxel_chunk_packed_draw_path_ready)
+              << ",\"renderer_pixel_voxel_chunk_packed_slot_present\":"
+              << static_cast<int>(
+                     r.renderer_pixel_voxel_chunk_packed_slot_present)
+              << ",\"renderer_pixel_voxel_chunk_packed_slice_ready\":"
+              << static_cast<int>(
+                     r.renderer_pixel_voxel_chunk_packed_slice_ready)
+              << ",\"renderer_pixel_voxel_chunk_packed_opaque_range_count\":"
+              << r.renderer_pixel_voxel_chunk_packed_opaque_range_count
+              << ",\"renderer_pixel_voxel_chunk_packed_texture_ready_range_"
+                 "count\":"
+              << r.renderer_pixel_voxel_chunk_packed_texture_ready_range_count
+              << ",\"renderer_pixel_voxel_chunk_packed_draw_call_count\":"
+              << r.renderer_pixel_voxel_chunk_packed_draw_call_count
+              << ",\"renderer_pixel_voxel_chunk_packed_drawn_quad_count\":"
+              << r.renderer_pixel_voxel_chunk_packed_drawn_quad_count
+              << ",\"renderer_pixel_voxel_chunk_packed_drawn_index_count\":"
+              << r.renderer_pixel_voxel_chunk_packed_drawn_index_count
+              << ",\"renderer_pixel_voxel_chunk_work_owner_flags\":"
+              << r.renderer_pixel_voxel_chunk_work_owner_flags
+              << ",\"renderer_pixel_voxel_chunk_dirty_queue_kind\":"
+              << static_cast<int>(r.renderer_pixel_voxel_chunk_dirty_queue_kind)
+              << ",\"renderer_pixel_voxel_chunk_dirty_queue_age_frames\":"
+              << r.renderer_pixel_voxel_chunk_dirty_queue_age_frames
+              << ",\"renderer_pixel_voxel_chunk_demand_has_active_attempt\":"
+              << static_cast<int>(
+                     r.renderer_pixel_voxel_chunk_demand_has_active_attempt)
+              << ",\"renderer_pixel_voxel_chunk_demand_active_stage\":"
+              << static_cast<int>(
+                     r.renderer_pixel_voxel_chunk_demand_active_stage)
+              << ",\"renderer_pixel_voxel_chunk_demand_desired_geom_rev\":"
+              << r.renderer_pixel_voxel_chunk_demand_desired_geom_rev
+              << ",\"renderer_pixel_voxel_chunk_demand_desired_light_rev\":"
+              << r.renderer_pixel_voxel_chunk_demand_desired_light_rev
+              << ",\"renderer_pixel_fluid_triangle_match\":"
+              << static_cast<int>(r.renderer_pixel_fluid_triangle_match)
+              << ",\"renderer_pixel_ready_fluid_triangle_match\":"
+              << static_cast<int>(r.renderer_pixel_ready_fluid_triangle_match)
+              << ",\"renderer_pixel_fluid_triangle_distance\":"
+              << r.renderer_pixel_fluid_triangle_distance
+              << ",\"renderer_pixel_fluid_face_index\":"
+              << r.renderer_pixel_fluid_face_index
+              << ",\"renderer_pixel_fluid_block_id\":"
+              << r.renderer_pixel_fluid_block_id
+              << ",\"renderer_pixel_fluid_chunk_x\":" << r.cx
+              << ",\"renderer_pixel_fluid_chunk_y\":" << r.cy
+              << ",\"renderer_pixel_fluid_chunk_z\":" << r.cz
+              << ",\"renderer_pixel_fluid_chunk_render_ready\":"
+              << static_cast<int>(r.renderer_pixel_fluid_chunk_render_ready)
+              << ",\"renderer_pixel_fluid_raw_ref_count\":"
+              << r.renderer_pixel_fluid_raw_ref_count
+              << ",\"renderer_pixel_fluid_ready_ref_count\":"
+              << r.renderer_pixel_fluid_ready_ref_count
+              << ",\"renderer_pixel_fluid_mdi_probe_checked\":"
+              << static_cast<int>(r.renderer_pixel_fluid_mdi_probe_checked)
+              << ",\"renderer_pixel_fluid_payload_check_attempted\":"
+              << static_cast<int>(
+                     r.renderer_pixel_fluid_payload_check_attempted)
+              << ",\"renderer_pixel_fluid_source_batch_index\":"
+              << r.renderer_pixel_fluid_source_batch_index
+              << ",\"renderer_pixel_fluid_gpu_batch_index\":"
+              << r.renderer_pixel_fluid_gpu_batch_index
+              << ",\"renderer_pixel_fluid_gpu_batch_vector_index\":"
+              << r.renderer_pixel_fluid_gpu_batch_vector_index
+              << ",\"renderer_pixel_fluid_gpu_compact_active\":"
+              << static_cast<int>(r.renderer_pixel_fluid_gpu_compact_active)
+              << ",\"renderer_pixel_fluid_gpu_vbo_byte_offset\":"
+              << r.renderer_pixel_fluid_gpu_vbo_byte_offset
+              << ",\"renderer_pixel_fluid_gpu_ebo_byte_offset\":"
+              << r.renderer_pixel_fluid_gpu_ebo_byte_offset
+              << ",\"renderer_pixel_fluid_gpu_vbo_buffer_bytes\":"
+              << r.renderer_pixel_fluid_gpu_vbo_buffer_bytes
+              << ",\"renderer_pixel_fluid_gpu_ebo_buffer_bytes\":"
+              << r.renderer_pixel_fluid_gpu_ebo_buffer_bytes
+              << ",\"renderer_pixel_fluid_source_vertex_count\":"
+              << r.renderer_pixel_fluid_source_vertex_count
+              << ",\"renderer_pixel_fluid_source_index_count\":"
+              << r.renderer_pixel_fluid_source_index_count
+              << ",\"renderer_pixel_fluid_gpu_vertex_count\":"
+              << r.renderer_pixel_fluid_gpu_vertex_count
+              << ",\"renderer_pixel_fluid_gpu_index_count\":"
+              << r.renderer_pixel_fluid_gpu_index_count
+              << ",\"renderer_pixel_fluid_gpu_index_count_gl\":"
+              << r.renderer_pixel_fluid_gpu_index_count_gl
+              << ",\"renderer_pixel_fluid_vertex_count_matches\":"
+              << static_cast<int>(r.renderer_pixel_fluid_vertex_count_matches)
+              << ",\"renderer_pixel_fluid_index_count_matches\":"
+              << static_cast<int>(r.renderer_pixel_fluid_index_count_matches)
+              << ",\"renderer_pixel_fluid_vertex_payload_matches\":"
+              << static_cast<int>(r.renderer_pixel_fluid_vertex_payload_matches)
+              << ",\"renderer_pixel_fluid_index_payload_matches\":"
+              << static_cast<int>(r.renderer_pixel_fluid_index_payload_matches)
+              << ",\"renderer_pixel_fluid_vertex_payload_readback_valid\":"
+              << static_cast<int>(
+                     r.renderer_pixel_fluid_vertex_payload_readback_valid)
+              << ",\"renderer_pixel_fluid_index_payload_readback_valid\":"
+              << static_cast<int>(
+                     r.renderer_pixel_fluid_index_payload_readback_valid)
+              << ",\"renderer_pixel_fluid_vertex_payload_first_mismatch_byte\":"
+              << r.renderer_pixel_fluid_vertex_payload_first_mismatch_byte
+              << ",\"renderer_pixel_fluid_index_payload_first_mismatch\":"
+              << r.renderer_pixel_fluid_index_payload_first_mismatch
+              << ",\"renderer_pixel_fluid_index_payload_source_value\":"
+              << r.renderer_pixel_fluid_index_payload_source_value
+              << ",\"renderer_pixel_fluid_index_payload_gpu_value\":"
+              << r.renderer_pixel_fluid_index_payload_gpu_value
+              << ",\"renderer_pixel_fluid_chunk_gate_flags\":"
+              << r.renderer_gate_flags
+              << ",\"renderer_pixel_fluid_chunk_gpu_resident\":"
+              << static_cast<int>(r.renderer_gpu_resident_marker)
+              << ",\"renderer_pixel_fluid_chunk_gpu_slot_quad_count\":"
+              << r.renderer_gpu_slot_quad_count
+              << ",\"renderer_pixel_fluid_chunk_mdi_resident_pass_flags\":"
+              << static_cast<int>(r.renderer_mdi_resident_pass_flags)
+              << ",\"renderer_pixel_fluid_chunk_mdi_visible_pass_flags\":"
+              << static_cast<int>(r.renderer_mdi_visible_pass_flags)
+              << ",\"renderer_pixel_fluid_chunk_mdi_command_count\":"
+              << r.renderer_mdi_command_count
+              << ",\"renderer_pixel_fluid_chunk_mdi_visible_command_count\":"
+              << r.renderer_mdi_visible_command_count
+              << ",\"renderer_pixel_fluid_chunk_mdi_first_block_id\":"
+              << r.renderer_mdi_first_block_id
+              << ",\"renderer_pixel_fluid_chunk_mdi_index_count\":"
+              << r.renderer_mdi_index_count
+              << ",\"renderer_pixel_fluid_chunk_mdi_visible_index_count\":"
+              << r.renderer_mdi_visible_index_count
+              << ",\"renderer_pixel_fluid_chunk_source_top_face_quads\":"
+              << r.renderer_source_top_face_quads
+              << ",\"renderer_pixel_fluid_chunk_texture_ready\":"
+              << static_cast<int>(r.renderer_texture_ready)
+              << ",\"renderer_pixel_fluid_chunk_mdi_payload_flags\":"
+              << static_cast<int>(r.renderer_mdi_payload_flags)
+              << ",\"renderer_pixel_fluid_chunk_mdi_command_flags\":"
+              << static_cast<int>(r.renderer_mdi_command_flags)
+              << ",\"renderer_mdi_command_instance_count\":"
+              << r.renderer_mdi_command_instance_count
+              << ",\"renderer_mdi_command_first_index\":"
+              << r.renderer_mdi_command_first_index
+              << ",\"renderer_mdi_command_base_vertex\":"
+              << r.renderer_mdi_command_base_vertex
+              << ",\"renderer_pixel_fluid_sky_light\":"
+              << r.renderer_pixel_fluid_sky_light
+              << ",\"renderer_pixel_fluid_block_light\":"
+              << r.renderer_pixel_fluid_block_light
+              << ",\"renderer_pixel_opaque_hit_distance\":"
+              << r.renderer_pixel_opaque_hit_distance
+              << ",\"renderer_pixel_opaque_chunk_x\":"
+              << r.renderer_pixel_opaque_chunk_x
+              << ",\"renderer_pixel_opaque_chunk_y\":"
+              << r.renderer_pixel_opaque_chunk_y
+              << ",\"renderer_pixel_opaque_chunk_z\":"
+              << r.renderer_pixel_opaque_chunk_z
+              << ",\"renderer_pixel_opaque_world_epoch\":"
+              << r.renderer_pixel_opaque_world_epoch
+              << ",\"renderer_pixel_opaque_incarnation\":"
+              << r.renderer_pixel_opaque_incarnation
+              << ",\"renderer_pixel_opaque_chunk_nonair\":"
+              << r.renderer_pixel_opaque_chunk_nonair
+              << ",\"renderer_pixel_opaque_chunk_content_revision\":"
+              << r.renderer_pixel_opaque_chunk_content_revision
+              << ",\"renderer_pixel_opaque_mesh_revision\":"
+              << r.renderer_pixel_opaque_mesh_revision
+              << ",\"renderer_pixel_opaque_published_geom_rev\":"
+              << r.renderer_pixel_opaque_published_geom_rev
+              << ",\"renderer_pixel_opaque_published_light_rev\":"
+              << r.renderer_pixel_opaque_published_light_rev
+              << ",\"renderer_pixel_opaque_meshed_light_rev\":"
+              << r.renderer_pixel_opaque_meshed_light_rev
+              << ",\"renderer_pixel_opaque_field_light_rev\":"
+              << r.renderer_pixel_opaque_field_light_rev
+              << ",\"renderer_pixel_opaque_source_index_count\":"
+              << r.renderer_pixel_opaque_source_index_count
+              << ",\"renderer_pixel_opaque_vertex_light_valid\":"
+              << static_cast<int>(r.renderer_pixel_opaque_vertex_light_valid)
+              << ",\"renderer_pixel_opaque_vertex_light_block_id\":"
+              << r.renderer_pixel_opaque_vertex_light_block_id
+              << ",\"renderer_pixel_opaque_vertex_light_face_index\":"
+              << r.renderer_pixel_opaque_vertex_light_face_index
+              << ",\"renderer_pixel_opaque_vertex_light_distance\":"
+              << r.renderer_pixel_opaque_vertex_light_distance
+              << ",\"renderer_pixel_opaque_vertex_sky_light\":"
+              << r.renderer_pixel_opaque_vertex_sky_light
+              << ",\"renderer_pixel_opaque_vertex_block_light\":"
+              << r.renderer_pixel_opaque_vertex_block_light
+              << ",\"renderer_pixel_opaque_vertex_light_preview\":"
+              << r.renderer_pixel_opaque_vertex_light_preview
+              << ",\"renderer_pixel_surface_preview_shader_override\":"
+              << ((r.renderer_gate_flags & (1u << 22)) != 0 ? 1 : 0)
+              << ",\"renderer_pixel_opaque_preview_shader_override\":"
+              << static_cast<int>(
+                     r.renderer_pixel_opaque_preview_shader_override)
+              << ",\"renderer_pixel_opaque_live_face_light_valid\":"
+              << static_cast<int>(r.renderer_pixel_opaque_live_face_light_valid)
+              << ",\"renderer_pixel_opaque_live_face_light_packed\":"
+              << static_cast<int>(
+                     r.renderer_pixel_opaque_live_face_light_packed)
+              << ",\"renderer_pixel_opaque_live_face_light_source\":"
+              << static_cast<int>(
+                     r.renderer_pixel_opaque_live_face_light_source)
+              << ",\"renderer_pixel_opaque_demand_present\":"
+              << static_cast<int>(r.renderer_pixel_opaque_demand_present)
+              << ",\"renderer_pixel_opaque_demand_has_active_attempt\":"
+              << static_cast<int>(
+                     r.renderer_pixel_opaque_demand_has_active_attempt)
+              << ",\"renderer_pixel_opaque_demand_has_settled_light\":"
+              << static_cast<int>(
+                     r.renderer_pixel_opaque_demand_has_settled_light)
+              << ",\"renderer_pixel_opaque_demand_active_stage\":"
+              << static_cast<int>(r.renderer_pixel_opaque_demand_active_stage)
+              << ",\"renderer_pixel_opaque_demand_desired_geom_rev\":"
+              << r.renderer_pixel_opaque_demand_desired_geom_rev
+              << ",\"renderer_pixel_opaque_demand_published_geom_rev\":"
+              << r.renderer_pixel_opaque_demand_published_geom_rev
+              << ",\"renderer_pixel_opaque_demand_desired_light_rev\":"
+              << r.renderer_pixel_opaque_demand_desired_light_rev
+              << ",\"renderer_pixel_opaque_demand_published_light_rev\":"
+              << r.renderer_pixel_opaque_demand_published_light_rev
+              << ",\"renderer_pixel_opaque_demand_settled_light_rev\":"
+              << r.renderer_pixel_opaque_demand_settled_light_rev
+              << ",\"renderer_pixel_surface_demand_attempt_age_ms\":"
+              << r.demand_attempt_age_ms
+              << ",\"renderer_pixel_surface_demand_progress_age_ms\":"
+              << r.demand_progress_age_ms
+              << ",\"renderer_pixel_opaque_demand_attempt_age_ms\":"
+              << r.renderer_pixel_opaque_demand_attempt_age_ms
+              << ",\"renderer_pixel_opaque_demand_progress_age_ms\":"
+              << r.renderer_pixel_opaque_demand_progress_age_ms
+              << ",\"renderer_pixel_opaque_mesh_dirty_queue_kind\":"
+              << static_cast<int>(r.mesh_dirty_queue_kind)
+              << ",\"renderer_pixel_opaque_mesh_dirty_queue_index\":"
+              << r.mesh_dirty_queue_index
+              << ",\"renderer_pixel_opaque_mesh_dirty_queue_size\":"
+              << r.mesh_dirty_queue_size
+              << ",\"renderer_pixel_opaque_mesh_dirty_queue_age_frames\":"
+              << r.mesh_dirty_queue_age_frames
+              << ",\"renderer_pixel_opaque_mesh_work_owner_flags\":"
+              << r.mesh_work_owner_flags
+              << ",\"renderer_pixel_opaque_relight_owner_flags\":"
+              << r.relight_owner_flags
+              << ",\"renderer_pixel_opaque_relight_queue_kind\":"
+              << static_cast<int>(r.relight_queue_kind)
+              << ",\"renderer_pixel_opaque_relight_queue_index\":"
+              << r.relight_queue_index
+              << ",\"renderer_pixel_opaque_relight_queue_size\":"
+              << r.relight_queue_size
+              << ",\"renderer_pixel_opaque_column_emerge_stage\":"
+              << static_cast<int>(r.column_emerge_stage)
+              << ",\"renderer_pixel_opaque_ref_flags\":"
+              << static_cast<int>(r.renderer_pixel_opaque_ref_flags)
+              << ",\"renderer_pixel_opaque_drawable\":"
+              << static_cast<int>(r.renderer_pixel_opaque_drawable)
+              << ",\"renderer_pixel_opaque_draw_ready\":"
+              << static_cast<int>(r.renderer_pixel_opaque_draw_ready)
+              << ",\"renderer_pixel_opaque_live_gpu\":"
+              << static_cast<int>(r.renderer_pixel_opaque_live_gpu)
+              << ",\"renderer_pixel_opaque_mdi_resident_pass_flags\":"
+              << static_cast<int>(
+                     r.renderer_pixel_opaque_mdi_resident_pass_flags)
+              << ",\"renderer_pixel_opaque_mdi_visible_pass_flags\":"
+              << static_cast<int>(
+                     r.renderer_pixel_opaque_mdi_visible_pass_flags)
+              << ",\"renderer_pixel_opaque_mdi_index_count\":"
+              << r.renderer_pixel_opaque_mdi_index_count
+              << ",\"renderer_pixel_opaque_mdi_visible_index_count\":"
+              << r.renderer_pixel_opaque_mdi_visible_index_count
+              << ",\"renderer_pixel_opaque_column_flow_ticket_flags\":"
+              << static_cast<int>(r.column_flow_ticket_flags)
+              << ",\"renderer_pixel_opaque_stale_light_remesh_pending\":"
+              << static_cast<int>(
+                     r.renderer_pixel_opaque_stale_light_remesh_pending)
+              << "}\n";
           return;
         }
-        (*out) << "{\"kind\":\"" << trace_kind
-               << "\""
-               << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
-               << ",\"cz\":" << r.cz
+        (*out) << "{\"kind\":\"" << trace_kind << "\""
+               << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy << ",\"cz\":" << r.cz
                << ",\"sample_kind\":" << static_cast<int>(r.sample_kind)
                << ",\"focus_state\":" << static_cast<int>(r.focus_state)
                << ",\"focus_column_visual_class\":"
@@ -6361,11 +6063,9 @@ void UFramePerfMonitor::Shutdown()
                << ",\"camera_y\":" << r.camera_y
                << ",\"camera_z\":" << r.camera_z
                << ",\"non_air_blocks\":" << r.non_air_blocks
-               << ",\"chunk_content_revision\":"
-               << r.chunk_content_revision
+               << ",\"chunk_content_revision\":" << r.chunk_content_revision
                << ",\"mesh_revision\":" << r.mesh_revision
-               << ",\"draw_gate_ready\":"
-               << static_cast<int>(r.draw_gate_ready)
+               << ",\"draw_gate_ready\":" << static_cast<int>(r.draw_gate_ready)
                << ",\"frame_epoch\":" << r.frame_epoch
                << ",\"world_epoch\":" << r.world_epoch
                << ",\"incarnation\":" << r.incarnation
@@ -6395,10 +6095,8 @@ void UFramePerfMonitor::Shutdown()
                << ",\"stale_source_cx\":" << r.stale_source_cx
                << ",\"stale_source_cy\":" << r.stale_source_cy
                << ",\"stale_source_cz\":" << r.stale_source_cz
-               << ",\"stale_source_incarnation\":"
-               << r.stale_source_incarnation
-               << ",\"stale_source_light_rev\":"
-               << r.stale_source_light_rev
+               << ",\"stale_source_incarnation\":" << r.stale_source_incarnation
+               << ",\"stale_source_light_rev\":" << r.stale_source_light_rev
                << ",\"stale_face_index\":"
                << static_cast<int>(r.stale_face_index)
                << ",\"stale_sample_light\":"
@@ -6411,14 +6109,10 @@ void UFramePerfMonitor::Shutdown()
                << static_cast<int>(r.stale_mesh_cache_entry_present)
                << ",\"stale_mesh_halo_stamp_valid\":"
                << static_cast<int>(r.stale_mesh_halo_stamp_valid)
-               << ",\"renderer_path\":"
-               << static_cast<int>(r.renderer_path)
-               << ",\"renderer_cpu_index_count\":"
-               << r.renderer_cpu_index_count
-               << ",\"renderer_gpu_quad_count\":"
-               << r.renderer_gpu_quad_count
-               << ",\"renderer_gate_flags\":"
-               << r.renderer_gate_flags
+               << ",\"renderer_path\":" << static_cast<int>(r.renderer_path)
+               << ",\"renderer_cpu_index_count\":" << r.renderer_cpu_index_count
+               << ",\"renderer_gpu_quad_count\":" << r.renderer_gpu_quad_count
+               << ",\"renderer_gate_flags\":" << r.renderer_gate_flags
                << ",\"renderer_runtime_cull_visible\":"
                << static_cast<int>(r.renderer_runtime_cull_visible)
                << ",\"renderer_mdi_resident_pass_flags\":"
@@ -6433,8 +6127,7 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_mdi_visible_command_count
                << ",\"renderer_mdi_first_block_id\":"
                << r.renderer_mdi_first_block_id
-               << ",\"renderer_mdi_index_count\":"
-               << r.renderer_mdi_index_count
+               << ",\"renderer_mdi_index_count\":" << r.renderer_mdi_index_count
                << ",\"renderer_mdi_visible_index_count\":"
                << r.renderer_mdi_visible_index_count
                << ",\"renderer_gpu_slot_quad_count\":"
@@ -6485,511 +6178,490 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_pixel_fluid_light_preview
                << ",\"renderer_pixel_fluid_wetness\":"
                << r.renderer_pixel_fluid_wetness
-               << ",\"renderer_pixel_probe_id\":"
-               << r.renderer_pixel_probe_id
+               << ",\"renderer_pixel_probe_id\":" << r.renderer_pixel_probe_id
                << ",\"renderer_pixel_sample_time_ms\":"
                << r.renderer_pixel_sample_time_ms
                << ",\"renderer_pixel_sample_steady_ms\":";
         const std::streamsize previous_precision = out->precision();
-        (*out) << std::setprecision(17)
-               << r.renderer_pixel_sample_steady_ms
+        (*out) << std::setprecision(17) << r.renderer_pixel_sample_steady_ms
                << std::setprecision(previous_precision);
-        (*out) << ",\"renderer_pixel_probe_trigger_flags\":"
-               << static_cast<int>(r.renderer_pixel_probe_trigger_flags)
-               << ",\"renderer_pixel_probe_event_frame_epoch\":"
-               << r.renderer_pixel_probe_event_frame_epoch
-               << ",\"renderer_pixel_x\":" << r.renderer_pixel_x
-               << ",\"renderer_pixel_y\":" << r.renderer_pixel_y
-               << ",\"renderer_pixel_rgba\":" << r.renderer_pixel_rgba
-               << ",\"renderer_pixel_pretransparent_rgba\":"
-               << r.renderer_pixel_pretransparent_rgba
-               << ",\"renderer_pixel_stencil_index\":"
-               << static_cast<int>(r.renderer_pixel_stencil_index)
-               << ",\"renderer_pixel_pretransparent_depth\":"
-               << r.renderer_pixel_pretransparent_depth
-               << ",\"renderer_pixel_shader_min_ambient\":"
-               << r.renderer_pixel_shader_min_ambient
-               << ",\"renderer_pixel_shader_day_factor\":"
-               << r.renderer_pixel_shader_day_factor
-               << ",\"renderer_pixel_shader_night_factor\":"
-               << r.renderer_pixel_shader_night_factor
-               << ",\"renderer_pixel_shader_sky_scale\":"
-               << r.renderer_pixel_shader_sky_scale
-               << ",\"renderer_pixel_shader_precipitation\":"
-               << r.renderer_pixel_shader_precipitation
-               << ",\"renderer_pixel_shader_wetness\":"
-               << r.renderer_pixel_shader_wetness
-               << ",\"renderer_pixel_shader_light_debug_mode\":"
-               << r.renderer_pixel_shader_light_debug_mode
-               << ",\"renderer_pixel_marker_mode\":"
-               << (r.renderer_pixel_marker_visible != 2 ? "true" : "false")
-               << ",\"renderer_pixel_marker_visible\":"
-               << (r.renderer_pixel_marker_visible == 1 ? "true" : "false")
-               << ",\"renderer_pixel_marker_coverage\":"
-               << (r.renderer_pixel_marker_visible != 2
-                       ? static_cast<double>(r.renderer_pixel_surface_valid >> 1u) /
-                             127.0
-                       : -1.0)
-               << ",\"renderer_pixel_surface_valid\":"
-               << static_cast<int>(r.renderer_pixel_surface_valid & 1u)
-               << ",\"renderer_pixel_surface_x\":"
-               << r.renderer_pixel_surface_x
-               << ",\"renderer_pixel_surface_y\":"
-               << r.renderer_pixel_surface_y
-               << ",\"renderer_pixel_surface_z\":"
-               << r.renderer_pixel_surface_z
-               << ",\"renderer_pixel_opaque_surface_valid\":"
-               << static_cast<int>(r.renderer_pixel_opaque_surface_valid)
-               << ",\"renderer_pixel_opaque_surface_x\":"
-               << r.renderer_pixel_opaque_surface_x
-               << ",\"renderer_pixel_opaque_surface_y\":"
-               << r.renderer_pixel_opaque_surface_y
-               << ",\"renderer_pixel_opaque_surface_z\":"
-               << r.renderer_pixel_opaque_surface_z
-               << ",\"renderer_pixel_voxel_ray_state\":"
-               << static_cast<int>(r.renderer_pixel_voxel_ray_state)
-               << ",\"renderer_pixel_voxel_known_air_steps\":"
-               << r.renderer_pixel_voxel_known_air_steps
-               << ",\"renderer_pixel_voxel_ray_gap\":"
-               << static_cast<int>(r.renderer_pixel_voxel_ray_gap)
-               << ",\"renderer_pixel_voxel_unloaded_x\":"
-               << r.renderer_pixel_voxel_unloaded_x
-               << ",\"renderer_pixel_voxel_unloaded_y\":"
-               << r.renderer_pixel_voxel_unloaded_y
-               << ",\"renderer_pixel_voxel_unloaded_z\":"
-               << r.renderer_pixel_voxel_unloaded_z
-               << ",\"renderer_pixel_voxel_unloaded_chunk_x\":"
-               << r.renderer_pixel_voxel_unloaded_chunk_x
-               << ",\"renderer_pixel_voxel_unloaded_chunk_y\":"
-               << r.renderer_pixel_voxel_unloaded_chunk_y
-               << ",\"renderer_pixel_voxel_unloaded_chunk_z\":"
-               << r.renderer_pixel_voxel_unloaded_chunk_z
-               << ",\"renderer_pixel_voxel_unloaded_distance\":"
-               << r.renderer_pixel_voxel_unloaded_distance
-               << ",\"renderer_pixel_voxel_hit_x\":"
-               << r.renderer_pixel_voxel_hit_x
-               << ",\"renderer_pixel_voxel_hit_y\":"
-               << r.renderer_pixel_voxel_hit_y
-               << ",\"renderer_pixel_voxel_hit_z\":"
-               << r.renderer_pixel_voxel_hit_z
-               << ",\"renderer_pixel_voxel_hit_block_id\":"
-               << r.renderer_pixel_voxel_hit_block_id
-               << ",\"renderer_pixel_voxel_previous_block_id\":"
-               << r.renderer_pixel_voxel_previous_block_id
-               << ",\"renderer_pixel_voxel_entry_face\":"
-               << static_cast<int>(r.renderer_pixel_voxel_entry_face)
-               << ",\"renderer_pixel_voxel_hit_distance\":"
-               << r.renderer_pixel_voxel_hit_distance
-               << ",\"renderer_pixel_voxel_face_source_valid\":"
-               << static_cast<int>(r.renderer_pixel_voxel_face_source_valid)
-               << ",\"renderer_pixel_voxel_face_source_distance\":"
-               << r.renderer_pixel_voxel_face_source_distance
-               << ",\"renderer_pixel_voxel_mesh_ray_intersects\":"
-               << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_intersects)
-               << ",\"renderer_pixel_voxel_mesh_ray_interior\":"
-               << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_interior)
-               << ",\"renderer_pixel_voxel_mesh_ray_gap\":"
-               << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_gap)
-               << ",\"renderer_pixel_voxel_mesh_ray_distance\":"
-               << r.renderer_pixel_voxel_mesh_ray_distance
-               << ",\"renderer_pixel_voxel_mesh_ray_projected_valid\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_mesh_ray_projected_valid)
-               << ",\"renderer_pixel_voxel_mesh_ray_projected_x\":"
-               << r.renderer_pixel_voxel_mesh_ray_projected_x
-               << ",\"renderer_pixel_voxel_mesh_ray_projected_y\":"
-               << r.renderer_pixel_voxel_mesh_ray_projected_y
-               << ",\"renderer_pixel_voxel_mesh_ray_projected_depth\":"
-               << r.renderer_pixel_voxel_mesh_ray_projected_depth
-               << ",\"renderer_pixel_voxel_mesh_ray_projected_delta_x\":"
-               << r.renderer_pixel_voxel_mesh_ray_projected_delta_x
-               << ",\"renderer_pixel_voxel_mesh_ray_projected_delta_y\":"
-               << r.renderer_pixel_voxel_mesh_ray_projected_delta_y
-               << ",\"renderer_pixel_voxel_mesh_ray_origin_projected_delta_x\":"
-               << r.renderer_pixel_voxel_mesh_ray_origin_projected_delta_x
-               << ",\"renderer_pixel_voxel_mesh_ray_origin_projected_delta_y\":"
-               << r.renderer_pixel_voxel_mesh_ray_origin_projected_delta_y
-               << ",\"renderer_pixel_voxel_mesh_ray_direction_projected_delta_x\":"
-               << r.renderer_pixel_voxel_mesh_ray_direction_projected_delta_x
-               << ",\"renderer_pixel_voxel_mesh_ray_direction_projected_delta_y\":"
-               << r.renderer_pixel_voxel_mesh_ray_direction_projected_delta_y
-               << ",\"renderer_pixel_voxel_mesh_ray_projected_depth_delta\":"
-               << r.renderer_pixel_voxel_mesh_ray_projected_depth_delta
-               << ",\"renderer_pixel_voxel_mesh_ray_projected_depth_would_pass\":"
-               << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_projected_depth_would_pass)
-               << ",\"renderer_pixel_voxel_mesh_ray_edge_margin\":"
-               << r.renderer_pixel_voxel_mesh_ray_edge_margin;
-          WriteGpuDrawStateJson(*out, r);
-          (*out) << ",\"renderer_pixel_voxel_mesh_ray_gpu_witness_attempted\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_mesh_ray_gpu_witness_attempted)
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_batch_found\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_mesh_ray_gpu_batch_found)
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_compact_active\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_mesh_ray_gpu_compact_active)
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_readable\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_mesh_ray_gpu_command_readable)
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_match\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_mesh_ray_gpu_command_match)
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_indices_readable\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_mesh_ray_gpu_indices_readable)
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_indices_match\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_mesh_ray_gpu_indices_match)
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_vertices_readable\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_mesh_ray_gpu_vertices_readable)
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_vertices_match\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_mesh_ray_gpu_vertices_match)
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_batch_index\":"
-               << r.renderer_pixel_voxel_mesh_ray_gpu_batch_index
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_slot\":"
-               << r.renderer_pixel_voxel_mesh_ray_gpu_command_slot
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_source_index_offset\":"
-               << r.renderer_pixel_voxel_mesh_ray_gpu_source_index_offset
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_source_index0\":"
-               << r.renderer_pixel_voxel_mesh_ray_gpu_source_index0
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_source_index1\":"
-               << r.renderer_pixel_voxel_mesh_ray_gpu_source_index1
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_source_index2\":"
-               << r.renderer_pixel_voxel_mesh_ray_gpu_source_index2
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_actual_index0\":"
-               << r.renderer_pixel_voxel_mesh_ray_gpu_actual_index0
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_actual_index1\":"
-               << r.renderer_pixel_voxel_mesh_ray_gpu_actual_index1
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_actual_index2\":"
-               << r.renderer_pixel_voxel_mesh_ray_gpu_actual_index2
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_vbo_byte_offset\":"
-               << r.renderer_pixel_voxel_mesh_ray_gpu_vbo_byte_offset
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_ebo_byte_offset\":"
-               << r.renderer_pixel_voxel_mesh_ray_gpu_ebo_byte_offset
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_count\":"
-               << r.renderer_pixel_voxel_mesh_ray_gpu_command_count
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_instances\":"
-               << r.renderer_pixel_voxel_mesh_ray_gpu_command_instances
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_first_index\":"
-               << r.renderer_pixel_voxel_mesh_ray_gpu_command_first_index
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_base_vertex\":"
-               << r.renderer_pixel_voxel_mesh_ray_gpu_command_base_vertex
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_vertex_position_max_delta\":"
-               << r.renderer_pixel_voxel_mesh_ray_gpu_vertex_position_max_delta
-               << ",\"renderer_pixel_voxel_face_batch_ref\":"
-               << static_cast<int>(r.renderer_pixel_voxel_face_batch_ref)
-               << ",\"renderer_pixel_voxel_face_gpu_command\":"
-               << static_cast<int>(r.renderer_pixel_voxel_face_gpu_command)
-               << ",\"renderer_pixel_voxel_face_gpu_pooled\":"
-               << static_cast<int>(r.renderer_pixel_voxel_face_gpu_pooled)
-               << ",\"renderer_pixel_voxel_face_gpu_index_count\":"
-               << r.renderer_pixel_voxel_face_gpu_index_count
-               << ",\"renderer_pixel_voxel_face_gpu_instances\":"
-               << r.renderer_pixel_voxel_face_gpu_instances
-               << ",\"renderer_pixel_voxel_face_texture_ready\":"
-               << static_cast<int>(r.renderer_pixel_voxel_face_texture_ready)
-               << ",\"renderer_pixel_voxel_face_texture_id\":"
-               << r.renderer_pixel_voxel_face_texture_id
-               << ",\"renderer_pixel_opaque_hit_distance\":"
-               << r.renderer_pixel_opaque_hit_distance
-               << ",\"renderer_pixel_voxel_chunk_x\":"
-               << r.renderer_pixel_voxel_chunk_x
-               << ",\"renderer_pixel_voxel_chunk_y\":"
-               << r.renderer_pixel_voxel_chunk_y
-               << ",\"renderer_pixel_voxel_chunk_z\":"
-               << r.renderer_pixel_voxel_chunk_z
-               << ",\"renderer_pixel_voxel_chunk_pending_light\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_chunk_pending_light)
-               << ",\"renderer_pixel_voxel_chunk_async_relight_inflight\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_chunk_async_relight_inflight)
-               << ",\"renderer_pixel_voxel_chunk_relight_queue_kind\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_chunk_relight_queue_kind)
-               << ",\"renderer_pixel_voxel_chunk_relight_y_band_defined\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_chunk_relight_y_band_defined)
-               << ",\"renderer_pixel_voxel_chunk_relight_queue_index\":"
-               << r.renderer_pixel_voxel_chunk_relight_queue_index
-               << ",\"renderer_pixel_voxel_chunk_relight_queue_size\":"
-               << r.renderer_pixel_voxel_chunk_relight_queue_size
-               << ",\"renderer_pixel_voxel_chunk_flow_ticket_flags\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_chunk_flow_ticket_flags)
-               << ",\"renderer_pixel_voxel_chunk_defer_until_lit\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_chunk_defer_until_lit)
-               << ",\"renderer_pixel_voxel_chunk_soft_defer_held\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_chunk_soft_defer_held)
-               << ",\"renderer_pixel_voxel_chunk_has_settled_light\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_chunk_has_settled_light)
-               << ",\"renderer_pixel_voxel_chunk_attempt_id\":"
-               << r.renderer_pixel_voxel_chunk_attempt_id
-               << ",\"renderer_pixel_voxel_chunk_settled_light_rev\":"
-               << r.renderer_pixel_voxel_chunk_settled_light_rev
-               << ",\"renderer_pixel_voxel_chunk_field_light_rev\":"
-               << r.renderer_pixel_voxel_chunk_field_light_rev
-               << ",\"renderer_pixel_voxel_chunk_nonair\":"
-               << r.renderer_pixel_voxel_chunk_nonair
-               << ",\"renderer_pixel_voxel_chunk_mesh_revision\":"
-               << r.renderer_pixel_voxel_chunk_mesh_revision
-               << ",\"renderer_pixel_voxel_chunk_published_geom_rev\":"
-               << r.renderer_pixel_voxel_chunk_published_geom_rev
-               << ",\"renderer_pixel_voxel_chunk_published_light_rev\":"
-               << r.renderer_pixel_voxel_chunk_published_light_rev
-               << ",\"renderer_pixel_voxel_chunk_render_flags\":"
-               << static_cast<int>(r.renderer_pixel_voxel_chunk_render_flags)
-               << ",\"renderer_pixel_voxel_chunk_ref_flags\":"
-               << static_cast<int>(r.renderer_pixel_voxel_chunk_ref_flags)
-               << ",\"renderer_pixel_voxel_chunk_column_reason\":"
-               << static_cast<int>(r.renderer_pixel_voxel_chunk_column_reason)
-               << ",\"renderer_pixel_voxel_chunk_face_debt_mask\":"
-               << static_cast<int>(r.renderer_pixel_voxel_chunk_face_debt_mask)
-               << ",\"renderer_pixel_voxel_chunk_mdi_command_count\":"
-               << r.renderer_pixel_voxel_chunk_mdi_command_count
-               << ",\"renderer_pixel_voxel_chunk_mdi_visible_command_count\":"
-               << r.renderer_pixel_voxel_chunk_mdi_visible_command_count
-               << ",\"renderer_pixel_voxel_chunk_mdi_index_count\":"
-               << r.renderer_pixel_voxel_chunk_mdi_index_count
-               << ",\"renderer_pixel_voxel_chunk_mdi_visible_index_count\":"
-               << r.renderer_pixel_voxel_chunk_mdi_visible_index_count
-               << ",\"renderer_pixel_voxel_chunk_gpu_slot_quad_count\":"
-               << r.renderer_pixel_voxel_chunk_gpu_slot_quad_count
-               << ",\"renderer_pixel_voxel_chunk_source_index_count\":"
-               << r.renderer_pixel_voxel_chunk_source_index_count
-               << ",\"renderer_pixel_voxel_chunk_packed_draw_selected\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_chunk_packed_draw_selected)
-               << ",\"renderer_pixel_voxel_chunk_packed_draw_path_ready\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_chunk_packed_draw_path_ready)
-               << ",\"renderer_pixel_voxel_chunk_packed_slot_present\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_chunk_packed_slot_present)
-               << ",\"renderer_pixel_voxel_chunk_packed_slice_ready\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_chunk_packed_slice_ready)
-               << ",\"renderer_pixel_voxel_chunk_packed_opaque_range_count\":"
-               << r.renderer_pixel_voxel_chunk_packed_opaque_range_count
-               << ",\"renderer_pixel_voxel_chunk_packed_texture_ready_range_count\":"
-               << r.renderer_pixel_voxel_chunk_packed_texture_ready_range_count
-               << ",\"renderer_pixel_voxel_chunk_packed_draw_call_count\":"
-               << r.renderer_pixel_voxel_chunk_packed_draw_call_count
-               << ",\"renderer_pixel_voxel_chunk_packed_missing_texture_entry_count\":"
-               << r.renderer_pixel_voxel_chunk_packed_missing_texture_entry_count
-               << ",\"renderer_pixel_voxel_chunk_packed_zero_texture_id_range_count\":"
-               << r.renderer_pixel_voxel_chunk_packed_zero_texture_id_range_count
-               << ",\"renderer_pixel_voxel_chunk_packed_first_opaque_range_block_id\":"
-               << r.renderer_pixel_voxel_chunk_packed_first_opaque_range_block_id
-               << ",\"renderer_pixel_voxel_chunk_packed_first_missing_texture_block_id\":"
-               << r.renderer_pixel_voxel_chunk_packed_first_missing_texture_block_id
-               << ",\"renderer_pixel_voxel_chunk_packed_first_zero_texture_id_block_id\":"
-               << r.renderer_pixel_voxel_chunk_packed_first_zero_texture_id_block_id
-               << ",\"renderer_pixel_voxel_chunk_packed_slot_quad_count\":"
-               << r.renderer_pixel_voxel_chunk_packed_slot_quad_count
-               << ",\"renderer_pixel_voxel_chunk_packed_opaque_range_quad_count\":"
-               << r.renderer_pixel_voxel_chunk_packed_opaque_range_quad_count
-               << ",\"renderer_pixel_voxel_chunk_packed_drawn_quad_count\":"
-               << r.renderer_pixel_voxel_chunk_packed_drawn_quad_count
-               << ",\"renderer_pixel_voxel_chunk_packed_drawn_index_count\":"
-               << r.renderer_pixel_voxel_chunk_packed_drawn_index_count
-               << ",\"renderer_pixel_voxel_chunk_work_owner_flags\":"
-               << r.renderer_pixel_voxel_chunk_work_owner_flags
-               << ",\"renderer_pixel_voxel_chunk_dirty_queue_kind\":"
-               << static_cast<int>(r.renderer_pixel_voxel_chunk_dirty_queue_kind)
-               << ",\"renderer_pixel_voxel_chunk_dirty_queue_index\":"
-               << r.renderer_pixel_voxel_chunk_dirty_queue_index
-               << ",\"renderer_pixel_voxel_chunk_dirty_queue_size\":"
-               << r.renderer_pixel_voxel_chunk_dirty_queue_size
-               << ",\"renderer_pixel_voxel_chunk_dirty_queue_age_frames\":"
-               << r.renderer_pixel_voxel_chunk_dirty_queue_age_frames
-               << ",\"renderer_pixel_voxel_chunk_scheduled_this_frame\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_chunk_scheduled_this_frame)
-               << ",\"renderer_pixel_voxel_chunk_demand_has_active_attempt\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_chunk_demand_has_active_attempt)
-               << ",\"renderer_pixel_voxel_chunk_demand_active_stage\":"
-               << static_cast<int>(
-                      r.renderer_pixel_voxel_chunk_demand_active_stage)
-               << ",\"renderer_pixel_voxel_chunk_demand_desired_geom_rev\":"
-               << r.renderer_pixel_voxel_chunk_demand_desired_geom_rev
-               << ",\"renderer_pixel_voxel_chunk_demand_desired_light_rev\":"
-               << r.renderer_pixel_voxel_chunk_demand_desired_light_rev
-               << ",\"renderer_pixel_opaque_chunk_x\":"
-               << r.renderer_pixel_opaque_chunk_x
-               << ",\"renderer_pixel_opaque_chunk_y\":"
-               << r.renderer_pixel_opaque_chunk_y
-               << ",\"renderer_pixel_opaque_chunk_z\":"
-               << r.renderer_pixel_opaque_chunk_z
-                 << ",\"renderer_pixel_opaque_world_epoch\":"
-                 << r.renderer_pixel_opaque_world_epoch
-                 << ",\"renderer_pixel_opaque_incarnation\":"
-                 << r.renderer_pixel_opaque_incarnation
-               << ",\"renderer_pixel_opaque_chunk_nonair\":"
-               << r.renderer_pixel_opaque_chunk_nonair
-               << ",\"renderer_pixel_opaque_chunk_content_revision\":"
-               << r.renderer_pixel_opaque_chunk_content_revision
-               << ",\"renderer_pixel_opaque_mesh_revision\":"
-               << r.renderer_pixel_opaque_mesh_revision
-               << ",\"renderer_pixel_opaque_published_geom_rev\":"
-               << r.renderer_pixel_opaque_published_geom_rev
-               << ",\"renderer_pixel_opaque_published_light_rev\":"
-               << r.renderer_pixel_opaque_published_light_rev
-               << ",\"renderer_pixel_opaque_meshed_light_rev\":"
-               << r.renderer_pixel_opaque_meshed_light_rev
-               << ",\"renderer_pixel_opaque_field_light_rev\":"
-               << r.renderer_pixel_opaque_field_light_rev
-               << ",\"renderer_pixel_opaque_source_index_count\":"
-               << r.renderer_pixel_opaque_source_index_count
-               << ",\"renderer_pixel_opaque_vertex_light_valid\":"
-               << static_cast<int>(
-                      r.renderer_pixel_opaque_vertex_light_valid)
-               << ",\"renderer_pixel_opaque_vertex_light_block_id\":"
-               << r.renderer_pixel_opaque_vertex_light_block_id
-               << ",\"renderer_pixel_opaque_vertex_light_face_index\":"
-               << r.renderer_pixel_opaque_vertex_light_face_index
-               << ",\"renderer_pixel_opaque_vertex_light_distance\":"
-               << r.renderer_pixel_opaque_vertex_light_distance
-               << ",\"renderer_pixel_opaque_vertex_sky_light\":"
-               << r.renderer_pixel_opaque_vertex_sky_light
-               << ",\"renderer_pixel_opaque_vertex_block_light\":"
-               << r.renderer_pixel_opaque_vertex_block_light
-               << ",\"renderer_pixel_opaque_vertex_light_preview\":"
-               << r.renderer_pixel_opaque_vertex_light_preview
-               << ",\"renderer_pixel_surface_preview_shader_override\":"
-               << ((r.renderer_gate_flags & (1u << 22)) != 0 ? 1 : 0)
-               << ",\"renderer_pixel_opaque_preview_shader_override\":"
-               << static_cast<int>(
-                      r.renderer_pixel_opaque_preview_shader_override)
-               << ",\"renderer_pixel_opaque_live_face_light_valid\":"
-               << static_cast<int>(
-                      r.renderer_pixel_opaque_live_face_light_valid)
-               << ",\"renderer_pixel_opaque_live_face_light_packed\":"
-               << static_cast<int>(
-                      r.renderer_pixel_opaque_live_face_light_packed)
-               << ",\"renderer_pixel_opaque_live_face_light_source\":"
-               << static_cast<int>(
-                      r.renderer_pixel_opaque_live_face_light_source)
-               << ",\"renderer_pixel_opaque_demand_present\":"
-               << static_cast<int>(r.renderer_pixel_opaque_demand_present)
-               << ",\"renderer_pixel_opaque_demand_has_active_attempt\":"
-               << static_cast<int>(
-                      r.renderer_pixel_opaque_demand_has_active_attempt)
-               << ",\"renderer_pixel_opaque_demand_has_settled_light\":"
-               << static_cast<int>(
-                      r.renderer_pixel_opaque_demand_has_settled_light)
-               << ",\"renderer_pixel_opaque_demand_active_stage\":"
-               << static_cast<int>(
-                      r.renderer_pixel_opaque_demand_active_stage)
-               << ",\"renderer_pixel_opaque_demand_desired_light_rev\":"
-               << r.renderer_pixel_opaque_demand_desired_light_rev
-               << ",\"renderer_pixel_opaque_demand_published_light_rev\":"
-               << r.renderer_pixel_opaque_demand_published_light_rev
-               << ",\"renderer_pixel_opaque_demand_settled_light_rev\":"
-               << r.renderer_pixel_opaque_demand_settled_light_rev
-               << ",\"renderer_pixel_surface_demand_attempt_age_ms\":"
-               << r.demand_attempt_age_ms
-               << ",\"renderer_pixel_surface_demand_progress_age_ms\":"
-               << r.demand_progress_age_ms
-               << ",\"renderer_pixel_opaque_demand_attempt_age_ms\":"
-               << r.renderer_pixel_opaque_demand_attempt_age_ms
-               << ",\"renderer_pixel_opaque_demand_progress_age_ms\":"
-               << r.renderer_pixel_opaque_demand_progress_age_ms
-               << ",\"renderer_pixel_opaque_ref_flags\":"
-               << static_cast<int>(r.renderer_pixel_opaque_ref_flags)
-               << ",\"renderer_pixel_opaque_drawable\":"
-               << static_cast<int>(r.renderer_pixel_opaque_drawable)
-               << ",\"renderer_pixel_opaque_draw_ready\":"
-               << static_cast<int>(r.renderer_pixel_opaque_draw_ready)
-               << ",\"renderer_pixel_opaque_live_gpu\":"
-               << static_cast<int>(r.renderer_pixel_opaque_live_gpu)
-               << ",\"renderer_pixel_opaque_mdi_resident_pass_flags\":"
-               << static_cast<int>(
-                      r.renderer_pixel_opaque_mdi_resident_pass_flags)
-               << ",\"renderer_pixel_opaque_mdi_visible_pass_flags\":"
-               << static_cast<int>(
-                      r.renderer_pixel_opaque_mdi_visible_pass_flags)
-               << ",\"renderer_pixel_opaque_mdi_index_count\":"
-               << r.renderer_pixel_opaque_mdi_index_count
-               << ",\"renderer_pixel_opaque_mdi_visible_index_count\":"
-               << r.renderer_pixel_opaque_mdi_visible_index_count
-               << ",\"renderer_pixel_opaque_column_flow_ticket_flags\":"
-               << static_cast<int>(r.column_flow_ticket_flags)
-               << ",\"renderer_pixel_opaque_stale_light_remesh_pending\":"
-               << static_cast<int>(
-                      r.renderer_pixel_opaque_stale_light_remesh_pending)
-               << ",\"renderer_column_reason\":"
-               << static_cast<int>(r.renderer_column_reason)
-               << ",\"renderer_column_draw_ok\":"
-               << static_cast<int>(r.renderer_column_draw_ok)
-               << ",\"renderer_column_has_repair_ticket\":"
-               << static_cast<int>(r.renderer_column_has_repair_ticket)
-               << ",\"draw_gate_repair_mode\":"
-               << static_cast<int>(r.draw_gate_repair_mode)
-               << ",\"relight_queue_kind\":"
-               << static_cast<int>(r.relight_queue_kind)
-               << ",\"relight_y_band_defined\":"
-               << static_cast<int>(r.relight_y_band_defined)
-               << ",\"relight_queue_index\":" << r.relight_queue_index
-               << ",\"relight_queue_size\":" << r.relight_queue_size
-               << ",\"mesh_dirty_queue_kind\":"
-               << static_cast<int>(r.mesh_dirty_queue_kind)
-               << ",\"mesh_dirty_queue_index\":"
-               << r.mesh_dirty_queue_index
-               << ",\"mesh_dirty_queue_size\":"
-               << r.mesh_dirty_queue_size
-               << ",\"mesh_dirty_queue_age_frames\":"
-               << r.mesh_dirty_queue_age_frames
-               << ",\"focus_mesh_cache_entry_present\":"
-               << static_cast<int>(r.focus_mesh_cache_entry_present)
-               << ",\"focus_mesh_cpu_vertex_count\":"
-               << r.focus_mesh_cpu_vertex_count
-               << ",\"focus_mesh_gpu_resident\":"
-               << static_cast<int>(r.focus_mesh_gpu_resident)
-               << ",\"focus_mesh_gpu_quad_count\":"
-               << r.focus_mesh_gpu_quad_count
-               << ",\"focus_mesh_boundary_overlay_mask\":"
-               << static_cast<int>(r.focus_mesh_boundary_overlay_mask)
-               << ",\"mesh_work_owner_flags\":"
-               << r.mesh_work_owner_flags
-               << ",\"relight_owner_flags\":"
-               << r.relight_owner_flags
-               << ",\"column_flow_ticket_flags\":"
-               << static_cast<int>(r.column_flow_ticket_flags)
-               << ",\"column_emerge_stage\":"
-               << static_cast<int>(r.column_emerge_stage)
-               << ",\"relight_band_min_y\":" << r.relight_band_min_y
-               << ",\"relight_band_max_y\":" << r.relight_band_max_y
-               << ",\"draw_gate_scan_recent_n\":"
-               << r.draw_gate_scan_recent_n
-               << ",\"draw_gate_scan_recent_age_n\":"
-               << r.draw_gate_scan_recent_age_n
-               << ",\"draw_gate_scan_radius_n\":"
-               << r.draw_gate_scan_radius_n
-               << ",\"draw_gate_scan_drawable_n\":"
-               << r.draw_gate_scan_drawable_n
-               << ",\"draw_gate_scan_repairable_n\":"
-               << r.draw_gate_scan_repairable_n
-               << ",\"draw_gate_scan_target_n\":"
-               << r.draw_gate_scan_target_n
-               << ",\"cause\":" << static_cast<int>(r.cause)
-               << ",\"active_stage\":" << static_cast<int>(r.active_stage)
-               << ",\"face_debt_mask\":"
-               << static_cast<int>(r.face_debt_mask)
-               << ",\"overlay_face_debt_mask\":"
-               << static_cast<int>(r.overlay_face_debt_mask)
-               << ",\"peer_face_debt_mask\":"
-               << static_cast<int>(r.peer_face_debt_mask)
-               << ",\"stable_published_face_debt\":"
-               << static_cast<int>(r.stable_published_face_debt);
-        const auto dumpFaceArray = [&](const char *name, const auto &values) {
+        (*out)
+            << ",\"renderer_pixel_probe_trigger_flags\":"
+            << static_cast<int>(r.renderer_pixel_probe_trigger_flags)
+            << ",\"renderer_pixel_probe_event_frame_epoch\":"
+            << r.renderer_pixel_probe_event_frame_epoch
+            << ",\"renderer_pixel_x\":" << r.renderer_pixel_x
+            << ",\"renderer_pixel_y\":" << r.renderer_pixel_y
+            << ",\"renderer_pixel_rgba\":" << r.renderer_pixel_rgba
+            << ",\"renderer_pixel_pretransparent_rgba\":"
+            << r.renderer_pixel_pretransparent_rgba
+            << ",\"renderer_pixel_stencil_index\":"
+            << static_cast<int>(r.renderer_pixel_stencil_index)
+            << ",\"renderer_pixel_pretransparent_depth\":"
+            << r.renderer_pixel_pretransparent_depth
+            << ",\"renderer_pixel_shader_min_ambient\":"
+            << r.renderer_pixel_shader_min_ambient
+            << ",\"renderer_pixel_shader_day_factor\":"
+            << r.renderer_pixel_shader_day_factor
+            << ",\"renderer_pixel_shader_night_factor\":"
+            << r.renderer_pixel_shader_night_factor
+            << ",\"renderer_pixel_shader_sky_scale\":"
+            << r.renderer_pixel_shader_sky_scale
+            << ",\"renderer_pixel_shader_precipitation\":"
+            << r.renderer_pixel_shader_precipitation
+            << ",\"renderer_pixel_shader_wetness\":"
+            << r.renderer_pixel_shader_wetness
+            << ",\"renderer_pixel_shader_light_debug_mode\":"
+            << r.renderer_pixel_shader_light_debug_mode
+            << ",\"renderer_pixel_marker_mode\":"
+            << (r.renderer_pixel_marker_visible != 2 ? "true" : "false")
+            << ",\"renderer_pixel_marker_visible\":"
+            << (r.renderer_pixel_marker_visible == 1 ? "true" : "false")
+            << ",\"renderer_pixel_marker_coverage\":"
+            << (r.renderer_pixel_marker_visible != 2
+                    ? static_cast<double>(r.renderer_pixel_surface_valid >>
+                                          1u) /
+                          127.0
+                    : -1.0)
+            << ",\"renderer_pixel_surface_valid\":"
+            << static_cast<int>(r.renderer_pixel_surface_valid & 1u)
+            << ",\"renderer_pixel_surface_x\":" << r.renderer_pixel_surface_x
+            << ",\"renderer_pixel_surface_y\":" << r.renderer_pixel_surface_y
+            << ",\"renderer_pixel_surface_z\":" << r.renderer_pixel_surface_z
+            << ",\"renderer_pixel_opaque_surface_valid\":"
+            << static_cast<int>(r.renderer_pixel_opaque_surface_valid)
+            << ",\"renderer_pixel_opaque_surface_x\":"
+            << r.renderer_pixel_opaque_surface_x
+            << ",\"renderer_pixel_opaque_surface_y\":"
+            << r.renderer_pixel_opaque_surface_y
+            << ",\"renderer_pixel_opaque_surface_z\":"
+            << r.renderer_pixel_opaque_surface_z
+            << ",\"renderer_pixel_voxel_ray_state\":"
+            << static_cast<int>(r.renderer_pixel_voxel_ray_state)
+            << ",\"renderer_pixel_voxel_known_air_steps\":"
+            << r.renderer_pixel_voxel_known_air_steps
+            << ",\"renderer_pixel_voxel_ray_gap\":"
+            << static_cast<int>(r.renderer_pixel_voxel_ray_gap)
+            << ",\"renderer_pixel_voxel_unloaded_x\":"
+            << r.renderer_pixel_voxel_unloaded_x
+            << ",\"renderer_pixel_voxel_unloaded_y\":"
+            << r.renderer_pixel_voxel_unloaded_y
+            << ",\"renderer_pixel_voxel_unloaded_z\":"
+            << r.renderer_pixel_voxel_unloaded_z
+            << ",\"renderer_pixel_voxel_unloaded_chunk_x\":"
+            << r.renderer_pixel_voxel_unloaded_chunk_x
+            << ",\"renderer_pixel_voxel_unloaded_chunk_y\":"
+            << r.renderer_pixel_voxel_unloaded_chunk_y
+            << ",\"renderer_pixel_voxel_unloaded_chunk_z\":"
+            << r.renderer_pixel_voxel_unloaded_chunk_z
+            << ",\"renderer_pixel_voxel_unloaded_distance\":"
+            << r.renderer_pixel_voxel_unloaded_distance
+            << ",\"renderer_pixel_voxel_hit_x\":"
+            << r.renderer_pixel_voxel_hit_x
+            << ",\"renderer_pixel_voxel_hit_y\":"
+            << r.renderer_pixel_voxel_hit_y
+            << ",\"renderer_pixel_voxel_hit_z\":"
+            << r.renderer_pixel_voxel_hit_z
+            << ",\"renderer_pixel_voxel_hit_block_id\":"
+            << r.renderer_pixel_voxel_hit_block_id
+            << ",\"renderer_pixel_voxel_previous_block_id\":"
+            << r.renderer_pixel_voxel_previous_block_id
+            << ",\"renderer_pixel_voxel_entry_face\":"
+            << static_cast<int>(r.renderer_pixel_voxel_entry_face)
+            << ",\"renderer_pixel_voxel_hit_distance\":"
+            << r.renderer_pixel_voxel_hit_distance
+            << ",\"renderer_pixel_voxel_face_source_valid\":"
+            << static_cast<int>(r.renderer_pixel_voxel_face_source_valid)
+            << ",\"renderer_pixel_voxel_face_source_distance\":"
+            << r.renderer_pixel_voxel_face_source_distance
+            << ",\"renderer_pixel_voxel_mesh_ray_intersects\":"
+            << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_intersects)
+            << ",\"renderer_pixel_voxel_mesh_ray_interior\":"
+            << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_interior)
+            << ",\"renderer_pixel_voxel_mesh_ray_gap\":"
+            << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_gap)
+            << ",\"renderer_pixel_voxel_mesh_ray_distance\":"
+            << r.renderer_pixel_voxel_mesh_ray_distance
+            << ",\"renderer_pixel_voxel_mesh_ray_projected_valid\":"
+            << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_projected_valid)
+            << ",\"renderer_pixel_voxel_mesh_ray_projected_x\":"
+            << r.renderer_pixel_voxel_mesh_ray_projected_x
+            << ",\"renderer_pixel_voxel_mesh_ray_projected_y\":"
+            << r.renderer_pixel_voxel_mesh_ray_projected_y
+            << ",\"renderer_pixel_voxel_mesh_ray_projected_depth\":"
+            << r.renderer_pixel_voxel_mesh_ray_projected_depth
+            << ",\"renderer_pixel_voxel_mesh_ray_projected_delta_x\":"
+            << r.renderer_pixel_voxel_mesh_ray_projected_delta_x
+            << ",\"renderer_pixel_voxel_mesh_ray_projected_delta_y\":"
+            << r.renderer_pixel_voxel_mesh_ray_projected_delta_y
+            << ",\"renderer_pixel_voxel_mesh_ray_origin_projected_delta_x\":"
+            << r.renderer_pixel_voxel_mesh_ray_origin_projected_delta_x
+            << ",\"renderer_pixel_voxel_mesh_ray_origin_projected_delta_y\":"
+            << r.renderer_pixel_voxel_mesh_ray_origin_projected_delta_y
+            << ",\"renderer_pixel_voxel_mesh_ray_direction_projected_delta_x\":"
+            << r.renderer_pixel_voxel_mesh_ray_direction_projected_delta_x
+            << ",\"renderer_pixel_voxel_mesh_ray_direction_projected_delta_y\":"
+            << r.renderer_pixel_voxel_mesh_ray_direction_projected_delta_y
+            << ",\"renderer_pixel_voxel_mesh_ray_projected_depth_delta\":"
+            << r.renderer_pixel_voxel_mesh_ray_projected_depth_delta
+            << ",\"renderer_pixel_voxel_mesh_ray_projected_depth_would_pass\":"
+            << static_cast<int>(
+                   r.renderer_pixel_voxel_mesh_ray_projected_depth_would_pass)
+            << ",\"renderer_pixel_voxel_mesh_ray_edge_margin\":"
+            << r.renderer_pixel_voxel_mesh_ray_edge_margin;
+        WriteGpuDrawStateJson(*out, r);
+        (*out)
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_witness_attempted\":"
+            << static_cast<int>(
+                   r.renderer_pixel_voxel_mesh_ray_gpu_witness_attempted)
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_batch_found\":"
+            << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_gpu_batch_found)
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_compact_active\":"
+            << static_cast<int>(
+                   r.renderer_pixel_voxel_mesh_ray_gpu_compact_active)
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_readable\":"
+            << static_cast<int>(
+                   r.renderer_pixel_voxel_mesh_ray_gpu_command_readable)
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_match\":"
+            << static_cast<int>(
+                   r.renderer_pixel_voxel_mesh_ray_gpu_command_match)
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_indices_readable\":"
+            << static_cast<int>(
+                   r.renderer_pixel_voxel_mesh_ray_gpu_indices_readable)
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_indices_match\":"
+            << static_cast<int>(
+                   r.renderer_pixel_voxel_mesh_ray_gpu_indices_match)
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_vertices_readable\":"
+            << static_cast<int>(
+                   r.renderer_pixel_voxel_mesh_ray_gpu_vertices_readable)
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_vertices_match\":"
+            << static_cast<int>(
+                   r.renderer_pixel_voxel_mesh_ray_gpu_vertices_match)
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_batch_index\":"
+            << r.renderer_pixel_voxel_mesh_ray_gpu_batch_index
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_slot\":"
+            << r.renderer_pixel_voxel_mesh_ray_gpu_command_slot
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_source_index_offset\":"
+            << r.renderer_pixel_voxel_mesh_ray_gpu_source_index_offset
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_source_index0\":"
+            << r.renderer_pixel_voxel_mesh_ray_gpu_source_index0
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_source_index1\":"
+            << r.renderer_pixel_voxel_mesh_ray_gpu_source_index1
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_source_index2\":"
+            << r.renderer_pixel_voxel_mesh_ray_gpu_source_index2
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_actual_index0\":"
+            << r.renderer_pixel_voxel_mesh_ray_gpu_actual_index0
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_actual_index1\":"
+            << r.renderer_pixel_voxel_mesh_ray_gpu_actual_index1
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_actual_index2\":"
+            << r.renderer_pixel_voxel_mesh_ray_gpu_actual_index2
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_vbo_byte_offset\":"
+            << r.renderer_pixel_voxel_mesh_ray_gpu_vbo_byte_offset
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_ebo_byte_offset\":"
+            << r.renderer_pixel_voxel_mesh_ray_gpu_ebo_byte_offset
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_count\":"
+            << r.renderer_pixel_voxel_mesh_ray_gpu_command_count
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_instances\":"
+            << r.renderer_pixel_voxel_mesh_ray_gpu_command_instances
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_first_index\":"
+            << r.renderer_pixel_voxel_mesh_ray_gpu_command_first_index
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_base_vertex\":"
+            << r.renderer_pixel_voxel_mesh_ray_gpu_command_base_vertex
+            << ",\"renderer_pixel_voxel_mesh_ray_gpu_vertex_position_max_"
+               "delta\":"
+            << r.renderer_pixel_voxel_mesh_ray_gpu_vertex_position_max_delta
+            << ",\"renderer_pixel_voxel_face_batch_ref\":"
+            << static_cast<int>(r.renderer_pixel_voxel_face_batch_ref)
+            << ",\"renderer_pixel_voxel_face_gpu_command\":"
+            << static_cast<int>(r.renderer_pixel_voxel_face_gpu_command)
+            << ",\"renderer_pixel_voxel_face_gpu_pooled\":"
+            << static_cast<int>(r.renderer_pixel_voxel_face_gpu_pooled)
+            << ",\"renderer_pixel_voxel_face_gpu_index_count\":"
+            << r.renderer_pixel_voxel_face_gpu_index_count
+            << ",\"renderer_pixel_voxel_face_gpu_instances\":"
+            << r.renderer_pixel_voxel_face_gpu_instances
+            << ",\"renderer_pixel_voxel_face_texture_ready\":"
+            << static_cast<int>(r.renderer_pixel_voxel_face_texture_ready)
+            << ",\"renderer_pixel_voxel_face_texture_id\":"
+            << r.renderer_pixel_voxel_face_texture_id
+            << ",\"renderer_pixel_opaque_hit_distance\":"
+            << r.renderer_pixel_opaque_hit_distance
+            << ",\"renderer_pixel_voxel_chunk_x\":"
+            << r.renderer_pixel_voxel_chunk_x
+            << ",\"renderer_pixel_voxel_chunk_y\":"
+            << r.renderer_pixel_voxel_chunk_y
+            << ",\"renderer_pixel_voxel_chunk_z\":"
+            << r.renderer_pixel_voxel_chunk_z
+            << ",\"renderer_pixel_voxel_chunk_pending_light\":"
+            << static_cast<int>(r.renderer_pixel_voxel_chunk_pending_light)
+            << ",\"renderer_pixel_voxel_chunk_async_relight_inflight\":"
+            << static_cast<int>(
+                   r.renderer_pixel_voxel_chunk_async_relight_inflight)
+            << ",\"renderer_pixel_voxel_chunk_relight_queue_kind\":"
+            << static_cast<int>(r.renderer_pixel_voxel_chunk_relight_queue_kind)
+            << ",\"renderer_pixel_voxel_chunk_relight_y_band_defined\":"
+            << static_cast<int>(
+                   r.renderer_pixel_voxel_chunk_relight_y_band_defined)
+            << ",\"renderer_pixel_voxel_chunk_relight_queue_index\":"
+            << r.renderer_pixel_voxel_chunk_relight_queue_index
+            << ",\"renderer_pixel_voxel_chunk_relight_queue_size\":"
+            << r.renderer_pixel_voxel_chunk_relight_queue_size
+            << ",\"renderer_pixel_voxel_chunk_flow_ticket_flags\":"
+            << static_cast<int>(r.renderer_pixel_voxel_chunk_flow_ticket_flags)
+            << ",\"renderer_pixel_voxel_chunk_defer_until_lit\":"
+            << static_cast<int>(r.renderer_pixel_voxel_chunk_defer_until_lit)
+            << ",\"renderer_pixel_voxel_chunk_soft_defer_held\":"
+            << static_cast<int>(r.renderer_pixel_voxel_chunk_soft_defer_held)
+            << ",\"renderer_pixel_voxel_chunk_has_settled_light\":"
+            << static_cast<int>(r.renderer_pixel_voxel_chunk_has_settled_light)
+            << ",\"renderer_pixel_voxel_chunk_attempt_id\":"
+            << r.renderer_pixel_voxel_chunk_attempt_id
+            << ",\"renderer_pixel_voxel_chunk_settled_light_rev\":"
+            << r.renderer_pixel_voxel_chunk_settled_light_rev
+            << ",\"renderer_pixel_voxel_chunk_field_light_rev\":"
+            << r.renderer_pixel_voxel_chunk_field_light_rev
+            << ",\"renderer_pixel_voxel_chunk_nonair\":"
+            << r.renderer_pixel_voxel_chunk_nonair
+            << ",\"renderer_pixel_voxel_chunk_mesh_revision\":"
+            << r.renderer_pixel_voxel_chunk_mesh_revision
+            << ",\"renderer_pixel_voxel_chunk_published_geom_rev\":"
+            << r.renderer_pixel_voxel_chunk_published_geom_rev
+            << ",\"renderer_pixel_voxel_chunk_published_light_rev\":"
+            << r.renderer_pixel_voxel_chunk_published_light_rev
+            << ",\"renderer_pixel_voxel_chunk_render_flags\":"
+            << static_cast<int>(r.renderer_pixel_voxel_chunk_render_flags)
+            << ",\"renderer_pixel_voxel_chunk_ref_flags\":"
+            << static_cast<int>(r.renderer_pixel_voxel_chunk_ref_flags)
+            << ",\"renderer_pixel_voxel_chunk_column_reason\":"
+            << static_cast<int>(r.renderer_pixel_voxel_chunk_column_reason)
+            << ",\"renderer_pixel_voxel_chunk_face_debt_mask\":"
+            << static_cast<int>(r.renderer_pixel_voxel_chunk_face_debt_mask)
+            << ",\"renderer_pixel_voxel_chunk_mdi_command_count\":"
+            << r.renderer_pixel_voxel_chunk_mdi_command_count
+            << ",\"renderer_pixel_voxel_chunk_mdi_visible_command_count\":"
+            << r.renderer_pixel_voxel_chunk_mdi_visible_command_count
+            << ",\"renderer_pixel_voxel_chunk_mdi_index_count\":"
+            << r.renderer_pixel_voxel_chunk_mdi_index_count
+            << ",\"renderer_pixel_voxel_chunk_mdi_visible_index_count\":"
+            << r.renderer_pixel_voxel_chunk_mdi_visible_index_count
+            << ",\"renderer_pixel_voxel_chunk_gpu_slot_quad_count\":"
+            << r.renderer_pixel_voxel_chunk_gpu_slot_quad_count
+            << ",\"renderer_pixel_voxel_chunk_source_index_count\":"
+            << r.renderer_pixel_voxel_chunk_source_index_count
+            << ",\"renderer_pixel_voxel_chunk_packed_draw_selected\":"
+            << static_cast<int>(
+                   r.renderer_pixel_voxel_chunk_packed_draw_selected)
+            << ",\"renderer_pixel_voxel_chunk_packed_draw_path_ready\":"
+            << static_cast<int>(
+                   r.renderer_pixel_voxel_chunk_packed_draw_path_ready)
+            << ",\"renderer_pixel_voxel_chunk_packed_slot_present\":"
+            << static_cast<int>(
+                   r.renderer_pixel_voxel_chunk_packed_slot_present)
+            << ",\"renderer_pixel_voxel_chunk_packed_slice_ready\":"
+            << static_cast<int>(r.renderer_pixel_voxel_chunk_packed_slice_ready)
+            << ",\"renderer_pixel_voxel_chunk_packed_opaque_range_count\":"
+            << r.renderer_pixel_voxel_chunk_packed_opaque_range_count
+            << ",\"renderer_pixel_voxel_chunk_packed_texture_ready_range_"
+               "count\":"
+            << r.renderer_pixel_voxel_chunk_packed_texture_ready_range_count
+            << ",\"renderer_pixel_voxel_chunk_packed_draw_call_count\":"
+            << r.renderer_pixel_voxel_chunk_packed_draw_call_count
+            << ",\"renderer_pixel_voxel_chunk_packed_missing_texture_entry_"
+               "count\":"
+            << r.renderer_pixel_voxel_chunk_packed_missing_texture_entry_count
+            << ",\"renderer_pixel_voxel_chunk_packed_zero_texture_id_range_"
+               "count\":"
+            << r.renderer_pixel_voxel_chunk_packed_zero_texture_id_range_count
+            << ",\"renderer_pixel_voxel_chunk_packed_first_opaque_range_block_"
+               "id\":"
+            << r.renderer_pixel_voxel_chunk_packed_first_opaque_range_block_id
+            << ",\"renderer_pixel_voxel_chunk_packed_first_missing_texture_"
+               "block_id\":"
+            << r.renderer_pixel_voxel_chunk_packed_first_missing_texture_block_id
+            << ",\"renderer_pixel_voxel_chunk_packed_first_zero_texture_id_"
+               "block_id\":"
+            << r.renderer_pixel_voxel_chunk_packed_first_zero_texture_id_block_id
+            << ",\"renderer_pixel_voxel_chunk_packed_slot_quad_count\":"
+            << r.renderer_pixel_voxel_chunk_packed_slot_quad_count
+            << ",\"renderer_pixel_voxel_chunk_packed_opaque_range_quad_count\":"
+            << r.renderer_pixel_voxel_chunk_packed_opaque_range_quad_count
+            << ",\"renderer_pixel_voxel_chunk_packed_drawn_quad_count\":"
+            << r.renderer_pixel_voxel_chunk_packed_drawn_quad_count
+            << ",\"renderer_pixel_voxel_chunk_packed_drawn_index_count\":"
+            << r.renderer_pixel_voxel_chunk_packed_drawn_index_count
+            << ",\"renderer_pixel_voxel_chunk_work_owner_flags\":"
+            << r.renderer_pixel_voxel_chunk_work_owner_flags
+            << ",\"renderer_pixel_voxel_chunk_dirty_queue_kind\":"
+            << static_cast<int>(r.renderer_pixel_voxel_chunk_dirty_queue_kind)
+            << ",\"renderer_pixel_voxel_chunk_dirty_queue_index\":"
+            << r.renderer_pixel_voxel_chunk_dirty_queue_index
+            << ",\"renderer_pixel_voxel_chunk_dirty_queue_size\":"
+            << r.renderer_pixel_voxel_chunk_dirty_queue_size
+            << ",\"renderer_pixel_voxel_chunk_dirty_queue_age_frames\":"
+            << r.renderer_pixel_voxel_chunk_dirty_queue_age_frames
+            << ",\"renderer_pixel_voxel_chunk_scheduled_this_frame\":"
+            << static_cast<int>(
+                   r.renderer_pixel_voxel_chunk_scheduled_this_frame)
+            << ",\"renderer_pixel_voxel_chunk_demand_has_active_attempt\":"
+            << static_cast<int>(
+                   r.renderer_pixel_voxel_chunk_demand_has_active_attempt)
+            << ",\"renderer_pixel_voxel_chunk_demand_active_stage\":"
+            << static_cast<int>(
+                   r.renderer_pixel_voxel_chunk_demand_active_stage)
+            << ",\"renderer_pixel_voxel_chunk_demand_desired_geom_rev\":"
+            << r.renderer_pixel_voxel_chunk_demand_desired_geom_rev
+            << ",\"renderer_pixel_voxel_chunk_demand_desired_light_rev\":"
+            << r.renderer_pixel_voxel_chunk_demand_desired_light_rev
+            << ",\"renderer_pixel_opaque_chunk_x\":"
+            << r.renderer_pixel_opaque_chunk_x
+            << ",\"renderer_pixel_opaque_chunk_y\":"
+            << r.renderer_pixel_opaque_chunk_y
+            << ",\"renderer_pixel_opaque_chunk_z\":"
+            << r.renderer_pixel_opaque_chunk_z
+            << ",\"renderer_pixel_opaque_world_epoch\":"
+            << r.renderer_pixel_opaque_world_epoch
+            << ",\"renderer_pixel_opaque_incarnation\":"
+            << r.renderer_pixel_opaque_incarnation
+            << ",\"renderer_pixel_opaque_chunk_nonair\":"
+            << r.renderer_pixel_opaque_chunk_nonair
+            << ",\"renderer_pixel_opaque_chunk_content_revision\":"
+            << r.renderer_pixel_opaque_chunk_content_revision
+            << ",\"renderer_pixel_opaque_mesh_revision\":"
+            << r.renderer_pixel_opaque_mesh_revision
+            << ",\"renderer_pixel_opaque_published_geom_rev\":"
+            << r.renderer_pixel_opaque_published_geom_rev
+            << ",\"renderer_pixel_opaque_published_light_rev\":"
+            << r.renderer_pixel_opaque_published_light_rev
+            << ",\"renderer_pixel_opaque_meshed_light_rev\":"
+            << r.renderer_pixel_opaque_meshed_light_rev
+            << ",\"renderer_pixel_opaque_field_light_rev\":"
+            << r.renderer_pixel_opaque_field_light_rev
+            << ",\"renderer_pixel_opaque_source_index_count\":"
+            << r.renderer_pixel_opaque_source_index_count
+            << ",\"renderer_pixel_opaque_vertex_light_valid\":"
+            << static_cast<int>(r.renderer_pixel_opaque_vertex_light_valid)
+            << ",\"renderer_pixel_opaque_vertex_light_block_id\":"
+            << r.renderer_pixel_opaque_vertex_light_block_id
+            << ",\"renderer_pixel_opaque_vertex_light_face_index\":"
+            << r.renderer_pixel_opaque_vertex_light_face_index
+            << ",\"renderer_pixel_opaque_vertex_light_distance\":"
+            << r.renderer_pixel_opaque_vertex_light_distance
+            << ",\"renderer_pixel_opaque_vertex_sky_light\":"
+            << r.renderer_pixel_opaque_vertex_sky_light
+            << ",\"renderer_pixel_opaque_vertex_block_light\":"
+            << r.renderer_pixel_opaque_vertex_block_light
+            << ",\"renderer_pixel_opaque_vertex_light_preview\":"
+            << r.renderer_pixel_opaque_vertex_light_preview
+            << ",\"renderer_pixel_surface_preview_shader_override\":"
+            << ((r.renderer_gate_flags & (1u << 22)) != 0 ? 1 : 0)
+            << ",\"renderer_pixel_opaque_preview_shader_override\":"
+            << static_cast<int>(r.renderer_pixel_opaque_preview_shader_override)
+            << ",\"renderer_pixel_opaque_live_face_light_valid\":"
+            << static_cast<int>(r.renderer_pixel_opaque_live_face_light_valid)
+            << ",\"renderer_pixel_opaque_live_face_light_packed\":"
+            << static_cast<int>(r.renderer_pixel_opaque_live_face_light_packed)
+            << ",\"renderer_pixel_opaque_live_face_light_source\":"
+            << static_cast<int>(r.renderer_pixel_opaque_live_face_light_source)
+            << ",\"renderer_pixel_opaque_demand_present\":"
+            << static_cast<int>(r.renderer_pixel_opaque_demand_present)
+            << ",\"renderer_pixel_opaque_demand_has_active_attempt\":"
+            << static_cast<int>(
+                   r.renderer_pixel_opaque_demand_has_active_attempt)
+            << ",\"renderer_pixel_opaque_demand_has_settled_light\":"
+            << static_cast<int>(
+                   r.renderer_pixel_opaque_demand_has_settled_light)
+            << ",\"renderer_pixel_opaque_demand_active_stage\":"
+            << static_cast<int>(r.renderer_pixel_opaque_demand_active_stage)
+            << ",\"renderer_pixel_opaque_demand_desired_light_rev\":"
+            << r.renderer_pixel_opaque_demand_desired_light_rev
+            << ",\"renderer_pixel_opaque_demand_published_light_rev\":"
+            << r.renderer_pixel_opaque_demand_published_light_rev
+            << ",\"renderer_pixel_opaque_demand_settled_light_rev\":"
+            << r.renderer_pixel_opaque_demand_settled_light_rev
+            << ",\"renderer_pixel_surface_demand_attempt_age_ms\":"
+            << r.demand_attempt_age_ms
+            << ",\"renderer_pixel_surface_demand_progress_age_ms\":"
+            << r.demand_progress_age_ms
+            << ",\"renderer_pixel_opaque_demand_attempt_age_ms\":"
+            << r.renderer_pixel_opaque_demand_attempt_age_ms
+            << ",\"renderer_pixel_opaque_demand_progress_age_ms\":"
+            << r.renderer_pixel_opaque_demand_progress_age_ms
+            << ",\"renderer_pixel_opaque_ref_flags\":"
+            << static_cast<int>(r.renderer_pixel_opaque_ref_flags)
+            << ",\"renderer_pixel_opaque_drawable\":"
+            << static_cast<int>(r.renderer_pixel_opaque_drawable)
+            << ",\"renderer_pixel_opaque_draw_ready\":"
+            << static_cast<int>(r.renderer_pixel_opaque_draw_ready)
+            << ",\"renderer_pixel_opaque_live_gpu\":"
+            << static_cast<int>(r.renderer_pixel_opaque_live_gpu)
+            << ",\"renderer_pixel_opaque_mdi_resident_pass_flags\":"
+            << static_cast<int>(r.renderer_pixel_opaque_mdi_resident_pass_flags)
+            << ",\"renderer_pixel_opaque_mdi_visible_pass_flags\":"
+            << static_cast<int>(r.renderer_pixel_opaque_mdi_visible_pass_flags)
+            << ",\"renderer_pixel_opaque_mdi_index_count\":"
+            << r.renderer_pixel_opaque_mdi_index_count
+            << ",\"renderer_pixel_opaque_mdi_visible_index_count\":"
+            << r.renderer_pixel_opaque_mdi_visible_index_count
+            << ",\"renderer_pixel_opaque_column_flow_ticket_flags\":"
+            << static_cast<int>(r.column_flow_ticket_flags)
+            << ",\"renderer_pixel_opaque_stale_light_remesh_pending\":"
+            << static_cast<int>(
+                   r.renderer_pixel_opaque_stale_light_remesh_pending)
+            << ",\"renderer_column_reason\":"
+            << static_cast<int>(r.renderer_column_reason)
+            << ",\"renderer_column_draw_ok\":"
+            << static_cast<int>(r.renderer_column_draw_ok)
+            << ",\"renderer_column_has_repair_ticket\":"
+            << static_cast<int>(r.renderer_column_has_repair_ticket)
+            << ",\"draw_gate_repair_mode\":"
+            << static_cast<int>(r.draw_gate_repair_mode)
+            << ",\"relight_queue_kind\":"
+            << static_cast<int>(r.relight_queue_kind)
+            << ",\"relight_y_band_defined\":"
+            << static_cast<int>(r.relight_y_band_defined)
+            << ",\"relight_queue_index\":" << r.relight_queue_index
+            << ",\"relight_queue_size\":" << r.relight_queue_size
+            << ",\"mesh_dirty_queue_kind\":"
+            << static_cast<int>(r.mesh_dirty_queue_kind)
+            << ",\"mesh_dirty_queue_index\":" << r.mesh_dirty_queue_index
+            << ",\"mesh_dirty_queue_size\":" << r.mesh_dirty_queue_size
+            << ",\"mesh_dirty_queue_age_frames\":"
+            << r.mesh_dirty_queue_age_frames
+            << ",\"focus_mesh_cache_entry_present\":"
+            << static_cast<int>(r.focus_mesh_cache_entry_present)
+            << ",\"focus_mesh_cpu_vertex_count\":"
+            << r.focus_mesh_cpu_vertex_count << ",\"focus_mesh_gpu_resident\":"
+            << static_cast<int>(r.focus_mesh_gpu_resident)
+            << ",\"focus_mesh_gpu_quad_count\":" << r.focus_mesh_gpu_quad_count
+            << ",\"focus_mesh_boundary_overlay_mask\":"
+            << static_cast<int>(r.focus_mesh_boundary_overlay_mask)
+            << ",\"mesh_work_owner_flags\":" << r.mesh_work_owner_flags
+            << ",\"relight_owner_flags\":" << r.relight_owner_flags
+            << ",\"column_flow_ticket_flags\":"
+            << static_cast<int>(r.column_flow_ticket_flags)
+            << ",\"column_emerge_stage\":"
+            << static_cast<int>(r.column_emerge_stage)
+            << ",\"relight_band_min_y\":" << r.relight_band_min_y
+            << ",\"relight_band_max_y\":" << r.relight_band_max_y
+            << ",\"draw_gate_scan_recent_n\":" << r.draw_gate_scan_recent_n
+            << ",\"draw_gate_scan_recent_age_n\":"
+            << r.draw_gate_scan_recent_age_n
+            << ",\"draw_gate_scan_radius_n\":" << r.draw_gate_scan_radius_n
+            << ",\"draw_gate_scan_drawable_n\":" << r.draw_gate_scan_drawable_n
+            << ",\"draw_gate_scan_repairable_n\":"
+            << r.draw_gate_scan_repairable_n
+            << ",\"draw_gate_scan_target_n\":" << r.draw_gate_scan_target_n
+            << ",\"cause\":" << static_cast<int>(r.cause)
+            << ",\"active_stage\":" << static_cast<int>(r.active_stage)
+            << ",\"face_debt_mask\":" << static_cast<int>(r.face_debt_mask)
+            << ",\"overlay_face_debt_mask\":"
+            << static_cast<int>(r.overlay_face_debt_mask)
+            << ",\"peer_face_debt_mask\":"
+            << static_cast<int>(r.peer_face_debt_mask)
+            << ",\"stable_published_face_debt\":"
+            << static_cast<int>(r.stable_published_face_debt);
+        const auto dumpFaceArray = [&](const char *name, const auto &values)
+        {
           (*out) << ",\"" << name << "\":[";
           for (size_t i = 0; i < 6; ++i)
           {
@@ -7033,23 +6705,15 @@ void UFramePerfMonitor::Shutdown()
         {
           (*out) << ",\"screen_ray_x\":" << r.screen_ray_x
                  << ",\"screen_ray_y\":" << r.screen_ray_y
-                 << ",\"screen_ray_origin_x\":"
-                 << r.screen_ray_origin_x
-                 << ",\"screen_ray_origin_y\":"
-                 << r.screen_ray_origin_y
-                 << ",\"screen_ray_origin_z\":"
-                 << r.screen_ray_origin_z
-                 << ",\"screen_ray_direction_x\":"
-                 << r.screen_ray_direction_x
-                 << ",\"screen_ray_direction_y\":"
-                 << r.screen_ray_direction_y
-                 << ",\"screen_ray_direction_z\":"
-                 << r.screen_ray_direction_z
-                 << ",\"screen_ray_distance\":"
-                 << r.screen_ray_distance
+                 << ",\"screen_ray_origin_x\":" << r.screen_ray_origin_x
+                 << ",\"screen_ray_origin_y\":" << r.screen_ray_origin_y
+                 << ",\"screen_ray_origin_z\":" << r.screen_ray_origin_z
+                 << ",\"screen_ray_direction_x\":" << r.screen_ray_direction_x
+                 << ",\"screen_ray_direction_y\":" << r.screen_ray_direction_y
+                 << ",\"screen_ray_direction_z\":" << r.screen_ray_direction_z
+                 << ",\"screen_ray_distance\":" << r.screen_ray_distance
                  << ",\"screen_ray_near_distance\":"
-                 << r.screen_ray_near_distance
-                 << ",\"screen_ray_perspective\":"
+                 << r.screen_ray_near_distance << ",\"screen_ray_perspective\":"
                  << static_cast<int>(r.screen_ray_perspective)
                  << ",\"screen_ray_known_air_steps\":"
                  << r.screen_ray_known_air_steps
@@ -7058,8 +6722,7 @@ void UFramePerfMonitor::Shutdown()
                  << ",\"screen_ray_block_z\":" << r.screen_ray_block_z
                  << ",\"screen_ray_column\":"
                  << static_cast<int>(r.screen_ray_column)
-                 << ",\"screen_ray_row\":"
-                 << static_cast<int>(r.screen_ray_row)
+                 << ",\"screen_ray_row\":" << static_cast<int>(r.screen_ray_row)
                  << ",\"screen_ray_state\":"
                  << static_cast<int>(r.screen_ray_state)
                  << ",\"screen_ray_in_focus_radius\":"

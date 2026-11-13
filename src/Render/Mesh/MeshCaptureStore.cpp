@@ -1,23 +1,17 @@
 #include "Render/Mesh/MeshCaptureStore.h"
-#include "Render/Mesh/BoundaryOverlay.h"
-#include "Render/Mesh/MeshNeighborPolicy.h"
 #include "Core/Jobs/PipelineAdmission.h"
+#include "Render/Mesh/BoundaryOverlay.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/FluidCellState.h"
+#include "World/Mesh/Contracts/MeshNeighborPolicy.h"
 
 namespace cutum
 {
 
-void UMeshCaptureStore::Invalidate(glm::ivec3 coord)
-{
-  Store_.erase(coord);
-}
+void UMeshCaptureStore::Invalidate(glm::ivec3 coord) { Store_.erase(coord); }
 
-void UMeshCaptureStore::InvalidateAll()
-{
-  Store_.clear();
-}
+void UMeshCaptureStore::InvalidateAll() { Store_.clear(); }
 
 void UMeshCaptureStore::BumpWorldEpoch()
 {
@@ -86,8 +80,7 @@ bool UMeshCaptureStore::EvictLeastRecentlyUsed(const bool require_credit)
       continue;
     }
     if (oldest == Store_.end() ||
-        it->second.last_access_sequence <
-            oldest->second.last_access_sequence)
+        it->second.last_access_sequence < oldest->second.last_access_sequence)
     {
       oldest = it;
     }
@@ -160,9 +153,9 @@ UMeshCaptureStore::CaptureAndStore(const UBlockWorld &world, glm::ivec3 coord,
   return Store_[coord].data;
 }
 
-std::optional<ChunkMeshSnapshot> UMeshCaptureStore::TakeOrRefresh(
-    const UBlockWorld &world, glm::ivec3 coord, uint64_t source_revision,
-    int &refresh_budget)
+std::optional<ChunkMeshSnapshot>
+UMeshCaptureStore::TakeOrRefresh(const UBlockWorld &world, glm::ivec3 coord,
+                                 uint64_t source_revision, int &refresh_budget)
 {
   if (auto hit = TryGet(world, coord, source_revision))
   {

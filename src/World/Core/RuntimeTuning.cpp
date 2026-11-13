@@ -1,10 +1,10 @@
 #include "World/Core/RuntimeTuning.h"
 
-#include "Render/Mesh/MeshApplyPolicy.h"
+#include "World/Mesh/Contracts/MeshApplyPolicy.h"
 #include "World/Physics/FluidTuning.h"
 
-#include <chrono>
 #include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -20,10 +20,7 @@ URuntimeTuning &URuntimeTuning::Get()
   return instance;
 }
 
-void URuntimeTuning::ResetToDefaults()
-{
-  Get() = URuntimeTuning{};
-}
+void URuntimeTuning::ResetToDefaults() { Get() = URuntimeTuning{}; }
 
 void URuntimeTuning::ApplyMemoryTier(const char *tier)
 {
@@ -221,8 +218,7 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
   }
   if (j.contains("miss_emerge_floor_ms"))
   {
-    t.MissEmergeFloorMs =
-        j.value("miss_emerge_floor_ms", t.MissEmergeFloorMs);
+    t.MissEmergeFloorMs = j.value("miss_emerge_floor_ms", t.MissEmergeFloorMs);
   }
   if (j.contains("streaming_phase_budget_ms"))
   {
@@ -257,8 +253,7 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
   }
   if (j.contains("memory_expand_max_rd"))
   {
-    t.MemoryExpandMaxRd =
-        j.value("memory_expand_max_rd", t.MemoryExpandMaxRd);
+    t.MemoryExpandMaxRd = j.value("memory_expand_max_rd", t.MemoryExpandMaxRd);
   }
   if (j.contains("completed_expand_enabled"))
   {
@@ -288,8 +283,9 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
   }
   if (j.contains("capture_drain_high_pending_moving_ms"))
   {
-    t.CaptureDrainHighPendingMovingMs = j.value(
-        "capture_drain_high_pending_moving_ms", t.CaptureDrainHighPendingMovingMs);
+    t.CaptureDrainHighPendingMovingMs =
+        j.value("capture_drain_high_pending_moving_ms",
+                t.CaptureDrainHighPendingMovingMs);
   }
   if (j.contains("capture_drain_high_pending_idle_ms"))
   {
@@ -308,8 +304,8 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
   }
   if (j.contains("capture_idle_pending_max_wall_ms"))
   {
-    t.CaptureIdlePendingMaxWallMs = j.value(
-        "capture_idle_pending_max_wall_ms", t.CaptureIdlePendingMaxWallMs);
+    t.CaptureIdlePendingMaxWallMs = j.value("capture_idle_pending_max_wall_ms",
+                                            t.CaptureIdlePendingMaxWallMs);
   }
   if (j.contains("capture_moving_bg_cap"))
   {
@@ -341,13 +337,11 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
   }
   if (j.contains("mesh_fly_cap_wall_hot"))
   {
-    t.MeshFlyCapWallHot =
-        j.value("mesh_fly_cap_wall_hot", t.MeshFlyCapWallHot);
+    t.MeshFlyCapWallHot = j.value("mesh_fly_cap_wall_hot", t.MeshFlyCapWallHot);
   }
   if (j.contains("mesh_fly_cap_wall_mid"))
   {
-    t.MeshFlyCapWallMid =
-        j.value("mesh_fly_cap_wall_mid", t.MeshFlyCapWallMid);
+    t.MeshFlyCapWallMid = j.value("mesh_fly_cap_wall_mid", t.MeshFlyCapWallMid);
   }
   if (j.contains("mesh_fly_cap_wall_ok"))
   {
@@ -360,8 +354,7 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
   }
   if (j.contains("mesh_fly_cap_holes_ok"))
   {
-    t.MeshFlyCapHolesOk =
-        j.value("mesh_fly_cap_holes_ok", t.MeshFlyCapHolesOk);
+    t.MeshFlyCapHolesOk = j.value("mesh_fly_cap_holes_ok", t.MeshFlyCapHolesOk);
   }
   if (j.contains("memory_green_max_wall_ms"))
   {
@@ -425,7 +418,8 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
   }
   if (j.contains("enter_lit_debt_mode"))
   {
-    const std::string mode = j.value("enter_lit_debt_mode", std::string("snapshot_rd"));
+    const std::string mode =
+        j.value("enter_lit_debt_mode", std::string("snapshot_rd"));
     t.EnterLitUseSnapshotDebt = (mode != "live_global");
   }
   if (j.contains("enter_lit_abort_ms"))
@@ -438,9 +432,8 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
   }
   if (j.contains("enter_gate_mesh_drain_iterations"))
   {
-    t.EnterGateMeshDrainIterations =
-        j.value("enter_gate_mesh_drain_iterations",
-                t.EnterGateMeshDrainIterations);
+    t.EnterGateMeshDrainIterations = j.value("enter_gate_mesh_drain_iterations",
+                                             t.EnterGateMeshDrainIterations);
   }
   if (j.contains("enter_force_ingame_ms"))
   {
@@ -522,7 +515,8 @@ void URuntimeTuning::ApplyEnvOverrides()
   apply(stream_simple, t.StreamSimple);
   apply(shed_uv1, t.ScheduleShedUv1);
   apply(replace_owner, t.RelightReplaceDirtyOwner);
-  // Keep MeshApplyPolicy atomic in sync with tuning (AF bisect / streaming_tune).
+  // Keep MeshApplyPolicy atomic in sync with tuning (AF bisect /
+  // streaming_tune).
   SetRelightReplaceDirtyOwnerEnabled(t.RelightReplaceDirtyOwner);
 }
 

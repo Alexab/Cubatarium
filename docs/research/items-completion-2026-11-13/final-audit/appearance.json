@@ -1,0 +1,21 @@
+{
+  "apply": true,
+  "cancel": true,
+  "draft_isolated": true,
+  "layouts": [
+    {
+      "controls_reachable": true,
+      "height": 720,
+      "width": 1280
+    },
+    {
+      "controls_reachable": true,
+      "height": 480,
+      "width": 640
+    }
+  ],
+  "original_selection_restored": true,
+  "passed": true,
+  "preview_rendered": true,
+  "user_save_serialized": true
+}

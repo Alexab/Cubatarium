@@ -5,21 +5,21 @@
 #include "Render/Camera/Camera.h"
 #include "Render/Mesh/ChunkMeshSnapshot.h"
 #include "Render/Mesh/GreedyMesher.h"
-#include "World/Chunks/ChunkManager.h"
-#include "World/Core/BlockWorld.h"
 #include "World/Chunks/ChunkLoadScheduler.h"
+#include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/ChunkStreamer.h"
+#include "World/Core/BlockWorld.h"
 #include "World/Core/World.h"
 #include "World/Lighting/LightUtil.h"
-#include "World/Streaming/WorldStreaming.h"
 #include "World/Mesh/WorldMeshService.h"
+#include "World/Streaming/WorldStreaming.h"
 
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <fstream>
-#include <nlohmann/json.hpp>
 #include <map>
+#include <nlohmann/json.hpp>
 #include <set>
 #include <tuple>
 #include <vector>
@@ -73,8 +73,102 @@ std::filesystem::path UMeshAuditDiagnostics::DefaultPath()
   return GetExecutableDirectory() / "mesh_audit.json";
 }
 
+template <typename Coords>
+static void AuditLilyPads(UWorld &world, const Coords &coords,
+                          const UBlockWorld &block_world,
+                          UBlockRegistry &registry, int sea, json &out)
+{
+  {
+    const BlockId pad = registry.GetIdByTypeName("lily_pad");
+    long pads = 0, ok = 0, over_land = 0, over_air = 0, submerged = 0,
+         fluid_in_cell = 0, water_below_not_source = 0;
+    std::map<int, int> height_over_sea;
+    json bad_samples = json::array();
+    if (pad != BLOCK_AIR)
+    {
+      for (const glm::ivec3 &coord : coords)
+      {
+        const UChunk *chunk = block_world.GetChunkManager().GetChunk(coord);
+        if (!chunk)
+        {
+          continue;
+        }
+        for (int z = 0; z < CHUNK_SIZE; ++z)
+        {
+          for (int y = 0; y < CHUNK_SIZE; ++y)
+          {
+            for (int x = 0; x < CHUNK_SIZE; ++x)
+            {
+              if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != pad)
+              {
+                continue;
+              }
+              const glm::ivec3 wp = coord * CHUNK_SIZE + glm::ivec3(x, y, z);
+              ++pads;
+              ++height_over_sea[wp.y - sea];
+              const BlockId below =
+                  block_world.GetBlock(wp - glm::ivec3(0, 1, 0));
+              const BlockId above =
+                  block_world.GetBlock(wp + glm::ivec3(0, 1, 0));
+              const bool water_below = registry.IsLiquid(below);
+              const bool liquid_above = registry.IsLiquid(above);
+              const bool fluid_here =
+                  PackFluidCellState(block_world.GetFluidState(wp)) != 0;
+              bool good = true;
+              if (!water_below)
+              {
+                ++(below == BLOCK_AIR ? over_air : over_land);
+                good = false;
+              }
+              else
+              {
+                const FluidCellState below_state =
+                    block_world.GetFluidState(wp - glm::ivec3(0, 1, 0));
+                if (!below_state.IsSource())
+                {
+                  ++water_below_not_source;
+                }
+              }
+              if (liquid_above)
+              {
+                ++submerged;
+                good = false;
+              }
+              if (fluid_here)
+              {
+                ++fluid_in_cell;
+                good = false;
+              }
+              if (good)
+              {
+                ++ok;
+              }
+              else if (bad_samples.size() < 8)
+              {
+                bad_samples.push_back(
+                    {{"pos", {wp.x, wp.y, wp.z}},
+                     {"below", registry.GetTypeNameById(below)},
+                     {"above", registry.GetTypeNameById(above)}});
+              }
+            }
+          }
+        }
+      }
+    }
+    out["lily_pads"] = {{"total", pads},
+                        {"ok_on_surface", ok},
+                        {"over_land", over_land},
+                        {"over_air", over_air},
+                        {"submerged", submerged},
+                        {"fluid_in_cell", fluid_in_cell},
+                        {"water_below_not_source", water_below_not_source},
+                        {"height_over_sea", height_over_sea},
+                        {"bad_samples", bad_samples}};
+  }
+}
+
 int UMeshAuditDiagnostics::Run(UWorld &world,
-                              const std::filesystem::path &path_override)
+                               const std::filesystem::path &path_override)
 {
   UBlockWorld &block_world = world.GetBlockWorld();
   UBlockRegistry &registry = world.GetBlockRegistry();
@@ -133,8 +227,7 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
           {
             continue;
           }
-          const glm::ivec3 above =
-              coord * CHUNK_SIZE + glm::ivec3(x, y + 1, z);
+          const glm::ivec3 above = coord * CHUNK_SIZE + glm::ivec3(x, y + 1, z);
           const glm::ivec3 above_chunk = UChunkManager::WorldToChunk(above);
           const BlockId above_id = block_world.GetBlock(above);
           if (!block_world.GetChunkManager().GetChunk(above_chunk))
@@ -161,8 +254,9 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
     json dark_sample = json::array();
     for (const auto &cell : expected)
     {
-      const glm::ivec3 above = coord * CHUNK_SIZE +
-                               glm::ivec3(std::get<0>(cell), std::get<1>(cell) + 1,
+      const glm::ivec3 above =
+          coord * CHUNK_SIZE + glm::ivec3(std::get<0>(cell),
+                                          std::get<1>(cell) + 1,
                                           std::get<2>(cell));
       const UChunk *above_chunk = block_world.GetChunkManager().GetChunk(
           UChunkManager::WorldToChunk(above));
@@ -170,14 +264,15 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
       {
         continue; // absent slice above terrain: open sky
       }
-      const uint8_t packed = above_chunk->GetLightPackedLocal(
-          UChunkManager::WorldToLocal(above));
+      const uint8_t packed =
+          above_chunk->GetLightPackedLocal(UChunkManager::WorldToLocal(above));
       if (packed == 0)
       {
         bool sky_open = true;
         for (int sy = above.y; sy < 320; ++sy)
         {
-          if (block_world.GetBlock(glm::ivec3(above.x, sy, above.z)) != BLOCK_AIR)
+          if (block_world.GetBlock(glm::ivec3(above.x, sy, above.z)) !=
+              BLOCK_AIR)
           {
             sky_open = false;
             break;
@@ -192,7 +287,8 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
         {
           json s;
           s["world"] = {above.x, above.y - 1, above.z};
-          s["block"] = registry.GetTypeNameById(block_world.GetBlock(above - glm::ivec3(0, 1, 0)));
+          s["block"] = registry.GetTypeNameById(
+              block_world.GetBlock(above - glm::ivec3(0, 1, 0)));
           json up = json::array();
           for (int dy = 0; dy < 4; ++dy)
           {
@@ -265,10 +361,12 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
                   block_world.GetBlock(air_cell + glm::ivec3(0, 1, 0)));
               const bool water_below = registry.IsLiquid(
                   block_world.GetBlock(air_cell - glm::ivec3(0, 1, 0)));
-              ++sub_sea_wall_kind[water_above ? (water_below ? "air_between_water"
-                                                             : "air_under_water_ceiling")
-                                              : (water_below ? "surface_step"
-                                                             : "air_pocket_other")];
+              ++sub_sea_wall_kind[water_above
+                                      ? (water_below
+                                             ? "air_between_water"
+                                             : "air_under_water_ceiling")
+                                      : (water_below ? "surface_step"
+                                                     : "air_pocket_other")];
             }
             if (sub_sea_wall_samples.size() < 10)
             {
@@ -276,19 +374,22 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
               sub_sea_wall_samples.push_back(
                   {{"water", {world_cell.x, world_cell.y, world_cell.z}},
                    {"air", {air.x, air.y, air.z}},
-                   {"air_above_is", registry.GetTypeNameById(block_world.GetBlock(
-                                        air + glm::ivec3(0, 1, 0)))},
-                   {"air_below_is", registry.GetTypeNameById(block_world.GetBlock(
-                                        air - glm::ivec3(0, 1, 0)))}});
+                   {"air_above_is",
+                    registry.GetTypeNameById(
+                        block_world.GetBlock(air + glm::ivec3(0, 1, 0)))},
+                   {"air_below_is",
+                    registry.GetTypeNameById(
+                        block_world.GetBlock(air - glm::ivec3(0, 1, 0)))}});
             }
           }
           if (neighbour != BLOCK_AIR && registry.IsLiquid(neighbour))
           {
             ++internal_fluid_faces;
-            const std::string own = registry.GetTypeNameById(
-                block_world.GetBlock(world_cell));
+            const std::string own =
+                registry.GetTypeNameById(block_world.GetBlock(world_cell));
             ++internal_fluid_by_neighbor_kind[own + " -> " +
-                                              registry.GetTypeNameById(neighbour)];
+                                              registry.GetTypeNameById(
+                                                  neighbour)];
             if (internal_fluid_samples.size() < 8)
             {
               internal_fluid_samples.push_back(
@@ -347,7 +448,8 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
             minz = std::min(minz, v.pz - origin.z);
             maxz = std::max(maxz, v.pz - origin.z);
           }
-          const int y = static_cast<int>(std::floor(v0.py - origin.y - 0.5f + 0.5f));
+          const int y =
+              static_cast<int>(std::floor(v0.py - origin.y - 0.5f + 0.5f));
           for (int x = static_cast<int>(std::floor(minx + 0.5f));
                x < static_cast<int>(std::floor(maxx + 0.5f)); ++x)
           {
@@ -372,12 +474,14 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
         continue;
       }
       const auto &c = entry.first;
-      const glm::ivec3 above = coord * CHUNK_SIZE +
-                               glm::ivec3(std::get<0>(c), std::get<1>(c) + 1, std::get<2>(c));
+      const glm::ivec3 above =
+          coord * CHUNK_SIZE +
+          glm::ivec3(std::get<0>(c), std::get<1>(c) + 1, std::get<2>(c));
       const UChunk *ac = block_world.GetChunkManager().GetChunk(
           UChunkManager::WorldToChunk(above));
       const uint8_t packed =
-          ac ? ac->GetLightPackedLocal(UChunkManager::WorldToLocal(above)) : 0xFF;
+          ac ? ac->GetLightPackedLocal(UChunkManager::WorldToLocal(above))
+             : 0xFF;
       if (packed != 0)
       {
         ++published_dark_but_field_lit;
@@ -412,8 +516,8 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
           ++published_missing;
           if (published_samples.size() < 6)
           {
-            published_samples.push_back({std::get<0>(cell), std::get<1>(cell),
-                                         std::get<2>(cell)});
+            published_samples.push_back(
+                {std::get<0>(cell), std::get<1>(cell), std::get<2>(cell)});
           }
         }
       }
@@ -428,8 +532,8 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
         ++missing;
         if (samples.size() < 6)
         {
-          samples.push_back({std::get<0>(cell), std::get<1>(cell),
-                             std::get<2>(cell)});
+          samples.push_back(
+              {std::get<0>(cell), std::get<1>(cell), std::get<2>(cell)});
         }
       }
     }
@@ -444,7 +548,8 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
       json d;
       d["chunk"] = {coord.x, coord.y, coord.z};
       d["lit_drawable_face"] = mesh.ChunkHasLitDrawableFace(coord);
-      d["provisional_preview"] = mesh.GetCache().HasProvisionalLightPreview(coord);
+      d["provisional_preview"] =
+          mesh.GetCache().HasProvisionalLightPreview(coord);
       d["draws_preview"] = world.ShouldDrawProvisionalLightPreview(coord);
       d["pending_light_slice"] = world.IsPendingLightBeforeMeshSlice(coord);
       d["pending_light_column"] =
@@ -476,9 +581,11 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
         }
         entry["column_8_y_0_9"] = col;
         entry["chunk_above_resident"] =
-            block_world.GetChunkManager().GetChunk(coord + glm::ivec3(0, 1, 0)) != nullptr;
+            block_world.GetChunkManager().GetChunk(
+                coord + glm::ivec3(0, 1, 0)) != nullptr;
         entry["chunk_below_resident"] =
-            block_world.GetChunkManager().GetChunk(coord - glm::ivec3(0, 1, 0)) != nullptr;
+            block_world.GetChunkManager().GetChunk(
+                coord - glm::ivec3(0, 1, 0)) != nullptr;
       }
       {
         const MeshPublishRevs revs = mesh.GetCache().GetMeshPublishRevs(coord);
@@ -517,9 +624,9 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
             verts += b.vertices.size();
             for (size_t vi = 0; vi < b.vertices.size(); vi += 4)
             {
-              const std::string key =
-                  std::string(b.Transparent ? "t" : "o") +
-                  std::to_string(static_cast<int>(b.vertices[vi].faceIndex + 0.5f));
+              const std::string key = std::string(b.Transparent ? "t" : "o") +
+                                      std::to_string(static_cast<int>(
+                                          b.vertices[vi].faceIndex + 0.5f));
               hist[key] = hist.value(key, 0) + 1;
             }
           }
@@ -565,9 +672,9 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
   out["total_mesher_missing_top_faces"] = total_missing;
   out["total_published_cpu_missing_top_faces"] = total_published_missing;
   out["reconcile_redirty_total"] = mesh.GetCache().GetReconcileRedirtyCount();
-  // Waterlogged decor audit: permeable (plant) cells carrying fluid, and whether
-  // any face of such a cell is exposed to air (reads as a water cube with the
-  // plant inside, especially above the sea surface).
+  // Waterlogged decor audit: permeable (plant) cells carrying fluid, and
+  // whether any face of such a cell is exposed to air (reads as a water cube
+  // with the plant inside, especially above the sea surface).
   {
     const int sea = world.GetProceduralSettings().SeaLevel;
     long total_waterlogged = 0, exposed_above_sea = 0, exposed_below_sea = 0,
@@ -621,8 +728,8 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
               by_type[name + (over ? "@above_sea" : "@below_sea")] += 1;
               if (wl_samples.size() < 8)
               {
-                wl_samples.push_back({{"pos", {wp.x, wp.y, wp.z}},
-                                      {"type", name}});
+                wl_samples.push_back(
+                    {{"pos", {wp.x, wp.y, wp.z}}, {"type", name}});
               }
             }
           }
@@ -683,8 +790,9 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
           }
         }
       }
-      // Surface steps: a water cell with air above whose horizontal neighbour is
-      // air over a lower water cell (side wall of the higher surface is visible).
+      // Surface steps: a water cell with air above whose horizontal neighbour
+      // is air over a lower water cell (side wall of the higher surface is
+      // visible).
       long surface_cells = 0, step_cells = 0, pillar_cells = 0;
       json step_samples = json::array();
       for (const glm::ivec3 &coord : coords)
@@ -718,7 +826,8 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
               {
                 const glm::ivec3 n = wp + o;
                 if (block_world.GetBlock(n) == BLOCK_AIR &&
-                    registry.IsLiquid(block_world.GetBlock(n - glm::ivec3(0, 1, 0))))
+                    registry.IsLiquid(
+                        block_world.GetBlock(n - glm::ivec3(0, 1, 0))))
                 {
                   ++lower_water_neighbors;
                 }
@@ -785,7 +894,8 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
               bool open = true;
               for (int sy = wp.y + 1; sy < wp.y + 24; ++sy)
               {
-                if (block_world.GetBlock(glm::ivec3(wp.x, sy, wp.z)) != BLOCK_AIR)
+                if (block_world.GetBlock(glm::ivec3(wp.x, sy, wp.z)) !=
+                    BLOCK_AIR)
                 {
                   open = false;
                   break;
@@ -815,9 +925,11 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
                 {
                   const glm::ivec3 cam_chunk = UChunkManager::WorldToChunk(
                       glm::ivec3(glm::floor(cam->GetPosition())));
-                  const glm::ivec3 cell_chunk = UChunkManager::WorldToChunk(cell);
-                  cam_dist_chunks = std::max(std::abs(cell_chunk.x - cam_chunk.x),
-                                             std::abs(cell_chunk.z - cam_chunk.z));
+                  const glm::ivec3 cell_chunk =
+                      UChunkManager::WorldToChunk(cell);
+                  cam_dist_chunks =
+                      std::max(std::abs(cell_chunk.x - cam_chunk.x),
+                               std::abs(cell_chunk.z - cam_chunk.z));
                 }
                 if (cam_dist_chunks > 4)
                 {
@@ -830,11 +942,13 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
                   ++slot.second;
                   if (d == 0)
                   {
-                    const glm::ivec3 cc_coord = UChunkManager::WorldToChunk(cell);
+                    const glm::ivec3 cc_coord =
+                        UChunkManager::WorldToChunk(cell);
                     const bool never_lit = cc->GetLightFieldRevision() <= 1;
                     const bool pending = world.IsPendingLightBeforeMesh(
                         glm::ivec2(cc_coord.x, cc_coord.z));
-                    ++zero_kind[std::string(never_lit ? "never_lit" : "lit_once") +
+                    ++zero_kind[std::string(never_lit ? "never_lit"
+                                                      : "lit_once") +
                                 (pending ? "+pending" : "+settled")];
                     if (zero_samples.size() < 8)
                     {
@@ -842,31 +956,37 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
                       for (int dy = 1; dy <= 20; dy += 1)
                       {
                         const glm::ivec3 pc = cell + glm::ivec3(0, dy, 0);
-                        const UChunk *pch = block_world.GetChunkManager().GetChunk(
-                            UChunkManager::WorldToChunk(pc));
-                        profile.push_back(pch ? UnpackSky(pch->GetLightPackedLocal(
-                                                   UChunkManager::WorldToLocal(pc)))
-                                              : -1);
+                        const UChunk *pch =
+                            block_world.GetChunkManager().GetChunk(
+                                UChunkManager::WorldToChunk(pc));
+                        profile.push_back(
+                            pch ? UnpackSky(pch->GetLightPackedLocal(
+                                      UChunkManager::WorldToLocal(pc)))
+                                : -1);
                       }
                       json above_chunks = json::array();
                       for (int k = 1; k <= 3; ++k)
                       {
-                        const UChunk *ac = block_world.GetChunkManager().GetChunk(
-                            cc_coord + glm::ivec3(0, k, 0));
-                        above_chunks.push_back(ac ? int(ac->GetLightFieldRevision())
-                                                  : -1);
+                        const UChunk *ac =
+                            block_world.GetChunkManager().GetChunk(
+                                cc_coord + glm::ivec3(0, k, 0));
+                        above_chunks.push_back(
+                            ac ? int(ac->GetLightFieldRevision()) : -1);
                       }
-                      zero_profiles.push_back({{"cell", {cell.x, cell.y, cell.z}},
-                                               {"sky_up_1_20", profile},
-                                               {"light_rev_chunks_above", above_chunks}});
+                      zero_profiles.push_back(
+                          {{"cell", {cell.x, cell.y, cell.z}},
+                           {"sky_up_1_20", profile},
+                           {"light_rev_chunks_above", above_chunks}});
                       zero_samples.push_back(
                           {{"cell", {cell.x, cell.y, cell.z}},
                            {"light_rev", cc->GetLightFieldRevision()},
                            {"neighbors_sky",
                             {UnpackSky(cc->GetLightPackedLocal(
-                                 UChunkManager::WorldToLocal(cell + glm::ivec3(1, 0, 0)) )),
+                                 UChunkManager::WorldToLocal(
+                                     cell + glm::ivec3(1, 0, 0)))),
                              UnpackSky(cc->GetLightPackedLocal(
-                                 UChunkManager::WorldToLocal(cell + glm::ivec3(0, 1, 0)) ))}}});
+                                 UChunkManager::WorldToLocal(
+                                     cell + glm::ivec3(0, 1, 0))))}}});
                     }
                   }
                 }
@@ -878,8 +998,8 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
       json depth_json = json::object();
       for (const auto &entry : by_depth)
       {
-        depth_json[std::to_string(entry.first)] = {{"cells", entry.second.first},
-                                                   {"sky_zero", entry.second.second}};
+        depth_json[std::to_string(entry.first)] = {
+            {"cells", entry.second.first}, {"sky_zero", entry.second.second}};
       }
       out["water_surface_sky_light_by_depth"] = depth_json;
       out["water_surface_sky_zero_kind"] = zero_kind;
@@ -888,90 +1008,7 @@ int UMeshAuditDiagnostics::Run(UWorld &world,
     }
     // Lily pad placement: it must rest on the water surface (water below,
     // air above, no fluid in its own cell).
-    {
-      const BlockId pad = registry.GetIdByTypeName("lily_pad");
-      long pads = 0, ok = 0, over_land = 0, over_air = 0, submerged = 0,
-           fluid_in_cell = 0, water_below_not_source = 0;
-      std::map<int, int> height_over_sea;
-      json bad_samples = json::array();
-      if (pad != BLOCK_AIR)
-      {
-        for (const glm::ivec3 &coord : coords)
-        {
-          const UChunk *chunk = block_world.GetChunkManager().GetChunk(coord);
-          if (!chunk)
-          {
-            continue;
-          }
-          for (int z = 0; z < CHUNK_SIZE; ++z)
-          {
-            for (int y = 0; y < CHUNK_SIZE; ++y)
-            {
-              for (int x = 0; x < CHUNK_SIZE; ++x)
-              {
-                if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != pad)
-                {
-                  continue;
-                }
-                const glm::ivec3 wp = coord * CHUNK_SIZE + glm::ivec3(x, y, z);
-                ++pads;
-                ++height_over_sea[wp.y - sea];
-                const BlockId below = block_world.GetBlock(wp - glm::ivec3(0, 1, 0));
-                const BlockId above = block_world.GetBlock(wp + glm::ivec3(0, 1, 0));
-                const bool water_below = registry.IsLiquid(below);
-                const bool liquid_above = registry.IsLiquid(above);
-                const bool fluid_here =
-                    PackFluidCellState(block_world.GetFluidState(wp)) != 0;
-                bool good = true;
-                if (!water_below)
-                {
-                  ++(below == BLOCK_AIR ? over_air : over_land);
-                  good = false;
-                }
-                else
-                {
-                  const FluidCellState below_state =
-                      block_world.GetFluidState(wp - glm::ivec3(0, 1, 0));
-                  if (!below_state.IsSource())
-                  {
-                    ++water_below_not_source;
-                  }
-                }
-                if (liquid_above)
-                {
-                  ++submerged;
-                  good = false;
-                }
-                if (fluid_here)
-                {
-                  ++fluid_in_cell;
-                  good = false;
-                }
-                if (good)
-                {
-                  ++ok;
-                }
-                else if (bad_samples.size() < 8)
-                {
-                  bad_samples.push_back({{"pos", {wp.x, wp.y, wp.z}},
-                                         {"below", registry.GetTypeNameById(below)},
-                                         {"above", registry.GetTypeNameById(above)}});
-                }
-              }
-            }
-          }
-        }
-      }
-      out["lily_pads"] = {{"total", pads},
-                          {"ok_on_surface", ok},
-                          {"over_land", over_land},
-                          {"over_air", over_air},
-                          {"submerged", submerged},
-                          {"fluid_in_cell", fluid_in_cell},
-                          {"water_below_not_source", water_below_not_source},
-                          {"height_over_sea", height_over_sea},
-                          {"bad_samples", bad_samples}};
-    }
+    AuditLilyPads(world, coords, block_world, registry, sea, out);
     out["waterlogged_total"] = total_waterlogged;
     out["waterlogged_above_sea"] = above_sea;
     out["waterlogged_exposed_above_sea"] = exposed_above_sea;
@@ -1086,10 +1123,13 @@ void UMeshAuditDiagnostics::TraceFlickerFrame(UWorld &world)
           {
             continue;
           }
-          const uint64_t published = mesh.GetCache().GetDrawnCenterContentRev(coord);
-          EditTrack &t = gEditTracks[std::make_tuple(coord.x, coord.y, coord.z)];
+          const uint64_t published =
+              mesh.GetCache().GetDrawnCenterContentRev(coord);
+          EditTrack &t =
+              gEditTracks[std::make_tuple(coord.x, coord.y, coord.z)];
           const uint64_t content = chunk->GetContentRevision();
-          if (t.last_content != 0 && content != t.last_content && published != 0)
+          if (t.last_content != 0 && content != t.last_content &&
+              published != 0)
           {
             if (!t.pending)
             {
@@ -1111,14 +1151,16 @@ void UMeshAuditDiagnostics::TraceFlickerFrame(UWorld &world)
               ++gEditPublishState[(gpu ? 2 : 0) + (cpu ? 1 : 0)];
             }
           }
-          else if (t.pending && !t.stuck_reported && now_ms - t.start_ms > 2000.0)
+          else if (t.pending && !t.stuck_reported &&
+                   now_ms - t.start_ms > 2000.0)
           {
             t.stuck_reported = true;
             nlohmann::json e;
             e["chunk"] = {coord.x, coord.y, coord.z};
             e["pending_content_rev"] = t.pending_rev;
             e["drawn_content_rev"] = published;
-            e["published_cpu_content_rev"] = mesh.GetCache().GetPublishedCenterContentRev(coord);
+            e["published_cpu_content_rev"] =
+                mesh.GetCache().GetPublishedCenterContentRev(coord);
             e["age_ms"] = now_ms - t.start_ms;
             e["drawable"] = mesh.HasDrawableGreedyMesh(coord);
             e["gpu_resident"] = mesh.GetCache().QueryGreedyGpuResident(coord);
@@ -1129,7 +1171,8 @@ void UMeshAuditDiagnostics::TraceFlickerFrame(UWorld &world)
             e["remesh_after_apply"] = mesh.IsRemeshAfterApplyPending(coord);
             e["softdefer_held"] = mesh.IsSoftDeferHeld(coord);
             e["defer_until_lit"] = mesh.GetCache().IsDeferMeshUntilLit(coord);
-            e["pending_light_slice"] = world.IsPendingLightBeforeMeshSlice(coord);
+            e["pending_light_slice"] =
+                world.IsPendingLightBeforeMeshSlice(coord);
             e["slice_render_ready"] = world.IsChunkSliceRenderReady(coord);
             gStuckEdits.push_back(std::move(e));
           }
@@ -1149,12 +1192,14 @@ void UMeshAuditDiagnostics::TraceFlickerFrame(UWorld &world)
         {
           continue;
         }
-        const UChunk *chunk = world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+        const UChunk *chunk =
+            world.GetBlockWorld().GetChunkManager().GetChunk(coord);
         if (!chunk)
         {
           continue;
         }
-        FlickerChunkState &s = gFlicker[std::make_tuple(coord.x, coord.y, coord.z)];
+        FlickerChunkState &s =
+            gFlicker[std::make_tuple(coord.x, coord.y, coord.z)];
         const bool preview = world.ShouldDrawProvisionalLightPreview(coord);
         const bool ready = world.IsChunkSliceRenderReady(coord);
         const bool dark = mesh.GetCache().ChunkHasFullyDarkFace(coord) &&
@@ -1196,7 +1241,9 @@ void UMeshAuditDiagnostics::FinishFlickerTrace()
   json out;
   out["frames"] = gFlickerFrames;
   long long preview = 0, ready = 0, dark = 0, light = 0, geom = 0, field = 0;
-  std::vector<std::pair<int, const std::pair<const std::tuple<int, int, int>, FlickerChunkState> *>> ranked;
+  std::vector<std::pair<int, const std::pair<const std::tuple<int, int, int>,
+                                             FlickerChunkState> *>>
+      ranked;
   for (const auto &entry : gFlicker)
   {
     const FlickerChunkState &s = entry.second;
@@ -1217,9 +1264,10 @@ void UMeshAuditDiagnostics::FinishFlickerTrace()
     out["preview_shown_toggles_in_render"] = shown_t;
   }
   out["chunks_tracked"] = gFlicker.size();
-  out["totals"] = {{"preview_toggles", preview}, {"ready_toggles", ready},
-                   {"dark_toggles", dark},       {"meshed_light_rev_changes", light},
-                   {"geom_rev_changes", geom},   {"field_light_rev_changes", field}};
+  out["totals"] = {
+      {"preview_toggles", preview}, {"ready_toggles", ready},
+      {"dark_toggles", dark},       {"meshed_light_rev_changes", light},
+      {"geom_rev_changes", geom},   {"field_light_rev_changes", field}};
   std::sort(ranked.begin(), ranked.end(),
             [](const auto &a, const auto &b) { return a.first > b.first; });
   json top = json::array();
@@ -1227,14 +1275,15 @@ void UMeshAuditDiagnostics::FinishFlickerTrace()
   {
     const auto &key = ranked[i].second->first;
     const FlickerChunkState &s = ranked[i].second->second;
-    top.push_back({{"chunk", {std::get<0>(key), std::get<1>(key), std::get<2>(key)}},
-                   {"frames", s.frames},
-                   {"preview_toggles", s.preview_toggles},
-                   {"ready_toggles", s.ready_toggles},
-                   {"dark_toggles", s.dark_toggles},
-                   {"meshed_light_rev_changes", s.light_rev_changes},
-                   {"geom_rev_changes", s.geom_rev_changes},
-                   {"field_light_rev_changes", s.field_rev_changes}});
+    top.push_back(
+        {{"chunk", {std::get<0>(key), std::get<1>(key), std::get<2>(key)}},
+         {"frames", s.frames},
+         {"preview_toggles", s.preview_toggles},
+         {"ready_toggles", s.ready_toggles},
+         {"dark_toggles", s.dark_toggles},
+         {"meshed_light_rev_changes", s.light_rev_changes},
+         {"geom_rev_changes", s.geom_rev_changes},
+         {"field_light_rev_changes", s.field_rev_changes}});
   }
   out["top_chunks"] = top;
   {
@@ -1260,8 +1309,11 @@ void UMeshAuditDiagnostics::FinishFlickerTrace()
     {
       if (entry.second.pending && end_ms - entry.second.start_ms > 2000.0)
       {
-        unresolved.push_back({{"chunk", {std::get<0>(entry.first), std::get<1>(entry.first), std::get<2>(entry.first)}},
-                              {"age_ms", end_ms - entry.second.start_ms}});
+        unresolved.push_back(
+            {{"chunk",
+              {std::get<0>(entry.first), std::get<1>(entry.first),
+               std::get<2>(entry.first)}},
+             {"age_ms", end_ms - entry.second.start_ms}});
       }
     }
     out["unresolved_edits_at_end"] = unresolved;
@@ -1295,9 +1347,10 @@ void UMeshAuditDiagnostics::TraceFlightTelemetry(UWorld &world)
   static double fog_tv = 0.0, fog_max_rate = 0.0, fog_max_accel = 0.0;
   static double fog_prev_rate = 0.0;
   static float fog_min = 1e9f, fog_max = -1e9f;
-  if (const StreamingFrameStats *st = world.GetStreamingService()
-                                          ? world.GetStreamingService()->GetLastFrameStats()
-                                          : nullptr)
+  if (const StreamingFrameStats *st =
+          world.GetStreamingService()
+              ? world.GetStreamingService()->GetLastFrameStats()
+              : nullptr)
   {
     st_candidates += st->loadCandidates;
     st_ring_blocked += st->ringGateBlocked;
@@ -1306,7 +1359,9 @@ void UMeshAuditDiagnostics::TraceFlightTelemetry(UWorld &world)
     st_near_skipped += st->nearLoadSkipped;
   }
   if (const UChunkLoadScheduler *sched =
-          world.GetStreamingService() ? world.GetStreamingService()->GetChunkScheduler() : nullptr)
+          world.GetStreamingService()
+              ? world.GetStreamingService()->GetChunkScheduler()
+              : nullptr)
   {
     st_pending_max = std::max(st_pending_max, sched->GetPendingQueueCount());
     st_inflight_max = std::max(st_inflight_max, sched->GetGenInFlightCount());
@@ -1315,8 +1370,7 @@ void UMeshAuditDiagnostics::TraceFlightTelemetry(UWorld &world)
   const auto now = std::chrono::steady_clock::now();
   {
     const float fog_h = world.GetPresentedFogHorizonBlocks();
-    const double dt_s =
-        std::chrono::duration<double>(now - last_frame).count();
+    const double dt_s = std::chrono::duration<double>(now - last_frame).count();
     if (fog_h >= 0.0f)
     {
       fog_min = std::min(fog_min, fog_h);
@@ -1326,8 +1380,8 @@ void UMeshAuditDiagnostics::TraceFlightTelemetry(UWorld &world)
         const double rate = (fog_h - fog_prev) / dt_s;
         fog_tv += std::fabs(fog_h - fog_prev);
         fog_max_rate = std::max(fog_max_rate, std::fabs(rate));
-        fog_max_accel = std::max(fog_max_accel,
-                                 std::fabs(rate - fog_prev_rate) / dt_s);
+        fog_max_accel =
+            std::max(fog_max_accel, std::fabs(rate - fog_prev_rate) / dt_s);
         fog_prev_rate = rate;
       }
       fog_prev = fog_h;
@@ -1344,8 +1398,7 @@ void UMeshAuditDiagnostics::TraceFlightTelemetry(UWorld &world)
   {
     return;
   }
-  const double since =
-      std::chrono::duration<double>(now - last_emit).count();
+  const double since = std::chrono::duration<double>(now - last_emit).count();
   if (since < 2.0)
   {
     return;
@@ -1362,8 +1415,10 @@ void UMeshAuditDiagnostics::TraceFlightTelemetry(UWorld &world)
   const float dir_len = glm::length(dir);
   dir = dir_len > 1e-4f ? dir / dir_len : glm::vec2(0.0f, 1.0f);
   const double speed =
-      have_last_pos ? glm::length(glm::vec2(pos.x - last_pos.x, pos.z - last_pos.z)) / since
-                    : 0.0;
+      have_last_pos
+          ? glm::length(glm::vec2(pos.x - last_pos.x, pos.z - last_pos.z)) /
+                since
+          : 0.0;
   last_pos = pos;
   have_last_pos = true;
   const UWorldMeshService &mesh = world.GetMeshService();
@@ -1393,8 +1448,10 @@ void UMeshAuditDiagnostics::TraceFlightTelemetry(UWorld &world)
   int first_missing_drawable = -1;
   for (int d = 1; d <= 24; ++d)
   {
-    const int cx = static_cast<int>(std::floor((pos.x + dir.x * d * CHUNK_SIZE) / CHUNK_SIZE));
-    const int cz = static_cast<int>(std::floor((pos.z + dir.y * d * CHUNK_SIZE) / CHUNK_SIZE));
+    const int cx = static_cast<int>(
+        std::floor((pos.x + dir.x * d * CHUNK_SIZE) / CHUNK_SIZE));
+    const int cz = static_cast<int>(
+        std::floor((pos.z + dir.y * d * CHUNK_SIZE) / CHUNK_SIZE));
     bool resident = false, drawable = false;
     column_state(cx, cz, resident, drawable);
     if (!resident && first_missing_resident < 0)
@@ -1420,13 +1477,16 @@ void UMeshAuditDiagnostics::TraceFlightTelemetry(UWorld &world)
     }
   }
   json line;
-  line["t_wall_s"] = std::chrono::duration<double>(now.time_since_epoch()).count();
+  line["t_wall_s"] =
+      std::chrono::duration<double>(now.time_since_epoch()).count();
   line["pos"] = {pos.x, pos.y, pos.z};
   line["speed_bps"] = speed;
   line["ahead_first_missing_resident_chunks"] = first_missing_resident;
   line["ahead_first_missing_drawable_chunks"] = first_missing_drawable;
-  line["ring8_resident_frac"] = ring_total ? double(ring_resident) / ring_total : 0.0;
-  line["ring8_drawable_frac"] = ring_total ? double(ring_drawable) / ring_total : 0.0;
+  line["ring8_resident_frac"] =
+      ring_total ? double(ring_resident) / ring_total : 0.0;
+  line["ring8_drawable_frac"] =
+      ring_total ? double(ring_drawable) / ring_total : 0.0;
   line["frame_ms_mean"] = frame_n ? frame_ms_sum / frame_n : 0.0;
   line["frame_ms_max"] = frame_ms_max;
   line["dirty_count"] = mesh.GetDirtyCount();

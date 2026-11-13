@@ -1,35 +1,35 @@
 #include "Gui/Preview/CreaturePreviewRenderer.h"
 
+#include "App/Settings/RenderSettings.h"
+#include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
-#include "App/Settings/RenderSettings.h"
-#include "Creatures/Core/Creature.h"
+#include "Creatures/Visual/BoneSkeleton/BoneSkeletonHierarchy.h"
+#include "Creatures/Visual/BoneSkeleton/BoneSkeletonModelSpace.h"
+#include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
 #include "Creatures/Visual/CreatureAppearance.h"
+#include "Creatures/Visual/CreatureBonePaletteGpu.h"
 #include "Creatures/Visual/CreatureDrawContext.h"
 #include "Creatures/Visual/CreatureDrawQueue.h"
 #include "Creatures/Visual/CreatureDrawSink.h"
-#include "Creatures/Visual/CreatureVisual.h"
-#include "Creatures/Visual/CreatureVisualFactory.h"
 #include "Creatures/Visual/CreatureMeshGpuCache.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureRootTransform.h"
 #include "Creatures/Visual/CreatureTextureResolver.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
-#include "Creatures/Visual/CreatureBonePaletteGpu.h"
+#include "Creatures/Visual/CreatureVisual.h"
+#include "Creatures/Visual/CreatureVisualFactory.h"
+#include "Creatures/Visual/Gltf/CreatureAnimationClipMap.h"
 #include "Creatures/Visual/Gltf/CreatureGltfBonePalette.h"
 #include "Creatures/Visual/Gltf/CreatureGltfCache.h"
+#include "Creatures/Visual/Gltf/CreatureGltfModelSpace.h"
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
-#include "Creatures/Visual/BoneSkeleton/BoneSkeletonHierarchy.h"
-#include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
-#include "Creatures/Visual/BoneSkeleton/BoneSkeletonModelSpace.h"
 #include "Creatures/Visual/WornEquipmentDrawer.h"
-#include "Gui/Preview/CreaturePreviewLayout.h"
 #include "Gui/Preview/CreatureGltfPreviewBounds.h"
 #include "Gui/Preview/CreaturePreviewBoundsSink.h"
-#include "Creatures/Visual/Gltf/CreatureAnimationClipMap.h"
-#include "Creatures/Visual/Gltf/CreatureGltfModelSpace.h"
+#include "Gui/Preview/CreaturePreviewLayout.h"
 #include "Pose/BoneSkeleton/BoneSkeletonPoseEngine.h"
 #include "Pose/CreaturePosePresenterRegistry.h"
 #include "Render/Engine/ShaderManager.h"
@@ -38,13 +38,13 @@
 
 #include "Render/GlIncludes.h"
 #include <algorithm>
-#include <cstdint>
 #include <cmath>
+#include <cstdint>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
+#include <limits>
 #include <unordered_map>
 #include <unordered_set>
-#include <limits>
 
 namespace cutum
 {
@@ -294,8 +294,8 @@ glm::mat4 UCreaturePreviewRenderer::OrbitView(float yawDeg, float pitchDeg,
                       distance * cosPitch * std::cos(yaw));
   // Exact top/bottom inspection must not use an up vector parallel to view.
   const glm::vec3 up = std::abs(cosPitch) < .001f
-      ? glm::vec3(0.f, 0.f, pitchDeg > 0.f ? -1.f : 1.f)
-      : glm::vec3(0.f, 1.f, 0.f);
+                           ? glm::vec3(0.f, 0.f, pitchDeg > 0.f ? -1.f : 1.f)
+                           : glm::vec3(0.f, 1.f, 0.f);
   return glm::lookAt(eye, glm::vec3(0.0f), up);
 }
 
@@ -378,10 +378,12 @@ class UPreviewCreatureDrawSink final : public cutum::ICreatureDrawSink
 {
 public:
   UPreviewCreatureDrawSink(cutum::UShaderProgram *shader,
-                          cutum::UShaderProgram *skinnedShader, GLuint cubeVao,
-                          GLuint headVao, GLuint bodyVao, GLuint rigidHeadVao)
+                           cutum::UShaderProgram *skinnedShader, GLuint cubeVao,
+                           GLuint headVao, GLuint bodyVao, GLuint rigidHeadVao)
       : Shader(shader), SkinnedShader(skinnedShader), CubeVao(cubeVao),
-        HeadVao(headVao), BodyVao(bodyVao), RigidHeadVao(rigidHeadVao) {}
+        HeadVao(headVao), BodyVao(bodyVao), RigidHeadVao(rigidHeadVao)
+  {
+  }
 
   void DrawTexturedPart(const glm::mat4 &mvp, GLuint texture,
                         cutum::CreaturePartMesh mesh) override
@@ -414,15 +416,17 @@ public:
     {
       return;
     }
-    const GLuint vao = cutum::CreatureMeshGpuCache::Instance()
-                           .GetOrCreateSkeletalMeshVao(mesh);
+    const GLuint vao =
+        cutum::CreatureMeshGpuCache::Instance().GetOrCreateSkeletalMeshVao(
+            mesh);
     DrawWithShader(*Shader, vao, mvp, texture,
                    static_cast<GLsizei>(mesh.indices.size()), glm::vec4(1.f));
   }
 
-  void DrawSkinnedMesh(
-      const glm::mat4 &mvp, GLuint texture, const cutum::GltfPrimitiveCpu &mesh,
-      const std::shared_ptr<const std::vector<glm::mat4>> &boneMatrices) override
+  void DrawSkinnedMesh(const glm::mat4 &mvp, GLuint texture,
+                       const cutum::GltfPrimitiveCpu &mesh,
+                       const std::shared_ptr<const std::vector<glm::mat4>>
+                           &boneMatrices) override
   {
     if (!SkinnedShader || !SkinnedShader->IsValid() || texture == 0 ||
         mesh.mesh.interleavedPosUv.empty() || mesh.mesh.indices.empty() ||
@@ -431,8 +435,9 @@ public:
       return;
     }
     size_t indexCount = 0;
-    const GLuint vao = cutum::CreatureMeshGpuCache::Instance()
-                           .GetOrCreateGltfSkinnedMeshVao(mesh, indexCount);
+    const GLuint vao =
+        cutum::CreatureMeshGpuCache::Instance().GetOrCreateGltfSkinnedMeshVao(
+            mesh, indexCount);
     if (vao == 0)
     {
       return;
@@ -451,8 +456,7 @@ public:
     glBindTexture(GL_TEXTURE_2D, 0);
   }
 
-  void DrawBoxWireframe(const glm::mat4 &mvp,
-                        const glm::vec4 &color) override
+  void DrawBoxWireframe(const glm::mat4 &mvp, const glm::vec4 &color) override
   {
     (void)mvp;
     (void)color;
@@ -498,15 +502,12 @@ private:
   GLuint RigidHeadVao;
 };
 
-bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
-                                                const std::string &skinId,
-                                                int viewportSize, float yawDeg,
-                                                float pitchDeg,
-                                                float animTimeSec,
-                                                bool animateWalk,
-                                                const std::array<WornArmorPreviewSlot, kWornArmorSlotCount> *armor,
-                                                const std::string *mainItemId,
-                                                const std::string *offhandItemId, const HumanAppearance *human)
+bool UCreaturePreviewRenderer::DrawSpeciesParts(
+    const std::string &speciesId, const std::string &skinId, int viewportSize,
+    float yawDeg, float pitchDeg, float animTimeSec, bool animateWalk,
+    const std::array<WornArmorPreviewSlot, kWornArmorSlotCount> *armor,
+    const std::string *mainItemId, const std::string *offhandItemId,
+    const HumanAppearance *human)
 {
   if (!Species || !Skins || !Textures || !Shader || viewportSize <= 0)
   {
@@ -518,15 +519,19 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
     return false;
   }
 
-  const uint64_t definitionsRevision=Species->Revision.load(std::memory_order_relaxed);
-  const uint64_t boneRevision=CreatureBoneSkeletonCache::Instance().GetRevision();
-  const uint64_t gltfRevision=CreatureGltfCache::Instance().GetRevision();
-  if(BoundsDefinitionsRevision!=definitionsRevision || BoundsBoneRevision!=boneRevision ||
-     BoundsGltfRevision!=gltfRevision)
+  const uint64_t definitionsRevision =
+      Species->Revision.load(std::memory_order_relaxed);
+  const uint64_t boneRevision =
+      CreatureBoneSkeletonCache::Instance().GetRevision();
+  const uint64_t gltfRevision = CreatureGltfCache::Instance().GetRevision();
+  if (BoundsDefinitionsRevision != definitionsRevision ||
+      BoundsBoneRevision != boneRevision || BoundsGltfRevision != gltfRevision)
   {
-    ProceduralBoundsCache.clear();GltfBoundsCache.clear();
-    BoundsDefinitionsRevision=definitionsRevision;BoundsBoneRevision=boneRevision;
-    BoundsGltfRevision=gltfRevision;
+    ProceduralBoundsCache.clear();
+    GltfBoundsCache.clear();
+    BoundsDefinitionsRevision = definitionsRevision;
+    BoundsBoneRevision = boneRevision;
+    BoundsGltfRevision = gltfRevision;
   }
 
   const CreatureVisualBackend backend =
@@ -549,43 +554,81 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
       previewCreature.SetSkinId(skinId);
     }
 
-    if(human) previewCreature.SetHumanAppearance(*human);
-    if(speciesId=="human") {
-      if(mainItemId && !mainItemId->empty())previewCreature.GetInventory().AssignToHotbar(0,0,{InventoryEntryKind::Item,*mainItemId,1,false});
-      if(offhandItemId && !offhandItemId->empty())previewCreature.GetInventory().EquipOffhand({InventoryEntryKind::Item,*offhandItemId,1,false});
+    if (human)
+      previewCreature.SetHumanAppearance(*human);
+    if (speciesId == "human")
+    {
+      if (mainItemId && !mainItemId->empty())
+        previewCreature.GetInventory().AssignToHotbar(
+            0, 0, {InventoryEntryKind::Item, *mainItemId, 1, false});
+      if (offhandItemId && !offhandItemId->empty())
+        previewCreature.GetInventory().EquipOffhand(
+            {InventoryEntryKind::Item, *offhandItemId, 1, false});
     }
     CreatureLocomotionFacts facts;
-    facts.supportValid[0]=facts.supportValid[1]=true;
-    facts.animPhase = animTimeSec * def->visual.Animation.walkCycleHz *
-                      6.283185307179586f;
+    facts.supportValid[0] = facts.supportValid[1] = true;
+    facts.animPhase =
+        animTimeSec * def->visual.Animation.walkCycleHz * 6.283185307179586f;
     if (animateWalk)
     {
       facts.state = AnimationPreviewState.value_or(LocomotionState::Walk);
-      facts.horizontalSpeed = def->locomotion.walkSpeed * AnimationPreviewSpeedRatio;
-      if(facts.state==LocomotionState::Crouch)facts.stanceBlend=1.f;
-      if(facts.state==LocomotionState::Jump) {facts.onGround=false;facts.verticalSpeed=2.f;}
-      if(facts.state==LocomotionState::Swim) {facts.onGround=false;facts.inFluid=true;facts.swimming=true;}
+      facts.horizontalSpeed =
+          def->locomotion.walkSpeed * AnimationPreviewSpeedRatio;
+      if (facts.state == LocomotionState::Crouch)
+        facts.stanceBlend = 1.f;
+      if (facts.state == LocomotionState::Jump)
+      {
+        facts.onGround = false;
+        facts.verticalSpeed = 2.f;
+      }
+      if (facts.state == LocomotionState::Swim)
+      {
+        facts.onGround = false;
+        facts.inFluid = true;
+        facts.swimming = true;
+      }
     }
     else
     {
       facts.state = LocomotionState::Idle;
     }
 
-    if(facts.state==LocomotionState::Fly || facts.state==LocomotionState::Hover) {facts.mode=CreatureMovementMode::Flying;facts.onGround=false;}
-    if(speciesId=="human" && facts.state==LocomotionState::Hover)facts.horizontalSpeed=0.f;
-    if(speciesId=="human" && facts.state==LocomotionState::Tread) {
-      facts.onGround=false;facts.inFluid=true;facts.swimming=true;facts.horizontalSpeed=0.f;
+    if (facts.state == LocomotionState::Fly ||
+        facts.state == LocomotionState::Hover)
+    {
+      facts.mode = CreatureMovementMode::Flying;
+      facts.onGround = false;
     }
-    if(facts.state==LocomotionState::Fall) {facts.onGround=false;facts.verticalSpeed=-6.f;}
-    facts.actualVelocity={0.f,facts.verticalSpeed,facts.horizontalSpeed};
-    auto seedHumanPreview=[&](const CreatureLocomotionFacts &f,bool sampling=false) {
-      previewCreature.HumanMotion={};previewCreature.HumanMotion.distancePhase=f.animPhase;
-      previewCreature.HumanMotion.idlePhase=sampling?f.animPhase:animTimeSec*2.5f;
-      if(f.state==LocomotionState::Action)previewCreature.HumanMotion.actionRemaining=.14f;
+    if (speciesId == "human" && facts.state == LocomotionState::Hover)
+      facts.horizontalSpeed = 0.f;
+    if (speciesId == "human" && facts.state == LocomotionState::Tread)
+    {
+      facts.onGround = false;
+      facts.inFluid = true;
+      facts.swimming = true;
+      facts.horizontalSpeed = 0.f;
+    }
+    if (facts.state == LocomotionState::Fall)
+    {
+      facts.onGround = false;
+      facts.verticalSpeed = -6.f;
+    }
+    facts.actualVelocity = {0.f, facts.verticalSpeed, facts.horizontalSpeed};
+    auto seedHumanPreview =
+        [&](const CreatureLocomotionFacts &f, bool sampling = false)
+    {
+      previewCreature.HumanMotion = {};
+      previewCreature.HumanMotion.distancePhase = f.animPhase;
+      previewCreature.HumanMotion.idlePhase =
+          sampling ? f.animPhase : animTimeSec * 2.5f;
+      if (f.state == LocomotionState::Action)
+        previewCreature.HumanMotion.actionRemaining = .14f;
     };
     seedHumanPreview(facts);
     std::unique_ptr<IUCreatureVisual> visual = CreateCreatureVisual(*def);
-    auto appearance = ResolveCreatureAppearance(*Species, *Skins, speciesId, skinId, previewCreature.GetHumanAppearance());
+    auto appearance =
+        ResolveCreatureAppearance(*Species, *Skins, speciesId, skinId,
+                                  previewCreature.GetHumanAppearance());
     appearance.hideHair = armor && !(*armor)[0].ItemId.empty();
     visual->SetAppearance(appearance);
     // Fresh visual each render: advance its animation clock by the preview
@@ -605,7 +648,7 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
     ctx.Queue = &queue;
     ctx.Textures = Textures.get();
     ctx.Settings = &previewSettings;
-    ctx.SkipWieldedItems=true;
+    ctx.SkipWieldedItems = true;
 
     // Collision bounds can be shorter than ears or a raised head. Fit the
     // rendered rest geometry without changing gameplay bounds or world scale.
@@ -614,13 +657,18 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
     bool geometryFit = false;
     if (backend != CreatureVisualBackend::GltfSkeleton)
     {
-      const std::string key = speciesId + "|" + skinId + "|" + previewCreature.GetHumanAppearance().Key() + (appearance.hideHair ? "|helmet|" : "|") + ToString(facts.state) +
-          (animateWalk ? "|cycle|" : "|rest|") + std::to_string(AnimationPreviewSpeedRatio) + "|" + std::to_string(Species->Revision.load()) +
-          "|" + std::to_string(Skins->Revision.load());
+      const std::string key = speciesId + "|" + skinId + "|" +
+                              previewCreature.GetHumanAppearance().Key() +
+                              (appearance.hideHair ? "|helmet|" : "|") +
+                              ToString(facts.state) +
+                              (animateWalk ? "|cycle|" : "|rest|") +
+                              std::to_string(AnimationPreviewSpeedRatio) + "|" +
+                              std::to_string(Species->Revision.load()) + "|" +
+                              std::to_string(Skins->Revision.load());
       auto cached = ProceduralBoundsCache.find(key);
       if (cached == ProceduralBoundsCache.end())
       {
-        CreaturePreviewBoundsSink bounds;
+        UCreaturePreviewBoundsSink bounds;
         CreatureDrawQueue boundsQueue;
         CreatureDrawContext boundsContext = ctx;
         boundsContext.Queue = &boundsQueue;
@@ -629,18 +677,22 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
         for (int sample = 0; sample <= samples; ++sample)
         {
           auto sampledFacts = facts;
-          sampledFacts.animPhase = samples ? sample * 6.283185307179586f / samples : 0.f;
+          sampledFacts.animPhase =
+              samples ? sample * 6.283185307179586f / samples : 0.f;
           CreaturePoseParams sampledPose;
           if (auto *presenter = presenters.Get(def->locomotionArchetype))
             sampledPose = presenter->Compute(sampledFacts, *def, 0.f);
-          seedHumanPreview(sampledFacts,true);
-          visual->UpdatePose(previewCreature, sampledFacts, sampledPose, *def, 0.f);
+          seedHumanPreview(sampledFacts, true);
+          visual->UpdatePose(previewCreature, sampledFacts, sampledPose, *def,
+                             0.f);
           visual->SubmitDraw(boundsContext, glm::mat4(1.f));
           boundsQueue.Flush(bounds);
           boundsQueue.Clear();
         }
         if (bounds.any)
-          cached = ProceduralBoundsCache.emplace(key, std::make_pair(bounds.low, bounds.high)).first;
+          cached = ProceduralBoundsCache
+                       .emplace(key, std::make_pair(bounds.low, bounds.high))
+                       .first;
         seedHumanPreview(facts);
         visual->UpdatePose(previewCreature, facts, presented, *def, 0.f);
       }
@@ -653,36 +705,60 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
     }
     if (backend == CreatureVisualBackend::GltfSkeleton)
     {
-      const auto asset = CreatureGltfCache::Instance().Load(speciesId,
-          def->visual.gltf.modelPath.empty() ? "model.gltf" : def->visual.gltf.modelPath,
+      const auto asset = CreatureGltfCache::Instance().Load(
+          speciesId,
+          def->visual.gltf.modelPath.empty() ? "model.gltf"
+                                             : def->visual.gltf.modelPath,
           def->visual.sourceDirectory);
       if (asset)
       {
-        const std::string clipName = ResolveAnimationClipId(facts.state,
-            def->visual.Animation.stateMap).value_or("idle");
+        const std::string clipName =
+            ResolveAnimationClipId(facts.state, def->visual.Animation.stateMap)
+                .value_or("idle");
         const auto clip = asset->animationIndexByName.find(clipName);
-        const auto *animation = clip == asset->animationIndexByName.end() ? nullptr : &asset->animations[clip->second];
-        const std::string key = speciesId + "|" + clipName + (animateWalk ? "|cycle" : "|pose0");
+        const auto *animation = clip == asset->animationIndexByName.end()
+                                    ? nullptr
+                                    : &asset->animations[clip->second];
+        const std::string key =
+            speciesId + "|" + clipName + (animateWalk ? "|cycle" : "|pose0");
         auto cached = GltfBoundsCache.find(key);
-        if (cached == GltfBoundsCache.end() || cached->second.asset.get() != asset.get())
+        if (cached == GltfBoundsCache.end() ||
+            cached->second.asset.get() != asset.get())
         {
-          if (const auto bounds = ComputeGltfPreviewBounds(*asset, animation, animateWalk))
-            cached = GltfBoundsCache.insert_or_assign(key, GltfBoundsEntry{asset, bounds->first, bounds->second}).first;
+          if (const auto bounds =
+                  ComputeGltfPreviewBounds(*asset, animation, animateWalk))
+            cached =
+                GltfBoundsCache
+                    .insert_or_assign(key, GltfBoundsEntry{asset, bounds->first,
+                                                           bounds->second})
+                    .first;
         }
-        if (cached != GltfBoundsCache.end() && cached->second.asset.get() == asset.get())
+        if (cached != GltfBoundsCache.end() &&
+            cached->second.asset.get() == asset.get())
         {
           const auto &bounds = cached->second;
-          const glm::mat4 root = BuildCreatureRootMatrix(glm::vec3(0.f),
-              def->visual.modelYawOffsetDeg, def->visual.gltf.modelOffsetY-asset->bindMinY*def->visual.gltf.modelScale,
-              [](){return GltfEntityConventionMatrix();}, def->visual.gltf.modelScale);
-          glm::vec3 low(std::numeric_limits<float>::max()), high(-std::numeric_limits<float>::max());
-          for (int x : {0,1}) for (int y : {0,1}) for (int z : {0,1})
-          {
-            const glm::vec3 point(root*glm::vec4(x ? bounds.high.x : bounds.low.x,
-                y ? bounds.high.y : bounds.low.y, z ? bounds.high.z : bounds.low.z, 1.f));
-            low=glm::min(low,point);high=glm::max(high,point);
-          }
-          previewSize=high-low;previewCenter=(high+low)*.5f;geometryFit=true;
+          const glm::mat4 root = BuildCreatureRootMatrix(
+              glm::vec3(0.f), def->visual.modelYawOffsetDeg,
+              def->visual.gltf.modelOffsetY -
+                  asset->bindMinY * def->visual.gltf.modelScale,
+              []() { return GltfEntityConventionMatrix(); },
+              def->visual.gltf.modelScale);
+          glm::vec3 low(std::numeric_limits<float>::max()),
+              high(-std::numeric_limits<float>::max());
+          for (int x : {0, 1})
+            for (int y : {0, 1})
+              for (int z : {0, 1})
+              {
+                const glm::vec3 point(
+                    root * glm::vec4(x ? bounds.high.x : bounds.low.x,
+                                     y ? bounds.high.y : bounds.low.y,
+                                     z ? bounds.high.z : bounds.low.z, 1.f));
+                low = glm::min(low, point);
+                high = glm::max(high, point);
+              }
+          previewSize = high - low;
+          previewCenter = (high + low) * .5f;
+          geometryFit = true;
         }
       }
     }
@@ -695,8 +771,9 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
     float fitScale = std::max(
         0.1f, std::max({previewSize.x, previewSize.y, previewSize.z}) / 1.8f);
     if (geometryFit)
-      fitScale = std::max(fitScale, glm::length(previewSize)*.55f /
-          (std::sin(glm::radians(kFovDeg*.5f))*kOrbitDistance));
+      fitScale = std::max(fitScale, glm::length(previewSize) * .55f /
+                                        (std::sin(glm::radians(kFovDeg * .5f)) *
+                                         kOrbitDistance));
     const glm::mat4 projection =
         glm::perspective(glm::radians(kFovDeg), 1.0f, 0.1f,
                          std::max(30.f, kOrbitDistance * fitScale * 3.f));
@@ -704,7 +781,8 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
         OrbitView(yawDeg, pitchDeg, kOrbitDistance * fitScale) *
         glm::translate(glm::mat4(1.0f), -previewCenter);
     const glm::mat4 viewProj = QaViewProjection.value_or(projection * view);
-    ctx.CameraPosition = QaCameraPosition.value_or(glm::vec3(glm::inverse(view)[3]));
+    ctx.CameraPosition =
+        QaCameraPosition.value_or(glm::vec3(glm::inverse(view)[3]));
 
     visual->SubmitDraw(ctx, viewProj);
     if (queue.Size() == 0)
@@ -718,38 +796,44 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
       return false;
     }
 
-    if (QaSubmissionObserver) QaSubmissionObserver(queue, viewProj);
+    if (QaSubmissionObserver)
+      QaSubmissionObserver(queue, viewProj);
 
     const glm::vec4 bg = def->visual.wireframeColor * 0.25f;
     glClearColor(bg.r, bg.g, bg.b, TransparentBackground ? 0.f : 1.f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     UPreviewCreatureDrawSink drawSink(Shader.get(), SkinnedShader.get(),
-                                     CubeVao, HeadCubeVao, BodyCubeVao,
-                                     RigidHeadCubeVao);
+                                      CubeVao, HeadCubeVao, BodyCubeVao,
+                                      RigidHeadCubeVao);
     queue.Flush(drawSink);
 
     // Armor / wielded overlays keep their own submission, aligned with the
     // backend root matrix the body was drawn with.
-    const bool wantsEquipment =
-        (armor != nullptr) || (mainItemId && !mainItemId->empty()) ||
-        (offhandItemId && !offhandItemId->empty());
+    const bool wantsEquipment = (armor != nullptr) ||
+                                (mainItemId && !mainItemId->empty()) ||
+                                (offhandItemId && !offhandItemId->empty());
     if (backend == CreatureVisualBackend::BoneSkeleton && wantsEquipment)
     {
       // Reuse the body's actual cached pose and common root (including ground
       // clearance). Re-evaluating the skeleton here used to leave overlays
       // below the body in phases where its feet needed a small lift.
       const glm::mat4 bodyMat(1.f);
-      const BoneMatrixLookupFn boneLookup =
-          [&](const std::string &boneName, glm::mat4 &out) -> bool
+      const BoneMatrixLookupFn boneLookup = [&](const std::string &boneName,
+                                                glm::mat4 &out) -> bool
       {
-        if (!visual->GetWorldBoneTransform(boneName, out)) return false;
-        if (AttachmentObserver) AttachmentObserver(boneName, out);
+        if (!visual->GetWorldBoneTransform(boneName, out))
+          return false;
+        if (AttachmentObserver)
+          AttachmentObserver(boneName, out);
         return true;
       };
-      const BoneBoundsLookupFn bounds=[&](const std::string &name,glm::vec3 &low,glm::vec3 &high)
+      const BoneBoundsLookupFn bounds =
+          [&](const std::string &name, glm::vec3 &low, glm::vec3 &high)
       {
-        if(!visual->GetBoneLocalBounds(name,low,high))return false;
-        if(AttachmentBoundsObserver)AttachmentBoundsObserver(name,low,high);
+        if (!visual->GetBoneLocalBounds(name, low, high))
+          return false;
+        if (AttachmentBoundsObserver)
+          AttachmentBoundsObserver(name, low, high);
         return true;
       };
       if (armor)
@@ -802,7 +886,9 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
         partVao = BodyCubeVao;
       }
     }
-    else if (UsesRigidFaceTexture(part.baseTextureAssetKey.empty() ? part.textureAssetKey : part.baseTextureAssetKey))
+    else if (UsesRigidFaceTexture(part.baseTextureAssetKey.empty()
+                                      ? part.textureAssetKey
+                                      : part.baseTextureAssetKey))
     {
       partVao = RigidHeadCubeVao;
     }
@@ -844,7 +930,8 @@ GLuint UCreaturePreviewRenderer::RenderToUniqueTexture(
     const std::string &speciesId, const std::string &skinId, int size,
     float yawDeg, float pitchDeg, float animTimeSec, bool animateWalk,
     const std::array<WornArmorPreviewSlot, kWornArmorSlotCount> *armor,
-    const std::string *mainItemId, const std::string *offhandItemId, const HumanAppearance *human)
+    const std::string *mainItemId, const std::string *offhandItemId,
+    const HumanAppearance *human)
 {
   if (speciesId.empty() || !Shader)
   {

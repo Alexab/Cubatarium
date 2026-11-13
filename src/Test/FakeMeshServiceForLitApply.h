@@ -40,16 +40,13 @@ struct FakeMeshChunkState
 };
 
 /// Test double for MarkRelit planner/executor tests (FZ2.7-B0/B4).
-class FakeMeshServiceForLitApply
+class UFakeMeshServiceForLitApply
 {
 public:
   std::unordered_map<glm::ivec3, FakeMeshChunkState, IVec3Hash> chunks;
   std::vector<FakeMeshCallRecord> calls;
 
-  FakeMeshChunkState &Mut(glm::ivec3 coord)
-  {
-    return chunks[coord];
-  }
+  FakeMeshChunkState &Mut(glm::ivec3 coord) { return chunks[coord]; }
 
   const FakeMeshChunkState &Get(glm::ivec3 coord) const
   {
@@ -134,8 +131,8 @@ public:
   }
 };
 
-inline ColumnChunkSnapshot SnapshotFromFake(const FakeMeshServiceForLitApply &mesh,
-                                            glm::ivec3 coord)
+inline ColumnChunkSnapshot
+SnapshotFromFake(const UFakeMeshServiceForLitApply &mesh, glm::ivec3 coord)
 {
   ColumnChunkSnapshot snap;
   snap.coord = coord;
@@ -162,8 +159,9 @@ struct FakeLitApplyFsmOutcome
   bool persistence_light_complete{false};
 };
 
-inline FakeLitApplyFsmOutcome ExecuteLitApplyPlanOnFake(
-    FakeMeshServiceForLitApply &mesh, const LitApplyPlan &plan)
+inline FakeLitApplyFsmOutcome
+ExecuteLitApplyPlanOnFake(UFakeMeshServiceForLitApply &mesh,
+                          const LitApplyPlan &plan)
 {
   FakeLitApplyFsmOutcome out;
   for (const glm::ivec3 &coord : plan.prefer_kick_gpu)

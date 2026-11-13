@@ -82,7 +82,7 @@ float PrecipitationEpisodeWeight(
 
 } // namespace
 
-void WeatherFrontField::Tick(float dt_seconds)
+void UWeatherFrontField::Tick(float dt_seconds)
 {
   if (std::isfinite(dt_seconds) && dt_seconds > 0.0f)
   {
@@ -90,12 +90,12 @@ void WeatherFrontField::Tick(float dt_seconds)
   }
 }
 
-void WeatherFrontField::SetSimulationTimeSec(double seconds)
+void UWeatherFrontField::SetSimulationTimeSec(double seconds)
 {
   SimulationTimeSec = std::isfinite(seconds) ? std::max(0.0, seconds) : 0.0;
 }
 
-WeatherSample WeatherFrontField::SampleAt(
+WeatherSample UWeatherFrontField::SampleAt(
     const glm::vec3 &position, const BiomeEnvironmentSample &biome,
     float sea_level, float temperature_lapse_per_block, float precip_fraction,
     float precip_heavy_fraction, float min_precip_minutes,
@@ -161,7 +161,8 @@ WeatherSample WeatherFrontField::SampleAt(
       }
 
       // Every potential precipitation front carries a dense cloud body. The
-      // climate and episode masks below decide whether that body actually rains.
+      // climate and episode masks below decide whether that body actually
+      // rains.
       if (Unit(rain_hash) < 0.22f)
       {
         const float storm_cloud =
@@ -222,7 +223,7 @@ WeatherSample WeatherFrontField::SampleAt(
   return result;
 }
 
-float WeatherFrontField::SampleCloudCoverageAt(
+float UWeatherFrontField::SampleCloudCoverageAt(
     const glm::vec2 &position_xz) const
 {
   const float base_angle = Unit(Hash(Seed, 0, 0, 0xA511E9B3u)) * 6.2831853f;
@@ -265,14 +266,13 @@ float WeatherFrontField::SampleCloudCoverageAt(
       if (Unit(cloud_hash) < 0.34f)
       {
         amount = edge *
-                 (0.45f +
-                  Unit(Hash(cloud_hash, cx, cz, 0x85EBCA6Bu)) * 0.55f);
+                 (0.45f + Unit(Hash(cloud_hash, cx, cz, 0x85EBCA6Bu)) * 0.55f);
       }
       if (Unit(rain_hash) < 0.22f)
       {
         amount = std::max(
-            amount,
-            edge * (0.62f + Unit(Hash(rain_hash, cx, cz, 0x3C6EF372u)) * 0.38f));
+            amount, edge * (0.62f + Unit(Hash(rain_hash, cx, cz, 0x3C6EF372u)) *
+                                        0.38f));
       }
       cloud = std::max(cloud, amount);
     }

@@ -1,16 +1,17 @@
 #include "World/Mesh/WorldMeshService.h"
-#include "World/Diagnostics/JobStageTrace.h"
+#include "App/Platform/Log.h"
 #include "Blocks/BlockRegistry.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Camera/Frustum.h"
+#include "Render/Mesh/GpuMeshPipeline.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/EditMeshRemeshPolicy.h"
 #include "World/Physics/PhysicsTelemetry.h"
 #include "World/Streaming/ChunkRenderDemand.h"
-#include "App/Platform/Log.h"
 #include "glog/logging.h"
 #include <algorithm>
 #include <chrono>
@@ -67,7 +68,8 @@ void UWorldMeshService::SetMeshForwardBias(float bias_k, glm::vec2 forward_xz)
   Cache.SetMeshForwardBias(bias_k, forward_xz);
 }
 
-void UWorldMeshService::SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> fn)
+void UWorldMeshService::SetDeferMeshUntilLitFn(
+    std::function<bool(glm::ivec3)> fn)
 {
   Cache.SetDeferMeshUntilLitFn(std::move(fn));
 }
@@ -353,12 +355,11 @@ void UWorldMeshService::MarkDirty(glm::ivec3 chunk_coord,
 
 void UWorldMeshService::MarkDirtyPriority(glm::ivec3 chunk_coord)
 {
-  MarkDirtyPriority(chunk_coord,
-                    MeshRevisionBumpReason::PriorityDirtyEnqueued);
+  MarkDirtyPriority(chunk_coord, MeshRevisionBumpReason::PriorityDirtyEnqueued);
 }
 
-void UWorldMeshService::MarkDirtyPriority(
-    glm::ivec3 chunk_coord, MeshRevisionBumpReason reason)
+void UWorldMeshService::MarkDirtyPriority(glm::ivec3 chunk_coord,
+                                          MeshRevisionBumpReason reason)
 {
 #ifndef NDEBUG
   if (ColumnFlowContainsFn)
@@ -366,8 +367,9 @@ void UWorldMeshService::MarkDirtyPriority(
     const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
     if (!ColumnFlowContainsFn(col))
     {
-      LOG(WARNING) << "[OWNERSHIP_VIOLATION] MarkDirtyPriority outside ColumnFlow col="
-                   << col.x << "," << col.y << " cy=" << chunk_coord.y;
+      LOG(WARNING)
+          << "[OWNERSHIP_VIOLATION] MarkDirtyPriority outside ColumnFlow col="
+          << col.x << "," << col.y << " cy=" << chunk_coord.y;
     }
   }
 #endif
@@ -383,8 +385,8 @@ void UWorldMeshService::MarkDirtyPriority(
   }
 }
 
-void UWorldMeshService::RequeueDirtyPriority(
-    glm::ivec3 chunk_coord, MeshRevisionBumpReason reason)
+void UWorldMeshService::RequeueDirtyPriority(glm::ivec3 chunk_coord,
+                                             MeshRevisionBumpReason reason)
 {
 #ifndef NDEBUG
   if (ColumnFlowContainsFn)
@@ -392,7 +394,8 @@ void UWorldMeshService::RequeueDirtyPriority(
     const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
     if (!ColumnFlowContainsFn(col))
     {
-      LOG(WARNING) << "[OWNERSHIP_VIOLATION] RequeueDirtyPriority outside ColumnFlow col="
+      LOG(WARNING) << "[OWNERSHIP_VIOLATION] RequeueDirtyPriority outside "
+                      "ColumnFlow col="
                    << col.x << "," << col.y << " cy=" << chunk_coord.y;
     }
   }
@@ -479,8 +482,9 @@ bool UWorldMeshService::FindFirstDirtyInHorizontalRadius(
                                                 out_coord);
 }
 
-void UWorldMeshService::NotifyFluidSurfaceDirtyAtBlock(
-    const UBlockWorld &world, UBlockRegistry *registry, glm::ivec3 block_pos)
+void UWorldMeshService::NotifyFluidSurfaceDirtyAtBlock(const UBlockWorld &world,
+                                                       UBlockRegistry *registry,
+                                                       glm::ivec3 block_pos)
 {
   if (!registry)
   {
@@ -649,11 +653,10 @@ int UWorldMeshService::MarkMissingSlicesDirtyPriority(
   {
     const glm::ivec3 coord(ground_chunk_coord.x, cy, ground_chunk_coord.z);
     const UChunk *chunk = world.GetChunkManager().GetChunk(coord);
-    const bool mesh_satisfying =
-        chunk && HasMeshSatisfyingColumnReady(coord);
+    const bool mesh_satisfying = chunk && HasMeshSatisfyingColumnReady(coord);
     const bool geometry_debt =
-        mesh_satisfying && HasScreenRayRepairableGeometryDebt(
-                               coord, chunk->GetIncarnation());
+        mesh_satisfying &&
+        HasScreenRayRepairableGeometryDebt(coord, chunk->GetIncarnation());
     if (!chunk || (mesh_satisfying && !geometry_debt) ||
         IsPendingGpuApply(coord) || IsPendingGpuQueued(coord) ||
         IsPendingGpuKickedOrDispatched(coord) || IsGpuExtractInFlight(coord) ||
@@ -692,8 +695,7 @@ int UWorldMeshService::MarkMissingSlicesDirtyPriority(
     }
     else
     {
-      MarkDirtyPriority(coord,
-                        MeshRevisionBumpReason::PriorityDirtyEnqueued);
+      MarkDirtyPriority(coord, MeshRevisionBumpReason::PriorityDirtyEnqueued);
     }
     if (geometry_debt)
     {
@@ -760,14 +762,12 @@ void UWorldMeshService::MarkTerrainChunkMeshDirtyPriority(
 }
 
 bool UWorldMeshService::HasMissingGreedyMeshInHorizontalRadius(
-    const UBlockWorld &world, glm::ivec3 center_ground_chunk,
-    int radius_chunks, glm::ivec3 *missing_coord_out,
-    bool *memo_hit_out) const
+    const UBlockWorld &world, glm::ivec3 center_ground_chunk, int radius_chunks,
+    glm::ivec3 *missing_coord_out, bool *memo_hit_out) const
 {
-  return Cache.HasMissingGreedyMeshInHorizontalRadius(world, center_ground_chunk,
-                                                      radius_chunks,
-                                                      missing_coord_out,
-                                                      memo_hit_out);
+  return Cache.HasMissingGreedyMeshInHorizontalRadius(
+      world, center_ground_chunk, radius_chunks, missing_coord_out,
+      memo_hit_out);
 }
 
 bool UWorldMeshService::FindNearestMissingGreedyMesh(
@@ -788,8 +788,7 @@ void UWorldMeshService::UpdateStickyNearestHole(glm::ivec3 coord, bool alive)
   }
   if (coord == StickyNearestHoleCoord)
   {
-    StickyNearestHoleFrames =
-        std::min(StickyNearestHoleFrames + 1, 1000000);
+    StickyNearestHoleFrames = std::min(StickyNearestHoleFrames + 1, 1000000);
   }
   else
   {
@@ -822,10 +821,9 @@ MeshRebuildTickStats UWorldMeshService::RebuildDirtyChunksWithStats(
     int max_schedule_per_frame, bool force_sync, int max_sync_rebuild,
     double max_sync_ms, bool skip_gpu_consume)
 {
-  return Cache.RebuildDirtyChunksWithStats(world, registry, max_drain_per_frame,
-                                           max_schedule_per_frame, force_sync,
-                                           max_sync_rebuild, max_sync_ms,
-                                           skip_gpu_consume);
+  return Cache.RebuildDirtyChunksWithStats(
+      world, registry, max_drain_per_frame, max_schedule_per_frame, force_sync,
+      max_sync_rebuild, max_sync_ms, skip_gpu_consume);
 }
 
 int UWorldMeshService::ConsumeGpuApplyBacklog(UBlockWorld &world,
@@ -914,10 +912,7 @@ void UWorldMeshService::SetFmDirtyEnqueueReserve(int n)
   Cache.SetFmDirtyEnqueueReserve(n);
 }
 
-void UWorldMeshService::SetFz2DeferGated(bool v)
-{
-  Cache.SetFz2DeferGated(v);
-}
+void UWorldMeshService::SetFz2DeferGated(bool v) { Cache.SetFz2DeferGated(v); }
 
 double UWorldMeshService::GetLastMeshImmediateMs() const
 {
@@ -962,14 +957,14 @@ bool UWorldMeshService::HasPendingDirty() const
   return Cache.HasPendingDirty();
 }
 
-bool UWorldMeshService::HasDirtyWithinHorizontalRadius(
-    glm::ivec3 center_chunk, int radius_chunks) const
+bool UWorldMeshService::HasDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
+                                                       int radius_chunks) const
 {
   return Cache.HasDirtyWithinHorizontalRadius(center_chunk, radius_chunks);
 }
 
-int UWorldMeshService::CountDirtyWithinHorizontalRadius(
-    glm::ivec3 center_chunk, int radius_chunks) const
+int UWorldMeshService::CountDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
+                                                        int radius_chunks) const
 {
   return Cache.CountDirtyWithinHorizontalRadius(center_chunk, radius_chunks);
 }
@@ -1200,7 +1195,7 @@ int UWorldMeshService::CountPendingGpuAppliesInHorizontalRadius(
     glm::ivec3 center_ground_chunk, int radius_chunks) const
 {
   return Cache.CountPendingGpuAppliesInHorizontalRadius(center_ground_chunk,
-                                                      radius_chunks);
+                                                        radius_chunks);
 }
 
 int UWorldMeshService::DrainPendingGpuMeshes(UBlockWorld &world,
@@ -1486,13 +1481,14 @@ bool UWorldMeshService::HasActiveBoundaryOverlayFace(glm::ivec3 chunk_coord,
   return Cache.HasActiveBoundaryOverlayFace(chunk_coord, face);
 }
 
-bool UWorldMeshService::HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const
+bool UWorldMeshService::HasMeshSatisfyingColumnReady(
+    glm::ivec3 chunk_coord) const
 {
   return Cache.HasMeshSatisfyingColumnReady(chunk_coord);
 }
 
-bool UWorldMeshService::HasGeometryPublicationDebt(
-    glm::ivec3 chunk_coord, uint64_t incarnation) const
+bool UWorldMeshService::HasGeometryPublicationDebt(glm::ivec3 chunk_coord,
+                                                   uint64_t incarnation) const
 {
   const ChunkRenderDemandRecord *demand =
       UChunkRenderDemandStore::Get().Find(chunk_coord);
@@ -1562,17 +1558,15 @@ void UWorldMeshService::SetWitnessSwapGrace(glm::ivec2 prior_xz, int frames)
   Cache.SetWitnessSwapGrace(prior_xz, frames);
 }
 
-void UWorldMeshService::TickWitnessSwapGrace()
-{
-  Cache.TickWitnessSwapGrace();
-}
+void UWorldMeshService::TickWitnessSwapGrace() { Cache.TickWitnessSwapGrace(); }
 
 bool UWorldMeshService::IsPendingGpuQueued(glm::ivec3 chunk_coord) const
 {
   return Cache.IsPendingGpuQueued(chunk_coord);
 }
 
-bool UWorldMeshService::IsPendingGpuKickedOrDispatched(glm::ivec3 chunk_coord) const
+bool UWorldMeshService::IsPendingGpuKickedOrDispatched(
+    glm::ivec3 chunk_coord) const
 {
   return Cache.IsPendingGpuKickedOrDispatched(chunk_coord);
 }
@@ -1588,7 +1582,7 @@ bool UWorldMeshService::DropQueuedPendingGpuApply(glm::ivec3 chunk_coord)
 }
 
 bool UWorldMeshService::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
-                                             const UBlockWorld &world) const
+                                               const UBlockWorld &world) const
 {
   return Cache.ChunkHasStaleDarkFaces(chunk_coord, world);
 }
@@ -1619,8 +1613,8 @@ bool UWorldMeshService::HasInflightMeshBuild(glm::ivec3 chunk_coord) const
   return Cache.HasInflightMeshBuild(chunk_coord);
 }
 
-uint64_t UWorldMeshService::GetInflightSourceRevision(
-    glm::ivec3 chunk_coord) const
+uint64_t
+UWorldMeshService::GetInflightSourceRevision(glm::ivec3 chunk_coord) const
 {
   return Cache.GetInflightSourceRevision(chunk_coord);
 }
@@ -1788,7 +1782,8 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
   const bool atomic_boundary_edit =
       block_positions.size() == 1 && !boundary_neighbors.empty();
   policy_in.ImmediateChunkCap =
-      atomic_boundary_edit ? 1 + static_cast<int>(boundary_neighbors.size()) : 2;
+      atomic_boundary_edit ? 1 + static_cast<int>(boundary_neighbors.size())
+                           : 2;
   policy_in.PreferGpuStorePatch = PreferGpuStorePatch;
 
   const EditMeshRemeshDecision decision = EvaluateEditMeshRemesh(policy_in);
@@ -1831,9 +1826,10 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
 
   // C1/P2: keep one Immediate for ordinary edits and bursts. A single block
   // on a chunk boundary is the exception: removing the center before its real
-  // seam neighbors publishes exposes a one-frame hole (mesh_break_boundary_v16).
-  // The exception is bounded to center + 1..3 boundary neighbors; multi-block
-  // bursts retain the original cap and time budget.
+  // seam neighbors publishes exposes a one-frame hole
+  // (mesh_break_boundary_v16). The exception is bounded to center + 1..3
+  // boundary neighbors; multi-block bursts retain the original cap and time
+  // budget.
   std::unordered_set<glm::ivec3, IVec3Hash> center_chunks;
   for (const glm::ivec3 &block_pos : block_positions)
   {
@@ -1928,6 +1924,23 @@ void UWorldMeshService::TickDigSeamDrain(UBlockWorld &block_world,
     RebuildChunkImmediate(block_world, registry, coord);
     LastDigSeamRemeshN = 1;
     break;
+  }
+}
+
+void UWorldMeshService::GetGpuAllocationCounters(size_t &freeSlots,
+                                                 size_t &boundSlots,
+                                                 size_t &maxSlots,
+                                                 uint64_t &stagingFailures)
+{
+  freeSlots = boundSlots = maxSlots = 0;
+  stagingFailures = 0;
+  if (auto *pipeline = Cache.GetGpuMeshPipeline())
+  {
+    const auto &allocator = pipeline->GetAllocator();
+    freeSlots = allocator.GetFreeSlotCount();
+    boundSlots = allocator.GetBoundSlotCount();
+    maxSlots = allocator.GetMaxSlots();
+    stagingFailures = allocator.GetStagingAllocationFailureCount();
   }
 }
 

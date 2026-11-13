@@ -11,10 +11,10 @@ namespace cutum
 
 /// Compiled immutable key/handle table owned by one WorldGenPack snapshot.
 /// Handles must never be persisted or resolved against another snapshot.
-class BiomeDefinitionRegistry
+class UBiomeDefinitionRegistry
 {
 public:
-  explicit BiomeDefinitionRegistry(std::vector<BiomeKey> keys = {})
+  explicit UBiomeDefinitionRegistry(std::vector<BiomeKey> keys = {})
   {
     std::sort(keys.begin(), keys.end());
     keys.erase(std::unique(keys.begin(), keys.end()), keys.end());
@@ -33,9 +33,8 @@ public:
 
   const BiomeKey *Key(BiomeHandle handle) const
   {
-    return handle.IsValid() && handle.index < Keys.size()
-               ? &Keys[handle.index]
-               : nullptr;
+    return handle.IsValid() && handle.index < Keys.size() ? &Keys[handle.index]
+                                                          : nullptr;
   }
 
   size_t Size() const { return Keys.size(); }

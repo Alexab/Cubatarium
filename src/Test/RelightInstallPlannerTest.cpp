@@ -1,5 +1,5 @@
-#include "Test/FakeMeshServiceForLitApply.h"
 #include "World/Streaming/RelightInstallPlanner.h"
+#include "Test/FakeMeshServiceForLitApply.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -20,12 +20,12 @@ int main()
   using cutum::ColumnInstallPath;
   using cutum::ExecuteLitApplyPlanOnFake;
   using cutum::FakeMeshCallKind;
-  using cutum::FakeMeshServiceForLitApply;
   using cutum::LitApplyColumnInput;
   using cutum::PlanColumnInstall;
   using cutum::SnapshotFromFake;
+  using cutum::UFakeMeshServiceForLitApply;
 
-  FakeMeshServiceForLitApply mesh;
+  UFakeMeshServiceForLitApply mesh;
   const glm::ivec3 coord{1, 0, 2};
   mesh.Mut(coord).has_drawable = true;
   mesh.Mut(coord).fully_dark = true;
@@ -42,8 +42,7 @@ int main()
   in.relit_chunks.push_back(SnapshotFromFake(mesh, coord));
 
   const auto plan = PlanColumnInstall(in);
-  Expect(plan.path == ColumnInstallPath::PrimaryConsume,
-         "PrimaryConsume plan");
+  Expect(plan.path == ColumnInstallPath::PrimaryConsume, "PrimaryConsume plan");
   auto out = ExecuteLitApplyPlanOnFake(mesh, plan);
   Expect(mesh.CountCalls(FakeMeshCallKind::MarkDirtyPriority) >= 1,
          "MarkDirtyPriority on stale dark");
@@ -60,7 +59,8 @@ int main()
          "P6: dirty FullyDark with light delta still priority");
 
   // Already dirty + matching revs → PreferKick/stall or skip remesh (A22 S1:
-  // equal-rev Dirty alone is not a remesh trigger; PendingLight+force_stale is).
+  // equal-rev Dirty alone is not a remesh trigger; PendingLight+force_stale
+  // is).
   mesh.ClearCalls();
   mesh.Mut(coord).meshed_light_rev = 3;
   mesh.Mut(coord).light_field_rev = 3;
@@ -83,7 +83,8 @@ int main()
          "A22 S1: force_stale FullyDark schedules repair");
   in.force_stale_ticket = false;
 
-  // Settled equal-rev FullyDark (!dirty, column settled) → skip remesh (LegalDark).
+  // Settled equal-rev FullyDark (!dirty, column settled) → skip remesh
+  // (LegalDark).
   mesh.ClearCalls();
   mesh.Mut(coord).is_dirty = false;
   mesh.Mut(coord).meshed_light_rev = 3;
@@ -95,7 +96,8 @@ int main()
   in.relit_chunks.clear();
   in.relit_chunks.push_back(SnapshotFromFake(mesh, coord));
   const auto plan_noop = PlanColumnInstall(in);
-  Expect(plan_noop.mark_dirty.empty() && plan_noop.mark_dirty_priority.empty() &&
+  Expect(plan_noop.mark_dirty.empty() &&
+             plan_noop.mark_dirty_priority.empty() &&
              plan_noop.prefer_kick_gpu.empty(),
          "P7: settled equal-rev FullyDark skips remesh");
 
@@ -105,23 +107,23 @@ int main()
     Expect(!ShouldRemeshAfterLitApplyForHole(in.relit_chunks.front(), false,
                                              false),
            "A41: equal-rev FD without repair flag → no remesh");
-    Expect(ShouldRemeshAfterLitApplyForHole(in.relit_chunks.front(), false,
-                                            true),
-           "A41: light_repair_once → remesh");
+    Expect(
+        ShouldRemeshAfterLitApplyForHole(in.relit_chunks.front(), false, true),
+        "A41: light_repair_once → remesh");
     in.column_settled = false;
     in.light_repair_once = true;
     in.relit_chunks.clear();
     in.relit_chunks.push_back(SnapshotFromFake(mesh, coord));
     const auto plan_lr = PlanColumnInstall(in);
-    Expect(!plan_lr.mark_dirty_priority.empty() || !plan_lr.mark_dirty.empty() ||
-               !plan_lr.prefer_kick_gpu.empty(),
+    Expect(!plan_lr.mark_dirty_priority.empty() ||
+               !plan_lr.mark_dirty.empty() || !plan_lr.prefer_kick_gpu.empty(),
            "A41: light_repair_once schedules repair");
     in.light_repair_once = false;
   }
 
   // P12 A1: skip_already_dirty on a hole → FirstMesh, not remesh skip.
   {
-    FakeMeshServiceForLitApply hole;
+    UFakeMeshServiceForLitApply hole;
     const glm::ivec3 hole_coord{2, 0, 3};
     hole.Mut(hole_coord).is_dirty = true;
     hole.Mut(hole_coord).has_drawable = false;

@@ -93,6 +93,11 @@ bool USurvivalSystems::Use(UWorld &w, UCreature &actor, glm::vec3 eye,
     }
     if (water)
     {
+      if (e->Id == "bucket" && e->contentsUnits > 0)
+      {
+        reason = "Bucket is already full";
+        return true;
+      }
       if (e->Id == "bucket" && !w.ReplaceBlockAt(*water, "air"))
       {
         reason = "Water is unavailable";
@@ -155,7 +160,7 @@ bool USurvivalSystems::Use(UWorld &w, UCreature &actor, glm::vec3 eye,
         reason = "Fleece is regrowing";
         return true;
       }
-      WorldItemSystem::Instance().SpawnStack(
+      UWorldItemSystem::Instance().SpawnStack(
           c->GetBodyOrigin() + glm::vec3(0, .5f, 0), Entry("wool", 3));
       Sheared.push_back({*target, 300});
     }
@@ -175,8 +180,8 @@ bool USurvivalSystems::Use(UWorld &w, UCreature &actor, glm::vec3 eye,
         reason = "Harvest failed";
         return true;
       }
-      WorldItemSystem::Instance().SpawnStack(glm::vec3(hit->blockPos),
-                                             Entry("plant_fiber", 2));
+      UWorldItemSystem::Instance().SpawnStack(glm::vec3(hit->blockPos),
+                                              Entry("plant_fiber", 2));
     }
     else
     {
@@ -306,7 +311,7 @@ void USurvivalSystems::BlockDrops(UWorld &w, glm::ivec3 p,
   }
   else if (id == "wheat" || id == "cu_crop_ripe")
   {
-    WorldItemSystem::Instance().Spawn(glm::vec3(p), "seeds", 2, false);
+    UWorldItemSystem::Instance().Spawn(glm::vec3(p), "seeds", 2, false);
     drop = "grain";
     count = 3;
     block = false;
@@ -321,14 +326,14 @@ void USurvivalSystems::BlockDrops(UWorld &w, glm::ivec3 p,
   {
     drop = "plant_fiber";
     block = false;
-    WorldItemSystem::Instance().Spawn(glm::vec3(p), "seeds", 1, false);
+    UWorldItemSystem::Instance().Spawn(glm::vec3(p), "seeds", 1, false);
   }
   else if (id.find("leaves") != std::string::npos)
   {
     drop = "plant_fiber";
     block = false;
   }
-  WorldItemSystem::Instance().Spawn(glm::vec3(p), drop, count, block);
+  UWorldItemSystem::Instance().Spawn(glm::vec3(p), drop, count, block);
 }
 void USurvivalSystems::Tick(UWorld &w, float dt)
 {

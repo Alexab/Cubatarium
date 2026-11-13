@@ -13,19 +13,19 @@
 #include <GLFW/glfw3.h>
 
 #include "App/Core.h"
-#include "Items/ItemDefinitionStorage.h"
 #include "Blocks/BlockDefinition.h"
 #include "Blocks/BlockDefinitionStorage.h"
+#include "Items/ItemDefinitionStorage.h"
 #include "Render/Engine/ViewEngine.h"
 #include "Render/Textures/TextureBase.h"
 #include "Render/Textures/TextureCube.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Core/World.h"
-#include "World/Mesh/WorldMeshService.h"
 #include "World/IO/BinaryChunkSerializer.h"
 #include "World/IO/JsonChunkSerializer.h"
 #include "World/Math/BlockTypes.h"
+#include "World/Mesh/WorldMeshService.h"
 #include "World/Objects/ObjectLibrary.h"
 #include "WorldGen/Core/WorldGenRefs.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
@@ -292,7 +292,7 @@ int RunCreateWorld(int argc, char **argv, int create_world_index)
 namespace
 {
 
-class ConsoleLoadProgressSink : public IUProgressSink
+class UConsoleLoadProgressSink : public IUProgressSink
 {
 public:
   void Begin(WorldOperationKind kind) override
@@ -304,8 +304,7 @@ public:
   void Report(const std::string &phaseId, float fraction,
               const std::string &message, int subDone, int subTotal) override
   {
-    std::cout << "load-world: " << phaseId << " " << fraction << " "
-              << message;
+    std::cout << "load-world: " << phaseId << " " << fraction << " " << message;
     if (subTotal > 0)
     {
       std::cout << " [" << subDone << "/" << subTotal << "]";
@@ -403,13 +402,14 @@ int RunLoadWorld(int argc, char **argv, int load_world_index)
 
   UWorld &world = *headless.World;
   world.BeginCooperativeLoad(folder);
-  ConsoleLoadProgressSink sink;
+  UConsoleLoadProgressSink sink;
   const auto started = std::chrono::steady_clock::now();
   while (!world.TickCooperativeLoad(sink, 64))
   {
-    const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                std::chrono::steady_clock::now() - started)
-                                .count();
+    const auto elapsed_ms =
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - started)
+            .count();
     if (elapsed_ms > timeout_ms)
     {
       std::cerr << "load-world: timeout after " << elapsed_ms << "ms"

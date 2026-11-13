@@ -21,10 +21,10 @@ struct WorldItem
   float age{0.f}, heldTime{0.f}, charge{0.f}, damage{0.f};
   bool flying{false}, arrow{false}, creativeCopy{false};
 };
-class WorldItemSystem
+class UWorldItemSystem
 {
 public:
-  static WorldItemSystem &Instance();
+  static UWorldItemSystem &Instance();
   int Spawn(const glm::vec3 &position, const std::string &itemId, int count,
             bool isBlock);
   int SpawnStack(glm::vec3 position, InventoryEntryRef stack,

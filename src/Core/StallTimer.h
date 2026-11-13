@@ -30,17 +30,17 @@ inline bool StallTraceAll()
 /// Scoped main-thread stall probe: reports when the scope took longer than
 /// `threshold_ms` (always with CUBA_STALL_TRACE=1). Cheap enough to leave in
 /// startup / world-operation paths as a regression guard.
-class ScopedStallTimer
+class UScopedStallTimer
 {
 public:
-  explicit ScopedStallTimer(const char *label, double threshold_ms = 50.0)
+  explicit UScopedStallTimer(const char *label, double threshold_ms = 50.0)
       : Label(label), ThresholdMs(threshold_ms),
         Begin(std::chrono::steady_clock::now())
   {
   }
-  ScopedStallTimer(const ScopedStallTimer &) = delete;
-  ScopedStallTimer &operator=(const ScopedStallTimer &) = delete;
-  ~ScopedStallTimer()
+  UScopedStallTimer(const UScopedStallTimer &) = delete;
+  UScopedStallTimer &operator=(const UScopedStallTimer &) = delete;
+  ~UScopedStallTimer()
   {
     const double ms = std::chrono::duration<double, std::milli>(
                           std::chrono::steady_clock::now() - Begin)

@@ -3,6 +3,8 @@
 #include "Creatures/Environment/CreatureEnvironment.h"
 #include "Creatures/Influence/InfluenceApplier.h"
 #include "Creatures/Influence/InfluenceResolver.h"
+#include "Creatures/Influence/StatusEffectCatalog.h"
+#include "Creatures/Influence/StatusEffectSystem.h"
 #include "Test/Native/SurvivalLoopQa.h"
 #include "World/Physics/WorldChunkDirtyService.h"
 #pragma once
@@ -27,7 +29,7 @@ inline void RunItemsInventoryQa(UWorld &world, const std::string &path)
   auto camera = world.GetCurrentUserCamera();
   if (!actor || !camera)
     return;
-  auto &physics = WorldItemSystem::Instance();
+  auto &physics = UWorldItemSystem::Instance();
   auto &survival = USurvivalSystems::Instance();
   nlohmann::json report;
   report["checks"] = nlohmann::json::array();
@@ -457,6 +459,51 @@ inline void RunItemsInventoryQa(UWorld &world, const std::string &path)
   }
   else
     check("shield fixture spawned", false);
+  float frontalImpactDamage = 0, rearImpactDamage = 0;
+  bool shieldFlights = true;
+  for (bool frontal : {true, false})
+  {
+    physics.Clear();
+    actor->CarryHandCount = 0;
+    inv = UCreatureInventory{};
+    inv.SetItemDefinitions(world.GetItemDefinitionStorage());
+    inv.Insert(entry("iron_pickaxe"));
+    inv.SetActiveSlot(0, 0);
+    auto shieldTarget = spawn("sheep", feet + forward * 3.f);
+    if (auto *target = world.GetCreature(shieldTarget))
+    {
+      auto &owned = target->GetInventory();
+      owned.Insert(entry("iron_shield"));
+      owned.EquipOffhand(owned.GetSlot(0), *world.GetItemDefinitionStorage());
+      target->SetBlocking(true);
+      target->SetOrientation(frontal ? 180.f : 0.f, 0.f);
+      float health = target->GetVitals().health;
+      bool armed = physics.BeginThrow(world, *actor, reason);
+      tick(1);
+      auto cargo = physics.GetItems().empty()
+                       ? eye
+                       : physics.GetItems().front().position;
+      actor->ThrowCharge = 1;
+      bool released = physics.Release(
+          world, *actor,
+          glm::normalize(target->GetCollisionVolume().center - cargo));
+      tick(40);
+      target = world.GetCreature(shieldTarget);
+      float dealt = target ? health - target->GetVitals().health : health;
+      if (frontal)
+        frontalImpactDamage = dealt;
+      else
+        rearImpactDamage = dealt;
+      shieldFlights = shieldFlights && armed && released && dealt > 0;
+      world.RemoveCreature(shieldTarget);
+    }
+    else
+      shieldFlights = false;
+  }
+  check("physical impacts respect the target's frontal shield arc",
+        shieldFlights && frontalImpactDamage < rearImpactDamage);
+  physics.Clear();
+  actor->CarryHandCount = 0;
   // A moving creature crosses the arrow path; contact must use relative motion.
   auto moving = spawn("sheep", feet + glm::vec3(-1, 0, 4));
   inv = UCreatureInventory{};
@@ -504,6 +551,16 @@ inline void RunItemsInventoryQa(UWorld &world, const std::string &path)
             inv.GetSlot(0).contentsUnits == 1 &&
             physics.Profile(world, inv.GetSlot(0)).mass > emptyMass &&
             world.GetBlockWorld().GetBlock(water) == BLOCK_AIR);
+  const auto secondWater = water + glm::ivec3(1, 0, 0);
+  world.ReplaceBlockAt(secondWater, "water");
+  survival.Use(world, *actor, glm::vec3(secondWater) + glm::vec3(0, 2, 0),
+               {0, -1, 0}, reason);
+  check("full bucket refuses another source atomically",
+        inv.GetSlot(0).instanceId == bucketId &&
+            inv.GetSlot(0).contentsUnits == 1 &&
+            world.GetBlockRegistry().IsLiquid(
+                world.GetBlockWorld().GetBlock(secondWater)));
+  world.ReplaceBlockAt(secondWater, "air");
   survival.Use(world, *actor, waterEye, {0, -1, 0}, reason);
   check("bucket pours without losing its instance",
         inv.GetSlot(0).instanceId == bucketId &&
@@ -674,6 +731,30 @@ inline void RunItemsInventoryQa(UWorld &world, const std::string &path)
     check("empty-inventory survival integration",
           report["survival_loop"]["passed"].get<bool>());
   }
+  const auto savedEffects = actor->GetStatusEffects();
+  inv = UCreatureInventory{};
+  inv.SetItemDefinitions(world.GetItemDefinitionStorage());
+  inv.Insert(entry("iron_pickaxe"));
+  inv.SetActiveSlot(0, 0);
+  const auto strengthBefore = actor->GetAttributes().strength;
+  PlayerInteractionRouter::BeginDigIntent(*actor, floor + glm::ivec3(0, 2, 10));
+  const auto normalDig =
+      InfluenceResolver::Resolve(world, *actor, world.GetGameMode(), nullptr);
+  StatusEffectDef strengthEffect;
+  strengthEffect.Id = "qa_strength";
+  strengthEffect.DurationSec = 10;
+  strengthEffect.StrengthDelta = 10;
+  UStatusEffectCatalog::Get().Register(strengthEffect);
+  StatusEffectSystem::ApplyStatus(*actor, "qa_strength");
+  const auto empoweredDig =
+      InfluenceResolver::Resolve(world, *actor, world.GetGameMode(), nullptr);
+  check("effective status attributes change real dig capability without "
+        "mutating base stats",
+        normalDig.Valid && empoweredDig.Valid &&
+            empoweredDig.DigDurationSec < normalDig.DigDurationSec &&
+            actor->GetAttributes().strength == strengthBefore);
+  actor->GetStatusEffects() = savedEffects;
+  actor->ClearIntent();
   // Leave a meaningful UI fixture on this QA world for native captures.
   inv = UCreatureInventory{};
   inv.SetItemDefinitions(world.GetItemDefinitionStorage());
@@ -702,7 +783,7 @@ inline void TickItemsCarryVisualQa(UWorld &world, float elapsed)
   auto camera = world.GetCurrentUserCamera();
   if (!actor || !camera)
     return;
-  auto &physics = WorldItemSystem::Instance();
+  auto &physics = UWorldItemSystem::Instance();
   int phase = std::min(5, int(elapsed / 6.f));
   float time = elapsed - phase * 6.f;
   if (last != phase)

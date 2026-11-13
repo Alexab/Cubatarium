@@ -1,7 +1,7 @@
 #pragma once
 
-#include "WorldGen/Features/ObjectFeatureConfig.h"
 #include "WorldGen/Core/WorldGenStageId.h"
+#include "WorldGen/Features/ObjectFeatureConfig.h"
 #include "WorldGen/Sampling/AquiferSampler.h"
 #include "WorldGen/Sampling/BiomeDefinitionRegistry.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
@@ -262,7 +262,7 @@ struct WorldGenPack
   PackValleysConfig Valleys;
   PackLakesConfig Lakes;
   std::unordered_map<std::string, BiomePackDefinition> Biomes;
-  std::shared_ptr<const BiomeDefinitionRegistry> BiomeRegistry;
+  std::shared_ptr<const UBiomeDefinitionRegistry> BiomeRegistry;
   std::vector<BiomeHandle> SurfaceClimateBiomes;
   std::vector<BiomeHandle> CaveClimateBiomes;
 };
@@ -295,7 +295,8 @@ public:
   static void ApplyPackRavineDefaults(ProceduralSettings &settings,
                                       bool preserveUserFields = false);
   static const BiomeHeightProfile *HeightProfileFor(const std::string &biomeId);
-  static const BiomePackDefinition *BiomeDefinitionFor(const std::string &biomeId);
+  static const BiomePackDefinition *
+  BiomeDefinitionFor(const std::string &biomeId);
   static float FeatureWeightMultiplier(const std::string &biomeId,
                                        const std::string &prefabName);
   static float SubBiomePoolWeightMultiplier(const std::string &biomeId,

@@ -80,9 +80,10 @@ inline bool EnterVisualVoidEdgeAcceptsSoftDefer(bool lit_ready, bool pending,
 }
 
 /// Classify per-column pipeline stage from live evidence (capture / refresh).
-inline EnterVisualItemState ClassifyEnterVisualItemState(
-    bool pending_or_unlit, bool fully_dark_stale_needs_remesh,
-    bool gpu_pending_or_inflight, bool terminal_ready)
+inline EnterVisualItemState
+ClassifyEnterVisualItemState(bool pending_or_unlit,
+                             bool fully_dark_stale_needs_remesh,
+                             bool gpu_pending_or_inflight, bool terminal_ready)
 {
   if (terminal_ready)
   {
@@ -105,8 +106,9 @@ inline EnterVisualItemState ClassifyEnterVisualItemState(
 }
 
 /// Monotonic: once Done, stay Done for debt (no live recount growth).
-inline EnterVisualItemState AdvanceEnterVisualItemStateMonotonic(
-    EnterVisualItemState prev, EnterVisualItemState observed)
+inline EnterVisualItemState
+AdvanceEnterVisualItemStateMonotonic(EnterVisualItemState prev,
+                                     EnterVisualItemState observed)
 {
   if (prev == EnterVisualItemState::Done)
   {
@@ -140,9 +142,10 @@ enum class EnterVoidEdgeAction : uint8_t
   RelightOnce = 3,
 };
 
-inline EnterVoidEdgeAction ClassifyEnterVoidEdgeAction(
-    bool fully_dark, bool stale_lit_field, bool /*soft_defer_with_ticket*/,
-    bool relight_already_owned, bool open_sky_done)
+inline EnterVoidEdgeAction
+ClassifyEnterVoidEdgeAction(bool fully_dark, bool stale_lit_field,
+                            bool /*soft_defer_with_ticket*/,
+                            bool relight_already_owned, bool open_sky_done)
 {
   if (!fully_dark)
   {
@@ -171,7 +174,7 @@ inline bool ShouldTreatMissingNeighborAsOpenSky(bool neighbor_loaded,
   return enter_gate_active && include_skylight && !neighbor_loaded;
 }
 
-class EnterVisualGate
+class UEnterVisualGate
 {
 public:
   void Reset();
@@ -179,11 +182,11 @@ public:
   void AddCapturedColumn(glm::ivec2 col, EnterVisualItemState initial);
   void EndCapture();
 
-  bool IsCaptured() const { return captured_; }
-  int Peak() const { return peak_; }
+  bool IsCaptured() const { return Captured; }
+  int Peak() const { return PeakDebt; }
   int Remaining() const;
-  EnterVisualGatePhase Phase() const { return phase_; }
-  void SetPhase(EnterVisualGatePhase phase) { phase_ = phase; }
+  EnterVisualGatePhase Phase() const { return GatePhase; }
+  void SetPhase(EnterVisualGatePhase phase) { GatePhase = phase; }
 
   EnterVisualItemState GetState(glm::ivec2 col) const;
   bool Contains(glm::ivec2 col) const;
@@ -194,7 +197,7 @@ public:
                            EnterVisualGroundHash> &
   Items() const
   {
-    return items_;
+    return ItemsByColumn;
   }
 
   int FramesWithoutGpuFinish() const { return frames_without_gpu_finish_; }
@@ -207,14 +210,15 @@ public:
 
 private:
   std::unordered_map<glm::ivec2, EnterVisualItemState, EnterVisualGroundHash>
-      items_;
+      ItemsByColumn;
   std::unordered_map<glm::ivec2, uint8_t, EnterVisualGroundHash>
       void_relight_probed_;
-  std::unordered_map<glm::ivec2, uint64_t, EnterVisualGroundHash> open_sky_applied_;
+  std::unordered_map<glm::ivec2, uint64_t, EnterVisualGroundHash>
+      open_sky_applied_;
   uint64_t open_sky_capture_id_{0};
-  bool captured_{false};
-  int peak_{0};
-  EnterVisualGatePhase phase_{EnterVisualGatePhase::Idle};
+  bool Captured{false};
+  int PeakDebt{0};
+  EnterVisualGatePhase GatePhase{EnterVisualGatePhase::Idle};
   int frames_without_gpu_finish_{0};
 };
 

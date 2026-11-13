@@ -360,7 +360,7 @@ set(SOURCES
     src/World/Streaming/ChunkRenderDemand.cpp
     src/World/Diagnostics/EnterLitDiagnostics.cpp
     src/World/Diagnostics/BlockInspectDiagnostics.cpp
-    src/World/Diagnostics/MeshAuditDiagnostics.cpp
+    src/World/Mesh/Diagnostics/MeshAuditDiagnostics.cpp
     src/World/Diagnostics/CreatureMovementDiagnostics.cpp
     src/World/Mesh/WorldMeshService.cpp
     src/World/Mesh/WorldMeshDirtyPolicy.cpp
@@ -662,7 +662,7 @@ set(HEADERS
     src/Render/Engine/UnderwaterFogPass.h
     src/Render/Engine/GreedyGpuBackend.h
     src/Render/Engine/CrossGpuBackend.h
-    src/Render/Engine/DistanceFog.h
+    src/World/View/DistanceFog.h
     src/World/Math/BlockTypes.h
     src/World/Math/GridMath.h
     src/Blocks/BlockRegistry.h

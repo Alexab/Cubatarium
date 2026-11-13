@@ -24,20 +24,21 @@ glm::vec3 Point(const BoneSkeletonHierarchy &rig,
 int main(int argc, char **argv)
 {
   Require(argc == 2, "geometry path required");
-  Require(std::abs(HumanMotionController::MeasureVelocity({.05f, 0, 0},
-                                                          1.f / 60.f, {0, 0, 0})
+  Require(std::abs(UHumanMotionController::MeasureVelocity(
+                       {.05f, 0, 0}, 1.f / 60.f, {0, 0, 0})
                        .x -
                    3.f) < .0001f,
           "actual speed uses simulated time");
-  Require(HumanMotionController::MeasureVelocity({0, 0, 0}, 0.f, {3, 0, 0}).x ==
-              3.f,
-          "no-step render frame preserves measured speed");
   Require(
-      HumanMotionController::MeasureVelocity({0, 0, 0}, 1.f / 60.f, {3, 0, 0})
+      UHumanMotionController::MeasureVelocity({0, 0, 0}, 0.f, {3, 0, 0}).x ==
+          3.f,
+      "no-step render frame preserves measured speed");
+  Require(
+      UHumanMotionController::MeasureVelocity({0, 0, 0}, 1.f / 60.f, {3, 0, 0})
               .x == 0.f,
       "blocked physical step stops progress");
   Require(
-      HumanMotionController::MeasureVelocity({0, 10, 0}, 1.f / 60.f, {0, 0, 0})
+      UHumanMotionController::MeasureVelocity({0, 10, 0}, 1.f / 60.f, {0, 0, 0})
               .y == 0.f,
       "teleport is not a vertical movement impulse");
   auto loaded = CreatureBoneSkeletonLoader::LoadFromFile(argv[1], "");
@@ -55,7 +56,7 @@ int main(int argc, char **argv)
     walk.facts.horizontalSpeed = 3.f;
     walk.facts.actualVelocity = {0, 0, direction * 3.f};
     walk.facts.supportValid[0] = walk.facts.supportValid[1] = true;
-    const auto pose = HumanMotionController::Compute(walk, counter, 0.f);
+    const auto pose = UHumanMotionController::Compute(walk, counter, 0.f);
     Require(pose.bones.at("rightArm").rotation.x *
                     pose.bones.at("rightLeg").rotation.x <
                 0.f,
@@ -68,7 +69,7 @@ int main(int argc, char **argv)
     input.facts.onGround = true;
     input.facts.supportValid[0] = input.facts.supportValid[1] = true;
     input.facts.stanceBlend = 1.f;
-    auto crouch = HumanMotionController::Compute(input, state, 1.f / fps);
+    auto crouch = UHumanMotionController::Compute(input, state, 1.f / fps);
     auto sole = Point(rig, g, crouch, "rightFoot", {0, -.125f, 0});
     Require(std::abs(sole.y * .9f) < .01f, "crouch sole remains on ground");
     Require(crouch.bones.at("rightShin").rotation.w < .99f,
@@ -86,7 +87,7 @@ int main(int argc, char **argv)
     for (int frame = 0; frame < fps * 2; ++frame)
     {
       input.feet.z += 3.f / fps;
-      auto pose = HumanMotionController::Compute(input, state, 1.f / fps);
+      auto pose = UHumanMotionController::Compute(input, state, 1.f / fps);
       auto foot = Point(rig, g, pose, "rightFoot", {0, -.125f, 0}) * .9f;
       foot.z = -foot.z;
       foot += input.feet;
@@ -121,7 +122,7 @@ int main(int argc, char **argv)
         {
           moving.feet += moving.facts.actualVelocity / static_cast<float>(fps);
           const auto pose =
-              HumanMotionController::Compute(moving, motion, 1.f / fps);
+              UHumanMotionController::Compute(moving, motion, 1.f / fps);
           for (int side = 0; side < 2; ++side)
           {
             auto sole = Point(rig, g, pose, side ? "leftFoot" : "rightFoot",
@@ -148,17 +149,17 @@ int main(int argc, char **argv)
     input.facts.onGround = false;
     input.facts.mode = CreatureMovementMode::Flying;
     input.facts.horizontalSpeed = 0;
-    auto fly1 = HumanMotionController::Compute(input, state, 1.f / fps);
+    auto fly1 = UHumanMotionController::Compute(input, state, 1.f / fps);
     for (int i = 0; i < fps; ++i)
-      HumanMotionController::Compute(input, state, 1.f / fps);
-    auto fly2 = HumanMotionController::Compute(input, state, 1.f / fps);
+      UHumanMotionController::Compute(input, state, 1.f / fps);
+    auto fly2 = UHumanMotionController::Compute(input, state, 1.f / fps);
     Require(glm::length(fly1.bones.at("rightArm").rotation -
                         fly2.bones.at("rightArm").rotation) > .001f,
             "hover keeps moving");
     input.facts.mode = CreatureMovementMode::Walking;
     input.facts.swimming = true;
     input.facts.headSubmerged = true;
-    auto swim = HumanMotionController::Compute(input, state, 1.f / fps);
+    auto swim = UHumanMotionController::Compute(input, state, 1.f / fps);
     Require(state.mode == HumanMotionMode::Submerged,
             "submerged classification");
     auto eyes = Point(rig, g, swim, "head", {0, 4.5f / 16.f, -.25f});
@@ -166,25 +167,25 @@ int main(int argc, char **argv)
             "animated eyes match physical breathing height");
     input.facts.swimming = false;
     input.facts.verticalSpeed = -8;
-    HumanMotionController::Compute(input, state, 1.f / fps);
+    UHumanMotionController::Compute(input, state, 1.f / fps);
     Require(state.mode == HumanMotionMode::Fall, "fall classification");
     input.facts.onGround = true;
     input.facts.verticalSpeed = 0;
-    HumanMotionController::Compute(input, state, 1.f / fps);
-    HumanMotionController::Compute(input, state, 1.f / fps);
+    UHumanMotionController::Compute(input, state, 1.f / fps);
+    UHumanMotionController::Compute(input, state, 1.f / fps);
     Require(state.landingEvents == 1, "single landing event");
     HumanMotionState shore;
     HumanMotionInput shoreInput;
     shoreInput.facts.onGround = false;
     shoreInput.facts.swimming = true;
     shoreInput.facts.horizontalSpeed = 3.f;
-    HumanMotionController::Compute(shoreInput, shore, 1.f / fps);
+    UHumanMotionController::Compute(shoreInput, shore, 1.f / fps);
     shoreInput.facts.onGround = true;
     shoreInput.facts.swimming = false;
     shoreInput.facts.horizontalSpeed = 0.f;
     shoreInput.facts.supportValid[0] = shoreInput.facts.supportValid[1] = true;
     const auto shorePose =
-        HumanMotionController::Compute(shoreInput, shore, 1.f / fps);
+        UHumanMotionController::Compute(shoreInput, shore, 1.f / fps);
     Require(std::abs(Point(rig, g, shorePose, "rightFoot", {0, -.125f, 0}).y *
                      .9f) < .01f,
             "post-blend shore landing keeps sole grounded");
@@ -192,7 +193,7 @@ int main(int argc, char **argv)
     HumanMotionInput ledge;
     ledge.facts.supportValid[0] = ledge.facts.supportValid[1] = true;
     ledge.facts.supportY[0] = -5.f;
-    HumanMotionController::Compute(ledge, unreachable, 1.f / fps);
+    UHumanMotionController::Compute(ledge, unreachable, 1.f / fps);
     Require(!unreachable.planted[0] && unreachable.ikWeights[0] > 0.f &&
                 unreachable.ikWeights[0] < 1.f,
             "unreachable IK fades instead of stretching");
@@ -201,9 +202,9 @@ int main(int argc, char **argv)
     water.facts.swimming = true;
     water.facts.horizontalSpeed = 3.f;
     HumanMotionState openWater, tightWater;
-    auto openPose = HumanMotionController::Compute(water, openWater, 0.f);
+    auto openPose = UHumanMotionController::Compute(water, openWater, 0.f);
     water.facts.swimClearance = .15f;
-    auto tightPose = HumanMotionController::Compute(water, tightWater, 0.f);
+    auto tightPose = UHumanMotionController::Compute(water, tightWater, 0.f);
     Require(std::abs(glm::angle(tightPose.bones.at("rightArm").rotation)) <
                 std::abs(glm::angle(openPose.bones.at("rightArm").rotation)),
             "tight water groups arms without changing collider");
@@ -213,13 +214,13 @@ int main(int argc, char **argv)
     close.facts.supportValid[0] = close.facts.supportValid[1] = true;
     close.facts.supportY[0] = .3375f;
     const auto foldedPose =
-        HumanMotionController::Compute(close, folded, 1.f / fps);
+        UHumanMotionController::Compute(close, folded, 1.f / fps);
     Require(!folded.planted[0], "too-close support disables IK");
     for (const char *bone : {"rightLeg", "rightShin", "rightFoot"})
       Require(std::isfinite(foldedPose.bones.at(bone).rotation.w),
               "folded IK stays finite");
     for (int frame = 0; frame < fps / 2; ++frame)
-      HumanMotionController::Compute(close, folded, 1.f / fps);
+      UHumanMotionController::Compute(close, folded, 1.f / fps);
     Require(folded.ikWeights[0] < .001f,
             "unreachable idle contact completes its fade");
     HumanMotionState aligned;
@@ -227,7 +228,7 @@ int main(int argc, char **argv)
     close.facts.horizontalSpeed = .9f;
     close.facts.actualVelocity = {0, 0, .9f};
     const auto alignedPose =
-        HumanMotionController::Compute(close, aligned, 0.f);
+        UHumanMotionController::Compute(close, aligned, 0.f);
     Require(std::isfinite(alignedPose.bones.at("rightLeg").rotation.w),
             "aligned bend pole uses stable fallback");
   }
@@ -235,15 +236,15 @@ int main(int argc, char **argv)
   oneHand.facts.onGround = true;
   oneHand.carryHands = 1;
   HumanMotionState oneState, twoState, chargedState;
-  const auto onePose = HumanMotionController::Compute(oneHand, oneState, 0.f);
+  const auto onePose = UHumanMotionController::Compute(oneHand, oneState, 0.f);
   auto both = oneHand;
   both.carryHands = 2;
-  const auto twoPose = HumanMotionController::Compute(both, twoState, 0.f);
+  const auto twoPose = UHumanMotionController::Compute(both, twoState, 0.f);
   Require(std::abs(glm::dot(onePose.bones.at("leftArm").rotation,
                             twoPose.bones.at("leftArm").rotation)) < .98f,
           "second hand joins a bulky hold");
   both.throwCharge = 1.f;
-  const auto charged = HumanMotionController::Compute(both, chargedState, 0.f);
+  const auto charged = UHumanMotionController::Compute(both, chargedState, 0.f);
   Require(std::abs(glm::dot(twoPose.bones.at("rightArm").rotation,
                             charged.bones.at("rightArm").rotation)) < .99f,
           "windup changes hold pose");

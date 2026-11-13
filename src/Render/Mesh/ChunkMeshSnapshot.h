@@ -1,12 +1,12 @@
 #pragma once
 
+#include "Render/Mesh/BoundaryOverlay.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkInputStamp.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Math/FluidCellState.h"
-#include "Render/Mesh/MeshNeighborPolicy.h"
-#include "Render/Mesh/BoundaryOverlay.h"
+#include "World/Mesh/Contracts/MeshNeighborPolicy.h"
 #include <array>
 #include <cstdint>
 #include <glm/glm.hpp>
@@ -68,7 +68,8 @@ struct ChunkMeshSnapshot
   /// Optional: when false for a neighbor chunk coord, shell treats that
   /// neighbor as Air (Era39 SoftDefer-hidden seam). Nullptr ⇒ all drawable.
   /// Affects Capture shell only — never InputsStillValid / stamp equality.
-  using NeighborVisualDrawableFn = bool (*)(void *ctx, glm::ivec3 neighbor_chunk);
+  using NeighborVisualDrawableFn = bool (*)(void *ctx,
+                                            glm::ivec3 neighbor_chunk);
 
   /// True when an ABSENT face neighbor chunk is known open air, so its shared
   /// boundary faces must be emitted instead of being hidden as Unknown:
@@ -85,15 +86,14 @@ struct ChunkMeshSnapshot
   static bool IsAbsentOpenSkyChunk(const UBlockWorld &world,
                                    glm::ivec3 chunk_coord);
   static bool IsKnownAirAbsentFaceNeighbor(const UBlockWorld &world,
-                                           glm::ivec3 neighbor_coord,
-                                           int axis, int sign);
+                                           glm::ivec3 neighbor_coord, int axis,
+                                           int sign);
 
   /// Geom/light stamp check. Optional drawable args are ignored (API symmetry
   /// with Capture call sites); SoftDefer visual flips do not invalidate.
-  bool InputsStillValid(
-      const UBlockWorld &world,
-      NeighborVisualDrawableFn neighbor_drawable = nullptr,
-      void *neighbor_drawable_ctx = nullptr) const;
+  bool InputsStillValid(const UBlockWorld &world,
+                        NeighborVisualDrawableFn neighbor_drawable = nullptr,
+                        void *neighbor_drawable_ctx = nullptr) const;
 
   /// Post-N01 thrash autopsy: why InputsStillValid/catalog failed.
   /// Geom wins over Light if both halo stamps mismatch.
@@ -101,14 +101,14 @@ struct ChunkMeshSnapshot
       bool input_stamps_valid, bool catalog_match,
       const std::array<ChunkInputStamp, kChunkMeshInputStampCount> &stamps,
       const UBlockWorld &world,
-      const std::array<uint64_t, kChunkMeshNeighborStampCount> &light_signatures);
+      const std::array<uint64_t, kChunkMeshNeighborStampCount>
+          &light_signatures);
 
-  static ChunkMeshSnapshot Capture(const UBlockWorld &world,
-                                   glm::ivec3 chunkCoord,
-                                   uint64_t sourceRevision,
-                                   NeighborVisualDrawableFn neighbor_drawable =
-                                       nullptr,
-                                   void *neighbor_drawable_ctx = nullptr);
+  static ChunkMeshSnapshot
+  Capture(const UBlockWorld &world, glm::ivec3 chunkCoord,
+          uint64_t sourceRevision,
+          NeighborVisualDrawableFn neighbor_drawable = nullptr,
+          void *neighbor_drawable_ctx = nullptr);
 
   BlockId GetBlock(glm::ivec3 worldPos) const;
   /// Same as GetBlock but never forces AIR under boundary overlay (R06).

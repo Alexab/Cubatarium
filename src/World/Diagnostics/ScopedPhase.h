@@ -8,10 +8,10 @@ namespace cutum
 /// RAII chrono bracket that writes elapsed ms into *OutMs on destruction.
 /// Use instead of manual lap_ms(t0) so parent self-time is explicit
 /// (parent_total - sum(children)), not a subtracted "gap" leftover.
-class ScopedPhase
+class UScopedPhase
 {
 public:
-  explicit ScopedPhase(double *out_ms)
+  explicit UScopedPhase(double *out_ms)
       : OutMs(out_ms), T0(std::chrono::high_resolution_clock::now())
   {
     if (OutMs)
@@ -20,10 +20,10 @@ public:
     }
   }
 
-  ScopedPhase(const ScopedPhase &) = delete;
-  ScopedPhase &operator=(const ScopedPhase &) = delete;
+  UScopedPhase(const UScopedPhase &) = delete;
+  UScopedPhase &operator=(const UScopedPhase &) = delete;
 
-  ~ScopedPhase()
+  ~UScopedPhase()
   {
     if (!OutMs)
     {
@@ -40,10 +40,10 @@ private:
 };
 
 /// Parent phase: latches total on destroy, computes SelfMs = Total - ChildSum.
-class ScopedParentPhase
+class UScopedParentPhase
 {
 public:
-  ScopedParentPhase(double *total_ms, double *self_ms)
+  UScopedParentPhase(double *total_ms, double *self_ms)
       : TotalMs(total_ms), SelfMs(self_ms),
         T0(std::chrono::high_resolution_clock::now())
   {
@@ -57,8 +57,8 @@ public:
     }
   }
 
-  ScopedParentPhase(const ScopedParentPhase &) = delete;
-  ScopedParentPhase &operator=(const ScopedParentPhase &) = delete;
+  UScopedParentPhase(const UScopedParentPhase &) = delete;
+  UScopedParentPhase &operator=(const UScopedParentPhase &) = delete;
 
   void AddChild(double child_ms) { ChildSum += child_ms; }
 
@@ -81,7 +81,7 @@ public:
     Finalized = true;
   }
 
-  ~ScopedParentPhase()
+  ~UScopedParentPhase()
   {
     if (!Finalized)
     {

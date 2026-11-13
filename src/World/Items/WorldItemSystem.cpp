@@ -17,12 +17,12 @@
 #include <unordered_set>
 namespace cutum
 {
-WorldItemSystem &WorldItemSystem::Instance()
+UWorldItemSystem &UWorldItemSystem::Instance()
 {
-  static WorldItemSystem s;
+  static UWorldItemSystem s;
   return s;
 }
-int WorldItemSystem::Add(WorldItem item)
+int UWorldItemSystem::Add(WorldItem item)
 {
   item.id = NextId++;
   int id = item.id;
@@ -32,8 +32,8 @@ int WorldItemSystem::Add(WorldItem item)
     Items.push_back(std::move(item));
   return id;
 }
-int WorldItemSystem::Spawn(glm::vec3 const &position, const std::string &id,
-                           int count, bool block)
+int UWorldItemSystem::Spawn(glm::vec3 const &position, const std::string &id,
+                            int count, bool block)
 {
   InventoryEntryRef e;
   e.empty = false;
@@ -42,8 +42,8 @@ int WorldItemSystem::Spawn(glm::vec3 const &position, const std::string &id,
   e.count = count;
   return SpawnStack(position, e);
 }
-int WorldItemSystem::SpawnStack(glm::vec3 position, InventoryEntryRef e,
-                                bool copy)
+int UWorldItemSystem::SpawnStack(glm::vec3 position, InventoryEntryRef e,
+                                 bool copy)
 {
   if (e.empty || e.Id.empty() || e.count <= 0)
     return 0;
@@ -53,8 +53,8 @@ int WorldItemSystem::SpawnStack(glm::vec3 position, InventoryEntryRef e,
   i.creativeCopy = copy;
   return Add(i);
 }
-PhysicalProfile WorldItemSystem::Profile(UWorld &world,
-                                         const InventoryEntryRef &e) const
+PhysicalProfile UWorldItemSystem::Profile(UWorld &world,
+                                          const InventoryEntryRef &e) const
 {
   if (e.kind == InventoryEntryKind::Item)
   {
@@ -77,8 +77,8 @@ PhysicalProfile WorldItemSystem::Profile(UWorld &world,
     p.mass = 40.f;
   return p;
 }
-PhysicalProfile WorldItemSystem::Profile(UWorld &world,
-                                         const UCreature &creature) const
+PhysicalProfile UWorldItemSystem::Profile(UWorld &world,
+                                          const UCreature &creature) const
 {
   PhysicalProfile p;
   p.size = creature.GetCollisionSize();
@@ -101,17 +101,17 @@ PhysicalProfile WorldItemSystem::Profile(UWorld &world,
     p.mass += Profile(world, off).mass;
   return p;
 }
-bool WorldItemSystem::HasCargo(uint64_t id) const
+bool UWorldItemSystem::HasCargo(uint64_t id) const
 {
   for (const auto &i : Items)
     if (i.carrierId == id)
       return true;
   return false;
 }
-WorldItemSystem::Hit WorldItemSystem::Sweep(UWorld &world, glm::vec3 p,
-                                            glm::vec3 delta, glm::vec3 half,
-                                            uint64_t skip, uint64_t exclude,
-                                            float dt) const
+UWorldItemSystem::Hit UWorldItemSystem::Sweep(UWorld &world, glm::vec3 p,
+                                              glm::vec3 delta, glm::vec3 half,
+                                              uint64_t skip, uint64_t exclude,
+                                              float dt) const
 {
   Hit result;
   const auto low = glm::min(p, p + delta) - half,
@@ -167,8 +167,8 @@ WorldItemSystem::Hit WorldItemSystem::Sweep(UWorld &world, glm::vec3 p,
   }
   return result;
 }
-bool WorldItemSystem::Grab(UWorld &world, UCreature &actor, glm::vec3 eye,
-                           glm::vec3 direction, std::string &reason)
+bool UWorldItemSystem::Grab(UWorld &world, UCreature &actor, glm::vec3 eye,
+                            glm::vec3 direction, std::string &reason)
 {
   if (HasCargo(actor.GetId()))
     return Release(world, actor, direction, true);
@@ -278,8 +278,8 @@ bool WorldItemSystem::Grab(UWorld &world, UCreature &actor, glm::vec3 eye,
   actor.SetBlocking(false);
   return true;
 }
-bool WorldItemSystem::BeginThrow(UWorld &world, UCreature &actor,
-                                 std::string &reason)
+bool UWorldItemSystem::BeginThrow(UWorld &world, UCreature &actor,
+                                  std::string &reason)
 {
   if (actor.ExternalMotion || actor.BowCharge > 0)
   {
@@ -329,9 +329,9 @@ bool WorldItemSystem::BeginThrow(UWorld &world, UCreature &actor,
   actor.ThrowCharge = .001f;
   return true;
 }
-void WorldItemSystem::CancelCharge(UCreature &actor) { actor.ThrowCharge = 0; }
-bool WorldItemSystem::Release(UWorld &world, UCreature &actor,
-                              glm::vec3 direction, bool gentle)
+void UWorldItemSystem::CancelCharge(UCreature &actor) { actor.ThrowCharge = 0; }
+bool UWorldItemSystem::Release(UWorld &world, UCreature &actor,
+                               glm::vec3 direction, bool gentle)
 {
   const float magnitude = glm::length(direction);
   if (!std::isfinite(magnitude) || magnitude < 1e-5f)
@@ -386,8 +386,8 @@ bool WorldItemSystem::Release(UWorld &world, UCreature &actor,
     }
   return false;
 }
-bool WorldItemSystem::FireArrow(UWorld &world, UCreature &actor, glm::vec3 eye,
-                                glm::vec3 direction, float charge)
+bool UWorldItemSystem::FireArrow(UWorld &world, UCreature &actor, glm::vec3 eye,
+                                 glm::vec3 direction, float charge)
 {
   if (actor.CarryHandCount > 0 || actor.ExternalMotion)
     return false;
@@ -440,7 +440,7 @@ bool WorldItemSystem::FireArrow(UWorld &world, UCreature &actor, glm::vec3 eye,
   UAudioApi::Post(shot);
   return true;
 }
-void WorldItemSystem::Settle(UWorld &world, WorldItem &i)
+void UWorldItemSystem::Settle(UWorld &world, WorldItem &i)
 {
   i.velocity = {};
   i.flying = false;
@@ -452,7 +452,7 @@ void WorldItemSystem::Settle(UWorld &world, WorldItem &i)
       c->GetLocomotion().BreakGroundSupport();
     }
 }
-void WorldItemSystem::Step(UWorld &world, float dt)
+void UWorldItemSystem::Step(UWorld &world, float dt)
 {
   auto *actor = world.GetControlledCreature();
   for (auto &i : Items)
@@ -590,14 +590,14 @@ void WorldItemSystem::Step(UWorld &world, float dt)
         float damage =
             i.arrow ? i.damage
                     : ImpactDamage(mass, normalSpeed, i.physical.hardness);
-        auto sourcePos = i.position - hit.normal;
+        auto sourcePos = i.position + hit.normal * .01f;
         if (hit.creature)
           InfluenceApplier::ApplyImpact(world, hit.creature, i.throwerId,
                                         damage, sourcePos);
         if (i.creatureId)
           InfluenceApplier::ApplyImpact(world, i.creatureId, i.throwerId,
                                         ImpactDamage(mass, normalSpeed),
-                                        i.position + hit.normal);
+                                        i.position - hit.normal);
         Settle(world, i);
         if (i.arrow)
         {
@@ -650,7 +650,7 @@ void WorldItemSystem::Step(UWorld &world, float dt)
                              [](const auto &i) { return i.id == 0; }),
               Items.end());
 }
-void WorldItemSystem::Tick(UWorld &world, float dt)
+void UWorldItemSystem::Tick(UWorld &world, float dt)
 {
   if (auto *actor = world.GetControlledCreature();
       actor && !HasCargo(actor->GetId()))
@@ -699,8 +699,8 @@ void WorldItemSystem::Tick(UWorld &world, float dt)
   if (!Items.empty())
     world.SyncPhysicalCreatureIndex();
 }
-void WorldItemSystem::Draw(UWorld &world, CreatureDrawQueue &queue,
-                           const glm::mat4 &vp)
+void UWorldItemSystem::Draw(UWorld &world, CreatureDrawQueue &queue,
+                            const glm::mat4 &vp)
 {
   for (const auto &i : Items)
     if (!i.creatureId)
@@ -726,7 +726,7 @@ void WorldItemSystem::Draw(UWorld &world, CreatureDrawQueue &queue,
               world.GetBlockRegistry().GetIdByTypeName(i.stack.Id)));
     }
 }
-void WorldItemSystem::Clear()
+void UWorldItemSystem::Clear()
 {
   USurvivalSystems::Instance().Clear();
   Items.clear();
@@ -734,7 +734,7 @@ void WorldItemSystem::Clear()
   Accumulator = 0;
   NextId = 1;
 }
-void WorldItemSystem::Serialize(nlohmann::json &root) const
+void UWorldItemSystem::Serialize(nlohmann::json &root) const
 {
   auto rows = nlohmann::json::array();
   auto add = [&](const auto &list)
@@ -772,7 +772,7 @@ void WorldItemSystem::Serialize(nlohmann::json &root) const
   add(Pending);
   root["world_physical_v1"] = rows;
 }
-void WorldItemSystem::Deserialize(const nlohmann::json &root)
+void UWorldItemSystem::Deserialize(const nlohmann::json &root)
 {
   Clear();
   if (!root.contains("world_physical_v1") ||

@@ -20,8 +20,8 @@ class UWorld;
 class UColumnFlowExecutor
 {
 public:
-  UColumnFlowScheduler &Scheduler() { return scheduler_; }
-  const UColumnFlowScheduler &Scheduler() const { return scheduler_; }
+  UColumnFlowScheduler &Scheduler() { return SchedulerState; }
+  const UColumnFlowScheduler &Scheduler() const { return SchedulerState; }
 
   void Enqueue(glm::ivec2 column, ColumnWorkKind kind, int priority)
   {
@@ -36,7 +36,7 @@ public:
 
   void Clear()
   {
-    scheduler_.Clear();
+    SchedulerState.Clear();
     last_dispatch_frame_.clear();
     relight_retry_after_frame_.clear();
     promote_pending_ = false;
@@ -52,13 +52,14 @@ public:
   void BeginFrame();
 
   /// Scan focus truth and enqueue derived work (uses real column coords).
-  /// last_frame_ms / pending_async gate stand stale-wave under miss (manual 131827).
-  void TickDerived(UWorld &world, glm::ivec3 focus_ground_horiz, int focus_radius,
-                   bool moving, bool missing_visible_mesh, bool visual_holes,
-                   bool idle_remesh_debt, bool idle_focus_dirty_debt,
-                   int pending_focus_n, int recover_n, int admit_n,
-                   double last_frame_ms = 0.0, int pending_async = 0,
-                   bool prep_over_budget = false);
+  /// last_frame_ms / pending_async gate stand stale-wave under miss (manual
+  /// 131827).
+  void TickDerived(UWorld &world, glm::ivec3 focus_ground_horiz,
+                   int focus_radius, bool moving, bool missing_visible_mesh,
+                   bool visual_holes, bool idle_remesh_debt,
+                   bool idle_focus_dirty_debt, int pending_focus_n,
+                   int recover_n, int admit_n, double last_frame_ms = 0.0,
+                   int pending_async = 0, bool prep_over_budget = false);
 
   /// Drain up to n queued items; AdvanceColumn uses item.column.
   int DrainBudget(UWorld &world, int n, glm::ivec3 focus_ground_horiz,
@@ -71,7 +72,8 @@ public:
                              bool missing_visible_mesh);
 
   /// Coalesce PromoteRelight to one ticket/frame (max priority). Flushed in
-  /// DrainBudget — no direct World promote from emerge except via AdvanceColumn.
+  /// DrainBudget — no direct World promote from emerge except via
+  /// AdvanceColumn.
   void RequestPromoteRelight(glm::ivec2 near_column, int priority);
 
   /// True when RequestPromoteRelight ran this frame and Flush not yet done.
@@ -115,10 +117,12 @@ public:
                                     int focus_radius);
   /// Q6: bind world for Decide* record_want during Enqueue (frame-scoped).
   void BindDecideWorld(UWorld *world) { decide_world_ = world; }
-  /// Focus-ring census for JSONL (PendingLight / Meshing / GpuPending / RenderReady).
+  /// Focus-ring census for JSONL (PendingLight / Meshing / GpuPending /
+  /// RenderReady).
   void CountFocusRingJobStages(glm::ivec3 focus_ground, int focus_radius,
                                int &out_pending_light, int &out_meshing,
-                               int &out_gpu_pending, int &out_render_ready) const;
+                               int &out_gpu_pending,
+                               int &out_render_ready) const;
 
   /// Structural cooldown identity (audit N06) — exposed for model tests.
   struct CooldownKey
@@ -153,7 +157,7 @@ private:
                      int admit_batch);
   void FlushPromoteRequest();
 
-  UColumnFlowScheduler scheduler_;
+  UColumnFlowScheduler SchedulerState;
   /// Rate-limit stale-dark NoteColumnRepair waves (manual 092627 thrash).
   std::chrono::steady_clock::time_point LastStaleRepairWave{};
   int frame_counter_{0};

@@ -1,6 +1,6 @@
 #include "World/Streaming/ChunkRenderDemand.h"
+#include "World/Mesh/Contracts/SeamCoverageManifest.h"
 #include "World/Streaming/RelightInstallPlanner.h"
-#include "Render/Mesh/SeamCoverageManifest.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -42,8 +42,10 @@ int main()
   store.Clear();
 
   const glm::ivec3 c{1, 2, 3};
-  Expect(store.NoteDemand(c, 5, 7) == DemandResult::NewDemand, "first NewDemand");
-  Expect(store.NoteDemand(c, 5, 7) == DemandResult::Coalesced, "same Coalesced");
+  Expect(store.NoteDemand(c, 5, 7) == DemandResult::NewDemand,
+         "first NewDemand");
+  Expect(store.NoteDemand(c, 5, 7) == DemandResult::Coalesced,
+         "same Coalesced");
 
   ChunkRenderDemandRecord *rec = store.Find(c);
   Expect(rec != nullptr, "record exists");
@@ -112,8 +114,7 @@ int main()
     Expect(store.NoteDemand(slice, 12, 20, 0, 0.0, 3, 71) ==
                DemandResult::NewDemand,
            "second OpenSky event creates successor demand");
-    const uint64_t second_repair_attempt =
-        DemandActiveAttemptId(store, slice);
+    const uint64_t second_repair_attempt = DemandActiveAttemptId(store, slice);
     store.NoteInstallResult(slice, InstallResult::Published, 12, 20,
                             second_repair_attempt);
     Expect(store.IsOpenSkyRepairPublished(slice, 6, 20),
@@ -154,7 +155,8 @@ int main()
   Expect(rec && (rec->face_debt_mask & 0x01u) != 0,
          "stale peer_gen keeps face0 debt");
   store.NoteFaceDebtSatisfied(c, 0x01u, /*peer_gen=*/42);
-  Expect(rec && (rec->face_debt_mask & 0x01u) == 0, "matching peer clears face0");
+  Expect(rec && (rec->face_debt_mask & 0x01u) == 0,
+         "matching peer clears face0");
   Expect(rec && (rec->face_debt_mask & 0x02u) != 0, "face1 kept");
   // A36 S2: re-demand raises waiting_peer_gen (monotonic).
   store.NoteFaceDebt(c, 0x02u, /*peer_gen=*/50);
@@ -186,9 +188,11 @@ int main()
 
   // Cutover: column FaceDebt clear forbidden while flag ON (default ON).
   ChunkDemandCutoverEnabled() = true;
-  Expect(!ChunkDemandAllowsColumnFaceDebtClear(), "cutover blocks column clear");
+  Expect(!ChunkDemandAllowsColumnFaceDebtClear(),
+         "cutover blocks column clear");
   ChunkDemandCutoverEnabled() = false;
-  Expect(ChunkDemandAllowsColumnFaceDebtClear(), "rollback restores column clear");
+  Expect(ChunkDemandAllowsColumnFaceDebtClear(),
+         "rollback restores column clear");
   ChunkDemandCutoverEnabled() = true; // restore default for process
 
   // A37 H2: cutover ⇒ authority (cannot leave cutover ON with authority OFF).
@@ -209,7 +213,8 @@ int main()
     Expect(!store.NoteStageProgress(gate, cutum::JobStage::Uploaded, aid),
            "stage gated when authority OFF");
     (void)ChunkDemandCutoverEnabled();
-    Expect(ChunkDemandAuthorityEnabled(), "re-read cutover re-enables authority");
+    Expect(ChunkDemandAuthorityEnabled(),
+           "re-read cutover re-enables authority");
     ChunkDemandAuthorityEnabled() = true;
   }
 
@@ -425,8 +430,9 @@ int main()
   Expect(plan_early.prefer_kick_gpu.empty(), "no PreferKick under limit");
   Expect(plan_early.note_prefer_kick_stall, "note stall under limit");
 
-  // A26 N1: randomized event suite — reorder/cancel/unload/reload, 2 Y, 6 peers,
-  // peer-ready-before-subscribe, stop→Published, zero orphan / infinite Retain.
+  // A26 N1: randomized event suite — reorder/cancel/unload/reload, 2 Y, 6
+  // peers, peer-ready-before-subscribe, stop→Published, zero orphan / infinite
+  // Retain.
   {
     using cutum::PeerReadyBeforeSubscribe;
     store.Clear();
@@ -436,7 +442,8 @@ int main()
     const int dy[6] = {0, 0, 1, -1, 0, 0};
     const int dz[6] = {0, 0, 0, 0, 1, -1};
     unsigned seed = 0xA261u;
-    auto rnd = [&seed]() -> unsigned {
+    auto rnd = [&seed]() -> unsigned
+    {
       seed = seed * 1664525u + 1013904223u;
       return seed;
     };
@@ -555,8 +562,7 @@ int main()
            "stall Admitted");
     srec = store.Find(stalled);
     Expect(srec && srec->last_progress_ms == 1000.0, "progress stamped");
-    const auto rs =
-        store.ReconcileMaintenance(16, /*now_ms=*/1000.0 + 30001.0);
+    const auto rs = store.ReconcileMaintenance(16, /*now_ms=*/1000.0 + 30001.0);
     Expect(rs.stalled_reschedule >= 1, "A40 stall reschedule");
     srec = store.Find(stalled);
     Expect(srec && srec->has_active_attempt, "reminted active");
@@ -665,8 +671,7 @@ int main()
         30, 40, RelightDeferralReason::VisibleExactReplacement);
     UJobStageTrace::NoteRelightDeferred(31, 40,
                                         RelightDeferralReason::FarthestTrim);
-    UJobStageTrace::NoteRelightDeferred(32, 40,
-                                        RelightDeferralReason::Other);
+    UJobStageTrace::NoteRelightDeferred(32, 40, RelightDeferralReason::Other);
     const auto attributed = UJobStageTrace::GetVisibilityLatencySummary();
     Expect(attributed.attemptsTerminalWithoutPublish == 4 &&
                attributed.attemptsRetained == 1 &&

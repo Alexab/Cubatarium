@@ -1,19 +1,19 @@
 #include "WorldGen/Core/WorldGenPack.h"
+#include "ThirdParty/stb_image.h"
+#include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenContentPin.h"
 #include "WorldGen/Core/WorldGenContentPinTls.h"
-#include <atomic>
-#include <memory>
-#include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenStageMask.h"
 #include "WorldGen/Sampling/BiomeRegistry.h"
-#include "ThirdParty/stb_image.h"
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <stdexcept>
+#include <memory>
 #include <nlohmann/json.hpp>
+#include <stdexcept>
 
 namespace cutum
 {
@@ -23,19 +23,18 @@ namespace
 
 std::vector<BiomeKey> BuiltinBiomeKeys()
 {
-  return {"plains",          "forest",        "desert",
-          "hills",           "tundra",        "savanna",
-          "foothills",       "scrubland",     "cold_steppe",
-          "ocean",            "beach",         "mountains",
-          "snowy_slopes",     "jagged_peaks",  "lush_caves",
-          "dripstone_caves",  "deep_dark"};
+  return {"plains",       "forest",       "desert",     "hills",
+          "tundra",       "savanna",      "foothills",  "scrubland",
+          "cold_steppe",  "ocean",        "beach",      "mountains",
+          "snowy_slopes", "jagged_peaks", "lush_caves", "dripstone_caves",
+          "deep_dark"};
 }
 
 std::shared_ptr<const WorldGenPack> MakeInitialWorldGenPack()
 {
   auto pack = std::make_shared<WorldGenPack>();
-  pack->BiomeRegistry = std::make_shared<const BiomeDefinitionRegistry>(
-      BuiltinBiomeKeys());
+  pack->BiomeRegistry =
+      std::make_shared<const UBiomeDefinitionRegistry>(BuiltinBiomeKeys());
   return pack;
 }
 
@@ -99,7 +98,7 @@ bool LoadBiomeMapImage(const std::string &path)
     return false;
   }
   gBiomeMapPixels.assign(data, data + static_cast<size_t>(gBiomeMapW) *
-                                       static_cast<size_t>(gBiomeMapH) * 3);
+                                          static_cast<size_t>(gBiomeMapH) * 3);
   stbi_image_free(data);
   return true;
 }
@@ -149,7 +148,8 @@ void ParseBiomeFeatures(const nlohmann::json &features,
   }
 }
 
-void ParseSubBiomes(const nlohmann::json &subBiomes, BiomePackDefinition &biomeDef)
+void ParseSubBiomes(const nlohmann::json &subBiomes,
+                    BiomePackDefinition &biomeDef)
 {
   if (!subBiomes.is_object())
   {
@@ -206,7 +206,8 @@ void ParsePalette(const nlohmann::json &palette, BiomePackDefinition &biomeDef)
   }
 }
 
-bool ParsePipelineStage(const std::string &stage, WorldGenPackPipeline &pipeline)
+bool ParsePipelineStage(const std::string &stage,
+                        WorldGenPackPipeline &pipeline)
 {
   if (stage == "terrain")
   {
@@ -433,34 +434,30 @@ void LoadHeightJson(const std::filesystem::path &root, WorldGenPack &pack)
         };
         pack.Height.Ocean.DeepOceanEnd =
             std::clamp(readRatio("deep_ocean_end", 0.22f), 0.05f, 0.80f);
-        pack.Height.Ocean.ShelfEnd = std::clamp(
-            readRatio("shelf_end", 0.38f),
-            pack.Height.Ocean.DeepOceanEnd + 0.05f, 0.90f);
-        pack.Height.Ocean.CoastEnd = std::clamp(
-            readRatio("coast_end", pack.Height.Ocean.CoastEnd),
-            pack.Height.Ocean.ShelfEnd + 0.05f, 0.98f);
-        pack.Height.Ocean.DeepOceanDepthRatio = std::clamp(
-            readRatio("deep_ocean_depth_ratio",
-                      pack.Height.Ocean.DeepOceanDepthRatio),
-            0.05f, 0.90f);
+        pack.Height.Ocean.ShelfEnd =
+            std::clamp(readRatio("shelf_end", 0.38f),
+                       pack.Height.Ocean.DeepOceanEnd + 0.05f, 0.90f);
+        pack.Height.Ocean.CoastEnd =
+            std::clamp(readRatio("coast_end", pack.Height.Ocean.CoastEnd),
+                       pack.Height.Ocean.ShelfEnd + 0.05f, 0.98f);
+        pack.Height.Ocean.DeepOceanDepthRatio =
+            std::clamp(readRatio("deep_ocean_depth_ratio",
+                                 pack.Height.Ocean.DeepOceanDepthRatio),
+                       0.05f, 0.90f);
         pack.Height.Ocean.ShelfDepthRatio = std::clamp(
-            readRatio("shelf_depth_ratio",
-                      pack.Height.Ocean.ShelfDepthRatio),
-            0.02f,
-            pack.Height.Ocean.DeepOceanDepthRatio);
+            readRatio("shelf_depth_ratio", pack.Height.Ocean.ShelfDepthRatio),
+            0.02f, pack.Height.Ocean.DeepOceanDepthRatio);
         pack.Height.Ocean.CoastDepthRatio = std::clamp(
-            readRatio("coast_depth_ratio",
-                      pack.Height.Ocean.CoastDepthRatio),
-            0.0f,
-            pack.Height.Ocean.ShelfDepthRatio);
-        pack.Height.Ocean.LowlandHeightRatio = std::clamp(
-            readRatio("lowland_height_ratio", 0.03f), 0.0f, 0.15f);
-        pack.Height.Ocean.HillHeightRatio = std::clamp(
-            readRatio("hill_height_ratio", 0.13f),
-            pack.Height.Ocean.LowlandHeightRatio, 0.30f);
-        pack.Height.Ocean.HighlandHeightRatio = std::clamp(
-            readRatio("highland_height_ratio", 0.22f),
-            pack.Height.Ocean.HillHeightRatio, 0.40f);
+            readRatio("coast_depth_ratio", pack.Height.Ocean.CoastDepthRatio),
+            0.0f, pack.Height.Ocean.ShelfDepthRatio);
+        pack.Height.Ocean.LowlandHeightRatio =
+            std::clamp(readRatio("lowland_height_ratio", 0.03f), 0.0f, 0.15f);
+        pack.Height.Ocean.HillHeightRatio =
+            std::clamp(readRatio("hill_height_ratio", 0.13f),
+                       pack.Height.Ocean.LowlandHeightRatio, 0.30f);
+        pack.Height.Ocean.HighlandHeightRatio =
+            std::clamp(readRatio("highland_height_ratio", 0.22f),
+                       pack.Height.Ocean.HillHeightRatio, 0.40f);
       }
     }
     if (json.contains("jitter") && json["jitter"].is_object())
@@ -523,10 +520,10 @@ void LoadClimateJson(const std::filesystem::path &root, WorldGenPack &pack)
     {
       ParseClimateAxis(json["ridge"], pack.Climate.Ridge);
     }
-    pack.Climate.TemperatureLapsePerBlock = std::clamp(
-        json.value("temperature_lapse_per_block",
-                   pack.Climate.TemperatureLapsePerBlock),
-        0.0f, 0.004f);
+    pack.Climate.TemperatureLapsePerBlock =
+        std::clamp(json.value("temperature_lapse_per_block",
+                              pack.Climate.TemperatureLapsePerBlock),
+                   0.0f, 0.004f);
     pack.Climate.Loaded = true;
   }
   catch (const std::exception &e)
@@ -561,19 +558,22 @@ void LoadOresJson(const std::filesystem::path &root, WorldGenPack &pack)
       rule.Slot = entry["slot"].get<std::string>();
       rule.YPeak = std::max(1, entry.value("y_peak", rule.YPeak));
       rule.YSpread = std::max(1, entry.value("y_spread", rule.YSpread));
-      rule.VeinSize = std::clamp(entry.value("vein_size", rule.VeinSize), 1, 32);
+      rule.VeinSize =
+          std::clamp(entry.value("vein_size", rule.VeinSize), 1, 32);
       rule.Rarity = std::clamp(entry.value("rarity", rule.Rarity), 0.0f, 1.0f);
       rule.MaxSurfaceOffset =
           std::max(0, entry.value("max_surface_offset", rule.MaxSurfaceOffset));
       rule.BelowSeaLevel = entry.value("below_sea_level", rule.BelowSeaLevel);
-      rule.SeedModulo = std::max(0, entry.value("seed_modulo", rule.SeedModulo));
+      rule.SeedModulo =
+          std::max(0, entry.value("seed_modulo", rule.SeedModulo));
       pack.Ores.Rules.push_back(rule);
     }
     pack.Ores.Loaded = !pack.Ores.Rules.empty();
   }
   catch (const std::exception &e)
   {
-    std::cerr << "WorldGenPack: ores.json parse error: " << e.what() << std::endl;
+    std::cerr << "WorldGenPack: ores.json parse error: " << e.what()
+              << std::endl;
   }
 }
 
@@ -590,7 +590,8 @@ void LoadValleysJson(const std::filesystem::path &root, WorldGenPack &pack)
     const nlohmann::json json = nlohmann::json::parse(file);
     pack.Valleys.Enabled = json.value("enabled", pack.Valleys.Enabled);
     pack.Valleys.MaxDepth = json.value("max_depth", pack.Valleys.MaxDepth);
-    pack.Valleys.WidthSigma = json.value("width_sigma", pack.Valleys.WidthSigma);
+    pack.Valleys.WidthSigma =
+        json.value("width_sigma", pack.Valleys.WidthSigma);
     pack.Valleys.AquaticDepthScale =
         json.value("aquatic_depth_scale", pack.Valleys.AquaticDepthScale);
     pack.Valleys.RiverNoiseScale =
@@ -602,10 +603,10 @@ void LoadValleysJson(const std::filesystem::path &root, WorldGenPack &pack)
         json.value("water_min_moisture", pack.Valleys.WaterMinMoisture);
     pack.Valleys.WaterSurfaceDepth =
         json.value("water_surface_depth", pack.Valleys.WaterSurfaceDepth);
-    pack.Valleys.WaterMaxElevationAboveSea = std::clamp(
-        json.value("max_water_elevation_above_sea",
-                   pack.Valleys.WaterMaxElevationAboveSea),
-        0, 256);
+    pack.Valleys.WaterMaxElevationAboveSea =
+        std::clamp(json.value("max_water_elevation_above_sea",
+                              pack.Valleys.WaterMaxElevationAboveSea),
+                   0, 256);
     pack.Valleys.Loaded = true;
   }
   catch (const std::exception &e)
@@ -627,15 +628,15 @@ void LoadLakesJson(const std::filesystem::path &root, WorldGenPack &pack)
     std::ifstream file(lakes_json);
     const nlohmann::json json = nlohmann::json::parse(file);
     pack.Lakes.Enabled = json.value("enabled", pack.Lakes.Enabled);
-    pack.Lakes.CellSize = std::clamp(
-        json.value("cell_size", pack.Lakes.CellSize), 48, 512);
+    pack.Lakes.CellSize =
+        std::clamp(json.value("cell_size", pack.Lakes.CellSize), 48, 512);
     pack.Lakes.ChancePerCell = std::clamp(
         json.value("chance_per_cell", pack.Lakes.ChancePerCell), 1, 1000);
-    pack.Lakes.RadiusMin = std::clamp(
-        json.value("radius_min", pack.Lakes.RadiusMin), 4, 24);
-    pack.Lakes.RadiusMax = std::clamp(
-        json.value("radius_max", pack.Lakes.RadiusMax), pack.Lakes.RadiusMin,
-        24);
+    pack.Lakes.RadiusMin =
+        std::clamp(json.value("radius_min", pack.Lakes.RadiusMin), 4, 24);
+    pack.Lakes.RadiusMax =
+        std::clamp(json.value("radius_max", pack.Lakes.RadiusMax),
+                   pack.Lakes.RadiusMin, 24);
     pack.Lakes.MinElevationAboveSea = std::clamp(
         json.value("min_elevation_above_sea", pack.Lakes.MinElevationAboveSea),
         1, 64);
@@ -647,12 +648,12 @@ void LoadLakesJson(const std::filesystem::path &root, WorldGenPack &pack)
         64);
     pack.Lakes.BasinDepthMin = std::clamp(
         json.value("basin_depth_min", pack.Lakes.BasinDepthMin), 1, 12);
-    pack.Lakes.BasinDepthMax = std::clamp(
-        json.value("basin_depth_max", pack.Lakes.BasinDepthMax),
-        pack.Lakes.BasinDepthMin, 12);
+    pack.Lakes.BasinDepthMax =
+        std::clamp(json.value("basin_depth_max", pack.Lakes.BasinDepthMax),
+                   pack.Lakes.BasinDepthMin, 12);
     pack.Lakes.MinContinentalness = std::clamp(
-        json.value("min_continentalness", pack.Lakes.MinContinentalness),
-        0.0f, 1.0f);
+        json.value("min_continentalness", pack.Lakes.MinContinentalness), 0.0f,
+        1.0f);
     pack.Lakes.MaxContinentalness = std::clamp(
         json.value("max_continentalness", pack.Lakes.MaxContinentalness),
         pack.Lakes.MinContinentalness, 1.0f);
@@ -717,8 +718,8 @@ void LoadCavesJson(const std::filesystem::path &root, WorldGenPack &pack)
         json.value("chunk_gate_threshold", pack.Caves.ChunkGateThreshold);
     pack.Caves.UseDensityField =
         json.value("use_density_field", pack.Caves.UseDensityField);
-    pack.Caves.DensityCaveAmplitude = json.value(
-        "density_cave_amplitude", pack.Caves.DensityCaveAmplitude);
+    pack.Caves.DensityCaveAmplitude =
+        json.value("density_cave_amplitude", pack.Caves.DensityCaveAmplitude);
     if (json.contains("layers") && json["layers"].is_object())
     {
       const auto &layers = json["layers"];
@@ -748,7 +749,8 @@ void LoadCavesJson(const std::filesystem::path &root, WorldGenPack &pack)
   }
   catch (const std::exception &e)
   {
-    std::cerr << "WorldGenPack: caves.json parse error: " << e.what() << std::endl;
+    std::cerr << "WorldGenPack: caves.json parse error: " << e.what()
+              << std::endl;
   }
 }
 
@@ -763,10 +765,14 @@ void LoadAquifersJson(const std::filesystem::path &root, WorldGenPack &pack)
   {
     std::ifstream file(aquifersJson);
     const nlohmann::json json = nlohmann::json::parse(file);
-    pack.Aquifers.CellSizeX = json.value("cell_size_x", pack.Aquifers.CellSizeX);
-    pack.Aquifers.CellSizeY = json.value("cell_size_y", pack.Aquifers.CellSizeY);
-    pack.Aquifers.CellSizeZ = json.value("cell_size_z", pack.Aquifers.CellSizeZ);
-    pack.Aquifers.CellJitter = json.value("cell_jitter", pack.Aquifers.CellJitter);
+    pack.Aquifers.CellSizeX =
+        json.value("cell_size_x", pack.Aquifers.CellSizeX);
+    pack.Aquifers.CellSizeY =
+        json.value("cell_size_y", pack.Aquifers.CellSizeY);
+    pack.Aquifers.CellSizeZ =
+        json.value("cell_size_z", pack.Aquifers.CellSizeZ);
+    pack.Aquifers.CellJitter =
+        json.value("cell_jitter", pack.Aquifers.CellJitter);
     pack.Aquifers.DryCellChance =
         json.value("dry_cell_chance", pack.Aquifers.DryCellChance);
     pack.Aquifers.WaterLevelOffset =
@@ -775,9 +781,8 @@ void LoadAquifersJson(const std::filesystem::path &root, WorldGenPack &pack)
         json.value("water_level_amplitude", pack.Aquifers.WaterLevelAmplitude);
     pack.Aquifers.BarrierBand =
         json.value("barrier_band", pack.Aquifers.BarrierBand);
-    pack.Aquifers.BarrierNoiseThreshold =
-        json.value("barrier_noise_threshold",
-                   pack.Aquifers.BarrierNoiseThreshold);
+    pack.Aquifers.BarrierNoiseThreshold = json.value(
+        "barrier_noise_threshold", pack.Aquifers.BarrierNoiseThreshold);
     pack.Aquifers.PressureDifferenceThreshold =
         json.value("pressure_difference_threshold",
                    pack.Aquifers.PressureDifferenceThreshold);
@@ -794,7 +799,7 @@ void LoadAquifersJson(const std::filesystem::path &root, WorldGenPack &pack)
 }
 
 BiomePackDefinition ParseBiomeJson(const nlohmann::json &biomeJson,
-                                     const std::string &biomeId)
+                                   const std::string &biomeId)
 {
   BiomePackDefinition biomeDef;
   biomeDef.SchemaVersion = biomeJson.value("schema_version", 1);
@@ -851,8 +856,8 @@ BiomePackDefinition ParseBiomeJson(const nlohmann::json &biomeJson,
       }
       out.Min = range[0].get<float>();
       out.Max = range[1].get<float>();
-      if (!std::isfinite(out.Min) || !std::isfinite(out.Max) || out.Min < 0.0f ||
-          out.Max > 1.0f || out.Min >= out.Max)
+      if (!std::isfinite(out.Min) || !std::isfinite(out.Max) ||
+          out.Min < 0.0f || out.Max > 1.0f || out.Min >= out.Max)
       {
         throw std::runtime_error(std::string("climate.") + key +
                                  " must satisfy 0 <= min < max <= 1");
@@ -876,8 +881,8 @@ BiomePackDefinition ParseBiomeJson(const nlohmann::json &biomeJson,
   }
   else
   {
-    biomeDef.Domain = is_cave_builtin ? BiomeDomain::Cave
-                                      : BiomeDomain::Surface;
+    biomeDef.Domain =
+        is_cave_builtin ? BiomeDomain::Cave : BiomeDomain::Surface;
   }
 
   if (biomeJson.contains("height"))
@@ -971,7 +976,8 @@ BiomePackDefinition ParseBiomeJson(const nlohmann::json &biomeJson,
            {"surface", "subsurface", "surface_v3", "subsurface_v3"})
       {
         if (palette.contains(slot) &&
-            (!palette[slot].is_string() || palette[slot].get<std::string>().empty()))
+            (!palette[slot].is_string() ||
+             palette[slot].get<std::string>().empty()))
         {
           throw std::runtime_error(std::string("palette.") + slot +
                                    " must be a non-empty slot name");
@@ -1052,8 +1058,8 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
     const nlohmann::json rootJson = nlohmann::json::parse(file);
     pack.Id = rootJson.value("id", "default");
     const std::string mode = rootJson.value("biome_mode", "procedural");
-    pack.BiomeMode =
-        mode == "image" ? WorldGenBiomeMode::Image : WorldGenBiomeMode::Procedural;
+    pack.BiomeMode = mode == "image" ? WorldGenBiomeMode::Image
+                                     : WorldGenBiomeMode::Procedural;
     pack.BiomeMapBlockScale =
         std::max(1, rootJson.value("biome_map_block_scale", 4));
     if (rootJson.contains("biome_blend_radius"))
@@ -1142,7 +1148,7 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
     biomeKeys.push_back(key);
   }
   pack.BiomeRegistry =
-      std::make_shared<const BiomeDefinitionRegistry>(std::move(biomeKeys));
+      std::make_shared<const UBiomeDefinitionRegistry>(std::move(biomeKeys));
   for (uint32_t i = 0; i < pack.BiomeRegistry->Size(); ++i)
   {
     const BiomeHandle handle{i};
@@ -1271,7 +1277,8 @@ std::vector<WorldGenPackInfo> UWorldGenPack::ListPackInfos()
 
 void UWorldGenPack::Publish(std::shared_ptr<const WorldGenPack> pack)
 {
-  std::atomic_store_explicit(&Active, std::move(pack), std::memory_order_release);
+  std::atomic_store_explicit(&Active, std::move(pack),
+                             std::memory_order_release);
 }
 
 std::shared_ptr<const WorldGenPack> UWorldGenPack::GetSnapshot()
@@ -1295,7 +1302,10 @@ const WorldGenPack &UWorldGenPack::Get()
 
 const PackHeightConfig &UWorldGenPack::HeightConfig() { return Get().Height; }
 
-const PackClimateConfig &UWorldGenPack::ClimateConfig() { return Get().Climate; }
+const PackClimateConfig &UWorldGenPack::ClimateConfig()
+{
+  return Get().Climate;
+}
 
 const PackOresConfig &UWorldGenPack::OresConfig() { return Get().Ores; }
 
@@ -1316,10 +1326,7 @@ const PackValleysConfig &UWorldGenPack::ValleysConfig()
   return Get().Valleys;
 }
 
-const PackLakesConfig &UWorldGenPack::LakesConfig()
-{
-  return Get().Lakes;
-}
+const PackLakesConfig &UWorldGenPack::LakesConfig() { return Get().Lakes; }
 
 void UWorldGenPack::ApplyPackCaveDefaults(ProceduralSettings &settings,
                                           bool preserveUserFields)
@@ -1365,8 +1372,8 @@ void UWorldGenPack::ApplyPackRavineDefaults(ProceduralSettings &settings,
   settings.Ravines.featherMode = ParseRavineFeatherMode(ravines.FeatherMode);
 }
 
-const BiomeHeightProfile *UWorldGenPack::HeightProfileFor(
-    const std::string &biomeId)
+const BiomeHeightProfile *
+UWorldGenPack::HeightProfileFor(const std::string &biomeId)
 {
   const BiomePackDefinition *def = BiomeDefinitionFor(biomeId);
   if (!def)
@@ -1376,8 +1383,8 @@ const BiomeHeightProfile *UWorldGenPack::HeightProfileFor(
   return &def->Height;
 }
 
-const BiomePackDefinition *UWorldGenPack::BiomeDefinitionFor(
-    const std::string &biomeId)
+const BiomePackDefinition *
+UWorldGenPack::BiomeDefinitionFor(const std::string &biomeId)
 {
   const WorldGenPack &pack = Get();
   const auto it = pack.Biomes.find(biomeId);

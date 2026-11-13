@@ -1,8 +1,8 @@
-#include "Render/Mesh/MeshPublishContract.h"
-#include "Render/Mesh/SeamCoverageManifest.h"
-#include "Render/Mesh/FluidColumnSummary.h"
+#include "World/Mesh/Contracts/MeshPublishContract.h"
 #include "Core/FrameDeadline.h"
+#include "World/Fluids/FluidColumnSummary.h"
 #include "World/Lighting/LightReferenceCompare.h"
+#include "World/Mesh/Contracts/SeamCoverageManifest.h"
 #include "World/Streaming/ColumnVisualState.h"
 #include "World/Streaming/MeshLitGate.h"
 #include "World/Streaming/MeshWorkAdmission.h"
@@ -27,6 +27,10 @@ void Expect(bool cond, const char *msg)
 
 int main()
 {
+  using cutum::ColumnVisualAllowsPreferKick;
+  using cutum::ColumnVisualForbidsTicketWithoutFifo;
+  using cutum::ColumnVisualState;
+  using cutum::ColumnVisualStateForFullyDarkDrawable;
   using cutum::DecideMeshPublishAction;
   using cutum::MeshPublishAction;
   using cutum::MeshPublishLiveFreeDisjoint;
@@ -36,10 +40,6 @@ int main()
   using cutum::ShouldPublishedEmptyAfterPriorLitExpire;
   using cutum::ShouldRejectDarkMeshCommit;
   using cutum::ShouldRetainPriorLitOverUnlitCandidate;
-  using cutum::ColumnVisualAllowsPreferKick;
-  using cutum::ColumnVisualState;
-  using cutum::ColumnVisualStateForFullyDarkDrawable;
-  using cutum::ColumnVisualForbidsTicketWithoutFifo;
 
   MeshPublishRevs a{1, 2, 3};
   MeshPublishRevs b{1, 2, 3};
@@ -48,12 +48,14 @@ int main()
   Expect(!ShouldAcceptMeshPublish(a, c, true), "reject light_rev mismatch");
   Expect(!ShouldAcceptMeshPublish(a, b, false), "reject when GPU not ready");
 
-  Expect(DecideMeshPublishAction(true, true, true) == MeshPublishAction::Replace,
+  Expect(DecideMeshPublishAction(true, true, true) ==
+             MeshPublishAction::Replace,
          "Replace on accept+drawable");
   Expect(DecideMeshPublishAction(true, false, true) ==
              MeshPublishAction::PublishedEmpty,
          "PublishedEmpty on accept+empty+prior");
-  Expect(DecideMeshPublishAction(false, true, true) == MeshPublishAction::Retain,
+  Expect(DecideMeshPublishAction(false, true, true) ==
+             MeshPublishAction::Retain,
          "Retain on reject");
   Expect(MeshPublishLiveFreeDisjoint(true, true) == false, "Live∩Free=0");
   Expect(MeshPublishLiveFreeDisjoint(false, true), "free non-live ok");
@@ -190,8 +192,10 @@ int main()
   using cutum::ShouldRejectStaleHaloLight;
   const uint8_t light_a[4] = {1, 2, 3, 4};
   const uint8_t light_b[4] = {1, 2, 3, 9};
-  Expect(CountLightFieldMismatches(light_a, light_a, 4) == 0, "light ref match");
-  Expect(CountLightFieldMismatches(light_a, light_b, 4) == 1, "light ref one miss");
+  Expect(CountLightFieldMismatches(light_a, light_a, 4) == 0,
+         "light ref match");
+  Expect(CountLightFieldMismatches(light_a, light_b, 4) == 1,
+         "light ref one miss");
   Expect(ShouldRejectStaleHaloLight(5, 5, 1, 2), "stale halo reject");
   Expect(!ShouldRejectStaleHaloLight(5, 5, 2, 2), "fresh halo ok");
 
@@ -322,7 +326,8 @@ int main()
     FluidColumnSummaryRequest req{};
     req.y_min = 3;
     req.height = 16;
-    // A39 P4: empty-flags enqueue is RejectedRetryable (never silent ready=false).
+    // A39 P4: empty-flags enqueue is RejectedRetryable (never silent
+    // ready=false).
     Expect(!TryEnqueueFluidSummaryWorker(job, req, true),
            "empty-flags rejected");
     Expect(!job.enqueued, "empty job not flagged");
@@ -340,7 +345,7 @@ int main()
     }
   }
 
-    // A31 P1: mutually exclusive defect class.
+  // A31 P1: mutually exclusive defect class.
   {
     using cutum::ChunkDefectClass;
     using cutum::ClassifyChunkDefect;
@@ -373,7 +378,8 @@ int main()
            "LightInvalid rejected");
   }
 
-  // A39 P5: Cross expected≠got fault-inject — SourceMismatch when live desire drifts.
+  // A39 P5: Cross expected≠got fault-inject — SourceMismatch when live desire
+  // drifts.
   {
     using cutum::PublicationCandidateAccepted;
     using cutum::PublicationValidation;
@@ -415,10 +421,10 @@ int main()
   // A35 R0/P4: fluid worker shutdown is joinable (no detach hang).
   {
     using cutum::EnsureFluidSummaryWorkerStarted;
+    using cutum::FluidColumnSummaryRequest;
+    using cutum::FluidSummaryWorkerJob;
     using cutum::ShutdownFluidSummaryWorker;
     using cutum::TryEnqueueFluidSummaryWorker;
-    using cutum::FluidSummaryWorkerJob;
-    using cutum::FluidColumnSummaryRequest;
     EnsureFluidSummaryWorkerStarted();
     FluidSummaryWorkerJob job{};
     FluidColumnSummaryRequest req{};

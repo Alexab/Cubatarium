@@ -3,14 +3,14 @@
 namespace cutum
 {
 
-void EnterVisualGate::Reset()
+void UEnterVisualGate::Reset()
 {
-  items_.clear();
+  ItemsByColumn.clear();
   void_relight_probed_.clear();
   open_sky_applied_.clear();
-  captured_ = false;
-  peak_ = 0;
-  phase_ = EnterVisualGatePhase::Idle;
+  Captured = false;
+  PeakDebt = 0;
+  GatePhase = EnterVisualGatePhase::Idle;
   frames_without_gpu_finish_ = 0;
   ++open_sky_capture_id_;
   if (open_sky_capture_id_ == 0)
@@ -19,14 +19,14 @@ void EnterVisualGate::Reset()
   }
 }
 
-void EnterVisualGate::BeginCapture()
+void UEnterVisualGate::BeginCapture()
 {
-  items_.clear();
+  ItemsByColumn.clear();
   void_relight_probed_.clear();
   open_sky_applied_.clear();
-  captured_ = false;
-  peak_ = 0;
-  phase_ = EnterVisualGatePhase::Capture;
+  Captured = false;
+  PeakDebt = 0;
+  GatePhase = EnterVisualGatePhase::Capture;
   frames_without_gpu_finish_ = 0;
   ++open_sky_capture_id_;
   if (open_sky_capture_id_ == 0)
@@ -35,24 +35,24 @@ void EnterVisualGate::BeginCapture()
   }
 }
 
-void EnterVisualGate::AddCapturedColumn(glm::ivec2 col,
-                                        EnterVisualItemState initial)
+void UEnterVisualGate::AddCapturedColumn(glm::ivec2 col,
+                                         EnterVisualItemState initial)
 {
-  items_[col] = initial;
+  ItemsByColumn[col] = initial;
 }
 
-void EnterVisualGate::EndCapture()
+void UEnterVisualGate::EndCapture()
 {
-  peak_ = static_cast<int>(items_.size());
-  captured_ = true;
-  phase_ = peak_ > 0 ? EnterVisualGatePhase::DrainLight
-                     : EnterVisualGatePhase::Verify;
+  PeakDebt = static_cast<int>(ItemsByColumn.size());
+  Captured = true;
+  GatePhase = PeakDebt > 0 ? EnterVisualGatePhase::DrainLight
+                           : EnterVisualGatePhase::Verify;
 }
 
-int EnterVisualGate::Remaining() const
+int UEnterVisualGate::Remaining() const
 {
   int n = 0;
-  for (const auto &kv : items_)
+  for (const auto &kv : ItemsByColumn)
   {
     if (kv.second != EnterVisualItemState::Done)
     {
@@ -62,43 +62,43 @@ int EnterVisualGate::Remaining() const
   return n;
 }
 
-EnterVisualItemState EnterVisualGate::GetState(glm::ivec2 col) const
+EnterVisualItemState UEnterVisualGate::GetState(glm::ivec2 col) const
 {
-  const auto it = items_.find(col);
-  if (it == items_.end())
+  const auto it = ItemsByColumn.find(col);
+  if (it == ItemsByColumn.end())
   {
     return EnterVisualItemState::Done;
   }
   return it->second;
 }
 
-bool EnterVisualGate::Contains(glm::ivec2 col) const
+bool UEnterVisualGate::Contains(glm::ivec2 col) const
 {
-  return items_.find(col) != items_.end();
+  return ItemsByColumn.find(col) != ItemsByColumn.end();
 }
 
-void EnterVisualGate::ObserveColumn(glm::ivec2 col,
-                                    EnterVisualItemState observed)
+void UEnterVisualGate::ObserveColumn(glm::ivec2 col,
+                                     EnterVisualItemState observed)
 {
-  auto it = items_.find(col);
-  if (it == items_.end())
+  auto it = ItemsByColumn.find(col);
+  if (it == ItemsByColumn.end())
   {
     return;
   }
   it->second = AdvanceEnterVisualItemStateMonotonic(it->second, observed);
 }
 
-void EnterVisualGate::MarkDone(glm::ivec2 col)
+void UEnterVisualGate::MarkDone(glm::ivec2 col)
 {
-  auto it = items_.find(col);
-  if (it == items_.end())
+  auto it = ItemsByColumn.find(col);
+  if (it == ItemsByColumn.end())
   {
     return;
   }
   it->second = EnterVisualItemState::Done;
 }
 
-void EnterVisualGate::NoteGpuFinishProgress(bool any_finish)
+void UEnterVisualGate::NoteGpuFinishProgress(bool any_finish)
 {
   if (any_finish)
   {
@@ -110,17 +110,17 @@ void EnterVisualGate::NoteGpuFinishProgress(bool any_finish)
   }
 }
 
-void EnterVisualGate::NoteVoidRelightProbed(glm::ivec2 col)
+void UEnterVisualGate::NoteVoidRelightProbed(glm::ivec2 col)
 {
   void_relight_probed_[col] = 1;
 }
 
-bool EnterVisualGate::WasVoidRelightProbed(glm::ivec2 col) const
+bool UEnterVisualGate::WasVoidRelightProbed(glm::ivec2 col) const
 {
   return void_relight_probed_.find(col) != void_relight_probed_.end();
 }
 
-uint64_t EnterVisualGate::NoteOpenSkyApplied(glm::ivec2 col)
+uint64_t UEnterVisualGate::NoteOpenSkyApplied(glm::ivec2 col)
 {
   if (open_sky_capture_id_ == 0)
   {
@@ -130,12 +130,12 @@ uint64_t EnterVisualGate::NoteOpenSkyApplied(glm::ivec2 col)
   return open_sky_capture_id_;
 }
 
-bool EnterVisualGate::WasOpenSkyApplied(glm::ivec2 col) const
+bool UEnterVisualGate::WasOpenSkyApplied(glm::ivec2 col) const
 {
   return open_sky_applied_.find(col) != open_sky_applied_.end();
 }
 
-uint64_t EnterVisualGate::OpenSkyEventId(glm::ivec2 col) const
+uint64_t UEnterVisualGate::OpenSkyEventId(glm::ivec2 col) const
 {
   const auto it = open_sky_applied_.find(col);
   return it == open_sky_applied_.end() ? 0 : it->second;

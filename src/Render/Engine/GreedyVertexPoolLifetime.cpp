@@ -3,12 +3,12 @@
 namespace cutum
 {
 
-void VertexPoolRetireQueue::FreePending(GreedyGpuPoolFreeSlot slot)
+void UVertexPoolRetireQueue::FreePending(GreedyGpuPoolFreeSlot slot)
 {
   Pending_.push_back(slot);
 }
 
-void VertexPoolRetireQueue::SignalDrawComplete(uint64_t fenceToken)
+void UVertexPoolRetireQueue::SignalDrawComplete(uint64_t fenceToken)
 {
   for (const GreedyGpuPoolFreeSlot &slot : Pending_)
   {
@@ -20,8 +20,8 @@ void VertexPoolRetireQueue::SignalDrawComplete(uint64_t fenceToken)
   Pending_.clear();
 }
 
-void VertexPoolRetireQueue::Retire(GreedyGpuPoolFreeSlot slot,
-                                   uint64_t fenceToken)
+void UVertexPoolRetireQueue::Retire(GreedyGpuPoolFreeSlot slot,
+                                    uint64_t fenceToken)
 {
   VertexPoolRetiredSlot retired;
   retired.slot = slot;
@@ -29,7 +29,7 @@ void VertexPoolRetireQueue::Retire(GreedyGpuPoolFreeSlot slot,
   Retired_.push_back(retired);
 }
 
-void VertexPoolRetireQueue::PollRetired(const PollFenceFn &poll)
+void UVertexPoolRetireQueue::PollRetired(const PollFenceFn &poll)
 {
   if (Retired_.empty() || !poll)
   {
@@ -58,7 +58,7 @@ void VertexPoolRetireQueue::PollRetired(const PollFenceFn &poll)
   Retired_.resize(write);
 }
 
-void VertexPoolRetireQueue::ReclaimToFreeList(
+void UVertexPoolRetireQueue::ReclaimToFreeList(
     std::vector<GreedyGpuPoolFreeSlot> &freeList)
 {
   if (Reclaimed_.empty())

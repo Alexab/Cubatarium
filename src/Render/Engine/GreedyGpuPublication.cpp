@@ -2,8 +2,8 @@
 #include "Render/Engine/GreedyGpuBackend.h"
 #include "Render/GlIncludes.h"
 #include "Render/Mesh/ChunkMeshCache.h"
-#include "Render/Mesh/MeshPublishContract.h"
 #include "World/Diagnostics/JobStageTrace.h"
+#include "World/Mesh/Contracts/MeshPublishContract.h"
 #include "World/Streaming/ChunkRenderDemand.h"
 #include "glog/logging.h"
 #include <algorithm>
@@ -58,9 +58,8 @@ bool PassMeshMatchesDemand(const UChunkRenderDemandStore &demand,
                            glm::ivec3 coord, const MeshPublishRevs &published)
 {
   const ChunkRenderDemandRecord *record = demand.Find(coord);
-  return !record ||
-         (record->desired_geom_rev == published.geom_rev &&
-          record->desired_light_rev == published.light_rev);
+  return !record || (record->desired_geom_rev == published.geom_rev &&
+                     record->desired_light_rev == published.light_rev);
 }
 
 } // namespace
@@ -170,9 +169,8 @@ void UGreedyGpuBackend::UploadBatch(GreedyGpuBatch &gpu,
       gpu.vbo = pool.VertexBuffer();
       gpu.ebo = pool.IndexBuffer();
       // New slot is live; prior is no longer live → Free is Live∩Free-safe.
-      if (had_prior_live &&
-          MeshPublishLiveFreeDisjoint(/*is_live_draw=*/false,
-                                      /*freeing_slot=*/true))
+      if (had_prior_live && MeshPublishLiveFreeDisjoint(/*is_live_draw=*/false,
+                                                        /*freeing_slot=*/true))
       {
         pool.Free(prior);
       }
@@ -270,7 +268,8 @@ uint64_t ConsumePublicationProgressUnitN()
 
 uint64_t ConsumePublicationMaterialBlockIdFlipN()
 {
-  return gPublicationMaterialBlockIdFlipN.exchange(0, std::memory_order_relaxed);
+  return gPublicationMaterialBlockIdFlipN.exchange(0,
+                                                   std::memory_order_relaxed);
 }
 
 void NotePubVerChangedWithoutFresh()
@@ -286,9 +285,8 @@ uint64_t ConsumePubVerChangedWithoutFreshN()
 void NotePassMeshRevLag(uint64_t lag)
 {
   uint64_t prev = gPassMeshRevLagMax.load(std::memory_order_relaxed);
-  while (lag > prev &&
-         !gPassMeshRevLagMax.compare_exchange_weak(prev, lag,
-                                                   std::memory_order_relaxed))
+  while (lag > prev && !gPassMeshRevLagMax.compare_exchange_weak(
+                           prev, lag, std::memory_order_relaxed))
   {
   }
 }
@@ -298,14 +296,26 @@ uint64_t ConsumePassMeshRevLagMax()
   return gPassMeshRevLagMax.exchange(0, std::memory_order_relaxed);
 }
 
-void UGreedyGpuBackend::RemoveCoord(GreedyGpuPassCache &cache,
-                                    glm::ivec3 coord)
+void UGreedyGpuBackend::RemoveCoord(GreedyGpuPassCache &cache, glm::ivec3 coord)
 {
   PublicationDelta delta;
   delta.kind = PublicationDeltaKind::RepresentationSwitch;
   delta.coord = coord;
   delta.targetBackend = 1; // packed sole resident
   (void)ApplyPublicationDelta(cache, delta);
+}
+
+static void SyncPooledBatchHandles(GreedyGpuPassCache &cache)
+{
+
+  cache.poolVbo = cache.VertexPool.VertexBuffer();
+  cache.poolEbo = cache.VertexPool.IndexBuffer();
+  for (auto &gpu : cache.batches)
+    if (gpu.pooled)
+    {
+      gpu.vbo = cache.poolVbo;
+      gpu.ebo = cache.poolEbo;
+    }
 }
 
 bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
@@ -316,7 +326,8 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
     if (!delta.replaceInputs || !delta.replaceDirty)
       return false;
     const std::vector<GreedyGpuUploadInput> &inputs = *delta.replaceInputs;
-    const std::unordered_set<glm::ivec3, IVec3Hash> &dirty = *delta.replaceDirty;
+    const std::unordered_set<glm::ivec3, IVec3Hash> &dirty =
+        *delta.replaceDirty;
     const uint64_t mesh_revision = delta.sourceMeshRevision;
     const uint64_t cull_revision = delta.sourceCullRevision;
     const uint64_t sort_revision = delta.sourceSortRevision;
@@ -324,312 +335,127 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
     const std::unordered_set<uint16_t> *cache_pass_indices_override =
         delta.cachePassIndicesOverride;
 
-  cache.PendingGeometryDirty.insert(dirty.begin(), dirty.end());
-  std::unordered_map<GpuBatchKey, size_t, GpuBatchKeyHash> resident;
-  for (size_t n = 0; n < cache.batches.size(); ++n)
-    resident.emplace(
-        GpuBatchKey{cache.batches[n].chunkCoord, cache.batches[n].batchIndex},
-        n);
+    cache.PendingGeometryDirty.insert(dirty.begin(), dirty.end());
+    std::unordered_map<GpuBatchKey, size_t, GpuBatchKeyHash> resident;
+    for (size_t n = 0; n < cache.batches.size(); ++n)
+      resident.emplace(
+          GpuBatchKey{cache.batches[n].chunkCoord, cache.batches[n].batchIndex},
+          n);
 
-  // Transaction unit is chunk+pass (audit N01 v2): stage all uploads for a coord
-  // and commit only when every batch succeeds. Neighbors progress independently.
-  // Partial OOM keeps PendingGeometryDirty and all predecessors for that coord;
-  // pass mesh/cull/sort revisions advance only when every upload coord commits.
-  std::vector<GreedyGpuBatch> staged;
-  std::vector<size_t> fresh;
-  std::vector<bool> retained(cache.batches.size(), false);
-  staged.reserve(inputs.size());
-  bool changed = cache.sortRevision != sort_revision;
-  bool any_fresh = false;
-  bool any_fail = false;
-  std::unordered_set<glm::ivec3, IVec3Hash> published_ok;
-  std::unordered_map<glm::ivec3, std::vector<const GreedyGpuUploadInput *>,
-                     IVec3Hash>
-      uploads_by_coord;
-  std::vector<glm::ivec3> upload_order;
+    // Transaction unit is chunk+pass (audit N01 v2): stage all uploads for a
+    // coord and commit only when every batch succeeds. Neighbors progress
+    // independently. Partial OOM keeps PendingGeometryDirty and all
+    // predecessors for that coord; pass mesh/cull/sort revisions advance only
+    // when every upload coord commits.
+    std::vector<GreedyGpuBatch> staged;
+    std::vector<size_t> fresh;
+    std::vector<bool> retained(cache.batches.size(), false);
+    staged.reserve(inputs.size());
+    bool changed = cache.sortRevision != sort_revision;
+    bool any_fresh = false;
+    bool any_fail = false;
+    std::unordered_set<glm::ivec3, IVec3Hash> published_ok;
+    std::unordered_map<glm::ivec3, std::vector<const GreedyGpuUploadInput *>,
+                       IVec3Hash>
+        uploads_by_coord;
+    std::vector<glm::ivec3> upload_order;
 
-  auto sync_handles = [&]()
-  {
-    cache.poolVbo = cache.VertexPool.VertexBuffer();
-    cache.poolEbo = cache.VertexPool.IndexBuffer();
-    for (auto &gpu : cache.batches)
-      if (gpu.pooled)
-      {
-        gpu.vbo = cache.poolVbo;
-        gpu.ebo = cache.poolEbo;
-      }
-  };
+    const bool transparent_pass = cache.passId == GreedyGpuPassId::Transparent;
 
-  const bool transparent_pass = cache.passId == GreedyGpuPassId::Transparent;
-
-  for (const auto &input : inputs)
-  {
-    const auto &ref = input.ref;
-    const auto *batch = input.batch;
-    if (!batch || batch->vertices.empty() || batch->indices.empty())
-      continue;
-    const auto found = resident.find({ref.chunkCoord, ref.batchIndex});
-    if (found != resident.end() &&
-        cache.PendingGeometryDirty.count(ref.chunkCoord) == 0 &&
-        cache.batches[found->second].pooled)
+    for (const auto &input : inputs)
     {
-      retained[found->second] = true;
-      if (found->second != staged.size())
-        changed = true;
-      staged.push_back(cache.batches[found->second]);
-      if (BatchCullAabbDegenerate(staged.back().cullAabbMin,
-                                  staged.back().cullAabbMax))
+      const auto &ref = input.ref;
+      const auto *batch = input.batch;
+      if (!batch || batch->vertices.empty() || batch->indices.empty())
+        continue;
+      const auto found = resident.find({ref.chunkCoord, ref.batchIndex});
+      if (found != resident.end() &&
+          cache.PendingGeometryDirty.count(ref.chunkCoord) == 0 &&
+          cache.batches[found->second].pooled)
       {
-        FillBatchCull(staged.back(), ref);
-        changed = true;
-      }
-      continue;
-    }
-    auto &group = uploads_by_coord[ref.chunkCoord];
-    if (group.empty())
-      upload_order.push_back(ref.chunkCoord);
-    group.push_back(&input);
-  }
-
-  for (const auto &coord : upload_order)
-  {
-    const auto &group = uploads_by_coord[coord];
-    std::vector<GreedyGpuBatch> group_fresh;
-    group_fresh.reserve(group.size());
-    bool group_ok = true;
-    const bool coord_dirty = cache.PendingGeometryDirty.count(coord) > 0;
-    std::unordered_set<uint16_t> upload_batch_indices;
-    for (const auto *input : group)
-      upload_batch_indices.insert(input->ref.batchIndex);
-    // N01: require cache pass materials ⊆ upload (not resident ⊆ upload).
-    // Material remove: resident extras drop on successful group commit.
-    if (coord_dirty)
-    {
-      std::unordered_set<uint16_t> cache_pass_indices;
-      bool have_cache_set = false;
-      if (mesh_cache != nullptr && cache.passId != GreedyGpuPassId::Unknown)
-      {
-        std::vector<GreedyBatchRef> cache_refs;
-        mesh_cache->AppendGreedyPassBatchRefs(coord, transparent_pass,
-                                              cache_refs);
-        for (const auto &cref : cache_refs)
-          cache_pass_indices.insert(cref.batchIndex);
-        have_cache_set = true;
-      }
-      else if (cache_pass_indices_override != nullptr)
-      {
-        cache_pass_indices = *cache_pass_indices_override;
-        have_cache_set = true;
-      }
-      if (have_cache_set)
-      {
-        for (const uint16_t idx : cache_pass_indices)
+        retained[found->second] = true;
+        if (found->second != staged.size())
+          changed = true;
+        staged.push_back(cache.batches[found->second]);
+        if (BatchCullAabbDegenerate(staged.back().cullAabbMin,
+                                    staged.back().cullAabbMax))
         {
-          if (upload_batch_indices.count(idx) == 0)
+          FillBatchCull(staged.back(), ref);
+          changed = true;
+        }
+        continue;
+      }
+      auto &group = uploads_by_coord[ref.chunkCoord];
+      if (group.empty())
+        upload_order.push_back(ref.chunkCoord);
+      group.push_back(&input);
+    }
+
+    for (const auto &coord : upload_order)
+    {
+      const auto &group = uploads_by_coord[coord];
+      std::vector<GreedyGpuBatch> group_fresh;
+      group_fresh.reserve(group.size());
+      bool group_ok = true;
+      const bool coord_dirty = cache.PendingGeometryDirty.count(coord) > 0;
+      std::unordered_set<uint16_t> upload_batch_indices;
+      for (const auto *input : group)
+        upload_batch_indices.insert(input->ref.batchIndex);
+      // N01: require cache pass materials ⊆ upload (not resident ⊆ upload).
+      // Material remove: resident extras drop on successful group commit.
+      if (coord_dirty)
+      {
+        std::unordered_set<uint16_t> cache_pass_indices;
+        bool have_cache_set = false;
+        if (mesh_cache != nullptr && cache.passId != GreedyGpuPassId::Unknown)
+        {
+          std::vector<GreedyBatchRef> cache_refs;
+          mesh_cache->AppendGreedyPassBatchRefs(coord, transparent_pass,
+                                                cache_refs);
+          for (const auto &cref : cache_refs)
+            cache_pass_indices.insert(cref.batchIndex);
+          have_cache_set = true;
+        }
+        else if (cache_pass_indices_override != nullptr)
+        {
+          cache_pass_indices = *cache_pass_indices_override;
+          have_cache_set = true;
+        }
+        if (have_cache_set)
+        {
+          for (const uint16_t idx : cache_pass_indices)
           {
-            group_ok = false;
-            any_fail = true;
-            NotePublicationIncompleteMaterial();
-            break;
+            if (upload_batch_indices.count(idx) == 0)
+            {
+              group_ok = false;
+              any_fail = true;
+              NotePublicationIncompleteMaterial();
+              break;
+            }
           }
         }
       }
-    }
-    for (const auto *input : group)
-    {
-      if (!group_ok)
-        break;
-      GreedyGpuBatch gpu;
-      UploadBatch(gpu, *input->batch, cache.VertexPool);
-      if (!gpu.pooled)
+      for (const auto *input : group)
       {
-        group_ok = false;
-        any_fail = true;
-        NotePublicationOomRetain();
-        break;
-      }
-      FillBatchCull(gpu, input->ref);
-      group_fresh.push_back(std::move(gpu));
-    }
-    if (!group_ok)
-    {
-      for (auto &gpu : group_fresh)
-        ReleasePooledBatch(gpu, cache.VertexPool);
-      // Keep the full predecessor image for this coord.
-      for (size_t n = 0; n < cache.batches.size(); ++n)
-      {
-        if (cache.batches[n].chunkCoord == coord && cache.batches[n].pooled)
+        if (!group_ok)
+          break;
+        GreedyGpuBatch gpu;
+        UploadBatch(gpu, *input->batch, cache.VertexPool);
+        if (!gpu.pooled)
         {
-          retained[n] = true;
-          staged.push_back(cache.batches[n]);
-        }
-      }
-      continue;
-    }
-    any_fresh = true;
-    NotePublicationProgressUnit();
-    published_ok.insert(coord);
-    // Sysreset v2 Accept: blockId flip only when (geom,light,material) match.
-    // A21-05: expected material stamp is THIS PASS only (not full-chunk batches).
-    if (mesh_cache != nullptr)
-    {
-      const MeshPublishRevs publish_revs = mesh_cache->GetMeshPublishRevs(coord);
-      MeshPublishRevs expected{};
-      expected.geom_rev = publish_revs.geom_rev;
-      const uint64_t meshed_light = mesh_cache->GetMeshedLightRevision(coord);
-      expected.light_rev =
-          meshed_light != 0 ? meshed_light : publish_revs.light_rev;
-      std::vector<std::pair<uint16_t, uint16_t>> expected_batches;
-      std::unordered_set<uint16_t> expected_batch_indices;
-      {
-        std::vector<GreedyBatchRef> pass_refs;
-        mesh_cache->AppendGreedyPassBatchRefs(coord, transparent_pass,
-                                              pass_refs);
-        expected_batches.reserve(pass_refs.size());
-        for (const auto &ref : pass_refs)
-        {
-          uint16_t block_id = static_cast<uint16_t>(ref.blockId);
-          if (const GreedyMeshBatch *cpu = mesh_cache->TryGetGreedyBatch(ref))
-          {
-            block_id = static_cast<uint16_t>(cpu->blockId);
-          }
-          expected_batches.emplace_back(ref.batchIndex, block_id);
-        }
-        std::sort(expected_batches.begin(), expected_batches.end(),
-                  [](const auto &a, const auto &b)
-                  { return a.first < b.first; });
-        expected_batch_indices.reserve(expected_batches.size());
-        for (const auto &entry : expected_batches)
-        {
-          expected_batch_indices.insert(entry.first);
-        }
-      }
-      std::unordered_map<uint16_t, uint16_t> got_id_by_batch_index;
-      got_id_by_batch_index.reserve(group_fresh.size());
-      for (const auto &gpu : group_fresh)
-      {
-        got_id_by_batch_index[gpu.batchIndex] =
-            static_cast<uint16_t>(gpu.blockId);
-      }
-      std::vector<uint16_t> expected_ids;
-      std::vector<uint16_t> got_ids;
-      expected_ids.reserve(expected_batches.size());
-      got_ids.reserve(expected_batches.size());
-      for (const auto &[batch_index, expected_block_id] : expected_batches)
-      {
-        expected_ids.push_back(expected_block_id);
-        const auto got_it = got_id_by_batch_index.find(batch_index);
-        if (got_it != got_id_by_batch_index.end())
-        {
-          got_ids.push_back(got_it->second);
-        }
-      }
-      expected.material_stamp =
-          MeshPublishMaterialStamp(expected_ids.data(), expected_ids.size());
-      MeshPublishRevs got{};
-      got.geom_rev = mesh_revision;
-      got.light_rev = expected.light_rev;
-      got.material_stamp =
-          MeshPublishMaterialStamp(got_ids.data(), got_ids.size());
-      const bool complete_material_payload =
-          expected_ids.size() == got_ids.size();
-      bool material_flip = false;
-      for (const auto &gpu : group_fresh)
-      {
-        if (expected_batch_indices.count(gpu.batchIndex) == 0)
-        {
-          continue;
-        }
-        const auto found =
-            resident.find(GpuBatchKey{gpu.chunkCoord, gpu.batchIndex});
-        if (found == resident.end())
-        {
-          continue;
-        }
-        if (cache.batches[found->second].blockId != gpu.blockId)
-        {
-          material_flip = true;
+          group_ok = false;
+          any_fail = true;
+          NotePublicationOomRetain();
           break;
         }
+        FillBatchCull(gpu, input->ref);
+        group_fresh.push_back(std::move(gpu));
       }
-      if (material_flip &&
-          (!complete_material_payload ||
-           !ShouldAcceptMaterialBlockIdFlip(got, expected,
-                                            /*gpu_ready=*/true, true)))
+      if (!group_ok)
       {
-        if (UJobStageTrace::VisualBlackTraceEnabled() &&
-            mesh_cache->HasScreenRayRepairPin(coord))
-        {
-          // PublishPassInputs runs on the render thread. Keep this diagnostic
-          // bounded globally and per ray-confirmed slice so one hot coord
-          // cannot hide later material-retain examples on the route.
-          uint8_t &coord_records = gScreenRayMaterialRetainAuditByCoord[coord];
-          const uint64_t total_records =
-              gScreenRayMaterialRetainAuditN.load(std::memory_order_relaxed);
-          if (coord_records < 8 && total_records < 128)
-          {
-            ++coord_records;
-            gScreenRayMaterialRetainAuditN.fetch_add(
-                1, std::memory_order_relaxed);
-            auto join_ids = [](const std::vector<uint16_t> &ids)
-            {
-              std::ostringstream joined;
-              for (size_t i = 0; i < ids.size(); ++i)
-              {
-                if (i != 0)
-                {
-                  joined << ',';
-                }
-                joined << ids[i];
-              }
-              return joined.str();
-            };
-            std::ostringstream flips;
-            bool first_flip = true;
-            for (const auto &gpu : group_fresh)
-            {
-              if (expected_batch_indices.count(gpu.batchIndex) == 0)
-              {
-                continue;
-              }
-              const auto found =
-                  resident.find(GpuBatchKey{gpu.chunkCoord, gpu.batchIndex});
-              if (found == resident.end())
-              {
-                continue;
-              }
-              const uint16_t prior_id = cache.batches[found->second].blockId;
-              if (prior_id == gpu.blockId)
-              {
-                continue;
-              }
-              if (!first_flip)
-              {
-                flips << ',';
-              }
-              first_flip = false;
-              flips << gpu.batchIndex << ':' << prior_id << "->" << gpu.blockId;
-            }
-            LOG(INFO) << "[ScreenRayMaterialRetain] coord=(" << coord.x << ','
-                      << coord.y << ',' << coord.z << ") pass="
-                      << (transparent_pass ? "transparent" : "opaque")
-                      << " pass_mesh_revision=" << mesh_revision
-                      << " current_chunk_mesh_rev="
-                      << mesh_cache->GetChunkMeshRevision(coord)
-                      << " expected_geom=" << expected.geom_rev
-                      << " expected_light=" << expected.light_rev
-                      << " expected_material=" << expected.material_stamp
-                      << " got_material=" << got.material_stamp
-                      << " flips=[" << flips.str()
-                      << "] expected_ids_by_batch_index=["
-                      << join_ids(expected_ids)
-                      << "] got_ids_by_batch_index=[" << join_ids(got_ids)
-                      << ']';
-          }
-        }
-        // Retain prior + keep dirty for remesh — do not commit flip.
         for (auto &gpu : group_fresh)
           ReleasePooledBatch(gpu, cache.VertexPool);
+        // Keep the full predecessor image for this coord.
         for (size_t n = 0; n < cache.batches.size(); ++n)
         {
           if (cache.batches[n].chunkCoord == coord && cache.batches[n].pooled)
@@ -638,263 +464,249 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
             staged.push_back(cache.batches[n]);
           }
         }
-        published_ok.erase(coord);
-        // Keep progress from other coords in this PublishPassInputs call.
-        any_fresh = !published_ok.empty();
-        // Sysreset v3: material Retain → FaceDebt + capped Dirty (real mismatch).
-        mesh_cache->NoteFaceDebt(coord, /*schedule_dirty=*/true);
-        if (kChunkDemandShadow())
-        {
-          UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
-          const MeshPublishRevs pub =
-              mesh_cache->GetMeshPublishRevs(coord);
-          if (PassMeshMatchesDemand(demand, coord, pub))
-          {
-            const uint64_t attempt_id =
-                DemandActiveAttemptId(demand, coord);
-            demand.NoteInstallResult(
-                coord, InstallResult::RetainedAwaitingSuccessor,
-                pub.geom_rev, pub.light_rev, attempt_id);
-          }
-        }
         continue;
       }
-    }
-    // Successful replace: do not retain old batches for this coord.
-    // Honest wrong-tex thrash: any blockId flip on successful Replace
-    // (SoT 090834 — same-size gate hid operator-visible swaps).
-    for (const auto &gpu : group_fresh)
-    {
-      const auto found =
-          resident.find(GpuBatchKey{gpu.chunkCoord, gpu.batchIndex});
-      if (found == resident.end())
-      {
-        continue;
-      }
-      const GreedyGpuBatch &prior = cache.batches[found->second];
-      if (prior.blockId != gpu.blockId)
-      {
-        NotePublicationMaterialBlockIdFlip();
-      }
-    }
-    for (size_t n = 0; n < cache.batches.size(); ++n)
-    {
-      if (cache.batches[n].chunkCoord == coord)
-        retained[n] = false;
-    }
-    for (auto &gpu : group_fresh)
-    {
-      fresh.push_back(staged.size());
-      staged.push_back(std::move(gpu));
-      changed = true;
-    }
-  }
-
-  if (any_fail && !any_fresh)
-  {
-    // Zero progress: keep prior publication + accumulated dirty demand.
-    for (const size_t n : fresh)
-      ReleasePooledBatch(staged[n], cache.VertexPool);
-    sync_handles();
-    if (kChunkDemandShadow() && mesh_cache != nullptr)
-    {
-      UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
-      for (const auto &coord : upload_order)
-      {
-        const MeshPublishRevs pub = mesh_cache->GetMeshPublishRevs(coord);
-        if (PassMeshMatchesDemand(demand, coord, pub))
-        {
-          const uint64_t attempt_id =
-              DemandActiveAttemptId(demand, coord);
-          demand.NoteInstallResult(coord, InstallResult::RejectedRetryable,
-                                   pub.geom_rev, pub.light_rev, attempt_id);
-        }
-      }
-    }
-    return false;
-  }
-
-  // N01 v2.1: coords with no inputs in this call keep their resident batches.
-  // Otherwise neighbor progress frees still-dirty peers (mixed pass / holes).
-  // Audit R01: retained[n] must stay true so ReleasePooledBatch does not Free
-  // ranges still referenced by the published draw table.
-  // Audit R02: dirty + authoritative empty pass set = empty Replace / Remove.
-  std::unordered_set<glm::ivec3, IVec3Hash> handled_coords;
-  for (const auto &input : inputs)
-  {
-    if (!input.batch || input.batch->vertices.empty() ||
-        input.batch->indices.empty())
-      continue;
-    handled_coords.insert(input.ref.chunkCoord);
-  }
-  auto resolve_cache_pass_indices =
-      [&](const glm::ivec3 &coord, std::unordered_set<uint16_t> &out) -> bool
-  {
-    if (mesh_cache != nullptr && cache.passId != GreedyGpuPassId::Unknown)
-    {
-      std::vector<GreedyBatchRef> cache_refs;
-      mesh_cache->AppendGreedyPassBatchRefs(coord, transparent_pass,
-                                            cache_refs);
-      for (const auto &cref : cache_refs)
-        out.insert(cref.batchIndex);
-      LastAppliedDeltaKind_ = PublicationDeltaKind::Replace;
-  return true;
-    }
-    if (cache_pass_indices_override != nullptr)
-    {
-      // Test hook: single-dirty override applies to each dirty coord in the call.
-      out = *cache_pass_indices_override;
-      LastAppliedDeltaKind_ = PublicationDeltaKind::Replace;
-  return true;
-    }
-    return false;
-  };
-  for (const auto &coord : dirty)
-  {
-    if (handled_coords.count(coord) > 0 || uploads_by_coord.count(coord) > 0)
-      continue;
-    std::unordered_set<uint16_t> cache_pass_indices;
-    if (!resolve_cache_pass_indices(coord, cache_pass_indices))
-      continue;
-    if (!cache_pass_indices.empty())
-      continue;
-    // Authoritative empty payload: drop resident batches for this coord.
-    for (size_t n = 0; n < cache.batches.size(); ++n)
-    {
-      if (cache.batches[n].chunkCoord == coord)
-        retained[n] = false;
-    }
-    handled_coords.insert(coord);
-    published_ok.insert(coord);
-    any_fresh = true;
-    changed = true;
-    NotePublicationProgressUnit();
-  }
-  for (size_t n = 0; n < cache.batches.size(); ++n)
-  {
-    const auto &batch = cache.batches[n];
-    if (handled_coords.count(batch.chunkCoord) > 0)
-      continue;
-    retained[n] = true;
-    staged.push_back(batch);
-    changed = true;
-  }
-
-  // Detect resident-table membership/order change before swap (R04).
-  bool table_identity_changed = staged.size() != cache.batches.size();
-  bool membership_only_reorder = false;
-  if (!table_identity_changed)
-  {
-    for (size_t i = 0; i < staged.size(); ++i)
-    {
-      if (staged[i].chunkCoord != cache.batches[i].chunkCoord ||
-          staged[i].batchIndex != cache.batches[i].batchIndex)
-      {
-        table_identity_changed = true;
-        break;
-      }
-    }
-  }
-  if (table_identity_changed && staged.size() == cache.batches.size() &&
-      !any_fresh)
-  {
-    // Same (coord,batchIndex) multiset, different order — camera sort thrash.
-    std::unordered_map<GpuBatchKey, int, GpuBatchKeyHash> prior_counts;
-    std::unordered_map<GpuBatchKey, int, GpuBatchKeyHash> staged_counts;
-    for (const auto &b : cache.batches)
-      ++prior_counts[GpuBatchKey{b.chunkCoord, b.batchIndex}];
-    for (const auto &b : staged)
-      ++staged_counts[GpuBatchKey{b.chunkCoord, b.batchIndex}];
-    membership_only_reorder = prior_counts == staged_counts;
-  }
-
-  changed = changed || staged.size() != cache.batches.size();
-  // A31-06: validate each published_ok BEFORE swapping resident batches.
-  // A34: light_rev drift on first install must not fail-all; observational
-  // LightInvalid via dark faces removed — only real SourceMismatch rejects.
-  {
-    PublicationEpochs draw{};
-    draw.artifact_generation = cache.publicationVersion;
-    draw.resident_table_revision = cache.resident_table_revision;
-    draw.cull_key_generation = cache.cullRevision;
-    draw.transparent_order_key = cache.transparent_order_key;
-    PublicationEpochs live{};
-    live.artifact_generation = cache.meshRevision;
-    live.resident_table_revision = cache.resident_table_revision;
-    live.cull_key_generation = cache.cullRevision;
-    live.transparent_order_key = cache.transparent_order_key;
-    bool pub_rejected = false;
-    for (const auto &coord : published_ok)
-    {
-      ArtifactManifest got{};
-      ArtifactManifest expected{};
-      ClearObservationalDarkFromLightValid(got, expected);
-      uint64_t light_rev = 0;
+      any_fresh = true;
+      NotePublicationProgressUnit();
+      published_ok.insert(coord);
+      // Sysreset v2 Accept: blockId flip only when (geom,light,material) match.
+      // A21-05: expected material stamp is THIS PASS only (not full-chunk
+      // batches).
       if (mesh_cache != nullptr)
       {
-        light_rev = mesh_cache->GetMeshedLightRevision(coord);
-        const MeshPublishRevs pub = mesh_cache->GetMeshPublishRevs(coord);
-        if (light_rev == 0)
+        const MeshPublishRevs publish_revs =
+            mesh_cache->GetMeshPublishRevs(coord);
+        MeshPublishRevs expected{};
+        expected.geom_rev = publish_revs.geom_rev;
+        const uint64_t meshed_light = mesh_cache->GetMeshedLightRevision(coord);
+        expected.light_rev =
+            meshed_light != 0 ? meshed_light : publish_revs.light_rev;
+        std::vector<std::pair<uint16_t, uint16_t>> expected_batches;
+        std::unordered_set<uint16_t> expected_batch_indices;
         {
-          light_rev = pub.light_rev;
+          std::vector<GreedyBatchRef> pass_refs;
+          mesh_cache->AppendGreedyPassBatchRefs(coord, transparent_pass,
+                                                pass_refs);
+          expected_batches.reserve(pass_refs.size());
+          for (const auto &ref : pass_refs)
+          {
+            uint16_t block_id = static_cast<uint16_t>(ref.blockId);
+            if (const GreedyMeshBatch *cpu = mesh_cache->TryGetGreedyBatch(ref))
+            {
+              block_id = static_cast<uint16_t>(cpu->blockId);
+            }
+            expected_batches.emplace_back(ref.batchIndex, block_id);
+          }
+          std::sort(expected_batches.begin(), expected_batches.end(),
+                    [](const auto &a, const auto &b)
+                    { return a.first < b.first; });
+          expected_batch_indices.reserve(expected_batches.size());
+          for (const auto &entry : expected_batches)
+          {
+            expected_batch_indices.insert(entry.first);
+          }
         }
-        got.source_geom_rev =
-            pub.geom_rev != 0 ? pub.geom_rev : cache.meshRevision;
-        expected.source_geom_rev = got.source_geom_rev;
-        // First install in pack: accept (no prior published geom).
-        if (pub.geom_rev == 0)
+        std::unordered_map<uint16_t, uint16_t> got_id_by_batch_index;
+        got_id_by_batch_index.reserve(group_fresh.size());
+        for (const auto &gpu : group_fresh)
         {
-          got.source_light_rev =
-              light_rev != 0 ? light_rev : cache.meshRevision;
-          expected.source_light_rev = got.source_light_rev;
+          got_id_by_batch_index[gpu.batchIndex] =
+              static_cast<uint16_t>(gpu.blockId);
         }
-        else if (pub.light_rev != 0 && light_rev != 0 &&
-                 pub.light_rev != light_rev)
+        std::vector<uint16_t> expected_ids;
+        std::vector<uint16_t> got_ids;
+        expected_ids.reserve(expected_batches.size());
+        got_ids.reserve(expected_batches.size());
+        for (const auto &[batch_index, expected_block_id] : expected_batches)
         {
-          // Real provenance drift → SourceMismatch (not LightInvalid).
-          got.source_light_rev = light_rev;
-          expected.source_light_rev = pub.light_rev;
+          expected_ids.push_back(expected_block_id);
+          const auto got_it = got_id_by_batch_index.find(batch_index);
+          if (got_it != got_id_by_batch_index.end())
+          {
+            got_ids.push_back(got_it->second);
+          }
         }
-        else
+        expected.material_stamp =
+            MeshPublishMaterialStamp(expected_ids.data(), expected_ids.size());
+        MeshPublishRevs got{};
+        got.geom_rev = mesh_revision;
+        got.light_rev = expected.light_rev;
+        got.material_stamp =
+            MeshPublishMaterialStamp(got_ids.data(), got_ids.size());
+        const bool complete_material_payload =
+            expected_ids.size() == got_ids.size();
+        bool material_flip = false;
+        for (const auto &gpu : group_fresh)
         {
-          got.source_light_rev =
-              light_rev != 0 ? light_rev : cache.meshRevision;
-          expected.source_light_rev = got.source_light_rev;
+          if (expected_batch_indices.count(gpu.batchIndex) == 0)
+          {
+            continue;
+          }
+          const auto found =
+              resident.find(GpuBatchKey{gpu.chunkCoord, gpu.batchIndex});
+          if (found == resident.end())
+          {
+            continue;
+          }
+          if (cache.batches[found->second].blockId != gpu.blockId)
+          {
+            material_flip = true;
+            break;
+          }
         }
-        ClearObservationalDarkFromLightValid(got, expected);
+        if (material_flip &&
+            (!complete_material_payload ||
+             !ShouldAcceptMaterialBlockIdFlip(got, expected,
+                                              /*gpu_ready=*/true, true)))
+        {
+          if (UJobStageTrace::VisualBlackTraceEnabled() &&
+              mesh_cache->HasScreenRayRepairPin(coord))
+          {
+            // PublishPassInputs runs on the render thread. Keep this diagnostic
+            // bounded globally and per ray-confirmed slice so one hot coord
+            // cannot hide later material-retain examples on the route.
+            uint8_t &coord_records =
+                gScreenRayMaterialRetainAuditByCoord[coord];
+            const uint64_t total_records =
+                gScreenRayMaterialRetainAuditN.load(std::memory_order_relaxed);
+            if (coord_records < 8 && total_records < 128)
+            {
+              ++coord_records;
+              gScreenRayMaterialRetainAuditN.fetch_add(
+                  1, std::memory_order_relaxed);
+              auto join_ids = [](const std::vector<uint16_t> &ids)
+              {
+                std::ostringstream joined;
+                for (size_t i = 0; i < ids.size(); ++i)
+                {
+                  if (i != 0)
+                  {
+                    joined << ',';
+                  }
+                  joined << ids[i];
+                }
+                return joined.str();
+              };
+              std::ostringstream flips;
+              bool first_flip = true;
+              for (const auto &gpu : group_fresh)
+              {
+                if (expected_batch_indices.count(gpu.batchIndex) == 0)
+                {
+                  continue;
+                }
+                const auto found =
+                    resident.find(GpuBatchKey{gpu.chunkCoord, gpu.batchIndex});
+                if (found == resident.end())
+                {
+                  continue;
+                }
+                const uint16_t prior_id = cache.batches[found->second].blockId;
+                if (prior_id == gpu.blockId)
+                {
+                  continue;
+                }
+                if (!first_flip)
+                {
+                  flips << ',';
+                }
+                first_flip = false;
+                flips << gpu.batchIndex << ':' << prior_id << "->"
+                      << gpu.blockId;
+              }
+              LOG(INFO) << "[ScreenRayMaterialRetain] coord=(" << coord.x << ','
+                        << coord.y << ',' << coord.z << ") pass="
+                        << (transparent_pass ? "transparent" : "opaque")
+                        << " pass_mesh_revision=" << mesh_revision
+                        << " current_chunk_mesh_rev="
+                        << mesh_cache->GetChunkMeshRevision(coord)
+                        << " expected_geom=" << expected.geom_rev
+                        << " expected_light=" << expected.light_rev
+                        << " expected_material=" << expected.material_stamp
+                        << " got_material=" << got.material_stamp << " flips=["
+                        << flips.str() << "] expected_ids_by_batch_index=["
+                        << join_ids(expected_ids)
+                        << "] got_ids_by_batch_index=[" << join_ids(got_ids)
+                        << ']';
+            }
+          }
+          // Retain prior + keep dirty for remesh — do not commit flip.
+          for (auto &gpu : group_fresh)
+            ReleasePooledBatch(gpu, cache.VertexPool);
+          for (size_t n = 0; n < cache.batches.size(); ++n)
+          {
+            if (cache.batches[n].chunkCoord == coord && cache.batches[n].pooled)
+            {
+              retained[n] = true;
+              staged.push_back(cache.batches[n]);
+            }
+          }
+          published_ok.erase(coord);
+          // Keep progress from other coords in this PublishPassInputs call.
+          any_fresh = !published_ok.empty();
+          // Sysreset v3: material Retain → FaceDebt + capped Dirty (real
+          // mismatch).
+          mesh_cache->NoteFaceDebt(coord, /*schedule_dirty=*/true);
+          if (kChunkDemandShadow())
+          {
+            UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+            const MeshPublishRevs pub = mesh_cache->GetMeshPublishRevs(coord);
+            if (PassMeshMatchesDemand(demand, coord, pub))
+            {
+              const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
+              demand.NoteInstallResult(coord,
+                                       InstallResult::RetainedAwaitingSuccessor,
+                                       pub.geom_rev, pub.light_rev, attempt_id);
+            }
+          }
+          continue;
+        }
       }
-      else
+      // Successful replace: do not retain old batches for this coord.
+      // Honest wrong-tex thrash: any blockId flip on successful Replace
+      // (SoT 090834 — same-size gate hid operator-visible swaps).
+      for (const auto &gpu : group_fresh)
       {
-        got.source_geom_rev = cache.meshRevision;
-        got.source_light_rev = cache.meshRevision;
-        expected = got;
-        ClearObservationalDarkFromLightValid(got, expected);
+        const auto found =
+            resident.find(GpuBatchKey{gpu.chunkCoord, gpu.batchIndex});
+        if (found == resident.end())
+        {
+          continue;
+        }
+        const GreedyGpuBatch &prior = cache.batches[found->second];
+        if (prior.blockId != gpu.blockId)
+        {
+          NotePublicationMaterialBlockIdFlip();
+        }
       }
-      const PublicationValidation pub_v =
-          ValidatePublicationCandidate(got, expected, draw, live);
-      if (!PublicationCandidateAccepted(pub_v))
+      for (size_t n = 0; n < cache.batches.size(); ++n)
       {
-        pub_rejected = true;
-        break;
+        if (cache.batches[n].chunkCoord == coord)
+          retained[n] = false;
+      }
+      for (auto &gpu : group_fresh)
+      {
+        fresh.push_back(staged.size());
+        staged.push_back(std::move(gpu));
+        changed = true;
       }
     }
-    if (pub_rejected)
+
+    if (any_fail && !any_fresh)
     {
-      // Same as fail-all: release fresh uploads, keep prior publication.
+      // Zero progress: keep prior publication + accumulated dirty demand.
       for (const size_t n : fresh)
         ReleasePooledBatch(staged[n], cache.VertexPool);
-      sync_handles();
-      NotePubVerChangedWithoutFresh();
+      SyncPooledBatchHandles(cache);
       if (kChunkDemandShadow() && mesh_cache != nullptr)
       {
         UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
-        for (const auto &coord : published_ok)
+        for (const auto &coord : upload_order)
         {
           const MeshPublishRevs pub = mesh_cache->GetMeshPublishRevs(coord);
           if (PassMeshMatchesDemand(demand, coord, pub))
           {
-            const uint64_t attempt_id =
-                DemandActiveAttemptId(demand, coord);
+            const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
             demand.NoteInstallResult(coord, InstallResult::RejectedRetryable,
                                      pub.geom_rev, pub.light_rev, attempt_id);
           }
@@ -902,85 +714,275 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
       }
       return false;
     }
-  }
-  for (size_t n = 0; n < cache.batches.size(); ++n)
-    if (!retained[n])
-      ReleasePooledBatch(cache.batches[n], cache.VertexPool);
-  cache.batches = std::move(staged);
-  // Clear dirty only for chunk groups fully published this call. Never wipe
-  // unrelated pending demand (neighbor progress must not clear a failed peer).
-  for (const auto &coord : published_ok)
-    cache.PendingGeometryDirty.erase(coord);
-  cache.usesVertexPool = !cache.batches.empty();
-  sync_handles();
-  // N01 v2 / epoch-split: do not advance pass revisions while any group failed,
-  // any upload coord remains unpublished, or PendingGeometryDirty remains —
-  // otherwise consumers treat a mixed pass as done. publicationVersion still
-  // advances on geometry change (see below).
-  bool all_upload_coords_published = true;
-  for (const auto &coord : upload_order)
-  {
-    if (published_ok.count(coord) == 0)
+
+    // N01 v2.1: coords with no inputs in this call keep their resident batches.
+    // Otherwise neighbor progress frees still-dirty peers (mixed pass / holes).
+    // Audit R01: retained[n] must stay true so ReleasePooledBatch does not Free
+    // ranges still referenced by the published draw table.
+    // Audit R02: dirty + authoritative empty pass set = empty Replace / Remove.
+    std::unordered_set<glm::ivec3, IVec3Hash> handled_coords;
+    for (const auto &input : inputs)
     {
-      all_upload_coords_published = false;
-      break;
+      if (!input.batch || input.batch->vertices.empty() ||
+          input.batch->indices.empty())
+        continue;
+      handled_coords.insert(input.ref.chunkCoord);
     }
-  }
-  const bool advance_pass_revisions =
-      !any_fail && all_upload_coords_published &&
-      cache.PendingGeometryDirty.empty();
-  if (advance_pass_revisions)
-  {
-    cache.meshRevision = mesh_revision;
-    cache.cullRevision = cull_revision;
-    cache.sortRevision = sort_revision;
-  }
-  else if (cache.sortRevision != sort_revision && !any_fresh &&
-           membership_only_reorder)
-  {
-    // Sysreset v2: order-only camera sort updates sort epoch without pubver.
-    cache.sortRevision = sort_revision;
-    ++cache.transparent_order_key;
-  }
-  if (changed)
-  {
-    cache.IndirectCullReady = false;
-    cache.GpuCompactActive = false;
-    cache.CompactVisCpuSynced = false;
-    // R04 / A21 P3: bump artifact epoch on fresh upload OR real membership
-    // change — not order-only. Order-only bumps resident_table_revision.
-    if (any_fresh || (table_identity_changed && !membership_only_reorder))
+    auto resolve_cache_pass_indices =
+        [&](const glm::ivec3 &coord, std::unordered_set<uint16_t> &out) -> bool
     {
-      ++cache.publicationVersion;
-      ++cache.resident_table_revision;
-    }
-    else if (membership_only_reorder)
-    {
-      ++cache.resident_table_revision;
-      NotePubVerChangedWithoutFresh();
-    }
-    else
-      NotePubVerChangedWithoutFresh();
-  }
-  cache.VertexPool.SignalUploadComplete();
-  LastAppliedDeltaKind_ = PublicationDeltaKind::Replace;
-  if (kChunkDemandShadow() && mesh_cache != nullptr)
-  {
-    UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
-    for (const auto &coord : published_ok)
-    {
-      const MeshPublishRevs pub = mesh_cache->GetMeshPublishRevs(coord);
-      if (PassMeshMatchesDemand(demand, coord, pub))
+      if (mesh_cache != nullptr && cache.passId != GreedyGpuPassId::Unknown)
       {
-        const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
-        const uint64_t cov_pub = DemandCoverageGenToPublish(demand, coord);
-        demand.NoteInstallResult(coord, InstallResult::Published, pub.geom_rev,
-                                 pub.light_rev, attempt_id, cov_pub);
+        std::vector<GreedyBatchRef> cache_refs;
+        mesh_cache->AppendGreedyPassBatchRefs(coord, transparent_pass,
+                                              cache_refs);
+        for (const auto &cref : cache_refs)
+          out.insert(cref.batchIndex);
+        LastAppliedDeltaKind_ = PublicationDeltaKind::Replace;
+        return true;
+      }
+      if (cache_pass_indices_override != nullptr)
+      {
+        // Test hook: single-dirty override applies to each dirty coord in the
+        // call.
+        out = *cache_pass_indices_override;
+        LastAppliedDeltaKind_ = PublicationDeltaKind::Replace;
+        return true;
+      }
+      return false;
+    };
+    for (const auto &coord : dirty)
+    {
+      if (handled_coords.count(coord) > 0 || uploads_by_coord.count(coord) > 0)
+        continue;
+      std::unordered_set<uint16_t> cache_pass_indices;
+      if (!resolve_cache_pass_indices(coord, cache_pass_indices))
+        continue;
+      if (!cache_pass_indices.empty())
+        continue;
+      // Authoritative empty payload: drop resident batches for this coord.
+      for (size_t n = 0; n < cache.batches.size(); ++n)
+      {
+        if (cache.batches[n].chunkCoord == coord)
+          retained[n] = false;
+      }
+      handled_coords.insert(coord);
+      published_ok.insert(coord);
+      any_fresh = true;
+      changed = true;
+      NotePublicationProgressUnit();
+    }
+    for (size_t n = 0; n < cache.batches.size(); ++n)
+    {
+      const auto &batch = cache.batches[n];
+      if (handled_coords.count(batch.chunkCoord) > 0)
+        continue;
+      retained[n] = true;
+      staged.push_back(batch);
+      changed = true;
+    }
+
+    // Detect resident-table membership/order change before swap (R04).
+    bool table_identity_changed = staged.size() != cache.batches.size();
+    bool membership_only_reorder = false;
+    if (!table_identity_changed)
+    {
+      for (size_t i = 0; i < staged.size(); ++i)
+      {
+        if (staged[i].chunkCoord != cache.batches[i].chunkCoord ||
+            staged[i].batchIndex != cache.batches[i].batchIndex)
+        {
+          table_identity_changed = true;
+          break;
+        }
       }
     }
-  }
-  return true;
+    if (table_identity_changed && staged.size() == cache.batches.size() &&
+        !any_fresh)
+    {
+      // Same (coord,batchIndex) multiset, different order — camera sort thrash.
+      std::unordered_map<GpuBatchKey, int, GpuBatchKeyHash> prior_counts;
+      std::unordered_map<GpuBatchKey, int, GpuBatchKeyHash> staged_counts;
+      for (const auto &b : cache.batches)
+        ++prior_counts[GpuBatchKey{b.chunkCoord, b.batchIndex}];
+      for (const auto &b : staged)
+        ++staged_counts[GpuBatchKey{b.chunkCoord, b.batchIndex}];
+      membership_only_reorder = prior_counts == staged_counts;
+    }
 
+    changed = changed || staged.size() != cache.batches.size();
+    // A31-06: validate each published_ok BEFORE swapping resident batches.
+    // A34: light_rev drift on first install must not fail-all; observational
+    // LightInvalid via dark faces removed — only real SourceMismatch rejects.
+    {
+      PublicationEpochs draw{};
+      draw.artifact_generation = cache.publicationVersion;
+      draw.resident_table_revision = cache.resident_table_revision;
+      draw.cull_key_generation = cache.cullRevision;
+      draw.transparent_order_key = cache.transparent_order_key;
+      PublicationEpochs live{};
+      live.artifact_generation = cache.meshRevision;
+      live.resident_table_revision = cache.resident_table_revision;
+      live.cull_key_generation = cache.cullRevision;
+      live.transparent_order_key = cache.transparent_order_key;
+      bool pub_rejected = false;
+      for (const auto &coord : published_ok)
+      {
+        ArtifactManifest got{};
+        ArtifactManifest expected{};
+        ClearObservationalDarkFromLightValid(got, expected);
+        uint64_t light_rev = 0;
+        if (mesh_cache != nullptr)
+        {
+          light_rev = mesh_cache->GetMeshedLightRevision(coord);
+          const MeshPublishRevs pub = mesh_cache->GetMeshPublishRevs(coord);
+          if (light_rev == 0)
+          {
+            light_rev = pub.light_rev;
+          }
+          got.source_geom_rev =
+              pub.geom_rev != 0 ? pub.geom_rev : cache.meshRevision;
+          expected.source_geom_rev = got.source_geom_rev;
+          // First install in pack: accept (no prior published geom).
+          if (pub.geom_rev == 0)
+          {
+            got.source_light_rev =
+                light_rev != 0 ? light_rev : cache.meshRevision;
+            expected.source_light_rev = got.source_light_rev;
+          }
+          else if (pub.light_rev != 0 && light_rev != 0 &&
+                   pub.light_rev != light_rev)
+          {
+            // Real provenance drift → SourceMismatch (not LightInvalid).
+            got.source_light_rev = light_rev;
+            expected.source_light_rev = pub.light_rev;
+          }
+          else
+          {
+            got.source_light_rev =
+                light_rev != 0 ? light_rev : cache.meshRevision;
+            expected.source_light_rev = got.source_light_rev;
+          }
+          ClearObservationalDarkFromLightValid(got, expected);
+        }
+        else
+        {
+          got.source_geom_rev = cache.meshRevision;
+          got.source_light_rev = cache.meshRevision;
+          expected = got;
+          ClearObservationalDarkFromLightValid(got, expected);
+        }
+        const PublicationValidation pub_v =
+            ValidatePublicationCandidate(got, expected, draw, live);
+        if (!PublicationCandidateAccepted(pub_v))
+        {
+          pub_rejected = true;
+          break;
+        }
+      }
+      if (pub_rejected)
+      {
+        // Same as fail-all: release fresh uploads, keep prior publication.
+        for (const size_t n : fresh)
+          ReleasePooledBatch(staged[n], cache.VertexPool);
+        SyncPooledBatchHandles(cache);
+        NotePubVerChangedWithoutFresh();
+        if (kChunkDemandShadow() && mesh_cache != nullptr)
+        {
+          UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+          for (const auto &coord : published_ok)
+          {
+            const MeshPublishRevs pub = mesh_cache->GetMeshPublishRevs(coord);
+            if (PassMeshMatchesDemand(demand, coord, pub))
+            {
+              const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
+              demand.NoteInstallResult(coord, InstallResult::RejectedRetryable,
+                                       pub.geom_rev, pub.light_rev, attempt_id);
+            }
+          }
+        }
+        return false;
+      }
+    }
+    for (size_t n = 0; n < cache.batches.size(); ++n)
+      if (!retained[n])
+        ReleasePooledBatch(cache.batches[n], cache.VertexPool);
+    cache.batches = std::move(staged);
+    // Clear dirty only for chunk groups fully published this call. Never wipe
+    // unrelated pending demand (neighbor progress must not clear a failed
+    // peer).
+    for (const auto &coord : published_ok)
+      cache.PendingGeometryDirty.erase(coord);
+    cache.usesVertexPool = !cache.batches.empty();
+    SyncPooledBatchHandles(cache);
+    // N01 v2 / epoch-split: do not advance pass revisions while any group
+    // failed, any upload coord remains unpublished, or PendingGeometryDirty
+    // remains — otherwise consumers treat a mixed pass as done.
+    // publicationVersion still advances on geometry change (see below).
+    bool all_upload_coords_published = true;
+    for (const auto &coord : upload_order)
+    {
+      if (published_ok.count(coord) == 0)
+      {
+        all_upload_coords_published = false;
+        break;
+      }
+    }
+    const bool advance_pass_revisions = !any_fail &&
+                                        all_upload_coords_published &&
+                                        cache.PendingGeometryDirty.empty();
+    if (advance_pass_revisions)
+    {
+      cache.meshRevision = mesh_revision;
+      cache.cullRevision = cull_revision;
+      cache.sortRevision = sort_revision;
+    }
+    else if (cache.sortRevision != sort_revision && !any_fresh &&
+             membership_only_reorder)
+    {
+      // Sysreset v2: order-only camera sort updates sort epoch without pubver.
+      cache.sortRevision = sort_revision;
+      ++cache.transparent_order_key;
+    }
+    if (changed)
+    {
+      cache.IndirectCullReady = false;
+      cache.GpuCompactActive = false;
+      cache.CompactVisCpuSynced = false;
+      // R04 / A21 P3: bump artifact epoch on fresh upload OR real membership
+      // change — not order-only. Order-only bumps resident_table_revision.
+      if (any_fresh || (table_identity_changed && !membership_only_reorder))
+      {
+        ++cache.publicationVersion;
+        ++cache.resident_table_revision;
+      }
+      else if (membership_only_reorder)
+      {
+        ++cache.resident_table_revision;
+        NotePubVerChangedWithoutFresh();
+      }
+      else
+        NotePubVerChangedWithoutFresh();
+    }
+    cache.VertexPool.SignalUploadComplete();
+    LastAppliedDeltaKind_ = PublicationDeltaKind::Replace;
+    if (kChunkDemandShadow() && mesh_cache != nullptr)
+    {
+      UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+      for (const auto &coord : published_ok)
+      {
+        const MeshPublishRevs pub = mesh_cache->GetMeshPublishRevs(coord);
+        if (PassMeshMatchesDemand(demand, coord, pub))
+        {
+          const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
+          const uint64_t cov_pub = DemandCoverageGenToPublish(demand, coord);
+          demand.NoteInstallResult(coord, InstallResult::Published,
+                                   pub.geom_rev, pub.light_rev, attempt_id,
+                                   cov_pub);
+        }
+      }
+    }
+    return true;
   }
   if (delta.kind != PublicationDeltaKind::Remove &&
       delta.kind != PublicationDeltaKind::RepresentationSwitch)

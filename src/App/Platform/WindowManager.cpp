@@ -10,8 +10,8 @@
 #include "Core/Progress/IUProgressSink.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
-#include "Creatures/Diagnostics/CreaturePassTimingProbe.h"
 #include "Creatures/Definition/CreatureDefinition.h"
+#include "Creatures/Diagnostics/CreaturePassTimingProbe.h"
 #include "Creatures/Influence/InfluenceApplier.h"
 #include "Creatures/Influence/InfluenceResolver.h"
 #include "Creatures/Player/User.h"
@@ -30,6 +30,7 @@
 #include "ThirdParty/stb_image_write.h"
 #include "World/Core/World.h"
 #include "World/Diagnostics/FramePerfMonitor.h"
+#include "World/Diagnostics/MeshAuditDiagnostics.h"
 #include "World/Diagnostics/Profile.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Mesh/WorldMeshService.h"
@@ -51,7 +52,6 @@
 #include <thread>
 #include <utility>
 #include <vector>
-#include "World/Diagnostics/MeshAuditDiagnostics.h"
 
 namespace cutum
 {
@@ -281,8 +281,8 @@ public:
       return false;
     }
 
-    slot->Payload = Frame{width, height, path, index, camera_x, camera_y,
-                          source_buffer, {}};
+    slot->Payload = Frame{width,    height,   path,          index,
+                          camera_x, camera_y, source_buffer, {}};
     slot->Fence = fence;
     slot->Busy = true;
     return true;
@@ -505,15 +505,13 @@ private:
       {
         saved = false;
       }
-      CubatariumLogInfo("FlightCapture",
-                        std::string(saved ? "saved" : "write failed") +
-                            " index=" + std::to_string(frame.Index) +
-                            " source=" +
-                            (frame.SourceBuffer == GL_FRONT ? "GL_FRONT"
-                                                            : "GL_BACK") +
-                            " camera_x=" + std::to_string(frame.CameraX) +
-                            " camera_y=" + std::to_string(frame.CameraY) +
-                            " path=" + frame.Path.string());
+      CubatariumLogInfo(
+          "FlightCapture",
+          std::string(saved ? "saved" : "write failed") +
+              " index=" + std::to_string(frame.Index) + " source=" +
+              (frame.SourceBuffer == GL_FRONT ? "GL_FRONT" : "GL_BACK") +
+              " camera_x=" + std::to_string(frame.CameraX) + " camera_y=" +
+              std::to_string(frame.CameraY) + " path=" + frame.Path.string());
     }
   }
 
@@ -974,8 +972,7 @@ void UWindowManager::Run()
         {
           next_capture =
               capture_now +
-              std::chrono::duration_cast<
-                  std::chrono::steady_clock::duration>(
+              std::chrono::duration_cast<std::chrono::steady_clock::duration>(
                   std::chrono::duration<double>(capture_delay_seconds));
           capture_schedule_initialized = true;
         }
@@ -983,8 +980,7 @@ void UWindowManager::Run()
         {
           next_capture =
               capture_now +
-              std::chrono::duration_cast<
-                  std::chrono::steady_clock::duration>(
+              std::chrono::duration_cast<std::chrono::steady_clock::duration>(
                   std::chrono::duration<double>(capture_interval_seconds));
           std::ostringstream filename;
           filename << "frame_" << std::setw(3) << std::setfill('0')
@@ -994,9 +990,9 @@ void UWindowManager::Run()
           {
             UFrameStageWatchdog::Scope stage("window.frame_capture");
             const uint32_t frame_index = capture_index - 1;
-            const float camera_y = camera
-                                       ? camera->GetPosition().y
-                                       : std::numeric_limits<float>::quiet_NaN();
+            const float camera_y =
+                camera ? camera->GetPosition().y
+                       : std::numeric_limits<float>::quiet_NaN();
             if (!FlightCapture->QueueCapture(Window, capture_path, frame_index,
                                              camera_x, camera_y, GL_BACK))
             {
@@ -1067,23 +1063,7 @@ void UWindowManager::Run()
     const double frame_wall_ms =
         std::chrono::duration<double, std::milli>(frame_end - frame_begin)
             .count();
-    if (World)
-    {
-      World->SetLastSwapWaitMs(swap_wait_ms);
-    }
-    if (World && Application && Application->GetState() == AppState::InGame)
-    {
-      double interval = 2.0;
-      if (Core)
-      {
-        interval = Core->GetUiSettings().PerfLogIntervalSec;
-      }
-      UFrameStageWatchdog::Scope stage("window.perf_emit");
-      CreaturePassTimingProbe::CompleteWindowFrame(frame_wall_ms, swap_wait_ms);
-      UFramePerfMonitor::OnInGameFrame(*World, swap_wait_ms, interval,
-                                       frame_wall_ms);
-    }
-
+    RecordFrameTiming(swap_wait_ms, frame_wall_ms);
   }
 
   if (FlightCapture)
@@ -1091,8 +1071,29 @@ void UWindowManager::Run()
     FlightCapture->Shutdown();
     FlightCapture.reset();
   }
-  CreaturePassTimingProbe::ShutdownSession();
+  UCreaturePassTimingProbe::ShutdownSession();
   UFramePerfMonitor::Shutdown();
+}
+
+void UWindowManager::RecordFrameTiming(double swap_wait_ms,
+                                       double frame_wall_ms)
+{
+  if (World)
+  {
+    World->SetLastSwapWaitMs(swap_wait_ms);
+  }
+  if (World && Application && Application->GetState() == AppState::InGame)
+  {
+    double interval = 2.0;
+    if (Core)
+    {
+      interval = Core->GetUiSettings().PerfLogIntervalSec;
+    }
+    UFrameStageWatchdog::Scope stage("window.perf_emit");
+    UCreaturePassTimingProbe::CompleteWindowFrame(frame_wall_ms, swap_wait_ms);
+    UFramePerfMonitor::OnInGameFrame(*World, swap_wait_ms, interval,
+                                     frame_wall_ms);
+  }
 }
 
 void UWindowManager::SetStopPredicate(std::function<bool()> predicate)
@@ -1325,8 +1326,9 @@ void UWindowManager::Update()
           {
             std::cout << "flight-sim: explicit break target=(" << target.x
                       << "," << target.y << "," << target.z
-                      << ") completed=" << completed << " after="
-                      << World->GetBlockWorld().GetBlock(target) << std::endl;
+                      << ") completed=" << completed
+                      << " after=" << World->GetBlockWorld().GetBlock(target)
+                      << std::endl;
           }
         }
       }

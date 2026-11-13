@@ -58,8 +58,9 @@ enum class FluidSummaryEnqueueResult : uint8_t
   NotDeferred
 };
 
-inline bool FluidColumnSummaryVersionsMatch(const FluidColumnSummary &got,
-                                            const FluidColumnSummaryRequest &req)
+inline bool
+FluidColumnSummaryVersionsMatch(const FluidColumnSummary &got,
+                                const FluidColumnSummaryRequest &req)
 {
   return got.ready && got.world_epoch == req.world_epoch &&
          got.content_rev == req.content_rev &&
@@ -237,9 +238,12 @@ inline void FluidSummaryWorkerLoop()
     FluidSummaryWorkerJob job{};
     {
       std::unique_lock<std::mutex> lock(qs.mu);
-      qs.cv.wait(lock, [&] {
-        return qs.stop.load(std::memory_order_relaxed) || !qs.pending.empty();
-      });
+      qs.cv.wait(lock,
+                 [&]
+                 {
+                   return qs.stop.load(std::memory_order_relaxed) ||
+                          !qs.pending.empty();
+                 });
       if (qs.stop.load(std::memory_order_relaxed) && qs.pending.empty())
       {
         return;
@@ -288,12 +292,10 @@ inline void EnsureFluidSummaryWorkerStarted()
   // A35: keep joinable for ShutdownFluidSummaryWorker (no detach).
 }
 
-inline FluidSummaryEnqueueResult
-EnqueueFluidSummaryWorker(FluidSummaryWorkerJob &job,
-                          const FluidColumnSummaryRequest &req,
-                          bool defer_sync_scan, const uint8_t *flags = nullptr,
-                          size_t flag_bytes = 0, uint64_t fluid_id_hash = 0,
-                          BlockId representative = BLOCK_AIR)
+inline FluidSummaryEnqueueResult EnqueueFluidSummaryWorker(
+    FluidSummaryWorkerJob &job, const FluidColumnSummaryRequest &req,
+    bool defer_sync_scan, const uint8_t *flags = nullptr, size_t flag_bytes = 0,
+    uint64_t fluid_id_hash = 0, BlockId representative = BLOCK_AIR)
 {
   if (!defer_sync_scan)
   {
@@ -338,17 +340,14 @@ EnqueueFluidSummaryWorker(FluidSummaryWorkerJob &job,
   return FluidSummaryEnqueueResult::Enqueued;
 }
 
-inline bool TryEnqueueFluidSummaryWorker(FluidSummaryWorkerJob &job,
-                                         const FluidColumnSummaryRequest &req,
-                                         bool defer_sync_scan,
-                                         const uint8_t *flags = nullptr,
-                                         size_t flag_bytes = 0,
-                                         uint64_t fluid_id_hash = 0,
-                                         BlockId representative = BLOCK_AIR)
+inline bool TryEnqueueFluidSummaryWorker(
+    FluidSummaryWorkerJob &job, const FluidColumnSummaryRequest &req,
+    bool defer_sync_scan, const uint8_t *flags = nullptr, size_t flag_bytes = 0,
+    uint64_t fluid_id_hash = 0, BlockId representative = BLOCK_AIR)
 {
-  const FluidSummaryEnqueueResult r = EnqueueFluidSummaryWorker(
-      job, req, defer_sync_scan, flags, flag_bytes, fluid_id_hash,
-      representative);
+  const FluidSummaryEnqueueResult r =
+      EnqueueFluidSummaryWorker(job, req, defer_sync_scan, flags, flag_bytes,
+                                fluid_id_hash, representative);
   return r == FluidSummaryEnqueueResult::Enqueued ||
          r == FluidSummaryEnqueueResult::Coalesced;
 }
@@ -480,8 +479,10 @@ inline int DrainFluidSummaryCompletions(
   return installed;
 }
 
-/// A26 N5: hitch gate — reject sync fluid_map work that would burn tens/hundreds ms.
-inline bool ShouldRejectFluidMapHitch(double estimated_ms, double budget_ms = 8.0)
+/// A26 N5: hitch gate — reject sync fluid_map work that would burn
+/// tens/hundreds ms.
+inline bool ShouldRejectFluidMapHitch(double estimated_ms,
+                                      double budget_ms = 8.0)
 {
   return estimated_ms > budget_ms;
 }

@@ -1,16 +1,16 @@
-#include "Core/StallTimer.h"
 #include "App/WorldOperationRunner.h"
-#include "World/Diagnostics/EnterLitDiagnostics.h"
-#include "World/Streaming/EnterVisualWarmupPolicy.h"
-#include "World/Streaming/OceanCruisePolicy.h"
-#include "World/Core/RuntimeTuning.h"
-#include "World/Core/WorldLoadDiagnostics.h"
 #include "App/Core.h"
 #include "App/Platform/Log.h"
 #include "Core/Progress/ProgressTypes.h"
-#include "World/Core/World.h"
+#include "Core/StallTimer.h"
 #include "World/Chunks/ChunkManager.h"
+#include "World/Core/RuntimeTuning.h"
+#include "World/Core/World.h"
+#include "World/Core/WorldLoadDiagnostics.h"
+#include "World/Diagnostics/EnterLitDiagnostics.h"
 #include "World/Mesh/WorldMeshService.h"
+#include "World/Streaming/EnterVisualWarmupPolicy.h"
+#include "World/Streaming/OceanCruisePolicy.h"
 #include "glog/logging.h"
 #include <chrono>
 #include <iostream>
@@ -18,6 +18,18 @@
 
 namespace cutum
 {
+void UWorldOperationRunner::UpdateEnterGameWarmupPeaks(
+    const EnterLitSample &lit_sample, int fov_debt)
+{
+  if (fov_debt > EnterGameFovLitPeakDebt)
+  {
+    EnterGameFovLitPeakDebt = fov_debt;
+  }
+  EnterGameFifoPeak = std::max(EnterGameFifoPeak, lit_sample.fifo_n);
+  EnterGameGpuPeak =
+      std::max(EnterGameGpuPeak, lit_sample.mesh_gpu_pending_near);
+  EnterGameRingPeak = std::max(EnterGameRingPeak, lit_sample.ring_not_ready);
+}
 
 namespace
 {
@@ -109,7 +121,8 @@ void UWorldOperationRunner::Start(WorldRunnerRequest request)
   }
 }
 
-void UWorldOperationRunner::Fail(const std::string &message, IUProgressSink &sink)
+void UWorldOperationRunner::Fail(const std::string &message,
+                                 IUProgressSink &sink)
 {
   Error = message;
   Success = false;
@@ -237,14 +250,7 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   {
     World.SetEnterSessionPhase(EnterSessionPhase::Quiesce);
   }
-  if (fov_debt > EnterGameFovLitPeakDebt)
-  {
-    EnterGameFovLitPeakDebt = fov_debt;
-  }
-  EnterGameFifoPeak = std::max(EnterGameFifoPeak, lit_sample.fifo_n);
-  EnterGameGpuPeak =
-      std::max(EnterGameGpuPeak, lit_sample.mesh_gpu_pending_near);
-  EnterGameRingPeak = std::max(EnterGameRingPeak, lit_sample.ring_not_ready);
+  UpdateEnterGameWarmupPeaks(lit_sample, fov_debt);
   const int fifo_peak = std::max(1, EnterGameFifoPeak);
   const int gpu_peak = std::max(1, EnterGameGpuPeak);
   const int ring_peak = std::max(1, EnterGameRingPeak);
@@ -252,8 +258,7 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
 
   const bool coop_prepared = World.IsSpawnAreaPreparedByCooperativeLoad();
   const bool focus_terrain_ready = World.IsEnterFocusTerrainReady();
-  const bool ring_ready =
-      coop_prepared || World.IsSpawnMeshRingReady();
+  const bool ring_ready = coop_prepared || World.IsSpawnMeshRingReady();
   const bool mesh_blockers_clear =
       coop_prepared || !World.NeedsEnterGameMeshWarmup();
   const bool fov_ready = coop_prepared || fov_debt <= 0;
@@ -287,31 +292,32 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
        (World.IsEnterLitQuiesceLatched() || EnterGameAbortDrainMode ||
         EnterGameGpuWarmupElapsedMs >=
             static_cast<double>(tune.EnterMeshAbortMs)));
-  const bool soft_ready =
-      focus_terrain_ready && mesh_blockers_for_exit && fov_ready &&
-      ring_ready_for_exit && visibility_ready_for_exit;
+  const bool soft_ready = focus_terrain_ready && mesh_blockers_for_exit &&
+                          fov_ready && ring_ready_for_exit &&
+                          visibility_ready_for_exit;
 
   const bool cap_reached =
-      focus_terrain_ready && ShouldForceEnterVisualCap(
-                                 EnterGameGpuWarmupElapsedMs, soft_ready,
-                                 EnterGameColdCreate,
-                                 tune.EnterFovLitHardWallMs,
-                                 tune.EnterLitRequireZero);
+      focus_terrain_ready &&
+      ShouldForceEnterVisualCap(EnterGameGpuWarmupElapsedMs, soft_ready,
+                                EnterGameColdCreate, tune.EnterFovLitHardWallMs,
+                                tune.EnterLitRequireZero);
   if (!cap_reached && (fov_debt > 0 || visibility_debt > 0) &&
       EnterGameGpuWarmupElapsedMs >=
           static_cast<double>(tune.EnterFovLitHardWallMs) &&
       !EnterGameLitWarnLogged)
   {
     EnterGameLitWarnLogged = true;
-    std::cerr << "[Era42/48] enter lit/visibility still draining past warn wall ("
-              << EnterGameGpuWarmupElapsedMs << "ms, lit=" << fov_debt
-              << " vis=" << visibility_debt << ")\n";
+    std::cerr
+        << "[Era42/48] enter lit/visibility still draining past warn wall ("
+        << EnterGameGpuWarmupElapsedMs << "ms, lit=" << fov_debt
+        << " vis=" << visibility_debt << ")\n";
   }
   // Era48: never EndEnterLitGate on lit abort while visibility debt remains —
   // keep unified drain (log only).
   if (!EnterGameForceLitAbort && tune.EnterLitRequireZero && fov_debt > 0 &&
       tune.EnterLitAbortMs > 0 &&
-      EnterGameGpuWarmupElapsedMs >= static_cast<double>(tune.EnterLitAbortMs) &&
+      EnterGameGpuWarmupElapsedMs >=
+          static_cast<double>(tune.EnterLitAbortMs) &&
       World.IsEnterLitGateActive())
   {
     EnterGameForceLitAbort = true;
@@ -321,7 +327,8 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
               << " (continuing drain; no force InGame)\n";
   }
   if (!EnterGameAbortDrainMode &&
-      ShouldForceEnterMeshAbort(fov_debt, ring_ready, EnterGameGpuWarmupElapsedMs,
+      ShouldForceEnterMeshAbort(fov_debt, ring_ready,
+                                EnterGameGpuWarmupElapsedMs,
                                 tune.EnterMeshAbortMs))
   {
     EnterGameForceMeshAbort = true;
@@ -330,8 +337,8 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
     {
       EnterGameAbortDrainLogged = true;
       LOG(INFO) << "[EnterWarmup] abort_drain elapsed_ms="
-                << EnterGameGpuWarmupElapsedMs << " dirty="
-                << (lit_sample.mesh_dirty ? 1 : 0)
+                << EnterGameGpuWarmupElapsedMs
+                << " dirty=" << (lit_sample.mesh_dirty ? 1 : 0)
                 << " missing=" << (lit_sample.mesh_missing_greedy ? 1 : 0)
                 << " gpu_pending=" << lit_sample.mesh_gpu_pending_near
                 << " async=" << (lit_sample.mesh_async_pending ? 1 : 0)
@@ -344,8 +351,8 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
 
   const float raw_prog = EnterGpuWarmupProgressFraction(
       lit_sample.fifo_n, fifo_peak, lit_sample.mesh_gpu_pending_near, gpu_peak,
-      lit_sample.ring_not_ready, ring_peak,
-      fov_debt + visibility_debt, std::max(fov_peak, 1));
+      lit_sample.ring_not_ready, ring_peak, fov_debt + visibility_debt,
+      std::max(fov_peak, 1));
   const float enter_prog =
       EnterGpuWarmupMonotonicProgress(raw_prog, EnterGameDisplayProgress);
   // Era48: hold bar under 100% until visibility ready.
@@ -365,8 +372,7 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
       kEnterGameGpuWarmupMaxFrames - EnterGameGpuWarmupFramesLeft;
   UEnterLitDiagnostics::MaybeLog(lit_sample, frame_index);
   UEnterLitDiagnostics::MaybeLogHeartbeat(lit_sample, 2000.0);
-  const bool min_frames_done =
-      frame_index >= kEnterGameGpuWarmupMinFrames;
+  const bool min_frames_done = frame_index >= kEnterGameGpuWarmupMinFrames;
   if (!mesh_blockers_for_exit || !ring_ready_for_exit)
   {
     World.SetEnterGameWarmupMissingGreedy(lit_sample.ring_not_ready);
@@ -391,12 +397,11 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
     World.MarkSpawnRingUnfinishedDirty(8);
   }
   const bool abort_underfeet_cap =
-      focus_terrain_ready && ShouldReleaseEnterAfterAbortUnderfeetCap(
-                                 EnterGameAbortDrainMode,
-                                 EnterGameGpuWarmupElapsedMs,
-                                 tune.EnterForceInGameMs,
-                                 underfeet_present_cap,
-                                 underfeet_gpu_pending_cap);
+      focus_terrain_ready &&
+      ShouldReleaseEnterAfterAbortUnderfeetCap(
+          EnterGameAbortDrainMode, EnterGameGpuWarmupElapsedMs,
+          tune.EnterForceInGameMs, underfeet_present_cap,
+          underfeet_gpu_pending_cap);
   bool enter_ready =
       focus_terrain_ready &&
       IsEnterGpuWarmupReady(ring_ready_for_exit, fov_ready ? 0 : fov_debt,
@@ -410,18 +415,19 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
     {
       EnterGameForceInGameLogged = true;
       LOG(WARNING) << "[EnterWarmup] abort_underfeet_cap elapsed_ms="
-                   << EnterGameGpuWarmupElapsedMs << " ring_ready="
-                   << (ring_ready ? 1 : 0) << " visibility_debt="
-                   << visibility_debt << " residual_fov=" << fov_debt
+                   << EnterGameGpuWarmupElapsedMs
+                   << " ring_ready=" << (ring_ready ? 1 : 0)
+                   << " visibility_debt=" << visibility_debt
+                   << " residual_fov=" << fov_debt
                    << " (underfeet present; residual vis may remain)";
       CubatariumFlushLogs();
     }
   }
   const int combined_debt = EnterWarmupCombinedDebt(lit_sample, fov_debt);
   const bool soft_clean_cap =
-      focus_terrain_ready && ShouldForceEnterLoadSoftCleanDebt(
-                                 EnterGameGpuWarmupElapsedMs, combined_debt,
-                                 underfeet_present_cap);
+      focus_terrain_ready &&
+      ShouldForceEnterLoadSoftCleanDebt(EnterGameGpuWarmupElapsedMs,
+                                        combined_debt, underfeet_present_cap);
   if (soft_clean_cap && !enter_ready && min_frames_done)
   {
     enter_ready = true;
@@ -440,10 +446,10 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
     }
   }
   const bool soft_exit_cap =
-      focus_terrain_ready && ShouldForceEnterLoadSoftExit(
-                                 EnterGameAbortDrainMode,
-                                 EnterGameGpuWarmupElapsedMs,
-                                 tune.EnterForceInGameMs, fov_debt);
+      focus_terrain_ready &&
+      ShouldForceEnterLoadSoftExit(EnterGameAbortDrainMode,
+                                   EnterGameGpuWarmupElapsedMs,
+                                   tune.EnterForceInGameMs, fov_debt);
   if (soft_exit_cap && !enter_ready && min_frames_done)
   {
     enter_ready = true;
@@ -453,12 +459,14 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
       if (ShouldAllowEnterSoftForceSettle(underfeet_present_cap))
       {
         World.SetLastEnterSettleReason("soft_force");
-        LOG(WARNING) << "[EnterWarmup] settle_reason=soft_force soft_exit_cap elapsed_ms="
-                     << EnterGameGpuWarmupElapsedMs << " ring_ready="
-                     << (ring_ready ? 1 : 0) << " mesh_dirty="
-                     << (lit_sample.mesh_dirty ? 1 : 0) << " gpu_pending="
-                     << lit_sample.mesh_gpu_pending_near << " ring="
-                     << lit_sample.ring_not_ready << " fifo=" << lit_sample.fifo_n
+        LOG(WARNING) << "[EnterWarmup] settle_reason=soft_force soft_exit_cap "
+                        "elapsed_ms="
+                     << EnterGameGpuWarmupElapsedMs
+                     << " ring_ready=" << (ring_ready ? 1 : 0)
+                     << " mesh_dirty=" << (lit_sample.mesh_dirty ? 1 : 0)
+                     << " gpu_pending=" << lit_sample.mesh_gpu_pending_near
+                     << " ring=" << lit_sample.ring_not_ready
+                     << " fifo=" << lit_sample.fifo_n
                      << " visibility_debt=" << visibility_debt
                      << " underfeet=" << (underfeet_present_cap ? 1 : 0);
         if (visibility_debt > 0)
@@ -472,10 +480,12 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
       {
         // Phase 5.7R5: wall exit without soft_force+UF=0 product event.
         World.SetLastEnterSettleReason("force_ingame_no_uf");
-        LOG(WARNING) << "[EnterWarmup] settle_reason=force_ingame_no_uf elapsed_ms="
-                     << EnterGameGpuWarmupElapsedMs << " ring_ready="
-                     << (ring_ready ? 1 : 0) << " visibility_debt="
-                     << visibility_debt << " underfeet=0 (no soft_force settle)";
+        LOG(WARNING)
+            << "[EnterWarmup] settle_reason=force_ingame_no_uf elapsed_ms="
+            << EnterGameGpuWarmupElapsedMs
+            << " ring_ready=" << (ring_ready ? 1 : 0)
+            << " visibility_debt=" << visibility_debt
+            << " underfeet=0 (no soft_force settle)";
         World.BeginEnterGameMeshBurst(24);
         World.MarkSpawnRingUnfinishedDirty(16);
       }
@@ -489,11 +499,12 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   {
     EnterGameForceInGameLogged = true;
     LOG(WARNING) << "[EnterWarmup] force_ingame wall elapsed_ms="
-                 << EnterGameGpuWarmupElapsedMs << " ring_ready="
-                 << (ring_ready ? 1 : 0) << " mesh_dirty="
-                 << (lit_sample.mesh_dirty ? 1 : 0) << " gpu_pending="
-                 << lit_sample.mesh_gpu_pending_near << " ring="
-                 << lit_sample.ring_not_ready << " fifo=" << lit_sample.fifo_n
+                 << EnterGameGpuWarmupElapsedMs
+                 << " ring_ready=" << (ring_ready ? 1 : 0)
+                 << " mesh_dirty=" << (lit_sample.mesh_dirty ? 1 : 0)
+                 << " gpu_pending=" << lit_sample.mesh_gpu_pending_near
+                 << " ring=" << lit_sample.ring_not_ready
+                 << " fifo=" << lit_sample.fifo_n
                  << " visibility_debt=" << visibility_debt
                  << " underfeet=" << (underfeet_present ? 1 : 0)
                  << " (waiting for soft_exit / underfeet cap)";
@@ -543,15 +554,8 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   return false;
 }
 
-bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
+bool UWorldOperationRunner::AnnounceSynchronousStage(IUProgressSink &sink)
 {
-  if (!Active || CurrentStage == Stage::Done || CurrentStage == Stage::Failed)
-  {
-    return true;
-  }
-
-  const int budget = chunkBudgetPerFrame > 0 ? chunkBudgetPerFrame : kChunkBudgetPerFrame;
-
   // Stages that run one long synchronous call: show their label first, run on
   // the next frame, so the UI never freezes on a stale screen.
   const char *announce = nullptr;
@@ -576,22 +580,50 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
   {
     AnnouncedStage = CurrentStage;
     sink.Report("prepare", 0.f, announce);
-    return false;
+    return true;
   }
   if (!announce)
   {
     AnnouncedStage = Stage::Idle;
   }
-  static const char *const kStageNames[] = {
-      "Runner.Idle",         "Runner.PrepareCreate",   "Runner.PreReplaceTerrain",
-      "Runner.WorldOperation", "Runner.PostLoadUsers", "Runner.PostCreateUsers",
-      "Runner.PostCreateSave", "Runner.EnterGameList", "Runner.EnterGameCreate",
-      "Runner.EnterGameLoad",  "Runner.EnterGameFinalize",
-      "Runner.EnterGameGpuWarmup", "Runner.ShutdownQuiesce",
-      "Runner.ShutdownSave",   "Runner.ShutdownFinalize", "Runner.Done",
-      "Runner.Failed"};
-  ScopedStallTimer stage_timer(kStageNames[static_cast<int>(CurrentStage)],
-                               100.0);
+  return false;
+}
+
+const char *UWorldOperationRunner::CurrentStageName() const
+{
+  static const char *const kStageNames[] = {"Runner.Idle",
+                                            "Runner.PrepareCreate",
+                                            "Runner.PreReplaceTerrain",
+                                            "Runner.WorldOperation",
+                                            "Runner.PostLoadUsers",
+                                            "Runner.PostCreateUsers",
+                                            "Runner.PostCreateSave",
+                                            "Runner.EnterGameList",
+                                            "Runner.EnterGameCreate",
+                                            "Runner.EnterGameLoad",
+                                            "Runner.EnterGameFinalize",
+                                            "Runner.EnterGameGpuWarmup",
+                                            "Runner.ShutdownQuiesce",
+                                            "Runner.ShutdownSave",
+                                            "Runner.ShutdownFinalize",
+                                            "Runner.Done",
+                                            "Runner.Failed"};
+  return kStageNames[static_cast<int>(CurrentStage)];
+}
+
+bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
+{
+  if (!Active || CurrentStage == Stage::Done || CurrentStage == Stage::Failed)
+  {
+    return true;
+  }
+
+  const int budget =
+      chunkBudgetPerFrame > 0 ? chunkBudgetPerFrame : kChunkBudgetPerFrame;
+
+  if (AnnounceSynchronousStage(sink))
+    return false;
+  UScopedStallTimer stage_timer(CurrentStageName(), 100.0);
 
   switch (CurrentStage)
   {
@@ -842,7 +874,8 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
       {
         sink.Report("save", 0.92f, "Saving world...");
         // Do not resume streaming after quit-save — PrepareForShutdown follows.
-        World.BeginCooperativeSave(folder, /*resume_streaming_after_save=*/false);
+        World.BeginCooperativeSave(folder,
+                                   /*resume_streaming_after_save=*/false);
       }
       if (!World.TickCooperativeSave(sink, budget))
       {

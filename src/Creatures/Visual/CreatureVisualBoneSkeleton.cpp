@@ -172,8 +172,8 @@ void UCreatureVisualBoneSkeleton::UpdatePose(
     input.carryHands = creature.CarryHandCount;
     input.throwCharge = creature.ThrowCharge;
     input.bowCharge = creature.BowCharge;
-    BonePose = HumanMotionController::Compute(input, creature.HumanMotion, dt,
-                                              creature.IsPossessed());
+    BonePose = UHumanMotionController::Compute(input, creature.HumanMotion, dt,
+                                               creature.IsPossessed());
   }
   else
     BonePose = BoneSkeletonPoseEngine::Compute(facts, animDef, dt);

@@ -23,7 +23,7 @@ def git_changed_files(base: str = "HEAD") -> list[Path]:
         check=False,
     )
     if proc.returncode != 0:
-        return []
+        raise RuntimeError(f"Cannot compare C++ files against {base}: {proc.stderr.strip()}")
     files: list[Path] = []
     for line in proc.stdout.splitlines():
         p = ROOT / line.strip()
@@ -35,9 +35,9 @@ def git_changed_files(base: str = "HEAD") -> list[Path]:
     return sorted(set(files))
 
 
-def collect_cpp_files(paths: list[str]) -> list[Path]:
+def collect_cpp_files(paths: list[str], base: str = "HEAD") -> list[Path]:
     if not paths:
-        return git_changed_files()
+        return git_changed_files(base)
     out: list[Path] = []
     for raw in paths:
         p = Path(raw)
@@ -84,17 +84,22 @@ def main() -> int:
         action="store_true",
         help="Check all src/**/*.cpp and src/**/*.h (slow; local only)",
     )
+    parser.add_argument("--base",default="HEAD",help="Git revision for changed-file checks (CI: HEAD^, requires fetched parent)")
     args = parser.parse_args()
 
     clang_format = shutil.which("clang-format")
     if not clang_format:
-        print("clang-format not found in PATH; skipping format check.", file=sys.stderr)
-        return 0
+        print("clang-format not found in PATH; cannot verify formatting.", file=sys.stderr)
+        return 1
 
-    if args.all:
-        files = collect_cpp_files([str(SRC)])
-    else:
-        files = collect_cpp_files(args.paths)
+    try:
+        if args.all:
+            files = collect_cpp_files([str(SRC)])
+        else:
+            files = collect_cpp_files(args.paths,args.base)
+    except RuntimeError as error:
+        print(str(error),file=sys.stderr)
+        return 1
 
     if not files:
         print("clang-format: no C++ files to check (pass).")

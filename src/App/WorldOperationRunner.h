@@ -1,17 +1,18 @@
 #pragma once
 
 #include "Core/Progress/IUProgressSink.h"
-#include "ResourcePacks/ResourcePackResolver.h"
-#include "World/View/WorldViewSettings.h"
-#include "WorldGen/Core/ProceduralSettings.h"
-#include "World/Core/World.h"
 #include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
+#include "ResourcePacks/ResourcePackResolver.h"
+#include "World/Core/World.h"
+#include "World/View/WorldViewSettings.h"
+#include "WorldGen/Core/ProceduralSettings.h"
 #include <functional>
 #include <string>
 
 namespace cutum
 {
+struct EnterLitSample;
 
 class UCore;
 class UWorld;
@@ -59,7 +60,10 @@ public:
     return Request.op == WorldRunnerOp::Shutdown &&
            Request.shutdownCloseApplication;
   }
-  bool IsShutdownOperation() const { return Request.op == WorldRunnerOp::Shutdown; }
+  bool IsShutdownOperation() const
+  {
+    return Request.op == WorldRunnerOp::Shutdown;
+  }
   bool IsEnterGameGpuWarmupStage() const
   {
     return CurrentStage == Stage::EnterGameGpuWarmup;
@@ -79,6 +83,10 @@ public:
   bool IsEnterGameAbortDrainMode() const { return EnterGameAbortDrainMode; }
 
 private:
+  const char *CurrentStageName() const;
+  void UpdateEnterGameWarmupPeaks(const EnterLitSample &lit_sample,
+                                  int fov_debt);
+  bool AnnounceSynchronousStage(IUProgressSink &sink);
   enum class Stage
   {
     Idle,
@@ -121,7 +129,8 @@ private:
   int EnterGameGpuWarmupFramesLeft{0};
   double EnterGameGpuWarmupElapsedMs{0.0};
   double EnterLoadElapsedMs{0.0};
-  /// Era33: Create/SaveThenCreate must not force-cap GpuWarmup while visual debt.
+  /// Era33: Create/SaveThenCreate must not force-cap GpuWarmup while visual
+  /// debt.
   bool EnterGameColdCreate{false};
   /// Era41: peak FOV lit debt for monotonic progress on the bar.
   int EnterGameFovLitPeakDebt{0};

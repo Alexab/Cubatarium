@@ -645,6 +645,143 @@ void UWorldPersistence::EnqueueBoundaryDependencyRelight(UWorld &world,
       /*visible_admission=*/false, "boundary_dependency", &world);
 }
 
+void UWorldPersistence::TraceDeniedRelightAdmission(
+    glm::ivec2 ground_xz, int min_y, int max_y, UWorld *world_context,
+    const char *producer, int fifo_n, int horiz, glm::ivec2 key, bool priority)
+{
+  if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+  {
+    int loaded_slices = 0;
+    int settled_slices = 0;
+    int pending_slices = 0;
+    int audit_min_y = -1;
+    int audit_max_y = -1;
+    bool band_needs_relight = false;
+    std::string dark_face_cy;
+    std::string unsettled_dark_face_cy;
+    std::string stale_dark_face_checked_cy;
+    std::string stale_dark_face_witness;
+    bool pending_column = false;
+    bool lit_ready = false;
+    if (world_context)
+    {
+      pending_column = world_context->IsPendingLightBeforeMesh(ground_xz);
+      lit_ready = world_context->IsColumnLitReady(
+          glm::ivec3(ground_xz.x, 0, ground_xz.y));
+      const int world_min_y = world_context->ProceduralTemplate.MinHeight;
+      const int world_max_y = world_context->ProceduralTemplate.MaxHeight;
+      audit_min_y = std::clamp(min_y, world_min_y, world_max_y);
+      const int requested_max_y = max_y >= audit_min_y ? max_y : world_max_y;
+      audit_max_y = std::clamp(requested_max_y, audit_min_y, world_max_y);
+      const auto deferred = DeferredFarRelightColumns.find(ground_xz);
+      if (deferred != DeferredFarRelightColumns.end())
+      {
+        const int deferred_min_y =
+            std::clamp(deferred->second.y_band.x, world_min_y, world_max_y);
+        const int deferred_max_y = deferred->second.y_band.y >= deferred_min_y
+                                       ? std::clamp(deferred->second.y_band.y,
+                                                    deferred_min_y, world_max_y)
+                                       : world_max_y;
+        audit_min_y = std::min(audit_min_y, deferred_min_y);
+        audit_max_y = std::max(audit_max_y, deferred_max_y);
+      }
+      band_needs_relight = ColumnSurfaceBandHasUnsettledOrStaleDarkFace(
+          *world_context, ground_xz, audit_min_y, audit_max_y);
+      const int min_cy = FloorDiv(audit_min_y, CHUNK_SIZE);
+      const int max_cy = FloorDiv(audit_max_y, CHUNK_SIZE);
+      const UChunkManager &chunks = world_context->BlockWorld.GetChunkManager();
+      const UWorldMeshService &mesh = world_context->GetMeshService();
+      for (int cy = min_cy; cy <= max_cy; ++cy)
+      {
+        const glm::ivec3 coord(ground_xz.x, cy, ground_xz.y);
+        if (chunks.GetChunk(coord))
+        {
+          ++loaded_slices;
+          if (world_context->HasCurrentChunkSliceLightSettlement(coord))
+          {
+            ++settled_slices;
+          }
+          if (world_context->IsPendingLightBeforeMeshSlice(coord))
+          {
+            ++pending_slices;
+          }
+        }
+        if (mesh.HasGreedyMesh(coord) &&
+            mesh.GetCache().ChunkHasFullyDarkFace(coord))
+        {
+          if (!dark_face_cy.empty())
+          {
+            dark_face_cy += ",";
+          }
+          dark_face_cy += std::to_string(cy);
+          if (!world_context->HasCurrentChunkSliceLightSettlement(coord))
+          {
+            if (!unsettled_dark_face_cy.empty())
+            {
+              unsettled_dark_face_cy += ",";
+            }
+            unsettled_dark_face_cy += std::to_string(cy);
+          }
+          else
+          {
+            if (!stale_dark_face_checked_cy.empty())
+            {
+              stale_dark_face_checked_cy += ",";
+            }
+            stale_dark_face_checked_cy += std::to_string(cy);
+            UChunkMeshCache::StaleDarkWitness witness{};
+            if (mesh.GetCache().ChunkHasStaleDarkFaces(
+                    coord, world_context->GetBlockWorld(), &witness))
+            {
+              if (!stale_dark_face_witness.empty())
+              {
+                stale_dark_face_witness += ",";
+              }
+              stale_dark_face_witness +=
+                  std::to_string(cy) + "@" +
+                  std::to_string(witness.sampled_block.x) + "," +
+                  std::to_string(witness.sampled_block.y) + "," +
+                  std::to_string(witness.sampled_block.z);
+            }
+          }
+        }
+      }
+    }
+    CubatariumLogInfo(
+        "RelightAudit",
+        "relight_fifo event=deny source=" +
+            std::string(producer ? producer : "unspecified") + " column=(" +
+            std::to_string(ground_xz.x) + "," + std::to_string(ground_xz.y) +
+            ") block_key=(" + std::to_string(key.x) + "," +
+            std::to_string(key.y) + ") band=" + std::to_string(min_y) + ":" +
+            std::to_string(max_y) + " priority=" + std::to_string(priority) +
+            " horiz=" + std::to_string(horiz) +
+            " fifo_n=" + std::to_string(fifo_n) + " priority_n=" +
+            std::to_string(PendingTerrainColumnRelightsPriority.size()) +
+            " deferred_far_n=" +
+            std::to_string(DeferredFarRelightColumns.size()) +
+            " world_state=" + (world_context ? "available" : "unavailable") +
+            " pending_column=" + std::to_string(pending_column) +
+            " lit_ready=" + std::to_string(lit_ready) +
+            " loaded_slices=" + std::to_string(loaded_slices) +
+            " settled_slices=" + std::to_string(settled_slices) +
+            " pending_slices=" + std::to_string(pending_slices) +
+            " audit_band=" + std::to_string(audit_min_y) + ":" +
+            std::to_string(audit_max_y) + " band_needs=" +
+            std::to_string(band_needs_relight) + " dark_face_cy=" +
+            (dark_face_cy.empty() ? std::string("none") : dark_face_cy) +
+            " unsettled_dark_face_cy=" +
+            (unsettled_dark_face_cy.empty() ? std::string("none")
+                                            : unsettled_dark_face_cy) +
+            " stale_dark_face_checked_cy=" +
+            (stale_dark_face_checked_cy.empty() ? std::string("none")
+                                                : stale_dark_face_checked_cy) +
+            " stale_dark_face=" +
+            (stale_dark_face_witness.empty() ? std::string("none")
+                                             : stale_dark_face_witness));
+  }
+}
+
 void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
     int world_x, int world_z, const bool priority, int min_y, int max_y,
     const bool visible_admission, const char *producer, UWorld *world_context)
@@ -830,143 +967,8 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
     }
     if (!visible_admission && fifo_backpressured)
     {
-      if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
-      {
-        int loaded_slices = 0;
-        int settled_slices = 0;
-        int pending_slices = 0;
-        int audit_min_y = -1;
-        int audit_max_y = -1;
-        bool band_needs_relight = false;
-        std::string dark_face_cy;
-        std::string unsettled_dark_face_cy;
-        std::string stale_dark_face_checked_cy;
-        std::string stale_dark_face_witness;
-        bool pending_column = false;
-        bool lit_ready = false;
-        if (world_context)
-        {
-          pending_column = world_context->IsPendingLightBeforeMesh(ground_xz);
-          lit_ready = world_context->IsColumnLitReady(
-              glm::ivec3(ground_xz.x, 0, ground_xz.y));
-          const int world_min_y = world_context->ProceduralTemplate.MinHeight;
-          const int world_max_y = world_context->ProceduralTemplate.MaxHeight;
-          audit_min_y = std::clamp(min_y, world_min_y, world_max_y);
-          const int requested_max_y =
-              max_y >= audit_min_y ? max_y : world_max_y;
-          audit_max_y = std::clamp(requested_max_y, audit_min_y, world_max_y);
-          const auto deferred = DeferredFarRelightColumns.find(ground_xz);
-          if (deferred != DeferredFarRelightColumns.end())
-          {
-            const int deferred_min_y =
-                std::clamp(deferred->second.y_band.x, world_min_y, world_max_y);
-            const int deferred_max_y =
-                deferred->second.y_band.y >= deferred_min_y
-                    ? std::clamp(deferred->second.y_band.y, deferred_min_y,
-                                 world_max_y)
-                    : world_max_y;
-            audit_min_y = std::min(audit_min_y, deferred_min_y);
-            audit_max_y = std::max(audit_max_y, deferred_max_y);
-          }
-          band_needs_relight = ColumnSurfaceBandHasUnsettledOrStaleDarkFace(
-              *world_context, ground_xz, audit_min_y, audit_max_y);
-          const int min_cy = FloorDiv(audit_min_y, CHUNK_SIZE);
-          const int max_cy = FloorDiv(audit_max_y, CHUNK_SIZE);
-          const UChunkManager &chunks =
-              world_context->BlockWorld.GetChunkManager();
-          const UWorldMeshService &mesh = world_context->GetMeshService();
-          for (int cy = min_cy; cy <= max_cy; ++cy)
-          {
-            const glm::ivec3 coord(ground_xz.x, cy, ground_xz.y);
-            if (chunks.GetChunk(coord))
-            {
-              ++loaded_slices;
-              if (world_context->HasCurrentChunkSliceLightSettlement(coord))
-              {
-                ++settled_slices;
-              }
-              if (world_context->IsPendingLightBeforeMeshSlice(coord))
-              {
-                ++pending_slices;
-              }
-            }
-            if (mesh.HasGreedyMesh(coord) &&
-                mesh.GetCache().ChunkHasFullyDarkFace(coord))
-            {
-              if (!dark_face_cy.empty())
-              {
-                dark_face_cy += ",";
-              }
-              dark_face_cy += std::to_string(cy);
-              if (!world_context->HasCurrentChunkSliceLightSettlement(coord))
-              {
-                if (!unsettled_dark_face_cy.empty())
-                {
-                  unsettled_dark_face_cy += ",";
-                }
-                unsettled_dark_face_cy += std::to_string(cy);
-              }
-              else
-              {
-                if (!stale_dark_face_checked_cy.empty())
-                {
-                  stale_dark_face_checked_cy += ",";
-                }
-                stale_dark_face_checked_cy += std::to_string(cy);
-                UChunkMeshCache::StaleDarkWitness witness{};
-                if (mesh.GetCache().ChunkHasStaleDarkFaces(
-                        coord, world_context->GetBlockWorld(), &witness))
-                {
-                  if (!stale_dark_face_witness.empty())
-                  {
-                    stale_dark_face_witness += ",";
-                  }
-                  stale_dark_face_witness +=
-                      std::to_string(cy) + "@" +
-                      std::to_string(witness.sampled_block.x) + "," +
-                      std::to_string(witness.sampled_block.y) + "," +
-                      std::to_string(witness.sampled_block.z);
-                }
-              }
-            }
-          }
-        }
-        CubatariumLogInfo(
-            "RelightAudit",
-            "relight_fifo event=deny source=" +
-                std::string(producer ? producer : "unspecified") + " column=(" +
-                std::to_string(ground_xz.x) + "," +
-                std::to_string(ground_xz.y) + ") block_key=(" +
-                std::to_string(key.x) + "," + std::to_string(key.y) +
-                ") band=" + std::to_string(min_y) + ":" +
-                std::to_string(max_y) + " priority=" +
-                std::to_string(priority) + " horiz=" + std::to_string(horiz) +
-                " fifo_n=" + std::to_string(fifo_n) + " priority_n=" +
-                std::to_string(PendingTerrainColumnRelightsPriority.size()) +
-                " deferred_far_n=" +
-                std::to_string(DeferredFarRelightColumns.size()) +
-                " world_state=" +
-                (world_context ? "available" : "unavailable") +
-                " pending_column=" + std::to_string(pending_column) +
-                " lit_ready=" + std::to_string(lit_ready) +
-                " loaded_slices=" + std::to_string(loaded_slices) +
-                " settled_slices=" + std::to_string(settled_slices) +
-                " pending_slices=" + std::to_string(pending_slices) +
-                " audit_band=" + std::to_string(audit_min_y) + ":" +
-                std::to_string(audit_max_y) + " band_needs=" +
-                std::to_string(band_needs_relight) + " dark_face_cy=" +
-                (dark_face_cy.empty() ? std::string("none") : dark_face_cy) +
-                " unsettled_dark_face_cy=" +
-                (unsettled_dark_face_cy.empty() ? std::string("none")
-                                                : unsettled_dark_face_cy) +
-                " stale_dark_face_checked_cy=" +
-                (stale_dark_face_checked_cy.empty()
-                     ? std::string("none")
-                     : stale_dark_face_checked_cy) +
-                " stale_dark_face=" +
-                (stale_dark_face_witness.empty() ? std::string("none")
-                                                 : stale_dark_face_witness));
-      }
+      TraceDeniedRelightAdmission(ground_xz, min_y, max_y, world_context,
+                                  producer, fifo_n, horiz, key, priority);
       // A FIFO admission denial is backpressure, not completion. Keep the
       // exact column/band in DeferredFar so PendingLight cannot outlive every
       // executable or retryable in-memory owner.

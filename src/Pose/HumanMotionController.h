@@ -11,7 +11,7 @@ namespace cutum
 {
 // Human v2 alone uses quaternions; no global locomotion enum or creature phase
 // changes.
-class HumanMotionController
+class UHumanMotionController
 {
   static glm::quat FromDown(glm::vec3 direction)
   {
@@ -74,14 +74,14 @@ public:
                         6.2831853f);
     s.idlePhase = std::fmod(s.idlePhase + dt * 2.5f, 6.2831853f);
     if (s.initialized && ground && !s.wasGrounded &&
-        s.previousVerticalSpeed < -.5f)
+        s.PreviousVerticalSpeed < -.5f)
     {
-      s.landing = std::clamp(-s.previousVerticalSpeed * .012f, .025f, .11f);
+      s.landing = std::clamp(-s.PreviousVerticalSpeed * .012f, .025f, .11f);
       ++s.landingEvents;
     }
     s.landing *= std::exp(-dt / .10f);
     s.wasGrounded = ground;
-    s.previousVerticalSpeed = f.verticalSpeed;
+    s.PreviousVerticalSpeed = f.verticalSpeed;
     s.mode = f.mode == CreatureMovementMode::Flying ? HumanMotionMode::Flight
              : f.swimming ? (f.headSubmerged ? HumanMotionMode::Submerged
                                              : HumanMotionMode::Surface)

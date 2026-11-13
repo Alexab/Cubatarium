@@ -207,8 +207,8 @@ void InfluenceApplier::ApplyImpact(UWorld &world, uint64_t id, uint64_t thrower,
   {
     if (def && world.GetGameMode() == WorldGameMode::Survival)
       for (const auto &drop : def->drops)
-        WorldItemSystem::Instance().Spawn(position, drop.itemId, drop.count,
-                                          false);
+        UWorldItemSystem::Instance().Spawn(position, drop.itemId, drop.count,
+                                           false);
     world.RemoveCreature(id);
     return;
   }
@@ -413,7 +413,7 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
             {
               if (ModePolicy::DropsBlocksOnBreak(mode))
               {
-                WorldItemSystem::Instance().Spawn(
+                UWorldItemSystem::Instance().Spawn(
                     target->GetBodyOrigin(), drop.itemId, drop.count, false);
               }
             }

@@ -608,7 +608,7 @@ void UBlockInputController::HandleRightRelease(const BlockInputContext &ctx)
         auto *e = c->GetInventory().GetActiveEntryRef();
         auto camera = ctx.World->GetCurrentUserCamera();
         if (e && e->Id == DrawingBow && camera && !c->CarryHandCount)
-          WorldItemSystem::Instance().FireArrow(
+          UWorldItemSystem::Instance().FireArrow(
               *ctx.World, *c, camera->GetPosition(), camera->GetFront(),
               c->BowCharge);
         c->BowCharge = 0;

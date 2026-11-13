@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "generator": "itemgen-v2",
   "provenance": "Original Cubatarium geometry and procedural textures; no Minecraft assets",
   "items": {
@@ -8,16 +8,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/apple.json": "fdd3a3184be326eac615267c3f953f66587bde9204ab9b0eb1fff33ae4443e0b",
+        "tools/item_recipes/apple.yaml": "fbd548749be7b7ed494ab568d57271da292bbdccdfc9857a94b0ded238ce6a61",
         "models/items/apple/ATTRIBUTION.json": "c705d31f2ac4f51e5ab15539a5cc5b77c6d384ef1387914756c7c1308ba62622",
         "models/items/apple/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/apple/model.bin": "49ea85154badbed9481a83aad28300f74d56be72b77ea37d96d1a31668f3888b",
         "models/items/apple/model.gltf": "cd37701debe9b5db800fdd241ec3410e22c3cae4ea6ac4aa2153cc0b5e835c77",
         "models/items/apple/textures/diffuse.png": "987ab975237c709195224cf02feb6c0318e0231d1b9fb1bf2f94424b34a0f9f0",
-        "tools/item_recipes/apple.yaml": "fbd548749be7b7ed494ab568d57271da292bbdccdfc9857a94b0ded238ce6a61"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "arrow": {
@@ -25,16 +33,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/arrow.json": "dda9c869117d832e34856570a26974f7cbdc3e7c2131e0467cbb09f668a65316",
+        "tools/item_recipes/arrow.yaml": "45447ee62d38fb7484262e43e82c1c46ffd73da6a38b5d6826e8c3f805831193",
         "models/items/arrow/ATTRIBUTION.json": "bd5496936e198f5be5a5bc86940a9d31fcdbef512ed0d78f085b517905d32fd9",
         "models/items/arrow/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/arrow/model.bin": "f424449700835cbe1e13095eac7a053111dcd2f35ee93a31e692505f86c7c8c6",
         "models/items/arrow/model.gltf": "6b1df6d7bd5f06dbda5acfd0a89468212289df37d034b6a6e67a48c1ff6117ef",
         "models/items/arrow/textures/diffuse.png": "4dd2204bfb7c9665ef0cc770fc6f8a8b84bb2f71c0ab412e1cf2b30c727bb8d3",
-        "tools/item_recipes/arrow.yaml": "45447ee62d38fb7484262e43e82c1c46ffd73da6a38b5d6826e8c3f805831193"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "bread": {
@@ -42,16 +58,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/bread.json": "cd8c477167ad87587b74ee38556155ffa16ff4b5269bec070c560a348823bea6",
+        "tools/item_recipes/bread.yaml": "0776148365782bad16030a2619d67e70b62eeb53597e1314b09ab9ad3fd34ecc",
         "models/items/bread/ATTRIBUTION.json": "41c9496f61cde70514ef984149c34ef4cb8a870310b6e1e38f8d64ca08635f2b",
         "models/items/bread/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/bread/model.bin": "f40303f4c8f58813827223038b75501319741b805852b19e68d09f4167db46ad",
         "models/items/bread/model.gltf": "40977021f2433922e9beda732dc7ccf312183a38a8fa45c2f08b040d43a4c1da",
         "models/items/bread/textures/diffuse.png": "363e3a38647788a14e854c7df2023e4983f20d086ebdd7ee979430bcc9c9bbe9",
-        "tools/item_recipes/bread.yaml": "0776148365782bad16030a2619d67e70b62eeb53597e1314b09ab9ad3fd34ecc"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "bucket": {
@@ -59,16 +83,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/bucket.json": "73557191bb70b942213fe72736dc9381d79b8272fcb5ed4740370acb6ea941fe",
+        "tools/item_recipes/bucket.yaml": "894f0118038952a14ca6a9d48b19181a0f177365515420a8640b2c405cb6da3a",
         "models/items/bucket/ATTRIBUTION.json": "bbf2556ef2072bd69e7ce8c73ae74e59e2d94fcb5861c33ec83d208066aae1c7",
         "models/items/bucket/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/bucket/model.bin": "2117a87c4670fc18fbfabbd910d4e40859a4f61dcb855be789455591e737c681",
         "models/items/bucket/model.gltf": "baed22a7e5bd4ab47ee8bb3223c5ed5bc9fc8cd4ed21cdcd08a6746010b5ce7a",
         "models/items/bucket/textures/diffuse.png": "a9a76da99e03548bcda0546069b0b8de08d65e58390a99b0b2c67a808d9f7235",
-        "tools/item_recipes/bucket.yaml": "894f0118038952a14ca6a9d48b19181a0f177365515420a8640b2c405cb6da3a"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "charcoal": {
@@ -76,16 +108,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/charcoal.json": "650269779a481d8c9eff005b02f6d7467581964cf9286590a1d568fc523d652d",
+        "tools/item_recipes/charcoal.yaml": "36212592a03af46d8b341422456154c371f28caf01d0ee9df76eecf67e8e8fbe",
         "models/items/charcoal/ATTRIBUTION.json": "3d146474645f94a75867dac5b1cf8e32de441ccc2f73376afd141b2a1664597b",
         "models/items/charcoal/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/charcoal/model.bin": "39314574a9ca0a25b329a7e32c00c1b3226b54b80ac9bfc7aec04ce85d680a38",
         "models/items/charcoal/model.gltf": "6ef0a713b8b456097b41dddcb04238193d8584b18401ef0ee38b99f9a9e01a1f",
         "models/items/charcoal/textures/diffuse.png": "6b297f3beb38ebf26323763092d8fa10b0d83402811f500a42d66a1ebbe5a753",
-        "tools/item_recipes/charcoal.yaml": "36212592a03af46d8b341422456154c371f28caf01d0ee9df76eecf67e8e8fbe"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "coal": {
@@ -93,16 +133,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/coal.json": "960481c230fe45aca5c0cd0856702a08d924ebb29c7d7f3ee7d90bb065864be8",
+        "tools/item_recipes/coal.yaml": "4c21d195ea3a2fed549efa608c27fc510816314ba3b296d8704589a44e5f21d0",
         "models/items/coal/ATTRIBUTION.json": "52a25b31029a89bfa603f299d8112852567eb61c0bd328277c5cbc46d75eb193",
         "models/items/coal/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/coal/model.bin": "bbafd0645663cc041222a1cdb3b8351c5886982df849cdb73c04dc295fd36835",
         "models/items/coal/model.gltf": "1c4959810bfdbd305fab7deee78492cba61fbc98a6a3b4d4423d23181c34d891",
         "models/items/coal/textures/diffuse.png": "dcbf0de90efeb39c1856b2db2e972a2addb25f09f5ba98b7e24f42d1ae96a8d8",
-        "tools/item_recipes/coal.yaml": "4c21d195ea3a2fed549efa608c27fc510816314ba3b296d8704589a44e5f21d0"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "cooked_meat": {
@@ -110,16 +158,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/cooked_meat.json": "f27b430231b1a8fea1c16a9c92a810cd0d821a6c93f9b7574c36c843902cb468",
+        "tools/item_recipes/cooked_meat.yaml": "ed4402c6d2cf402f53f75702afc78fef061c25975d8fe22515052bdb56842310",
         "models/items/cooked_meat/ATTRIBUTION.json": "a4495a7d2834452d99e9183787d29e60c9c0be3e25b3f2b8563764346005cece",
         "models/items/cooked_meat/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/cooked_meat/model.bin": "d9dc700dc8069ca0b49caa59dd76350d753d44c27566255a9a349823423e7105",
         "models/items/cooked_meat/model.gltf": "3441cacb1a17e0ec6a37d48fbc426454d86d1317726ddc42370fc1657a867a03",
         "models/items/cooked_meat/textures/diffuse.png": "c3cf7e3088184c7a78b84806a4621770a9f6c776de338e8f1808d0a4735f1c3e",
-        "tools/item_recipes/cooked_meat.yaml": "ed4402c6d2cf402f53f75702afc78fef061c25975d8fe22515052bdb56842310"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "copper_axe": {
@@ -127,17 +183,25 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/copper_axe.json": "bf73173698a7b2424e11f1aae8d38faa5917375cc085a56622b96cca4be92458",
+        "tools/item_recipes/copper_axe.yaml": "48eb8caaa2136eb0be010394b5fff3af488fd1850df81acdabd0eeeb163e7d18",
         "models/items/copper_axe/ATTRIBUTION.json": "8386c797a44179ac73652d6a123c7db72a263c6f138c1c1262e86d57528892c5",
         "models/items/copper_axe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/copper_axe/model.bin": "2d488e863f54068ff24912a6410bdbd67ccf0143dc06c979b9e48b51e458e6c4",
         "models/items/copper_axe/model.glb": "de5c6cc51cdb5bcfad8bd7128b7ff0e37a34e6f4f8deddec82bb8634c25cc20d",
         "models/items/copper_axe/model.gltf": "5d73a766216053fba64a2d2227e90c2e74d165435ccd5654a3c1bbd7b6a92dc7",
         "models/items/copper_axe/textures/diffuse.png": "f641ea0a48b33d5f9f5c2968fed6fbca5b1860ef57d8ba134746a122f93615fd",
-        "tools/item_recipes/copper_axe.yaml": "48eb8caaa2136eb0be010394b5fff3af488fd1850df81acdabd0eeeb163e7d18"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "copper_chest": {
@@ -145,10 +209,13 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/copper_chest.json": "cc65c6aec2cd8f106da85c9893a813f8eade0af739038f37336d56e167bbef17",
+        "tools/item_recipes/copper_chest.yaml": "2e1f12ff24a77baf6431af85eb2463c539d980ca5cadec14b26fa4b362d1fd0a",
         "models/items/copper_chest/ATTRIBUTION.json": "c8e997d6b9f8986f1111c8b2cfccafdb9126b3c37fc8ab3adb87334a13745ae7",
         "models/items/copper_chest/gltf_buffer_0.bin": "24c5fd76306c37677bd634232230315644f4ab18d2254b6340d4ac94bace116a",
         "models/items/copper_chest/gltf_buffer_1.bin": "db16cdf5a5ad81ac50722365486534e9c79ce285e9486c900cdd85eac1142763",
@@ -160,7 +227,12 @@
         "models/items/copper_chest/wear.json": "f9efb46f631787cdddbd2a0d4a3a82ba6bd59310afc8fb7547565fc3e3da6279",
         "models/items/copper_chest/wear_indices.bin": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
         "models/items/copper_chest/wear_texture.png": "05822b4c9abe8971260d8ac0cfc0742092e22cd2926f2be2b17093b9d8458aee",
-        "tools/item_recipes/copper_chest.yaml": "2e1f12ff24a77baf6431af85eb2463c539d980ca5cadec14b26fa4b362d1fd0a"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "copper_feet": {
@@ -168,10 +240,13 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/copper_feet.json": "cecc40ad83e6bb42d6743504ec0cba3701fb645db85f1fe70fd05eff858c3671",
+        "tools/item_recipes/copper_feet.yaml": "5c5c6f501d9d280f31eb37abee1366bd9b4687d433ce6efd1d6bbe5173962749",
         "models/items/copper_feet/ATTRIBUTION.json": "aeecf05a070e3f780ad46ba555f010294fb862984d2108a01be9e9fe74d2dcd7",
         "models/items/copper_feet/gltf_buffer_0.bin": "1c0fd5389192104f25978864a5144afa515d44bcb9e064ae921356b294f4dbd6",
         "models/items/copper_feet/gltf_buffer_1.bin": "b0daaa0636a6f9cb8ecd74e224578460427847a2b14af76118a10036952aab10",
@@ -181,7 +256,12 @@
         "models/items/copper_feet/model.gltf": "6cb3be8e726d1fd7f4a5c9c2849ddffe90f6e5699c38a276a3cacaecc1be450e",
         "models/items/copper_feet/textures/diffuse.png": "f641ea0a48b33d5f9f5c2968fed6fbca5b1860ef57d8ba134746a122f93615fd",
         "models/items/copper_feet/wear.json": "35fec2c6222ed4e7ac265d438ff2da2c86458af9ec1f276b4e135d85a2c83938",
-        "tools/item_recipes/copper_feet.yaml": "5c5c6f501d9d280f31eb37abee1366bd9b4687d433ce6efd1d6bbe5173962749"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "copper_head": {
@@ -189,10 +269,13 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/copper_head.json": "31da5581389a72e73b0fed815ba040bbef699107b1cace7ec8321d894c0683cb",
+        "tools/item_recipes/copper_head.yaml": "ab17e326bebc416b9128ac567d8101d29d63c2e01dac333cb2c4282f2d687f29",
         "models/items/copper_head/ATTRIBUTION.json": "37609a11a7d8d6001560af91f34cd80c965b540b3fd4a69aacfe123f7d1074f2",
         "models/items/copper_head/gltf_buffer_0.bin": "343f83f2df60c4917a99956803480976f4030d73dec3ce6a9013a052aeb03409",
         "models/items/copper_head/gltf_buffer_1.bin": "62158099e289ad68b9f56a1840eaa97358b2914c2251de392d21ac4d26388080",
@@ -201,7 +284,12 @@
         "models/items/copper_head/model.gltf": "2d90bd24fa8c64efb048aadfa984b41406d68292a9dcac13cf204fd78f72d54b",
         "models/items/copper_head/textures/diffuse.png": "f641ea0a48b33d5f9f5c2968fed6fbca5b1860ef57d8ba134746a122f93615fd",
         "models/items/copper_head/wear.json": "1c4a3a8f81945e581316b520c44989b9a7c403b4f798febf8d5bf69caf955f5f",
-        "tools/item_recipes/copper_head.yaml": "ab17e326bebc416b9128ac567d8101d29d63c2e01dac333cb2c4282f2d687f29"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "copper_hoe": {
@@ -209,16 +297,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/copper_hoe.json": "4deffb4d2f38a2063fe08f4c5159b9e79d3ba701628e85f689e70e4d7e6a01ae",
+        "tools/item_recipes/copper_hoe.yaml": "8f01c2450c62691d023c9c5390ee347ff4e88c1a4ea86d9ea3887bb62e8a485b",
         "models/items/copper_hoe/ATTRIBUTION.json": "085d322836b2b894afbed8239ac13554d7061f7dfa31be06bfd64b25d223e13c",
         "models/items/copper_hoe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/copper_hoe/model.bin": "cc692868b62bb9685e6d5077e5bf794e625a6dd1ce61b33e1fd4f2d400fdf573",
         "models/items/copper_hoe/model.gltf": "abb77b00aa4904fac9a4e559df833a791a755bee3af06d33df559e7a0708cef5",
         "models/items/copper_hoe/textures/diffuse.png": "f641ea0a48b33d5f9f5c2968fed6fbca5b1860ef57d8ba134746a122f93615fd",
-        "tools/item_recipes/copper_hoe.yaml": "8f01c2450c62691d023c9c5390ee347ff4e88c1a4ea86d9ea3887bb62e8a485b"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "copper_ingot": {
@@ -226,16 +322,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/copper_ingot.json": "112d03e21b1cba55c5fba0985aa6d1cff8fcf26e5d7f6586b857bfb139035c0c",
+        "tools/item_recipes/copper_ingot.yaml": "fb83671ecf646b3795be13e5ef837720f8e629abf85b746391fce6640696de88",
         "models/items/copper_ingot/ATTRIBUTION.json": "3a52c77d3d216830448ac545b9cc54857efd68058e2c193b75daa7faecd9f85e",
         "models/items/copper_ingot/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/copper_ingot/model.bin": "e2164c08e4ff695a1679be3861229696f5a42718da055c4d774cbd10af2bff1f",
         "models/items/copper_ingot/model.gltf": "078e776ea38f033da88a8c67f89496b83c737346e750487d667be9ff74f62889",
         "models/items/copper_ingot/textures/diffuse.png": "f641ea0a48b33d5f9f5c2968fed6fbca5b1860ef57d8ba134746a122f93615fd",
-        "tools/item_recipes/copper_ingot.yaml": "fb83671ecf646b3795be13e5ef837720f8e629abf85b746391fce6640696de88"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "copper_legs": {
@@ -243,10 +347,13 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/copper_legs.json": "ead18f16aed6f8ef730976a89a25c105c689e6dfb50656600d5ee274744dbbed",
+        "tools/item_recipes/copper_legs.yaml": "e6caf59e92344c03159628a7a306e64255340aad232425fd23b3761e54d5b391",
         "models/items/copper_legs/ATTRIBUTION.json": "223f68997cf235781f2c59aa8d58d5ae984dc6a1c0619ccd1b9ef10644e27c60",
         "models/items/copper_legs/gltf_buffer_0.bin": "24c5fd76306c37677bd634232230315644f4ab18d2254b6340d4ac94bace116a",
         "models/items/copper_legs/gltf_buffer_1.bin": "db16cdf5a5ad81ac50722365486534e9c79ce285e9486c900cdd85eac1142763",
@@ -258,7 +365,12 @@
         "models/items/copper_legs/wear.json": "35fec2c6222ed4e7ac265d438ff2da2c86458af9ec1f276b4e135d85a2c83938",
         "models/items/copper_legs/wear_indices.bin": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
         "models/items/copper_legs/wear_texture.png": "792c4ee7bbbccee855bee6b6e2e72371bb26dca593756cbcbcbf49d2aa94b93b",
-        "tools/item_recipes/copper_legs.yaml": "e6caf59e92344c03159628a7a306e64255340aad232425fd23b3761e54d5b391"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "copper_pickaxe": {
@@ -266,17 +378,25 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/copper_pickaxe.json": "5bf9a29c4efed70925ba6374c7f977a0e7ed7ead43eb0abb8b77739ab30d4045",
+        "tools/item_recipes/copper_pickaxe.yaml": "4f8200a541abfa6ff23ed28967465c98db5c0bf8a07333f72300f12e1ad7919f",
         "models/items/copper_pickaxe/ATTRIBUTION.json": "15161cfa9b16f707d7a631a64a94c920b4e0538bdc0f9927ace8260971b20a6b",
         "models/items/copper_pickaxe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/copper_pickaxe/model.bin": "8650c462b91a4c1a2fa87497389108a1e1318894c3c71cd7dbb58a9797c6c711",
         "models/items/copper_pickaxe/model.glb": "2b77a238b8666338094d83fc5561984643c335c49ccacd9e0e0a50fb2849c542",
         "models/items/copper_pickaxe/model.gltf": "c93a901de004bf34bfdc70bca076718682a3b5255c943c5b08aa05ed6c8c2f68",
         "models/items/copper_pickaxe/textures/diffuse.png": "f641ea0a48b33d5f9f5c2968fed6fbca5b1860ef57d8ba134746a122f93615fd",
-        "tools/item_recipes/copper_pickaxe.yaml": "4f8200a541abfa6ff23ed28967465c98db5c0bf8a07333f72300f12e1ad7919f"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "copper_shovel": {
@@ -284,17 +404,25 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/copper_shovel.json": "86524830227e3a9628f52de5f3034fd11cad0b57a22f5368f7ed998a411ea9ca",
+        "tools/item_recipes/copper_shovel.yaml": "9d7aee6f11bcc486a6b74aa6a6f7b180468eef47a1fa54321782bc858a6e39f5",
         "models/items/copper_shovel/ATTRIBUTION.json": "bb0de038424b0793c88b42bf0d213543abfa4df2c172d92591efab2ced385e84",
         "models/items/copper_shovel/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/copper_shovel/model.bin": "4038d987b3422137c8b7bfe1f9478e9dce5b1a97f54bead4855e828747799510",
         "models/items/copper_shovel/model.glb": "20abb2420f0215c59694287207b7a6324114552b9f59846ab2a2673e3a7c1147",
         "models/items/copper_shovel/model.gltf": "e02cc0435f99b8667a5bce328c52d4cde8df8e94ae8e887d0f2c7ecb7ee887cb",
         "models/items/copper_shovel/textures/diffuse.png": "f641ea0a48b33d5f9f5c2968fed6fbca5b1860ef57d8ba134746a122f93615fd",
-        "tools/item_recipes/copper_shovel.yaml": "9d7aee6f11bcc486a6b74aa6a6f7b180468eef47a1fa54321782bc858a6e39f5"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "copper_sword": {
@@ -302,10 +430,13 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/copper_sword.json": "672bc269ea7ab42f5cdefccdabca84d7e2de17f97c4d6e2e5e2183189092f1f5",
+        "tools/item_recipes/copper_sword.yaml": "27e427571967ccb4c03c43219e29b38760bdf720fedfe1b998561a6f1a30e068",
         "models/items/copper_sword/arrow_A.bin": "6ad254651117d72fbeb6f4da2415bbf1f47e4f44c196d845355fb7376898f3ca",
         "models/items/copper_sword/arrow_B.bin": "3685a0a4feedcbdff6b1097374be565b67341a9c5be9ea1cab799d1235a9b972",
         "models/items/copper_sword/ATTRIBUTION.json": "063423d5ae8dd45c8a1f3e0ebcbbc9852906accfd1580c6c3e48c8b1ee429fd2",
@@ -343,7 +474,12 @@
         "models/items/copper_sword/textures/diffuse.png": "f641ea0a48b33d5f9f5c2968fed6fbca5b1860ef57d8ba134746a122f93615fd",
         "models/items/copper_sword/wand_A.bin": "ec6c0221b6fc29a4ab6874d6a66051539ff2a8cf59f7adc334ea15e2a3ace45e",
         "models/items/copper_sword/weapons_bits_texture.png": "c153429a49928594b00b53c07c4ab3d6352087b7f5df6c272d4aedfdb99a40be",
-        "tools/item_recipes/copper_sword.yaml": "27e427571967ccb4c03c43219e29b38760bdf720fedfe1b998561a6f1a30e068"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "cord": {
@@ -351,16 +487,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/cord.json": "9f6a0c980606ffa64c41199d0a86f705b5c01f337582ba349db2a96e2c640bdd",
+        "tools/item_recipes/cord.yaml": "d22b8f73d442335e607799bba0d9b98dee2a44c6bafbd6f6103cdea3945e0f72",
         "models/items/cord/ATTRIBUTION.json": "6234414f5069155a1fb59b201f8a7be4bd1748b48f94b406287a5c9f0f5a32e6",
         "models/items/cord/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/cord/model.bin": "d9ed1652afb34c8d5034f9b59c2933f04654482c75761596ed231a04426a556a",
         "models/items/cord/model.gltf": "7e1bd991d5d4da4a4a7a967c38843dae48061c5c7713f88b7aa52298874c0622",
         "models/items/cord/textures/diffuse.png": "48b7643c3ce36c169dfff08ce2554e236c783723ee5938564aef244a6997739b",
-        "tools/item_recipes/cord.yaml": "d22b8f73d442335e607799bba0d9b98dee2a44c6bafbd6f6103cdea3945e0f72"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "flint_and_steel": {
@@ -368,16 +512,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/flint_and_steel.json": "bfe9f546df279b37ac24bc1716930bb299778f4aa5ea2e982c6fead9333b01cc",
+        "tools/item_recipes/flint_and_steel.yaml": "be776e46a6cd539cce21f490d47e814161f9ab4756e023ee7af7c0529a080ac8",
         "models/items/flint_and_steel/ATTRIBUTION.json": "45f97315b7fec8c92e48ba6fbbb203d4e41271587d9056032ca127c40500321b",
         "models/items/flint_and_steel/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/flint_and_steel/model.bin": "e2f8aacda3a1dd4d34a4ff79ee7c4278b8fa055cac61cf7803735da8773f4bc9",
         "models/items/flint_and_steel/model.gltf": "2841472a999f9731f2d90ea99a875ce4c58cb87d74fc47e92033afd5cc646d69",
         "models/items/flint_and_steel/textures/diffuse.png": "a9a76da99e03548bcda0546069b0b8de08d65e58390a99b0b2c67a808d9f7235",
-        "tools/item_recipes/flint_and_steel.yaml": "be776e46a6cd539cce21f490d47e814161f9ab4756e023ee7af7c0529a080ac8"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "gold_axe": {
@@ -385,16 +537,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/gold_axe.json": "17bdd2c0734ff5048ae41acfb832508319f50a4583d4273a888dea201568031e",
+        "tools/item_recipes/gold_axe.yaml": "9a2b7f9a4205e6450788420cd0eecb3743e0136fa5db5ba1d0272bd3def78d7a",
         "models/items/gold_axe/ATTRIBUTION.json": "cd25a766747ffb9557dfca7b09db2d9bfda36e019568959804900dbb623fad7d",
         "models/items/gold_axe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/gold_axe/model.bin": "2d488e863f54068ff24912a6410bdbd67ccf0143dc06c979b9e48b51e458e6c4",
         "models/items/gold_axe/model.gltf": "9b1125daeb228d014e518487706532dc59a12a35c5ab8352b054b2f795a7f463",
         "models/items/gold_axe/textures/diffuse.png": "35beb7e99e2e5a9f5d5aacdf75f105dd3fdd276532886eccc504367e1ea9eac5",
-        "tools/item_recipes/gold_axe.yaml": "9a2b7f9a4205e6450788420cd0eecb3743e0136fa5db5ba1d0272bd3def78d7a"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "gold_chest": {
@@ -402,17 +562,25 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/gold_chest.json": "98f15555b4c261660857309d931531ad9674c470bac69e6a3a165b50cd0884ec",
+        "tools/item_recipes/gold_chest.yaml": "19bc8f62491d0e3854bdc9c641249b3e857f48728b1bab5b66c53e074e719c70",
         "models/items/gold_chest/ATTRIBUTION.json": "8792679b567d0a70e8b6296a683c322d705abbc66b18825beee59f0d413cb776",
         "models/items/gold_chest/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/gold_chest/model.bin": "5b05ad7c567576f74bc73b9d0b3ecda7117c9f5359321bbe2081c48839cfa1d3",
         "models/items/gold_chest/model.gltf": "616a5fc99ae34fb671dabd8ee7e4efbfa510db731078d7ee095928fb10045dca",
         "models/items/gold_chest/textures/diffuse.png": "35beb7e99e2e5a9f5d5aacdf75f105dd3fdd276532886eccc504367e1ea9eac5",
         "models/items/gold_chest/wear.json": "f9efb46f631787cdddbd2a0d4a3a82ba6bd59310afc8fb7547565fc3e3da6279",
-        "tools/item_recipes/gold_chest.yaml": "19bc8f62491d0e3854bdc9c641249b3e857f48728b1bab5b66c53e074e719c70"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "gold_feet": {
@@ -420,17 +588,25 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/gold_feet.json": "5361ac6b5a112e08578def4d5e1e6a68f6a061e7e83e97578104363105207303",
+        "tools/item_recipes/gold_feet.yaml": "a9224a8655f474074a68cfd248c526e6a5c8012f35f8c641cffe6a11b405a49a",
         "models/items/gold_feet/ATTRIBUTION.json": "f3141e8611f8808e4cce817abe1e506f085433430a2810e80be219f479283e39",
         "models/items/gold_feet/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/gold_feet/model.bin": "b5bcda1561e06d68ca95ecc1230c491794ec9f32f6a1445ae545bbdb09c5905c",
         "models/items/gold_feet/model.gltf": "7480802a4e53f487ffbdc02450c26d6c5b5b35f0a12bfc287bfbe4b5fe28c24f",
         "models/items/gold_feet/textures/diffuse.png": "35beb7e99e2e5a9f5d5aacdf75f105dd3fdd276532886eccc504367e1ea9eac5",
         "models/items/gold_feet/wear.json": "35fec2c6222ed4e7ac265d438ff2da2c86458af9ec1f276b4e135d85a2c83938",
-        "tools/item_recipes/gold_feet.yaml": "a9224a8655f474074a68cfd248c526e6a5c8012f35f8c641cffe6a11b405a49a"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "gold_head": {
@@ -438,17 +614,25 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/gold_head.json": "4b002a364c71b9384b54e06209864c74612d4d70818d5cf90353dc7977006f4f",
+        "tools/item_recipes/gold_head.yaml": "28b560baecfbcf54ae18a59a561adb840e5dccdc74812bd9c26e59de42243a4d",
         "models/items/gold_head/ATTRIBUTION.json": "b05ca3d9ecf835014fac04916767cef84e40018fe8102a8b8a32655b3fc7bee3",
         "models/items/gold_head/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/gold_head/model.bin": "243436908e46a64eb44698b4e484a84f2a2979de220d0adc6e3ba1cddfa9325b",
         "models/items/gold_head/model.gltf": "6c61c14a0d3f883a9386b19e7e2de8b53118e27a9175d92adf15f4f8f1c30fde",
         "models/items/gold_head/textures/diffuse.png": "35beb7e99e2e5a9f5d5aacdf75f105dd3fdd276532886eccc504367e1ea9eac5",
         "models/items/gold_head/wear.json": "1c4a3a8f81945e581316b520c44989b9a7c403b4f798febf8d5bf69caf955f5f",
-        "tools/item_recipes/gold_head.yaml": "28b560baecfbcf54ae18a59a561adb840e5dccdc74812bd9c26e59de42243a4d"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "gold_hoe": {
@@ -456,16 +640,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/gold_hoe.json": "89f9e0d126f41d5345261e246eb5fceb4f73fd9111c53fe3ebc4ab2ede2604a3",
+        "tools/item_recipes/gold_hoe.yaml": "caa9930db3b4ea17e4bcfd20c2e14fb084897f11210b371ae288837eb31aac06",
         "models/items/gold_hoe/ATTRIBUTION.json": "8d06d35a311e9feeee6bc19ecb30b55a379dd95947f70c28235aa4e7d5c8b931",
         "models/items/gold_hoe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/gold_hoe/model.bin": "cc692868b62bb9685e6d5077e5bf794e625a6dd1ce61b33e1fd4f2d400fdf573",
         "models/items/gold_hoe/model.gltf": "1c529984903d4183ea5ac0cbf735968f35e09ad3d04aa461cedf9bb4e7956c41",
         "models/items/gold_hoe/textures/diffuse.png": "35beb7e99e2e5a9f5d5aacdf75f105dd3fdd276532886eccc504367e1ea9eac5",
-        "tools/item_recipes/gold_hoe.yaml": "caa9930db3b4ea17e4bcfd20c2e14fb084897f11210b371ae288837eb31aac06"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "gold_ingot": {
@@ -473,16 +665,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/gold_ingot.json": "ef312f0297b961b6840ad5a285645c408e1d3583369e9bcaae789742a41d1dc4",
+        "tools/item_recipes/gold_ingot.yaml": "f22bcfdbf2f154f0885ee14b562247c5b436675b78e599c319824ae1f7b2acbe",
         "models/items/gold_ingot/ATTRIBUTION.json": "0e4d9d6b7e524a1528906eeac044c5032fa2b761e452c02bc44bd2b98a554f92",
         "models/items/gold_ingot/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/gold_ingot/model.bin": "e2164c08e4ff695a1679be3861229696f5a42718da055c4d774cbd10af2bff1f",
         "models/items/gold_ingot/model.gltf": "6d95927e2010ec8630e5efe21dc51e3ed3de5d362358ff1fdffea2ef3e4a6a6b",
         "models/items/gold_ingot/textures/diffuse.png": "35beb7e99e2e5a9f5d5aacdf75f105dd3fdd276532886eccc504367e1ea9eac5",
-        "tools/item_recipes/gold_ingot.yaml": "f22bcfdbf2f154f0885ee14b562247c5b436675b78e599c319824ae1f7b2acbe"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "gold_legs": {
@@ -490,17 +690,25 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/gold_legs.json": "318fd26b4f421f232a8cdb8739615603dbfdb0e74cc78e056475d5e659cae58a",
+        "tools/item_recipes/gold_legs.yaml": "97eb2ded79d65a60710c8eb128b91b922163352628f3c7de4c675a067be724f6",
         "models/items/gold_legs/ATTRIBUTION.json": "ebad95246b64941cca8487ace0e62135d88d0248873ec376e700e3d7f8c99255",
         "models/items/gold_legs/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/gold_legs/model.bin": "bffd6730e7d429a7856d5d14382045c446a29be6035f1651619763abb6949a67",
         "models/items/gold_legs/model.gltf": "8a8162cec601e3ec7f9720f44f198704a8af168c7b69abb256672843a4576554",
         "models/items/gold_legs/textures/diffuse.png": "35beb7e99e2e5a9f5d5aacdf75f105dd3fdd276532886eccc504367e1ea9eac5",
         "models/items/gold_legs/wear.json": "35fec2c6222ed4e7ac265d438ff2da2c86458af9ec1f276b4e135d85a2c83938",
-        "tools/item_recipes/gold_legs.yaml": "97eb2ded79d65a60710c8eb128b91b922163352628f3c7de4c675a067be724f6"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "gold_pickaxe": {
@@ -508,16 +716,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/gold_pickaxe.json": "3d3e23732cccdb0f68a5ca09a42f4629f816e04e385500f48425f1e0990d14a5",
+        "tools/item_recipes/gold_pickaxe.yaml": "1a54412739351da3e616284b7f087eba5b5dead397938c2cb63ffd9999043f33",
         "models/items/gold_pickaxe/ATTRIBUTION.json": "17df43dc44bcb5e456276362fb8377f2848249a47410e92b135f705869ca9df3",
         "models/items/gold_pickaxe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/gold_pickaxe/model.bin": "8650c462b91a4c1a2fa87497389108a1e1318894c3c71cd7dbb58a9797c6c711",
         "models/items/gold_pickaxe/model.gltf": "d5eb34832dc8cc3f987a1a4ba3be60a48d6d4553bd5d13fd1a5a152d20cf9cf7",
         "models/items/gold_pickaxe/textures/diffuse.png": "35beb7e99e2e5a9f5d5aacdf75f105dd3fdd276532886eccc504367e1ea9eac5",
-        "tools/item_recipes/gold_pickaxe.yaml": "1a54412739351da3e616284b7f087eba5b5dead397938c2cb63ffd9999043f33"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "gold_shovel": {
@@ -525,16 +741,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/gold_shovel.json": "7920d3245a5a7aac34635de136f0de06fe4ccbda92f4fccea5c79cf22494da2a",
+        "tools/item_recipes/gold_shovel.yaml": "ec428f23847d949a6d247a3756e63d009a0d292788bfbb069102af3753bc44bc",
         "models/items/gold_shovel/ATTRIBUTION.json": "a8a5084b55d5a94eca29af4c781b9c379fff502b2cc96be31166a203813254ef",
         "models/items/gold_shovel/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/gold_shovel/model.bin": "4038d987b3422137c8b7bfe1f9478e9dce5b1a97f54bead4855e828747799510",
         "models/items/gold_shovel/model.gltf": "e638c1c509add82d38398fc70d4e5b8f19e6c09c8a5f7195b4805e48172fe0e4",
         "models/items/gold_shovel/textures/diffuse.png": "35beb7e99e2e5a9f5d5aacdf75f105dd3fdd276532886eccc504367e1ea9eac5",
-        "tools/item_recipes/gold_shovel.yaml": "ec428f23847d949a6d247a3756e63d009a0d292788bfbb069102af3753bc44bc"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "gold_sword": {
@@ -542,10 +766,13 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/gold_sword.json": "b0716f96d926ffe994c3de3609c0d0d11e4d1210df414cdfa83dc5a988637928",
+        "tools/item_recipes/gold_sword.yaml": "f7661a9dd01066909462ad80706a54c047b2d73044135450dbbebd6ae388020c",
         "models/items/gold_sword/arrow_A.bin": "6ad254651117d72fbeb6f4da2415bbf1f47e4f44c196d845355fb7376898f3ca",
         "models/items/gold_sword/arrow_B.bin": "3685a0a4feedcbdff6b1097374be565b67341a9c5be9ea1cab799d1235a9b972",
         "models/items/gold_sword/ATTRIBUTION.json": "c0853375b5b7c6ee0eb2592a87d33b26383a37a908cd407d0a1eb622186a2c37",
@@ -583,7 +810,12 @@
         "models/items/gold_sword/textures/diffuse.png": "35beb7e99e2e5a9f5d5aacdf75f105dd3fdd276532886eccc504367e1ea9eac5",
         "models/items/gold_sword/wand_A.bin": "ec6c0221b6fc29a4ab6874d6a66051539ff2a8cf59f7adc334ea15e2a3ace45e",
         "models/items/gold_sword/weapons_bits_texture.png": "c153429a49928594b00b53c07c4ab3d6352087b7f5df6c272d4aedfdb99a40be",
-        "tools/item_recipes/gold_sword.yaml": "f7661a9dd01066909462ad80706a54c047b2d73044135450dbbebd6ae388020c"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "grain": {
@@ -591,16 +823,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/grain.json": "2408723e5b7e2b6aef0030ba2bf8c1b2c28089bc46be932f556e7035d94db418",
+        "tools/item_recipes/grain.yaml": "37541f971365df87e6077829dbd325494967ac81c966d71df9b7b8f89ee5ebde",
         "models/items/grain/ATTRIBUTION.json": "8981e35364a9e8f6d53d3cc8718c8cb08f71df98fa6afefed238f274ddf0e8fa",
         "models/items/grain/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/grain/model.bin": "7ce57a6ad2201914367ec25bb2bd9cd4a0353df94f77c57c9c8406a225785c7f",
         "models/items/grain/model.gltf": "e541203b88c6f9ab1b909bc9576106449e4a24bc579ff65598469cca14fa65da",
         "models/items/grain/textures/diffuse.png": "af5891134e21fb6e2c33804c527923e380f7e4486254a6dce45181ba2f419eb9",
-        "tools/item_recipes/grain.yaml": "37541f971365df87e6077829dbd325494967ac81c966d71df9b7b8f89ee5ebde"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "iron_axe": {
@@ -608,17 +848,25 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/iron_axe.json": "5f95d7ba4cf59126cc8025f26bec56b54c64a610102bc9fd99886f75a2d7de6a",
+        "tools/item_recipes/iron_axe.yaml": "8723748539358a71297a877ab4a483a2ce7f16fc0117f96f4b3620212b4ae566",
         "models/items/iron_axe/ATTRIBUTION.json": "2d3a8ac5436af4b8bcc3e187b9623afeb6f38994f07b66a4b63fd188cc0251ae",
         "models/items/iron_axe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/iron_axe/model.bin": "2d488e863f54068ff24912a6410bdbd67ccf0143dc06c979b9e48b51e458e6c4",
         "models/items/iron_axe/model.glb": "18ffed02c818a25bc0a87609ccebdf3c55e238131efa2c50bdd6991fc6a2d8f2",
         "models/items/iron_axe/model.gltf": "4c76168c63182031bf6f1b4563118d394c75068afd20e29dc61fc1f0a879636c",
         "models/items/iron_axe/textures/diffuse.png": "a9a76da99e03548bcda0546069b0b8de08d65e58390a99b0b2c67a808d9f7235",
-        "tools/item_recipes/iron_axe.yaml": "8723748539358a71297a877ab4a483a2ce7f16fc0117f96f4b3620212b4ae566"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "iron_chest": {
@@ -626,10 +874,13 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/iron_chest.json": "c79a209d8fce8276ef5f348f4c880fdd10ea659d7f5576678e64c4ff9fa3f484",
+        "tools/item_recipes/iron_chest.yaml": "9216bcfc873c1c95b1497fc63f04d7fc624a45238b00a8d822a5d1058bd7c75f",
         "models/items/iron_chest/ATTRIBUTION.json": "10007b2018cb68fa1d073af9fab9487712bcbbf3271f799326790aa0783b28ce",
         "models/items/iron_chest/gltf_buffer_0.bin": "234c65a076d97a3cf2dea059459abc958e3fb1e3ba04eb6bcd1440c700432725",
         "models/items/iron_chest/gltf_buffer_1.bin": "2a5f5b62ee7bf7f3ab3d38ee4a3ccacf53d83b59457ee0e46fd34da7eb19f1b5",
@@ -641,7 +892,12 @@
         "models/items/iron_chest/wear.json": "f9efb46f631787cdddbd2a0d4a3a82ba6bd59310afc8fb7547565fc3e3da6279",
         "models/items/iron_chest/wear_indices.bin": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
         "models/items/iron_chest/wear_texture.png": "973d015b3544b7c100d874cf02aa9222ee5145006de327e2bff502f74e56d079",
-        "tools/item_recipes/iron_chest.yaml": "9216bcfc873c1c95b1497fc63f04d7fc624a45238b00a8d822a5d1058bd7c75f"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "iron_feet": {
@@ -649,10 +905,13 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/iron_feet.json": "aca16a059979da278e6f9790155deeca644c1cf6aa7acaf21da5d41bf0b83d0e",
+        "tools/item_recipes/iron_feet.yaml": "24f3f5fe2bc1ffb9aa082d0d2eab0c143b3ccd506e9a00cc2e0533aa4f930f04",
         "models/items/iron_feet/ATTRIBUTION.json": "ad2517b0e5653ca8c4c6e36b266c5359d760836c4cef98e1cb0732d69d2f991e",
         "models/items/iron_feet/gltf_buffer_0.bin": "1c0fd5389192104f25978864a5144afa515d44bcb9e064ae921356b294f4dbd6",
         "models/items/iron_feet/gltf_buffer_1.bin": "b0daaa0636a6f9cb8ecd74e224578460427847a2b14af76118a10036952aab10",
@@ -662,7 +921,12 @@
         "models/items/iron_feet/model.gltf": "ec0a468f9aa7201d72dbd9b1a4ea84c5a7f3d3340a0a1c9d5a0307a473aa4b39",
         "models/items/iron_feet/textures/diffuse.png": "a9a76da99e03548bcda0546069b0b8de08d65e58390a99b0b2c67a808d9f7235",
         "models/items/iron_feet/wear.json": "35fec2c6222ed4e7ac265d438ff2da2c86458af9ec1f276b4e135d85a2c83938",
-        "tools/item_recipes/iron_feet.yaml": "24f3f5fe2bc1ffb9aa082d0d2eab0c143b3ccd506e9a00cc2e0533aa4f930f04"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "iron_head": {
@@ -670,10 +934,13 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/iron_head.json": "d628f20473932df4782fa0426605440d54ff973981f716bca72c5b5e1e59aadf",
+        "tools/item_recipes/iron_head.yaml": "c0616115ad8ebb494beb394d707126c1a1f35e27ec8b2829ba305a8f48ecbb6a",
         "models/items/iron_head/ATTRIBUTION.json": "26310a26e6f2607b631c5190bf0fc656a825ebf2186b58824ca5d8dfff54bce2",
         "models/items/iron_head/gltf_buffer_0.bin": "787cafe2db5f3f79e8c9b9c14ed9c25f3277002c8d2a8005c332afb9b4cbb85c",
         "models/items/iron_head/gltf_buffer_1.bin": "1abf3f61c5f4053e0c6dbffa04c4f0ec45d3f084a664cbd7c0a5cd2459cd1815",
@@ -684,7 +951,12 @@
         "models/items/iron_head/model.gltf": "52eb67e6663aa1a1991676f3478033c0e54edcdb50433ff6fb1011e2be1c76d6",
         "models/items/iron_head/textures/diffuse.png": "a9a76da99e03548bcda0546069b0b8de08d65e58390a99b0b2c67a808d9f7235",
         "models/items/iron_head/wear.json": "1c4a3a8f81945e581316b520c44989b9a7c403b4f798febf8d5bf69caf955f5f",
-        "tools/item_recipes/iron_head.yaml": "c0616115ad8ebb494beb394d707126c1a1f35e27ec8b2829ba305a8f48ecbb6a"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "iron_hoe": {
@@ -692,17 +964,25 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/iron_hoe.json": "bc1a1f76816c76c56b8c29cbd5051f85041050624672ab8c0c21f25f3b515345",
+        "tools/item_recipes/iron_hoe.yaml": "736236487cf79e7819643dc1ad10cca031feaf08c76845337a3fd357966479cc",
         "models/items/iron_hoe/ATTRIBUTION.json": "d44782e4649b33b4e79952c567e0c8f0a86f4593a99564db26cfa40bea86c945",
         "models/items/iron_hoe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/iron_hoe/model.bin": "cc692868b62bb9685e6d5077e5bf794e625a6dd1ce61b33e1fd4f2d400fdf573",
         "models/items/iron_hoe/model.glb": "5eeb272214900705e2a147ca2500e233b629e5dc6fc53ffc82f29534fda4378a",
         "models/items/iron_hoe/model.gltf": "637cf3253e2de47d875a1b1069303a38e1986f5094a5e04ca7c9e2d02ef4c93d",
         "models/items/iron_hoe/textures/diffuse.png": "a9a76da99e03548bcda0546069b0b8de08d65e58390a99b0b2c67a808d9f7235",
-        "tools/item_recipes/iron_hoe.yaml": "736236487cf79e7819643dc1ad10cca031feaf08c76845337a3fd357966479cc"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "iron_ingot": {
@@ -710,16 +990,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/iron_ingot.json": "c7dfdf349040c05dcbecf2c51c5172dcb5233c328103aca41b50d6ac78d5a918",
+        "tools/item_recipes/iron_ingot.yaml": "9a40fa5fb7840f86efd7409c3560cbcad33377576929416d0eb5b7392a9c38e3",
         "models/items/iron_ingot/ATTRIBUTION.json": "4ed0f83358151267ef4e3f569c54c9a0cfb87dfc6f161a8ae74596d9fca53199",
         "models/items/iron_ingot/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/iron_ingot/model.bin": "e2164c08e4ff695a1679be3861229696f5a42718da055c4d774cbd10af2bff1f",
         "models/items/iron_ingot/model.gltf": "c9dd857cde9fa4c8d213c0fb9d01747c1c29f12cd130a6c75476576ef624f407",
         "models/items/iron_ingot/textures/diffuse.png": "a9a76da99e03548bcda0546069b0b8de08d65e58390a99b0b2c67a808d9f7235",
-        "tools/item_recipes/iron_ingot.yaml": "9a40fa5fb7840f86efd7409c3560cbcad33377576929416d0eb5b7392a9c38e3"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "iron_legs": {
@@ -727,10 +1015,13 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/iron_legs.json": "f6a91645528468db5e500eae615c6233ac37d5d007fe7b66ebbccfb01607dd3c",
+        "tools/item_recipes/iron_legs.yaml": "c67d866f8624e52d3c3adefde5cdf6e188c7d246a07e0e03b9e621ba81457273",
         "models/items/iron_legs/ATTRIBUTION.json": "4531c0d2a7233bf8fefb130e75293d71cddc4df5522d722543cf00a49b433045",
         "models/items/iron_legs/gltf_buffer_0.bin": "234c65a076d97a3cf2dea059459abc958e3fb1e3ba04eb6bcd1440c700432725",
         "models/items/iron_legs/gltf_buffer_1.bin": "2a5f5b62ee7bf7f3ab3d38ee4a3ccacf53d83b59457ee0e46fd34da7eb19f1b5",
@@ -742,7 +1033,12 @@
         "models/items/iron_legs/wear.json": "35fec2c6222ed4e7ac265d438ff2da2c86458af9ec1f276b4e135d85a2c83938",
         "models/items/iron_legs/wear_indices.bin": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
         "models/items/iron_legs/wear_texture.png": "e5a23738574176757e6cd0d2962d5aba5d98c2bd052dedbb1a2c8a07f753c396",
-        "tools/item_recipes/iron_legs.yaml": "c67d866f8624e52d3c3adefde5cdf6e188c7d246a07e0e03b9e621ba81457273"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "iron_pickaxe": {
@@ -750,17 +1046,25 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/iron_pickaxe.json": "d965c8282dc4126b9ccbd3ec48ce98a44398ae93e4b84b8128d96d20bbc15e3d",
+        "tools/item_recipes/iron_pickaxe.yaml": "c38423995f1315637499d2e2b713b17a5797d97f3a4df49943a3259a9ff77fef",
         "models/items/iron_pickaxe/ATTRIBUTION.json": "08bc01fb8ab1d1747f86e579d6b9a92988f9c7dc6a462d866ec2b5bb443c4b6f",
         "models/items/iron_pickaxe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/iron_pickaxe/model.bin": "8650c462b91a4c1a2fa87497389108a1e1318894c3c71cd7dbb58a9797c6c711",
         "models/items/iron_pickaxe/model.glb": "3a42ad099f37fc064e5c87c7331a4ef96e12b100d6c2e6dc69241085a94c2105",
         "models/items/iron_pickaxe/model.gltf": "4e506b6b1927ecdae63913f7bc440cf53ebaef93a3c1bb2d57dae93cae328497",
         "models/items/iron_pickaxe/textures/diffuse.png": "a9a76da99e03548bcda0546069b0b8de08d65e58390a99b0b2c67a808d9f7235",
-        "tools/item_recipes/iron_pickaxe.yaml": "c38423995f1315637499d2e2b713b17a5797d97f3a4df49943a3259a9ff77fef"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "iron_shield": {
@@ -768,10 +1072,13 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/iron_shield.json": "035a54b16c6112bc4f940c42eb107b28b7134e348e82aa8bb83bbac94dd66bb6",
+        "tools/item_recipes/iron_shield.yaml": "54a6a4f521aae6f95336f4c63443ae5d62b49431fef755df1cef7ab923fe036b",
         "models/items/iron_shield/arrow_A.bin": "6ad254651117d72fbeb6f4da2415bbf1f47e4f44c196d845355fb7376898f3ca",
         "models/items/iron_shield/arrow_B.bin": "3685a0a4feedcbdff6b1097374be565b67341a9c5be9ea1cab799d1235a9b972",
         "models/items/iron_shield/ATTRIBUTION.json": "61fc226426b62f260cd41ca80644ef3c9668f73b60da860c6e1aeb87119c2aec",
@@ -809,7 +1116,12 @@
         "models/items/iron_shield/textures/diffuse.png": "30ce017c953689ae60b56e836775a3e2a9e8fc122062400ed195e6aec69c3906",
         "models/items/iron_shield/wand_A.bin": "ec6c0221b6fc29a4ab6874d6a66051539ff2a8cf59f7adc334ea15e2a3ace45e",
         "models/items/iron_shield/weapons_bits_texture.png": "c153429a49928594b00b53c07c4ab3d6352087b7f5df6c272d4aedfdb99a40be",
-        "tools/item_recipes/iron_shield.yaml": "54a6a4f521aae6f95336f4c63443ae5d62b49431fef755df1cef7ab923fe036b"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "iron_shovel": {
@@ -817,17 +1129,25 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/iron_shovel.json": "51b4bb8c94226cc16e611aec690ddd38fde701cda660b88f03a6c636ab3d1162",
+        "tools/item_recipes/iron_shovel.yaml": "2a38d6451937b7ed7554d5c1aba56450b577f10c2f212fc0af6eff93d5b98ccf",
         "models/items/iron_shovel/ATTRIBUTION.json": "dc71cd8618d0fe9b24c110164608ab52b041494e05e5f2b4ec77e021a0ca414a",
         "models/items/iron_shovel/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/iron_shovel/model.bin": "4038d987b3422137c8b7bfe1f9478e9dce5b1a97f54bead4855e828747799510",
         "models/items/iron_shovel/model.glb": "85c0afbca34cb4f274cae75eb4a75714b5d377cde74fca8595350500ac750289",
         "models/items/iron_shovel/model.gltf": "5c71b86d043a850a72c3ac9731b2709410ebea8dfaa42e5da95010a7fb1c6a74",
         "models/items/iron_shovel/textures/diffuse.png": "a9a76da99e03548bcda0546069b0b8de08d65e58390a99b0b2c67a808d9f7235",
-        "tools/item_recipes/iron_shovel.yaml": "2a38d6451937b7ed7554d5c1aba56450b577f10c2f212fc0af6eff93d5b98ccf"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "iron_sword": {
@@ -835,10 +1155,13 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/iron_sword.json": "afe62baaf58cf1b3b70d57c6173b0312532b42810598bcc094ce75dda86bfda2",
+        "tools/item_recipes/iron_sword.yaml": "7402dcaadd8d998528ec6b358c6b6a4263485a0a7f2310ff96ed5fb3ec19e98a",
         "models/items/iron_sword/arrow_A.bin": "6ad254651117d72fbeb6f4da2415bbf1f47e4f44c196d845355fb7376898f3ca",
         "models/items/iron_sword/arrow_B.bin": "3685a0a4feedcbdff6b1097374be565b67341a9c5be9ea1cab799d1235a9b972",
         "models/items/iron_sword/ATTRIBUTION.json": "c43b8c5b845d801d2ae238c772dc5d5f80b23945c3c5399ee87809eb22322549",
@@ -876,7 +1199,12 @@
         "models/items/iron_sword/textures/diffuse.png": "a9a76da99e03548bcda0546069b0b8de08d65e58390a99b0b2c67a808d9f7235",
         "models/items/iron_sword/wand_A.bin": "ec6c0221b6fc29a4ab6874d6a66051539ff2a8cf59f7adc334ea15e2a3ace45e",
         "models/items/iron_sword/weapons_bits_texture.png": "c153429a49928594b00b53c07c4ab3d6352087b7f5df6c272d4aedfdb99a40be",
-        "tools/item_recipes/iron_sword.yaml": "7402dcaadd8d998528ec6b358c6b6a4263485a0a7f2310ff96ed5fb3ec19e98a"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "leather": {
@@ -884,16 +1212,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/leather.json": "377b169d333dc153e7c8e2e6e64dc71d6d78d65ec5583b5a12194ff751010628",
+        "tools/item_recipes/leather.yaml": "702bd511984043bcaf42026500403d9d2586a0c5b3dbff0a2c9bdfe7b89e84e0",
         "models/items/leather/ATTRIBUTION.json": "c92ec759a9a7962302678951c8dc83394ef6b6390cbdce8cb9bb932bf474ca38",
         "models/items/leather/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/leather/model.bin": "3892ef4ec2812b916c626fa9cc5e763b2cab3043e18de61716d6be4ee198d0e9",
         "models/items/leather/model.gltf": "7e553f8a3f31481c643e45bda4f0c87a8aae34bd9bddc87562d334216309bbaf",
         "models/items/leather/textures/diffuse.png": "e20bc891524477430943e7b826e6a84963bd49fa59a0da72175be25f277fdddc",
-        "tools/item_recipes/leather.yaml": "702bd511984043bcaf42026500403d9d2586a0c5b3dbff0a2c9bdfe7b89e84e0"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "leather_chest": {
@@ -901,10 +1237,13 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/leather_chest.json": "6a9431960f2e243c9321c9f1d3d76d421bbc5b916766a94057b1c807e955ec93",
+        "tools/item_recipes/leather_chest.yaml": "f142795ecf6cbf2f0319b006e815d6c7fa29691c92b7eb1c1787688ed01951c7",
         "models/items/leather_chest/ATTRIBUTION.json": "67a7b7215bd0e06a76f4595988a3d1e08128c5f927620ff7d6c1743eaf23f692",
         "models/items/leather_chest/gltf_buffer_0.bin": "354de2da6f3f3dc858dfcc9ccfbe3ef432f9e82e46dc3302462aecf09fa8d4ea",
         "models/items/leather_chest/gltf_buffer_1.bin": "add398965397ca06844a657df0376f20acf55e6de0bf11ff919a795c2599b790",
@@ -916,7 +1255,12 @@
         "models/items/leather_chest/wear.json": "f9efb46f631787cdddbd2a0d4a3a82ba6bd59310afc8fb7547565fc3e3da6279",
         "models/items/leather_chest/wear_indices.bin": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
         "models/items/leather_chest/wear_texture.png": "2559651738726cd28bea6291a655d16ced9605add40b84c69ec24c4e160d262f",
-        "tools/item_recipes/leather_chest.yaml": "f142795ecf6cbf2f0319b006e815d6c7fa29691c92b7eb1c1787688ed01951c7"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "leather_feet": {
@@ -924,10 +1268,13 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/leather_feet.json": "5b8379c2e914511544ab78b96e339ab6db43cdc94abd29061d0bc95187d31c0b",
+        "tools/item_recipes/leather_feet.yaml": "c8e29dbbac01ba1ed8d9b6a33c4a38166c4b9236976eac197f71b2ceb02510d8",
         "models/items/leather_feet/ATTRIBUTION.json": "fe2ff225bdafa9dc502ee16a7510e43631fcc1feb834b8816089b1fab09aadac",
         "models/items/leather_feet/gltf_buffer_0.bin": "1c0fd5389192104f25978864a5144afa515d44bcb9e064ae921356b294f4dbd6",
         "models/items/leather_feet/gltf_buffer_1.bin": "b0daaa0636a6f9cb8ecd74e224578460427847a2b14af76118a10036952aab10",
@@ -937,7 +1284,12 @@
         "models/items/leather_feet/model.gltf": "c6343020e45e83d6cdced2f830790de1d572ee4aa65f2d3387d1528dc8972ed0",
         "models/items/leather_feet/textures/diffuse.png": "e20bc891524477430943e7b826e6a84963bd49fa59a0da72175be25f277fdddc",
         "models/items/leather_feet/wear.json": "35fec2c6222ed4e7ac265d438ff2da2c86458af9ec1f276b4e135d85a2c83938",
-        "tools/item_recipes/leather_feet.yaml": "c8e29dbbac01ba1ed8d9b6a33c4a38166c4b9236976eac197f71b2ceb02510d8"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "leather_head": {
@@ -945,10 +1297,13 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/leather_head.json": "ef1fbce0550790774d2da8b32905f6588476ee5fd93a77b2f0318be1b48452c7",
+        "tools/item_recipes/leather_head.yaml": "c2b306e00934f8f48c805a1476bc3bf6c8a3d0af7192b5c4a3d80236f4c7878b",
         "models/items/leather_head/ATTRIBUTION.json": "b620a59aac8953eac29239bbae0b164a43e645dffd78be6f4376355a0111c179",
         "models/items/leather_head/gltf_buffer_0.bin": "343f83f2df60c4917a99956803480976f4030d73dec3ce6a9013a052aeb03409",
         "models/items/leather_head/gltf_buffer_1.bin": "62158099e289ad68b9f56a1840eaa97358b2914c2251de392d21ac4d26388080",
@@ -957,7 +1312,12 @@
         "models/items/leather_head/model.gltf": "543bcd08e6ac23cc9abea623945256dbe37db705e5151650fcf6cdae0fcbfb43",
         "models/items/leather_head/textures/diffuse.png": "e20bc891524477430943e7b826e6a84963bd49fa59a0da72175be25f277fdddc",
         "models/items/leather_head/wear.json": "1c4a3a8f81945e581316b520c44989b9a7c403b4f798febf8d5bf69caf955f5f",
-        "tools/item_recipes/leather_head.yaml": "c2b306e00934f8f48c805a1476bc3bf6c8a3d0af7192b5c4a3d80236f4c7878b"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "leather_legs": {
@@ -965,10 +1325,13 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/leather_legs.json": "c185e51b8c3cce95f3d6e7dca827cce2f64164a3123a31ed194d0f72edca90f4",
+        "tools/item_recipes/leather_legs.yaml": "8c790cfc87c146809ae0fed8cfa0e43f2c3d15cd707bf989940da883050a9a4b",
         "models/items/leather_legs/ATTRIBUTION.json": "4fb0f53d4b4a577c59754cf77ea8a0146944678627224309444f415d27e28d97",
         "models/items/leather_legs/gltf_buffer_0.bin": "354de2da6f3f3dc858dfcc9ccfbe3ef432f9e82e46dc3302462aecf09fa8d4ea",
         "models/items/leather_legs/gltf_buffer_1.bin": "add398965397ca06844a657df0376f20acf55e6de0bf11ff919a795c2599b790",
@@ -980,7 +1343,12 @@
         "models/items/leather_legs/wear.json": "35fec2c6222ed4e7ac265d438ff2da2c86458af9ec1f276b4e135d85a2c83938",
         "models/items/leather_legs/wear_indices.bin": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
         "models/items/leather_legs/wear_texture.png": "e9c9b026cd86a6889a3c2f1cc16b3ce49d5539f80f9794c65bf390c816748d17",
-        "tools/item_recipes/leather_legs.yaml": "8c790cfc87c146809ae0fed8cfa0e43f2c3d15cd707bf989940da883050a9a4b"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "plant_fiber": {
@@ -988,16 +1356,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/plant_fiber.json": "24f47d8b8dbe3e25234de4a72aaa50c38c7d51f6c8ccfdb6d3a586b214476838",
+        "tools/item_recipes/plant_fiber.yaml": "61272cd76a0312130c40b51d518eefbbee4b813acae5e559f1607b66a9ae570b",
         "models/items/plant_fiber/ATTRIBUTION.json": "a904baf658c26df4c5def7a9d4893e13e7ac6f1f72ebdb099fb4a99af927f4bb",
         "models/items/plant_fiber/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/plant_fiber/model.bin": "42718b45d633e2604e6ee6fc48aecd681f1e45667fc19f041edff3ed3534e11a",
         "models/items/plant_fiber/model.gltf": "1d7a4a76c4b3900f9a11269a8777a1d94adccc8dff278cc5bec05a0279126d3e",
         "models/items/plant_fiber/textures/diffuse.png": "f5dea1fdcf0e3a4dd7275de14eef08ecfcf409ce4464e29af85149b96a990ec5",
-        "tools/item_recipes/plant_fiber.yaml": "61272cd76a0312130c40b51d518eefbbee4b813acae5e559f1607b66a9ae570b"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "raw_copper": {
@@ -1005,16 +1381,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/raw_copper.json": "b23d72a343f7e98656e596fc5b4caa103b473ea8af4e21d87c8cd2b524c24127",
+        "tools/item_recipes/raw_copper.yaml": "d846e3a3d71e69c9d1b69e0ec3f64cd98dcce4f79c82b638cbf0fbb2bcdb3c82",
         "models/items/raw_copper/ATTRIBUTION.json": "31e9fa5c9ab7e9a79f6be235328b5ed554524fb20223c40ca416bc9da52d30bf",
         "models/items/raw_copper/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/raw_copper/model.bin": "3c01e78a456bb82e40aa00f864c492e74151e3774a44b0d27ba176c269afae2f",
         "models/items/raw_copper/model.gltf": "6bd0bd2efe89eefd76b11cbb1554b957419e93871897d022d65a6de6516cb862",
         "models/items/raw_copper/textures/diffuse.png": "15d832020d525e8234acd64d1e86b449d2a0aa66e32521e1b9b00b14d958f4f6",
-        "tools/item_recipes/raw_copper.yaml": "d846e3a3d71e69c9d1b69e0ec3f64cd98dcce4f79c82b638cbf0fbb2bcdb3c82"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "raw_gold": {
@@ -1022,16 +1406,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/raw_gold.json": "5fcc756403fdf505854f28c0a6cf653a492efd6e50574eb0e8e81fcd339e0f68",
+        "tools/item_recipes/raw_gold.yaml": "29782bd9c81fd3d783253c9523337c0b5a9d9e75aad4ec4a2197d10e9d799ec3",
         "models/items/raw_gold/ATTRIBUTION.json": "7e85ee3d16c7b5c4bb24c7c7857c340fd368d4ac91f7d24846ba1b83630d2db9",
         "models/items/raw_gold/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/raw_gold/model.bin": "3c01e78a456bb82e40aa00f864c492e74151e3774a44b0d27ba176c269afae2f",
         "models/items/raw_gold/model.gltf": "7b77ac53820962aa92e339ea3d28757a48da0ad655109c3b9c477d9211016838",
         "models/items/raw_gold/textures/diffuse.png": "55de095e00d2acfa5be41aba2895612df1c5fd4ae00e98a37972e7a6dc68c7f0",
-        "tools/item_recipes/raw_gold.yaml": "29782bd9c81fd3d783253c9523337c0b5a9d9e75aad4ec4a2197d10e9d799ec3"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "raw_iron": {
@@ -1039,16 +1431,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/raw_iron.json": "ab08f268fe4bc6a09c116031bd66c4d099fc8923638d186f7e5c60200d222b63",
+        "tools/item_recipes/raw_iron.yaml": "ce8e25d383f8e1d92dc674e9406d74ed7e63825be13ae66777c0536332cbeb57",
         "models/items/raw_iron/ATTRIBUTION.json": "911f82c422d43ef18a46f1368bda08caea50afe7c33d7c3ae812bb6fa5577123",
         "models/items/raw_iron/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/raw_iron/model.bin": "3c01e78a456bb82e40aa00f864c492e74151e3774a44b0d27ba176c269afae2f",
         "models/items/raw_iron/model.gltf": "efee9f6e7127197a30f6be7abd4dea747242b29be5792ab312e518f00b9440fe",
         "models/items/raw_iron/textures/diffuse.png": "e2b28fd4b5c0c1400613ad7bcf4e7a32498c795880b79d4814cc8ba996533ed3",
-        "tools/item_recipes/raw_iron.yaml": "ce8e25d383f8e1d92dc674e9406d74ed7e63825be13ae66777c0536332cbeb57"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "raw_meat": {
@@ -1056,16 +1456,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/raw_meat.json": "c4ba33820455539c8a1cdde7f1c0079a4cb687aaecf2145927d260e4175c22d9",
+        "tools/item_recipes/raw_meat.yaml": "6512c71d6869d725ed638bbc5adc26491f74a6785dc7b70c3a4cfa6a7be173d7",
         "models/items/raw_meat/ATTRIBUTION.json": "7c1d220eb72e0e85aa41ede302895169808e35a6569e1d007f14eed8d67b96ec",
         "models/items/raw_meat/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/raw_meat/model.bin": "9720a6eb3d6345d148560a587b1d6a2a6783eef0e363dae8e4a5db1b66a1ef15",
         "models/items/raw_meat/model.gltf": "4d456562861c1c46162560374f16e804d09be88e4a7891ce4de431feb18b791c",
         "models/items/raw_meat/textures/diffuse.png": "b7be1c60b4f58cfe296769c88b9f806af9756600d9d6b4a10721985b390b1ee6",
-        "tools/item_recipes/raw_meat.yaml": "6512c71d6869d725ed638bbc5adc26491f74a6785dc7b70c3a4cfa6a7be173d7"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "seeds": {
@@ -1073,16 +1481,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/seeds.json": "a0927f1333e0c74c42a8373aa4bda806cb7dbc3efc781634ddfaebebe628652d",
+        "tools/item_recipes/seeds.yaml": "080f6e25fa9a5a8312693c64f5d4906570ced61ae6aa80b6e6a3d4ee41de5813",
         "models/items/seeds/ATTRIBUTION.json": "a67d46e3b276e63cac329597c1b5a20183eb12436750f57d0cfd9594bd2ed548",
         "models/items/seeds/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/seeds/model.bin": "3892ef4ec2812b916c626fa9cc5e763b2cab3043e18de61716d6be4ee198d0e9",
         "models/items/seeds/model.gltf": "ef0b95e481257bf10463fc709f96c89feb11d2d817575b05e578c8edff5e19ba",
         "models/items/seeds/textures/diffuse.png": "e20bc891524477430943e7b826e6a84963bd49fa59a0da72175be25f277fdddc",
-        "tools/item_recipes/seeds.yaml": "080f6e25fa9a5a8312693c64f5d4906570ced61ae6aa80b6e6a3d4ee41de5813"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "shears": {
@@ -1090,16 +1506,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/shears.json": "7e7b41b973b7cc86ac046a91942e031c830c7b185f416cb8211bca203439f06c",
+        "tools/item_recipes/shears.yaml": "663143f6d059b7c5a771fc961fbf4513fe963452687b2abfc693af51bc5fc594",
         "models/items/shears/ATTRIBUTION.json": "98dba56ecc5fdb63b1ad3982b0933e4268e8950d41eb33d17cd8f284c9a67934",
         "models/items/shears/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/shears/model.bin": "4ddc149756ef24cd86dcff1e74ed68b76b48baa940531b4d896ced5f85aea0cd",
         "models/items/shears/model.gltf": "9fb58e6a20313973dd5c945383f2c1c7781b828a9d3e062e04d279be83d05f92",
         "models/items/shears/textures/diffuse.png": "a9a76da99e03548bcda0546069b0b8de08d65e58390a99b0b2c67a808d9f7235",
-        "tools/item_recipes/shears.yaml": "663143f6d059b7c5a771fc961fbf4513fe963452687b2abfc693af51bc5fc594"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "stick": {
@@ -1107,16 +1531,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/stick.json": "bc8dd2f0565a294835893e55b1684d08600346ec4b22416e4f7ea22b607269bc",
+        "tools/item_recipes/stick.yaml": "45317bfcc9de4abde618010ab6997a247c0fddc5324e98c0861d26a0309af13d",
         "models/items/stick/ATTRIBUTION.json": "61b03fc7697702aa4a91e117d48098da2564672046dad1f62f148577bf36888c",
         "models/items/stick/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/stick/model.bin": "5f1664f1c9bbfc5961968a78646ca48c95aa5ceb7f7488dfb6e1251b75b20d8b",
         "models/items/stick/model.gltf": "78f36b309d287b5781263c969882017d9e64d659cf762309af6c8cf7c6a096b7",
         "models/items/stick/textures/diffuse.png": "9c76e9ee4d88f693f1bbde97363cd2b5804cd63039063c26beb3a2705b24f13d",
-        "tools/item_recipes/stick.yaml": "45317bfcc9de4abde618010ab6997a247c0fddc5324e98c0861d26a0309af13d"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "stone_axe": {
@@ -1124,17 +1556,25 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/stone_axe.json": "109eea7553cda3baeae1e9c8fee32e505fdd409f9a6bb28f0a588fb956f01025",
+        "tools/item_recipes/stone_axe.yaml": "534bccf3629b5a60d843fe4d4cd0a5b48dbe3ce8537a79836dd81c5dc09ee0c3",
         "models/items/stone_axe/ATTRIBUTION.json": "fdc61943bc16e33b88a7fc665caffeb778e3e01aa5a43e74403f20304738766e",
         "models/items/stone_axe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/stone_axe/model.bin": "aaf61bd3d5ccc614a64e3b01784e56ca302e7c9b90b1ebeeb7d49b16ccf17ef3",
         "models/items/stone_axe/model.glb": "de5c6cc51cdb5bcfad8bd7128b7ff0e37a34e6f4f8deddec82bb8634c25cc20d",
         "models/items/stone_axe/model.gltf": "b3bdf63dfc15b2b98a63db66fedc1ab7e42e920178197159ca0b200fc9cb22c6",
         "models/items/stone_axe/textures/diffuse.png": "ea297654a56cbbdd716502f5911ab17fb5b342b69fc209f6bff5f35a935be83d",
-        "tools/item_recipes/stone_axe.yaml": "534bccf3629b5a60d843fe4d4cd0a5b48dbe3ce8537a79836dd81c5dc09ee0c3"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "stone_hoe": {
@@ -1142,16 +1582,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/stone_hoe.json": "e7bed6d638c8d87e6b9c8a4832940e2a591df1cda919ee1a23ff86bba0144629",
+        "tools/item_recipes/stone_hoe.yaml": "018757ebfa81132c3842d69df013f4423a3a93f8807e47bb225058b5b78f162a",
         "models/items/stone_hoe/ATTRIBUTION.json": "83c0c0279961a8779e0f02936ceb7a6191608a81ad8cf8c4e06dc1a152291870",
         "models/items/stone_hoe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/stone_hoe/model.bin": "12527479dc45bdbf6d53561120a681ff80cecf9f3515de03dd51de631e4ef464",
         "models/items/stone_hoe/model.gltf": "8eee909b872c8db8a8722d6572b374ce8c71a72296fda3489d7674508f8581f9",
         "models/items/stone_hoe/textures/diffuse.png": "ea297654a56cbbdd716502f5911ab17fb5b342b69fc209f6bff5f35a935be83d",
-        "tools/item_recipes/stone_hoe.yaml": "018757ebfa81132c3842d69df013f4423a3a93f8807e47bb225058b5b78f162a"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "stone_pickaxe": {
@@ -1159,17 +1607,25 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/stone_pickaxe.json": "b66f4f5f340b8e053dd1de812b08230235d3a8724229957ea0bfdc3e82ca567c",
+        "tools/item_recipes/stone_pickaxe.yaml": "5e452bb345c788ff356eca3e62e5bff9d802aa60882cad26d843232c65d46b36",
         "models/items/stone_pickaxe/ATTRIBUTION.json": "b4ea4b633f06c27e585c66b124af1a221b9ef1727f4dcf074e69e1afa095a307",
         "models/items/stone_pickaxe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/stone_pickaxe/model.bin": "f6cabd5aef0315f0706929e00365b2f66c33abe0b6a3797a4a6756e70e9d9648",
         "models/items/stone_pickaxe/model.glb": "2b77a238b8666338094d83fc5561984643c335c49ccacd9e0e0a50fb2849c542",
         "models/items/stone_pickaxe/model.gltf": "e3f4a4f018771a5f8ea9f3a7d71d023c11ac9f4e6564c31b2608fffe80b42c89",
         "models/items/stone_pickaxe/textures/diffuse.png": "ea297654a56cbbdd716502f5911ab17fb5b342b69fc209f6bff5f35a935be83d",
-        "tools/item_recipes/stone_pickaxe.yaml": "5e452bb345c788ff356eca3e62e5bff9d802aa60882cad26d843232c65d46b36"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "stone_shovel": {
@@ -1177,17 +1633,25 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/stone_shovel.json": "e5b6c75e63c3c958fd94511f994671f9d1cdf68317b273d095aec609324914d4",
+        "tools/item_recipes/stone_shovel.yaml": "7e3e2960ccbb2553e633de9e06bebd8079517103ac6e02f9e2b13dbf0938e209",
         "models/items/stone_shovel/ATTRIBUTION.json": "de42219add557108cf4074cef54622876393722d12e4a322caa7e4214792a565",
         "models/items/stone_shovel/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/stone_shovel/model.bin": "5af0dfdbad856c262188ae87ed138d71a321c13578532aeda0dcfbb7d688bbc8",
         "models/items/stone_shovel/model.glb": "20abb2420f0215c59694287207b7a6324114552b9f59846ab2a2673e3a7c1147",
         "models/items/stone_shovel/model.gltf": "6b93a27aa110fb85768d40d42e674e69b44965f73f5cdf6a1cb0578654f79093",
         "models/items/stone_shovel/textures/diffuse.png": "ea297654a56cbbdd716502f5911ab17fb5b342b69fc209f6bff5f35a935be83d",
-        "tools/item_recipes/stone_shovel.yaml": "7e3e2960ccbb2553e633de9e06bebd8079517103ac6e02f9e2b13dbf0938e209"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "stone_sword": {
@@ -1195,10 +1659,13 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/stone_sword.json": "a8aa0617a3b3ed8c77e78f3fb68c16f444a0d910f691b751906adbb9d3ec4d8e",
+        "tools/item_recipes/stone_sword.yaml": "9822231f1120d28f65753b2293f63d7eb361c184a1c10ecbcb56231d6d9629e3",
         "models/items/stone_sword/arrow_A.bin": "6ad254651117d72fbeb6f4da2415bbf1f47e4f44c196d845355fb7376898f3ca",
         "models/items/stone_sword/arrow_B.bin": "3685a0a4feedcbdff6b1097374be565b67341a9c5be9ea1cab799d1235a9b972",
         "models/items/stone_sword/ATTRIBUTION.json": "09c8673b5f016fdb29de468e878e86ec6a57b4d0649dface5e341560a8f28b61",
@@ -1236,7 +1703,12 @@
         "models/items/stone_sword/textures/diffuse.png": "ea297654a56cbbdd716502f5911ab17fb5b342b69fc209f6bff5f35a935be83d",
         "models/items/stone_sword/wand_A.bin": "ec6c0221b6fc29a4ab6874d6a66051539ff2a8cf59f7adc334ea15e2a3ace45e",
         "models/items/stone_sword/weapons_bits_texture.png": "c153429a49928594b00b53c07c4ab3d6352087b7f5df6c272d4aedfdb99a40be",
-        "tools/item_recipes/stone_sword.yaml": "9822231f1120d28f65753b2293f63d7eb361c184a1c10ecbcb56231d6d9629e3"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "waterskin": {
@@ -1244,16 +1716,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/waterskin.json": "614408787638579a45378456d02b2299bcdcaed3f3a9555b6a91063ad1b322b7",
+        "tools/item_recipes/waterskin.yaml": "df5f5628f9a91e16ac86f159ed2542f53a6fc9c49d96ec145dc905f36b88fc9b",
         "models/items/waterskin/ATTRIBUTION.json": "aa50bb1a6a8334eb2a849038a5ea1c2595057e74d3f9f7d7fa4bfa64263de688",
         "models/items/waterskin/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/waterskin/model.bin": "2117a87c4670fc18fbfabbd910d4e40859a4f61dcb855be789455591e737c681",
         "models/items/waterskin/model.gltf": "9631ac5447c889667fb4eb2e991c9adc81a12eb5eca112e7fe1abdefb55d9ebb",
         "models/items/waterskin/textures/diffuse.png": "72bfdd92c6d1243faf276566ddddc069449934d4da29f2c0e5e3cd98f05fb9fe",
-        "tools/item_recipes/waterskin.yaml": "df5f5628f9a91e16ac86f159ed2542f53a6fc9c49d96ec145dc905f36b88fc9b"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "wood_axe": {
@@ -1261,17 +1741,25 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/wood_axe.json": "f6d9d4068a64c0ba2cd97b33e7ca1301d971f978c2688cec1daaf510c84d7050",
+        "tools/item_recipes/wood_axe.yaml": "89588294974f089673babbaebc8e120d5d7b2fa1de39cf5fff9fcee426d495c9",
         "models/items/wood_axe/ATTRIBUTION.json": "b38160adf46801f1280cff858ce108b41d2d88354afa741db1ccf1f40ebe7953",
         "models/items/wood_axe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/wood_axe/model.bin": "aaf61bd3d5ccc614a64e3b01784e56ca302e7c9b90b1ebeeb7d49b16ccf17ef3",
         "models/items/wood_axe/model.glb": "de5c6cc51cdb5bcfad8bd7128b7ff0e37a34e6f4f8deddec82bb8634c25cc20d",
         "models/items/wood_axe/model.gltf": "d9f0ece1ea7203707b4593fa6e24b5177a44d090035a1f5d0249f46917acded4",
         "models/items/wood_axe/textures/diffuse.png": "9c76e9ee4d88f693f1bbde97363cd2b5804cd63039063c26beb3a2705b24f13d",
-        "tools/item_recipes/wood_axe.yaml": "89588294974f089673babbaebc8e120d5d7b2fa1de39cf5fff9fcee426d495c9"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "wood_bow": {
@@ -1279,10 +1767,13 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/wood_bow.json": "6c6d3b4a95b2c5f023120d44beaeb8341b35df5238d248c306862494b59ade5f",
+        "tools/item_recipes/wood_bow.yaml": "0733f064e05a752c7432ea8c272f95da3c3a91d4c90a473562e98942eeb0dcdc",
         "models/items/wood_bow/arrow_A.bin": "6ad254651117d72fbeb6f4da2415bbf1f47e4f44c196d845355fb7376898f3ca",
         "models/items/wood_bow/arrow_B.bin": "3685a0a4feedcbdff6b1097374be565b67341a9c5be9ea1cab799d1235a9b972",
         "models/items/wood_bow/ATTRIBUTION.json": "4274fea4e2a2a64281d4b72854a781c7a7b65b92ae9736d0ec4b24bd755a0de6",
@@ -1320,7 +1811,12 @@
         "models/items/wood_bow/textures/diffuse.png": "44e170f67a266622690f8b89a37a311f5ea4b792f10e4e3f05756624895e53d9",
         "models/items/wood_bow/wand_A.bin": "ec6c0221b6fc29a4ab6874d6a66051539ff2a8cf59f7adc334ea15e2a3ace45e",
         "models/items/wood_bow/weapons_bits_texture.png": "c153429a49928594b00b53c07c4ab3d6352087b7f5df6c272d4aedfdb99a40be",
-        "tools/item_recipes/wood_bow.yaml": "0733f064e05a752c7432ea8c272f95da3c3a91d4c90a473562e98942eeb0dcdc"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "wood_hoe": {
@@ -1328,16 +1824,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/wood_hoe.json": "a4c1dee1d20b25168c02a44bc6c95e5258f10a05e74307be0433d8b7bb66112e",
+        "tools/item_recipes/wood_hoe.yaml": "10b54fd3e8b5e94b44fdcd057b54c331b0a59f951f00b1f8b192b98b2aa3e533",
         "models/items/wood_hoe/ATTRIBUTION.json": "f499c57ad362cc418213f234b031feae56f90795b358f50377553ba323933a6d",
         "models/items/wood_hoe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/wood_hoe/model.bin": "12527479dc45bdbf6d53561120a681ff80cecf9f3515de03dd51de631e4ef464",
         "models/items/wood_hoe/model.gltf": "17f60ff26a9f34539e53c557cfb28c807ed84cf61a1a198f5497b3d5535c6457",
         "models/items/wood_hoe/textures/diffuse.png": "9c76e9ee4d88f693f1bbde97363cd2b5804cd63039063c26beb3a2705b24f13d",
-        "tools/item_recipes/wood_hoe.yaml": "10b54fd3e8b5e94b44fdcd057b54c331b0a59f951f00b1f8b192b98b2aa3e533"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "wood_pickaxe": {
@@ -1345,17 +1849,25 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/wood_pickaxe.json": "579ada7fe5feccf1c14b6808b325f0f343de0df55237fa955c722c20b6bec00b",
+        "tools/item_recipes/wood_pickaxe.yaml": "8ee601ed44ab97b995498ac85883a5890210ebd92be42f2c0bd8b4a1503e3b36",
         "models/items/wood_pickaxe/ATTRIBUTION.json": "c0e814bd1cae691f72a010c0fd7c991a74b952b1ca1f7abd3d720a9647268468",
         "models/items/wood_pickaxe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/wood_pickaxe/model.bin": "36a4b17b0b3320945566629667344f85791c7b864b86b991ebbd26205a233cda",
         "models/items/wood_pickaxe/model.glb": "2b77a238b8666338094d83fc5561984643c335c49ccacd9e0e0a50fb2849c542",
         "models/items/wood_pickaxe/model.gltf": "5a418a814853679f814c4ecfc08a5daa71a3d06dc6b686748385fe1cd3a58f28",
         "models/items/wood_pickaxe/textures/diffuse.png": "9c76e9ee4d88f693f1bbde97363cd2b5804cd63039063c26beb3a2705b24f13d",
-        "tools/item_recipes/wood_pickaxe.yaml": "8ee601ed44ab97b995498ac85883a5890210ebd92be42f2c0bd8b4a1503e3b36"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "wood_shield": {
@@ -1363,10 +1875,13 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/wood_shield.json": "323fa5089cba41c0d4450692e743d3d2a807af45b68b746c115eb6d36c7af87c",
+        "tools/item_recipes/wood_shield.yaml": "0bc0c7ad3f61cc4dd55094b68076997b76ee81ded06591e056bab13da2ffb06d",
         "models/items/wood_shield/arrow_A.bin": "6ad254651117d72fbeb6f4da2415bbf1f47e4f44c196d845355fb7376898f3ca",
         "models/items/wood_shield/arrow_B.bin": "3685a0a4feedcbdff6b1097374be565b67341a9c5be9ea1cab799d1235a9b972",
         "models/items/wood_shield/ATTRIBUTION.json": "91197a34ceb18811fceebcb29381eb53a49d2aaa6bb7e1f28d6156d19b2c65da",
@@ -1404,7 +1919,12 @@
         "models/items/wood_shield/textures/diffuse.png": "35c79e9b3924a0eda09366288235df8ae4f7c4c22ab2579fe222cb5e3df874c7",
         "models/items/wood_shield/wand_A.bin": "ec6c0221b6fc29a4ab6874d6a66051539ff2a8cf59f7adc334ea15e2a3ace45e",
         "models/items/wood_shield/weapons_bits_texture.png": "c153429a49928594b00b53c07c4ab3d6352087b7f5df6c272d4aedfdb99a40be",
-        "tools/item_recipes/wood_shield.yaml": "0bc0c7ad3f61cc4dd55094b68076997b76ee81ded06591e056bab13da2ffb06d"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "wood_shovel": {
@@ -1412,17 +1932,25 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/wood_shovel.json": "4a65184ac551e25db1654d500433e04595a05031666f34af024dfca103e68e21",
+        "tools/item_recipes/wood_shovel.yaml": "5e616ec8d1b41c82e48d827a827b076a4a8a6a7e594b74c9831550d64df2a97c",
         "models/items/wood_shovel/ATTRIBUTION.json": "3cf915035c630268781567647e450d0761b76d63d55198ef095467dfe0d552af",
         "models/items/wood_shovel/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/wood_shovel/model.bin": "5af0dfdbad856c262188ae87ed138d71a321c13578532aeda0dcfbb7d688bbc8",
         "models/items/wood_shovel/model.glb": "20abb2420f0215c59694287207b7a6324114552b9f59846ab2a2673e3a7c1147",
         "models/items/wood_shovel/model.gltf": "dfd4f611308b45c117cdf5b221a78b8434c5dfdf94cf1bdd00fabc5b439826c2",
         "models/items/wood_shovel/textures/diffuse.png": "9c76e9ee4d88f693f1bbde97363cd2b5804cd63039063c26beb3a2705b24f13d",
-        "tools/item_recipes/wood_shovel.yaml": "5e616ec8d1b41c82e48d827a827b076a4a8a6a7e594b74c9831550d64df2a97c"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "wood_spear": {
@@ -1430,16 +1958,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/wood_spear.json": "8cb781dccb2a8e54c0558205a41c104e3b26344cc2c2b5c65d245609185b05a0",
+        "tools/item_recipes/wood_spear.yaml": "a19d3b6536b40ce895205e3782d89da68d30de76dd7a9d36a02bd3c98e9d3698",
         "models/items/wood_spear/ATTRIBUTION.json": "f7891ae6e2837badd59aa916604c41e77ce79cd329597703c7c709577cb8bbe6",
         "models/items/wood_spear/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/wood_spear/model.bin": "87c3cd71aadd5c50a104864f2a914429211e63f001bc8d2f07c4903a20ad3116",
         "models/items/wood_spear/model.gltf": "a4dbecce6a38d2d0381cd8a39346df6b5cf0c10e3cce1b86c2c527cfe8a606f9",
         "models/items/wood_spear/textures/diffuse.png": "9c76e9ee4d88f693f1bbde97363cd2b5804cd63039063c26beb3a2705b24f13d",
-        "tools/item_recipes/wood_spear.yaml": "a19d3b6536b40ce895205e3782d89da68d30de76dd7a9d36a02bd3c98e9d3698"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "wood_sword": {
@@ -1447,10 +1983,13 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/wood_sword.json": "31d85407c7f0ea9a38cd6630b37cda23a344d897f4a412a852538b9a6e067c35",
+        "tools/item_recipes/wood_sword.yaml": "6740e26c5d8ee2c16257b144afa25c8d27c9b061a93db62a7c9b52229f1bdf02",
         "models/items/wood_sword/arrow_A.bin": "6ad254651117d72fbeb6f4da2415bbf1f47e4f44c196d845355fb7376898f3ca",
         "models/items/wood_sword/arrow_B.bin": "3685a0a4feedcbdff6b1097374be565b67341a9c5be9ea1cab799d1235a9b972",
         "models/items/wood_sword/ATTRIBUTION.json": "9e03e0ab94eea9138b13bf90e3c4bbd0906e9a6a3d478cca060ab2f1efc66e12",
@@ -1489,7 +2028,12 @@
         "models/items/wood_sword/wand_A.bin": "ec6c0221b6fc29a4ab6874d6a66051539ff2a8cf59f7adc334ea15e2a3ace45e",
         "models/items/wood_sword/weapons_bits_texture.png": "c153429a49928594b00b53c07c4ab3d6352087b7f5df6c272d4aedfdb99a40be",
         "models/items/wood_sword/wield_grip.json": "4eab804d87c1d0ab7efc4788f41b081a580abe6d253610518a33e801beeb4198",
-        "tools/item_recipes/wood_sword.yaml": "6740e26c5d8ee2c16257b144afa25c8d27c9b061a93db62a7c9b52229f1bdf02"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "wood_torch": {
@@ -1497,10 +2041,13 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/wood_torch.json": "3108edd19c2f0c8d7a8dd45dab537ab197cd14618306b66612d95090e0a385eb",
+        "tools/item_recipes/wood_torch.yaml": "41e3490333658ad06ec94242557eaf024fdc692c5c9b570f9f895bd8f7887b4d",
         "models/items/wood_torch/anvil.bin": "4dabc949ce4c0876731693c2e70e7020da9d48592c7a469803ba2aaa23ff88d2",
         "models/items/wood_torch/ATTRIBUTION.json": "907ed3bff78ca0297a80b5c35042405b6afaa681128211df1007afea4e5a173a",
         "models/items/wood_torch/axe.bin": "af3b83ef8ab49fe0272382310115c5daacc37cf350aecc064812a3c2a2deb086",
@@ -1560,7 +2107,12 @@
         "models/items/wood_torch/wield_grip.json": "4eab804d87c1d0ab7efc4788f41b081a580abe6d253610518a33e801beeb4198",
         "models/items/wood_torch/wrench_A.bin": "df666161e7cc4a173cd81d617da238b6339d9562f5f3347738fa0a21a191f20f",
         "models/items/wood_torch/wrench_B.bin": "27742c8ebbeac19b856ea51606dc7d57f991533b0100fa03a17dbfa1eb1d8203",
-        "tools/item_recipes/wood_torch.yaml": "41e3490333658ad06ec94242557eaf024fdc692c5c9b570f9f895bd8f7887b4d"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     },
     "wool": {
@@ -1568,16 +2120,24 @@
         "tools/item_materials.yaml",
         "tools/itemgen/builders.py",
         "tools/itemgen/export_gltf.py",
-        "tools/itemgen/texturegen.py"
+        "tools/itemgen/texturegen.py",
+        "tools/itemgen/pipeline.py",
+        "tools/itemgen/manifest.py"
       ],
       "sha256": {
         "content/items/wool.json": "fd6960c67e3d26ce88107e0e5f575bb7b09665299703734f0110cd01141182d6",
+        "tools/item_recipes/wool.yaml": "47429d76b737ff7fd97c4de90261d097def307b4207f761ce7ab48c945379a13",
         "models/items/wool/ATTRIBUTION.json": "9805268243bfa945147168d230ba34b48b54588665a88dfdb91d0822f57ac277",
         "models/items/wool/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
         "models/items/wool/model.bin": "00abd918c219022cac713277e8c5b29a02d300060472be4013c9a06022a5f5a1",
         "models/items/wool/model.gltf": "d9d803dd014795d1d491ea689bdeebb238cdf845cb817e3d1a7f2e4ff7f7fb5c",
         "models/items/wool/textures/diffuse.png": "2b8285125ea931119ac313e84626abb2f485d7bcaddd837cf317d0e96896eabf",
-        "tools/item_recipes/wool.yaml": "47429d76b737ff7fd97c4de90261d097def307b4207f761ce7ab48c945379a13"
+        "tools/item_materials.yaml": "7c59cbd5c0d23aa260f1498b4267e82d31750e2167d4f215fd74873e5a0dfb9b",
+        "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+        "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+        "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+        "tools/itemgen/pipeline.py": "2213ef49f3febdfbcced5b54875bf539f3160ba52a67638df5fcb537235ff076",
+        "tools/itemgen/manifest.py": "17ced109da381a1f74ba78afe96a23787871405b73f1370ec7b92b58f606db7b"
       }
     }
   }

@@ -39,6 +39,14 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
 
       - name: Block id assignment check
         shell: pwsh
@@ -79,7 +87,14 @@ jobs:
 
       - name: clang-format (changed src files)
         shell: pwsh
-        run: python tools/audit_clang_format.py
+        run: |
+          if (-not (Get-Command clang-format -ErrorAction SilentlyContinue)) {
+            $formatterPath = Join-Path $env:ProgramFiles 'LLVM/bin/clang-format.exe'
+            if (-not (Test-Path -LiteralPath $formatterPath)) { throw 'clang-format is required for this gate' }
+            $env:PATH = (Split-Path $formatterPath) + ';' + $env:PATH
+          }
+          python tools/audit_clang_format.py --base 'HEAD^'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Creature catalog audit
         shell: pwsh
@@ -93,6 +108,10 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install -r requirements-assetgen.txt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tools/test_itemgen_publication.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tools/test_cpp_audits.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python tools/validate_item_defs.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -343,11 +362,6 @@ jobs:
       - name: C++ unit test (object placement mode)
         shell: pwsh
         run: ./build/desktop-msvc/Release/object_placement_mode_test.exe
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
 
       - name: C++ unit test (worldgen cave depth)
         shell: pwsh

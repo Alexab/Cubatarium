@@ -590,7 +590,7 @@ void UGameSession::DiscardInventory()
   if (!inv->Take(index, count, out))
     return;
   auto cam = World->GetCurrentUserCamera();
-  WorldItemSystem::Instance().SpawnStack(
+  UWorldItemSystem::Instance().SpawnStack(
       actor->GetEyePosition() + (cam ? cam->GetFront() * .9f : glm::vec3(0)),
       out, inv->IsCreative());
   CancelDrag();

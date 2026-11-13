@@ -1817,6 +1817,41 @@ bool UApplication::ResolveSlotAt(int x, int y, SlotAddress &out)
   return false;
 }
 
+static void ConfigureCarryContacts(FpViewmodelDrawParams &params,
+                                   const UCreature &actor,
+                                   const UCamera &camera)
+{
+  if (params.CarryHands <= 0)
+    return;
+  for (const auto &cargo : UWorldItemSystem::Instance().GetItems())
+  {
+    if (cargo.carrierId != actor.GetId())
+      continue;
+    const auto view = camera.GetViewMatrix();
+    const auto vp = camera.GetProjection() * view;
+    const auto right = glm::normalize(glm::vec3(glm::inverse(view)[0]));
+    // Creature colliders include extremities; grip the torso inside that
+    // volume.
+    const float width = glm::dot(glm::abs(right), cargo.physical.size) * .5f *
+                        (cargo.creatureId ? .72f : 1.f);
+    const auto rightClip = vp * glm::vec4(cargo.position + right * width, 1.f);
+    const auto leftClip = vp * glm::vec4(cargo.position - right * width, 1.f);
+    if (rightClip.w <= .001f || leftClip.w <= .001f)
+      return;
+    const auto r = glm::vec2(rightClip) / rightClip.w,
+               l = glm::vec2(leftClip) / leftClip.w;
+    if (!std::isfinite(r.x) || !std::isfinite(r.y) || !std::isfinite(l.x) ||
+        !std::isfinite(l.y) ||
+        glm::any(glm::greaterThan(glm::abs(r), glm::vec2(2.f))) ||
+        glm::any(glm::greaterThan(glm::abs(l), glm::vec2(2.f))))
+      return;
+    params.CarryRightNdc = r;
+    params.CarryLeftNdc = l;
+    params.HasCarryContacts = true;
+    return;
+  }
+}
+
 void UApplication::DrawDragGhost(int width, int height)
 {
   if (!GameSession || !GameSession->IsDragging() || !IconSource || !GuiContext)
@@ -2567,6 +2602,8 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
         fpParams.FramebufferW = width;
         fpParams.FramebufferH = height;
         fpParams.CarryHands = creature->CarryHandCount;
+        ConfigureCarryContacts(fpParams, *creature,
+                               *World->GetCurrentUserCamera());
         fpParams.ThrowCharge = creature->ThrowCharge;
         fpParams.BowCharge = creature->BowCharge;
         fpParams.Active =

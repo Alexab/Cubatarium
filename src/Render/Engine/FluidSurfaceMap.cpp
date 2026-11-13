@@ -5,9 +5,9 @@
 
 #include "Render/Engine/FluidSurfaceMapLogic.h"
 #include "Render/Mesh/ChunkMeshCache.h"
-#include "Render/Mesh/FluidSurfaceColumnSlice.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Fluids/FluidSurfaceColumnSlice.h"
 #include "World/Math/GridMath.h"
 
 #include <algorithm>
@@ -31,10 +31,10 @@ void PatchGroundChunkStaging(std::vector<float> &surfaceStaging,
                              const FluidSurfaceColumnSlice *slice,
                              UBlockRegistry &registry)
 {
-  PatchFluidSurfaceStagingChunk(
-      surfaceStaging, fluidIndexStaging, fluidBottomStaging, sizeBlocks,
-      originBlock, groundChunk, slice, registry,
-      UFluidSurfaceMap::kNoSurfaceSentinel);
+  PatchFluidSurfaceStagingChunk(surfaceStaging, fluidIndexStaging,
+                                fluidBottomStaging, sizeBlocks, originBlock,
+                                groundChunk, slice, registry,
+                                UFluidSurfaceMap::kNoSurfaceSentinel);
 }
 
 bool GroundChunkIntersectsWindow(glm::ivec3 groundChunk, glm::ivec2 originBlock,
@@ -257,7 +257,8 @@ void UFluidSurfaceMap::QueueGpuChunk(glm::ivec3 groundChunk)
   PendingGpuGroundChunks.insert(groundChunk);
 }
 
-bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &registry,
+bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world,
+                                      UBlockRegistry &registry,
                                       UChunkMeshCache &cache,
                                       glm::ivec3 cameraBlockXZ, int scanHintY,
                                       double lastWallMs, bool cruise_throttle,
@@ -281,10 +282,10 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
 
   auto finish_cpu = [&]()
   {
-    LastFrameStats.CpuMs = std::chrono::duration<double, std::milli>(
-                               std::chrono::high_resolution_clock::now() -
-                               cpu_begin)
-                               .count();
+    LastFrameStats.CpuMs =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - cpu_begin)
+            .count();
     LastFrameStats.DirtyChunksPending =
         static_cast<int>(fluidSurfaceDirty.size()) +
         static_cast<int>(PendingGpuGroundChunks.size()) +
@@ -308,16 +309,15 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
       return 0;
     }
     SortGroundChunksNearFirst(PendingRebuildGroundChunks, cx, cz);
-    const int take = std::min(
-        budget, static_cast<int>(PendingRebuildGroundChunks.size()));
+    const int take =
+        std::min(budget, static_cast<int>(PendingRebuildGroundChunks.size()));
     for (int i = 0; i < take; ++i)
     {
       patch_one(PendingRebuildGroundChunks[static_cast<size_t>(i)],
                 PendingRebuildScanHintY);
     }
-    PendingRebuildGroundChunks.erase(
-        PendingRebuildGroundChunks.begin(),
-        PendingRebuildGroundChunks.begin() + take);
+    PendingRebuildGroundChunks.erase(PendingRebuildGroundChunks.begin(),
+                                     PendingRebuildGroundChunks.begin() + take);
     return take;
   };
 
@@ -379,15 +379,14 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
   {
     if (ColdSeedGz_ != INT32_MAX)
     {
-      AppendColdSeedChunks(PendingRebuildGroundChunks, ColdSeedCx_, ColdSeedCz_,
-                           ColdSeedRenderDist_, ColdSeedGz_, ColdSeedGx_,
-                           ChunkUpdateBudget(0, lastWallMs, cruise_throttle,
-                                             enter_throttle));
+      AppendColdSeedChunks(
+          PendingRebuildGroundChunks, ColdSeedCx_, ColdSeedCz_,
+          ColdSeedRenderDist_, ColdSeedGz_, ColdSeedGx_,
+          ChunkUpdateBudget(0, lastWallMs, cruise_throttle, enter_throttle));
     }
     const int pending = static_cast<int>(PendingRebuildGroundChunks.size()) +
                         static_cast<int>(fluidSurfaceDirty.size());
-    const int near_dirty =
-        NearFluidDirtyCount(fluidSurfaceDirty, cx, cz);
+    const int near_dirty = NearFluidDirtyCount(fluidSurfaceDirty, cx, cz);
     const int budget = FluidDirtyBudget(pending, near_dirty, lastWallMs,
                                         cruise_throttle, enter_throttle);
     int processed = drain_pending_rebuild(budget);
@@ -415,8 +414,7 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
   {
     if (!fluidSurfaceDirty.empty())
     {
-      const int near_dirty =
-          NearFluidDirtyCount(fluidSurfaceDirty, cx, cz);
+      const int near_dirty = NearFluidDirtyCount(fluidSurfaceDirty, cx, cz);
       const int budget = FluidDirtyBudget(
           static_cast<int>(fluidSurfaceDirty.size()), near_dirty, lastWallMs,
           cruise_throttle, enter_throttle);
@@ -458,17 +456,17 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
       for (int gx = cx - renderDistChunks; gx <= cx + renderDistChunks; ++gx)
       {
         const glm::ivec3 groundChunk(gx, 0, gz);
-        if (!FluidSurfaceChunkNeedsStripPatch(groundChunk, oldOrigin, originBlock,
-                                              SizeBlocks))
+        if (!FluidSurfaceChunkNeedsStripPatch(groundChunk, oldOrigin,
+                                              originBlock, SizeBlocks))
         {
           continue;
         }
         PendingRebuildGroundChunks.push_back(groundChunk);
       }
     }
-    const int budget = ChunkUpdateBudget(
-        static_cast<int>(PendingRebuildGroundChunks.size()), lastWallMs,
-        cruise_throttle, enter_throttle);
+    const int budget =
+        ChunkUpdateBudget(static_cast<int>(PendingRebuildGroundChunks.size()),
+                          lastWallMs, cruise_throttle, enter_throttle);
     const int processed = drain_pending_rebuild(budget);
     LastFrameStats.DirtyChunksProcessed = processed;
     LastFrameStats.FullRebuild = !PendingRebuildGroundChunks.empty();
@@ -487,9 +485,8 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
   WindowOriginBlock = originBlock;
   OriginBlockXZ = glm::vec2(static_cast<float>(originBlock.x),
                             static_cast<float>(originBlock.y));
-  InvSizeBlocks =
-      glm::vec2(1.0f / static_cast<float>(std::max(SizeBlocks, 1)),
-                1.0f / static_cast<float>(std::max(SizeBlocks, 1)));
+  InvSizeBlocks = glm::vec2(1.0f / static_cast<float>(std::max(SizeBlocks, 1)),
+                            1.0f / static_cast<float>(std::max(SizeBlocks, 1)));
 
   const size_t texelCount =
       static_cast<size_t>(SizeBlocks) * static_cast<size_t>(SizeBlocks);
@@ -509,9 +506,9 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
       ChunkUpdateBudget(0, lastWallMs, cruise_throttle, enter_throttle);
   AppendColdSeedChunks(PendingRebuildGroundChunks, cx, cz, renderDistChunks,
                        ColdSeedGz_, ColdSeedGx_, seed_budget);
-  const int budget = ChunkUpdateBudget(
-      static_cast<int>(PendingRebuildGroundChunks.size()), lastWallMs,
-      cruise_throttle, enter_throttle);
+  const int budget =
+      ChunkUpdateBudget(static_cast<int>(PendingRebuildGroundChunks.size()),
+                        lastWallMs, cruise_throttle, enter_throttle);
   const int processed = drain_pending_rebuild(budget);
   LastFrameStats.DirtyChunksProcessed = processed;
   LastFrameStats.FullRebuild = !PendingRebuildGroundChunks.empty();
@@ -675,10 +672,10 @@ bool UFluidSurfaceMap::Update(UBlockWorld &world, UBlockRegistry &registry,
     Valid = true;
   }
 
-  LastFrameStats.GpuMs = std::chrono::duration<double, std::milli>(
-                             std::chrono::high_resolution_clock::now() -
-                             gpu_begin)
-                             .count();
+  LastFrameStats.GpuMs =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - gpu_begin)
+          .count();
   LastFrameStats.DirtyChunksPending =
       static_cast<int>(cache.GetFluidSurfaceDirtyGroundChunks().size()) +
       static_cast<int>(PendingGpuGroundChunks.size()) +

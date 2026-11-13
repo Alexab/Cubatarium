@@ -10,6 +10,7 @@
 
 namespace cutum
 {
+struct EnterWarmupStepSample;
 
 class UWorld;
 
@@ -46,12 +47,18 @@ public:
   void Cancel();
   void CancelBackgroundWorkers();
 
-  /// When true, main-thread TickAsyncChunkSystems should not run (coop owns or quiesces workers).
+  /// When true, main-thread TickAsyncChunkSystems should not run (coop owns or
+  /// quiesces workers).
   bool BlocksStreamingTick() const;
   /// Load/create bar-side enter visual warmup (MeshWarmup..PrepareView).
   bool IsEnterVisualWarmupActive() const;
 
 private:
+  void DrainPreparedViewMeshes(UWorld &world,
+                               EnterWarmupStepSample &step_sample,
+                               int meshBudget, int gateIters);
+  void ResetLoadViewWarmup();
+  bool BeginPreparedViewLoad(UWorld &world, IUProgressSink &sink, int budget);
   enum class Phase
   {
     Init,
@@ -106,26 +113,32 @@ private:
   // switch-exit breaks became returns.
   void HandlePhaseInit(UWorld &world, IUProgressSink &sink, int budget);
   void HandlePhaseLoadChunks(UWorld &world, IUProgressSink &sink, int budget);
-  void HandlePhaseSpatialChunks(UWorld &world, IUProgressSink &sink, int budget);
-  void HandlePhaseRelightChunks(UWorld &world, IUProgressSink &sink, int budget);
-  void HandlePhaseRelightBulkChunks(UWorld &world, IUProgressSink &sink, int budget);
-  void HandlePhaseRelightColumns(UWorld &world, IUProgressSink &sink, int budget);
-  void HandlePhaseRelightEmissiveBlockLight(UWorld &world, IUProgressSink &sink, int budget);
+  void HandlePhaseSpatialChunks(UWorld &world, IUProgressSink &sink,
+                                int budget);
+  void HandlePhaseRelightChunks(UWorld &world, IUProgressSink &sink,
+                                int budget);
+  void HandlePhaseRelightBulkChunks(UWorld &world, IUProgressSink &sink,
+                                    int budget);
+  void HandlePhaseRelightColumns(UWorld &world, IUProgressSink &sink,
+                                 int budget);
+  void HandlePhaseRelightEmissiveBlockLight(UWorld &world, IUProgressSink &sink,
+                                            int budget);
   void HandlePhaseMeshWarmup(UWorld &world, IUProgressSink &sink, int budget);
-  void HandlePhasePostLoadAnalysis(UWorld &world, IUProgressSink &sink, int budget);
-  void HandlePhaseProceduralFill(UWorld &world, IUProgressSink &sink, int budget);
+  void HandlePhasePostLoadAnalysis(UWorld &world, IUProgressSink &sink,
+                                   int budget);
+  void HandlePhaseProceduralFill(UWorld &world, IUProgressSink &sink,
+                                 int budget);
   void HandlePhaseResolveSpawn(UWorld &world, IUProgressSink &sink, int budget);
   void HandlePhasePrepareView(UWorld &world, IUProgressSink &sink, int budget);
   // PrepareView splits by operation kind (create spawn warmup vs load
   // enter-lit warmup); the post-warmup tail stays in the dispatcher.
-  void HandlePrepareViewCreate(UWorld &world, IUProgressSink &sink,
-                               int budget);
+  void HandlePrepareViewCreate(UWorld &world, IUProgressSink &sink, int budget);
   void HandlePrepareViewLoad(UWorld &world, IUProgressSink &sink, int budget);
   void HandlePhaseDrainAsyncIo(UWorld &world, IUProgressSink &sink, int budget);
   void HandlePhaseSaveChunks(UWorld &world, IUProgressSink &sink, int budget);
-  void HandlePhaseGenerateColumns(UWorld &world, IUProgressSink &sink, int budget);
+  void HandlePhaseGenerateColumns(UWorld &world, IUProgressSink &sink,
+                                  int budget);
   void HandlePhasePostCreate(UWorld &world, IUProgressSink &sink, int budget);
-
 
   Phase CurrentPhase{Phase::Init};
   std::string TimedPhaseId;
@@ -186,86 +199,86 @@ private:
 
   struct FSpatialState
   {
-  int SpatialRadius{0};
-  glm::ivec3 SpatialCenter{0};
-  std::vector<glm::ivec3> SpatialColumnQueue;
-  size_t SpatialColumnQueueIndex{0};
-  std::vector<glm::ivec3> SpatialAsyncColumns;
-  size_t SpatialColumnsVisited{0};
-  bool SpatialStreamingLoad{false};
+    int SpatialRadius{0};
+    glm::ivec3 SpatialCenter{0};
+    std::vector<glm::ivec3> SpatialColumnQueue;
+    size_t SpatialColumnQueueIndex{0};
+    std::vector<glm::ivec3> SpatialAsyncColumns;
+    size_t SpatialColumnsVisited{0};
+    bool SpatialStreamingLoad{false};
   };
   FSpatialState Spatial;
   struct FMeshWarmupState
   {
-  int MeshWarmupTicks{0};
-  std::chrono::steady_clock::time_point MeshWarmupStartedAt{};
-  size_t MeshWarmupStartPending{0};
-  size_t MeshWarmupSeenTotal{0};
-  bool MeshWarmupFinalizeOnly{false};
-  size_t MeshWarmupProcessedMax{0};
-  size_t MeshWarmupCompletedTotal{0};
-  bool MeshWarmupTimedOutWithDirty{false};
+    int MeshWarmupTicks{0};
+    std::chrono::steady_clock::time_point MeshWarmupStartedAt{};
+    size_t MeshWarmupStartPending{0};
+    size_t MeshWarmupSeenTotal{0};
+    bool MeshWarmupFinalizeOnly{false};
+    size_t MeshWarmupProcessedMax{0};
+    size_t MeshWarmupCompletedTotal{0};
+    bool MeshWarmupTimedOutWithDirty{false};
   };
   FMeshWarmupState MeshWarmup;
   struct FStreamingWarmupState
   {
-  int StreamingWarmupTicks{0};
-  int StreamingWarmupPeakDebt{0};
-  int StreamingWarmupLastRawDebt{0};
-  int StreamingWarmupDisplayDebt{0};
-  std::chrono::steady_clock::time_point StreamingWarmupWallStart{};
-  bool StreamingWarmupLitWarnLogged{false};
-  bool StreamingWarmupAbortDrainMode{false};
-  bool StreamingWarmupAbortLogged{false};
-  bool StreamingWarmupAbortCapLogged{false};
-  bool StreamingWarmupSettleLogged{false};
-  int StreamingWarmupBestFovDebt{INT_MAX};
-  std::chrono::steady_clock::time_point StreamingWarmupLitProgressAt{};
-  bool StreamingWarmupLitStallLogged{false};
+    int StreamingWarmupTicks{0};
+    int StreamingWarmupPeakDebt{0};
+    int StreamingWarmupLastRawDebt{0};
+    int StreamingWarmupDisplayDebt{0};
+    std::chrono::steady_clock::time_point StreamingWarmupWallStart{};
+    bool StreamingWarmupLitWarnLogged{false};
+    bool StreamingWarmupAbortDrainMode{false};
+    bool StreamingWarmupAbortLogged{false};
+    bool StreamingWarmupAbortCapLogged{false};
+    bool StreamingWarmupSettleLogged{false};
+    int StreamingWarmupBestFovDebt{INT_MAX};
+    std::chrono::steady_clock::time_point StreamingWarmupLitProgressAt{};
+    bool StreamingWarmupLitStallLogged{false};
   };
   FStreamingWarmupState StreamingWarmup;
   struct FGenState
   {
-  int GenCenterX{0};
-  int GenCenterZ{0};
-  int GenPatchMinX{0};
-  int GenPatchMaxX{0};
-  int GenPatchMinZ{0};
-  int GenPatchMaxZ{0};
-  std::vector<GenChunkEntry> GenChunkQueue;
-  size_t GenChunkScheduleIndex{0};
-  std::vector<GenColumnEntry> GenColumnQueue;
-  size_t GenColumnIndex{0};
-  int GenTotalColumns{0};
-  int GenDoneColumns{0};
-  /// S5 fluid-seal cursor (next chunk row X to seal).
-  int FluidSealNextCx{INT_MIN};
+    int GenCenterX{0};
+    int GenCenterZ{0};
+    int GenPatchMinX{0};
+    int GenPatchMaxX{0};
+    int GenPatchMinZ{0};
+    int GenPatchMaxZ{0};
+    std::vector<GenChunkEntry> GenChunkQueue;
+    size_t GenChunkScheduleIndex{0};
+    std::vector<GenColumnEntry> GenColumnQueue;
+    size_t GenColumnIndex{0};
+    int GenTotalColumns{0};
+    int GenDoneColumns{0};
+    /// S5 fluid-seal cursor (next chunk row X to seal).
+    int FluidSealNextCx{INT_MIN};
   };
   FGenState Gen;
   struct FSaveState
   {
-  std::vector<glm::ivec3> SaveChunkCoords;
-  size_t SaveChunkIndex{0};
-  bool SaveUsesTerrainColumns{false};
-  int SaveDrainIoFrames{0};
+    std::vector<glm::ivec3> SaveChunkCoords;
+    size_t SaveChunkIndex{0};
+    bool SaveUsesTerrainColumns{false};
+    int SaveDrainIoFrames{0};
   };
   FSaveState Save;
   struct FRelightState
   {
-  std::vector<glm::ivec3> RelightQueue;
-  size_t RelightQueueIndex{0};
-  std::vector<glm::ivec2> ColumnRelightQueue;
-  size_t ColumnRelightIndex{0};
-  size_t ColumnRelightScheduledIndex{0};
-  size_t ColumnRelightAppliedCount{0};
-  std::vector<glm::ivec3> BulkRelightChunkQueue;
-  size_t BulkRelightChunkScheduledIndex{0};
-  size_t BulkRelightChunkAppliedCount{0};
-  std::vector<glm::ivec3> EmissiveChunkRelightQueue;
-  /// S4: chunks still needing the 16^3 emissive scan (drained per tick).
-  std::vector<glm::ivec3> EmissiveChunkScanQueue;
-  size_t EmissiveChunkRelightIndex{0};
-  std::chrono::steady_clock::time_point RelightColumnsStartedAt{};
+    std::vector<glm::ivec3> RelightQueue;
+    size_t RelightQueueIndex{0};
+    std::vector<glm::ivec2> ColumnRelightQueue;
+    size_t ColumnRelightIndex{0};
+    size_t ColumnRelightScheduledIndex{0};
+    size_t ColumnRelightAppliedCount{0};
+    std::vector<glm::ivec3> BulkRelightChunkQueue;
+    size_t BulkRelightChunkScheduledIndex{0};
+    size_t BulkRelightChunkAppliedCount{0};
+    std::vector<glm::ivec3> EmissiveChunkRelightQueue;
+    /// S4: chunks still needing the 16^3 emissive scan (drained per tick).
+    std::vector<glm::ivec3> EmissiveChunkScanQueue;
+    size_t EmissiveChunkRelightIndex{0};
+    std::chrono::steady_clock::time_point RelightColumnsStartedAt{};
   };
   FRelightState Relight;
   int ChunkFilesRead{0};

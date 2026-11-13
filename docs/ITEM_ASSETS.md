@@ -41,7 +41,9 @@ python tools/itemgen.py validate --id iron_pickaxe
 python tools/itemgen.py publish --id iron_pickaxe
 ```
 
-Publishing preserves authored worn/grip sidecars. QA rasterizes real triangles,
+Publishing preserves authored worn/grip sidecars and pose defaults; explicit recipe
+overrides remain authoritative. Manifest v3 updates with publication and hashes all
+published resources and generator dependencies. `audit_item_visuals.py` verifies it. QA rasterizes real triangles,
 UV and textures; it no longer replaces geometry with bounds. Icon, FP, TP and
 ground presentation scales are independent from physical dimensions.
 World drops and thrown items use their actual models; block units use the block atlas.

@@ -322,7 +322,7 @@ void ParseObjectPool(
     {
       WorldGenObjectEntry entry;
       const std::string modeName = item.value("mode", "object");
-      const auto mode = ObjectFeatureTypeRegistry::Find(modeName);
+      const auto mode = UObjectFeatureTypeRegistry::Find(modeName);
       if (!mode)
       {
         continue;
@@ -467,10 +467,10 @@ void UpgradeLegacyFeatureMetadata(
   {
     for (WorldGenObjectEntry &entry : sectionPair.second.Entries)
     {
-      const auto authored = std::find_if(
-          global.begin(), global.end(),
-          [&entry](const ObjectFeatureRule &candidate)
-          { return candidate.ObjectName == entry.ObjectName; });
+      const auto authored =
+          std::find_if(global.begin(), global.end(),
+                       [&entry](const ObjectFeatureRule &candidate)
+                       { return candidate.ObjectName == entry.ObjectName; });
       if (authored == global.end())
       {
         continue;

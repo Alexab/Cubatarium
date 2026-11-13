@@ -5,6 +5,7 @@
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Influence/BareHandToolInfluenceProvider.h"
 #include "Creatures/Influence/InfluenceHitMath.h"
+#include "Creatures/Influence/StatusEffectSystem.h"
 #include "Game/Inventory/InventoryTypes.h"
 #include "Game/ModePolicy.h"
 #include "Items/ItemDefinitionStorage.h"
@@ -143,8 +144,8 @@ bool TryResolveDig(UWorld &world, UCreature &source, WorldGameMode mode,
     tool = items->GetHandDefinition();
   }
 
-  const DigParams dig =
-      ResolveDigParams(tool, *block, source.GetAttributes(), mode);
+  const DigParams dig = ResolveDigParams(
+      tool, *block, StatusEffectSystem::GetEffectiveAttributes(source), mode);
   pred.Capability.Id = tool ? tool->Id : "bare_hand";
   pred.DigDurationSec = dig.DurationSec;
   pred.DigWearDelta = dig.WearDelta;
@@ -178,7 +179,8 @@ bool TryResolveRadiusTargets(UWorld &world, UCreature &source,
       continue;
     }
     const InfluenceHitParams hit = InfluenceHitMath::Compute(
-        target->GetArmorGroups(), cap, source.GetAttributes(),
+        target->GetArmorGroups(), cap,
+        StatusEffectSystem::GetEffectiveAttributes(source),
         source.GetTimeSinceLastInfluenceSec());
     if (hit.Missed || !hit.DidHit || hit.Damage <= 0.f)
     {
@@ -418,7 +420,8 @@ InfluenceResolver::Resolve(UWorld &world, UCreature &source, WorldGameMode mode,
   }
 
   const InfluenceHitParams hit = InfluenceHitMath::Compute(
-      target->GetArmorGroups(), cap, source.GetAttributes(),
+      target->GetArmorGroups(), cap,
+      StatusEffectSystem::GetEffectiveAttributes(source),
       source.GetTimeSinceLastInfluenceSec());
   if (hit.Missed)
   {

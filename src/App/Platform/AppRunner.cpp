@@ -1,16 +1,16 @@
-#include "Core/StallTimer.h"
-#include "Core/UiPump.h"
-#include "Render/GlIncludes.h"
-#include "World/Diagnostics/MeshAuditDiagnostics.h"
-#include "Render/Camera/CameraBasisLogic.h"
-#include <fstream>
-#include "Game/CreatureVisualQaSpawner.h"
-#include "Game/ModePolicy.h"
-#include "App/Platform/FlightSimHarness.h"
-#include "Creatures/Locomotion/CreatureLocomotionController.h"
-#include "App/Platform/SampleProfiler.h"
 #include "App/Platform/AppRunner.h"
 #include "App/Platform/CreatureQaCapture.h"
+#include "App/Platform/FlightSimHarness.h"
+#include "App/Platform/SampleProfiler.h"
+#include "Core/StallTimer.h"
+#include "Core/UiPump.h"
+#include "Creatures/Locomotion/CreatureLocomotionController.h"
+#include "Game/CreatureVisualQaSpawner.h"
+#include "Game/ModePolicy.h"
+#include "Render/Camera/CameraBasisLogic.h"
+#include "Render/GlIncludes.h"
+#include "World/Diagnostics/MeshAuditDiagnostics.h"
+#include <fstream>
 #if !defined(__ANDROID__)
 #include "App/Platform/HumanMotionQa.h"
 #endif
@@ -20,8 +20,8 @@
 #include "App/Application.h"
 #include "App/Core.h"
 #include "Items/ItemDefinitionStorage.h"
-#include "World/Objects/ObjectLibrary.h"
 #include "World/Diagnostics/MovementDiagnosticsRecorder.h"
+#include "World/Objects/ObjectLibrary.h"
 #if !defined(__ANDROID__)
 #include "App/Platform/DesktopPlatformWindow.h"
 #include "App/Platform/GlfwKeyCompat.h"
@@ -37,6 +37,8 @@
 #include "Creatures/Core/CreatureSpawnSource.h"
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
+#include "Creatures/Influence/InfluenceEvent.h"
+#include "Creatures/Player/User.h"
 #include "Creatures/Stats/CreatureVitalsSystem.h"
 #include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
@@ -45,20 +47,18 @@
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/TextRenderer.h"
 #include "Render/Engine/ViewEngine.h"
-#include <algorithm>
 #include "Render/Textures/TextureBase.h"
 #include "Render/Textures/TextureCube.h"
-#include "Creatures/Player/User.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/World.h"
-#include "World/Raycast/BlockRaycast.h"
-#include "Creatures/Influence/InfluenceEvent.h"
-#include "World/Math/BlockTypes.h"
 #include "World/Core/WorldLoadDiagnostics.h"
 #include "World/Diagnostics/FramePerfMonitor.h"
+#include "World/Math/BlockTypes.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Objects/ObjectLibrary.h"
+#include "World/Raycast/BlockRaycast.h"
 #include "WorldGen/Core/ProceduralSettings.h"
+#include <algorithm>
 
 #include <chrono>
 #include <cmath>
@@ -76,6 +76,21 @@
 
 namespace cutum
 {
+static std::string EscapeFlightReportJson(const std::string &s)
+{
+
+  std::string out;
+  out.reserve(s.size() + 8);
+  for (const char c : s)
+  {
+    if (c == '\\' || c == '"')
+    {
+      out.push_back('\\');
+    }
+    out.push_back(c);
+  }
+  return out;
+}
 
 int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths)
 {
@@ -185,7 +200,8 @@ int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths)
     application->Startup(paths.ResolveWritable("config.json").string());
     if (!application->StartupSucceeded())
     {
-      CubatariumLogError("App", "Startup failed — staying on screen for diagnostics");
+      CubatariumLogError("App",
+                         "Startup failed — staying on screen for diagnostics");
     }
     else
     {
@@ -209,8 +225,7 @@ int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths)
     }
     catch (const std::exception &e)
     {
-      CubatariumLogError("App",
-                         std::string("SaveSystem failed: ") + e.what());
+      CubatariumLogError("App", std::string("SaveSystem failed: ") + e.what());
     }
     application.reset();
     text_renderer.reset();
@@ -425,7 +440,8 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
           : window.InitializeHidden(1280, 720, "Cubatarium autoload");
   if (!window_ok)
   {
-    std::cerr << "autoload-last-world: failed to initialize window" << std::endl;
+    std::cerr << "autoload-last-world: failed to initialize window"
+              << std::endl;
     return 1;
   }
 
@@ -446,7 +462,8 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
     auto text_renderer = std::make_shared<UTextRenderer>();
     if (!text_renderer->Initialize(16))
     {
-      std::cerr << "autoload-last-world: text renderer init failed" << std::endl;
+      std::cerr << "autoload-last-world: text renderer init failed"
+                << std::endl;
       return 1;
     }
     text_renderer->SetWindowSize(1280, 720);
@@ -455,7 +472,8 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
         world, texture_base_instance, texture_cube_instance, text_renderer);
     if (!geometry_engine->InitEngine())
     {
-      std::cerr << "autoload-last-world: geometry engine init failed" << std::endl;
+      std::cerr << "autoload-last-world: geometry engine init failed"
+                << std::endl;
       return 1;
     }
 
@@ -529,12 +547,10 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
               if (UCreature *player_creature = world->GetPlayerCreature())
               {
                 CreatureVitals &vitals = player_creature->GetVitals();
-                vitals.fatalWounds =
-                    std::max(0, vitals.maxFatalWounds - 1);
+                vitals.fatalWounds = std::max(0, vitals.maxFatalWounds - 1);
                 vitals.health = 1.0f;
                 CreatureVitalsSystem::ApplyDamage(
-                    *world, *player_creature, 1.0f, world->GetGameMode(),
-                    "qa");
+                    *world, *player_creature, 1.0f, world->GetGameMode(), "qa");
                 forced_hardcore_death_applied = true;
               }
             }
@@ -552,11 +568,10 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
                 user->SetPosition(drop_start_position);
                 if (UCreature *controlled = world->GetControlledCreature())
                 {
-                  controlled->SetBodyOrigin(
-                      glm::vec3(drop_start_position.x,
-                                drop_start_position.y -
-                                    controlled->GetEyeOffset().y,
-                                drop_start_position.z));
+                  controlled->SetBodyOrigin(glm::vec3(
+                      drop_start_position.x,
+                      drop_start_position.y - controlled->GetEyeOffset().y,
+                      drop_start_position.z));
                   controlled->GetLocomotion().SetMode(
                       CreatureMovementMode::Walking);
                 }
@@ -597,8 +612,8 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
           const bool hostile =
               definition &&
               std::find(definition->catalog.tags.begin(),
-                        definition->catalog.tags.end(), "hostile") !=
-                  definition->catalog.tags.end();
+                        definition->catalog.tags.end(),
+                        "hostile") != definition->catalog.tags.end();
           if (hostile)
           {
             ++hostile_creature_count;
@@ -665,10 +680,9 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
       const auto ground = world->QueryGroundFeetYUnder(
           static_cast<int>(std::floor(player_position.x)),
           static_cast<int>(std::floor(player_position.z)), feet_y);
-      drop_test_passed =
-          player_position.y < drop_start_position.y - 10.0f && ground &&
-          std::abs(feet_y - *ground) < 1.0f && !world->IsPlayerDead() &&
-          player_health > 0.0f;
+      drop_test_passed = player_position.y < drop_start_position.y - 10.0f &&
+                         ground && std::abs(feet_y - *ground) < 1.0f &&
+                         !world->IsPlayerDead() && player_health > 0.0f;
     }
 
     world->PrepareForShutdown();
@@ -709,10 +723,9 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
     std::ofstream report(report_path);
     if (report)
     {
-      const double elapsed_sec =
-          std::chrono::duration<double>(std::chrono::steady_clock::now() -
-                                        started)
-              .count();
+      const double elapsed_sec = std::chrono::duration<double>(
+                                     std::chrono::steady_clock::now() - started)
+                                     .count();
       report << "exit_code=" << exit_code << '\n'
              << "exit_reason=" << exit_reason << '\n'
              << "elapsed_sec=" << elapsed_sec << '\n'
@@ -723,30 +736,28 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
              << "world_folder=" << world_folder.string() << '\n'
              << "game_mode=" << WorldGameModeToString(world->GetGameMode())
              << '\n'
-             << "difficulty="
-             << WorldDifficultyToString(world->GetDifficulty()) << '\n'
-             << "player_dead=" << (world->IsPlayerDead() ? 1 : 0) << '\n'
-             << "hardcore_dead=" << (world->IsHardcoreDead() ? 1 : 0)
+             << "difficulty=" << WorldDifficultyToString(world->GetDifficulty())
              << '\n'
+             << "player_dead=" << (world->IsPlayerDead() ? 1 : 0) << '\n'
+             << "hardcore_dead=" << (world->IsHardcoreDead() ? 1 : 0) << '\n'
              << "creatures=" << creature_count << '\n'
              << "natural_creatures=" << natural_creature_count << '\n'
              << "hostile_creatures=" << hostile_creature_count << '\n'
-             << "natural_hostile_creatures="
-             << natural_hostile_creature_count << '\n'
+             << "natural_hostile_creatures=" << natural_hostile_creature_count
+             << '\n'
              << "player_health=" << player_health << '\n'
              << "player_position=" << player_position.x << ','
              << player_position.y << ',' << player_position.z << '\n'
              << "forced_creature_ai_ticks="
              << (opt.ForceCreatureAiTicks ? 1 : 0) << '\n'
-             << "drop_player_applied=" << (drop_player_applied ? 1 : 0)
-             << '\n'
+             << "drop_player_applied=" << (drop_player_applied ? 1 : 0) << '\n'
              << "drop_test_passed=" << (drop_test_passed ? 1 : 0) << '\n'
              << "drop_start_position=" << drop_start_position.x << ','
              << drop_start_position.y << ',' << drop_start_position.z << '\n'
              << "forced_hardcore_death_applied="
              << (forced_hardcore_death_applied ? 1 : 0) << '\n'
-             << "hardcore_death_passed="
-             << (hardcore_death_passed ? 1 : 0) << '\n'
+             << "hardcore_death_passed=" << (hardcore_death_passed ? 1 : 0)
+             << '\n'
              << "creatures_saved=" << (creatures_saved ? 1 : 0) << '\n'
              << "saved_creatures=" << saved_creature_count << '\n'
              << "creature_save_path=" << creature_save_path.string() << '\n'
@@ -767,8 +778,7 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
     {
       std::cout << "autoload-last-world: PASS ingame_frames="
                 << ingame_frames_seen << " creatures=" << creature_count
-                << " natural_creatures=" << natural_creature_count
-                << std::endl;
+                << " natural_creatures=" << natural_creature_count << std::endl;
     }
     else
     {
@@ -786,14 +796,10 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
   }
 }
 
-int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
+bool LoadFlightAssetGalleryPages(
+    const FlightSimOptions &options,
+    std::vector<std::vector<std::string>> &gallery_pages)
 {
-  // Harness-only move-speed scale lives in locomotion as a plain hook; the
-  // App layer owns reading the env var (audit M7).
-  CreatureMoveSpeedScaleOverride() = FlightSimMoveSpeedScale();
-  const double gallery_page_seconds =
-      std::clamp(options.AssetGalleryPageSeconds, 3.0, 3600.0);
-  std::vector<std::vector<std::string>> gallery_pages;
   if (!options.AssetGalleryManifest.empty())
   {
     std::ifstream manifest_stream(options.AssetGalleryManifest);
@@ -801,13 +807,14 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     {
       std::cerr << "flight-sim: could not read asset gallery manifest: "
                 << options.AssetGalleryManifest << std::endl;
-      return 1;
+      return false;
     }
     try
     {
       const nlohmann::json manifest = nlohmann::json::parse(manifest_stream);
       std::map<int, std::vector<std::pair<int, std::string>>> indexed_pages;
-      for (const auto &entry : manifest.value("blocks", nlohmann::json::array()))
+      for (const auto &entry :
+           manifest.value("blocks", nlohmann::json::array()))
       {
         if (!entry.is_object() || !entry.contains("name") ||
             !entry["name"].is_string())
@@ -818,7 +825,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
         const int slot = entry.value("slot", 0);
         if (page > 0)
         {
-          indexed_pages[page].emplace_back(slot, entry["name"].get<std::string>());
+          indexed_pages[page].emplace_back(slot,
+                                           entry["name"].get<std::string>());
         }
       }
       for (auto &[page_number, entries] : indexed_pages)
@@ -835,17 +843,805 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     }
     catch (const std::exception &error)
     {
-      std::cerr << "flight-sim: invalid asset gallery manifest: " << error.what()
-                << std::endl;
-      return 1;
+      std::cerr << "flight-sim: invalid asset gallery manifest: "
+                << error.what() << std::endl;
+      return false;
     }
     if (gallery_pages.empty())
     {
       std::cerr << "flight-sim: asset gallery manifest contains no block pages"
                 << std::endl;
-      return 1;
+      return false;
     }
   }
+  return true;
+}
+
+void TickFlightCreatureGrid(const std::shared_ptr<UWorld> &world,
+                            int ingame_frames_seen)
+{
+  if (std::getenv("CUBA_FLIGHT_QA_GRID") != nullptr && world)
+  {
+    world->SetTimeOfDayNormalized(0.35f);
+    world->SetTimeFrozen(true);
+  }
+}
+
+void TickFlightCreatureCloseReview(const std::shared_ptr<UWorld> &world,
+                                   int ingame_frames_seen)
+{
+  if (ingame_frames_seen >= 30 &&
+      std::getenv("CUBA_FLIGHT_QA_CLOSE") != nullptr)
+  {
+    if (auto camera = world->GetCurrentUserCamera())
+    {
+      world->ForEachCreature(
+          [&](const UCreature &creature)
+          {
+            if (creature.GetSpawnSource() != CreatureSpawnSource::Qa ||
+                creature.IsPlayerCharacter())
+              return;
+            const auto size = creature.GetCollisionSize();
+            const float distance =
+                std::max(.7f, std::max({size.x, size.y, size.z}) * 1.5f);
+            const auto center =
+                creature.GetBodyOrigin() + glm::vec3(0.f, size.y * .5f, 0.f);
+            const bool waterClose =
+                std::getenv("CUBA_FLIGHT_QA_WATER") != nullptr;
+            auto offset =
+                glm::vec3(.6f, waterClose ? .08f : .4f, -1.f) * distance;
+            if (std::getenv("CUBA_FLIGHT_QA_LAVA") != nullptr)
+            {
+              const float yaw = glm::radians(creature.GetYaw());
+              offset = glm::vec3(.6f * std::cos(yaw) + std::sin(yaw), .65f,
+                                 -.6f * std::sin(yaw) + std::cos(yaw)) *
+                       distance;
+            }
+            // Keep a review camera out of terrain; looking through a
+            // shore bank is not evidence that the model rendered well.
+            if (waterClose)
+            {
+              const auto &blocks = world->GetBlockWorld();
+              auto &registry = world->GetBlockRegistry();
+              for (int turn = 0; turn < 8; ++turn)
+              {
+                const float angle = glm::radians(45.f * turn);
+                const auto candidate = glm::vec3(
+                    offset.x * std::cos(angle) - offset.z * std::sin(angle),
+                    offset.y,
+                    offset.x * std::sin(angle) + offset.z * std::cos(angle));
+                bool clear = true;
+                for (int step = 1; step <= 32; ++step)
+                {
+                  const auto point =
+                      center + candidate * (static_cast<float>(step) / 32.f);
+                  // The collision/render grid is centred on integers.
+                  // floor(point) can report water while the ray is
+                  // already inside the neighbouring shore block.
+                  const auto block = blocks.GetBlock(
+                      glm::ivec3(glm::floor(point + glm::vec3(.5f))));
+                  if (block != BLOCK_AIR && !registry.IsLiquid(block))
+                  {
+                    clear = false;
+                    break;
+                  }
+                }
+                if (clear)
+                {
+                  offset = candidate;
+                  break;
+                }
+              }
+            }
+            const auto position = center + offset;
+            const auto direction = center - position;
+            camera->SetFreeMove(true);
+            camera->SetPosition(position);
+            camera->SetOrientation(
+                glm::degrees(std::atan2(direction.z, direction.x)),
+                glm::degrees(std::atan2(direction.y,
+                                        std::hypot(direction.x, direction.z))));
+          });
+    }
+  }
+}
+
+void TickFlightCreatureLifecycleProbes(const std::shared_ptr<UWorld> &world,
+                                       int ingame_frames_seen,
+                                       int qaBehaviorFrame,
+                                       std::ofstream &qaBehaviorLog)
+{
+  // Kill QA (CUBA_FLIGHT_QA_KILL=1): at frame 300, inside a world
+  // creature loop, each visited QA creature removes the next QA
+  // creature and then itself (a kill plus a death in the same
+  // visit). Logs what lookups and the map report during and
+  // after the loop.
+  if (qaBehaviorFrame == 300 && std::getenv("CUBA_FLIGHT_QA_KILL") != nullptr)
+  {
+    std::vector<CreatureId> qaIds;
+    world->ForEachCreature(
+        [&](const UCreature &c)
+        {
+          if (c.GetSpawnSource() == CreatureSpawnSource::Qa)
+          {
+            qaIds.push_back(c.GetId());
+          }
+        });
+    int visited = 0;
+    int stillAliveInLoop = 0;
+    int lookupsHidden = 0;
+    world->ForEachCreature(
+        [&](UCreature &c)
+        {
+          if (c.GetSpawnSource() != CreatureSpawnSource::Qa)
+          {
+            return;
+          }
+          ++visited;
+          const auto it = std::find(qaIds.begin(), qaIds.end(), c.GetId());
+          const CreatureId victim =
+              qaIds[(static_cast<size_t>(it - qaIds.begin()) + 1) %
+                    qaIds.size()];
+          world->RemoveCreature(victim);
+          lookupsHidden += world->GetCreature(victim) == nullptr;
+          world->RemoveCreature(c.GetId());
+          // The visited body must still be intact here.
+          stillAliveInLoop +=
+              c.GetId() != 0 && c.GetBounds().profile.restSizeBlocks.y > 0.0f;
+        });
+    int remaining = 0;
+    world->ForEachCreature(
+        [&](const UCreature &c)
+        { remaining += c.GetSpawnSource() == CreatureSpawnSource::Qa; });
+    qaBehaviorLog << "kill qa=" << qaIds.size() << " visited=" << visited
+                  << " aliveInLoop=" << stillAliveInLoop
+                  << " lookupsHidden=" << lookupsHidden
+                  << " remainingAfter=" << remaining << std::endl;
+    if (auto camera = world->GetCurrentUserCamera())
+    {
+      glm::vec3 pos = camera->GetPosition();
+      pos.x += 4.0f;
+      qaBehaviorLog << "respawn id="
+                    << world->SpawnCreature("pig", pos, "",
+                                            CreatureSpawnSource::Qa)
+                    << std::endl;
+    }
+  }
+  // View-spawn QA (CUBA_FLIGHT_QA_VIEWSPAWN=ogre,whale,...): try
+  // the creative "spawn by view" for each species facing four
+  // directions, log the outcome (or the blocked hint) and the
+  // distance from the player, then remove the spawned creature.
+  if (const char *qaViewSpawn = std::getenv("CUBA_FLIGHT_QA_VIEWSPAWN");
+      qaViewSpawn != nullptr && qaBehaviorFrame == 90 &&
+      ingame_frames_seen >= 60)
+  {
+    if (auto camera = world->GetCurrentUserCamera())
+    {
+      std::string list(qaViewSpawn);
+      size_t start = 0;
+      while (start <= list.size())
+      {
+        const size_t comma = list.find(',', start);
+        const std::string species =
+            list.substr(start, comma == std::string::npos ? std::string::npos
+                                                          : comma - start);
+        start = comma == std::string::npos ? list.size() + 1 : comma + 1;
+        if (species.empty())
+        {
+          continue;
+        }
+        for (const float yaw : {0.0f, 90.0f, 180.0f, 270.0f})
+        {
+          camera->SetOrientation(yaw, -30.0f);
+          CreatureId maxId = 0;
+          world->ForEachCreature([&](const UCreature &c)
+                                 { maxId = std::max(maxId, c.GetId()); });
+          const bool ok = world->SpawnCreatureByView(species);
+          qaBehaviorLog << "viewspawn " << species << " yaw=" << yaw
+                        << " ok=" << ok;
+          CreatureId newId = 0;
+          world->ForEachCreature(
+              [&](const UCreature &c)
+              {
+                if (c.GetId() > maxId)
+                {
+                  newId = c.GetId();
+                }
+              });
+          if (const UCreature *spawned = world->GetCreature(newId))
+          {
+            const glm::vec3 p = spawned->GetBodyOrigin();
+            const glm::vec3 cp = camera->GetPosition();
+            qaBehaviorLog << " pos=" << p.x << "," << p.y << "," << p.z
+                          << " distXZ=" << std::hypot(p.x - cp.x, p.z - cp.z)
+                          << " inBlock="
+                          << world->CheckBlockCollisionVolume(
+                                 spawned->GetCollisionVolume());
+            world->RemoveCreature(newId);
+          }
+          else
+          {
+            qaBehaviorLog << " hint="
+                          << world->GetCreatureSpawnBlockedHint(species);
+          }
+          qaBehaviorLog << std::endl;
+        }
+      }
+    }
+  }
+  // Melee QA (CUBA_FLIGHT_QA_MELEE=1): log every attack event of
+  // a QA creature with its outcome and whether the straight ray
+  // from the attacker's eye to the target's center crosses blocks.
+  if (qaBehaviorFrame == 1 && std::getenv("CUBA_FLIGHT_QA_MELEE") != nullptr)
+  {
+    struct QaMeleeSink final : IUInfluenceEventSink
+    {
+      UWorld *World{nullptr};
+      std::ofstream *Log{nullptr};
+      void OnInfluenceEvent(const InfluenceEvent &ev) override
+      {
+        if (ev.Channel != InfluenceChannel::Melee ||
+            ev.Kind == InfluenceEventKind::DigProgress)
+        {
+          return;
+        }
+        const UCreature *src = World->GetCreature(ev.SourceId);
+        if (!src || src->GetSpawnSource() != CreatureSpawnSource::Qa)
+        {
+          return;
+        }
+        *Log << "melee src=" << src->GetTypeId() << "#" << ev.SourceId
+             << " kind="
+             << (ev.Kind == InfluenceEventKind::Applied ? "applied"
+                                                        : "cancelled")
+             << " reason=" << ev.CancelReason;
+        const CreatureId tid = ev.TargetIds.empty()
+                                   ? World->GetControlledCreatureId()
+                                   : ev.TargetIds.front();
+        if (const UCreature *tgt = World->GetCreature(tid))
+        {
+          const glm::vec3 eye = src->GetEyePosition();
+          const glm::vec3 center =
+              tgt->GetBodyOrigin() +
+              glm::vec3(0.0f, 0.5f * tgt->GetBounds().profile.restSizeBlocks.y,
+                        0.0f);
+          const glm::vec3 d = center - eye;
+          const bool blocked = glm::length(d) > 1e-4f &&
+                               RaycastSolidBlocks(World->GetBlockWorld(),
+                                                  World->GetBlockRegistry(),
+                                                  eye, d, glm::length(d))
+                                   .has_value();
+          *Log << " tgt=" << tid << " centerRayBlocked=" << blocked;
+        }
+        *Log << std::endl;
+      }
+    };
+    static QaMeleeSink qaMeleeSink;
+    qaMeleeSink.World = world.get();
+    qaMeleeSink.Log = &qaBehaviorLog;
+    InfluenceEvents::AddSink(&qaMeleeSink);
+  }
+}
+
+void TickFlightCreatureBehavior(const std::shared_ptr<UWorld> &world,
+                                int ingame_frames_seen)
+{
+  if (const char *qaBehavior = std::getenv("CUBA_FLIGHT_QA_BEHAVIOR");
+      qaBehavior != nullptr && world)
+  {
+    static bool qaBehaviorSpawned = false;
+    static int qaBehaviorFrame = 0;
+    static std::ofstream qaBehaviorLog("qa_behavior.txt");
+    ++qaBehaviorFrame;
+    TickFlightCreatureLifecycleProbes(world, ingame_frames_seen,
+                                      qaBehaviorFrame, qaBehaviorLog);
+    if (!qaBehaviorSpawned && ingame_frames_seen >= 60 &&
+        ModePolicy::AllowsQaSpawner(world->GetGameMode()))
+    {
+      if (auto camera = world->GetCurrentUserCamera())
+      {
+        qaBehaviorSpawned = true;
+        // Face the spawn group (+X) so captures show the mobs.
+        camera->SetOrientation(0.0f, -30.0f);
+        std::string list(qaBehavior);
+        size_t start = 0;
+        int slot = 0;
+        while (start <= list.size())
+        {
+          const size_t comma = list.find(',', start);
+          const std::string species =
+              list.substr(start, comma == std::string::npos ? std::string::npos
+                                                            : comma - start);
+          start = comma == std::string::npos ? list.size() + 1 : comma + 1;
+          if (species.empty())
+          {
+            continue;
+          }
+          glm::vec3 pos = camera->GetPosition();
+          pos.x += 4.0f + 1.5f * static_cast<float>(slot % 4);
+          pos.z += 2.0f * static_cast<float>(slot / 4) - 1.0f;
+          ++slot;
+          const CreatureId id =
+              world->SpawnCreature(species, pos, "", CreatureSpawnSource::Qa);
+          qaBehaviorLog << "spawn " << species << " id=" << id << std::endl;
+        }
+      }
+    }
+    // Ride QA (CUBA_FLIGHT_QA_RIDE=1): drop the player onto the
+    // first QA creature from 8 blocks and log rider vs back height.
+    if (qaBehaviorSpawned && std::getenv("CUBA_FLIGHT_QA_RIDE") != nullptr)
+    {
+      static CreatureId rideId = 0;
+      if (qaBehaviorFrame >= 60 && rideId == 0)
+      {
+        world->ForEachCreature(
+            [&](const UCreature &creature)
+            {
+              // CUBA_FLIGHT_QA_RIDE_SPECIES picks the mount by
+              // species (default: first QA creature).
+              const char *rideSpecies =
+                  std::getenv("CUBA_FLIGHT_QA_RIDE_SPECIES");
+              if (rideId == 0 &&
+                  creature.GetSpawnSource() == CreatureSpawnSource::Qa &&
+                  (rideSpecies == nullptr ||
+                   creature.GetTypeId() == rideSpecies))
+              {
+                rideId = creature.GetId();
+              }
+            });
+      }
+      if (qaBehaviorFrame == 90)
+      {
+        if (UCreature *target = world->GetCreature(rideId))
+        {
+          if (auto camera = world->GetCurrentUserCamera())
+          {
+            const glm::vec3 p = target->GetBodyOrigin();
+            const float top = p.y + target->GetCollisionSize().y;
+            camera->SetFreeMove(false);
+            const char *dropEnv = std::getenv("CUBA_FLIGHT_QA_RIDE");
+            const float drop = std::max(0.3f, std::strtof(dropEnv, nullptr));
+            camera->SetPosition(glm::vec3(p.x, top + drop + 1.6f, p.z));
+            camera->ResetVerticalPhysics();
+          }
+        }
+      }
+      // Hold the mount still while the rider lands (frames 60-170);
+      // afterwards it wanders so carrying can be observed.
+      if (rideId != 0 && qaBehaviorFrame >= 60 && qaBehaviorFrame < 170)
+      {
+        if (UCreature *target = world->GetCreature(rideId))
+        {
+          target->ClearIntent();
+        }
+      }
+      if (rideId != 0 && qaBehaviorFrame >= 90 && qaBehaviorFrame < 900)
+      {
+        const UCreature *target = world->GetCreature(rideId);
+        const UCreature *rider = world->GetControlledCreature();
+        if (target && rider)
+        {
+          const glm::vec3 t = target->GetBodyOrigin();
+          const glm::vec3 r = rider->GetBodyOrigin();
+          qaBehaviorLog << "ride f=" << qaBehaviorFrame << " rider=" << r.x
+                        << "," << r.y << "," << r.z
+                        << " mobTop=" << t.y + target->GetCollisionSize().y
+                        << " mob=" << t.x << "," << t.z
+                        << " dxz=" << std::hypot(r.x - t.x, r.z - t.z);
+          const CollisionVolume rv = rider->GetCollisionVolume();
+          const auto mount =
+              world->FindMountCreatureUnder(r, rv.halfExtents, rider->GetId());
+          qaBehaviorLog << " mountFound=" << (mount ? 1 : 0) << " riderInBlock="
+                        << world->CheckBlockCollisionVolume(rv);
+          if (mount)
+          {
+            qaBehaviorLog << " backY=" << mount->second;
+          }
+          const CollisionVolume tv = target->GetCollisionVolume();
+          qaBehaviorLog << " volTop=" << tv.center.y + tv.halfExtents.y
+                        << " vy="
+                        << rider->GetLocomotion().GetVerticalVelocity()
+                        << " onGround=" << rider->GetLocomotion().IsOnGround()
+                        << " feetY=" << rider->GetLocomotion().GetFeetY()
+                        << " anch=" << rider->GetLocomotion().IsFeetAnchored();
+          if (auto cam = world->GetCurrentUserCamera())
+          {
+            qaBehaviorLog << " camY=" << cam->GetPosition().y
+                          << " stance=" << cam->GetStanceBlend() << " mountId="
+                          << cam->GetLocomotionController().GetMountSupportId();
+          }
+          qaBehaviorLog << std::endl;
+        }
+      }
+    }
+    // Follow-cam on the first QA creature (CUBA_FLIGHT_QA_FOLLOW=1)
+    // so captures show limb motion at readable size.
+    if (qaBehaviorSpawned && std::getenv("CUBA_FLIGHT_QA_FOLLOW") != nullptr)
+    {
+      if (auto camera = world->GetCurrentUserCamera())
+      {
+        world->ForEachCreature(
+            [&](const UCreature &creature)
+            {
+              static CreatureId followId = 0;
+              if (creature.GetSpawnSource() != CreatureSpawnSource::Qa)
+              {
+                return;
+              }
+              if (followId == 0)
+              {
+                followId = creature.GetId();
+              }
+              if (creature.GetId() != followId)
+              {
+                return;
+              }
+              const glm::vec3 p = creature.GetBodyOrigin();
+              camera->SetFreeMove(true);
+              camera->SetPosition(p + glm::vec3(-3.0f, 1.4f, 0.0f));
+              camera->SetOrientation(0.0f, -8.0f);
+            });
+      }
+    }
+    // Pick QA (CUBA_FLIGHT_QA_PICK=1): aim at each QA creature from
+    // the player's eye and log what the view pick returns (it used
+    // to return the viewer itself).
+    if (qaBehaviorSpawned && qaBehaviorFrame % 30 == 15 &&
+        std::getenv("CUBA_FLIGHT_QA_PICK") != nullptr)
+    {
+      if (auto cam = world->GetCurrentUserCamera())
+      {
+        const glm::vec3 eye = cam->GetPosition();
+        world->ForEachCreature(
+            [&](const UCreature &creature)
+            {
+              if (creature.GetSpawnSource() != CreatureSpawnSource::Qa)
+              {
+                return;
+              }
+              const glm::vec3 size =
+                  creature.GetBounds().profile.restSizeBlocks;
+              const glm::vec3 aim = creature.GetBodyOrigin() +
+                                    glm::vec3(0.0f, size.y * 0.5f, 0.0f) - eye;
+              const auto picked = world->PickCreatureByView(eye, aim, 64.0f);
+              qaBehaviorLog << "pick f=" << qaBehaviorFrame
+                            << " target=" << creature.GetTypeId() << "#"
+                            << creature.GetId()
+                            << " got=" << (picked ? *picked : 0)
+                            << " self=" << world->GetControlledCreatureId()
+                            << " dist=" << glm::length(aim) << std::endl;
+            });
+      }
+    }
+    if (qaBehaviorSpawned && qaBehaviorFrame % 30 == 0)
+    {
+      world->ForEachCreature(
+          [&](const UCreature &creature)
+          {
+            if (creature.GetSpawnSource() != CreatureSpawnSource::Qa)
+            {
+              return;
+            }
+            const glm::vec3 p = creature.GetBodyOrigin();
+            const CreatureLocomotionFacts &f = creature.GetLocomotionFacts();
+            qaBehaviorLog << "f=" << qaBehaviorFrame << " "
+                          << creature.GetTypeId() << "#" << creature.GetId()
+                          << " pos=" << p.x << "," << p.y << "," << p.z
+                          << " state=" << static_cast<int>(f.state)
+                          << " speed=" << f.horizontalSpeed
+                          << " phase=" << f.animPhase
+                          << " ground=" << f.onGround
+                          << " yaw=" << creature.GetYaw() << " box="
+                          << creature.GetBounds().profile.restSizeBlocks.x
+                          << "x"
+                          << creature.GetBounds().profile.restSizeBlocks.z;
+            if (auto cam = world->GetCurrentUserCamera())
+            {
+              const glm::vec3 cp = cam->GetPosition();
+              qaBehaviorLog << " cam=" << cp.x << "," << cp.y << "," << cp.z;
+            }
+            qaBehaviorLog << " blockBelow="
+                          << static_cast<int>(
+                                 world->GetBlockWorld().GetBlock(glm::ivec3(
+                                     static_cast<int>(std::floor(p.x)),
+                                     static_cast<int>(std::floor(p.y)) - 1,
+                                     static_cast<int>(std::floor(p.z)))))
+                          << std::endl;
+          });
+    }
+  }
+}
+
+bool PlaceFlightWaterProbe(const std::shared_ptr<UWorld> &world, glm::vec3 &pos)
+{
+  bool placed_underwater = false;
+  if (const char *find_water = std::getenv("CUBA_FLIGHT_FIND_WATER");
+      find_water && find_water[0] == '1')
+  {
+    const UBlockWorld &bw = world->GetBlockWorld();
+    UBlockRegistry &reg = world->GetBlockRegistry();
+    const int sea_i = world->GetProceduralSettings().SeaLevel;
+    const int origin_x = static_cast<int>(std::floor(pos.x));
+    const int origin_z = static_cast<int>(std::floor(pos.z));
+    float depth_under = 2.5f;
+    if (const char *du = std::getenv("CUBA_FLIGHT_WATER_UNDER"))
+    {
+      depth_under = std::strtof(du, nullptr);
+    }
+    int best_d2 = 1 << 30;
+    glm::ivec3 best(0);
+    for (int dz = -64; dz <= 64; dz += 3)
+    {
+      for (int dx = -64; dx <= 64; dx += 3)
+      {
+        const int x = origin_x + dx;
+        const int z = origin_z + dz;
+        int top = -1;
+        for (int y = sea_i + 2; y >= sea_i - 40; --y)
+        {
+          const BlockId id = bw.GetBlock(glm::ivec3(x, y, z));
+          if (id == BLOCK_AIR)
+          {
+            continue;
+          }
+          if (reg.IsLiquid(id))
+          {
+            top = y;
+          }
+          break;
+        }
+        if (top < 0)
+        {
+          continue;
+        }
+        int depth = 0;
+        for (int y = top; y > top - 12; --y)
+        {
+          if (!reg.IsLiquid(bw.GetBlock(glm::ivec3(x, y, z))))
+          {
+            break;
+          }
+          ++depth;
+        }
+        const int d2 = dx * dx + dz * dz;
+        if (depth >= 6 && d2 < best_d2)
+        {
+          best_d2 = d2;
+          best = glm::ivec3(x, top, z);
+        }
+      }
+    }
+    if (best_d2 < (1 << 30))
+    {
+      pos =
+          glm::vec3(best.x + 0.5f, static_cast<float>(best.y + 1) - depth_under,
+                    best.z + 0.5f);
+      placed_underwater = true;
+      std::cout << "flight-sim: underwater probe at " << best.x << "," << best.y
+                << "," << best.z << std::endl;
+    }
+    else
+    {
+      std::cout << "flight-sim: underwater probe found no water" << std::endl;
+    }
+  }
+  return placed_underwater;
+}
+
+class UFlightAssetGallery
+{
+public:
+  UFlightAssetGallery(std::shared_ptr<UWorld> world_,
+                      const std::vector<std::vector<std::string>> &pages)
+      : world(std::move(world_)), gallery_pages(pages)
+  {
+  }
+  bool asset_gallery_initialized = false;
+  int asset_gallery_page = -1;
+  int asset_gallery_floor_y = 0;
+  int asset_gallery_start_x = 0;
+  int asset_gallery_start_z = 0;
+  static constexpr int kAssetGalleryCols = 8;
+  static constexpr int kAssetGalleryRows = 5;
+  static constexpr int kAssetGallerySpacing = 2;
+  std::vector<glm::ivec3> asset_gallery_sample_positions;
+  void InstallPage(int page_index)
+  {
+    if (page_index < 0 || page_index >= static_cast<int>(gallery_pages.size()))
+    {
+      return;
+    }
+    UBlockWorld &block_world = world->GetBlockWorld();
+    UBlockRegistry &registry = world->GetBlockRegistry();
+    std::vector<glm::ivec3> changed;
+    changed.reserve(asset_gallery_sample_positions.size() +
+                    gallery_pages[page_index].size());
+    for (const glm::ivec3 &pos : asset_gallery_sample_positions)
+    {
+      block_world.SetBlock(pos, BLOCK_AIR);
+      changed.push_back(pos);
+    }
+    asset_gallery_sample_positions.clear();
+    const auto &names = gallery_pages[page_index];
+    for (size_t slot = 0;
+         slot < static_cast<size_t>(kAssetGalleryCols * kAssetGalleryRows);
+         ++slot)
+    {
+      const int x =
+          asset_gallery_start_x +
+          static_cast<int>(slot % kAssetGalleryCols) * kAssetGallerySpacing;
+      const int z =
+          asset_gallery_start_z +
+          static_cast<int>(slot / kAssetGalleryCols) * kAssetGallerySpacing;
+      const glm::ivec3 pos(x, asset_gallery_floor_y + 1, z);
+      if (slot >= names.size())
+      {
+        block_world.SetBlock(pos, BLOCK_AIR);
+        changed.push_back(pos);
+        continue;
+      }
+      const BlockId id = registry.GetIdByTypeName(names[slot]);
+      if (id == BLOCK_AIR)
+      {
+        CubatariumLogInfo("AssetGallery",
+                          "skipping unresolved block=" + names[slot]);
+        block_world.SetBlock(pos, BLOCK_AIR);
+      }
+      else
+      {
+        block_world.SetBlock(pos, id);
+        asset_gallery_sample_positions.push_back(pos);
+      }
+      changed.push_back(pos);
+    }
+    std::unordered_set<glm::ivec3, IVec3Hash> modified_chunks;
+    world->GetMeshService().MarkBlocksChunkDirtyBatchFromEdit(
+        block_world, &registry, changed, modified_chunks, true, false);
+    asset_gallery_page = page_index;
+    CubatariumLogInfo("AssetGallery",
+                      "page=" + std::to_string(page_index + 1) + "/" +
+                          std::to_string(gallery_pages.size()) +
+                          " blocks=" + std::to_string(names.size()));
+  }
+  void Initialize(const std::shared_ptr<UCamera> &camera)
+  {
+    if (!camera || gallery_pages.empty())
+    {
+      return;
+    }
+    camera->SetFreeMove(true);
+    const glm::vec3 spawn = camera->GetPosition();
+    const int center_x = static_cast<int>(std::floor(spawn.x));
+    const int center_z = static_cast<int>(std::floor(spawn.z));
+    asset_gallery_start_x =
+        center_x - (kAssetGalleryCols - 1) * kAssetGallerySpacing / 2;
+    asset_gallery_start_z =
+        center_z - (kAssetGalleryRows - 1) * kAssetGallerySpacing / 2;
+    asset_gallery_floor_y = static_cast<int>(std::floor(spawn.y)) - 2;
+    for (int z = 0; z < kAssetGalleryRows * kAssetGallerySpacing; ++z)
+    {
+      for (int x = 0; x < kAssetGalleryCols * kAssetGallerySpacing; ++x)
+      {
+        if (const auto top = world->FindHighestSolidY(
+                asset_gallery_start_x + x, asset_gallery_start_z + z))
+        {
+          asset_gallery_floor_y = (std::max)(asset_gallery_floor_y, *top);
+        }
+      }
+    }
+    BlockId floor_id = world->GetBlockRegistry().GetIdByTypeName("stone");
+    if (floor_id == BLOCK_AIR)
+    {
+      floor_id = world->GetBlockRegistry().GetIdByTypeName("dirt");
+    }
+    if (floor_id == BLOCK_AIR)
+    {
+      CubatariumLogError("AssetGallery",
+                         "no stone or dirt floor block available");
+      return;
+    }
+    UBlockWorld &block_world = world->GetBlockWorld();
+    std::vector<glm::ivec3> changed;
+    changed.reserve(kAssetGalleryCols * kAssetGalleryRows *
+                    kAssetGallerySpacing * kAssetGallerySpacing * 8);
+    for (int z = 0; z < kAssetGalleryRows * kAssetGallerySpacing; ++z)
+    {
+      for (int x = 0; x < kAssetGalleryCols * kAssetGallerySpacing; ++x)
+      {
+        for (int dy = 1; dy <= 7; ++dy)
+        {
+          const glm::ivec3 clear_pos(asset_gallery_start_x + x,
+                                     asset_gallery_floor_y + dy,
+                                     asset_gallery_start_z + z);
+          block_world.SetBlock(clear_pos, BLOCK_AIR);
+          changed.push_back(clear_pos);
+        }
+        const glm::ivec3 floor_pos(asset_gallery_start_x + x,
+                                   asset_gallery_floor_y,
+                                   asset_gallery_start_z + z);
+        block_world.SetBlock(floor_pos, floor_id);
+        changed.push_back(floor_pos);
+      }
+    }
+    std::unordered_set<glm::ivec3, IVec3Hash> modified_chunks;
+    world->GetMeshService().MarkBlocksChunkDirtyBatchFromEdit(
+        block_world, &world->GetBlockRegistry(), changed, modified_chunks, true,
+        false);
+    const glm::vec3 camera_pos(static_cast<float>(center_x) + 0.5f,
+                               static_cast<float>(asset_gallery_floor_y) + 9.5f,
+                               static_cast<float>(center_z) + 13.5f);
+    camera->SetPosition(camera_pos);
+    camera->SetOrientation(-90.0f, -32.0f);
+    if (auto user = world->GetCurrentUser())
+    {
+      user->SetPosition(camera_pos);
+      user->SetCameraOrientation(-90.0f, -32.0f);
+    }
+    world->SetWeatherAutoEnabled(false);
+    world->SetWeather(UWorld::WeatherType::Clear, 0.0f);
+    world->SetWeatherParticlesEnabled(false);
+    world->SetWeatherOverlayEnabled(false);
+    asset_gallery_initialized = true;
+    InstallPage(0);
+    CubatariumLogInfo(
+        "AssetGallery",
+        "initialized floor_y=" + std::to_string(asset_gallery_floor_y) +
+            " origin=" + std::to_string(asset_gallery_start_x) + "," +
+            std::to_string(asset_gallery_start_z));
+  }
+
+private:
+  std::shared_ptr<UWorld> world;
+  const std::vector<std::vector<std::string>> &gallery_pages;
+};
+
+static float ResolveFlightCruiseEyeY(const FlightSimOptions &options, UWorld &w,
+                                     const glm::vec3 &pos, float sea)
+{
+  constexpr float kCruiseEyeCeilSlack = 16.f;
+
+  if (options.CruiseEyeY <= 0.0f && options.MinAltitudeAboveSea <= 0.0f)
+  {
+    return 0.0f;
+  }
+  const float sea_floor = sea + options.MinAltitudeAboveSea;
+  float land_y = 0.0f;
+  if (options.CruiseEyeY > 0.0f)
+  {
+    const int wx = static_cast<int>(std::floor(pos.x));
+    const int wz = static_cast<int>(std::floor(pos.z));
+    if (const auto top = w.FindHighestSolidY(wx, wz))
+    {
+      land_y = static_cast<float>(*top) + 12.0f;
+    }
+    else
+    {
+      land_y = options.CruiseEyeY;
+    }
+  }
+  const float y_floor =
+      (std::max)(options.CruiseEyeY > 0.0f ? options.CruiseEyeY : sea_floor,
+                 sea_floor);
+  float target = land_y > 0.0f ? land_y : y_floor;
+  target = (std::max)(target, y_floor);
+  if (options.CruiseEyeY > 0.0f)
+  {
+    const float y_ceil = options.CruiseEyeY + kCruiseEyeCeilSlack;
+    target = (std::min)(target, y_ceil);
+  }
+  return target;
+}
+
+int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
+{
+  // Harness-only move-speed scale lives in locomotion as a plain hook; the
+  // App layer owns reading the env var (audit M7).
+  CreatureMoveSpeedScaleOverride() = FlightSimMoveSpeedScale();
+  const double gallery_page_seconds =
+      std::clamp(options.AssetGalleryPageSeconds, 3.0, 3600.0);
+  std::vector<std::vector<std::string>> gallery_pages;
+  if (!LoadFlightAssetGalleryPages(options, gallery_pages))
+    return 1;
 
   double in_game_seconds = options.InGameSeconds;
   if (!gallery_pages.empty())
@@ -877,10 +1673,9 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
   }
 
   UDesktopPlatformWindow window;
-  const bool ok =
-      options.VisibleWindow
-          ? window.Initialize(1280, 720, "flight-sim")
-          : window.InitializeHidden(1280, 720, "flight-sim");
+  const bool ok = options.VisibleWindow
+                      ? window.Initialize(1280, 720, "flight-sim")
+                      : window.InitializeHidden(1280, 720, "flight-sim");
   if (!ok)
   {
     std::cerr << "flight-sim: failed to initialize window" << std::endl;
@@ -940,8 +1735,9 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
       std::cerr << "flight-sim: startup failed" << std::endl;
       return 1;
     }
-    // QA escape hatch: CUBA_FLIGHT_BENCH_OVERLAY=0 keeps the in-game HUD visible
-    // so frame captures can verify on-screen debug info during flight-sim runs.
+    // QA escape hatch: CUBA_FLIGHT_BENCH_OVERLAY=0 keeps the in-game HUD
+    // visible so frame captures can verify on-screen debug info during
+    // flight-sim runs.
     const char *bench_overlay = std::getenv("CUBA_FLIGHT_BENCH_OVERLAY");
     if (!bench_overlay || std::string(bench_overlay) != "0")
     {
@@ -1001,40 +1797,6 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     // which pinned Y at spawn and stuck product-174657 west at focus_cx≈2).
     // Apply every frame with floor/ceiling — lift-only ratcheted Y~70 and
     // collapsed void_near (HoldSpace-blind class) on west autofly.
-    constexpr float kCruiseEyeCeilSlack = 16.0f;
-    auto resolve_cruise_eye_y = [&](UWorld &w, const glm::vec3 &pos,
-                                    float sea) -> float {
-      if (options.CruiseEyeY <= 0.0f && options.MinAltitudeAboveSea <= 0.0f)
-      {
-        return 0.0f;
-      }
-      const float sea_floor = sea + options.MinAltitudeAboveSea;
-      float land_y = 0.0f;
-      if (options.CruiseEyeY > 0.0f)
-      {
-        const int wx = static_cast<int>(std::floor(pos.x));
-        const int wz = static_cast<int>(std::floor(pos.z));
-        if (const auto top = w.FindHighestSolidY(wx, wz))
-        {
-          land_y = static_cast<float>(*top) + 12.0f;
-        }
-        else
-        {
-          land_y = options.CruiseEyeY;
-        }
-      }
-      const float y_floor =
-          (std::max)(options.CruiseEyeY > 0.0f ? options.CruiseEyeY : sea_floor,
-                     sea_floor);
-      float target = land_y > 0.0f ? land_y : y_floor;
-      target = (std::max)(target, y_floor);
-      if (options.CruiseEyeY > 0.0f)
-      {
-        const float y_ceil = options.CruiseEyeY + kCruiseEyeCeilSlack;
-        target = (std::min)(target, y_ceil);
-      }
-      return target;
-    };
 
     enum class AvoidancePhase
     {
@@ -1071,31 +1833,35 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     std::vector<AvoidanceEvent> avoidance_events;
     auto next_avoidance_probe = std::chrono::steady_clock::time_point{};
     auto next_detour_replan = std::chrono::steady_clock::time_point{};
-    auto apply_cruise_height = [&](glm::vec3 pos) {
-      const float sea = static_cast<float>(
-          world->GetProceduralSettings().SeaLevel);
-      const float target_y = resolve_cruise_eye_y(*world, pos, sea);
+    auto apply_cruise_height = [&](glm::vec3 pos)
+    {
+      const float sea =
+          static_cast<float>(world->GetProceduralSettings().SeaLevel);
+      const float target_y = ResolveFlightCruiseEyeY(options, *world, pos, sea);
       if (target_y > 0.0f)
       {
         pos.y = target_y;
       }
       return pos;
     };
-    auto is_flight_hazard = [&](const glm::vec3 &candidate,
-                                const PlayerCapsule &capsule) {
+    auto is_flight_hazard =
+        [&](const glm::vec3 &candidate, const PlayerCapsule &capsule)
+    {
       const glm::vec3 at_height = apply_cruise_height(candidate);
       return world->CheckCollision(at_height, capsule) ||
              world->HasGroundSupport(at_height, capsule);
     };
     auto segment_is_clear = [&](const glm::vec3 &from, const glm::vec3 &to,
-                                const PlayerCapsule &capsule) {
+                                const PlayerCapsule &capsule)
+    {
       const glm::vec3 delta = to - from;
       const float span = glm::length(delta);
-      const int samples = (std::max)(1, static_cast<int>(std::ceil(span / 0.4f)));
+      const int samples =
+          (std::max)(1, static_cast<int>(std::ceil(span / 0.4f)));
       for (int sample = 1; sample <= samples; ++sample)
       {
-        const float t = static_cast<float>(sample) /
-                        static_cast<float>(samples);
+        const float t =
+            static_cast<float>(sample) / static_cast<float>(samples);
         if (is_flight_hazard(from + delta * t, capsule))
         {
           return false;
@@ -1104,161 +1870,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
       return true;
     };
 
-    bool asset_gallery_initialized = false;
-    int asset_gallery_page = -1;
-    int asset_gallery_floor_y = 0;
-    int asset_gallery_start_x = 0;
-    int asset_gallery_start_z = 0;
-    constexpr int kAssetGalleryCols = 8;
-    constexpr int kAssetGalleryRows = 5;
-    constexpr int kAssetGallerySpacing = 2;
-    std::vector<glm::ivec3> asset_gallery_sample_positions;
-    auto install_asset_gallery_page = [&](int page_index)
-    {
-      if (page_index < 0 ||
-          page_index >= static_cast<int>(gallery_pages.size()))
-      {
-        return;
-      }
-      UBlockWorld &block_world = world->GetBlockWorld();
-      UBlockRegistry &registry = world->GetBlockRegistry();
-      std::vector<glm::ivec3> changed;
-      changed.reserve(asset_gallery_sample_positions.size() +
-                      gallery_pages[page_index].size());
-      for (const glm::ivec3 &pos : asset_gallery_sample_positions)
-      {
-        block_world.SetBlock(pos, BLOCK_AIR);
-        changed.push_back(pos);
-      }
-      asset_gallery_sample_positions.clear();
-      const auto &names = gallery_pages[page_index];
-      for (size_t slot = 0; slot <
-                           static_cast<size_t>(kAssetGalleryCols * kAssetGalleryRows);
-           ++slot)
-      {
-        const int x = asset_gallery_start_x +
-                      static_cast<int>(slot % kAssetGalleryCols) *
-                          kAssetGallerySpacing;
-        const int z = asset_gallery_start_z +
-                      static_cast<int>(slot / kAssetGalleryCols) *
-                          kAssetGallerySpacing;
-        const glm::ivec3 pos(x, asset_gallery_floor_y + 1, z);
-        if (slot >= names.size())
-        {
-          block_world.SetBlock(pos, BLOCK_AIR);
-          changed.push_back(pos);
-          continue;
-        }
-        const BlockId id = registry.GetIdByTypeName(names[slot]);
-        if (id == BLOCK_AIR)
-        {
-          CubatariumLogInfo("AssetGallery",
-                            "skipping unresolved block=" + names[slot]);
-          block_world.SetBlock(pos, BLOCK_AIR);
-        }
-        else
-        {
-          block_world.SetBlock(pos, id);
-          asset_gallery_sample_positions.push_back(pos);
-        }
-        changed.push_back(pos);
-      }
-      std::unordered_set<glm::ivec3, IVec3Hash> modified_chunks;
-      world->GetMeshService().MarkBlocksChunkDirtyBatchFromEdit(
-          block_world, &registry, changed, modified_chunks, true, false);
-      asset_gallery_page = page_index;
-      CubatariumLogInfo("AssetGallery",
-                        "page=" + std::to_string(page_index + 1) + "/" +
-                            std::to_string(gallery_pages.size()) +
-                            " blocks=" + std::to_string(names.size()));
-    };
-    auto initialize_asset_gallery = [&](const std::shared_ptr<UCamera> &camera)
-    {
-      if (!camera || gallery_pages.empty())
-      {
-        return;
-      }
-      camera->SetFreeMove(true);
-      const glm::vec3 spawn = camera->GetPosition();
-      const int center_x = static_cast<int>(std::floor(spawn.x));
-      const int center_z = static_cast<int>(std::floor(spawn.z));
-      asset_gallery_start_x =
-          center_x - (kAssetGalleryCols - 1) * kAssetGallerySpacing / 2;
-      asset_gallery_start_z =
-          center_z - (kAssetGalleryRows - 1) * kAssetGallerySpacing / 2;
-      asset_gallery_floor_y = static_cast<int>(std::floor(spawn.y)) - 2;
-      for (int z = 0; z < kAssetGalleryRows * kAssetGallerySpacing; ++z)
-      {
-        for (int x = 0; x < kAssetGalleryCols * kAssetGallerySpacing; ++x)
-        {
-          if (const auto top = world->FindHighestSolidY(
-                  asset_gallery_start_x + x, asset_gallery_start_z + z))
-          {
-            asset_gallery_floor_y =
-                (std::max)(asset_gallery_floor_y, *top);
-          }
-        }
-      }
-      BlockId floor_id = world->GetBlockRegistry().GetIdByTypeName("stone");
-      if (floor_id == BLOCK_AIR)
-      {
-        floor_id = world->GetBlockRegistry().GetIdByTypeName("dirt");
-      }
-      if (floor_id == BLOCK_AIR)
-      {
-        CubatariumLogError("AssetGallery", "no stone or dirt floor block available");
-        return;
-      }
-      UBlockWorld &block_world = world->GetBlockWorld();
-      std::vector<glm::ivec3> changed;
-      changed.reserve(kAssetGalleryCols * kAssetGalleryRows *
-                      kAssetGallerySpacing * kAssetGallerySpacing * 8);
-      for (int z = 0; z < kAssetGalleryRows * kAssetGallerySpacing; ++z)
-      {
-        for (int x = 0; x < kAssetGalleryCols * kAssetGallerySpacing; ++x)
-        {
-          for (int dy = 1; dy <= 7; ++dy)
-          {
-            const glm::ivec3 clear_pos(asset_gallery_start_x + x,
-                                       asset_gallery_floor_y + dy,
-                                       asset_gallery_start_z + z);
-            block_world.SetBlock(clear_pos, BLOCK_AIR);
-            changed.push_back(clear_pos);
-          }
-          const glm::ivec3 floor_pos(asset_gallery_start_x + x,
-                                    asset_gallery_floor_y,
-                                    asset_gallery_start_z + z);
-          block_world.SetBlock(floor_pos, floor_id);
-          changed.push_back(floor_pos);
-        }
-      }
-      std::unordered_set<glm::ivec3, IVec3Hash> modified_chunks;
-      world->GetMeshService().MarkBlocksChunkDirtyBatchFromEdit(
-          block_world, &world->GetBlockRegistry(), changed, modified_chunks,
-          true, false);
-      const glm::vec3 camera_pos(
-          static_cast<float>(center_x) + 0.5f,
-          static_cast<float>(asset_gallery_floor_y) + 9.5f,
-          static_cast<float>(center_z) + 13.5f);
-      camera->SetPosition(camera_pos);
-      camera->SetOrientation(-90.0f, -32.0f);
-      if (auto user = world->GetCurrentUser())
-      {
-        user->SetPosition(camera_pos);
-        user->SetCameraOrientation(-90.0f, -32.0f);
-      }
-      world->SetWeatherAutoEnabled(false);
-      world->SetWeather(UWorld::WeatherType::Clear, 0.0f);
-      world->SetWeatherParticlesEnabled(false);
-      world->SetWeatherOverlayEnabled(false);
-      asset_gallery_initialized = true;
-      install_asset_gallery_page(0);
-      CubatariumLogInfo("AssetGallery",
-                        "initialized floor_y=" +
-                            std::to_string(asset_gallery_floor_y) +
-                            " origin=" + std::to_string(asset_gallery_start_x) +
-                            "," + std::to_string(asset_gallery_start_z));
-    };
+    UFlightAssetGallery gallery(world, gallery_pages);
 
     window.SetStopPredicate(
         [&]()
@@ -1276,14 +1888,14 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
           {
             excluded_clock_gap_sec += clock_gap_sec;
             ++excluded_clock_gap_count;
-            std::cout << "flight-sim: excluded long clock gap="
-                      << clock_gap_sec << "s total="
-                      << excluded_clock_gap_sec << "s" << std::endl;
+            std::cout << "flight-sim: excluded long clock gap=" << clock_gap_sec
+                      << "s total=" << excluded_clock_gap_sec << "s"
+                      << std::endl;
           }
-          const double elapsed_sec = (std::max)(
-              0.0,
-              std::chrono::duration<double>(now - started).count() -
-                  excluded_clock_gap_sec);
+          const double elapsed_sec =
+              (std::max)(0.0,
+                         std::chrono::duration<double>(now - started).count() -
+                             excluded_clock_gap_sec);
           if (elapsed_sec > safety_timeout)
           {
             return true;
@@ -1305,725 +1917,258 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
               // so flight captures can review all creature models. Daylight
               // is forced and time frozen; wander is suppressed by clearing
               // intents every frame while the flag is set.
-              if (std::getenv("CUBA_FLIGHT_QA_GRID") != nullptr && world)
-              {
-                world->SetTimeOfDayNormalized(0.35f);
-                world->SetTimeFrozen(true);
-              }
+              TickFlightCreatureGrid(world, ingame_frames_seen);
             }
-              // QA grid: suppress wander drift so captured frames show the
-              // grid in place (agents re-set intents at tick rate; clearing
-              // every frame keeps the motor wish at zero).
-              if (std::getenv("CUBA_FLIGHT_QA_GRID") != nullptr && world)
-              {
-                const char *yawSweep = std::getenv("CUBA_FLIGHT_QA_YAW_SWEEP");
-                const bool sweep = yawSweep != nullptr && yawSweep[0] != '\0' &&
-                                   yawSweep[0] != '0';
-                const float yaw = sweep
-                                      ? std::fmod(static_cast<float>(elapsed_sec) * 45.0f, 360.0f)
-                                      : 0.0f;
-                world->ForEachCreature(
-                    [&](UCreature &creature)
+            // QA grid: suppress wander drift so captured frames show the
+            // grid in place (agents re-set intents at tick rate; clearing
+            // every frame keeps the motor wish at zero).
+            if (std::getenv("CUBA_FLIGHT_QA_GRID") != nullptr && world)
+            {
+              const char *yawSweep = std::getenv("CUBA_FLIGHT_QA_YAW_SWEEP");
+              const bool sweep = yawSweep != nullptr && yawSweep[0] != '\0' &&
+                                 yawSweep[0] != '0';
+              const float yaw =
+                  sweep ? std::fmod(static_cast<float>(elapsed_sec) * 45.0f,
+                                    360.0f)
+                        : 0.0f;
+              world->ForEachCreature(
+                  [&](UCreature &creature)
+                  {
+                    creature.ClearIntent();
+                    if (sweep &&
+                        creature.GetSpawnSource() == CreatureSpawnSource::Qa)
                     {
-                      creature.ClearIntent();
-                      if (sweep &&
-                          creature.GetSpawnSource() == CreatureSpawnSource::Qa)
-                      {
-                        creature.SetOrientation(yaw, 0.0f);
-                      }
-                    });
+                      creature.SetOrientation(yaw, 0.0f);
+                    }
+                  });
+            }
+            // One-shot relocation at frame 30: ground queries need
+            // collision-ready chunks, which the first InGame frame does
+            // not guarantee yet.
+            if (std::getenv("CUBA_FLIGHT_QA_GRID") != nullptr && world &&
+                ingame_frames_seen == 30)
+            {
+              // Spawning needs collision-ready water/terrain too. Doing
+              // this at the first playable frame silently skipped whales.
+              if (ModePolicy::AllowsQaSpawner(world->GetGameMode()))
+              {
+                UCreatureVisualQaSpawner spawner(*world);
+                const auto result = spawner.SpawnAllInGrid();
+                std::cout << "flight-sim: QA grid spawn: " << result.Message
+                          << std::endl;
               }
-              // One-shot relocation at frame 30: ground queries need
-              // collision-ready chunks, which the first InGame frame does
-              // not guarantee yet.
-              if (std::getenv("CUBA_FLIGHT_QA_GRID") != nullptr && world &&
-                  ingame_frames_seen == 30)
+              // Relocate every QA creature onto a flat, ground-snapped
+              // grid in front of the camera: terrain slope used to
+              // scatter the review set across hills and canopies.
+              if (auto camera = world->GetCurrentUserCamera())
               {
-                  // Spawning needs collision-ready water/terrain too. Doing
-                  // this at the first playable frame silently skipped whales.
-                  if (ModePolicy::AllowsQaSpawner(world->GetGameMode()))
-                  {
-                    UCreatureVisualQaSpawner spawner(*world);
-                    const auto result = spawner.SpawnAllInGrid();
-                    std::cout << "flight-sim: QA grid spawn: " << result.Message << std::endl;
-                  }
-                  // Relocate every QA creature onto a flat, ground-snapped
-                  // grid in front of the camera: terrain slope used to
-                  // scatter the review set across hills and canopies.
-                  if (auto camera = world->GetCurrentUserCamera())
-                  {
-                    glm::vec3 forward(0.0f, 0.0f, -1.0f);
-                    glm::vec3 right(1.0f, 0.0f, 0.0f);
-                    glm::vec3 basisUp;
-                    ComputeFpsCameraBasis(camera->GetYaw(),
-                                          camera->GetPitch(), forward, right,
-                                          basisUp);
-                    forward.y = 0.0f;
-                    right.y = 0.0f;
-                    if (glm::length(forward) > 1e-5f)
-                    {
-                      forward = glm::normalize(forward);
-                    }
-                    if (glm::length(right) > 1e-5f)
-                    {
-                      right = glm::normalize(right);
-                    }
-                    const glm::vec3 base = camera->GetPosition();
-                    int qaCount = 0;
-                    world->ForEachCreature([&](const UCreature &creature)
+                glm::vec3 forward(0.0f, 0.0f, -1.0f);
+                glm::vec3 right(1.0f, 0.0f, 0.0f);
+                glm::vec3 basisUp;
+                ComputeFpsCameraBasis(camera->GetYaw(), camera->GetPitch(),
+                                      forward, right, basisUp);
+                forward.y = 0.0f;
+                right.y = 0.0f;
+                if (glm::length(forward) > 1e-5f)
+                {
+                  forward = glm::normalize(forward);
+                }
+                if (glm::length(right) > 1e-5f)
+                {
+                  right = glm::normalize(right);
+                }
+                const glm::vec3 base = camera->GetPosition();
+                int qaCount = 0;
+                world->ForEachCreature(
+                    [&](const UCreature &creature)
                     {
                       if (creature.GetSpawnSource() == CreatureSpawnSource::Qa)
                       {
                         ++qaCount;
                       }
                     });
-                    const int kCols = std::clamp(qaCount, 1, 10);
-                    constexpr float kColSpacing = 2.0f;
-                    constexpr float kRowSpacing = 3.0f;
-                    size_t slot = 0;
-                    float gridGroundSum = 0.0f;
-                    int gridGroundSamples = 0;
-                    const bool waterReview = std::getenv("CUBA_FLIGHT_QA_WATER") != nullptr;
-                    std::vector<glm::vec3> waterSlots;
-                    world->ForEachCreature(
-                        [&](UCreature &creature)
-                        {
-                          if (creature.IsPlayerCharacter() ||
-                              creature.GetSpawnSource() !=
-                                  CreatureSpawnSource::Qa)
-                          {
-                            return;
-                          }
-                          const int row = static_cast<int>(slot / kCols);
-                          const int col = static_cast<int>(slot % kCols);
-                          glm::vec3 pos =
-                              base + forward *
-                                         (4.0f +
-                                          static_cast<float>(row) *
-                                              kRowSpacing) +
-                              right * (static_cast<float>(col - kCols / 2) *
-                                       kColSpacing);
-                          if (waterReview)
-                          {
-                            // Explicit aquatic QA: choose real loaded water,
-                            // with room for the full creature below its surface.
-                            // This creature already exists: relocation writes
-                            // the validated free-water position directly, so
-                            // do not run spawn checks against its own body.
-                            const auto water = FindCreatureQaWaterPosition(*world, pos, waterSlots, creature.GetCollisionSize());
-                            if (!water)
-                              throw std::runtime_error("Aquatic QA: no loaded water with sufficient depth");
-                            pos = *water;
-                            waterSlots.push_back(pos);
-                            gridGroundSum += pos.y;
-                            ++gridGroundSamples;
-                          }
-                          else if (const auto *definition = world->GetCreatureDefinitionStorage()->Get(creature.GetTypeId());
-                                   definition && (definition->habitat == CreatureHabitat::Terrestrial ||
-                                     (definition->habitat == CreatureHabitat::Lava && std::getenv("CUBA_FLIGHT_QA_LAVA") != nullptr)))
-                          {
-                            // SpawnAllInGrid already found a valid whole-body
-                            // land site. Do not move a wide treeman back into
-                            // the original grid's tree trunk on this same frame.
-                            pos = creature.GetBodyOrigin();
-                            gridGroundSum += pos.y;
-                            ++gridGroundSamples;
-                          }
-                          else if (const std::optional<float> ground =
-                                  world->QueryGroundFeetYUnder(
-                                      static_cast<int>(std::floor(pos.x)),
-                                      static_cast<int>(std::floor(pos.z)),
-                                      pos.y))
-                          {
-                            pos.y = *ground;
-                            gridGroundSum += *ground;
-                            ++gridGroundSamples;
-                          }
-                          creature.SetBodyOrigin(pos);
-                          ++slot;
-                        });
-                    // Vantage: 6 blocks behind the grid front row, above the
-                    // highest slot ground, level view down the rows.
-                    if (gridGroundSamples > 0)
+                const int kCols = std::clamp(qaCount, 1, 10);
+                constexpr float kColSpacing = 2.0f;
+                constexpr float kRowSpacing = 3.0f;
+                size_t slot = 0;
+                float gridGroundSum = 0.0f;
+                int gridGroundSamples = 0;
+                const bool waterReview =
+                    std::getenv("CUBA_FLIGHT_QA_WATER") != nullptr;
+                std::vector<glm::vec3> waterSlots;
+                world->ForEachCreature(
+                    [&](UCreature &creature)
                     {
-                      // Average ground across the grid: the terrain slopes,
-                      // so max/min would aim the review camera at a hill.
-                      const float gridGroundY =
-                          gridGroundSum /
-                          static_cast<float>(gridGroundSamples);
-                      // Float the review camera: gravity would otherwise
-                      // drop it off the vantage into the grid.
-                      camera->SetFreeMove(true);
-                      glm::vec3 vantage =
-                          base - forward * (qaCount <= 5 ? 1.f : 4.f) +
-                          glm::vec3(0.0f, gridGroundY - base.y +
-                                             (qaCount <= 5 ? 2.5f : 10.f), 0.0f);
-                      camera->SetPosition(vantage);
-                      // Aim at the grid center (mid rows): the spawn-time
-                      // yaw is arbitrary when autopilot never armed.
-                      glm::vec3 center =
-                          base + forward * (qaCount <= 5 ? 4.f : 11.5f) +
-                          glm::vec3(0.0f, gridGroundY - base.y + 0.5f, 0.0f);
-                      if (std::getenv("CUBA_FLIGHT_QA_CLOSE") != nullptr)
+                      if (creature.IsPlayerCharacter() ||
+                          creature.GetSpawnSource() != CreatureSpawnSource::Qa)
                       {
-                        if (qaCount != 1)
-                          throw std::runtime_error("Close QA requires one creature");
+                        return;
                       }
-                      if (!waterSlots.empty())
+                      const int row = static_cast<int>(slot / kCols);
+                      const int col = static_cast<int>(slot % kCols);
+                      glm::vec3 pos =
+                          base +
+                          forward *
+                              (4.0f + static_cast<float>(row) * kRowSpacing) +
+                          right * (static_cast<float>(col - kCols / 2) *
+                                   kColSpacing);
+                      if (waterReview)
                       {
-                        center = glm::vec3(0.f);
-                        for (const auto &p : waterSlots) { center += p; }
-                        center /= static_cast<float>(waterSlots.size());
-                        center.y += .3f;
-                        vantage = center - forward * 4.f + glm::vec3(0.f, .6f, 0.f);
-                        camera->SetPosition(vantage);
+                        // Explicit aquatic QA: choose real loaded water,
+                        // with room for the full creature below its surface.
+                        // This creature already exists: relocation writes
+                        // the validated free-water position directly, so
+                        // do not run spawn checks against its own body.
+                        const auto water = FindCreatureQaWaterPosition(
+                            *world, pos, waterSlots,
+                            creature.GetCollisionSize());
+                        if (!water)
+                          throw std::runtime_error(
+                              "Aquatic QA: no loaded water with sufficient "
+                              "depth");
+                        pos = *water;
+                        waterSlots.push_back(pos);
+                        gridGroundSum += pos.y;
+                        ++gridGroundSamples;
                       }
-                      const glm::vec3 dir = center - vantage;
-                      const float horizontal =
-                          std::sqrt(dir.x * dir.x + dir.z * dir.z);
-                      const float yawDeg =
-                          glm::degrees(std::atan2(dir.z, dir.x));
-                      const float pitchDeg =
-                          glm::degrees(std::atan2(
-                              dir.y, std::max(0.5f, horizontal)));
-                      camera->SetOrientation(yawDeg, pitchDeg);
-                    }
-                  }
+                      else if (const auto *definition =
+                                   world->GetCreatureDefinitionStorage()->Get(
+                                       creature.GetTypeId());
+                               definition &&
+                               (definition->habitat ==
+                                    CreatureHabitat::Terrestrial ||
+                                (definition->habitat == CreatureHabitat::Lava &&
+                                 std::getenv("CUBA_FLIGHT_QA_LAVA") !=
+                                     nullptr)))
+                      {
+                        // SpawnAllInGrid already found a valid whole-body
+                        // land site. Do not move a wide treeman back into
+                        // the original grid's tree trunk on this same frame.
+                        pos = creature.GetBodyOrigin();
+                        gridGroundSum += pos.y;
+                        ++gridGroundSamples;
+                      }
+                      else if (const std::optional<float> ground =
+                                   world->QueryGroundFeetYUnder(
+                                       static_cast<int>(std::floor(pos.x)),
+                                       static_cast<int>(std::floor(pos.z)),
+                                       pos.y))
+                      {
+                        pos.y = *ground;
+                        gridGroundSum += *ground;
+                        ++gridGroundSamples;
+                      }
+                      creature.SetBodyOrigin(pos);
+                      ++slot;
+                    });
+                // Vantage: 6 blocks behind the grid front row, above the
+                // highest slot ground, level view down the rows.
+                if (gridGroundSamples > 0)
                 {
-                  std::ofstream dump("qa_relocation.txt");
-                  dump << "relocation done" << std::endl;
-                  world->ForEachCreature(
-                      [&](const UCreature &creature)
-                      {
-                        const glm::vec3 p = creature.GetBodyOrigin();
-                        dump << creature.GetTypeId() << " " << p.x << " "
-                             << p.y << " " << p.z << " src="
-                             << static_cast<int>(creature.GetSpawnSource())
-                             << std::endl;
-                      });
-                  if (auto cam = world->GetCurrentUserCamera())
+                  // Average ground across the grid: the terrain slopes,
+                  // so max/min would aim the review camera at a hill.
+                  const float gridGroundY =
+                      gridGroundSum / static_cast<float>(gridGroundSamples);
+                  // Float the review camera: gravity would otherwise
+                  // drop it off the vantage into the grid.
+                  camera->SetFreeMove(true);
+                  glm::vec3 vantage =
+                      base - forward * (qaCount <= 5 ? 1.f : 4.f) +
+                      glm::vec3(0.0f,
+                                gridGroundY - base.y +
+                                    (qaCount <= 5 ? 2.5f : 10.f),
+                                0.0f);
+                  camera->SetPosition(vantage);
+                  // Aim at the grid center (mid rows): the spawn-time
+                  // yaw is arbitrary when autopilot never armed.
+                  glm::vec3 center =
+                      base + forward * (qaCount <= 5 ? 4.f : 11.5f) +
+                      glm::vec3(0.0f, gridGroundY - base.y + 0.5f, 0.0f);
+                  if (std::getenv("CUBA_FLIGHT_QA_CLOSE") != nullptr)
                   {
-                    const glm::vec3 cp = cam->GetPosition();
-                    dump << "camera " << cp.x << " " << cp.y << " " << cp.z
-                         << std::endl;
+                    if (qaCount != 1)
+                      throw std::runtime_error(
+                          "Close QA requires one creature");
                   }
+                  if (!waterSlots.empty())
+                  {
+                    center = glm::vec3(0.f);
+                    for (const auto &p : waterSlots)
+                    {
+                      center += p;
+                    }
+                    center /= static_cast<float>(waterSlots.size());
+                    center.y += .3f;
+                    vantage = center - forward * 4.f + glm::vec3(0.f, .6f, 0.f);
+                    camera->SetPosition(vantage);
+                  }
+                  const glm::vec3 dir = center - vantage;
+                  const float horizontal =
+                      std::sqrt(dir.x * dir.x + dir.z * dir.z);
+                  const float yawDeg = glm::degrees(std::atan2(dir.z, dir.x));
+                  const float pitchDeg = glm::degrees(
+                      std::atan2(dir.y, std::max(0.5f, horizontal)));
+                  camera->SetOrientation(yawDeg, pitchDeg);
                 }
+              }
+              {
+                std::ofstream dump("qa_relocation.txt");
+                dump << "relocation done" << std::endl;
+                world->ForEachCreature(
+                    [&](const UCreature &creature)
+                    {
+                      const glm::vec3 p = creature.GetBodyOrigin();
+                      dump << creature.GetTypeId() << " " << p.x << " " << p.y
+                           << " " << p.z << " src="
+                           << static_cast<int>(creature.GetSpawnSource())
+                           << std::endl;
+                    });
+                if (auto cam = world->GetCurrentUserCamera())
+                {
+                  const glm::vec3 cp = cam->GetPosition();
+                  dump << "camera " << cp.x << " " << cp.y << " " << cp.z
+                       << std::endl;
+                }
+              }
             }
             // Close review follows the actual body after physics settles;
             // a one-shot camera can lose a tiny creature at sub-block range.
-            if (ingame_frames_seen >= 30 && std::getenv("CUBA_FLIGHT_QA_CLOSE") != nullptr)
-            {
-              if (auto camera = world->GetCurrentUserCamera())
-              {
-                world->ForEachCreature([&](const UCreature &creature)
-                {
-                  if (creature.GetSpawnSource() != CreatureSpawnSource::Qa || creature.IsPlayerCharacter()) return;
-                  const auto size = creature.GetCollisionSize();
-                  const float distance = std::max(.7f, std::max({size.x,size.y,size.z})*1.5f);
-                  const auto center = creature.GetBodyOrigin() + glm::vec3(0.f,size.y*.5f,0.f);
-                  const bool waterClose = std::getenv("CUBA_FLIGHT_QA_WATER") != nullptr;
-                  auto offset = glm::vec3(.6f,waterClose ? .08f : .4f,-1.f)*distance;
-                  if (std::getenv("CUBA_FLIGHT_QA_LAVA") != nullptr)
-                  {
-                    const float yaw=glm::radians(creature.GetYaw());
-                    offset=glm::vec3(.6f*std::cos(yaw)+std::sin(yaw),.65f,
-                                     -.6f*std::sin(yaw)+std::cos(yaw))*distance;
-                  }
-                  // Keep a review camera out of terrain; looking through a
-                  // shore bank is not evidence that the model rendered well.
-                  if (waterClose)
-                  {
-                    const auto &blocks = world->GetBlockWorld();
-                    auto &registry = world->GetBlockRegistry();
-                    for (int turn = 0; turn < 8; ++turn)
-                    {
-                      const float angle = glm::radians(45.f*turn);
-                      const auto candidate = glm::vec3(offset.x*std::cos(angle)-offset.z*std::sin(angle),offset.y,
-                                                       offset.x*std::sin(angle)+offset.z*std::cos(angle));
-                      bool clear = true;
-                      for (int step = 1; step <= 32; ++step)
-                      {
-                        const auto point = center+candidate*(static_cast<float>(step)/32.f);
-                        // The collision/render grid is centred on integers.
-                        // floor(point) can report water while the ray is
-                        // already inside the neighbouring shore block.
-                        const auto block = blocks.GetBlock(glm::ivec3(glm::floor(point+glm::vec3(.5f))));
-                        if (block != BLOCK_AIR && !registry.IsLiquid(block)) { clear = false; break; }
-                      }
-                      if (clear) { offset = candidate; break; }
-                    }
-                  }
-                  const auto position = center + offset;
-                  const auto direction = center-position;
-                  camera->SetFreeMove(true);
-                  camera->SetPosition(position);
-                  camera->SetOrientation(glm::degrees(std::atan2(direction.z,direction.x)),
-                      glm::degrees(std::atan2(direction.y,std::hypot(direction.x,direction.z))));
-                });
-              }
-            }
+            TickFlightCreatureCloseReview(world, ingame_frames_seen);
             if (ingame_frames_seen == 30)
             {
               ExportCreatureQaFrames(*core, *world,
-                                    geometry_engine->GetShaderManager());
-              RunCreatureQaWorldUserProbe(*core,*world);
+                                     geometry_engine->GetShaderManager());
+              RunCreatureQaWorldUserProbe(*core, *world);
             }
             // Behavior QA: CUBA_FLIGHT_QA_BEHAVIOR=wasp,sheep,... spawns the
             // listed species in front of the camera and logs position and
             // locomotion facts to bin/qa_behavior.txt twice a second
             // (movement/animation regression check in the real frame loop).
-            if (const char *qaBehavior = std::getenv("CUBA_FLIGHT_QA_BEHAVIOR");
-                qaBehavior != nullptr && world)
-            {
-              static bool qaBehaviorSpawned = false;
-              static int qaBehaviorFrame = 0;
-              static std::ofstream qaBehaviorLog("qa_behavior.txt");
-              ++qaBehaviorFrame;
-              // Kill QA (CUBA_FLIGHT_QA_KILL=1): at frame 300, inside a world
-              // creature loop, each visited QA creature removes the next QA
-              // creature and then itself (a kill plus a death in the same
-              // visit). Logs what lookups and the map report during and
-              // after the loop.
-              if (qaBehaviorFrame == 300 &&
-                  std::getenv("CUBA_FLIGHT_QA_KILL") != nullptr)
-              {
-                std::vector<CreatureId> qaIds;
-                world->ForEachCreature(
-                    [&](const UCreature &c)
-                    {
-                      if (c.GetSpawnSource() == CreatureSpawnSource::Qa)
-                      {
-                        qaIds.push_back(c.GetId());
-                      }
-                    });
-                int visited = 0;
-                int stillAliveInLoop = 0;
-                int lookupsHidden = 0;
-                world->ForEachCreature(
-                    [&](UCreature &c)
-                    {
-                      if (c.GetSpawnSource() != CreatureSpawnSource::Qa)
-                      {
-                        return;
-                      }
-                      ++visited;
-                      const auto it =
-                          std::find(qaIds.begin(), qaIds.end(), c.GetId());
-                      const CreatureId victim =
-                          qaIds[(static_cast<size_t>(it - qaIds.begin()) + 1) %
-                                qaIds.size()];
-                      world->RemoveCreature(victim);
-                      lookupsHidden += world->GetCreature(victim) == nullptr;
-                      world->RemoveCreature(c.GetId());
-                      // The visited body must still be intact here.
-                      stillAliveInLoop += c.GetId() != 0 &&
-                                          c.GetBounds().profile.restSizeBlocks.y > 0.0f;
-                    });
-                int remaining = 0;
-                world->ForEachCreature(
-                    [&](const UCreature &c)
-                    {
-                      remaining += c.GetSpawnSource() == CreatureSpawnSource::Qa;
-                    });
-                qaBehaviorLog << "kill qa=" << qaIds.size()
-                              << " visited=" << visited
-                              << " aliveInLoop=" << stillAliveInLoop
-                              << " lookupsHidden=" << lookupsHidden
-                              << " remainingAfter=" << remaining << std::endl;
-                if (auto camera = world->GetCurrentUserCamera())
-                {
-                  glm::vec3 pos = camera->GetPosition();
-                  pos.x += 4.0f;
-                  qaBehaviorLog << "respawn id="
-                                << world->SpawnCreature("pig", pos, "",
-                                                        CreatureSpawnSource::Qa)
-                                << std::endl;
-                }
-              }
-              // View-spawn QA (CUBA_FLIGHT_QA_VIEWSPAWN=ogre,whale,...): try
-              // the creative "spawn by view" for each species facing four
-              // directions, log the outcome (or the blocked hint) and the
-              // distance from the player, then remove the spawned creature.
-              if (const char *qaViewSpawn =
-                      std::getenv("CUBA_FLIGHT_QA_VIEWSPAWN");
-                  qaViewSpawn != nullptr && qaBehaviorFrame == 90 &&
-                  ingame_frames_seen >= 60)
-              {
-                if (auto camera = world->GetCurrentUserCamera())
-                {
-                  std::string list(qaViewSpawn);
-                  size_t start = 0;
-                  while (start <= list.size())
-                  {
-                    const size_t comma = list.find(',', start);
-                    const std::string species = list.substr(
-                        start, comma == std::string::npos ? std::string::npos
-                                                          : comma - start);
-                    start = comma == std::string::npos ? list.size() + 1
-                                                       : comma + 1;
-                    if (species.empty())
-                    {
-                      continue;
-                    }
-                    for (const float yaw : {0.0f, 90.0f, 180.0f, 270.0f})
-                    {
-                      camera->SetOrientation(yaw, -30.0f);
-                      CreatureId maxId = 0;
-                      world->ForEachCreature(
-                          [&](const UCreature &c)
-                          { maxId = std::max(maxId, c.GetId()); });
-                      const bool ok = world->SpawnCreatureByView(species);
-                      qaBehaviorLog << "viewspawn " << species << " yaw=" << yaw
-                                    << " ok=" << ok;
-                      CreatureId newId = 0;
-                      world->ForEachCreature(
-                          [&](const UCreature &c)
-                          {
-                            if (c.GetId() > maxId)
-                            {
-                              newId = c.GetId();
-                            }
-                          });
-                      if (const UCreature *spawned = world->GetCreature(newId))
-                      {
-                        const glm::vec3 p = spawned->GetBodyOrigin();
-                        const glm::vec3 cp = camera->GetPosition();
-                        qaBehaviorLog
-                            << " pos=" << p.x << "," << p.y << "," << p.z
-                            << " distXZ="
-                            << std::hypot(p.x - cp.x, p.z - cp.z)
-                            << " inBlock="
-                            << world->CheckBlockCollisionVolume(
-                                   spawned->GetCollisionVolume());
-                        world->RemoveCreature(newId);
-                      }
-                      else
-                      {
-                        qaBehaviorLog
-                            << " hint="
-                            << world->GetCreatureSpawnBlockedHint(species);
-                      }
-                      qaBehaviorLog << std::endl;
-                    }
-                  }
-                }
-              }
-              // Melee QA (CUBA_FLIGHT_QA_MELEE=1): log every attack event of
-              // a QA creature with its outcome and whether the straight ray
-              // from the attacker's eye to the target's center crosses blocks.
-              if (qaBehaviorFrame == 1 &&
-                  std::getenv("CUBA_FLIGHT_QA_MELEE") != nullptr)
-              {
-                struct QaMeleeSink final : IUInfluenceEventSink
-                {
-                  UWorld *World{nullptr};
-                  std::ofstream *Log{nullptr};
-                  void OnInfluenceEvent(const InfluenceEvent &ev) override
-                  {
-                    if (ev.Channel != InfluenceChannel::Melee ||
-                        ev.Kind == InfluenceEventKind::DigProgress)
-                    {
-                      return;
-                    }
-                    const UCreature *src = World->GetCreature(ev.SourceId);
-                    if (!src ||
-                        src->GetSpawnSource() != CreatureSpawnSource::Qa)
-                    {
-                      return;
-                    }
-                    *Log << "melee src=" << src->GetTypeId() << "#"
-                         << ev.SourceId << " kind="
-                         << (ev.Kind == InfluenceEventKind::Applied
-                                 ? "applied"
-                                 : "cancelled")
-                         << " reason=" << ev.CancelReason;
-                    const CreatureId tid = ev.TargetIds.empty()
-                                               ? World->GetControlledCreatureId()
-                                               : ev.TargetIds.front();
-                    if (const UCreature *tgt = World->GetCreature(tid))
-                    {
-                      const glm::vec3 eye = src->GetEyePosition();
-                      const glm::vec3 center =
-                          tgt->GetBodyOrigin() +
-                          glm::vec3(0.0f,
-                                    0.5f * tgt->GetBounds()
-                                               .profile.restSizeBlocks.y,
-                                    0.0f);
-                      const glm::vec3 d = center - eye;
-                      const bool blocked =
-                          glm::length(d) > 1e-4f &&
-                          RaycastSolidBlocks(World->GetBlockWorld(),
-                                             World->GetBlockRegistry(), eye, d,
-                                             glm::length(d))
-                              .has_value();
-                      *Log << " tgt=" << tid << " centerRayBlocked="
-                           << blocked;
-                    }
-                    *Log << std::endl;
-                  }
-                };
-                static QaMeleeSink qaMeleeSink;
-                qaMeleeSink.World = world.get();
-                qaMeleeSink.Log = &qaBehaviorLog;
-                InfluenceEvents::AddSink(&qaMeleeSink);
-              }
-              if (!qaBehaviorSpawned && ingame_frames_seen >= 60 &&
-                  ModePolicy::AllowsQaSpawner(world->GetGameMode()))
-              {
-                if (auto camera = world->GetCurrentUserCamera())
-                {
-                  qaBehaviorSpawned = true;
-                  // Face the spawn group (+X) so captures show the mobs.
-                  camera->SetOrientation(0.0f, -30.0f);
-                  std::string list(qaBehavior);
-                  size_t start = 0;
-                  int slot = 0;
-                  while (start <= list.size())
-                  {
-                    const size_t comma = list.find(',', start);
-                    const std::string species = list.substr(
-                        start, comma == std::string::npos ? std::string::npos
-                                                          : comma - start);
-                    start = comma == std::string::npos ? list.size() + 1
-                                                       : comma + 1;
-                    if (species.empty())
-                    {
-                      continue;
-                    }
-                    glm::vec3 pos = camera->GetPosition();
-                    pos.x += 4.0f + 1.5f * static_cast<float>(slot % 4);
-                    pos.z += 2.0f * static_cast<float>(slot / 4) - 1.0f;
-                    ++slot;
-                    const CreatureId id = world->SpawnCreature(
-                        species, pos, "", CreatureSpawnSource::Qa);
-                    qaBehaviorLog << "spawn " << species << " id=" << id
-                                  << std::endl;
-                  }
-                }
-              }
-              // Ride QA (CUBA_FLIGHT_QA_RIDE=1): drop the player onto the
-              // first QA creature from 8 blocks and log rider vs back height.
-              if (qaBehaviorSpawned &&
-                  std::getenv("CUBA_FLIGHT_QA_RIDE") != nullptr)
-              {
-                static CreatureId rideId = 0;
-                if (qaBehaviorFrame >= 60 && rideId == 0)
-                {
-                  world->ForEachCreature(
-                      [&](const UCreature &creature)
-                      {
-                        // CUBA_FLIGHT_QA_RIDE_SPECIES picks the mount by
-                        // species (default: first QA creature).
-                        const char *rideSpecies =
-                            std::getenv("CUBA_FLIGHT_QA_RIDE_SPECIES");
-                        if (rideId == 0 && creature.GetSpawnSource() ==
-                                               CreatureSpawnSource::Qa &&
-                            (rideSpecies == nullptr ||
-                             creature.GetTypeId() == rideSpecies))
-                        {
-                          rideId = creature.GetId();
-                        }
-                      });
-                }
-                if (qaBehaviorFrame == 90)
-                {
-                  if (UCreature *target = world->GetCreature(rideId))
-                  {
-                    if (auto camera = world->GetCurrentUserCamera())
-                    {
-                      const glm::vec3 p = target->GetBodyOrigin();
-                      const float top =
-                          p.y + target->GetCollisionSize().y;
-                      camera->SetFreeMove(false);
-                      const char *dropEnv = std::getenv("CUBA_FLIGHT_QA_RIDE");
-                      const float drop = std::max(0.3f, std::strtof(dropEnv, nullptr));
-                      camera->SetPosition(glm::vec3(p.x, top + drop + 1.6f, p.z));
-                      camera->ResetVerticalPhysics();
-                    }
-                  }
-                }
-                // Hold the mount still while the rider lands (frames 60-170);
-                // afterwards it wanders so carrying can be observed.
-                if (rideId != 0 && qaBehaviorFrame >= 60 &&
-                    qaBehaviorFrame < 170)
-                {
-                  if (UCreature *target = world->GetCreature(rideId))
-                  {
-                    target->ClearIntent();
-                  }
-                }
-                if (rideId != 0 && qaBehaviorFrame >= 90 &&
-                    qaBehaviorFrame < 900)
-                {
-                  const UCreature *target = world->GetCreature(rideId);
-                  const UCreature *rider = world->GetControlledCreature();
-                  if (target && rider)
-                  {
-                    const glm::vec3 t = target->GetBodyOrigin();
-                    const glm::vec3 r = rider->GetBodyOrigin();
-                    qaBehaviorLog
-                        << "ride f=" << qaBehaviorFrame << " rider="
-                        << r.x << "," << r.y << "," << r.z << " mobTop="
-                        << t.y + target->GetCollisionSize().y
-                        << " mob=" << t.x << "," << t.z << " dxz="
-                        << std::hypot(r.x - t.x, r.z - t.z);
-                    const CollisionVolume rv = rider->GetCollisionVolume();
-                    const auto mount = world->FindMountCreatureUnder(
-                        r, rv.halfExtents, rider->GetId());
-                    qaBehaviorLog << " mountFound=" << (mount ? 1 : 0)
-                                  << " riderInBlock="
-                                  << world->CheckBlockCollisionVolume(rv);
-                    if (mount)
-                    {
-                      qaBehaviorLog << " backY=" << mount->second;
-                    }
-                    const CollisionVolume tv = target->GetCollisionVolume();
-                    qaBehaviorLog
-                        << " volTop=" << tv.center.y + tv.halfExtents.y
-                        << " vy="
-                        << rider->GetLocomotion().GetVerticalVelocity()
-                        << " onGround=" << rider->GetLocomotion().IsOnGround()
-                        << " feetY=" << rider->GetLocomotion().GetFeetY()
-                        << " anch=" << rider->GetLocomotion().IsFeetAnchored();
-                    if (auto cam = world->GetCurrentUserCamera())
-                    {
-                      qaBehaviorLog << " camY=" << cam->GetPosition().y
-                                    << " stance=" << cam->GetStanceBlend()
-                                    << " mountId="
-                                    << cam->GetLocomotionController()
-                                           .GetMountSupportId();
-                    }
-                    qaBehaviorLog << std::endl;
-                  }
-                }
-              }
-              // Follow-cam on the first QA creature (CUBA_FLIGHT_QA_FOLLOW=1)
-              // so captures show limb motion at readable size.
-              if (qaBehaviorSpawned &&
-                  std::getenv("CUBA_FLIGHT_QA_FOLLOW") != nullptr)
-              {
-                if (auto camera = world->GetCurrentUserCamera())
-                {
-                  world->ForEachCreature(
-                      [&](const UCreature &creature)
-                      {
-                        static CreatureId followId = 0;
-                        if (creature.GetSpawnSource() !=
-                            CreatureSpawnSource::Qa)
-                        {
-                          return;
-                        }
-                        if (followId == 0)
-                        {
-                          followId = creature.GetId();
-                        }
-                        if (creature.GetId() != followId)
-                        {
-                          return;
-                        }
-                        const glm::vec3 p = creature.GetBodyOrigin();
-                        camera->SetFreeMove(true);
-                        camera->SetPosition(p + glm::vec3(-3.0f, 1.4f, 0.0f));
-                        camera->SetOrientation(0.0f, -8.0f);
-                      });
-                }
-              }
-              // Pick QA (CUBA_FLIGHT_QA_PICK=1): aim at each QA creature from
-              // the player's eye and log what the view pick returns (it used
-              // to return the viewer itself).
-              if (qaBehaviorSpawned && qaBehaviorFrame % 30 == 15 &&
-                  std::getenv("CUBA_FLIGHT_QA_PICK") != nullptr)
-              {
-                if (auto cam = world->GetCurrentUserCamera())
-                {
-                  const glm::vec3 eye = cam->GetPosition();
-                  world->ForEachCreature(
-                      [&](const UCreature &creature)
-                      {
-                        if (creature.GetSpawnSource() != CreatureSpawnSource::Qa)
-                        {
-                          return;
-                        }
-                        const glm::vec3 size =
-                            creature.GetBounds().profile.restSizeBlocks;
-                        const glm::vec3 aim =
-                            creature.GetBodyOrigin() +
-                            glm::vec3(0.0f, size.y * 0.5f, 0.0f) - eye;
-                        const auto picked =
-                            world->PickCreatureByView(eye, aim, 64.0f);
-                        qaBehaviorLog << "pick f=" << qaBehaviorFrame
-                                      << " target=" << creature.GetTypeId()
-                                      << "#" << creature.GetId() << " got="
-                                      << (picked ? *picked : 0) << " self="
-                                      << world->GetControlledCreatureId()
-                                      << " dist=" << glm::length(aim)
-                                      << std::endl;
-                      });
-                }
-              }
-              if (qaBehaviorSpawned && qaBehaviorFrame % 30 == 0)
-              {
-                world->ForEachCreature(
-                    [&](const UCreature &creature)
-                    {
-                      if (creature.GetSpawnSource() != CreatureSpawnSource::Qa)
-                      {
-                        return;
-                      }
-                      const glm::vec3 p = creature.GetBodyOrigin();
-                      const CreatureLocomotionFacts &f =
-                          creature.GetLocomotionFacts();
-                      qaBehaviorLog
-                          << "f=" << qaBehaviorFrame << " "
-                          << creature.GetTypeId() << "#" << creature.GetId()
-                          << " pos=" << p.x << "," << p.y << "," << p.z
-                          << " state=" << static_cast<int>(f.state)
-                          << " speed=" << f.horizontalSpeed
-                          << " phase=" << f.animPhase
-                          << " ground=" << f.onGround << " yaw="
-                          << creature.GetYaw() << " box="
-                          << creature.GetBounds().profile.restSizeBlocks.x
-                          << "x"
-                          << creature.GetBounds().profile.restSizeBlocks.z;
-                      if (auto cam = world->GetCurrentUserCamera())
-                      {
-                        const glm::vec3 cp = cam->GetPosition();
-                        qaBehaviorLog << " cam=" << cp.x << "," << cp.y << ","
-                                      << cp.z;
-                      }
-                      qaBehaviorLog << " blockBelow="
-                                    << static_cast<int>(
-                                           world->GetBlockWorld().GetBlock(
-                                               glm::ivec3(
-                                                   static_cast<int>(std::floor(p.x)),
-                                                   static_cast<int>(std::floor(p.y)) - 1,
-                                                   static_cast<int>(std::floor(p.z)))))
-                                    << std::endl;
-                    });
-              }
-            }
-            const double ingame_sec = (std::max)(
-                0.0,
-                std::chrono::duration<double>(now - ingame_started).count() -
-                    (excluded_clock_gap_sec -
-                     excluded_before_ingame_sec));
+            TickFlightCreatureBehavior(world, ingame_frames_seen);
+            const double ingame_sec =
+                (std::max)(0.0,
+                           std::chrono::duration<double>(now - ingame_started)
+                                   .count() -
+                               (excluded_clock_gap_sec -
+                                excluded_before_ingame_sec));
             if (auto camera = world->GetCurrentUserCamera())
             {
               if (!gallery_pages.empty())
               {
-                if (!asset_gallery_initialized)
+                if (!gallery.asset_gallery_initialized)
                 {
-                  initialize_asset_gallery(camera);
+                  gallery.Initialize(camera);
                 }
-                if (asset_gallery_initialized)
+                if (gallery.asset_gallery_initialized)
                 {
-                  const int desired_page = (std::min)(
-                      static_cast<int>(gallery_pages.size()) - 1,
-                      (std::max)(0, static_cast<int>(
-                                        ingame_sec / gallery_page_seconds)));
-                  if (desired_page != asset_gallery_page)
+                  const int desired_page =
+                      (std::min)(static_cast<int>(gallery_pages.size()) - 1,
+                                 (std::max)(0, static_cast<int>(
+                                                   ingame_sec /
+                                                   gallery_page_seconds)));
+                  if (desired_page != gallery.asset_gallery_page)
                   {
-                    install_asset_gallery_page(desired_page);
+                    gallery.InstallPage(desired_page);
                   }
                   world->SetTimeOfDayNormalized(0.32f);
                 }
@@ -2038,7 +2183,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                   camera->SetFreeMove(true);
                   camera->SetPlanarFreeMoveForward(options.LevelForward);
                 }
-                camera->SetOrientation(options.FaceYawDeg, options.FacePitchDeg);
+                camera->SetOrientation(options.FaceYawDeg,
+                                       options.FacePitchDeg);
                 const float sea =
                     static_cast<float>(world->GetProceduralSettings().SeaLevel);
                 glm::vec3 pos = camera->GetPosition();
@@ -2055,83 +2201,13 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 // blocks under the surface of the nearest water body (>=6 deep,
                 // open sky above) so underwater/surface-underside captures are
                 // reproducible without hand-picked coordinates.
-                bool placed_underwater = false;
-                if (const char *find_water = std::getenv("CUBA_FLIGHT_FIND_WATER");
-                    find_water && find_water[0] == '1')
-                {
-                  const UBlockWorld &bw = world->GetBlockWorld();
-                  UBlockRegistry &reg = world->GetBlockRegistry();
-                  const int sea_i = world->GetProceduralSettings().SeaLevel;
-                  const int origin_x = static_cast<int>(std::floor(pos.x));
-                  const int origin_z = static_cast<int>(std::floor(pos.z));
-                  float depth_under = 2.5f;
-                  if (const char *du = std::getenv("CUBA_FLIGHT_WATER_UNDER"))
-                  {
-                    depth_under = std::strtof(du, nullptr);
-                  }
-                  int best_d2 = 1 << 30;
-                  glm::ivec3 best(0);
-                  for (int dz = -64; dz <= 64; dz += 3)
-                  {
-                    for (int dx = -64; dx <= 64; dx += 3)
-                    {
-                      const int x = origin_x + dx;
-                      const int z = origin_z + dz;
-                      int top = -1;
-                      for (int y = sea_i + 2; y >= sea_i - 40; --y)
-                      {
-                        const BlockId id = bw.GetBlock(glm::ivec3(x, y, z));
-                        if (id == BLOCK_AIR)
-                        {
-                          continue;
-                        }
-                        if (reg.IsLiquid(id))
-                        {
-                          top = y;
-                        }
-                        break;
-                      }
-                      if (top < 0)
-                      {
-                        continue;
-                      }
-                      int depth = 0;
-                      for (int y = top; y > top - 12; --y)
-                      {
-                        if (!reg.IsLiquid(bw.GetBlock(glm::ivec3(x, y, z))))
-                        {
-                          break;
-                        }
-                        ++depth;
-                      }
-                      const int d2 = dx * dx + dz * dz;
-                      if (depth >= 6 && d2 < best_d2)
-                      {
-                        best_d2 = d2;
-                        best = glm::ivec3(x, top, z);
-                      }
-                    }
-                  }
-                  if (best_d2 < (1 << 30))
-                  {
-                    pos = glm::vec3(best.x + 0.5f,
-                                    static_cast<float>(best.y + 1) - depth_under,
-                                    best.z + 0.5f);
-                    placed_underwater = true;
-                    std::cout << "flight-sim: underwater probe at " << best.x
-                              << "," << best.y << "," << best.z << std::endl;
-                  }
-                  else
-                  {
-                    std::cout << "flight-sim: underwater probe found no water"
-                              << std::endl;
-                  }
-                }
+                const bool placed_underwater =
+                    PlaceFlightWaterProbe(world, pos);
                 if (!options.BreakStandMode && !placed_underwater)
                 {
                   // Land/ocean cruise eye: set every arm (floor/ceil).
                   const float target_y =
-                      resolve_cruise_eye_y(*world, pos, sea);
+                      ResolveFlightCruiseEyeY(options, *world, pos, sea);
                   if (target_y > 0.0f &&
                       (pos.y != target_y || options.TeleportToCruiseStart))
                   {
@@ -2151,7 +2227,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                           << " level_forward=" << (options.LevelForward ? 1 : 0)
                           << " break_stand=" << (options.BreakStandMode ? 1 : 0)
                           << " yaw_sweep=" << (options.YawSweepMode ? 1 : 0)
-                          << " teleport=" << (options.TeleportToCruiseStart ? 1 : 0)
+                          << " teleport="
+                          << (options.TeleportToCruiseStart ? 1 : 0)
                           << " yaw=" << options.FaceYawDeg
                           << " pitch=" << options.FacePitchDeg
                           << " idle_s=" << options.IdleBeforeFlySec
@@ -2166,9 +2243,9 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                   camera->SetPlanarFreeMoveForward(options.LevelForward);
                 }
                 const double fly_end =
-                    options.IdleBeforeFlySec +
-                    (options.FlyStopMode ? options.FlyPhaseSec
-                                         : in_game_seconds);
+                    options.IdleBeforeFlySec + (options.FlyStopMode
+                                                    ? options.FlyPhaseSec
+                                                    : in_game_seconds);
                 const double dive_end = fly_end + options.DivePhaseSec;
                 const bool in_dive =
                     options.FlyStopMode && options.DivePhaseSec > 0.0 &&
@@ -2177,16 +2254,15 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 {
                   dive_engaged = true;
                   window.SetAutopilotKey(KeyCode::Key_Space, false);
-                  std::cout << "flight-sim: dive phase pitch="
-                            << options.DivePitchDeg << " at t=" << ingame_sec
-                            << "s" << std::endl;
+                  std::cout
+                      << "flight-sim: dive phase pitch=" << options.DivePitchDeg
+                      << " at t=" << ingame_sec << "s" << std::endl;
                 }
                 float yaw = options.FaceYawDeg;
                 if (options.YawSweepMode &&
                     ingame_sec >= options.IdleBeforeFlySec)
                 {
-                  const double sweep_t =
-                      ingame_sec - options.IdleBeforeFlySec;
+                  const double sweep_t = ingame_sec - options.IdleBeforeFlySec;
                   const int step = static_cast<int>(
                       sweep_t / (std::max)(0.1, options.YawSweepSec));
                   static const float kYaws[4] = {0.f, 90.f, 180.f, 270.f};
@@ -2242,8 +2318,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     !intentional_course_turn &&
                     camera->GetLastMoveAttemptSubsteps() > 0)
                 {
-                  const float yaw_delta = std::abs(
-                      std::remainder(camera->GetYaw() - yaw, 360.0f));
+                  const float yaw_delta =
+                      std::abs(std::remainder(camera->GetYaw() - yaw, 360.0f));
                   const float pitch_delta =
                       std::abs(camera->GetPitch() - pitch);
                   max_heading_yaw_delta_deg =
@@ -2260,8 +2336,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 camera->SetOrientation(yaw, pitch);
                 if (options.AvoidObstacles && options.Fly &&
                     options.HoldForward && autopilot_flying &&
-                    !fly_stop_released && !in_dive &&
-                    !options.BreakStandMode && !options.YawSweepMode)
+                    !fly_stop_released && !in_dive && !options.BreakStandMode &&
+                    !options.YawSweepMode)
                 {
                   const glm::vec3 position = camera->GetPosition();
                   const PlayerCapsule capsule = camera->GetPlayerCapsule();
@@ -2271,8 +2347,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       camera->GetLastMoveBlockedSubsteps();
                   const int flight_ground_contacts =
                       camera->GetLastFlightGroundContacts();
-                  constexpr float kDegreesToRadians =
-                      0.01745329251994329577f;
+                  constexpr float kDegreesToRadians = 0.01745329251994329577f;
                   const float yaw_rad = yaw * kDegreesToRadians;
                   const glm::vec3 forward(std::cos(yaw_rad), 0.0f,
                                           std::sin(yaw_rad));
@@ -2298,16 +2373,16 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     ++avoidance_detour_replans;
                     std::cout << "flight-sim: obstacle bypass blocked; "
                                  "replanning from current position at t="
-                              << ingame_sec << "s blocked="
-                              << move_blocked_substeps << "/"
-                              << move_attempt_substeps << " ground_contacts="
-                              << flight_ground_contacts << std::endl;
+                              << ingame_sec
+                              << "s blocked=" << move_blocked_substeps << "/"
+                              << move_attempt_substeps
+                              << " ground_contacts=" << flight_ground_contacts
+                              << std::endl;
                     avoidance_phase = AvoidancePhase::None;
                     avoidance_hazard_hold = true;
                     preferred_avoidance_side = -avoidance_side;
                     next_avoidance_probe = now;
-                    next_detour_replan =
-                        now + std::chrono::milliseconds(250);
+                    next_detour_replan = now + std::chrono::milliseconds(250);
                     window.SetAutopilotKey(KeyCode::Key_A, false);
                     window.SetAutopilotKey(KeyCode::Key_D, false);
                   }
@@ -2319,7 +2394,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     // detect crossing the lateral target plane as arrival.
                     if (avoidance_phase == AvoidancePhase::MoveAside &&
                         (std::abs(glm::dot(avoidance_side_target - position,
-                                          right)) <= kWaypointTolerance ||
+                                           right)) <= kWaypointTolerance ||
                          glm::dot(avoidance_side_target - position, right) *
                                  static_cast<float>(avoidance_side) <=
                              0.0f))
@@ -2330,8 +2405,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     }
                     if (avoidance_phase == AvoidancePhase::PassObstacle)
                     {
-                      const float remaining_forward = glm::dot(
-                          avoidance_pass_target - position, forward);
+                      const float remaining_forward =
+                          glm::dot(avoidance_pass_target - position, forward);
                       if (remaining_forward <= kWaypointTolerance)
                       {
                         avoidance_phase = AvoidancePhase::ReturnToRoute;
@@ -2342,7 +2417,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     }
                     if (avoidance_phase == AvoidancePhase::ReturnToRoute &&
                         (std::abs(glm::dot(avoidance_return_target - position,
-                                          right)) <= kWaypointTolerance ||
+                                           right)) <= kWaypointTolerance ||
                          glm::dot(avoidance_return_target - position, right) *
                                  static_cast<float>(-avoidance_side) <=
                              0.0f))
@@ -2351,8 +2426,9 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       ++avoidance_detours_completed;
                       preferred_avoidance_side = -avoidance_side;
                       std::cout << "flight-sim: obstacle bypass complete at t="
-                                << ingame_sec << "s completed="
-                                << avoidance_detours_completed << std::endl;
+                                << ingame_sec
+                                << "s completed=" << avoidance_detours_completed
+                                << std::endl;
                     }
                   }
 
@@ -2393,10 +2469,9 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       event.hazard_distance = hazard_distance;
                       bool found_plan = false;
                       float best_cost = std::numeric_limits<float>::max();
-                      const float offsets[] = {3.0f, 5.0f, 7.0f, 9.0f,
-                                                12.0f, 16.0f, 24.0f, 32.0f,
-                                                40.0f};
-                      const float clearances[] = {5.0f, 9.0f, 13.0f, 18.0f,
+                      const float offsets[] = {3.0f,  5.0f,  7.0f,  9.0f, 12.0f,
+                                               16.0f, 24.0f, 32.0f, 40.0f};
+                      const float clearances[] = {5.0f,  9.0f,  13.0f, 18.0f,
                                                   24.0f, 32.0f, 48.0f};
                       const int offset_count =
                           avoidance_plan_failures > 2
@@ -2418,13 +2493,12 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                                clearance_index < clearance_count;
                                ++clearance_index)
                           {
-                            const float clearance =
-                                clearances[clearance_index];
+                            const float clearance = clearances[clearance_index];
                             const float pass_distance =
                                 hazard_distance + clearance;
                             const glm::vec3 side_target =
-                                position + right * (static_cast<float>(side) *
-                                                    offset);
+                                position +
+                                right * (static_cast<float>(side) * offset);
                             const glm::vec3 pass_target =
                                 side_target + forward * pass_distance;
                             const glm::vec3 return_target =
@@ -2463,14 +2537,14 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                         next_detour_replan =
                             now + std::chrono::milliseconds(250);
                         avoidance_hazard_hold = false;
-                        std::cout << "flight-sim: obstacle bypass planned at t="
-                                  << ingame_sec << "s hazard="
-                                  << event.hazard_distance << " side="
-                                  << (event.side < 0 ? "left" : "right")
-                                  << " offset=" << event.side_offset
-                                  << " pass=" << event.pass_distance
-                                  << " attempt=" << avoidance_attempts
-                                  << std::endl;
+                        std::cout
+                            << "flight-sim: obstacle bypass planned at t="
+                            << ingame_sec
+                            << "s hazard=" << event.hazard_distance
+                            << " side=" << (event.side < 0 ? "left" : "right")
+                            << " offset=" << event.side_offset
+                            << " pass=" << event.pass_distance
+                            << " attempt=" << avoidance_attempts << std::endl;
                       }
                       else
                       {
@@ -2479,10 +2553,11 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                         preferred_avoidance_side = -preferred_avoidance_side;
                         next_avoidance_probe =
                             now + std::chrono::milliseconds(250);
-                        std::cout << "flight-sim: no clear obstacle bypass at t="
-                                  << ingame_sec << "s hazard="
-                                  << event.hazard_distance << " attempt="
-                                  << avoidance_attempts << std::endl;
+                        std::cout
+                            << "flight-sim: no clear obstacle bypass at t="
+                            << ingame_sec
+                            << "s hazard=" << event.hazard_distance
+                            << " attempt=" << avoidance_attempts << std::endl;
                       }
                       avoidance_events.push_back(event);
                     }
@@ -2511,18 +2586,16 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                         glm::dot(side_target - position, right);
                     const bool move_right = lateral_error > 0.0f;
                     window.SetAutopilotKey(
-                        KeyCode::Key_W,
-                        !side_step && !avoidance_hazard_hold);
+                        KeyCode::Key_W, !side_step && !avoidance_hazard_hold);
                     window.SetAutopilotKey(KeyCode::Key_A,
                                            side_step && !move_right);
                     window.SetAutopilotKey(KeyCode::Key_D,
                                            side_step && move_right);
                   }
                 }
-                if (options.StopAfterBlockedSec > 0.0 &&
-                    options.HoldForward && !options.BreakStandMode &&
-                    !options.YawSweepMode && autopilot_flying &&
-                    !fly_stop_released &&
+                if (options.StopAfterBlockedSec > 0.0 && options.HoldForward &&
+                    !options.BreakStandMode && !options.YawSweepMode &&
+                    autopilot_flying && !fly_stop_released &&
                     ingame_sec >= options.IdleBeforeFlySec)
                 {
                   const bool blocked_or_landed =
@@ -2534,16 +2607,16 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     {
                       blocked_move_started_ingame_sec = ingame_sec;
                     }
-                    collision_stop_elapsed_sec = (std::max)(
-                        0.0,
-                        ingame_sec - blocked_move_started_ingame_sec);
+                    collision_stop_elapsed_sec =
+                        (std::max)(0.0, ingame_sec -
+                                            blocked_move_started_ingame_sec);
                     if (collision_stop_elapsed_sec >=
                         options.StopAfterBlockedSec)
                     {
                       collision_stop_triggered = true;
                       std::cout << "flight-sim: sustained collision stop after "
-                                << collision_stop_elapsed_sec << "s at t="
-                                << ingame_sec << "s" << std::endl;
+                                << collision_stop_elapsed_sec
+                                << "s at t=" << ingame_sec << "s" << std::endl;
                       return true;
                     }
                   }
@@ -2557,7 +2630,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 // Set every frame (not lift-only) so rising canopy does not
                 // ratchet Y into altitude-blind void_near collapse.
                 // Dive: do NOT clamp Y — allow underwater stop (SoT 210431).
-                if (!options.BreakStandMode && !options.YawSweepMode && !in_dive &&
+                if (!options.BreakStandMode && !options.YawSweepMode &&
+                    !in_dive &&
                     (options.HoldSpace || options.MinAltitudeAboveSea > 0.0f ||
                      options.CruiseEyeY > 0.0f))
                 {
@@ -2565,7 +2639,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       world->GetProceduralSettings().SeaLevel);
                   glm::vec3 pos = camera->GetPosition();
                   const float target_y =
-                      resolve_cruise_eye_y(*world, pos, sea);
+                      ResolveFlightCruiseEyeY(options, *world, pos, sea);
                   if (target_y > 0.0f && pos.y != target_y)
                   {
                     pos.y = target_y;
@@ -2585,7 +2659,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     last_break_request_sec = ingame_sec;
                     // Optional boundary-face witness: "x y z yaw pitch" places
                     // the eye only for this synthetic break request. The normal
-                    // break-stand camera and all non-diagnostic runs are intact.
+                    // break-stand camera and all non-diagnostic runs are
+                    // intact.
                     if (const char *eye_spec =
                             std::getenv("CUBA_FLIGHT_BREAK_EYE"))
                     {
@@ -2659,7 +2734,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                   }
                 }
               }
-              TickHumanMotionQa(*world,*camera,window,ingame_sec);
+              TickHumanMotionQa(*world, *camera, window, ingame_sec);
               if (!start_focus_captured && ingame_sec >= 2.0)
               {
                 const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(
@@ -2675,8 +2750,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
               }
               if (route_line_tracking_enabled && route_line_origin_captured)
               {
-                constexpr float kDegreesToRadians =
-                    0.01745329251994329577f;
+                constexpr float kDegreesToRadians = 0.01745329251994329577f;
                 const float route_yaw_rad =
                     options.FaceYawDeg * kDegreesToRadians;
                 const glm::vec3 route_right(-std::sin(route_yaw_rad), 0.0f,
@@ -2727,8 +2801,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
         start_focus_captured
             ? static_cast<int>(std::max(std::abs(focus_dx), std::abs(focus_dz)))
             : 0;
-    if (options.HoldForward && !options.BreakStandMode &&
-        chunks_traveled < 3)
+    if (options.HoldForward && !options.BreakStandMode && chunks_traveled < 3)
     {
       std::cerr << "flight-sim: FAIL insufficient travel chunks="
                 << chunks_traveled << " start=(" << start_focus_cx << ","
@@ -2768,19 +2841,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
       std::ofstream report(report_path);
       if (report)
       {
-        const auto json_escape = [](const std::string &s) -> std::string {
-          std::string out;
-          out.reserve(s.size() + 8);
-          for (const char c : s)
-          {
-            if (c == '\\' || c == '"')
-            {
-              out.push_back('\\');
-            }
-            out.push_back(c);
-          }
-          return out;
-        };
+
         const char *git_sha = std::getenv("CUBATARIUM_GIT_SHA");
         const std::string git_sha_str =
             (git_sha && git_sha[0] != '\0') ? git_sha : "unknown";
@@ -2804,8 +2865,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
         localtime_r(&run_t, &run_tm);
 #endif
         std::ostringstream run_id;
-        run_id << world_name << '_'
-               << std::put_time(&run_tm, "%Y%m%dT%H%M%S");
+        run_id << world_name << '_' << std::put_time(&run_tm, "%Y%m%dT%H%M%S");
         std::string perf_jsonl = perf_path;
         for (char &c : perf_jsonl)
         {
@@ -2823,18 +2883,19 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                << "  \"ingame_seconds_requested\": " << in_game_seconds << ",\n"
                << "  \"wall_elapsed_sec\": " << wall_elapsed_sec << ",\n"
                << "  \"active_elapsed_sec\": " << active_elapsed_sec << ",\n"
-               << "  \"excluded_clock_gap_sec\": "
-               << excluded_clock_gap_sec << ",\n"
-               << "  \"excluded_clock_gap_count\": "
-               << excluded_clock_gap_count
+               << "  \"excluded_clock_gap_sec\": " << excluded_clock_gap_sec
                << ",\n"
-               << "  \"world\": \"" << json_escape(world_name) << "\",\n"
+               << "  \"excluded_clock_gap_count\": " << excluded_clock_gap_count
+               << ",\n"
+               << "  \"world\": \"" << EscapeFlightReportJson(world_name)
+               << "\",\n"
                << "  \"resolution\": [" << report_resolution.x << ", "
                << report_resolution.y << "],\n"
                << "  \"teleport_cruise\": "
                << (teleport_cruise ? "true" : "false") << ",\n"
                << "  \"manifest\": {\n"
-               << "    \"git_sha\": \"" << json_escape(git_sha_str) << "\",\n"
+               << "    \"git_sha\": \"" << EscapeFlightReportJson(git_sha_str)
+               << "\",\n"
                << "    \"build_type\": \"" << build_type << "\",\n"
                << "    \"route\": \"flight-sim\",\n"
                << "    \"config_hash\": \"\",\n"
@@ -2843,7 +2904,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                << (teleport_cruise ? "true" : "false") << ",\n"
                << "    \"obstacle_avoidance_enabled\": "
                << (options.AvoidObstacles ? "true" : "false") << ",\n"
-               << "    \"run_id\": \"" << json_escape(run_id.str()) << "\"\n"
+               << "    \"run_id\": \"" << EscapeFlightReportJson(run_id.str())
+               << "\"\n"
                << "  },\n"
                << "  \"autopilot_armed\": "
                << (autopilot_armed ? "true" : "false") << ",\n"
@@ -2875,12 +2937,11 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                << "    \"attempts\": " << avoidance_attempts << ",\n"
                << "    \"detours_started\": " << avoidance_detours_started
                << ",\n"
-               << "    \"detours_completed\": "
-               << avoidance_detours_completed << ",\n"
-               << "    \"detour_replans\": "
-               << avoidance_detour_replans << ",\n"
-               << "    \"plan_failures\": " << avoidance_plan_failures
+               << "    \"detours_completed\": " << avoidance_detours_completed
                << ",\n"
+               << "    \"detour_replans\": " << avoidance_detour_replans
+               << ",\n"
+               << "    \"plan_failures\": " << avoidance_plan_failures << ",\n"
                << "    \"planned_lateral_blocks\": "
                << avoidance_total_lateral_blocks << ",\n"
                << "    \"events\": [\n";
@@ -2889,8 +2950,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
           const AvoidanceEvent &event = avoidance_events[i];
           report << "      {\"at_sec\": " << event.at_sec
                  << ", \"hazard_distance\": " << event.hazard_distance
-                 << ", \"planned\": "
-                 << (event.planned ? "true" : "false")
+                 << ", \"planned\": " << (event.planned ? "true" : "false")
                  << ", \"side\": " << event.side
                  << ", \"side_offset\": " << event.side_offset
                  << ", \"pass_distance\": " << event.pass_distance << "}"
@@ -2913,14 +2973,16 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                << "    \"end_lateral_deviation_blocks\": "
                << end_route_lateral_deviation_blocks << "\n"
                << "  },\n"
-               << "  \"perf_jsonl\": \"" << json_escape(perf_jsonl) << "\",\n"
+               << "  \"perf_jsonl\": \"" << EscapeFlightReportJson(perf_jsonl)
+               << "\",\n"
                << "  \"analyze\": \"run tools/flight_sim_analyze.py on perf\"\n"
                << "}\n";
       }
     }
 
     UMovementDiagnosticsRecorder::SaveToFile(
-        *world, (report_path.parent_path() / "movement_diagnostics.json").string());
+        *world,
+        (report_path.parent_path() / "movement_diagnostics.json").string());
     std::cout << "flight-sim: report written path=" << report_path.string()
               << " — shutting down (fast)" << std::endl;
     world->PrepareForShutdownFast();
@@ -2942,7 +3004,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
   }
   catch (const std::exception &e)
   {
-    CubatariumLogError("FlightSim",std::string("exception: ")+e.what());
+    CubatariumLogError("FlightSim", std::string("exception: ") + e.what());
     CubatariumFlushLogs();
     std::cerr << "flight-sim: exception: " << e.what() << std::endl;
     std::_Exit(1);
