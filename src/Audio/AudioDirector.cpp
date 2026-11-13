@@ -5,6 +5,7 @@
 #include "ThirdParty/miniaudio.h"
 
 #include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <cstring>
 #include <numeric>
@@ -23,6 +24,9 @@ struct StreamingLoop
   int FadingOut{-1};
   float Fade{0.f};
   std::string SetName; // current source identity (set name or track path)
+  /// Last source that failed to open. Stops a missing file from being
+  /// probed again on every housekeeping tick.
+  std::string MissName;
   float BaseGain{1.f};
 
   void FreeSlot(int index)
@@ -46,6 +50,13 @@ struct UAudioDirector::HousekeepingState
   std::vector<int> PlayOrder;
   std::size_t PlayPos{0};
   std::string Context;
+  /// Relative paths last seen under the music root.
+  std::vector<std::string> ScannedFiles;
+  bool MusicScanned{false};
+  float NextMusicScanSec{0.f};
+  /// Open failed for every track; wait for the next scan instead of looping.
+  bool MusicGiveUp{false};
+  std::vector<std::string> Unopenable;
 
   /// Continuous ambience layers.
   StreamingLoop BiomeLoop;
@@ -55,6 +66,8 @@ struct UAudioDirector::HousekeepingState
   std::vector<std::uint32_t> DayStingers;
   std::vector<std::uint32_t> NightStingers;
   std::string StingerBiome;
+  /// Last logged biome (diagnostics; also gates the log rate).
+  std::string LastBiomeId;
   float NextStingerSec{0.f};
   std::string LastWeatherName;
 };
@@ -64,6 +77,163 @@ namespace
 
 /// Housekeeping cadence for ambience/music scheduling (block in seconds).
 constexpr std::uint32_t kIdleTickMs = 100;
+/// How often an empty music context rechecks the disk for new files.
+constexpr float kMusicRescanSec = 3.f;
+
+bool IsMusicFile(const std::filesystem::path &path)
+{
+  std::string ext = path.extension().string();
+  for (char &ch : ext)
+  {
+    ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+  }
+  return ext == ".mp3" || ext == ".wav" || ext == ".flac";
+}
+
+std::vector<std::string> ListMusicFiles(const std::filesystem::path &root)
+{
+  std::vector<std::string> files;
+  std::error_code error;
+  if (!std::filesystem::exists(root, error) || error)
+  {
+    return files;
+  }
+  std::filesystem::recursive_directory_iterator it(
+      root, std::filesystem::directory_options::skip_permission_denied, error);
+  const std::filesystem::recursive_directory_iterator end;
+  for (; !error && it != end; it.increment(error))
+  {
+    std::error_code fileError;
+    if (!it->is_regular_file(fileError) || fileError || !IsMusicFile(it->path()))
+    {
+      continue;
+    }
+    const std::filesystem::path relative =
+        std::filesystem::relative(it->path(), root, fileError);
+    if (fileError)
+    {
+      continue;
+    }
+    files.push_back(relative.generic_string());
+  }
+  std::sort(files.begin(), files.end());
+  return files;
+}
+
+bool ContainsPath(const std::vector<std::string> &paths, const std::string &path)
+{
+  return std::find(paths.begin(), paths.end(), path) != paths.end();
+}
+
+void AdvanceLoopFade(StreamingLoop &loop, float fadeStep)
+{
+  if (loop.FadingOut < 0)
+  {
+    return;
+  }
+  loop.Fade = std::min(1.f, loop.Fade + fadeStep);
+  const float outGain = loop.BaseGain * (1.f - loop.Fade);
+  const float inGain = loop.BaseGain * loop.Fade;
+  if (loop.FadingOut >= 0 && loop.Ready[loop.FadingOut])
+  {
+    ma_sound_set_volume(&loop.Slots[loop.FadingOut], outGain);
+  }
+  if (loop.FadingIn >= 0 && loop.Ready[loop.FadingIn])
+  {
+    ma_sound_set_volume(&loop.Slots[loop.FadingIn], inGain);
+  }
+  if (loop.Fade >= 1.f)
+  {
+    const int done = loop.FadingOut;
+    loop.FadingOut = -1;
+    loop.FadingIn = -1;
+    if (done >= 0)
+    {
+      loop.FreeSlot(done);
+      if (loop.Active == done)
+      {
+        loop.Active = loop.Ready[1 - done] ? 1 - done : -1;
+      }
+    }
+  }
+}
+
+bool StartLoopCrossfade(UAudioEngine &engine, ma_engine *maEngine,
+                        StreamingLoop &loop, const std::string &setName,
+                        const std::filesystem::path &file, bool looping,
+                        float gain, AudioBus bus)
+{
+  if (loop.SetName == setName &&
+      (loop.Active >= 0 || loop.FadingIn >= 0 || loop.FadingOut >= 0))
+  {
+    return true;
+  }
+  if (loop.MissName == setName)
+  {
+    return false;
+  }
+  const int freeSlot = loop.Active < 0 ? 0 : 1 - loop.Active;
+  loop.FreeSlot(freeSlot);
+  ma_sound_group *group = static_cast<ma_sound_group *>(engine.GetRawGroup(bus));
+  const ma_sound_flags flags = static_cast<ma_sound_flags>(
+      MA_SOUND_FLAG_STREAM | MA_SOUND_FLAG_NO_SPATIALIZATION);
+  const ma_result result =
+      ma_sound_init_from_file(maEngine, file.string().c_str(), flags, group,
+                              nullptr, &loop.Slots[freeSlot]);
+  if (result != MA_SUCCESS)
+  {
+    loop.Ready[freeSlot] = false;
+    loop.MissName = setName;
+    return false;
+  }
+  loop.Ready[freeSlot] = true;
+  loop.MissName.clear();
+  ma_sound_set_looping(&loop.Slots[freeSlot], looping ? MA_TRUE : MA_FALSE);
+  loop.BaseGain = gain;
+  ma_sound_set_volume(&loop.Slots[freeSlot], loop.Active >= 0 ? 0.f : gain);
+  ma_sound_set_start_time_in_pcm_frames(&loop.Slots[freeSlot],
+                                        ma_engine_get_time(maEngine));
+  ma_sound_start(&loop.Slots[freeSlot]);
+  if (loop.Active >= 0 && loop.Ready[loop.Active])
+  {
+    loop.FadingOut = loop.Active;
+    loop.FadingIn = freeSlot;
+    loop.Fade = 0.f;
+  }
+  else
+  {
+    loop.Active = freeSlot;
+    loop.FadingOut = -1;
+    loop.FadingIn = -1;
+  }
+  loop.SetName = setName;
+  return true;
+}
+
+/// Fades a loop out from its current gain and clears its source.
+void StopStreamingLoop(StreamingLoop &loop)
+{
+  if (loop.SetName.empty())
+  {
+    loop.MissName.clear();
+    return;
+  }
+  if (loop.Active >= 0 && loop.FadingOut < 0)
+  {
+    loop.FadingOut = loop.Active;
+    loop.FadingIn = -1;
+    loop.Fade = 0.f;
+  }
+  else if (loop.FadingOut < 0)
+  {
+    loop.SetName.clear();
+    loop.MissName.clear();
+    loop.FreeSlot(0);
+    loop.FreeSlot(1);
+    loop.Active = -1;
+  }
+}
+
 /// Seconds between retries after a failed device open (no-device machines).
 constexpr float kDeviceRetrySeconds = 5.f;
 /// Random one-shot ambience window (birds, drips — the "living world" layer).
@@ -397,6 +567,9 @@ void UAudioDirector::Run()
       {
         HandleEvent(event, settings);
       }
+      // Keep crossfades/stingers advancing even during event bursts; the
+      // tick is cheap and must not starve behind footsteps.
+      TickHousekeeping(static_cast<float>(kIdleTickMs) / 1000.f);
       continue;
     }
 
@@ -457,6 +630,108 @@ void UAudioDirector::HandleEvent(const UAudioEvent &event,
   EventsHandled.fetch_add(1);
 }
 
+void UAudioDirector::TickMusic(const AudioAmbienceSnapshot &amb, float fadeStep)
+{
+  ma_engine *maEngine = static_cast<ma_engine *>(Engine.GetRawEngine());
+  if (!maEngine || !Hk)
+  {
+    return;
+  }
+  // Music never stands in for a biome bed: an empty context fades the
+  // music bus out and leaves ambience running on its own bus.
+  const std::string biomeId =
+      amb.Valid && amb.InGame ? std::string(amb.BiomeId) : std::string();
+  const bool isNight = amb.Valid && amb.InGame && amb.IsNight;
+  MusicSelection selection =
+      MusicManifest.Select(Hk->ScannedFiles, biomeId, isNight);
+  const bool contextChanged = selection.Context != Hk->Context;
+  const bool scanDue = !Hk->MusicScanned || NowSec >= Hk->NextMusicScanSec;
+  if ((contextChanged || !Hk->MusicScanned ||
+       (selection.Files.empty() && scanDue)) &&
+      (contextChanged || scanDue))
+  {
+    Hk->ScannedFiles = ListMusicFiles(MusicRoot);
+    Hk->MusicScanned = true;
+    Hk->NextMusicScanSec = NowSec + kMusicRescanSec;
+    selection = MusicManifest.Select(Hk->ScannedFiles, biomeId, isNight);
+  }
+  const bool selectionChanged =
+      selection.Context != Hk->Context || selection.Files != Hk->Playlist;
+  if (selectionChanged)
+  {
+    Hk->Context = selection.Context;
+    Hk->Playlist = selection.Files;
+    Hk->PlayOrder.resize(Hk->Playlist.size());
+    std::iota(Hk->PlayOrder.begin(), Hk->PlayOrder.end(), 0);
+    if (!Hk->PlayOrder.empty())
+    {
+      std::shuffle(Hk->PlayOrder.begin(), Hk->PlayOrder.end(), Random);
+    }
+    Hk->PlayPos = 0;
+    Hk->MusicGiveUp = false;
+    Hk->Unopenable.clear();
+    CubatariumLogInfo("Audio", "music: context '" + Hk->Context +
+                                   "' tracks=" +
+                                   std::to_string(Hk->Playlist.size()));
+    if (Hk->Playlist.empty())
+    {
+      StopStreamingLoop(Hk->Music);
+    }
+  }
+  if (!Hk->Playlist.empty() && !Hk->MusicGiveUp)
+  {
+    const bool finished =
+        Hk->Music.Active >= 0 && Hk->Music.Ready[Hk->Music.Active] &&
+        ma_sound_at_end(&Hk->Music.Slots[Hk->Music.Active]);
+    const bool idle = Hk->Music.Active < 0 && Hk->Music.FadingOut < 0 &&
+                      Hk->Music.FadingIn < 0;
+    if (selectionChanged || finished || idle)
+    {
+      bool started = false;
+      for (std::size_t attempt = 0; attempt < Hk->Playlist.size(); ++attempt)
+      {
+        if (Hk->PlayPos >= Hk->PlayOrder.size())
+        {
+          std::shuffle(Hk->PlayOrder.begin(), Hk->PlayOrder.end(), Random);
+          if (Hk->PlayOrder.size() > 1 &&
+              Hk->Music.SetName == Hk->Playlist[Hk->PlayOrder.front()])
+          {
+            std::swap(Hk->PlayOrder.front(), Hk->PlayOrder.back());
+          }
+          Hk->PlayPos = 0;
+        }
+        const std::string &trackFile = Hk->Playlist[Hk->PlayOrder[Hk->PlayPos]];
+        ++Hk->PlayPos;
+        if (ContainsPath(Hk->Unopenable, trackFile))
+        {
+          continue;
+        }
+        if (StartLoopCrossfade(Engine, maEngine, Hk->Music, trackFile,
+                               MusicRoot / trackFile, false, 1.f,
+                               AudioBus::Music))
+        {
+          started = true;
+          break;
+        }
+        Hk->Unopenable.push_back(trackFile);
+        CubatariumLogInfo("Audio", "music: failed to open " + trackFile);
+      }
+      if (!started)
+      {
+        Hk->MusicGiveUp = true;
+        CubatariumLogInfo("Audio", "music: context '" + Hk->Context +
+                                       "' has no playable files");
+        StopStreamingLoop(Hk->Music);
+      }
+    }
+  }
+  else if (Hk->Playlist.empty())
+  {
+    StopStreamingLoop(Hk->Music);
+  }
+  AdvanceLoopFade(Hk->Music, fadeStep);
+}
+
 void UAudioDirector::TickHousekeeping(float dt)
 {
   if (!Engine.IsReady() || !Hk)
@@ -473,145 +748,18 @@ void UAudioDirector::TickHousekeeping(float dt)
   const float crossfadeSec =
       std::max(0.5f, MusicManifest.GetCrossfadeSeconds());
   const float fadeStep = dt / crossfadeSec;
-
-  auto advanceFade = [&](StreamingLoop &loop)
-  {
-    if (loop.FadingOut < 0)
-    {
-      return;
-    }
-    loop.Fade = std::min(1.f, loop.Fade + fadeStep);
-    const float outGain = loop.BaseGain * (1.f - loop.Fade);
-    const float inGain = loop.BaseGain * loop.Fade;
-    if (loop.FadingOut >= 0 && loop.Ready[loop.FadingOut])
-    {
-      ma_sound_set_volume(&loop.Slots[loop.FadingOut], outGain);
-    }
-    if (loop.FadingIn >= 0 && loop.Ready[loop.FadingIn])
-    {
-      ma_sound_set_volume(&loop.Slots[loop.FadingIn], inGain);
-    }
-    if (loop.Fade >= 1.f)
-    {
-      // Swap over: the incoming slot becomes the active one.
-      const int done = loop.FadingOut;
-      loop.FadingOut = -1;
-      loop.FadingIn = -1;
-      if (done >= 0)
-      {
-        loop.FreeSlot(done);
-        if (loop.Active == done)
-        {
-          loop.Active = loop.Ready[1 - done] ? 1 - done : -1;
-        }
-      }
-    }
-  };
-
-  auto startCrossfade = [&](StreamingLoop &loop, const std::string &setName,
-                            const std::filesystem::path &file, bool looping,
-                            float gain)
-  {
-    if (loop.SetName == setName)
-    {
-      return;
-    }
-    const int freeSlot = loop.Active < 0 ? 0 : 1 - loop.Active;
-    loop.FreeSlot(freeSlot);
-    ma_sound_group *group =
-        static_cast<ma_sound_group *>(Engine.GetRawGroup(AudioBus::Music));
-    const ma_sound_flags flags = static_cast<ma_sound_flags>(
-        MA_SOUND_FLAG_STREAM | MA_SOUND_FLAG_NO_SPATIALIZATION);
-    const ma_result result =
-        ma_sound_init_from_file(maEngine, file.string().c_str(), flags, group,
-                                nullptr, &loop.Slots[freeSlot]);
-    if (result != MA_SUCCESS)
-    {
-      loop.Ready[freeSlot] = false;
-      return;
-    }
-    loop.Ready[freeSlot] = true;
-    ma_sound_set_looping(&loop.Slots[freeSlot], looping ? MA_TRUE : MA_FALSE);
-    loop.BaseGain = gain;
-    ma_sound_set_volume(&loop.Slots[freeSlot],
-                        loop.Active >= 0 ? 0.f : gain);
-    ma_sound_set_start_time_in_pcm_frames(&loop.Slots[freeSlot],
-                                          ma_engine_get_time(maEngine));
-    ma_sound_start(&loop.Slots[freeSlot]);
-    if (loop.Active >= 0 && loop.Ready[loop.Active])
-    {
-      loop.FadingOut = loop.Active;
-      loop.FadingIn = freeSlot;
-      loop.Fade = 0.f;
-    }
-    else
-    {
-      loop.Active = freeSlot;
-      loop.FadingOut = -1;
-      loop.FadingIn = -1;
-    }
-    loop.SetName = setName;
-  };
-
-  // ---- Music playlist ----
-  {
-    const UMusicManifest &manifest = MusicManifest;
-    const MusicPlaylistDef *playlist =
-        manifest.Match(amb.Valid && amb.InGame ? std::string(amb.BiomeId)
-                                               : std::string());
-    const std::string context =
-        playlist ? playlist->Context : std::string();
-    if (Hk->Playlist.empty() || context != Hk->Context)
-    {
-      Hk->Context = context;
-      Hk->Playlist =
-          playlist ? playlist->Files : std::vector<std::string>{};
-      Hk->PlayOrder.resize(Hk->Playlist.size());
-      std::iota(Hk->PlayOrder.begin(), Hk->PlayOrder.end(), 0);
-      std::shuffle(Hk->PlayOrder.begin(), Hk->PlayOrder.end(), Random);
-      Hk->PlayPos = 0;
-    }
-    if (!Hk->Playlist.empty())
-    {
-      // Track finished → start the next one (no immediate repeat).
-      const bool finished =
-          Hk->Music.Active >= 0 && Hk->Music.Ready[Hk->Music.Active] &&
-          ma_sound_at_end(&Hk->Music.Slots[Hk->Music.Active]);
-      const bool idle = Hk->Music.Active < 0 && Hk->Music.FadingOut < 0;
-      if (finished || idle)
-      {
-        if (Hk->PlayPos >= Hk->PlayOrder.size())
-        {
-          std::shuffle(Hk->PlayOrder.begin(), Hk->PlayOrder.end(), Random);
-          // Keep the same track from repeating back-to-back.
-          if (Hk->PlayOrder.size() > 1 && Hk->Music.SetName ==
-                                              Hk->Playlist[Hk->PlayOrder.front()])
-          {
-            std::swap(Hk->PlayOrder.front(), Hk->PlayOrder.back());
-          }
-          Hk->PlayPos = 0;
-        }
-        const std::string &trackFile =
-            Hk->Playlist[Hk->PlayOrder[Hk->PlayPos]];
-        ++Hk->PlayPos;
-        startCrossfade(Hk->Music, trackFile, MusicRoot / trackFile, false,
-                       1.f);
-      }
-    }
-    advanceFade(Hk->Music);
-  }
+  TickMusic(amb, fadeStep);
 
   // ---- Biome ambience loop ----
   {
     const UMaterialSoundMap *materialMap = GetAudioMaterialMap();
     std::string targetSet;
     float targetGain = 0.f;
-    if (materialMap)
+    // Menu / not in game: no world ambience at all — silence, not fallback.
+    if (materialMap && amb.Valid && amb.InGame)
     {
       const BiomeAmbienceDef *biome =
-          materialMap->ResolveBiome(amb.Valid && amb.InGame
-                                        ? std::string(amb.BiomeId)
-                                        : std::string());
+          materialMap->ResolveBiome(std::string(amb.BiomeId));
       if (biome && !biome->LoopSet.empty())
       {
         if (const SoundSetDef *set = Manifest.FindByName(biome->LoopSet))
@@ -623,14 +771,27 @@ void UAudioDirector::TickHousekeeping(float dt)
           }
         }
       }
+      if (std::string(amb.BiomeId) != Hk->LastBiomeId)
+      {
+        Hk->LastBiomeId = amb.BiomeId;
+        CubatariumLogInfo(
+            "Audio", std::string("biome '") + amb.BiomeId + "' ambience: " +
+                         (targetSet.empty() ? std::string("(none)")
+                                            : targetSet));
+      }
     }
     if (!targetSet.empty())
     {
       const SoundSetDef *set = Manifest.FindByName(targetSet);
-      startCrossfade(Hk->BiomeLoop, targetSet,
-                     SoundsRoot / set->Files.front(), true, targetGain);
+      StartLoopCrossfade(Engine, maEngine, Hk->BiomeLoop, targetSet,
+                         SoundsRoot / set->Files.front(), true, targetGain,
+                         AudioBus::Ambient);
     }
-    advanceFade(Hk->BiomeLoop);
+    else
+    {
+      StopStreamingLoop(Hk->BiomeLoop);
+    }
+    AdvanceLoopFade(Hk->BiomeLoop, fadeStep);
   }
 
   // ---- Weather overlay loop ----
@@ -660,28 +821,16 @@ void UAudioDirector::TickHousekeeping(float dt)
     if (!targetSet.empty())
     {
       const SoundSetDef *set = Manifest.FindByName(targetSet);
-      startCrossfade(Hk->WeatherLoop, targetSet,
-                     SoundsRoot / set->Files.front(), true, targetGain);
+      StartLoopCrossfade(Engine, maEngine, Hk->WeatherLoop, targetSet,
+                         SoundsRoot / set->Files.front(), true, targetGain,
+                         AudioBus::Ambient);
     }
     else if (!Hk->WeatherLoop.SetName.empty())
     {
-      // Weather cleared: fade out whatever overlay is playing.
-      if (Hk->WeatherLoop.Active >= 0 && Hk->WeatherLoop.FadingOut < 0)
-      {
-        Hk->WeatherLoop.FadingOut = Hk->WeatherLoop.Active;
-        Hk->WeatherLoop.FadingIn = -1;
-        Hk->WeatherLoop.Fade = 0.f;
-        Hk->WeatherLoop.BaseGain = 0.f;
-      }
-      else if (Hk->WeatherLoop.FadingOut < 0)
-      {
-        Hk->WeatherLoop.SetName.clear();
-        Hk->WeatherLoop.FreeSlot(0);
-        Hk->WeatherLoop.FreeSlot(1);
-        Hk->WeatherLoop.Active = -1;
-      }
+      // Weather cleared / left the world: fade the overlay out.
+      StopStreamingLoop(Hk->WeatherLoop);
     }
-    advanceFade(Hk->WeatherLoop);
+    AdvanceLoopFade(Hk->WeatherLoop, fadeStep);
   }
 
   // ---- Random stingers (birds by day, crickets/drips by night) ----

@@ -56,6 +56,45 @@ int main()
   Expect(!broken.Load(&nlohmann::json::parse(R"json({"contexts": []})json")),
          "missing contexts object rejected");
 
+  // Available files bind by letters and digits. A biome with none of its
+  // own tracks stays silent instead of borrowing the overworld playlist.
+  const nlohmann::json pickup = nlohmann::json::parse(R"json({
+    "contexts": {
+      "overworld": ["1-08 Theme of Prontera.mp3"],
+      "forest": ["1-03 Peaceful Forest.mp3"],
+      "desert": ["1-24 Desert.mp3"],
+      "caves": ["1-19 Under the ground.mp3"],
+      "night": ["1-07 Wind of Tragedy.mp3"]
+    }
+  })json");
+  cutum::UMusicManifest music;
+  Expect(music.Load(&pickup), "pickup manifest parses");
+  const std::vector<std::string> disk = {
+      "1-08. Theme of Prontera.mp3", "album/extra theme.mp3"};
+  const cutum::MusicSelection menu = music.Select(disk, "", false);
+  Expect(menu.Context == "overworld", "menu uses overworld");
+  Expect(menu.Files.size() == 2, "overworld keeps unmatched files");
+  Expect(menu.Files[0] == "1-08. Theme of Prontera.mp3",
+         "khinsider dot still matches");
+  Expect(menu.Files[1] == "album/extra theme.mp3",
+         "extra file stays on overworld");
+
+  const cutum::MusicSelection forest = music.Select(disk, "dense_forest", false);
+  Expect(forest.Context == "forest", "forest context chosen");
+  Expect(forest.Files.empty(), "forest does not borrow overworld");
+
+  const cutum::MusicSelection nightFallback =
+      music.Select(disk, "savanna", true);
+  Expect(nightFallback.Context == "overworld" && nightFallback.Files.size() == 2,
+         "night without files keeps the biome playlist");
+
+  const std::vector<std::string> withNight = {
+      "1-08. Theme of Prontera.mp3", "1-07 Wind of Tragedy.mp3"};
+  const cutum::MusicSelection atNight = music.Select(withNight, "forest", true);
+  Expect(atNight.Context == "night" && atNight.Files.size() == 1 &&
+             atNight.Files[0] == "1-07 Wind of Tragedy.mp3",
+         "night playlist plays when its files exist");
+
   std::cout << kTestName << " OK\n";
   return 0;
 }

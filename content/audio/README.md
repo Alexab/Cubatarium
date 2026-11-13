@@ -58,13 +58,19 @@ refresh `bin/audio/sounds/`.
 | creature hurt/death, eat | 80 CC0 Creature SFX (OGA, rubberduck) |
 | pickup, equip, ui open/close | Kenney RPG Audio (kenney.nl) |
 | ui click | Kenney UI Audio (kenney.nl) |
-| splash, ocean loop | 40 CC0 water/splash/slime SFX (OGA, rubberduck) |
-| forest loop, bird stingers | Ambient Bird Sounds (OGA, isaiah658) |
+| splash | 40 CC0 water/splash/slime SFX (OGA, rubberduck) |
+| ocean loop | Calm ocean waves (Freesound, SamsterBirdies, CC0) |
+| forest loop | Ambiance_Wind_Forest_Calm_Loop_Stereo (Freesound, Nox_Sound, CC0) |
+| bird stingers | Ambient Bird Sounds (OGA, isaiah658) |
 | crickets stingers | Cricket sounds (OGA, syncopika) |
 | cave loop, drip stingers | Dripping water loop (OGA, qubodup) |
 | rain loop | Rain (loopable) (OGA, ylmir) |
 | torch crackle | Fire Crackling (OGA, AntumDeluge) |
 | wind/desert loops | synthesized by install_sounds.py (no external license) |
+
+The forest and ocean loops in `bin/audio/sounds/` are those CC0 recordings
+converted to 44.1 kHz 16-bit PCM. Bird one-shots stay separate from the
+forest bed.
 
 ## Music (RO OST selection)
 
@@ -82,5 +88,14 @@ these files in `bin/audio/music/`:
 - caves: `1-19 Under the ground.mp3`, `1-16 Labyrinth.mp3`
 - night: `1-07 Wind of Tragedy.mp3`, `2-14 Fear....mp3`
 
-Playlists are mapped to contexts in `music_manifest.json` (longest contained
-context key wins; `overworld` is the fallback, `night` overrides at night).
+Playlists are mapped to contexts in `music_manifest.json`. A downloaded
+file matches its manifest entry when the letters and digits agree, so
+khinsider names like `1-08. Theme of Prontera.mp3` satisfy
+`1-08 Theme of Prontera.mp3`. Files that match nothing are added only to
+the overworld playlist.
+
+Music and biome ambience are separate. A forest, desert or cave context
+with none of its own files leaves the music bus silent; the biome loop
+keeps playing. `night` replaces the music playlist only when those files
+exist and it is night. `overworld` plays in the menu and in biomes without
+their own key.

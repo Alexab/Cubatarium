@@ -92,9 +92,12 @@ leaves/gravel/mud (TinyWorlds), Swishes Sound Pack (artisticdude), 100 CC0
 SFX, 40 CC0 water/splash/slime SFX, 80 CC0 Creature SFX (rubberduck),
 Ambient Bird Sounds (isaiah658), Cricket sounds (syncopika), Dripping water
 loop, Rain (loopable) (ylmir), Fire Crackling (AntumDeluge) — all CC0; Horse
-gallop on different surfaces (only its CC0 tracks used). The wind/desert
-loops are synthesized by the local installer. The Ragnarok Online OST music
-is Gravity copyright — local personal use only.
+gallop on different surfaces (only its CC0 tracks used). The forest bed is
+Ambiance_Wind_Forest_Calm_Loop_Stereo by Nox_Sound (Freesound, CC0); bird
+calls stay one-shots from Ambient Bird Sounds. The ocean bed is Calm ocean
+waves by SamsterBirdies (Freesound, CC0). The open-wind and desert loops are
+synthesized by the local installer. The Ragnarok Online OST music is Gravity
+copyright — local personal use only, and it never replaces a biome bed.
 
 ---
 

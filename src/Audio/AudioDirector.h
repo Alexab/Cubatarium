@@ -69,6 +69,8 @@ private:
   void HandleEvent(const UAudioEvent &event, const AudioSettings &settings);
   /// 10 Hz housekeeping: music playlists, biome/weather loops, stingers.
   void TickHousekeeping(float dt);
+  /// Music bus only. An empty context fades music out and leaves ambience.
+  void TickMusic(const AudioAmbienceSnapshot &amb, float fadeStep);
   void ResetHousekeeping();
 
   std::uint32_t ResolveEventSet(const UAudioEvent &event) const;
