@@ -32,7 +32,7 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
     return;
   }
 
-  const glm::vec3 eye = camera->GetPosition();
+  const glm::vec3 eye = camera->GetRenderPosition();
   const SampledFluidState fluid =
       world.SampleFluidPhysics(eye, camera->GetPlayerCapsule());
   const FluidColumnSurface column = world.FindFluidColumnSurface(eye);

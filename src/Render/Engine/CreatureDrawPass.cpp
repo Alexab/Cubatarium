@@ -486,7 +486,7 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
   FrameBonePalette.reset();
 
   const Frustum frustum = Frustum::FromViewProjection(viewProj);
-  const glm::vec3 cameraPos = camera->GetPosition();
+  const glm::vec3 cameraPos = camera->GetRenderPosition();
   TimingProbe.BeginFrame(dt, cameraPos.x, cameraPos.y, cameraPos.z);
 
   // Narrow draw context for the visual backends: queue, textures, settings,
@@ -549,7 +549,7 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
         ++Stats.CreaturesConsidered;
         const bool controlled_first_person =
             creature.GetId() == controlledId &&
-            camera->GetPerspective() == CameraPerspective::FirstPerson &&
+            (camera->GetPerspective() == CameraPerspective::FirstPerson || camera->ShouldHideLocalBody()) &&
             !camera->IsIsometricProjection();
 
         auto draw_debug_bounds = [&]()
