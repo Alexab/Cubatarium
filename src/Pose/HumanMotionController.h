@@ -147,7 +147,8 @@ public:
       if(stance && (!s.stanceLast[side] || speed<.05f)) {
         s.contacts[side]=toWorld(foot);
         if(f.supportValid[side])s.contacts[side].y=f.supportY[side]+.125f*in.scale;
-        s.unreachable[side]=false;s.ikWeights[side]=1.f;
+        if(!s.stanceLast[side]){s.unreachable[side]=false;s.ikWeights[side]=1.f;}
+        else if(speed<.05f)s.unreachable[side]=false;
       }
       s.stanceLast[side]=stance;
       s.planted[side]=stance;
@@ -164,17 +165,25 @@ public:
       float distance=glm::length(delta);
       const float upperLength=.375f,lowerLength=.25f;
       const float maxReach=upperLength+lowerLength-.00001f;
+      const float minReach=std::abs(upperLength-lowerLength)+.00001f;
       if(distance>maxReach){
         if(distance>upperLength+lowerLength+.001f)s.unreachable[side]=true;
         delta*=maxReach/std::max(distance,.001f);distance=maxReach;
       }
+      if(distance<minReach) {
+        if(distance<std::abs(upperLength-lowerLength)-.001f)s.unreachable[side]=true;
+        delta=(distance>.00001f?delta/distance:glm::vec3(0,-1,0))*minReach;distance=minReach;
+      }
       if(!stance)s.unreachable[side]=false;
       if(s.unreachable[side])s.planted[side]=false;
       s.ikWeights[side]=glm::mix(s.ikWeights[side],s.unreachable[side]?0.f:1.f,1.f-std::exp(-dt/.06f));
-      distance=std::max(distance,.01f);
       const glm::vec3 axis=delta/distance;
       glm::vec3 pole=inversePelvis*glm::vec3(0,0,-1);
-      pole=glm::normalize(pole-axis*glm::dot(pole,axis));
+      pole-=axis*glm::dot(pole,axis);
+      if(glm::length(pole)<.00001f) {
+        pole=inversePelvis*glm::vec3(0,-1,0);pole-=axis*glm::dot(pole,axis);
+      }
+      pole=glm::normalize(pole);
       const float along=(upperLength*upperLength-lowerLength*lowerLength+distance*distance)/(2.f*distance);
       const glm::vec3 knee=hip+axis*along+pole*std::sqrt(std::max(0.f,upperLength*upperLength-along*along));
       const auto upper=FromDown(glm::normalize(knee-hip));

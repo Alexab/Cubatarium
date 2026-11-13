@@ -100,6 +100,17 @@ int main(int argc,char **argv) {
   water.facts.swimClearance=.15f;
   auto tightPose=HumanMotionController::Compute(water,tightWater,0.f);
   Require(std::abs(glm::angle(tightPose.bones.at("rightArm").rotation))<std::abs(glm::angle(openPose.bones.at("rightArm").rotation)),"tight water groups arms without changing collider");
+  HumanMotionState folded;HumanMotionInput close;
+  close.facts.stanceBlend=1.f;close.facts.supportValid[0]=close.facts.supportValid[1]=true;close.facts.supportY[0]=.3375f;
+  const auto foldedPose=HumanMotionController::Compute(close,folded,1.f/fps);
+  Require(!folded.planted[0],"too-close support disables IK");
+  for(const char *bone:{"rightLeg","rightShin","rightFoot"})Require(std::isfinite(foldedPose.bones.at(bone).rotation.w),"folded IK stays finite");
+  for(int frame=0;frame<fps/2;++frame)HumanMotionController::Compute(close,folded,1.f/fps);
+  Require(folded.ikWeights[0]<.001f,"unreachable idle contact completes its fade");
+  HumanMotionState aligned;aligned.distancePhase=1.57079633f;
+  close.facts.horizontalSpeed=.9f;close.facts.actualVelocity={0,0,.9f};
+  const auto alignedPose=HumanMotionController::Compute(close,aligned,0.f);
+  Require(std::isfinite(alignedPose.bones.at("rightLeg").rotation.w),"aligned bend pole uses stable fallback");
  }
  const float radius=CameraVolumeRadius(.1f,90.f,16.f/9.f);
  Require(radius>=.20f,"near-plane corners protected");
