@@ -1,0 +1,1265 @@
+{
+  "frames": [
+    {
+      "id": "male_none_view0",
+      "sha256": "16587c30a90dd66d926ccafb2cf01be30fcdf38d1c9bc2ea70e9180c3753566a",
+      "bbox": [
+        77,
+        27,
+        179,
+        224
+      ]
+    },
+    {
+      "id": "male_none_view1",
+      "sha256": "2fe3dfbf7c2753418c26af619058447aed90e4c071bacf07e0a31408f854abc7",
+      "bbox": [
+        101,
+        27,
+        155,
+        229
+      ]
+    },
+    {
+      "id": "male_none_view2",
+      "sha256": "3f94cd684b2074bda29a2b95f79db5032e8b3f351228feef8e532c9ad84df68e",
+      "bbox": [
+        77,
+        27,
+        179,
+        224
+      ]
+    },
+    {
+      "id": "male_none_view3",
+      "sha256": "a9e8c0ee6ad08e005fe3d35faf89664f415bd785eede1876eaf58ee350888f59",
+      "bbox": [
+        87,
+        27,
+        174,
+        229
+      ]
+    },
+    {
+      "id": "male_none_helmet",
+      "sha256": "573beba7a3333fee1709aa8ea74d158971e9cf86d33b14eb7f09f3916eff8a23",
+      "bbox": [
+        50,
+        18,
+        174,
+        229
+      ]
+    },
+    {
+      "id": "male_short_view0",
+      "sha256": "e770495a74f932829355d5bae0e9eb2180268e41c239ea1e60bd1769894ae86b",
+      "bbox": [
+        79,
+        27,
+        177,
+        223
+      ]
+    },
+    {
+      "id": "male_short_view1",
+      "sha256": "2654a2ce8b0665d2aa164505f98ee5bd88748d9ed287a63425faaca36f087e24",
+      "bbox": [
+        99,
+        27,
+        157,
+        228
+      ]
+    },
+    {
+      "id": "male_short_view2",
+      "sha256": "35afb38ae18f39fca4bcb13ac8ef9a70cce969de69a7a8257ede396d07f6324a",
+      "bbox": [
+        79,
+        27,
+        177,
+        223
+      ]
+    },
+    {
+      "id": "male_short_view3",
+      "sha256": "4bdf5409237cef25a57ce7da0a05db1e7b9047831af8faa35e15cd88b4315972",
+      "bbox": [
+        88,
+        26,
+        173,
+        229
+      ]
+    },
+    {
+      "id": "male_short_helmet",
+      "sha256": "573beba7a3333fee1709aa8ea74d158971e9cf86d33b14eb7f09f3916eff8a23",
+      "bbox": [
+        50,
+        18,
+        174,
+        229
+      ]
+    },
+    {
+      "id": "male_bob_view0",
+      "sha256": "5e9452ce2b211df9a065abbb112f2f7e5bfa661d7c77c7108073741003dfc102",
+      "bbox": [
+        79,
+        27,
+        177,
+        223
+      ]
+    },
+    {
+      "id": "male_bob_view1",
+      "sha256": "7f12e4683ab0f747c4fd5e0caca56a4909ffd2e3ffc87d724be1ac34679b5c31",
+      "bbox": [
+        99,
+        27,
+        157,
+        228
+      ]
+    },
+    {
+      "id": "male_bob_view2",
+      "sha256": "e1ad3eb452038dfe633330f3457749e4cf6b9170ef1c27774eb33364c52ac5b5",
+      "bbox": [
+        79,
+        27,
+        177,
+        223
+      ]
+    },
+    {
+      "id": "male_bob_view3",
+      "sha256": "de67f5b44b842c51fb794151be20fcdf6b6a54f79058b9c955499e3e31286982",
+      "bbox": [
+        88,
+        26,
+        173,
+        229
+      ]
+    },
+    {
+      "id": "male_bob_helmet",
+      "sha256": "573beba7a3333fee1709aa8ea74d158971e9cf86d33b14eb7f09f3916eff8a23",
+      "bbox": [
+        50,
+        18,
+        174,
+        229
+      ]
+    },
+    {
+      "id": "male_long_view0",
+      "sha256": "0fecd539bb890edbdaed46a208458bbd6032e7703681aabdad5a18d38b82005c",
+      "bbox": [
+        79,
+        27,
+        177,
+        223
+      ]
+    },
+    {
+      "id": "male_long_view1",
+      "sha256": "6024596c8f8700393180823a2853e229790fc7ca33601fb95a8ac29d082e598c",
+      "bbox": [
+        99,
+        27,
+        157,
+        228
+      ]
+    },
+    {
+      "id": "male_long_view2",
+      "sha256": "cee1062802bad620332937506a6a637b8ea150c187c308abf8e261153fc328e3",
+      "bbox": [
+        79,
+        27,
+        177,
+        223
+      ]
+    },
+    {
+      "id": "male_long_view3",
+      "sha256": "2aaffabcda082a2e41a239f7571a5d9965cae7653256a8c1d943de25eefad2c5",
+      "bbox": [
+        88,
+        26,
+        173,
+        229
+      ]
+    },
+    {
+      "id": "male_long_helmet",
+      "sha256": "573beba7a3333fee1709aa8ea74d158971e9cf86d33b14eb7f09f3916eff8a23",
+      "bbox": [
+        50,
+        18,
+        174,
+        229
+      ]
+    },
+    {
+      "id": "male_ponytail_view0",
+      "sha256": "82be283702216ab659bc9b343d3fca780f3140a02e1de39e69307ec76bb4d099",
+      "bbox": [
+        79,
+        28,
+        177,
+        226
+      ]
+    },
+    {
+      "id": "male_ponytail_view1",
+      "sha256": "4bfedd634abe07b8276d2954c3c2114a3a5d7dcfe580f288b1f4e291590134bd",
+      "bbox": [
+        90,
+        29,
+        164,
+        227
+      ]
+    },
+    {
+      "id": "male_ponytail_view2",
+      "sha256": "e4e86da4a49edc7a6e020c75c3b905d50f7182b8ccf63fd90e71d7a5a0916ebf",
+      "bbox": [
+        81,
+        29,
+        175,
+        219
+      ]
+    },
+    {
+      "id": "male_ponytail_view3",
+      "sha256": "22c07024c70769bea1f1d369b6a729d035f20e54a5b17ddba4b913cfbf6638c6",
+      "bbox": [
+        83,
+        27,
+        167,
+        230
+      ]
+    },
+    {
+      "id": "male_ponytail_helmet",
+      "sha256": "573beba7a3333fee1709aa8ea74d158971e9cf86d33b14eb7f09f3916eff8a23",
+      "bbox": [
+        50,
+        18,
+        174,
+        229
+      ]
+    },
+    {
+      "id": "male_curly_view0",
+      "sha256": "79a2ab2d0eb9996663c0cb45f27bdb24ef2a0b23a1869e8cff160b3553e9f4fd",
+      "bbox": [
+        81,
+        28,
+        175,
+        223
+      ]
+    },
+    {
+      "id": "male_curly_view1",
+      "sha256": "1a2350135287d6b7e02b3334e513fb4e6868e776649c40ca8cd421194f1d28d4",
+      "bbox": [
+        100,
+        28,
+        156,
+        228
+      ]
+    },
+    {
+      "id": "male_curly_view2",
+      "sha256": "4f353f350e34e025bcdfd35d256cf02bed9ad8ad8253fdc2f086ec2ed9394e58",
+      "bbox": [
+        81,
+        28,
+        175,
+        223
+      ]
+    },
+    {
+      "id": "male_curly_view3",
+      "sha256": "77ad9bc066949c61a5649279cc8a7d3c4e5eb4fdf3160619c1f56de4ee8c7050",
+      "bbox": [
+        90,
+        28,
+        171,
+        228
+      ]
+    },
+    {
+      "id": "male_curly_helmet",
+      "sha256": "573beba7a3333fee1709aa8ea74d158971e9cf86d33b14eb7f09f3916eff8a23",
+      "bbox": [
+        50,
+        18,
+        174,
+        229
+      ]
+    },
+    {
+      "id": "female_none_view0",
+      "sha256": "0cc3836830cf9a290e5c9c76ca1d3dd24f2fa29eb951f5ba0e2cec3375b71141",
+      "bbox": [
+        87,
+        27,
+        169,
+        224
+      ]
+    },
+    {
+      "id": "female_none_view1",
+      "sha256": "d3f74203bed0d328bc0534157fbb361a435e6110f757d89ab8044d1516fa3b56",
+      "bbox": [
+        101,
+        27,
+        155,
+        229
+      ]
+    },
+    {
+      "id": "female_none_view2",
+      "sha256": "347de69a6330331f4958c48dcb906b240920d28d6578f8ff058c5f4c9ce720e2",
+      "bbox": [
+        87,
+        27,
+        169,
+        224
+      ]
+    },
+    {
+      "id": "female_none_view3",
+      "sha256": "834c2fa9872881f9d3ec39a40d581f7484f1e4270d206fa939b83be8a3542006",
+      "bbox": [
+        93,
+        27,
+        167,
+        229
+      ]
+    },
+    {
+      "id": "female_none_helmet",
+      "sha256": "387b688a778758ef5a291b2e44ec5ee59a3336aaac6c94b31e40b8261488709c",
+      "bbox": [
+        54,
+        18,
+        170,
+        229
+      ]
+    },
+    {
+      "id": "female_short_view0",
+      "sha256": "a71851298c573eea1de60451e225fe4bc4d00bf6e0a4d0c727b32bc56024d0dc",
+      "bbox": [
+        88,
+        27,
+        168,
+        223
+      ]
+    },
+    {
+      "id": "female_short_view1",
+      "sha256": "427f098ae872603084f33d7b4711e0a174950974944ae0096e3a77b9376c6c82",
+      "bbox": [
+        99,
+        27,
+        157,
+        228
+      ]
+    },
+    {
+      "id": "female_short_view2",
+      "sha256": "47635d83780498eb92ed7b705db151fac791c4df2d2862f86d815358457c4301",
+      "bbox": [
+        88,
+        27,
+        168,
+        223
+      ]
+    },
+    {
+      "id": "female_short_view3",
+      "sha256": "8edf74fd03612a0b5d9e7b96fab788c12cdf0467fd437764b152e1de2fc4826a",
+      "bbox": [
+        89,
+        26,
+        167,
+        229
+      ]
+    },
+    {
+      "id": "female_short_helmet",
+      "sha256": "387b688a778758ef5a291b2e44ec5ee59a3336aaac6c94b31e40b8261488709c",
+      "bbox": [
+        54,
+        18,
+        170,
+        229
+      ]
+    },
+    {
+      "id": "female_bob_view0",
+      "sha256": "ada05079be015c7d586f6d2c7539a7c4ba563006cbd27ce5235b291cd86c0d7e",
+      "bbox": [
+        88,
+        27,
+        168,
+        223
+      ]
+    },
+    {
+      "id": "female_bob_view1",
+      "sha256": "570f53fda90daa2e8c9b86c3d2c560d48d61001acc77e0eb1b21fcc34f2de1ea",
+      "bbox": [
+        99,
+        27,
+        157,
+        228
+      ]
+    },
+    {
+      "id": "female_bob_view2",
+      "sha256": "be7505f0b78b4928789d86b7c784b4095bac0ba6b3bfcc649cfc22fe539e4949",
+      "bbox": [
+        88,
+        27,
+        168,
+        223
+      ]
+    },
+    {
+      "id": "female_bob_view3",
+      "sha256": "efc8fd00a401a981ab3db4e1b2504d059f5278073873777fb067bb95dfa5d6a5",
+      "bbox": [
+        89,
+        26,
+        167,
+        229
+      ]
+    },
+    {
+      "id": "female_bob_helmet",
+      "sha256": "387b688a778758ef5a291b2e44ec5ee59a3336aaac6c94b31e40b8261488709c",
+      "bbox": [
+        54,
+        18,
+        170,
+        229
+      ]
+    },
+    {
+      "id": "female_long_view0",
+      "sha256": "415363676fd96767ac9db947a3fd37cc12a619c80686f2685a69948516104531",
+      "bbox": [
+        88,
+        27,
+        168,
+        223
+      ]
+    },
+    {
+      "id": "female_long_view1",
+      "sha256": "df8fb21993e17b63b45b013323c36be0f4142aa06f7fa2fc88401797817608d9",
+      "bbox": [
+        99,
+        27,
+        157,
+        228
+      ]
+    },
+    {
+      "id": "female_long_view2",
+      "sha256": "667a05309856be1171f6dfea89ebe42aaee0278185a8ea31107a67be2f7870b1",
+      "bbox": [
+        88,
+        27,
+        168,
+        223
+      ]
+    },
+    {
+      "id": "female_long_view3",
+      "sha256": "15cf46a4114ad2f34dc730b0a20179896b8e6ba61788964626b8c255de8e96f3",
+      "bbox": [
+        89,
+        26,
+        167,
+        229
+      ]
+    },
+    {
+      "id": "female_long_helmet",
+      "sha256": "387b688a778758ef5a291b2e44ec5ee59a3336aaac6c94b31e40b8261488709c",
+      "bbox": [
+        54,
+        18,
+        170,
+        229
+      ]
+    },
+    {
+      "id": "female_ponytail_view0",
+      "sha256": "f02d09a9e4c5c8f88a364bbad53845597b54cefaaa2b624eb50d3e57b6f249d7",
+      "bbox": [
+        87,
+        27,
+        169,
+        227
+      ]
+    },
+    {
+      "id": "female_ponytail_view1",
+      "sha256": "99599853f97e24d9d37f473b8e12a67e83f56ffba8974931c41e20f15eeb198b",
+      "bbox": [
+        90,
+        27,
+        164,
+        228
+      ]
+    },
+    {
+      "id": "female_ponytail_view2",
+      "sha256": "135ac4403ec59d378380d5663f1348b72faa0fd1db442e9ea11d4a66cf8e2cae",
+      "bbox": [
+        89,
+        28,
+        167,
+        220
+      ]
+    },
+    {
+      "id": "female_ponytail_view3",
+      "sha256": "f0db482d0b794ec131be052d5d097823215d506cab0bd704da7dc1d939d54709",
+      "bbox": [
+        83,
+        26,
+        161,
+        231
+      ]
+    },
+    {
+      "id": "female_ponytail_helmet",
+      "sha256": "387b688a778758ef5a291b2e44ec5ee59a3336aaac6c94b31e40b8261488709c",
+      "bbox": [
+        54,
+        18,
+        170,
+        229
+      ]
+    },
+    {
+      "id": "female_curly_view0",
+      "sha256": "42bc0a01133f7c77abb03dde01167580085361409839973ff8807c08bad77491",
+      "bbox": [
+        90,
+        28,
+        166,
+        223
+      ]
+    },
+    {
+      "id": "female_curly_view1",
+      "sha256": "fd2cad84b58d573df0320ef0c301b5c34afa35dc475f70963c1e3653b42f7691",
+      "bbox": [
+        100,
+        28,
+        156,
+        228
+      ]
+    },
+    {
+      "id": "female_curly_view2",
+      "sha256": "82bb89ae07c4fb5b89a7a594e7a189132173c1ff08b6022808a34af7d17dc018",
+      "bbox": [
+        90,
+        28,
+        166,
+        223
+      ]
+    },
+    {
+      "id": "female_curly_view3",
+      "sha256": "e94aaf714726e055391a2d9f3af8870395187f10b0201cb7e88d501c9d142419",
+      "bbox": [
+        91,
+        28,
+        165,
+        228
+      ]
+    },
+    {
+      "id": "female_curly_helmet",
+      "sha256": "387b688a778758ef5a291b2e44ec5ee59a3336aaac6c94b31e40b8261488709c",
+      "bbox": [
+        54,
+        18,
+        170,
+        229
+      ]
+    },
+    {
+      "id": "male_color_black_base",
+      "sha256": "aae449f1571b5c93c900d312a5c59abb6a514e89d4edf5997d55f0e62b7a3705",
+      "bbox": [
+        88,
+        26,
+        173,
+        229
+      ]
+    },
+    {
+      "id": "male_color_black_human_adventurer",
+      "sha256": "78ad1ea186d8239d407ee835556a07ec93a152c930f1d1164a01ec571f635f00",
+      "bbox": [
+        88,
+        26,
+        173,
+        229
+      ]
+    },
+    {
+      "id": "male_color_black_human_guard",
+      "sha256": "48d02dea26dde346f0c79299178e14f7858c85b377e8b58ea1ce15f233f12b90",
+      "bbox": [
+        88,
+        26,
+        173,
+        229
+      ]
+    },
+    {
+      "id": "female_color_black_base",
+      "sha256": "eda778137306d80e595b93db498e48d5a3420e76ed4f88f70c3f793179322cf3",
+      "bbox": [
+        89,
+        26,
+        167,
+        229
+      ]
+    },
+    {
+      "id": "female_color_black_human_adventurer",
+      "sha256": "3c76a060ad0ee5fa99f12808d80fea2e6b8c56f69485b3a3ad512ed6237b7a4d",
+      "bbox": [
+        89,
+        26,
+        167,
+        229
+      ]
+    },
+    {
+      "id": "female_color_black_human_guard",
+      "sha256": "a63e1742c4d2bc3b1b4039609db7be1fdbe6c31a422eb5fa3f0fe8b739301c9e",
+      "bbox": [
+        89,
+        26,
+        167,
+        229
+      ]
+    },
+    {
+      "id": "male_color_chestnut_base",
+      "sha256": "2aaffabcda082a2e41a239f7571a5d9965cae7653256a8c1d943de25eefad2c5",
+      "bbox": [
+        88,
+        26,
+        173,
+        229
+      ]
+    },
+    {
+      "id": "male_color_chestnut_human_adventurer",
+      "sha256": "187645de861e4e5039b2df5516fb69d8d996bf67f151cb86746939aca09753db",
+      "bbox": [
+        88,
+        26,
+        173,
+        229
+      ]
+    },
+    {
+      "id": "male_color_chestnut_human_guard",
+      "sha256": "65cafeb48487b46a504bf6dd207106a79175aeec38ebf262ab7f0ada75629151",
+      "bbox": [
+        88,
+        26,
+        173,
+        229
+      ]
+    },
+    {
+      "id": "female_color_chestnut_base",
+      "sha256": "15cf46a4114ad2f34dc730b0a20179896b8e6ba61788964626b8c255de8e96f3",
+      "bbox": [
+        89,
+        26,
+        167,
+        229
+      ]
+    },
+    {
+      "id": "female_color_chestnut_human_adventurer",
+      "sha256": "4b2561332dcd7766db3eaa39baaf191f904a3255a9974b8c7c7603f74617d09a",
+      "bbox": [
+        89,
+        26,
+        167,
+        229
+      ]
+    },
+    {
+      "id": "female_color_chestnut_human_guard",
+      "sha256": "b015498cae3bee8cbf3891d3b8edb1edea0601a33a4ff8bd12daece51b5eff32",
+      "bbox": [
+        89,
+        26,
+        167,
+        229
+      ]
+    },
+    {
+      "id": "male_color_brown_base",
+      "sha256": "20e9d00161496d57718328df42b109a6e8bc10581570471fbe63804fdf91391c",
+      "bbox": [
+        88,
+        26,
+        173,
+        229
+      ]
+    },
+    {
+      "id": "male_color_brown_human_adventurer",
+      "sha256": "7afab810a53c56d810434a5e4966538ddf845fb4d46dc7d6472479c193cba316",
+      "bbox": [
+        88,
+        26,
+        173,
+        229
+      ]
+    },
+    {
+      "id": "male_color_brown_human_guard",
+      "sha256": "f568844ec6fc2cb585551b590a2428df73775733712b14b888f701462094e839",
+      "bbox": [
+        88,
+        26,
+        173,
+        229
+      ]
+    },
+    {
+      "id": "female_color_brown_base",
+      "sha256": "6f58331677f2781c330246cfe50938e95f0805d38271b18150e0feceddc485a1",
+      "bbox": [
+        89,
+        26,
+        167,
+        229
+      ]
+    },
+    {
+      "id": "female_color_brown_human_adventurer",
+      "sha256": "4b87a0ad3169c268c6039d2995faf802279c6d9c56ee71c4e882fa15f302523d",
+      "bbox": [
+        89,
+        26,
+        167,
+        229
+      ]
+    },
+    {
+      "id": "female_color_brown_human_guard",
+      "sha256": "db0740185a52e3614ea8a7ec6a51c3eeb67c755442765d17748a4c2cafdb329e",
+      "bbox": [
+        89,
+        26,
+        167,
+        229
+      ]
+    },
+    {
+      "id": "male_color_blond_base",
+      "sha256": "a47c7ae4979fbeaa6e911ba7df806293614b075b1faf250c434d91fceca8a824",
+      "bbox": [
+        88,
+        26,
+        173,
+        229
+      ]
+    },
+    {
+      "id": "male_color_blond_human_adventurer",
+      "sha256": "ff4e19e2fb59a69bf6de39ac3319196c2ecdec511b4454f9af86063029a186c0",
+      "bbox": [
+        88,
+        26,
+        173,
+        229
+      ]
+    },
+    {
+      "id": "male_color_blond_human_guard",
+      "sha256": "c84a7cf562a7d4fb77b9ff38f158cf5952e084d0c6144963898dc0530e7cbde4",
+      "bbox": [
+        88,
+        26,
+        173,
+        229
+      ]
+    },
+    {
+      "id": "female_color_blond_base",
+      "sha256": "1a1d7be41144fc6a91b990e2dd3587571c3f924acb94374abdca9c2a04b95f4c",
+      "bbox": [
+        89,
+        26,
+        167,
+        229
+      ]
+    },
+    {
+      "id": "female_color_blond_human_adventurer",
+      "sha256": "a5026b6771cd73cc118142e90bc4b4eb3ab37f8754f77000d750764a40770476",
+      "bbox": [
+        89,
+        26,
+        167,
+        229
+      ]
+    },
+    {
+      "id": "female_color_blond_human_guard",
+      "sha256": "8e7722a9ef9dbd5638b9920186223b1bce6ff0e1326733c2762e4f690cd0934e",
+      "bbox": [
+        89,
+        26,
+        167,
+        229
+      ]
+    },
+    {
+      "id": "male_color_ginger_base",
+      "sha256": "dce9dc329f0f7a9f3b62e38c76d3d306a05fed026631523bbb513330499cfbcd",
+      "bbox": [
+        88,
+        26,
+        173,
+        229
+      ]
+    },
+    {
+      "id": "male_color_ginger_human_adventurer",
+      "sha256": "08eab030bf358b09b33592137fe0d946e87f21acae9417f6b71554a118abe856",
+      "bbox": [
+        88,
+        26,
+        173,
+        229
+      ]
+    },
+    {
+      "id": "male_color_ginger_human_guard",
+      "sha256": "6e349dc013a6ed3510c8b108effd72d960c39c5b3addb06f2b7d39b8835eb8c1",
+      "bbox": [
+        88,
+        26,
+        173,
+        229
+      ]
+    },
+    {
+      "id": "female_color_ginger_base",
+      "sha256": "67ad5c9477c4a9d5e0daa494801f941cabac87625d2afbaefb7806266d3b3d14",
+      "bbox": [
+        89,
+        26,
+        167,
+        229
+      ]
+    },
+    {
+      "id": "female_color_ginger_human_adventurer",
+      "sha256": "7f4debd147b34ccee680060d376ff079e209f88a4471da966e0a5601a159fb49",
+      "bbox": [
+        89,
+        26,
+        167,
+        229
+      ]
+    },
+    {
+      "id": "female_color_ginger_human_guard",
+      "sha256": "2282369b55a29b045bea9a404eb3ab873fa099082a667596893d7b985d1ca07a",
+      "bbox": [
+        89,
+        26,
+        167,
+        229
+      ]
+    },
+    {
+      "id": "male_motion_walk1",
+      "sha256": "49b37e2199c50d877f3c8cda11fbd8169875c6fba4d2f1b79bce2537b4dccaa4",
+      "bbox": [
+        85,
+        32,
+        173,
+        220
+      ]
+    },
+    {
+      "id": "male_motion_walk2",
+      "sha256": "7c9c8c13f8d6bc245dc7a133ec0b78a4d05f195049daf209d6966feab3ad85cd",
+      "bbox": [
+        90,
+        32,
+        171,
+        226
+      ]
+    },
+    {
+      "id": "male_motion_walk3",
+      "sha256": "c7341730d1dbe79973353d5446962be55eabc3b0ea29f579e6170aab9e108a75",
+      "bbox": [
+        80,
+        32,
+        179,
+        227
+      ]
+    },
+    {
+      "id": "male_motion_run1",
+      "sha256": "49b37e2199c50d877f3c8cda11fbd8169875c6fba4d2f1b79bce2537b4dccaa4",
+      "bbox": [
+        85,
+        32,
+        173,
+        220
+      ]
+    },
+    {
+      "id": "male_motion_run2",
+      "sha256": "7c9c8c13f8d6bc245dc7a133ec0b78a4d05f195049daf209d6966feab3ad85cd",
+      "bbox": [
+        90,
+        32,
+        171,
+        226
+      ]
+    },
+    {
+      "id": "male_motion_run3",
+      "sha256": "c7341730d1dbe79973353d5446962be55eabc3b0ea29f579e6170aab9e108a75",
+      "bbox": [
+        80,
+        32,
+        179,
+        227
+      ]
+    },
+    {
+      "id": "male_motion_crouch1",
+      "sha256": "4bdf5409237cef25a57ce7da0a05db1e7b9047831af8faa35e15cd88b4315972",
+      "bbox": [
+        88,
+        26,
+        173,
+        229
+      ]
+    },
+    {
+      "id": "male_motion_crouch2",
+      "sha256": "4bdf5409237cef25a57ce7da0a05db1e7b9047831af8faa35e15cd88b4315972",
+      "bbox": [
+        88,
+        26,
+        173,
+        229
+      ]
+    },
+    {
+      "id": "male_motion_crouch3",
+      "sha256": "4bdf5409237cef25a57ce7da0a05db1e7b9047831af8faa35e15cd88b4315972",
+      "bbox": [
+        88,
+        26,
+        173,
+        229
+      ]
+    },
+    {
+      "id": "male_motion_Jump1",
+      "sha256": "56e71a25234abe2bcd0a3297a7118fb3a257b61c4c70bbb3162219e5183e9c46",
+      "bbox": [
+        86,
+        29,
+        173,
+        221
+      ]
+    },
+    {
+      "id": "male_motion_Jump2",
+      "sha256": "56e71a25234abe2bcd0a3297a7118fb3a257b61c4c70bbb3162219e5183e9c46",
+      "bbox": [
+        86,
+        29,
+        173,
+        221
+      ]
+    },
+    {
+      "id": "male_motion_Jump3",
+      "sha256": "56e71a25234abe2bcd0a3297a7118fb3a257b61c4c70bbb3162219e5183e9c46",
+      "bbox": [
+        86,
+        29,
+        173,
+        221
+      ]
+    },
+    {
+      "id": "male_motion_swim1",
+      "sha256": "7105f6708d37bda2d13cfaaa5336f8148d8d298caa453346b2cd632324ec2a5b",
+      "bbox": [
+        86,
+        31,
+        172,
+        218
+      ]
+    },
+    {
+      "id": "male_motion_swim2",
+      "sha256": "4ce43bb92848ca61132e7ee13150876ff6ac12d9cdf97a6f20a3df2bbf27209c",
+      "bbox": [
+        90,
+        31,
+        170,
+        224
+      ]
+    },
+    {
+      "id": "male_motion_swim3",
+      "sha256": "4ae687d279e945eb24b3acfa0d6895e3fc551df540181299e14e38bcfd574157",
+      "bbox": [
+        81,
+        31,
+        178,
+        224
+      ]
+    },
+    {
+      "id": "male_motion_Action1",
+      "sha256": "47a7d8e745b97f3dbee4496b57b707d5e6683b52de38353d07dda5643bdd921c",
+      "bbox": [
+        87,
+        28,
+        169,
+        230
+      ]
+    },
+    {
+      "id": "male_motion_Action2",
+      "sha256": "73a09cd0b40cc3fc43bfb4c220e7f2f212ff007c8afb11853add23d449a8ec68",
+      "bbox": [
+        87,
+        27,
+        169,
+        230
+      ]
+    },
+    {
+      "id": "male_motion_Action3",
+      "sha256": "0a7e7394dbf4c03949df212b011c75a6ee707dfdc9598c2e30120b19232ea11b",
+      "bbox": [
+        87,
+        27,
+        169,
+        230
+      ]
+    },
+    {
+      "id": "female_motion_walk1",
+      "sha256": "e5945fc0770eef0de2ffd894371cfc83991dda2b7b0c26d16740c85ff7d7a92b",
+      "bbox": [
+        84,
+        29,
+        170,
+        223
+      ]
+    },
+    {
+      "id": "female_motion_walk2",
+      "sha256": "78845bb8f6231f15373cd21d22906b738bcc1ed7a3dfe16b8a00ec3be75d1b42",
+      "bbox": [
+        90,
+        29,
+        166,
+        229
+      ]
+    },
+    {
+      "id": "female_motion_walk3",
+      "sha256": "2ab3e7534d2b9e686292028efe467bbba8d9e31e41a95490a920e34fdcfc0284",
+      "bbox": [
+        84,
+        29,
+        173,
+        229
+      ]
+    },
+    {
+      "id": "female_motion_run1",
+      "sha256": "e5945fc0770eef0de2ffd894371cfc83991dda2b7b0c26d16740c85ff7d7a92b",
+      "bbox": [
+        84,
+        29,
+        170,
+        223
+      ]
+    },
+    {
+      "id": "female_motion_run2",
+      "sha256": "78845bb8f6231f15373cd21d22906b738bcc1ed7a3dfe16b8a00ec3be75d1b42",
+      "bbox": [
+        90,
+        29,
+        166,
+        229
+      ]
+    },
+    {
+      "id": "female_motion_run3",
+      "sha256": "2ab3e7534d2b9e686292028efe467bbba8d9e31e41a95490a920e34fdcfc0284",
+      "bbox": [
+        84,
+        29,
+        173,
+        229
+      ]
+    },
+    {
+      "id": "female_motion_crouch1",
+      "sha256": "8edf74fd03612a0b5d9e7b96fab788c12cdf0467fd437764b152e1de2fc4826a",
+      "bbox": [
+        89,
+        26,
+        167,
+        229
+      ]
+    },
+    {
+      "id": "female_motion_crouch2",
+      "sha256": "8edf74fd03612a0b5d9e7b96fab788c12cdf0467fd437764b152e1de2fc4826a",
+      "bbox": [
+        89,
+        26,
+        167,
+        229
+      ]
+    },
+    {
+      "id": "female_motion_crouch3",
+      "sha256": "8edf74fd03612a0b5d9e7b96fab788c12cdf0467fd437764b152e1de2fc4826a",
+      "bbox": [
+        89,
+        26,
+        167,
+        229
+      ]
+    },
+    {
+      "id": "female_motion_Jump1",
+      "sha256": "3eee92cb8cc9ef56ed7e38f7b1504fac820228bb6be31d5d2c7e71a8a609f48a",
+      "bbox": [
+        85,
+        26,
+        169,
+        224
+      ]
+    },
+    {
+      "id": "female_motion_Jump2",
+      "sha256": "3eee92cb8cc9ef56ed7e38f7b1504fac820228bb6be31d5d2c7e71a8a609f48a",
+      "bbox": [
+        85,
+        26,
+        169,
+        224
+      ]
+    },
+    {
+      "id": "female_motion_Jump3",
+      "sha256": "3eee92cb8cc9ef56ed7e38f7b1504fac820228bb6be31d5d2c7e71a8a609f48a",
+      "bbox": [
+        85,
+        26,
+        169,
+        224
+      ]
+    },
+    {
+      "id": "female_motion_swim1",
+      "sha256": "68422524265d8e774ba6d1d07b7d3fbb19d34aef4d636e4aa49a384546fb65e2",
+      "bbox": [
+        85,
+        29,
+        169,
+        220
+      ]
+    },
+    {
+      "id": "female_motion_swim2",
+      "sha256": "ad1c2b782d20317b4bf70e3d6e7152b7b824b05bd6c3d8273ada612b86de3963",
+      "bbox": [
+        90,
+        29,
+        166,
+        226
+      ]
+    },
+    {
+      "id": "female_motion_swim3",
+      "sha256": "5dd31eab5e8c6ff2c7fdc5570b28c8dac3011a244072ee861f82fe17320c8a5f",
+      "bbox": [
+        85,
+        29,
+        173,
+        226
+      ]
+    },
+    {
+      "id": "female_motion_Action1",
+      "sha256": "e74c7b30f03a0311750a7dfc1460013032a6cec41948618e5cf59daa58755068",
+      "bbox": [
+        90,
+        28,
+        166,
+        230
+      ]
+    },
+    {
+      "id": "female_motion_Action2",
+      "sha256": "410aa517def2218511a0e7af333a6871a72c1af908c1d96247aa7f3ef15616eb",
+      "bbox": [
+        91,
+        27,
+        167,
+        230
+      ]
+    },
+    {
+      "id": "female_motion_Action3",
+      "sha256": "4eed2b535390d3f563416c5b256928cfc5c71bc5e09e06becc13e4384456be5a",
+      "bbox": [
+        92,
+        27,
+        168,
+        230
+      ]
+    }
+  ],
+  "helmet_hair_hidden": true
+}

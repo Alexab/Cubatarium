@@ -1,0 +1,1640 @@
+[
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "none"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_none_view0",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 0.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "none"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_none_view1",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 90.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "none"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_none_view2",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 180.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "none"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_none_view3",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "none"
+    },
+    "full_armor_and_items": true,
+    "helmet": true,
+    "id": "male_none_helmet",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_short_view0",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 0.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_short_view1",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 90.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_short_view2",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 180.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_short_view3",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": true,
+    "helmet": true,
+    "id": "male_short_helmet",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "bob"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_bob_view0",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 0.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "bob"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_bob_view1",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 90.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "bob"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_bob_view2",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 180.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "bob"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_bob_view3",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "bob"
+    },
+    "full_armor_and_items": true,
+    "helmet": true,
+    "id": "male_bob_helmet",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_long_view0",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 0.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_long_view1",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 90.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_long_view2",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 180.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_long_view3",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": true,
+    "helmet": true,
+    "id": "male_long_helmet",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "ponytail"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_ponytail_view0",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 0.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "ponytail"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_ponytail_view1",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 90.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "ponytail"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_ponytail_view2",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 180.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "ponytail"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_ponytail_view3",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "ponytail"
+    },
+    "full_armor_and_items": true,
+    "helmet": true,
+    "id": "male_ponytail_helmet",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "curly"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_curly_view0",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 0.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "curly"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_curly_view1",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 90.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "curly"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_curly_view2",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 180.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "curly"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_curly_view3",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "curly"
+    },
+    "full_armor_and_items": true,
+    "helmet": true,
+    "id": "male_curly_helmet",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "none"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_none_view0",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 0.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "none"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_none_view1",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 90.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "none"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_none_view2",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 180.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "none"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_none_view3",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "none"
+    },
+    "full_armor_and_items": true,
+    "helmet": true,
+    "id": "female_none_helmet",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_short_view0",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 0.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_short_view1",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 90.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_short_view2",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 180.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_short_view3",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": true,
+    "helmet": true,
+    "id": "female_short_helmet",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "bob"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_bob_view0",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 0.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "bob"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_bob_view1",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 90.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "bob"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_bob_view2",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 180.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "bob"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_bob_view3",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "bob"
+    },
+    "full_armor_and_items": true,
+    "helmet": true,
+    "id": "female_bob_helmet",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_long_view0",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 0.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_long_view1",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 90.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_long_view2",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 180.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_long_view3",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": true,
+    "helmet": true,
+    "id": "female_long_helmet",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "ponytail"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_ponytail_view0",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 0.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "ponytail"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_ponytail_view1",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 90.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "ponytail"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_ponytail_view2",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 180.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "ponytail"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_ponytail_view3",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "ponytail"
+    },
+    "full_armor_and_items": true,
+    "helmet": true,
+    "id": "female_ponytail_helmet",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "curly"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_curly_view0",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 0.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "curly"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_curly_view1",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 90.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "curly"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_curly_view2",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 180.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "curly"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_curly_view3",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "curly"
+    },
+    "full_armor_and_items": true,
+    "helmet": true,
+    "id": "female_curly_helmet",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "black",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_color_black_base",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "black",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_color_black_human_adventurer",
+    "outfit": "human_adventurer",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "black",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_color_black_human_guard",
+    "outfit": "human_guard",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "black",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_color_black_base",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "black",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_color_black_human_adventurer",
+    "outfit": "human_adventurer",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "black",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_color_black_human_guard",
+    "outfit": "human_guard",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_color_chestnut_base",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_color_chestnut_human_adventurer",
+    "outfit": "human_adventurer",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_color_chestnut_human_guard",
+    "outfit": "human_guard",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_color_chestnut_base",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_color_chestnut_human_adventurer",
+    "outfit": "human_adventurer",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_color_chestnut_human_guard",
+    "outfit": "human_guard",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "brown",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_color_brown_base",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "brown",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_color_brown_human_adventurer",
+    "outfit": "human_adventurer",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "brown",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_color_brown_human_guard",
+    "outfit": "human_guard",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "brown",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_color_brown_base",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "brown",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_color_brown_human_adventurer",
+    "outfit": "human_adventurer",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "brown",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_color_brown_human_guard",
+    "outfit": "human_guard",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "blond",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_color_blond_base",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "blond",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_color_blond_human_adventurer",
+    "outfit": "human_adventurer",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "blond",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_color_blond_human_guard",
+    "outfit": "human_guard",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "blond",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_color_blond_base",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "blond",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_color_blond_human_adventurer",
+    "outfit": "human_adventurer",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "blond",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_color_blond_human_guard",
+    "outfit": "human_guard",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "ginger",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_color_ginger_base",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "ginger",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_color_ginger_human_adventurer",
+    "outfit": "human_adventurer",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "ginger",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_color_ginger_human_guard",
+    "outfit": "human_guard",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "ginger",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_color_ginger_base",
+    "outfit": "",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "ginger",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_color_ginger_human_adventurer",
+    "outfit": "human_adventurer",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "ginger",
+      "hairstyle_id": "long"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_color_ginger_human_guard",
+    "outfit": "human_guard",
+    "state": "idle",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_motion_walk1",
+    "outfit": "",
+    "state": "walk",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_motion_walk2",
+    "outfit": "",
+    "state": "walk",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_motion_walk3",
+    "outfit": "",
+    "state": "walk",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_motion_run1",
+    "outfit": "",
+    "state": "run",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_motion_run2",
+    "outfit": "",
+    "state": "run",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_motion_run3",
+    "outfit": "",
+    "state": "run",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_motion_crouch1",
+    "outfit": "",
+    "state": "crouch",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_motion_crouch2",
+    "outfit": "",
+    "state": "crouch",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_motion_crouch3",
+    "outfit": "",
+    "state": "crouch",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_motion_Jump1",
+    "outfit": "",
+    "state": "Jump",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_motion_Jump2",
+    "outfit": "",
+    "state": "Jump",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_motion_Jump3",
+    "outfit": "",
+    "state": "Jump",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_motion_swim1",
+    "outfit": "",
+    "state": "swim",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_motion_swim2",
+    "outfit": "",
+    "state": "swim",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_motion_swim3",
+    "outfit": "",
+    "state": "swim",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_motion_Action1",
+    "outfit": "",
+    "state": "Action",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_motion_Action2",
+    "outfit": "",
+    "state": "Action",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "male",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "male_motion_Action3",
+    "outfit": "",
+    "state": "Action",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_motion_walk1",
+    "outfit": "",
+    "state": "walk",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_motion_walk2",
+    "outfit": "",
+    "state": "walk",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_motion_walk3",
+    "outfit": "",
+    "state": "walk",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_motion_run1",
+    "outfit": "",
+    "state": "run",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_motion_run2",
+    "outfit": "",
+    "state": "run",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_motion_run3",
+    "outfit": "",
+    "state": "run",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_motion_crouch1",
+    "outfit": "",
+    "state": "crouch",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_motion_crouch2",
+    "outfit": "",
+    "state": "crouch",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_motion_crouch3",
+    "outfit": "",
+    "state": "crouch",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_motion_Jump1",
+    "outfit": "",
+    "state": "Jump",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_motion_Jump2",
+    "outfit": "",
+    "state": "Jump",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_motion_Jump3",
+    "outfit": "",
+    "state": "Jump",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_motion_swim1",
+    "outfit": "",
+    "state": "swim",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_motion_swim2",
+    "outfit": "",
+    "state": "swim",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_motion_swim3",
+    "outfit": "",
+    "state": "swim",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_motion_Action1",
+    "outfit": "",
+    "state": "Action",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_motion_Action2",
+    "outfit": "",
+    "state": "Action",
+    "yaw": 45.0
+  },
+  {
+    "appearance": {
+      "body_variant": "female",
+      "hair_color_id": "chestnut",
+      "hairstyle_id": "short"
+    },
+    "full_armor_and_items": false,
+    "helmet": false,
+    "id": "female_motion_Action3",
+    "outfit": "",
+    "state": "Action",
+    "yaw": 45.0
+  }
+]

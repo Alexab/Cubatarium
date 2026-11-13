@@ -1,0 +1,23 @@
+..F.................................F
+======================================================================
+FAIL: test_arboreal_stone_contact_and_functional_rigs (__main__.FidelityTests.test_arboreal_stone_contact_and_functional_rigs)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "E:\Work\Home\Cubatarium\tools\test_creaturegen_fidelity.py", line 200, in test_arboreal_stone_contact_and_functional_rigs
+    self.assertTrue(retreat);self.assertLess(sum(retreat),-.05,sid+': backwards stance')
+    ~~~~~~~~~~~~~~~^^^^^^^^^
+AssertionError: [] is not true
+
+======================================================================
+FAIL: test_warriors_preserve_attached_limbs_stride_and_weapon_action (__main__.FidelityTests.test_warriors_preserve_attached_limbs_stride_and_weapon_action)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "E:\Work\Home\Cubatarium\tools\test_creaturegen_fidelity.py", line 108, in test_warriors_preserve_attached_limbs_stride_and_weapon_action
+    self.assertLess(q[:,1].min(),.001,sid+': floating contact')
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0.0014550315788680046 not less than 0.001 : orc: floating contact
+
+----------------------------------------------------------------------
+Ran 37 tests in 189.462s
+
+FAILED (failures=2)

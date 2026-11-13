@@ -1,0 +1,4 @@
+UCreatureDefinitionStorage: C:\Users\BAKHSH~1\AppData\Local\Temp\creature_appearance_test_1\creatures\bone_test\creature.json: bone_skeleton without visual.geometry for bone_test
+USkinDefinitionStorage: loaded 3 skins
+UCreatureDefinitionStorage: loaded 0 definitions
+creature_appearance_test: OK

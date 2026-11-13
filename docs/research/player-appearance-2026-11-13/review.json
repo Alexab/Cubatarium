@@ -1,0 +1,29 @@
+{
+  "schema": "player-appearance-review.v1",
+  "reviewer": "Codex native visual inspection",
+  "decision": "accept_v1_with_documented_followups",
+  "code_commit": "eabc3c837",
+  "asset_manifest_sha256": "7a35d502f7175683fe2bba80f5a7360cb9775fb9ae7007edf249f901d3ffd79c",
+  "verified_context": "context_shipped.json",
+  "verified_native": "native_shipped",
+  "backlog": "BACKLOG_RU.md",
+  "sheets": {
+    "before_after_sheet.png": "7c964ecccd7b40bd92b491345d473bf18edeab7895f04a98993887f11d3cd8b0",
+    "body_hairstyles_sheet.png": "667c9ca7b3e7b7fea63f100d7b78ff7273cd7ab2fd345fdf19b973aaffd0d4c7",
+    "first_person_sheet.png": "90e099afd742d69c98df5756ab539865924079d0bdba5e158d003966ee74353d",
+    "hair_colors_sheet.png": "7f3513981bb2a54f94c0c7bc972e2444ac0163a4eabbce731d9e5473cb8f9288",
+    "helmets_sheet.png": "5090f7353c8557072ca00809304580009ad599d1960a5ab7cc4f88f723cbca44",
+    "motion_sheet.png": "7df074fc368a6692b126db560363976912e55429c31aafe3c1d136076f45446a",
+    "outfits_sheet.png": "4cfcf7abc8afbb4d6723acc3aa7e0f2b372a9263d522ddeb0ee36bc6eef2b791"
+  },
+  "observations": [
+    "Faces use small white/iris eyes instead of flat dark squares",
+    "All body and hair silhouettes inspected from four directions",
+    "Slim shoulders have continuous body/arm contact",
+    "Hair joins no longer expose a light stripe beneath the cap",
+    "All helmet cases hide hair consistently",
+    "Native editor labels are visible; draft has a large rotatable preview",
+    "Full creature R6 and remaining contact work are separate",
+    "Full armor and sword/torch inspected on both bodies; boots meet the sole after removing a legacy double offset"
+  ]
+}

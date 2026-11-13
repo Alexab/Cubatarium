@@ -1,0 +1,252 @@
+{
+  "schema": "player-appearance-release.v1",
+  "completed_at_msk": "2026-11-13T12:46:03.389250+03:00",
+  "code_commit": "eabc3c837",
+  "baseline_commit": "2b0866352",
+  "branch": "codex/player-appearance-polish",
+  "exe_sha256": "d27de54c50bbb3261c53732e0b63cc15f7c575112b5bdd8c0e8be53b711059e3",
+  "configuration": "Release",
+  "build": "pass",
+  "static_windows_executable_check": "pass",
+  "player_generator_tests": {
+    "passed": 4,
+    "resource_pairings_checked": 180
+  },
+  "generator_quality_tests": {
+    "passed": 13
+  },
+  "fidelity_tests": {
+    "passed": 35,
+    "failed": 2,
+    "total": 37,
+    "deferred": [
+      "Treeman foot contact",
+      "Orc floor contact"
+    ]
+  },
+  "cpp_appearance_test": "pass: defaults, malformed/unknown fields,60 choices,missing resources,legacy/new atlas overlays",
+  "native_player_frames": 126,
+  "native_fp_frames": 1248,
+  "native_fp_passed": true,
+  "native_entity_roundtrips": 128,
+  "native_entity_save_passed": true,
+  "ui": {
+    "apply": true,
+    "cancel": true,
+    "draft_isolated": true,
+    "layouts": [
+      {
+        "controls_reachable": true,
+        "height": 720,
+        "width": 1280
+      },
+      {
+        "controls_reachable": true,
+        "height": 480,
+        "width": 640
+      }
+    ],
+    "original_selection_restored": true,
+    "passed": true,
+    "preview_rendered": true,
+    "user_save_serialized": true
+  },
+  "legacy_model_payloads_unchanged": true,
+  "new_asset_count": 42,
+  "runtime_parity": [
+    {
+      "path": "creatures/human/appearance/female_bob.geo.json",
+      "sha256": "bc8e2d2c18f7b6b03ae3052e81a9b67de98ef76f59bb2dbd4bcc9de5453bb3dc"
+    },
+    {
+      "path": "creatures/human/appearance/female_curly.geo.json",
+      "sha256": "3828d2f99b6028863fe332f53aae1c112cc33cdd48fecc11115ae709b59f0d62"
+    },
+    {
+      "path": "creatures/human/appearance/female_long.geo.json",
+      "sha256": "46f1833cdcf60c5bae4ccad4bc35ec4e64b4140d0728e542e79f67981ea24cca"
+    },
+    {
+      "path": "creatures/human/appearance/female_none.geo.json",
+      "sha256": "59b2c6e9330361130047ecd0d8debf62f018d7669ddb7781bb028caaca377219"
+    },
+    {
+      "path": "creatures/human/appearance/female_ponytail.geo.json",
+      "sha256": "7cc0e92017068fff40ba23fa98e13f3d8a1463ff3141489a28668f8f7e479c89"
+    },
+    {
+      "path": "creatures/human/appearance/female_short.geo.json",
+      "sha256": "d3a3e597f43998352bf815e384dca08abf07f40edbb767d7761817d6bb92f5b0"
+    },
+    {
+      "path": "creatures/human/appearance/male_bob.geo.json",
+      "sha256": "5a772eb58d3c4d9ef1eb9b312b2531bd1dbda2e74970120bc9f8f5e0f3d8c393"
+    },
+    {
+      "path": "creatures/human/appearance/male_curly.geo.json",
+      "sha256": "ecffc3e5ca7acd5ce52bbecde1effc0d259022268c9822bf8ce97e1ec4215aa8"
+    },
+    {
+      "path": "creatures/human/appearance/male_long.geo.json",
+      "sha256": "1de763ada2c085a801eec088952ba9410d145a4dc9bd8a6c45108d456e37724f"
+    },
+    {
+      "path": "creatures/human/appearance/male_none.geo.json",
+      "sha256": "aebe792a3bb7c4f6df7816316606cc2fdd8d8cb4b3c0e78deb7063376ae9fb6e"
+    },
+    {
+      "path": "creatures/human/appearance/male_ponytail.geo.json",
+      "sha256": "fed55fea90621ebab27c8a0474a4a6689594fccfa4d0059c6984fbaf7b56d181"
+    },
+    {
+      "path": "creatures/human/appearance/male_short.geo.json",
+      "sha256": "e4d44a6671c3e87d3d04918a93850dac7f392c19f2247ece582caa0f4f4fb4de"
+    },
+    {
+      "path": "creatures/human/textures/appearance_female_black.png",
+      "sha256": "66637360a194bd2a4540e18ec049271f33e385244e6550b760599c494b301860"
+    },
+    {
+      "path": "creatures/human/textures/appearance_female_blond.png",
+      "sha256": "818981d7cb7bf8540897b5079a9a4530572398cd24848814dfaa63f987e77485"
+    },
+    {
+      "path": "creatures/human/textures/appearance_female_brown.png",
+      "sha256": "f61f711500695b9c9c150d4fcc6227f6a732a4e3023b7d411455ac5a078fd548"
+    },
+    {
+      "path": "creatures/human/textures/appearance_female_chestnut.png",
+      "sha256": "3351982f4a6c5e91e0e19bf4d3d0e9f908383df44d983b639aeb99213704c88f"
+    },
+    {
+      "path": "creatures/human/textures/appearance_female_ginger.png",
+      "sha256": "8a79e9e94d46f917d57c690df628626a15df09ee598b1c51bc1052c26483eb90"
+    },
+    {
+      "path": "creatures/human/textures/appearance_male_black.png",
+      "sha256": "a149c7d10ac0281a6dfc72ae10f34ba986943847b8d6f4824780edfee67d3a04"
+    },
+    {
+      "path": "creatures/human/textures/appearance_male_blond.png",
+      "sha256": "f3b2eb895f06dd10ce718a3f917acf935b9e46b0609ab2f17172a03b31841f9b"
+    },
+    {
+      "path": "creatures/human/textures/appearance_male_brown.png",
+      "sha256": "41398dbed88784f6f453369dbed8c55af0931bf59aa3597d2f7d03bf8b3612a8"
+    },
+    {
+      "path": "creatures/human/textures/appearance_male_chestnut.png",
+      "sha256": "d44cddec95572ae906c9eccc702d93842c5a2dfd671732699e35f08e310789d4"
+    },
+    {
+      "path": "creatures/human/textures/appearance_male_ginger.png",
+      "sha256": "bdec7f62f652f2e87e012e4cf95cc3c9cbc0881f020a8547a1cb3b1ab65f6fcf"
+    },
+    {
+      "path": "skins/human_adventurer/textures/appearance_female_black.png",
+      "sha256": "b8624f560876260c2a8b31ceb4603a1fc4efcd4b51e11194d9a6717e1915956f"
+    },
+    {
+      "path": "skins/human_adventurer/textures/appearance_female_blond.png",
+      "sha256": "e78eeef284c5c5a7bab69f89f1524288768e22bc17c838379163f821062d9813"
+    },
+    {
+      "path": "skins/human_adventurer/textures/appearance_female_brown.png",
+      "sha256": "ed52970ac8f7900ac03cb28a0fd19f7992c3ff0f726874e0d4c850db13a85c37"
+    },
+    {
+      "path": "skins/human_adventurer/textures/appearance_female_chestnut.png",
+      "sha256": "57c216e800de98951474ad534ece6250175152dfbe53bd732afbcaf15b9fcc66"
+    },
+    {
+      "path": "skins/human_adventurer/textures/appearance_female_ginger.png",
+      "sha256": "d8014ec4d33887b866b9890a7938b0fca4170b570d34c400546ba41cf1b0c39f"
+    },
+    {
+      "path": "skins/human_adventurer/textures/appearance_male_black.png",
+      "sha256": "118254c3c0a54ab8c00cc935c81e1ac45f7a2e533f7df0a5bd839d20e8c39314"
+    },
+    {
+      "path": "skins/human_adventurer/textures/appearance_male_blond.png",
+      "sha256": "2b327371f551433b00b0a3626f66c11ca7da4732285ce9d44d707e51e97124df"
+    },
+    {
+      "path": "skins/human_adventurer/textures/appearance_male_brown.png",
+      "sha256": "921d2ef6b92ae4cbc9cb869848855c31beb7a1a295955491f98bf3b1e3578670"
+    },
+    {
+      "path": "skins/human_adventurer/textures/appearance_male_chestnut.png",
+      "sha256": "234ecbb87bc27a5a401f869c2ce14e35e6a3d72ad9506135b289f641d73a5dfe"
+    },
+    {
+      "path": "skins/human_adventurer/textures/appearance_male_ginger.png",
+      "sha256": "20ece51087f622ec50201219f8c0774e31d737f732f5f61c45a924c1d5e95913"
+    },
+    {
+      "path": "skins/human_guard/textures/appearance_female_black.png",
+      "sha256": "f273d15b1a140d497634f1b728548eda81c212f1ff735fea90f231b64e8eaecf"
+    },
+    {
+      "path": "skins/human_guard/textures/appearance_female_blond.png",
+      "sha256": "e4e53df53143ebccc95e424b109afbe15c37bba628782d8d156d28ee844f60c5"
+    },
+    {
+      "path": "skins/human_guard/textures/appearance_female_brown.png",
+      "sha256": "5bb9b46f88abac2062e8bea095e98f84146718c4a457330b10fdc153091e6462"
+    },
+    {
+      "path": "skins/human_guard/textures/appearance_female_chestnut.png",
+      "sha256": "3797786aac79c82cd7d0fa9b50a66159f83544ad9c0553a5bb7326ee9d61e2d9"
+    },
+    {
+      "path": "skins/human_guard/textures/appearance_female_ginger.png",
+      "sha256": "1f62ff7d1ba11d1c111c6fc1da07024fa14798c8353aaa11d0167103568d3867"
+    },
+    {
+      "path": "skins/human_guard/textures/appearance_male_black.png",
+      "sha256": "db7205443bcf9cba2699467aa2c2ad9c0780d467093d1cca6f1c4f52c61c0c8d"
+    },
+    {
+      "path": "skins/human_guard/textures/appearance_male_blond.png",
+      "sha256": "53bc4433b3c32c941bf9b5eb3a5e04c702f91a9c42aa58f50e163f583e58786f"
+    },
+    {
+      "path": "skins/human_guard/textures/appearance_male_brown.png",
+      "sha256": "d1b8bba48630bb0d1dcae3a1afcbebac7fc92cf8ee1af7b201d3784d85c04f35"
+    },
+    {
+      "path": "skins/human_guard/textures/appearance_male_chestnut.png",
+      "sha256": "ababe7ffc28f9d2c9f9348097d55b1d9785930b47f4e9a7470739868c4a648bf"
+    },
+    {
+      "path": "skins/human_guard/textures/appearance_male_ginger.png",
+      "sha256": "3a9bfebd0f17175f8f0b592d8a8675eacb01fd8065f8fcb7fd88081398b9fb97"
+    }
+  ],
+  "review_scope": "Own artwork and pairwise native visual review; not full creature R6,Android,installer,terrain IK or long performance certification",
+  "manual_windows_input_capture": "helper failed twice with timeout; native real-widget actions,hit testing,session commands and framebuffer verified",
+  "cpp_equipment_fit_test": "pass: inventory slots2/3,sole and greave boundary",
+  "boot_generator_tests": {
+    "passed": 1,
+    "materials": 4
+  },
+  "native_full_armor_with_items_cases": 12,
+  "boot_fit_sidecars": [
+    {
+      "path": "models/items/copper_feet/wear.json",
+      "sha256": "35fec2c6222ed4e7ac265d438ff2da2c86458af9ec1f276b4e135d85a2c83938"
+    },
+    {
+      "path": "models/items/gold_feet/wear.json",
+      "sha256": "35fec2c6222ed4e7ac265d438ff2da2c86458af9ec1f276b4e135d85a2c83938"
+    },
+    {
+      "path": "models/items/iron_feet/wear.json",
+      "sha256": "35fec2c6222ed4e7ac265d438ff2da2c86458af9ec1f276b4e135d85a2c83938"
+    },
+    {
+      "path": "models/items/leather_feet/wear.json",
+      "sha256": "35fec2c6222ed4e7ac265d438ff2da2c86458af9ec1f276b4e135d85a2c83938"
+    }
+  ]
+}

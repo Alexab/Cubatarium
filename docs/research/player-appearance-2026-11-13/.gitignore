@@ -1,0 +1,11 @@
+# Bulk native captures remain local; selected review inputs are force-added.
+/native_*/
+/runtime*/
+/ui_frames/
+/relocation_*.txt
+/*.users.json
+
+# Generated flight contexts/reports: only curated baseline and final runs are tracked.
+/context_*.json
+/report_*.json
+/ui_flight_report.json

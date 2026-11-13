@@ -17,8 +17,9 @@ def main(root,native):
  grid('body_hairstyles_sheet.png',[(b+' / '+h,[n/f'{b}_{h}_view{v}.png' for v in range(4)]) for b in ('male','female') for h in ('none','short','bob','long','ponytail','curly')],4)
  grid('hair_colors_sheet.png',[(b,[n/f'{b}_color_{c}_base.png' for c in ('black','chestnut','brown','blond','ginger')]) for b in ('male','female')],5,200)
  grid('outfits_sheet.png',[(b,[n/f'{b}_color_chestnut_{o}.png' for o in ('base','human_adventurer','human_guard')]) for b in ('male','female')],3,220)
+ grid('motion_sheet.png',[(b+' | Walk, Run, Crouch, Jump, Swim, Action',[n/(x['id']+'.png') for x in rows if x['id'].startswith(b+'_motion_') and x['id'].endswith('1')]) for b in ('male','female')],6,170)
  grid('helmets_sheet.png',[(b,[n/f'{b}_{h}_helmet.png' for h in ('none','short','bob','long','ponytail','curly')]) for b in ('male','female')],6,160)
- grid('before_after_sheet.png',[(s,[root/'native_before/matrix'/s/'pose_0_view_0_color.png',root/native/'matrix'/s/'pose_0_view_0_color.png',root/'native_before/matrix'/s/'pose_0_view_1_color.png',root/native/'matrix'/s/'pose_0_view_1_color.png']) for s in ('human','human_adventurer','human_guard')],4,240)
+ grid('before_after_sheet.png',[(s+' | BEFORE / AFTER front | BEFORE / AFTER 45deg',[root/'native_before/matrix'/s/'pose_0_view_0_color.png',root/native/'matrix'/s/'pose_0_view_0_color.png',root/'native_before/matrix'/s/'pose_0_view_1_color.png',root/native/'matrix'/s/'pose_0_view_1_color.png']) for s in ('human','human_adventurer','human_guard')],4,240)
  audit=[]
  for row in rows:
   p=n/(row['id']+'.png');im=Image.open(p).convert('RGBA');box=im.getchannel('A').getbbox()
