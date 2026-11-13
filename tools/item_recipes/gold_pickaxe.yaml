@@ -1,0 +1,11 @@
+id: gold_pickaxe
+family: pickaxe
+material: gold
+palette: gold
+recipe_version: 1
+seed: 1
+wield_scale: 1.5
+silhouette: pickaxe
+traits:
+  - transverse_head
+  - binding

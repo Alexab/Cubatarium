@@ -116,20 +116,6 @@
       "class": "tool",
       "path": "Models/GLB format/tool-shovel-upgraded.glb"
     },
-    "iron_hammer": {
-      "source": "kenney_survival_kit",
-      "tier": "free",
-      "role": "existing",
-      "class": "tool",
-      "path": "Models/GLB format/tool-hammer-upgraded.glb"
-    },
-    "stone_knife": {
-      "source": "kaykit_rpg_tools",
-      "path": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/knife.gltf",
-      "tier": "free",
-      "role": "existing",
-      "class": "weapon"
-    },
     "wood_bow": {
       "source": "kaykit_fantasy_weapons",
       "path": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/bow_A_withString.gltf",
@@ -147,20 +133,6 @@
     "leather_chest": {
       "source": "quaternius_fantasy_props",
       "path": "Ultimate RPG Items Pack - Aug 2019/OBJ/Armor_Leather.obj",
-      "tier": "free",
-      "role": "existing",
-      "class": "armor"
-    },
-    "leather_arms": {
-      "source": "quaternius_fantasy_props",
-      "path": "Ultimate RPG Items Pack - Aug 2019/OBJ/Armor_Leather.obj",
-      "tier": "free",
-      "role": "existing",
-      "class": "armor"
-    },
-    "leather_hands": {
-      "source": "quaternius_fantasy_props",
-      "path": "Ultimate RPG Items Pack - Aug 2019/OBJ/Glove.obj",
       "tier": "free",
       "role": "existing",
       "class": "armor"
@@ -189,20 +161,6 @@
     "iron_chest": {
       "source": "quaternius_fantasy_props",
       "path": "Ultimate RPG Items Pack - Aug 2019/OBJ/Armor_Metal.obj",
-      "tier": "free",
-      "role": "existing",
-      "class": "armor"
-    },
-    "iron_arms": {
-      "source": "quaternius_fantasy_props",
-      "path": "Ultimate RPG Items Pack - Aug 2019/OBJ/Armor_Metal.obj",
-      "tier": "free",
-      "role": "existing",
-      "class": "armor"
-    },
-    "iron_hands": {
-      "source": "quaternius_fantasy_props",
-      "path": "Ultimate RPG Items Pack - Aug 2019/OBJ/Glove.obj",
       "tier": "free",
       "role": "existing",
       "class": "armor"
@@ -249,48 +207,6 @@
       "role": "new",
       "class": "weapon"
     },
-    "wood_spear": {
-      "source": "kaykit_fantasy_weapons",
-      "path": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/spear_A.gltf",
-      "tier": "free",
-      "role": "new",
-      "class": "weapon"
-    },
-    "stone_spear": {
-      "source": "kaykit_fantasy_weapons",
-      "path": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/spear_A.gltf",
-      "tier": "free",
-      "role": "new",
-      "class": "weapon"
-    },
-    "iron_spear": {
-      "source": "kaykit_fantasy_weapons",
-      "path": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/spear_A.gltf",
-      "tier": "free",
-      "role": "new",
-      "class": "weapon"
-    },
-    "wood_hammer": {
-      "source": "kenney_survival_kit",
-      "tier": "free",
-      "role": "new",
-      "class": "tool",
-      "path": "Models/GLB format/tool-hammer.glb"
-    },
-    "stone_hammer": {
-      "source": "kenney_survival_kit",
-      "tier": "free",
-      "role": "new",
-      "class": "tool",
-      "path": "Models/GLB format/tool-hammer.glb"
-    },
-    "iron_dagger": {
-      "source": "kaykit_fantasy_weapons",
-      "path": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/dagger_A.gltf",
-      "tier": "free",
-      "role": "new",
-      "class": "weapon"
-    },
     "wood_shield": {
       "source": "kaykit_fantasy_weapons",
       "path": "KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/shield_A.gltf",
@@ -305,63 +221,12 @@
       "role": "new",
       "class": "utility"
     },
-    "iron_lantern": {
-      "source": "kaykit_rpg_tools",
-      "path": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/lantern.gltf",
-      "tier": "free",
-      "role": "new",
-      "class": "utility"
-    },
-    "fishing_rod": {
-      "source": "kaykit_rpg_tools",
-      "glob": "**/fishing*.gltf",
-      "tier": "free",
-      "role": "new",
-      "class": "utility",
-      "status": "parts_only"
-    },
-    "iron_wrench": {
-      "source": "kaykit_rpg_tools",
-      "path": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/wrench_A.gltf",
-      "tier": "free",
-      "role": "new",
-      "class": "utility"
-    },
-    "wood_mallet": {
-      "source": "kenney_survival_kit",
-      "tier": "free",
-      "role": "new",
-      "class": "tool",
-      "path": "Models/GLB format/tool-hammer.glb"
-    },
     "iron_hoe": {
       "source": "kenney_survival_kit",
       "tier": "free",
       "role": "new",
       "class": "utility",
       "path": "Models/GLB format/tool-hoe-upgraded.glb"
-    },
-    "iron_scythe": {
-      "source": "kaykit_rpg_tools",
-      "glob": "**/scythe*.gltf",
-      "tier": "free",
-      "role": "new",
-      "class": "utility",
-      "status": "parts_only"
-    },
-    "iron_tongs": {
-      "source": "kaykit_rpg_tools",
-      "path": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/tongs.gltf",
-      "tier": "free",
-      "role": "new",
-      "class": "utility"
-    },
-    "iron_saw": {
-      "source": "kaykit_rpg_tools",
-      "path": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/saw.gltf",
-      "tier": "free",
-      "role": "new",
-      "class": "utility"
     },
     "wood_torch": {
       "source": "kaykit_rpg_tools",
@@ -391,20 +256,6 @@
       "role": "new",
       "class": "armor"
     },
-    "copper_arms": {
-      "source": "quaternius_fantasy_props",
-      "path": "Ultimate RPG Items Pack - Aug 2019/OBJ/Armor_Golden.obj",
-      "tier": "free",
-      "role": "new",
-      "class": "armor"
-    },
-    "copper_hands": {
-      "source": "quaternius_fantasy_props",
-      "path": "Ultimate RPG Items Pack - Aug 2019/OBJ/Glove.obj",
-      "tier": "free",
-      "role": "new",
-      "class": "armor"
-    },
     "copper_legs": {
       "source": "quaternius_fantasy_props",
       "path": "Ultimate RPG Items Pack - Aug 2019/OBJ/Armor_Golden.obj",
@@ -418,41 +269,6 @@
       "tier": "free",
       "role": "new",
       "class": "armor"
-    },
-    "tool_axe_upgraded": {
-      "source": "kenney_survival_kit",
-      "path": "Models/GLB format/tool-axe-upgraded.glb",
-      "tier": "free",
-      "role": "new",
-      "class": "tool"
-    },
-    "tool_pickaxe_upgraded": {
-      "source": "kenney_survival_kit",
-      "path": "Models/GLB format/tool-pickaxe-upgraded.glb",
-      "tier": "free",
-      "role": "new",
-      "class": "tool"
-    },
-    "tool_shovel_upgraded": {
-      "source": "kenney_survival_kit",
-      "path": "Models/GLB format/tool-shovel-upgraded.glb",
-      "tier": "free",
-      "role": "new",
-      "class": "tool"
-    },
-    "tool_hammer_upgraded": {
-      "source": "kenney_survival_kit",
-      "path": "Models/GLB format/tool-hammer-upgraded.glb",
-      "tier": "free",
-      "role": "new",
-      "class": "tool"
-    },
-    "tool_hoe_upgraded": {
-      "source": "kenney_survival_kit",
-      "path": "Models/GLB format/tool-hoe-upgraded.glb",
-      "tier": "free",
-      "role": "new",
-      "class": "utility"
     }
   }
 }

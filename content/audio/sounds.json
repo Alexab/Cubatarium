@@ -1,0 +1,429 @@
+{
+  "//": "Sound set manifest. Files live under bin/audio/sounds/ (gitignored). Each set lists variant files relative to that root; missing files are warned once and stay silent. Formats: .wav, .mp3, .flac (miniaudio built-ins).",
+  "sets": [
+    {
+      "name": "footstep.grass",
+      "bus": "sfx",
+      "gain": 0.9,
+      "distance": 6.0,
+      "min_interval_sec": 0.12,
+      "files": [
+        "footstep/grass/variant_1.wav",
+        "footstep/grass/variant_2.wav",
+        "footstep/grass/variant_3.wav",
+        "footstep/grass/variant_4.wav"
+      ]
+    },
+    {
+      "name": "footstep.stone",
+      "bus": "sfx",
+      "gain": 0.9,
+      "distance": 6.0,
+      "min_interval_sec": 0.12,
+      "files": [
+        "footstep/stone/variant_1.wav",
+        "footstep/stone/variant_2.wav",
+        "footstep/stone/variant_3.wav",
+        "footstep/stone/variant_4.wav"
+      ]
+    },
+    {
+      "name": "footstep.wood",
+      "bus": "sfx",
+      "gain": 0.9,
+      "distance": 6.0,
+      "min_interval_sec": 0.12,
+      "files": [
+        "footstep/wood/variant_1.wav",
+        "footstep/wood/variant_2.wav",
+        "footstep/wood/variant_3.wav",
+        "footstep/wood/variant_4.wav"
+      ]
+    },
+    {
+      "name": "footstep.sand",
+      "bus": "sfx",
+      "gain": 0.9,
+      "distance": 6.0,
+      "min_interval_sec": 0.12,
+      "files": [
+        "footstep/sand/variant_1.wav",
+        "footstep/sand/variant_2.wav",
+        "footstep/sand/variant_3.wav",
+        "footstep/sand/variant_4.wav"
+      ]
+    },
+    {
+      "name": "footstep.snow",
+      "bus": "sfx",
+      "gain": 0.9,
+      "distance": 6.0,
+      "min_interval_sec": 0.14,
+      "files": [
+        "footstep/snow/variant_1.wav",
+        "footstep/snow/variant_2.wav",
+        "footstep/snow/variant_3.wav",
+        "footstep/snow/variant_4.wav"
+      ]
+    },
+    {
+      "name": "footstep.gravel",
+      "bus": "sfx",
+      "gain": 0.9,
+      "distance": 6.0,
+      "min_interval_sec": 0.12,
+      "files": [
+        "footstep/gravel/variant_1.wav",
+        "footstep/gravel/variant_2.wav",
+        "footstep/gravel/variant_3.wav",
+        "footstep/gravel/variant_4.wav"
+      ]
+    },
+    {
+      "name": "footstep.leaf",
+      "bus": "sfx",
+      "gain": 0.8,
+      "distance": 6.0,
+      "min_interval_sec": 0.12,
+      "files": [
+        "footstep/leaf/variant_1.wav",
+        "footstep/leaf/variant_2.wav",
+        "footstep/leaf/variant_3.wav"
+      ]
+    },
+    {
+      "name": "footstep.paws",
+      "bus": "sfx",
+      "gain": 0.7,
+      "distance": 8.0,
+      "min_interval_sec": 0.16,
+      "files": [
+        "footstep/paws/variant_1.wav",
+        "footstep/paws/variant_2.wav",
+        "footstep/paws/variant_3.wav"
+      ]
+    },
+    {
+      "name": "footstep.hooves",
+      "bus": "sfx",
+      "gain": 0.8,
+      "distance": 10.0,
+      "min_interval_sec": 0.16,
+      "files": [
+        "footstep/hooves/variant_1.wav",
+        "footstep/hooves/variant_2.wav",
+        "footstep/hooves/variant_3.wav"
+      ]
+    },
+    {
+      "name": "footstep.barefoot",
+      "bus": "sfx",
+      "gain": 0.6,
+      "distance": 6.0,
+      "min_interval_sec": 0.16,
+      "files": [
+        "footstep/barefoot/variant_1.wav",
+        "footstep/barefoot/variant_2.wav",
+        "footstep/barefoot/variant_3.wav"
+      ]
+    },
+    {
+      "name": "dig.stone",
+      "bus": "sfx",
+      "gain": 0.9,
+      "distance": 10.0,
+      "min_interval_sec": 0.15,
+      "files": [
+        "dig/stone/variant_1.wav",
+        "dig/stone/variant_2.wav"
+      ]
+    },
+    {
+      "name": "dig.soft",
+      "bus": "sfx",
+      "gain": 0.9,
+      "distance": 8.0,
+      "min_interval_sec": 0.15,
+      "files": [
+        "dig/soft/variant_1.wav",
+        "dig/soft/variant_2.wav"
+      ]
+    },
+    {
+      "name": "dig.wood",
+      "bus": "sfx",
+      "gain": 0.9,
+      "distance": 10.0,
+      "min_interval_sec": 0.15,
+      "files": [
+        "dig/wood/variant_1.wav",
+        "dig/wood/variant_2.wav"
+      ]
+    },
+    {
+      "name": "dug.stone",
+      "bus": "sfx",
+      "gain": 1.0,
+      "distance": 10.0,
+      "files": [
+        "dug/stone/variant_1.wav",
+        "dug/stone/variant_2.wav"
+      ]
+    },
+    {
+      "name": "dug.soft",
+      "bus": "sfx",
+      "gain": 1.0,
+      "distance": 8.0,
+      "files": [
+        "dug/soft/variant_1.wav",
+        "dug/soft/variant_2.wav"
+      ]
+    },
+    {
+      "name": "dug.wood",
+      "bus": "sfx",
+      "gain": 1.0,
+      "distance": 10.0,
+      "files": [
+        "dug/wood/variant_1.wav",
+        "dug/wood/variant_2.wav"
+      ]
+    },
+    {
+      "name": "melee.swing",
+      "bus": "sfx",
+      "gain": 0.8,
+      "distance": 10.0,
+      "min_interval_sec": 0.08,
+      "files": [
+        "melee/swing/variant_1.wav",
+        "melee/swing/variant_2.wav"
+      ]
+    },
+    {
+      "name": "melee.hit",
+      "bus": "sfx",
+      "gain": 1.0,
+      "distance": 12.0,
+      "min_interval_sec": 0.08,
+      "files": [
+        "melee/hit/variant_1.wav",
+        "melee/hit/variant_2.wav",
+        "melee/hit/variant_3.wav"
+      ]
+    },
+    {
+      "name": "ranged.shot",
+      "bus": "sfx",
+      "gain": 1.0,
+      "distance": 16.0,
+      "files": [
+        "ranged/shot/variant_1.wav",
+        "ranged/shot/variant_2.wav"
+      ]
+    },
+    {
+      "name": "creature.hurt",
+      "bus": "sfx",
+      "gain": 1.0,
+      "distance": 14.0,
+      "min_interval_sec": 0.15,
+      "files": [
+        "creature/hurt/variant_1.wav",
+        "creature/hurt/variant_2.wav"
+      ]
+    },
+    {
+      "name": "creature.death",
+      "bus": "sfx",
+      "gain": 1.0,
+      "distance": 14.0,
+      "files": [
+        "creature/death/variant_1.wav"
+      ]
+    },
+    {
+      "name": "pickup.item",
+      "bus": "sfx",
+      "gain": 0.8,
+      "distance": 8.0,
+      "min_interval_sec": 0.05,
+      "files": [
+        "pickup/item/variant_1.wav",
+        "pickup/item/variant_2.wav"
+      ]
+    },
+    {
+      "name": "eat.food",
+      "bus": "sfx",
+      "gain": 0.9,
+      "distance": 6.0,
+      "min_interval_sec": 0.2,
+      "files": [
+        "eat/food/variant_1.wav",
+        "eat/food/variant_2.wav"
+      ]
+    },
+    {
+      "name": "equip.armor",
+      "bus": "sfx",
+      "gain": 0.9,
+      "distance": 0.0,
+      "files": [
+        "equip/armor/variant_1.wav"
+      ]
+    },
+    {
+      "name": "place.block",
+      "bus": "sfx",
+      "gain": 0.9,
+      "distance": 10.0,
+      "min_interval_sec": 0.05,
+      "files": [
+        "place/block/variant_1.wav",
+        "place/block/variant_2.wav"
+      ]
+    },
+    {
+      "name": "splash.water",
+      "bus": "sfx",
+      "gain": 0.9,
+      "distance": 12.0,
+      "min_interval_sec": 0.3,
+      "files": [
+        "splash/water/variant_1.wav",
+        "splash/water/variant_2.wav"
+      ]
+    },
+    {
+      "name": "ui.click",
+      "bus": "ui",
+      "gain": 0.8,
+      "distance": 0.0,
+      "min_interval_sec": 0.03,
+      "files": [
+        "ui/click/variant_1.wav",
+        "ui/click/variant_2.wav"
+      ]
+    },
+    {
+      "name": "ui.open",
+      "bus": "ui",
+      "gain": 0.8,
+      "distance": 0.0,
+      "files": [
+        "ui/open/variant_1.wav"
+      ]
+    },
+    {
+      "name": "ui.close",
+      "bus": "ui",
+      "gain": 0.8,
+      "distance": 0.0,
+      "files": [
+        "ui/close/variant_1.wav"
+      ]
+    },
+    {
+      "name": "ambient.forest.loop",
+      "loop": true,
+      "bus": "ambient",
+      "gain": 0.45,
+      "distance": 0.0,
+      "files": [
+        "ambient/forest/loop_1.wav"
+      ]
+    },
+    {
+      "name": "ambient.forest.bird",
+      "bus": "ambient",
+      "gain": 0.7,
+      "distance": 24.0,
+      "files": [
+        "ambient/forest/bird_1.wav",
+        "ambient/forest/bird_2.wav",
+        "ambient/forest/bird_3.wav"
+      ]
+    },
+    {
+      "name": "ambient.forest.crickets",
+      "bus": "ambient",
+      "gain": 0.5,
+      "distance": 20.0,
+      "files": [
+        "ambient/forest/crickets_1.wav",
+        "ambient/forest/crickets_2.wav"
+      ]
+    },
+    {
+      "name": "ambient.wind.loop",
+      "loop": true,
+      "bus": "ambient",
+      "gain": 0.28,
+      "distance": 0.0,
+      "files": [
+        "ambient/wind/loop_1.wav"
+      ]
+    },
+    {
+      "name": "ambient.desert.loop",
+      "loop": true,
+      "bus": "ambient",
+      "gain": 0.3,
+      "distance": 0.0,
+      "files": [
+        "ambient/desert/loop_1.wav"
+      ]
+    },
+    {
+      "name": "ambient.ocean.loop",
+      "loop": true,
+      "bus": "ambient",
+      "gain": 0.45,
+      "distance": 0.0,
+      "files": [
+        "ambient/ocean/loop_1.wav"
+      ]
+    },
+    {
+      "name": "ambient.cave.loop",
+      "loop": true,
+      "bus": "ambient",
+      "gain": 0.4,
+      "distance": 0.0,
+      "files": [
+        "ambient/cave/loop_1.wav"
+      ]
+    },
+    {
+      "name": "ambient.cave.drip",
+      "bus": "ambient",
+      "gain": 0.7,
+      "distance": 18.0,
+      "files": [
+        "ambient/cave/drip_1.wav",
+        "ambient/cave/drip_2.wav"
+      ]
+    },
+    {
+      "name": "ambient.rain.loop",
+      "loop": true,
+      "bus": "ambient",
+      "gain": 0.45,
+      "distance": 0.0,
+      "files": [
+        "ambient/rain/loop_1.wav"
+      ]
+    },
+    {
+      "name": "ambient.torch.crackle",
+      "bus": "ambient",
+      "gain": 0.5,
+      "distance": 6.0,
+      "files": [
+        "ambient/torch/crackle_1.wav"
+      ]
+    }
+  ]
+}

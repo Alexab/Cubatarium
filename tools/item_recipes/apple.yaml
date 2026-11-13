@@ -1,0 +1,10 @@
+id: apple
+family: apple
+material: organic
+palette: organic
+recipe_version: 1
+seed: 1
+wield_scale: 0.95
+silhouette: apple
+traits:
+  - fruit

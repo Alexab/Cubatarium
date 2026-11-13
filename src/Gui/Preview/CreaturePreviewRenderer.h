@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <cstdint>
 #include "Creatures/Locomotion/LocomotionTypes.h"
+#include "Creatures/Visual/WornEquipmentDrawer.h"
 
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
@@ -23,7 +24,6 @@ class USkinDefinitionStorage;
 class UCreatureTextureStorage;
 class UShaderManager;
 class CreatureDrawQueue;
-struct WornArmorPreviewSlot;
 struct CreatureGltfMeshAsset;
 
 class UCreaturePreviewRenderer
@@ -85,7 +85,7 @@ public:
       const std::string &speciesId, const std::string &skinId, int size,
       float yawDeg, float pitchDeg, float animTimeSec = 0.f,
       bool animateWalk = false,
-      const std::array<WornArmorPreviewSlot, 6> *armor = nullptr,
+      const std::array<WornArmorPreviewSlot, kWornArmorSlotCount> *armor = nullptr,
       const std::string *mainItemId = nullptr,
       const std::string *offhandItemId = nullptr);
 
@@ -118,7 +118,7 @@ private:
   bool DrawSpeciesParts(const std::string &speciesId, const std::string &skinId,
                         int viewportSize, float yawDeg, float pitchDeg,
                         float animTimeSec = 0.f, bool animateWalk = false,
-                        const std::array<WornArmorPreviewSlot, 6> *armor =
+                        const std::array<WornArmorPreviewSlot, kWornArmorSlotCount> *armor =
                             nullptr,
                         const std::string *mainItemId = nullptr,
                         const std::string *offhandItemId = nullptr);

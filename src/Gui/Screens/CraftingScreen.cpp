@@ -88,6 +88,14 @@ void UCraftingScreen::Update(double /*dt*/)
   {
     Status->SetText(StatusText);
   }
+  if (Visible && Icons)
+  {
+    if (Icons->PendingItemIcons() > 0)
+    {
+      Icons->WarmupItemIcons(4);
+    }
+    RefreshRecipeIcons();
+  }
 }
 
 void UCraftingScreen::Relayout()
@@ -122,6 +130,8 @@ void UCraftingScreen::RebuildList()
     return;
   }
   Scroll->Content().ClearChildren();
+  RecipeIconSlots.clear();
+  RecipeOutputIds.clear();
   const int slotSize = Theme->HotbarSlotSize;
   int y = 4;
   for (const RecipeDefinition &recipe : Recipes.GetRecipes())
@@ -140,7 +150,10 @@ void UCraftingScreen::RebuildList()
     {
       icon->SetCornerHint("x" + std::to_string(recipe.Output.Count));
     }
-    rowPtr->AddChild(std::move(icon));
+    UGuiSlot *iconPtr =
+        static_cast<UGuiSlot *>(rowPtr->AddChild(std::move(icon)));
+    RecipeIconSlots.push_back(iconPtr);
+    RecipeOutputIds.push_back(recipe.Output.Id);
 
     std::ostringstream label;
     label << recipe.Id << "  (";
@@ -197,6 +210,28 @@ void UCraftingScreen::RebuildList()
     y += slotSize + 16;
   }
   Scroll->LayoutContent();
+}
+
+void UCraftingScreen::RefreshRecipeIcons()
+{
+  if (!Icons)
+  {
+    return;
+  }
+  for (size_t i = 0; i < RecipeIconSlots.size() && i < RecipeOutputIds.size();
+       ++i)
+  {
+    UGuiSlot *slot = RecipeIconSlots[i];
+    if (!slot || slot->GetIconTexture() != 0)
+    {
+      continue;
+    }
+    const GLuint tex = Icons->GetItemIconTexture(RecipeOutputIds[i]);
+    if (tex != 0)
+    {
+      slot->SetIconTexture(tex);
+    }
+  }
 }
 
 } // namespace cutum

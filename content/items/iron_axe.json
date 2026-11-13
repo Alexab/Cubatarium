@@ -9,7 +9,7 @@
   "model": "models/items/iron_axe/model.gltf",
   "repair": {
     "materials": [
-      "iron_ingot",
+      "mtg_steelblock",
       "iron"
     ],
     "amount": 0.25
@@ -38,6 +38,17 @@
     "swing": {
       "dig": "dig_tool",
       "melee": "dig_tool"
-    }
+    },
+    "fit_axis": "y",
+    "wield_euler_deg": [
+      -8,
+      20,
+      80
+    ],
+    "wield_offset": [
+      0,
+      -0.1,
+      0
+    ]
   }
 }

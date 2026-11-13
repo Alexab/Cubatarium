@@ -119,6 +119,7 @@ public:
   float GetUiScale() const { return UiScale; }
   void UpdateUiScale(int fb_w, int fb_h, const PlatformUiMetrics &platform);
   void ApplyLiveUiScale(float user_scale) override;
+  void ApplyLiveAudioSettings(const AudioSettings &settings) override;
 
   bool RouteKey(int key, int Action, int Mods);
   bool RouteChar(unsigned int Codepoint);
@@ -229,6 +230,8 @@ private:
   UInputRouter InputRouter;
 
   std::shared_ptr<UCore> Core;
+  /// Throttle for the throttled ambience snapshot post (see Update).
+  double AudioAmbienceCooldown{0.0};
   std::shared_ptr<UWorld> World;
   std::shared_ptr<UGeometryEngine> Geometry;
   std::shared_ptr<UViewEngine> Views;

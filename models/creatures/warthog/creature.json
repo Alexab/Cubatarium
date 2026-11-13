@@ -126,5 +126,11 @@
         "Fly": "idle"
       }
     }
-  }
+  },
+  "drops": [
+    {
+      "id": "raw_meat",
+      "count": 1
+    }
+  ]
 }

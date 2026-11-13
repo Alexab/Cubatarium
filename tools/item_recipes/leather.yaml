@@ -1,0 +1,10 @@
+id: leather
+family: leather
+material: leather
+palette: leather
+recipe_version: 1
+seed: 1
+wield_scale: 0.9
+silhouette: leather
+traits:
+  - hide

@@ -1,0 +1,24 @@
+{
+  "id": "flint_and_steel",
+  "displayName": "Flint And Steel",
+  "types": [
+    "utility"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "model": "models/items/flint_and_steel/model.gltf",
+  "visual": {
+    "wield_scale": 1.0,
+    "fit_axis": "y",
+    "wield_euler_deg": [
+      -10,
+      0,
+      0
+    ],
+    "wield_offset": [
+      0,
+      0.12,
+      0
+    ]
+  }
+}

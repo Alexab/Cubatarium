@@ -1,0 +1,18 @@
+{
+  "id": "iron_shovel",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "mtg_steelblock",
+      "count": 1
+    },
+    {
+      "id": "wood",
+      "count": 2
+    }
+  ],
+  "output": {
+    "id": "iron_shovel",
+    "count": 1
+  }
+}

@@ -1,0 +1,10 @@
+id: gold_shovel
+family: shovel
+material: gold
+palette: gold
+recipe_version: 1
+seed: 1
+wield_scale: 1.45
+silhouette: shovel
+traits:
+  - scoop

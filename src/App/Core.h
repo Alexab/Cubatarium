@@ -11,6 +11,7 @@
 #include "App/CreateWorldCli.h"
 #include "App/ResourcePackBootstrap.h"
 #include "App/Settings/AppSettingsSnapshot.h"
+#include "App/Settings/AudioSettings.h"
 #include "App/Settings/RenderSettings.h"
 #include "App/Settings/UiSettings.h"
 #include "App/WorldLifecycleFacade.h"
@@ -45,6 +46,7 @@ class UViewEngine;
 class UBlockDefinitionStorage;
 class UBlockMergeRegistry;
 class UPlaceholderTextureCache;
+class UAudioDirector;
 
 class UCore : public IUGameContent
 {
@@ -86,6 +88,11 @@ public:
 
   const UiSettings &GetUiSettings() const { return Ui; }
   RenderSettings GetRenderSettings() const { return Render; }
+  const AudioSettings &GetAudioSettings() const { return Audio; }
+  /// Live audio-settings path from the settings GUI (no config write).
+  void ApplyAudioSettingsLive(const AudioSettings &settings);
+  /// Window focus loss mutes everything (no config change).
+  void SetAudioFocusMuted(bool muted);
 
   void CreateWorld(const std::string &terrain_type = "");
   void CreateWorldFromProceduralConfig();
@@ -236,6 +243,9 @@ private:
   PhysicsBudgets PhysicsBudgetsConfig;
   RenderSettings Render;
   UiSettings Ui;
+  AudioSettings Audio;
+  std::unique_ptr<UAudioDirector> AudioDirectorInstance;
+  void StartAudioDirectorIfReady();
   ResourcePacksConfig ResourcePacks;
   std::vector<std::string> ActiveResourcePacksEnabled;
   std::vector<std::string> PendingNewWorldResourcePacks;

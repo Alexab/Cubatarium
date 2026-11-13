@@ -1,0 +1,10 @@
+id: stone_axe
+family: axe
+material: stone
+palette: stone
+recipe_version: 1
+seed: 1
+wield_scale: 1.5
+silhouette: axe
+traits:
+  - broad_blade

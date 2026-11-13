@@ -1,0 +1,8 @@
+{
+  "id": "waterskin",
+  "shapeless": true,
+  "inputs": [
+    { "id": "leather", "count": 1 }
+  ],
+  "output": { "id": "waterskin", "count": 1 }
+}

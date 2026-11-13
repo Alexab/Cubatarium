@@ -3,6 +3,8 @@
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
 #include "Game/Economy/ResourceEconomy.h"
+#include "Game/ModePolicy.h"
+#include "World/Items/WorldItemSystem.h"
 #include "Game/WorldGameMode.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Items/ToolCapabilities.h"
@@ -90,15 +92,13 @@ bool UBlockBreakService::Complete(UWorld &world)
     }
   }
 
-  if (!blockTypeName.empty())
+  if (!blockTypeName.empty() &&
+      ModePolicy::DropsBlocksOnBreak(world.GetGameMode()))
   {
-    if (UCreature *creature = world.GetControlledCreature())
-    {
-      ResourceEconomyService::GrantBlockDrop(world.GetGameMode(),
-                                             creature->GetInventory(),
-                                             blockTypeName,
-                                             /*count=*/1);
-    }
+    const glm::vec3 dropPos(static_cast<float>(pos.x) + 0.5f,
+                            static_cast<float>(pos.y) + 0.5f,
+                            static_cast<float>(pos.z) + 0.5f);
+    WorldItemSystem::Instance().Spawn(dropPos, blockTypeName, 1, true);
   }
   return world.DelBlockAt(pos);
 }

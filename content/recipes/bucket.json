@@ -1,0 +1,14 @@
+{
+  "id": "bucket",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "mtg_steelblock",
+      "count": 3
+    }
+  ],
+  "output": {
+    "id": "bucket",
+    "count": 1
+  }
+}

@@ -1,12 +1,12 @@
 {
   "asset": {
     "version": "2.0",
-    "generator": "cubatarium parts_to_gltf"
+    "generator": "cubatarium-itemgen"
   },
   "buffers": [
     {
       "uri": "model.bin",
-      "byteLength": 552
+      "byteLength": 1656
     }
   ],
   "bufferViews": [
@@ -27,6 +27,42 @@
       "byteOffset": 480,
       "byteLength": 72,
       "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 552,
+      "byteLength": 288,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 840,
+      "byteLength": 192,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1032,
+      "byteLength": 72,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1104,
+      "byteLength": 288,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1392,
+      "byteLength": 192,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1584,
+      "byteLength": 72,
+      "target": 34963
     }
   ],
   "accessors": [
@@ -36,14 +72,14 @@
       "count": 24,
       "type": "VEC3",
       "min": [
-        -0.18,
-        0.0,
-        -0.11
+        -0.14,
+        -0.06,
+        -0.08
       ],
       "max": [
-        0.18,
-        0.16,
-        0.11
+        0.14,
+        0.06,
+        0.08
       ]
     },
     {
@@ -57,6 +93,122 @@
       "componentType": 5123,
       "count": 36,
       "type": "SCALAR"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC3",
+      "min": [
+        -0.12,
+        0.030000000000000002,
+        -0.06
+      ],
+      "max": [
+        0.12,
+        0.07,
+        0.06
+      ]
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 5,
+      "componentType": 5123,
+      "count": 36,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 6,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC3",
+      "min": [
+        -0.13,
+        -0.06,
+        -0.07
+      ],
+      "max": [
+        0.13,
+        -0.02,
+        0.07
+      ]
+    },
+    {
+      "bufferView": 7,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 8,
+      "componentType": 5123,
+      "count": 36,
+      "type": "SCALAR"
+    }
+  ],
+  "images": [
+    {
+      "uri": "textures/diffuse.png"
+    }
+  ],
+  "textures": [
+    {
+      "source": 0
+    }
+  ],
+  "materials": [
+    {
+      "name": "body",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicFactor": 0.0,
+        "roughnessFactor": 0.95
+      }
+    },
+    {
+      "name": "accent",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicFactor": 0.05,
+        "roughnessFactor": 0.95
+      }
+    },
+    {
+      "name": "edge",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicFactor": 0.05,
+        "roughnessFactor": 0.75
+      }
     }
   ],
   "meshes": [
@@ -71,6 +223,24 @@
           "indices": 2,
           "mode": 4,
           "material": 0
+        },
+        {
+          "attributes": {
+            "POSITION": 3,
+            "TEXCOORD_0": 4
+          },
+          "indices": 5,
+          "mode": 4,
+          "material": 1
+        },
+        {
+          "attributes": {
+            "POSITION": 6,
+            "TEXCOORD_0": 7
+          },
+          "indices": 8,
+          "mode": 4,
+          "material": 2
         }
       ]
     }
@@ -89,33 +259,7 @@
     }
   ],
   "scene": 0,
-  "images": [
-    {
-      "uri": "Textures/body.png",
-      "name": "body"
-    }
-  ],
-  "textures": [
-    {
-      "source": 0
-    }
-  ],
-  "materials": [
-    {
-      "name": "body",
-      "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 0
-        },
-        "baseColorFactor": [
-          0.8235294117647058,
-          0.6470588235294118,
-          0.35294117647058826,
-          1.0
-        ],
-        "metallicFactor": 0.0,
-        "roughnessFactor": 1.0
-      }
-    }
-  ]
+  "extras": {
+    "authoring_source": "cubatarium-recipe"
+  }
 }

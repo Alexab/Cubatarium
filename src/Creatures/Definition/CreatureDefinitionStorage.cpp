@@ -490,6 +490,23 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
     {
       ParseVisualSpec(data["visual"], def, path);
     }
+    if (data.contains("drops") && data["drops"].is_array())
+    {
+      for (const auto &entry : data["drops"])
+      {
+        if (!entry.is_object())
+        {
+          continue;
+        }
+        CreatureDropEntry drop;
+        drop.itemId = entry.value("id", entry.value("item", ""));
+        drop.count = std::max(1, entry.value("count", 1));
+        if (!drop.itemId.empty())
+        {
+          def.drops.push_back(std::move(drop));
+        }
+      }
+    }
     std::unique_lock lock(DefinitionsMutex);
     Definitions[def.Id] = std::move(def);
     Revision.fetch_add(1, std::memory_order_relaxed);

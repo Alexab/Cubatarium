@@ -157,8 +157,18 @@ endforeach()
 set(SOURCES
     src/ThirdParty/stb_image.cpp
     src/ThirdParty/stb_image_write.cpp
+    src/ThirdParty/miniaudio.cpp
     src/main.cpp
+    src/Audio/AudioApi.cpp
+    src/Audio/AudioDirector.cpp
+    src/Audio/AudioEngine.cpp
+    src/Audio/AudioEventQueue.cpp
+    src/Audio/MaterialSoundMap.cpp
+    src/Audio/MusicManifest.cpp
+    src/Audio/SoundBank.cpp
+    src/Audio/SoundManifest.cpp
     src/App/Utils.cpp
+    src/App/Settings/AudioSettings.cpp
     src/App/CreateWorldCli.cpp
     src/Render/Camera/Camera.cpp
     src/Render/Camera/CameraLens.cpp
@@ -184,6 +194,7 @@ set(SOURCES
     src/Items/ItemWieldRenderer.cpp
     src/Items/FpViewmodelRenderer.cpp
     src/Items/ItemGltfTextureCache.cpp
+    src/World/Items/WorldItemSystem.cpp
     src/Items/ItemToolInfluenceProvider.cpp
     src/Items/ItemVisualPresetLibrary.cpp
     src/Creatures/Influence/InfluenceHitMath.cpp
@@ -618,6 +629,16 @@ set(HEADERS
     src/World/Lighting/FlatLightingPipeline.h
     src/World/Lighting/LightingPipelineFactory.h
     src/App/Settings/GraphicsQualityProfile.h
+    src/App/Settings/AudioSettings.h
+    src/Audio/AudioApi.h
+    src/Audio/AudioDirector.h
+    src/Audio/AudioEngine.h
+    src/Audio/AudioEvent.h
+    src/Audio/AudioEventQueue.h
+    src/Audio/MaterialSoundMap.h
+    src/Audio/MusicManifest.h
+    src/Audio/SoundBank.h
+    src/Audio/SoundManifest.h
     src/World/Persistence/WorldPersistence.h
     src/World/Streaming/WorldStreaming.h
     src/World/Streaming/ChunkEmergeCoordinator.h
@@ -952,6 +973,36 @@ cubatarium_add_test(NAME chunk_load_priority_test
 cubatarium_add_test(NAME completed_job_queue_test
     SOURCES
         src/Test/CompletedJobQueueTest.cpp)
+
+cubatarium_add_test(NAME audio_event_queue_test
+    SOURCES
+        src/Audio/AudioEventQueue.cpp
+        src/Test/AudioEventQueueTest.cpp)
+
+cubatarium_add_test(NAME audio_settings_json_test
+    SOURCES
+        src/App/Settings/AudioSettings.cpp
+        src/Test/AudioSettingsTest.cpp
+    LIBRARIES nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME material_sound_map_test
+    SOURCES
+        src/Audio/MaterialSoundMap.cpp
+        src/Test/MaterialSoundMapTest.cpp
+    LIBRARIES nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME footstep_phase_wrap_test
+    SOURCES
+        src/Creatures/Locomotion/CreatureLocomotionFacts.cpp
+        src/Creatures/Locomotion/LocomotionStateDerive.cpp
+        src/Test/FootstepPhaseTest.cpp
+    LIBRARIES glm::glm)
+
+cubatarium_add_test(NAME music_manifest_test
+    SOURCES
+        src/Audio/MusicManifest.cpp
+        src/Test/MusicManifestTest.cpp
+    LIBRARIES nlohmann_json::nlohmann_json)
 
 cubatarium_add_test(NAME terrain_column_util_test
     SOURCES
@@ -1514,6 +1565,25 @@ cubatarium_add_test(NAME resource_economy_test
         src/Game/Economy/ResourceEconomy.cpp
         src/Test/ResourceEconomyTest.cpp
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME item_survival_hooks_test
+    SOURCES
+        src/Creatures/Core/CreatureCatalogTypes.cpp
+        src/Creatures/Core/CreatureInventory.cpp
+        src/Creatures/Definition/CreatureDefinitionStorage.cpp
+        src/Creatures/Locomotion/LocomotionTypes.cpp
+        src/Creatures/Stats/CreatureStatsDefaults.cpp
+        src/Creatures/Stats/CreatureStatsJson.cpp
+        src/Creatures/Visual/CreatureRigidModelLoader.cpp
+        src/Game/Economy/ResourceEconomy.cpp
+        src/Items/ItemDefinitionStorage.cpp
+        src/Items/ItemUseRegistry.cpp
+        src/Items/ItemVisualPresetLibrary.cpp
+        src/Items/ToolCapabilities.cpp
+        src/Test/ItemSurvivalHooksTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+add_test(NAME item_survival_hooks_test COMMAND $<TARGET_FILE:item_survival_hooks_test>)
+set_tests_properties(item_survival_hooks_test PROPERTIES LABELS "unit;items")
 
 cubatarium_add_test(NAME mode_policy_test
     SOURCES
@@ -2992,8 +3062,9 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/models")
         COMMAND ${CMAKE_COMMAND}
             -DSYNC_SRC="${CMAKE_SOURCE_DIR}/models"
             -DSYNC_DST="${CUBATARIUM_RUN_DIR}/models"
+            -DSYNC_MIRROR=ON
             -P "${CMAKE_SOURCE_DIR}/cmake/sync_runtime_subdir.cmake"
-        COMMENT "Syncing models to runtime directory"
+        COMMENT "Syncing models to runtime directory (mirror prune)"
     )
 endif()
 
@@ -3022,8 +3093,9 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/content")
         COMMAND ${CMAKE_COMMAND}
             -DSYNC_SRC="${CMAKE_SOURCE_DIR}/content"
             -DSYNC_DST="${CUBATARIUM_RUN_DIR}/content"
+            -DSYNC_MIRROR=ON
             -P "${CMAKE_SOURCE_DIR}/cmake/sync_runtime_subdir.cmake"
-        COMMENT "Syncing content data to runtime directory"
+        COMMENT "Syncing content data to runtime directory (mirror prune)"
     )
 endif()
 

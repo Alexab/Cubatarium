@@ -303,32 +303,27 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
       // Survival mode: InventoryKey toggles backpack UI.
       if (!allowCreativePalette)
       {
-        if (app.SurvivalInventoryOpen)
+        if (app.PaletteOpen && app.PaletteScreen)
         {
-          app.SurvivalInventoryOpen = false;
-          if (app.SurvivalInventoryScreen)
-          {
-            app.SurvivalInventoryScreen->SetVisible(false);
-          }
+          app.PaletteOpen = false;
+          app.PaletteScreen->SetVisible(false);
           app.GuiContext->ClearInputState();
         }
-        else
+        else if (app.PaletteScreen)
         {
-          app.SurvivalInventoryOpen = true;
-          app.PaletteOpen = false;
+          app.PaletteOpen = true;
+          app.SurvivalInventoryOpen = false;
           app.WorldGenOpen = false;
-          if (app.PaletteScreen)
-          {
-            app.PaletteScreen->SetVisible(false);
-          }
           if (app.WorldGenScreen)
           {
             app.WorldGenScreen->SetVisible(false);
           }
           if (app.SurvivalInventoryScreen)
           {
-            app.SurvivalInventoryScreen->SetVisible(true);
+            app.SurvivalInventoryScreen->SetVisible(false);
           }
+          app.PaletteScreen->SetCatalogAllowed(false);
+          app.PaletteScreen->SetVisible(true);
         }
         app.SyncCursorVisibility();
         return true;

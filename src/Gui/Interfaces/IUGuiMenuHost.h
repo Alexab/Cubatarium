@@ -13,6 +13,7 @@ namespace cutum
 {
 
 struct AppSettingsSnapshot;
+struct AudioSettings;
 struct ProceduralSettings;
 struct InstalledPackInfo;
 
@@ -71,6 +72,8 @@ public:
   ApplyWorldSettings(const ResourcePackSelection &selection,
                      const WorldViewSettings &view) = 0;
   virtual void ApplyLiveUiScale(float user_scale) = 0;
+  /// Live audio volume preview from the Audio tab (no config write).
+  virtual void ApplyLiveAudioSettings(const AudioSettings &settings) = 0;
 };
 
 } // namespace cutum

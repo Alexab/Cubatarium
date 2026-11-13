@@ -1,0 +1,37 @@
+{
+  "//": "Music playlists by context. Files live in bin/audio/music/ (gitignored) — place the selected Ragnarok Online OST MP3s there manually (see docs/research/audio-system). Contexts resolve like biomes: longest prefix wins, 'overworld' is the fallback.",
+  "crossfade_seconds": 3.0,
+  "contexts": {
+    "overworld": [
+      "1-08 Theme of Prontera.mp3",
+      "1-14 Theme of Payon.mp3",
+      "2-04 Be Nice'n Easy.mp3",
+      "2-05 One Step Closer.mp3",
+      "2-16 Morning Gloomy.mp3",
+      "2-02 Dreamer's Dream.mp3"
+    ],
+    "travel": [
+      "1-23 Travel.mp3",
+      "1-25 Plateau.mp3",
+      "2-06 Brassy Road.mp3",
+      "2-01 Everlasting Wanderers.mp3",
+      "1-12 Streamside.mp3"
+    ],
+    "forest": [
+      "1-03 Peaceful Forest.mp3",
+      "1-14 Theme of Payon.mp3"
+    ],
+    "desert": [
+      "1-24 Desert.mp3",
+      "1-11 Theme of Morroc.mp3"
+    ],
+    "caves": [
+      "1-19 Under the ground.mp3",
+      "1-16 Labyrinth.mp3"
+    ],
+    "night": [
+      "1-07 Wind of Tragedy.mp3",
+      "2-14 Fear....mp3"
+    ]
+  }
+}

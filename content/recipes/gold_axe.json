@@ -1,0 +1,18 @@
+{
+  "id": "gold_axe",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "mtg_goldblock",
+      "count": 3
+    },
+    {
+      "id": "wood",
+      "count": 2
+    }
+  ],
+  "output": {
+    "id": "gold_axe",
+    "count": 1
+  }
+}

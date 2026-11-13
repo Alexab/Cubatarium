@@ -1,8 +1,12 @@
 #include "Creatures/Influence/InfluenceApplier.h"
+#include "Audio/AudioApi.h"
 #include "Creatures/Core/Creature.h"
+#include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Influence/InfluenceEvent.h"
 #include "Creatures/Influence/StatusEffectSystem.h"
 #include "Creatures/Stats/CreatureVitalsSystem.h"
+#include "Game/Economy/ResourceEconomy.h"
+#include "World/Items/WorldItemSystem.h"
 #include "Game/Inventory/InventoryTypes.h"
 #include "Game/ModePolicy.h"
 #include "Items/ItemDefinitionStorage.h"
@@ -39,7 +43,7 @@ void ApplyArmorWearForHit(UWorld &world, UCreature &target,
     if (items)
     {
       std::vector<size_t> worn;
-      for (size_t slot = 0; slot < 6; ++slot)
+      for (size_t slot = 0; slot < UCreatureInventory::kArmorSlotCount; ++slot)
       {
         const InventoryEntryRef &e = inv.GetEquippedArmor(slot);
         if (!e.empty && !e.broken && e.kind == InventoryEntryKind::Item)
@@ -62,7 +66,8 @@ void ApplyArmorWearForHit(UWorld &world, UCreature &target,
           }
           else
           {
-            inv.EquipArmor(pick, armor, *items);
+            // Worn-copy refresh: do not consume a spare from storage.
+            inv.EquipArmor(pick, armor, *items, /*consumeFromStorage=*/false);
           }
         }
       }
@@ -111,7 +116,8 @@ void ApplyShieldWearForBlock(UWorld &world, UCreature &target,
   }
   else
   {
-    inv.EquipOffhand(off, *items);
+    // Worn-copy refresh: do not consume a spare from storage.
+    inv.EquipOffhand(off, *items, /*consumeFromStorage=*/false);
   }
 }
 
@@ -154,6 +160,10 @@ void ConsumeRangedAmmo(UWorld &world, UCreature &source, const std::string &capa
           slot.entry.Id != bow->Ranged.AmmoId)
       {
         continue;
+      }
+      if (slot.entry.count < 0)
+      {
+        return;
       }
       if (slot.entry.count > 1)
       {
@@ -258,10 +268,23 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
       progress_ev.SourcePos = pred.SourcePos;
       progress_ev.TargetPos = glm::vec3(pred.DigBlockPos);
       InfluenceEvents::Emit(progress_ev);
+      // Dig hit on the block surface, synced to the progress tick.
+      UAudioEvent audio;
+      audio.Kind = AudioEventKind::DigHit;
+      audio.X = progress_ev.TargetPos.x + 0.5f;
+      audio.Y = progress_ev.TargetPos.y + 0.5f;
+      audio.Z = progress_ev.TargetPos.z + 0.5f;
+      audio.MaterialId = world.ResolveAudioMaterialAt(pred.DigBlockPos);
+      audio.EntityId = static_cast<std::uint32_t>(pred.SourceId);
+      UAudioApi::Post(audio);
       result.Applied = true;
       return result;
     }
 
+    // Resolve the block material while the block is still in place; the
+    // completed-break thud must name the material that just disappeared.
+    const std::uint32_t digMaterialId =
+        world.ResolveAudioMaterialAt(pred.DigBlockPos);
     result.Applied = world.CompleteBreakSession();
     InfluenceEvent ev;
     ev.Kind = result.Applied ? InfluenceEventKind::Applied
@@ -278,6 +301,17 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
       ev.CancelReason = "dig_complete_failed";
     }
     InfluenceEvents::Emit(ev);
+    if (result.Applied)
+    {
+      UAudioEvent audio;
+      audio.Kind = AudioEventKind::DigComplete;
+      audio.X = ev.TargetPos.x + 0.5f;
+      audio.Y = ev.TargetPos.y + 0.5f;
+      audio.Z = ev.TargetPos.z + 0.5f;
+      audio.MaterialId = digMaterialId;
+      audio.EntityId = static_cast<std::uint32_t>(pred.SourceId);
+      UAudioApi::Post(audio);
+    }
     return result;
   }
 
@@ -298,33 +332,14 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
     }
     v.ClampCurrents();
 
-    // Consume one from storage and active hotbar if present.
-    auto &storage = source->GetInventory().GetStorageMutable();
-    const auto it = storage.find(pred.UseItemId);
-    if (it != storage.end() && it->second > 0)
+    // Consume one from storage and every hotbar mirror when the use is
+    // edible (unlimited stacks and the creative gate live in the helper).
+    if (pred.UseConsumes)
     {
-      --it->second;
-      if (it->second <= 0)
-      {
-        storage.erase(it);
-      }
-    }
-    if (InventoryEntryRef *active = source->GetInventory().GetActiveEntryRef())
-    {
-      if (!active->empty && active->kind == InventoryEntryKind::Item &&
-          active->Id == pred.UseItemId)
-      {
-        if (active->count > 1)
-        {
-          --active->count;
-        }
-        else
-        {
-          const size_t bar = source->GetInventory().GetActiveBarIndex();
-          const size_t slot = source->GetInventory().GetActiveSlotIndex();
-          source->GetInventory().ClearHotbarSlot(bar, slot);
-        }
-      }
+      (void)ResourceEconomyService::ConsumeUnits(mode,
+                                                 source->GetInventory(),
+                                                 InventoryEntryKind::Item,
+                                                 pred.UseItemId, 1);
     }
 
     source->ResetInfluenceCooldown();
@@ -337,6 +352,14 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
     ev.TargetPos = pred.SourcePos;
     ev.Effects = pred.Capability.Effects;
     InfluenceEvents::Emit(ev);
+    // Eat/drink feedback right at the consume moment.
+    UAudioEvent audio;
+    audio.Kind = AudioEventKind::Eat;
+    audio.X = pred.SourcePos.x;
+    audio.Y = pred.SourcePos.y;
+    audio.Z = pred.SourcePos.z;
+    audio.EntityId = static_cast<std::uint32_t>(pred.SourceId);
+    UAudioApi::Post(audio);
     result.Applied = true;
     return result;
   }
@@ -372,6 +395,21 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
                                             "influence", pred.SourceId))
       {
         result.AnyTargetRemoved = true;
+        if (source && source->GetId() != delta.TargetId)
+        {
+          if (const CreatureDefinition *killed =
+                  world.GetCreatureDefinition(target->GetTypeId()))
+          {
+            for (const CreatureDropEntry &drop : killed->drops)
+            {
+              if (ModePolicy::DropsBlocksOnBreak(mode))
+              {
+                WorldItemSystem::Instance().Spawn(
+                    target->GetBodyOrigin(), drop.itemId, drop.count, false);
+              }
+            }
+          }
+        }
         world.RemoveCreature(delta.TargetId);
         continue;
       }
@@ -415,6 +453,28 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
     ev.TargetIds.push_back(t.TargetId);
   }
   InfluenceEvents::Emit(ev);
+  // Combat feedback: the bow reports at the shooter, the hit lands on the
+  // target only when damage was actually dealt.
+  if (pred.Capability.Channel == InfluenceChannel::Ranged)
+  {
+    UAudioEvent audio;
+    audio.Kind = AudioEventKind::RangedShot;
+    audio.X = pred.SourcePos.x;
+    audio.Y = pred.SourcePos.y;
+    audio.Z = pred.SourcePos.z;
+    audio.EntityId = static_cast<std::uint32_t>(pred.SourceId);
+    UAudioApi::Post(audio);
+  }
+  if (total_damage > 0.f && pred.Capability.Channel == InfluenceChannel::Melee)
+  {
+    UAudioEvent audio;
+    audio.Kind = AudioEventKind::MeleeHit;
+    audio.X = primary_target_pos.x;
+    audio.Y = primary_target_pos.y;
+    audio.Z = primary_target_pos.z;
+    audio.EntityId = static_cast<std::uint32_t>(pred.SourceId);
+    UAudioApi::Post(audio);
+  }
   result.Applied = true;
   return result;
 }

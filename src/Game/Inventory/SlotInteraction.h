@@ -15,7 +15,9 @@ enum class SlotSurface
   PaletteGrid,
   Hotbar,
   CharacterArmor,
-  CharacterOffhand
+  CharacterOffhand,
+  /// Drop on the paper-doll preview: equip into the item's own armor slot.
+  CharacterDoll
 };
 
 struct SlotAddress

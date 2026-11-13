@@ -1,0 +1,18 @@
+{
+  "id": "copper_sword",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "mtg_copperblock",
+      "count": 2
+    },
+    {
+      "id": "wood",
+      "count": 2
+    }
+  ],
+  "output": {
+    "id": "copper_sword",
+    "count": 1
+  }
+}

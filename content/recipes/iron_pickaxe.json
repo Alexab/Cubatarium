@@ -1,0 +1,18 @@
+{
+  "id": "iron_pickaxe",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "mtg_steelblock",
+      "count": 3
+    },
+    {
+      "id": "wood",
+      "count": 2
+    }
+  ],
+  "output": {
+    "id": "iron_pickaxe",
+    "count": 1
+  }
+}

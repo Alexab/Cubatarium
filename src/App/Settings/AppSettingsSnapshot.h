@@ -1,5 +1,6 @@
 #pragma once
 
+#include "App/Settings/AudioSettings.h"
 #include "App/Settings/RenderSettings.h"
 #include "App/Settings/UiSettings.h"
 #include "ResourcePacks/ResourcePackResolver.h"
@@ -22,6 +23,7 @@ struct AppSettingsSnapshot
   float ActivityTickHz{20.0f};
   RenderSettings Render;
   UiSettings Ui;
+  AudioSettings Audio;
   std::vector<std::string> DefaultResourcePacksEnabled;
   ResourcePackSelection DefaultResourcePacks;
 };

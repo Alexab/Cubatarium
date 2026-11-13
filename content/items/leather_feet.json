@@ -13,10 +13,21 @@
       "feet"
     ],
     "armor_groups": {
-      "fleshy": 40
+      "fleshy": 35
     }
   },
   "visual": {
-    "wield_scale": 1.0
+    "wield_scale": 1.0,
+    "fit_axis": "longest",
+    "wield_euler_deg": [
+      -25,
+      0,
+      0
+    ],
+    "wield_offset": [
+      0,
+      0,
+      0
+    ]
   }
 }

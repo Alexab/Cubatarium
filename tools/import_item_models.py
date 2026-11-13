@@ -233,6 +233,14 @@ def main() -> None:
         help="Set content/items/<id>.json model path to imported glTF",
     )
     args = parser.parse_args()
+    if not args.list:
+        # tools/itemgen is the primary item pipeline now; a casual re-run of
+        # this CC0 importer must not silently resurrect catalog entries.
+        raise SystemExit(
+            "import_item_models.py is a legacy CC0 import path. "
+            "Use `python -m itemgen build-all` for the procedural catalog, "
+            "or pass --list here to only inspect the manifest."
+        )
     manifest = ensure_manifest()
     if args.list or not args.pack_root:
         list_items(manifest)

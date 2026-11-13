@@ -17,6 +17,7 @@ class UGuiScrollView;
 class UGuiPanel;
 class UGuiLabel;
 class UGuiButton;
+class UGuiSlot;
 struct GuiTheme;
 
 /// Shapeless recipe list + craft buttons (MVP crafting UI).
@@ -39,6 +40,7 @@ public:
 private:
   void RebuildList();
   void Relayout();
+  void RefreshRecipeIcons();
 
   UGameSession *Session{nullptr};
   UWorld *World{nullptr};
@@ -53,6 +55,8 @@ private:
   const GuiTheme *Theme{nullptr};
   bool Visible{false};
   std::string StatusText;
+  std::vector<UGuiSlot *> RecipeIconSlots;
+  std::vector<std::string> RecipeOutputIds;
 };
 
 } // namespace cutum

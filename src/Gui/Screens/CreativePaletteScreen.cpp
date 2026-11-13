@@ -11,9 +11,11 @@
 #include "Gui/Preview/ContentPreviewDock.h"
 #include "Gui/Preview/ContentPreviewRenderer.h"
 #include "Gui/Core/GuiRenderer.h"
+#include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiScrollView.h"
+#include "Gui/Layout/GuiLayout.h"
 #include "Gui/Widgets/GuiSlot.h"
 #include "Gui/Widgets/GuiTabBar.h"
 #include "Items/ItemDefinitionStorage.h"
@@ -99,10 +101,9 @@ bool UCreativePaletteScreen::PickSlot(int x, int y, SlotAddress &out) const
 
 void UCreativePaletteScreen::SetVisible(bool visible)
 {
-  if (visible && Session &&
-      !ModePolicy::AllowsCreativePalette(Session->GetWorldGameMode()))
+  if (visible)
   {
-    visible = false;
+    RefreshListingPolicy();
   }
   Visible = visible;
   if (Root)
@@ -117,6 +118,51 @@ void UCreativePaletteScreen::SetVisible(bool visible)
       PreviewDock->ClearSelection();
     }
   }
+  else
+  {
+    RelayoutPanel();
+  }
+}
+
+void UCreativePaletteScreen::SetCatalogAllowed(bool allowed)
+{
+  CatalogAllowed = allowed;
+  if (!CatalogAllowed)
+  {
+    Listing = PaletteListing::Backpack;
+    Built = false;
+  }
+  if (CatalogButton)
+  {
+    CatalogButton->SetVisible(CatalogAllowed);
+  }
+}
+
+void UCreativePaletteScreen::SetListingBackpack(bool backpack)
+{
+  if (backpack)
+  {
+    Listing = PaletteListing::Backpack;
+  }
+  else if (CatalogAllowed)
+  {
+    Listing = PaletteListing::Catalog;
+  }
+  Built = false;
+  RelayoutPanel();
+}
+
+void UCreativePaletteScreen::RefreshListingPolicy()
+{
+  const bool creative =
+      Session && Session->GetInventoryMode() == InventoryMode::Creative;
+  SetCatalogAllowed(creative);
+}
+
+InventoryMode UCreativePaletteScreen::CurrentListingMode() const
+{
+  return Listing == PaletteListing::Backpack ? InventoryMode::Owned
+                                             : InventoryMode::Creative;
 }
 
 void UCreativePaletteScreen::Toggle() { SetVisible(!Visible); }
@@ -253,6 +299,16 @@ void UCreativePaletteScreen::Build(UGuiContext &ctx)
   HotbarStripLabel = stripLabel.get();
   rootShell->AddChild(std::move(stripLabel));
 
+  auto catalogBtn = std::make_unique<UGuiButton>(Theme, "Cat");
+  CatalogButton = catalogBtn.get();
+  CatalogButton->SetOnClick([this]() { SetListingBackpack(false); });
+  rootShell->AddChild(std::move(catalogBtn));
+
+  auto bagBtn = std::make_unique<UGuiButton>(Theme, "Bag");
+  BackpackButton = bagBtn.get();
+  BackpackButton->SetOnClick([this]() { SetListingBackpack(true); });
+  rootShell->AddChild(std::move(bagBtn));
+
   panel->AddChild(std::move(mainTabs));
   panel->AddChild(std::move(subTabs));
   panel->AddChild(std::move(scroll));
@@ -310,15 +366,32 @@ void UCreativePaletteScreen::RelayoutPanel()
         {GetContentOffsetX(), GetContentOffsetY(), ViewportW, ViewportH});
   }
   Panel->SetBounds(layout.main);
+  const int modeW = 56;
+  GuiRect panelRect = layout.main;
+  panelRect.X += modeW;
+  panelRect.W = std::max(160, panelRect.W - modeW);
+  Panel->SetBounds(panelRect);
+  if (CatalogButton)
+  {
+    CatalogButton->SetVisible(CatalogAllowed);
+    CatalogButton->SetLabel(Listing == PaletteListing::Catalog ? "[Cat]" : "Cat");
+    CatalogButton->SetBounds({panelRect.X - modeW, panelRect.Y, modeW - 6, 40});
+  }
+  if (BackpackButton)
+  {
+    BackpackButton->SetLabel(Listing == PaletteListing::Backpack ? "[Bag]" : "Bag");
+    BackpackButton->SetBounds(
+        {panelRect.X - modeW, panelRect.Y + 46, modeW - 6, 40});
+  }
   if (PreviewDock)
   {
     PreviewDock->Relayout(layout.preview);
   }
 
-  const int panelX = layout.main.X;
-  const int panelY = layout.main.Y;
-  const int panelW = layout.main.W;
-  const int panelH = layout.main.H;
+  const int panelX = panelRect.X;
+  const int panelY = panelRect.Y;
+  const int panelW = panelRect.W;
+  const int panelH = panelRect.H;
 
   const int pad = Theme->Padding;
   const int tabH = Theme->TabBarHeight;
@@ -654,14 +727,24 @@ void UCreativePaletteScreen::Update(double dt)
     }
   }
 
-  // UX U4: drain queued block icons; refresh textures in place when the
-  // queue empties (a full grid rebuild would re-create every widget).
+  // UX U4: drain queued icons; refresh textures in place when the queue
+  // empties (a full grid rebuild would re-create every widget).
   if (Visible && Icons)
   {
-    const bool hadQueue = Icons->PendingBlockIcons() > 0;
+    const bool hadBlockQueue = Icons->PendingBlockIcons() > 0;
     Icons->WarmupBlockIcons(4);
-    if (hadQueue && Icons->PendingBlockIcons() == 0 &&
+    if (Kind == ContentKind::Item)
+    {
+      Icons->WarmupItemIcons(8);
+    }
+    if (hadBlockQueue && Icons->PendingBlockIcons() == 0 &&
         Kind == ContentKind::Block)
+    {
+      RefreshGridIconTextures();
+    }
+    // Items can finish warming via the global per-frame budget; fill any
+    // still-empty slots once the queue is idle (not only on edge).
+    if (Kind == ContentKind::Item && Icons->PendingItemIcons() == 0)
     {
       RefreshGridIconTextures();
     }
@@ -701,35 +784,11 @@ void UCreativePaletteScreen::Update(double dt)
 
   if (SubTabs)
   {
-    const auto Types = Catalog->GetTypeIds(Kind);
-    std::vector<std::string> labels;
-    for (const auto &Id : Types)
+    const std::string previousType = ActiveTypeId;
+    SyncTypeTabs();
+    if (ActiveTypeId != previousType)
     {
-      labels.push_back(Catalog->GetTypeDisplayName(Id));
-    }
-    if (labels.empty())
-    {
-      labels.push_back("Misc");
-    }
-    SubTabs->SetTabs(labels);
-    if (!Types.empty())
-    {
-      auto it = std::find(Types.begin(), Types.end(), ActiveTypeId);
-      if (it == Types.end())
-      {
-        ActiveTypeId = Types.front();
-        SubTabs->SetActiveTab(0);
-      }
-      else
-      {
-        SubTabs->SetActiveTab(
-            static_cast<int>(std::distance(Types.begin(), it)));
-      }
-    }
-    else
-    {
-      ActiveTypeId.clear();
-      SubTabs->SetActiveTab(0);
+      Built = false;
     }
   }
 
@@ -742,6 +801,89 @@ void UCreativePaletteScreen::Update(double dt)
     PreviewDock->Update(dt);
   }
   UpdateTooltip();
+}
+
+void UCreativePaletteScreen::SyncTypeTabs()
+{
+  if (!SubTabs || !Catalog || !Session)
+  {
+    return;
+  }
+  // Recompute per-type emptiness only when something relevant changed: the
+  // signature covers the storage the Owned listing reads from. Running
+  // GetEntries for every type on every frame rebuilt the whole catalog view
+  // needlessly.
+  const InventoryMode mode = CurrentListingMode();
+  const size_t signature = Session->GetInventorySignature();
+  if (!TypeTabsCacheValid || TypeTabSignature != signature ||
+      TypeTabKind != Kind || TypeTabMode != mode)
+  {
+    const auto types = Catalog->GetTypeIds(Kind);
+    std::vector<std::string> labels;
+    std::vector<bool> enabled;
+    labels.reserve(types.size());
+    enabled.reserve(types.size());
+    for (const std::string &id : types)
+    {
+      labels.push_back(Catalog->GetTypeDisplayName(id));
+      enabled.push_back(!Session->GetEntries(Kind, id, mode).empty());
+    }
+    if (labels.empty())
+    {
+      labels.push_back("Misc");
+      enabled.push_back(true);
+    }
+    TypeTabTypes = std::move(types);
+    TypeTabLabels = std::move(labels);
+    TypeTabEnabled = std::move(enabled);
+    TypeTabSignature = signature;
+    TypeTabKind = Kind;
+    TypeTabMode = mode;
+    TypeTabsCacheValid = true;
+    TypeTabsUiDirty = true;
+  }
+
+  if (TypeTabsUiDirty)
+  {
+    SubTabs->SetTabs(TypeTabLabels);
+    SubTabs->SetTabEnabled(TypeTabEnabled);
+    TypeTabsUiDirty = false;
+  }
+
+  int previous = 0;
+  for (size_t i = 0; i < TypeTabTypes.size(); ++i)
+  {
+    if (TypeTabTypes[i] == ActiveTypeId)
+    {
+      previous = static_cast<int>(i);
+      break;
+    }
+  }
+  int active = -1;
+  if (previous >= 0 && previous < static_cast<int>(TypeTabEnabled.size()) &&
+      TypeTabEnabled[static_cast<size_t>(previous)] &&
+      previous < static_cast<int>(TypeTabTypes.size()) &&
+      TypeTabTypes[static_cast<size_t>(previous)] == ActiveTypeId)
+  {
+    active = previous;
+  }
+  if (active < 0 && !TypeTabEnabled.empty())
+  {
+    active = NearestEnabledIndex(previous, TypeTabEnabled);
+    if (active >= 0 && active < static_cast<int>(TypeTabEnabled.size()) &&
+        TypeTabEnabled[static_cast<size_t>(active)] &&
+        active < static_cast<int>(TypeTabTypes.size()))
+    {
+      ActiveTypeId = TypeTabTypes[static_cast<size_t>(active)];
+      Built = false;
+    }
+  }
+  if (active < 0)
+  {
+    active = 0;
+    ActiveTypeId.clear();
+  }
+  SubTabs->SetActiveTab(active);
 }
 
 void UCreativePaletteScreen::SyncPreviewDock()
@@ -792,7 +934,8 @@ void UCreativePaletteScreen::RebuildGrid()
 
   const std::string groupId =
       ActiveTypeId.empty() ? "misc" : ActiveTypeId;
-  GridPendingViews = Session->GetEntries(Kind, groupId);
+  GridPendingViews =
+      Session->GetEntries(Kind, groupId, CurrentListingMode());
   GridBuiltCount = 0;
 
   // UX tail: materialize the first chunk only; Update appends the rest per
@@ -852,6 +995,14 @@ void UCreativePaletteScreen::AppendGridSlotsChunk()
         tex = Icons->GetItemIconTexture(entryId);
       }
       slot->SetIconTexture(tex);
+    }
+    if (view.ref.count < 0)
+    {
+      slot->SetCornerHint("inf");
+    }
+    else if (view.ref.count > 0)
+    {
+      slot->SetCornerHint(std::to_string(view.ref.count));
     }
     InventoryEntryRef entry = view.ref;
 
@@ -921,16 +1072,29 @@ void UCreativePaletteScreen::FinishGridBuild()
 
 void UCreativePaletteScreen::RefreshGridIconTextures()
 {
-  if (!Icons || Kind != ContentKind::Block)
+  if (!Icons)
   {
     return;
   }
   for (size_t i = 0; i < GridSlots.size() && i < GridEntryIds.size(); ++i)
   {
-    if (GridSlots[i] && GridSlots[i]->GetIconTexture() == 0)
+    if (!GridSlots[i] || GridSlots[i]->GetIconTexture() != 0)
     {
-      GridSlots[i]->SetIconTexture(
-          Icons->GetBlockIconTextureIfCached(GridEntryIds[i]));
+      continue;
+    }
+    GLuint tex = 0;
+    if (Kind == ContentKind::Block)
+    {
+      tex = Icons->GetBlockIconTextureIfCached(GridEntryIds[i]);
+    }
+    else if (Kind == ContentKind::Item)
+    {
+      // Queue is drained; cache hits only (GetItemIconTexture queues misses).
+      tex = Icons->GetItemIconTexture(GridEntryIds[i]);
+    }
+    if (tex != 0)
+    {
+      GridSlots[i]->SetIconTexture(tex);
     }
   }
 }
@@ -946,8 +1110,7 @@ void UCreativePaletteScreen::LayoutGridInScroll()
   const int gap = Theme->HotbarSlotGap;
   const int viewportW = contentRect.W;
   const int viewportH = std::max(1, Scroll->GetBounds().H);
-  const int denom = std::max(1, slotSize + gap);
-  const int cols = std::max(1, (viewportW + gap) / denom);
+  const int cols = SlotGridColumnCount(viewportW, slotSize, gap, 0);
   const int contentTop = contentRect.Y;
 
   int x = contentRect.X;

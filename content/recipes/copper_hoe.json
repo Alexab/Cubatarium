@@ -1,0 +1,18 @@
+{
+  "id": "copper_hoe",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "mtg_copperblock",
+      "count": 2
+    },
+    {
+      "id": "wood",
+      "count": 2
+    }
+  ],
+  "output": {
+    "id": "copper_hoe",
+    "count": 1
+  }
+}

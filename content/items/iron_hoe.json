@@ -8,7 +8,7 @@
   "wear_end": "destroy",
   "repair": {
     "materials": [
-      "iron_ingot",
+      "mtg_steelblock",
       "iron"
     ],
     "amount": 0.25
@@ -19,10 +19,32 @@
       "melee": 1,
       "fleshy": 1
     },
-    "punch_attack_uses": 60
+    "punch_attack_uses": 60,
+    "groupcaps": {
+      "crumbly": {
+        "maxlevel": 1,
+        "uses": 20,
+        "times": {
+          "1": 1.6,
+          "2": 1.2,
+          "3": 0.9
+        }
+      }
+    }
   },
   "model": "models/items/iron_hoe/model.gltf",
   "visual": {
-    "wield_scale": 1.25
+    "wield_scale": 1.45,
+    "fit_axis": "y",
+    "wield_euler_deg": [
+      -6,
+      0,
+      90
+    ],
+    "wield_offset": [
+      0,
+      -0.08,
+      0
+    ]
   }
 }

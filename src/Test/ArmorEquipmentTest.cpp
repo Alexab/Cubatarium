@@ -117,6 +117,77 @@ int main()
   Expect(!afterBroken.DidHit && !afterBroken.Missed,
          "broken armor should not contribute to damage");
 
+  // 2b) Storage-backed equip/unequip round trip: the worn copy leaves the bag
+  // (storage) and comes back on unequip; hotbar mirrors stay in sync.
+  {
+    UCreatureInventory inv;
+    inv.EnsureHotbarCount(1);
+    inv.GetStorageMutable()["armor_helmet_test"] = 2;
+    InventoryEntryRef mirror;
+    mirror.empty = false;
+    mirror.kind = InventoryEntryKind::Item;
+    mirror.Id = "armor_helmet_test";
+    mirror.count = 2;
+    inv.AssignToHotbar(0, 0, mirror);
+    inv.SetActiveBarIndex(0);
+    inv.SetActiveSlotIndex(0);
+
+    Expect(inv.EquipArmor(0, mirror, storage), "equip from storage-backed copy");
+    Expect(inv.GetStorage().at("armor_helmet_test") == 1,
+           "equip consumes one from storage");
+    Expect(inv.GetHotbar(0).slots[0].entry.count == 1,
+           "mirror re-synced to the new total");
+    Expect(inv.GetEquippedArmor(0).count == 1, "worn copy is a single unit");
+
+    inv.UnequipArmor(0, storage);
+    Expect(inv.GetStorage().at("armor_helmet_test") == 2,
+           "unequip returns the copy to storage");
+    Expect(inv.GetEquippedArmor(0).empty, "armor slot cleared");
+    Expect(inv.GetHotbar(0).slots[0].entry.count == 2,
+           "mirror re-synced after unequip");
+
+    // Unequip + re-equip round trip: returning the worn copy to storage and
+    // consuming one again is net zero for the pair.
+    Expect(inv.EquipArmor(0, mirror, storage), "wear from storage");
+    Expect(inv.GetStorage().at("armor_helmet_test") == 1,
+           "one copy left in the bag while one is worn");
+    InventoryEntryRef wornCopy = inv.GetEquippedArmor(0);
+    inv.UnequipArmor(0, storage);
+    Expect(inv.GetStorage().at("armor_helmet_test") == 2,
+           "worn copy back in storage after unequip");
+    Expect(inv.EquipArmor(0, wornCopy, storage), "re-equip the returned copy");
+    Expect(inv.GetStorage().at("armor_helmet_test") == 1,
+           "re-equip consumed the returned copy again");
+    Expect(!inv.GetEquippedArmor(0).empty, "copy worn again");
+
+    // Broken copies are destroyed on unequip, never returned to the bag.
+    inv.GetStorageMutable()["armor_helmet_test"] = 1;
+    InventoryEntryRef broken = mirror;
+    broken.broken = true;
+    Expect(inv.EquipArmor(0, broken, storage, /*consumeFromStorage=*/false),
+           "equip accepts a broken copy without consuming storage");
+    Expect(inv.GetStorage().at("armor_helmet_test") == 1,
+           "storage untouched by consumeFromStorage=false");
+    inv.UnequipArmor(0, storage);
+    Expect(inv.GetStorage().at("armor_helmet_test") == 1,
+           "broken unequip destroys the copy");
+  }
+
+  // 2c) Survival init purges Item ghosts that have no storage backing.
+  {
+    UCreatureInventory inv;
+    inv.EnsureHotbarCount(1);
+    InventoryEntryRef ghost;
+    ghost.empty = false;
+    ghost.kind = InventoryEntryKind::Item;
+    ghost.Id = "legacy_item";
+    ghost.count = 3;
+    inv.AssignToHotbar(0, 0, ghost);
+    inv.EnsureDefaultHotbar();
+    Expect(inv.GetHotbar(0).slots[0].empty,
+           "item ghost purged at survival init");
+  }
+
   // 3) Offhand equip + JSON round-trip.
   {
     UCreatureInventory ohInv;

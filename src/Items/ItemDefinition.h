@@ -63,7 +63,7 @@ struct ItemRepairDef
 
 struct ItemArmorDef
 {
-  /// Slot ids: {"head","chest","arms","hands","legs","feet"}.
+  /// Slot ids: {"head","chest","legs","feet"}.
   std::vector<std::string> Slots;
   /// Luanti-style armor_groups: group -> rating (int).
   std::unordered_map<std::string, int> ArmorGroups;
@@ -80,6 +80,8 @@ enum class ItemUseActionKind
 struct ItemUseDef
 {
   ItemUseActionKind Action{ItemUseActionKind::None};
+  /// World block placed by the place_block action; empty = use the item id.
+  std::string PlaceBlockId;
   float Satiety{0.f};
   float Thirst{0.f};
   float Health{0.f};

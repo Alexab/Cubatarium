@@ -1,5 +1,7 @@
 #include "Creatures/Core/CreatureInventory.h"
+#include "Audio/AudioApi.h"
 #include "Items/ItemDefinitionStorage.h"
+#include <iostream>
 #include <nlohmann/json.hpp>
 
 namespace cutum
@@ -9,17 +11,43 @@ namespace
 {
 constexpr size_t kHotbarSlots = 10;
 
-constexpr size_t kArmorSlots = 6;
+/// Gear rustle on equip/unequip — a UI-bus sound, no spatialization.
+void PostEquipAudio(AudioEventKind kind)
+{
+  UAudioEvent audio;
+  audio.Kind = kind;
+  UAudioApi::Post(audio);
+}
+
+constexpr size_t kArmorSlots = UCreatureInventory::kArmorSlotCount;
 
 const char *ArmorSlotId(size_t slot)
 {
-  static constexpr const char *ids[kArmorSlots] = {"head",  "chest", "arms",
-                                                    "hands", "legs",  "feet"};
+  static constexpr const char *ids[kArmorSlots] = {"head", "chest", "legs",
+                                                    "feet"};
   if (slot >= kArmorSlots)
   {
     return "";
   }
   return ids[slot];
+}
+
+InventoryEntryRef ParseArmorEntry(const nlohmann::json &ej)
+{
+  InventoryEntryRef entry{};
+  const bool empty =
+      ej.value("empty", ej.value("id", std::string()).empty());
+  entry.empty = empty;
+  if (!empty)
+  {
+    entry.kind = InventoryEntryKind::Item;
+    entry.Id = ej.value("id", "");
+    entry.count = ej.value("count", 1);
+    entry.wear = ej.value("wear", 0.f);
+    entry.broken = ej.value("broken", false);
+    entry.empty = entry.Id.empty();
+  }
+  return entry;
 }
 
 void RemapLegacyHotbarEntryId(InventoryEntryRef &entry)
@@ -140,17 +168,13 @@ void UCreatureInventory::EnsureDefaultHotbar()
     }
   }
 
-  // Owned / survival: drop hotbar ghosts that are not backed by storage, and
-  // convert leftover creative unlimited counts to owned stack sizes.
+  // Owned / survival: drop hotbar ghosts that are not backed by storage (any
+  // kind — Block, Object and Item alike), and convert leftover creative
+  // unlimited counts to owned stack sizes.
   for (size_t slot = 0; slot < Hotbars[0].slots.size(); ++slot)
   {
     auto &s = Hotbars[0].slots[slot];
     if (s.empty || s.entry.Id.empty())
-    {
-      continue;
-    }
-    if (s.entry.kind != InventoryEntryKind::Block &&
-        s.entry.kind != InventoryEntryKind::Object)
     {
       continue;
     }
@@ -332,7 +356,8 @@ const InventoryEntryRef &UCreatureInventory::GetEquippedArmor(size_t slot) const
 }
 
 bool UCreatureInventory::EquipArmor(size_t slot, const InventoryEntryRef &entry,
-                                     const UItemDefinitionStorage &items)
+                                     const UItemDefinitionStorage &items,
+                                     bool consumeFromStorage)
 {
   if (slot >= kArmorSlots)
   {
@@ -348,6 +373,7 @@ bool UCreatureInventory::EquipArmor(size_t slot, const InventoryEntryRef &entry,
   {
     return false;
   }
+  PostEquipAudio(AudioEventKind::Equip);
 
   const char *slotId = ArmorSlotId(slot);
   bool slotAllowed = false;
@@ -364,7 +390,32 @@ bool UCreatureInventory::EquipArmor(size_t slot, const InventoryEntryRef &entry,
     return false;
   }
 
-  EquippedArmor[slot] = entry;
+  InventoryEntryRef worn = entry;
+  worn.empty = false;
+  // The worn instance is a single copy; a bag/hotbar mirror may carry the
+  // whole stack count. Unlimited (-1) copies stay unlimited.
+  if (worn.count > 1)
+  {
+    worn.count = 1;
+  }
+
+  if (consumeFromStorage && worn.count > 0)
+  {
+    // The worn copy leaves the bag: decrement storage so it is not counted
+    // twice, then re-sync the hotbar mirrors.
+    const auto it = Storage.find(worn.Id);
+    if (it != Storage.end() && it->second > 0)
+    {
+      it->second -= 1;
+      if (it->second <= 0)
+      {
+        Storage.erase(it);
+      }
+      SyncItemMirrors(worn.kind, worn.Id);
+    }
+  }
+
+  EquippedArmor[slot] = worn;
 
   // Recompute pre-aggregated armor groups.
   EquippedArmorGroups.Ratings.clear();
@@ -416,7 +467,23 @@ void UCreatureInventory::UnequipArmor(size_t slot,
   {
     return;
   }
+  const InventoryEntryRef worn = EquippedArmor[slot];
+  if (!worn.empty && !worn.Id.empty())
+  {
+    PostEquipAudio(AudioEventKind::Unequip);
+  }
   EquippedArmor[slot] = InventoryEntryRef{};
+  // Non-broken gear returns to the bag (storage); broken items are destroyed.
+  if (!worn.empty && !worn.broken && !worn.Id.empty())
+  {
+    // Legacy worn copies may carry a stale mirror count; one copy was worn.
+    const int returned = worn.count > 1 ? 1 : worn.count;
+    if (returned > 0)
+    {
+      AddItem(worn.Id, returned);
+      SyncItemMirrors(worn.kind, worn.Id);
+    }
+  }
   EquippedArmorGroups.Ratings.clear();
   for (size_t i = 0; i < kArmorSlots; ++i)
   {
@@ -496,16 +563,36 @@ bool UCreatureInventory::EquipOffhand(const InventoryEntryRef &entry)
   }
   EquippedOffhand = entry;
   EquippedOffhand.empty = false;
+  // The worn instance is a single copy; unlimited (-1) stays unlimited.
+  if (EquippedOffhand.count > 1)
+  {
+    EquippedOffhand.count = 1;
+  }
   OffhandArmorGroups.Ratings.clear();
   return true;
 }
 
 bool UCreatureInventory::EquipOffhand(const InventoryEntryRef &entry,
-                                      const UItemDefinitionStorage &items)
+                                      const UItemDefinitionStorage &items,
+                                      bool consumeFromStorage)
 {
   if (!EquipOffhand(entry))
   {
     return false;
+  }
+  if (consumeFromStorage && entry.count > 0)
+  {
+    // The worn copy leaves the bag: decrement storage and re-sync mirrors.
+    const auto it = Storage.find(entry.Id);
+    if (it != Storage.end() && it->second > 0)
+    {
+      it->second -= 1;
+      if (it->second <= 0)
+      {
+        Storage.erase(it);
+      }
+      SyncItemMirrors(entry.kind, entry.Id);
+    }
   }
   RecalcOffhandArmorGroups(&items);
   return true;
@@ -519,8 +606,48 @@ void UCreatureInventory::UnequipOffhand()
 
 void UCreatureInventory::UnequipOffhand(const UItemDefinitionStorage &items)
 {
-  (void)items;
+  const InventoryEntryRef worn = EquippedOffhand;
   UnequipOffhand();
+  // Non-broken gear returns to the bag (storage); broken items are destroyed.
+  if (!worn.empty && !worn.broken && !worn.Id.empty())
+  {
+    const int returned = worn.count > 1 ? 1 : worn.count;
+    if (returned > 0)
+    {
+      AddItem(worn.Id, returned);
+      SyncItemMirrors(worn.kind, worn.Id);
+    }
+  }
+}
+
+void UCreatureInventory::SyncItemMirrors(InventoryEntryKind kind,
+                                         const std::string &id)
+{
+  if (id.empty())
+  {
+    return;
+  }
+  const auto it = Storage.find(id);
+  const int total = (it == Storage.end()) ? 0 : it->second;
+  for (auto &bar : Hotbars)
+  {
+    for (auto &slot : bar.slots)
+    {
+      if (slot.empty || slot.entry.kind != kind || slot.entry.Id != id)
+      {
+        continue;
+      }
+      if (total <= 0)
+      {
+        slot.empty = true;
+        slot.entry = InventoryEntryRef{};
+      }
+      else
+      {
+        slot.entry.count = total;
+      }
+    }
+  }
 }
 
 void UCreatureInventory::EnsureHotbarCount(size_t count)
@@ -735,20 +862,32 @@ void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data,
   if (data.contains("equipped_armor") && data["equipped_armor"].is_array())
   {
     const auto &arr = data["equipped_armor"];
-    const size_t n = std::min(static_cast<size_t>(arr.size()), kArmorSlots);
-    for (size_t i = 0; i < n; ++i)
+    // Legacy saves stored 6 slots: head,chest,arms,hands,legs,feet.
+    // Map 0→head, 1→chest, 4→legs, 5→feet; park arms/hands into storage.
+    if (arr.size() >= 6)
     {
-      const auto &ej = arr[i];
-      const bool empty = ej.value("empty", ej.value("id", std::string()).empty());
-      EquippedArmor[i].empty = empty;
-      if (!empty)
+      EquippedArmor[0] = ParseArmorEntry(arr[0]);
+      EquippedArmor[1] = ParseArmorEntry(arr[1]);
+      EquippedArmor[2] = ParseArmorEntry(arr[4]);
+      EquippedArmor[3] = ParseArmorEntry(arr[5]);
+      for (size_t legacy : {2ull, 3ull})
       {
-        EquippedArmor[i].kind = InventoryEntryKind::Item;
-        EquippedArmor[i].Id = ej.value("id", "");
-        EquippedArmor[i].count = ej.value("count", 1);
-        EquippedArmor[i].wear = ej.value("wear", 0.f);
-        EquippedArmor[i].broken = ej.value("broken", false);
-        EquippedArmor[i].empty = EquippedArmor[i].Id.empty();
+        InventoryEntryRef parked = ParseArmorEntry(arr[legacy]);
+        if (!parked.empty && !parked.Id.empty())
+        {
+          AddItem(parked.Id, std::max(1, parked.count));
+          std::cerr << "UCreatureInventory: migrated legacy armor slot "
+                    << (legacy == 2 ? "arms" : "hands") << " item '"
+                    << parked.Id << "' into storage\n";
+        }
+      }
+    }
+    else
+    {
+      const size_t n = std::min(static_cast<size_t>(arr.size()), kArmorSlots);
+      for (size_t i = 0; i < n; ++i)
+      {
+        EquippedArmor[i] = ParseArmorEntry(arr[i]);
       }
     }
   }

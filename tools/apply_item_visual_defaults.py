@@ -15,12 +15,10 @@ OVERRIDES = {
     "wood_shield": 1.5,
     "iron_shield": 1.5,
     "wood_torch": 1.1,
-    "iron_lantern": 1.15,
-    "wood_spear": 1.8,
-    "stone_spear": 1.8,
-    "iron_spear": 1.85,
     "apple": 0.95,
     "bread": 0.95,
+    "raw_meat": 0.95,
+    "waterskin": 0.95,
 }
 
 

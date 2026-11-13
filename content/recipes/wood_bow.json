@@ -1,0 +1,14 @@
+{
+  "id": "wood_bow",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "wood",
+      "count": 3
+    }
+  ],
+  "output": {
+    "id": "wood_bow",
+    "count": 1
+  }
+}

@@ -22,6 +22,7 @@ class UGuiScrollView;
 class UGuiPanel;
 class UGuiSlot;
 class UGuiLabel;
+class UGuiButton;
 class UGuiRenderer;
 struct GuiTheme;
 
@@ -48,6 +49,8 @@ public:
   void SetVisible(bool visible);
   void Toggle();
   void OpenWithMainTab(int tab);
+  /// Creative may show the full catalog. Survival is backpack-only.
+  void SetCatalogAllowed(bool allowed);
   int GetActiveMainTab() const;
   void InvalidateGrid() { Built = false; }
   void SetPointerPosition(int x, int y);
@@ -67,6 +70,16 @@ private:
   void EnsureHotbarStrip();
   void LayoutHotbarStrip();
   void SyncHotbarStrip();
+  void SetListingBackpack(bool backpack);
+  void RefreshListingPolicy();
+  void SyncTypeTabs();
+  InventoryMode CurrentListingMode() const;
+
+  enum class PaletteListing
+  {
+    Catalog,
+    Backpack
+  };
 
   IUContentCatalog *Catalog{nullptr};
   UGameSession *Session{nullptr};
@@ -80,6 +93,8 @@ private:
   UGuiPanel *Panel{nullptr};
   UGuiTabBar *MainTabs{nullptr};
   UGuiTabBar *SubTabs{nullptr};
+  UGuiButton *CatalogButton{nullptr};
+  UGuiButton *BackpackButton{nullptr};
   UGuiScrollView *Scroll{nullptr};
   UGuiLabel *TooltipLabel{nullptr};
   UGuiLabel *UsageHintLabel{nullptr};
@@ -101,10 +116,22 @@ private:
   std::string SelectedEntryId;
   ContentKind Kind{ContentKind::Block};
   std::string ActiveTypeId;
+  PaletteListing Listing{PaletteListing::Catalog};
+  bool CatalogAllowed{true};
   const GuiTheme *Theme{nullptr};
   bool Visible{false};
   bool Built{false};
   bool HotbarStripBuilt{false};
+  // Per-frame type-tab cache (see SyncTypeTabs): emptiness of the catalog
+  // groups is only recomputed when the inventory signature changes.
+  bool TypeTabsCacheValid{false};
+  bool TypeTabsUiDirty{false};
+  size_t TypeTabSignature{0};
+  ContentKind TypeTabKind{ContentKind::Block};
+  InventoryMode TypeTabMode{InventoryMode::Creative};
+  std::vector<std::string> TypeTabTypes;
+  std::vector<std::string> TypeTabLabels;
+  std::vector<bool> TypeTabEnabled;
 };
 
 } // namespace cutum

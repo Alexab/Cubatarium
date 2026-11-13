@@ -9,6 +9,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTENT = ROOT / "content" / "items"
+MANIFEST = ROOT / "tools" / "item_model_manifest.json"
+
+from item_critical_ids import CRITICAL_IDS  # noqa: E402 - shared set
 KNOWN_TYPES = {
     "mining",
     "cutting",
@@ -19,72 +22,9 @@ KNOWN_TYPES = {
     "misc",
     "head",
     "chest",
-    "arms",
-    "hands",
     "legs",
     "feet",
     "tool",
-}
-
-# Keep in sync with tools/audit_item_visuals.py CRITICAL_IDS.
-CRITICAL_IDS = {
-    "hand",
-    "wood_pickaxe",
-    "wood_axe",
-    "wood_shovel",
-    "stone_pickaxe",
-    "stone_axe",
-    "stone_shovel",
-    "iron_pickaxe",
-    "iron_axe",
-    "iron_shovel",
-    "copper_pickaxe",
-    "copper_axe",
-    "copper_shovel",
-    "tool_pickaxe_upgraded",
-    "tool_axe_upgraded",
-    "tool_shovel_upgraded",
-    "wood_hammer",
-    "stone_hammer",
-    "iron_hammer",
-    "wood_mallet",
-    "iron_hoe",
-    "tool_hammer_upgraded",
-    "tool_hoe_upgraded",
-    "wood_sword",
-    "stone_sword",
-    "iron_sword",
-    "copper_sword",
-    "gold_sword",
-    "wood_spear",
-    "stone_spear",
-    "iron_spear",
-    "iron_dagger",
-    "stone_knife",
-    "wood_bow",
-    "wood_shield",
-    "iron_shield",
-    "leather_head",
-    "leather_chest",
-    "leather_arms",
-    "leather_hands",
-    "leather_legs",
-    "leather_feet",
-    "copper_head",
-    "copper_chest",
-    "copper_arms",
-    "copper_hands",
-    "copper_legs",
-    "copper_feet",
-    "iron_head",
-    "iron_chest",
-    "iron_arms",
-    "iron_hands",
-    "iron_legs",
-    "iron_feet",
-    "apple",
-    "bread",
-    "wood_torch",
 }
 
 
@@ -122,8 +62,10 @@ def is_critical(data: dict, item_id: str) -> bool:
 
 def main() -> int:
     errors: list[str] = []
+    def_ids: set[str] = set()
     for path in sorted(CONTENT.glob("*.json")):
         data = json.loads(path.read_text(encoding="utf-8"))
+        def_ids.add(data.get("id") or path.stem)
         item_id = data.get("id") or path.stem
         if item_id != path.stem:
             errors.append(f"{path.name}: id={item_id} != filename")
@@ -172,6 +114,13 @@ def main() -> int:
                 )
         if is_critical(data, item_id) and data.get("hidden"):
             errors.append(f"{item_id}: critical item must not be hidden")
+    # Manifest ids must stay a subset of live defs: re-running the CC0 import
+    # pipeline must never resurrect pruned items.
+    if MANIFEST.is_file():
+        manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        for mid in manifest.get("items", {}):
+            if mid not in def_ids:
+                errors.append(f"manifest item without def: {mid}")
     if errors:
         print("validate_item_defs FAILED:")
         for e in errors:

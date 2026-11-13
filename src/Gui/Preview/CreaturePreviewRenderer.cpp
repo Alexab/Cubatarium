@@ -504,7 +504,7 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
                                                 float pitchDeg,
                                                 float animTimeSec,
                                                 bool animateWalk,
-                                                const std::array<WornArmorPreviewSlot, 6> *armor,
+                                                const std::array<WornArmorPreviewSlot, kWornArmorSlotCount> *armor,
                                                 const std::string *mainItemId,
                                                 const std::string *offhandItemId)
 {
@@ -818,7 +818,7 @@ GLuint UCreaturePreviewRenderer::Render(const std::string &speciesId,
 GLuint UCreaturePreviewRenderer::RenderToUniqueTexture(
     const std::string &speciesId, const std::string &skinId, int size,
     float yawDeg, float pitchDeg, float animTimeSec, bool animateWalk,
-    const std::array<WornArmorPreviewSlot, 6> *armor,
+    const std::array<WornArmorPreviewSlot, kWornArmorSlotCount> *armor,
     const std::string *mainItemId, const std::string *offhandItemId)
 {
   if (speciesId.empty() || !Shader)

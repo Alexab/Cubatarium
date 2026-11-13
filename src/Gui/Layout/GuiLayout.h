@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Gui/Core/GuiTypes.h"
+#include <algorithm>
 #include <vector>
 
 namespace cutum
@@ -72,5 +73,53 @@ public:
   static void GridPlace(const GuiRect &clientArea, const GuiGridSpec &spec,
                         const std::vector<GuiGridItem> &items);
 };
+
+inline bool StackIsUnlimited(int count)
+{
+  return count < 0;
+}
+
+/// How many slot columns fit. maxCols <= 0 means "as many as the width allows".
+inline int SlotGridColumnCount(int viewportW, int slotSize, int gap, int maxCols)
+{
+  const int denom = std::max(1, slotSize + gap);
+  const int fit = std::max(1, (std::max(0, viewportW) + gap) / denom);
+  if (maxCols > 0)
+  {
+    return std::min(maxCols, fit);
+  }
+  return fit;
+}
+
+/// Pick the closest enabled tab. Ties go to the lower index, never to the last
+/// tab just because it was appended.
+inline int NearestEnabledIndex(int previous, const std::vector<bool> &enabled)
+{
+  if (enabled.empty())
+  {
+    return 0;
+  }
+  if (previous >= 0 && previous < static_cast<int>(enabled.size()) &&
+      enabled[static_cast<size_t>(previous)])
+  {
+    return previous;
+  }
+  int best = -1;
+  int bestDist = 0;
+  for (int i = 0; i < static_cast<int>(enabled.size()); ++i)
+  {
+    if (!enabled[static_cast<size_t>(i)])
+    {
+      continue;
+    }
+    const int dist = previous < 0 ? i : std::abs(i - previous);
+    if (best < 0 || dist < bestDist || (dist == bestDist && i < best))
+    {
+      best = i;
+      bestDist = dist;
+    }
+  }
+  return best < 0 ? 0 : best;
+}
 
 } // namespace cutum

@@ -4,7 +4,7 @@
   "types": [
     "utility"
   ],
-  "stack_max": 1,
+  "stack_max": 64,
   "wear_end": "destroy",
   "repair": {
     "materials": [
@@ -21,8 +21,24 @@
     },
     "punch_attack_uses": 60
   },
+  "use_action": "place_block",
+  "use": {
+    "action": "place_block",
+    "place_block": "torch"
+  },
   "model": "models/items/wood_torch/model.gltf",
   "visual": {
-    "wield_scale": 1.1
+    "wield_scale": 1.0,
+    "fit_axis": "y",
+    "wield_euler_deg": [
+      -10,
+      0,
+      0
+    ],
+    "wield_offset": [
+      0,
+      0.12,
+      0
+    ]
   }
 }

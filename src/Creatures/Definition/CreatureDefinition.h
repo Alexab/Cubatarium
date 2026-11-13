@@ -7,6 +7,7 @@
 #include "Creatures/Stats/CreatureAttributes.h"
 #include "Creatures/Stats/CreatureVitals.h"
 #include <string>
+#include <vector>
 
 #include "Creatures/Locomotion/LocomotionTypes.h"
 
@@ -33,6 +34,12 @@ struct CreatureStatsSpec
   bool needsTick{false};
 };
 
+struct CreatureDropEntry
+{
+  std::string itemId;
+  int count{1};
+};
+
 struct CreatureDefinition
 {
   std::string Id;
@@ -48,6 +55,8 @@ struct CreatureDefinition
   CreatureBehaviorParams behavior;
   CreatureVisualSpec visual;
   CreatureStatsSpec stats;
+  /// Optional inventory grants to the killer on fatal influence damage.
+  std::vector<CreatureDropEntry> drops;
 };
 
 } // namespace cutum

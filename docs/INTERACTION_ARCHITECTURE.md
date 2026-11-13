@@ -62,6 +62,6 @@ Example: sword has `damage.fleshy` for melee and `groupcaps.snappy` for leaves â
 |---------|------|
 | `Melee` | Punch / weapon vs creature |
 | `Dig` | Break block (session progress) |
-| `Use` | Reserved stub (`use_unimplemented`); social UI = TD-INF-004 |
-| `Ranged` / `Aura` | Future |
+| `Use` | Eat and drink shipped; `place_block` places from the held item (torch). Social UI remains TD-INF-004 |
+| `Ranged` | Hitscan bow shipped (`wood_bow` + `arrow`). Aura still future |
 | `None` | No influence this tick |

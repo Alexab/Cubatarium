@@ -8,7 +8,7 @@
   "wear_end": "destroy",
   "repair": {
     "materials": [
-      "copper_ingot",
+      "mtg_copperblock",
       "copper"
     ],
     "amount": 0.25
@@ -34,10 +34,21 @@
   },
   "model": "models/items/copper_shovel/model.gltf",
   "visual": {
-    "wield_scale": 1.5,
+    "wield_scale": 1.45,
     "swing": {
       "dig": "dig_tool",
       "melee": "dig_tool"
-    }
+    },
+    "fit_axis": "y",
+    "wield_euler_deg": [
+      12,
+      0,
+      90
+    ],
+    "wield_offset": [
+      0,
+      0.08,
+      0
+    ]
   }
 }

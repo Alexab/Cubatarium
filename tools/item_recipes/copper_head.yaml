@@ -1,0 +1,10 @@
+id: copper_head
+family: armor_head
+material: copper
+palette: copper
+recipe_version: 1
+seed: 1
+wield_scale: 1.0
+silhouette: armor_head
+traits:
+  - head

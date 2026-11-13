@@ -9,7 +9,7 @@
   "model": "models/items/iron_pickaxe/model.gltf",
   "repair": {
     "materials": [
-      "iron_ingot",
+      "mtg_steelblock",
       "iron"
     ],
     "amount": 0.25
@@ -22,7 +22,7 @@
     },
     "groupcaps": {
       "cracky": {
-        "maxlevel": 2,
+        "maxlevel": 3,
         "uses": 120,
         "times": {
           "2": 0.8,
@@ -38,6 +38,17 @@
     "swing": {
       "dig": "dig_tool",
       "melee": "dig_tool"
-    }
+    },
+    "fit_axis": "y",
+    "wield_euler_deg": [
+      -8,
+      0,
+      90
+    ],
+    "wield_offset": [
+      0,
+      -0.12,
+      0
+    ]
   }
 }

@@ -1,0 +1,11 @@
+id: wood_torch
+family: torch
+material: wood
+palette: torch
+recipe_version: 1
+seed: 1
+wield_scale: 1.0
+silhouette: torch
+traits:
+  - stick
+  - flame

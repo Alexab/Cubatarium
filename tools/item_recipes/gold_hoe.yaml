@@ -1,0 +1,10 @@
+id: gold_hoe
+family: hoe
+material: gold
+palette: gold
+recipe_version: 1
+seed: 1
+wield_scale: 1.45
+silhouette: hoe
+traits:
+  - perp_blade

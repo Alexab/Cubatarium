@@ -1,0 +1,10 @@
+id: copper_shovel
+family: shovel
+material: copper
+palette: copper
+recipe_version: 1
+seed: 1
+wield_scale: 1.45
+silhouette: shovel
+traits:
+  - scoop

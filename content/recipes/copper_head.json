@@ -1,0 +1,14 @@
+{
+  "id": "copper_head",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "mtg_copperblock",
+      "count": 5
+    }
+  ],
+  "output": {
+    "id": "copper_head",
+    "count": 1
+  }
+}

@@ -12,6 +12,7 @@
 #include "App/Core.h"
 #include "App/Platform/CursorCapture.h"
 #include "Blocks/BlockDefinitionStorage.h"
+#include "Audio/AudioApi.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Camera/CameraPerspective.h"
 #ifdef __ANDROID__
@@ -86,6 +87,7 @@
 #include <cctype>
 #include <chrono>
 #include <cmath>
+#include <cstdio>
 #include <iostream>
 
 namespace cutum
@@ -1404,6 +1406,11 @@ void UApplication::ClearGameplayKeyboard()
 
 void UApplication::HandleWindowFocus(bool focused)
 {
+  // Focus loss mutes the whole mixer; nothing changes in the config.
+  if (Core)
+  {
+    Core->SetAudioFocusMuted(!focused);
+  }
 #ifndef __ANDROID__
   if (!Window)
   {
@@ -1767,6 +1774,12 @@ bool UApplication::ResolveSlotAt(int x, int y, SlotAddress &out)
       out.surface = SlotSurface::CharacterOffhand;
       return true;
     }
+    if (CharacterSheetScreen->PickDoll(x, y))
+    {
+      out = SlotAddress{};
+      out.surface = SlotSurface::CharacterDoll;
+      return true;
+    }
     if (CharacterSheetScreen->PickMainSlot(x, y) && GameSession)
     {
       out = SlotAddress{};
@@ -1832,6 +1845,21 @@ void UApplication::NotifyFpSwing(FpSwingKind kind)
   if (FpViewmodelRenderer)
   {
     FpViewmodelRenderer->NotifySwing(kind);
+  }
+  // Melee swing whoosh right as the viewmodel starts moving (dig/place have
+  // their own impact sounds at the block).
+  if (kind == FpSwingKind::Melee && World)
+  {
+    if (const std::shared_ptr<UCamera> &camera = World->GetCurrentUserCamera())
+    {
+      const glm::vec3 eye = camera->GetPosition();
+      UAudioEvent audio;
+      audio.Kind = AudioEventKind::MeleeSwing;
+      audio.X = eye.x;
+      audio.Y = eye.y;
+      audio.Z = eye.z;
+      UAudioApi::Post(audio);
+    }
   }
 }
 
@@ -1927,6 +1955,49 @@ void UApplication::OpenAnvilScreen()
 
 void UApplication::Update(double dt)
 {
+  // Audio listener: one tiny guarded copy per frame, no engine calls here.
+  if (World)
+  {
+    if (const std::shared_ptr<UCamera> &camera = World->GetCurrentUserCamera())
+    {
+      const glm::vec3 position = camera->GetPosition();
+      const glm::vec3 front = camera->GetFront();
+      const glm::vec3 up = camera->GetUp();
+      AudioListenerSnapshot listener;
+      listener.X = position.x;
+      listener.Y = position.y;
+      listener.Z = position.z;
+      listener.FwdX = front.x;
+      listener.FwdY = front.y;
+      listener.FwdZ = front.z;
+      listener.UpX = up.x;
+      listener.UpY = up.y;
+      listener.UpZ = up.z;
+      listener.Valid = true;
+      UAudioApi::UpdateListener(listener);
+    }
+
+    // World context for ambience/music, throttled — biome sampling touches
+    // the chunk cache, so 4 Hz is plenty for crossfade-paced scheduling.
+    AudioAmbienceCooldown += dt;
+    if (AudioAmbienceCooldown >= 0.25)
+    {
+      AudioAmbienceCooldown = 0.0;
+      AudioAmbienceSnapshot ambience{};
+      const glm::vec3 probe =
+          World->GetCurrentUserCamera()
+              ? World->GetCurrentUserCamera()->GetPosition()
+              : World->GetSpawnPoint();
+      std::snprintf(ambience.BiomeId, sizeof(ambience.BiomeId), "%s",
+                    World->DominantBiomeIdAt(probe).c_str());
+      std::snprintf(ambience.WeatherName, sizeof(ambience.WeatherName), "%s",
+                    World->GetWeatherName().c_str());
+      ambience.InGame = (State == AppState::InGame);
+      ambience.IsNight = World->IsNightTime();
+      ambience.Valid = true;
+      UAudioApi::UpdateAmbience(ambience);
+    }
+  }
   if (PendingEnterGame)
   {
     PendingEnterGame = false;
@@ -2256,6 +2327,14 @@ void UApplication::ApplyLiveUiScale(float user_scale)
   const float effective =
       ResolveEffectiveUiScale(Ui.UiScaleUser, metrics);
   SetUiScale(effective);
+}
+
+void UApplication::ApplyLiveAudioSettings(const AudioSettings &settings)
+{
+  if (Core)
+  {
+    Core->ApplyAudioSettingsLive(settings);
+  }
 }
 
 void UApplication::NotifyAllScreensMetricsChanged(const GuiMetrics &metrics)

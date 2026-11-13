@@ -1,0 +1,104 @@
+# Material palettes for Cubatarium itemgen (RGB 0-255).
+# Roles: handle, binding, head, accent, edge, body, stem, leaf, flame, leather, water
+
+wood:
+  handle: [118, 78, 42]
+  binding: [92, 58, 30]
+  head: [148, 102, 54]
+  accent: [168, 120, 68]
+  edge: [90, 60, 32]
+
+stone:
+  handle: [72, 70, 66]
+  binding: [84, 64, 48]
+  head: [92, 92, 98]
+  accent: [70, 70, 76]
+  edge: [48, 48, 52]
+
+copper:
+  handle: [168, 108, 58]
+  binding: [140, 88, 48]
+  head: [184, 112, 64]
+  accent: [156, 92, 52]
+  edge: [210, 140, 88]
+
+iron:
+  handle: [176, 180, 188]
+  binding: [72, 72, 76]
+  head: [188, 192, 200]
+  accent: [140, 144, 152]
+  edge: [230, 234, 240]
+
+gold:
+  handle: [214, 176, 72]
+  binding: [160, 120, 48]
+  head: [236, 196, 72]
+  accent: [200, 156, 48]
+  edge: [255, 230, 140]
+
+leather:
+  handle: [118, 78, 42]
+  binding: [92, 58, 30]
+  head: [132, 88, 52]
+  accent: [160, 112, 68]
+  edge: [88, 56, 32]
+  leather: [132, 88, 52]
+  body: [132, 88, 52]
+
+organic:
+  body: [196, 48, 48]
+  stem: [72, 120, 48]
+  leaf: [88, 148, 56]
+  accent: [220, 80, 72]
+  handle: [180, 140, 90]
+  head: [196, 48, 48]
+
+bread:
+  body: [196, 150, 78]
+  accent: [160, 110, 52]
+  edge: [120, 80, 40]
+
+meat:
+  body: [168, 72, 72]
+  accent: [210, 140, 140]
+  edge: [96, 40, 40]
+
+torch:
+  handle: [118, 78, 42]
+  head: [64, 64, 68]
+  flame: [255, 170, 48]
+  accent: [255, 220, 120]
+
+water:
+  leather: [120, 78, 48]
+  water: [72, 140, 188]
+  accent: [48, 96, 132]
+  binding: [92, 58, 30]
+
+shield_wood:
+  handle: [118, 78, 42]
+  head: [140, 96, 56]
+  accent: [96, 64, 36]
+  edge: [72, 48, 28]
+  binding: [160, 120, 72]
+
+shield_iron:
+  handle: [100, 68, 38]
+  head: [156, 160, 168]
+  accent: [110, 114, 122]
+  edge: [210, 214, 220]
+  binding: [72, 72, 76]
+
+bow:
+  handle: [118, 78, 42]
+  head: [148, 102, 54]
+  binding: [210, 210, 200]
+  accent: [92, 58, 30]
+  edge: [72, 48, 28]
+
+arrow:
+  handle: [148, 102, 54]
+  head: [156, 160, 168]
+  accent: [220, 210, 180]
+  edge: [88, 148, 56]
+  binding: [118, 78, 42]

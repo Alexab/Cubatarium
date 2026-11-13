@@ -1,0 +1,11 @@
+id: wood_bow
+family: bow
+material: wood
+palette: bow
+recipe_version: 1
+seed: 1
+wield_scale: 1.2
+silhouette: bow
+traits:
+  - limb
+  - string

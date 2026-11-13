@@ -2,6 +2,7 @@
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Interfaces/IUCharacterStatsViewModel.h"
+#include "Gui/Layout/GuiLayout.h"
 #include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiPreviewViewport.h"
@@ -134,9 +135,8 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
 
     ArmorSlots.clear();
     ToolSlots.clear();
-    const char *armorNames[6] = {"Head", "Chest", "Arms",
-                                 "Hands", "Legs", "Feet"};
-    for (int i = 0; i < 6; ++i)
+    const char *armorNames[4] = {"Head", "Chest", "Legs", "Feet"};
+    for (int i = 0; i < 4; ++i)
     {
       auto slot = std::make_unique<UGuiSlot>(&theme);
       slot->SetLabel(armorNames[i]);
@@ -157,13 +157,29 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
           session->BeginDragFromSlot(address, entry);
         }
       });
+      slot->SetOnClick([this, address, armorIndex]() {
+        auto *session = dynamic_cast<UGameSession *>(Stats);
+        if (!session)
+        {
+          return;
+        }
+        const InventoryEntryRef entry = session->GetArmorEntryRef(armorIndex);
+        if (entry.empty)
+        {
+          return;
+        }
+        session->BeginDragFromSlot(address, entry);
+        SlotAddress bag;
+        bag.surface = SlotSurface::PaletteGrid;
+        session->DropOnSlot(bag);
+      });
       ArmorSlots.push_back(slot.get());
       DollPanel->AddChild(std::move(slot));
     }
     for (int i = 0; i < 2; ++i)
     {
       auto slot = std::make_unique<UGuiSlot>(&theme);
-      slot->SetLabel(i == 0 ? "Main (=hotbar)" : "Offhand");
+      slot->SetLabel(i == 0 ? "Hand" : "Off");
       slot->SetIconTexture(0);
       if (i == 0)
       {
@@ -190,8 +206,21 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
           {
             return;
           }
-          const size_t slot = session->GetSelectedSlot(0);
-          session->ApplyPendingAssignment(0, slot);
+          SlotAddress address;
+          address.surface = SlotSurface::Hotbar;
+          address.bar = 0;
+          address.slot = session->GetSelectedSlot(0);
+          const InventoryEntryRef entry =
+              session->GetHotbarEntryRef(address.bar, address.slot);
+          if (!entry.empty)
+          {
+            session->BeginDragFromSlot(address, entry);
+            SlotAddress bag;
+            bag.surface = SlotSurface::PaletteGrid;
+            session->DropOnSlot(bag);
+            return;
+          }
+          session->ApplyPendingAssignment(0, address.slot);
         });
       }
       else
@@ -210,12 +239,97 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
             session->BeginDragFromSlot(address, entry);
           }
         });
+        slot->SetOnClick([this, address]() {
+          auto *session = dynamic_cast<UGameSession *>(Stats);
+          if (!session)
+          {
+            return;
+          }
+          const InventoryEntryRef entry = session->GetOffhandEntryRef();
+          if (entry.empty)
+          {
+            return;
+          }
+          session->BeginDragFromSlot(address, entry);
+          SlotAddress bag;
+          bag.surface = SlotSurface::PaletteGrid;
+          session->DropOnSlot(bag);
+        });
       }
       ToolSlots.push_back(slot.get());
       DollPanel->AddChild(std::move(slot));
     }
 
     body->AddChild(std::move(doll));
+  }
+
+  {
+    auto bag = std::make_unique<UGuiPanel>(&theme);
+    BagPanel = bag.get();
+    BagPanel->SetDrawBackground(true);
+    BagSlots.clear();
+    for (int i = 0; i < 24; ++i)
+    {
+      auto slot = std::make_unique<UGuiSlot>(&theme);
+      slot->SetIconTexture(0);
+      const size_t bagIndex = static_cast<size_t>(i);
+      slot->SetOnBeginDrag([this, bagIndex]() {
+        auto *session = dynamic_cast<UGameSession *>(Stats);
+        if (!session)
+        {
+          return;
+        }
+        const CharacterStatsSnapshot snap = session->GetCharacterStatsSnapshot();
+        if (bagIndex >= snap.carriedItems.size())
+        {
+          return;
+        }
+        InventoryEntryRef entry;
+        entry.empty = false;
+        entry.kind = InventoryEntryKind::Item;
+        entry.Id = snap.carriedItems[bagIndex].id;
+        entry.count = snap.carriedItems[bagIndex].count;
+        SlotAddress address;
+        address.surface = SlotSurface::PaletteGrid;
+        address.entryId = entry.Id;
+        session->BeginDragFromSlot(address, entry);
+      });
+      slot->SetOnClick([this, bagIndex]() {
+        auto *session = dynamic_cast<UGameSession *>(Stats);
+        if (!session)
+        {
+          return;
+        }
+        const CharacterStatsSnapshot snap = session->GetCharacterStatsSnapshot();
+        if (bagIndex >= snap.carriedItems.size())
+        {
+          return;
+        }
+        InventoryEntryRef entry;
+        entry.empty = false;
+        entry.kind = InventoryEntryKind::Item;
+        entry.Id = snap.carriedItems[bagIndex].id;
+        entry.count = snap.carriedItems[bagIndex].count;
+        SlotAddress address;
+        address.surface = SlotSurface::PaletteGrid;
+        address.entryId = entry.Id;
+        session->BeginDragFromSlot(address, entry);
+        SlotAddress doll;
+        doll.surface = SlotSurface::CharacterDoll;
+        if (!session->DropOnSlot(doll))
+        {
+          session->BeginDragFromSlot(address, entry);
+          SlotAddress hand;
+          hand.surface = SlotSurface::Hotbar;
+          hand.bar = 0;
+          hand.slot = session->GetSelectedSlot(0);
+          session->DropOnSlot(hand);
+        }
+      });
+      BagSlots.push_back(slot.get());
+      BagPanel->AddChild(std::move(slot));
+    }
+    body->AddChild(std::move(bag));
   }
 
   // Stats panel (vitals + attributes).
@@ -268,8 +382,11 @@ void UCharacterSheetScreen::Relayout()
   }
   Root->SetBounds({0, 0, ViewportW, ViewportH});
 
-  const int sheetW = std::min(kSheetW, std::max(320, ViewportW - 16));
-  const int sheetH = std::min(kSheetH, std::max(360, ViewportH - 16));
+  WideLayout = ViewportW >= 900 && ViewportH >= 640;
+  const int sheetW = WideLayout ? std::min(ViewportW - 24, 980)
+                                : std::min(kSheetW, std::max(320, ViewportW - 16));
+  const int sheetH = WideLayout ? std::min(ViewportH - 24, 640)
+                                : std::min(ViewportH - 16, std::max(420, ViewportH - 16));
   const int x = std::max(8, (ViewportW - sheetW) / 2);
   const int y = std::max(8, (ViewportH - sheetH) / 2);
   Window->SetBounds({x, y, sheetW, sheetH});
@@ -290,24 +407,41 @@ void UCharacterSheetScreen::Relayout()
   // Two columns under identity: doll (left ~58%) + stats (right ~40%).
   const int gap = 8;
   const int contentH = client.Y + client.H - cy - 8;
-  const int dollW = std::max(220, (client.W * 58) / 100);
-  const int statsW = std::max(160, client.W - dollW - gap - 16);
+  const int dollW = WideLayout ? std::min(380, (client.W * 46) / 100)
+                              : std::max(200, client.W - 16);
+  const int dollH = WideLayout ? (contentH * 62) / 100 : std::min(contentH / 2, 300);
   const int dollX = client.X + 8;
-  const int statsX = dollX + dollW + gap;
+  const int bagX = WideLayout ? dollX + dollW + gap : dollX;
+  const int bagY = WideLayout ? cy : cy + dollH + gap;
+  const int bagW = WideLayout ? std::max(160, client.W - dollW - gap - 16)
+                             : dollW;
+  const int bagH = WideLayout ? contentH : std::max(80, contentH - dollH - gap);
 
   if (DollPanel)
   {
-    DollPanel->SetBounds({dollX, cy, dollW, contentH});
+    DollPanel->SetBounds({dollX, cy, dollW, dollH});
+  }
+  if (BagPanel)
+  {
+    BagPanel->SetBounds({bagX, bagY, bagW, bagH});
   }
   if (StatsPanel)
   {
-    StatsPanel->SetBounds({statsX, cy, statsW, contentH});
+    if (WideLayout)
+    {
+      StatsPanel->SetVisible(true);
+      StatsPanel->SetBounds(
+          {dollX, cy + dollH + gap, dollW, std::max(80, contentH - dollH - gap)});
+    }
+    else
+    {
+      StatsPanel->SetVisible(false);
+    }
   }
 
   // --- Paper-doll interior ---
   //        [Head]
-  // [Chest][PREVIEW][Arms]
-  // [Legs]          [Hands]
+  // [Chest][PREVIEW][Legs]
   //   [Tool1][Feet][Tool2]
   const int pad = 8;
   const int headerH = kLineH;
@@ -317,8 +451,9 @@ void UCharacterSheetScreen::Relayout()
   }
 
   const int slotColW = kSlotSize + kSlotGap;
+  const int previewCap = WideLayout ? 160 : 96;
   const int previewSide = std::min(
-      180, std::max(110, dollW - pad * 2 - slotColW * 2 - 8));
+      previewCap, std::max(72, dollW - pad * 2 - slotColW * 2 - 8));
   const int headerBottom = cy + pad + headerH;
   // Reserve a full slot row above the preview for Head (centered).
   const int previewTop = headerBottom + 4 + kSlotSize + kSlotGap;
@@ -343,15 +478,13 @@ void UCharacterSheetScreen::Relayout()
 
   const int headX = previewX + (previewSide - kSlotSize) / 2;
   const int headY = previewTop - kSlotSize - kSlotGap;
-  placeArmor(0, headX, headY);                                   // Head
-  placeArmor(1, leftSlotX, midY - kSlotSize / 2 - 4);             // Chest
-  placeArmor(4, leftSlotX, midY + kSlotSize / 2 + 4);             // Legs
-  placeArmor(2, rightSlotX, midY - kSlotSize / 2 - 4);            // Arms
-  placeArmor(3, rightSlotX, midY + kSlotSize / 2 + 4);            // Hands
+  placeArmor(0, headX, headY);                       // Head
+  placeArmor(1, leftSlotX, midY);                    // Chest
+  placeArmor(2, rightSlotX, midY);                   // Legs
 
   const int bottomY = previewTop + previewSide + kSlotGap;
   const int feetX = previewX + (previewSide - kSlotSize) / 2;
-  placeArmor(5, feetX, bottomY);                                 // Feet
+  placeArmor(3, feetX, bottomY);                     // Feet
 
   if (ToolSlots.size() >= 1 && ToolSlots[0])
   {
@@ -364,7 +497,9 @@ void UCharacterSheetScreen::Relayout()
         {feetX + (kSlotSize + kSlotGap), bottomY, kSlotSize, kSlotSize});
   }
 
-  // --- Stats interior ---
+  // Stats sit under the doll on wide screens (same absolute coordinates).
+  const int statsX = dollX;
+  const int statsW = dollW;
   int sy = cy + pad;
   if (VitalsHeader)
   {
@@ -394,6 +529,22 @@ void UCharacterSheetScreen::Relayout()
     }
     lab->SetBounds({statsX + pad, sy, statsW - pad * 2, kLineH});
     sy += kLineH;
+  }
+
+  if (BagPanel)
+  {
+    const GuiRect bag = BagPanel->GetBounds();
+    const int slot = WideLayout ? kSlotSize : 40;
+    const int gapS = 4;
+    const int maxCols = WideLayout ? 5 : 4;
+    const int cols = SlotGridColumnCount(bag.W - 8, slot, gapS, maxCols);
+    for (size_t i = 0; i < BagSlots.size(); ++i)
+    {
+      const int col = static_cast<int>(i) % cols;
+      const int row = static_cast<int>(i) / cols;
+      BagSlots[i]->SetBounds({bag.X + 6 + col * (slot + gapS),
+                              bag.Y + 6 + row * (slot + gapS), slot, slot});
+    }
   }
 }
 
@@ -426,6 +577,11 @@ bool UCharacterSheetScreen::PickOffhandSlot(int x, int y) const
     return false;
   }
   return PointInBounds(x, y, ToolSlots[1]->GetBounds());
+}
+
+bool UCharacterSheetScreen::PickDoll(int x, int y) const
+{
+  return PreviewViewport && PointInBounds(x, y, PreviewViewport->GetBounds());
 }
 
 void UCharacterSheetScreen::RefreshLabels()
@@ -498,7 +654,7 @@ void UCharacterSheetScreen::RefreshLabels()
 
   if (Icons)
   {
-    for (int i = 0; i < 6 && i < static_cast<int>(ArmorSlots.size()); ++i)
+    for (int i = 0; i < 4 && i < static_cast<int>(ArmorSlots.size()); ++i)
     {
       const auto &s = snap.equippedArmor[i];
       if (ArmorSlots[i] && !s.itemId.empty())
@@ -536,6 +692,28 @@ void UCharacterSheetScreen::RefreshLabels()
         ToolSlots[i]->SetWearProgress(0.f);
         ToolSlots[i]->SetBroken(false);
         ToolSlots[i]->SetDimmed(false);
+      }
+    }
+    for (size_t i = 0; i < BagSlots.size(); ++i)
+    {
+      if (!BagSlots[i])
+      {
+        continue;
+      }
+      if (i < snap.carriedItems.size())
+      {
+        const auto &carried = snap.carriedItems[i];
+        BagSlots[i]->SetIconTexture(Icons->GetItemIconTexture(carried.id));
+        BagSlots[i]->SetCornerHint(carried.count < 0
+                                       ? "inf"
+                                       : std::to_string(carried.count));
+        BagSlots[i]->SetVisible(true);
+      }
+      else
+      {
+        BagSlots[i]->SetIconTexture(0);
+        BagSlots[i]->SetCornerHint("");
+        BagSlots[i]->SetVisible(i < 8 || !snap.carriedItems.empty());
       }
     }
   }
@@ -576,7 +754,7 @@ void UCharacterSheetScreen::RenderCharacterPreview()
     return;
   }
 
-  std::array<WornArmorPreviewSlot, 6> armorSlots{};
+  std::array<WornArmorPreviewSlot, kWornArmorSlotCount> armorSlots{};
   std::string armorKey;
   std::string mainId;
   std::string offId;
@@ -584,7 +762,7 @@ void UCharacterSheetScreen::RenderCharacterPreview()
   if (Stats)
   {
     const CharacterStatsSnapshot snap = Stats->GetCharacterStatsSnapshot();
-    for (size_t i = 0; i < 6; ++i)
+    for (size_t i = 0; i < kWornArmorSlotCount; ++i)
     {
       const auto &s = snap.equippedArmor[i];
       if (!s.itemId.empty() && !s.broken)

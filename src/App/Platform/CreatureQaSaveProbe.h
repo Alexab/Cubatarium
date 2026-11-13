@@ -104,8 +104,8 @@ inline void ExportCreatureQaSaveProbe(UCore &core,UWorld &world,const std::files
       inv.AssignToHotbar(1,4,main);inv.SetActiveSlot(1,4);
       if(r.species=="human" || r.species=="bot" || r.species=="zombie" || r.species=="skeleton")
       {
-        const char *slots[]={"head","chest","arms","hands","legs","feet"};
-        for(size_t slot=0;slot<6;++slot)
+        const char *slots[]={"head","chest","legs","feet"};
+        for(size_t slot=0;slot<4;++slot)
         {auto armor=main;armor.Id=std::string("copper_")+slots[slot];armor.wear=.125f*static_cast<float>(slot+1);
           if(!inv.EquipArmor(slot,armor,*core.GetItemDefinitionStorage()))throw std::runtime_error("Save QA armor equip failed");}
         auto off=main;off.Id="wood_torch";off.wear=.25f;

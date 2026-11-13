@@ -1,0 +1,11 @@
+id: iron_shield
+family: shield
+material: iron
+palette: shield_iron
+recipe_version: 1
+seed: 1
+wield_scale: 1.1
+silhouette: shield
+traits:
+  - plate
+  - boss

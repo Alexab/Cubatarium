@@ -1,0 +1,10 @@
+{
+  "id": "arrow",
+  "format": "gltf",
+  "license": "CC0-1.0",
+  "authoring_source": "cubatarium-recipe",
+  "family": "arrow",
+  "material": "iron",
+  "recipe_version": 1,
+  "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+}

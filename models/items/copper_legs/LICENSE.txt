@@ -1,2 +1,2 @@
 CC0-1.0
-https://opengameart.org/content/low-poly-rpg-pack
+Original Cubatarium item mesh generated from item_recipes.

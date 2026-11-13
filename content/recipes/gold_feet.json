@@ -1,0 +1,14 @@
+{
+  "id": "gold_feet",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "mtg_goldblock",
+      "count": 4
+    }
+  ],
+  "output": {
+    "id": "gold_feet",
+    "count": 1
+  }
+}

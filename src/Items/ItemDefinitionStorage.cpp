@@ -294,6 +294,8 @@ bool UItemDefinitionStorage::LoadFile(const std::string &path)
       def.Use.Satiety = use.value("satiety", data.value("satiety", 0.f));
       def.Use.Thirst = use.value("thirst", data.value("thirst", 0.f));
       def.Use.Health = use.value("health", data.value("health", 0.f));
+      def.Use.PlaceBlockId =
+          use.value("place_block", data.value("place_block", std::string{}));
     }
     if (data.contains("tool") && data["tool"].is_object())
     {

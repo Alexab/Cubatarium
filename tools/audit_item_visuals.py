@@ -12,76 +12,9 @@ CONTENT = ROOT / "content" / "items"
 MODELS = ROOT / "models" / "items"
 OUT_DIR = ROOT / "bin" / "iter_reports"
 
-# Critical for gameplay: dig caps, armor, eat/drink, combat progression, hand.
-CRITICAL_IDS = {
-    "hand",
-    # mining tools
-    "wood_pickaxe",
-    "wood_axe",
-    "wood_shovel",
-    "stone_pickaxe",
-    "stone_axe",
-    "stone_shovel",
-    "iron_pickaxe",
-    "iron_axe",
-    "iron_shovel",
-    "copper_pickaxe",
-    "copper_axe",
-    "copper_shovel",
-    "tool_pickaxe_upgraded",
-    "tool_axe_upgraded",
-    "tool_shovel_upgraded",
-    # other dig
-    "wood_hammer",
-    "stone_hammer",
-    "iron_hammer",
-    "wood_mallet",
-    "iron_hoe",
-    "tool_hammer_upgraded",
-    "tool_hoe_upgraded",
-    # combat melee
-    "wood_sword",
-    "stone_sword",
-    "iron_sword",
-    "copper_sword",
-    "gold_sword",
-    "wood_spear",
-    "stone_spear",
-    "iron_spear",
-    "iron_dagger",
-    "stone_knife",
-    # ranged / shield
-    "wood_bow",
-    "wood_shield",
-    "iron_shield",
-    # armor leather
-    "leather_head",
-    "leather_chest",
-    "leather_arms",
-    "leather_hands",
-    "leather_legs",
-    "leather_feet",
-    # armor copper
-    "copper_head",
-    "copper_chest",
-    "copper_arms",
-    "copper_hands",
-    "copper_legs",
-    "copper_feet",
-    # armor iron
-    "iron_head",
-    "iron_chest",
-    "iron_arms",
-    "iron_hands",
-    "iron_legs",
-    "iron_feet",
-    # food / light
-    "apple",
-    "bread",
-    "wood_torch",
-}
+from item_critical_ids import CRITICAL_IDS  # noqa: E402 - shared set
 
-HIDEABLE_IDS = {"fishing_rod", "iron_scythe"}
+HIDEABLE_IDS = set()
 
 
 def is_critical(data: dict, item_id: str) -> bool:

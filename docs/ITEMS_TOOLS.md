@@ -47,14 +47,13 @@ Hand is a built-in hidden def (`hand`) with weak `oddly_breakable_by_hand` / `cr
 **Critical** (must stay in catalog even without textures; must not set `hidden`):
 
 - Built-in `hand`
-- Mining: `wood/stone/iron/copper_{pickaxe,axe,shovel}`, `tool_{pickaxe,axe,shovel}_upgraded`
-- Other dig: hammers, `wood_mallet`, `iron_hoe`, upgraded hammer/hoe
-- Melee: swords, spears, `iron_dagger`, `stone_knife`
-- `wood_bow`, `wood_shield`, `iron_shield`
-- All leather/copper/iron armor slots
-- `apple`, `bread`, `wood_torch`
+- Tools: `wood/stone/copper/iron/gold_{pickaxe,axe,shovel,hoe,sword}`
+- `wood_bow`, `arrow`, `wood_shield`, `iron_shield`, `wood_torch`
+- Armor (4 slots): `leather/copper/iron/gold_{head,chest,legs,feet}`
+- Food / thirst: `apple`, `bread`, `raw_meat`, `leather`, `waterskin`
 
-**Hideable** if assets stay broken (no fishing/crop gameplay): `fishing_rod`, `iron_scythe`.
+Duplicate pack roles (hammers, spears, daggers, `tool_*_upgraded`, utility filler,
+`arms`/`hands` armor) were removed in the tools_visual catalog collapse.
 
 Audit: `python tools/audit_item_visuals.py` → `bin/iter_reports/item_visual_audit.json`.
 Validate: `python tools/validate_item_defs.py`.

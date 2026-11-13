@@ -1,194 +1,336 @@
 {
   "asset": {
-    "generator": "UnityGLTF",
-    "version": "2.0"
+    "version": "2.0",
+    "generator": "cubatarium-itemgen"
   },
-  "extensionsUsed": [
-    "KHR_texture_transform"
-  ],
-  "scene": 0,
-  "scenes": [
+  "buffers": [
     {
-      "nodes": [
-        0
-      ],
-      "name": "tool-axe"
+      "uri": "model.bin",
+      "byteLength": 2208
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 288,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 288,
+      "byteLength": 192,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 480,
+      "byteLength": 72,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 552,
+      "byteLength": 288,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 840,
+      "byteLength": 192,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1032,
+      "byteLength": 72,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1104,
+      "byteLength": 288,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1392,
+      "byteLength": 192,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1584,
+      "byteLength": 72,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1656,
+      "byteLength": 288,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1944,
+      "byteLength": 192,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 2136,
+      "byteLength": 72,
+      "target": 34963
     }
   ],
   "accessors": [
     {
       "bufferView": 0,
       "componentType": 5126,
-      "count": 138,
+      "count": 24,
       "type": "VEC3",
-      "max": [
-        0.04116937518119812,
-        0.25599998235702515,
-        0.015463500283658504
-      ],
       "min": [
-        -0.07331643998622894,
-        0.0,
-        -0.015463500283658504
+        -0.0275,
+        -0.39,
+        -0.0275
+      ],
+      "max": [
+        0.0275,
+        0.35,
+        0.0275
       ]
     },
     {
       "bufferView": 1,
       "componentType": 5126,
-      "count": 138,
-      "type": "VEC3",
-      "max": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "min": [
-        -1.0,
-        -1.0,
-        -1.0
-      ]
+      "count": 24,
+      "type": "VEC2"
     },
     {
       "bufferView": 2,
-      "componentType": 5126,
-      "count": 138,
-      "type": "VEC4",
-      "max": [
-        1.0,
-        0.0,
-        1.0,
-        1.0
-      ],
-      "min": [
-        -1.0,
-        0.0,
-        -1.0,
-        1.0
-      ]
+      "componentType": 5123,
+      "count": 36,
+      "type": "SCALAR"
     },
     {
       "bufferView": 3,
       "componentType": 5126,
-      "count": 138,
-      "type": "VEC2",
-      "max": [
-        0.59375,
-        0.9750000238418579
-      ],
+      "count": 24,
+      "type": "VEC3",
       "min": [
-        0.34375,
-        0.7749999761581421
+        -0.039999999999999994,
+        0.22000000000000003,
+        -0.045
+      ],
+      "max": [
+        0.08,
+        0.34,
+        0.045
       ]
     },
     {
       "bufferView": 4,
-      "componentType": 5121,
-      "count": 252,
-      "type": "SCALAR",
-      "max": [
-        137.0
-      ],
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 5,
+      "componentType": 5123,
+      "count": 36,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 6,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC3",
       "min": [
-        0.0
+        0.01999999999999999,
+        0.19,
+        -0.035
+      ],
+      "max": [
+        0.28,
+        0.41,
+        0.035
       ]
-    }
-  ],
-  "buffers": [
-    {
-      "byteLength": 6876,
-      "uri": "model.bin"
-    }
-  ],
-  "bufferViews": [
-    {
-      "buffer": 0,
-      "byteLength": 1656,
-      "byteStride": 12,
-      "target": 34962
     },
     {
-      "buffer": 0,
-      "byteOffset": 1656,
-      "byteLength": 1656,
-      "byteStride": 12,
-      "target": 34962
+      "bufferView": 7,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC2"
     },
     {
-      "buffer": 0,
-      "byteOffset": 3312,
-      "byteLength": 2208,
-      "target": 34962
+      "bufferView": 8,
+      "componentType": 5123,
+      "count": 36,
+      "type": "SCALAR"
     },
     {
-      "buffer": 0,
-      "byteOffset": 5520,
-      "byteLength": 1104,
-      "target": 34962
+      "bufferView": 9,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC3",
+      "min": [
+        0.23500000000000001,
+        0.16999999999999998,
+        -0.0225
+      ],
+      "max": [
+        0.30500000000000005,
+        0.43,
+        0.0225
+      ]
     },
     {
-      "buffer": 0,
-      "byteOffset": 6624,
-      "byteLength": 252,
-      "target": 34963
+      "bufferView": 10,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 11,
+      "componentType": 5123,
+      "count": 36,
+      "type": "SCALAR"
     }
   ],
   "images": [
     {
-      "uri": "Textures/colormap.png",
-      "name": "colormap"
+      "uri": "textures/diffuse.png"
+    }
+  ],
+  "textures": [
+    {
+      "source": 0
     }
   ],
   "materials": [
     {
+      "name": "handle",
       "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
         "baseColorTexture": {
-          "index": 0,
-          "extensions": {
-            "KHR_texture_transform": {
-              "texCoord": 0
-            }
-          }
+          "index": 0
         },
-        "metallicFactor": 0.0
-      },
-      "doubleSided": true,
-      "name": "colormap"
+        "metallicFactor": 0.0,
+        "roughnessFactor": 0.95
+      }
+    },
+    {
+      "name": "binding",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicFactor": 0.0,
+        "roughnessFactor": 0.95
+      }
+    },
+    {
+      "name": "head",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicFactor": 0.05,
+        "roughnessFactor": 0.75
+      }
+    },
+    {
+      "name": "edge",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicFactor": 0.05,
+        "roughnessFactor": 0.75
+      }
     }
   ],
   "meshes": [
     {
+      "name": "wood_axe",
       "primitives": [
         {
           "attributes": {
             "POSITION": 0,
-            "NORMAL": 1,
-            "TANGENT": 2,
-            "TEXCOORD_0": 3
+            "TEXCOORD_0": 1
           },
-          "indices": 4,
+          "indices": 2,
+          "mode": 4,
           "material": 0
+        },
+        {
+          "attributes": {
+            "POSITION": 3,
+            "TEXCOORD_0": 4
+          },
+          "indices": 5,
+          "mode": 4,
+          "material": 1
+        },
+        {
+          "attributes": {
+            "POSITION": 6,
+            "TEXCOORD_0": 7
+          },
+          "indices": 8,
+          "mode": 4,
+          "material": 2
+        },
+        {
+          "attributes": {
+            "POSITION": 9,
+            "TEXCOORD_0": 10
+          },
+          "indices": 11,
+          "mode": 4,
+          "material": 3
         }
-      ],
-      "name": "tool-axe"
+      ]
     }
   ],
   "nodes": [
     {
       "mesh": 0,
-      "name": "tool-axe"
+      "name": "wood_axe"
     }
   ],
-  "samplers": [
+  "scenes": [
     {
-      "magFilter": 9728,
-      "minFilter": 9984
+      "nodes": [
+        0
+      ]
     }
   ],
-  "textures": [
-    {
-      "sampler": 0,
-      "source": 0,
-      "name": "colormap"
-    }
-  ]
+  "scene": 0,
+  "extras": {
+    "authoring_source": "cubatarium-recipe"
+  }
 }

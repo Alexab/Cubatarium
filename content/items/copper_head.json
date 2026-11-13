@@ -1,22 +1,33 @@
 {
   "id": "copper_head",
-  "displayName": "Copper Head",
+  "displayName": "Copper Helmet",
   "types": [
     "armor",
     "head"
   ],
   "stack_max": 1,
   "wear_end": "destroy",
+  "model": "models/items/copper_head/model.gltf",
   "armor": {
     "slots": [
       "head"
     ],
     "armor_groups": {
-      "fleshy": 56
+      "fleshy": 50
     }
   },
-  "model": "models/items/copper_head/model.gltf",
   "visual": {
-    "wield_scale": 1.0
+    "wield_scale": 1.0,
+    "fit_axis": "longest",
+    "wield_euler_deg": [
+      -25,
+      0,
+      0
+    ],
+    "wield_offset": [
+      0,
+      0,
+      0
+    ]
   }
 }

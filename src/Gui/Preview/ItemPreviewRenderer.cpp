@@ -538,6 +538,14 @@ UItemPreviewRenderer::FallbackParts(const std::string &itemId) const
         Part{"metal", -0.02f, 0.3f, 0.04f, 0.06f, 0.05f, 0.06f},
     };
   }
+  if (itemId.find("hammer") != std::string::npos ||
+      itemId.find("mallet") != std::string::npos)
+  {
+    return {
+        Part{"metal", 0.f, -0.1f, 0.f, 0.05f, 0.55f, 0.05f},
+        Part{"metal", 0.f, 0.28f, 0.f, 0.22f, 0.14f, 0.12f},
+    };
+  }
   return {Part{"metal", 0.f, 0.f, 0.f, 0.2f, 0.2f, 0.2f}};
 }
 

@@ -23,6 +23,7 @@
 #include "Core/StallTimer.h"
 #include "App/Core.h"
 #include "App/CreatureQaAssetRoot.h"
+#include "Audio/AudioDirector.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "App/LegacyConfigAdapter.h"
 #include "App/Platform/Log.h"
@@ -159,6 +160,11 @@ UCore::UCore(std::shared_ptr<UTextureBaseStorage> texture_base_storage_,
 
 UCore::~UCore()
 {
+  if (AudioDirectorInstance)
+  {
+    AudioDirectorInstance->Stop();
+    AudioDirectorInstance.reset();
+  }
   CreatureGltfCache::Instance().Clear();
   UnwireRenderMeshSink();
 }
@@ -490,6 +496,10 @@ void UCore::LoadConfig(const std::string &config_file_name)
       {
         ReadLegacyUiSettings(d["ui"], Ui);
       }
+      if (d.contains("audio") && d["audio"].is_object())
+      {
+        ReadAudioSettings(d["audio"], Audio);
+      }
       ResourcePacks = UResourcePackResolver::ParseFromJson(d);
       const json *physics_tuning =
           (d.contains("physics") && d["physics"].is_object()) ? &d["physics"]
@@ -646,6 +656,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
               << " foliage_climb=" << (FoliageClimbEnabled ? "1" : "0")
               << " entity_collision=" << (EntityCollisionEnabled ? "1" : "0")
               << " activity_tick_hz=" << ActivityTickHz << std::endl;
+    StartAudioDirectorIfReady();
   }
   catch (const json::exception &e)
   {
@@ -809,6 +820,9 @@ void UCore::SaveConfigFile()
   json environment_json = DefaultEnvironmentConfig.ToJson();
   system_data["environment"] = environment_json;
   WriteUiSettings(system_data, Ui);
+  json audio_json;
+  WriteAudioSettings(audio_json, Audio);
+  system_data["audio"] = audio_json;
   json resource_packs;
   resource_packs["default_selection_version"] = 2;
   resource_packs["default_primary"] = ResourcePacks.DefaultPrimary;
@@ -885,6 +899,7 @@ AppSettingsSnapshot UCore::GetAppSettings() const
   snapshot.ActivityTickHz = ActivityTickHz;
   snapshot.Render = Render;
   snapshot.Ui = Ui;
+  snapshot.Audio = Audio;
   snapshot.DefaultResourcePacks = GetDefaultResourcePackSelection();
   snapshot.DefaultResourcePacksEnabled = snapshot.DefaultResourcePacks.AllIds();
   return snapshot;
@@ -903,6 +918,11 @@ void UCore::ApplyAppSettings(const AppSettingsSnapshot &settings)
   ActivityTickHz = settings.ActivityTickHz;
   Render = settings.Render;
   Ui = settings.Ui;
+  Audio = ClampAudioSettings(settings.Audio);
+  if (AudioDirectorInstance)
+  {
+    AudioDirectorInstance->ApplySettings(Audio);
+  }
   if (!settings.DefaultResourcePacks.Primary.empty())
   {
     SetDefaultResourcePackSelection(settings.DefaultResourcePacks);
@@ -930,6 +950,35 @@ void UCore::ApplyAppSettings(const AppSettingsSnapshot &settings)
     GeometryEngineInstance->SetRenderSettings(Render);
     GeometryEngineInstance->SetCreatureTextureStorage(
         CreatureTextureStorageInstance);
+  }
+}
+
+void UCore::StartAudioDirectorIfReady()
+{
+  if (AudioDirectorInstance)
+  {
+    return;
+  }
+  AudioDirectorInstance = std::make_unique<UAudioDirector>();
+  AudioDirectorInstance->Start(Audio, WorkDir / "content" / "audio",
+                               ExeDir / "audio" / "sounds",
+                               ExeDir / "audio" / "music");
+}
+
+void UCore::ApplyAudioSettingsLive(const AudioSettings &settings)
+{
+  Audio = ClampAudioSettings(settings);
+  if (AudioDirectorInstance)
+  {
+    AudioDirectorInstance->ApplySettings(Audio);
+  }
+}
+
+void UCore::SetAudioFocusMuted(bool muted)
+{
+  if (AudioDirectorInstance)
+  {
+    AudioDirectorInstance->SetFocusMuted(muted);
   }
 }
 

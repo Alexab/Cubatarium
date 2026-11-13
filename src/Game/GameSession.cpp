@@ -1,4 +1,5 @@
 #include "Game/GameSession.h"
+#include "Audio/AudioApi.h"
 #include "Game/ModePolicy.h"
 #include "Game/Interfaces/IUGameContent.h"
 #include "App/Application.h"
@@ -21,6 +22,7 @@
 #include "WorldGen/Core/WorldGenContentReload.h"
 
 #include <algorithm>
+#include <functional>
 #include <iostream>
 #include <sstream>
 
@@ -29,6 +31,14 @@ namespace cutum
 
 namespace
 {
+
+/// Inventory drag/drop clicks — UI-bus sounds, no spatialization.
+void PostInventoryClickAudio(AudioEventKind kind)
+{
+  UAudioEvent audio;
+  audio.Kind = kind;
+  UAudioApi::Post(audio);
+}
 
 UCreatureInventory *GetControlledInventory(UWorld *world)
 {
@@ -362,7 +372,7 @@ InventoryEntryRef UGameSession::GetArmorEntryRef(size_t armorSlot) const
 {
   InventoryEntryRef entry;
   const UCreatureInventory *inv = GetControlledInventory(World.get());
-  if (!inv || armorSlot >= 6)
+  if (!inv || armorSlot >= UCreatureInventory::kArmorSlotCount)
   {
     return entry;
   }
@@ -392,6 +402,7 @@ void UGameSession::BeginDragFromSlot(const SlotAddress &source,
   Drag.Active = true;
   Drag.entry = entry;
   Drag.source = source;
+  PostInventoryClickAudio(AudioEventKind::Pickup);
 }
 
 bool UGameSession::IsDragging() const { return Drag.Active; }
@@ -413,6 +424,7 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
     CancelDrag();
     return true;
   }
+  PostInventoryClickAudio(AudioEventKind::UiClick);
 
   const SlotAddress source = Drag.source;
   const InventoryEntryRef entry = Drag.entry;
@@ -448,7 +460,15 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
     {
       if (UCreatureInventory *inv = GetControlledInventory(World.get()))
       {
-        inv->UnequipOffhand();
+        if (UItemDefinitionStorage *items =
+                World ? World->GetItemDefinitionStorage() : nullptr)
+        {
+          inv->UnequipOffhand(*items);
+        }
+        else
+        {
+          inv->UnequipOffhand();
+        }
       }
     }
     SelectSlot(target.bar, target.slot);
@@ -461,8 +481,23 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
     UCreatureInventory *inv = GetControlledInventory(World.get());
     UItemDefinitionStorage *items =
         World ? World->GetItemDefinitionStorage() : nullptr;
-    if (!inv || !items || entry.kind != InventoryEntryKind::Item ||
-        !inv->EquipArmor(target.slot, entry, *items))
+    if (!inv || !items || entry.kind != InventoryEntryKind::Item)
+    {
+      CancelDrag();
+      return false;
+    }
+    // Return the source copy to storage before the equip consumes one, so
+    // re-equipping (armor -> armor, offhand -> armor) is net zero.
+    if (source.surface == SlotSurface::CharacterArmor &&
+        source.slot != target.slot)
+    {
+      inv->UnequipArmor(source.slot, *items);
+    }
+    else if (source.surface == SlotSurface::CharacterOffhand)
+    {
+      inv->UnequipOffhand(*items);
+    }
+    if (!inv->EquipArmor(target.slot, entry, *items))
     {
       CancelDrag();
       return false;
@@ -471,14 +506,80 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
     {
       inv->ClearHotbarSlot(source.bar, source.slot);
     }
-    else if (source.surface == SlotSurface::CharacterArmor &&
-             source.slot != target.slot)
+    CancelDrag();
+    return true;
+  }
+
+  if (target.surface == SlotSurface::CharacterDoll)
+  {
+    UCreatureInventory *inv = GetControlledInventory(World.get());
+    UItemDefinitionStorage *items =
+        World ? World->GetItemDefinitionStorage() : nullptr;
+    const ItemDefinition *def =
+        items && entry.kind == InventoryEntryKind::Item ? items->Get(entry.Id)
+                                                         : nullptr;
+    int armorSlot = -1;
+    if (def)
+    {
+      for (const std::string &name : def->Armor.Slots)
+      {
+        if (name == "head")
+          armorSlot = 0;
+        else if (name == "chest")
+          armorSlot = 1;
+        else if (name == "legs")
+          armorSlot = 2;
+        else if (name == "feet")
+          armorSlot = 3;
+        if (armorSlot >= 0)
+        {
+          break;
+        }
+      }
+    }
+    if (!inv || !items)
+    {
+      CancelDrag();
+      return false;
+    }
+    if (armorSlot < 0)
+    {
+      const size_t hand = GetSelectedSlot(0);
+      if (!CanAssignToHotbar(entry, 0, hand) || !AssignSlot(0, hand, entry))
+      {
+        CancelDrag();
+        return false;
+      }
+      if (source.surface == SlotSurface::CharacterOffhand)
+      {
+        inv->UnequipOffhand(*items);
+      }
+      else if (source.surface == SlotSurface::CharacterArmor)
+      {
+        inv->UnequipArmor(source.slot, *items);
+      }
+      SelectSlot(0, hand);
+      CancelDrag();
+      return true;
+    }
+    // Return the source copy to storage before the equip consumes one, so
+    // re-equipping (armor -> armor, offhand -> armor) is net zero.
+    if (source.surface == SlotSurface::CharacterArmor)
     {
       inv->UnequipArmor(source.slot, *items);
     }
     else if (source.surface == SlotSurface::CharacterOffhand)
     {
-      inv->UnequipOffhand();
+      inv->UnequipOffhand(*items);
+    }
+    if (!inv->EquipArmor(static_cast<size_t>(armorSlot), entry, *items))
+    {
+      CancelDrag();
+      return false;
+    }
+    if (source.surface == SlotSurface::Hotbar)
+    {
+      inv->ClearHotbarSlot(source.bar, source.slot);
     }
     CancelDrag();
     return true;
@@ -495,6 +596,11 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
     }
     UItemDefinitionStorage *items =
         World ? World->GetItemDefinitionStorage() : nullptr;
+    // Return the armor copy to storage before the offhand equip consumes one.
+    if (source.surface == SlotSurface::CharacterArmor && items)
+    {
+      inv->UnequipArmor(source.slot, *items);
+    }
     const bool ok =
         items ? inv->EquipOffhand(entry, *items) : inv->EquipOffhand(entry);
     if (!ok)
@@ -505,17 +611,6 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
     if (source.surface == SlotSurface::Hotbar)
     {
       inv->ClearHotbarSlot(source.bar, source.slot);
-    }
-    else if (source.surface == SlotSurface::CharacterArmor)
-    {
-      if (UItemDefinitionStorage *items =
-              World ? World->GetItemDefinitionStorage() : nullptr)
-      {
-        if (items)
-        {
-          inv->UnequipArmor(source.slot, *items);
-        }
-      }
     }
     CancelDrag();
     return true;
@@ -552,7 +647,15 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
   {
     if (UCreatureInventory *inv = GetControlledInventory(World.get()))
     {
-      inv->UnequipOffhand();
+      if (UItemDefinitionStorage *items =
+              World ? World->GetItemDefinitionStorage() : nullptr)
+      {
+        inv->UnequipOffhand(*items);
+      }
+      else
+      {
+        inv->UnequipOffhand();
+      }
     }
     CancelDrag();
     return true;
@@ -599,6 +702,25 @@ std::vector<InventoryEntryView>
 UGameSession::GetEntries(ContentKind tab, const std::string &groupId) const
 {
   return GetEntries(tab, groupId, GetInventoryMode());
+}
+
+size_t UGameSession::GetInventorySignature() const
+{
+  const UCreatureInventory *inv = GetControlledInventory(World.get());
+  if (!inv)
+  {
+    return 0;
+  }
+  size_t sig = 0;
+  for (const auto &pair : inv->GetStorage())
+  {
+    // Map negative (unlimited) counts onto a distinct constant so a creative
+    // -1 <-> finite flip still changes the signature.
+    const size_t magnitude =
+        pair.second < 0 ? size_t{0x7FFFFFFF} : static_cast<size_t>(pair.second) + 1;
+    sig += std::hash<std::string>{}(pair.first) * magnitude;
+  }
+  return sig;
 }
 
 std::vector<InventoryEntryView>
@@ -914,7 +1036,7 @@ CharacterStatsSnapshot UGameSession::GetCharacterStatsSnapshot() const
 
   // Equipped armor (0..5) + active tool items (2 slots).
   const UCreatureInventory &inv = creature->GetInventory();
-  for (size_t i = 0; i < 6; ++i)
+  for (size_t i = 0; i < UCreatureInventory::kArmorSlotCount; ++i)
   {
     const InventoryEntryRef &e = inv.GetEquippedArmor(i);
     snap.equippedArmor[i].itemId = e.empty ? std::string() : e.Id;
@@ -943,6 +1065,21 @@ CharacterStatsSnapshot UGameSession::GetCharacterStatsSnapshot() const
       snap.equippedTools[1].wear = oh.wear;
       snap.equippedTools[1].broken = oh.broken;
       snap.equippedTools[1].isBlock = oh.kind == InventoryEntryKind::Block;
+    }
+  }
+
+  if (UItemDefinitionStorage *itemDefs = World->GetItemDefinitionStorage())
+  {
+    for (const auto &kv : inv.GetStorage())
+    {
+      if (!itemDefs->Get(kv.first) || kv.second == 0)
+      {
+        continue;
+      }
+      CharacterStatsSnapshot::CarriedItem carried;
+      carried.id = kv.first;
+      carried.count = kv.second;
+      snap.carriedItems.push_back(std::move(carried));
     }
   }
 

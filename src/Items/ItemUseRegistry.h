@@ -24,6 +24,12 @@ struct ItemUseRegistry
   static ItemUseParams FromDefinition(const ItemDefinition &def);
 };
 
+/// Eat consumes a stack unit; Drink (waterskin) is reusable.
+inline bool ItemUseConsumes(ItemUseAction action)
+{
+  return action == ItemUseAction::Eat;
+}
+
 } // namespace cutum
 
 #endif

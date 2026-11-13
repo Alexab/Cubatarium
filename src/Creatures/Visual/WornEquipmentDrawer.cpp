@@ -38,13 +38,11 @@ namespace
 bool g_HidePossessedWield = false;
 const UItemDefinitionStorage *g_ItemDefinitions = nullptr;
 
-constexpr const char *kSlotBones[6][3] = {
-    {"hat", "head", nullptr},          // head
-    {"body", nullptr, nullptr},        // chest
-    {"leftArm", "rightArm", nullptr},  // arms
-    {"leftItem", "rightItem", nullptr},// hands
-    {"leftLeg", "rightLeg", nullptr},  // legs
-    {"leftLeg", "rightLeg", nullptr},  // feet
+constexpr const char *kSlotBones[4][3] = {
+    {"hat", "head", nullptr},           // head
+    {"body", nullptr, nullptr},         // chest
+    {"leftLeg", "rightLeg", nullptr},   // legs
+    {"leftLeg", "rightLeg", nullptr},   // feet
 };
 
 struct WearLocal
@@ -65,7 +63,7 @@ WearLocal DefaultWear(size_t slot)
   {
     w.bones.emplace_back(kSlotBones[slot][i]);
   }
-  if (slot == 5)
+  if (slot == 3) // feet
   {
     w.offset = glm::vec3(0.f, -0.15f, 0.f);
     w.scale = 0.85f;
@@ -838,12 +836,9 @@ void ResolveWieldParams(const UItemDefinitionStorage *items,
   if (const ItemDefinition *def = src->Get(itemId))
   {
     scale = DefaultWieldScale(*def);
-    offset[0] = def->Visual.WieldOffset[0];
-    offset[1] = def->Visual.WieldOffset[1];
-    offset[2] = def->Visual.WieldOffset[2];
-    euler[0] = def->Visual.WieldEulerDeg[0];
-    euler[1] = def->Visual.WieldEulerDeg[1];
-    euler[2] = def->Visual.WieldEulerDeg[2];
+    std::string fitAxis;
+    ResolveWieldPose(*def, offset, euler, fitAxis);
+    (void)fitAxis;
   }
 }
 
@@ -876,8 +871,8 @@ void WornEquipmentDrawer::SubmitFromCreature(CreatureDrawQueue &queue,
                                              const BoneMatrixLookupFn &bones,
                                              const BoneBoundsLookupFn &bounds)
 {
-  std::array<WornArmorPreviewSlot, 6> slots{};
-  for (size_t i = 0; i < 6; ++i)
+  std::array<WornArmorPreviewSlot, UCreatureInventory::kArmorSlotCount> slots{};
+  for (size_t i = 0; i < UCreatureInventory::kArmorSlotCount; ++i)
   {
     const InventoryEntryRef &e = creature.GetInventory().GetEquippedArmor(i);
     if (!e.empty && !e.broken && e.kind == InventoryEntryKind::Item)
@@ -945,7 +940,7 @@ void WornEquipmentDrawer::SubmitWieldedPreview(
 
 
 void WornEquipmentDrawer::DrawImmediate(
-    const std::array<WornArmorPreviewSlot, 6> &slots, const glm::mat4 &viewProj,
+    const std::array<WornArmorPreviewSlot, kWornArmorSlotCount> &slots, const glm::mat4 &viewProj,
     const glm::mat4 &bodyMat, const BoneMatrixLookupFn &bones,
     UShaderProgram *shader, const BoneBoundsLookupFn &bounds)
 {

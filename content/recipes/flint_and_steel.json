@@ -1,0 +1,18 @@
+{
+  "id": "flint_and_steel",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "mtg_steelblock",
+      "count": 1
+    },
+    {
+      "id": "stone",
+      "count": 1
+    }
+  ],
+  "output": {
+    "id": "flint_and_steel",
+    "count": 1
+  }
+}

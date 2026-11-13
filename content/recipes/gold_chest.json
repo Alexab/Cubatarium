@@ -1,0 +1,14 @@
+{
+  "id": "gold_chest",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "mtg_goldblock",
+      "count": 8
+    }
+  ],
+  "output": {
+    "id": "gold_chest",
+    "count": 1
+  }
+}

@@ -211,5 +211,11 @@
       64
     ],
     "animation_profile": "rabbit"
-  }
+  },
+  "drops": [
+    {
+      "id": "raw_meat",
+      "count": 1
+    }
+  ]
 }

@@ -1,0 +1,14 @@
+{
+  "id": "iron_legs",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "mtg_steelblock",
+      "count": 7
+    }
+  ],
+  "output": {
+    "id": "iron_legs",
+    "count": 1
+  }
+}

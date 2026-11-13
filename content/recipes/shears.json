@@ -1,0 +1,14 @@
+{
+  "id": "shears",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "mtg_steelblock",
+      "count": 2
+    }
+  ],
+  "output": {
+    "id": "shears",
+    "count": 1
+  }
+}

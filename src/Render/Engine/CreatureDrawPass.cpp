@@ -22,6 +22,7 @@
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/TextRenderer.h"
 #include "World/Chunks/ChunkManager.h"
+#include "World/Items/WorldItemSystem.h"
 #include "World/Lighting/LightUtil.h"
 #include "Render/GlIncludes.h"
 #include "World/Chunks/Chunk.h"
@@ -791,6 +792,7 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
   {
     DrawCreatureLabels(world, viewProj, engine);
   }
+  WorldItemSystem::Instance().Draw(world, engine, viewProj);
   TimingProbe.EndFrame(Stats);
 }
 

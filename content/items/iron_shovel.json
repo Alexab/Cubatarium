@@ -9,7 +9,7 @@
   "model": "models/items/iron_shovel/model.gltf",
   "repair": {
     "materials": [
-      "iron_ingot",
+      "mtg_steelblock",
       "iron"
     ],
     "amount": 0.25
@@ -34,10 +34,21 @@
     "punch_attack_uses": 120
   },
   "visual": {
-    "wield_scale": 1.5,
+    "wield_scale": 1.45,
     "swing": {
       "dig": "dig_tool",
       "melee": "dig_tool"
-    }
+    },
+    "fit_axis": "y",
+    "wield_euler_deg": [
+      12,
+      0,
+      90
+    ],
+    "wield_offset": [
+      0,
+      0.08,
+      0
+    ]
   }
 }

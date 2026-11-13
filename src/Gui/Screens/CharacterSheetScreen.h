@@ -43,6 +43,7 @@ public:
   bool PickMainSlot(int x, int y) const;
   /// Hit-test offhand slot (Tool2).
   bool PickOffhandSlot(int x, int y) const;
+  bool PickDoll(int x, int y) const;
 
 private:
   void Relayout();
@@ -64,6 +65,9 @@ private:
   UGuiPreviewViewport *PreviewViewport{nullptr};
   std::vector<UGuiSlot *> ArmorSlots;
   std::vector<UGuiSlot *> ToolSlots;
+  UGuiPanel *BagPanel{nullptr};
+  std::vector<UGuiSlot *> BagSlots;
+  bool WideLayout{true};
   GLuint PreviewTexture{0};
   bool PreviewValid{false};
   std::string PreviewTypeId;

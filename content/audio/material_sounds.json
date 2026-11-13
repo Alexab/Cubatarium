@@ -1,0 +1,132 @@
+{
+  "//": "Maps blocks/dig-groups to surface materials, creatures to footstep sets, and biomes/weather to ambience sets. Set names must exist in sounds.json.",
+  "surface_materials": {
+    "grass": {
+      "blocks": ["grass"],
+      "dig_groups": ["crumbly"],
+      "footstep_set": "footstep.grass",
+      "dig_set": "dig.soft",
+      "dug_set": "dug.soft"
+    },
+    "stone": {
+      "blocks": ["stone", "cobblestone", "sandstone", "bedrock", "hellrock", "obsidian", "granite", "basalt", "marble", "limestone", "slate", "amethyst_block", "mese_block", "diamond_block", "iron_block", "gold_block", "copper_block", "steel_block", "bricks", "furnace"],
+      "dig_groups": ["cracky"],
+      "footstep_set": "footstep.stone",
+      "dig_set": "dig.stone",
+      "dug_set": "dug.stone"
+    },
+    "wood": {
+      "blocks": ["wood", "tree", "tree_bark", "planks", "fence", "door", "chest", "crafting_table", "anvil", "sign"],
+      "dig_groups": ["choppy"],
+      "footstep_set": "footstep.wood",
+      "dig_set": "dig.wood",
+      "dug_set": "dug.wood"
+    },
+    "sand": {
+      "blocks": ["sand", "desert_sand", "silver_sand"],
+      "dig_groups": [],
+      "footstep_set": "footstep.sand",
+      "dig_set": "dig.soft",
+      "dug_set": "dug.soft"
+    },
+    "snow": {
+      "blocks": ["snow", "snowblock", "ice", "caveblock"],
+      "dig_groups": [],
+      "footstep_set": "footstep.snow",
+      "dig_set": "dig.soft",
+      "dug_set": "dug.soft"
+    },
+    "gravel": {
+      "blocks": ["gravel", "dirt", "clay", "dry_dirt"],
+      "dig_groups": [],
+      "footstep_set": "footstep.gravel",
+      "dig_set": "dig.soft",
+      "dug_set": "dug.soft"
+    },
+    "leaf": {
+      "blocks": ["leaves", "bush", "shrubs", "papyrus", "grass_1", "grass_2", "grass_3", "grass_4", "cactus"],
+      "dig_groups": ["snappy"],
+      "footstep_set": "footstep.leaf",
+      "dig_set": "dig.soft",
+      "dug_set": "dug.soft"
+    }
+  },
+  "creature_defaults": {
+    "terrestrial_biped": {"footstep_set": "footstep.barefoot", "pitch": 1.0, "interval_mul": 1.0},
+    "terrestrial_quadruped": {"footstep_set": "footstep.paws", "pitch": 0.85, "interval_mul": 1.3},
+    "aerial": {"footstep_set": "", "pitch": 1.0, "interval_mul": 1.0},
+    "aquatic": {"footstep_set": "splash.water", "pitch": 1.0, "interval_mul": 1.6},
+    "serpentine": {"footstep_set": "footstep.leaf", "pitch": 0.9, "interval_mul": 1.4}
+  },
+  "biomes": {
+    "forest": {
+      "loop_set": "ambient.forest.loop",
+      "day_stingers": ["ambient.forest.bird"],
+      "night_stingers": ["ambient.forest.crickets"]
+    },
+    "desert": {
+      "loop_set": "ambient.desert.loop",
+      "day_stingers": [],
+      "night_stingers": []
+    },
+    "ocean": {
+      "loop_set": "ambient.ocean.loop",
+      "day_stingers": [],
+      "night_stingers": []
+    },
+    "beach": {
+      "loop_set": "ambient.ocean.loop",
+      "day_stingers": [],
+      "night_stingers": []
+    },
+    "caves": {
+      "loop_set": "ambient.cave.loop",
+      "day_stingers": ["ambient.cave.drip"],
+      "night_stingers": ["ambient.cave.drip"]
+    },
+    "dripstone_caves": {
+      "loop_set": "ambient.cave.loop",
+      "day_stingers": ["ambient.cave.drip"],
+      "night_stingers": ["ambient.cave.drip"]
+    },
+    "lush_caves": {
+      "loop_set": "ambient.cave.loop",
+      "day_stingers": ["ambient.cave.drip"],
+      "night_stingers": ["ambient.cave.drip"]
+    },
+    "deep_dark": {
+      "loop_set": "ambient.cave.loop",
+      "day_stingers": ["ambient.cave.drip"],
+      "night_stingers": ["ambient.cave.drip"]
+    },
+    "tundra": {
+      "loop_set": "ambient.wind.loop",
+      "day_stingers": [],
+      "night_stingers": []
+    },
+    "snowy_slopes": {
+      "loop_set": "ambient.wind.loop",
+      "day_stingers": [],
+      "night_stingers": []
+    },
+    "jagged_peaks": {
+      "loop_set": "ambient.wind.loop",
+      "day_stingers": [],
+      "night_stingers": []
+    },
+    "savanna": {
+      "loop_set": "ambient.wind.loop",
+      "day_stingers": [],
+      "night_stingers": []
+    }
+  },
+  "fallback_biome": {
+    "loop_set": "ambient.wind.loop",
+    "day_stingers": [],
+    "night_stingers": []
+  },
+  "weather": {
+    "rain": "ambient.rain.loop",
+    "storm": "ambient.rain.loop"
+  }
+}

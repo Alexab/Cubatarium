@@ -1,0 +1,10 @@
+id: wood_axe
+family: axe
+material: wood
+palette: wood
+recipe_version: 1
+seed: 1
+wield_scale: 1.5
+silhouette: axe
+traits:
+  - broad_blade

@@ -74,7 +74,30 @@ Transitive Maven dependencies of the above are standard AndroidX libraries (also
 | Component | Path | License |
 |-----------|------|---------|
 | [stb_image](https://github.com/nothings/stb) | `src/ThirdParty/stb_image.h` | [MIT / public domain](https://github.com/nothings/stb/blob/master/LICENSE) |
+| [miniaudio](https://github.com/mackron/miniaudio) | `src/ThirdParty/miniaudio.h` (v0.11.26) | [MIT-0 / public domain](https://github.com/mackron/miniaudio/blob/master/LICENSE) — audio playback/mixing (WASAPI / AAudio) |
 | [Roboto](https://github.com/googlefonts/roboto) | `fonts/Roboto-Regular.ttf` | [Apache 2.0](fonts/LICENSE-Roboto.txt) |
+
+### Runtime audio assets (not committed)
+
+Sound effect files are installed locally under `bin/audio/sounds/` from CC0
+sources (see `content/audio/README.md` for the pack list and layout). Music
+under `bin/audio/music/` is user-supplied (Ragnarok Online OST — Gravity
+copyright, personal local use only, never committed). Manifests referencing
+these files live in `content/audio/` (committed).
+
+Installed SFX packs (all CC0 unless noted): Kenney UI Audio, Kenney Impact
+Sounds, Kenney RPG Audio (kenney.nl, CC0); OpenGameArt — Fantozzi's
+Footsteps, 42 Snow and Gravel Footsteps, Different steps on wood/stone/
+leaves/gravel/mud (TinyWorlds), Swishes Sound Pack (artisticdude), 100 CC0
+SFX, 40 CC0 water/splash/slime SFX, 80 CC0 Creature SFX (rubberduck),
+Ambient Bird Sounds (isaiah658), Cricket sounds (syncopika), Dripping water
+loop, Rain (loopable) (ylmir), Fire Crackling (AntumDeluge) — all CC0; Horse
+gallop on different surfaces (only its CC0 tracks used). The forest bed is
+Ambiance_Wind_Forest_Calm_Loop_Stereo by Nox_Sound (Freesound, CC0); bird
+calls stay one-shots from Ambient Bird Sounds. The ocean bed is Calm ocean
+waves by SamsterBirdies (Freesound, CC0). The open-wind and desert loops are
+synthesized by the local installer. The Ragnarok Online OST music is Gravity
+copyright — local personal use only, and it never replaces a biome bed.
 
 ---
 

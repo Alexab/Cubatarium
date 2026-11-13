@@ -285,5 +285,11 @@
     "intelligence": 3,
     "luck": 6,
     "perception": 8
-  }
+  },
+  "drops": [
+    {
+      "id": "raw_meat",
+      "count": 1
+    }
+  ]
 }

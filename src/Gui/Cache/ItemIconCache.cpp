@@ -2,6 +2,8 @@
 #include "Gui/Preview/ItemPreviewRenderer.h"
 #include "Render/GlIncludes.h"
 #include <algorithm>
+#include <chrono>
+#include <filesystem>
 #include <vector>
 
 namespace cutum
@@ -189,14 +191,33 @@ void UItemIconCache::WarmupNext(size_t count)
 
 std::string UItemIconCache::FingerprintFor(const std::string &itemId) const
 {
-  // Item id + model preset version: stale disk icons re-render when the
-  // model art changes.
+  // Item id + model path + published-model stamp: the stamp follows the model
+  // file's size/mtime so meshes regenerated in place invalidate disk-cached
+  // icons automatically, with no manual generation tag to forget. When the
+  // file cannot be resolved from the working directory, the model path alone
+  // still keys the entry.
   std::string fingerprint = itemId;
   if (Items)
   {
     if (const ItemDefinition *def = Items->Get(itemId))
     {
       fingerprint += "|model=" + def->ModelPath;
+      if (!def->ModelPath.empty())
+      {
+        std::error_code ec;
+        const std::filesystem::path modelPath(def->ModelPath);
+        if (!ec && std::filesystem::exists(modelPath, ec))
+        {
+          const auto mtime =
+              std::filesystem::last_write_time(modelPath, ec).time_since_epoch().count();
+          const auto size = std::filesystem::file_size(modelPath, ec);
+          if (!ec)
+          {
+            fingerprint += "|stamp=" + std::to_string(size) + ":" +
+                           std::to_string(mtime);
+          }
+        }
+      }
     }
   }
   return fingerprint;

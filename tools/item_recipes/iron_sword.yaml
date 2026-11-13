@@ -1,0 +1,10 @@
+id: iron_sword
+family: sword
+material: iron
+palette: iron
+recipe_version: 1
+seed: 1
+wield_scale: 1.35
+silhouette: sword
+traits:
+  - blade_guard

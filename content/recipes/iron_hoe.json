@@ -1,0 +1,18 @@
+{
+  "id": "iron_hoe",
+  "shapeless": true,
+  "inputs": [
+    {
+      "id": "mtg_steelblock",
+      "count": 2
+    },
+    {
+      "id": "wood",
+      "count": 2
+    }
+  ],
+  "output": {
+    "id": "iron_hoe",
+    "count": 1
+  }
+}

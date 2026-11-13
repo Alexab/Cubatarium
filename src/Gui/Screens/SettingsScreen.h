@@ -1,5 +1,6 @@
 #pragma once
 
+#include "App/Settings/AudioSettings.h"
 #include "App/Settings/UiSettings.h"
 #include "App/Settings/RenderSettings.h"
 #include "Gui/Core/GuiScreenBase.h"
@@ -40,6 +41,9 @@ private:
   void LayoutAppPage(const GuiRect &area) const;
   void LayoutHotbarCountControls(const GuiGridSpec &spec) const;
   std::vector<GuiGridItem> BuildAppGridItems(const GuiGridSpec &spec) const;
+  int MeasureAudioPageHeight(const GuiRect &area) const;
+  void LayoutAudioPage(const GuiRect &area) const;
+  std::vector<GuiGridItem> BuildAudioGridItems(const GuiGridSpec &spec) const;
   int MeasureWorldPageHeight(const GuiRect &area) const;
   void LayoutWorldPage(const GuiRect &area) const;
   int MeasurePacksPageHeight(const GuiRect &area) const;
@@ -49,10 +53,19 @@ private:
   UGuiWindow *Window{nullptr};
   UGuiDialogFrame *DialogFrame{nullptr};
   UGuiPanel *AppPanel{nullptr};
+  UGuiPanel *AudioPanel{nullptr};
   UGuiPanel *WorldPanel{nullptr};
   UGuiPanel *PacksPanel{nullptr};
   std::unique_ptr<UWorldGenSettingsForm> WorldForm;
   std::unique_ptr<UResourcePackPickerForm> PackForm;
+
+  /// Audio tab rows: [Master, Music, Ambient, Sfx, UI] label / % value / slider.
+  UGuiCheckbox *AudioEnabledBox{nullptr};
+  UGuiLabel *AudioRowLabels[5]{};
+  UGuiLabel *AudioValueLabels[5]{};
+  UGuiSlider *AudioSliders[5]{};
+  /// Working copy edited by the Audio tab; committed live on slider commit.
+  AudioSettings AudioTab;
 
   UGuiLabel *DefaultUserLabel{nullptr};
   UGuiLabel *DefaultWorldLabel{nullptr};

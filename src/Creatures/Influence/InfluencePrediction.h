@@ -42,6 +42,7 @@ struct InfluencePrediction
   std::string DigToolId;
   /// Self-use (eat/drink) payload.
   bool UseSelf{false};
+  bool UseConsumes{true};
   float UseSatietyDelta{0.f};
   float UseThirstDelta{0.f};
   float UseHealthDelta{0.f};

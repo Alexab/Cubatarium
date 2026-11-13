@@ -1,3 +1,2 @@
 CC0-1.0
-Generated from Cubatarium parts_v1 educational meshes.
-Replace with upstream CC0 pack import when available.
+Original Cubatarium item mesh generated from item_recipes.
