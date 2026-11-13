@@ -64,7 +64,7 @@ void USettingsScreen::OnSave()
   }
   if (PackForm && !PackForm->HasValidSelection())
   {
-    ShowTab(2);
+    ShowTab(3);
     return;
   }
   AppSettingsSnapshot app = Host->LoadAppSettingsSnapshot();
@@ -155,6 +155,11 @@ void USettingsScreen::OnSave()
   app.Ui.HotbarCount = std::clamp(HotbarCount, 1, 2);
   app.Ui.UiScaleUser = std::clamp(UiScaleUser, kGuiMinUserScale, kGuiMaxUserScale);
   app.Ui.ControlScheme = SelectedControlScheme;
+  if (AudioEnabledBox)
+  {
+    AudioTab.Enabled = AudioEnabledBox->IsChecked();
+  }
+  app.Audio = ClampAudioSettings(AudioTab);
   if (PackForm)
   {
     app.DefaultResourcePacks = PackForm->ReadSelection();
@@ -221,6 +226,7 @@ void USettingsScreen::Build(UGuiContext &ctx)
   SelectedLightingMode =
       GraphicsQualityProfile::ResolveLightingMode(appSnap.Render);
   SelectedAndroidGpuEnabled = appSnap.Render.AndroidGpuEnabled;
+  AudioTab = ClampAudioSettings(appSnap.Audio);
 
   auto backdrop = std::make_unique<UGuiPanel>(&theme);
   backdrop->SetBounds({0, 0, ViewportW, ViewportH});
@@ -237,8 +243,9 @@ void USettingsScreen::Build(UGuiContext &ctx)
   auto frame = std::make_unique<UGuiDialogFrame>(&theme);
   DialogFrame = frame.get();
   frame->SetScrollbarMode(GuiScrollbarMode::Auto);
-  frame->CreateTabBar({"Application", "World defaults", "Resource packs"},
-                      [this](int tab) { ShowTab(tab); });
+  frame->CreateTabBar(
+      {"Application", "Audio", "World defaults", "Resource packs"},
+      [this](int tab) { ShowTab(tab); });
 
   UGuiPanel &app = frame->AddScrollPage();
   AppPanel = &app;
@@ -489,6 +496,82 @@ void USettingsScreen::Build(UGuiContext &ctx)
   app.AddChild(std::move(androidGpuBox));
 #endif
 
+  UGuiPanel &audioPage = frame->AddScrollPage();
+  AudioPanel = &audioPage;
+
+  auto audioEnabled = std::make_unique<UGuiCheckbox>(&theme, "Enable audio");
+  audioEnabled->SetChecked(AudioTab.Enabled);
+  AudioEnabledBox = audioEnabled.get();
+  audioPage.AddChild(std::move(audioEnabled));
+
+  auto refreshAudioSliders = [this](bool enabled)
+  {
+    for (UGuiSlider *slider : AudioSliders)
+    {
+      if (slider)
+      {
+        slider->SetEnabled(enabled);
+      }
+    }
+  };
+  AudioEnabledBox->SetOnChanged(
+      [this, refreshAudioSliders](bool checked)
+      {
+        AudioTab.Enabled = checked;
+        refreshAudioSliders(checked);
+        if (Host)
+        {
+          Host->ApplyLiveAudioSettings(AudioTab);
+        }
+      });
+
+  auto addVolumeSlider =
+      [&theme, &audioPage, this](const char *labelText, int row,
+                                 float AudioSettings::*field)
+  {
+    auto label = std::make_unique<UGuiLabel>(&theme, labelText);
+    AudioRowLabels[row] = label.get();
+    audioPage.AddChild(std::move(label));
+    auto valueLabel = std::make_unique<UGuiLabel>(
+        &theme,
+        std::to_string(static_cast<int>(std::lround(AudioTab.*field * 100))) +
+            "%");
+    valueLabel->SetTextAlign(GuiTextAlign::Center);
+    AudioValueLabels[row] = valueLabel.get();
+    audioPage.AddChild(std::move(valueLabel));
+    auto slider = std::make_unique<UGuiSlider>(&theme);
+    slider->SetRange(0.f, 1.f);
+    slider->SetStep(0.05f);
+    slider->SetValue(AudioTab.*field);
+    slider->SetEnabled(AudioTab.Enabled);
+    slider->SetOnValueChanged(
+        [this, field, row](float value)
+        {
+          AudioTab.*field = value;
+          if (AudioValueLabels[row])
+          {
+            AudioValueLabels[row]->SetText(
+                std::to_string(static_cast<int>(std::lround(value * 100))) +
+                "%");
+          }
+        });
+    slider->SetOnCommit(
+        [this](float)
+        {
+          if (Host)
+          {
+            Host->ApplyLiveAudioSettings(AudioTab);
+          }
+        });
+    AudioSliders[row] = slider.get();
+    audioPage.AddChild(std::move(slider));
+  };
+  addVolumeSlider("Master volume:", 0, &AudioSettings::Master);
+  addVolumeSlider("Music volume:", 1, &AudioSettings::Music);
+  addVolumeSlider("Ambient volume:", 2, &AudioSettings::Ambient);
+  addVolumeSlider("Effects volume:", 3, &AudioSettings::Sfx);
+  addVolumeSlider("UI volume:", 4, &AudioSettings::Ui);
+
   UGuiPanel &world = frame->AddScrollPage();
   WorldPanel = &world;
   WorldForm = std::make_unique<UWorldGenSettingsForm>(&theme);
@@ -510,10 +593,13 @@ void USettingsScreen::Build(UGuiContext &ctx)
       0, [this](const GuiRect &area) { return MeasureAppPageHeight(area); },
       [this](const GuiRect &area) { LayoutAppPage(area); });
   frame->SetScrollPageLayout(
-      1, [this](const GuiRect &area) { return MeasureWorldPageHeight(area); },
+      1, [this](const GuiRect &area) { return MeasureAudioPageHeight(area); },
+      [this](const GuiRect &area) { LayoutAudioPage(area); });
+  frame->SetScrollPageLayout(
+      2, [this](const GuiRect &area) { return MeasureWorldPageHeight(area); },
       [this](const GuiRect &area) { LayoutWorldPage(area); });
   frame->SetScrollPageLayout(
-      2, [this](const GuiRect &area) { return MeasurePacksPageHeight(area); },
+      3, [this](const GuiRect &area) { return MeasurePacksPageHeight(area); },
       [this](const GuiRect &area) { LayoutPacksPage(area); });
 
   auto saveBtn = std::make_unique<UGuiButton>(&theme, "Save");
@@ -705,6 +791,50 @@ void USettingsScreen::LayoutAppPage(const GuiRect &area) const
   const GuiGridSpec spec = BuildTwoColumnSpec(GetMetrics(), area.W);
   UGuiLayout::GridPlace(area, spec, BuildAppGridItems(spec));
   LayoutHotbarCountControls(spec);
+}
+
+std::vector<GuiGridItem>
+USettingsScreen::BuildAudioGridItems(const GuiGridSpec &spec) const
+{
+  const int cols = std::max(1, spec.columns);
+  const int labelH = Scaled(28);
+  const int fieldH = Scaled(32);
+  const int checkH = Scaled(30);
+  const int sliderH = Scaled(28);
+  std::vector<GuiGridItem> items;
+  int row = 0;
+  items.push_back({AudioEnabledBox, row, 0, 1, cols, checkH});
+  ++row;
+  for (int i = 0; i < 5; ++i)
+  {
+    items.push_back({AudioRowLabels[i], row, 0, 1, 1, labelH});
+    if (cols > 1)
+    {
+      items.push_back({AudioValueLabels[i], row, 1, 1, 1, fieldH});
+      ++row;
+    }
+    else
+    {
+      ++row;
+      items.push_back({AudioValueLabels[i], row, 0, 1, 1, fieldH});
+      ++row;
+    }
+    items.push_back({AudioSliders[i], row, 0, 1, cols, sliderH});
+    ++row;
+  }
+  return items;
+}
+
+int USettingsScreen::MeasureAudioPageHeight(const GuiRect &area) const
+{
+  const GuiGridSpec spec = BuildTwoColumnSpec(GetMetrics(), area.W);
+  return UGuiLayout::GridMeasure(area, spec, BuildAudioGridItems(spec));
+}
+
+void USettingsScreen::LayoutAudioPage(const GuiRect &area) const
+{
+  const GuiGridSpec spec = BuildTwoColumnSpec(GetMetrics(), area.W);
+  UGuiLayout::GridPlace(area, spec, BuildAudioGridItems(spec));
 }
 
 int USettingsScreen::MeasureWorldPageHeight(const GuiRect &area) const

@@ -107,6 +107,14 @@
         "console_key": "grave",
         "palette_key": "b"
     },
+    "audio": {
+        "enabled": true,
+        "master": 0.8,
+        "music": 0.8,
+        "ambient": 0.8,
+        "sfx": 1.0,
+        "ui": 0.8
+    },
     "resource_packs": {
         "default_selection_version": 2,
         "default_primary": ["cubatarium_worldgen_cc0"],

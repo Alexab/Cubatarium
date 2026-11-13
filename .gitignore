@@ -35,6 +35,10 @@
 /bin/fonts/
 /bin/cache/
 /bin/objects/
+
+# Local audio assets: sound files are downloaded CC0 packs, music is user-
+# supplied RO OST rips — never committed; manifests in content/audio/ are.
+/bin/audio/
 /bin/bin/worlds/
 /bin/config.json
 /bin/icon.png

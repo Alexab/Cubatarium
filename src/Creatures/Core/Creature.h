@@ -171,6 +171,12 @@ public:
   {
     return LocomotionFacts;
   }
+  /// Audio footstep tracking (phase crossings / landing), updated by the
+  /// world tick after locomotion facts rebuild.
+  CreatureFootstepAudioState &GetFootstepAudioState()
+  {
+    return FootstepAudioState;
+  }
   CreatureMovementMode GetMovementMode() const { return Locomotion.GetMode(); }
   LocomotionArchetype GetLocomotionArchetype() const
   {
@@ -284,6 +290,8 @@ protected:
   LocomotionArchetype LocomotionArchetype{
       LocomotionArchetype::TerrestrialBiped};
   CreatureLocomotionFacts LocomotionFacts{};
+  /// Audio footstep tracking state; accessed via GetFootstepAudioState().
+  CreatureFootstepAudioState FootstepAudioState{};
   glm::vec3 LastBodyOrigin{0.0f};
   float WalkCycleHz{2.0f};
 };

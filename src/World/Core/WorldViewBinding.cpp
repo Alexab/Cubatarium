@@ -6,6 +6,8 @@
 #include <fstream>
 
 #include "Activity/WorldCreatureActivitySink.h"
+#include "Audio/AudioApi.h"
+#include "Audio/MaterialSoundMap.h"
 #include "Creatures/Combat/CreatureCombat.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
@@ -62,6 +64,63 @@ constexpr float kMinReasonablePlayerY = -32.0f;
 // alt-tab stall reported seconds), and one huge step teleported mobs several
 // blocks, saturated gravity and burned wander timers in a single tick.
 constexpr float kMaxCreatureStepDt = 0.1f;
+
+/// Posts footstep / landing / splash audio for one creature. Reads the block
+/// directly under the feet and maps it to a surface material; the audio
+/// director resolves the actual sound set on the audio thread.
+void EmitCreatureFootstepAudio(UWorld &world, UCreature &creature)
+{
+  const CreatureLocomotionFacts &facts = creature.GetLocomotionFacts();
+  const int crossing =
+      ConsumeFootstepAudio(facts, creature.GetFootstepAudioState());
+  if (crossing == 0)
+  {
+    return;
+  }
+
+  const glm::vec3 feet = creature.GetFeetPosition();
+  glm::ivec3 underFeet = WorldPosToBlock(feet);
+  underFeet.y -= 1;
+  const std::uint32_t materialId =
+      world.ResolveAudioMaterialAt(underFeet);
+
+  UAudioEvent event;
+  if (facts.inFluid)
+  {
+    event.Kind = AudioEventKind::Splash;
+  }
+  else if (crossing < 0)
+  {
+    event.Kind = AudioEventKind::Land;
+  }
+  else
+  {
+    event.Kind = AudioEventKind::Footstep;
+  }
+  event.X = feet.x;
+  event.Y = feet.y;
+  event.Z = feet.z;
+  event.MaterialId = materialId;
+  event.Archetype = static_cast<std::uint8_t>(facts.archetype);
+  event.EntityId = static_cast<std::uint32_t>(creature.GetId());
+  switch (facts.state)
+  {
+  case LocomotionState::Run:
+    event.RunState = 1;
+    break;
+  case LocomotionState::Crouch:
+    event.RunState = 2;
+    break;
+  default:
+    event.RunState = 0;
+    break;
+  }
+  // Louder steps when running, softer when sneaking.
+  event.Strength = event.RunState == 1 ? 1.2f
+                   : event.RunState == 2 ? 0.6f
+                                         : 1.f;
+  UAudioApi::Post(event);
+}
 
 } // namespace
 
@@ -791,6 +850,7 @@ bool UWorld::SyncControlledBodyFromCamera(UCreature *controlled,
   controlled->RebuildLocomotionFactsFromController(
       camLoc, controlled->GetLocomotion().GetCapabilities(),
       static_cast<float>(camera->GetDeltaTime()), horizontalSpeed, this);
+  EmitCreatureFootstepAudio(*this, *controlled);
   return true;
 }
 
@@ -898,6 +958,7 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
           // parity - entity simulation is not gated on frame time).
           ++world_creatures_skipped;
           creature.ExecuteIntent(*this, dt);
+          EmitCreatureFootstepAudio(*this, creature);
           if (CreatureQaWorldMotionEnabled())
             RecordCreatureQaWorldMotion(creature, CheckBlockCollisionVolume(creature.GetCollisionVolume()), qaTerrain);
           Environment.UpdateCreatureInSpatialIndex(creature);
@@ -912,6 +973,7 @@ void UWorld::TickNpcCreatureIntents(float dt, bool tick_world_ai,
           CreatureCombat::TryMeleeStrike(*this, creature, GetGameMode());
         }
         creature.ExecuteIntent(*this, dt);
+        EmitCreatureFootstepAudio(*this, creature);
         if (CreatureQaWorldMotionEnabled())
           RecordCreatureQaWorldMotion(creature, CheckBlockCollisionVolume(creature.GetCollisionVolume()), qaTerrain);
         // Keep the spatial index live as bodies move (audit S7): per-move

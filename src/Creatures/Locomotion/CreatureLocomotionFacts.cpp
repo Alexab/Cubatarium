@@ -30,6 +30,48 @@ void SettleFrozenLocomotionFacts(CreatureLocomotionFacts &facts)
   facts.verticalSpeed = 0.0f;
 }
 
+int ConsumeFootstepAudio(const CreatureLocomotionFacts &facts,
+                         CreatureFootstepAudioState &state)
+{
+  constexpr float kTwoPi = 6.283185307f;
+  constexpr float kHalfCycle = kTwoPi * 0.5f;
+  constexpr float kMoveEpsilon = 0.05f;
+
+  const bool moving = facts.horizontalSpeed >= kMoveEpsilon;
+  int crossing = 0;
+
+  if (state.Seeded && facts.onGround && !state.PrevOnGround)
+  {
+    crossing = -1; // grounded transition: landing
+  }
+
+  if (moving && facts.onGround)
+  {
+    // Accumulate only actual forward phase motion (idle drift is skipped);
+    // each half-cycle boundary is one footfall of the walk cycle.
+    const float delta = facts.animPhase - state.PrevPhase;
+    if (delta > 0.f && delta < kTwoPi)
+    {
+      const float before = state.AccumPhase;
+      state.AccumPhase += delta;
+      if (!state.Seeded)
+      {
+        crossing = 0;
+      }
+      else if (static_cast<int>(before / kHalfCycle) !=
+               static_cast<int>(state.AccumPhase / kHalfCycle))
+      {
+        crossing = 1;
+      }
+    }
+  }
+
+  state.PrevPhase = facts.animPhase;
+  state.PrevOnGround = facts.onGround;
+  state.Seeded = true;
+  return crossing;
+}
+
 void FillTerrestrialRawFacts(CreatureLocomotionFacts &out,
                              const CreatureLocomotionRawInput &input,
                              LocomotionArchetype archetype, float bodyYaw,

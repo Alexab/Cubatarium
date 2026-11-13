@@ -1,4 +1,5 @@
 #include "Creatures/Stats/CreatureVitalsSystem.h"
+#include "Audio/AudioApi.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Environment/CreatureEnvironment.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
@@ -191,6 +192,17 @@ bool CreatureVitalsSystem::ApplyDamage(UWorld &world, UCreature &target,
   {
     return HandleLethal(world, target, mode);
   }
+  // Hurt cry at the survivor, synced to the damage application.
+  {
+    UAudioEvent audio;
+    audio.Kind = AudioEventKind::CreatureHurt;
+    const glm::vec3 pos = target.GetBodyOrigin();
+    audio.X = pos.x;
+    audio.Y = pos.y;
+    audio.Z = pos.z;
+    audio.EntityId = static_cast<std::uint32_t>(target.GetId());
+    UAudioApi::Post(audio);
+  }
   return false;
 }
 
@@ -223,6 +235,17 @@ bool CreatureVitalsSystem::HandleLethal(UWorld &world, UCreature &target,
         world.PersistWorldMetadata();
       }
       return false;
+    }
+    // True death: the caller removes the body; the cry fires here once.
+    {
+      UAudioEvent audio;
+      audio.Kind = AudioEventKind::CreatureDeath;
+      const glm::vec3 pos = target.GetBodyOrigin();
+      audio.X = pos.x;
+      audio.Y = pos.y;
+      audio.Z = pos.z;
+      audio.EntityId = static_cast<std::uint32_t>(target.GetId());
+      UAudioApi::Post(audio);
     }
     return true;
   }

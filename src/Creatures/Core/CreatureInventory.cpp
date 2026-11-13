@@ -1,4 +1,5 @@
 #include "Creatures/Core/CreatureInventory.h"
+#include "Audio/AudioApi.h"
 #include "Items/ItemDefinitionStorage.h"
 #include <iostream>
 #include <nlohmann/json.hpp>
@@ -9,6 +10,14 @@ namespace cutum
 namespace
 {
 constexpr size_t kHotbarSlots = 10;
+
+/// Gear rustle on equip/unequip — a UI-bus sound, no spatialization.
+void PostEquipAudio(AudioEventKind kind)
+{
+  UAudioEvent audio;
+  audio.Kind = kind;
+  UAudioApi::Post(audio);
+}
 
 constexpr size_t kArmorSlots = UCreatureInventory::kArmorSlotCount;
 
@@ -364,6 +373,7 @@ bool UCreatureInventory::EquipArmor(size_t slot, const InventoryEntryRef &entry,
   {
     return false;
   }
+  PostEquipAudio(AudioEventKind::Equip);
 
   const char *slotId = ArmorSlotId(slot);
   bool slotAllowed = false;
@@ -458,6 +468,10 @@ void UCreatureInventory::UnequipArmor(size_t slot,
     return;
   }
   const InventoryEntryRef worn = EquippedArmor[slot];
+  if (!worn.empty && !worn.Id.empty())
+  {
+    PostEquipAudio(AudioEventKind::Unequip);
+  }
   EquippedArmor[slot] = InventoryEntryRef{};
   // Non-broken gear returns to the bag (storage); broken items are destroyed.
   if (!worn.empty && !worn.broken && !worn.Id.empty())

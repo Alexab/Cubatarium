@@ -617,6 +617,9 @@ public:
   void TickBreakSession(float dt, float durationSeconds);
   bool CompleteBreakSession();
   float GetBreakProgress() const;
+  /// Surface-material id for audio at a block position (0 = unknown); used
+  /// by gameplay SFX posts. Read-only, safe from any game-thread site.
+  std::uint32_t ResolveAudioMaterialAt(const glm::ivec3 &blockPos) const;
   bool HasBreakSession() const
   {
     return BreakService && BreakService->HasSession();

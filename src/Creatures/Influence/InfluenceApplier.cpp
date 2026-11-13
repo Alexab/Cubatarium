@@ -1,4 +1,5 @@
 #include "Creatures/Influence/InfluenceApplier.h"
+#include "Audio/AudioApi.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Influence/InfluenceEvent.h"
@@ -267,10 +268,23 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
       progress_ev.SourcePos = pred.SourcePos;
       progress_ev.TargetPos = glm::vec3(pred.DigBlockPos);
       InfluenceEvents::Emit(progress_ev);
+      // Dig hit on the block surface, synced to the progress tick.
+      UAudioEvent audio;
+      audio.Kind = AudioEventKind::DigHit;
+      audio.X = progress_ev.TargetPos.x + 0.5f;
+      audio.Y = progress_ev.TargetPos.y + 0.5f;
+      audio.Z = progress_ev.TargetPos.z + 0.5f;
+      audio.MaterialId = world.ResolveAudioMaterialAt(pred.DigBlockPos);
+      audio.EntityId = static_cast<std::uint32_t>(pred.SourceId);
+      UAudioApi::Post(audio);
       result.Applied = true;
       return result;
     }
 
+    // Resolve the block material while the block is still in place; the
+    // completed-break thud must name the material that just disappeared.
+    const std::uint32_t digMaterialId =
+        world.ResolveAudioMaterialAt(pred.DigBlockPos);
     result.Applied = world.CompleteBreakSession();
     InfluenceEvent ev;
     ev.Kind = result.Applied ? InfluenceEventKind::Applied
@@ -287,6 +301,17 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
       ev.CancelReason = "dig_complete_failed";
     }
     InfluenceEvents::Emit(ev);
+    if (result.Applied)
+    {
+      UAudioEvent audio;
+      audio.Kind = AudioEventKind::DigComplete;
+      audio.X = ev.TargetPos.x + 0.5f;
+      audio.Y = ev.TargetPos.y + 0.5f;
+      audio.Z = ev.TargetPos.z + 0.5f;
+      audio.MaterialId = digMaterialId;
+      audio.EntityId = static_cast<std::uint32_t>(pred.SourceId);
+      UAudioApi::Post(audio);
+    }
     return result;
   }
 
@@ -327,6 +352,14 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
     ev.TargetPos = pred.SourcePos;
     ev.Effects = pred.Capability.Effects;
     InfluenceEvents::Emit(ev);
+    // Eat/drink feedback right at the consume moment.
+    UAudioEvent audio;
+    audio.Kind = AudioEventKind::Eat;
+    audio.X = pred.SourcePos.x;
+    audio.Y = pred.SourcePos.y;
+    audio.Z = pred.SourcePos.z;
+    audio.EntityId = static_cast<std::uint32_t>(pred.SourceId);
+    UAudioApi::Post(audio);
     result.Applied = true;
     return result;
   }
@@ -420,6 +453,28 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
     ev.TargetIds.push_back(t.TargetId);
   }
   InfluenceEvents::Emit(ev);
+  // Combat feedback: the bow reports at the shooter, the hit lands on the
+  // target only when damage was actually dealt.
+  if (pred.Capability.Channel == InfluenceChannel::Ranged)
+  {
+    UAudioEvent audio;
+    audio.Kind = AudioEventKind::RangedShot;
+    audio.X = pred.SourcePos.x;
+    audio.Y = pred.SourcePos.y;
+    audio.Z = pred.SourcePos.z;
+    audio.EntityId = static_cast<std::uint32_t>(pred.SourceId);
+    UAudioApi::Post(audio);
+  }
+  if (total_damage > 0.f && pred.Capability.Channel == InfluenceChannel::Melee)
+  {
+    UAudioEvent audio;
+    audio.Kind = AudioEventKind::MeleeHit;
+    audio.X = primary_target_pos.x;
+    audio.Y = primary_target_pos.y;
+    audio.Z = primary_target_pos.z;
+    audio.EntityId = static_cast<std::uint32_t>(pred.SourceId);
+    UAudioApi::Post(audio);
+  }
   result.Applied = true;
   return result;
 }

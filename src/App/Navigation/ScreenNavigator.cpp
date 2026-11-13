@@ -1,5 +1,6 @@
 #include "App/Navigation/ScreenNavigator.h"
 
+#include "Audio/AudioApi.h"
 #include "App/Application.h"
 #include "App/Platform/CursorCapture.h"
 #include "App/Settings/AppState.h"
@@ -30,6 +31,14 @@ UWindowManager *GetWindowManager(GLFWwindow *window)
   return static_cast<UWindowManager *>(glfwGetWindowUserPointer(window));
 }
 #endif
+
+/// Menu screens open with a soft UI sound (Ui bus, no spatialization).
+void PostUiOpenAudio()
+{
+  UAudioEvent audio;
+  audio.Kind = AudioEventKind::UiOpen;
+  UAudioApi::Post(audio);
+}
 
 } // namespace
 
@@ -71,6 +80,7 @@ void UScreenNavigator::ShowSettings()
   Application->GuiContext->SetScreen(
       std::make_unique<USettingsScreen>(Application));
   Application->SyncCursorVisibility();
+  PostUiOpenAudio();
 }
 
 void UScreenNavigator::ShowWorldSettings()
@@ -88,6 +98,7 @@ void UScreenNavigator::ShowWorldSettings()
   Application->GuiContext->SetScreen(std::make_unique<UWorldResourcePacksScreen>(
       Application, [this]() { ShowMainMenu(); }));
   Application->SyncCursorVisibility();
+  PostUiOpenAudio();
 }
 
 void UScreenNavigator::ShowNewWorld()
@@ -105,6 +116,7 @@ void UScreenNavigator::ShowNewWorld()
   Application->GuiContext->SetScreen(
       std::make_unique<UNewWorldScreen>(Application));
   Application->SyncCursorVisibility();
+  PostUiOpenAudio();
 }
 
 void UScreenNavigator::ShowLoadWorld()
@@ -122,6 +134,7 @@ void UScreenNavigator::ShowLoadWorld()
   Application->GuiContext->SetScreen(
       std::make_unique<ULoadWorldScreen>(Application));
   Application->SyncCursorVisibility();
+  PostUiOpenAudio();
 }
 
 void UScreenNavigator::ReturnToMainMenu()

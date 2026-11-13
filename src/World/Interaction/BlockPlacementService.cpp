@@ -1,5 +1,6 @@
 #include "World/Interaction/BlockPlacementService.h"
 
+#include "Audio/AudioApi.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
 #include "Creatures/Player/PlayerCapsule.h"
@@ -14,6 +15,23 @@
 
 namespace cutum
 {
+
+namespace
+{
+
+/// Thud right after the block appears; material of the block itself.
+void PostPlaceAudio(UWorld &world, const glm::ivec3 &blockPos)
+{
+  UAudioEvent audio;
+  audio.Kind = AudioEventKind::Place;
+  audio.X = static_cast<float>(blockPos.x) + 0.5f;
+  audio.Y = static_cast<float>(blockPos.y) + 0.5f;
+  audio.Z = static_cast<float>(blockPos.z) + 0.5f;
+  audio.MaterialId = world.ResolveAudioMaterialAt(blockPos);
+  UAudioApi::Post(audio);
+}
+
+} // namespace
 
 bool UBlockPlacementService::AddObjectByView(UWorld &world,
                                              const glm::vec3 &position,
@@ -69,6 +87,7 @@ bool UBlockPlacementService::AddObjectByView(UWorld &world,
     (void)ResourceEconomyService::ConsumeOnPlace(world.GetGameMode(),
                                                   controlled->GetInventory(),
                                                   entryCopy);
+    PostPlaceAudio(world, *resolved.place_block_pos);
     world.UpdateIntersection(position, front);
     return true;
   }
@@ -104,6 +123,7 @@ bool UBlockPlacementService::PlaceBlockFromHeldItem(
   {
     return false;
   }
+  PostPlaceAudio(world, *resolved.place_block_pos);
   auto &inv = controlled->GetInventory();
   const InventoryEntryRef *active = inv.GetActiveEntryRef();
   if (active && !active->empty && active->kind == InventoryEntryKind::Item)

@@ -1,5 +1,6 @@
 #include "World/Items/WorldItemSystem.h"
 
+#include "Audio/AudioApi.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
 #include "Game/Economy/ResourceEconomy.h"
@@ -81,6 +82,13 @@ void WorldItemSystem::Tick(UWorld &world, float dt)
         ResourceEconomyService::GrantItemDrop(world.GetGameMode(), inv,
                                                it->itemId, it->count);
       }
+      UAudioEvent audio;
+      audio.Kind = AudioEventKind::Pickup;
+      audio.X = playerPos.x;
+      audio.Y = playerPos.y;
+      audio.Z = playerPos.z;
+      audio.EntityId = static_cast<std::uint32_t>(player->GetId());
+      UAudioApi::Post(audio);
       it = Items.erase(it);
       continue;
     }

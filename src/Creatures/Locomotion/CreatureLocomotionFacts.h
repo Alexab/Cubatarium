@@ -40,8 +40,25 @@ struct CreatureLocomotionFacts
   float animPhase{0.0f};
 };
 
+/// Audio-side per-creature tracking for footstep emission. Kept on UCreature
+/// (audio reuses the walk-cycle phase; no animation-event system exists).
+struct CreatureFootstepAudioState
+{
+  float PrevPhase{0.0f};
+  /// Own unwrapped accumulator: facts.animPhase is shared with pose code and
+  /// drifts idly when blocked, so crossing detection accumulates deltas.
+  float AccumPhase{0.0f};
+  bool PrevOnGround{false};
+  bool Seeded{false};
+};
+
 float AdvanceAnimPhase(float phase, float horizontalSpeed, float walkCycleHz,
                        float walkSpeedRef, float dt);
+
+/// Footstep detection: returns +1 once per half-cycle (each footfall) while
+/// grounded and moving, -1 on the grounded transition (landing), 0 otherwise.
+int ConsumeFootstepAudio(const CreatureLocomotionFacts &facts,
+                         CreatureFootstepAudioState &state);
 
 void FillTerrestrialRawFacts(CreatureLocomotionFacts &out,
                              const CreatureLocomotionRawInput &input,

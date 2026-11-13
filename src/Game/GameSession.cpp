@@ -1,4 +1,5 @@
 #include "Game/GameSession.h"
+#include "Audio/AudioApi.h"
 #include "Game/ModePolicy.h"
 #include "Game/Interfaces/IUGameContent.h"
 #include "App/Application.h"
@@ -30,6 +31,14 @@ namespace cutum
 
 namespace
 {
+
+/// Inventory drag/drop clicks — UI-bus sounds, no spatialization.
+void PostInventoryClickAudio(AudioEventKind kind)
+{
+  UAudioEvent audio;
+  audio.Kind = kind;
+  UAudioApi::Post(audio);
+}
 
 UCreatureInventory *GetControlledInventory(UWorld *world)
 {
@@ -393,6 +402,7 @@ void UGameSession::BeginDragFromSlot(const SlotAddress &source,
   Drag.Active = true;
   Drag.entry = entry;
   Drag.source = source;
+  PostInventoryClickAudio(AudioEventKind::Pickup);
 }
 
 bool UGameSession::IsDragging() const { return Drag.Active; }
@@ -414,6 +424,7 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
     CancelDrag();
     return true;
   }
+  PostInventoryClickAudio(AudioEventKind::UiClick);
 
   const SlotAddress source = Drag.source;
   const InventoryEntryRef entry = Drag.entry;

@@ -74,7 +74,16 @@ Transitive Maven dependencies of the above are standard AndroidX libraries (also
 | Component | Path | License |
 |-----------|------|---------|
 | [stb_image](https://github.com/nothings/stb) | `src/ThirdParty/stb_image.h` | [MIT / public domain](https://github.com/nothings/stb/blob/master/LICENSE) |
+| [miniaudio](https://github.com/mackron/miniaudio) | `src/ThirdParty/miniaudio.h` (v0.11.26) | [MIT-0 / public domain](https://github.com/mackron/miniaudio/blob/master/LICENSE) — audio playback/mixing (WASAPI / AAudio) |
 | [Roboto](https://github.com/googlefonts/roboto) | `fonts/Roboto-Regular.ttf` | [Apache 2.0](fonts/LICENSE-Roboto.txt) |
+
+### Runtime audio assets (not committed)
+
+Sound effect files are installed locally under `bin/audio/sounds/` from CC0
+sources (see `content/audio/README.md` for the pack list and layout). Music
+under `bin/audio/music/` is user-supplied (Ragnarok Online OST — Gravity
+copyright, personal local use only, never committed). Manifests referencing
+these files live in `content/audio/` (committed).
 
 ---
 

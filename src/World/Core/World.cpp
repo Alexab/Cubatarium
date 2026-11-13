@@ -39,6 +39,7 @@
 #include "World/Core/RuntimeTuning.h"
 #include "World/Core/WorldFluidFacade.h"
 #include "World/Core/WorldViewBinding.h"
+#include "Audio/MaterialSoundMap.h"
 #include "World/Diagnostics/MovementDiagnosticsRecorder.h"
 #include "World/Diagnostics/JobStageTrace.h"
 #include "World/Environment/WeatherAutoController.h"
@@ -15295,6 +15296,36 @@ float UWorld::GetBreakProgress() const
 std::optional<glm::ivec3> UWorld::GetBreakSessionBlockPos() const
 {
   return BreakService ? BreakService->GetBlockPos() : std::nullopt;
+}
+
+std::uint32_t UWorld::ResolveAudioMaterialAt(const glm::ivec3 &blockPos) const
+{
+  const UMaterialSoundMap *materialMap = GetAudioMaterialMap();
+  if (!materialMap)
+  {
+    return 0;
+  }
+  const BlockId id = BlockWorld.GetBlock(blockPos);
+  if (id == 0)
+  {
+    return 0;
+  }
+  const std::string &blockName = BlockRegistry->GetTypeNameById(id);
+  std::string digGroupsCsv;
+  if (BlockDefinitions)
+  {
+    const auto catalog = BlockDefinitions->GetCatalogSnapshot();
+    auto it = catalog->ById.find(id);
+    if (it != catalog->ById.end())
+    {
+      for (const auto &group : it->second.DigGroups)
+      {
+        digGroupsCsv += group.first;
+        digGroupsCsv += ',';
+      }
+    }
+  }
+  return materialMap->ResolveMaterial(blockName, digGroupsCsv);
 }
 
 FluidColumnSurface UWorld::FindFluidColumnSurfaceAt(int bx, int bz,
