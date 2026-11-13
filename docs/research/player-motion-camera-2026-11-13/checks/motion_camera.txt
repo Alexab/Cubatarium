@@ -1,0 +1,4 @@
+30 FPS maximum stance drift=1.22733e-07 blocks
+60 FPS maximum stance drift=1.33615e-07 blocks
+144 FPS maximum stance drift=2.39923e-07 blocks
+human_motion_camera_test: passed at 30/60/144 FPS
