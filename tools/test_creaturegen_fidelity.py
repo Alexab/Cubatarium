@@ -63,6 +63,27 @@ class FidelityTests(unittest.TestCase):
             with tempfile.TemporaryDirectory() as temp, self.assertRaises(ValueError):
                 pipeline.runtime_definition('owl',Path(temp))
 
+    def test_orc_macro_loop_measures_each_complete_stride(self):
+        model=build_model(pipeline.load_recipe('orc'));g,blob=export_gltf(model,['walk','run'])
+        a=g['meshes'][0]['primitives'][0]['attributes'];p=accessor(g,[blob],a['POSITION'])
+        v=np.column_stack([p,np.ones(len(p))]);j=accessor(g,[blob],a['JOINTS_0']).astype(int);w=accessor(g,[blob],a['WEIGHTS_0'])
+        inv=accessor(g,[blob],g['skins'][0]['inverseBindMatrices']).reshape(-1,4,4).transpose(0,2,1)
+        foot=next(i for i,b in enumerate(model.bones) if b.name=='foot_left')
+        mask=(authored_vertex_owners(model,g,[blob])==foot)&(w[:,0]>.99)
+        def sample(clip,phase):
+            world=world_matrices(sample_nodes(g,[blob],clip,phase))
+            pal=np.array([world[n]@iv for n,iv in zip(g['skins'][0]['joints'],inv)])
+            return np.einsum('nij,nj->ni',(pal[j[mask]]*w[mask,:,None,None]).sum(axis=1),v[mask])[:,:3]
+        for clip,count in [('walk',4),('run',3)]:
+            settings=model.motion['clips'][clip];duration=max(t['times'][-1] for t in settings['tracks'])
+            track=next(t for t in settings['tracks'] if t['bone']=='foot_left' and t['path']=='rotation')
+            stride=next(time for time,value in zip(track['times'][1:],track['values'][1:]) if np.allclose(value,track['values'][0],atol=1e-8))
+            self.assertAlmostEqual(duration/stride,count,places=5)
+            for stride in range(count):
+                start=stride/count;end=(stride+.5)/count
+                speed=(sample(clip,end)[:,2]-sample(clip,start)[:,2]).mean()/(duration/count*.5/settings['runtime_speed'])
+                self.assertAlmostEqual(speed,pipeline.runtime_definition('orc',Path(tempfile.gettempdir()))['locomotion']['walk_speed'],places=4)
+
     def test_warriors_preserve_attached_limbs_stride_and_weapon_action(self):
         for sid,count in [('oerkki',21),('orc',18),('ogre',18),('dungeon_master',17),('land_guard',17)]:
             model=build_model(pipeline.load_recipe(sid));g,blob=export_gltf(model,list(model.motion['clips']))
@@ -111,7 +132,13 @@ class FidelityTests(unittest.TestCase):
                         if side=='left':
                             definition=pipeline.runtime_definition(sid,Path(tempfile.gettempdir()));settings=model.motion['clips'][clip]
                             duration=max(t['times'][-1] for t in settings['tracks'])
-                            speed=(poses[32][:,2]-poses[0][:,2]).mean()/(duration*.5/settings['runtime_speed'])
+                            stride_duration=duration
+                            if sid=='orc':
+                                # The foot completes four Walk or three Run strides in a macro loop.
+                                track=next(t for t in settings['tracks'] if t['bone']=='foot_left' and t['path']=='rotation')
+                                stride_duration=next(time for time,value in zip(track['times'][1:],track['values'][1:]) if np.allclose(value,track['values'][0],atol=1e-8))
+                            stance_phase=.5*stride_duration/duration
+                            speed=(sample(clip,stance_phase)[0][mask,2]-sample(clip,0)[0][mask,2]).mean()/(stride_duration*.5/settings['runtime_speed'])
                             self.assertAlmostEqual(speed,definition['locomotion']['walk_speed'],places=4)
             if sid!='oerkki':
                 uv=accessor(g,[blob],a['TEXCOORD_0'])*np.array(model.texture_size)
@@ -433,8 +460,12 @@ class FidelityTests(unittest.TestCase):
                         self.assertLess(sum(retreat),-.01,'stance must retract, not moonwalk')
                     # Compare finger separation in palm-local space: closing must
                     # remain visible even when the entire claw lifts to strike.
-                    tip=(authored_vertex_owners(model,g,[blob])==names['moving_finger_'+side])&(w[:,0]>.99)&np.isclose(p[:,2],-19/16)
-                    fixed=(authored_vertex_owners(model,g,[blob])==names['palm_'+side])&(w[:,0]>.99)&np.isclose(p[:,2],-19/16)
+                    tip_owner=(authored_vertex_owners(model,g,[blob])==names['moving_finger_'+side])&(w[:,0]>.99)
+                    fixed_owner=(authored_vertex_owners(model,g,[blob])==names['palm_'+side])&(w[:,0]>.99)
+                    self.assertTrue(tip_owner.any());self.assertTrue(fixed_owner.any())
+                    tip=tip_owner & np.isclose(p[:,2],p[tip_owner,2].min())
+                    fixed=fixed_owner & np.isclose(p[:,2],p[fixed_owner,2].min())
+                    self.assertTrue(tip.any());self.assertTrue(fixed.any())
                     gaps=[np.linalg.norm(sample('punch',t)[tip].mean(axis=0)-sample('punch',t)[fixed].mean(axis=0)) for t in (0,.5)]
                     self.assertGreater(gaps[0],gaps[1]+.015,'pincer does not close')
         invalid=copy.deepcopy(pipeline.load_recipe('crab'));invalid['locomotion_axis']='+y'

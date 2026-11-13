@@ -1,0 +1,178 @@
+[
+  {
+    "species": "orc",
+    "clip": "walk",
+    "side": "left",
+    "min_height": -1.6813005803166178e-07,
+    "max_height": 0.1928044969776283,
+    "stance_intervals": 296,
+    "stance_speed_min": -4.177885319825313,
+    "stance_speed_max": 3.8806816894678673,
+    "stance_speed_median": 0.6080145149045573
+  },
+  {
+    "species": "orc",
+    "clip": "walk",
+    "side": "right",
+    "min_height": -1.2115079334532042e-07,
+    "max_height": 0.2055898321842855,
+    "stance_intervals": 215,
+    "stance_speed_min": -4.177855017589705,
+    "stance_speed_max": 3.880667752802775,
+    "stance_speed_median": 0.7804682982070928
+  },
+  {
+    "species": "orc",
+    "clip": "run",
+    "side": "left",
+    "min_height": -0.00012565591638610905,
+    "max_height": 0.2603469499817496,
+    "stance_intervals": 254,
+    "stance_speed_min": -4.266545663322558,
+    "stance_speed_max": 3.998695185823116,
+    "stance_speed_median": 1.152524240581277
+  },
+  {
+    "species": "orc",
+    "clip": "run",
+    "side": "right",
+    "min_height": -0.00012565086047892308,
+    "max_height": 0.26034695976426214,
+    "stance_intervals": 254,
+    "stance_speed_min": -4.266545426779325,
+    "stance_speed_max": 3.9987206022764634,
+    "stance_speed_median": 1.15251983865602
+  },
+  {
+    "species": "tree_monster",
+    "clip": "walk",
+    "side": "left",
+    "min_height": -7.970568959861368e-06,
+    "max_height": 0.039674114569296856,
+    "stance_intervals": 261,
+    "stance_speed_min": -3.327322670921413,
+    "stance_speed_max": 2.885081503862259,
+    "stance_speed_median": 1.5661033245081406
+  },
+  {
+    "species": "tree_monster",
+    "clip": "walk",
+    "side": "right",
+    "min_height": -7.97056916216829e-06,
+    "max_height": 0.03967411436399334,
+    "stance_intervals": 261,
+    "stance_speed_min": -3.3273709260823905,
+    "stance_speed_max": 2.8850815030277572,
+    "stance_speed_median": 1.5657251431074366
+  },
+  {
+    "species": "tree_monster",
+    "clip": "run",
+    "side": "left",
+    "min_height": -1.771911364372141e-05,
+    "max_height": 0.08578699745168852,
+    "stance_intervals": 256,
+    "stance_speed_min": -3.332183507786283,
+    "stance_speed_max": 2.9605143852064204,
+    "stance_speed_median": 1.5509204962284684
+  },
+  {
+    "species": "tree_monster",
+    "clip": "run",
+    "side": "right",
+    "min_height": -1.7719113842597917e-05,
+    "max_height": 0.08578699774762563,
+    "stance_intervals": 256,
+    "stance_speed_min": -3.332210176376589,
+    "stance_speed_max": 2.960526272653783,
+    "stance_speed_median": 1.5511218493274783
+  },
+  {
+    "species": "treeman",
+    "clip": "walk",
+    "side": "left",
+    "min_height": 0.062499992819593064,
+    "max_height": 0.6426600455590314,
+    "stance_intervals": 0,
+    "stance_speed_min": null,
+    "stance_speed_max": null,
+    "stance_speed_median": null
+  },
+  {
+    "species": "treeman",
+    "clip": "walk",
+    "side": "right",
+    "min_height": 0.062499992819593064,
+    "max_height": 0.6426600416921608,
+    "stance_intervals": 0,
+    "stance_speed_min": null,
+    "stance_speed_max": null,
+    "stance_speed_median": null
+  },
+  {
+    "species": "treeman",
+    "clip": "run",
+    "side": "left",
+    "min_height": 0.06249998357405373,
+    "max_height": 0.8605649170191445,
+    "stance_intervals": 0,
+    "stance_speed_min": null,
+    "stance_speed_max": null,
+    "stance_speed_median": null
+  },
+  {
+    "species": "treeman",
+    "clip": "run",
+    "side": "right",
+    "min_height": 0.06249998357405373,
+    "max_height": 0.8605649476335394,
+    "stance_intervals": 0,
+    "stance_speed_min": null,
+    "stance_speed_max": null,
+    "stance_speed_median": null
+  },
+  {
+    "species": "golem",
+    "clip": "walk",
+    "side": "left",
+    "min_height": -1.5530151297569236e-05,
+    "max_height": 0.08499972190344508,
+    "stance_intervals": 258,
+    "stance_speed_min": -3.1114507949175327,
+    "stance_speed_max": 2.5547390790357496,
+    "stance_speed_median": 1.5731652342513112
+  },
+  {
+    "species": "golem",
+    "clip": "walk",
+    "side": "right",
+    "min_height": -1.553015124687628e-05,
+    "max_height": 0.08499972180750273,
+    "stance_intervals": 258,
+    "stance_speed_min": -3.1114698050607164,
+    "stance_speed_max": 2.5547390790357496,
+    "stance_speed_median": 1.5731677469205732
+  },
+  {
+    "species": "golem",
+    "clip": "run",
+    "side": "left",
+    "min_height": -3.476008199452358e-05,
+    "max_height": 0.1795582919504724,
+    "stance_intervals": 256,
+    "stance_speed_min": -3.0497199366552543,
+    "stance_speed_max": 2.615618066014723,
+    "stance_speed_median": 1.491509833635332
+  },
+  {
+    "species": "golem",
+    "clip": "run",
+    "side": "right",
+    "min_height": -3.476007494081397e-05,
+    "max_height": 0.1795582936076682,
+    "stance_intervals": 256,
+    "stance_speed_min": -3.0496960792128496,
+    "stance_speed_max": 2.615640236225587,
+    "stance_speed_median": 1.4912848185282774
+  }
+]
