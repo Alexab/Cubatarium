@@ -161,6 +161,7 @@ private:
   std::string ArmSpecies,ArmFile,ArmGeometry,ArmDirectory;
   uint64_t ArmRevision{0};
   bool ArmRequestSeen{false};
+  std::vector<std::pair<size_t,glm::mat4>> ArmSegments[2];
   size_t ArmIndices[2]{static_cast<size_t>(-1),static_cast<size_t>(-1)};
   glm::mat4 ArmFits[2]{glm::mat4(1.f),glm::mat4(1.f)};
   float ArmScales[2]{1.f,1.f};

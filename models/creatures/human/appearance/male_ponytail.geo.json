@@ -45,7 +45,7 @@
             ]
           }
         ],
-        "parent": "waist"
+        "parent": "spine"
       },
       {
         "name": "head",
@@ -95,17 +95,17 @@
           {
             "origin": [
               -8.0,
-              12.0,
+              18.0,
               -2.0
             ],
             "size": [
               4,
-              12,
+              6,
               4
             ],
             "uv": [
-              40,
-              16
+              1,
+              65
             ]
           }
         ],
@@ -119,7 +119,7 @@
           1.0
         ],
         "cubes": [],
-        "parent": "rightArm"
+        "parent": "rightHand"
       },
       {
         "name": "rightLeg",
@@ -132,21 +132,21 @@
           {
             "origin": [
               -4.0,
-              0.0,
+              6.0,
               -2.0
             ],
             "size": [
               4,
-              12,
+              6,
               4
             ],
             "uv": [
-              61,
-              34
+              18,
+              65
             ]
           }
         ],
-        "parent": "body"
+        "parent": "waist"
       },
       {
         "name": "leftArm",
@@ -159,17 +159,17 @@
           {
             "origin": [
               4.0,
-              12.0,
+              18.0,
               -2.0
             ],
             "size": [
               4,
-              12,
+              6,
               4
             ],
             "uv": [
-              79,
-              34
+              35,
+              65
             ]
           }
         ],
@@ -183,7 +183,7 @@
           1.0
         ],
         "cubes": [],
-        "parent": "leftArm"
+        "parent": "leftHand"
       },
       {
         "name": "leftLeg",
@@ -196,21 +196,277 @@
           {
             "origin": [
               0.0,
+              6.0,
+              -2.0
+            ],
+            "size": [
+              4,
+              6,
+              4
+            ],
+            "uv": [
+              52,
+              65
+            ]
+          }
+        ],
+        "parent": "waist"
+      },
+      {
+        "name": "spine",
+        "pivot": [
+          0.0,
+          12.0,
+          0.0
+        ],
+        "cubes": [],
+        "parent": "waist"
+      },
+      {
+        "name": "rightForearm",
+        "pivot": [
+          -5.0,
+          18.0,
+          0.0
+        ],
+        "cubes": [
+          {
+            "origin": [
+              -8.0,
+              12.0,
+              -2.0
+            ],
+            "size": [
+              4,
+              6,
+              4
+            ],
+            "uv": [
+              69,
+              65
+            ]
+          },
+          {
+            "origin": [
+              -7.5,
+              17.0,
+              -1.5
+            ],
+            "size": [
+              3,
+              2,
+              3
+            ],
+            "uv": [
+              86,
+              65
+            ]
+          }
+        ],
+        "parent": "rightArm"
+      },
+      {
+        "name": "rightHand",
+        "pivot": [
+          -5.0,
+          12.0,
+          0.0
+        ],
+        "cubes": [],
+        "parent": "rightForearm"
+      },
+      {
+        "name": "rightShin",
+        "pivot": [
+          -2.0,
+          6.0,
+          0.0
+        ],
+        "cubes": [
+          {
+            "origin": [
+              -4.0,
+              2.0,
+              -2.0
+            ],
+            "size": [
+              4,
+              4,
+              4
+            ],
+            "uv": [
+              99,
+              65
+            ]
+          },
+          {
+            "origin": [
+              -3.5,
+              5.0,
+              -1.5
+            ],
+            "size": [
+              3,
+              2,
+              3
+            ],
+            "uv": [
+              116,
+              65
+            ]
+          }
+        ],
+        "parent": "rightLeg"
+      },
+      {
+        "name": "rightFoot",
+        "pivot": [
+          -2.0,
+          2.0,
+          0.0
+        ],
+        "cubes": [
+          {
+            "origin": [
+              -4.0,
               0.0,
               -2.0
             ],
             "size": [
               4,
-              12,
+              2,
               4
             ],
             "uv": [
-              97,
-              34
+              129,
+              65
             ]
           }
         ],
-        "parent": "body"
+        "parent": "rightShin"
+      },
+      {
+        "name": "leftForearm",
+        "pivot": [
+          5.0,
+          18.0,
+          0.0
+        ],
+        "cubes": [
+          {
+            "origin": [
+              4.0,
+              12.0,
+              -2.0
+            ],
+            "size": [
+              4,
+              6,
+              4
+            ],
+            "uv": [
+              146,
+              65
+            ]
+          },
+          {
+            "origin": [
+              4.5,
+              17.0,
+              -1.5
+            ],
+            "size": [
+              3,
+              2,
+              3
+            ],
+            "uv": [
+              163,
+              65
+            ]
+          }
+        ],
+        "parent": "leftArm"
+      },
+      {
+        "name": "leftHand",
+        "pivot": [
+          5.0,
+          12.0,
+          0.0
+        ],
+        "cubes": [],
+        "parent": "leftForearm"
+      },
+      {
+        "name": "leftShin",
+        "pivot": [
+          2.0,
+          6.0,
+          0.0
+        ],
+        "cubes": [
+          {
+            "origin": [
+              0.0,
+              2.0,
+              -2.0
+            ],
+            "size": [
+              4,
+              4,
+              4
+            ],
+            "uv": [
+              176,
+              65
+            ]
+          },
+          {
+            "origin": [
+              0.5,
+              5.0,
+              -1.5
+            ],
+            "size": [
+              3,
+              2,
+              3
+            ],
+            "uv": [
+              193,
+              65
+            ]
+          }
+        ],
+        "parent": "leftLeg"
+      },
+      {
+        "name": "leftFoot",
+        "pivot": [
+          2.0,
+          2.0,
+          0.0
+        ],
+        "cubes": [
+          {
+            "origin": [
+              0.0,
+              0.0,
+              -2.0
+            ],
+            "size": [
+              4,
+              2,
+              4
+            ],
+            "uv": [
+              206,
+              65
+            ]
+          }
+        ],
+        "parent": "leftShin"
       },
       {
         "name": "hair",
@@ -319,6 +575,18 @@
         ],
         "parent": "head"
       }
-    ]
+    ],
+    "human_rig_version": 2,
+    "model_scale": 0.9,
+    "semantic_bindings": {
+      "pelvis": "waist",
+      "spine": "spine",
+      "right_elbow": "rightForearm",
+      "left_elbow": "leftForearm",
+      "right_knee": "rightShin",
+      "left_knee": "leftShin",
+      "right_foot": "rightFoot",
+      "left_foot": "leftFoot"
+    }
   }
 }

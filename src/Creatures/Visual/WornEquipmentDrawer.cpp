@@ -574,16 +574,34 @@ void SubmitItemOnBones(CreatureDrawQueue *queue, UShaderProgram *shader,
   const std::filesystem::path gltfAbs = ResolveGltfAbs(itemId, true);
   const GLuint fallbackTex = SolidColorTex(itemId);
 
-  for (const std::string &boneName : worn.wear.bones)
+  auto wearBones=worn.wear.bones;
+  bool articulatedLegs=false;
+  if(slot==2)for(const auto &name:worn.wear.bones) {
+    const std::string shin=name=="rightLeg"?"rightShin":name=="leftLeg"?"leftShin":"";
+    glm::mat4 probe(1.f);
+    if(!shin.empty() && bones(shin,probe)){wearBones.push_back(shin);articulatedLegs=true;}
+  }
+  for (const std::string &originalBone : wearBones)
   {
+    std::string boneName=originalBone;
     glm::mat4 boneMat(1.f);
+    if(slot==3 && (boneName=="rightLeg" || boneName=="leftLeg")) {
+      const std::string foot=boneName=="rightLeg"?"rightFoot":"leftFoot";
+      if(bones(foot,boneMat))boneName=foot;
+    }
     if (!bones(boneName, boneMat))
     {
       continue;
     }
     glm::mat4 fit=worn.fit;glm::vec3 low,high;
-    if(worn.wear.boneVolume && bounds && bounds(boneName,low,high))
-      fit=FitCreatureWearToRegion(worn.itemLow,worn.itemHigh,CreatureWearRegion(slot,low,high));
+    if(worn.wear.boneVolume && bounds && bounds(boneName,low,high)) {
+      auto region=CreatureWearRegion(slot,low,high);
+      if(articulatedLegs || (slot==3 && boneName.find("Foot")!=std::string::npos)) {
+        const float pad=articulatedLegs?.03f:.026f;
+        region={low-glm::vec3(pad,0.f,pad),high+glm::vec3(pad,0.f,pad)};
+      }
+      fit=FitCreatureWearToRegion(worn.itemLow,worn.itemHigh,region);
+    }
     const glm::mat4 local=WearLocalMatrix(worn.wear)*fit;
     const glm::mat4 mvp = viewProj * bodyMat * boneMat * local;
     for (const GltfPrimitiveCpu &prim : asset->primitives)

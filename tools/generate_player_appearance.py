@@ -51,6 +51,45 @@ def model_for(body,style):
      c.size[0]=3
      c.origin[0]=-6.5 if b.name=='rightArm' else 3.5
     if b.name=='body':c.origin[0]+=.5;c.size[0]=7
+ # Articulated human v2: legs attach to pelvis, independently of torso lean.
+ extra=[Bone('spine','waist',[0,12,0],[])]
+ for b in m.bones:
+  if b.name=='body':b.parent='spine'
+  if b.name in ('rightLeg','leftLeg'):b.parent='waist'
+  if b.name in ('rightArm','leftArm','rightLeg','leftLeg'):
+   arm='Arm' in b.name;side='right' if b.name.startswith('right') else 'left'
+   joint=18 if arm else 6
+   lower_name=side+('Forearm' if arm else 'Shin')
+   lower=[]
+   for c in b.cubes:
+    bottom=c.origin[1];top=bottom+c.size[1]
+    lo=copy.deepcopy(c);lo.size[1]=joint-bottom
+    c.origin[1]=joint;c.size[1]=top-joint
+    lower.append(lo)
+   extra.append(Bone(lower_name,b.name,[b.pivot[0],joint,0],lower))
+   end=[]
+   if not arm:
+    for c in lower:
+     sole=copy.deepcopy(c);sole.size[1]=2;end.append(sole)
+     c.origin[1]=2;c.size[1]-=2
+   extra.append(Bone(side+('Hand' if arm else 'Foot'),lower_name,
+                     [b.pivot[0],12 if arm else 2,0],end))
+   # Inset joint core bridges the opening on the bent side. Its faces lie
+   # inside the limb envelope and never coincide with the outer skin faces.
+   width=int(lower[0].size[0])-1
+   lower.append(Cube([lower[0].origin[0]+.5,joint-1,-1.5],
+                     [width,2,3],lower[0].role,(0,0),lower[0].name))
+  if b.name in ('rightItem','leftItem'):
+   b.parent=('right' if b.name.startswith('right') else 'left')+'Hand'
+ m.bones.extend(extra)
+ # Dedicated integer UV islands preserve pixel density after segmentation.
+ u=1;v=65;row=0
+ for b in m.bones:
+  if b.name.endswith(('Arm','Forearm','Leg','Shin','Foot')):
+   for c in b.cubes:
+    w,h,d=c.size;width=int(2*(w+d));height=int(h+d)
+    if u+width>255:u=1;v+=row+1;row=0
+    c.uv=(u,v);u+=width+1;row=max(row,height)
  cubes=hair_cubes()
  m.bones.append(Bone('hair','head',[0,24,0],[cubes[n] for n in SETS[style]]))
  return m
@@ -77,10 +116,10 @@ def paint(body,outfit,color):
       rgb=tuple(palette['face'])
       if face=='north':
        # One logical texel per feature: calm two-texel eyes, small nose and mouth.
-       if 27<=y<28 and 1<=abs(x)<3:rgb=(232,222,198) if abs(x)>=2 else (61,84,72)
-       elif 28<=y<29 and 2<=abs(x)<3:rgb=(174,125,92) if body=='male' else (167,116,86)
-       elif 26<=y<27 and 0<x<1:rgb=(176,124,90)
-       elif 25<=y<26 and abs(x)<1:rgb=(165,105,88) if body=='female' else (171,118,89)
+       if 28<=y<29 and 1<=abs(x)<3:rgb=(232,222,198) if abs(x)>=2 else (61,84,72)
+       elif 29<=y<30 and 2<=abs(x)<3:rgb=(174,125,92) if body=='male' else (167,116,86)
+       elif 27<=y<28 and 0<x<1:rgb=(176,124,90)
+       elif 26<=y<27 and abs(x)<1:rgb=(165,105,88) if body=='female' else (171,118,89)
       elif face=='down':rgb=(169,118,89)
      pixels[ox+i,oy+j]=tuple(rgb)+(255,)
  return image
@@ -91,7 +130,10 @@ def generate(output):
  identifier=definition['visual'].get('geometry','geometry.human')
  for body in BODIES:
   for style in HAIR:
-   (human/'appearance'/f'{body}_{style}.geo.json').write_text(json.dumps(export_geometry(model_for(body,style),identifier),indent=2)+'\n')
+   geometry=export_geometry(model_for(body,style),identifier)
+   desc=geometry[identifier] if identifier in geometry else geometry['minecraft:geometry'][0]['description']
+   desc.update(human_rig_version=2,model_scale=.9,semantic_bindings={'pelvis':'waist','spine':'spine','right_elbow':'rightForearm','left_elbow':'leftForearm','right_knee':'rightShin','left_knee':'leftShin','right_foot':'rightFoot','left_foot':'leftFoot'})
+   (human/'appearance'/f'{body}_{style}.geo.json').write_text(json.dumps(geometry,indent=2)+'\n',encoding='utf-8',newline='\n')
   for outfit in ('human','human_adventurer','human_guard'):
    folder=human if outfit=='human' else output/'skins'/outfit
    (folder/'textures').mkdir(parents=True,exist_ok=True)
@@ -101,7 +143,7 @@ def generate(output):
  manifest={'schema':'player-appearance-assets.v1','source_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
  **source_context(ROOT,'human'),
  'files':{p.relative_to(output).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(files)}}
- (human/'appearance_manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+ (human/'appearance_manifest.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8',newline='\n')
  return manifest
 if __name__=='__main__':
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('--output',type=Path,default=ROOT/'models');a=p.parse_args()

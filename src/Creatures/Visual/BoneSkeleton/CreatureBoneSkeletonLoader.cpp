@@ -131,6 +131,8 @@ bool ParseGeometryObject(const nlohmann::json &geoObj,
   {
     return false;
   }
+  out.humanRigVersion = geoObj.value("human_rig_version", 0);
+  out.modelScale = out.humanRigVersion == 2 ? .9f : 1.f;
   out.textureSize.x = geoObj.value("texturewidth",
                                    geoObj.value("texture_width", 64));
   out.textureSize.y = geoObj.value("textureheight",
