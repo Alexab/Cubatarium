@@ -85,6 +85,17 @@ under `bin/audio/music/` is user-supplied (Ragnarok Online OST — Gravity
 copyright, personal local use only, never committed). Manifests referencing
 these files live in `content/audio/` (committed).
 
+Installed SFX packs (all CC0 unless noted): Kenney UI Audio, Kenney Impact
+Sounds, Kenney RPG Audio (kenney.nl, CC0); OpenGameArt — Fantozzi's
+Footsteps, 42 Snow and Gravel Footsteps, Different steps on wood/stone/
+leaves/gravel/mud (TinyWorlds), Swishes Sound Pack (artisticdude), 100 CC0
+SFX, 40 CC0 water/splash/slime SFX, 80 CC0 Creature SFX (rubberduck),
+Ambient Bird Sounds (isaiah658), Cricket sounds (syncopika), Dripping water
+loop, Rain (loopable) (ylmir), Fire Crackling (AntumDeluge) — all CC0; Horse
+gallop on different surfaces (only its CC0 tracks used). The wind/desert
+loops are synthesized by the local installer. The Ragnarok Online OST music
+is Gravity copyright — local personal use only.
+
 ---
 
 ## Shipped runtime data

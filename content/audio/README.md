@@ -38,6 +38,34 @@ Suggested CC0 sources (verify the license page when downloading):
 - OpenGameArt nature ambiences (wind, birds, crickets, rain, waves) — filter
   by CC0, e.g. https://opengameart.org/
 
+## Installed set (2026-11-13)
+
+`third_party/asset_cache/audio-sources/install_sounds.py` (local, gitignored
+workspace) downloads the packs below, converts to 44.1 kHz PCM wav, slices
+multi-step takes into individual footfalls by transient peaks, synthesizes
+the two wind loops, and lays everything out per `sounds.json`. Re-run it to
+refresh `bin/audio/sounds/`.
+
+| Set family | Source (all CC0 unless noted) |
+|---|---|
+| footstep grass/snow/wood, paws, barefoot, dig/place impacts | Kenney Impact Sounds (kenney.nl) |
+| footstep stone/sand | Fantozzi's Footsteps (OGA, qubodup) |
+| footstep snow/gravel | 42 Snow and Gravel Footsteps (OGA, qubodup) |
+| footstep wood/leaf/gravel, dig soft/wood | Different steps... (OGA, TinyWorlds) |
+| footstep hooves | Horse gallop on different surfaces (OGA; only the CC0 tracks clicky/grass/ground/muffled) |
+| melee swing, ranged shot | Swishes Sound Pack (OGA, artisticdude) |
+| melee hit, dug stone/soft | 100 CC0 SFX (OGA, rubberduck) |
+| creature hurt/death, eat | 80 CC0 Creature SFX (OGA, rubberduck) |
+| pickup, equip, ui open/close | Kenney RPG Audio (kenney.nl) |
+| ui click | Kenney UI Audio (kenney.nl) |
+| splash, ocean loop | 40 CC0 water/splash/slime SFX (OGA, rubberduck) |
+| forest loop, bird stingers | Ambient Bird Sounds (OGA, isaiah658) |
+| crickets stingers | Cricket sounds (OGA, syncopika) |
+| cave loop, drip stingers | Dripping water loop (OGA, qubodup) |
+| rain loop | Rain (loopable) (OGA, ylmir) |
+| torch crackle | Fire Crackling (OGA, AntumDeluge) |
+| wind/desert loops | synthesized by install_sounds.py (no external license) |
+
 ## Music (RO OST selection)
 
 Download from https://downloads.khinsider.com/game-soundtracks/album/ragnarok-online-original-soundtrack
