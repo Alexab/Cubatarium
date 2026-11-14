@@ -26,7 +26,8 @@ vec3 displayColor(vec3 c)
 void main()
 {
     vec4 sampleColor=texture(uAlbedo,vUv);
-    vec3 albedo=linearColor(sampleColor.rgb)*uColor.rgb;
+    // The item-only sRGB texture decodes before filtering and mip sampling.
+    vec3 albedo=sampleColor.rgb*uColor.rgb;
     vec3 n=normalize(vNormal);
     vec3 l=normalize(uLightDirection);
     vec3 viewDirection=normalize(uCamera-vPosition);

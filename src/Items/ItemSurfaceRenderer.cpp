@@ -25,12 +25,11 @@ void ItemSurfaceRenderer::Clear()
       glDeleteVertexArrays(1, &buffer.Vao);
     }
   Geometry.clear();
-  FilteredTextures.clear();
 }
 
 void ItemSurfaceRenderer::Draw(
     const std::shared_ptr<const ItemRenderAsset> &asset,
-    const std::filesystem::path &path, const glm::mat4 &viewProjection,
+    const std::filesystem::path &, const glm::mat4 &viewProjection,
     const glm::mat4 &model, const ItemVisualState &state,
     const ItemPresentationProfile &profile)
 {
@@ -95,7 +94,7 @@ void ItemSurfaceRenderer::Draw(
     const glm::mat4 matrix = model * transforms[primitive.Node];
     const auto &material = asset->Materials[primitive.Material];
     const auto texture =
-        ItemGltfTextureCache::Instance().Get(path, material.Name);
+        ItemGltfTextureCache::Instance().GetLinearAlbedo(material.Albedo);
     if (!texture)
       continue;
     Shader->SetMat4("uModel", matrix);
@@ -106,13 +105,6 @@ void ItemSurfaceRenderer::Draw(
     Shader->SetVec3("uEmissive", material.Emissive);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
-    if (FilteredTextures.insert(texture).second)
-    {
-      glGenerateMipmap(GL_TEXTURE_2D);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                      GL_LINEAR_MIPMAP_LINEAR);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    }
     glBindVertexArray(found->second.Primitives[i].Vao);
     glDrawElements(GL_TRIANGLES, GLsizei(primitive.Indices.size()),
                    GL_UNSIGNED_INT, nullptr);

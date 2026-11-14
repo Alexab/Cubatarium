@@ -149,6 +149,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           ctest --test-dir build/desktop-msvc -C Release -L items --no-tests=error --output-on-failure
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ctest --test-dir build/desktop-msvc -C Release -R '^inventory_icon_fingerprint_test$' --no-tests=error --output-on-failure
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Native inventory ownership acceptance
         if: github.event_name == 'workflow_dispatch' && inputs.native_items_qa

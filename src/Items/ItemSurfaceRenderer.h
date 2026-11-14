@@ -3,7 +3,6 @@
 
 #include "Items/ItemRenderAsset.h"
 #include <unordered_map>
-#include <unordered_set>
 
 namespace cutum
 {
@@ -45,7 +44,6 @@ private:
   };
   std::unordered_map<const ItemRenderAsset *, Uploaded> Geometry;
   std::shared_ptr<UShaderProgram> Shader;
-  std::unordered_set<unsigned> FilteredTextures;
 };
 } // namespace cutum
 

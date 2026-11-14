@@ -8,7 +8,7 @@ import sys
 from qa_report_artifacts import reset_report
 
 ROOT = Path(__file__).resolve().parents[1]
-ITEM_TARGETS=['item_render_asset_test','ownership_snapshot_test','throw_math_test','inventory_transactions_test','armor_equipment_test','resource_economy_test','recipe_registry_test','inventory_mode_test','item_survival_hooks_test','human_motion_camera_test']
+ITEM_TARGETS=['inventory_icon_fingerprint_test','item_render_asset_test','ownership_snapshot_test','throw_math_test','inventory_transactions_test','armor_equipment_test','resource_economy_test','recipe_registry_test','inventory_mode_test','item_survival_hooks_test','human_motion_camera_test']
 EXTENDED_TARGETS=['creature_draw_queue_test','creature_draw_clip_bounds_test','influence_hit_math_test','tool_capabilities_test','influence_use_test','creature_influence_channels_test','creature_equipment_fit_test','fog_range_smoother_test','seam_absent_neighbor_test','mesh_publish_contract_test','miss_first_mesh_class_test','column_flow_scheduler_test','worldgen_vegetation_placement_test','worldgen_fluid_vegetation_pipeline_test']
 
 def main():

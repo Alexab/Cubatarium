@@ -1,5 +1,6 @@
 #include "Gui/Cache/ItemIconCache.h"
 #include "App/Platform/IUPlatformPaths.h"
+#include "Gui/Cache/ItemIconFingerprint.h"
 #include "Gui/Preview/ItemPreviewRenderer.h"
 #include "Items/ItemRenderAsset.h"
 #include "Render/GlIncludes.h"
@@ -245,36 +246,16 @@ void UItemIconCache::WarmupNext(size_t count)
 
 std::string UItemIconCache::FingerprintFor(const std::string &itemId) const
 {
-  // Item id + model path + published-model stamp: the stamp follows the model
-  // file's size/mtime so meshes regenerated in place invalidate disk-cached
-  // icons automatically, with no manual generation tag to forget. When the
-  // file cannot be resolved from the working directory, the model path alone
-  // still keys the entry.
-  std::string fingerprint = itemId;
-  if (Items)
-  {
-    if (const ItemDefinition *def = Items->Get(itemId))
-    {
-      fingerprint += "|model=" + def->ModelPath;
-      if (!def->ModelPath.empty())
-      {
-        std::error_code ec;
-        const std::filesystem::path modelPath(def->ModelPath);
-        if (!ec && std::filesystem::exists(modelPath, ec))
-        {
-          const auto mtime = std::filesystem::last_write_time(modelPath, ec)
-                                 .time_since_epoch()
-                                 .count();
-          const auto size = std::filesystem::file_size(modelPath, ec);
-          if (!ec)
-          {
-            fingerprint +=
-                "|stamp=" + std::to_string(size) + ":" + std::to_string(mtime);
-          }
-        }
-      }
-    }
-  }
+  const auto cached = Fingerprints.find(itemId);
+  if (cached != Fingerprints.end())
+    return cached->second;
+  const auto *def = Items ? Items->Get(itemId) : nullptr;
+  const auto *paths = IUPlatformPaths::TryGet();
+  std::string fingerprint;
+  if (def && paths && !def->ModelPath.empty())
+    fingerprint = BuildItemIconFingerprint(paths->AssetRoot(), def->ModelPath,
+                                           def->Visual.IconScale);
+  Fingerprints.emplace(itemId, fingerprint);
   return fingerprint;
 }
 
@@ -290,6 +271,7 @@ void UItemIconCache::Invalidate()
   SkipDiskCache = true;
   Warmup.Clear();
   StateRequests.clear();
+  Fingerprints.clear();
   if (ItemPreview)
     ItemPreview->Invalidate();
   for (auto &pair : Cache)

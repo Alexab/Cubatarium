@@ -21,6 +21,10 @@ public:
   GLuint Get(const std::filesystem::path &modelGltfAbs,
              const std::string &textureStem);
 
+  /// Item-only albedo: sRGB decode precedes filtering; shared by image path.
+  /// The legacy Get() representation remains unchanged for creature consumers.
+  GLuint GetLinearAlbedo(const std::filesystem::path &imageAbs);
+
   void Clear();
 
 private:
@@ -32,6 +36,7 @@ private:
   /// Key: normalized full glTF path. Material tables belong to a model.
   std::unordered_map<std::string, std::unordered_map<std::string, GLuint>>
       ByModel;
+  std::unordered_map<std::string, GLuint> LinearAlbedo;
 };
 
 } // namespace cutum

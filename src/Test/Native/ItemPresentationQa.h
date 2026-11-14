@@ -10,6 +10,7 @@
 #include "Items/FpViewmodelRenderer.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Items/ItemDrawRequest.h"
+#include "Items/ItemGltfTextureCache.h"
 #include "Items/ItemPresentationMath.h"
 #include "Items/ItemSurfaceRenderer.h"
 #include "Render/Engine/ShaderManager.h"
@@ -268,6 +269,73 @@ inline void RunItemStateQa(const std::string &id, const ItemRenderAsset &asset,
   check(id + " cancellation restores rendered pixels",
         !rest.empty() && rest == bytes(frames / (id + "-state-3-orbit.png")));
 }
+inline void RunItemColorQa(ItemSurfaceRenderer &renderer,
+                           const std::filesystem::path &frames,
+                           nlohmann::json &report)
+{
+  auto check = [&](const std::string &name, bool passed)
+  {
+    report["checks"].push_back({{"name", name}, {"passed", passed}});
+    if (!passed)
+      report["passed"] = false;
+  };
+  std::filesystem::create_directories(frames);
+  const auto image = frames / "srgb-checker.png";
+  const unsigned char pixels[] = {0,   0,   0,   255, 255, 255, 255, 255,
+                                  255, 255, 255, 255, 0,   0,   0,   255};
+  check("color fixture PNG writes",
+        stbi_write_png(image.string().c_str(), 2, 2, 4, pixels, 8) != 0);
+  auto &cache = ItemGltfTextureCache::Instance();
+  const auto texture = cache.GetLinearAlbedo(image);
+  check("albedo path aliases share texture",
+        texture && texture == cache.GetLinearAlbedo(frames / "." /
+                                                    "srgb-checker.png"));
+  glBindTexture(GL_TEXTURE_2D, texture);
+  GLint format = 0, filter = 0, width = 0;
+  glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT,
+                           &format);
+  glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, &filter);
+  glGetTexLevelParameteriv(GL_TEXTURE_2D, 1, GL_TEXTURE_WIDTH, &width);
+  check("item albedo uses sRGB storage and complete mip chain",
+        format == GL_SRGB8_ALPHA8 && filter == GL_LINEAR_MIPMAP_LINEAR &&
+            width == 1);
+#if !defined(__ANDROID__)
+  unsigned char mip[4] = {};
+  glGetTexImage(GL_TEXTURE_2D, 1, GL_RGBA, GL_UNSIGNED_BYTE, mip);
+  check("mip average is linear-light black and white",
+        mip[0] >= 186 && mip[0] <= 189);
+  report["color_pipeline"]["mip_encoded_rgb"] = mip[0];
+#endif
+  auto asset = std::make_shared<ItemRenderAsset>();
+  asset->Materials.push_back({});
+  asset->Materials[0].Albedo = image;
+  asset->Nodes.push_back({});
+  ItemRenderPrimitive primitive;
+  primitive.Vertices = {-1,  -1,  0,  .5f, .5f, 0,   0,   1, 1,   -1,  0,
+                        .5f, .5f, 0,  0,   1,   1,   1,   0, .5f, .5f, 0,
+                        0,   1,   -1, 1,   0,   .5f, .5f, 0, 0,   1};
+  primitive.Indices = {0, 1, 2, 0, 2, 3};
+  asset->Primitives.push_back(std::move(primitive));
+  ItemPresentationProfile profile;
+  profile.InspectionMode = 3;
+  UItemQaTarget target(16, 16);
+  for (int factor = 0; factor < 2; ++factor)
+  {
+    target.Bind();
+    asset->Materials[0].Color = glm::vec4(factor ? .5f : 1.f);
+    renderer.Draw(asset, {}, glm::mat4(1.f), glm::mat4(1.f), {}, profile);
+    unsigned char pixel[4] = {};
+    glReadPixels(8, 8, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+    const int expected = factor ? 137 : 188;
+    check(factor ? "linear material factor applies once"
+                 : "bilinear sampling precedes display encoding",
+          std::abs(int(pixel[0]) - expected) <= 2 && pixel[0] == pixel[1] &&
+              pixel[1] == pixel[2]);
+    report["color_pipeline"][factor ? "half_factor_encoded_rgb"
+                                    : "filtered_encoded_rgb"] = pixel[0];
+  }
+}
+
 inline void
 RunItemPresentationQa(const std::filesystem::path &path,
                       std::shared_ptr<UItemDefinitionStorage> definitions,
@@ -311,6 +379,7 @@ RunItemPresentationQa(const std::filesystem::path &path,
   };
   ItemSurfaceRenderer renderer;
   check("item renderer initializes", renderer.Initialize(shaders));
+  RunItemColorQa(renderer, frames, report);
   UItemQaTarget target;
   UItemQaTarget fpTarget(1280, 720);
   UItemPreviewRenderer orbit(definitions, shaderManager);

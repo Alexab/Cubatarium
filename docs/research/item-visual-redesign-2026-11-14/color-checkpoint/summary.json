@@ -1,0 +1,84 @@
+{
+  "passed": true,
+  "status": "partial_linear_color_and_icon_identity_checkpoint",
+  "staged_count": 70,
+  "production_v3_count": 0,
+  "color_pipeline": {
+    "filtered_encoded_rgb": 188,
+    "half_factor_encoded_rgb": 137,
+    "mip_encoded_rgb": 188
+  },
+  "presentation_checks": 2262,
+  "native_reports": {
+    "gameplay": {
+      "passed": true,
+      "checks": 51
+    },
+    "window": {
+      "passed": true,
+      "checks": 0
+    },
+    "ownership": {
+      "passed": true,
+      "checks": 57
+    },
+    "ownership_ui": {
+      "passed": true,
+      "checks": 18
+    },
+    "player_window": {
+      "passed": true,
+      "checks": 7
+    },
+    "icons": {
+      "passed": true,
+      "checks": 209
+    },
+    "item_lab": {
+      "passed": true,
+      "checks": 111
+    },
+    "presentations": {
+      "passed": true,
+      "checks": 2262
+    }
+  },
+  "cpp_regressions": 24,
+  "separate_fingerprint_regression_passed": true,
+  "runtime_files_verified_restored": 210,
+  "executable_sha256": "99a561cefe49b3614a52067b6e64de139ee339ad5e6684edb0a7716a50aea447",
+  "limitations": [
+    "No final artistic/performance acceptance or publication.",
+    "Current typed atlas sampler uses linear/trilinear clamp; general imported sampler support is unfinished.",
+    "Fingerprint disk reads are cached per definition revision; live edits require explicit resource reload.",
+    "No remote CI run; workflow gates updated locally."
+  ],
+  "files_sha256": {
+    "ctest-items.log": "a049a53b8790293c09799eb7984802b5d21b8e8e7ab7093aa60f782db690259c",
+    "design-probe.json": "c655b50ee62fe08f378850f61335e976ce0f47f5414df7971de17cc191edbe86",
+    "desktop-release.log": "222859dd2e55f9e8cc00511bb760469d00fb200f748b5ed6f9e1d31f5884f2e0",
+    "fingerprint-build-release.log": "77909490cdf2c19c73db6486d68378df0de3eb321777d3fc825cc962506f9414",
+    "fingerprint-test.log": "7db7af8c464f573451154a8f2dcfdd0156213403670a5eca6a000e8dcac40e7b",
+    "format.log": "b34dfbc9376a61128b4bff337b7e3ac1585e6cedfb6ce3b477645e380873d9e7",
+    "includes.log": "3e02176a66e9887c36635120171a991d151d94d59b878f50006ea97853cbd6c9",
+    "native/apple-fp-male-right.png": "1183d56b4fe70cf2940722613729a506b919814088cc36e88611761ddc3a402f",
+    "native/apple-loose-0.png": "b9d3c044928c06c4ab138bd27da0ec740b94ac3422abc54855f6e4ab32ad1838",
+    "native/apple-male-right-0.png": "f4d18e4cd9bf007bb64c3a3147f2f45a49a166a59fd20f4aa08a6b56e77a8256",
+    "native/bucket-fp-male-right.png": "96b011e598745cd719c134c232413536e9d162bf974fc9ba856d75152fa50444",
+    "native/bucket-loose-0.png": "eb0ffb858893dc32dee9486fce819fb26fc1e4c5ad9cd1999be3bf3ae0ac0f1a",
+    "native/bucket-male-right-0.png": "8e556fb51f9a6c117f436d618f07bb2fe43ecc66d15daedd460826d61213351f",
+    "native/gold_chest-female-armor-1.png": "549900e0731e81023f5ffb6204eac3eb49ca08ab4b017afda40c42b3128b2546",
+    "native/gold_chest-fp-male-right.png": "59755119c70a76f57f9197e2a7844f23ce239db341d4754a597cda67b8ffd8e3",
+    "native/gold_chest-loose-0.png": "1067d242a2f974d9026caadc33b1cf1b1faf1ca365534d31e64a408d1d86724e",
+    "native/gold_chest-male-armor-0.png": "4539c3df46fde6501fc0a1f79f0c53e682bf818b612a7ab19d182886ce6e0026",
+    "native/gold_chest-male-right-0.png": "b7973779177c259c015dbd4e8ca66dd5640ac8fa688d287b676d35e628d9e6ae",
+    "native/iron_pickaxe-fp-male-right.png": "b3982e0e5cfd9f31e515d6ddfc2a108d7af056bf597e2873ec6c303a6c03c341",
+    "native/iron_pickaxe-loose-0.png": "922fdda08d72a270cd7b2f9cf25376c9bd01610c5cd0f396829d697c40629597",
+    "native/iron_pickaxe-male-right-0.png": "b3dd39719dab7def82f24fa0097f7dbb6017e5f7a0d1eccb2dfbeb9ad7340a75",
+    "native/srgb-checker.png": "0d83ab5608c3b4dce62dc5878c415692d90d1265ed0b56c40d8f1e55af6f16ce",
+    "native-probes.log": "95c05ef7317211d6faa8ce1ae7fa417e9631721b2ef9f3c4bd4ddf20a062182d",
+    "native-regression.json": "07e3941349c53fbfec8dc0b59f5e452f683d8cf6de8d8bab1314644bc8354bfd",
+    "native-runner.log": "2251bd9e45bec7bcb3de76a72a95f665ef0b8b18e72e34b459d5f6e194f0d457",
+    "style.log": "7b00bf7ed2d292a49c34b6aa610a5f9c00e46637a909909cdd9e7eff91839996"
+  }
+}

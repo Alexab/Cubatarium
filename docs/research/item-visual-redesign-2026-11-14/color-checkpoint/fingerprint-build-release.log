@@ -1,0 +1,10 @@
+Версия MSBuild 17.14.60+43b635718 для .NET Framework
+
+  Building Custom Rule E:/Work/Home/Cubatarium/CMakeLists.txt
+  IUPlatformPaths.cpp
+  stb_image.cpp
+  stb_image_write.cpp
+  InventoryIconService.cpp
+  InventoryIconFingerprintTest.cpp
+  Generating Code...
+  inventory_icon_fingerprint_test.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\Release\inventory_icon_fingerprint_test.exe

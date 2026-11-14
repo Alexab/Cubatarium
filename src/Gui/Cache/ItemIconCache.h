@@ -39,11 +39,11 @@ public:
 
 private:
   static constexpr int kIconSize = 64;
-  /// Stable fingerprint for the disk cache: item id + its model preset so
-  /// stale PNGs re-render instead of showing wrong art.
+  /// Content identity of model, dependencies, shaders and icon presentation.
   std::string FingerprintFor(const std::string &itemId) const;
   uint64_t CachedRevision{UItemDefinitionStorage::ContentRevision()};
   bool SkipDiskCache{false};
+  mutable std::unordered_map<std::string, std::string> Fingerprints;
   void SyncRevision();
   struct StateRequest
   {

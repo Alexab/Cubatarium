@@ -5,8 +5,9 @@
 
 #include <fstream>
 #include <iostream>
-#include <vector>
 #include <nlohmann/json.hpp>
+#include <unordered_set>
+#include <vector>
 
 namespace cutum
 {
@@ -21,8 +22,7 @@ GLuint LoadPng(const std::filesystem::path &path)
     return 0;
   }
   int w = 0, h = 0, ch = 0;
-  unsigned char *data =
-      stbi_load(path.string().c_str(), &w, &h, &ch, 4);
+  unsigned char *data = stbi_load(path.string().c_str(), &w, &h, &ch, 4);
   if (!data)
   {
     return 0;
@@ -30,8 +30,8 @@ GLuint LoadPng(const std::filesystem::path &path)
   GLuint tex = 0;
   glGenTextures(1, &tex);
   glBindTexture(GL_TEXTURE_2D, tex);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, data);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+               data);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -164,7 +164,8 @@ void LoadFromGltfJson(const std::filesystem::path &gltfPath,
       const int bufIndex = bv.value("buffer", 0);
       const int byteOffset = bv.value("byteOffset", 0);
       const int byteLength = bv.value("byteLength", 0);
-      if (bufIndex < 0 || bufIndex >= static_cast<int>(gltf["buffers"].size()) ||
+      if (bufIndex < 0 ||
+          bufIndex >= static_cast<int>(gltf["buffers"].size()) ||
           byteLength <= 0)
       {
         continue;
@@ -247,7 +248,8 @@ void LoadFromGltfJson(const std::filesystem::path &gltfPath,
     if (mat.contains("pbrMetallicRoughness"))
     {
       const auto &pbr = mat["pbrMetallicRoughness"];
-      if (pbr.contains("baseColorFactor") && pbr["baseColorFactor"].is_array() &&
+      if (pbr.contains("baseColorFactor") &&
+          pbr["baseColorFactor"].is_array() &&
           pbr["baseColorFactor"].size() >= 3)
       {
         const auto &c = pbr["baseColorFactor"];
@@ -276,7 +278,8 @@ ItemGltfTextureCache &ItemGltfTextureCache::Instance()
   return inst;
 }
 
-void ItemGltfTextureCache::EnsureLoaded(const std::filesystem::path &modelGltfAbs)
+void ItemGltfTextureCache::EnsureLoaded(
+    const std::filesystem::path &modelGltfAbs)
 {
   const std::string key = modelGltfAbs.lexically_normal().generic_string();
   if (ByModel.find(key) != ByModel.end())
@@ -315,20 +318,56 @@ GLuint ItemGltfTextureCache::Get(const std::filesystem::path &modelGltfAbs,
   return 0;
 }
 
+GLuint
+ItemGltfTextureCache::GetLinearAlbedo(const std::filesystem::path &imageAbs)
+{
+  std::lock_guard<std::mutex> lock(Mu);
+  const auto key = std::filesystem::weakly_canonical(imageAbs).generic_string();
+  const auto found = LinearAlbedo.find(key);
+  if (found != LinearAlbedo.end())
+    return found->second;
+  int width = 0, height = 0, channels = 0;
+  auto *pixels =
+      stbi_load(imageAbs.string().c_str(), &width, &height, &channels, 4);
+  if (!pixels)
+    return 0;
+  GLint previous = 0;
+  glGetIntegerv(GL_TEXTURE_BINDING_2D, &previous);
+  GLuint texture = 0;
+  glGenTextures(1, &texture);
+  glBindTexture(GL_TEXTURE_2D, texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, width, height, 0, GL_RGBA,
+               GL_UNSIGNED_BYTE, pixels);
+  stbi_image_free(pixels);
+  glGenerateMipmap(GL_TEXTURE_2D);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                  GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glBindTexture(GL_TEXTURE_2D, GLuint(previous));
+  LinearAlbedo.emplace(key, texture);
+  return texture;
+}
+
 void ItemGltfTextureCache::Clear()
 {
   std::lock_guard<std::mutex> lock(Mu);
+  std::unordered_set<GLuint> released;
   for (auto &kv : ByModel)
   {
     for (auto &t : kv.second)
     {
-      if (t.second != 0)
+      if (t.second != 0 && released.insert(t.second).second)
       {
         glDeleteTextures(1, &t.second);
       }
     }
   }
   ByModel.clear();
+  for (const auto &entry : LinearAlbedo)
+    glDeleteTextures(1, &entry.second);
+  LinearAlbedo.clear();
 }
 
 } // namespace cutum

@@ -455,6 +455,43 @@ Individual-slot images are not presented as completed full-set acceptance.
 This integration work, final skin/hand clearance and complete motion/world
 scenes remain required before publication.
 
+## Linear color and disk icon identity, 2026-11-15
+
+The typed item renderer now loads albedo into a separate `GL_SRGB8_ALPHA8`
+cache, shared by canonical image path. Filtering and mip generation operate
+before final display encoding. The shader applies the linear material factor
+once, without a second texture decode. It no longer changes the legacy texture
+objects' filtering or loads the same atlas through material-name fallbacks.
+The legacy loader's storage stays unchanged; alias entries are deleted only once
+when clearing that cache.
+
+This follows the [glTF base-color contract](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#metallic-roughness-material):
+texture RGB is sRGB, while the factor multiplies linear values. A native GPU
+fixture checks storage, mip completeness and path sharing, then samples a
+black/white checker through the actual item shader. Bilinear filtering and the
+1x1 mip both return encoded RGB 188; a 0.5 linear material factor returns 137.
+These are measured pixels, not screenshots judged by file existence.
+
+Disk icon identity now hashes model content, external buffers and images,
+both item shaders, the legacy fallback shaders and definition icon scale.
+Authored icon orientation/presentation extras are covered by the model content.
+Missing, malformed or escaping dependencies disable disk reuse. Hashes are
+cached once per item/definition revision; live edits still require the explicit
+Item Lab resource reload. A regression replaces each dependency with different
+bytes of the same size and timestamp and verifies invalidation, as well as
+unchanged bytes, path aliases, scale, model presentation, unrelated files and
+failure cases. The runner and Windows CI now include that regression.
+
+The exact Release desktop build, separate fingerprint CTest and 24 existing
+profile CTests pass. The complete native regression passes, including 2262
+presentation checks on all 70 candidates, property/UI checks and a separate FP
+flight. All 210 temporarily substituted runtime files are verified restored.
+See [checkpoint evidence](color-checkpoint/summary.json) and its native frames.
+This is still candidate coverage: no production assets were published, no remote
+CI was run, and no performance or final artistic acceptance is claimed. The
+current item atlas sampler uses linear/trilinear clamp; general imported sampler
+settings still need support or explicit rejection before import/publication.
+
 ## Remaining implementation, in order
 
 1. Native baseline and actual resource-path trace, before/after references and
@@ -485,16 +522,13 @@ scenes remain required before publication.
 Before publication, adapt the existing creature equipment/reload/culling QA
 collectors for typed item surfaces, final texture semantics and gold sets.
 The legacy equipment matrix currently assumes `wear.gltf` and source color
-factors. Also close these known integration gaps: share the final
-arrow resource with the bow's temporary nocked-arrow geometry; project the full
-consume-duration/cancel state into presentations; and extend disk icon
-fingerprints beyond the glTF timestamp to binary, texture, shader and relevant
-presentation dependencies. Explicit Item Lab reload already invalidates caches,
-but texture-only edits across a cold restart need a regression test. Also
-finish the item-only sRGB texture path: the current RGBA upload/manual shader
-decode occurs after sampling, so filtering/mipmap generation still need an
-explicit linear-color path without changing legacy creature textures. These
-requirements remain open rather than being hidden behind the passing probes.
+factors. Also close these known integration gaps: share the final arrow
+resource with the bow's temporary nocked-arrow geometry; project the full
+consume-duration/cancel state into presentations; and complete carry/two-hand
+contact wiring. The sRGB filtering and cold disk-icon dependency problems are
+covered by the newer checkpoint above. General imported sampler handling,
+resource publication and measured performance remain open.
+
 
 ## Acceptance contract
 
