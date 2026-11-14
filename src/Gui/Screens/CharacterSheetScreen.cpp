@@ -832,11 +832,12 @@ void UCharacterSheetScreen::RefreshLabels()
       slot->SetIconTexture(tex);
       slot->SetWearProgress(entry.wear);
       slot->SetBroken(entry.broken);
-      slot->SetCornerHint(
-          entry.empty ? ""
-                      : (entry.pinned ? "* " : "") +
-                            (entry.count < 0 ? std::string("inf")
-                                             : std::to_string(entry.count)));
+      slot->SetCornerHint(entry.empty
+                              ? ""
+                              : (entry.pinned ? "* " : "") +
+                                    (entry.IsCatalogReference()
+                                         ? std::string("inf")
+                                         : std::to_string(entry.count)));
       std::string text = entry.Id;
       std::replace(text.begin(), text.end(), '_', ' ');
       std::transform(text.begin(), text.end(), text.begin(),
@@ -945,8 +946,9 @@ void UCharacterSheetScreen::RefreshLabels()
                       : nullptr;
       std::string text = BuildItemTooltipText(def ? def->DisplayName : hover.Id,
                                               def, hover.wear, hover.broken);
-      text += "\nCount: " + (hover.count < 0 ? std::string("Unlimited")
-                                             : std::to_string(hover.count));
+      text += "\nCount: " + (hover.IsCatalogReference()
+                                 ? std::string("Unlimited")
+                                 : std::to_string(hover.count));
       if (!hover.contentsId.empty())
         text += "\n" + hover.contentsId + ": " +
                 std::to_string(hover.contentsUnits);

@@ -52,6 +52,7 @@ nlohmann::json WriteEntry(const InventoryEntryRef &e)
   if (e.empty || e.Id.empty() || e.count == 0)
     return {{"empty", true}};
   return {{"empty", false},
+          {"form", e.IsCatalogReference() ? "catalog" : "finite"},
           {"kind", KindName(e.kind)},
           {"id", e.Id},
           {"count", e.count},
@@ -73,6 +74,8 @@ InventoryEntryRef ReadEntry(const nlohmann::json &j)
     return {};
   e.kind = ReadKind(j.value("kind", std::string{"item"}));
   e.count = j.value("count", 1);
+  if (j.value("form", std::string{}) == "catalog" || e.count < 0)
+    e.form = InventoryEntryForm::CatalogReference;
   e.wear = j.value("wear", 0.f);
   e.wear = std::isfinite(e.wear) ? std::clamp(e.wear, 0.f, 1.f) : 1.f;
   e.broken = j.value("broken", false);
@@ -95,6 +98,11 @@ InventoryEntryRef UCreatureInventory::Prepare(InventoryEntryRef e)
   if (e.empty || e.Id.empty() || e.count == 0)
     return {};
   e.empty = false;
+  if (e.IsCatalogReference())
+  {
+    e.form = InventoryEntryForm::CatalogReference;
+    e.count = 1;
+  }
   static std::atomic<uint64_t> serial{
       uint64_t(std::chrono::duration_cast<std::chrono::milliseconds>(
                    std::chrono::system_clock::now().time_since_epoch())
@@ -129,7 +137,8 @@ InventoryEntryKind UCreatureInventory::KindForId(const std::string &id) const
 bool UCreatureInventory::CanMerge(const InventoryEntryRef &a,
                                   const InventoryEntryRef &b)
 {
-  return !a.empty && !b.empty && a.kind == b.kind && a.Id == b.Id &&
+  return !a.empty && !b.empty && !a.IsCatalogReference() &&
+         !b.IsCatalogReference() && a.kind == b.kind && a.Id == b.Id &&
          a.wear == b.wear && a.broken == b.broken &&
          a.contentsId == b.contentsId && a.contentsUnits == b.contentsUnits &&
          !a.pinned && !b.pinned;
@@ -157,7 +166,7 @@ const std::map<std::string, int> &UCreatureInventory::GetStorage() const
       if (s.empty || s.entry.empty || s.entry.count == 0)
         continue;
       auto &n = next[s.entry.Id];
-      if (n < 0 || s.entry.count < 0)
+      if (n < 0 || s.entry.IsCatalogReference())
         n = -1;
       else
         n = static_cast<int>(std::min<long long>(
@@ -176,7 +185,7 @@ int UCreatureInventory::Count(InventoryEntryKind kind,
     const auto &e = GetSlot(i);
     if (e.empty || e.kind != kind || e.Id != id)
       continue;
-    if (e.count < 0)
+    if (e.IsCatalogReference())
       return -1;
     n = static_cast<int>(
         std::min<long long>(INT_MAX, static_cast<long long>(n) + e.count));
@@ -194,7 +203,7 @@ InventoryOperationResult UCreatureInventory::Insert(InventoryEntryRef e)
     for (auto &row : rows)
       for (auto &s : row.slots)
       {
-        if (s.empty || !CanMerge(s.entry, e) || s.entry.count < 0)
+        if (s.empty || !CanMerge(s.entry, e) || s.entry.IsCatalogReference())
           continue;
         const int n = std::min(e.count, std::max(0, limit - s.entry.count));
         s.entry.count += n;
@@ -228,12 +237,13 @@ InventoryOperationResult UCreatureInventory::Take(size_t i, int count,
   auto &s = GetHotbarsMutable()[i / 10].slots[i % 10];
   if (s.empty || s.entry.empty || s.entry.count == 0)
     return {0, count, "empty_slot"};
-  if (s.entry.count >= 0 && s.entry.count < count)
+  if (!s.entry.IsCatalogReference() && s.entry.count < count)
     return {0, count, "insufficient_items"};
   out = s.entry;
   out.count = count;
-  if (Creative || s.entry.count < 0)
+  if (s.entry.IsCatalogReference())
   {
+    out.form = InventoryEntryForm::FiniteStack;
     out.instanceId = 0;
     out = Prepare(out);
     return {count, 0, {}};
@@ -261,14 +271,14 @@ InventoryOperationResult UCreatureInventory::Move(size_t from, size_t to,
   const int wanted = count < 0 ? source.count : count;
   if (wanted <= 0 && !Creative)
     return {0, 0, "invalid_count"};
-  if (!Creative && wanted > source.count)
+  if (!source.IsCatalogReference() && wanted > source.count)
     return {0, wanted, "insufficient_items"};
   auto &rows = GetHotbarsMutable();
   auto &a = rows[from / 10].slots[from % 10];
   auto &b = rows[to / 10].slots[to % 10];
   if (b.empty || b.entry.empty)
   {
-    if (count < 0 || wanted == source.count || Creative)
+    if (count < 0 || wanted == source.count || source.IsCatalogReference())
     {
       b = a;
       a = {};
@@ -417,7 +427,8 @@ void UCreatureInventory::InitCreativeDefaults()
     e.Id = "wood";
     e.kind = InventoryEntryKind::Block;
     e.empty = false;
-    e.count = -1;
+    e.form = InventoryEntryForm::CatalogReference;
+    e.count = 1;
     AssignToHotbar(0, 1, e);
     SetActiveSlot(0, 1);
   }
@@ -442,7 +453,8 @@ void UCreatureInventory::SetObjectHotbar(const std::vector<std::string> &names)
     e.Id = names[i];
     e.kind = InventoryEntryKind::Object;
     e.empty = false;
-    e.count = -1;
+    e.form = InventoryEntryForm::CatalogReference;
+    e.count = 1;
     if (Creative)
       AssignToHotbar(1, i, e);
   }
@@ -460,8 +472,6 @@ bool UCreatureInventory::AssignToHotbar(size_t bar, size_t slot,
   auto e = Prepare(entry);
   if (!e.empty && e.count > StackLimit(e) && !Creative)
     return false;
-  if (Creative && !e.empty)
-    e.count = -1;
   GetHotbarsMutable()[bar].slots[slot] = {e.empty, e};
   return true;
 }
@@ -571,7 +581,7 @@ bool UCreatureInventory::Equip(InventoryEntryRef &target,
   }
   auto trial = *this;
   InventoryEntryRef worn;
-  if (consume && !Creative)
+  if (consume)
   {
     bool found = false;
     for (size_t i = 0; i < kSlotCount; ++i)
@@ -590,8 +600,11 @@ bool UCreatureInventory::Equip(InventoryEntryRef &target,
   }
   else
   {
-    worn = trial.Prepare(copy);
+    worn = copy;
+    worn.form = InventoryEntryForm::FiniteStack;
+    worn.instanceId = 0;
     worn.count = 1;
+    worn = trial.Prepare(worn);
   }
   const auto previous = target;
   if (!previous.empty && !trial.Insert(previous))
@@ -623,12 +636,12 @@ bool UCreatureInventory::ReturnEquipment(InventoryEntryRef &e)
 {
   if (e.empty)
     return true;
-  if (!Creative)
   {
     auto trial = *this;
     if (!trial.Insert(e))
       return false;
     Hotbars = std::move(trial.Hotbars);
+    CreativeHotbars = std::move(trial.CreativeHotbars);
     NextInstanceId = trial.NextInstanceId;
   }
   e = {};
@@ -788,7 +801,7 @@ InventoryOperationResult UCreatureInventory::Recover(size_t index)
 }
 void UCreatureInventory::SerializeToJson(nlohmann::json &out) const
 {
-  out["inventory_version"] = 3;
+  out["inventory_version"] = 4;
   out["inventory_creative"] = Creative;
   out["next_instance_id"] = NextInstanceId;
   out["active_bar"] = ActiveBarIndex;
@@ -996,10 +1009,11 @@ void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data, size_t)
   for (auto &row : Hotbars)
     for (auto &s : row.slots)
     {
-      if (s.entry.count < 0)
+      if (s.entry.IsCatalogReference())
       {
         auto e = s.entry;
-        e.count = -1;
+        e.form = InventoryEntryForm::CatalogReference;
+        e.count = 1;
         CreativeHotbars[&row - &Hotbars[0]].slots[&s - &row.slots[0]] = {false,
                                                                          e};
         s = {};

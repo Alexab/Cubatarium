@@ -158,6 +158,57 @@ int main()
   const auto stationBefore = Snapshot(inv);
   Expect(!recipes.TryCraft(inv, station) && Snapshot(inv) == stationBefore,
          "station requirement is atomic");
+  UCreatureInventory creativeFinite;
+  creativeFinite.SetItemDefinitions(&defs);
+  creativeFinite.SetCreative(true);
+  auto catalog = Item("apple");
+  catalog.form = InventoryEntryForm::CatalogReference;
+  creativeFinite.AssignToHotbar(0, 0, catalog);
+  creativeFinite.Insert(Item("apple", 8));
+  InventoryEntryRef extracted;
+  Expect(creativeFinite.Take(1, 3, extracted) && extracted.count == 3 &&
+             !extracted.IsCatalogReference() &&
+             creativeFinite.GetSlot(1).count == 5,
+         "creative finite extraction transfers rather than copies");
+  Expect(creativeFinite.Take(0, 3, extracted) && extracted.count == 3 &&
+             !extracted.IsCatalogReference() &&
+             creativeFinite.GetSlot(0).IsCatalogReference(),
+         "catalog materialization preserves the reference");
+  Expect(creativeFinite.Move(1, 2, 2) && creativeFinite.GetSlot(1).count == 3 &&
+             creativeFinite.GetSlot(2).count == 2,
+         "creative finite splitting conserves quantities");
+  auto creativeSave = Snapshot(creativeFinite);
+  UCreatureInventory creativeLoaded;
+  creativeLoaded.SetItemDefinitions(&defs);
+  creativeLoaded.DeserializeFromJson(creativeSave);
+  Expect(creativeLoaded.GetSlot(0).IsCatalogReference() &&
+             creativeLoaded.GetSlot(1).count == 3 &&
+             creativeLoaded.GetSlot(2).count == 2,
+         "v4 roundtrip retains mixed creative entries");
+  UCreatureInventory creativeGear;
+  creativeGear.SetItemDefinitions(&defs);
+  creativeGear.SetCreative(true);
+  creativeGear.Insert(Item("iron_chest", 1, .6f));
+  const auto gearEntry = creativeGear.GetSlot(0);
+  Expect(creativeGear.EquipArmor(1, gearEntry, defs) &&
+             creativeGear.GetSlot(0).empty &&
+             creativeGear.GetEquippedArmor(1).instanceId ==
+                 gearEntry.instanceId,
+         "creative equipment moves the finite instance");
+  creativeGear.UnequipArmor(1, defs);
+  Expect(creativeGear.GetEquippedArmor(1).empty &&
+             creativeGear.GetSlot(0).instanceId == gearEntry.instanceId &&
+             creativeGear.GetSlot(0).wear == .6f,
+         "creative unequip returns the same worn instance");
+  auto oldCreative = creativeSave;
+  oldCreative["inventory_version"] = 3;
+  oldCreative["creative_slots"][0].erase("form");
+  oldCreative["creative_slots"][0]["count"] = -1;
+  creativeLoaded.DeserializeFromJson(oldCreative);
+  Expect(creativeLoaded.GetSlot(0).IsCatalogReference() &&
+             creativeLoaded.GetSlot(0).count == 1 &&
+             creativeLoaded.GetSlot(1).count == 3,
+         "v3 negative catalog counts migrate without converting finite stock");
   std::cout << "inventory_transactions_test failures=" << failures << '\n';
   return failures ? 1 : 0;
 }

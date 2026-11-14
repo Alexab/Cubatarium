@@ -17,8 +17,18 @@ enum class InventoryEntryKind
   Item
 };
 
+enum class InventoryEntryForm
+{
+  FiniteStack,
+  CatalogReference
+};
+
 struct InventoryEntryRef
 {
+  bool IsCatalogReference() const
+  {
+    return form == InventoryEntryForm::CatalogReference || count < 0;
+  }
   InventoryEntryKind kind{InventoryEntryKind::Block};
   std::string Id;
   int count{0};
@@ -31,6 +41,7 @@ struct InventoryEntryRef
   std::string contentsId;
   int contentsUnits{0};
   bool pinned{false};
+  InventoryEntryForm form{InventoryEntryForm::FiniteStack};
 };
 
 struct InventoryOperationResult

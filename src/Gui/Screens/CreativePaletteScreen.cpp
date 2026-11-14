@@ -990,7 +990,7 @@ void UCreativePaletteScreen::AppendGridSlotsChunk()
       }
       slot->SetIconTexture(tex);
     }
-    if (view.ref.count < 0)
+    if (view.ref.IsCatalogReference())
     {
       slot->SetCornerHint("inf");
     }

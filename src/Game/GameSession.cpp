@@ -722,9 +722,10 @@ UGameSession::GetEntries(ContentKind tab, const std::string &groupId,
             result.push_back({slot.entry, e.displayName});
       continue;
     }
-    if (tab == ContentKind::Item)
+    if (mode == InventoryMode::Creative)
     {
-      ref.count = -1;
+      ref.form = InventoryEntryForm::CatalogReference;
+      ref.count = 1;
       result.push_back({ref, e.displayName});
       continue;
     }

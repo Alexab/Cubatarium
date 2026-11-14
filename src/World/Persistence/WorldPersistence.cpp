@@ -5598,11 +5598,11 @@ void UWorldPersistence::LoadUsers(UWorld &world, const std::string &file_name)
     bool legacyInventory = false;
     for (const auto &saved : d)
       legacyInventory |=
-          saved.is_object() && saved.value("inventory_version", 0) < 3;
+          saved.is_object() && saved.value("inventory_version", 0) < 4;
     if (legacyInventory)
     {
       std::error_code backupError;
-      std::filesystem::copy_file(file_name, file_name + ".inventory-v2.bak",
+      std::filesystem::copy_file(file_name, file_name + ".inventory-pre-v4.bak",
                                  std::filesystem::copy_options::skip_existing,
                                  backupError);
       if (backupError)

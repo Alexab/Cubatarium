@@ -1,6 +1,7 @@
 #include "Gui/Screens/SurvivalInventoryScreen.h"
 
 #include "Game/GameSession.h"
+#include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiTheme.h"
 #include "Gui/Interfaces/IUGuiIconSource.h"
@@ -12,7 +13,6 @@
 #include "Gui/Widgets/GuiScrollView.h"
 #include "Gui/Widgets/GuiSlot.h"
 #include "Gui/Widgets/GuiTabBar.h"
-#include "Game/Inventory/SlotInteraction.h"
 
 #include <algorithm>
 #include <memory>
@@ -21,8 +21,8 @@ namespace cutum
 {
 
 USurvivalInventoryScreen::USurvivalInventoryScreen(IUContentCatalog *catalog,
-                                                     UGameSession *session,
-                                                     IUGuiIconSource *icons)
+                                                   UGameSession *session,
+                                                   IUGuiIconSource *icons)
     : Catalog(catalog), Session(session), Icons(icons)
 {
 }
@@ -161,9 +161,9 @@ void USurvivalInventoryScreen::RelayoutPanel()
     return;
   }
 
-  DockedLayout layout = DockedOverlayLayout::Compute(
-      ViewportW, ViewportH, GetContentOffsetX(), GetContentOffsetY(), 70, 0,
-      *Theme);
+  DockedLayout layout =
+      DockedOverlayLayout::Compute(ViewportW, ViewportH, GetContentOffsetX(),
+                                   GetContentOffsetY(), 70, 0, *Theme);
   const int slotSize = Theme->HotbarSlotSize;
   const int hotbarReserve =
       slotSize + Theme->HotbarMarginBottom + Theme->Padding * 2;
@@ -184,8 +184,7 @@ void USurvivalInventoryScreen::RelayoutPanel()
   // Survival backpack uses the main dock only (no preview pane).
   layout.main.W = std::min(layout.main.W + layout.preview.W + Theme->Padding,
                            ViewportW - Theme->Padding * 2);
-  layout.main.X = GetContentOffsetX() +
-                  (ViewportW - layout.main.W) / 2;
+  layout.main.X = GetContentOffsetX() + (ViewportW - layout.main.W) / 2;
 
   RootShell->SetBounds(
       {GetContentOffsetX(), GetContentOffsetY(), ViewportW, ViewportH});
@@ -205,8 +204,8 @@ void USurvivalInventoryScreen::RelayoutPanel()
   }
   if (Tabs)
   {
-    Tabs->SetBounds(
-        {panelX + pad, panelY + pad + titleH + pad / 2, panelW - pad * 2, tabH});
+    Tabs->SetBounds({panelX + pad, panelY + pad + titleH + pad / 2,
+                     panelW - pad * 2, tabH});
   }
 
   const int scrollTop = panelY + pad + titleH + pad / 2 + tabH + pad;
@@ -267,8 +266,7 @@ void USurvivalInventoryScreen::RebuildGrid()
     {
       continue;
     }
-    if (Kind == ContentKind::Block &&
-        entry.kind != InventoryEntryKind::Block)
+    if (Kind == ContentKind::Block && entry.kind != InventoryEntryKind::Block)
     {
       continue;
     }
@@ -282,14 +280,13 @@ void USurvivalInventoryScreen::RebuildGrid()
 
     if (Icons)
     {
-      const unsigned tex =
-          (Kind == ContentKind::Block)
-              ? Icons->GetBlockIconTexture(entry.Id)
-              : Icons->GetItemIconTexture(entry.Id);
+      const unsigned tex = (Kind == ContentKind::Block)
+                               ? Icons->GetBlockIconTexture(entry.Id)
+                               : Icons->GetItemIconTexture(entry.Id);
       slot->SetIconTexture(tex);
     }
 
-    if (entry.count < 0)
+    if (entry.IsCatalogReference())
     {
       slot->SetCornerHint("inf");
     }

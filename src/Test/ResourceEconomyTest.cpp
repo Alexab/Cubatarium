@@ -54,7 +54,8 @@ int main()
   Expect(ResourceEconomyService::ConsumeOnPlace(WorldGameMode::Creative, inv,
                                                 block),
          "creative free placement");
-  Expect(inv.GetSlot(1).count == -1, "creative loadout remains unlimited");
+  Expect(inv.GetSlot(1).IsCatalogReference(),
+         "creative loadout remains unlimited");
   inv.SetCreative(false);
   Expect(inv.Count(InventoryEntryKind::Item, "raw_meat") == 2 &&
              inv.Count(block.kind, block.Id) == 0,
