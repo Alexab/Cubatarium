@@ -20,3 +20,5 @@
 /LICENSE -text
 /tools/creature_palettes.yaml -text
 /tools/requirements-creaturegen.txt -text
+docs/research/item-visual-redesign-2026-11-14/world-lighting-checkpoint/native-world-frames.zip filter=lfs diff=lfs merge=lfs -text
+docs/research/item-visual-redesign-2026-11-14/carry-input-checkpoint/selected-native-frames.zip filter=lfs diff=lfs merge=lfs -text

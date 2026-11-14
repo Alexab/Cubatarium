@@ -1,0 +1,105 @@
+"""Item-only surface geometry. Coordinates are metres, faces are outward CCW.
+
+The module has no dependency on creature buffers or any imported asset pack.
+Every face owns its UV island; authoring may deliberately reuse an island later.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+import math
+
+
+@dataclass(frozen=True)
+class Face:
+    points: tuple[tuple[float, float, float], ...]
+    role: str = "body"
+    name: str = "surface"
+
+    def normal(self):
+        a, b, c = self.points[:3]
+        u = [b[i]-a[i] for i in range(3)]
+        v = [c[i]-a[i] for i in range(3)]
+        n = (u[1]*v[2]-u[2]*v[1], u[2]*v[0]-u[0]*v[2], u[0]*v[1]-u[1]*v[0])
+        length = math.sqrt(sum(x*x for x in n))
+        if length < 1e-10:
+            raise ValueError(f"Degenerate face: {self.name}")
+        return tuple(x/length for x in n)
+
+
+def extrude(contour, depth, *, role="body", name="profile"):
+    """Extrude a convex CCW XY outline along Z (concave inputs are rejected)."""
+    if not math.isfinite(depth) or depth <= 0 or len(contour) < 3:
+        raise ValueError("Extrusion needs a positive depth and three points")
+    contour = tuple(tuple(float(x) for x in p) for p in contour)
+    if any(len(p) != 2 or not all(math.isfinite(x) for x in p) for p in contour):
+        raise ValueError("Invalid contour")
+    for i, a in enumerate(contour):
+        b, c = contour[(i+1)%len(contour)], contour[(i+2)%len(contour)]
+        if (b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0]) <= 0:
+            raise ValueError("Contour must be strictly convex and CCW")
+    front = tuple((x,y,depth/2) for x,y in contour)
+    back = tuple((x,y,-depth/2) for x,y in contour)
+    result = [Face(front,role,name+'.front'), Face(tuple(reversed(back)),role,name+'.back')]
+    for i in range(len(contour)):
+        j = (i+1)%len(contour)
+        result.append(Face((back[i],back[j],front[j],front[i]),role,name+f'.side{i}'))
+    return result
+
+
+def bevel_box(size, bevel, *, role="body", name="box"):
+    """Eight-sided extrusion: trims the four XY corners without microgeometry."""
+    x,y,z = (float(v) for v in size)
+    if not all(math.isfinite(v) for v in (x,y,z,bevel)) or min(x,y,z) <= 0 or not 0 < bevel < min(x,y)/2:
+        raise ValueError("Bevel must fit inside the box")
+    x,y=x/2,y/2
+    return extrude(((-x+bevel,-y),(x-bevel,-y),(x,-y+bevel),
+                    (x,y-bevel),(x-bevel,y),(-x+bevel,y),
+                    (-x,y-bevel),(-x,-y+bevel)),z,role=role,name=name)
+
+
+def shell(size, thickness, *, role="body", name="shell"):
+    """Open rectangular shell with bottom, inner walls and a closed top rim."""
+    x,y,z = map(float,size)
+    if not all(math.isfinite(v) for v in (x,y,z,thickness)) or not 0 < thickness < min(x,y,z)/2:
+        raise ValueError("Invalid shell thickness")
+    outer=((-x/2,-z/2),(x/2,-z/2),(x/2,z/2),(-x/2,z/2))
+    inner=tuple((a-math.copysign(thickness,a),b-math.copysign(thickness,b)) for a,b in outer)
+    def ring(points,h): return tuple((a,h,b) for a,b in points)
+    lo,hi=ring(outer,0),ring(outer,y)
+    il,ih=ring(inner,thickness),ring(inner,y)
+    faces=[Face(lo,role,name+'.bottom'),Face(tuple(reversed(il)),role,name+'.floor')]
+    for i in range(4):
+        j=(i+1)%4
+        faces.extend((Face((lo[i],hi[i],hi[j],lo[j]),role,name+f'.outer{i}'),
+                      Face((il[i],il[j],ih[j],ih[i]),role,name+f'.inner{i}'),
+                      Face((hi[i],ih[i],ih[j],hi[j]),role,name+f'.rim{i}')))
+    return faces
+
+
+def transform(faces, *, offset=(0,0,0), rotation=(0,0,0), pivot=(0,0,0), taper=1.0):
+    """Rotate XYZ in degrees about a pivot; taper XZ from bottom to top."""
+    if not all(math.isfinite(v) for values in (offset,rotation,pivot) for v in values) or not math.isfinite(taper) or taper <= 0:
+        raise ValueError("Invalid transform")
+    ys=[p[1] for f in faces for p in f.points]
+    if not ys: return []
+    low,high=min(ys),max(ys)
+    def point(p):
+        scale=1+(taper-1)*(p[1]-low)/max(high-low,1e-8)
+        q=[p[i]-pivot[i] for i in range(3)]
+        q[0]*=scale; q[2]*=scale
+        for axis,degrees in enumerate(rotation):
+            a,b=(axis+1)%3,(axis+2)%3
+            c,s=math.cos(math.radians(degrees)),math.sin(math.radians(degrees))
+            q[a],q[b]=q[a]*c-q[b]*s,q[a]*s+q[b]*c
+        return tuple(q[i]+pivot[i]+offset[i] for i in range(3))
+    return [Face(tuple(point(p) for p in f.points),f.role,f.name) for f in faces]
+
+
+def triangulate(faces):
+    """Return independent flat-shaded triangles, never averaged edge normals."""
+    result=[]
+    for f in faces:
+        n=f.normal()
+        for i in range(1,len(f.points)-1):
+            result.append((f.name,f.role,(f.points[0],f.points[i],f.points[i+1]),n))
+    return result

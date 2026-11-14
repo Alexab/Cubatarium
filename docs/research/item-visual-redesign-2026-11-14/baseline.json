@@ -1,0 +1,5358 @@
+{
+  "commit": "946ef5f2d",
+  "items": [
+    {
+      "id": "apple",
+      "model": "models/items/apple/model.gltf",
+      "definition": {
+        "id": "apple",
+        "displayName": "Apple",
+        "types": [
+          "misc"
+        ],
+        "stack_max": 16,
+        "wear_end": "destroy",
+        "use_action": "eat",
+        "use": {
+          "action": "eat",
+          "satiety": 20,
+          "health": 2
+        },
+        "visual": {
+          "wield_scale": 0.95,
+          "use": {
+            "eat": "eat_hand"
+          },
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "model": "models/items/apple/model.gltf",
+        "physical": {
+          "mass": 1,
+          "size": [
+            0.22,
+            0.29,
+            0.22
+          ],
+          "hardness": 1
+        },
+        "throw_category": "food"
+      },
+      "geometry_sha256": "49ea85154badbed9481a83aad28300f74d56be72b77ea37d96d1a31668f3888b",
+      "triangles": 48,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "apple",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "apple",
+        "material": "organic",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "arrow",
+      "model": "models/items/arrow/model.gltf",
+      "definition": {
+        "id": "arrow",
+        "displayName": "Arrow",
+        "types": [
+          "misc"
+        ],
+        "stack_max": 64,
+        "wear_end": "destroy",
+        "model": "models/items/arrow/model.gltf",
+        "visual": {
+          "wield_scale": 0.9,
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            0,
+            0,
+            90
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 0.06,
+          "size": [
+            0.14,
+            0.69,
+            0.04
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "throwable"
+      },
+      "geometry_sha256": "f424449700835cbe1e13095eac7a053111dcd2f35ee93a31e692505f86c7c8c6",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "arrow",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "arrow",
+        "material": "iron",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "bread",
+      "model": "models/items/bread/model.gltf",
+      "definition": {
+        "id": "bread",
+        "displayName": "Bread",
+        "types": [
+          "misc"
+        ],
+        "stack_max": 16,
+        "wear_end": "destroy",
+        "use_action": "eat",
+        "use": {
+          "action": "eat",
+          "satiety": 35,
+          "health": 1
+        },
+        "visual": {
+          "wield_scale": 0.95,
+          "use": {
+            "eat": "eat_hand"
+          },
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "model": "models/items/bread/model.gltf",
+        "physical": {
+          "mass": 1,
+          "size": [
+            0.28,
+            0.13,
+            0.16
+          ],
+          "hardness": 1
+        },
+        "throw_category": "food"
+      },
+      "geometry_sha256": "f40303f4c8f58813827223038b75501319741b805852b19e68d09f4167db46ad",
+      "triangles": 36,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "bread",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "bread",
+        "material": "bread",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "bucket",
+      "model": "models/items/bucket/model.gltf",
+      "definition": {
+        "id": "bucket",
+        "displayName": "Bucket",
+        "types": [
+          "utility"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/bucket/model.gltf",
+        "visual": {
+          "wield_scale": 1.1,
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 2.6,
+          "size": [
+            0.16,
+            0.315,
+            0.12
+          ],
+          "hardness": 1
+        },
+        "use": {
+          "interaction": "container"
+        },
+        "throw_category": "utility"
+      },
+      "geometry_sha256": "2117a87c4670fc18fbfabbd910d4e40859a4f61dcb855be789455591e737c681",
+      "triangles": 48,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "bucket",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "bucket",
+        "material": "iron",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "charcoal",
+      "model": "models/items/charcoal/model.gltf",
+      "definition": {
+        "id": "charcoal",
+        "displayName": "Charcoal",
+        "types": [
+          "misc",
+          "material"
+        ],
+        "stack_max": 32,
+        "wear_end": "indestructible",
+        "model": "models/items/charcoal/model.gltf",
+        "visual": {
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 0.8,
+          "size": [
+            0.15,
+            0.28,
+            0.17
+          ],
+          "hardness": 0.7
+        },
+        "use": {},
+        "throw_category": "material"
+      },
+      "geometry_sha256": "39314574a9ca0a25b329a7e32c00c1b3226b54b80ac9bfc7aec04ce85d680a38",
+      "triangles": 24,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "charcoal",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "material",
+        "material": "wood",
+        "recipe_version": 2,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "coal",
+      "model": "models/items/coal/model.gltf",
+      "definition": {
+        "id": "coal",
+        "displayName": "Coal",
+        "types": [
+          "misc",
+          "material"
+        ],
+        "stack_max": 32,
+        "wear_end": "indestructible",
+        "model": "models/items/coal/model.gltf",
+        "visual": {
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 1.8,
+          "size": [
+            0.23,
+            0.195,
+            0.16
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "material"
+      },
+      "geometry_sha256": "bbafd0645663cc041222a1cdb3b8351c5886982df849cdb73c04dc295fd36835",
+      "triangles": 24,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "coal",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "material",
+        "material": "stone",
+        "recipe_version": 2,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "cooked_meat",
+      "model": "models/items/cooked_meat/model.gltf",
+      "definition": {
+        "id": "cooked_meat",
+        "displayName": "Cooked Meat",
+        "types": [
+          "misc",
+          "food"
+        ],
+        "stack_max": 32,
+        "wear_end": "indestructible",
+        "use": {
+          "action": "eat",
+          "satiety": 32,
+          "duration": 1.1
+        },
+        "use_action": "eat",
+        "model": "models/items/cooked_meat/model.gltf",
+        "visual": {
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 0.8,
+          "size": [
+            0.26,
+            0.1375,
+            0.18
+          ],
+          "hardness": 0.7
+        },
+        "throw_category": "food"
+      },
+      "geometry_sha256": "d9dc700dc8069ca0b49caa59dd76350d753d44c27566255a9a349823423e7105",
+      "triangles": 24,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "cooked_meat",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "material",
+        "material": "wood",
+        "recipe_version": 2,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "copper_axe",
+      "model": "models/items/copper_axe/model.gltf",
+      "definition": {
+        "id": "copper_axe",
+        "displayName": "Copper Axe",
+        "types": [
+          "cutting"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "repair": {
+          "materials": [
+            "copper_ingot"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 1.0,
+          "damage": {
+            "melee": 3,
+            "fleshy": 3
+          },
+          "groupcaps": {
+            "choppy": {
+              "maxlevel": 2,
+              "uses": 80,
+              "times": {
+                "1": 1.6,
+                "2": 1.0,
+                "3": 0.7
+              }
+            }
+          },
+          "punch_attack_uses": 80
+        },
+        "model": "models/items/copper_axe/model.gltf",
+        "visual": {
+          "wield_scale": 1.5,
+          "swing": {
+            "dig": "dig_tool",
+            "melee": "dig_tool"
+          },
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            -8,
+            20,
+            80
+          ],
+          "wield_offset": [
+            0,
+            -0.1,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 2.2,
+          "size": [
+            0.3025,
+            0.85,
+            0.06
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "tool"
+      },
+      "geometry_sha256": "2d488e863f54068ff24912a6410bdbd67ccf0143dc06c979b9e48b51e458e6c4",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "copper_axe",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "axe",
+        "material": "copper",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "copper_chest",
+      "model": "models/items/copper_chest/model.gltf",
+      "definition": {
+        "id": "copper_chest",
+        "displayName": "Copper Chestplate",
+        "types": [
+          "armor",
+          "chest"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/copper_chest/model.gltf",
+        "armor": {
+          "slots": [
+            "chest"
+          ],
+          "armor_groups": {
+            "fleshy": 70
+          }
+        },
+        "visual": {
+          "wield_scale": 1.0,
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 4.4,
+          "size": [
+            0.46,
+            0.52,
+            0.24
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "equipment"
+      },
+      "geometry_sha256": "5b05ad7c567576f74bc73b9d0b3ecda7117c9f5359321bbe2081c48839cfa1d3",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "copper_chest",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "armor_chest",
+        "material": "copper",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "copper_feet",
+      "model": "models/items/copper_feet/model.gltf",
+      "definition": {
+        "id": "copper_feet",
+        "displayName": "Copper Boots",
+        "types": [
+          "armor",
+          "feet"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/copper_feet/model.gltf",
+        "armor": {
+          "slots": [
+            "feet"
+          ],
+          "armor_groups": {
+            "fleshy": 45
+          }
+        },
+        "visual": {
+          "wield_scale": 1.0,
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 1.54,
+          "size": [
+            0.34,
+            0.165,
+            0.25
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "equipment"
+      },
+      "geometry_sha256": "b5bcda1561e06d68ca95ecc1230c491794ec9f32f6a1445ae545bbdb09c5905c",
+      "triangles": 72,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "copper_feet",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "armor_feet",
+        "material": "copper",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "copper_head",
+      "model": "models/items/copper_head/model.gltf",
+      "definition": {
+        "id": "copper_head",
+        "displayName": "Copper Helmet",
+        "types": [
+          "armor",
+          "head"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/copper_head/model.gltf",
+        "armor": {
+          "slots": [
+            "head"
+          ],
+          "armor_groups": {
+            "fleshy": 50
+          }
+        },
+        "visual": {
+          "wield_scale": 1.0,
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 1.7600000000000002,
+          "size": [
+            0.36,
+            0.24,
+            0.38
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "equipment"
+      },
+      "geometry_sha256": "243436908e46a64eb44698b4e484a84f2a2979de220d0adc6e3ba1cddfa9325b",
+      "triangles": 48,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "copper_head",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "armor_head",
+        "material": "copper",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "copper_hoe",
+      "model": "models/items/copper_hoe/model.gltf",
+      "definition": {
+        "id": "copper_hoe",
+        "displayName": "Copper Hoe",
+        "types": [
+          "utility"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "repair": {
+          "materials": [
+            "copper_ingot"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 1.0,
+          "damage": {
+            "melee": 1,
+            "fleshy": 1
+          },
+          "punch_attack_uses": 60,
+          "groupcaps": {
+            "crumbly": {
+              "maxlevel": 1,
+              "uses": 20,
+              "times": {
+                "1": 1.6,
+                "2": 1.2,
+                "3": 0.9
+              }
+            }
+          }
+        },
+        "model": "models/items/copper_hoe/model.gltf",
+        "visual": {
+          "wield_scale": 1.45,
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            -6,
+            0,
+            90
+          ],
+          "wield_offset": [
+            0,
+            -0.08,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 2.2,
+          "size": [
+            0.2975,
+            0.725,
+            0.06
+          ],
+          "hardness": 1
+        },
+        "use": {
+          "interaction": "till"
+        },
+        "throw_category": "tool"
+      },
+      "geometry_sha256": "cc692868b62bb9685e6d5077e5bf794e625a6dd1ce61b33e1fd4f2d400fdf573",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "copper_hoe",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "hoe",
+        "material": "copper",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "copper_ingot",
+      "model": "models/items/copper_ingot/model.gltf",
+      "definition": {
+        "id": "copper_ingot",
+        "displayName": "Copper Ingot",
+        "types": [
+          "misc",
+          "material"
+        ],
+        "stack_max": 32,
+        "wear_end": "indestructible",
+        "model": "models/items/copper_ingot/model.gltf",
+        "visual": {
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 2.2,
+          "size": [
+            0.32,
+            0.1275,
+            0.17
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "material"
+      },
+      "geometry_sha256": "e2164c08e4ff695a1679be3861229696f5a42718da055c4d774cbd10af2bff1f",
+      "triangles": 36,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "copper_ingot",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "material",
+        "material": "copper",
+        "recipe_version": 2,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "copper_legs",
+      "model": "models/items/copper_legs/model.gltf",
+      "definition": {
+        "id": "copper_legs",
+        "displayName": "Copper Leggings",
+        "types": [
+          "armor",
+          "legs"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/copper_legs/model.gltf",
+        "armor": {
+          "slots": [
+            "legs"
+          ],
+          "armor_groups": {
+            "fleshy": 55
+          }
+        },
+        "visual": {
+          "wield_scale": 1.0,
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 3.3000000000000003,
+          "size": [
+            0.35,
+            0.43,
+            0.17
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "equipment"
+      },
+      "geometry_sha256": "bffd6730e7d429a7856d5d14382045c446a29be6035f1651619763abb6949a67",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "copper_legs",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "armor_legs",
+        "material": "copper",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "copper_pickaxe",
+      "model": "models/items/copper_pickaxe/model.gltf",
+      "definition": {
+        "id": "copper_pickaxe",
+        "displayName": "Copper Pickaxe",
+        "types": [
+          "mining"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "repair": {
+          "materials": [
+            "copper_ingot"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 1.0,
+          "damage": {
+            "melee": 3,
+            "fleshy": 3
+          },
+          "groupcaps": {
+            "cracky": {
+              "maxlevel": 2,
+              "uses": 80,
+              "times": {
+                "1": 1.6,
+                "2": 1.0,
+                "3": 0.7
+              }
+            }
+          },
+          "punch_attack_uses": 80
+        },
+        "model": "models/items/copper_pickaxe/model.gltf",
+        "visual": {
+          "wield_scale": 1.5,
+          "swing": {
+            "dig": "dig_tool",
+            "melee": "dig_tool"
+          },
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            -8,
+            0,
+            90
+          ],
+          "wield_offset": [
+            0,
+            -0.12,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 2.2,
+          "size": [
+            0.46,
+            0.83,
+            0.06
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "tool"
+      },
+      "geometry_sha256": "8650c462b91a4c1a2fa87497389108a1e1318894c3c71cd7dbb58a9797c6c711",
+      "triangles": 72,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "copper_pickaxe",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "pickaxe",
+        "material": "copper",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "copper_shovel",
+      "model": "models/items/copper_shovel/model.gltf",
+      "definition": {
+        "id": "copper_shovel",
+        "displayName": "Copper Shovel",
+        "types": [
+          "digging"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "repair": {
+          "materials": [
+            "copper_ingot"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 1.0,
+          "damage": {
+            "melee": 2,
+            "fleshy": 2
+          },
+          "groupcaps": {
+            "crumbly": {
+              "maxlevel": 2,
+              "uses": 80,
+              "times": {
+                "1": 1.6,
+                "2": 1.0,
+                "3": 0.7
+              }
+            }
+          },
+          "punch_attack_uses": 80
+        },
+        "model": "models/items/copper_shovel/model.gltf",
+        "visual": {
+          "wield_scale": 1.45,
+          "swing": {
+            "dig": "dig_tool",
+            "melee": "dig_tool"
+          },
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            12,
+            0,
+            90
+          ],
+          "wield_offset": [
+            0,
+            0.08,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 2.2,
+          "size": [
+            0.17,
+            0.9325,
+            0.05
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "tool"
+      },
+      "geometry_sha256": "4038d987b3422137c8b7bfe1f9478e9dce5b1a97f54bead4855e828747799510",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "copper_shovel",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "shovel",
+        "material": "copper",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "copper_sword",
+      "model": "models/items/copper_sword/model.gltf",
+      "definition": {
+        "id": "copper_sword",
+        "displayName": "Copper Sword",
+        "types": [
+          "combat"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "repair": {
+          "materials": [
+            "copper_ingot"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 1.0,
+          "damage": {
+            "melee": 3,
+            "fleshy": 3
+          },
+          "punch_attack_uses": 90
+        },
+        "model": "models/items/copper_sword/model.gltf",
+        "visual": {
+          "wield_scale": 1.35,
+          "swing": {
+            "melee": "slash_weapon"
+          },
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            -18,
+            0,
+            8
+          ],
+          "wield_offset": [
+            0,
+            -0.05,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 2.2,
+          "size": [
+            0.18,
+            0.805,
+            0.05
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "weapon"
+      },
+      "geometry_sha256": "4ddc149756ef24cd86dcff1e74ed68b76b48baa940531b4d896ced5f85aea0cd",
+      "triangles": 72,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "copper_sword",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "sword",
+        "material": "copper",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "cord",
+      "model": "models/items/cord/model.gltf",
+      "definition": {
+        "id": "cord",
+        "displayName": "Cord",
+        "types": [
+          "misc",
+          "material"
+        ],
+        "stack_max": 32,
+        "wear_end": "indestructible",
+        "model": "models/items/cord/model.gltf",
+        "visual": {
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 0.5,
+          "size": [
+            0.28,
+            0.045,
+            0.185
+          ],
+          "hardness": 0.7
+        },
+        "use": {},
+        "throw_category": "material"
+      },
+      "geometry_sha256": "d9ed1652afb34c8d5034f9b59c2933f04654482c75761596ed231a04426a556a",
+      "triangles": 36,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "cord",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "material",
+        "material": "leather",
+        "recipe_version": 2,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "flint_and_steel",
+      "model": "models/items/flint_and_steel/model.gltf",
+      "definition": {
+        "id": "flint_and_steel",
+        "displayName": "Flint And Steel",
+        "types": [
+          "utility"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/flint_and_steel/model.gltf",
+        "visual": {
+          "wield_scale": 1.0,
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            -10,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0.12,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 2.6,
+          "size": [
+            0.08,
+            0.665,
+            0.08
+          ],
+          "hardness": 1
+        },
+        "use": {
+          "interaction": "ignite"
+        },
+        "throw_category": "utility"
+      },
+      "geometry_sha256": "e2f8aacda3a1dd4d34a4ff79ee7c4278b8fa055cac61cf7803735da8773f4bc9",
+      "triangles": 48,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "flint_and_steel",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "flint",
+        "material": "iron",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "gold_axe",
+      "model": "models/items/gold_axe/model.gltf",
+      "definition": {
+        "id": "gold_axe",
+        "displayName": "Gold Axe",
+        "types": [
+          "cutting"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/gold_axe/model.gltf",
+        "repair": {
+          "materials": [
+            "gold_ingot"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 0.8,
+          "damage": {
+            "melee": 3,
+            "fleshy": 3
+          },
+          "groupcaps": {
+            "choppy": {
+              "maxlevel": 1,
+              "uses": 40,
+              "times": {
+                "1": 1.0,
+                "2": 0.7,
+                "3": 0.5
+              }
+            }
+          },
+          "punch_attack_uses": 40
+        },
+        "visual": {
+          "wield_scale": 1.5,
+          "swing": {
+            "dig": "dig_tool",
+            "melee": "dig_tool"
+          },
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            -8,
+            20,
+            80
+          ],
+          "wield_offset": [
+            0,
+            -0.1,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 4.5,
+          "size": [
+            0.3025,
+            0.85,
+            0.06
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "tool"
+      },
+      "geometry_sha256": "2d488e863f54068ff24912a6410bdbd67ccf0143dc06c979b9e48b51e458e6c4",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "gold_axe",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "axe",
+        "material": "gold",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "gold_chest",
+      "model": "models/items/gold_chest/model.gltf",
+      "definition": {
+        "id": "gold_chest",
+        "displayName": "Gold Chestplate",
+        "types": [
+          "armor",
+          "chest"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/gold_chest/model.gltf",
+        "armor": {
+          "slots": [
+            "chest"
+          ],
+          "armor_groups": {
+            "fleshy": 55
+          }
+        },
+        "visual": {
+          "wield_scale": 1.0,
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 9.0,
+          "size": [
+            0.46,
+            0.52,
+            0.24
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "equipment"
+      },
+      "geometry_sha256": "5b05ad7c567576f74bc73b9d0b3ecda7117c9f5359321bbe2081c48839cfa1d3",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "gold_chest",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "armor_chest",
+        "material": "gold",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "gold_feet",
+      "model": "models/items/gold_feet/model.gltf",
+      "definition": {
+        "id": "gold_feet",
+        "displayName": "Gold Boots",
+        "types": [
+          "armor",
+          "feet"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/gold_feet/model.gltf",
+        "armor": {
+          "slots": [
+            "feet"
+          ],
+          "armor_groups": {
+            "fleshy": 40
+          }
+        },
+        "visual": {
+          "wield_scale": 1.0,
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 3.15,
+          "size": [
+            0.34,
+            0.165,
+            0.25
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "equipment"
+      },
+      "geometry_sha256": "b5bcda1561e06d68ca95ecc1230c491794ec9f32f6a1445ae545bbdb09c5905c",
+      "triangles": 72,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "gold_feet",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "armor_feet",
+        "material": "gold",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "gold_head",
+      "model": "models/items/gold_head/model.gltf",
+      "definition": {
+        "id": "gold_head",
+        "displayName": "Gold Helmet",
+        "types": [
+          "armor",
+          "head"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/gold_head/model.gltf",
+        "armor": {
+          "slots": [
+            "head"
+          ],
+          "armor_groups": {
+            "fleshy": 45
+          }
+        },
+        "visual": {
+          "wield_scale": 1.0,
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 3.6,
+          "size": [
+            0.36,
+            0.24,
+            0.38
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "equipment"
+      },
+      "geometry_sha256": "243436908e46a64eb44698b4e484a84f2a2979de220d0adc6e3ba1cddfa9325b",
+      "triangles": 48,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "gold_head",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "armor_head",
+        "material": "gold",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "gold_hoe",
+      "model": "models/items/gold_hoe/model.gltf",
+      "definition": {
+        "id": "gold_hoe",
+        "displayName": "Gold Hoe",
+        "types": [
+          "utility"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "repair": {
+          "materials": [
+            "gold_ingot"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 0.8,
+          "damage": {
+            "melee": 1,
+            "fleshy": 1
+          },
+          "punch_attack_uses": 25,
+          "groupcaps": {
+            "crumbly": {
+              "maxlevel": 1,
+              "uses": 20,
+              "times": {
+                "1": 1.6,
+                "2": 1.2,
+                "3": 0.9
+              }
+            }
+          }
+        },
+        "model": "models/items/gold_hoe/model.gltf",
+        "visual": {
+          "wield_scale": 1.45,
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            -6,
+            0,
+            90
+          ],
+          "wield_offset": [
+            0,
+            -0.08,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 4.5,
+          "size": [
+            0.2975,
+            0.725,
+            0.06
+          ],
+          "hardness": 1
+        },
+        "use": {
+          "interaction": "till"
+        },
+        "throw_category": "tool"
+      },
+      "geometry_sha256": "cc692868b62bb9685e6d5077e5bf794e625a6dd1ce61b33e1fd4f2d400fdf573",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "gold_hoe",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "hoe",
+        "material": "gold",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "gold_ingot",
+      "model": "models/items/gold_ingot/model.gltf",
+      "definition": {
+        "id": "gold_ingot",
+        "displayName": "Gold Ingot",
+        "types": [
+          "misc",
+          "material"
+        ],
+        "stack_max": 32,
+        "wear_end": "indestructible",
+        "model": "models/items/gold_ingot/model.gltf",
+        "visual": {
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 4.5,
+          "size": [
+            0.32,
+            0.1275,
+            0.17
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "material"
+      },
+      "geometry_sha256": "e2164c08e4ff695a1679be3861229696f5a42718da055c4d774cbd10af2bff1f",
+      "triangles": 36,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "gold_ingot",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "material",
+        "material": "gold",
+        "recipe_version": 2,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "gold_legs",
+      "model": "models/items/gold_legs/model.gltf",
+      "definition": {
+        "id": "gold_legs",
+        "displayName": "Gold Leggings",
+        "types": [
+          "armor",
+          "legs"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/gold_legs/model.gltf",
+        "armor": {
+          "slots": [
+            "legs"
+          ],
+          "armor_groups": {
+            "fleshy": 45
+          }
+        },
+        "visual": {
+          "wield_scale": 1.0,
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 6.75,
+          "size": [
+            0.35,
+            0.43,
+            0.17
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "equipment"
+      },
+      "geometry_sha256": "bffd6730e7d429a7856d5d14382045c446a29be6035f1651619763abb6949a67",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "gold_legs",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "armor_legs",
+        "material": "gold",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "gold_pickaxe",
+      "model": "models/items/gold_pickaxe/model.gltf",
+      "definition": {
+        "id": "gold_pickaxe",
+        "displayName": "Gold Pickaxe",
+        "types": [
+          "mining"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/gold_pickaxe/model.gltf",
+        "repair": {
+          "materials": [
+            "gold_ingot"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 0.8,
+          "damage": {
+            "melee": 3,
+            "fleshy": 3
+          },
+          "groupcaps": {
+            "cracky": {
+              "maxlevel": 1,
+              "uses": 40,
+              "times": {
+                "1": 1.0,
+                "2": 0.7,
+                "3": 0.5
+              }
+            }
+          },
+          "punch_attack_uses": 40
+        },
+        "visual": {
+          "wield_scale": 1.5,
+          "swing": {
+            "dig": "dig_tool",
+            "melee": "dig_tool"
+          },
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            -8,
+            0,
+            90
+          ],
+          "wield_offset": [
+            0,
+            -0.12,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 4.5,
+          "size": [
+            0.46,
+            0.83,
+            0.06
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "tool"
+      },
+      "geometry_sha256": "8650c462b91a4c1a2fa87497389108a1e1318894c3c71cd7dbb58a9797c6c711",
+      "triangles": 72,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "gold_pickaxe",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "pickaxe",
+        "material": "gold",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "gold_shovel",
+      "model": "models/items/gold_shovel/model.gltf",
+      "definition": {
+        "id": "gold_shovel",
+        "displayName": "Gold Shovel",
+        "types": [
+          "digging"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/gold_shovel/model.gltf",
+        "repair": {
+          "materials": [
+            "gold_ingot"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 0.8,
+          "damage": {
+            "melee": 2,
+            "fleshy": 2
+          },
+          "groupcaps": {
+            "crumbly": {
+              "maxlevel": 1,
+              "uses": 40,
+              "times": {
+                "1": 1.0,
+                "2": 0.7,
+                "3": 0.5
+              }
+            }
+          },
+          "punch_attack_uses": 40
+        },
+        "visual": {
+          "wield_scale": 1.45,
+          "swing": {
+            "dig": "dig_tool",
+            "melee": "dig_tool"
+          },
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            12,
+            0,
+            90
+          ],
+          "wield_offset": [
+            0,
+            0.08,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 4.5,
+          "size": [
+            0.17,
+            0.9325,
+            0.05
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "tool"
+      },
+      "geometry_sha256": "4038d987b3422137c8b7bfe1f9478e9dce5b1a97f54bead4855e828747799510",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "gold_shovel",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "shovel",
+        "material": "gold",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "gold_sword",
+      "model": "models/items/gold_sword/model.gltf",
+      "definition": {
+        "id": "gold_sword",
+        "displayName": "Gold Sword",
+        "types": [
+          "combat"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "repair": {
+          "materials": [
+            "gold_ingot"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 0.8,
+          "damage": {
+            "melee": 3,
+            "fleshy": 3
+          },
+          "punch_attack_uses": 40
+        },
+        "model": "models/items/gold_sword/model.gltf",
+        "visual": {
+          "wield_scale": 1.35,
+          "swing": {
+            "melee": "slash_weapon"
+          },
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            -18,
+            0,
+            8
+          ],
+          "wield_offset": [
+            0,
+            -0.05,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 4.5,
+          "size": [
+            0.18,
+            0.805,
+            0.05
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "weapon"
+      },
+      "geometry_sha256": "4ddc149756ef24cd86dcff1e74ed68b76b48baa940531b4d896ced5f85aea0cd",
+      "triangles": 72,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "gold_sword",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "sword",
+        "material": "gold",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "grain",
+      "model": "models/items/grain/model.gltf",
+      "definition": {
+        "id": "grain",
+        "displayName": "Grain",
+        "types": [
+          "misc",
+          "material"
+        ],
+        "stack_max": 32,
+        "wear_end": "indestructible",
+        "model": "models/items/grain/model.gltf",
+        "visual": {
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 0.02,
+          "size": [
+            0.165,
+            0.16,
+            0.05
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "material"
+      },
+      "geometry_sha256": "7ce57a6ad2201914367ec25bb2bd9cd4a0353df94f77c57c9c8406a225785c7f",
+      "triangles": 36,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "grain",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "material",
+        "material": "gold",
+        "recipe_version": 2,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "iron_axe",
+      "model": "models/items/iron_axe/model.gltf",
+      "definition": {
+        "id": "iron_axe",
+        "displayName": "Iron Axe",
+        "types": [
+          "cutting"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/iron_axe/model.gltf",
+        "repair": {
+          "materials": [
+            "iron_ingot"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 1.0,
+          "damage": {
+            "melee": 5,
+            "fleshy": 5
+          },
+          "groupcaps": {
+            "choppy": {
+              "maxlevel": 2,
+              "uses": 120,
+              "times": {
+                "2": 0.7,
+                "1": 1.2,
+                "3": 0.45
+              }
+            }
+          },
+          "punch_attack_uses": 120
+        },
+        "visual": {
+          "wield_scale": 1.5,
+          "swing": {
+            "dig": "dig_tool",
+            "melee": "dig_tool"
+          },
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            -8,
+            20,
+            80
+          ],
+          "wield_offset": [
+            0,
+            -0.1,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 2.6,
+          "size": [
+            0.3025,
+            0.85,
+            0.06
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "tool"
+      },
+      "geometry_sha256": "2d488e863f54068ff24912a6410bdbd67ccf0143dc06c979b9e48b51e458e6c4",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "iron_axe",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "axe",
+        "material": "iron",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "iron_chest",
+      "model": "models/items/iron_chest/model.gltf",
+      "definition": {
+        "id": "iron_chest",
+        "displayName": "Iron Chestplate",
+        "types": [
+          "armor",
+          "chest"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/iron_chest/model.gltf",
+        "armor": {
+          "slots": [
+            "chest"
+          ],
+          "armor_groups": {
+            "fleshy": 100
+          }
+        },
+        "visual": {
+          "wield_scale": 1.0,
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 5.2,
+          "size": [
+            0.46,
+            0.52,
+            0.24
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "equipment"
+      },
+      "geometry_sha256": "5b05ad7c567576f74bc73b9d0b3ecda7117c9f5359321bbe2081c48839cfa1d3",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "iron_chest",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "armor_chest",
+        "material": "iron",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "iron_feet",
+      "model": "models/items/iron_feet/model.gltf",
+      "definition": {
+        "id": "iron_feet",
+        "displayName": "Iron Boots",
+        "types": [
+          "armor",
+          "feet"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/iron_feet/model.gltf",
+        "armor": {
+          "slots": [
+            "feet"
+          ],
+          "armor_groups": {
+            "fleshy": 80
+          }
+        },
+        "visual": {
+          "wield_scale": 1.0,
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 1.8199999999999998,
+          "size": [
+            0.34,
+            0.165,
+            0.25
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "equipment"
+      },
+      "geometry_sha256": "b5bcda1561e06d68ca95ecc1230c491794ec9f32f6a1445ae545bbdb09c5905c",
+      "triangles": 72,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "iron_feet",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "armor_feet",
+        "material": "iron",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "iron_head",
+      "model": "models/items/iron_head/model.gltf",
+      "definition": {
+        "id": "iron_head",
+        "displayName": "Iron Helmet",
+        "types": [
+          "armor",
+          "head"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/iron_head/model.gltf",
+        "armor": {
+          "slots": [
+            "head"
+          ],
+          "armor_groups": {
+            "fleshy": 90
+          }
+        },
+        "visual": {
+          "wield_scale": 1.0,
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 2.08,
+          "size": [
+            0.36,
+            0.24,
+            0.38
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "equipment"
+      },
+      "geometry_sha256": "243436908e46a64eb44698b4e484a84f2a2979de220d0adc6e3ba1cddfa9325b",
+      "triangles": 48,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "iron_head",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "armor_head",
+        "material": "iron",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "iron_hoe",
+      "model": "models/items/iron_hoe/model.gltf",
+      "definition": {
+        "id": "iron_hoe",
+        "displayName": "Iron Hoe",
+        "types": [
+          "utility"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "repair": {
+          "materials": [
+            "iron_ingot"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 1.0,
+          "damage": {
+            "melee": 1,
+            "fleshy": 1
+          },
+          "punch_attack_uses": 60,
+          "groupcaps": {
+            "crumbly": {
+              "maxlevel": 1,
+              "uses": 20,
+              "times": {
+                "1": 1.6,
+                "2": 1.2,
+                "3": 0.9
+              }
+            }
+          }
+        },
+        "model": "models/items/iron_hoe/model.gltf",
+        "visual": {
+          "wield_scale": 1.45,
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            -6,
+            0,
+            90
+          ],
+          "wield_offset": [
+            0,
+            -0.08,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 2.6,
+          "size": [
+            0.2975,
+            0.725,
+            0.06
+          ],
+          "hardness": 1
+        },
+        "use": {
+          "interaction": "till"
+        },
+        "throw_category": "tool"
+      },
+      "geometry_sha256": "cc692868b62bb9685e6d5077e5bf794e625a6dd1ce61b33e1fd4f2d400fdf573",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "iron_hoe",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "hoe",
+        "material": "iron",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "iron_ingot",
+      "model": "models/items/iron_ingot/model.gltf",
+      "definition": {
+        "id": "iron_ingot",
+        "displayName": "Iron Ingot",
+        "types": [
+          "misc",
+          "material"
+        ],
+        "stack_max": 32,
+        "wear_end": "indestructible",
+        "model": "models/items/iron_ingot/model.gltf",
+        "visual": {
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 2.6,
+          "size": [
+            0.32,
+            0.1275,
+            0.17
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "material"
+      },
+      "geometry_sha256": "e2164c08e4ff695a1679be3861229696f5a42718da055c4d774cbd10af2bff1f",
+      "triangles": 36,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "iron_ingot",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "material",
+        "material": "iron",
+        "recipe_version": 2,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "iron_legs",
+      "model": "models/items/iron_legs/model.gltf",
+      "definition": {
+        "id": "iron_legs",
+        "displayName": "Iron Leggings",
+        "types": [
+          "armor",
+          "legs"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/iron_legs/model.gltf",
+        "armor": {
+          "slots": [
+            "legs"
+          ],
+          "armor_groups": {
+            "fleshy": 90
+          }
+        },
+        "visual": {
+          "wield_scale": 1.0,
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 3.9000000000000004,
+          "size": [
+            0.35,
+            0.43,
+            0.17
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "equipment"
+      },
+      "geometry_sha256": "bffd6730e7d429a7856d5d14382045c446a29be6035f1651619763abb6949a67",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "iron_legs",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "armor_legs",
+        "material": "iron",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "iron_pickaxe",
+      "model": "models/items/iron_pickaxe/model.gltf",
+      "definition": {
+        "id": "iron_pickaxe",
+        "displayName": "Iron Pickaxe",
+        "types": [
+          "mining"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/iron_pickaxe/model.gltf",
+        "repair": {
+          "materials": [
+            "iron_ingot"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 1.0,
+          "damage": {
+            "melee": 4,
+            "fleshy": 4
+          },
+          "groupcaps": {
+            "cracky": {
+              "maxlevel": 3,
+              "uses": 120,
+              "times": {
+                "2": 0.8,
+                "1": 1.4,
+                "3": 0.5
+              }
+            }
+          },
+          "punch_attack_uses": 120
+        },
+        "visual": {
+          "wield_scale": 1.5,
+          "swing": {
+            "dig": "dig_tool",
+            "melee": "dig_tool"
+          },
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            -8,
+            0,
+            90
+          ],
+          "wield_offset": [
+            0,
+            -0.12,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 2.6,
+          "size": [
+            0.46,
+            0.83,
+            0.06
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "tool"
+      },
+      "geometry_sha256": "8650c462b91a4c1a2fa87497389108a1e1318894c3c71cd7dbb58a9797c6c711",
+      "triangles": 72,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "iron_pickaxe",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "pickaxe",
+        "material": "iron",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "iron_shield",
+      "model": "models/items/iron_shield/model.gltf",
+      "definition": {
+        "id": "iron_shield",
+        "displayName": "Iron Shield",
+        "types": [
+          "combat",
+          "utility"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "repair": {
+          "materials": [
+            "iron_ingot"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 1.5,
+          "damage": {
+            "melee": 0,
+            "fleshy": 0
+          },
+          "punch_attack_uses": 200
+        },
+        "armor": {
+          "armor_groups": {
+            "fleshy": 25
+          }
+        },
+        "block": {
+          "enabled": true,
+          "damage_mul": 0.2,
+          "angle_deg": 120,
+          "passive_damage_mul": 0.8,
+          "block_uses": 200
+        },
+        "model": "models/items/iron_shield/model.gltf",
+        "visual": {
+          "wield_scale": 1.1,
+          "use": {
+            "block": "raise_shield"
+          },
+          "fit_axis": "z",
+          "wield_euler_deg": [
+            0,
+            180,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 2.6,
+          "size": [
+            0.46,
+            0.56,
+            0.17
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "equipment"
+      },
+      "geometry_sha256": "7a60d26cd28da8c21fe2d1b3563b0cbc6b36e9977af7021d34d4440eb0453b70",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "iron_shield",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "shield",
+        "material": "iron",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "iron_shovel",
+      "model": "models/items/iron_shovel/model.gltf",
+      "definition": {
+        "id": "iron_shovel",
+        "displayName": "Iron Shovel",
+        "types": [
+          "digging"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/iron_shovel/model.gltf",
+        "repair": {
+          "materials": [
+            "iron_ingot"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 1.0,
+          "damage": {
+            "melee": 3,
+            "fleshy": 3
+          },
+          "groupcaps": {
+            "crumbly": {
+              "maxlevel": 2,
+              "uses": 120,
+              "times": {
+                "2": 0.5,
+                "1": 0.8,
+                "3": 0.35
+              }
+            }
+          },
+          "punch_attack_uses": 120
+        },
+        "visual": {
+          "wield_scale": 1.45,
+          "swing": {
+            "dig": "dig_tool",
+            "melee": "dig_tool"
+          },
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            12,
+            0,
+            90
+          ],
+          "wield_offset": [
+            0,
+            0.08,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 2.6,
+          "size": [
+            0.17,
+            0.9325,
+            0.05
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "tool"
+      },
+      "geometry_sha256": "4038d987b3422137c8b7bfe1f9478e9dce5b1a97f54bead4855e828747799510",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "iron_shovel",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "shovel",
+        "material": "iron",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "iron_sword",
+      "model": "models/items/iron_sword/model.gltf",
+      "definition": {
+        "id": "iron_sword",
+        "displayName": "Iron Sword",
+        "types": [
+          "combat"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/iron_sword/model.gltf",
+        "repair": {
+          "materials": [
+            "iron_ingot"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 1.0,
+          "damage": {
+            "melee": 7,
+            "fleshy": 7
+          },
+          "groupcaps": {
+            "snappy": {
+              "maxlevel": 2,
+              "uses": 160,
+              "times": {
+                "2": 0.4,
+                "1": 0.6,
+                "3": 0.3
+              }
+            }
+          },
+          "punch_attack_uses": 120
+        },
+        "visual": {
+          "wield_scale": 1.35,
+          "swing": {
+            "melee": "slash_weapon"
+          },
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            -18,
+            0,
+            8
+          ],
+          "wield_offset": [
+            0,
+            -0.05,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 2.6,
+          "size": [
+            0.18,
+            0.805,
+            0.05
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "weapon"
+      },
+      "geometry_sha256": "4ddc149756ef24cd86dcff1e74ed68b76b48baa940531b4d896ced5f85aea0cd",
+      "triangles": 72,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "iron_sword",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "sword",
+        "material": "iron",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "leather",
+      "model": "models/items/leather/model.gltf",
+      "definition": {
+        "id": "leather",
+        "displayName": "Leather",
+        "types": [
+          "misc"
+        ],
+        "stack_max": 64,
+        "wear_end": "destroy",
+        "model": "models/items/leather/model.gltf",
+        "visual": {
+          "wield_scale": 0.9,
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 0.5,
+          "size": [
+            0.26,
+            0.055,
+            0.2
+          ],
+          "hardness": 0.7
+        },
+        "use": {},
+        "throw_category": "material"
+      },
+      "geometry_sha256": "3892ef4ec2812b916c626fa9cc5e763b2cab3043e18de61716d6be4ee198d0e9",
+      "triangles": 36,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "leather",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "leather",
+        "material": "leather",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "leather_chest",
+      "model": "models/items/leather_chest/model.gltf",
+      "definition": {
+        "id": "leather_chest",
+        "displayName": "Leather Chestplate",
+        "types": [
+          "armor",
+          "chest"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/leather_chest/model.gltf",
+        "armor": {
+          "slots": [
+            "chest"
+          ],
+          "armor_groups": {
+            "fleshy": 50
+          }
+        },
+        "visual": {
+          "wield_scale": 1.0,
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 1.0,
+          "size": [
+            0.46,
+            0.52,
+            0.24
+          ],
+          "hardness": 0.7
+        },
+        "use": {},
+        "throw_category": "equipment"
+      },
+      "geometry_sha256": "5b05ad7c567576f74bc73b9d0b3ecda7117c9f5359321bbe2081c48839cfa1d3",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "leather_chest",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "armor_chest",
+        "material": "leather",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "leather_feet",
+      "model": "models/items/leather_feet/model.gltf",
+      "definition": {
+        "id": "leather_feet",
+        "displayName": "Leather Boots",
+        "types": [
+          "armor",
+          "feet"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/leather_feet/model.gltf",
+        "armor": {
+          "slots": [
+            "feet"
+          ],
+          "armor_groups": {
+            "fleshy": 35
+          }
+        },
+        "visual": {
+          "wield_scale": 1.0,
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 0.35,
+          "size": [
+            0.34,
+            0.165,
+            0.25
+          ],
+          "hardness": 0.7
+        },
+        "use": {},
+        "throw_category": "equipment"
+      },
+      "geometry_sha256": "b5bcda1561e06d68ca95ecc1230c491794ec9f32f6a1445ae545bbdb09c5905c",
+      "triangles": 72,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "leather_feet",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "armor_feet",
+        "material": "leather",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "leather_head",
+      "model": "models/items/leather_head/model.gltf",
+      "definition": {
+        "id": "leather_head",
+        "displayName": "Leather Helmet",
+        "types": [
+          "armor",
+          "head"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/leather_head/model.gltf",
+        "armor": {
+          "slots": [
+            "head"
+          ],
+          "armor_groups": {
+            "fleshy": 40
+          }
+        },
+        "visual": {
+          "wield_scale": 1.0,
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 0.4,
+          "size": [
+            0.36,
+            0.24,
+            0.38
+          ],
+          "hardness": 0.7
+        },
+        "use": {},
+        "throw_category": "equipment"
+      },
+      "geometry_sha256": "243436908e46a64eb44698b4e484a84f2a2979de220d0adc6e3ba1cddfa9325b",
+      "triangles": 48,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "leather_head",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "armor_head",
+        "material": "leather",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "leather_legs",
+      "model": "models/items/leather_legs/model.gltf",
+      "definition": {
+        "id": "leather_legs",
+        "displayName": "Leather Leggings",
+        "types": [
+          "armor",
+          "legs"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/leather_legs/model.gltf",
+        "armor": {
+          "slots": [
+            "legs"
+          ],
+          "armor_groups": {
+            "fleshy": 40
+          }
+        },
+        "visual": {
+          "wield_scale": 1.0,
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 0.75,
+          "size": [
+            0.35,
+            0.43,
+            0.17
+          ],
+          "hardness": 0.7
+        },
+        "use": {},
+        "throw_category": "equipment"
+      },
+      "geometry_sha256": "bffd6730e7d429a7856d5d14382045c446a29be6035f1651619763abb6949a67",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "leather_legs",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "armor_legs",
+        "material": "leather",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "plant_fiber",
+      "model": "models/items/plant_fiber/model.gltf",
+      "definition": {
+        "id": "plant_fiber",
+        "displayName": "Plant Fiber",
+        "types": [
+          "misc",
+          "material"
+        ],
+        "stack_max": 32,
+        "wear_end": "indestructible",
+        "model": "models/items/plant_fiber/model.gltf",
+        "visual": {
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 0.5,
+          "size": [
+            0.155,
+            0.3,
+            0.035
+          ],
+          "hardness": 0.7
+        },
+        "use": {},
+        "throw_category": "material"
+      },
+      "geometry_sha256": "42718b45d633e2604e6ee6fc48aecd681f1e45667fc19f041edff3ed3534e11a",
+      "triangles": 36,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "plant_fiber",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "material",
+        "material": "leather",
+        "recipe_version": 2,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "raw_copper",
+      "model": "models/items/raw_copper/model.gltf",
+      "definition": {
+        "id": "raw_copper",
+        "displayName": "Raw Copper",
+        "types": [
+          "misc",
+          "material"
+        ],
+        "stack_max": 32,
+        "wear_end": "indestructible",
+        "model": "models/items/raw_copper/model.gltf",
+        "visual": {
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 2.2,
+          "size": [
+            0.275,
+            0.22,
+            0.22
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "material"
+      },
+      "geometry_sha256": "3c01e78a456bb82e40aa00f864c492e74151e3774a44b0d27ba176c269afae2f",
+      "triangles": 36,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "raw_copper",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "material",
+        "material": "copper",
+        "recipe_version": 2,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "raw_gold",
+      "model": "models/items/raw_gold/model.gltf",
+      "definition": {
+        "id": "raw_gold",
+        "displayName": "Raw Gold",
+        "types": [
+          "misc",
+          "material"
+        ],
+        "stack_max": 32,
+        "wear_end": "indestructible",
+        "model": "models/items/raw_gold/model.gltf",
+        "visual": {
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 4.5,
+          "size": [
+            0.275,
+            0.22,
+            0.22
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "material"
+      },
+      "geometry_sha256": "3c01e78a456bb82e40aa00f864c492e74151e3774a44b0d27ba176c269afae2f",
+      "triangles": 36,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "raw_gold",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "material",
+        "material": "gold",
+        "recipe_version": 2,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "raw_iron",
+      "model": "models/items/raw_iron/model.gltf",
+      "definition": {
+        "id": "raw_iron",
+        "displayName": "Raw Iron",
+        "types": [
+          "misc",
+          "material"
+        ],
+        "stack_max": 32,
+        "wear_end": "indestructible",
+        "model": "models/items/raw_iron/model.gltf",
+        "visual": {
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 2.6,
+          "size": [
+            0.275,
+            0.22,
+            0.22
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "material"
+      },
+      "geometry_sha256": "3c01e78a456bb82e40aa00f864c492e74151e3774a44b0d27ba176c269afae2f",
+      "triangles": 36,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "raw_iron",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "material",
+        "material": "iron",
+        "recipe_version": 2,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "raw_meat",
+      "model": "models/items/raw_meat/model.gltf",
+      "definition": {
+        "id": "raw_meat",
+        "displayName": "Raw Meat",
+        "types": [
+          "misc"
+        ],
+        "stack_max": 16,
+        "wear_end": "destroy",
+        "use_action": "eat",
+        "use": {
+          "action": "eat",
+          "satiety": 28,
+          "health": 0
+        },
+        "visual": {
+          "wield_scale": 0.95,
+          "use": {
+            "eat": "eat_hand"
+          },
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "model": "models/items/raw_meat/model.gltf",
+        "physical": {
+          "mass": 1,
+          "size": [
+            0.24,
+            0.1,
+            0.16
+          ],
+          "hardness": 1
+        },
+        "throw_category": "food"
+      },
+      "geometry_sha256": "9720a6eb3d6345d148560a587b1d6a2a6783eef0e363dae8e4a5db1b66a1ef15",
+      "triangles": 36,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "raw_meat",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "raw_meat",
+        "material": "meat",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "seeds",
+      "model": "models/items/seeds/model.gltf",
+      "definition": {
+        "id": "seeds",
+        "displayName": "Seeds",
+        "types": [
+          "misc"
+        ],
+        "stack_max": 16,
+        "wear_end": "destroy",
+        "model": "models/items/seeds/model.gltf",
+        "visual": {
+          "wield_scale": 0.8,
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 0.02,
+          "size": [
+            0.26,
+            0.055,
+            0.2
+          ],
+          "hardness": 0.7
+        },
+        "use": {
+          "interaction": "plant"
+        },
+        "throw_category": "material"
+      },
+      "geometry_sha256": "3892ef4ec2812b916c626fa9cc5e763b2cab3043e18de61716d6be4ee198d0e9",
+      "triangles": 36,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "seeds",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "seeds",
+        "material": "wood",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "shears",
+      "model": "models/items/shears/model.gltf",
+      "definition": {
+        "id": "shears",
+        "displayName": "Shears",
+        "types": [
+          "utility"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/shears/model.gltf",
+        "visual": {
+          "wield_scale": 1.1,
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 2.6,
+          "size": [
+            0.18,
+            0.805,
+            0.05
+          ],
+          "hardness": 1
+        },
+        "use": {
+          "interaction": "shear"
+        },
+        "throw_category": "utility"
+      },
+      "geometry_sha256": "4ddc149756ef24cd86dcff1e74ed68b76b48baa940531b4d896ced5f85aea0cd",
+      "triangles": 72,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "shears",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "shears",
+        "material": "iron",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "stick",
+      "model": "models/items/stick/model.gltf",
+      "definition": {
+        "id": "stick",
+        "displayName": "Stick",
+        "types": [
+          "misc",
+          "material"
+        ],
+        "stack_max": 32,
+        "wear_end": "indestructible",
+        "model": "models/items/stick/model.gltf",
+        "visual": {
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 0.8,
+          "size": [
+            0.07,
+            0.55,
+            0.07
+          ],
+          "hardness": 0.7
+        },
+        "use": {},
+        "throw_category": "material"
+      },
+      "geometry_sha256": "5f1664f1c9bbfc5961968a78646ca48c95aa5ceb7f7488dfb6e1251b75b20d8b",
+      "triangles": 24,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "stick",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "material",
+        "material": "wood",
+        "recipe_version": 2,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "stone_axe",
+      "model": "models/items/stone_axe/model.gltf",
+      "definition": {
+        "id": "stone_axe",
+        "displayName": "Stone Axe",
+        "types": [
+          "cutting"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/stone_axe/model.gltf",
+        "repair": {
+          "materials": [
+            "stone"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 1.0,
+          "damage": {
+            "melee": 4,
+            "fleshy": 4
+          },
+          "groupcaps": {
+            "choppy": {
+              "maxlevel": 1,
+              "uses": 60,
+              "times": {
+                "2": 0.9,
+                "3": 0.6
+              }
+            }
+          },
+          "punch_attack_uses": 60
+        },
+        "visual": {
+          "wield_scale": 1.5,
+          "swing": {
+            "dig": "dig_tool",
+            "melee": "dig_tool"
+          },
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            -8,
+            20,
+            80
+          ],
+          "wield_offset": [
+            0,
+            -0.1,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 1.8,
+          "size": [
+            0.345,
+            0.82,
+            0.09
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "tool"
+      },
+      "geometry_sha256": "aaf61bd3d5ccc614a64e3b01784e56ca302e7c9b90b1ebeeb7d49b16ccf17ef3",
+      "triangles": 48,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "stone_axe",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "axe",
+        "material": "stone",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "stone_hoe",
+      "model": "models/items/stone_hoe/model.gltf",
+      "definition": {
+        "id": "stone_hoe",
+        "displayName": "Stone Hoe",
+        "types": [
+          "utility"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "repair": {
+          "materials": [
+            "stone",
+            "cobble"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 1.0,
+          "damage": {
+            "melee": 1,
+            "fleshy": 1
+          },
+          "punch_attack_uses": 50,
+          "groupcaps": {
+            "crumbly": {
+              "maxlevel": 1,
+              "uses": 20,
+              "times": {
+                "1": 1.6,
+                "2": 1.2,
+                "3": 0.9
+              }
+            }
+          }
+        },
+        "model": "models/items/stone_hoe/model.gltf",
+        "visual": {
+          "wield_scale": 1.45,
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            -6,
+            0,
+            90
+          ],
+          "wield_offset": [
+            0,
+            -0.08,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 1.8,
+          "size": [
+            0.285,
+            0.72,
+            0.07
+          ],
+          "hardness": 1
+        },
+        "use": {
+          "interaction": "till"
+        },
+        "throw_category": "tool"
+      },
+      "geometry_sha256": "12527479dc45bdbf6d53561120a681ff80cecf9f3515de03dd51de631e4ef464",
+      "triangles": 48,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "stone_hoe",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "hoe",
+        "material": "stone",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "stone_pickaxe",
+      "model": "models/items/stone_pickaxe/model.gltf",
+      "definition": {
+        "id": "stone_pickaxe",
+        "displayName": "Stone Pickaxe",
+        "types": [
+          "mining"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/stone_pickaxe/model.gltf",
+        "repair": {
+          "materials": [
+            "stone"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 1.0,
+          "damage": {
+            "melee": 3,
+            "fleshy": 3
+          },
+          "groupcaps": {
+            "cracky": {
+              "maxlevel": 1,
+              "uses": 60,
+              "times": {
+                "2": 1,
+                "3": 0.7
+              }
+            }
+          },
+          "punch_attack_uses": 60
+        },
+        "visual": {
+          "wield_scale": 1.5,
+          "swing": {
+            "dig": "dig_tool",
+            "melee": "dig_tool"
+          },
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            -8,
+            0,
+            90
+          ],
+          "wield_offset": [
+            0,
+            -0.12,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 1.8,
+          "size": [
+            0.58,
+            0.84,
+            0.09
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "tool"
+      },
+      "geometry_sha256": "f6cabd5aef0315f0706929e00365b2f66c33abe0b6a3797a4a6756e70e9d9648",
+      "triangles": 72,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "stone_pickaxe",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "pickaxe",
+        "material": "stone",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "stone_shovel",
+      "model": "models/items/stone_shovel/model.gltf",
+      "definition": {
+        "id": "stone_shovel",
+        "displayName": "Stone Shovel",
+        "types": [
+          "digging"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/stone_shovel/model.gltf",
+        "repair": {
+          "materials": [
+            "stone"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 1.0,
+          "damage": {
+            "melee": 2,
+            "fleshy": 2
+          },
+          "groupcaps": {
+            "crumbly": {
+              "maxlevel": 1,
+              "uses": 60,
+              "times": {
+                "2": 0.6,
+                "3": 0.45
+              }
+            }
+          },
+          "punch_attack_uses": 60
+        },
+        "visual": {
+          "wield_scale": 1.45,
+          "swing": {
+            "dig": "dig_tool",
+            "melee": "dig_tool"
+          },
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            12,
+            0,
+            90
+          ],
+          "wield_offset": [
+            0,
+            0.08,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 1.8,
+          "size": [
+            0.18,
+            0.93,
+            0.06
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "tool"
+      },
+      "geometry_sha256": "5af0dfdbad856c262188ae87ed138d71a321c13578532aeda0dcfbb7d688bbc8",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "stone_shovel",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "shovel",
+        "material": "stone",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "stone_sword",
+      "model": "models/items/stone_sword/model.gltf",
+      "definition": {
+        "id": "stone_sword",
+        "displayName": "Stone Sword",
+        "types": [
+          "combat"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/stone_sword/model.gltf",
+        "repair": {
+          "materials": [
+            "stone"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 1.0,
+          "damage": {
+            "melee": 5,
+            "fleshy": 5
+          },
+          "groupcaps": {
+            "snappy": {
+              "maxlevel": 1,
+              "uses": 80,
+              "times": {
+                "2": 0.45,
+                "3": 0.35
+              }
+            }
+          },
+          "punch_attack_uses": 60
+        },
+        "visual": {
+          "wield_scale": 1.35,
+          "swing": {
+            "melee": "slash_weapon"
+          },
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            -18,
+            0,
+            8
+          ],
+          "wield_offset": [
+            0,
+            -0.05,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 1.8,
+          "size": [
+            0.16,
+            0.765,
+            0.05
+          ],
+          "hardness": 1
+        },
+        "use": {},
+        "throw_category": "weapon"
+      },
+      "geometry_sha256": "87c3cd71aadd5c50a104864f2a914429211e63f001bc8d2f07c4903a20ad3116",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "stone_sword",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "sword",
+        "material": "stone",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "waterskin",
+      "model": "models/items/waterskin/model.gltf",
+      "definition": {
+        "id": "waterskin",
+        "displayName": "Waterskin",
+        "types": [
+          "utility",
+          "misc"
+        ],
+        "stack_max": 1,
+        "wear_end": "indestructible",
+        "use_action": "drink",
+        "use": {
+          "action": "drink",
+          "thirst": 40,
+          "satiety": 0,
+          "health": 0,
+          "interaction": "container"
+        },
+        "visual": {
+          "wield_scale": 0.95,
+          "use": {
+            "drink": "eat_hand"
+          },
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "model": "models/items/waterskin/model.gltf",
+        "physical": {
+          "mass": 1,
+          "size": [
+            0.16,
+            0.315,
+            0.12
+          ],
+          "hardness": 1
+        },
+        "throw_category": "utility"
+      },
+      "geometry_sha256": "2117a87c4670fc18fbfabbd910d4e40859a4f61dcb855be789455591e737c681",
+      "triangles": 48,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "waterskin",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "waterskin",
+        "material": "water",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "wood_axe",
+      "model": "models/items/wood_axe/model.gltf",
+      "definition": {
+        "id": "wood_axe",
+        "displayName": "Wooden Axe",
+        "types": [
+          "cutting"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/wood_axe/model.gltf",
+        "repair": {
+          "materials": [
+            "wood"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 1.0,
+          "damage": {
+            "melee": 3,
+            "fleshy": 3
+          },
+          "groupcaps": {
+            "choppy": {
+              "maxlevel": 0,
+              "uses": 30,
+              "times": {
+                "3": 1
+              }
+            }
+          },
+          "punch_attack_uses": 30
+        },
+        "visual": {
+          "wield_scale": 1.5,
+          "swing": {
+            "dig": "dig_tool",
+            "melee": "dig_tool"
+          },
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            -8,
+            20,
+            80
+          ],
+          "wield_offset": [
+            0,
+            -0.1,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 0.8,
+          "size": [
+            0.345,
+            0.82,
+            0.09
+          ],
+          "hardness": 0.7
+        },
+        "use": {},
+        "throw_category": "tool"
+      },
+      "geometry_sha256": "aaf61bd3d5ccc614a64e3b01784e56ca302e7c9b90b1ebeeb7d49b16ccf17ef3",
+      "triangles": 48,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "wood_axe",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "axe",
+        "material": "wood",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "wood_bow",
+      "model": "models/items/wood_bow/model.gltf",
+      "definition": {
+        "id": "wood_bow",
+        "displayName": "Wood Bow",
+        "types": [
+          "combat"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/wood_bow/model.gltf",
+        "repair": {
+          "materials": [
+            "oak_log",
+            "wood"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 0.9,
+          "damage": {
+            "fleshy": 5,
+            "melee": 5
+          },
+          "punch_attack_uses": 100
+        },
+        "ranged": {
+          "enabled": true,
+          "range": 16,
+          "ammo_id": "arrow",
+          "require_los": true
+        },
+        "visual": {
+          "wield_scale": 1.2,
+          "use": {
+            "ranged": "draw_bow"
+          },
+          "swing": {
+            "melee": "slash_weapon"
+          },
+          "fit_axis": "z",
+          "wield_euler_deg": [
+            0,
+            0,
+            90
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 0.8,
+          "size": [
+            0.05,
+            0.88,
+            0.175
+          ],
+          "hardness": 0.7
+        },
+        "use": {},
+        "throw_category": "weapon"
+      },
+      "geometry_sha256": "51e7667fda19c8b91615cd7945075b5fc25d13d02f81e5576600486d64fb13ce",
+      "triangles": 72,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "wood_bow",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "bow",
+        "material": "wood",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "wood_hoe",
+      "model": "models/items/wood_hoe/model.gltf",
+      "definition": {
+        "id": "wood_hoe",
+        "displayName": "Wooden Hoe",
+        "types": [
+          "utility"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "repair": {
+          "materials": [
+            "wood"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 1.0,
+          "damage": {
+            "melee": 1,
+            "fleshy": 1
+          },
+          "punch_attack_uses": 30,
+          "groupcaps": {
+            "crumbly": {
+              "maxlevel": 0,
+              "uses": 20,
+              "times": {
+                "1": 1.6,
+                "2": 1.2,
+                "3": 0.9
+              }
+            }
+          }
+        },
+        "model": "models/items/wood_hoe/model.gltf",
+        "visual": {
+          "wield_scale": 1.45,
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            -6,
+            0,
+            90
+          ],
+          "wield_offset": [
+            0,
+            -0.08,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 0.8,
+          "size": [
+            0.285,
+            0.72,
+            0.07
+          ],
+          "hardness": 0.7
+        },
+        "use": {
+          "interaction": "till"
+        },
+        "throw_category": "tool"
+      },
+      "geometry_sha256": "12527479dc45bdbf6d53561120a681ff80cecf9f3515de03dd51de631e4ef464",
+      "triangles": 48,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "wood_hoe",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "hoe",
+        "material": "wood",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "wood_pickaxe",
+      "model": "models/items/wood_pickaxe/model.gltf",
+      "definition": {
+        "id": "wood_pickaxe",
+        "displayName": "Wooden Pickaxe",
+        "types": [
+          "mining"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/wood_pickaxe/model.gltf",
+        "repair": {
+          "materials": [
+            "wood"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 1.0,
+          "damage": {
+            "melee": 2,
+            "fleshy": 2
+          },
+          "groupcaps": {
+            "cracky": {
+              "maxlevel": 0,
+              "uses": 30,
+              "times": {
+                "3": 1.2
+              }
+            }
+          },
+          "punch_attack_uses": 30
+        },
+        "visual": {
+          "wield_scale": 1.5,
+          "swing": {
+            "dig": "dig_tool",
+            "melee": "dig_tool"
+          },
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            -8,
+            0,
+            90
+          ],
+          "wield_offset": [
+            0,
+            -0.12,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 0.8,
+          "size": [
+            0.58,
+            0.8,
+            0.09
+          ],
+          "hardness": 0.7
+        },
+        "use": {},
+        "throw_category": "tool"
+      },
+      "geometry_sha256": "36a4b17b0b3320945566629667344f85791c7b864b86b991ebbd26205a233cda",
+      "triangles": 72,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "wood_pickaxe",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "pickaxe",
+        "material": "wood",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "wood_shield",
+      "model": "models/items/wood_shield/model.gltf",
+      "definition": {
+        "id": "wood_shield",
+        "displayName": "Wood Shield",
+        "types": [
+          "combat",
+          "utility"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "repair": {
+          "materials": [
+            "oak_log",
+            "wood"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 1.5,
+          "damage": {
+            "melee": 0,
+            "fleshy": 0
+          },
+          "punch_attack_uses": 200
+        },
+        "armor": {
+          "armor_groups": {
+            "fleshy": 15
+          }
+        },
+        "block": {
+          "enabled": true,
+          "damage_mul": 0.25,
+          "angle_deg": 120,
+          "passive_damage_mul": 0.85,
+          "block_uses": 200
+        },
+        "model": "models/items/wood_shield/model.gltf",
+        "visual": {
+          "wield_scale": 1.1,
+          "use": {
+            "block": "raise_shield"
+          },
+          "fit_axis": "z",
+          "wield_euler_deg": [
+            0,
+            180,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 0.8,
+          "size": [
+            0.46,
+            0.56,
+            0.17
+          ],
+          "hardness": 0.7
+        },
+        "use": {},
+        "throw_category": "equipment"
+      },
+      "geometry_sha256": "7a60d26cd28da8c21fe2d1b3563b0cbc6b36e9977af7021d34d4440eb0453b70",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "wood_shield",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "shield",
+        "material": "wood",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "wood_shovel",
+      "model": "models/items/wood_shovel/model.gltf",
+      "definition": {
+        "id": "wood_shovel",
+        "displayName": "Wooden Shovel",
+        "types": [
+          "digging"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/wood_shovel/model.gltf",
+        "repair": {
+          "materials": [
+            "wood"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 1.0,
+          "damage": {
+            "melee": 1,
+            "fleshy": 1
+          },
+          "groupcaps": {
+            "crumbly": {
+              "maxlevel": 0,
+              "uses": 30,
+              "times": {
+                "3": 0.7
+              }
+            }
+          },
+          "punch_attack_uses": 30
+        },
+        "visual": {
+          "wield_scale": 1.45,
+          "swing": {
+            "dig": "dig_tool",
+            "melee": "dig_tool"
+          },
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            12,
+            0,
+            90
+          ],
+          "wield_offset": [
+            0,
+            0.08,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 0.8,
+          "size": [
+            0.18,
+            0.93,
+            0.06
+          ],
+          "hardness": 0.7
+        },
+        "use": {},
+        "throw_category": "tool"
+      },
+      "geometry_sha256": "5af0dfdbad856c262188ae87ed138d71a321c13578532aeda0dcfbb7d688bbc8",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "wood_shovel",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "shovel",
+        "material": "wood",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "wood_spear",
+      "model": "models/items/wood_spear/model.gltf",
+      "definition": {
+        "id": "wood_spear",
+        "displayName": "Wood Spear",
+        "types": [
+          "combat",
+          "piercing"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/wood_spear/model.gltf",
+        "visual": {
+          "wield_scale": 1.6,
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            -18,
+            0,
+            8
+          ],
+          "wield_offset": [
+            0,
+            -0.05,
+            0
+          ],
+          "swing": {
+            "melee": "spear_thrust"
+          },
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "tool": {
+          "full_punch_interval": 1.1,
+          "damage": {
+            "fleshy": 4,
+            "melee": 4
+          },
+          "punch_attack_uses": 80
+        },
+        "physical": {
+          "mass": 0.8,
+          "size": [
+            0.16,
+            0.765,
+            0.05
+          ],
+          "hardness": 0.7
+        },
+        "use": {},
+        "throw_category": "weapon"
+      },
+      "geometry_sha256": "87c3cd71aadd5c50a104864f2a914429211e63f001bc8d2f07c4903a20ad3116",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "wood_spear",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "spear",
+        "material": "wood",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "wood_sword",
+      "model": "models/items/wood_sword/model.gltf",
+      "definition": {
+        "id": "wood_sword",
+        "displayName": "Wooden Sword",
+        "types": [
+          "combat"
+        ],
+        "stack_max": 1,
+        "wear_end": "destroy",
+        "model": "models/items/wood_sword/model.gltf",
+        "repair": {
+          "materials": [
+            "wood"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 1.0,
+          "damage": {
+            "melee": 4,
+            "fleshy": 4
+          },
+          "groupcaps": {
+            "snappy": {
+              "maxlevel": 0,
+              "uses": 40,
+              "times": {
+                "3": 0.5
+              }
+            }
+          },
+          "punch_attack_uses": 30
+        },
+        "visual": {
+          "wield_scale": 1.35,
+          "swing": {
+            "melee": "slash_weapon"
+          },
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            -18,
+            0,
+            8
+          ],
+          "wield_offset": [
+            0,
+            -0.05,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 0.8,
+          "size": [
+            0.16,
+            0.765,
+            0.05
+          ],
+          "hardness": 0.7
+        },
+        "use": {},
+        "throw_category": "weapon"
+      },
+      "geometry_sha256": "87c3cd71aadd5c50a104864f2a914429211e63f001bc8d2f07c4903a20ad3116",
+      "triangles": 60,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "wood_sword",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "sword",
+        "material": "wood",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "wood_torch",
+      "model": "models/items/wood_torch/model.gltf",
+      "definition": {
+        "id": "wood_torch",
+        "displayName": "Wood Torch",
+        "types": [
+          "utility"
+        ],
+        "stack_max": 64,
+        "wear_end": "destroy",
+        "repair": {
+          "materials": [
+            "oak_log",
+            "wood"
+          ],
+          "amount": 0.25
+        },
+        "tool": {
+          "full_punch_interval": 1.0,
+          "damage": {
+            "melee": 1,
+            "fleshy": 1
+          },
+          "punch_attack_uses": 60
+        },
+        "use_action": "place_block",
+        "use": {
+          "action": "place_block",
+          "place_block": "torch"
+        },
+        "model": "models/items/wood_torch/model.gltf",
+        "visual": {
+          "wield_scale": 1.0,
+          "fit_axis": "y",
+          "wield_euler_deg": [
+            -10,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0.12,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 0.8,
+          "size": [
+            0.08,
+            0.665,
+            0.08
+          ],
+          "hardness": 0.7
+        },
+        "throw_category": "utility"
+      },
+      "geometry_sha256": "e2f8aacda3a1dd4d34a4ff79ee7c4278b8fa055cac61cf7803735da8773f4bc9",
+      "triangles": 48,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "wood_torch",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "torch",
+        "material": "wood",
+        "recipe_version": 1,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    },
+    {
+      "id": "wool",
+      "model": "models/items/wool/model.gltf",
+      "definition": {
+        "id": "wool",
+        "displayName": "Wool",
+        "types": [
+          "misc",
+          "material"
+        ],
+        "stack_max": 32,
+        "wear_end": "indestructible",
+        "model": "models/items/wool/model.gltf",
+        "visual": {
+          "fit_axis": "longest",
+          "wield_euler_deg": [
+            -25,
+            0,
+            0
+          ],
+          "wield_offset": [
+            0,
+            0,
+            0
+          ],
+          "presentations": {
+            "icon_scale": 1.0,
+            "fp_scale": 1.0,
+            "tp_scale": 1.0,
+            "ground_scale": 1.0
+          }
+        },
+        "physical": {
+          "mass": 0.5,
+          "size": [
+            0.32,
+            0.25,
+            0.29
+          ],
+          "hardness": 0.7
+        },
+        "use": {},
+        "throw_category": "material"
+      },
+      "geometry_sha256": "00abd918c219022cac713277e8c5b29a02d300060472be4013c9a06022a5f5a1",
+      "triangles": 24,
+      "texture_size": [
+        64,
+        64
+      ],
+      "attribution": {
+        "id": "wool",
+        "format": "gltf",
+        "license": "CC0-1.0",
+        "authoring_source": "cubatarium-recipe",
+        "family": "material",
+        "material": "leather",
+        "recipe_version": 2,
+        "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+      }
+    }
+  ],
+  "identical_geometry": [
+    [
+      "bucket",
+      "waterskin"
+    ],
+    [
+      "copper_axe",
+      "gold_axe",
+      "iron_axe"
+    ],
+    [
+      "copper_chest",
+      "gold_chest",
+      "iron_chest",
+      "leather_chest"
+    ],
+    [
+      "copper_feet",
+      "gold_feet",
+      "iron_feet",
+      "leather_feet"
+    ],
+    [
+      "copper_head",
+      "gold_head",
+      "iron_head",
+      "leather_head"
+    ],
+    [
+      "copper_hoe",
+      "gold_hoe",
+      "iron_hoe"
+    ],
+    [
+      "copper_ingot",
+      "gold_ingot",
+      "iron_ingot"
+    ],
+    [
+      "copper_legs",
+      "gold_legs",
+      "iron_legs",
+      "leather_legs"
+    ],
+    [
+      "copper_pickaxe",
+      "gold_pickaxe",
+      "iron_pickaxe"
+    ],
+    [
+      "copper_shovel",
+      "gold_shovel",
+      "iron_shovel"
+    ],
+    [
+      "copper_sword",
+      "gold_sword",
+      "iron_sword",
+      "shears"
+    ],
+    [
+      "flint_and_steel",
+      "wood_torch"
+    ],
+    [
+      "iron_shield",
+      "wood_shield"
+    ],
+    [
+      "leather",
+      "seeds"
+    ],
+    [
+      "raw_copper",
+      "raw_gold",
+      "raw_iron"
+    ],
+    [
+      "stone_axe",
+      "wood_axe"
+    ],
+    [
+      "stone_hoe",
+      "wood_hoe"
+    ],
+    [
+      "stone_shovel",
+      "wood_shovel"
+    ],
+    [
+      "stone_sword",
+      "wood_spear",
+      "wood_sword"
+    ]
+  ]
+}
