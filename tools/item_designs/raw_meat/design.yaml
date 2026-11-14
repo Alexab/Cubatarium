@@ -1,0 +1,107 @@
+version: 3
+id: raw_meat
+atlas_size: 256
+texels_per_metre: 230
+triangle_budget: 600
+presentation:
+  tp_euler_deg:
+  - -30
+  - 0
+  - 20
+  right_grip:
+  - 0
+  - 0
+  - 0
+  left_grip:
+  - 0
+  - 0
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.48
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+  tp_scale: 1.5
+materials:
+  flesh:
+    color:
+    - 158
+    - 57
+    - 53
+    pattern: meat
+  fat:
+    color:
+    - 220
+    - 186
+    - 159
+    pattern: food
+  bone:
+    color:
+    - 223
+    - 212
+    - 170
+    pattern: plain
+parts:
+- name: fresh_cut
+  material: flesh
+  shape: extrude
+  contour:
+  - - -0.12
+    - -0.025
+  - - -0.07
+    - -0.075
+  - - 0.065
+    - -0.065
+  - - 0.125
+    - 0.015
+  - - 0.05
+    - 0.08
+  - - -0.085
+    - 0.065
+  depth: 0.055
+  offset:
+  - 0
+  - 0
+  - 0
+  rotation:
+  - 90
+  - 0
+  - 0
+- name: marrow
+  material: bone
+  shape: revolve
+  profile:
+  - - 0.027
+    - 0.022
+  - - 0.032
+    - 0.02
+  sides: 6
+  offset:
+  - -0.025
+  - 0
+  - 0.012
+- name: fat_ribbon
+  material: fat
+  shape: bevel_box
+  size:
+  - 0.095
+  - 0.008
+  - 0.015
+  bevel: 0.0014399999999999999
+  offset:
+  - 0.028
+  - 0.03
+  - -0.04
+  rotation:
+  - 0
+  - -25
+  - 0
+authorship:
+  construction: Cubatarium supply coordinate drawings
+  reference_kind: functional real-world objects and materials
+  external_meshes: false
+  external_pixels: false

@@ -105,17 +105,20 @@ def shell(size, thickness, *, role="body", name="shell"):
     return faces
 
 
-def transform(faces, *, offset=(0,0,0), rotation=(0,0,0), pivot=(0,0,0), taper=1.0):
+def transform(faces, *, offset=(0,0,0), rotation=(0,0,0), pivot=(0,0,0), taper=1.0, scale=(1,1,1)):
     """Rotate XYZ in degrees about a pivot; taper XZ from bottom to top."""
     if not all(math.isfinite(v) for values in (offset,rotation,pivot) for v in values) or not math.isfinite(taper) or taper <= 0:
         raise ValueError("Invalid transform")
+    if len(scale)!=3 or any(isinstance(v,bool) or not isinstance(v,(int,float)) or not math.isfinite(v) or v<=0 for v in scale):
+        raise ValueError('Part scale must have three finite positive components')
     ys=[p[1] for f in faces for p in f.points]
     if not ys: return []
     low,high=min(ys),max(ys)
     def point(p):
-        scale=1+(taper-1)*(p[1]-low)/max(high-low,1e-8)
+        taper_scale=1+(taper-1)*(p[1]-low)/max(high-low,1e-8)
         q=[p[i]-pivot[i] for i in range(3)]
-        q[0]*=scale; q[2]*=scale
+        q[0]*=taper_scale; q[2]*=taper_scale
+        q=[q[i]*scale[i] for i in range(3)]
         for axis,degrees in enumerate(rotation):
             a,b=(axis+1)%3,(axis+2)%3
             c,s=math.cos(math.radians(degrees)),math.sin(math.radians(degrees))

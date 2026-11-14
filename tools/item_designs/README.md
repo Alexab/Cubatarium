@@ -19,6 +19,9 @@ Additional shapes: `revolve` (Y/radius profile, 3..16 sides) and `ring`
 XYZ rotation in degrees, pivot and positive taper are applied
 before uniform fitting into the unchanged gameplay physical envelope.
 
+An optional positive XYZ `scale` flattens or elongates a part around its pivot
+before rotation. This does not alter the gameplay physical profile.
+
 `blade` uses a convex contour, web `depth`, thinner `edge_depth`,
 `bevel_fraction` and optional `edge_material` to construct sloping cutting
 bevels on both faces. A material `uv_direction` projects its preferred U axis
@@ -47,6 +50,8 @@ Named-node visual bindings project bow draw, successful-use pulses and container
 filling without becoming an inventory store. See the [pilot cards](PILOTS.md)
 for the binding/attachment contract and candidate limitations, and the
 [Item Lab guide](ITEM_LAB.md) for read-only inspection and pose controls.
+See [equipment and supply cards](SUPPLIES.md) for the new weapon, utility,
+container, food and material constructions and the supported emission factor.
 Manual glTF import, publication and the remaining Item Lab presentations are
 still under development.
 

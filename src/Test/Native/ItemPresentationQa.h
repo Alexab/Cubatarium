@@ -17,9 +17,12 @@
 #include "Render/Pipeline/GlStateScope.h"
 #include "ThirdParty/stb_image_write.h"
 #include <algorithm>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
+#include <set>
+#include <sstream>
 #include <stdexcept>
 
 namespace cutum
@@ -311,8 +314,18 @@ RunItemPresentationQa(const std::filesystem::path &path,
   UItemQaTarget fpTarget(1280, 720);
   UItemPreviewRenderer orbit(definitions, shaderManager);
   check("state preview renderer initializes", orbit.Initialize());
+  std::set<std::string> requested;
+  if (const char *selected = std::getenv("CUBA_ITEM_PRESENTATION_IDS"))
+  {
+    std::istringstream input(selected);
+    for (std::string id; std::getline(input, id, ',');)
+      if (!id.empty())
+        requested.insert(id);
+  }
   for (const auto &id : items.ListCatalogIds())
   {
+    if (!requested.empty() && !requested.count(id))
+      continue;
     const auto *def = items.Get(id);
     const auto model = IUPlatformPaths::Current().AssetRoot() / def->ModelPath;
     const auto surface =
@@ -406,6 +419,9 @@ RunItemPresentationQa(const std::filesystem::path &path,
     }
   }
   report["surface_count"] = report["surface_ids"].size();
+  if (!requested.empty())
+    check("all requested item surfaces inspected",
+          report["surface_ids"].size() == requested.size());
   std::ofstream output(path);
   output << report.dump(2) << '\n';
 }

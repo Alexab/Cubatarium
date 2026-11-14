@@ -112,7 +112,7 @@ def load_primitives(item_dir: Path) -> list[dict]:
     return parts
 
 
-def render(primitives: list[dict], *, mode='color', size=160, yaw=35., pitch=-25.) -> Image.Image:
+def render(primitives: list[dict], *, mode='color', size=160, yaw=35., pitch=25.) -> Image.Image:
     ya, pi = math.radians(yaw), math.radians(pitch)
     ry = np.array([[math.cos(ya), 0, -math.sin(ya)], [0, 1, 0], [math.sin(ya), 0, math.cos(ya)]])
     rx = np.array([[1, 0, 0], [0, math.cos(pi), -math.sin(pi)], [0, math.sin(pi), math.cos(pi)]])
@@ -122,7 +122,7 @@ def render(primitives: list[dict], *, mode='color', size=160, yaw=35., pitch=-25
     lower, upper = bounds[:, :2].min(axis=0), bounds[:, :2].max(axis=0)
     scale = size * .76 / max(float((upper-lower).max()), .05)
     center = (upper+lower) * .5
-    background = (255, 255, 255, 255) if mode in ('gray', 'silhouette') else (24, 24, 28, 255)
+    background = (255, 255, 255, 255) if mode in ('gray', 'grayscale', 'silhouette') else (24, 24, 28, 255)
     pixels = np.empty((size, size, 4), dtype=np.uint8)
     pixels[:] = background
     depth = np.full((size, size), -np.inf)
@@ -168,6 +168,9 @@ def render(primitives: list[dict], *, mode='color', size=160, yaw=35., pitch=-25
                 rgb[:] = 0
             elif mode == 'gray':
                 rgb[:] = 170*shade
+            elif mode == 'grayscale':
+                gray = rgb @ np.array([.2126, .7152, .0722])
+                rgb = np.repeat(gray[..., None], 3, axis=-1)
             patch = pixels[region]
             patch[mask, :3] = rgb[mask].astype(np.uint8)
             patch[mask, 3] = 255

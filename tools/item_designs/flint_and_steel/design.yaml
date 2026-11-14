@@ -1,0 +1,144 @@
+version: 3
+id: flint_and_steel
+atlas_size: 256
+texels_per_metre: 450
+triangle_budget: 1800
+presentation:
+  tp_euler_deg:
+  - -30
+  - 0
+  - 20
+  right_grip:
+  - 0.026
+  - 0.045
+  - 0
+  left_grip:
+  - 0.026
+  - 0.045
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.55
+  fp_hand_offset:
+  - -0.04
+  - 0.65
+  - 0
+  tp_scale: 1.5
+materials:
+  steel:
+    color:
+    - 112
+    - 128
+    - 134
+    pattern: forged
+    metallic: 0.7
+    roughness: 0.45
+  flint:
+    color:
+    - 74
+    - 77
+    - 82
+    pattern: stone
+  edge:
+    color:
+    - 141
+    - 147
+    - 151
+    pattern: stone
+  cord:
+    color:
+    - 126
+    - 89
+    - 49
+    pattern: fiber
+parts:
+- name: forged_striker
+  material: steel
+  shape: ring
+  outer_radius: 0.05
+  inner_radius: 0.034
+  depth: 0.014
+  sides: 8
+  offset:
+  - 0.026
+  - 0.022
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: knapped_flint
+  material: flint
+  shape: extrude
+  contour:
+  - - -0.048
+    - -0.008
+  - - -0.044
+    - -0.058
+  - - 0.006
+    - -0.052
+  - - 0.02
+    - -0.017
+  - - -0.006
+    - 0.01
+  depth: 0.024
+  offset:
+  - -0.01
+  - 0
+  - 0.008
+  node: flint
+- name: fresh_flint_facet
+  material: edge
+  shape: extrude
+  contour:
+  - - -0.038
+    - -0.02
+  - - -0.034
+    - -0.047
+  - - -0.005
+    - -0.038
+  - - -0.016
+    - -0.012
+  depth: 0.003
+  offset:
+  - -0.01
+  - 0
+  - 0.022
+  node: flint
+- name: link_cord
+  material: cord
+  shape: bevel_box
+  size:
+  - 0.012
+  - 0.055
+  - 0.012
+  bevel: 0.00216
+  offset:
+  - -0.008
+  - -0.002
+  - -0.01
+  rotation:
+  - 0
+  - 0
+  - -25
+authorship:
+  construction: Cubatarium supply coordinate drawings
+  reference_kind: functional real-world objects and materials
+  external_meshes: false
+  external_pixels: false
+nodes:
+  flint:
+    pivot:
+    - -0.02
+    - -0.02
+    - 0.008
+visual_bindings:
+- node: flint
+  channel: use_phase
+  curve: pulse
+  rotation_to:
+  - 0
+  - 0
+  - -24

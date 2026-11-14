@@ -16,7 +16,7 @@ def paint_surface(width, height, material, name):
     style=material.get('pattern','plain')
     if material.get('grain_axis','v') not in ('u','v'):
         raise ValueError('Wood grain axis must be u or v')
-    if style not in ('plain','wood','leather','forged','hammered','stone','food','fiber','water'):
+    if style not in ('plain','wood','leather','forged','hammered','stone','food','fiber','water','feather','painted','char','flame','cast','ore','coal','wool','grain','meat','roast'):
         raise ValueError(f'Unknown surface pattern: {style}')
     phase=int.from_bytes(hashlib.sha256(name.encode()).digest()[:2],'little')/1000
     image=Image.new('RGBA',(width,height))
@@ -42,11 +42,45 @@ def paint_surface(width, height, material, name):
                 shade+=2*math.sin(u*8+v*3)
             elif style=='fiber':
                 shade+=5*math.sin(u*30+v*12)
+            elif style=='feather':
+                shade+=5*math.sin(u*28-v*18)-12*max(0,1-abs(v-.5)*20)
+            elif style=='cast':
+                shade+=3*math.sin(u*9)+2*math.sin(v*23+phase)
+            elif style=='ore':
+                shade+=8*math.sin(u*14+v*7)*math.cos(v*11-phase)
+            elif style=='coal':
+                shade+=4*math.sin(u*11+v*7)+3*math.sin(v*17-u*4)
+            elif style=='char':
+                shade-=14*max(0,math.sin(v*20+math.sin(u*6)))**10
+            elif style=='wool':
+                shade+=4*math.sin(u*14+math.sin(v*14))*math.cos(v*17)
+            elif style=='grain':
+                shade-=12*math.exp(-((v-.5)*15)**2)
+            elif style=='meat':
+                shade+=7*math.sin(u*7+v*3)*math.sin(v*5+phase)
+            elif style=='roast':
+                shade-=16*max(0,math.sin(u*13+v*5))**12
+            elif style=='flame':
+                shade+=14*(.5-u)
             pixel=tuple(max(0,min(255,round(c+shade))) for c in color)
             image.putpixel((x,y),pixel+(255,))
     draw=ImageDraw.Draw(image)
+    if min(width,height)>=8:
+        if style=='meat' and name.endswith(('.front','.back')):
+            for shift in (.18,.60):
+                draw.arc((width*.12,height*(shift-.15),width*.83,height*(shift+.25)),15,160,fill=(211,157,136,255),width=max(1,min(width,height)//40))
+        elif style=='painted':
+            # A restrained hand-painted lozenge on the shield spine, without
+            # borrowing a crest, national symbol or external texture pixels.
+            accent=tuple(min(255,c+24) for c in color)+(255,)
+            draw.line((width*.5,height*.18,width*.72,height*.37,width*.5,height*.57,width*.28,height*.37,width*.5,height*.18),fill=accent,width=max(1,width//35))
+        elif style=='wool':
+            accent=tuple(max(0,c-12) for c in color)+(255,)
+            for i in range(3):
+                x=width*(.12+.26*i);y=height*(.25+.12*(i%2))
+                draw.arc((x,y,x+width*.26,y+height*.24),15,235,fill=accent,width=1)
     marks=material.get('marks','')
-    if marks not in ('','joinery','knapped','rivet','forge','inlay','grain_knots'):
+    if marks not in ('','joinery','knapped','rivet','forge','inlay','grain_knots','planks'):
         raise ValueError(f'Unknown surface marks: {marks}')
     # Construction marks belong to broad working faces, not every side/bevel.
     if min(width,height)>=10 and name.endswith(('.front','.back')):
@@ -69,6 +103,11 @@ def paint_surface(width, height, material, name):
         elif marks=='joinery':
             draw.line((width*.30,height*.16,width*.33,height*.83),fill=dark,width=line)
             draw.line((width*.34,height*.16,width*.37,height*.83),fill=light,width=line)
+        elif marks=='planks':
+            for fraction in (.20,.40,.60,.80):
+                y=height*fraction
+                draw.line((0,y,width,y),fill=dark,width=line)
+                draw.line((0,y+line,width,y+line),fill=light,width=line)
     if style=='water':
         accent=tuple(min(255,c+18) for c in color)+(255,)
         for shift in (.15,.48):

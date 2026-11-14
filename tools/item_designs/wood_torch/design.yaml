@@ -1,0 +1,177 @@
+version: 3
+id: wood_torch
+atlas_size: 256
+texels_per_metre: 210
+triangle_budget: 1200
+presentation:
+  tp_euler_deg:
+  - -30
+  - 0
+  - 20
+  right_grip:
+  - 0
+  - -0.19
+  - 0
+  left_grip:
+  - 0
+  - -0.19
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.6
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+  tp_scale: 1.5
+materials:
+  wood:
+    color:
+    - 102
+    - 66
+    - 34
+    pattern: wood
+    uv_direction:
+    - 0
+    - 1
+    - 0
+    grain_axis: u
+  binding:
+    color:
+    - 74
+    - 49
+    - 29
+    pattern: fiber
+  char:
+    color:
+    - 45
+    - 35
+    - 26
+    pattern: char
+  flame:
+    color:
+    - 227
+    - 112
+    - 28
+    pattern: flame
+    emissive:
+    - 0.55
+    - 0.12
+    - 0.005
+  core:
+    color:
+    - 252
+    - 196
+    - 70
+    pattern: plain
+    emissive:
+    - 0.8
+    - 0.4
+    - 0.06
+parts:
+- name: torch_staff
+  material: wood
+  shape: revolve
+  profile:
+  - - -0.3
+    - 0.018
+  - - 0.15
+    - 0.014
+  sides: 6
+  offset:
+  - 0
+  - 0
+  - 0
+- name: resin_bundle
+  material: char
+  shape: revolve
+  profile:
+  - - 0.11
+    - 0.021
+  - - 0.18
+    - 0.035
+  - - 0.25
+    - 0.029
+  sides: 7
+  offset:
+  - 0
+  - 0
+  - 0
+- name: flame
+  material: flame
+  shape: revolve
+  profile:
+  - - 0.23
+    - 0.021
+  - - 0.27
+    - 0.03
+  - - 0.32
+    - 0.017
+  - - 0.36
+    - 0.002
+  sides: 5
+  offset:
+  - 0
+  - 0
+  - 0
+- name: hot_core
+  material: core
+  shape: revolve
+  profile:
+  - - 0.23
+    - 0.01
+  - - 0.27
+    - 0.016
+  - - 0.3
+    - 0.002
+  sides: 5
+  offset:
+  - 0
+  - 0
+  - 0.018
+- name: binding0
+  material: binding
+  shape: revolve
+  profile:
+  - - 0.122
+    - 0.035
+  - - 0.138
+    - 0.035
+  sides: 7
+  offset:
+  - 0
+  - 0
+  - 0
+- name: binding1
+  material: binding
+  shape: revolve
+  profile:
+  - - 0.162
+    - 0.035
+  - - 0.17800000000000002
+    - 0.035
+  sides: 7
+  offset:
+  - 0
+  - 0
+  - 0
+- name: binding2
+  material: binding
+  shape: revolve
+  profile:
+  - - 0.20199999999999999
+    - 0.035
+  - - 0.218
+    - 0.035
+  sides: 7
+  offset:
+  - 0
+  - 0
+  - 0
+authorship:
+  construction: Cubatarium supply coordinate drawings
+  reference_kind: functional real-world objects and materials
+  external_meshes: false
+  external_pixels: false

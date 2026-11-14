@@ -1,0 +1,158 @@
+version: 3
+id: plant_fiber
+atlas_size: 128
+texels_per_metre: 105
+triangle_budget: 600
+presentation:
+  tp_euler_deg:
+  - -30
+  - 0
+  - 20
+  right_grip:
+  - 0
+  - 0
+  - 0
+  left_grip:
+  - 0
+  - 0
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.5
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+  tp_scale: 1.5
+materials:
+  fiber:
+    color:
+    - 191
+    - 172
+    - 115
+    pattern: fiber
+  tie:
+    color:
+    - 125
+    - 94
+    - 48
+    pattern: fiber
+parts:
+- name: stripped_fiber0
+  material: fiber
+  shape: revolve
+  profile:
+  - - -0.14
+    - 0.006
+  - - 0.09
+    - 0.007
+  - - 0.145
+    - 0.002
+  sides: 4
+  offset:
+  - -0.045
+  - 0
+  - 0.0
+  rotation:
+  - 0
+  - 0
+  - 12
+- name: stripped_fiber1
+  material: fiber
+  shape: revolve
+  profile:
+  - - -0.14
+    - 0.006
+  - - 0.09
+    - 0.007
+  - - 0.145
+    - 0.002
+  sides: 4
+  offset:
+  - -0.025
+  - 0
+  - 0.012
+  rotation:
+  - 0
+  - 0
+  - 6
+- name: stripped_fiber2
+  material: fiber
+  shape: revolve
+  profile:
+  - - -0.14
+    - 0.006
+  - - 0.09
+    - 0.007
+  - - 0.145
+    - 0.002
+  sides: 4
+  offset:
+  - -0.005
+  - 0
+  - 0.0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: stripped_fiber3
+  material: fiber
+  shape: revolve
+  profile:
+  - - -0.14
+    - 0.006
+  - - 0.09
+    - 0.007
+  - - 0.145
+    - 0.002
+  sides: 4
+  offset:
+  - 0.016
+  - 0
+  - 0.012
+  rotation:
+  - 0
+  - 0
+  - -6
+- name: stripped_fiber4
+  material: fiber
+  shape: revolve
+  profile:
+  - - -0.14
+    - 0.006
+  - - 0.09
+    - 0.007
+  - - 0.145
+    - 0.002
+  sides: 4
+  offset:
+  - 0.037
+  - 0
+  - 0.0
+  rotation:
+  - 0
+  - 0
+  - -12
+- name: fiber_tie
+  material: tie
+  shape: bevel_box
+  size:
+  - 0.12
+  - 0.025
+  - 0.029
+  bevel: 0.0045
+  offset:
+  - 0
+  - -0.035
+  - 0.006
+  rotation:
+  - 0
+  - 0
+  - 0
+authorship:
+  construction: Cubatarium supply coordinate drawings
+  reference_kind: functional real-world objects and materials
+  external_meshes: false
+  external_pixels: false

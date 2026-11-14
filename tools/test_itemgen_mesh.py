@@ -5,6 +5,18 @@ from itemgen.mesh import bevel_box, blade, extrude, shell, transform, triangulat
 
 
 class MeshTests(unittest.TestCase):
+    def test_anisotropic_scale_preserves_pivot_and_outward_normals(self):
+        faces=bevel_box((.2,.4,.2),.02)
+        scaled=transform(faces,scale=(2,.5,1),pivot=(0,0,0))
+        points=[p for f in scaled for p in f.points]
+        self.assertAlmostEqual(max(p[0] for p in points)-min(p[0] for p in points),.4)
+        self.assertAlmostEqual(max(p[1] for p in points)-min(p[1] for p in points),.2)
+        for face in scaled:
+            centre=[sum(p[i] for p in face.points)/len(face.points) for i in range(3)]
+            self.assertGreater(sum(a*b for a,b in zip(centre,face.normal())),0)
+        for scale in ((1,0,1),(1,-1,1),(1,float('nan'),1),(1,1)):
+            with self.assertRaises(ValueError):transform(faces,scale=scale)
+
     def test_blade_web_edge_winding_and_closed_surface(self):
         faces=blade(((-1,-2),(1,-2),(1,2),(-1,2)),.2,.02,edge_role='edge')
         edges={}

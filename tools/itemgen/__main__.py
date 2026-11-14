@@ -20,7 +20,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Cubatarium original item mesh generator")
     ap.add_argument(
         "command",
-        choices=["list", "build", "build-design", "seed-workshop", "build-all", "validate", "publish", "preview", "preview-all", "audit"],
+        choices=["list", "build", "build-design", "seed-workshop", "seed-supplies", "build-all", "validate", "publish", "preview", "preview-all", "audit"],
     )
     ap.add_argument("--id", help="item id for build/preview")
     ap.add_argument("--family", help="family for preview sheet")
@@ -29,6 +29,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "seed-workshop":
         from itemgen.workshop_designs import seed_missing
+        print(f"Created {seed_missing(_TOOLS.parent)}")
+        return 0
+
+    if args.command == "seed-supplies":
+        from itemgen.supplies_designs import seed_missing
         print(f"Created {seed_missing(_TOOLS.parent)}")
         return 0
 

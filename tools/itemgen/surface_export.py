@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 import struct
 
@@ -10,6 +11,10 @@ from itemgen.surface_paint import bake
 
 
 def write_asset(destination: Path, item_id, faces, materials, *, size, density, overlays=None, presentation=None, nodes=None, face_nodes=None, bindings=None):
+    for material in materials.values():
+        emissive=material.get('emissive',[0,0,0])
+        if not isinstance(emissive,list) or len(emissive)!=3 or any(isinstance(v,bool) or not isinstance(v,(int,float)) or not math.isfinite(v) or not 0<=v<=1 for v in emissive):
+            raise ValueError('Emissive factor must contain three values in 0..1')
     islands=pack(faces,size=size,texels_per_metre=density,directions={role:m['uv_direction'] for role,m in materials.items() if 'uv_direction' in m})
     lookup={i.name:i for i in islands}
     destination.mkdir(parents=True,exist_ok=True)
@@ -72,7 +77,7 @@ def write_asset(destination: Path, item_id, faces, materials, *, size, density, 
               buffers=[dict(uri='model.bin',byteLength=len(blob))],bufferViews=views,accessors=accessors,
               images=[dict(uri='textures/diffuse.png')],samplers=[dict(magFilter=9729,minFilter=9987,wrapS=33071,wrapT=33071)],
               textures=[dict(source=0,sampler=0)],
-              materials=[dict(name=role,pbrMetallicRoughness=dict(baseColorTexture=dict(index=0),metallicFactor=materials[role].get('metallic',0),roughnessFactor=materials[role].get('roughness',.85))) for role in roles],
+              materials=[dict(name=role,emissiveFactor=materials[role].get('emissive',[0,0,0]),pbrMetallicRoughness=dict(baseColorTexture=dict(index=0),metallicFactor=materials[role].get('metallic',0),roughnessFactor=materials[role].get('roughness',.85))) for role in roles],
               meshes=meshes,nodes=node_defs,scenes=[dict(nodes=[0])],scene=0,
               extras=dict(authoring_source='cubatarium-surface-design',design_version=3,presentation=presentation or {},visual_bindings=bindings or []))
     (destination/'model.bin').write_bytes(blob)

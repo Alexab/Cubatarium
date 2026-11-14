@@ -1,0 +1,222 @@
+version: 3
+id: wood_spear
+atlas_size: 256
+texels_per_metre: 145
+triangle_budget: 1200
+presentation:
+  tp_euler_deg:
+  - -30
+  - 0
+  - 20
+  right_grip:
+  - 0
+  - -0.08
+  - 0
+  left_grip:
+  - 0
+  - -0.08
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.75
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+  tp_scale: 1.5
+materials:
+  wood:
+    color:
+    - 109
+    - 69
+    - 37
+    pattern: wood
+    uv_direction:
+    - 0
+    - 1
+    - 0
+    grain_axis: u
+  binding:
+    color:
+    - 82
+    - 53
+    - 35
+    pattern: leather
+    seam: true
+  head:
+    color:
+    - 142
+    - 158
+    - 165
+    pattern: forged
+    metallic: 0.7
+    roughness: 0.6
+  edge:
+    color:
+    - 172
+    - 188
+    - 195
+    pattern: plain
+    metallic: 0.8
+    roughness: 0.45
+  dark:
+    color:
+    - 63
+    - 74
+    - 80
+    pattern: plain
+    metallic: 0.5
+    roughness: 0.7
+parts:
+- name: spear_shaft
+  material: wood
+  shape: revolve
+  profile:
+  - - -0.39
+    - 0.014
+  - - -0.28
+    - 0.018
+  - - 0.23
+    - 0.015
+  - - 0.3
+    - 0.012
+  sides: 8
+  offset:
+  - 0
+  - 0
+  - 0
+- name: leaf_point
+  material: head
+  shape: blade
+  contour:
+  - - -0.043
+    - 0.27
+  - - 0.043
+    - 0.27
+  - - 0.031
+    - 0.36
+  - - 0
+    - 0.48
+  - - -0.031
+    - 0.36
+  depth: 0.023
+  offset:
+  - 0
+  - 0
+  - 0
+  edge_depth: 0.00368
+  bevel_fraction: 0.13
+  edge_material: edge
+- name: socket
+  material: dark
+  shape: revolve
+  profile:
+  - - 0.2
+    - 0.021
+  - - 0.28
+    - 0.018
+  sides: 6
+  offset:
+  - 0
+  - 0
+  - 0
+- name: butt_cap
+  material: dark
+  shape: revolve
+  profile:
+  - - -0.41
+    - 0.019
+  - - -0.38
+    - 0.02
+  sides: 6
+  offset:
+  - 0
+  - 0
+  - 0
+- name: haft_binding0
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.038
+  - 0.013
+  - 0.034
+  bevel: 0.0023399999999999996
+  offset:
+  - 0
+  - -0.06
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 9
+- name: haft_binding1
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.038
+  - 0.013
+  - 0.034
+  bevel: 0.0023399999999999996
+  offset:
+  - 0
+  - -0.095
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 9
+- name: haft_binding2
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.038
+  - 0.013
+  - 0.034
+  bevel: 0.0023399999999999996
+  offset:
+  - 0
+  - -0.13
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 9
+- name: haft_binding3
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.038
+  - 0.013
+  - 0.034
+  bevel: 0.0023399999999999996
+  offset:
+  - 0
+  - 0.225
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 9
+- name: haft_binding4
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.038
+  - 0.013
+  - 0.034
+  bevel: 0.0023399999999999996
+  offset:
+  - 0
+  - 0.25
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 9
+authorship:
+  construction: Cubatarium supply coordinate drawings
+  reference_kind: functional real-world objects and materials
+  external_meshes: false
+  external_pixels: false

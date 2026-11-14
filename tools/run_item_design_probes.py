@@ -15,6 +15,7 @@ from contextlib import contextmanager
 
 from itemgen.design import build_design, ROOT
 from run_items_acceptance import ITEM_TARGETS, EXTENDED_TARGETS
+from qa_report_artifacts import reset_report
 
 
 @contextmanager
@@ -41,7 +42,7 @@ def main():
     parser.add_argument('--fp-id',default='bucket')
     parser.add_argument('--fp-only',action='store_true',help='Presentation probe only; does not claim full native regression')
     parser.add_argument('--presentation-only',action='store_true',help='Native attachment/FP/loose inspection only; no gameplay regression claim')
-    parser.add_argument('--id',action='append',dest='selected',help='Substitute only these authored IDs; existing v3 production assets may also be inspected')
+    parser.add_argument('--id',action='append',dest='selected',help='Limit candidate substitutions and presentation inspection to these authored IDs')
     args=parser.parse_args()
     if not args.world.endswith('QA') or '/' in args.world or '\\' in args.world:
         parser.error('Use a dedicated world ending in QA')
@@ -69,12 +70,13 @@ def main():
     staged={id:build_design(id) for id in ids}
     env=os.environ.copy();env['PYTHONIOENCODING']='utf-8'
     # Ambient diagnostic switches from a developer shell must not alter this run.
-    for key in ('CUBA_FLIGHT_QA_FP_ITEM','CUBA_ITEMS_INVENTORY_QA','CUBA_ITEMS_SURVIVAL_LOOP_QA','CUBA_ITEMS_CARRY_VISUAL_QA','CUBA_OWNERSHIP_CATALOG_VISUAL_QA','CUBA_ITEM_LAB_QA','CUBA_ITEM_PRESENTATION_QA'):
+    for key in ('CUBA_FLIGHT_QA_FP_ITEM','CUBA_ITEMS_INVENTORY_QA','CUBA_ITEMS_SURVIVAL_LOOP_QA','CUBA_ITEMS_CARRY_VISUAL_QA','CUBA_OWNERSHIP_CATALOG_VISUAL_QA','CUBA_ITEM_LAB_QA','CUBA_ITEM_PRESENTATION_QA','CUBA_ITEM_PRESENTATION_IDS'):
         env.pop(key,None)
     if args.presentation_only:
         report=summary_path.with_name('design-presentations.json')
-        report.unlink(missing_ok=True)
+        reset_report(report,summary_path.parent)
         env['CUBA_ITEM_PRESENTATION_QA']=str(report)
+        if args.selected: env['CUBA_ITEM_PRESENTATION_IDS']=','.join(ids)
         with runtime_designs(staged) as restored_count:
             run([sys.executable,'tools/flight_sim_run.py','--world',args.world,'--require-existing-world','--seconds','3','--process-timeout',str(180+6*len(ids)),'--no-fly','--no-hold-forward','--idle-sec','0','--report',logs/'item-design-presentations-flight.json'],'item-design-presentations',env)
             coverage=json.loads(report.read_text(encoding='utf-8'))

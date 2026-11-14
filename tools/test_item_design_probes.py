@@ -3,9 +3,27 @@ from pathlib import Path
 import tempfile
 import unittest
 from run_item_design_probes import runtime_designs
+from qa_report_artifacts import reset_report
 
 
 class RuntimeProbeTests(unittest.TestCase):
+    def test_report_reset_removes_stale_frames_but_preserves_other_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);report=root/'native.json';frames=root/'native.json.frames'
+            frames.mkdir();(frames/'stale.png').write_bytes(b'stale')
+            report.write_text('{}');other=root/'other.json';other.write_text('keep')
+            reset_report(report,root)
+            self.assertFalse(report.exists());self.assertFalse(frames.exists())
+            self.assertEqual(other.read_text(),'keep')
+            reset_report(report,root)
+
+    def test_report_reset_refuses_paths_outside_the_owned_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);output=root/'qa';output.mkdir()
+            report=root/'outside.json';report.write_text('keep')
+            with self.assertRaises(ValueError):reset_report(report,output)
+            self.assertEqual(report.read_text(),'keep')
+
     def test_failed_probe_restores_every_file(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp); runtime=root/'bin/models/items/bucket'; staged=root/'stage'

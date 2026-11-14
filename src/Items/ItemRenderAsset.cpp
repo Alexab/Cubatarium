@@ -310,6 +310,16 @@ LoadItemRenderAsset(const std::filesystem::path &path,
     material.Name = m.value("name", "");
     material.Metallic = pbr.value("metallicFactor", 1.f);
     material.Roughness = pbr.value("roughnessFactor", 1.f);
+    const auto emissive =
+        m.value("emissiveFactor", std::vector<float>{0, 0, 0});
+    Require(emissive.size() == 3, "emissive factor requires RGB");
+    for (int i = 0; i < 3; ++i)
+    {
+      Require(std::isfinite(emissive[size_t(i)]) && emissive[size_t(i)] >= 0 &&
+                  emissive[size_t(i)] <= 1,
+              "emissive factors must be in 0..1");
+      material.Emissive[i] = emissive[size_t(i)];
+    }
     const auto color =
         pbr.value("baseColorFactor", std::vector<float>{1, 1, 1, 1});
     Require(color.size() == 4, "base color requires RGBA");

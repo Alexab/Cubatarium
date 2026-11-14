@@ -13,6 +13,7 @@ uniform float uLightIntensity;
 uniform float uFog;
 uniform float uMetallic;
 uniform float uRoughness;
+uniform vec3 uEmissive;
 uniform int uInspectionMode;
 vec3 linearColor(vec3 c)
 {
@@ -35,7 +36,7 @@ void main()
     float highlight=pow(max(dot(n,halfDirection),0.0),mix(64.0,8.0,roughness));
     vec3 specular=mix(vec3(0.035),albedo*0.16,uMetallic)*highlight*(1.0-roughness*0.65);
     vec3 lit=albedo*(clamp(uAmbient,0.0,1.0)+(1.0-clamp(uAmbient,0.0,1.0))*diffuse)+specular;
-    vec3 finalColor=mix(lit*max(uLightIntensity,0.0),linearColor(uFogColor),clamp(uFog,0.0,1.0));
+    vec3 finalColor=mix(lit*max(uLightIntensity,0.0)+uEmissive,linearColor(uFogColor),clamp(uFog,0.0,1.0));
     if(uInspectionMode==1) finalColor=vec3(0.005);
     if(uInspectionMode==2) finalColor=vec3(0.35)*(clamp(uAmbient,0.0,1.0)+(1.0-clamp(uAmbient,0.0,1.0))*diffuse);
     if(uInspectionMode==3) finalColor=albedo;

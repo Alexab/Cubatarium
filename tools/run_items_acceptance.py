@@ -5,6 +5,7 @@ import json
 import os
 import subprocess
 import sys
+from qa_report_artifacts import reset_report
 
 ROOT = Path(__file__).resolve().parents[1]
 ITEM_TARGETS=['item_render_asset_test','ownership_snapshot_test','throw_math_test','inventory_transactions_test','armor_equipment_test','resource_economy_test','recipe_registry_test','inventory_mode_test','item_survival_hooks_test','human_motion_camera_test']
@@ -28,7 +29,7 @@ def main():
     if not args.skip_build:
         run(['cmake','--build','build/desktop-msvc','--config','Release','--target','Cubatarium','--parallel','8'],'desktop-release')
         run(['cmake','--build','build/desktop-msvc','--config','Release','--target',*targets,'--parallel','8'],'unit-release')
-    for file in ['test_cpp_audits.py','test_itemgen_publication.py','test_itemgen_mesh.py','test_itemgen_surface_uv.py','test_itemgen_design.py','test_itemgen_workshop.py','test_item_design_probes.py','validate_item_defs.py','audit_item_visuals.py','test_itemgen_raster.py','test_survival_chains.py','research/throw_prototype.py']:
+    for file in ['test_cpp_audits.py','test_itemgen_publication.py','test_itemgen_mesh.py','test_itemgen_surface_uv.py','test_itemgen_design.py','test_itemgen_workshop.py','test_itemgen_supplies.py','test_item_design_probes.py','validate_item_defs.py','audit_item_visuals.py','test_itemgen_raster.py','test_survival_chains.py','research/throw_prototype.py']:
         run([sys.executable,ROOT/'tools'/file],Path(file).stem)
     designs=sorted((ROOT/'tools/item_designs').glob('*/design.yaml'))
     for design in designs:
@@ -41,7 +42,7 @@ def main():
     native=output/'native.json'
     # A successful process must produce this run's reports, never reuse a prior pass.
     for report in [native,Path(str(native)+'.ui.json'),Path(str(native)+'.ownership.json'),Path(str(native)+'.ownership-ui.json'),Path(str(native)+'.player-window.json'),Path(str(native)+'.icons.json'),Path(str(native)+'.item-lab.json'),Path(str(native)+'.presentations.json'),output/'flight.json',output/'result.json']:
-        report.unlink(missing_ok=True)
+        reset_report(report,output)
     env.update(PYTHONIOENCODING='utf-8',CUBA_ITEMS_INVENTORY_QA=str(native),CUBA_ITEMS_SURVIVAL_LOOP_QA='1',CUBA_ITEM_LAB_QA=str(native)+'.item-lab.json',CUBA_ITEM_PRESENTATION_QA=str(native)+'.presentations.json',CUBA_FLIGHT_CAPTURE_DIR=str(output/'captures'),CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='4')
     # Native fixtures run before simulated route time. Allow their bounded
     # per-design capture work, rather than treating a growing catalog as a hang.

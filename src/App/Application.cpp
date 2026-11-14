@@ -2774,24 +2774,36 @@ void UApplication::RunInventoryIconsQa(const std::string &path)
     }
   }
   reset();
-  const auto *bucketDef = World->GetItemDefinitionStorage()->Get("bucket");
-  const auto bucketAsset =
-      bucketDef
-          ? FindItemSurfaceAsset(IUPlatformPaths::Current().AssetRoot() /
-                                     bucketDef->ModelPath,
-                                 UItemDefinitionStorage::ContentRevision())
-          : nullptr;
-  report["container_state_supported"] =
-      bucketAsset && !bucketAsset->Bindings.empty();
-  if (report["container_state_supported"].get<bool>())
+  for (const char *id : {"bucket", "waterskin"})
   {
-    auto bucket = entry(InventoryEntryKind::Item, "bucket");
-    bucket.form = InventoryEntryForm::FiniteStack;
-    inventory.AssignToHotbar(0, 0, bucket);
+    reset();
+    const auto *def = World->GetItemDefinitionStorage()->Get(id);
+    const auto asset =
+        def ? FindItemSurfaceAsset(IUPlatformPaths::Current().AssetRoot() /
+                                       def->ModelPath,
+                                   UItemDefinitionStorage::ContentRevision())
+            : nullptr;
+    int maximum = 0;
+    if (asset)
+      for (const auto &binding : asset->Bindings)
+        if (binding.Channel == ItemVisualChannel::FillUnits)
+          maximum = std::max(maximum, int(std::ceil(binding.Maximum)));
+    report["container_state_support"][id] = maximum > 0;
+    if (std::string(id) == "bucket")
+      report["container_state_supported"] = maximum > 0;
+    if (maximum <= 0)
+      continue;
+    auto container = entry(InventoryEntryKind::Item, id);
+    container.form = InventoryEntryForm::FiniteStack;
+    inventory.AssignToHotbar(0, 0, container);
     inventory.SetActiveSlot(0, 0);
-    unsigned restIcon = 0, fullIcon = 0;
+    unsigned restIcon = 0;
+    std::set<unsigned> filledIcons;
     int step = 0;
-    for (int units : {0, 1, 0})
+    const std::vector<int> sequence =
+        maximum > 1 ? std::vector<int>{0, maximum / 2, maximum, 0}
+                    : std::vector<int>{0, maximum, 0};
+    for (int units : sequence)
     {
       auto *current = inventory.GetSlotMutable(0);
       current->contentsUnits = units;
@@ -2805,23 +2817,23 @@ void UApplication::RunInventoryIconsQa(const std::string &path)
       const auto footer = PlayerWindowScreen->GetHotbarIconTexture(0);
       if (step == 0)
         restIcon = expected;
-      if (step == 1)
-        fullIcon = expected;
+      const bool correctState =
+          units == 0
+              ? expected == restIcon
+              : expected != restIcon && filledIcons.insert(expected).second;
       report["checks"].push_back(
-          {{"id", "bucket"},
+          {{"id", id},
            {"location", "contents-state"},
            {"units", units},
            {"expected", expected},
            {"backpack", actual},
            {"footer", footer},
            {"passed", expected != 0 && actual == expected &&
-                          footer == expected &&
-                          (step != 1 || fullIcon != restIcon) &&
-                          (step != 2 || expected == restIcon)}});
+                          footer == expected && correctState}});
       if (!CapturePlayerWindow(
               *GuiContext, *GetPlayerWindowRoot(), 1280, 720,
               std::filesystem::path(path + ".frames") /
-                  ("bucket_fill_" + std::to_string(step) + ".png")))
+                  (std::string(id) + "_fill_" + std::to_string(step) + ".png")))
         throw std::runtime_error("Cannot capture stateful inventory icon");
       ++step;
     }

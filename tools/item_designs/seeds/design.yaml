@@ -1,0 +1,185 @@
+version: 3
+id: seeds
+atlas_size: 128
+texels_per_metre: 155
+triangle_budget: 600
+presentation:
+  tp_euler_deg:
+  - -30
+  - 0
+  - 20
+  right_grip:
+  - 0
+  - 0
+  - 0
+  left_grip:
+  - 0
+  - 0
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.45
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+  tp_scale: 1.5
+materials:
+  kernel:
+    color:
+    - 117
+    - 75
+    - 36
+    pattern: grain
+  germ:
+    color:
+    - 169
+    - 129
+    - 67
+    pattern: plain
+parts:
+- name: kernel0
+  material: kernel
+  shape: revolve
+  profile:
+  - - -0.017
+    - 0.003
+  - - 0
+    - 0.012
+  - - 0.022
+    - 0.004
+  sides: 5
+  offset:
+  - -0.075
+  - 0
+  - -0.035
+  scale:
+  - 1
+  - 1
+  - 0.55
+  rotation:
+  - 90
+  - 0
+  - 0
+- name: kernel1
+  material: kernel
+  shape: revolve
+  profile:
+  - - -0.017
+    - 0.003
+  - - 0
+    - 0.012
+  - - 0.022
+    - 0.004
+  sides: 5
+  offset:
+  - -0.025
+  - 0
+  - 0.028
+  scale:
+  - 1
+  - 1
+  - 0.55
+  rotation:
+  - 90
+  - 0
+  - 27
+- name: kernel2
+  material: kernel
+  shape: revolve
+  profile:
+  - - -0.017
+    - 0.003
+  - - 0
+    - 0.012
+  - - 0.022
+    - 0.004
+  sides: 5
+  offset:
+  - 0.03
+  - 0
+  - -0.025
+  scale:
+  - 1
+  - 1
+  - 0.55
+  rotation:
+  - 90
+  - 0
+  - 54
+- name: kernel3
+  material: kernel
+  shape: revolve
+  profile:
+  - - -0.017
+    - 0.003
+  - - 0
+    - 0.012
+  - - 0.022
+    - 0.004
+  sides: 5
+  offset:
+  - 0.075
+  - 0
+  - 0.035
+  scale:
+  - 1
+  - 1
+  - 0.55
+  rotation:
+  - 90
+  - 0
+  - 81
+- name: kernel4
+  material: kernel
+  shape: revolve
+  profile:
+  - - -0.017
+    - 0.003
+  - - 0
+    - 0.012
+  - - 0.022
+    - 0.004
+  sides: 5
+  offset:
+  - -0.065
+  - 0
+  - 0.045
+  scale:
+  - 1
+  - 1
+  - 0.55
+  rotation:
+  - 90
+  - 0
+  - 108
+- name: kernel5
+  material: kernel
+  shape: revolve
+  profile:
+  - - -0.017
+    - 0.003
+  - - 0
+    - 0.012
+  - - 0.022
+    - 0.004
+  sides: 5
+  offset:
+  - 0.012
+  - 0
+  - 0.05
+  scale:
+  - 1
+  - 1
+  - 0.55
+  rotation:
+  - 90
+  - 0
+  - 135
+authorship:
+  construction: Cubatarium supply coordinate drawings
+  reference_kind: functional real-world objects and materials
+  external_meshes: false
+  external_pixels: false

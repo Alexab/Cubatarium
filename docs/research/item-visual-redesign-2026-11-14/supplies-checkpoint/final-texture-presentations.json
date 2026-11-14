@@ -1,0 +1,136 @@
+{
+  "checks": [
+    {
+      "name": "item renderer initializes",
+      "passed": true
+    },
+    {
+      "name": "state preview renderer initializes",
+      "passed": true
+    },
+    {
+      "name": "raw_meat FP male right",
+      "passed": true
+    },
+    {
+      "name": "raw_meat FP male left",
+      "passed": true
+    },
+    {
+      "name": "raw_meat FP female right",
+      "passed": true
+    },
+    {
+      "name": "raw_meat FP female left",
+      "passed": true
+    },
+    {
+      "name": "raw_meat-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "raw_meat-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "raw_meat-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "raw_meat-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "raw_meat-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "raw_meat-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "raw_meat-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "raw_meat-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "raw_meat-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "raw_meat-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "raw_meat-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "raw_meat-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "raw_meat-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "raw_meat-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "raw_meat-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "raw_meat-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "raw_meat-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "raw_meat-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "raw_meat-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "raw_meat-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "raw_meat-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "raw_meat-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "raw_meat-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "raw_meat-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "all requested item surfaces inspected",
+      "passed": true
+    }
+  ],
+  "inventory_unchanged": true,
+  "passed": true,
+  "scope": "synthetic native attachments and loose item submissions",
+  "state_ids": [],
+  "surface_count": 1,
+  "surface_ids": [
+    "raw_meat"
+  ]
+}

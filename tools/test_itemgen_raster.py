@@ -9,6 +9,26 @@ from itemgen.pipeline import load_materials
 from itemgen.raster import load_primitives, render
 
 class RasterTests(unittest.TestCase):
+    def test_positive_camera_elevation_sees_top_surface(self):
+        def face(y,color,reverse=False):
+            positions=np.array([[-.2,y,-.2],[-.2,y,.2],[.2,y,.2],[.2,y,-.2]])
+            if reverse:positions=positions[::-1]
+            return dict(positions=positions,indices=np.array([[0,1,2],[0,2,3]]),uv=np.zeros((4,2)),texture=None,factor=np.array([*color,1]),double_sided=False,alpha_cutoff=.5)
+        surfaces=[face(.1,[1,0,0]),face(-.1,[0,0,1],True)]
+        above=render(surfaces,size=96,yaw=0,pitch=45).getpixel((48,48))
+        below=render(surfaces,size=96,yaw=0,pitch=-45).getpixel((48,48))
+        self.assertGreater(above[0],above[2])
+        self.assertGreater(below[2],below[0])
+
+    def test_grayscale_albedo_remains_separate_from_gray_material(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder=Path(tmp)
+            write_gltf(folder,'gray',[dict(role='head',offset=[0,0,0],size=[.4,.4,.2])],load_materials()['iron'])
+            parts=load_primitives(folder)
+            before=np.asarray(render(parts,mode='grayscale',size=96))
+            for part in parts:part['factor'][:3]*=.1
+            self.assertFalse(np.array_equal(before,np.asarray(render(parts,mode='grayscale',size=96))))
+
     def test_gray_material_ignores_albedo_and_retains_shape_lighting(self):
         with tempfile.TemporaryDirectory() as tmp:
             folder=Path(tmp)

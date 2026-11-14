@@ -1,0 +1,101 @@
+version: 3
+id: wool
+atlas_size: 128
+texels_per_metre: 60
+triangle_budget: 600
+presentation:
+  tp_euler_deg:
+  - -30
+  - 0
+  - 20
+  right_grip:
+  - 0
+  - 0
+  - 0
+  left_grip:
+  - 0
+  - 0
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.45
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+  tp_scale: 1.5
+materials:
+  fleece:
+    color:
+    - 216
+    - 207
+    - 180
+    pattern: wool
+  warm:
+    color:
+    - 197
+    - 183
+    - 150
+    pattern: wool
+  binding:
+    color:
+    - 122
+    - 91
+    - 51
+    pattern: fiber
+parts:
+- name: fleece_bundle
+  material: fleece
+  shape: revolve
+  profile:
+  - - -0.09
+    - 0.065
+  - - -0.04
+    - 0.13
+  - - 0.05
+    - 0.12
+  - - 0.1
+    - 0.06
+  sides: 7
+  offset:
+  - 0
+  - 0
+  - 0
+- name: side_lock
+  material: warm
+  shape: revolve
+  profile:
+  - - -0.04
+    - 0.035
+  - - 0
+    - 0.075
+  - - 0.06
+    - 0.033
+  sides: 6
+  offset:
+  - 0.095
+  - -0.025
+  - 0.025
+- name: tie
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.014
+  - 0.23
+  - 0.2
+  bevel: 0.00252
+  offset:
+  - 0
+  - 0
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+authorship:
+  construction: Cubatarium supply coordinate drawings
+  reference_kind: functional real-world objects and materials
+  external_meshes: false
+  external_pixels: false

@@ -1,0 +1,106 @@
+version: 3
+id: raw_gold
+atlas_size: 128
+texels_per_metre: 110
+triangle_budget: 600
+presentation:
+  tp_euler_deg:
+  - -30
+  - 0
+  - 20
+  right_grip:
+  - 0
+  - 0
+  - 0
+  left_grip:
+  - 0
+  - 0
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.45
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+  tp_scale: 1.5
+materials:
+  matrix:
+    color:
+    - 153
+    - 145
+    - 120
+    pattern: stone
+  exposed:
+    color:
+    - 214
+    - 177
+    - 65
+    pattern: ore
+    metallic: 0.45
+    roughness: 0.65
+  oxide:
+    color:
+    - 211
+    - 206
+    - 174
+    pattern: stone
+parts:
+- name: matrix
+  material: matrix
+  shape: revolve
+  profile:
+  - - -0.09
+    - 0.05
+  - - -0.03
+    - 0.11
+  - - 0.05
+    - 0.1
+  - - 0.09
+    - 0.04
+  sides: 5
+  offset:
+  - 0
+  - 0
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 24
+- name: ore_lobe
+  material: exposed
+  shape: revolve
+  profile:
+  - - -0.04
+    - 0.035
+  - - 0.015
+    - 0.06
+  - - 0.065
+    - 0.025
+  sides: 5
+  offset:
+  - 0.025
+  - 0.025
+  - 0.07
+- name: oxide_lobe
+  material: oxide
+  shape: revolve
+  profile:
+  - - -0.04
+    - 0.022
+  - - 0
+    - 0.045
+  - - 0.045
+    - 0.018
+  sides: 5
+  offset:
+  - -0.06
+  - -0.025
+  - 0.045
+authorship:
+  construction: Cubatarium supply coordinate drawings
+  reference_kind: functional real-world objects and materials
+  external_meshes: false
+  external_pixels: false

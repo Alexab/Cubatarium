@@ -1,0 +1,82 @@
+version: 3
+id: charcoal
+atlas_size: 128
+texels_per_metre: 110
+triangle_budget: 600
+presentation:
+  tp_euler_deg:
+  - -30
+  - 0
+  - 20
+  right_grip:
+  - 0
+  - 0
+  - 0
+  left_grip:
+  - 0
+  - 0
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.5
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+  tp_scale: 1.5
+materials:
+  charred:
+    color:
+    - 46
+    - 39
+    - 32
+    pattern: char
+    uv_direction:
+    - 0
+    - 1
+    - 0
+    grain_axis: u
+  end:
+    color:
+    - 70
+    - 58
+    - 42
+    pattern: char
+parts:
+- name: charred_branch
+  material: charred
+  shape: revolve
+  profile:
+  - - -0.13
+    - 0.035
+  - - -0.09
+    - 0.065
+  - - 0.1
+    - 0.055
+  - - 0.14
+    - 0.025
+  sides: 7
+  offset:
+  - 0
+  - 0
+  - 0
+- name: exposed_end
+  material: end
+  shape: revolve
+  profile:
+  - - 0.115
+    - 0.036
+  - - 0.13
+    - 0.032
+  sides: 7
+  offset:
+  - 0
+  - 0
+  - 0
+authorship:
+  construction: Cubatarium supply coordinate drawings
+  reference_kind: functional real-world objects and materials
+  external_meshes: false
+  external_pixels: false

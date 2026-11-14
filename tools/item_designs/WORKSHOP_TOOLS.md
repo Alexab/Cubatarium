@@ -44,8 +44,8 @@ ground-model size or FP fitting.
 
 For a quick native art iteration, run
 `python tools/run_item_design_probes.py --skip-build --presentation-only --id copper_pickaxe --world CarryAimQA`.
-Omit `--id` to substitute all candidates. Existing v3 production assets may
-also be inspected by the native fixture. This checks both hands/body forms, FP
+Omit `--id` to substitute all candidates. Selected IDs also filter the native
+fixture, including after v3 production publication. This checks both hands/body forms, FP
 framing and loose-item submissions, restores runtime resources, and writes a
 separate `presentation-probe.json`. It does not claim inventory/gameplay or
 performance acceptance. Run the full probe after gameplay/render code changes.

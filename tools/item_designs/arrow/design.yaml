@@ -1,0 +1,203 @@
+version: 3
+id: arrow
+atlas_size: 256
+texels_per_metre: 165
+triangle_budget: 1200
+presentation:
+  tp_euler_deg:
+  - -30
+  - 0
+  - 20
+  right_grip:
+  - 0
+  - -0.2
+  - 0
+  left_grip:
+  - 0
+  - -0.2
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.65
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+  tp_scale: 1.5
+materials:
+  shaft:
+    color:
+    - 158
+    - 112
+    - 60
+    pattern: wood
+    uv_direction:
+    - 0
+    - 1
+    - 0
+    grain_axis: u
+  steel:
+    color:
+    - 151
+    - 164
+    - 167
+    pattern: forged
+    metallic: 0.7
+    roughness: 0.5
+  feather:
+    color:
+    - 216
+    - 204
+    - 166
+    pattern: feather
+  wrap:
+    color:
+    - 81
+    - 57
+    - 38
+    pattern: fiber
+parts:
+- name: arrow_shaft
+  material: shaft
+  shape: revolve
+  profile:
+  - - -0.31
+    - 0.006
+  - - 0.24
+    - 0.006
+  sides: 6
+  offset:
+  - 0
+  - 0
+  - 0
+- name: forged_arrow_point
+  material: steel
+  shape: blade
+  contour:
+  - - -0.027
+    - 0.23
+  - - 0.027
+    - 0.23
+  - - 0
+    - 0.34
+  depth: 0.014
+  edge_depth: 0.003
+  bevel_fraction: 0.2
+- name: feather0
+  material: feather
+  shape: extrude
+  contour:
+  - - 0.005
+    - -0.27
+  - - 0.026
+    - -0.25
+  - - 0.02
+    - -0.15
+  - - 0.005
+    - -0.13
+  depth: 0.003
+  offset:
+  - 0
+  - 0
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: feather1
+  material: feather
+  shape: extrude
+  contour:
+  - - 0.005
+    - -0.27
+  - - 0.026
+    - -0.25
+  - - 0.02
+    - -0.15
+  - - 0.005
+    - -0.13
+  depth: 0.003
+  offset:
+  - 0
+  - 0
+  - 0
+  rotation:
+  - 0
+  - 120
+  - 0
+- name: feather2
+  material: feather
+  shape: extrude
+  contour:
+  - - 0.005
+    - -0.27
+  - - 0.026
+    - -0.25
+  - - 0.02
+    - -0.15
+  - - 0.005
+    - -0.13
+  depth: 0.003
+  offset:
+  - 0
+  - 0
+  - 0
+  rotation:
+  - 0
+  - 240
+  - 0
+- name: nock_binding
+  material: wrap
+  shape: bevel_box
+  size:
+  - 0.016
+  - 0.025
+  - 0.016
+  bevel: 0.0028799999999999997
+  offset:
+  - 0
+  - -0.285
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: nock_left
+  material: shaft
+  shape: bevel_box
+  size:
+  - 0.004
+  - 0.025
+  - 0.009
+  bevel: 0.0007199999999999999
+  offset:
+  - -0.005
+  - -0.32
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: nock_right
+  material: shaft
+  shape: bevel_box
+  size:
+  - 0.004
+  - 0.025
+  - 0.009
+  bevel: 0.0007199999999999999
+  offset:
+  - 0.005
+  - -0.32
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+authorship:
+  construction: Cubatarium supply coordinate drawings
+  reference_kind: functional real-world objects and materials
+  external_meshes: false
+  external_pixels: false

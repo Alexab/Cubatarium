@@ -47,14 +47,14 @@ def main():
         sheet=Image.new('RGBA',(960,220),(24,24,28,255)); label=ImageDraw.Draw(sheet)
         modes=['silhouette','gray','color','color','color','color']
         for j,mode in enumerate(modes):
-            yaw,pitch=(35,-25) if j<3 else ((135,-25),(35,-65),(0,0))[j-3]
+            yaw,pitch=(35,25) if j<3 else ((135,25),(35,65),(0,0))[j-3]
             sheet.paste(render(new,mode=mode,size=160,yaw=yaw,pitch=pitch),(j*160,26))
             label.text((j*160+5,5),mode+f' {yaw}/{pitch}',fill='white')
         label.text((5,200),id+' / offline surface geometry inspection',fill='white')
         sheet.save(out/(id+'.png'))
         x=i%4*320;y=i//4*220
-        overview.paste(render(old,size=160,yaw=35,pitch=-25),(x,y+25))
-        overview.paste(render(new,size=160,yaw=35,pitch=-25),(x+160,y+25))
+        overview.paste(render(old,size=160,yaw=35,pitch=25),(x,y+25))
+        overview.paste(render(new,size=160,yaw=35,pitch=25),(x+160,y+25))
         draw.text((x+5,y+4),id+' / old -> v3',fill='white')
     overview.save(out/'overview.png')
     print(out)

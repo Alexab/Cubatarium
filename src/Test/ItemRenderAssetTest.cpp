@@ -220,11 +220,14 @@ int main()
         {"scene", 0}};
     auto write = [&](const Json &data)
     { std::ofstream(folder / "model.gltf") << data.dump(); };
+    g["materials"][0]["emissiveFactor"] = {.25, .10, 0};
     g["extras"]["presentation"] = {{"right_grip", {0, .25, 0}},
                                    {"fp_euler_deg", {62, 0, 0}},
                                    {"fp_scale", .65}};
     write(g);
     const auto asset = cutum::LoadItemRenderAsset(folder / "model.gltf");
+    Expect(asset->Materials[0].Emissive == glm::vec3(.25f, .10f, 0),
+           "linear emissive factor is retained independently of albedo");
     Expect(asset->Primitives.size() == 1 && asset->Nodes.size() == 2,
            "scene hierarchy is preserved");
     Expect(asset->Primitives[0].Vertices.size() == 24,
@@ -315,6 +318,15 @@ int main()
       Expect(failed, "invalid glTF was accepted");
     };
     auto bad = g;
+    bad["materials"][0]["emissiveFactor"] = {1.1, 0, 0};
+    rejected(bad);
+    bad = g;
+    bad["materials"][0]["emissiveFactor"] = {0, -1, 0};
+    rejected(bad);
+    bad = g;
+    bad["materials"][0]["emissiveFactor"] = {0, 0};
+    rejected(bad);
+    bad = g;
     bad["extras"]["visual_bindings"] =
         Json::array({{{"node", "missing"}, {"channel", "bow_charge"}}});
     rejected(bad);

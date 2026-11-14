@@ -1,0 +1,302 @@
+version: 3
+id: iron_shield
+atlas_size: 256
+texels_per_metre: 120
+triangle_budget: 1200
+presentation:
+  tp_euler_deg:
+  - -65
+  - 180
+  - 0
+  right_grip:
+  - 0
+  - -0.045
+  - -0.065
+  left_grip:
+  - 0
+  - -0.045
+  - -0.065
+  fp_euler_deg:
+  - -26
+  - 180
+  - -20
+  fp_scale: 0.55
+  fp_hand_offset:
+  - -0.1
+  - 0.24
+  - 0
+  tp_scale: 1.5
+materials:
+  wood:
+    color:
+    - 109
+    - 69
+    - 37
+    pattern: wood
+    uv_direction:
+    - 0
+    - 1
+    - 0
+    grain_axis: u
+  binding:
+    color:
+    - 82
+    - 53
+    - 35
+    pattern: leather
+    seam: true
+  head:
+    color:
+    - 142
+    - 158
+    - 165
+    pattern: forged
+    metallic: 0.7
+    roughness: 0.6
+  edge:
+    color:
+    - 172
+    - 188
+    - 195
+    pattern: plain
+    metallic: 0.8
+    roughness: 0.45
+  dark:
+    color:
+    - 63
+    - 74
+    - 80
+    pattern: plain
+    metallic: 0.5
+    roughness: 0.7
+  paint:
+    color:
+    - 62
+    - 94
+    - 102
+    pattern: painted
+parts:
+- name: rim
+  material: dark
+  shape: extrude
+  contour:
+  - - -0.23
+    - -0.11
+  - - -0.15
+    - -0.24
+  - - 0.09
+    - -0.26
+  - - 0.23
+    - -0.1
+  - - 0.23
+    - 0.14
+  - - 0.13
+    - 0.23
+  - - -0.13
+    - 0.23
+  - - -0.23
+    - 0.14
+  depth: 0.055
+  offset:
+  - 0
+  - 0
+  - 0
+- name: face_panel
+  material: head
+  shape: blade
+  contour:
+  - - -0.2116
+    - -0.1023
+  - - -0.138
+    - -0.2232
+  - - 0.0828
+    - -0.24180000000000001
+  - - 0.2116
+    - -0.09300000000000001
+  - - 0.2116
+    - 0.1302
+  - - 0.11960000000000001
+    - 0.2139
+  - - -0.11960000000000001
+    - 0.2139
+  - - -0.2116
+    - 0.1302
+  depth: 0.035
+  offset:
+  - 0
+  - 0
+  - 0.03
+  edge_depth: 0.008
+  bevel_fraction: 0.19
+  edge_material: head
+- name: front_spine
+  material: head
+  shape: bevel_box
+  size:
+  - 0.046
+  - 0.46
+  - 0.018
+  bevel: 0.00828
+  offset:
+  - 0
+  - -0.005
+  - 0.059
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: hammered_boss
+  material: head
+  shape: revolve
+  profile:
+  - - -0.01
+    - 0.045
+  - - 0.015
+    - 0.061
+  - - 0.035
+    - 0.035
+  sides: 6
+  offset:
+  - 0
+  - 0
+  - 0.055
+  rotation:
+  - 90
+  - 0
+  - 0
+- name: rim_rivet0
+  material: head
+  shape: revolve
+  profile:
+  - - -0.004
+    - 0.012
+  - - 0.004
+    - 0.012
+  sides: 6
+  offset:
+  - -0.17
+  - 0.16
+  - 0.06
+  rotation:
+  - 90
+  - 0
+  - 0
+- name: rim_rivet1
+  material: head
+  shape: revolve
+  profile:
+  - - -0.004
+    - 0.012
+  - - 0.004
+    - 0.012
+  sides: 6
+  offset:
+  - 0.17
+  - 0.16
+  - 0.06
+  rotation:
+  - 90
+  - 0
+  - 0
+- name: rim_rivet2
+  material: head
+  shape: revolve
+  profile:
+  - - -0.004
+    - 0.012
+  - - 0.004
+    - 0.012
+  sides: 6
+  offset:
+  - -0.13
+  - -0.16
+  - 0.06
+  rotation:
+  - 90
+  - 0
+  - 0
+- name: rim_rivet3
+  material: head
+  shape: revolve
+  profile:
+  - - -0.004
+    - 0.012
+  - - 0.004
+    - 0.012
+  sides: 6
+  offset:
+  - 0.13
+  - -0.16
+  - 0.06
+  rotation:
+  - 90
+  - 0
+  - 0
+- name: back_grip
+  material: binding
+  shape: ring
+  outer_radius: 0.062
+  inner_radius: 0.044
+  depth: 0.025
+  sides: 8
+  offset:
+  - 0
+  - 0
+  - -0.065
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: reverse_arm_strap
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.24
+  - 0.04
+  - 0.018
+  bevel: 0.0072
+  offset:
+  - 0
+  - -0.12
+  - -0.045
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: left_grip_mount
+  material: dark
+  shape: bevel_box
+  size:
+  - 0.03
+  - 0.05
+  - 0.035
+  bevel: 0.005399999999999999
+  offset:
+  - -0.06
+  - 0
+  - -0.04
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: right_grip_mount
+  material: dark
+  shape: bevel_box
+  size:
+  - 0.03
+  - 0.05
+  - 0.035
+  bevel: 0.005399999999999999
+  offset:
+  - 0.06
+  - 0
+  - -0.04
+  rotation:
+  - 0
+  - 0
+  - 0
+authorship:
+  construction: Cubatarium supply coordinate drawings
+  reference_kind: functional real-world objects and materials
+  external_meshes: false
+  external_pixels: false

@@ -18,6 +18,7 @@ struct ItemRenderMaterial
   std::string Name;
   std::filesystem::path Albedo;
   glm::vec4 Color{1.f};
+  glm::vec3 Emissive{0.f};
   float Metallic{0.f}, Roughness{1.f};
 };
 

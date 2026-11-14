@@ -103,6 +103,7 @@ void ItemSurfaceRenderer::Draw(
     Shader->SetVec4("uColor", material.Color);
     Shader->SetFloat("uMetallic", material.Metallic);
     Shader->SetFloat("uRoughness", material.Roughness);
+    Shader->SetVec3("uEmissive", material.Emissive);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
     if (FilteredTextures.insert(texture).second)

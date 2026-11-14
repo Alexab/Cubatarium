@@ -350,6 +350,61 @@ restoration tests with checked exit codes. Its optional native profile also
 invokes the staged presentation probe and uploads the fresh evidence. The
 workflow YAML was parsed locally; no remote CI run is claimed.
 
+## Equipment, food and supply wave
+
+There are now **56 authored candidates**. This wave adds seven equipment items
+(spear, arrow, two shields, torch, flint/steel and waterskin) plus sixteen food
+and material designs. The remaining **14 missing sources are armor slots**;
+the two existing armor pilots still require final refinement. Production still
+has **zero v3 replacements**. No gameplay definitions, IDs, recipes, masses,
+collision profiles or inventory mechanics were changed.
+
+[Supply construction cards](../../../tools/item_designs/SUPPLIES.md) describe
+each item. The spear has its own socket/point and the arrow three feather vanes
+and a split nock. Shields have separate front/reverse construction, hand loops
+and arm straps. The waterskin is a sewn, flattened pouch with stopper, tether
+and curved welts; its volume follows finite water contents 0..4. Flint moves
+against a separate hollow striker through a successful-use pulse. Coal and
+charcoal, raw/cooked meat, grain/seeds, mineral ores and fibers/cord now have
+different constructions and surface fields. Cast ingots deliberately share a
+blank; the tests do not misrepresent this allowed reuse as unique geometry.
+
+The generator now supports positive anisotropic part scale around the authored
+pivot. The item renderer also supports linear glTF emissive factors, validated
+at export/load and used for the torch flame. There is no new world-light or
+held-torch mechanic. Unsupported emissive/normal/other material maps remain
+rejected. The factor/default-texture behavior follows the
+[glTF material specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#material-emissivefactor).
+Creature vertex formats, shaders and lighting remain unchanged.
+
+Native review caught and corrected a clipped flint stroke, a metal-backed
+wooden shield, pouch occlusion by the hand, straight floating side welts and
+repeated stitches across every pouch facet. Container icon QA now covers empty,
+half-full, full and restored-empty waterskins, alongside the bucket. Selected
+presentation IDs filter the actual native fixture as well as substitutions,
+including when other v3 production resources are present. Report reset verifies
+the exact owned output directory before removing stale generated frame folders;
+unit tests cover reset idempotence and refusing paths outside that directory.
+
+The offline comparison camera was found to be below the models, hiding top
+construction details. Comparison views now use positive camera elevation,
+including a steep top view; a red-top/blue-bottom fixture verifies the sign.
+Plain-gray material remains independent of albedo. A separate grayscale-albedo
+mode preserves the legacy colorblind-luminance audit instead of making that
+gate meaningless when the new gray-material view is used. The legacy published
+quality gate passes without weakening its separation checks. Marbling was
+restricted to meat cut faces; sides no longer repeat those marks.
+
+[Checkpoint evidence](supplies-checkpoint/summary.json) contains the Release
+builds, **24 CTest tests**, full native regression, **1736 presentation checks**,
+**209 icon checks**, **111 Item Lab checks**, source cards, comparative sheets
+and native frames. The final raw-meat cut-face texture mask was adjusted after
+the full run and separately passed **31 targeted native checks**. Its final
+frames are archived separately and override that item's earlier texture views;
+geometry and mechanics are unchanged. The 56-item full substitution restored
+168 files, and the final single-item probe restored its three files. These are
+partial acceptance checkpoints, not a final world/performance or artistic pass.
+
 ## Remaining implementation, in order
 
 1. Native baseline and actual resource-path trace, before/after references and
@@ -371,11 +426,22 @@ workflow YAML was parsed locally; no remote CI run is claimed.
    instances must not mutate saved player property.
 6. Twelve pilots: stone_pickaxe, iron_pickaxe, copper_axe, gold_sword, iron_head,
    leather_chest, wood_bow, bucket, shears, apple, bread, raw_iron.
-7. Finalize the 25 authored tool candidates and author the other 37 items:
-   remaining weapons, utilities/containers, armor and food/materials. Remove
-   unrelated family aliases and color-only armor tiers.
+7. Author the remaining 14 armor slots and finalize all 56 existing candidates.
+   Keep construction differences across armor materials, and check both body
+   forms, movement, skin clearance and all hand/ground views.
 8. Full native visual audit and performance acceptance. No final completion
    checkbox until every item and gameplay representation has evidence.
+
+Before publication, also close these known integration gaps: share the final
+arrow resource with the bow's temporary nocked-arrow geometry; project the full
+consume-duration/cancel state into presentations; and extend disk icon
+fingerprints beyond the glTF timestamp to binary, texture, shader and relevant
+presentation dependencies. Explicit Item Lab reload already invalidates caches,
+but texture-only edits across a cold restart need a regression test. Also
+finish the item-only sRGB texture path: the current RGBA upload/manual shader
+decode occurs after sampling, so filtering/mipmap generation still need an
+explicit linear-color path without changing legacy creature textures. These
+requirements remain open rather than being hidden behind the passing probes.
 
 ## Acceptance contract
 

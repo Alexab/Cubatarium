@@ -35,7 +35,7 @@ def build_design(item_id, *, root=ROOT, output=None):
         elif kind=='revolve': geometry=revolve(part['profile'],sides=part.get('sides',8),**kwargs)
         elif kind=='ring': geometry=ring(part['outer_radius'],part['inner_radius'],part['depth'],sides=part.get('sides',8),**kwargs)
         else: raise ValueError(f'Unknown geometry shape: {kind}')
-        shaped=transform(geometry,offset=part.get('offset',(0,0,0)),rotation=part.get('rotation',(0,0,0)),pivot=part.get('pivot',(0,0,0)),taper=part.get('taper',1))
+        shaped=transform(geometry,offset=part.get('offset',(0,0,0)),rotation=part.get('rotation',(0,0,0)),pivot=part.get('pivot',(0,0,0)),taper=part.get('taper',1),scale=part.get('scale',(1,1,1)))
         faces.extend(shaped)
         if part.get('fit_reference',True): fit_faces.extend(shaped)
         if part.get('node'):

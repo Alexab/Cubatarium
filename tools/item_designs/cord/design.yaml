@@ -1,0 +1,124 @@
+version: 3
+id: cord
+atlas_size: 128
+texels_per_metre: 75
+triangle_budget: 600
+presentation:
+  tp_euler_deg:
+  - -30
+  - 0
+  - 20
+  right_grip:
+  - 0
+  - 0
+  - 0
+  left_grip:
+  - 0
+  - 0
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.45
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+  tp_scale: 1.5
+materials:
+  fiber:
+    color:
+    - 159
+    - 130
+    - 79
+    pattern: fiber
+  tie:
+    color:
+    - 105
+    - 79
+    - 43
+    pattern: fiber
+parts:
+- name: coil0
+  material: fiber
+  shape: ring
+  outer_radius: 0.085
+  inner_radius: 0.067
+  depth: 0.014
+  sides: 6
+  offset:
+  - 0
+  - 0.0
+  - 0
+  rotation:
+  - 90
+  - 0
+  - 0
+- name: coil1
+  material: fiber
+  shape: ring
+  outer_radius: 0.085
+  inner_radius: 0.067
+  depth: 0.014
+  sides: 6
+  offset:
+  - 0
+  - 0.017
+  - 0
+  rotation:
+  - 90
+  - 0
+  - 0
+- name: coil2
+  material: fiber
+  shape: ring
+  outer_radius: 0.085
+  inner_radius: 0.067
+  depth: 0.014
+  sides: 6
+  offset:
+  - 0
+  - 0.034
+  - 0
+  rotation:
+  - 90
+  - 0
+  - 0
+- name: loose_tail
+  material: fiber
+  shape: bevel_box
+  size:
+  - 0.085
+  - 0.012
+  - 0.012
+  bevel: 0.00216
+  offset:
+  - 0.085
+  - 0.011
+  - 0.025
+  rotation:
+  - 0
+  - 0
+  - -12
+- name: coil_tie
+  material: tie
+  shape: bevel_box
+  size:
+  - 0.015
+  - 0.065
+  - 0.025
+  bevel: 0.0026999999999999997
+  offset:
+  - 0.067
+  - 0.02
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+authorship:
+  construction: Cubatarium supply coordinate drawings
+  reference_kind: functional real-world objects and materials
+  external_meshes: false
+  external_pixels: false

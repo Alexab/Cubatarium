@@ -1,0 +1,1031 @@
+[
+  {
+    "id": "wood_spear",
+    "triangles": 276,
+    "atlas_size": 256,
+    "density": 145,
+    "parts": [
+      "spear_shaft",
+      "leaf_point",
+      "socket",
+      "butt_cap",
+      "haft_binding0",
+      "haft_binding1",
+      "haft_binding2",
+      "haft_binding3",
+      "haft_binding4"
+    ],
+    "source_sha256": "cee58132d80c1c1c3c83866cf9680a3440b8cc8bebfd2db38d8cfa6b51914214",
+    "presentation": {
+      "tp_euler_deg": [
+        -30,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.08,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.08,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.75,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "arrow",
+    "triangles": 160,
+    "atlas_size": 256,
+    "density": 165,
+    "parts": [
+      "arrow_shaft",
+      "forged_arrow_point",
+      "feather0",
+      "feather1",
+      "feather2",
+      "nock_binding",
+      "nock_left",
+      "nock_right"
+    ],
+    "source_sha256": "3ae972d8b3792ca35521483c9b6bb4828a9e5860a932640e32b9531b3941f296",
+    "presentation": {
+      "tp_euler_deg": [
+        -30,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.2,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.2,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.65,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "wood_shield",
+    "triangles": 304,
+    "atlas_size": 256,
+    "density": 140,
+    "parts": [
+      "rim",
+      "face_panel",
+      "front_spine",
+      "rim_rivet0",
+      "rim_rivet1",
+      "rim_rivet2",
+      "rim_rivet3",
+      "back_grip",
+      "reverse_arm_strap",
+      "left_grip_mount",
+      "right_grip_mount"
+    ],
+    "source_sha256": "8159d17b4759a7e385fd50e8f43e1e3e6c5d8a1712d821190bb907aa7e6e92a0",
+    "presentation": {
+      "tp_euler_deg": [
+        -65,
+        180,
+        0
+      ],
+      "right_grip": [
+        0,
+        -0.045,
+        -0.065
+      ],
+      "left_grip": [
+        0,
+        -0.045,
+        -0.065
+      ],
+      "fp_euler_deg": [
+        -26,
+        180,
+        -20
+      ],
+      "fp_scale": 0.55,
+      "fp_hand_offset": [
+        -0.1,
+        0.24,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "iron_shield",
+    "triangles": 376,
+    "atlas_size": 256,
+    "density": 120,
+    "parts": [
+      "rim",
+      "face_panel",
+      "front_spine",
+      "hammered_boss",
+      "rim_rivet0",
+      "rim_rivet1",
+      "rim_rivet2",
+      "rim_rivet3",
+      "back_grip",
+      "reverse_arm_strap",
+      "left_grip_mount",
+      "right_grip_mount"
+    ],
+    "source_sha256": "a976276cfa283f2a3d09f5fe0547ad9cc257d78b22c7b8d1100e1b3c73dab975",
+    "presentation": {
+      "tp_euler_deg": [
+        -65,
+        180,
+        0
+      ],
+      "right_grip": [
+        0,
+        -0.045,
+        -0.065
+      ],
+      "left_grip": [
+        0,
+        -0.045,
+        -0.065
+      ],
+      "fp_euler_deg": [
+        -26,
+        180,
+        -20
+      ],
+      "fp_scale": 0.55,
+      "fp_hand_offset": [
+        -0.1,
+        0.24,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "wood_torch",
+    "triangles": 192,
+    "atlas_size": 256,
+    "density": 210,
+    "parts": [
+      "torch_staff",
+      "resin_bundle",
+      "flame",
+      "hot_core",
+      "binding0",
+      "binding1",
+      "binding2"
+    ],
+    "source_sha256": "5723888850a24455228cf59fcdec15503a12282f2d9590f85d0f41be15670845",
+    "presentation": {
+      "tp_euler_deg": [
+        -30,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.19,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.19,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.6,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "flint_and_steel",
+    "triangles": 120,
+    "atlas_size": 256,
+    "density": 450,
+    "parts": [
+      "forged_striker",
+      "knapped_flint",
+      "fresh_flint_facet",
+      "link_cord"
+    ],
+    "source_sha256": "71d8202b952da47e5983d50d0087ba08ad32b4c54db34877a8c968415ac26038",
+    "presentation": {
+      "tp_euler_deg": [
+        -30,
+        0,
+        20
+      ],
+      "right_grip": [
+        0.026,
+        0.045,
+        0
+      ],
+      "left_grip": [
+        0.026,
+        0.045,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.55,
+      "fp_hand_offset": [
+        -0.04,
+        0.65,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "waterskin",
+    "triangles": 256,
+    "atlas_size": 256,
+    "density": 290,
+    "parts": [
+      "sewn_pouch",
+      "neck",
+      "stopper",
+      "left_edge_seam0",
+      "left_edge_seam1",
+      "right_edge_seam0",
+      "right_edge_seam1",
+      "stopper_tie",
+      "tether"
+    ],
+    "source_sha256": "acb41f1b2ee31f0a33a53f3e18cb4e55c38408365391e167c83ab78cd6db9cd2",
+    "presentation": {
+      "tp_euler_deg": [
+        -30,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        0.1,
+        0
+      ],
+      "left_grip": [
+        0,
+        0.1,
+        0
+      ],
+      "fp_euler_deg": [
+        76,
+        0,
+        -20
+      ],
+      "fp_scale": 0.48,
+      "fp_hand_offset": [
+        -0.04,
+        0.65,
+        0
+      ],
+      "tp_scale": 2
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "copper_ingot",
+    "triangles": 28,
+    "atlas_size": 128,
+    "density": 150,
+    "parts": [
+      "cast_bar"
+    ],
+    "source_sha256": "4b871e55a2ad6449c4af75b92be214238bf450d8496496223e086d5779b64276",
+    "presentation": {
+      "tp_euler_deg": [
+        -30,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        0,
+        0
+      ],
+      "left_grip": [
+        0,
+        0,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.45,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "iron_ingot",
+    "triangles": 28,
+    "atlas_size": 128,
+    "density": 150,
+    "parts": [
+      "cast_bar"
+    ],
+    "source_sha256": "bd1479b62737873a4a24b25577c0691c5d4c2c497a0b5fa62cee8c58e15be5d8",
+    "presentation": {
+      "tp_euler_deg": [
+        -30,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        0,
+        0
+      ],
+      "left_grip": [
+        0,
+        0,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.45,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "gold_ingot",
+    "triangles": 28,
+    "atlas_size": 128,
+    "density": 150,
+    "parts": [
+      "cast_bar"
+    ],
+    "source_sha256": "60da587a953d1b35b8e9a9a6b9df1e29ff25a5955ff0d94da138dbc63db604ef",
+    "presentation": {
+      "tp_euler_deg": [
+        -30,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        0,
+        0
+      ],
+      "left_grip": [
+        0,
+        0,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.45,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "raw_copper",
+    "triangles": 88,
+    "atlas_size": 128,
+    "density": 110,
+    "parts": [
+      "matrix",
+      "ore_lobe",
+      "oxide_lobe"
+    ],
+    "source_sha256": "f23301a1c234b91d2636a774ea801883ed91b74830a2a9c8424c022059eeb3da",
+    "presentation": {
+      "tp_euler_deg": [
+        -30,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        0,
+        0
+      ],
+      "left_grip": [
+        0,
+        0,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.45,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "raw_gold",
+    "triangles": 88,
+    "atlas_size": 128,
+    "density": 110,
+    "parts": [
+      "matrix",
+      "ore_lobe",
+      "oxide_lobe"
+    ],
+    "source_sha256": "0d425acf5d11e0a4a67dcecaa09f3f49ebdf914e57328db02030f36986cd7584",
+    "presentation": {
+      "tp_euler_deg": [
+        -30,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        0,
+        0
+      ],
+      "left_grip": [
+        0,
+        0,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.45,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "coal",
+    "triangles": 56,
+    "atlas_size": 128,
+    "density": 125,
+    "parts": [
+      "coal_mass",
+      "cleaved_lobe"
+    ],
+    "source_sha256": "ca0a74117a7d8eca9d5df4e8b0871e63d8e4e987ab4dc929055b422cb9897ecc",
+    "presentation": {
+      "tp_euler_deg": [
+        -30,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        0,
+        0
+      ],
+      "left_grip": [
+        0,
+        0,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.45,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "charcoal",
+    "triangles": 76,
+    "atlas_size": 128,
+    "density": 110,
+    "parts": [
+      "charred_branch",
+      "exposed_end"
+    ],
+    "source_sha256": "2937a27660c9870da34172cbc63054e9116ce7a672f027656e76fc14453a9eae",
+    "presentation": {
+      "tp_euler_deg": [
+        -30,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        0,
+        0
+      ],
+      "left_grip": [
+        0,
+        0,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.5,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "cord",
+    "triangles": 200,
+    "atlas_size": 128,
+    "density": 75,
+    "parts": [
+      "coil0",
+      "coil1",
+      "coil2",
+      "loose_tail",
+      "coil_tie"
+    ],
+    "source_sha256": "cc4c37fb04c367415c78789dee7fa4222e37f783cc0068b4c138f279db455e37",
+    "presentation": {
+      "tp_euler_deg": [
+        -30,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        0,
+        0
+      ],
+      "left_grip": [
+        0,
+        0,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.45,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "stick",
+    "triangles": 80,
+    "atlas_size": 128,
+    "density": 100,
+    "parts": [
+      "branch",
+      "cut_end",
+      "branch_knot"
+    ],
+    "source_sha256": "06deb9d3d97d5ba62e3728d8e004980482018966b74a8832a17b7d8649f517fe",
+    "presentation": {
+      "tp_euler_deg": [
+        -30,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        0,
+        0
+      ],
+      "left_grip": [
+        0,
+        0,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.6,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "leather",
+    "triangles": 32,
+    "atlas_size": 128,
+    "density": 100,
+    "parts": [
+      "cut_hide",
+      "folded_corner"
+    ],
+    "source_sha256": "9ada71b4d634f71eb1ecb87701605f94187b8a0ca9551bba17cab0affcd885df",
+    "presentation": {
+      "tp_euler_deg": [
+        -30,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        0,
+        0
+      ],
+      "left_grip": [
+        0,
+        0,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.45,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "wool",
+    "triangles": 112,
+    "atlas_size": 128,
+    "density": 60,
+    "parts": [
+      "fleece_bundle",
+      "side_lock",
+      "tie"
+    ],
+    "source_sha256": "3300fed6317300b6b65bc269910db652d62c5ca1c1f4ec5bfb4ec95734dc1b1c",
+    "presentation": {
+      "tp_euler_deg": [
+        -30,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        0,
+        0
+      ],
+      "left_grip": [
+        0,
+        0,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.45,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "plant_fiber",
+    "triangles": 128,
+    "atlas_size": 128,
+    "density": 105,
+    "parts": [
+      "stripped_fiber0",
+      "stripped_fiber1",
+      "stripped_fiber2",
+      "stripped_fiber3",
+      "stripped_fiber4",
+      "fiber_tie"
+    ],
+    "source_sha256": "37c28fb4d10c7106272f6d5f7a5ac65c947946eea0b961e53d7fe85354e48300",
+    "presentation": {
+      "tp_euler_deg": [
+        -30,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        0,
+        0
+      ],
+      "left_grip": [
+        0,
+        0,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.5,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "seeds",
+    "triangles": 156,
+    "atlas_size": 128,
+    "density": 155,
+    "parts": [
+      "kernel0",
+      "kernel1",
+      "kernel2",
+      "kernel3",
+      "kernel4",
+      "kernel5"
+    ],
+    "source_sha256": "5f80fee9eb08c3436c324c46b409d6d3bd757d6165fb6c8b9172a07e7608056b",
+    "presentation": {
+      "tp_euler_deg": [
+        -30,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        0,
+        0
+      ],
+      "left_grip": [
+        0,
+        0,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.45,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "grain",
+    "triangles": 156,
+    "atlas_size": 128,
+    "density": 155,
+    "parts": [
+      "kernel0",
+      "kernel1",
+      "kernel2",
+      "kernel3",
+      "kernel4",
+      "kernel5"
+    ],
+    "source_sha256": "13e2bad2c0aabca201b930e37593cf5da024719565cad331b38ba3f4854f3476",
+    "presentation": {
+      "tp_euler_deg": [
+        -30,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        0,
+        0
+      ],
+      "left_grip": [
+        0,
+        0,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.45,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "raw_meat",
+    "triangles": 68,
+    "atlas_size": 256,
+    "density": 230,
+    "parts": [
+      "fresh_cut",
+      "marrow",
+      "fat_ribbon"
+    ],
+    "source_sha256": "21d145880e071a776f0f6e96483334c62bb9ac5d566b8c012b84203e39c463e1",
+    "presentation": {
+      "tp_euler_deg": [
+        -30,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        0,
+        0
+      ],
+      "left_grip": [
+        0,
+        0,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.48,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "cooked_meat",
+    "triangles": 80,
+    "atlas_size": 256,
+    "density": 230,
+    "parts": [
+      "roasted_cut",
+      "rendered_fat"
+    ],
+    "source_sha256": "b6eafaf097d214770ab31a260c69a6d96c279ff06055b4c8f6788f5819b29904",
+    "presentation": {
+      "tp_euler_deg": [
+        -30,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        0,
+        0
+      ],
+      "left_grip": [
+        0,
+        0,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.48,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  }
+]
