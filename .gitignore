@@ -239,3 +239,5 @@ tools/debug_uv_overlays/
 /bin/ownership_completion/
 /bin/ownership_visual/
 /bin/items_completion_captures*/
+
+/bin/item_lab_exports/

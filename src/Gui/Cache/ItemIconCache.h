@@ -15,7 +15,8 @@ namespace cutum
 
 class UItemPreviewRenderer;
 
-/// Renders procedural 3D-ish tool icons into a texture cache (object-icon style).
+/// Renders procedural 3D-ish tool icons into a texture cache (object-icon
+/// style).
 class UItemIconCache
 {
 public:
@@ -38,6 +39,9 @@ private:
   /// Stable fingerprint for the disk cache: item id + its model preset so
   /// stale PNGs re-render instead of showing wrong art.
   std::string FingerprintFor(const std::string &itemId) const;
+  uint64_t CachedRevision{UItemDefinitionStorage::ContentRevision()};
+  bool SkipDiskCache{false};
+  void SyncRevision();
   GLuint RenderItemIcon(const std::string &itemId);
   void EnsureFbo(int size);
 

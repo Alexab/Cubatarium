@@ -36,6 +36,9 @@ public:
   /// Item model caches keyed by item id compare against it (see
   /// SyncItemModelCache) so a pack change is not masked by a stale model.
   static uint64_t ContentRevision();
+  /// Invalidate visual caches after an explicit authoring reload. No gameplay
+  /// data changes.
+  static void NotifyVisualAssetsChanged() { BumpContentRevision(); }
   const UItemVisualPresetLibrary &VisualPresets() const { return Presets; }
   UItemVisualPresetLibrary &VisualPresets() { return Presets; }
 

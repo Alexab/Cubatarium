@@ -1,4 +1,5 @@
 #include "App/Application.h"
+#include "App/Platform/IUPlatformPaths.h"
 #include "Core/StallTimer.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Visual/CreatureAppearance.h"
@@ -60,6 +61,7 @@
 #include "Gui/Screens/CreativePaletteScreen.h"
 #include "Gui/Screens/DeathScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
+#include "Gui/Screens/ItemLabScreen.h"
 #include "Gui/Screens/LoadWorldScreen.h"
 #include "Gui/Screens/MainMenuScreen.h"
 #include "Gui/Screens/NewWorldScreen.h"
@@ -591,6 +593,8 @@ void UApplication::SetHotbarCountSetting(int count)
 
 void UApplication::ReturnToMainMenu()
 {
+  ItemLabOpen = false;
+  ItemLabScreen = nullptr;
   HardcoreSpectating = false;
   ScreenNav.ReturnToMainMenu();
 }
@@ -1205,17 +1209,17 @@ void UApplication::ShowInGameHud()
 bool UApplication::UsesUiPointer() const
 {
   return State == AppState::MainMenu || State == AppState::Loading ||
-         FreeCursor || ConsoleOpen || PaletteOpen || WorldGenOpen ||
-         CharacterSheetOpen || SurvivalInventoryOpen || CraftingOpen ||
-         AnvilOpen || DeathScreenOpen;
+         FreeCursor || ItemLabOpen || ConsoleOpen || PaletteOpen ||
+         WorldGenOpen || CharacterSheetOpen || SurvivalInventoryOpen ||
+         CraftingOpen || AnvilOpen || DeathScreenOpen;
 }
 
 bool UApplication::BlocksGameMouseLook() const
 {
   return State == AppState::InGame &&
-         (FreeCursor || ConsoleOpen || PaletteOpen || WorldGenOpen ||
-          CharacterSheetOpen || SurvivalInventoryOpen || CraftingOpen ||
-          AnvilOpen || DeathScreenOpen);
+         (FreeCursor || ItemLabOpen || ConsoleOpen || PaletteOpen ||
+          WorldGenOpen || CharacterSheetOpen || SurvivalInventoryOpen ||
+          CraftingOpen || AnvilOpen || DeathScreenOpen);
 }
 
 AppCursorPolicy UApplication::GetCursorPolicy() const
@@ -2464,6 +2468,150 @@ void UApplication::RunPlayerWindowQa(const std::string &path)
   std::ofstream out(path);
   out << report.dump(2) << '\n';
 }
+void UApplication::ToggleItemLab()
+{
+  if (State != AppState::InGame || !GuiContext || !World)
+    return;
+  if (ItemLabOpen)
+  {
+    ItemLabOpen = false;
+    ItemLabScreen = nullptr;
+    GuiContext->SetScreen(nullptr);
+    SyncCursorVisibility();
+    return;
+  }
+  if (DeathScreenOpen || World->IsPlayerDead())
+    return;
+  if (GameSession)
+    GameSession->CancelDrag();
+  EnterInGameInputState();
+  if (auto *actor = World->GetControlledCreature())
+    UWorldItemSystem::Instance().CancelCharge(*actor);
+  auto screen = std::make_unique<UItemLabScreen>(
+      Core->GetItemDefinitionStorage(), ShaderManager);
+  ItemLabScreen = screen.get();
+  GuiContext->SetScreen(std::move(screen));
+  ItemLabOpen = true;
+  SyncCursorVisibility();
+}
+
+void UApplication::UpdateItemLab(double dt)
+{
+  if (ItemLabOpen && GuiContext->GetScreen() != ItemLabScreen)
+  {
+    ItemLabOpen = false;
+    ItemLabScreen = nullptr;
+  }
+  if (ItemLabOpen)
+  {
+    GuiContext->Update(dt);
+    if (ItemLabScreen->WantsClose())
+      ToggleItemLab();
+  }
+}
+
+void UApplication::RunItemLabQa(const std::string &path)
+{
+  nlohmann::json before;
+  World->GetControlledCreature()->GetInventory().SerializeToJson(before);
+  InputRouter.RouteKey(*this, GLFW_KEY_F8, GLFW_PRESS, GLFW_MOD_CONTROL);
+  if (!ItemLabScreen)
+    throw std::runtime_error("Item Lab did not open");
+  nlohmann::json report = {{"passed", true},
+                           {"checks", nlohmann::json::array()}};
+  auto check = [&](const std::string &name, bool ok)
+  {
+    report["checks"].push_back({{"name", name}, {"passed", ok}});
+    if (!ok)
+      report["passed"] = false;
+  };
+  check("catalog includes every item",
+        ItemLabScreen->GetItemCount() ==
+            Core->GetItemDefinitionStorage()->ListCatalogIds().size());
+  for (const auto &id : Core->GetItemDefinitionStorage()->ListCatalogIds())
+  {
+    ItemLabScreen->SelectItem(id);
+    ItemLabScreen->Update(0);
+    check("published preview " + id, ItemLabScreen->GetPreviewTexture(0) != 0);
+  }
+  ItemLabScreen->SelectItem("bucket");
+  for (int mode = 0; mode < 7; ++mode)
+  {
+    ItemLabScreen->SetMode(mode);
+    ItemLabScreen->Update(0);
+    check("candidate inspection mode " + std::to_string(mode),
+          ItemLabScreen->HasCandidate());
+    check("capture inspection mode " + std::to_string(mode),
+          CapturePlayerWindow(*GuiContext, *ItemLabScreen->GetRoot(),
+                              ItemLabScreen->GetViewportWidth(),
+                              ItemLabScreen->GetViewportHeight(),
+                              std::filesystem::path(path + ".frames") /
+                                  ("mode_" + std::to_string(mode) + ".png")));
+  }
+  auto click = [&](const GuiRect &b)
+  {
+    for (bool pressed : {true, false})
+      InputRouter.RouteMouseButton(*this, GLFW_MOUSE_BUTTON_LEFT, pressed,
+                                   b.X + b.W / 2, b.Y + b.H / 2, 0);
+  };
+  const auto exports =
+      IUPlatformPaths::Current().AssetRoot() / "item_lab_exports";
+  const auto exportReport = exports / "bucket-6.json";
+  std::filesystem::remove(exportReport);
+  for (const auto &suffix : {"-published.png", "-candidate.png"})
+    std::filesystem::remove(exports / (std::string("bucket-6") + suffix));
+  click(ItemLabScreen->GetExportBounds());
+  check("export writes fresh report",
+        std::filesystem::is_regular_file(exportReport));
+  for (const auto &suffix : {"-published.png", "-candidate.png"})
+    check(std::string("export image ") + suffix,
+          std::filesystem::is_regular_file(exports /
+                                           (std::string("bucket-6") + suffix)));
+  const auto revision = UItemDefinitionStorage::ContentRevision();
+  click(ItemLabScreen->GetReloadBounds());
+  ItemLabScreen->Update(0);
+  check("reload invalidates gameplay visual caches",
+        UItemDefinitionStorage::ContentRevision() > revision &&
+            ItemLabScreen->HasCandidate());
+  ItemLabScreen->SetMode(0);
+  const float scale = GuiContext->GetUiScale();
+  const int originalWidth = ItemLabScreen->GetViewportWidth();
+  const int originalHeight = ItemLabScreen->GetViewportHeight();
+  for (auto size : {glm::ivec2(1280, 720), glm::ivec2(1920, 1080)})
+    for (float uiScale : {1.f, 1.5f, 2.f})
+    {
+      GuiContext->ApplyUiScale(uiScale);
+      ItemLabScreen->OnViewportChanged(size.x, size.y);
+      ItemLabScreen->Update(0);
+      const std::string label = std::to_string(size.x) + "x" +
+                                std::to_string(size.y) + "_" +
+                                std::to_string(int(uiScale * 100));
+      check("layout " + label, ItemLabScreen->LayoutValid());
+      check("capture " + label,
+            CapturePlayerWindow(
+                *GuiContext, *ItemLabScreen->GetRoot(), size.x, size.y,
+                std::filesystem::path(path + ".frames") / (label + ".png")));
+    }
+  GuiContext->ApplyUiScale(scale);
+  ItemLabScreen->OnViewportChanged(originalWidth, originalHeight);
+  const auto button = ItemLabScreen->GetModeBounds();
+  InputRouter.RouteMouseButton(*this, GLFW_MOUSE_BUTTON_LEFT, true,
+                               button.X + button.W / 2, button.Y + button.H / 2,
+                               0);
+  InputRouter.RouteMouseButton(*this, GLFW_MOUSE_BUTTON_LEFT, false,
+                               button.X + button.W / 2, button.Y + button.H / 2,
+                               0);
+  check("pointer switches inspection mode", ItemLabScreen->GetMode() == 1);
+  InputRouter.RouteKey(*this, GLFW_KEY_ESCAPE, GLFW_PRESS, 0);
+  check("Escape closes studio",
+        !ItemLabOpen && GuiContext->GetScreen() == nullptr);
+  nlohmann::json after;
+  World->GetControlledCreature()->GetInventory().SerializeToJson(after);
+  check("studio preserves player property", before == after);
+  std::ofstream out(path);
+  out << report.dump(2) << '\n';
+}
+
 void UApplication::RunInventoryIconsQa(const std::string &path)
 {
   const auto originalMode = World->GetGameMode();
@@ -2652,6 +2800,13 @@ void UApplication::RunInventoryIconsQa(const std::string &path)
 }
 void UApplication::UpdateNativeItemsQa(double dt)
 {
+  static bool itemLabQaDone = false;
+  if (!itemLabQaDone && World && World->GetControlledCreature())
+    if (const char *path = std::getenv("CUBA_ITEM_LAB_QA"))
+    {
+      itemLabQaDone = true;
+      RunItemLabQa(path);
+    }
   static bool itemsQaDone = false;
   if (!itemsQaDone && World && World->GetControlledCreature())
     if (const char *path = std::getenv("CUBA_ITEMS_INVENTORY_QA"))
@@ -2961,6 +3116,7 @@ void UApplication::Update(double dt)
   }
   else if (State == AppState::InGame)
   {
+    UpdateItemLab(dt);
     if (HudScreen)
     {
 #ifndef __ANDROID__
@@ -3200,6 +3356,12 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
     return;
   }
 
+  if (ItemLabOpen && ItemLabScreen)
+  {
+    GuiContext->Render(width, height, ViewportInsetLeft, ViewportInsetTop,
+                       ViewportInsetRight, ViewportInsetBottom);
+    return;
+  }
   if (State == AppState::InGame && Geometry && World)
   {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -3444,17 +3606,18 @@ bool UApplication::WantsCaptureKeyboard() const
   {
     return true;
   }
-  return ConsoleOpen || PaletteOpen || WorldGenOpen || CharacterSheetOpen ||
-         SurvivalInventoryOpen || CraftingOpen || AnvilOpen ||
-         DeathScreenOpen || GuiContext->WantsCaptureKeyboard();
+  return ItemLabOpen || ConsoleOpen || PaletteOpen || WorldGenOpen ||
+         CharacterSheetOpen || SurvivalInventoryOpen || CraftingOpen ||
+         AnvilOpen || DeathScreenOpen || GuiContext->WantsCaptureKeyboard();
 }
 
 bool UApplication::AllowsWorldMousePlacement() const
 {
-  return State == AppState::InGame && !ConsoleOpen && !PaletteOpen &&
-         !WorldGenOpen && !CharacterSheetOpen && !SurvivalInventoryOpen &&
-         !CraftingOpen && !AnvilOpen && !DeathScreenOpen &&
-         !HardcoreSpectating && !(World && World->IsHardcoreDead());
+  return State == AppState::InGame && !ItemLabOpen && !ConsoleOpen &&
+         !PaletteOpen && !WorldGenOpen && !CharacterSheetOpen &&
+         !SurvivalInventoryOpen && !CraftingOpen && !AnvilOpen &&
+         !DeathScreenOpen && !HardcoreSpectating &&
+         !(World && World->IsHardcoreDead());
 }
 
 bool UApplication::RouteKey(int key, int Action, int Mods)

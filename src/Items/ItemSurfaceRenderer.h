@@ -16,6 +16,7 @@ struct ItemPresentationProfile
   glm::vec3 LightDirection{-.4f, .8f, .6f};
   glm::vec3 FogColor{.5f};
   float Ambient{.65f}, Fog{0.f};
+  int InspectionMode{0};
 };
 
 /// A shared rendering implementation for item presentations; no creature VAOs

@@ -1,0 +1,70 @@
+{
+  "passed": true,
+  "scope": "Native Item Lab foundation; full redesign remains in progress",
+  "branch": "codex/item-visual-redesign",
+  "published_preview_checks": 70,
+  "lab_checks": 104,
+  "release_ctest_tests": 22,
+  "all_native_regressions_passed": true,
+  "authored_candidates": 12,
+  "new_production_resources": 0,
+  "candidate_modes": [
+    {
+      "mode": 0,
+      "sha256": "ad11c35ba2a3d7532ae54e398c3e91e60ee8394aa36b86d037357994e0a61a27",
+      "colors": 1577
+    },
+    {
+      "mode": 1,
+      "sha256": "02cb0021eac81554b41b7e3ed2f0c21f2bad8a0a418939aee04503668ad1eeca",
+      "colors": 216
+    },
+    {
+      "mode": 2,
+      "sha256": "8f4d822f6c133f59c1c0869fdebdd395e700851729716df18248f4b420e97cf0",
+      "colors": 229
+    },
+    {
+      "mode": 3,
+      "sha256": "1905e05262a2bdce2f9c321278b3eae81b317c20196e82aa89b46a88955f95c4",
+      "colors": 1095
+    },
+    {
+      "mode": 4,
+      "sha256": "75288992103caa8544ce256d2a2e3013a993b3e54fdee140c2399a9885a13f3e",
+      "colors": 460
+    },
+    {
+      "mode": 5,
+      "sha256": "c90a46aa76d69796267ee6bfad41330874ce6f5bf108f659c498db4d4ef1b6cc",
+      "colors": 1522
+    },
+    {
+      "mode": 6,
+      "sha256": "f11af5ba66ccdcf0e9bf2bfc34962e7c424fcad9dbc13616347556122c165d0d",
+      "colors": 2931
+    }
+  ],
+  "performance_acceptance": "not run; flight metrics disabled",
+  "source_sha256": {
+    "shaders/item_surface.frag": "566c27897f5b3105597454ade5965ce420474be0d923ac915fd463299c0ec839",
+    "src/App/Application.cpp": "f288853bc5c094a16892c725636172f76ccc93a9714ce2e05c8cbdf360544363",
+    "src/App/Application.h": "c18fb4dfbfd8ccc6d97d1c720f1d77e6785e00548fb4fb93355d5fc620b3d12e",
+    "src/App/Input/InputRouter.cpp": "89b05ea038d50235f4d90168419859c8d3c2bf205175eb4686fc971848398b0c",
+    "src/Gui/Cache/ItemIconCache.cpp": "3426cbb8c0b85e3be11fe2014007f4017847b98e72ba95ed1408594c59f8b86e",
+    "src/Gui/Cache/ItemIconCache.h": "e1b4ddaa6f4c0f38015112d70e16bad1bab6736b5de43e62ab68131b3d5c9866",
+    "src/Gui/Preview/ItemPreviewRenderer.cpp": "d6b58c9bd3982ba7b099762a6fbe305a9a79289c1297e4f9507a58f7417fa310",
+    "src/Gui/Preview/ItemPreviewRenderer.h": "29147f2bf897aadfa04d1691a9b2243b9ab10fa6af47fdaab8e6e4f468ca17fc",
+    "src/Gui/Screens/ItemLabScreen.cpp": "9b8cb253437cc121028b36f13161435e2abe420e73051621ba7ad110d9587b58",
+    "src/Gui/Screens/ItemLabScreen.h": "c7d1635679298e01d4f3c9246d78934db9f6cb110f08a0cd8dbc3a1b271742ea",
+    "src/Gui/Widgets/GuiListView.cpp": "7083f1eca0fb6a013e5001d8514a17929a36b7f950013dbcfa873422f3e53d2c",
+    "src/Gui/Widgets/GuiListView.h": "356644c3bcf6cb7bd203f35650192e4176c3745d811d7b69607ad33d8372b9fe",
+    "src/Items/ItemDefinitionStorage.h": "d3f11ac9707c9241f5f75688972a3fa4457a28b351fe6349a5b21f2106bcf018",
+    "src/Items/ItemRenderAsset.cpp": "837268a3188adbc77f617b237ac01cfb2be66450cee9899dc542ac112b635315",
+    "src/Items/ItemRenderAsset.h": "393dc9e6fad81f05044678e536dca1aa5991ceffd91e4d7fe70ad39d24753dfa",
+    "src/Items/ItemSurfaceRenderer.cpp": "ddfaca335034f00acd8b3f0e0485e964f24ead6d19af16b259a03a21d875178b",
+    "src/Items/ItemSurfaceRenderer.h": "5e117dffc3cea1a8005f97a8b72e0084d9176f9e7516eaaf6a4038f93f6c85d4",
+    "src/Test/ItemRenderAssetTest.cpp": "2dedebb43d3df81fa7ec2ad6204d3f3fdc8c7ed67fe92b70cbc08ff14db17236",
+    "tools/run_items_acceptance.py": "e5f73e67846c1caa9500bf39ac2a6db2d6b7c19c1d4fe0e8170bb18a53e44aec"
+  }
+}

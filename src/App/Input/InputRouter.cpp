@@ -122,6 +122,20 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
 {
 
   GuiKeyEvent event = MakeGuiKeyEvent(key, action, mods);
+  if (app.State == AppState::InGame && action == GLFW_PRESS &&
+      key == GLFW_KEY_F8 && (mods & GLFW_MOD_CONTROL) != 0)
+  {
+    app.ToggleItemLab();
+    return true;
+  }
+  if (app.ItemLabOpen)
+  {
+    if (action == GLFW_PRESS && key == GLFW_KEY_ESCAPE)
+      app.ToggleItemLab();
+    else
+      app.GuiContext->RouteKey(event);
+    return true;
+  }
   if (key != GLFW_KEY_ESCAPE && app.CharacterSheetOpen &&
       app.CharacterSheetScreen && app.CharacterSheetScreen->IsSearchFocused())
   {
@@ -489,6 +503,11 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
 
 bool UInputRouter::RouteChar(UApplication &app, unsigned int codepoint)
 {
+  if (app.ItemLabOpen)
+  {
+    app.GuiContext->RouteChar(GuiCharEvent{codepoint});
+    return true;
+  }
 
   if (app.State == AppState::InGame && app.ConsoleOpen && app.ConsoleScreen)
   {
@@ -522,6 +541,14 @@ bool UInputRouter::RouteMouseButton(UApplication &app, int button, bool pressed,
                  : button == GLFW_MOUSE_BUTTON_MIDDLE ? GuiMouseButton::Middle
                                                       : GuiMouseButton::Left;
   event.Pressed = pressed;
+  if (app.ItemLabOpen)
+  {
+    if (pressed)
+      app.GuiContext->RouteMouseDown(event);
+    else
+      app.GuiContext->RouteMouseUp(event);
+    return true;
+  }
 #ifndef __ANDROID__
   if (app.Window &&
       (glfwGetKey(app.Window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
@@ -602,6 +629,11 @@ bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y,
   event.X = x;
   event.Y = y;
   event.PointerId = pointer_id;
+  if (app.ItemLabOpen)
+  {
+    app.GuiContext->RouteMouseMove(event);
+    return true;
+  }
   if (app.State == AppState::InGame && app.HudScreen)
   {
     app.HudScreen->SetPointerPosition(x, y);
@@ -752,6 +784,12 @@ bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y,
 bool UInputRouter::RouteScroll(UApplication &app, double xoffset,
                                double yoffset, int mouse_x, int mouse_y)
 {
+  if (app.ItemLabOpen)
+  {
+    app.GuiContext->RouteScroll(GuiScrollEvent{xoffset, yoffset}, mouse_x,
+                                mouse_y);
+    return true;
+  }
 
   if (app.State == AppState::InGame)
   {

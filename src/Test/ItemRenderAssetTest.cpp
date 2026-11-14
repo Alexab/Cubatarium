@@ -183,6 +183,22 @@ int main()
     bad = g;
     bad["meshes"][0]["primitives"][0]["attributes"].erase("NORMAL");
     rejected(bad);
+    const auto legacy = cutum::LoadItemRenderAsset(folder / "model.gltf", true);
+    Expect(legacy->Primitives[0].Vertices[7] == 1.f,
+           "legacy inspection computes normals without relaxing production "
+           "loading");
+    bad["extras"]["design_version"] = 3;
+    write(bad);
+    bool rejectedPreview = false;
+    try
+    {
+      cutum::LoadItemRenderAsset(folder / "model.gltf", true);
+    }
+    catch (const std::exception &)
+    {
+      rejectedPreview = true;
+    }
+    Expect(rejectedPreview, "inspection must not mask missing v3 normals");
     bad = g;
     bad["accessors"][3]["count"] = 2;
     rejected(bad);

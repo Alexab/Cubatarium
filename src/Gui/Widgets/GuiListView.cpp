@@ -62,6 +62,8 @@ void UGuiListView::ApplyMinimumBounds()
 
 void UGuiListView::SetBounds(const GuiRect &bounds)
 {
+  RowHeight =
+      Theme ? Theme->FontSizeBody + std::max(4, Theme->Padding / 2) : 20;
   GuiRect b = bounds;
   const int minH = MinHeight();
   if (b.H < minH)

@@ -57,7 +57,8 @@ struct ItemRenderAsset
 /// Strict static item glTF subset. Throws with an actionable reason; callers
 /// must not silently replace a malformed production asset with a cube.
 std::shared_ptr<ItemRenderAsset>
-LoadItemRenderAsset(const std::filesystem::path &path);
+LoadItemRenderAsset(const std::filesystem::path &path,
+                    bool legacyPreviewNormals = false);
 std::shared_ptr<const ItemRenderAsset>
 FindItemSurfaceAsset(const std::filesystem::path &path, uint64_t revision = 0);
 void ClearItemSurfaceAssets();

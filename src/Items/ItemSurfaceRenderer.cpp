@@ -71,6 +71,13 @@ void ItemSurfaceRenderer::Draw(
   }
   Shader->Use();
   Shader->SetInt("uAlbedo", 0);
+  Shader->SetInt("uInspectionMode", profile.InspectionMode);
+#if !defined(__ANDROID__)
+  GLint polygonMode[2];
+  glGetIntegerv(GL_POLYGON_MODE, polygonMode);
+  if (profile.InspectionMode == 6)
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+#endif
   Shader->SetVec3("uCamera", profile.CameraPosition);
   Shader->SetVec3("uLightDirection", profile.LightDirection);
   Shader->SetFloat("uAmbient", profile.Ambient);
@@ -105,6 +112,10 @@ void ItemSurfaceRenderer::Draw(
                    GL_UNSIGNED_INT, nullptr);
   }
   glBindVertexArray(0);
+#if !defined(__ANDROID__)
+  if (profile.InspectionMode == 6)
+    glPolygonMode(GL_FRONT_AND_BACK, polygonMode[0]);
+#endif
   Shader->Unuse();
 }
 } // namespace cutum

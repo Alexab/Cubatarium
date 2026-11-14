@@ -1,6 +1,7 @@
 #ifndef ITEM_PREVIEW_RENDERER_H
 #define ITEM_PREVIEW_RENDERER_H
 
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -33,6 +34,12 @@ public:
   /// Renders to an owned texture (caller must keep/delete it).
   GLuint RenderToUniqueTexture(const std::string &itemId, int size,
                                float yawDeg, float pitchDeg);
+  std::shared_ptr<const struct ItemRenderAsset>
+  GetInspectionAsset(const std::filesystem::path &path);
+  GLuint RenderInspectionTexture(const std::string &itemId,
+                                 const std::filesystem::path &path, int size,
+                                 float yaw, float pitch, int mode,
+                                 float ambient);
 
 private:
   struct Part
@@ -59,6 +66,9 @@ private:
                         const glm::mat4 &projection, const glm::mat4 &view);
 
   std::vector<Part> FallbackParts(const std::string &itemId) const;
+  bool DrawGltfPath(const std::string &itemId,
+                    const std::filesystem::path &path,
+                    const glm::mat4 &projection, const glm::mat4 &view);
 
   glm::mat4 OrbitView(float yawDeg, float pitchDeg, float distance) const;
 
@@ -67,6 +77,12 @@ private:
 
   std::shared_ptr<class UShaderProgram> Shader;
   std::unique_ptr<class ItemSurfaceRenderer> SurfaceRenderer;
+  std::shared_ptr<const struct ItemRenderAsset> InspectionAsset;
+  std::filesystem::path InspectionPath;
+  int InspectionMode{0};
+  float InspectionAmbient{.65f};
+  std::unordered_map<std::string, std::shared_ptr<const ItemRenderAsset>>
+      InspectionAssets;
 
   GLuint CubeVao{0};
   GLuint CubeVbo{0};

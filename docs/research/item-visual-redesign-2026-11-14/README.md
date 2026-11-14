@@ -148,6 +148,58 @@ need gameplay-driven node poses, and containers need visible fill. Item Lab,
 world/TP/armor/carry integration, author glTF import, versioned publication,
 the remaining 58 designs and comparative performance gates are still required.
 
+## Native Item Lab checkpoint
+
+The read-only orbit comparison studio opens with **Ctrl+F8**, preserving the
+existing F8 weather action. It lists all 70 item IDs and renders published and
+staged resources side by side with synchronized rotation. Seven actual-mesh
+modes are available: lit, silhouette, gray material, albedo, UV checker, normals
+and wireframe. Ambient-light presets, triangle/vertex/material costs, explicit
+missing-candidate messages, PNG/JSON export and resource reload are implemented.
+The studio does not equip items, consume stacks or write player property.
+
+Reload clears inspection geometry and GPU resources, surface/texture caches and
+notifies game item caches through the item content revision. Icon warmup drops
+stale entries and bypasses the previous disk images after invalidation. Strict
+production validation remains intact: computed normals are permitted only for
+legacy inspection, never for a declared v3 candidate. The loader regression
+covers both cases. Failed loads clear the previous image instead of displaying
+a stale successful selection.
+
+Native inspection found overlapping list text at 200% scale. List row height
+now follows the scaled theme during layout; the native layout audit checks it
+in addition to widget bounds. All six 1280x720 / 1920x1080 and 100/150/200%
+combinations were captured; the limiting 1280x720 / 200% case was visually inspected.
+The final studio run passes **104 checks**, including all 70 published previews,
+seven candidate modes, captures, real routed pointer switching, export, reload,
+closing and unchanged serialized inventory. The seven candidate preview crops
+have distinct pixel hashes; both exported images are 512x512.
+
+The general acceptance runner now stages all authored candidates and requires
+the studio report alongside the existing native reports. The full regression
+passes **22 Release CTest tests**, **202 icon checks**, 51 gameplay checks,
+57 ownership checks, 18 ownership UI checks and seven player-window checks.
+After the final label sizing adjustment, the 104-check studio run was repeated
+on the rebuilt Release executable. Style, include and clang-format checks pass.
+
+![Native studio at 100%](item-lab-checkpoint/1280x720_100.png)
+![Native studio at 200%](item-lab-checkpoint/1280x720_200.png)
+![True gray geometry comparison](item-lab-checkpoint/mode_2.png)
+
+Evidence: [summary and source hashes](item-lab-checkpoint/summary.json),
+[full native regression](item-lab-checkpoint/native-result.json),
+[final studio checks](item-lab-checkpoint/lab-final.json),
+[Release tests](item-lab-checkpoint/ctest-release.log),
+[Release build](item-lab-checkpoint/desktop-release.log),
+[studio authoring guide](../../../tools/item_designs/ITEM_LAB.md).
+
+This is an initial studio, not completion of the visual plan: twelve authored
+candidates exist and **zero production models have been replaced**. FP/TP/ground
+and both-body armor lab scenes, gameplay-state controls, contact/bounds overlays,
+small-icon inspection, author glTF import, publication, the remaining 58 designs
+and comparative performance acceptance are still required. Flight metrics were
+disabled for these correctness runs; no p95 or memory-budget claim is made.
+
 ## Remaining implementation, in order
 
 1. Native baseline and actual resource-path trace, before/after references and

@@ -1,8 +1,8 @@
 #ifndef GUI_LIST_VIEW_H
 #define GUI_LIST_VIEW_H
 
-#include "Gui/Widgets/GuiWidget.h"
 #include "Gui/Core/GuiScrollbarController.h"
+#include "Gui/Widgets/GuiWidget.h"
 #include <functional>
 #include <string>
 #include <vector>
@@ -20,6 +20,7 @@ public:
   void SetItems(std::vector<std::string> items);
   void SetSelectedIndex(int index);
   int GetSelectedIndex() const { return SelectedIndex; }
+  int GetRowHeight() const { return RowHeight; }
   void SetOnSelectionChanged(std::function<void(int)> handler);
   void SetAcceptKeyNavigation(bool enabled) { AcceptKeyNavigation = enabled; }
   void SetVisibleRowCount(int rows);

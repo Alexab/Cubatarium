@@ -1,0 +1,23 @@
+check_include_rules: ok (World/Mesh adapter exempt; 38 allowlisted legacy include(s); reverse Render->World streaming/lighting edges=42)
+check_include_rules: reverse inventory (burn-down targets):
+  src/Render/Blocks/BlockBreakFxPass.cpp:6: #include "World/Core/World.h"
+  src/Render/Camera/Camera.cpp:10: #include "World/Core/World.h"
+  src/Render/Camera/Camera.cpp:11: #include "World/Streaming/PhysicsStepPolicy.h"
+  src/Render/Camera/WorldCameraSweep.h:3: #include "World/Core/World.h"
+  src/Render/Effects/InfluenceFxSystem.cpp:3: #include "World/Core/World.h"
+  src/Render/Engine/CreatureDrawPass.cpp:28: #include "World/Core/World.h"
+  src/Render/Engine/CreatureDrawPass.cpp:30: #include "World/Lighting/LightUtil.h"
+  src/Render/Engine/FluidSurfaceMap.cpp:4: #include "World/Streaming/OceanCruisePolicy.h"
+  src/Render/Engine/GeometryEngine.cpp:52: #include "World/Core/World.h"
+  src/Render/Engine/GeometryEngine.cpp:57: #include "World/Lighting/IULightingPipeline.h"
+  src/Render/Engine/GeometryEngine.cpp:58: #include "World/Lighting/LightUtil.h"
+  src/Render/Engine/GeometryEngine.cpp:64: #include "World/Streaming/ChunkRenderDemand.h"
+  src/Render/Engine/GeometryEngine.cpp:65: #include "World/Streaming/ColumnFlowExecutor.h"
+  src/Render/Engine/GeometryEngine.cpp:66: #include "World/Streaming/VisualObligationPolicy.h"
+  src/Render/Engine/GreedyGpuPublication.cpp:7: #include "World/Streaming/ChunkRenderDemand.h"
+  src/Render/Engine/HorizonFogColor.h:4: #include "World/Core/World.h"
+  src/Render/Engine/SkyGradientPass.h:4: #include "World/Core/World.h"
+  src/Render/Engine/UnderwaterFogPass.cpp:10: #include "World/Core/World.h"
+  src/Render/Engine/UnderwaterFogPass.cpp:15: #include "World/Streaming/OceanCruisePolicy.h"
+  src/Render/Mesh/AsyncMeshBuilder.cpp:14: #include "World/Streaming/ChunkRenderDemand.h"
+  ... +22 more

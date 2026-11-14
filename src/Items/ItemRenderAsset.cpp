@@ -142,7 +142,8 @@ glm::mat4 LocalMatrix(const Json &node)
 } // namespace
 
 std::shared_ptr<ItemRenderAsset>
-LoadItemRenderAsset(const std::filesystem::path &path)
+LoadItemRenderAsset(const std::filesystem::path &path,
+                    bool legacyPreviewNormals)
 {
   Reader reader;
   std::ifstream in(path);
@@ -244,7 +245,44 @@ LoadItemRenderAsset(const std::filesystem::path &path)
                 "only static triangles are supported");
         const auto &attrs = p.at("attributes");
         const auto positions = reader.Read(attrs.at("POSITION"), "VEC3");
-        const auto normals = reader.Read(attrs.at("NORMAL"), "VEC3");
+        const auto indices = reader.Read(p.at("indices"), "SCALAR");
+        Require(indices.size() % 3 == 0, "triangle indices must be triples");
+        for (double index : indices)
+          Require(index >= 0 && index < positions.size() / 3 &&
+                      std::floor(index) == index,
+                  "index outside vertex buffer");
+        std::vector<double> normals;
+        if (attrs.contains("NORMAL"))
+          normals = reader.Read(attrs.at("NORMAL"), "VEC3");
+        else
+        {
+          Require(legacyPreviewNormals &&
+                      g.value("extras", Json::object())
+                              .value("design_version", 0) != 3,
+                  "item requires authored normals");
+          std::vector<glm::vec3> sums(positions.size() / 3, glm::vec3(0));
+          auto point = [&](size_t i)
+          {
+            return glm::vec3(positions[i * 3], positions[i * 3 + 1],
+                             positions[i * 3 + 2]);
+          };
+          for (size_t i = 0; i < indices.size(); i += 3)
+          {
+            const auto a = size_t(indices[i]), b = size_t(indices[i + 1]),
+                       c = size_t(indices[i + 2]);
+            const auto n = glm::cross(point(b) - point(a), point(c) - point(a));
+            sums[a] += n;
+            sums[b] += n;
+            sums[c] += n;
+          }
+          for (const auto &n : sums)
+          {
+            Require(glm::length(n) > 1e-8f,
+                    "legacy preview has degenerate normals");
+            const auto unit = glm::normalize(n);
+            normals.insert(normals.end(), {unit.x, unit.y, unit.z});
+          }
+        }
         const auto uv = reader.Read(attrs.at("TEXCOORD_0"), "VEC2");
         Require(normals.size() == positions.size() &&
                     uv.size() / 2 == positions.size() / 3,
@@ -270,7 +308,6 @@ LoadItemRenderAsset(const std::filesystem::path &path)
                                      float(uv[i * 2]), float(uv[i * 2 + 1]),
                                      normal.x, normal.y, normal.z});
         }
-        const auto indices = reader.Read(p.at("indices"), "SCALAR");
         Require(indices.size() % 3 == 0, "triangle indices must be triples");
         for (double value : indices)
         {

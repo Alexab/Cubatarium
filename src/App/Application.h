@@ -59,6 +59,7 @@ class UCreaturePreviewRenderer;
 class UFpViewmodelRenderer;
 enum class FpSwingKind : uint8_t;
 class UMainMenuScreen;
+class UItemLabScreen;
 class UWorldResourcePacksScreen;
 
 enum class MenuSubview
@@ -109,10 +110,13 @@ public:
 
   void Update(double dt);
   void UpdateNativeItemsQa(double dt);
+  void UpdateItemLab(double dt);
   void OpenPlayerWindow(int section);
   UGuiWidget *GetPlayerWindowRoot();
   void RunPlayerWindowQa(const std::string &path);
   void RunInventoryIconsQa(const std::string &path);
+  void ToggleItemLab();
+  void RunItemLabQa(const std::string &path);
   void ShowInteractionMessage(const std::string &message, float seconds = 2.f);
 
   void ProcessInput();
@@ -319,6 +323,8 @@ private:
   std::unique_ptr<UCharacterSheetScreen> CharacterSheetScreen;
   std::unique_ptr<UPlayerWindowScreen> PlayerWindowScreen;
   std::unique_ptr<UWorldGenPaletteScreen> WorldGenScreen;
+  UItemLabScreen *ItemLabScreen{nullptr}; // Owned by GuiContext while active.
+  bool ItemLabOpen{false};
   std::unique_ptr<IUGuiClipboard> Clipboard;
   std::unique_ptr<UGuiPopupMenu> OverlayPopup;
 

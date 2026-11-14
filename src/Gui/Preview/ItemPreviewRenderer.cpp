@@ -150,6 +150,7 @@ void UItemPreviewRenderer::Shutdown()
 
 void UItemPreviewRenderer::Invalidate()
 {
+  InspectionAssets.clear();
   if (SurfaceRenderer)
     SurfaceRenderer->Clear();
   if (DepthRbo != 0)
@@ -524,8 +525,19 @@ bool UItemPreviewRenderer::TryDrawGltfModel(const std::string &itemId,
   }
 
   const std::filesystem::path absPath = paths->AssetRoot() / gltfRel;
-  if (const auto surface = FindItemSurfaceAsset(
-          absPath, UItemDefinitionStorage::ContentRevision()))
+  return DrawGltfPath(itemId, absPath, projection, view);
+}
+
+bool UItemPreviewRenderer::DrawGltfPath(const std::string &itemId,
+                                        const std::filesystem::path &absPath,
+                                        const glm::mat4 &projection,
+                                        const glm::mat4 &view)
+{
+  if (const auto surface =
+          InspectionAsset
+              ? InspectionAsset
+              : FindItemSurfaceAsset(absPath,
+                                     UItemDefinitionStorage::ContentRevision()))
   {
     const auto center = (surface->Low + surface->High) * .5f;
     const auto extent = surface->High - surface->Low;
@@ -541,6 +553,8 @@ bool UItemPreviewRenderer::TryDrawGltfModel(const std::string &itemId,
     const auto model = glm::scale(glm::mat4(1), glm::vec3(scale)) * rotation *
                        glm::translate(glm::mat4(1), -center);
     ItemPresentationProfile profile;
+    profile.InspectionMode = InspectionMode;
+    profile.Ambient = InspectionAmbient;
     profile.CameraPosition = glm::vec3(glm::inverse(view)[3]);
     SurfaceRenderer->Draw(surface, absPath, projection * view, model, {},
                           profile);
@@ -554,7 +568,7 @@ bool UItemPreviewRenderer::TryDrawGltfModel(const std::string &itemId,
     if (gItemModelMissingLogged.insert(itemId + "|gltf").second)
     {
       std::cerr << "ItemPreviewRenderer: failed to load glTF for item="
-                << itemId << " path=" << gltfRel << '\n';
+                << itemId << " path=" << absPath << '\n';
     }
     return false;
   }
@@ -746,7 +760,10 @@ GLuint UItemPreviewRenderer::RenderToUniqueTexture(const std::string &itemId,
   glEnable(GL_DEPTH_TEST);
   glDepthMask(GL_TRUE);
   glDisable(GL_CULL_FACE);
-  glClearColor(0.12f, 0.12f, 0.14f, 1.0f);
+  if (InspectionMode == 1)
+    glClearColor(.95f, .95f, .95f, 1.f);
+  else
+    glClearColor(0.12f, 0.12f, 0.14f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   const glm::mat4 projection =
@@ -761,7 +778,8 @@ GLuint UItemPreviewRenderer::RenderToUniqueTexture(const std::string &itemId,
   }
 
   // Prefer static glTF when present, then parts[] cubes, then procedural.
-  if (TryDrawGltfModel(itemId, modelRel, projection, view))
+  if (InspectionAsset ? DrawGltfPath(itemId, InspectionPath, projection, view)
+                      : TryDrawGltfModel(itemId, modelRel, projection, view))
   {
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                            ColorTex, 0);
@@ -836,4 +854,38 @@ GLuint UItemPreviewRenderer::RenderToUniqueTexture(const std::string &itemId,
   return tex;
 }
 
+std::shared_ptr<const ItemRenderAsset>
+UItemPreviewRenderer::GetInspectionAsset(const std::filesystem::path &path)
+{
+  const auto key = std::filesystem::weakly_canonical(path).generic_string();
+  auto &asset = InspectionAssets[key];
+  if (!asset)
+    asset = LoadItemRenderAsset(path, true);
+  return asset;
+}
+
+GLuint UItemPreviewRenderer::RenderInspectionTexture(
+    const std::string &itemId, const std::filesystem::path &path, int size,
+    float yaw, float pitch, int mode, float ambient)
+{
+  InspectionAsset = GetInspectionAsset(path);
+  InspectionPath = path;
+  InspectionMode = std::clamp(mode, 0, 6);
+  InspectionAmbient = std::clamp(ambient, 0.f, 1.f);
+  try
+  {
+    const auto texture = RenderToUniqueTexture(itemId, size, yaw, pitch);
+    InspectionAsset.reset();
+    InspectionMode = 0;
+    InspectionAmbient = .65f;
+    return texture;
+  }
+  catch (...)
+  {
+    InspectionAsset.reset();
+    InspectionMode = 0;
+    InspectionAmbient = .65f;
+    throw;
+  }
+}
 } // namespace cutum

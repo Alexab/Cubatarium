@@ -1,0 +1,4112 @@
+{
+  "passed": true,
+  "reports": {
+    "gameplay": {
+      "checks": [
+        {
+          "name": "take exact worn instance for throw",
+          "passed": true
+        },
+        {
+          "name": "release charged item",
+          "passed": true
+        },
+        {
+          "name": "flight and save retain identity and durability",
+          "passed": true
+        },
+        {
+          "name": "wall CCD stops thrown tool",
+          "passed": true
+        },
+        {
+          "name": "grab a small creature",
+          "passed": true
+        },
+        {
+          "name": "held save retains creature ID and possessions",
+          "passed": true
+        },
+        {
+          "name": "hard impact damages thrown creature",
+          "passed": true
+        },
+        {
+          "name": "AI ownership restored after impact",
+          "passed": true
+        },
+        {
+          "name": "creature projectile damages both participants",
+          "passed": true
+        },
+        {
+          "name": "mutually lethal impact handles both creatures",
+          "passed": true
+        },
+        {
+          "name": "resting lethal contact creates no repeated drops",
+          "passed": true
+        },
+        {
+          "name": "two-hand creature grab",
+          "passed": true
+        },
+        {
+          "name": "looking down keeps a ground-obstructed creature held",
+          "passed": true
+        },
+        {
+          "name": "raising aim lifts a grounded creature without releasing it",
+          "passed": true
+        },
+        {
+          "name": "turning aim retains the creature without floor penetration",
+          "passed": true
+        },
+        {
+          "name": "ceiling restricts held cargo without dropping or penetrating it",
+          "passed": true
+        },
+        {
+          "name": "gentle placement does no contact damage",
+          "passed": true
+        },
+        {
+          "name": "eligible hostile creature can be grabbed",
+          "passed": true
+        },
+        {
+          "name": "creature resistance releases ownership",
+          "passed": true
+        },
+        {
+          "name": "possession of held creature restores movement without duplication",
+          "passed": true
+        },
+        {
+          "name": "carrier death releases creature and returns AI ownership",
+          "passed": true
+        },
+        {
+          "name": "grab requires direct line of sight",
+          "passed": true
+        },
+        {
+          "name": "unloaded collision region pauses bodies without losing state",
+          "passed": true
+        },
+        {
+          "name": "oversized or heavy creature is refused without damage",
+          "passed": true
+        },
+        {
+          "name": "bow fires flying arrow",
+          "passed": true
+        },
+        {
+          "name": "arrow stops at wall",
+          "passed": true
+        },
+        {
+          "name": "bootstrap wood to sticks and wooden tool",
+          "passed": true
+        },
+        {
+          "name": "missing furnace fails atomically",
+          "passed": true
+        },
+        {
+          "name": "smelting converts raw ore and fuel",
+          "passed": true
+        },
+        {
+          "name": "hoe tills soil",
+          "passed": true
+        },
+        {
+          "name": "watered planted grain reaches maturity",
+          "passed": true
+        },
+        {
+          "name": "crop persistence round trip",
+          "passed": true
+        },
+        {
+          "name": "occupied shield does not protect against melee",
+          "passed": true
+        },
+        {
+          "name": "physical impacts respect the target's frontal shield arc",
+          "passed": true
+        },
+        {
+          "name": "moving target is struck by an arrow",
+          "passed": true
+        },
+        {
+          "name": "bucket collects water and gains mass",
+          "passed": true
+        },
+        {
+          "name": "full bucket refuses another source atomically",
+          "passed": true
+        },
+        {
+          "name": "bucket pours without losing its instance",
+          "passed": true
+        },
+        {
+          "name": "empty waterskin cannot restore thirst",
+          "passed": true
+        },
+        {
+          "name": "drink consumes finite water, preserves container",
+          "passed": true
+        },
+        {
+          "name": "water damps a physical body's fall",
+          "passed": true
+        },
+        {
+          "name": "body budget retains all property",
+          "passed": true
+        },
+        {
+          "name": "budget overflow is serialized without silent deletion",
+          "passed": true
+        },
+        {
+          "name": "missing carrier safely releases cargo and frees hands",
+          "passed": true
+        },
+        {
+          "name": "switching worn instances cancels dig without wear",
+          "passed": true
+        },
+        {
+          "name": "completed dig wears the exact source instance",
+          "passed": true
+        },
+        {
+          "name": "failed dig spends no durability",
+          "passed": true
+        },
+        {
+          "name": "native trajectory stable at 30/60/144 FPS",
+          "passed": true
+        },
+        {
+          "name": "long frame keeps a swept body and its exact instance",
+          "passed": true
+        },
+        {
+          "name": "empty-inventory survival integration",
+          "passed": true
+        },
+        {
+          "name": "effective status attributes change real dig capability without mutating base stats",
+          "passed": true
+        }
+      ],
+      "frame_rates": [
+        {
+          "fps": 30,
+          "position": [
+            -32.0,
+            70.91500091552734,
+            43.57063293457031
+          ]
+        },
+        {
+          "fps": 60,
+          "position": [
+            -32.0,
+            70.91507720947266,
+            43.57063293457031
+          ]
+        },
+        {
+          "fps": 144,
+          "position": [
+            -32.0,
+            70.91507720947266,
+            43.57063293457031
+          ]
+        }
+      ],
+      "passed": true,
+      "physics_512_active_bodies_60_steps_ms": 174.7225,
+      "physics_64_bodies_60_steps_ms": 22.6342,
+      "survival_loop": {
+        "crop_before_harvest": "cu_crop_ripe",
+        "passed": true,
+        "plant_reason": "Seeds planted",
+        "steps": [
+          {
+            "name": "empty inventory gathers natural wood by hand",
+            "passed": true
+          },
+          {
+            "name": "hand recipes produce sticks, wooden pick and workbench",
+            "passed": true
+          },
+          {
+            "name": "workbench placed through resource-consuming placement",
+            "passed": true
+          },
+          {
+            "name": "wooden pick mines stone; furnace and stone pick crafted",
+            "passed": true
+          },
+          {
+            "name": "furnace placed from its actual slot",
+            "passed": true
+          },
+          {
+            "name": "stone pick obtains ore and fuel",
+            "passed": true
+          },
+          {
+            "name": "ore and coal smelt into iron; upgrade pick",
+            "passed": true
+          },
+          {
+            "name": "iron pick supplies the complete iron baseline",
+            "passed": true
+          },
+          {
+            "name": "vegetation supplies seed and fiber; cord is craftable",
+            "passed": true
+          },
+          {
+            "name": "five iron tools and four armor slots craftable",
+            "passed": true
+          },
+          {
+            "name": "utilities, shield, anvil and bow use real resources",
+            "passed": true
+          },
+          {
+            "name": "anvil placement",
+            "passed": true
+          },
+          {
+            "name": "tilled, watered crop matures and is harvested",
+            "passed": true
+          },
+          {
+            "name": "harvest and fuel bake edible bread",
+            "passed": true
+          },
+          {
+            "name": "cooked harvest restores survival nutrition",
+            "passed": true
+          }
+        ],
+        "till_reason": "Used Iron Hoe"
+      }
+    },
+    "window": {
+      "active_row_hand_drag": true,
+      "layouts": [
+        {
+          "controls": 43,
+          "height": 720,
+          "passed": true,
+          "scale": 1.0,
+          "section": 0,
+          "width": 1280
+        },
+        {
+          "controls": 49,
+          "height": 720,
+          "passed": true,
+          "scale": 1.0,
+          "section": 1,
+          "width": 1280
+        },
+        {
+          "controls": 0,
+          "height": 720,
+          "passed": true,
+          "scale": 1.0,
+          "section": 2,
+          "width": 1280
+        },
+        {
+          "controls": 6,
+          "height": 720,
+          "passed": true,
+          "scale": 1.0,
+          "section": 3,
+          "width": 1280
+        },
+        {
+          "controls": 43,
+          "height": 720,
+          "passed": true,
+          "scale": 1.5,
+          "section": 0,
+          "width": 1280
+        },
+        {
+          "controls": 49,
+          "height": 720,
+          "passed": true,
+          "scale": 1.5,
+          "section": 1,
+          "width": 1280
+        },
+        {
+          "controls": 0,
+          "height": 720,
+          "passed": true,
+          "scale": 1.5,
+          "section": 2,
+          "width": 1280
+        },
+        {
+          "controls": 6,
+          "height": 720,
+          "passed": true,
+          "scale": 1.5,
+          "section": 3,
+          "width": 1280
+        },
+        {
+          "controls": 43,
+          "height": 720,
+          "passed": true,
+          "scale": 2.0,
+          "section": 0,
+          "width": 1280
+        },
+        {
+          "controls": 49,
+          "height": 720,
+          "passed": true,
+          "scale": 2.0,
+          "section": 1,
+          "width": 1280
+        },
+        {
+          "controls": 0,
+          "height": 720,
+          "passed": true,
+          "scale": 2.0,
+          "section": 2,
+          "width": 1280
+        },
+        {
+          "controls": 6,
+          "height": 720,
+          "passed": true,
+          "scale": 2.0,
+          "section": 3,
+          "width": 1280
+        },
+        {
+          "controls": 43,
+          "height": 1080,
+          "passed": true,
+          "scale": 1.0,
+          "section": 0,
+          "width": 1920
+        },
+        {
+          "controls": 49,
+          "height": 1080,
+          "passed": true,
+          "scale": 1.0,
+          "section": 1,
+          "width": 1920
+        },
+        {
+          "controls": 0,
+          "height": 1080,
+          "passed": true,
+          "scale": 1.0,
+          "section": 2,
+          "width": 1920
+        },
+        {
+          "controls": 6,
+          "height": 1080,
+          "passed": true,
+          "scale": 1.0,
+          "section": 3,
+          "width": 1920
+        },
+        {
+          "controls": 43,
+          "height": 1080,
+          "passed": true,
+          "scale": 1.5,
+          "section": 0,
+          "width": 1920
+        },
+        {
+          "controls": 49,
+          "height": 1080,
+          "passed": true,
+          "scale": 1.5,
+          "section": 1,
+          "width": 1920
+        },
+        {
+          "controls": 0,
+          "height": 1080,
+          "passed": true,
+          "scale": 1.5,
+          "section": 2,
+          "width": 1920
+        },
+        {
+          "controls": 6,
+          "height": 1080,
+          "passed": true,
+          "scale": 1.5,
+          "section": 3,
+          "width": 1920
+        },
+        {
+          "controls": 43,
+          "height": 1080,
+          "passed": true,
+          "scale": 2.0,
+          "section": 0,
+          "width": 1920
+        },
+        {
+          "controls": 49,
+          "height": 1080,
+          "passed": true,
+          "scale": 2.0,
+          "section": 1,
+          "width": 1920
+        },
+        {
+          "controls": 0,
+          "height": 1080,
+          "passed": true,
+          "scale": 2.0,
+          "section": 2,
+          "width": 1920
+        },
+        {
+          "controls": 6,
+          "height": 1080,
+          "passed": true,
+          "scale": 2.0,
+          "section": 3,
+          "width": 1920
+        }
+      ],
+      "passed": true
+    },
+    "ownership": {
+      "checks": [
+        {
+          "name": "creative instant mining produces finite pickup beside catalog reference",
+          "passed": true
+        },
+        {
+          "name": "mode change preserves independent survival inventory",
+          "passed": true
+        },
+        {
+          "name": "creative mined stock survives mode roundtrip",
+          "passed": true
+        },
+        {
+          "name": "stateful catalog bucket becomes one finite filled instance",
+          "passed": true
+        },
+        {
+          "name": "legacy creative copies migrate to v2 domains without deletion",
+          "passed": true
+        },
+        {
+          "name": "survival cannot pick a creative world drop after load",
+          "passed": true
+        },
+        {
+          "name": "creative picks a finite world drop",
+          "passed": true
+        },
+        {
+          "name": "survival drop remains visible without immediate repickup",
+          "passed": true
+        },
+        {
+          "name": "drop pickup retains finite identity and wear",
+          "passed": true
+        },
+        {
+          "name": "creative drop remains visible without immediate repickup",
+          "passed": true
+        },
+        {
+          "name": "drop pickup retains finite identity and wear",
+          "passed": true
+        },
+        {
+          "name": "restricted throw refuses sword before extraction",
+          "passed": true
+        },
+        {
+          "name": "free policy starts sword windup",
+          "passed": true
+        },
+        {
+          "name": "release rechecks policy before the next physics step",
+          "passed": true
+        },
+        {
+          "name": "policy change cancels windup but retains held item",
+          "passed": true
+        },
+        {
+          "name": "held item cannot bypass restricted policy",
+          "passed": true
+        },
+        {
+          "name": "restricted item can be gently placed",
+          "passed": true
+        },
+        {
+          "name": "survival iron_sword miss preserves payload",
+          "passed": true
+        },
+        {
+          "name": "survival iron_sword hit preserves payload",
+          "passed": true
+        },
+        {
+          "name": "survival iron_shovel miss preserves payload",
+          "passed": true
+        },
+        {
+          "name": "survival iron_shovel hit preserves payload",
+          "passed": true
+        },
+        {
+          "name": "survival apple miss preserves payload",
+          "passed": true
+        },
+        {
+          "name": "survival apple hit preserves payload",
+          "passed": true
+        },
+        {
+          "name": "survival iron_ingot miss preserves payload",
+          "passed": true
+        },
+        {
+          "name": "survival iron_ingot hit preserves payload",
+          "passed": true
+        },
+        {
+          "name": "survival stone miss preserves payload",
+          "passed": true
+        },
+        {
+          "name": "survival missed block pickup increments backpack",
+          "passed": true
+        },
+        {
+          "name": "survival stone hit preserves payload",
+          "passed": true
+        },
+        {
+          "name": "survival hit block pickup increments backpack",
+          "passed": true
+        },
+        {
+          "name": "survival bucket miss preserves payload",
+          "passed": true
+        },
+        {
+          "name": "survival bucket hit preserves payload",
+          "passed": true
+        },
+        {
+          "name": "creative iron_sword miss preserves payload",
+          "passed": true
+        },
+        {
+          "name": "creative iron_sword hit preserves payload",
+          "passed": true
+        },
+        {
+          "name": "creative iron_shovel miss preserves payload",
+          "passed": true
+        },
+        {
+          "name": "creative iron_shovel hit preserves payload",
+          "passed": true
+        },
+        {
+          "name": "creative apple miss preserves payload",
+          "passed": true
+        },
+        {
+          "name": "creative apple hit preserves payload",
+          "passed": true
+        },
+        {
+          "name": "creative iron_ingot miss preserves payload",
+          "passed": true
+        },
+        {
+          "name": "creative iron_ingot hit preserves payload",
+          "passed": true
+        },
+        {
+          "name": "creative stone miss preserves payload",
+          "passed": true
+        },
+        {
+          "name": "creative missed block pickup increments backpack",
+          "passed": true
+        },
+        {
+          "name": "creative stone hit preserves payload",
+          "passed": true
+        },
+        {
+          "name": "creative hit block pickup increments backpack",
+          "passed": true
+        },
+        {
+          "name": "creative bucket miss preserves payload",
+          "passed": true
+        },
+        {
+          "name": "creative bucket hit preserves payload",
+          "passed": true
+        },
+        {
+          "name": "creative partial block pickup fills finite stack beside catalog",
+          "passed": true
+        },
+        {
+          "name": "creative remaining blocks enter freed backpack slot",
+          "passed": true
+        },
+        {
+          "name": "active budget defers and persists every extra drop",
+          "passed": true
+        },
+        {
+          "name": "creative creature hold preserves identity without fatigue",
+          "passed": true
+        },
+        {
+          "name": "creative creatures still resist and regain motion",
+          "passed": true
+        },
+        {
+          "name": "projectile death loot keeps release context across mode change",
+          "passed": true
+        },
+        {
+          "name": "death processing issues loot once",
+          "passed": true
+        },
+        {
+          "name": "ambiguous duplicate world ownership is quarantined",
+          "passed": true
+        },
+        {
+          "name": "quarantine cannot resurrect a subsequently spent instance",
+          "passed": true
+        },
+        {
+          "name": "malformed physical property retained in recovery",
+          "passed": true
+        },
+        {
+          "name": "missing block definitions move into mode-local inventory recovery",
+          "passed": true
+        },
+        {
+          "name": "unavailable creative items stay out of survival recovery",
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    "ownership_ui": {
+      "checks": [
+        {
+          "name": "E opens Creative catalog",
+          "passed": true
+        },
+        {
+          "name": "large Creative block catalog finishes progressive grid loading",
+          "passed": true
+        },
+        {
+          "name": "cold catalog icons appear while the background queue is pending",
+          "passed": true
+        },
+        {
+          "name": "catalog scrolling exposes new slots and restores the first page",
+          "passed": true
+        },
+        {
+          "name": "B respects mode and keeps a single player window",
+          "passed": true
+        },
+        {
+          "name": "rebound inventory action works",
+          "passed": true
+        },
+        {
+          "name": "full hand click retains worn instance and starts cursor transfer",
+          "passed": true
+        },
+        {
+          "name": "Drop click transfers the actual hand instance into the world",
+          "passed": true
+        },
+        {
+          "name": "clicked Drop stays in world after pickup delay",
+          "passed": true
+        },
+        {
+          "name": "explicit delete removes only a catalog assignment",
+          "passed": true
+        },
+        {
+          "name": "delete assignment cannot destroy a finite item",
+          "passed": true
+        },
+        {
+          "name": "E opens Survival backpack",
+          "passed": true
+        },
+        {
+          "name": "B respects mode and keeps a single player window",
+          "passed": true
+        },
+        {
+          "name": "rebound inventory action works",
+          "passed": true
+        },
+        {
+          "name": "full hand click retains worn instance and starts cursor transfer",
+          "passed": true
+        },
+        {
+          "name": "Drop click transfers the actual hand instance into the world",
+          "passed": true
+        },
+        {
+          "name": "clicked Drop stays in world after pickup delay",
+          "passed": true
+        },
+        {
+          "name": "middle button picks a catalog block without mining",
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    "player_window": {
+      "checks": [
+        {
+          "name": "shared footer transfers worn instances into the active inventory row",
+          "passed": true
+        },
+        {
+          "name": "shared footer selects within the active inventory row",
+          "passed": true
+        },
+        {
+          "name": "nonzero catalog scroll survives backpack roundtrip",
+          "passed": true
+        },
+        {
+          "name": "catalog selection and preview rotation use the shared input tree",
+          "passed": true
+        },
+        {
+          "name": "backpack search and section state survive catalog roundtrip",
+          "passed": true
+        },
+        {
+          "name": "catalog category selection and scroll survive backpack roundtrip",
+          "passed": true
+        },
+        {
+          "name": "unapplied appearance draft survives catalog roundtrip",
+          "passed": true
+        }
+      ],
+      "layouts": [
+        {
+          "height": 720,
+          "mode": "creative",
+          "passed": true,
+          "scale": 1.0,
+          "section": 4,
+          "width": 1280,
+          "window": [
+            100,
+            30,
+            1080,
+            660
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "creative",
+          "passed": true,
+          "scale": 1.0,
+          "section": 0,
+          "width": 1280,
+          "window": [
+            100,
+            30,
+            1080,
+            660
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "creative",
+          "passed": true,
+          "scale": 1.0,
+          "section": 1,
+          "width": 1280,
+          "window": [
+            100,
+            30,
+            1080,
+            660
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "creative",
+          "passed": true,
+          "scale": 1.0,
+          "section": 2,
+          "width": 1280,
+          "window": [
+            100,
+            30,
+            1080,
+            660
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "creative",
+          "passed": true,
+          "scale": 1.0,
+          "section": 3,
+          "width": 1280,
+          "window": [
+            100,
+            30,
+            1080,
+            660
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "creative",
+          "passed": true,
+          "scale": 1.0,
+          "section": 0,
+          "width": 1280,
+          "window": [
+            100,
+            30,
+            1080,
+            660
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "creative",
+          "passed": true,
+          "scale": 1.5,
+          "section": 4,
+          "width": 1280,
+          "window": [
+            12,
+            12,
+            1256,
+            696
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "creative",
+          "passed": true,
+          "scale": 1.5,
+          "section": 0,
+          "width": 1280,
+          "window": [
+            12,
+            12,
+            1256,
+            696
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "creative",
+          "passed": true,
+          "scale": 1.5,
+          "section": 1,
+          "width": 1280,
+          "window": [
+            12,
+            12,
+            1256,
+            696
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "creative",
+          "passed": true,
+          "scale": 1.5,
+          "section": 2,
+          "width": 1280,
+          "window": [
+            12,
+            12,
+            1256,
+            696
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "creative",
+          "passed": true,
+          "scale": 1.5,
+          "section": 3,
+          "width": 1280,
+          "window": [
+            12,
+            12,
+            1256,
+            696
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "creative",
+          "passed": true,
+          "scale": 1.5,
+          "section": 0,
+          "width": 1280,
+          "window": [
+            12,
+            12,
+            1256,
+            696
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "creative",
+          "passed": true,
+          "scale": 2.0,
+          "section": 4,
+          "width": 1280,
+          "window": [
+            16,
+            16,
+            1248,
+            688
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "creative",
+          "passed": true,
+          "scale": 2.0,
+          "section": 0,
+          "width": 1280,
+          "window": [
+            16,
+            16,
+            1248,
+            688
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "creative",
+          "passed": true,
+          "scale": 2.0,
+          "section": 1,
+          "width": 1280,
+          "window": [
+            16,
+            16,
+            1248,
+            688
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "creative",
+          "passed": true,
+          "scale": 2.0,
+          "section": 2,
+          "width": 1280,
+          "window": [
+            16,
+            16,
+            1248,
+            688
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "creative",
+          "passed": true,
+          "scale": 2.0,
+          "section": 3,
+          "width": 1280,
+          "window": [
+            16,
+            16,
+            1248,
+            688
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "creative",
+          "passed": true,
+          "scale": 2.0,
+          "section": 0,
+          "width": 1280,
+          "window": [
+            16,
+            16,
+            1248,
+            688
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "creative",
+          "passed": true,
+          "scale": 1.0,
+          "section": 4,
+          "width": 1920,
+          "window": [
+            420,
+            210,
+            1080,
+            660
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "creative",
+          "passed": true,
+          "scale": 1.0,
+          "section": 0,
+          "width": 1920,
+          "window": [
+            420,
+            210,
+            1080,
+            660
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "creative",
+          "passed": true,
+          "scale": 1.0,
+          "section": 1,
+          "width": 1920,
+          "window": [
+            420,
+            210,
+            1080,
+            660
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "creative",
+          "passed": true,
+          "scale": 1.0,
+          "section": 2,
+          "width": 1920,
+          "window": [
+            420,
+            210,
+            1080,
+            660
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "creative",
+          "passed": true,
+          "scale": 1.0,
+          "section": 3,
+          "width": 1920,
+          "window": [
+            420,
+            210,
+            1080,
+            660
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "creative",
+          "passed": true,
+          "scale": 1.0,
+          "section": 0,
+          "width": 1920,
+          "window": [
+            420,
+            210,
+            1080,
+            660
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "creative",
+          "passed": true,
+          "scale": 1.5,
+          "section": 4,
+          "width": 1920,
+          "window": [
+            150,
+            45,
+            1620,
+            990
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "creative",
+          "passed": true,
+          "scale": 1.5,
+          "section": 0,
+          "width": 1920,
+          "window": [
+            150,
+            45,
+            1620,
+            990
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "creative",
+          "passed": true,
+          "scale": 1.5,
+          "section": 1,
+          "width": 1920,
+          "window": [
+            150,
+            45,
+            1620,
+            990
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "creative",
+          "passed": true,
+          "scale": 1.5,
+          "section": 2,
+          "width": 1920,
+          "window": [
+            150,
+            45,
+            1620,
+            990
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "creative",
+          "passed": true,
+          "scale": 1.5,
+          "section": 3,
+          "width": 1920,
+          "window": [
+            150,
+            45,
+            1620,
+            990
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "creative",
+          "passed": true,
+          "scale": 1.5,
+          "section": 0,
+          "width": 1920,
+          "window": [
+            150,
+            45,
+            1620,
+            990
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "creative",
+          "passed": true,
+          "scale": 2.0,
+          "section": 4,
+          "width": 1920,
+          "window": [
+            16,
+            16,
+            1888,
+            1048
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "creative",
+          "passed": true,
+          "scale": 2.0,
+          "section": 0,
+          "width": 1920,
+          "window": [
+            16,
+            16,
+            1888,
+            1048
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "creative",
+          "passed": true,
+          "scale": 2.0,
+          "section": 1,
+          "width": 1920,
+          "window": [
+            16,
+            16,
+            1888,
+            1048
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "creative",
+          "passed": true,
+          "scale": 2.0,
+          "section": 2,
+          "width": 1920,
+          "window": [
+            16,
+            16,
+            1888,
+            1048
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "creative",
+          "passed": true,
+          "scale": 2.0,
+          "section": 3,
+          "width": 1920,
+          "window": [
+            16,
+            16,
+            1888,
+            1048
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "creative",
+          "passed": true,
+          "scale": 2.0,
+          "section": 0,
+          "width": 1920,
+          "window": [
+            16,
+            16,
+            1888,
+            1048
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "survival",
+          "passed": true,
+          "scale": 1.0,
+          "section": 4,
+          "width": 1280,
+          "window": [
+            100,
+            30,
+            1080,
+            660
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "survival",
+          "passed": true,
+          "scale": 1.0,
+          "section": 0,
+          "width": 1280,
+          "window": [
+            100,
+            30,
+            1080,
+            660
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "survival",
+          "passed": true,
+          "scale": 1.0,
+          "section": 1,
+          "width": 1280,
+          "window": [
+            100,
+            30,
+            1080,
+            660
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "survival",
+          "passed": true,
+          "scale": 1.0,
+          "section": 2,
+          "width": 1280,
+          "window": [
+            100,
+            30,
+            1080,
+            660
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "survival",
+          "passed": true,
+          "scale": 1.0,
+          "section": 3,
+          "width": 1280,
+          "window": [
+            100,
+            30,
+            1080,
+            660
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "survival",
+          "passed": true,
+          "scale": 1.0,
+          "section": 0,
+          "width": 1280,
+          "window": [
+            100,
+            30,
+            1080,
+            660
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "survival",
+          "passed": true,
+          "scale": 1.5,
+          "section": 4,
+          "width": 1280,
+          "window": [
+            12,
+            12,
+            1256,
+            696
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "survival",
+          "passed": true,
+          "scale": 1.5,
+          "section": 0,
+          "width": 1280,
+          "window": [
+            12,
+            12,
+            1256,
+            696
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "survival",
+          "passed": true,
+          "scale": 1.5,
+          "section": 1,
+          "width": 1280,
+          "window": [
+            12,
+            12,
+            1256,
+            696
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "survival",
+          "passed": true,
+          "scale": 1.5,
+          "section": 2,
+          "width": 1280,
+          "window": [
+            12,
+            12,
+            1256,
+            696
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "survival",
+          "passed": true,
+          "scale": 1.5,
+          "section": 3,
+          "width": 1280,
+          "window": [
+            12,
+            12,
+            1256,
+            696
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "survival",
+          "passed": true,
+          "scale": 1.5,
+          "section": 0,
+          "width": 1280,
+          "window": [
+            12,
+            12,
+            1256,
+            696
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "survival",
+          "passed": true,
+          "scale": 2.0,
+          "section": 4,
+          "width": 1280,
+          "window": [
+            16,
+            16,
+            1248,
+            688
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "survival",
+          "passed": true,
+          "scale": 2.0,
+          "section": 0,
+          "width": 1280,
+          "window": [
+            16,
+            16,
+            1248,
+            688
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "survival",
+          "passed": true,
+          "scale": 2.0,
+          "section": 1,
+          "width": 1280,
+          "window": [
+            16,
+            16,
+            1248,
+            688
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "survival",
+          "passed": true,
+          "scale": 2.0,
+          "section": 2,
+          "width": 1280,
+          "window": [
+            16,
+            16,
+            1248,
+            688
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "survival",
+          "passed": true,
+          "scale": 2.0,
+          "section": 3,
+          "width": 1280,
+          "window": [
+            16,
+            16,
+            1248,
+            688
+          ]
+        },
+        {
+          "height": 720,
+          "mode": "survival",
+          "passed": true,
+          "scale": 2.0,
+          "section": 0,
+          "width": 1280,
+          "window": [
+            16,
+            16,
+            1248,
+            688
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "survival",
+          "passed": true,
+          "scale": 1.0,
+          "section": 4,
+          "width": 1920,
+          "window": [
+            420,
+            210,
+            1080,
+            660
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "survival",
+          "passed": true,
+          "scale": 1.0,
+          "section": 0,
+          "width": 1920,
+          "window": [
+            420,
+            210,
+            1080,
+            660
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "survival",
+          "passed": true,
+          "scale": 1.0,
+          "section": 1,
+          "width": 1920,
+          "window": [
+            420,
+            210,
+            1080,
+            660
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "survival",
+          "passed": true,
+          "scale": 1.0,
+          "section": 2,
+          "width": 1920,
+          "window": [
+            420,
+            210,
+            1080,
+            660
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "survival",
+          "passed": true,
+          "scale": 1.0,
+          "section": 3,
+          "width": 1920,
+          "window": [
+            420,
+            210,
+            1080,
+            660
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "survival",
+          "passed": true,
+          "scale": 1.0,
+          "section": 0,
+          "width": 1920,
+          "window": [
+            420,
+            210,
+            1080,
+            660
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "survival",
+          "passed": true,
+          "scale": 1.5,
+          "section": 4,
+          "width": 1920,
+          "window": [
+            150,
+            45,
+            1620,
+            990
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "survival",
+          "passed": true,
+          "scale": 1.5,
+          "section": 0,
+          "width": 1920,
+          "window": [
+            150,
+            45,
+            1620,
+            990
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "survival",
+          "passed": true,
+          "scale": 1.5,
+          "section": 1,
+          "width": 1920,
+          "window": [
+            150,
+            45,
+            1620,
+            990
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "survival",
+          "passed": true,
+          "scale": 1.5,
+          "section": 2,
+          "width": 1920,
+          "window": [
+            150,
+            45,
+            1620,
+            990
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "survival",
+          "passed": true,
+          "scale": 1.5,
+          "section": 3,
+          "width": 1920,
+          "window": [
+            150,
+            45,
+            1620,
+            990
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "survival",
+          "passed": true,
+          "scale": 1.5,
+          "section": 0,
+          "width": 1920,
+          "window": [
+            150,
+            45,
+            1620,
+            990
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "survival",
+          "passed": true,
+          "scale": 2.0,
+          "section": 4,
+          "width": 1920,
+          "window": [
+            16,
+            16,
+            1888,
+            1048
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "survival",
+          "passed": true,
+          "scale": 2.0,
+          "section": 0,
+          "width": 1920,
+          "window": [
+            16,
+            16,
+            1888,
+            1048
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "survival",
+          "passed": true,
+          "scale": 2.0,
+          "section": 1,
+          "width": 1920,
+          "window": [
+            16,
+            16,
+            1888,
+            1048
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "survival",
+          "passed": true,
+          "scale": 2.0,
+          "section": 2,
+          "width": 1920,
+          "window": [
+            16,
+            16,
+            1888,
+            1048
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "survival",
+          "passed": true,
+          "scale": 2.0,
+          "section": 3,
+          "width": 1920,
+          "window": [
+            16,
+            16,
+            1888,
+            1048
+          ]
+        },
+        {
+          "height": 1080,
+          "mode": "survival",
+          "passed": true,
+          "scale": 2.0,
+          "section": 0,
+          "width": 1920,
+          "window": [
+            16,
+            16,
+            1888,
+            1048
+          ]
+        }
+      ],
+      "passed": true
+    },
+    "icons": {
+      "checks": [
+        {
+          "backpack": 2104,
+          "expected": 2104,
+          "footer": 2104,
+          "id": "bush_acacia",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2113,
+          "expected": 2113,
+          "footer": 2113,
+          "id": "bush_blueberry",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2121,
+          "expected": 2121,
+          "footer": 2121,
+          "id": "bush_common",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2125,
+          "expected": 2125,
+          "footer": 2125,
+          "id": "bush_pine",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2127,
+          "expected": 2127,
+          "footer": 2127,
+          "id": "cactus_large",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2131,
+          "expected": 2131,
+          "footer": 2131,
+          "id": "cubatarium_worldgen_cc0::asset_flower_patch_01",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2136,
+          "expected": 2136,
+          "footer": 2136,
+          "id": "cubatarium_worldgen_cc0::asset_flower_patch_02",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2141,
+          "expected": 2141,
+          "footer": 2141,
+          "id": "cubatarium_worldgen_cc0::asset_flower_patch_03",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2150,
+          "expected": 2150,
+          "footer": 2150,
+          "id": "cubatarium_worldgen_cc0::asset_flower_patch_04",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2155,
+          "expected": 2155,
+          "footer": 2155,
+          "id": "cubatarium_worldgen_cc0::asset_flower_patch_05",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2159,
+          "expected": 2159,
+          "footer": 2159,
+          "id": "cubatarium_worldgen_cc0::asset_flower_patch_06",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2163,
+          "expected": 2163,
+          "footer": 2163,
+          "id": "cubatarium_worldgen_cc0::asset_flower_patch_07",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2167,
+          "expected": 2167,
+          "footer": 2167,
+          "id": "cubatarium_worldgen_cc0::asset_flower_patch_08",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2171,
+          "expected": 2171,
+          "footer": 2171,
+          "id": "cubatarium_worldgen_cc0::asset_flower_patch_09",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2175,
+          "expected": 2175,
+          "footer": 2175,
+          "id": "cubatarium_worldgen_cc0::asset_flower_patch_10",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2179,
+          "expected": 2179,
+          "footer": 2179,
+          "id": "cubatarium_worldgen_cc0::asset_flower_patch_11",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2183,
+          "expected": 2183,
+          "footer": 2183,
+          "id": "cubatarium_worldgen_cc0::asset_flower_patch_12",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2185,
+          "expected": 2185,
+          "footer": 2185,
+          "id": "cubatarium_worldgen_cc0::asset_flower_patch_13",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2208,
+          "expected": 2208,
+          "footer": 2208,
+          "id": "cubatarium_worldgen_cc0::asset_flower_patch_14",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2229,
+          "expected": 2229,
+          "footer": 2229,
+          "id": "cubatarium_worldgen_cc0::asset_flower_patch_15",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2233,
+          "expected": 2233,
+          "footer": 2233,
+          "id": "cubatarium_worldgen_cc0::asset_flower_patch_16",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2237,
+          "expected": 2237,
+          "footer": 2237,
+          "id": "deco_log_acacia",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2241,
+          "expected": 2241,
+          "footer": 2241,
+          "id": "deco_log_apple",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2244,
+          "expected": 2244,
+          "footer": 2244,
+          "id": "deco_log_aspen",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2245,
+          "expected": 2245,
+          "footer": 2245,
+          "id": "deco_log_jungle",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2246,
+          "expected": 2246,
+          "footer": 2246,
+          "id": "deco_log_pine",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2247,
+          "expected": 2247,
+          "footer": 2247,
+          "id": "dry_grass_clump",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2248,
+          "expected": 2248,
+          "footer": 2248,
+          "id": "fire_patch",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2249,
+          "expected": 2249,
+          "footer": 2249,
+          "id": "flower_patch_common",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2250,
+          "expected": 2250,
+          "footer": 2250,
+          "id": "flower_scatter_plains",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2251,
+          "expected": 2251,
+          "footer": 2251,
+          "id": "house_stone_cottage",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2252,
+          "expected": 2252,
+          "footer": 2252,
+          "id": "house_wood_small",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2253,
+          "expected": 2253,
+          "footer": 2253,
+          "id": "lily_pad_pair",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2254,
+          "expected": 2254,
+          "footer": 2254,
+          "id": "mushroom_brown_pair",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2255,
+          "expected": 2255,
+          "footer": 2255,
+          "id": "mushroom_red_pair",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2256,
+          "expected": 2256,
+          "footer": 2256,
+          "id": "path_cobble_3x3",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2257,
+          "expected": 2257,
+          "footer": 2257,
+          "id": "reeds_on_dirt",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2258,
+          "expected": 2258,
+          "footer": 2258,
+          "id": "reeds_on_dry_dirt",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2259,
+          "expected": 2259,
+          "footer": 2259,
+          "id": "ruin_desert",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2260,
+          "expected": 2260,
+          "footer": 2260,
+          "id": "ruin_egypt_a",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2261,
+          "expected": 2261,
+          "footer": 2261,
+          "id": "ruin_egypt_b",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2262,
+          "expected": 2262,
+          "footer": 2262,
+          "id": "ruin_house_a",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2263,
+          "expected": 2263,
+          "footer": 2263,
+          "id": "ruin_house_b",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2264,
+          "expected": 2264,
+          "footer": 2264,
+          "id": "ruin_sandstone",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2265,
+          "expected": 2265,
+          "footer": 2265,
+          "id": "ruin_stonehenge",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2266,
+          "expected": 2266,
+          "footer": 2266,
+          "id": "ruin_temple",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2267,
+          "expected": 2267,
+          "footer": 2267,
+          "id": "shed_wood",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2268,
+          "expected": 2268,
+          "footer": 2268,
+          "id": "tall_grass_patch",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2269,
+          "expected": 2269,
+          "footer": 2269,
+          "id": "tower_stone",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2270,
+          "expected": 2270,
+          "footer": 2270,
+          "id": "tree_acacia",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2271,
+          "expected": 2271,
+          "footer": 2271,
+          "id": "tree_apple",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2272,
+          "expected": 2272,
+          "footer": 2272,
+          "id": "tree_aspen",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2273,
+          "expected": 2273,
+          "footer": 2273,
+          "id": "tree_jungle",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2274,
+          "expected": 2274,
+          "footer": 2274,
+          "id": "tree_jungle_emergent",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2275,
+          "expected": 2275,
+          "footer": 2275,
+          "id": "tree_large",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2276,
+          "expected": 2276,
+          "footer": 2276,
+          "id": "tree_pine",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2277,
+          "expected": 2277,
+          "footer": 2277,
+          "id": "tree_pine_small",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2278,
+          "expected": 2278,
+          "footer": 2278,
+          "id": "tree_pine_snowy",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2279,
+          "expected": 2279,
+          "footer": 2279,
+          "id": "tree_pine_snowy_small",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2280,
+          "expected": 2280,
+          "footer": 2280,
+          "id": "tree_small",
+          "kind": 1,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2281,
+          "expected": 2281,
+          "footer": 2281,
+          "id": "badger",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2282,
+          "expected": 2282,
+          "footer": 2282,
+          "id": "bee",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2283,
+          "expected": 2283,
+          "footer": 2283,
+          "id": "bot",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2284,
+          "expected": 2284,
+          "footer": 2284,
+          "id": "bunny",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2285,
+          "expected": 2285,
+          "footer": 2285,
+          "id": "butterfly",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2286,
+          "expected": 2286,
+          "footer": 2286,
+          "id": "chicken",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2287,
+          "expected": 2287,
+          "footer": 2287,
+          "id": "cow",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2288,
+          "expected": 2288,
+          "footer": 2288,
+          "id": "crab",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2289,
+          "expected": 2289,
+          "footer": 2289,
+          "id": "dirt_monster",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2068,
+          "expected": 2068,
+          "footer": 2068,
+          "id": "dolphin",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2290,
+          "expected": 2290,
+          "footer": 2290,
+          "id": "dungeon_master",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2291,
+          "expected": 2291,
+          "footer": 2291,
+          "id": "fire_spirit",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2292,
+          "expected": 2292,
+          "footer": 2292,
+          "id": "fox",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2293,
+          "expected": 2293,
+          "footer": 2293,
+          "id": "golem",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2294,
+          "expected": 2294,
+          "footer": 2294,
+          "id": "hedgehog",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2295,
+          "expected": 2295,
+          "footer": 2295,
+          "id": "hermitcrab",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2296,
+          "expected": 2296,
+          "footer": 2296,
+          "id": "kitten",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2297,
+          "expected": 2297,
+          "footer": 2297,
+          "id": "land_guard",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2298,
+          "expected": 2298,
+          "footer": 2298,
+          "id": "lava_flan",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2299,
+          "expected": 2299,
+          "footer": 2299,
+          "id": "lobster",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2300,
+          "expected": 2300,
+          "footer": 2300,
+          "id": "manatee",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2301,
+          "expected": 2301,
+          "footer": 2301,
+          "id": "mese_monster",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2302,
+          "expected": 2302,
+          "footer": 2302,
+          "id": "octopus",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2303,
+          "expected": 2303,
+          "footer": 2303,
+          "id": "oerkki",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2304,
+          "expected": 2304,
+          "footer": 2304,
+          "id": "ogre",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2305,
+          "expected": 2305,
+          "footer": 2305,
+          "id": "orc",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2306,
+          "expected": 2306,
+          "footer": 2306,
+          "id": "owl",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2307,
+          "expected": 2307,
+          "footer": 2307,
+          "id": "panda",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2308,
+          "expected": 2308,
+          "footer": 2308,
+          "id": "penguin",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2309,
+          "expected": 2309,
+          "footer": 2309,
+          "id": "pig",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2310,
+          "expected": 2310,
+          "footer": 2310,
+          "id": "puffin",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2311,
+          "expected": 2311,
+          "footer": 2311,
+          "id": "rat",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2312,
+          "expected": 2312,
+          "footer": 2312,
+          "id": "rigid_demo_flyer",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2313,
+          "expected": 2313,
+          "footer": 2313,
+          "id": "rigid_demo_swimmer",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2314,
+          "expected": 2314,
+          "footer": 2314,
+          "id": "rigid_demo_walker",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2315,
+          "expected": 2315,
+          "footer": 2315,
+          "id": "sand_monster",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2316,
+          "expected": 2316,
+          "footer": 2316,
+          "id": "seahorse",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2317,
+          "expected": 2317,
+          "footer": 2317,
+          "id": "seal",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2318,
+          "expected": 2318,
+          "footer": 2318,
+          "id": "shark",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2319,
+          "expected": 2319,
+          "footer": 2319,
+          "id": "sheep",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2320,
+          "expected": 2320,
+          "footer": 2320,
+          "id": "skeleton",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2321,
+          "expected": 2321,
+          "footer": 2321,
+          "id": "spider",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2322,
+          "expected": 2322,
+          "footer": 2322,
+          "id": "squid",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2323,
+          "expected": 2323,
+          "footer": 2323,
+          "id": "stingray",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2324,
+          "expected": 2324,
+          "footer": 2324,
+          "id": "stone_monster",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2325,
+          "expected": 2325,
+          "footer": 2325,
+          "id": "tortoise",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2326,
+          "expected": 2326,
+          "footer": 2326,
+          "id": "tree_monster",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2327,
+          "expected": 2327,
+          "footer": 2327,
+          "id": "treeman",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2328,
+          "expected": 2328,
+          "footer": 2328,
+          "id": "trout",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2329,
+          "expected": 2329,
+          "footer": 2329,
+          "id": "warthog",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2330,
+          "expected": 2330,
+          "footer": 2330,
+          "id": "wasp",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2331,
+          "expected": 2331,
+          "footer": 2331,
+          "id": "water_dragon",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2332,
+          "expected": 2332,
+          "footer": 2332,
+          "id": "whale",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2333,
+          "expected": 2333,
+          "footer": 2333,
+          "id": "wolf",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2334,
+          "expected": 2334,
+          "footer": 2334,
+          "id": "zombie",
+          "kind": 2,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2335,
+          "expected": 2335,
+          "footer": 2335,
+          "id": "human_adventurer",
+          "kind": 3,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2336,
+          "expected": 2336,
+          "footer": 2336,
+          "id": "human_guard",
+          "kind": 3,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2337,
+          "expected": 2337,
+          "footer": 2337,
+          "id": "sheep_wool_black",
+          "kind": 3,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2338,
+          "expected": 2338,
+          "footer": 2338,
+          "id": "sheep_wool_golden",
+          "kind": 3,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2339,
+          "expected": 2339,
+          "footer": 2339,
+          "id": "wolf_snow",
+          "kind": 3,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2144,
+          "expected": 2144,
+          "footer": 2144,
+          "id": "apple",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2112,
+          "expected": 2112,
+          "footer": 2112,
+          "id": "arrow",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2166,
+          "expected": 2166,
+          "footer": 2166,
+          "id": "bread",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2124,
+          "expected": 2124,
+          "footer": 2124,
+          "id": "bucket",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2099,
+          "expected": 2099,
+          "footer": 2099,
+          "id": "charcoal",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2174,
+          "expected": 2174,
+          "footer": 2174,
+          "id": "coal",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2170,
+          "expected": 2170,
+          "footer": 2170,
+          "id": "cooked_meat",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2117,
+          "expected": 2117,
+          "footer": 2117,
+          "id": "copper_axe",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2347,
+          "expected": 2347,
+          "footer": 2347,
+          "id": "copper_chest",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2354,
+          "expected": 2354,
+          "footer": 2354,
+          "id": "copper_feet",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2360,
+          "expected": 2360,
+          "footer": 2360,
+          "id": "copper_head",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2365,
+          "expected": 2365,
+          "footer": 2365,
+          "id": "copper_hoe",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2370,
+          "expected": 2370,
+          "footer": 2370,
+          "id": "copper_ingot",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2375,
+          "expected": 2375,
+          "footer": 2375,
+          "id": "copper_legs",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2228,
+          "expected": 2228,
+          "footer": 2228,
+          "id": "copper_pickaxe",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2386,
+          "expected": 2386,
+          "footer": 2386,
+          "id": "copper_shovel",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2380,
+          "expected": 2380,
+          "footer": 2380,
+          "id": "copper_sword",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2182,
+          "expected": 2182,
+          "footer": 2182,
+          "id": "cord",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2397,
+          "expected": 2397,
+          "footer": 2397,
+          "id": "flint_and_steel",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2391,
+          "expected": 2391,
+          "footer": 2391,
+          "id": "gold_axe",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2402,
+          "expected": 2402,
+          "footer": 2402,
+          "id": "gold_chest",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2407,
+          "expected": 2407,
+          "footer": 2407,
+          "id": "gold_feet",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2412,
+          "expected": 2412,
+          "footer": 2412,
+          "id": "gold_head",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2417,
+          "expected": 2417,
+          "footer": 2417,
+          "id": "gold_hoe",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2422,
+          "expected": 2422,
+          "footer": 2422,
+          "id": "gold_ingot",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2427,
+          "expected": 2427,
+          "footer": 2427,
+          "id": "gold_legs",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2232,
+          "expected": 2232,
+          "footer": 2232,
+          "id": "gold_pickaxe",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2437,
+          "expected": 2437,
+          "footer": 2437,
+          "id": "gold_shovel",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2432,
+          "expected": 2432,
+          "footer": 2432,
+          "id": "gold_sword",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2162,
+          "expected": 2162,
+          "footer": 2162,
+          "id": "grain",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2449,
+          "expected": 2449,
+          "footer": 2449,
+          "id": "iron_axe",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2130,
+          "expected": 2130,
+          "footer": 2130,
+          "id": "iron_chest",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2140,
+          "expected": 2140,
+          "footer": 2140,
+          "id": "iron_feet",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2126,
+          "expected": 2126,
+          "footer": 2126,
+          "id": "iron_head",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2103,
+          "expected": 2103,
+          "footer": 2103,
+          "id": "iron_hoe",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2158,
+          "expected": 2158,
+          "footer": 2158,
+          "id": "iron_ingot",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2135,
+          "expected": 2135,
+          "footer": 2135,
+          "id": "iron_legs",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2096,
+          "expected": 2096,
+          "footer": 2096,
+          "id": "iron_pickaxe",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2455,
+          "expected": 2455,
+          "footer": 2455,
+          "id": "iron_shield",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2443,
+          "expected": 2443,
+          "footer": 2443,
+          "id": "iron_shovel",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2467,
+          "expected": 2467,
+          "footer": 2467,
+          "id": "iron_sword",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2472,
+          "expected": 2472,
+          "footer": 2472,
+          "id": "leather",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2478,
+          "expected": 2478,
+          "footer": 2478,
+          "id": "leather_chest",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2483,
+          "expected": 2483,
+          "footer": 2483,
+          "id": "leather_feet",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2489,
+          "expected": 2489,
+          "footer": 2489,
+          "id": "leather_head",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2494,
+          "expected": 2494,
+          "footer": 2494,
+          "id": "leather_legs",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2499,
+          "expected": 2499,
+          "footer": 2499,
+          "id": "plant_fiber",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2505,
+          "expected": 2505,
+          "footer": 2505,
+          "id": "raw_copper",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2510,
+          "expected": 2510,
+          "footer": 2510,
+          "id": "raw_gold",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2154,
+          "expected": 2154,
+          "footer": 2154,
+          "id": "raw_iron",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2520,
+          "expected": 2520,
+          "footer": 2520,
+          "id": "raw_meat",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2116,
+          "expected": 2116,
+          "footer": 2116,
+          "id": "seeds",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2526,
+          "expected": 2526,
+          "footer": 2526,
+          "id": "shears",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2515,
+          "expected": 2515,
+          "footer": 2515,
+          "id": "stick",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2532,
+          "expected": 2532,
+          "footer": 2532,
+          "id": "stone_axe",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2537,
+          "expected": 2537,
+          "footer": 2537,
+          "id": "stone_hoe",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2236,
+          "expected": 2236,
+          "footer": 2236,
+          "id": "stone_pickaxe",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2547,
+          "expected": 2547,
+          "footer": 2547,
+          "id": "stone_shovel",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2542,
+          "expected": 2542,
+          "footer": 2542,
+          "id": "stone_sword",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2120,
+          "expected": 2120,
+          "footer": 2120,
+          "id": "waterskin",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2559,
+          "expected": 2559,
+          "footer": 2559,
+          "id": "wood_axe",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2107,
+          "expected": 2107,
+          "footer": 2107,
+          "id": "wood_bow",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2565,
+          "expected": 2565,
+          "footer": 2565,
+          "id": "wood_hoe",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2240,
+          "expected": 2240,
+          "footer": 2240,
+          "id": "wood_pickaxe",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2149,
+          "expected": 2149,
+          "footer": 2149,
+          "id": "wood_shield",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2553,
+          "expected": 2553,
+          "footer": 2553,
+          "id": "wood_shovel",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2571,
+          "expected": 2571,
+          "footer": 2571,
+          "id": "wood_spear",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2098,
+          "expected": 2098,
+          "footer": 2098,
+          "id": "wood_sword",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2583,
+          "expected": 2583,
+          "footer": 2583,
+          "id": "wood_torch",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2178,
+          "expected": 2178,
+          "footer": 2178,
+          "id": "wool",
+          "kind": 4,
+          "location": "backpack",
+          "passed": true
+        },
+        {
+          "backpack": 2095,
+          "expected": 2095,
+          "footer": 2095,
+          "id": "stone",
+          "kind": 0,
+          "location": "mixed",
+          "passed": true
+        },
+        {
+          "backpack": 2096,
+          "expected": 2096,
+          "footer": 2096,
+          "id": "iron_pickaxe",
+          "kind": 4,
+          "location": "mixed",
+          "passed": true
+        },
+        {
+          "backpack": 2068,
+          "expected": 2068,
+          "footer": 2068,
+          "id": "dolphin",
+          "kind": 2,
+          "location": "mixed",
+          "passed": true
+        },
+        {
+          "backpack": 2270,
+          "expected": 2270,
+          "footer": 2270,
+          "id": "tree_acacia",
+          "kind": 1,
+          "location": "mixed",
+          "passed": true
+        },
+        {
+          "backpack": 2335,
+          "expected": 2335,
+          "footer": 2335,
+          "id": "human_adventurer",
+          "kind": 3,
+          "location": "mixed",
+          "passed": true
+        },
+        {
+          "backpack": 2124,
+          "expected": 2124,
+          "footer": 2124,
+          "id": "bucket",
+          "kind": 4,
+          "location": "mixed",
+          "passed": true
+        },
+        {
+          "backpack": 2095,
+          "expected": 2095,
+          "footer": 2124,
+          "id": "stone",
+          "kind": 0,
+          "location": "recovery",
+          "passed": true
+        },
+        {
+          "backpack": 2096,
+          "expected": 2096,
+          "footer": 2124,
+          "id": "iron_pickaxe",
+          "kind": 4,
+          "location": "recovery",
+          "passed": true
+        },
+        {
+          "backpack": 2068,
+          "expected": 2068,
+          "footer": 2124,
+          "id": "dolphin",
+          "kind": 2,
+          "location": "recovery",
+          "passed": true
+        },
+        {
+          "backpack": 2270,
+          "expected": 2270,
+          "footer": 2124,
+          "id": "tree_acacia",
+          "kind": 1,
+          "location": "recovery",
+          "passed": true
+        },
+        {
+          "backpack": 2335,
+          "expected": 2335,
+          "footer": 2124,
+          "id": "human_adventurer",
+          "kind": 3,
+          "location": "recovery",
+          "passed": true
+        },
+        {
+          "backpack": 2124,
+          "expected": 2124,
+          "footer": 2124,
+          "id": "bucket",
+          "kind": 4,
+          "location": "recovery",
+          "passed": true
+        }
+      ],
+      "counts": {
+        "creatures": 55,
+        "items": 70,
+        "objects": 60,
+        "skins": 5
+      },
+      "items_catalog_complete": true,
+      "passed": true
+    },
+    "item_lab": {
+      "checks": [
+        {
+          "name": "catalog includes every item",
+          "passed": true
+        },
+        {
+          "name": "published preview apple",
+          "passed": true
+        },
+        {
+          "name": "published preview arrow",
+          "passed": true
+        },
+        {
+          "name": "published preview bread",
+          "passed": true
+        },
+        {
+          "name": "published preview bucket",
+          "passed": true
+        },
+        {
+          "name": "published preview charcoal",
+          "passed": true
+        },
+        {
+          "name": "published preview coal",
+          "passed": true
+        },
+        {
+          "name": "published preview cooked_meat",
+          "passed": true
+        },
+        {
+          "name": "published preview copper_axe",
+          "passed": true
+        },
+        {
+          "name": "published preview copper_chest",
+          "passed": true
+        },
+        {
+          "name": "published preview copper_feet",
+          "passed": true
+        },
+        {
+          "name": "published preview copper_head",
+          "passed": true
+        },
+        {
+          "name": "published preview copper_hoe",
+          "passed": true
+        },
+        {
+          "name": "published preview copper_ingot",
+          "passed": true
+        },
+        {
+          "name": "published preview copper_legs",
+          "passed": true
+        },
+        {
+          "name": "published preview copper_pickaxe",
+          "passed": true
+        },
+        {
+          "name": "published preview copper_shovel",
+          "passed": true
+        },
+        {
+          "name": "published preview copper_sword",
+          "passed": true
+        },
+        {
+          "name": "published preview cord",
+          "passed": true
+        },
+        {
+          "name": "published preview flint_and_steel",
+          "passed": true
+        },
+        {
+          "name": "published preview gold_axe",
+          "passed": true
+        },
+        {
+          "name": "published preview gold_chest",
+          "passed": true
+        },
+        {
+          "name": "published preview gold_feet",
+          "passed": true
+        },
+        {
+          "name": "published preview gold_head",
+          "passed": true
+        },
+        {
+          "name": "published preview gold_hoe",
+          "passed": true
+        },
+        {
+          "name": "published preview gold_ingot",
+          "passed": true
+        },
+        {
+          "name": "published preview gold_legs",
+          "passed": true
+        },
+        {
+          "name": "published preview gold_pickaxe",
+          "passed": true
+        },
+        {
+          "name": "published preview gold_shovel",
+          "passed": true
+        },
+        {
+          "name": "published preview gold_sword",
+          "passed": true
+        },
+        {
+          "name": "published preview grain",
+          "passed": true
+        },
+        {
+          "name": "published preview iron_axe",
+          "passed": true
+        },
+        {
+          "name": "published preview iron_chest",
+          "passed": true
+        },
+        {
+          "name": "published preview iron_feet",
+          "passed": true
+        },
+        {
+          "name": "published preview iron_head",
+          "passed": true
+        },
+        {
+          "name": "published preview iron_hoe",
+          "passed": true
+        },
+        {
+          "name": "published preview iron_ingot",
+          "passed": true
+        },
+        {
+          "name": "published preview iron_legs",
+          "passed": true
+        },
+        {
+          "name": "published preview iron_pickaxe",
+          "passed": true
+        },
+        {
+          "name": "published preview iron_shield",
+          "passed": true
+        },
+        {
+          "name": "published preview iron_shovel",
+          "passed": true
+        },
+        {
+          "name": "published preview iron_sword",
+          "passed": true
+        },
+        {
+          "name": "published preview leather",
+          "passed": true
+        },
+        {
+          "name": "published preview leather_chest",
+          "passed": true
+        },
+        {
+          "name": "published preview leather_feet",
+          "passed": true
+        },
+        {
+          "name": "published preview leather_head",
+          "passed": true
+        },
+        {
+          "name": "published preview leather_legs",
+          "passed": true
+        },
+        {
+          "name": "published preview plant_fiber",
+          "passed": true
+        },
+        {
+          "name": "published preview raw_copper",
+          "passed": true
+        },
+        {
+          "name": "published preview raw_gold",
+          "passed": true
+        },
+        {
+          "name": "published preview raw_iron",
+          "passed": true
+        },
+        {
+          "name": "published preview raw_meat",
+          "passed": true
+        },
+        {
+          "name": "published preview seeds",
+          "passed": true
+        },
+        {
+          "name": "published preview shears",
+          "passed": true
+        },
+        {
+          "name": "published preview stick",
+          "passed": true
+        },
+        {
+          "name": "published preview stone_axe",
+          "passed": true
+        },
+        {
+          "name": "published preview stone_hoe",
+          "passed": true
+        },
+        {
+          "name": "published preview stone_pickaxe",
+          "passed": true
+        },
+        {
+          "name": "published preview stone_shovel",
+          "passed": true
+        },
+        {
+          "name": "published preview stone_sword",
+          "passed": true
+        },
+        {
+          "name": "published preview waterskin",
+          "passed": true
+        },
+        {
+          "name": "published preview wood_axe",
+          "passed": true
+        },
+        {
+          "name": "published preview wood_bow",
+          "passed": true
+        },
+        {
+          "name": "published preview wood_hoe",
+          "passed": true
+        },
+        {
+          "name": "published preview wood_pickaxe",
+          "passed": true
+        },
+        {
+          "name": "published preview wood_shield",
+          "passed": true
+        },
+        {
+          "name": "published preview wood_shovel",
+          "passed": true
+        },
+        {
+          "name": "published preview wood_spear",
+          "passed": true
+        },
+        {
+          "name": "published preview wood_sword",
+          "passed": true
+        },
+        {
+          "name": "published preview wood_torch",
+          "passed": true
+        },
+        {
+          "name": "published preview wool",
+          "passed": true
+        },
+        {
+          "name": "candidate inspection mode 0",
+          "passed": true
+        },
+        {
+          "name": "capture inspection mode 0",
+          "passed": true
+        },
+        {
+          "name": "candidate inspection mode 1",
+          "passed": true
+        },
+        {
+          "name": "capture inspection mode 1",
+          "passed": true
+        },
+        {
+          "name": "candidate inspection mode 2",
+          "passed": true
+        },
+        {
+          "name": "capture inspection mode 2",
+          "passed": true
+        },
+        {
+          "name": "candidate inspection mode 3",
+          "passed": true
+        },
+        {
+          "name": "capture inspection mode 3",
+          "passed": true
+        },
+        {
+          "name": "candidate inspection mode 4",
+          "passed": true
+        },
+        {
+          "name": "capture inspection mode 4",
+          "passed": true
+        },
+        {
+          "name": "candidate inspection mode 5",
+          "passed": true
+        },
+        {
+          "name": "capture inspection mode 5",
+          "passed": true
+        },
+        {
+          "name": "candidate inspection mode 6",
+          "passed": true
+        },
+        {
+          "name": "capture inspection mode 6",
+          "passed": true
+        },
+        {
+          "name": "export writes fresh report",
+          "passed": true
+        },
+        {
+          "name": "export image -published.png",
+          "passed": true
+        },
+        {
+          "name": "export image -candidate.png",
+          "passed": true
+        },
+        {
+          "name": "reload invalidates gameplay visual caches",
+          "passed": true
+        },
+        {
+          "name": "layout 1280x720_100",
+          "passed": true
+        },
+        {
+          "name": "capture 1280x720_100",
+          "passed": true
+        },
+        {
+          "name": "layout 1280x720_150",
+          "passed": true
+        },
+        {
+          "name": "capture 1280x720_150",
+          "passed": true
+        },
+        {
+          "name": "layout 1280x720_200",
+          "passed": true
+        },
+        {
+          "name": "capture 1280x720_200",
+          "passed": true
+        },
+        {
+          "name": "layout 1920x1080_100",
+          "passed": true
+        },
+        {
+          "name": "capture 1920x1080_100",
+          "passed": true
+        },
+        {
+          "name": "layout 1920x1080_150",
+          "passed": true
+        },
+        {
+          "name": "capture 1920x1080_150",
+          "passed": true
+        },
+        {
+          "name": "layout 1920x1080_200",
+          "passed": true
+        },
+        {
+          "name": "capture 1920x1080_200",
+          "passed": true
+        },
+        {
+          "name": "pointer switches inspection mode",
+          "passed": true
+        },
+        {
+          "name": "Escape closes studio",
+          "passed": true
+        },
+        {
+          "name": "studio preserves player property",
+          "passed": true
+        }
+      ],
+      "passed": true
+    }
+  }
+}

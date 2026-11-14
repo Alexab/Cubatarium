@@ -12,6 +12,7 @@ uniform float uAmbient;
 uniform float uFog;
 uniform float uMetallic;
 uniform float uRoughness;
+uniform int uInspectionMode;
 vec3 linearColor(vec3 c)
 {
     return mix(c/12.92,pow((c+0.055)/1.055,vec3(2.4)),step(vec3(0.04045),c));
@@ -34,6 +35,14 @@ void main()
     vec3 specular=mix(vec3(0.035),albedo*0.16,uMetallic)*highlight*(1.0-roughness*0.65);
     vec3 lit=albedo*(clamp(uAmbient,0.0,1.0)+(1.0-clamp(uAmbient,0.0,1.0))*diffuse)+specular;
     vec3 finalColor=mix(lit,linearColor(uFogColor),clamp(uFog,0.0,1.0));
+    if(uInspectionMode==1) finalColor=vec3(0.005);
+    if(uInspectionMode==2) finalColor=vec3(0.35)*(clamp(uAmbient,0.0,1.0)+(1.0-clamp(uAmbient,0.0,1.0))*diffuse);
+    if(uInspectionMode==3) finalColor=albedo;
+    if(uInspectionMode==4) {
+        vec2 cell=floor(vUv*32.0);
+        finalColor=mod(cell.x+cell.y,2.0)<1.0?vec3(0.8):vec3(0.04);
+    }
+    if(uInspectionMode==5) { FragColor=vec4(n*0.5+0.5,1.0); return; }
     // The current item material subset is OPAQUE: alpha does not blend.
     FragColor=vec4(displayColor(finalColor),1.0);
 }

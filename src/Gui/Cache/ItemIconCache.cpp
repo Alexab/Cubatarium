@@ -60,13 +60,13 @@ void PaintTool(std::vector<unsigned char> &px, int size, const std::string &id)
   unsigned char r = 158, g = 107, b = 56;
   ToolRgb(id, r, g, b);
   // handle
-  FillRect(px, size, size / 2 - 3, size / 2 - 4, size / 2 + 3, size - 8, 110, 70,
-           30);
+  FillRect(px, size, size / 2 - 3, size / 2 - 4, size / 2 + 3, size - 8, 110,
+           70, 30);
   if (id.find("sword") != std::string::npos)
   {
     FillRect(px, size, size / 2 - 3, 8, size / 2 + 3, size / 2, r, g, b);
-    FillRect(px, size, size / 2 - 10, size / 2 - 2, size / 2 + 10, size / 2 + 3, r,
-             g, b);
+    FillRect(px, size, size / 2 - 10, size / 2 - 2, size / 2 + 10, size / 2 + 3,
+             r, g, b);
   }
   else if (id.find("shovel") != std::string::npos)
   {
@@ -96,9 +96,7 @@ UItemIconCache::UItemIconCache(
 {
 }
 
-void UItemIconCache::EnsureFbo(int)
-{
-}
+void UItemIconCache::EnsureFbo(int) {}
 
 GLuint UItemIconCache::RenderItemIcon(const std::string &itemId)
 {
@@ -106,8 +104,8 @@ GLuint UItemIconCache::RenderItemIcon(const std::string &itemId)
 
   if (ItemPreview)
   {
-    const GLuint tex = ItemPreview->RenderToUniqueTexture(itemId, kSize, 45.f,
-                                                           20.f);
+    const GLuint tex =
+        ItemPreview->RenderToUniqueTexture(itemId, kSize, 45.f, 20.f);
     if (tex != 0)
     {
       return tex;
@@ -131,6 +129,7 @@ GLuint UItemIconCache::RenderItemIcon(const std::string &itemId)
 
 GLuint UItemIconCache::GetIcon(const std::string &itemId)
 {
+  SyncRevision();
   if (itemId.empty())
   {
     return 0;
@@ -140,13 +139,12 @@ GLuint UItemIconCache::GetIcon(const std::string &itemId)
   {
     return it->second;
   }
-  if (IconService)
+  if (IconService && !SkipDiskCache)
   {
     // Disk cache read: a previous session already rendered this icon.
     GLuint cached = 0;
-    if (IconService->TryLoadIconTexture("item", itemId, "",
-                                        FingerprintFor(itemId), kIconSize,
-                                        cached) &&
+    if (IconService->TryLoadIconTexture(
+            "item", itemId, "", FingerprintFor(itemId), kIconSize, cached) &&
         cached != 0)
     {
       Cache[itemId] = cached;
@@ -161,6 +159,7 @@ GLuint UItemIconCache::GetIcon(const std::string &itemId)
 
 void UItemIconCache::WarmupNext(size_t count)
 {
+  SyncRevision();
   size_t done = 0;
   while (done < count)
   {
@@ -178,8 +177,8 @@ void UItemIconCache::WarmupNext(size_t count)
     Cache[itemId] = tex;
     if (IconService)
     {
-      IconService->StoreIconTexture("item", itemId, "",
-                                    FingerprintFor(itemId), kIconSize, tex);
+      IconService->StoreIconTexture("item", itemId, "", FingerprintFor(itemId),
+                                    kIconSize, tex);
     }
     ++done;
   }
@@ -208,13 +207,14 @@ std::string UItemIconCache::FingerprintFor(const std::string &itemId) const
         const std::filesystem::path modelPath(def->ModelPath);
         if (!ec && std::filesystem::exists(modelPath, ec))
         {
-          const auto mtime =
-              std::filesystem::last_write_time(modelPath, ec).time_since_epoch().count();
+          const auto mtime = std::filesystem::last_write_time(modelPath, ec)
+                                 .time_since_epoch()
+                                 .count();
           const auto size = std::filesystem::file_size(modelPath, ec);
           if (!ec)
           {
-            fingerprint += "|stamp=" + std::to_string(size) + ":" +
-                           std::to_string(mtime);
+            fingerprint +=
+                "|stamp=" + std::to_string(size) + ":" + std::to_string(mtime);
           }
         }
       }
@@ -223,8 +223,19 @@ std::string UItemIconCache::FingerprintFor(const std::string &itemId) const
   return fingerprint;
 }
 
+void UItemIconCache::SyncRevision()
+{
+  if (CachedRevision != UItemDefinitionStorage::ContentRevision())
+    Invalidate();
+}
+
 void UItemIconCache::Invalidate()
 {
+  CachedRevision = UItemDefinitionStorage::ContentRevision();
+  SkipDiskCache = true;
+  Warmup.Clear();
+  if (ItemPreview)
+    ItemPreview->Invalidate();
   for (auto &pair : Cache)
   {
     if (pair.second)
