@@ -199,6 +199,8 @@ set(SOURCES
     src/Items/ItemWieldRenderer.cpp
     src/Items/FpViewmodelRenderer.cpp
     src/Items/ItemGltfTextureCache.cpp
+    src/Items/ItemRenderAsset.cpp
+    src/Items/ItemSurfaceRenderer.cpp
     src/Game/Survival/SurvivalSystems.cpp
     src/World/Items/WorldItemSystem.cpp
     src/Items/ItemToolInfluenceProvider.cpp
@@ -1208,6 +1210,12 @@ cubatarium_add_test(NAME armor_equipment_test
         src/Items/ToolCapabilities.cpp
         src/Test/ArmorEquipmentTest.cpp
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+cubatarium_add_test(NAME item_render_asset_test
+    SOURCES src/Items/ItemRenderAsset.cpp src/Test/ItemRenderAssetTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+add_test(NAME item_render_asset_test COMMAND $<TARGET_FILE:item_render_asset_test>)
+set_tests_properties(item_render_asset_test PROPERTIES LABELS "unit;items")
 
 cubatarium_add_test(NAME ownership_snapshot_test SOURCES src/Test/OwnershipSnapshotTest.cpp LIBRARIES nlohmann_json::nlohmann_json)
 add_test(NAME ownership_snapshot_test COMMAND $<TARGET_FILE:ownership_snapshot_test>)

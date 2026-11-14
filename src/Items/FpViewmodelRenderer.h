@@ -179,6 +179,7 @@ private:
   std::shared_ptr<UCreatureTextureStorage> CreatureTextures;
   std::shared_ptr<UShaderManager> ShaderManager;
   std::shared_ptr<class UShaderProgram> Shader;
+  std::unique_ptr<class ItemSurfaceRenderer> SurfaceRenderer;
 
   GLuint CubeVao{0};
   GLuint CubeVbo{0};

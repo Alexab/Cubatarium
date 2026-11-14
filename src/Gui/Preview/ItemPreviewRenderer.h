@@ -23,7 +23,7 @@ class UItemPreviewRenderer
 {
 public:
   UItemPreviewRenderer(std::shared_ptr<UItemDefinitionStorage> items,
-                        std::shared_ptr<UShaderManager> shaderManager);
+                       std::shared_ptr<UShaderManager> shaderManager);
   ~UItemPreviewRenderer();
 
   bool Initialize();
@@ -32,7 +32,7 @@ public:
 
   /// Renders to an owned texture (caller must keep/delete it).
   GLuint RenderToUniqueTexture(const std::string &itemId, int size,
-                                float yawDeg, float pitchDeg);
+                               float yawDeg, float pitchDeg);
 
 private:
   struct Part
@@ -51,8 +51,8 @@ private:
   GLuint GetOrCreateColorTexture(const std::string &itemId);
 
   bool TryLoadPartsFromModelJson(const std::string &itemId,
-                                  std::string &outModelRelPath,
-                                  std::vector<Part> &outParts) const;
+                                 std::string &outModelRelPath,
+                                 std::vector<Part> &outParts) const;
 
   /// Returns true if a static glTF mesh was drawn into the bound FBO.
   bool TryDrawGltfModel(const std::string &itemId, const std::string &modelRel,
@@ -66,6 +66,7 @@ private:
   std::shared_ptr<UShaderManager> ShaderManager;
 
   std::shared_ptr<class UShaderProgram> Shader;
+  std::unique_ptr<class ItemSurfaceRenderer> SurfaceRenderer;
 
   GLuint CubeVao{0};
   GLuint CubeVbo{0};
@@ -85,4 +86,3 @@ private:
 } // namespace cutum
 
 #endif
-

@@ -234,6 +234,7 @@ tools/debug_uv_overlays/
 
 # Item/inventory native QA scratch; promoted evidence lives in docs/research.
 /bin/items_acceptance/
+/bin/item_surface_fp/
 /bin/items_carry_final/
 /bin/ownership_completion/
 /bin/ownership_visual/

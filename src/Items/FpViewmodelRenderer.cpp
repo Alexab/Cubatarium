@@ -15,6 +15,7 @@
 #include "Game/Inventory/InventoryTypes.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Items/ItemGltfTextureCache.h"
+#include "Items/ItemSurfaceRenderer.h"
 #include "Items/ItemVisualDefaults.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
@@ -220,11 +221,15 @@ bool UFpViewmodelRenderer::Initialize()
   WoodTex = SolidTex(158, 107, 56);
   Motion.WieldOffsetX = kInertiaBaseX;
   Motion.WieldOffsetY = kInertiaBaseY;
+  SurfaceRenderer = std::make_unique<ItemSurfaceRenderer>();
+  if (!SurfaceRenderer->Initialize(*ShaderManager))
+    return false;
   return true;
 }
 
 void UFpViewmodelRenderer::Shutdown()
 {
+  SurfaceRenderer.reset();
   auto delTex = [](GLuint &t)
   {
     if (t != 0)
@@ -1021,6 +1026,7 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const std::string &itemId,
   }
 
   const std::filesystem::path absGltf = paths->AssetRoot() / gltfRel;
+  const auto surface = FindItemSurfaceAsset(absGltf);
 
   static std::mutex cacheMu;
   static std::unordered_map<std::string, std::shared_ptr<CreatureGltfMeshAsset>>
@@ -1064,6 +1070,11 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const std::string &itemId,
   if (minV.x > maxV.x)
   {
     return false;
+  }
+  if (surface)
+  {
+    minV = surface->Low;
+    maxV = surface->High;
   }
   const glm::vec3 center = (minV + maxV) * 0.5f;
   const glm::vec3 ext = maxV - minV;
@@ -1127,6 +1138,14 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const std::string &itemId,
                  glm::vec3(fitScale * kToolWieldScale * wieldScale)) *
       glm::translate(glm::mat4(1.f), -center + visualOff);
   const glm::mat4 mvp = mvpBase * model;
+
+  if (surface)
+  {
+    ItemPresentationProfile profile;
+    profile.CameraPosition = glm::vec3(0);
+    SurfaceRenderer->Draw(surface, absGltf, mvpBase, model, {}, profile);
+    return true;
+  }
 
   static GLuint vao = 0, vbo = 0, ebo = 0;
   if (vao == 0)

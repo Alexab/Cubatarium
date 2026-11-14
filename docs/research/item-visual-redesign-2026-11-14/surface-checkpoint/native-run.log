@@ -1,0 +1,13 @@
+test_cpp_audits
+test_itemgen_publication
+test_itemgen_mesh
+test_itemgen_surface_uv
+test_itemgen_design
+validate_item_defs
+audit_item_visuals
+test_itemgen_raster
+test_survival_chains
+throw_prototype
+ctest-items
+native-flight
+passed=True; evidence=E:\Work\Home\Cubatarium\bin\items_acceptance

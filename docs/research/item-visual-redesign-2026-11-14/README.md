@@ -53,24 +53,61 @@ default previously failed during floating-point texture multiplication.
 
 Validation at this checkpoint: 11 new geometry/UV/design tests, four existing
 raster tests and two publication tests pass. Style/include checks pass. The
-profiled acceptance runner now includes the three new test scripts. No new
-native visual acceptance or performance result is claimed yet; runtime shaders,
-Item Lab and production assets remain pending.
+profiled acceptance runner now includes the three new test scripts.
+
+## Runtime surface checkpoint
+
+Added independent item CPU/GPU representations without changing creature vertex
+buffers or creature shaders. The strict loader preserves hierarchical node
+transforms, unit normals, UVs and material factors; rejects escaping paths,
+truncated/oversized/invalid accessors, missing normals, cyclic/shared nodes,
+invalid scale and unsupported primitive modes. A Release C++ test covers the
+interleaved accessor stride, material values, composed bounds, parent-pose
+inheritance and returning to the authored pose after cancellation.
+
+`ItemSurfaceRenderer` uploads each immutable primitive once and retains its
+owner while the VAO exists. The shader performs linear-light diffuse shading,
+a restrained metallic/roughness-dependent highlight and display conversion.
+It supports a presentation light profile and fog; albedo gets mipmaps. Cache
+clearing and GL cleanup are explicit. Icons/previews and FP now dispatch v3
+assets through this path; legacy resources retain the previous renderer.
+
+Native probes temporarily substituted **only the runtime copy** of the staged
+bucket, restored the original three files in a finally block, and ran the
+Release executable through flight_sim_run.py on CarryAimQA. Production sources
+and the publication manifest were not replaced.
+
+- Full checkpoint regression: 22 Release CTest tests and native gameplay,
+  ownership, player window and 132 icon checks passed, including bucket in mixed
+  slots and recovery. This proves the connected icon path runs in a real GUI.
+- A separate presentation-only FP probe uses `CUBA_FLIGHT_QA_FP_ITEM=bucket`;
+  it neither equips nor consumes saved property.
+- The FP image exposes an unfinished grip: the inherited waterskin-era pose
+  places the hand inside the vessel. The bucket is **not accepted as a finished
+  pilot**. Authored contact anchors and appropriate framing remain required.
+- World lighting of FP, TP/armor/ground integration, gameplay-driven state
+  binding, imported authored meshes and Item Lab are still pending. No claim of
+  a performance-budget pass or full native visual acceptance is made.
+
+![Native mixed slots with v3 bucket](surface-checkpoint/native-bucket-icons.png)
+![Native FP probe showing the grip defect](surface-checkpoint/native-bucket-fp.png)
+
+Checkpoint logs/reports are in [surface-checkpoint](surface-checkpoint/).
 
 ## Remaining implementation, in order
 
 1. Native baseline and actual resource-path trace, before/after references and
    individual design cards. No claim of direct Luanti mesh copying is established.
-2. Versioned recipe adapter and surface glTF exporter with normals, part UVs,
-   explicit material assignments, stable nodes/pivots and authored overrides.
+2. Finish the versioned design adapter and surface glTF exporter with animated
+   nodes/pivots, manual glTF import and preserved authored overrides.
    Build to staging; validate and publish separately; preserve sidecars and layers.
 3. Surface-space painted layers and authored overlays: base, broad variation,
    construction detail, manufacturing marks. 128 small materials, 256 hand items,
    512 armor. Albedo and optional standard metallic/roughness parameters.
-4. ItemRenderAsset, ItemVisualState and ItemPresentationProfile; item-only mesh
-   cache and gentle lit shader across icon/FP/TP/armor/ground/carry, with colour
-   spaces, filtering/mips, world light/fog and neutral studio light. Leave creature
-   buffer ABI and creature shaders unchanged.
+4. Complete the item-only path across TP/armor/ground/carry and wire world
+   light, gameplay state and authored contacts. The data types, shader and
+   icon/FP dispatch exist, but have not met full presentation acceptance.
+   Leave creature buffer ABI and creature shaders unchanged.
 5. In-game Item Lab: catalog, old/new, fixed/orbit cameras, silhouette/gray/albedo/
    lit/UV/normals/wireframe, 32/48/64 icons, FP/TP/ground, both body types, states,
    anchors/bounds/cost, reload with cache invalidation, PNG/JSON export. Synthetic

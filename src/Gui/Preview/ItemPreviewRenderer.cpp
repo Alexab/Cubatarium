@@ -2,6 +2,7 @@
 #include "Core/Json/JsonVec.h"
 
 #include "Items/ItemGltfTextureCache.h"
+#include "Items/ItemSurfaceRenderer.h"
 
 #include "App/Platform/IUPlatformPaths.h"
 #include "Creatures/Visual/Gltf/CreatureGltfCache.h"
@@ -102,12 +103,16 @@ bool UItemPreviewRenderer::Initialize()
     return false;
   }
 
+  SurfaceRenderer = std::make_unique<ItemSurfaceRenderer>();
+  if (!SurfaceRenderer->Initialize(*ShaderManager))
+    return false;
   return EnsureFboSize(256);
 }
 
 void UItemPreviewRenderer::Shutdown()
 {
   Invalidate();
+  SurfaceRenderer.reset();
 
   if (ScratchMeshEbo != 0)
   {
@@ -145,6 +150,8 @@ void UItemPreviewRenderer::Shutdown()
 
 void UItemPreviewRenderer::Invalidate()
 {
+  if (SurfaceRenderer)
+    SurfaceRenderer->Clear();
   if (DepthRbo != 0)
   {
     glDeleteRenderbuffers(1, &DepthRbo);
@@ -517,6 +524,22 @@ bool UItemPreviewRenderer::TryDrawGltfModel(const std::string &itemId,
   }
 
   const std::filesystem::path absPath = paths->AssetRoot() / gltfRel;
+  if (const auto surface = FindItemSurfaceAsset(absPath))
+  {
+    const auto center = (surface->Low + surface->High) * .5f;
+    const auto extent = surface->High - surface->Low;
+    const auto *definition = Items->Get(itemId);
+    const float scale =
+        1.2f / std::max(1e-5f, std::max({extent.x, extent.y, extent.z})) *
+        (definition ? definition->Visual.IconScale : 1.f);
+    const auto model = glm::scale(glm::mat4(1), glm::vec3(scale)) *
+                       glm::translate(glm::mat4(1), -center);
+    ItemPresentationProfile profile;
+    profile.CameraPosition = glm::vec3(glm::inverse(view)[3]);
+    SurfaceRenderer->Draw(surface, absPath, projection * view, model, {},
+                          profile);
+    return true;
+  }
   // UX R2: route through the shared glTF cache - re-parsing the model JSON
   // + .bin from disk per icon render was the first-open stall driver.
   auto asset = CreatureGltfCache::Instance().LoadFromPath(absPath);

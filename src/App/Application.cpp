@@ -2592,7 +2592,8 @@ void UApplication::RunInventoryIconsQa(const std::string &path)
       entry(InventoryEntryKind::Item, "iron_pickaxe"),
       entry(InventoryEntryKind::UCreature, "dolphin"),
       entry(InventoryEntryKind::Object, sample(ContentKind::Object)),
-      entry(InventoryEntryKind::Skin, sample(ContentKind::Skin))};
+      entry(InventoryEntryKind::Skin, sample(ContentKind::Skin)),
+      entry(InventoryEntryKind::Item, "bucket")};
   for (size_t i = 0; i < mixed.size(); ++i)
   {
     inventory.AssignToHotbar(0, i, mixed[i]);
@@ -3249,12 +3250,29 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
   const auto fp_viewmodel_begin = std::chrono::high_resolution_clock::now();
   if (State == AppState::InGame && World &&
       (!MinimalOverlayForBench || std::getenv("CUBA_FLIGHT_QA_FP_SKIN") ||
+       std::getenv("CUBA_FLIGHT_QA_FP_ITEM") ||
        std::getenv("CUBA_FLIGHT_QA_WORLD_USER")) &&
       !PaletteOpen && FpViewmodelRenderer)
   {
     const WorldViewSettings &view = World->GetViewSettings();
-    if (const char *qaSkin = std::getenv("CUBA_FLIGHT_QA_FP_SKIN");
-        qaSkin && std::getenv("CUBA_CREATURE_QA_MODELS"))
+    if (const char *qaItem = std::getenv("CUBA_FLIGHT_QA_FP_ITEM");
+        qaItem && *qaItem)
+    {
+      // Presentation-only probe: no inventory assignment, consumption or save.
+      InventoryEntryRef main{InventoryEntryKind::Item, qaItem, 1, false};
+      FpViewmodelDrawParams params;
+      params.FramebufferW = width;
+      params.FramebufferH = height;
+      params.Active = &main;
+      params.SpeciesId = "human";
+      if (const auto definitions = World->GetCreatureDefinitionStorage())
+        params.Definition = definitions->Get("human");
+      if (const auto *creature = World->GetControlledCreature())
+        params.Appearance = World->GetResolvedAppearanceShared(*creature);
+      FpViewmodelRenderer->DrawWorldOverlay(params);
+    }
+    else if (const char *qaSkin = std::getenv("CUBA_FLIGHT_QA_FP_SKIN");
+             qaSkin && std::getenv("CUBA_CREATURE_QA_MODELS"))
     {
       // Explicit candidate-only visual probe. Does not equip or save items.
       InventoryEntryRef main{InventoryEntryKind::Item, "wood_sword", 1, false};

@@ -1,0 +1,6 @@
+Версия MSBuild 17.14.60+43b635718 для .NET Framework
+
+  ItemRenderAsset.cpp
+  ItemRenderAssetTest.cpp
+  Generating Code...
+  item_render_asset_test.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\Release\item_render_asset_test.exe
