@@ -58,6 +58,8 @@ private:
   };
   Hit Sweep(UWorld &world, glm::vec3 position, glm::vec3 delta, glm::vec3 half,
             uint64_t skip, uint64_t exclude, float dt) const;
+  void MoveHeldCargo(UWorld &world, WorldItem &item, glm::vec3 desired,
+                     float dt);
   void Settle(UWorld &world, WorldItem &item);
   int Add(WorldItem item);
   void Step(UWorld &world, float dt);

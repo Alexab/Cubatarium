@@ -250,6 +250,40 @@ inline void RunItemsInventoryQa(UWorld &world, const std::string &path)
                        reason) &&
               actor->CarryHandCount == 2);
     const auto hp = c->GetVitals().health;
+    camera->SetOrientation(90.f, -70.f);
+    tick(8);
+    check("looking down keeps a ground-obstructed creature held",
+          physics.HasCargo(actor->GetId()) && c->ExternalMotion);
+    const float lowY = c->GetCollisionVolume().center.y;
+    for (int frame = 1; frame <= 24; ++frame)
+    {
+      camera->SetOrientation(90.f, -70.f + 145.f * frame / 24.f);
+      tick(1);
+    }
+    check("raising aim lifts a grounded creature without releasing it",
+          physics.HasCargo(actor->GetId()) &&
+              c->GetCollisionVolume().center.y > lowY + .3f);
+    for (int frame = 1; frame <= 24; ++frame)
+    {
+      camera->SetOrientation(90.f + 180.f * frame / 24.f, 0.f);
+      tick(1);
+    }
+    check("turning aim retains the creature without floor penetration",
+          physics.HasCargo(actor->GetId()) &&
+              c->GetCollisionVolume().center.y -
+                      c->GetCollisionVolume().halfExtents.y >=
+                  float(floor.y) + .499f);
+    camera->SetOrientation(90.f, 75.f);
+    const auto ceiling = floor + glm::ivec3(0, 3, 0);
+    world.GetBlockWorld().SetBlock(ceiling, stone);
+    tick(8);
+    auto volume = c->GetCollisionVolume();
+    volume.halfExtents -= glm::vec3(.001f);
+    check("ceiling restricts held cargo without dropping or penetrating it",
+          physics.HasCargo(actor->GetId()) &&
+              !world.CheckBlockCollisionVolume(volume));
+    world.GetBlockWorld().SetBlock(ceiling, BLOCK_AIR);
+    camera->SetOrientation(90.f, 0.f);
     physics.Release(world, *actor, forward, true);
     tick(45);
     check("gentle placement does no contact damage",

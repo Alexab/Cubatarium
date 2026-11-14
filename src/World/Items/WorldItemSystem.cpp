@@ -452,6 +452,29 @@ void UWorldItemSystem::Settle(UWorld &world, WorldItem &i)
       c->GetLocomotion().BreakGroundSupport();
     }
 }
+void UWorldItemSystem::MoveHeldCargo(UWorld &world, WorldItem &item,
+                                     glm::vec3 desired, float dt)
+{
+  auto movement = desired - item.position;
+  // A blocked grip slides along surfaces instead of letting go. The next step
+  // retries from the last safe position, so looking up can lift floor contact.
+  for (int plane = 0; plane < 3; ++plane)
+  {
+    const float distance = glm::length(movement);
+    if (distance < .0001f)
+      return;
+    const auto hit =
+        Sweep(world, item.position, movement, item.physical.size * .5f,
+              item.creatureId, item.carrierId, dt);
+    if (!hit.ready)
+      return;
+    item.position += movement * std::max(0.f, hit.time - .001f / distance);
+    if (!hit.found)
+      return;
+    movement = desired - item.position;
+    movement -= hit.normal * std::min(0.f, glm::dot(movement, hit.normal));
+  }
+}
 void UWorldItemSystem::Step(UWorld &world, float dt)
 {
   auto *actor = world.GetControlledCreature();
@@ -538,7 +561,9 @@ void UWorldItemSystem::Step(UWorld &world, float dt)
           glm::vec3(
               0, -.45f - .25f * i.physical.size.y + .12f * holder->ThrowCharge,
               0);
-      if (glm::distance(desired, i.position) > 4.f)
+      // Only a genuinely separated carrier loses the grip. A quick camera
+      // turn can move the requested contact across the full carry diameter.
+      if (glm::distance(viewEye, i.position) > 4.f)
       {
         i.carrierId = 0;
         i.flying = true;
@@ -547,15 +572,7 @@ void UWorldItemSystem::Step(UWorld &world, float dt)
         holder->ThrowCharge = 0;
         continue;
       }
-      auto hit =
-          Sweep(world, i.position, desired - i.position, i.physical.size * .5f,
-                i.creatureId, holder->GetId(), dt);
-      if (hit.ready)
-        i.position += (desired - i.position) * std::max(0.f, hit.time - .005f);
-      if (hit.found && glm::distance(i.position, desired) > .5f)
-      {
-        Release(world, *holder, viewForward, true);
-      }
+      MoveHeldCargo(world, i, desired, dt);
     }
     else if (i.flying || !i.creatureId)
     {
