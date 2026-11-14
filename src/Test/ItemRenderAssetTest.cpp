@@ -1,6 +1,7 @@
 #include "Items/ItemRenderAsset.h"
 #include "Game/Inventory/InventoryTypes.h"
 #include "Items/ItemActionPulse.h"
+#include "Items/ItemLabAssets.h"
 #include "Items/ItemPresentationMath.h"
 
 #include <chrono>
@@ -18,6 +19,78 @@ void Expect(bool value, const char *reason)
   if (!value)
     throw std::runtime_error(reason);
 }
+void TestLabPaths(const std::filesystem::path &folder)
+{
+  namespace fs = std::filesystem;
+  const auto parent = fs::weakly_canonical(folder);
+  const auto root = parent / "lab";
+  struct Cleanup
+  {
+    fs::path Root, Parent;
+    ~Cleanup()
+    {
+      std::error_code ec;
+      if (!fs::is_symlink(Root) &&
+          fs::weakly_canonical(Root).parent_path() == Parent &&
+          Root.filename() == "lab")
+        fs::remove_all(Root, ec);
+    }
+  } cleanup{root, parent};
+  const auto assets = root / "bin";
+  const auto published = assets / "models/items/bucket/model.gltf";
+  const auto reference =
+      published.parent_path() / "_itemgen_reference/model.gltf";
+  const auto staged = root / "assetgen_output/items/redesign/bucket/model.gltf";
+  fs::create_directories(published.parent_path());
+  std::ofstream(published) << "published";
+  auto paths = cutum::ResolveItemLabAssets(
+      assets, "models/items/bucket/model.gltf", "bucket");
+  Expect(paths.Reference == published && !paths.Archived && !paths.Staged,
+         "development reference resolves published model");
+  fs::create_directories(staged.parent_path());
+  std::ofstream(staged) << "candidate";
+  paths = cutum::ResolveItemLabAssets(assets, "models/items/bucket/model.gltf",
+                                      "bucket");
+  Expect(paths.Staged && paths.Candidate == staged,
+         "development candidate resolves staging");
+  fs::create_directories(reference.parent_path());
+  std::ofstream(reference) << "baseline";
+  paths = cutum::ResolveItemLabAssets(assets, "models/items/bucket/model.gltf",
+                                      "bucket");
+  Expect(paths.Archived && paths.Reference == reference &&
+             paths.Candidate == staged,
+         "archive comparison retains staged candidate precedence");
+  fs::remove(staged);
+  paths = cutum::ResolveItemLabAssets(assets, "models/items/bucket/model.gltf",
+                                      "bucket");
+  Expect(paths.Archived && !paths.Staged && paths.Candidate == published &&
+             paths.Reference != paths.Candidate,
+         "packaged comparison uses baseline and current production");
+  for (const auto &id : {"../bucket", ""})
+  {
+    bool rejected = false;
+    try
+    {
+      cutum::ResolveItemLabAssets(assets, "models/items/bucket/model.gltf", id);
+    }
+    catch (const std::invalid_argument &)
+    {
+      rejected = true;
+    }
+    Expect(rejected, "unsafe Lab item ID rejected");
+  }
+  bool rejected = false;
+  try
+  {
+    cutum::ResolveItemLabAssets(assets, "../outside.gltf", "bucket");
+  }
+  catch (const std::invalid_argument &)
+  {
+    rejected = true;
+  }
+  Expect(rejected, "Lab published path cannot escape asset root");
+}
+
 void TestVisualState()
 {
   using namespace cutum;
@@ -177,6 +250,7 @@ int main()
   } cleanup{folder};
   try
   {
+    TestLabPaths(folder);
     const float vertices[] = {0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1,
                               0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1};
     std::vector<unsigned char> bytes(sizeof(vertices) + 3);

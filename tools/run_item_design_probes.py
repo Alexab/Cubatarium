@@ -20,18 +20,33 @@ from qa_report_artifacts import reset_report
 
 @contextmanager
 def runtime_designs(staged,root=ROOT):
-    backup={}
+    from itemgen.artifact_contract import relative_file
+    root=Path(root).resolve();owned=(root/'bin/models/items').resolve()
+    backup={};created=set();payload={}
+    # Resolve every candidate dependency before changing a runtime file.
+    for id,path in staged.items():
+        if not id or any(c not in 'abcdefghijklmnopqrstuvwxyz0123456789_' for c in id):raise ValueError('Invalid runtime item ID')
+        gltf=json.loads((path/'model.gltf').read_text(encoding='utf-8'))
+        names={'model.gltf'}|{row['uri'] for kind in ('buffers','images') for row in gltf.get(kind,[])}
+        for name in names:
+            source=relative_file(path,name);relative=source.relative_to(path.resolve())
+            target=(owned/id/relative).resolve()
+            if not target.is_relative_to(owned/id):raise ValueError('Runtime dependency escapes owned item directory')
+            payload[target]=source.read_bytes()
     try:
-        for id,path in staged.items():
-            if not id or any(c not in 'abcdefghijklmnopqrstuvwxyz0123456789_' for c in id):
-                raise ValueError('Invalid runtime item ID')
-            for name in ('model.gltf','model.bin','textures/diffuse.png'):
-                runtime=root/'bin/models/items'/id/name
-                backup[runtime]=runtime.read_bytes()
-                runtime.write_bytes((path/name).read_bytes())
+        for target,data in payload.items():
+            backup[target]=target.read_bytes() if target.exists() else None
+            parent=target.parent
+            while parent!=owned and not parent.exists():created.add(parent);parent=parent.parent
+            target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(data)
         yield len(backup)
     finally:
-        for path,data in backup.items(): path.write_bytes(data)
+        for path,data in backup.items():
+            if data is None:path.unlink(missing_ok=True)
+            else:path.write_bytes(data)
+        for folder in sorted(created,key=lambda p:len(p.parts),reverse=True):
+            try:folder.rmdir()
+            except OSError:pass # Preserve unrelated files created during a probe.
         print(f'Restored {len(backup)} runtime files',flush=True)
 
 

@@ -17,7 +17,7 @@ def digest(path):
 
 
 def relative_file(folder, name):
-    if not isinstance(name,str) or not name or ':' in name or '\\' in name:
+    if not isinstance(name,str) or not name or ':' in name or '\\' in name or Path(name).is_absolute():
         raise ValueError(f'Expected relative resource URI: {name}')
     base=folder.resolve(); path=(base/name).resolve()
     if not path.is_relative_to(base) or path==base or not path.is_file():
@@ -27,8 +27,16 @@ def relative_file(folder, name):
 
 def validate_model(folder, *, budget):
     folder=Path(folder); g=json.loads((folder/'model.gltf').read_text(encoding='utf-8'))
+    def reject_extensions(value):
+        if isinstance(value,dict):
+            if 'extensions' in value:raise ValueError('glTF extensions are unsupported')
+            for key,child in value.items():
+                if key!='extras':reject_extensions(child)
+        elif isinstance(value,list):
+            for child in value:reject_extensions(child)
+    reject_extensions(g)
     if g.get('asset',{}).get('version')!='2.0':raise ValueError('Expected glTF 2.0')
-    if any(key in g for key in ('skins','animations','extensions')) or g.get('extensionsRequired') or g.get('extensionsUsed'):
+    if any(key in g for key in ('skins','animations','cameras','extensions')) or g.get('extensionsRequired') or g.get('extensionsUsed'):
         raise ValueError('Skins, animation clips and extensions are unsupported; use named visual drivers')
     resources={'model.gltf'}; buffers=[]
     for row in g['buffers']:
@@ -66,6 +74,8 @@ def validate_model(folder, *, budget):
         sampler=at(g['samplers'],texture['sampler'])
         if any(sampler.get(key,default)!=expected for key,default,expected in [('magFilter',9729,9729),('minFilter',9987,9987),('wrapS',10497,33071),('wrapT',10497,33071)]):
             raise ValueError('Item subset requires linear/trilinear clamp sampler; convert other sampling explicitly')
+    material_names=[m.get('name') for m in g['materials']]
+    if any(not isinstance(name,str) or not name for name in material_names) or len(set(material_names))!=len(material_names):raise ValueError('Unique named materials are required')
     for material in g['materials']:
         if material.get('doubleSided') or material.get('alphaMode','OPAQUE')!='OPAQUE' or any(key in material for key in ('normalTexture','occlusionTexture','emissiveTexture','extensions')):
             raise ValueError('Only opaque albedo materials with scalar properties are supported')
@@ -78,8 +88,9 @@ def validate_model(folder, *, budget):
             raise ValueError('Invalid linear material factors')
     triangles=0
     for mesh in g['meshes']:
+        if 'weights' in mesh:raise ValueError('Morph mesh weights are unsupported')
         for primitive in mesh['primitives']:
-            if primitive.get('mode',4)!=4 or primitive.get('targets') or set(primitive['attributes'])!={'POSITION','NORMAL','TEXCOORD_0'}:
+            if primitive.get('mode',4)!=4 or 'targets' in primitive or set(primitive['attributes'])!={'POSITION','NORMAL','TEXCOORD_0'}:
                 raise ValueError('Only triangles with POSITION, NORMAL and TEXCOORD_0 are supported')
             attrs=primitive['attributes']; pos=accessor(attrs['POSITION'],'VEC3'); normal=accessor(attrs['NORMAL'],'VEC3'); uv=accessor(attrs['TEXCOORD_0'],'VEC2')
             indices=accessor(primitive['indices'],'SCALAR',(5121,5123,5125)).reshape(-1)
@@ -89,19 +100,19 @@ def validate_model(folder, *, budget):
             tri=pos[indices.reshape(-1,3)]; cross=np.cross(tri[:,1]-tri[:,0],tri[:,2]-tri[:,0])
             if np.any(np.linalg.norm(cross,axis=1)<1e-12):raise ValueError('Degenerate triangle')
             if np.any(np.sum(cross*normal[indices.reshape(-1,3)].mean(axis=1),axis=1)<=0):raise ValueError('Triangle winding disagrees with normals')
-            if not 0<=primitive['material']<len(g['materials']):raise ValueError('Invalid material reference')
+            at(g['materials'],primitive['material'])
             triangles+=len(indices)//3
     names=set(); visited=set()
     def visit(index):
         if index in visited:raise ValueError('Cyclic or shared scene node')
         node=at(g['nodes'],index);visited.add(index);name=node.get('name','')
-        if not name or name in names:raise ValueError('Unique named nodes are required')
+        if not isinstance(name,str) or not name or name in names:raise ValueError('Unique named nodes are required')
         names.add(name)
         if 'mesh' in node:at(g['meshes'],node['mesh'])
-        if any(key in node for key in ('skin','weights','extensions')):raise ValueError('Unsupported node feature')
+        if set(node)-{'name','children','mesh','matrix','translation','rotation','scale','extras'}:raise ValueError('Unsupported node feature')
         if 'matrix' in node:
             m=np.array(node['matrix'],dtype=float)
-            if m.shape!=(16,) or any(k in node for k in ('translation','rotation','scale')) or not np.isfinite(m).all() or abs(np.linalg.det(m.reshape(4,4)))<1e-8:raise ValueError('Invalid node matrix')
+            if m.shape!=(16,) or any(k in node for k in ('translation','rotation','scale')) or not np.isfinite(m).all() or np.linalg.det(m.reshape(4,4))<=1e-8 or not np.allclose(m[[3,7,11,15]],[0,0,0,1],atol=1e-7):raise ValueError('Invalid node matrix')
         else:
             t=np.array(node.get('translation',[0,0,0]));r=np.array(node.get('rotation',[0,0,0,1]));s=np.array(node.get('scale',[1,1,1]))
             if t.shape!=(3,) or r.shape!=(4,) or s.shape!=(3,) or not all(np.isfinite(v).all() for v in (t,r,s)) or abs(np.linalg.norm(r)-1)>1e-3 or np.any(s<=0):raise ValueError('Invalid node TRS')

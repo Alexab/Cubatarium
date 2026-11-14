@@ -522,14 +522,47 @@ tests, all-item validation, incremental Release build and scoped native probes.
 This checkpoint does not publish the candidates or close final artistic,
 performance, manual-import or full Item Lab requirements.
 
+## Manual source and packaged Item Lab checkpoint, 2026-11-15
+
+Recipes can now override geometry with author-owned limited glTF 2.0 sources.
+The importer retains topology, UVs, normals, named hierarchy, pivots and materials;
+merges external buffers; copies multiple albedo images; and fits the result to
+the unchanged physical profile. Fitted positions get separate accessors so
+shared POSITION/NORMAL storage cannot corrupt normals. Percent-encoded source
+URIs are decoded before local containment checks. Unsupported data, invalid
+references and unreviewed source/provenance mismatches fail before publication.
+Source files remain read-only and a failed import preserves prior staging.
+
+Item Lab now resolves the archived prior model after publication, and uses
+current production as candidate when staging is absent. Export schema 2 records
+actual reference/candidate/published paths and uses explicit reference image names.
+Offline comparison uses the same prior archive; `--read-staged` now validates the
+complete frozen build instead of comparing only item-local source hashes.
+
+Five manual-source tests cover TRS/matrices, multiple buffers/textures, URI file
+names, shared attribute storage, optional fit subtrees, source preservation,
+determinism, provenance and failure. The broader source/publication tests pass,
+as does the Release C++ model/Item Lab path test. All 70 generated candidates
+still pass the strict contract. The dedicated QA world passes 113 Item Lab checks
+(including both resolutions and 100/150/200%) and 67 bucket presentation checks
+with a manually imported two-image resource and staging deliberately absent.
+Runtime and author data are verified conserved. See
+[checkpoint evidence](manual-checkpoint/summary.json), the native frames and
+[manual source guide](../../../tools/item_designs/MANUAL_GLTF.md).
+
+This does not close full Item Lab scene/thumbnail/contact controls, gameplay
+visual-state integration, per-item artistic approval, production promotion or
+performance acceptance. The native fixture is a tooling example, not a new
+production design or a general gameplay acceptance substitute.
+
 ## Remaining implementation, in order
 
 1. Native baseline and actual resource-path trace, before/after references and
    individual design cards. No claim of direct Luanti mesh copying is established.
-2. Implement the remaining manual glTF source import on the versioned artifact
-   contract. Authored generation, separate validation/publication, crash recovery
-   and source/sidecar preservation now have coverage. Wire the archived prior
-   resource into Item Lab before production promotion.
+2. Finish integration/acceptance of the versioned source pipeline during final
+   production promotion. Authored generation, manual glTF source overrides,
+   separate validation/publication, crash recovery, source/sidecar preservation
+   and archived Item Lab comparison now have scoped coverage.
 3. Surface-space painted layers and authored overlays: base, broad variation,
    construction detail, manufacturing marks. 128 small materials, 256 hand items,
    512 armor. Albedo and optional standard metallic/roughness parameters.
@@ -550,6 +583,12 @@ performance, manual-import or full Item Lab requirements.
 8. Full native visual audit and performance acceptance. No final completion
    checkbox until every item and gameplay representation has evidence.
 
+Before publication, verify exact source/resource hashes after a fresh Git checkout.
+Several generator modules and `item_surface.vert` currently have LF working-tree
+bytes while repository attributes request CRLF; raw provenance hashes must not
+be accepted across a checkout without checking the byte-preservation policy.
+The manual checkpoint payload is explicitly stored without text normalization.
+
 Before publication, adapt the existing creature equipment/reload/culling QA
 collectors for typed item surfaces, final texture semantics and gold sets.
 The legacy equipment matrix currently assumes `wear.gltf` and source color
@@ -557,9 +596,8 @@ factors. Also close these known integration gaps: share the final arrow
 resource with the bow's temporary nocked-arrow geometry; project the full
 consume-duration/cancel state into presentations; and complete carry/two-hand
 contact wiring. The sRGB filtering and cold disk-icon dependency problems are
-covered by the newer checkpoint above. General imported sampler conversion,
-manual source import, final publication acceptance and measured performance
-remain open.
+covered by the newer checkpoint above. Unsupported imported samplers are explicitly rejected; optional conversion,
+final publication acceptance and measured performance remain open.
 
 
 ## Acceptance contract

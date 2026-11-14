@@ -36,13 +36,13 @@ def main():
     for i,id in enumerate(ids):
         if args.read_staged:
             folder=ROOT/'assetgen_output/items/redesign'/id
-            report=json.loads((folder/'design_build.json').read_text(encoding='utf-8'))
-            current={p.relative_to(ROOT).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((ROOT/'tools/item_designs'/id).rglob('*')) if p.is_file()}
-            if report.get('id')!=id or report.get('sources')!=current:
-                raise ValueError(f'Stale staging for {id}; build the authored design first')
+            from itemgen.design_publication import validate_design
+            validate_design(id,staging=folder)
         else:
             folder=build_design(id)
-        old=presentation_parts(ROOT/'models/items'/id)
+        published=ROOT/'models/items'/id
+        reference=published/'_itemgen_reference'
+        old=presentation_parts(reference if (reference/'model.gltf').is_file() else published)
         new=presentation_parts(folder)
         sheet=Image.new('RGBA',(960,220),(24,24,28,255)); label=ImageDraw.Draw(sheet)
         modes=['silhouette','gray','color','color','color','color']

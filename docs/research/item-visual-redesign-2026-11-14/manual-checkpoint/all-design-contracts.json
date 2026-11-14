@@ -1,0 +1,637 @@
+{
+  "passed": true,
+  "items": [
+    {
+      "id": "apple",
+      "triangles": 104,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "arrow",
+      "triangles": 160,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "bread",
+      "triangles": 144,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "bucket",
+      "triangles": 196,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "charcoal",
+      "triangles": 76,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "coal",
+      "triangles": 56,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "cooked_meat",
+      "triangles": 80,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "copper_axe",
+      "triangles": 240,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "copper_chest",
+      "triangles": 404,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "copper_feet",
+      "triangles": 344,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "copper_head",
+      "triangles": 280,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "copper_hoe",
+      "triangles": 284,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "copper_ingot",
+      "triangles": 28,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "copper_legs",
+      "triangles": 720,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "copper_pickaxe",
+      "triangles": 324,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "copper_shovel",
+      "triangles": 340,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "copper_sword",
+      "triangles": 200,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "cord",
+      "triangles": 200,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "flint_and_steel",
+      "triangles": 120,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "gold_axe",
+      "triangles": 312,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "gold_chest",
+      "triangles": 284,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "gold_feet",
+      "triangles": 456,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "gold_head",
+      "triangles": 96,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "gold_hoe",
+      "triangles": 328,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "gold_ingot",
+      "triangles": 28,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "gold_legs",
+      "triangles": 592,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "gold_pickaxe",
+      "triangles": 360,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "gold_shovel",
+      "triangles": 384,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "gold_sword",
+      "triangles": 200,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "grain",
+      "triangles": 156,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "iron_axe",
+      "triangles": 272,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "iron_chest",
+      "triangles": 236,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "iron_feet",
+      "triangles": 288,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "iron_head",
+      "triangles": 196,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "iron_hoe",
+      "triangles": 272,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "iron_ingot",
+      "triangles": 28,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "iron_legs",
+      "triangles": 472,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "iron_pickaxe",
+      "triangles": 224,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "iron_shield",
+      "triangles": 376,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "iron_shovel",
+      "triangles": 320,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "iron_sword",
+      "triangles": 200,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "leather",
+      "triangles": 32,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "leather_chest",
+      "triangles": 264,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "leather_feet",
+      "triangles": 344,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "leather_head",
+      "triangles": 136,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "leather_legs",
+      "triangles": 512,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "plant_fiber",
+      "triangles": 128,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "raw_copper",
+      "triangles": 88,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "raw_gold",
+      "triangles": 88,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "raw_iron",
+      "triangles": 88,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "raw_meat",
+      "triangles": 68,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "seeds",
+      "triangles": 156,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "shears",
+      "triangles": 236,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "stick",
+      "triangles": 80,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "stone_axe",
+      "triangles": 268,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "stone_hoe",
+      "triangles": 256,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "stone_pickaxe",
+      "triangles": 180,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "stone_shovel",
+      "triangles": 340,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "stone_sword",
+      "triangles": 240,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "waterskin",
+      "triangles": 256,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "wood_axe",
+      "triangles": 276,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "wood_bow",
+      "triangles": 208,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "wood_hoe",
+      "triangles": 256,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "wood_pickaxe",
+      "triangles": 332,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "wood_shield",
+      "triangles": 304,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "wood_shovel",
+      "triangles": 340,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "wood_spear",
+      "triangles": 276,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "wood_sword",
+      "triangles": 204,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "wood_torch",
+      "triangles": 192,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    },
+    {
+      "id": "wool",
+      "triangles": 112,
+      "resources": [
+        "model.bin",
+        "model.gltf",
+        "textures/diffuse.png"
+      ]
+    }
+  ],
+  "count": 70,
+  "seconds": 61.56548100011423
+}

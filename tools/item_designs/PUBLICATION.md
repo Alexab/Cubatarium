@@ -35,7 +35,8 @@ clamp sampling. UVs stay within the atlas. Skins, animation clips, morph targets
 extra maps, extensions and unsupported samplers fail with a reason. Visual
 bindings and anatomical wear references are checked against actual named nodes.
 The declared triangle budget is enforced. These checks do not assess beauty.
-Manual external glTF source authoring/import is still an open implementation step.
+Manual external glTF source overrides use this same contract; see
+[the manual import guide](MANUAL_GLTF.md).
 
 `provenance.json` has an explicit record for every current item: coordinate-recipe
 origin, texture-layer process, external mesh/pixel inputs, design card, license
@@ -60,9 +61,8 @@ removed to force a rename past a lock.
 The first legacy replacement also retains that item's full prior directory under
 `_itemgen_reference`, with its original textures, grips, wear and attribution.
 The v4 manifest records `reference_model` and hashes these files. Subsequent
-publications preserve this comparison source. Item Lab must still be wired to
-this packaged reference after final publication instead of comparing production
-with itself. The reference copy is part of the same transaction.
+publications preserve this comparison source. Item Lab uses this packaged reference and prefers a staged candidate when one
+exists, otherwise the current published model. The reference copy is part of the same transaction.
 
 The runtime-sync CMake script refuses a source tree containing an unfinished
 publication journal. Recover first, then build Release. This prevents a later

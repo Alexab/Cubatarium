@@ -1,0 +1,2 @@
+CC0-1.0
+Original Cubatarium item mesh generated from item_recipes.

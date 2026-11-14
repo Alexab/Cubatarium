@@ -2561,6 +2561,24 @@ void UApplication::RunItemLabQa(const std::string &path)
     check("published preview " + id, ItemLabScreen->GetPreviewTexture(0) != 0);
   }
   ItemLabScreen->SelectItem("bucket");
+  ItemLabScreen->Update(0);
+  const auto bucketModel =
+      IUPlatformPaths::Current().AssetRoot() / "models/items/bucket/model.gltf";
+  const auto archive =
+      bucketModel.parent_path() / "_itemgen_reference/model.gltf";
+  check("archived reference selected when available",
+        ItemLabScreen->UsesArchivedReference() ==
+            std::filesystem::is_regular_file(archive));
+  if (ItemLabScreen->UsesArchivedReference())
+  {
+    check("reference differs from current candidate",
+          ItemLabScreen->GetReferencePath() !=
+              ItemLabScreen->GetCandidatePath());
+    report["archived_reference"] =
+        ItemLabScreen->GetReferencePath().generic_string();
+    report["candidate"] = ItemLabScreen->GetCandidatePath().generic_string();
+    report["staged_candidate"] = ItemLabScreen->UsesStagedCandidate();
+  }
   for (int mode = 0; mode < 7; ++mode)
   {
     ItemLabScreen->SetMode(mode);
@@ -2584,12 +2602,12 @@ void UApplication::RunItemLabQa(const std::string &path)
       IUPlatformPaths::Current().AssetRoot() / "item_lab_exports";
   const auto exportReport = exports / "bucket-6.json";
   std::filesystem::remove(exportReport);
-  for (const auto &suffix : {"-published.png", "-candidate.png"})
+  for (const auto &suffix : {"-reference.png", "-candidate.png"})
     std::filesystem::remove(exports / (std::string("bucket-6") + suffix));
   click(ItemLabScreen->GetExportBounds());
   check("export writes fresh report",
         std::filesystem::is_regular_file(exportReport));
-  for (const auto &suffix : {"-published.png", "-candidate.png"})
+  for (const auto &suffix : {"-reference.png", "-candidate.png"})
     check(std::string("export image ") + suffix,
           std::filesystem::is_regular_file(exports /
                                            (std::string("bucket-6") + suffix)));

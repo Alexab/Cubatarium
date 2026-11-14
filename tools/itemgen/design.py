@@ -10,6 +10,7 @@ from itemgen.mesh import Face, bevel_box, blade, extrude, shell, tube, transform
 from itemgen.surface_export import write_asset
 from itemgen.visual_bindings import prepare_bindings
 from itemgen.wear_sections import prepare_sections
+from itemgen.presentation import prepare_presentation
 
 ROOT=Path(__file__).resolve().parents[2]
 
@@ -26,6 +27,13 @@ def _build_design(item_id, *, root=ROOT, output=None):
     destination=output or root/'assetgen_output/items/redesign'/item_id
     if any(destination.resolve().is_relative_to((root/name).resolve()) for name in ('tools','content','models','shaders','docs')):
         raise ValueError('Staging cannot overwrite author sources')
+    if 'geometry_source' in recipe:
+        from itemgen.manual import build_manual
+        definition=json.loads((root/'content/items'/f'{item_id}.json').read_text(encoding='utf-8'))
+        fit=build_manual(item_id,source,destination,recipe,definition)
+        sources={p.relative_to(root).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(source.rglob('*')) if p.is_file()}
+        (destination/'design_build.json').write_text(json.dumps(dict(id=item_id,version=3,triangles=fit['triangles'],sources=sources,physical_fit=fit),indent=2)+'\n',encoding='utf-8')
+        return destination
     faces=[]; face_nodes={}; fit_faces=[]
     for part in recipe['parts']:
         kwargs=dict(role=part['material'],name=part['name'])
@@ -52,16 +60,7 @@ def _build_design(item_id, *, root=ROOT, output=None):
     scale=min(physical[i]/(high[i]-low[i]) for i in range(3))
     centre=[(low[i]+high[i])/2 for i in range(3)]
     faces=[Face(tuple(tuple((p[i]-centre[i])*scale for i in range(3)) for p in f.points),f.role,f.name) for f in faces]
-    presentation=dict(recipe.get('presentation',{}))
-    allowed={'right_grip','left_grip','fp_euler_deg','fp_hand_offset','fp_scale','icon_euler_deg','fp_arm_euler_deg','tp_euler_deg','tp_scale','ground_euler_deg'}
-    if set(presentation)-allowed: raise ValueError('Unknown presentation field')
-    for key,value in presentation.items():
-        if key in ('fp_scale','tp_scale'):
-            if isinstance(value,bool) or not isinstance(value,(int,float)) or not math.isfinite(value) or not .1<=value<=3: raise ValueError('Invalid FP scale')
-        elif not isinstance(value,list) or len(value)!=3 or not all(isinstance(v,(int,float)) and math.isfinite(v) for v in value):
-            raise ValueError(f'Invalid presentation vector: {key}')
-    for key in ('right_grip','left_grip'):
-        if key in presentation: presentation[key]=[(presentation[key][i]-centre[i])*scale for i in range(3)]
+    presentation=prepare_presentation(recipe.get('presentation',{}),scale,centre)
     nodes={}
     for name,node in recipe.get('nodes',{}).items():
         pivot=node['pivot']

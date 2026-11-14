@@ -1,0 +1,55 @@
+version: 3
+id: bucket
+triangle_budget: 1800
+geometry_source:
+  path: authored/model.gltf
+presentation:
+  tp_euler_deg:
+  - -65
+  - 0
+  - 0
+  right_grip:
+  - 0.2
+  - 0.4905263157894736
+  - 0.4
+  left_grip:
+  - 0.2
+  - 0.4905263157894736
+  - 0.4
+  fp_euler_deg:
+  - -46
+  - 0
+  - -22
+  fp_arm_euler_deg:
+  - 20
+  - 0
+  - 0
+  fp_scale: 0.45
+  fp_hand_offset:
+  - -0.06
+  - 0.65
+  - 0
+  tp_scale: 2.0
+visual_bindings:
+- node: water_surface
+  channel: fill_units
+  range:
+  - 0
+  - 1
+  translation_from:
+  - 0.0
+  - -0.0757894736842105
+  - 0.0
+  translation_to:
+  - 0.0
+  - 0.0
+  - 0.0
+  scale_from:
+  - 0.91
+  - 1
+  - 0.91
+  scale_to:
+  - 1
+  - 1
+  - 1
+  visible_above: 0.001

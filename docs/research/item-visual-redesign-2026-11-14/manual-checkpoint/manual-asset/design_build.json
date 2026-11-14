@@ -1,0 +1,76 @@
+{
+  "id": "bucket",
+  "version": 3,
+  "triangles": 196,
+  "sources": {
+    "tools/item_designs/bucket/authored/model.bin": "3bb823b9171b6a3c0ec950642864b8d197d24c0757d8f5d2bf360cd7e37632ab",
+    "tools/item_designs/bucket/authored/model.gltf": "f243b648878b334d4cd8d110d5a2feee379e52c62207684198364f2b4c67b5bc",
+    "tools/item_designs/bucket/authored/textures/diffuse.png": "37bd3c2d34becabb2efcce83da9f31ea0710c0c35c5ea4b156349b1cf808eedc",
+    "tools/item_designs/bucket/authored/textures/second texture.png": "26100f0b1819a5cc157eb27718380aabc3bf5265045e7722fae38f315b038ac3",
+    "tools/item_designs/bucket/design.yaml": "0c938e0c02bbab5a29c80f1333d4052d70f10429c4a7459025a1da341bb7a68b",
+    "tools/item_designs/provenance.json": "60a20de1ab3e263a68bf449d4dac8430e6103872ab248172334e6913b4c914ad",
+    "LICENSE": "d5b2c2cdb51ab4c8b124dfab74f936267098953b3e78afdf67ad89b11d71006e"
+  },
+  "physical_fit": {
+    "scale": 0.5000000111758711,
+    "centre": [
+      0.2,
+      0.30000000000000004,
+      0.4
+    ],
+    "source": "authored/model.gltf",
+    "source_gltf_sha256": "f243b648878b334d4cd8d110d5a2feee379e52c62207684198364f2b4c67b5bc",
+    "triangles": 196
+  },
+  "definition": {
+    "content/items/bucket.json": "76140cc4db3ab271b1a8c6d8f9b38223c3ff84a77e18a81b975c4ee87d751ff1"
+  },
+  "generator": {
+    "version": 3,
+    "sha256": {
+      "shaders/item_surface.frag": "599880f34ca01bd4d52caaad89239a41bb3ee3eeaac5283304fd56a6ecc02d19",
+      "shaders/item_surface.vert": "9fcd0a6657f34552fa98797ab7da9e1c323f195148c6583a8bff07841ff2b9c5",
+      "tools/itemgen/__init__.py": "3816a80e472ceca3be260a4fc6e82678c8d3da4ff2248154f53987a4a6a16275",
+      "tools/itemgen/__main__.py": "d2323fe9ae7ee8c896b833dd8e03c0c2405c2103e0964c5b5d9b4a830be69900",
+      "tools/itemgen/armor_designs.py": "a84b5a15585432dbf2831f12431cc6016e76eae365d0702453eaabac194d14ed",
+      "tools/itemgen/artifact_contract.py": "3c208e8de93720ca13b995383d770bb7de966b1cbafef4a684e6a315895eae71",
+      "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+      "tools/itemgen/design.py": "e4ad5f57dede7c38bb7f4b8ea38deb5e34d9a2834342423b8a72b7e6d7a0d7da",
+      "tools/itemgen/design_publication.py": "abf8c2c6451e4aeafa9a38cbe3bf29458b23918699553a0c67917a4c7291d5bc",
+      "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+      "tools/itemgen/filesystem.py": "d2c1819e51b7da134f1b76d337f0e5311648b15ea83a2458956d01850a28ab14",
+      "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd",
+      "tools/itemgen/manual.py": "2d920305a0ca7b0453f4d2ff0fcdeb57146a47d455934e81211b46ebd8b5be5c",
+      "tools/itemgen/mesh.py": "aaacbdbc2681db750fb7127db023dd0124416f055aa01ead9832748185b4f448",
+      "tools/itemgen/pilot_designs.py": "a8b8695a0a00e75b1a0c5b477de7a08f9278fc30875a73ac933f0366171efdb5",
+      "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
+      "tools/itemgen/presentation.py": "3a8eb9a639165b8c7f2f45df32bc545443af6deb090872114d70a0c600c2771b",
+      "tools/itemgen/preview.py": "f707ee5f6389bfc74704cdce31dff47e316c9085a980dd2668abf43bd29ace3a",
+      "tools/itemgen/quality.py": "1c740e95a9eeaa25936728a66ef40d676321d168f20bc8ab8c25bb4677d2475f",
+      "tools/itemgen/raster.py": "8974c41252e04b030d39b6bf42b160ded4a927f11bb1a073e830f30e01603fa1",
+      "tools/itemgen/resource_uri.py": "a8f1688d402729a87cb998f78d5de2fccd8380a73f7528a400051de7421d5ee7",
+      "tools/itemgen/supplies_designs.py": "430d7de1affd537c26be37f5c3003d9a4f5c5616a96c44a74276c28b523d6b89",
+      "tools/itemgen/surface_export.py": "5a9c2f39f6481fb8ff394ae30e8816a276c589e07805d3a289e05730c6c4fbd3",
+      "tools/itemgen/surface_paint.py": "3f740e19073a360616de7efefeb1f8b46b4b3eeffbe16c5b139c9fc78587c515",
+      "tools/itemgen/surface_uv.py": "781d306211b448e7da8118b5f2ae1e6f6ceab4e12a89fcaee70ee20af11d02fa",
+      "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+      "tools/itemgen/visual_bindings.py": "880719ae181b227aa0ea87258cbc8be89cbcd40b4edcf6c842ca1d68860eab22",
+      "tools/itemgen/wear_sections.py": "7c509db2e83f38af469d60b19319dd52b67844864a688620bb523eed5dc742b0",
+      "tools/itemgen/workshop_designs.py": "e760de707ababb90793b170c15d0fe860ada3b0ab3f19d1f1486cfc4772d5571"
+    }
+  },
+  "outputs": {
+    "ATTRIBUTION.json": "e0d51cd5c5d8ed0b57b3efc536cfa56a20899afa179602812a9a151e27273b0a",
+    "LICENSE.txt": "d5b2c2cdb51ab4c8b124dfab74f936267098953b3e78afdf67ad89b11d71006e",
+    "model.bin": "3c0a3fc5d81b59571dc997567c45faa54953d162f99f6a0b706fc0fa3803064f",
+    "model.gltf": "c8918617146828873ae9f09fa94507d424c7c02b5c033cbf94568f99fe9a4bc2",
+    "textures/albedo_0.png": "37bd3c2d34becabb2efcce83da9f31ea0710c0c35c5ea4b156349b1cf808eedc",
+    "textures/albedo_1.png": "26100f0b1819a5cc157eb27718380aabc3bf5265045e7722fae38f315b038ac3"
+  },
+  "validated_resources": [
+    "model.bin",
+    "model.gltf",
+    "textures/albedo_0.png",
+    "textures/albedo_1.png"
+  ]
+}

@@ -11,6 +11,7 @@ import math
 from pathlib import Path
 import numpy as np
 from PIL import Image
+from itemgen.resource_uri import resolve_resource
 
 
 def load_primitives(item_dir: Path) -> list[dict]:
@@ -18,10 +19,8 @@ def load_primitives(item_dir: Path) -> list[dict]:
     def resource(uri):
         if uri.startswith('data:'):
             return base64.b64decode(uri.split(',', 1)[1])
-        resolved = (item_dir / uri).resolve()
-        if not resolved.is_relative_to(item_dir.resolve()):
-            raise ValueError('glTF resource escapes asset directory')
-        return resolved.read_bytes()
+        return resolve_resource(item_dir,uri).read_bytes()
+
     buffers = [resource(b['uri']) for b in gltf.get('buffers', [])]
     components = {5120: 'i1', 5121: 'u1', 5122: '<i2', 5123: '<u2', 5125: '<u4', 5126: '<f4'}
     widths = {'SCALAR': 1, 'VEC2': 2, 'VEC3': 3, 'VEC4': 4, 'MAT4': 16}
@@ -62,7 +61,7 @@ def load_primitives(item_dir: Path) -> list[dict]:
         m[:3, 3] = node.get('translation', [0, 0, 0])
         return m
     parts = []
-    def mesh(index, matrix):
+    def mesh(index, matrix, node_name=""):
         for prim in gltf['meshes'][index]['primitives']:
             if prim.get('mode', 4) != 4:
                 raise ValueError('only triangle primitives are accepted')
@@ -85,7 +84,7 @@ def load_primitives(item_dir: Path) -> list[dict]:
                 if source not in images:
                     images[source] = image(source)
                 tex = images[source]
-            parts.append(dict(positions=positions, indices=indices.reshape(-1, 3), uv=uv,
+            parts.append(dict(node_name=node_name,positions=positions, indices=indices.reshape(-1, 3), uv=uv,
                               texture=tex, factor=factor, role=mat.get('name', ''),
                               alpha_cutoff=mat.get('alphaCutoff', .5),
                               double_sided=mat.get('doubleSided', False)))
@@ -96,7 +95,7 @@ def load_primitives(item_dir: Path) -> list[dict]:
         node = nodes[index]
         matrix = parent @ local_matrix(node)
         if 'mesh' in node:
-            mesh(node['mesh'], matrix)
+            mesh(node['mesh'], matrix, node.get('name',''))
         for child in node.get('children', []):
             visit(child, matrix, ancestry | {index})
     if nodes:

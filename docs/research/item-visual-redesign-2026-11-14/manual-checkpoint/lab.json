@@ -1,0 +1,460 @@
+{
+  "archived_reference": "E:/Work/Home/Cubatarium/bin/models/items/bucket/_itemgen_reference/model.gltf",
+  "candidate": "E:/Work/Home/Cubatarium/bin/models/items/bucket/model.gltf",
+  "checks": [
+    {
+      "name": "catalog includes every item",
+      "passed": true
+    },
+    {
+      "name": "published preview apple",
+      "passed": true
+    },
+    {
+      "name": "published preview arrow",
+      "passed": true
+    },
+    {
+      "name": "published preview bread",
+      "passed": true
+    },
+    {
+      "name": "published preview bucket",
+      "passed": true
+    },
+    {
+      "name": "published preview charcoal",
+      "passed": true
+    },
+    {
+      "name": "published preview coal",
+      "passed": true
+    },
+    {
+      "name": "published preview cooked_meat",
+      "passed": true
+    },
+    {
+      "name": "published preview copper_axe",
+      "passed": true
+    },
+    {
+      "name": "published preview copper_chest",
+      "passed": true
+    },
+    {
+      "name": "published preview copper_feet",
+      "passed": true
+    },
+    {
+      "name": "published preview copper_head",
+      "passed": true
+    },
+    {
+      "name": "published preview copper_hoe",
+      "passed": true
+    },
+    {
+      "name": "published preview copper_ingot",
+      "passed": true
+    },
+    {
+      "name": "published preview copper_legs",
+      "passed": true
+    },
+    {
+      "name": "published preview copper_pickaxe",
+      "passed": true
+    },
+    {
+      "name": "published preview copper_shovel",
+      "passed": true
+    },
+    {
+      "name": "published preview copper_sword",
+      "passed": true
+    },
+    {
+      "name": "published preview cord",
+      "passed": true
+    },
+    {
+      "name": "published preview flint_and_steel",
+      "passed": true
+    },
+    {
+      "name": "published preview gold_axe",
+      "passed": true
+    },
+    {
+      "name": "published preview gold_chest",
+      "passed": true
+    },
+    {
+      "name": "published preview gold_feet",
+      "passed": true
+    },
+    {
+      "name": "published preview gold_head",
+      "passed": true
+    },
+    {
+      "name": "published preview gold_hoe",
+      "passed": true
+    },
+    {
+      "name": "published preview gold_ingot",
+      "passed": true
+    },
+    {
+      "name": "published preview gold_legs",
+      "passed": true
+    },
+    {
+      "name": "published preview gold_pickaxe",
+      "passed": true
+    },
+    {
+      "name": "published preview gold_shovel",
+      "passed": true
+    },
+    {
+      "name": "published preview gold_sword",
+      "passed": true
+    },
+    {
+      "name": "published preview grain",
+      "passed": true
+    },
+    {
+      "name": "published preview iron_axe",
+      "passed": true
+    },
+    {
+      "name": "published preview iron_chest",
+      "passed": true
+    },
+    {
+      "name": "published preview iron_feet",
+      "passed": true
+    },
+    {
+      "name": "published preview iron_head",
+      "passed": true
+    },
+    {
+      "name": "published preview iron_hoe",
+      "passed": true
+    },
+    {
+      "name": "published preview iron_ingot",
+      "passed": true
+    },
+    {
+      "name": "published preview iron_legs",
+      "passed": true
+    },
+    {
+      "name": "published preview iron_pickaxe",
+      "passed": true
+    },
+    {
+      "name": "published preview iron_shield",
+      "passed": true
+    },
+    {
+      "name": "published preview iron_shovel",
+      "passed": true
+    },
+    {
+      "name": "published preview iron_sword",
+      "passed": true
+    },
+    {
+      "name": "published preview leather",
+      "passed": true
+    },
+    {
+      "name": "published preview leather_chest",
+      "passed": true
+    },
+    {
+      "name": "published preview leather_feet",
+      "passed": true
+    },
+    {
+      "name": "published preview leather_head",
+      "passed": true
+    },
+    {
+      "name": "published preview leather_legs",
+      "passed": true
+    },
+    {
+      "name": "published preview plant_fiber",
+      "passed": true
+    },
+    {
+      "name": "published preview raw_copper",
+      "passed": true
+    },
+    {
+      "name": "published preview raw_gold",
+      "passed": true
+    },
+    {
+      "name": "published preview raw_iron",
+      "passed": true
+    },
+    {
+      "name": "published preview raw_meat",
+      "passed": true
+    },
+    {
+      "name": "published preview seeds",
+      "passed": true
+    },
+    {
+      "name": "published preview shears",
+      "passed": true
+    },
+    {
+      "name": "published preview stick",
+      "passed": true
+    },
+    {
+      "name": "published preview stone_axe",
+      "passed": true
+    },
+    {
+      "name": "published preview stone_hoe",
+      "passed": true
+    },
+    {
+      "name": "published preview stone_pickaxe",
+      "passed": true
+    },
+    {
+      "name": "published preview stone_shovel",
+      "passed": true
+    },
+    {
+      "name": "published preview stone_sword",
+      "passed": true
+    },
+    {
+      "name": "published preview waterskin",
+      "passed": true
+    },
+    {
+      "name": "published preview wood_axe",
+      "passed": true
+    },
+    {
+      "name": "published preview wood_bow",
+      "passed": true
+    },
+    {
+      "name": "published preview wood_hoe",
+      "passed": true
+    },
+    {
+      "name": "published preview wood_pickaxe",
+      "passed": true
+    },
+    {
+      "name": "published preview wood_shield",
+      "passed": true
+    },
+    {
+      "name": "published preview wood_shovel",
+      "passed": true
+    },
+    {
+      "name": "published preview wood_spear",
+      "passed": true
+    },
+    {
+      "name": "published preview wood_sword",
+      "passed": true
+    },
+    {
+      "name": "published preview wood_torch",
+      "passed": true
+    },
+    {
+      "name": "published preview wool",
+      "passed": true
+    },
+    {
+      "name": "archived reference selected when available",
+      "passed": true
+    },
+    {
+      "name": "reference differs from current candidate",
+      "passed": true
+    },
+    {
+      "name": "candidate inspection mode 0",
+      "passed": true
+    },
+    {
+      "name": "capture inspection mode 0",
+      "passed": true
+    },
+    {
+      "name": "candidate inspection mode 1",
+      "passed": true
+    },
+    {
+      "name": "capture inspection mode 1",
+      "passed": true
+    },
+    {
+      "name": "candidate inspection mode 2",
+      "passed": true
+    },
+    {
+      "name": "capture inspection mode 2",
+      "passed": true
+    },
+    {
+      "name": "candidate inspection mode 3",
+      "passed": true
+    },
+    {
+      "name": "capture inspection mode 3",
+      "passed": true
+    },
+    {
+      "name": "candidate inspection mode 4",
+      "passed": true
+    },
+    {
+      "name": "capture inspection mode 4",
+      "passed": true
+    },
+    {
+      "name": "candidate inspection mode 5",
+      "passed": true
+    },
+    {
+      "name": "capture inspection mode 5",
+      "passed": true
+    },
+    {
+      "name": "candidate inspection mode 6",
+      "passed": true
+    },
+    {
+      "name": "capture inspection mode 6",
+      "passed": true
+    },
+    {
+      "name": "export writes fresh report",
+      "passed": true
+    },
+    {
+      "name": "export image -reference.png",
+      "passed": true
+    },
+    {
+      "name": "export image -candidate.png",
+      "passed": true
+    },
+    {
+      "name": "reload invalidates gameplay visual caches",
+      "passed": true
+    },
+    {
+      "name": "state preview 0",
+      "passed": true
+    },
+    {
+      "name": "state capture 0",
+      "passed": true
+    },
+    {
+      "name": "state preview 1",
+      "passed": true
+    },
+    {
+      "name": "state capture 1",
+      "passed": true
+    },
+    {
+      "name": "state preview 2",
+      "passed": true
+    },
+    {
+      "name": "state capture 2",
+      "passed": true
+    },
+    {
+      "name": "pointer switches state preset",
+      "passed": true
+    },
+    {
+      "name": "layout 1280x720_100",
+      "passed": true
+    },
+    {
+      "name": "capture 1280x720_100",
+      "passed": true
+    },
+    {
+      "name": "layout 1280x720_150",
+      "passed": true
+    },
+    {
+      "name": "capture 1280x720_150",
+      "passed": true
+    },
+    {
+      "name": "layout 1280x720_200",
+      "passed": true
+    },
+    {
+      "name": "capture 1280x720_200",
+      "passed": true
+    },
+    {
+      "name": "layout 1920x1080_100",
+      "passed": true
+    },
+    {
+      "name": "capture 1920x1080_100",
+      "passed": true
+    },
+    {
+      "name": "layout 1920x1080_150",
+      "passed": true
+    },
+    {
+      "name": "capture 1920x1080_150",
+      "passed": true
+    },
+    {
+      "name": "layout 1920x1080_200",
+      "passed": true
+    },
+    {
+      "name": "capture 1920x1080_200",
+      "passed": true
+    },
+    {
+      "name": "pointer switches inspection mode",
+      "passed": true
+    },
+    {
+      "name": "Escape closes studio",
+      "passed": true
+    },
+    {
+      "name": "studio preserves player property",
+      "passed": true
+    }
+  ],
+  "passed": true,
+  "staged_candidate": false
+}

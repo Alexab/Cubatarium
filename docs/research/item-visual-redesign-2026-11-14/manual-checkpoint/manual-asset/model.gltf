@@ -1,0 +1,602 @@
+{
+  "asset": {
+    "version": "2.0",
+    "generator": "cubatarium-itemgen-v3-manual"
+  },
+  "buffers": [
+    {
+      "uri": "model.bin",
+      "byteLength": 17488
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 672
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 672,
+      "byteLength": 672
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1344,
+      "byteLength": 448
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1792,
+      "byteLength": 336
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 2128,
+      "byteLength": 576
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 2704,
+      "byteLength": 576
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 3280,
+      "byteLength": 384
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 3664,
+      "byteLength": 336
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 4000,
+      "byteLength": 2304
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 6304,
+      "byteLength": 2304
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 8608,
+      "byteLength": 1536
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 10144,
+      "byteLength": 1344
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 11488,
+      "byteLength": 576
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 12064,
+      "byteLength": 576
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 12640,
+      "byteLength": 384
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 13024,
+      "byteLength": 336
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 13360,
+      "byteLength": 672
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 14032,
+      "byteLength": 576
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 14608,
+      "byteLength": 2304
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 16912,
+      "byteLength": 576
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 56,
+      "type": "VEC3",
+      "min": [
+        -0.06130526315789473,
+        -0.1026315789473684,
+        -0.05658947368421052
+      ],
+      "max": [
+        0.06130526315789473,
+        -0.0015789473684210537,
+        0.05658947368421052
+      ]
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 56,
+      "type": "VEC3",
+      "min": [
+        -0.9983222318244451,
+        -1.0,
+        -0.9985984520209933
+      ],
+      "max": [
+        0.9983222318244451,
+        1.0,
+        0.9985984520209933
+      ]
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 56,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5125,
+      "count": 84,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5126,
+      "count": 48,
+      "type": "VEC3",
+      "min": [
+        -0.050526315789473676,
+        0.08789473684210523,
+        -0.007368421052631578
+      ],
+      "max": [
+        0.050526315789473676,
+        0.1026315789473684,
+        0.007368421052631578
+      ]
+    },
+    {
+      "bufferView": 5,
+      "componentType": 5126,
+      "count": 48,
+      "type": "VEC3",
+      "min": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "max": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "bufferView": 6,
+      "componentType": 5126,
+      "count": 48,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 7,
+      "componentType": 5125,
+      "count": 84,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 8,
+      "componentType": 5126,
+      "count": 192,
+      "type": "VEC3",
+      "min": [
+        -0.07622977392607018,
+        -0.012781319409679559,
+        -0.06
+      ],
+      "max": [
+        0.07622977392607018,
+        0.09383395098862692,
+        0.06
+      ]
+    },
+    {
+      "bufferView": 9,
+      "componentType": 5126,
+      "count": 192,
+      "type": "VEC3",
+      "min": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "max": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "bufferView": 10,
+      "componentType": 5126,
+      "count": 192,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 11,
+      "componentType": 5125,
+      "count": 336,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 12,
+      "componentType": 5126,
+      "count": 48,
+      "type": "VEC3",
+      "min": [
+        -0.053473684210526305,
+        -0.000421052631578947,
+        -0.04884210526315789
+      ],
+      "max": [
+        0.053473684210526305,
+        0.000421052631578947,
+        0.04884210526315789
+      ]
+    },
+    {
+      "bufferView": 13,
+      "componentType": 5126,
+      "count": 48,
+      "type": "VEC3",
+      "min": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "max": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "bufferView": 14,
+      "componentType": 5126,
+      "count": 48,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 15,
+      "componentType": 5125,
+      "count": 84,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 16,
+      "componentType": 5126,
+      "count": 56,
+      "type": "VEC3",
+      "min": [
+        -0.03065263107419014,
+        -0.051315788179636,
+        -0.02829473651945591
+      ],
+      "max": [
+        0.03065263107419014,
+        -0.0007894737063907087,
+        0.02829473651945591
+      ]
+    },
+    {
+      "bufferView": 17,
+      "componentType": 5126,
+      "count": 48,
+      "type": "VEC3",
+      "min": [
+        -0.025263158604502678,
+        0.04394736886024475,
+        -0.0036842105910182
+      ],
+      "max": [
+        0.025263158604502678,
+        0.051315788179636,
+        0.0036842105910182
+      ]
+    },
+    {
+      "bufferView": 18,
+      "componentType": 5126,
+      "count": 192,
+      "type": "VEC3",
+      "min": [
+        -0.03811488673090935,
+        -0.006390659604221582,
+        -0.029999999329447746
+      ],
+      "max": [
+        0.03811488673090935,
+        0.04691697657108307,
+        0.029999999329447746
+      ]
+    },
+    {
+      "bufferView": 19,
+      "componentType": 5126,
+      "count": 48,
+      "type": "VEC3",
+      "min": [
+        -0.026736842468380928,
+        -0.00021052631200291216,
+        -0.024421053007245064
+      ],
+      "max": [
+        0.026736842468380928,
+        0.00021052631200291216,
+        0.024421053007245064
+      ]
+    }
+  ],
+  "images": [
+    {
+      "uri": "textures/albedo_0.png"
+    },
+    {
+      "uri": "textures/albedo_1.png"
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987,
+      "wrapS": 33071,
+      "wrapT": 33071
+    }
+  ],
+  "textures": [
+    {
+      "source": 0,
+      "sampler": 0
+    },
+    {
+      "source": 1,
+      "sampler": 0
+    }
+  ],
+  "materials": [
+    {
+      "name": "forged",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 1
+        },
+        "metallicFactor": 0.7,
+        "roughnessFactor": 0.65
+      }
+    },
+    {
+      "name": "grip",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicFactor": 0,
+        "roughnessFactor": 0.85
+      }
+    },
+    {
+      "name": "rim",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicFactor": 0.75,
+        "roughnessFactor": 0.55
+      }
+    },
+    {
+      "name": "water",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicFactor": 0.05,
+        "roughnessFactor": 0.35
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "bucket",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 16,
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
+          },
+          "indices": 3,
+          "material": 0,
+          "mode": 4
+        },
+        {
+          "attributes": {
+            "POSITION": 17,
+            "NORMAL": 5,
+            "TEXCOORD_0": 6
+          },
+          "indices": 7,
+          "material": 1,
+          "mode": 4
+        },
+        {
+          "attributes": {
+            "POSITION": 18,
+            "NORMAL": 9,
+            "TEXCOORD_0": 10
+          },
+          "indices": 11,
+          "material": 2,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "water_surface",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 19,
+            "NORMAL": 13,
+            "TEXCOORD_0": 14
+          },
+          "indices": 15,
+          "material": 3,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "bucket",
+      "children": [
+        1
+      ],
+      "mesh": 0,
+      "translation": [
+        0.0,
+        -2.7755575615628914e-17,
+        0.0
+      ],
+      "scale": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "name": "water_surface",
+      "translation": [
+        0.0,
+        -0.008157894919185261,
+        0.0
+      ],
+      "mesh": 1
+    }
+  ],
+  "scenes": [
+    {
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "scene": 0,
+  "extras": {
+    "authoring_source": "cubatarium-manual-design",
+    "design_version": 3,
+    "presentation": {
+      "tp_euler_deg": [
+        -65,
+        0,
+        0
+      ],
+      "right_grip": [
+        0.0,
+        0.09526316002403432,
+        0.0
+      ],
+      "left_grip": [
+        0.0,
+        0.09526316002403432,
+        0.0
+      ],
+      "fp_euler_deg": [
+        -46,
+        0,
+        -22
+      ],
+      "fp_arm_euler_deg": [
+        20,
+        0,
+        0
+      ],
+      "fp_scale": 0.45,
+      "fp_hand_offset": [
+        -0.06,
+        0.65,
+        0
+      ],
+      "tp_scale": 2.0
+    },
+    "visual_bindings": [
+      {
+        "node": "water_surface",
+        "channel": "fill_units",
+        "range": [
+          0,
+          1
+        ],
+        "translation_from": [
+          0.0,
+          -0.03789473768911864,
+          0.0
+        ],
+        "translation_to": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale_from": [
+          0.91,
+          1,
+          0.91
+        ],
+        "scale_to": [
+          1,
+          1,
+          1
+        ],
+        "visible_above": 0.001
+      }
+    ],
+    "wear_sections": []
+  }
+}

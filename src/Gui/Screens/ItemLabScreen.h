@@ -34,6 +34,10 @@ public:
   void SetPosePreset(int pose);
   int GetPosePreset() const { return PosePreset; }
   GuiRect GetPoseBounds() const;
+  bool UsesArchivedReference() const { return ArchivedReference; }
+  bool UsesStagedCandidate() const { return StagedCandidate; }
+  std::filesystem::path GetReferencePath() const { return Paths[0]; }
+  std::filesystem::path GetCandidatePath() const { return Paths[1]; }
   bool HasCandidate() const { return Textures[1] != 0; }
   unsigned GetPreviewTexture(int index) const { return Textures[index]; }
   std::string GetSelectedId() const { return Selected; }
@@ -60,7 +64,8 @@ private:
   UGuiButton *ModeButton{nullptr}, *LightButton{nullptr}, *PoseButton{nullptr},
       *ReloadButton{nullptr}, *ExportButton{nullptr}, *CloseButton{nullptr};
   unsigned Textures[2]{0, 0};
-  std::filesystem::path Paths[2];
+  std::filesystem::path Paths[2], PublishedPath;
+  bool ArchivedReference{false}, StagedCandidate{false};
   std::string Selected{"bucket"};
   float Yaw{35}, Pitch{25};
   int Mode{0}, Light{0}, PosePreset{0};

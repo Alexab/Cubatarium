@@ -58,6 +58,12 @@ def validate_design(item_id, *, root=ROOT, staging=None):
     if provenance['license_source']!='LICENSE' or (folder/'LICENSE.txt').read_bytes()!=(root/'LICENSE').read_bytes():raise ValueError('License source differs')
     recipe=yaml.safe_load((source/'design.yaml').read_text(encoding='utf-8'))
     if recipe.get('id')!=item_id or recipe.get('version')!=3:raise ValueError('Recipe identity mismatch')
+    if 'geometry_source' in recipe:
+        expected_source=f"tools/item_designs/{item_id}/{recipe['geometry_source']['path']}"
+        if provenance['geometry'].get('authoring_format')!='manual-gltf-2.0' or provenance['geometry'].get('source')!=expected_source:
+            raise ValueError('Update explicit provenance for the manual glTF source before publication')
+    elif provenance['geometry'].get('source')!=f'tools/item_designs/{item_id}/design.yaml':
+        raise ValueError('Generated geometry provenance must identify the active design recipe')
     budget=recipe['triangle_budget']
     if isinstance(budget,bool) or not isinstance(budget,int) or not 1<=budget<=2000:raise ValueError('Invalid declared item budget')
     inspected=validate_model(folder,budget=budget)

@@ -33,3 +33,18 @@ combinations, pointer switching, closing and unchanged player inventory.
 This initial studio is an orbit comparison screen. Dedicated FP/TP/ground and
 both-body armor scenes, contacts/bounds overlays and
 32/48/64-pixel icon inspection are still required by the full redesign plan.
+
+## Packaged old/current comparison
+
+Before publication, the reference is the current published model and the candidate
+comes from staging. After publication the reference uses `_itemgen_reference`;
+the candidate still prefers staging, or uses current production if staging is
+absent. Missing resources show a diagnostic, not a cube. Both viewports retain
+shared camera, state, light, reload and inspection controls. Player property is
+not an authoring or preview store.
+
+Export schema 2 includes actual `published`, `reference` and `candidate` paths,
+`archived_reference` and `staged_candidate` flags. Images are named
+`<id>-<mode>-reference.png` and `<id>-<mode>-candidate.png`. These names replace
+the ambiguous old `-published.png` reference label. Native QA exercises packaged
+comparison without a staging folder at both resolutions and all three UI scales.

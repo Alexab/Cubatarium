@@ -11,6 +11,7 @@
 #include "Gui/Widgets/GuiTextInput.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Items/ItemGltfTextureCache.h"
+#include "Items/ItemLabAssets.h"
 #include "Items/ItemRenderAsset.h"
 #include "Render/GlIncludes.h"
 #include "Render/Pipeline/GlStateScope.h"
@@ -214,9 +215,18 @@ void UItemLabScreen::Refresh()
   const auto *definition = Items->Get(Selected);
   if (!definition)
     return;
-  Paths[0] = platform->AssetRoot() / definition->ModelPath;
-  Paths[1] = platform->AssetRoot().parent_path() /
-             "assetgen_output/items/redesign" / Selected / "model.gltf";
+  const auto assets = ResolveItemLabAssets(platform->AssetRoot(),
+                                           definition->ModelPath, Selected);
+  PublishedPath = assets.Published;
+  Paths[0] = assets.Reference;
+  Paths[1] = assets.Candidate;
+  ArchivedReference = assets.Archived;
+  StagedCandidate = assets.Staged;
+  Captions[0]->SetText(ArchivedReference ? "Previous published reference"
+                                         : "Published reference");
+  Captions[1]->SetText(StagedCandidate     ? "Staged candidate"
+                       : ArchivedReference ? "Published candidate"
+                                           : "No staged candidate");
   Title->SetText("Item Lab / " + Selected + " / Ctrl+F8 or Esc closes");
   for (int i = 0; i < 2; ++i)
   {
@@ -253,7 +263,8 @@ void UItemLabScreen::Refresh()
                          std::to_string(asset->Materials.size()) + " mat");
       }
       else
-        Info[i]->SetText("No staged design");
+        Info[i]->SetText(i == 0 ? "Missing reference model"
+                                : "Missing staged candidate");
       if (Textures[i])
         glDeleteTextures(1, &Textures[i]);
       Textures[i] = next;
@@ -302,13 +313,21 @@ void UItemLabScreen::Export()
     return;
   const auto folder = platform->AssetRoot() / "item_lab_exports";
   std::filesystem::create_directories(folder);
-  nlohmann::json report = {
-      {"id", Selected}, {"mode", Modes[Mode]}, {"pose", Poses[PosePreset]},
-      {"yaw", Yaw},     {"pitch", Pitch},      {"read_only", true}};
+  nlohmann::json report = {{"schema_version", 2},
+                           {"id", Selected},
+                           {"mode", Modes[Mode]},
+                           {"pose", Poses[PosePreset]},
+                           {"published", PublishedPath.generic_string()},
+                           {"reference", Paths[0].generic_string()},
+                           {"candidate", Paths[1].generic_string()},
+                           {"archived_reference", ArchivedReference},
+                           {"staged_candidate", StagedCandidate},
+                           {"yaw", Yaw},
+                           {"pitch", Pitch},
+                           {"read_only", true}};
   UGlStateScope scope(kGlMaskIconFbo);
   for (int i = 0; i < 2; ++i)
   {
-    report[i == 0 ? "published" : "candidate"] = Paths[i].generic_string();
     if (!Textures[i])
       continue;
     GLuint fbo = 0;
@@ -329,7 +348,7 @@ void UItemLabScreen::Export()
                        pixels.begin() + (y + 1) * 512 * 4,
                        pixels.begin() + (511 - y) * 512 * 4);
     const auto file = folder / (Selected + "-" + std::to_string(Mode) +
-                                (i == 0 ? "-published.png" : "-candidate.png"));
+                                (i == 0 ? "-reference.png" : "-candidate.png"));
     const bool saved = stbi_write_png(file.string().c_str(), 512, 512, 4,
                                       pixels.data(), 512 * 4) != 0;
     glDeleteFramebuffers(1, &fbo);
