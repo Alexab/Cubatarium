@@ -26,6 +26,7 @@ public:
   bool PickHotbarSlot(int x, int y, SlotAddress &out) const;
   GuiRect GetTabBounds(int section) const;
   GuiRect GetHotbarBounds(size_t index) const;
+  unsigned GetHotbarIconTexture(size_t index) const;
   const PlayerWindowLayout &GetLayout() const { return Layout; }
   int GetSection() const { return Section; }
 

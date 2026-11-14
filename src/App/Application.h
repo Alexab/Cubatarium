@@ -112,6 +112,7 @@ public:
   void OpenPlayerWindow(int section);
   UGuiWidget *GetPlayerWindowRoot();
   void RunPlayerWindowQa(const std::string &path);
+  void RunInventoryIconsQa(const std::string &path);
   void ShowInteractionMessage(const std::string &message, float seconds = 2.f);
 
   void ProcessInput();

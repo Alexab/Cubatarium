@@ -23,7 +23,8 @@
     { "id": "passive", "displayName": "Passive mobs", "sortOrder": 51 },
     { "id": "hostile", "displayName": "Hostile mobs", "sortOrder": 52 },
     { "id": "flying", "displayName": "Flying mobs", "sortOrder": 53 },
-    { "id": "humanoid", "displayName": "Humanoid", "sortOrder": 60 }
+    { "id": "humanoid", "displayName": "Humanoid", "sortOrder": 60 },
+    { "id": "outfits", "displayName": "Outfits", "sortOrder": 70 }
   ],
   "itemTypes": [
     { "id": "mining", "displayName": "Mining", "sortOrder": 10 },

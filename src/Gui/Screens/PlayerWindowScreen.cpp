@@ -197,26 +197,8 @@ void UPlayerWindowScreen::Update(double)
     slot->SetSelected(view.selected);
     slot->SetWearProgress(view.wear);
     slot->SetBroken(view.broken);
-    unsigned texture = 0;
-    if (Icons && !view.Id.empty())
-      switch (view.entryKind)
-      {
-      case InventoryEntryKind::Block:
-        texture = Icons->GetBlockIconTexture(view.Id);
-        break;
-      case InventoryEntryKind::Item:
-        texture = Icons->GetItemIconTexture(view.Id);
-        break;
-      case InventoryEntryKind::Object:
-        texture = Icons->GetObjectIconTexture(view.Id);
-        break;
-      case InventoryEntryKind::UCreature:
-        texture = Icons->GetCreatureIconTexture(view.Id);
-        break;
-      case InventoryEntryKind::Skin:
-        texture = Icons->GetSkinIconTexture(view.Id);
-        break;
-      }
+    const unsigned texture =
+        Icons ? Icons->GetEntryIcon(view.entryKind, view.Id) : 0;
     slot->SetIconTexture(texture);
   }
 }
@@ -244,5 +226,9 @@ GuiRect UPlayerWindowScreen::GetTabBounds(int section) const
 GuiRect UPlayerWindowScreen::GetHotbarBounds(size_t index) const
 {
   return index < Slots.size() ? Slots[index]->GetBounds() : GuiRect{};
+}
+unsigned UPlayerWindowScreen::GetHotbarIconTexture(size_t index) const
+{
+  return index < Slots.size() ? Slots[index]->GetIconTexture() : 0;
 }
 } // namespace cutum

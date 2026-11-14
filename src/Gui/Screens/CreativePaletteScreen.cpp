@@ -613,28 +613,8 @@ void UCreativePaletteScreen::SyncHotbarStrip()
     slot->SetSelected(primary[i].selected);
     slot->SetLabel(primary[i].label);
     slot->SetCountHint(primary[i].CountLabel);
-    GLuint tex = 0;
-    if (Icons && !primary[i].Id.empty())
-    {
-      switch (primary[i].entryKind)
-      {
-      case InventoryEntryKind::Block:
-        tex = Icons->GetBlockIconTexture(primary[i].Id);
-        break;
-      case InventoryEntryKind::Object:
-        tex = Icons->GetObjectIconTexture(primary[i].Id);
-        break;
-      case InventoryEntryKind::UCreature:
-        tex = Icons->GetCreatureIconTexture(primary[i].Id);
-        break;
-      case InventoryEntryKind::Skin:
-        tex = Icons->GetSkinIconTexture(primary[i].Id);
-        break;
-      case InventoryEntryKind::Item:
-        tex = Icons->GetItemIconTexture(primary[i].Id);
-        break;
-      }
-    }
+    const GLuint tex =
+        Icons ? Icons->GetEntryIcon(primary[i].entryKind, primary[i].Id) : 0;
     slot->SetIconTexture(tex);
     slot->SetWearProgress(primary[i].entryKind == InventoryEntryKind::Item
                               ? primary[i].wear

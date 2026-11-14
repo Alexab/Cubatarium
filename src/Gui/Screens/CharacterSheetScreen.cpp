@@ -943,10 +943,7 @@ void UCharacterSheetScreen::RefreshLabels()
                                      : empty)
                               : snap.slots[i];
       auto *slot = BagSlots[i];
-      const auto tex = entry.empty ? 0
-                       : entry.kind == InventoryEntryKind::Block
-                           ? Icons->GetBlockIconTexture(entry.Id)
-                           : Icons->GetItemIconTexture(entry.Id);
+      const auto tex = Icons->GetEntryIcon(entry);
       slot->SetLabel(RecoveryMode ? entry.Id : "");
       slot->SetIconTexture(tex);
       slot->SetWearProgress(entry.wear);
@@ -1512,8 +1509,16 @@ GuiRect UCharacterSheetScreen::GetSearchBounds() const
 {
   return Search->GetBounds();
 }
+GuiRect UCharacterSheetScreen::GetRecoveryButtonBounds() const
+{
+  return RecoveryButton->GetBounds();
+}
 GuiRect UCharacterSheetScreen::GetBackpackSlotBounds(size_t index) const
 {
   return index < BagSlots.size() ? BagSlots[index]->GetBounds() : GuiRect{};
+}
+GLuint UCharacterSheetScreen::GetBackpackIconTexture(size_t index) const
+{
+  return index < BagSlots.size() ? BagSlots[index]->GetIconTexture() : 0;
 }
 } // namespace cutum

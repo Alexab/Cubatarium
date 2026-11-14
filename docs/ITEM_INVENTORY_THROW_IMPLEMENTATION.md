@@ -52,3 +52,5 @@ The subsequent systemic refactor completes finite/catalog ownership, Creative mi
 Follow-up: [finite pickup counters and progressive catalog icons](research/inventory-pickup-icons-2026-11-14/README.md).
 
 Player window: [shared shell, section state and Release acceptance](research/player-window-unification-2026-11-14/README.md).
+
+Icon follow-up: [all inventory entry types, native audit and dolphin regression](research/inventory-icon-types-2026-11-14/README.md).

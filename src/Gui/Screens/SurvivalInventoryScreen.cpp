@@ -280,9 +280,7 @@ void USurvivalInventoryScreen::RebuildGrid()
 
     if (Icons)
     {
-      const unsigned tex = (Kind == ContentKind::Block)
-                               ? Icons->GetBlockIconTexture(entry.Id)
-                               : Icons->GetItemIconTexture(entry.Id);
+      const unsigned tex = Icons->GetEntryIcon(entry);
       slot->SetIconTexture(tex);
     }
 

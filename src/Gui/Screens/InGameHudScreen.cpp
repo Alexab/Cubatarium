@@ -376,28 +376,7 @@ void UInGameHudScreen::SyncSlotIcons()
   const auto primary = Session->GetBarSlots(0);
   for (size_t i = 0; i < PrimarySlots.size() && i < primary.size(); ++i)
   {
-    GLuint tex = 0;
-    if (!primary[i].Id.empty())
-    {
-      switch (primary[i].entryKind)
-      {
-      case InventoryEntryKind::Block:
-        tex = Icons->GetBlockIconTexture(primary[i].Id);
-        break;
-      case InventoryEntryKind::Object:
-        tex = Icons->GetObjectIconTexture(primary[i].Id);
-        break;
-      case InventoryEntryKind::UCreature:
-        tex = Icons->GetCreatureIconTexture(primary[i].Id);
-        break;
-      case InventoryEntryKind::Skin:
-        tex = Icons->GetSkinIconTexture(primary[i].Id);
-        break;
-      case InventoryEntryKind::Item:
-        tex = Icons->GetItemIconTexture(primary[i].Id);
-        break;
-      }
-    }
+    const GLuint tex = Icons->GetEntryIcon(primary[i].entryKind, primary[i].Id);
     PrimarySlots[i]->SetIconTexture(tex);
     PrimarySlots[i]->SetWearProgress(
         primary[i].entryKind == InventoryEntryKind::Item ? primary[i].wear
@@ -415,28 +394,8 @@ void UInGameHudScreen::SyncSlotIcons()
   }
   for (size_t i = 0; i < SecondarySlots.size() && i < secondary.size(); ++i)
   {
-    GLuint tex = 0;
-    if (!secondary[i].Id.empty())
-    {
-      switch (secondary[i].entryKind)
-      {
-      case InventoryEntryKind::Block:
-        tex = Icons->GetBlockIconTexture(secondary[i].Id);
-        break;
-      case InventoryEntryKind::Object:
-        tex = Icons->GetObjectIconTexture(secondary[i].Id);
-        break;
-      case InventoryEntryKind::UCreature:
-        tex = Icons->GetCreatureIconTexture(secondary[i].Id);
-        break;
-      case InventoryEntryKind::Skin:
-        tex = Icons->GetSkinIconTexture(secondary[i].Id);
-        break;
-      case InventoryEntryKind::Item:
-        tex = Icons->GetItemIconTexture(secondary[i].Id);
-        break;
-      }
-    }
+    const GLuint tex =
+        Icons->GetEntryIcon(secondary[i].entryKind, secondary[i].Id);
     SecondarySlots[i]->SetIconTexture(tex);
     SecondarySlots[i]->SetWearProgress(
         secondary[i].entryKind == InventoryEntryKind::Item ? secondary[i].wear

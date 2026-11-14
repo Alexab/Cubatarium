@@ -54,7 +54,9 @@ public:
   int GetSection() const { return Section; }
   std::string GetSectionStateKey() const;
   GuiRect GetSearchBounds() const;
+  GuiRect GetRecoveryButtonBounds() const;
   GuiRect GetBackpackSlotBounds(size_t index) const;
+  GLuint GetBackpackIconTexture(size_t index) const;
   void SetHosted(bool hosted)
   {
     Hosted = hosted;

@@ -37,11 +37,11 @@ def main():
     env=os.environ.copy()
     native=output/'native.json'
     # A successful process must produce this run's reports, never reuse a prior pass.
-    for report in [native,Path(str(native)+'.ui.json'),Path(str(native)+'.ownership.json'),Path(str(native)+'.ownership-ui.json'),Path(str(native)+'.player-window.json'),output/'flight.json',output/'result.json']:
+    for report in [native,Path(str(native)+'.ui.json'),Path(str(native)+'.ownership.json'),Path(str(native)+'.ownership-ui.json'),Path(str(native)+'.player-window.json'),Path(str(native)+'.icons.json'),output/'flight.json',output/'result.json']:
         report.unlink(missing_ok=True)
     env.update(PYTHONIOENCODING='utf-8',CUBA_ITEMS_INVENTORY_QA=str(native),CUBA_ITEMS_SURVIVAL_LOOP_QA='1',CUBA_FLIGHT_CAPTURE_DIR=str(output/'captures'),CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='4')
     run([sys.executable,ROOT/'tools/flight_sim_run.py','--world',args.world,'--require-existing-world','--seconds','27','--no-fly','--no-hold-forward','--idle-sec','2','--report',output/'flight.json'],'native-flight',env=env)
-    reports={name:json.loads(path.read_text(encoding='utf-8')) for name,path in [('gameplay',native),('window',Path(str(native)+'.ui.json')),('ownership',Path(str(native)+'.ownership.json')),('ownership_ui',Path(str(native)+'.ownership-ui.json')),('player_window',Path(str(native)+'.player-window.json'))]}
+    reports={name:json.loads(path.read_text(encoding='utf-8')) for name,path in [('gameplay',native),('window',Path(str(native)+'.ui.json')),('ownership',Path(str(native)+'.ownership.json')),('ownership_ui',Path(str(native)+'.ownership-ui.json')),('player_window',Path(str(native)+'.player-window.json')),('icons',Path(str(native)+'.icons.json'))]}
     passed=all(r.get('passed') is True for r in reports.values())
     (output/'result.json').write_text(json.dumps(dict(passed=passed,reports=reports),indent=2)+'\n',encoding='utf-8')
     print(f"passed={passed}; evidence={output}")

@@ -12,6 +12,7 @@
 #include "World/Core/RuntimeTuning.h"
 #include "World/Diagnostics/EnterLitDiagnostics.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
+#include <set>
 #include <thread>
 
 #include "App/Core.h"
@@ -1940,25 +1941,7 @@ void UApplication::DrawDragGhost(int width, int height)
   {
     return;
   }
-  GLuint tex = 0;
-  switch (drag.entry.kind)
-  {
-  case InventoryEntryKind::Block:
-    tex = IconSource->GetBlockIconTexture(drag.entry.Id);
-    break;
-  case InventoryEntryKind::Object:
-    tex = IconSource->GetObjectIconTexture(drag.entry.Id);
-    break;
-  case InventoryEntryKind::UCreature:
-    tex = IconSource->GetCreatureIconTexture(drag.entry.Id);
-    break;
-  case InventoryEntryKind::Skin:
-    tex = IconSource->GetSkinIconTexture(drag.entry.Id);
-    break;
-  case InventoryEntryKind::Item:
-    tex = IconSource->GetItemIconTexture(drag.entry.Id);
-    break;
-  }
+  const GLuint tex = IconSource->GetEntryIcon(drag.entry);
   if (tex == 0)
   {
     return;
@@ -2481,6 +2464,183 @@ void UApplication::RunPlayerWindowQa(const std::string &path)
   std::ofstream out(path);
   out << report.dump(2) << '\n';
 }
+void UApplication::RunInventoryIconsQa(const std::string &path)
+{
+  const auto originalMode = World->GetGameMode();
+  auto &inventory = World->GetControlledCreature()->GetInventory();
+  const auto originalInventory = inventory;
+  const auto originalScale = GuiContext->GetMetrics().Scale;
+  const auto originalWidth = PlayerWindowScreen->GetViewportWidth();
+  const auto originalHeight = PlayerWindowScreen->GetViewportHeight();
+  GameSession->SyncToWorldGameMode(WorldGameMode::Creative);
+  GuiContext->ApplyUiScale(1.f);
+  PlayerWindowScreen->OnMetricsChanged(GuiContext->GetMetrics());
+  PlayerWindowScreen->OnViewportChanged(1280, 720);
+  OpenPlayerWindow(0);
+  nlohmann::json report = {{"checks", nlohmann::json::array()},
+                           {"counts", nlohmann::json::object()}};
+  auto expectedIcon = [&](InventoryEntryKind kind,
+                          const std::string &id) -> unsigned
+  {
+    switch (kind)
+    {
+    case InventoryEntryKind::Block:
+      return IconSource->GetBlockIconTexture(id);
+    case InventoryEntryKind::Item:
+      return IconSource->GetItemIconTexture(id);
+    case InventoryEntryKind::Object:
+      return IconSource->GetObjectIconTexture(id);
+    case InventoryEntryKind::UCreature:
+      return IconSource->GetCreatureIconTexture(id);
+    case InventoryEntryKind::Skin:
+      return IconSource->GetSkinIconTexture(id);
+    }
+    return 0;
+  };
+  auto reset = [&]
+  {
+    inventory = UCreatureInventory{};
+    inventory.SetItemDefinitions(World->GetItemDefinitionStorage());
+    inventory.SetCreative(true);
+    inventory.SetActiveSlot(0, 0);
+  };
+  auto entry = [](InventoryEntryKind kind, const std::string &id)
+  {
+    InventoryEntryRef e;
+    e.empty = false;
+    e.kind = kind;
+    e.Id = id;
+    e.count = 1;
+    e.form = InventoryEntryForm::CatalogReference;
+    return e;
+  };
+  auto verify = [&](InventoryEntryKind kind, const std::string &id, size_t slot,
+                    const std::string &location)
+  {
+    auto expected = expectedIcon(kind, id);
+    IconSource->WarmupItemIcons(8);
+    if (!expected)
+      expected = expectedIcon(kind, id);
+    CharacterSheetScreen->Update(0);
+    PlayerWindowScreen->Update(0);
+    const auto actual = CharacterSheetScreen->GetBackpackIconTexture(slot);
+    const auto footer = PlayerWindowScreen->GetHotbarIconTexture(
+        inventory.GetActiveSlotIndex());
+    const bool ok = expected != 0 && actual == expected &&
+                    (location == "recovery" || footer == expected);
+    report["checks"].push_back({{"kind", int(kind)},
+                                {"id", id},
+                                {"location", location},
+                                {"expected", expected},
+                                {"backpack", actual},
+                                {"footer", footer},
+                                {"passed", ok}});
+    return ok;
+  };
+  const auto &catalog = GameSession->GetContentCatalog();
+  for (auto kind :
+       {ContentKind::Object, ContentKind::UCreature, ContentKind::Skin})
+  {
+    const auto inventoryKind =
+        kind == ContentKind::Object      ? InventoryEntryKind::Object
+        : kind == ContentKind::UCreature ? InventoryEntryKind::UCreature
+                                         : InventoryEntryKind::Skin;
+    const std::string label = kind == ContentKind::Object      ? "objects"
+                              : kind == ContentKind::UCreature ? "creatures"
+                                                               : "skins";
+    std::set<std::string> ids;
+    for (const auto &type : catalog.GetTypeIds(kind))
+      for (const auto &e : catalog.GetEntries(kind, type))
+        ids.insert(e.Id);
+    report["counts"][label] = ids.size();
+    size_t index = 0;
+    for (const auto &id : ids)
+    {
+      const size_t slot = index % 40;
+      if (slot == 0)
+        reset();
+      inventory.AssignToHotbar(slot / 10, slot % 10, entry(inventoryKind, id));
+      inventory.SetActiveSlot(slot / 10, slot % 10);
+      verify(inventoryKind, id, slot, "backpack");
+      ++index;
+      if (index % 40 == 0 || index == ids.size())
+      {
+        const auto imagePath =
+            std::filesystem::path(path + ".frames") /
+            (label + "_" + std::to_string((index - 1) / 40) + ".png");
+        if (!CapturePlayerWindow(*GuiContext, *GetPlayerWindowRoot(), 1280, 720,
+                                 imagePath))
+          throw std::runtime_error("Cannot capture inventory icon page");
+      }
+    }
+  }
+  reset();
+  auto sample = [&](ContentKind kind) -> std::string
+  {
+    for (const auto &type : catalog.GetTypeIds(kind))
+    {
+      const auto entries = catalog.GetEntries(kind, type);
+      if (!entries.empty())
+        return entries.front().Id;
+    }
+    throw std::runtime_error(
+        "Inventory icon QA requires a catalog sample for kind " +
+        std::to_string(int(kind)));
+  };
+  const std::vector<InventoryEntryRef> mixed = {
+      entry(InventoryEntryKind::Block, "stone"),
+      entry(InventoryEntryKind::Item, "iron_pickaxe"),
+      entry(InventoryEntryKind::UCreature, "dolphin"),
+      entry(InventoryEntryKind::Object, sample(ContentKind::Object)),
+      entry(InventoryEntryKind::Skin, sample(ContentKind::Skin))};
+  for (size_t i = 0; i < mixed.size(); ++i)
+  {
+    inventory.AssignToHotbar(0, i, mixed[i]);
+    inventory.SetActiveSlot(0, i);
+    verify(mixed[i].kind, mixed[i].Id, i, "mixed");
+  }
+  if (!CapturePlayerWindow(*GuiContext, *GetPlayerWindowRoot(), 1280, 720,
+                           std::filesystem::path(path + ".frames") /
+                               "mixed_dolphin.png"))
+    throw std::runtime_error("Cannot capture mixed inventory");
+  nlohmann::json state;
+  inventory.SerializeToJson(state);
+  state["creative_recovery"] = nlohmann::json::array();
+  for (size_t i = 0; i < mixed.size(); ++i)
+    state["creative_recovery"].push_back(state["creative_slots"][i]);
+  inventory.DeserializeFromJson(state);
+  CharacterSheetScreen->Update(0);
+  const auto recovery = CharacterSheetScreen->GetRecoveryButtonBounds();
+  auto clickRecovery = [&]
+  {
+    InputRouter.RouteMouseButton(*this, GLFW_MOUSE_BUTTON_LEFT, true,
+                                 recovery.X + recovery.W / 2,
+                                 recovery.Y + recovery.H / 2, 0);
+    InputRouter.RouteMouseButton(*this, GLFW_MOUSE_BUTTON_LEFT, false,
+                                 recovery.X + recovery.W / 2,
+                                 recovery.Y + recovery.H / 2, 0);
+  };
+  clickRecovery();
+  for (size_t i = 0; i < mixed.size(); ++i)
+    verify(mixed[i].kind, mixed[i].Id, i, "recovery");
+  if (!CapturePlayerWindow(*GuiContext, *GetPlayerWindowRoot(), 1280, 720,
+                           std::filesystem::path(path + ".frames") /
+                               "recovery.png"))
+    throw std::runtime_error("Cannot capture inventory recovery");
+  clickRecovery();
+  GameSession->SyncToWorldGameMode(originalMode);
+  inventory = originalInventory;
+  GuiContext->ApplyUiScale(originalScale);
+  PlayerWindowScreen->OnMetricsChanged(GuiContext->GetMetrics());
+  PlayerWindowScreen->OnViewportChanged(originalWidth, originalHeight);
+  OpenPlayerWindow(0);
+  report["passed"] = true;
+  for (const auto &row : report["checks"])
+    if (!row["passed"].get<bool>())
+      report["passed"] = false;
+  std::ofstream out(path);
+  out << report.dump(2) << '\n';
+}
 void UApplication::UpdateNativeItemsQa(double dt)
 {
   static bool itemsQaDone = false;
@@ -2497,6 +2657,7 @@ void UApplication::UpdateNativeItemsQa(double dt)
         CharacterSheetScreen->RunInventoryQa(std::string(path) + ".ui.json");
         RunOwnershipUiQa(std::string(path) + ".ownership-ui.json");
         RunPlayerWindowQa(std::string(path) + ".player-window.json");
+        RunInventoryIconsQa(std::string(path) + ".icons.json");
         CharacterSheetOpen = true;
         CharacterSheetScreen->SetSection(0);
         CharacterSheetScreen->SetVisible(true);
