@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "scope": "presentation_only",
+  "world": "CarryAimQA",
+  "staged_ids": [
+    "copper_feet",
+    "gold_feet",
+    "iron_feet",
+    "leather_feet"
+  ],
+  "inspected_surface_ids": [
+    "copper_feet",
+    "gold_feet",
+    "iron_feet",
+    "leather_feet"
+  ],
+  "presentation_checks": 163,
+  "restored_runtime_files": 12,
+  "executable_sha256": "aa08aa3c849295f7c40bef89b34ad54906d598919ce130641feea7b6d7b185ff"
+}

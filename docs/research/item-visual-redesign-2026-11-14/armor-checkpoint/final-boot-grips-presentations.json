@@ -1,0 +1,797 @@
+{
+  "checks": [
+    {
+      "name": "item renderer initializes",
+      "passed": true
+    },
+    {
+      "name": "state preview renderer initializes",
+      "passed": true
+    },
+    {
+      "name": "copper_feet FP male right",
+      "passed": true
+    },
+    {
+      "name": "copper_feet FP male left",
+      "passed": true
+    },
+    {
+      "name": "copper_feet FP female right",
+      "passed": true
+    },
+    {
+      "name": "copper_feet FP female left",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-male-armor-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-male-armor-0 sole remains above support tolerance",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-male-armor-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-male-armor-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-male-armor-1 sole remains above support tolerance",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-male-armor-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-female-armor-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-female-armor-0 sole remains above support tolerance",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-female-armor-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-female-armor-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-female-armor-1 sole remains above support tolerance",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-female-armor-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_feet-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_feet FP male right",
+      "passed": true
+    },
+    {
+      "name": "gold_feet FP male left",
+      "passed": true
+    },
+    {
+      "name": "gold_feet FP female right",
+      "passed": true
+    },
+    {
+      "name": "gold_feet FP female left",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-male-armor-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-male-armor-0 sole remains above support tolerance",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-male-armor-0 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-male-armor-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-male-armor-1 sole remains above support tolerance",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-male-armor-1 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-female-armor-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-female-armor-0 sole remains above support tolerance",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-female-armor-0 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-female-armor-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-female-armor-1 sole remains above support tolerance",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-female-armor-1 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_feet-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_feet FP male right",
+      "passed": true
+    },
+    {
+      "name": "iron_feet FP male left",
+      "passed": true
+    },
+    {
+      "name": "iron_feet FP female right",
+      "passed": true
+    },
+    {
+      "name": "iron_feet FP female left",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-male-armor-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-male-armor-0 sole remains above support tolerance",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-male-armor-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-male-armor-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-male-armor-1 sole remains above support tolerance",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-male-armor-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-female-armor-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-female-armor-0 sole remains above support tolerance",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-female-armor-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-female-armor-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-female-armor-1 sole remains above support tolerance",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-female-armor-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_feet-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_feet FP male right",
+      "passed": true
+    },
+    {
+      "name": "leather_feet FP male left",
+      "passed": true
+    },
+    {
+      "name": "leather_feet FP female right",
+      "passed": true
+    },
+    {
+      "name": "leather_feet FP female left",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-male-armor-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-male-armor-0 sole remains above support tolerance",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-male-armor-0 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-male-armor-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-male-armor-1 sole remains above support tolerance",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-male-armor-1 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-female-armor-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-female-armor-0 sole remains above support tolerance",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-female-armor-0 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-female-armor-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-female-armor-1 sole remains above support tolerance",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-female-armor-1 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_feet-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "all requested item surfaces inspected",
+      "passed": true
+    }
+  ],
+  "inventory_unchanged": true,
+  "passed": true,
+  "scope": "synthetic native attachments and loose item submissions",
+  "state_ids": [],
+  "surface_count": 4,
+  "surface_ids": [
+    "copper_feet",
+    "gold_feet",
+    "iron_feet",
+    "leather_feet"
+  ],
+  "wear_geometry": {
+    "copper_feet-female-armor-0": {
+      "draws": 2,
+      "minimum_y": 9.003792001749389e-06,
+      "roots": [
+        "left_boot",
+        "right_boot"
+      ]
+    },
+    "copper_feet-female-armor-1": {
+      "draws": 2,
+      "minimum_y": 2.1062579236286183e-08,
+      "roots": [
+        "left_boot",
+        "right_boot"
+      ]
+    },
+    "copper_feet-male-armor-0": {
+      "draws": 2,
+      "minimum_y": 9.003792001749389e-06,
+      "roots": [
+        "left_boot",
+        "right_boot"
+      ]
+    },
+    "copper_feet-male-armor-1": {
+      "draws": 2,
+      "minimum_y": 2.1062579236286183e-08,
+      "roots": [
+        "left_boot",
+        "right_boot"
+      ]
+    },
+    "gold_feet-female-armor-0": {
+      "draws": 2,
+      "minimum_y": 9.003792001749389e-06,
+      "roots": [
+        "left_boot",
+        "right_boot"
+      ]
+    },
+    "gold_feet-female-armor-1": {
+      "draws": 2,
+      "minimum_y": 2.1062579236286183e-08,
+      "roots": [
+        "left_boot",
+        "right_boot"
+      ]
+    },
+    "gold_feet-male-armor-0": {
+      "draws": 2,
+      "minimum_y": 9.003792001749389e-06,
+      "roots": [
+        "left_boot",
+        "right_boot"
+      ]
+    },
+    "gold_feet-male-armor-1": {
+      "draws": 2,
+      "minimum_y": 2.1062579236286183e-08,
+      "roots": [
+        "left_boot",
+        "right_boot"
+      ]
+    },
+    "iron_feet-female-armor-0": {
+      "draws": 2,
+      "minimum_y": 9.003792001749389e-06,
+      "roots": [
+        "left_boot",
+        "right_boot"
+      ]
+    },
+    "iron_feet-female-armor-1": {
+      "draws": 2,
+      "minimum_y": 2.1062579236286183e-08,
+      "roots": [
+        "left_boot",
+        "right_boot"
+      ]
+    },
+    "iron_feet-male-armor-0": {
+      "draws": 2,
+      "minimum_y": 9.003792001749389e-06,
+      "roots": [
+        "left_boot",
+        "right_boot"
+      ]
+    },
+    "iron_feet-male-armor-1": {
+      "draws": 2,
+      "minimum_y": 2.1062579236286183e-08,
+      "roots": [
+        "left_boot",
+        "right_boot"
+      ]
+    },
+    "leather_feet-female-armor-0": {
+      "draws": 2,
+      "minimum_y": 9.003792001749389e-06,
+      "roots": [
+        "left_boot",
+        "right_boot"
+      ]
+    },
+    "leather_feet-female-armor-1": {
+      "draws": 2,
+      "minimum_y": 2.1062579236286183e-08,
+      "roots": [
+        "left_boot",
+        "right_boot"
+      ]
+    },
+    "leather_feet-male-armor-0": {
+      "draws": 2,
+      "minimum_y": 9.003792001749389e-06,
+      "roots": [
+        "left_boot",
+        "right_boot"
+      ]
+    },
+    "leather_feet-male-armor-1": {
+      "draws": 2,
+      "minimum_y": 2.1062579236286183e-08,
+      "roots": [
+        "left_boot",
+        "right_boot"
+      ]
+    }
+  }
+}

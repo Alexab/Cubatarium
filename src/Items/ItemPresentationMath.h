@@ -15,6 +15,16 @@ inline glm::mat4 ItemEulerMatrix(glm::vec3 degrees)
          glm::rotate(glm::mat4(1), a.y, glm::vec3(0, 1, 0)) *
          glm::rotate(glm::mat4(1), a.z, glm::vec3(0, 0, 1));
 }
+inline glm::mat4 ItemWearSectionMatrix(const ItemWearSection &section,
+                                       glm::vec3 low, glm::vec3 high)
+{
+  return glm::translate(glm::mat4(1), (low + high) * .5f) *
+         ItemEulerMatrix(section.EulerDeg) *
+         glm::scale(glm::mat4(1),
+                    (high - low) / glm::max(section.High - section.Low,
+                                            glm::vec3(.0001f))) *
+         glm::translate(glm::mat4(1), -(section.Low + section.High) * .5f);
+}
 inline glm::mat4 ItemWieldLocalMatrix(const ItemRenderAsset &asset,
                                       glm::vec3 palm, bool left, float scale)
 {

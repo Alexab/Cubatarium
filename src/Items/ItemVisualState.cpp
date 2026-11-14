@@ -43,10 +43,15 @@ ItemVisualInputs MakeItemVisualInputs(const InventoryEntryRef *entry,
 bool ItemNodeVisible(const ItemRenderAsset &asset, const ItemVisualState &state,
                      size_t node)
 {
+  bool selected = state.VisibleRoots.empty();
   for (int i = int(node); i >= 0; i = asset.Nodes[size_t(i)].Parent)
+  {
     if (state.HiddenNodes.count(asset.Nodes[size_t(i)].Name))
       return false;
-  return true;
+    selected =
+        selected || state.VisibleRoots.count(asset.Nodes[size_t(i)].Name);
+  }
+  return selected;
 }
 ItemVisualState EvaluateItemVisualState(const ItemRenderAsset &asset,
                                         const ItemVisualInputs &inputs)
@@ -128,7 +133,8 @@ ItemVisualState EvaluateItemVisualState(const ItemRenderAsset &asset,
 std::pair<glm::vec3, glm::vec3> ItemVisualBounds(const ItemRenderAsset &asset,
                                                  const ItemVisualState &state)
 {
-  if (state.NodeTransforms.empty() && state.HiddenNodes.empty())
+  if (state.NodeTransforms.empty() && state.HiddenNodes.empty() &&
+      state.VisibleRoots.empty())
     return {asset.Low, asset.High};
   const auto transforms = ResolveItemNodeTransforms(asset, state);
   glm::vec3 low(std::numeric_limits<float>::max()),

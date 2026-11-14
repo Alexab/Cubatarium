@@ -105,6 +105,26 @@ def shell(size, thickness, *, role="body", name="shell"):
     return faces
 
 
+def tube(size, thickness, *, role='body', name='sleeve'):
+    """Rectangular armor sleeve, open at both ends with closed wall rims."""
+    x,y,z=map(float,size)
+    if not all(math.isfinite(v) for v in (x,y,z,thickness)) or not 0<thickness<min(x,y,z)/2:
+        raise ValueError('Invalid armor sleeve thickness')
+    outer=((-x/2,-z/2),(x/2,-z/2),(x/2,z/2),(-x/2,z/2))
+    inner=tuple((a-math.copysign(thickness,a),b-math.copysign(thickness,b)) for a,b in outer)
+    def rim(points,h):return tuple((a,h,b) for a,b in points)
+    lo,hi=rim(outer,-y/2),rim(outer,y/2)
+    il,ih=rim(inner,-y/2),rim(inner,y/2)
+    faces=[]
+    for i in range(4):
+        j=(i+1)%4
+        faces.extend((Face((lo[i],hi[i],hi[j],lo[j]),role,name+f'.outer{i}'),
+                      Face((il[i],il[j],ih[j],ih[i]),role,name+f'.inner{i}'),
+                      Face((hi[i],ih[i],ih[j],hi[j]),role,name+f'.top{i}'),
+                      Face((lo[j],il[j],il[i],lo[i]),role,name+f'.bottom{i}')))
+    return faces
+
+
 def transform(faces, *, offset=(0,0,0), rotation=(0,0,0), pivot=(0,0,0), taper=1.0, scale=(1,1,1)):
     """Rotate XYZ in degrees about a pivot; taper XZ from bottom to top."""
     if not all(math.isfinite(v) for values in (offset,rotation,pivot) for v in values) or not math.isfinite(taper) or taper <= 0:

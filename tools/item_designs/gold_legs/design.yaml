@@ -1,0 +1,500 @@
+version: 3
+id: gold_legs
+atlas_size: 512
+texels_per_metre: 180
+triangle_budget: 2000
+presentation:
+  tp_euler_deg:
+  - -65
+  - 0
+  - 0
+  right_grip:
+  - 0
+  - -0.05
+  - 0
+  left_grip:
+  - 0
+  - -0.05
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.5
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+materials:
+  body:
+    color:
+    - 212
+    - 171
+    - 72
+    pattern: forged
+    metallic: 0.65
+    roughness: 0.55
+  trim:
+    color:
+    - 239
+    - 198
+    - 99
+    pattern: plain
+    metallic: 0.7
+    roughness: 0.7
+  lining:
+    color:
+    - 66
+    - 49
+    - 35
+    pattern: leather
+  strap:
+    color:
+    - 87
+    - 57
+    - 34
+    pattern: leather
+    seam: true
+  fastener:
+    color:
+    - 252
+    - 211
+    - 112
+    pattern: hammered
+    metallic: 0.6
+    roughness: 0.6
+parts:
+- name: waist_band
+  material: lining
+  shape: tube
+  size:
+  - 0.33
+  - 0.052
+  - 0.15
+  thickness: 0.012
+  offset:
+  - 0
+  - 0.19
+  - 0
+  node: waist
+- name: waist_buckle0
+  material: fastener
+  shape: bevel_box
+  size:
+  - 0.035
+  - 0.009
+  - 0.009
+  bevel: 0.00162
+  offset:
+  - 0
+  - 0.1725
+  - 0.083
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: waist
+- name: waist_buckle1
+  material: fastener
+  shape: bevel_box
+  size:
+  - 0.035
+  - 0.009
+  - 0.009
+  bevel: 0.00162
+  offset:
+  - 0
+  - 0.20750000000000002
+  - 0.083
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: waist
+- name: waist_buckle2
+  material: fastener
+  shape: bevel_box
+  size:
+  - 0.009
+  - 0.035
+  - 0.009
+  bevel: 0.00162
+  offset:
+  - -0.0175
+  - 0.19
+  - 0.083
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: waist
+- name: waist_buckle3
+  material: fastener
+  shape: bevel_box
+  size:
+  - 0.009
+  - 0.035
+  - 0.009
+  bevel: 0.00162
+  offset:
+  - 0.0175
+  - 0.19
+  - 0.083
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: waist
+- name: left_thigh_liner
+  material: lining
+  shape: tube
+  size:
+  - 0.14
+  - 0.18
+  - 0.15
+  thickness: 0.01
+  offset:
+  - -0.085
+  - 0.085
+  - 0
+  node: left_thigh
+- name: left_thigh_slender_plate
+  material: body
+  shape: extrude
+  contour:
+  - - -0.05
+    - -0.075
+  - - 0.05
+    - -0.075
+  - - 0.048
+    - 0.065
+  - - 0
+    - 0.085
+  - - -0.048
+    - 0.065
+  depth: 0.012
+  offset:
+  - -0.085
+  - 0.085
+  - 0.082
+  node: left_thigh
+- name: left_thigh_gold_binding0
+  material: trim
+  shape: tube
+  size:
+  - 0.146
+  - 0.012
+  - 0.158
+  thickness: 0.004
+  offset:
+  - -0.085
+  - 0.030000000000000006
+  - 0
+  node: left_thigh
+- name: left_thigh_gold_binding1
+  material: trim
+  shape: tube
+  size:
+  - 0.146
+  - 0.012
+  - 0.158
+  thickness: 0.004
+  offset:
+  - -0.085
+  - 0.14
+  - 0
+  node: left_thigh
+- name: left_shin_liner
+  material: lining
+  shape: tube
+  size:
+  - 0.14
+  - 0.18
+  - 0.15
+  thickness: 0.01
+  offset:
+  - -0.085
+  - -0.11
+  - 0
+  node: left_shin
+- name: left_shin_slender_plate
+  material: body
+  shape: extrude
+  contour:
+  - - -0.05
+    - -0.075
+  - - 0.05
+    - -0.075
+  - - 0.048
+    - 0.065
+  - - 0
+    - 0.085
+  - - -0.048
+    - 0.065
+  depth: 0.012
+  offset:
+  - -0.085
+  - -0.11
+  - 0.082
+  node: left_shin
+- name: left_shin_gold_binding0
+  material: trim
+  shape: tube
+  size:
+  - 0.146
+  - 0.012
+  - 0.158
+  thickness: 0.004
+  offset:
+  - -0.085
+  - -0.165
+  - 0
+  node: left_shin
+- name: left_shin_gold_binding1
+  material: trim
+  shape: tube
+  size:
+  - 0.146
+  - 0.012
+  - 0.158
+  thickness: 0.004
+  offset:
+  - -0.085
+  - -0.055
+  - 0
+  node: left_shin
+- name: right_thigh_liner
+  material: lining
+  shape: tube
+  size:
+  - 0.14
+  - 0.18
+  - 0.15
+  thickness: 0.01
+  offset:
+  - 0.085
+  - 0.085
+  - 0
+  node: right_thigh
+- name: right_thigh_slender_plate
+  material: body
+  shape: extrude
+  contour:
+  - - -0.05
+    - -0.075
+  - - 0.05
+    - -0.075
+  - - 0.048
+    - 0.065
+  - - 0
+    - 0.085
+  - - -0.048
+    - 0.065
+  depth: 0.012
+  offset:
+  - 0.085
+  - 0.085
+  - 0.082
+  node: right_thigh
+- name: right_thigh_gold_binding0
+  material: trim
+  shape: tube
+  size:
+  - 0.146
+  - 0.012
+  - 0.158
+  thickness: 0.004
+  offset:
+  - 0.085
+  - 0.030000000000000006
+  - 0
+  node: right_thigh
+- name: right_thigh_gold_binding1
+  material: trim
+  shape: tube
+  size:
+  - 0.146
+  - 0.012
+  - 0.158
+  thickness: 0.004
+  offset:
+  - 0.085
+  - 0.14
+  - 0
+  node: right_thigh
+- name: right_shin_liner
+  material: lining
+  shape: tube
+  size:
+  - 0.14
+  - 0.18
+  - 0.15
+  thickness: 0.01
+  offset:
+  - 0.085
+  - -0.11
+  - 0
+  node: right_shin
+- name: right_shin_slender_plate
+  material: body
+  shape: extrude
+  contour:
+  - - -0.05
+    - -0.075
+  - - 0.05
+    - -0.075
+  - - 0.048
+    - 0.065
+  - - 0
+    - 0.085
+  - - -0.048
+    - 0.065
+  depth: 0.012
+  offset:
+  - 0.085
+  - -0.11
+  - 0.082
+  node: right_shin
+- name: right_shin_gold_binding0
+  material: trim
+  shape: tube
+  size:
+  - 0.146
+  - 0.012
+  - 0.158
+  thickness: 0.004
+  offset:
+  - 0.085
+  - -0.165
+  - 0
+  node: right_shin
+- name: right_shin_gold_binding1
+  material: trim
+  shape: tube
+  size:
+  - 0.146
+  - 0.012
+  - 0.158
+  thickness: 0.004
+  offset:
+  - 0.085
+  - -0.055
+  - 0
+  node: right_shin
+nodes:
+  waist:
+    pivot:
+    - 0
+    - 0.19
+    - 0
+  left_thigh:
+    pivot:
+    - -0.085
+    - 0.085
+    - 0
+  left_shin:
+    pivot:
+    - -0.085
+    - -0.11
+    - 0
+  right_thigh:
+    pivot:
+    - 0.085
+    - 0.085
+    - 0
+  right_shin:
+    pivot:
+    - 0.085
+    - -0.11
+    - 0
+wear_sections:
+- node: waist
+  bones:
+  - body
+  slot: 2
+  region: waist
+  low:
+  - -0.15
+  - 0.165
+  - -0.065
+  high:
+  - 0.15
+  - 0.215
+  - 0.065
+  euler_deg:
+  - 0
+  - 180
+  - 0
+- node: left_thigh
+  bones:
+  - leftLeg
+  slot: 2
+  region: full
+  low:
+  - -0.14500000000000002
+  - -0.0049999999999999906
+  - -0.065
+  high:
+  - -0.02500000000000001
+  - 0.175
+  - 0.065
+  euler_deg:
+  - 0
+  - 180
+  - 0
+- node: left_shin
+  bones:
+  - leftShin
+  slot: 2
+  region: full
+  low:
+  - -0.14500000000000002
+  - -0.2
+  - -0.065
+  high:
+  - -0.02500000000000001
+  - -0.020000000000000004
+  - 0.065
+  euler_deg:
+  - 0
+  - 180
+  - 0
+- node: right_thigh
+  bones:
+  - rightLeg
+  slot: 2
+  region: full
+  low:
+  - 0.02500000000000001
+  - -0.0049999999999999906
+  - -0.065
+  high:
+  - 0.14500000000000002
+  - 0.175
+  - 0.065
+  euler_deg:
+  - 0
+  - 180
+  - 0
+- node: right_shin
+  bones:
+  - rightShin
+  slot: 2
+  region: full
+  low:
+  - 0.02500000000000001
+  - -0.2
+  - -0.065
+  high:
+  - 0.14500000000000002
+  - -0.020000000000000004
+  - 0.065
+  euler_deg:
+  - 0
+  - 180
+  - 0
+authorship:
+  construction: Cubatarium armor coordinate drawings
+  reference_kind: functional sewn and worked armor
+  external_meshes: false
+  external_pixels: false

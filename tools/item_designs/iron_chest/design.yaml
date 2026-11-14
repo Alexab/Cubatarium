@@ -1,0 +1,266 @@
+version: 3
+id: iron_chest
+atlas_size: 512
+texels_per_metre: 230
+triangle_budget: 2000
+presentation:
+  tp_euler_deg:
+  - -65
+  - 0
+  - 0
+  right_grip:
+  - 0
+  - -0.05
+  - 0
+  left_grip:
+  - 0
+  - -0.05
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.5
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+materials:
+  body:
+    color:
+    - 135
+    - 152
+    - 157
+    pattern: forged
+    metallic: 0.65
+    roughness: 0.55
+  trim:
+    color:
+    - 162
+    - 179
+    - 184
+    pattern: plain
+    metallic: 0.7
+    roughness: 0.7
+  lining:
+    color:
+    - 66
+    - 49
+    - 35
+    pattern: leather
+  strap:
+    color:
+    - 87
+    - 57
+    - 34
+    pattern: leather
+    seam: true
+  fastener:
+    color:
+    - 175
+    - 192
+    - 197
+    pattern: hammered
+    metallic: 0.6
+    roughness: 0.6
+parts:
+- name: front_panel
+  material: body
+  shape: extrude
+  contour:
+  - - -0.22
+    - 0.15
+  - - -0.19
+    - -0.22
+  - - 0.19
+    - -0.22
+  - - 0.22
+    - 0.15
+  - - 0.13
+    - 0.23
+  - - -0.13
+    - 0.23
+  depth: 0.022
+  offset:
+  - 0
+  - 0
+  - 0.12
+  node: torso
+- name: rear_panel
+  material: body
+  shape: extrude
+  contour:
+  - - -0.22
+    - 0.15
+  - - -0.19
+    - -0.22
+  - - 0.19
+    - -0.22
+  - - 0.22
+    - 0.15
+  - - 0.13
+    - 0.23
+  - - -0.13
+    - 0.23
+  depth: 0.022
+  offset:
+  - 0
+  - 0
+  - -0.12
+  node: torso
+- name: left_shoulder_strap
+  material: strap
+  shape: bevel_box
+  size:
+  - 0.055
+  - 0.03
+  - 0.26
+  bevel: 0.005399999999999999
+  offset:
+  - -0.145
+  - 0.21
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: torso
+- name: left_side_lacing
+  material: strap
+  shape: bevel_box
+  size:
+  - 0.018
+  - 0.23
+  - 0.21
+  bevel: 0.00324
+  offset:
+  - -0.185
+  - -0.04
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: torso
+- name: right_shoulder_strap
+  material: strap
+  shape: bevel_box
+  size:
+  - 0.055
+  - 0.03
+  - 0.26
+  bevel: 0.005399999999999999
+  offset:
+  - 0.145
+  - 0.21
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: torso
+- name: right_side_lacing
+  material: strap
+  shape: bevel_box
+  size:
+  - 0.018
+  - 0.23
+  - 0.21
+  bevel: 0.00324
+  offset:
+  - 0.185
+  - -0.04
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: torso
+- name: left_breastplate
+  material: body
+  shape: blade
+  contour:
+  - - -0.19
+    - 0.11
+  - - -0.16
+    - -0.17
+  - - -0.008
+    - -0.13
+  - - -0.04
+    - 0.17
+  depth: 0.022
+  offset:
+  - 0
+  - 0
+  - 0.14
+  edge_depth: 0.006
+  bevel_fraction: 0.13
+  edge_material: trim
+  node: torso
+- name: right_breastplate
+  material: body
+  shape: blade
+  contour:
+  - - 0.008
+    - -0.13
+  - - 0.16
+    - -0.17
+  - - 0.19
+    - 0.11
+  - - 0.04
+    - 0.17
+  depth: 0.022
+  offset:
+  - 0
+  - 0
+  - 0.14
+  edge_depth: 0.006
+  bevel_fraction: 0.13
+  edge_material: trim
+  node: torso
+- name: lower_fauld
+  material: lining
+  shape: bevel_box
+  size:
+  - 0.37
+  - 0.052
+  - 0.03
+  bevel: 0.009359999999999999
+  offset:
+  - 0
+  - -0.2
+  - 0.13
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: torso
+nodes:
+  torso:
+    pivot:
+    - 0
+    - 0
+    - 0
+wear_sections:
+- node: torso
+  bones:
+  - body
+  slot: 1
+  region: slot
+  low:
+  - -0.19
+  - -0.22
+  - -0.105
+  high:
+  - 0.19
+  - 0.22
+  - 0.105
+  euler_deg:
+  - 0
+  - 180
+  - 0
+authorship:
+  construction: Cubatarium armor coordinate drawings
+  reference_kind: functional sewn and worked armor
+  external_meshes: false
+  external_pixels: false

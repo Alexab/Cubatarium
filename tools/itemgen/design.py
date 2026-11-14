@@ -5,9 +5,10 @@ import json
 import math
 import yaml
 
-from itemgen.mesh import Face, bevel_box, blade, extrude, shell, transform, revolve, ring
+from itemgen.mesh import Face, bevel_box, blade, extrude, shell, tube, transform, revolve, ring
 from itemgen.surface_export import write_asset
 from itemgen.visual_bindings import prepare_bindings
+from itemgen.wear_sections import prepare_sections
 
 ROOT=Path(__file__).resolve().parents[2]
 
@@ -32,6 +33,7 @@ def build_design(item_id, *, root=ROOT, output=None):
         elif kind=='extrude': geometry=extrude(part['contour'],part['depth'],**kwargs)
         elif kind=='blade': geometry=blade(part['contour'],part['depth'],part['edge_depth'],part.get('bevel_fraction',.18),edge_role=part.get('edge_material'),**kwargs)
         elif kind=='shell': geometry=shell(part['size'],part['thickness'],**kwargs)
+        elif kind=='tube': geometry=tube(part['size'],part['thickness'],**kwargs)
         elif kind=='revolve': geometry=revolve(part['profile'],sides=part.get('sides',8),**kwargs)
         elif kind=='ring': geometry=ring(part['outer_radius'],part['inner_radius'],part['depth'],sides=part.get('sides',8),**kwargs)
         else: raise ValueError(f'Unknown geometry shape: {kind}')
@@ -65,7 +67,8 @@ def build_design(item_id, *, root=ROOT, output=None):
         if not name or len(pivot)!=3 or not all(math.isfinite(v) for v in pivot): raise ValueError('Invalid authored node pivot')
         nodes[name]=dict(parent=node.get('parent',''),pivot=[(pivot[i]-centre[i])*scale for i in range(3)])
     bindings=prepare_bindings(recipe.get('visual_bindings',[]),nodes,scale,item_id)
-    gltf=write_asset(destination,item_id,faces,recipe['materials'],size=recipe['atlas_size'],density=recipe['texels_per_metre'],overlays=source/'surfaces',presentation=presentation,nodes=nodes,face_nodes=face_nodes,bindings=bindings)
+    sections=prepare_sections(recipe.get('wear_sections',[]),nodes,scale,centre,definition.get('armor',{}).get('slots',[]))
+    gltf=write_asset(destination,item_id,faces,recipe['materials'],size=recipe['atlas_size'],density=recipe['texels_per_metre'],overlays=source/'surfaces',presentation=presentation,nodes=nodes,face_nodes=face_nodes,bindings=bindings,wear_sections=sections)
     triangles=sum(gltf['accessors'][p['indices']]['count']//3 for mesh in gltf['meshes'] for p in mesh['primitives'])
     if triangles>recipe['triangle_budget']: raise ValueError('Item exceeds triangle budget')
     sources={p.relative_to(root).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(source.rglob('*')) if p.is_file()}

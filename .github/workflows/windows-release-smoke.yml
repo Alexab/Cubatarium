@@ -139,6 +139,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python tools/test_itemgen_supplies.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tools/test_itemgen_armor.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python tools/test_item_design_probes.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python tools/itemgen.py audit

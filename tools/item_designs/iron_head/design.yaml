@@ -4,7 +4,10 @@ atlas_size: 512
 texels_per_metre: 420
 triangle_budget: 2000
 presentation:
-  tp_euler_deg: [-65, 0, 0]
+  tp_euler_deg:
+  - -65
+  - 0
+  - 0
   right_grip:
   - 0
   - -0.05
@@ -77,6 +80,7 @@ parts:
   - 0
   - 0.12
   - 0
+  node: helmet
 - name: crown_ridge
   material: dark
   shape: bevel_box
@@ -93,6 +97,7 @@ parts:
   - 0
   - 0
   - 0
+  node: helmet
 - name: brow
   material: edge
   shape: bevel_box
@@ -109,6 +114,7 @@ parts:
   - 0
   - 0
   - 0
+  node: helmet
 - name: cheek0
   material: head
   shape: bevel_box
@@ -125,6 +131,7 @@ parts:
   - 0
   - 0
   - 0
+  node: helmet
 - name: cheek_rivet0
   material: edge
   shape: bevel_box
@@ -141,6 +148,7 @@ parts:
   - 0
   - 0
   - 0
+  node: helmet
 - name: cheek1
   material: head
   shape: bevel_box
@@ -157,6 +165,7 @@ parts:
   - 0
   - 0
   - 0
+  node: helmet
 - name: cheek_rivet1
   material: edge
   shape: bevel_box
@@ -172,4 +181,29 @@ parts:
   rotation:
   - 0
   - 0
+  - 0
+  node: helmet
+nodes:
+  helmet:
+    pivot:
+    - 0
+    - 0
+    - 0
+wear_sections:
+- node: helmet
+  bones:
+  - hat
+  slot: 0
+  region: slot
+  low:
+  - -0.145
+  - -0.05
+  - -0.13
+  high:
+  - 0.145
+  - 0.12
+  - 0.13
+  euler_deg:
+  - 0
+  - 180
   - 0

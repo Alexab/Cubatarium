@@ -1,0 +1,381 @@
+version: 3
+id: gold_feet
+atlas_size: 512
+texels_per_metre: 230
+triangle_budget: 2000
+presentation:
+  tp_euler_deg:
+  - -65
+  - 0
+  - 0
+  right_grip:
+  - 0
+  - 0
+  - 0.025
+  left_grip:
+  - 0
+  - 0
+  - 0.025
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.5
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+materials:
+  body:
+    color:
+    - 212
+    - 171
+    - 72
+    pattern: forged
+    metallic: 0.65
+    roughness: 0.55
+  trim:
+    color:
+    - 239
+    - 198
+    - 99
+    pattern: plain
+    metallic: 0.7
+    roughness: 0.7
+  lining:
+    color:
+    - 66
+    - 49
+    - 35
+    pattern: leather
+  strap:
+    color:
+    - 87
+    - 57
+    - 34
+    pattern: leather
+    seam: true
+  fastener:
+    color:
+    - 252
+    - 211
+    - 112
+    pattern: hammered
+    metallic: 0.6
+    roughness: 0.6
+parts:
+- name: left_boot_sole
+  material: lining
+  shape: bevel_box
+  size:
+  - 0.145
+  - 0.025
+  - 0.21
+  bevel: 0.0045
+  offset:
+  - -0.083
+  - 0.0125
+  - 0.025
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: left_boot
+- name: left_boot_toe
+  material: body
+  shape: bevel_box
+  size:
+  - 0.14
+  - 0.055
+  - 0.12
+  bevel: 0.009899999999999999
+  offset:
+  - -0.083
+  - 0.051
+  - 0.065
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: left_boot
+- name: left_boot_ankle
+  material: body
+  shape: tube
+  size:
+  - 0.13
+  - 0.11
+  - 0.12
+  thickness: 0.012
+  offset:
+  - -0.083
+  - 0.11
+  - -0.02
+  node: left_boot
+- name: left_boot_fine_toe_band
+  material: trim
+  shape: bevel_box
+  size:
+  - 0.145
+  - 0.012
+  - 0.035
+  bevel: 0.00216
+  offset:
+  - -0.083
+  - 0.087
+  - 0.09
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: left_boot
+- name: left_boot_clasp0
+  material: fastener
+  shape: bevel_box
+  size:
+  - 0.027
+  - 0.009
+  - 0.009
+  bevel: 0.00162
+  offset:
+  - -0.083
+  - 0.1065
+  - 0.049
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: left_boot
+- name: left_boot_clasp1
+  material: fastener
+  shape: bevel_box
+  size:
+  - 0.027
+  - 0.009
+  - 0.009
+  bevel: 0.00162
+  offset:
+  - -0.083
+  - 0.1335
+  - 0.049
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: left_boot
+- name: left_boot_clasp2
+  material: fastener
+  shape: bevel_box
+  size:
+  - 0.009
+  - 0.027
+  - 0.009
+  bevel: 0.00162
+  offset:
+  - -0.0965
+  - 0.12
+  - 0.049
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: left_boot
+- name: left_boot_clasp3
+  material: fastener
+  shape: bevel_box
+  size:
+  - 0.009
+  - 0.027
+  - 0.009
+  bevel: 0.00162
+  offset:
+  - -0.0695
+  - 0.12
+  - 0.049
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: left_boot
+- name: right_boot_sole
+  material: lining
+  shape: bevel_box
+  size:
+  - 0.145
+  - 0.025
+  - 0.21
+  bevel: 0.0045
+  offset:
+  - 0.083
+  - 0.0125
+  - 0.025
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: right_boot
+- name: right_boot_toe
+  material: body
+  shape: bevel_box
+  size:
+  - 0.14
+  - 0.055
+  - 0.12
+  bevel: 0.009899999999999999
+  offset:
+  - 0.083
+  - 0.051
+  - 0.065
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: right_boot
+- name: right_boot_ankle
+  material: body
+  shape: tube
+  size:
+  - 0.13
+  - 0.11
+  - 0.12
+  thickness: 0.012
+  offset:
+  - 0.083
+  - 0.11
+  - -0.02
+  node: right_boot
+- name: right_boot_fine_toe_band
+  material: trim
+  shape: bevel_box
+  size:
+  - 0.145
+  - 0.012
+  - 0.035
+  bevel: 0.00216
+  offset:
+  - 0.083
+  - 0.087
+  - 0.09
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: right_boot
+- name: right_boot_clasp0
+  material: fastener
+  shape: bevel_box
+  size:
+  - 0.027
+  - 0.009
+  - 0.009
+  bevel: 0.00162
+  offset:
+  - 0.083
+  - 0.1065
+  - 0.049
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: right_boot
+- name: right_boot_clasp1
+  material: fastener
+  shape: bevel_box
+  size:
+  - 0.027
+  - 0.009
+  - 0.009
+  bevel: 0.00162
+  offset:
+  - 0.083
+  - 0.1335
+  - 0.049
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: right_boot
+- name: right_boot_clasp2
+  material: fastener
+  shape: bevel_box
+  size:
+  - 0.009
+  - 0.027
+  - 0.009
+  bevel: 0.00162
+  offset:
+  - 0.0695
+  - 0.12
+  - 0.049
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: right_boot
+- name: right_boot_clasp3
+  material: fastener
+  shape: bevel_box
+  size:
+  - 0.009
+  - 0.027
+  - 0.009
+  bevel: 0.00162
+  offset:
+  - 0.0965
+  - 0.12
+  - 0.049
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: right_boot
+nodes:
+  left_boot:
+    pivot:
+    - -0.083
+    - 0
+    - 0
+  right_boot:
+    pivot:
+    - 0.083
+    - 0
+    - 0
+wear_sections:
+- node: left_boot
+  bones:
+  - leftFoot
+  slot: 3
+  region: full
+  low:
+  - -0.14800000000000002
+  - 0
+  - -0.08
+  high:
+  - -0.018000000000000002
+  - 0.16
+  - 0.13
+  euler_deg:
+  - 0
+  - 180
+  - 0
+- node: right_boot
+  bones:
+  - rightFoot
+  slot: 3
+  region: full
+  low:
+  - 0.018000000000000002
+  - 0
+  - -0.08
+  high:
+  - 0.14800000000000002
+  - 0.16
+  - 0.13
+  euler_deg:
+  - 0
+  - 180
+  - 0
+authorship:
+  construction: Cubatarium armor coordinate drawings
+  reference_kind: functional sewn and worked armor
+  external_meshes: false
+  external_pixels: false

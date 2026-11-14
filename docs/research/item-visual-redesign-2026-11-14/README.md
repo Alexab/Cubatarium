@@ -405,6 +405,56 @@ geometry and mechanics are unchanged. The 56-item full substitution restored
 168 files, and the final single-item probe restored its three files. These are
 partial acceptance checkpoints, not a final world/performance or artistic pass.
 
+## Armor wave, 2026-11-15
+
+**All 70 gameplay item IDs now have authored candidate recipes.** The wave adds
+fourteen missing armor sources and refines the two armor pilots. This is source
+coverage, not completion: production still has **zero v3 replacements**, and
+full artistic/world/performance acceptance, tooling and publication remain open.
+
+[Armor cards and anatomical-section contract](../../../tools/item_designs/ARMOR.md)
+describe leather, copper, iron and gold constructions. New geometry includes
+open-ended sleeves, crown/ear panels, segmented copper lamellae, forged plates,
+knee guards, slender gold bands, boot soles/cuffs and separate fasteners. The
+sixteen actual meshes differ beyond color and stay within unchanged physical
+profiles and the 2000-triangle slot cap. All armor textures use 512-pixel atlases;
+explicit gold-leg density was reduced after a packing overflow. No gameplay
+ID, recipe, statistic, mass, collision profile or property data changed.
+
+New `wear_sections` select a named node subtree, target bone, slot, anatomical
+reference volume, fitting region and local orientation. The same mesh remains a
+whole item in catalog/held/ground views. Leggings have waist, left/right thigh
+and left/right shin sections; boots have one section per foot. The old path
+copied the complete trouser mesh onto each thigh/shin. Subtree selection now
+also computes the section's actual culling bounds. Existing wear pose transforms
+still apply; the old renderer path remains for resources without annotations.
+
+Native images exposed rear-facing plates and toe caps: authored +Z front differs
+from the rig's front. Per-section 180-degree Y rotation around the fitted center
+fixes orientation while preserving left/right attachment centers and sole Y.
+Unit tests cover that center/sole invariant, selective visibility and bounds,
+invalid metadata, open-sleeve wall closure, unchanged definitions and read-only
+regeneration. Native QA verifies exact section roots/draw counts, rather than
+merely accepting any nonzero draw. It records minimum world Y and checks boot
+support tolerance in both body forms and idle/walk snapshots. Full-run minima
+were approximately 0.0 m for boots and -0.0173 m for leggings; these snapshots do
+not prove a complete animation cycle or world-contact acceptance.
+
+[Armor checkpoint](armor-checkpoint/summary.json) archives the Release build,
+**24 CTest tests**, full native regression and **2256 presentation checks** for
+all 70 candidates. The final boot hold-point refinement was separately checked
+on all four boot assets (**163 checks**), with final frames archived separately.
+No geometry or worn fitting changed in that refinement. The full run restored
+210 runtime files; the boot-only run restored its twelve files. Item Lab's
+existing six-resolution/scale QA and 209 icon checks also pass.
+
+The existing creature equipment-matrix tool was inspected for final set testing.
+It still assumes legacy `wear.gltf`, source material factors and only three
+materials; typed surfaces, texture sampling and gold need proper support there.
+Individual-slot images are not presented as completed full-set acceptance.
+This integration work, final skin/hand clearance and complete motion/world
+scenes remain required before publication.
+
 ## Remaining implementation, in order
 
 1. Native baseline and actual resource-path trace, before/after references and
@@ -426,13 +476,16 @@ partial acceptance checkpoints, not a final world/performance or artistic pass.
    instances must not mutate saved player property.
 6. Twelve pilots: stone_pickaxe, iron_pickaxe, copper_axe, gold_sword, iron_head,
    leather_chest, wood_bow, bucket, shears, apple, bread, raw_iron.
-7. Author the remaining 14 armor slots and finalize all 56 existing candidates.
-   Keep construction differences across armor materials, and check both body
-   forms, movement, skin clearance and all hand/ground views.
+7. Finalize the 70 authored candidates, including both armor body forms,
+   complete sets/motion cycles, skin/hand clearance, small icons and all world
+   representations. Source coverage alone is not artistic acceptance.
 8. Full native visual audit and performance acceptance. No final completion
    checkbox until every item and gameplay representation has evidence.
 
-Before publication, also close these known integration gaps: share the final
+Before publication, adapt the existing creature equipment/reload/culling QA
+collectors for typed item surfaces, final texture semantics and gold sets.
+The legacy equipment matrix currently assumes `wear.gltf` and source color
+factors. Also close these known integration gaps: share the final
 arrow resource with the bow's temporary nocked-arrow geometry; project the full
 consume-duration/cancel state into presentations; and extend disk icon
 fingerprints beyond the glTF timestamp to binary, texture, shader and relevant

@@ -21,6 +21,18 @@ void Expect(bool value, const char *reason)
 void TestVisualState()
 {
   using namespace cutum;
+  ItemWearSection section;
+  section.Low = {-.1f, 0, -.2f};
+  section.High = {.1f, .3f, .2f};
+  section.EulerDeg = {0, 180, 0};
+  const glm::vec3 regionLow(.4f, 0, .2f), regionHigh(.6f, .3f, .6f);
+  const auto wear = ItemWearSectionMatrix(section, regionLow, regionHigh);
+  Expect(glm::length(glm::vec3(wear * glm::vec4(0, .15f, 0, 1)) -
+                     (regionLow + regionHigh) * .5f) < 1e-5f,
+         "wear orientation keeps its anatomical reference center fixed");
+  Expect(std::abs(glm::vec3(wear * glm::vec4(0, 0, .2f, 1)).z - .2f) < 1e-5f &&
+             std::abs(glm::vec3(wear * glm::vec4(0, 0, .2f, 1)).y) < 1e-5f,
+         "front-facing wear rotation preserves the sole plane");
   ItemRenderAsset a;
   a.Nodes = {{"root", glm::mat4(1), glm::mat4(1), -1},
              {"tip", glm::translate(glm::mat4(1), {0, 1, 0}),
@@ -78,6 +90,13 @@ void TestVisualState()
   Expect(!ItemNodeVisible(a, EvaluateItemVisualState(a, water), 2),
          "non-water contents do not fabricate water");
   ItemVisualState hidden;
+  hidden.VisibleRoots.insert("tip");
+  Expect(ItemNodeVisible(a, hidden, 1) && !ItemNodeVisible(a, hidden, 2) &&
+             !ItemNodeVisible(a, hidden, 0),
+         "selected armor section excludes siblings and ancestor meshes");
+  Expect(ItemVisualBounds(a, hidden).first == glm::vec3(0),
+         "section bounds do not reuse the whole item bounds");
+  hidden.VisibleRoots.clear();
   hidden.HiddenNodes.insert("root");
   Expect(!ItemNodeVisible(a, hidden, 2),
          "node visibility inherits from parents");
@@ -221,11 +240,21 @@ int main()
     auto write = [&](const Json &data)
     { std::ofstream(folder / "model.gltf") << data.dump(); };
     g["materials"][0]["emissiveFactor"] = {.25, .10, 0};
+    g["extras"]["wear_sections"] = Json::array({{{"node", "blade"},
+                                                 {"bones", {"body"}},
+                                                 {"slot", 1},
+                                                 {"region", "full"},
+                                                 {"low", {0, 0, 0}},
+                                                 {"high", {1, 1, 1}}}});
     g["extras"]["presentation"] = {{"right_grip", {0, .25, 0}},
                                    {"fp_euler_deg", {62, 0, 0}},
                                    {"fp_scale", .65}};
     write(g);
     const auto asset = cutum::LoadItemRenderAsset(folder / "model.gltf");
+    Expect(asset->WearSections.size() == 1 &&
+               asset->WearSections[0].Node == "blade" &&
+               asset->WearSections[0].Region == "full",
+           "anatomical wear sections are retained");
     Expect(asset->Materials[0].Emissive == glm::vec3(.25f, .10f, 0),
            "linear emissive factor is retained independently of albedo");
     Expect(asset->Primitives.size() == 1 && asset->Nodes.size() == 2,
@@ -318,6 +347,15 @@ int main()
       Expect(failed, "invalid glTF was accepted");
     };
     auto bad = g;
+    bad["extras"]["wear_sections"][0]["node"] = "missing";
+    rejected(bad);
+    bad = g;
+    bad["extras"]["wear_sections"][0]["high"] = {0, 0, 0};
+    rejected(bad);
+    bad = g;
+    bad["extras"]["wear_sections"].push_back(bad["extras"]["wear_sections"][0]);
+    rejected(bad);
+    bad = g;
     bad["materials"][0]["emissiveFactor"] = {1.1, 0, 0};
     rejected(bad);
     bad = g;

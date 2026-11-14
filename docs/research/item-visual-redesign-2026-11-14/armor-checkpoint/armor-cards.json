@@ -1,0 +1,1671 @@
+[
+  {
+    "id": "leather_head",
+    "triangles": 136,
+    "atlas_size": 512,
+    "density": 230,
+    "parts": [
+      "sewn_crown",
+      "rear_panel",
+      "left_ear_flap",
+      "right_ear_flap",
+      "crown_cross_seam",
+      "forehead_binding"
+    ],
+    "wear_sections": [
+      {
+        "node": "helmet",
+        "bones": [
+          "hat"
+        ],
+        "slot": 0,
+        "region": "slot",
+        "low": [
+          -0.145,
+          -0.05,
+          -0.13
+        ],
+        "high": [
+          0.145,
+          0.12,
+          0.13
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      }
+    ],
+    "source_sha256": "bc8bd74dc7b4779d2016133310bf6998ce60597069436b52284aa7267660ad2c",
+    "presentation": {
+      "tp_euler_deg": [
+        -65,
+        0,
+        0
+      ],
+      "right_grip": [
+        0,
+        -0.05,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.05,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.5,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ]
+    },
+    "artistic_acceptance": "pending"
+  },
+  {
+    "id": "leather_chest",
+    "triangles": 264,
+    "atlas_size": 512,
+    "density": 400,
+    "parts": [
+      "front_panel",
+      "back_panel",
+      "waist_belt",
+      "front_seam",
+      "shoulder_strap0",
+      "shoulder_strap1",
+      "buckle_frame0",
+      "buckle_frame1",
+      "buckle_frame2",
+      "buckle_frame3"
+    ],
+    "wear_sections": [
+      {
+        "node": "torso",
+        "bones": [
+          "body"
+        ],
+        "slot": 1,
+        "region": "slot",
+        "low": [
+          -0.19,
+          -0.22,
+          -0.105
+        ],
+        "high": [
+          0.19,
+          0.22,
+          0.105
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      }
+    ],
+    "source_sha256": "e5a6656a794064684a09fbd09e334049751911daf47be4abffe33e2555f46a15",
+    "presentation": {
+      "tp_euler_deg": [
+        -65,
+        0,
+        0
+      ],
+      "right_grip": [
+        0,
+        -0.12,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.12,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.55,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ]
+    },
+    "artistic_acceptance": "pending"
+  },
+  {
+    "id": "leather_legs",
+    "triangles": 512,
+    "atlas_size": 512,
+    "density": 230,
+    "parts": [
+      "waist_band",
+      "waist_buckle0",
+      "waist_buckle1",
+      "waist_buckle2",
+      "waist_buckle3",
+      "left_thigh_liner",
+      "left_thigh_front_patch",
+      "left_thigh_cuff",
+      "left_shin_liner",
+      "left_shin_front_patch",
+      "left_shin_cuff",
+      "right_thigh_liner",
+      "right_thigh_front_patch",
+      "right_thigh_cuff",
+      "right_shin_liner",
+      "right_shin_front_patch",
+      "right_shin_cuff"
+    ],
+    "wear_sections": [
+      {
+        "node": "waist",
+        "bones": [
+          "body"
+        ],
+        "slot": 2,
+        "region": "waist",
+        "low": [
+          -0.15,
+          0.165,
+          -0.065
+        ],
+        "high": [
+          0.15,
+          0.215,
+          0.065
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      },
+      {
+        "node": "left_thigh",
+        "bones": [
+          "leftLeg"
+        ],
+        "slot": 2,
+        "region": "full",
+        "low": [
+          -0.14500000000000002,
+          -0.0049999999999999906,
+          -0.065
+        ],
+        "high": [
+          -0.02500000000000001,
+          0.175,
+          0.065
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      },
+      {
+        "node": "left_shin",
+        "bones": [
+          "leftShin"
+        ],
+        "slot": 2,
+        "region": "full",
+        "low": [
+          -0.14500000000000002,
+          -0.2,
+          -0.065
+        ],
+        "high": [
+          -0.02500000000000001,
+          -0.020000000000000004,
+          0.065
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      },
+      {
+        "node": "right_thigh",
+        "bones": [
+          "rightLeg"
+        ],
+        "slot": 2,
+        "region": "full",
+        "low": [
+          0.02500000000000001,
+          -0.0049999999999999906,
+          -0.065
+        ],
+        "high": [
+          0.14500000000000002,
+          0.175,
+          0.065
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      },
+      {
+        "node": "right_shin",
+        "bones": [
+          "rightShin"
+        ],
+        "slot": 2,
+        "region": "full",
+        "low": [
+          0.02500000000000001,
+          -0.2,
+          -0.065
+        ],
+        "high": [
+          0.14500000000000002,
+          -0.020000000000000004,
+          0.065
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      }
+    ],
+    "source_sha256": "e974a8524348d1a468126498ef478eb8290490b410dec486a7880b34926e8178",
+    "presentation": {
+      "tp_euler_deg": [
+        -65,
+        0,
+        0
+      ],
+      "right_grip": [
+        0,
+        -0.05,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.05,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.5,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ]
+    },
+    "artistic_acceptance": "pending"
+  },
+  {
+    "id": "leather_feet",
+    "triangles": 344,
+    "atlas_size": 512,
+    "density": 230,
+    "parts": [
+      "left_boot_sole",
+      "left_boot_toe",
+      "left_boot_ankle",
+      "left_boot_lace0",
+      "left_boot_lace1",
+      "left_boot_lace2",
+      "right_boot_sole",
+      "right_boot_toe",
+      "right_boot_ankle",
+      "right_boot_lace0",
+      "right_boot_lace1",
+      "right_boot_lace2"
+    ],
+    "wear_sections": [
+      {
+        "node": "left_boot",
+        "bones": [
+          "leftFoot"
+        ],
+        "slot": 3,
+        "region": "full",
+        "low": [
+          -0.14800000000000002,
+          0,
+          -0.08
+        ],
+        "high": [
+          -0.018000000000000002,
+          0.16,
+          0.13
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      },
+      {
+        "node": "right_boot",
+        "bones": [
+          "rightFoot"
+        ],
+        "slot": 3,
+        "region": "full",
+        "low": [
+          0.018000000000000002,
+          0,
+          -0.08
+        ],
+        "high": [
+          0.14800000000000002,
+          0.16,
+          0.13
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      }
+    ],
+    "source_sha256": "ef40e8a08c4738fa5542ccf30248f9931b80ce45bfd9054f4cd9e837ffc86a0f",
+    "presentation": {
+      "tp_euler_deg": [
+        -65,
+        0,
+        0
+      ],
+      "right_grip": [
+        0,
+        0,
+        0.025
+      ],
+      "left_grip": [
+        0,
+        0,
+        0.025
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.5,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ]
+    },
+    "artistic_acceptance": "pending"
+  },
+  {
+    "id": "copper_head",
+    "triangles": 280,
+    "atlas_size": 512,
+    "density": 230,
+    "parts": [
+      "cap_shell",
+      "brow",
+      "crown_segment0",
+      "crown_segment1",
+      "crown_segment2",
+      "brow_rivet0",
+      "brow_rivet1",
+      "brow_rivet2",
+      "brow_rivet3",
+      "brow_rivet4"
+    ],
+    "wear_sections": [
+      {
+        "node": "helmet",
+        "bones": [
+          "hat"
+        ],
+        "slot": 0,
+        "region": "slot",
+        "low": [
+          -0.145,
+          -0.05,
+          -0.13
+        ],
+        "high": [
+          0.145,
+          0.12,
+          0.13
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      }
+    ],
+    "source_sha256": "5210d610d9f1213c1804edd22e91ff071bfdb2aa3a9d05aecd9c192bdc2806b4",
+    "presentation": {
+      "tp_euler_deg": [
+        -65,
+        0,
+        0
+      ],
+      "right_grip": [
+        0,
+        -0.05,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.05,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.5,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ]
+    },
+    "artistic_acceptance": "pending"
+  },
+  {
+    "id": "copper_chest",
+    "triangles": 404,
+    "atlas_size": 512,
+    "density": 230,
+    "parts": [
+      "front_panel",
+      "rear_panel",
+      "left_shoulder_strap",
+      "left_side_lacing",
+      "right_shoulder_strap",
+      "right_side_lacing",
+      "overlapping_lamella0",
+      "lamella_rivet0_-1",
+      "lamella_rivet0_1",
+      "overlapping_lamella1",
+      "lamella_rivet1_-1",
+      "lamella_rivet1_1",
+      "overlapping_lamella2",
+      "lamella_rivet2_-1",
+      "lamella_rivet2_1"
+    ],
+    "wear_sections": [
+      {
+        "node": "torso",
+        "bones": [
+          "body"
+        ],
+        "slot": 1,
+        "region": "slot",
+        "low": [
+          -0.19,
+          -0.22,
+          -0.105
+        ],
+        "high": [
+          0.19,
+          0.22,
+          0.105
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      }
+    ],
+    "source_sha256": "28fb1a500d927b8334728cce6b17ef84cad7d9ef6b3cc85ccfa7fffb2cee96bc",
+    "presentation": {
+      "tp_euler_deg": [
+        -65,
+        0,
+        0
+      ],
+      "right_grip": [
+        0,
+        -0.05,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.05,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.5,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ]
+    },
+    "artistic_acceptance": "pending"
+  },
+  {
+    "id": "copper_legs",
+    "triangles": 720,
+    "atlas_size": 512,
+    "density": 230,
+    "parts": [
+      "waist_band",
+      "waist_buckle0",
+      "waist_buckle1",
+      "waist_buckle2",
+      "waist_buckle3",
+      "left_thigh_liner",
+      "left_thigh_lamella0",
+      "left_thigh_lamella1",
+      "left_thigh_lamella2",
+      "left_thigh_rivet",
+      "left_shin_liner",
+      "left_shin_lamella0",
+      "left_shin_lamella1",
+      "left_shin_lamella2",
+      "left_shin_rivet",
+      "right_thigh_liner",
+      "right_thigh_lamella0",
+      "right_thigh_lamella1",
+      "right_thigh_lamella2",
+      "right_thigh_rivet",
+      "right_shin_liner",
+      "right_shin_lamella0",
+      "right_shin_lamella1",
+      "right_shin_lamella2",
+      "right_shin_rivet"
+    ],
+    "wear_sections": [
+      {
+        "node": "waist",
+        "bones": [
+          "body"
+        ],
+        "slot": 2,
+        "region": "waist",
+        "low": [
+          -0.15,
+          0.165,
+          -0.065
+        ],
+        "high": [
+          0.15,
+          0.215,
+          0.065
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      },
+      {
+        "node": "left_thigh",
+        "bones": [
+          "leftLeg"
+        ],
+        "slot": 2,
+        "region": "full",
+        "low": [
+          -0.14500000000000002,
+          -0.0049999999999999906,
+          -0.065
+        ],
+        "high": [
+          -0.02500000000000001,
+          0.175,
+          0.065
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      },
+      {
+        "node": "left_shin",
+        "bones": [
+          "leftShin"
+        ],
+        "slot": 2,
+        "region": "full",
+        "low": [
+          -0.14500000000000002,
+          -0.2,
+          -0.065
+        ],
+        "high": [
+          -0.02500000000000001,
+          -0.020000000000000004,
+          0.065
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      },
+      {
+        "node": "right_thigh",
+        "bones": [
+          "rightLeg"
+        ],
+        "slot": 2,
+        "region": "full",
+        "low": [
+          0.02500000000000001,
+          -0.0049999999999999906,
+          -0.065
+        ],
+        "high": [
+          0.14500000000000002,
+          0.175,
+          0.065
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      },
+      {
+        "node": "right_shin",
+        "bones": [
+          "rightShin"
+        ],
+        "slot": 2,
+        "region": "full",
+        "low": [
+          0.02500000000000001,
+          -0.2,
+          -0.065
+        ],
+        "high": [
+          0.14500000000000002,
+          -0.020000000000000004,
+          0.065
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      }
+    ],
+    "source_sha256": "61bdf6d8b6cd2c687be4b493ecbccd657a5b3fb5a54d28aab34ecbdea5c05dc4",
+    "presentation": {
+      "tp_euler_deg": [
+        -65,
+        0,
+        0
+      ],
+      "right_grip": [
+        0,
+        -0.05,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.05,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.5,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ]
+    },
+    "artistic_acceptance": "pending"
+  },
+  {
+    "id": "copper_feet",
+    "triangles": 344,
+    "atlas_size": 512,
+    "density": 230,
+    "parts": [
+      "left_boot_sole",
+      "left_boot_toe",
+      "left_boot_ankle",
+      "left_boot_toe_plate",
+      "left_boot_toe_rivet-1",
+      "left_boot_toe_rivet1",
+      "right_boot_sole",
+      "right_boot_toe",
+      "right_boot_ankle",
+      "right_boot_toe_plate",
+      "right_boot_toe_rivet-1",
+      "right_boot_toe_rivet1"
+    ],
+    "wear_sections": [
+      {
+        "node": "left_boot",
+        "bones": [
+          "leftFoot"
+        ],
+        "slot": 3,
+        "region": "full",
+        "low": [
+          -0.14800000000000002,
+          0,
+          -0.08
+        ],
+        "high": [
+          -0.018000000000000002,
+          0.16,
+          0.13
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      },
+      {
+        "node": "right_boot",
+        "bones": [
+          "rightFoot"
+        ],
+        "slot": 3,
+        "region": "full",
+        "low": [
+          0.018000000000000002,
+          0,
+          -0.08
+        ],
+        "high": [
+          0.14800000000000002,
+          0.16,
+          0.13
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      }
+    ],
+    "source_sha256": "26219c73357ac4f47fd3175294dc3f3769acb2512ba89f3592b1fb1169664617",
+    "presentation": {
+      "tp_euler_deg": [
+        -65,
+        0,
+        0
+      ],
+      "right_grip": [
+        0,
+        0,
+        0.025
+      ],
+      "left_grip": [
+        0,
+        0,
+        0.025
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.5,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ]
+    },
+    "artistic_acceptance": "pending"
+  },
+  {
+    "id": "iron_head",
+    "triangles": 196,
+    "atlas_size": 512,
+    "density": 420,
+    "parts": [
+      "cap",
+      "crown_ridge",
+      "brow",
+      "cheek0",
+      "cheek_rivet0",
+      "cheek1",
+      "cheek_rivet1"
+    ],
+    "wear_sections": [
+      {
+        "node": "helmet",
+        "bones": [
+          "hat"
+        ],
+        "slot": 0,
+        "region": "slot",
+        "low": [
+          -0.145,
+          -0.05,
+          -0.13
+        ],
+        "high": [
+          0.145,
+          0.12,
+          0.13
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      }
+    ],
+    "source_sha256": "9ab1ede60e92327d351e11ab57a090aeb989b5f60c9a7553de8a8fa5f73d4cae",
+    "presentation": {
+      "tp_euler_deg": [
+        -65,
+        0,
+        0
+      ],
+      "right_grip": [
+        0,
+        -0.05,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.05,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.5,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ]
+    },
+    "artistic_acceptance": "pending"
+  },
+  {
+    "id": "iron_chest",
+    "triangles": 236,
+    "atlas_size": 512,
+    "density": 230,
+    "parts": [
+      "front_panel",
+      "rear_panel",
+      "left_shoulder_strap",
+      "left_side_lacing",
+      "right_shoulder_strap",
+      "right_side_lacing",
+      "left_breastplate",
+      "right_breastplate",
+      "lower_fauld"
+    ],
+    "wear_sections": [
+      {
+        "node": "torso",
+        "bones": [
+          "body"
+        ],
+        "slot": 1,
+        "region": "slot",
+        "low": [
+          -0.19,
+          -0.22,
+          -0.105
+        ],
+        "high": [
+          0.19,
+          0.22,
+          0.105
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      }
+    ],
+    "source_sha256": "2203d6221926f78ff2d0e9f95b95d5689a2331c438274fce637a930274f921c1",
+    "presentation": {
+      "tp_euler_deg": [
+        -65,
+        0,
+        0
+      ],
+      "right_grip": [
+        0,
+        -0.05,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.05,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.5,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ]
+    },
+    "artistic_acceptance": "pending"
+  },
+  {
+    "id": "iron_legs",
+    "triangles": 472,
+    "atlas_size": 512,
+    "density": 230,
+    "parts": [
+      "waist_band",
+      "waist_buckle0",
+      "waist_buckle1",
+      "waist_buckle2",
+      "waist_buckle3",
+      "left_thigh_liner",
+      "left_thigh_forged_plate",
+      "left_shin_liner",
+      "left_shin_forged_plate",
+      "left_shin_knee_guard",
+      "right_thigh_liner",
+      "right_thigh_forged_plate",
+      "right_shin_liner",
+      "right_shin_forged_plate",
+      "right_shin_knee_guard"
+    ],
+    "wear_sections": [
+      {
+        "node": "waist",
+        "bones": [
+          "body"
+        ],
+        "slot": 2,
+        "region": "waist",
+        "low": [
+          -0.15,
+          0.165,
+          -0.065
+        ],
+        "high": [
+          0.15,
+          0.215,
+          0.065
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      },
+      {
+        "node": "left_thigh",
+        "bones": [
+          "leftLeg"
+        ],
+        "slot": 2,
+        "region": "full",
+        "low": [
+          -0.14500000000000002,
+          -0.0049999999999999906,
+          -0.065
+        ],
+        "high": [
+          -0.02500000000000001,
+          0.175,
+          0.065
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      },
+      {
+        "node": "left_shin",
+        "bones": [
+          "leftShin"
+        ],
+        "slot": 2,
+        "region": "full",
+        "low": [
+          -0.14500000000000002,
+          -0.2,
+          -0.065
+        ],
+        "high": [
+          -0.02500000000000001,
+          -0.020000000000000004,
+          0.065
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      },
+      {
+        "node": "right_thigh",
+        "bones": [
+          "rightLeg"
+        ],
+        "slot": 2,
+        "region": "full",
+        "low": [
+          0.02500000000000001,
+          -0.0049999999999999906,
+          -0.065
+        ],
+        "high": [
+          0.14500000000000002,
+          0.175,
+          0.065
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      },
+      {
+        "node": "right_shin",
+        "bones": [
+          "rightShin"
+        ],
+        "slot": 2,
+        "region": "full",
+        "low": [
+          0.02500000000000001,
+          -0.2,
+          -0.065
+        ],
+        "high": [
+          0.14500000000000002,
+          -0.020000000000000004,
+          0.065
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      }
+    ],
+    "source_sha256": "b490d40cd417bff1f88daa438f20a951636f80dba424111fb3f3a350c74245f3",
+    "presentation": {
+      "tp_euler_deg": [
+        -65,
+        0,
+        0
+      ],
+      "right_grip": [
+        0,
+        -0.05,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.05,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.5,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ]
+    },
+    "artistic_acceptance": "pending"
+  },
+  {
+    "id": "iron_feet",
+    "triangles": 288,
+    "atlas_size": 512,
+    "density": 230,
+    "parts": [
+      "left_boot_sole",
+      "left_boot_toe",
+      "left_boot_ankle",
+      "left_boot_toe_ridge",
+      "left_boot_ankle_band",
+      "right_boot_sole",
+      "right_boot_toe",
+      "right_boot_ankle",
+      "right_boot_toe_ridge",
+      "right_boot_ankle_band"
+    ],
+    "wear_sections": [
+      {
+        "node": "left_boot",
+        "bones": [
+          "leftFoot"
+        ],
+        "slot": 3,
+        "region": "full",
+        "low": [
+          -0.14800000000000002,
+          0,
+          -0.08
+        ],
+        "high": [
+          -0.018000000000000002,
+          0.16,
+          0.13
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      },
+      {
+        "node": "right_boot",
+        "bones": [
+          "rightFoot"
+        ],
+        "slot": 3,
+        "region": "full",
+        "low": [
+          0.018000000000000002,
+          0,
+          -0.08
+        ],
+        "high": [
+          0.14800000000000002,
+          0.16,
+          0.13
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      }
+    ],
+    "source_sha256": "08f3c2e8d5630a25e36967a393b1d7c5ecc34c3abf0581262fd9bbabd3f52f08",
+    "presentation": {
+      "tp_euler_deg": [
+        -65,
+        0,
+        0
+      ],
+      "right_grip": [
+        0,
+        0,
+        0.025
+      ],
+      "left_grip": [
+        0,
+        0,
+        0.025
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.5,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ]
+    },
+    "artistic_acceptance": "pending"
+  },
+  {
+    "id": "gold_head",
+    "triangles": 96,
+    "atlas_size": 512,
+    "density": 230,
+    "parts": [
+      "cap_shell",
+      "brow",
+      "thin_crown_band",
+      "forehead_inlay"
+    ],
+    "wear_sections": [
+      {
+        "node": "helmet",
+        "bones": [
+          "hat"
+        ],
+        "slot": 0,
+        "region": "slot",
+        "low": [
+          -0.145,
+          -0.05,
+          -0.13
+        ],
+        "high": [
+          0.145,
+          0.12,
+          0.13
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      }
+    ],
+    "source_sha256": "8a3f1cb50ad6e1972759921f314a350fa2c9e23873e1daebfd1c1ad81eb2dbfa",
+    "presentation": {
+      "tp_euler_deg": [
+        -65,
+        0,
+        0
+      ],
+      "right_grip": [
+        0,
+        -0.05,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.05,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.5,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ]
+    },
+    "artistic_acceptance": "pending"
+  },
+  {
+    "id": "gold_chest",
+    "triangles": 284,
+    "atlas_size": 512,
+    "density": 230,
+    "parts": [
+      "front_panel",
+      "rear_panel",
+      "left_shoulder_strap",
+      "left_side_lacing",
+      "right_shoulder_strap",
+      "right_side_lacing",
+      "fine_chest_chevron",
+      "dark_inlay",
+      "side_clasp0",
+      "side_clasp1",
+      "side_clasp2",
+      "side_clasp3"
+    ],
+    "wear_sections": [
+      {
+        "node": "torso",
+        "bones": [
+          "body"
+        ],
+        "slot": 1,
+        "region": "slot",
+        "low": [
+          -0.19,
+          -0.22,
+          -0.105
+        ],
+        "high": [
+          0.19,
+          0.22,
+          0.105
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      }
+    ],
+    "source_sha256": "85bc80898cce287e61bdc1fcb41f495991fc4cfa031c18b5933cc55ac739231a",
+    "presentation": {
+      "tp_euler_deg": [
+        -65,
+        0,
+        0
+      ],
+      "right_grip": [
+        0,
+        -0.05,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.05,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.5,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ]
+    },
+    "artistic_acceptance": "pending"
+  },
+  {
+    "id": "gold_legs",
+    "triangles": 592,
+    "atlas_size": 512,
+    "density": 180,
+    "parts": [
+      "waist_band",
+      "waist_buckle0",
+      "waist_buckle1",
+      "waist_buckle2",
+      "waist_buckle3",
+      "left_thigh_liner",
+      "left_thigh_slender_plate",
+      "left_thigh_gold_binding0",
+      "left_thigh_gold_binding1",
+      "left_shin_liner",
+      "left_shin_slender_plate",
+      "left_shin_gold_binding0",
+      "left_shin_gold_binding1",
+      "right_thigh_liner",
+      "right_thigh_slender_plate",
+      "right_thigh_gold_binding0",
+      "right_thigh_gold_binding1",
+      "right_shin_liner",
+      "right_shin_slender_plate",
+      "right_shin_gold_binding0",
+      "right_shin_gold_binding1"
+    ],
+    "wear_sections": [
+      {
+        "node": "waist",
+        "bones": [
+          "body"
+        ],
+        "slot": 2,
+        "region": "waist",
+        "low": [
+          -0.15,
+          0.165,
+          -0.065
+        ],
+        "high": [
+          0.15,
+          0.215,
+          0.065
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      },
+      {
+        "node": "left_thigh",
+        "bones": [
+          "leftLeg"
+        ],
+        "slot": 2,
+        "region": "full",
+        "low": [
+          -0.14500000000000002,
+          -0.0049999999999999906,
+          -0.065
+        ],
+        "high": [
+          -0.02500000000000001,
+          0.175,
+          0.065
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      },
+      {
+        "node": "left_shin",
+        "bones": [
+          "leftShin"
+        ],
+        "slot": 2,
+        "region": "full",
+        "low": [
+          -0.14500000000000002,
+          -0.2,
+          -0.065
+        ],
+        "high": [
+          -0.02500000000000001,
+          -0.020000000000000004,
+          0.065
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      },
+      {
+        "node": "right_thigh",
+        "bones": [
+          "rightLeg"
+        ],
+        "slot": 2,
+        "region": "full",
+        "low": [
+          0.02500000000000001,
+          -0.0049999999999999906,
+          -0.065
+        ],
+        "high": [
+          0.14500000000000002,
+          0.175,
+          0.065
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      },
+      {
+        "node": "right_shin",
+        "bones": [
+          "rightShin"
+        ],
+        "slot": 2,
+        "region": "full",
+        "low": [
+          0.02500000000000001,
+          -0.2,
+          -0.065
+        ],
+        "high": [
+          0.14500000000000002,
+          -0.020000000000000004,
+          0.065
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      }
+    ],
+    "source_sha256": "60a8af52d0382001f8f98ec8c100b6299057516ce92347c6d8c65aa22e3455c9",
+    "presentation": {
+      "tp_euler_deg": [
+        -65,
+        0,
+        0
+      ],
+      "right_grip": [
+        0,
+        -0.05,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.05,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.5,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ]
+    },
+    "artistic_acceptance": "pending"
+  },
+  {
+    "id": "gold_feet",
+    "triangles": 456,
+    "atlas_size": 512,
+    "density": 230,
+    "parts": [
+      "left_boot_sole",
+      "left_boot_toe",
+      "left_boot_ankle",
+      "left_boot_fine_toe_band",
+      "left_boot_clasp0",
+      "left_boot_clasp1",
+      "left_boot_clasp2",
+      "left_boot_clasp3",
+      "right_boot_sole",
+      "right_boot_toe",
+      "right_boot_ankle",
+      "right_boot_fine_toe_band",
+      "right_boot_clasp0",
+      "right_boot_clasp1",
+      "right_boot_clasp2",
+      "right_boot_clasp3"
+    ],
+    "wear_sections": [
+      {
+        "node": "left_boot",
+        "bones": [
+          "leftFoot"
+        ],
+        "slot": 3,
+        "region": "full",
+        "low": [
+          -0.14800000000000002,
+          0,
+          -0.08
+        ],
+        "high": [
+          -0.018000000000000002,
+          0.16,
+          0.13
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      },
+      {
+        "node": "right_boot",
+        "bones": [
+          "rightFoot"
+        ],
+        "slot": 3,
+        "region": "full",
+        "low": [
+          0.018000000000000002,
+          0,
+          -0.08
+        ],
+        "high": [
+          0.14800000000000002,
+          0.16,
+          0.13
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      }
+    ],
+    "source_sha256": "213f02a9e31ebe8b644ef12c0b4966baa81660dc51758ad5b027753c252d6ed0",
+    "presentation": {
+      "tp_euler_deg": [
+        -65,
+        0,
+        0
+      ],
+      "right_grip": [
+        0,
+        0,
+        0.025
+      ],
+      "left_grip": [
+        0,
+        0,
+        0.025
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.5,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ]
+    },
+    "artistic_acceptance": "pending"
+  }
+]

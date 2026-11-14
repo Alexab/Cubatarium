@@ -1,0 +1,34 @@
+Версия MSBuild 17.14.60+43b635718 для .NET Framework
+
+  ItemRenderAsset.cpp
+  ItemVisualState.cpp
+  ItemRenderAssetTest.cpp
+  Generating Code...
+  item_render_asset_test.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\Release\item_render_asset_test.exe
+Версия MSBuild 17.14.60+43b635718 для .NET Framework
+
+  CreatureDrawQueue.cpp
+  CreatureDrawQueueTest.cpp
+  Generating Code...
+  creature_draw_queue_test.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\Release\creature_draw_queue_test.exe
+Версия MSBuild 17.14.60+43b635718 для .NET Framework
+
+  CreatureDrawClipBoundsTest.cpp
+  creature_draw_clip_bounds_test.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\Release\creature_draw_clip_bounds_test.exe
+Internal ctest changing into directory: E:/Work/Home/Cubatarium/build/desktop-msvc
+Test project E:/Work/Home/Cubatarium/build/desktop-msvc
+    Start 12: item_render_asset_test
+1/3 Test #12: item_render_asset_test ...........   Passed    0.11 sec
+    Start 19: creature_draw_clip_bounds_test
+2/3 Test #19: creature_draw_clip_bounds_test ...   Passed    0.02 sec
+    Start 37: creature_draw_queue_test
+3/3 Test #37: creature_draw_queue_test .........   Passed    0.02 sec
+
+100% tests passed, 0 tests failed out of 3
+
+Label Time Summary:
+creatures    =   0.05 sec*proc (2 tests)
+items        =   0.11 sec*proc (1 test)
+unit         =   0.16 sec*proc (3 tests)
+
+Total Test time (real) =   0.22 sec

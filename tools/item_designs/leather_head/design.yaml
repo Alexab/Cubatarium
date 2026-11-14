@@ -1,0 +1,199 @@
+version: 3
+id: leather_head
+atlas_size: 512
+texels_per_metre: 230
+triangle_budget: 2000
+presentation:
+  tp_euler_deg:
+  - -65
+  - 0
+  - 0
+  right_grip:
+  - 0
+  - -0.05
+  - 0
+  left_grip:
+  - 0
+  - -0.05
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.5
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+materials:
+  body:
+    color:
+    - 126
+    - 79
+    - 43
+    pattern: leather
+    metallic: 0
+    roughness: 0.85
+  trim:
+    color:
+    - 153
+    - 106
+    - 70
+    pattern: leather
+    metallic: 0
+    roughness: 0.7
+  lining:
+    color:
+    - 66
+    - 49
+    - 35
+    pattern: leather
+  strap:
+    color:
+    - 87
+    - 57
+    - 34
+    pattern: leather
+    seam: true
+  fastener:
+    color:
+    - 153
+    - 118
+    - 65
+    pattern: hammered
+    metallic: 0.6
+    roughness: 0.6
+parts:
+- name: sewn_crown
+  material: body
+  shape: bevel_box
+  size:
+  - 0.32
+  - 0.025
+  - 0.3
+  bevel: 0.0045
+  offset:
+  - 0
+  - 0.12
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: helmet
+- name: rear_panel
+  material: body
+  shape: bevel_box
+  size:
+  - 0.32
+  - 0.13
+  - 0.022
+  bevel: 0.0234
+  offset:
+  - 0
+  - 0.055
+  - -0.14
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: helmet
+- name: left_ear_flap
+  material: body
+  shape: extrude
+  contour:
+  - - -0.16
+    - -0.06
+  - - -0.13
+    - -0.09
+  - - -0.13
+    - 0.12
+  - - -0.16
+    - 0.1
+  depth: 0.2
+  offset:
+  - 0
+  - 0
+  - -0.015
+  node: helmet
+- name: right_ear_flap
+  material: body
+  shape: extrude
+  contour:
+  - - 0.13
+    - -0.09
+  - - 0.16
+    - -0.06
+  - - 0.16
+    - 0.1
+  - - 0.13
+    - 0.12
+  depth: 0.2
+  offset:
+  - 0
+  - 0
+  - -0.015
+  node: helmet
+- name: crown_cross_seam
+  material: strap
+  shape: bevel_box
+  size:
+  - 0.022
+  - 0.018
+  - 0.3
+  bevel: 0.00324
+  offset:
+  - 0
+  - 0.137
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: helmet
+- name: forehead_binding
+  material: strap
+  shape: bevel_box
+  size:
+  - 0.32
+  - 0.032
+  - 0.024
+  bevel: 0.0057599999999999995
+  offset:
+  - 0
+  - 0.045
+  - 0.145
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: helmet
+nodes:
+  helmet:
+    pivot:
+    - 0
+    - 0
+    - 0
+wear_sections:
+- node: helmet
+  bones:
+  - hat
+  slot: 0
+  region: slot
+  low:
+  - -0.145
+  - -0.05
+  - -0.13
+  high:
+  - 0.145
+  - 0.12
+  - 0.13
+  euler_deg:
+  - 0
+  - 180
+  - 0
+authorship:
+  construction: Cubatarium armor coordinate drawings
+  reference_kind: functional sewn and worked armor
+  external_meshes: false
+  external_pixels: false

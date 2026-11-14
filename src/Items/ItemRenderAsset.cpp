@@ -238,6 +238,55 @@ void ReadVisualBindings(const Json &data, ItemRenderAsset &asset)
             Require(!other.Span || other.Node != size_t(node),
                     "span links must not depend on span outputs");
 }
+void ReadWearSections(const Json &rows, ItemRenderAsset &asset)
+{
+  Require(rows.is_array(), "wear sections must be an array");
+  std::unordered_set<std::string> assigned;
+  for (const auto &row : rows)
+  {
+    ItemWearSection section;
+    section.Node = row.at("node").get<std::string>();
+    section.Slot = row.at("slot").get<size_t>();
+    section.Region = row.value("region", std::string("slot"));
+    section.Bones = row.at("bones").get<std::vector<std::string>>();
+    Require(section.Slot < 4 && !section.Bones.empty(),
+            "invalid wear slot or bones");
+    Require(section.Region == "slot" || section.Region == "full" ||
+                section.Region == "waist",
+            "unknown wear region");
+    const auto count =
+        std::count_if(asset.Nodes.begin(), asset.Nodes.end(),
+                      [&](const auto &n) { return n.Name == section.Node; });
+    Require(count == 1, "wear section node is missing or ambiguous");
+    bool geometry = false;
+    for (const auto &primitive : asset.Primitives)
+      for (int node = int(primitive.Node); node >= 0;
+           node = asset.Nodes[size_t(node)].Parent)
+        geometry = geometry || asset.Nodes[size_t(node)].Name == section.Node;
+    Require(geometry, "wear section has no descendant geometry");
+    for (const auto &bone : section.Bones)
+      Require(
+          !bone.empty() &&
+              assigned.insert(std::to_string(section.Slot) + ":" + bone).second,
+          "duplicate or empty wear bone");
+    const auto low = row.at("low").get<std::vector<float>>();
+    const auto high = row.at("high").get<std::vector<float>>();
+    const auto euler = row.value("euler_deg", std::vector<float>{0, 0, 0});
+    Require(euler.size() == 3, "wear orientation requires XYZ");
+    Require(low.size() == 3 && high.size() == 3, "wear bounds require XYZ");
+    for (int i = 0; i < 3; ++i)
+    {
+      Require(std::isfinite(low[size_t(i)]) && std::isfinite(high[size_t(i)]) &&
+                  low[size_t(i)] < high[size_t(i)],
+              "invalid wear reference volume");
+      section.Low[i] = low[size_t(i)];
+      section.High[i] = high[size_t(i)];
+      Require(std::isfinite(euler[size_t(i)]), "non-finite wear orientation");
+      section.EulerDeg[i] = euler[size_t(i)];
+    }
+    asset.WearSections.push_back(std::move(section));
+  }
+}
 } // namespace
 
 std::shared_ptr<ItemRenderAsset>
@@ -450,6 +499,9 @@ LoadItemRenderAsset(const std::filesystem::path &path,
   Require(!asset->Primitives.empty(), "scene contains no geometry");
   ReadVisualBindings(
       g.value("extras", Json::object()).value("visual_bindings", Json::array()),
+      *asset);
+  ReadWearSections(
+      g.value("extras", Json::object()).value("wear_sections", Json::array()),
       *asset);
   const auto visible =
       ItemVisualBounds(*asset, EvaluateItemVisualState(*asset, {}));

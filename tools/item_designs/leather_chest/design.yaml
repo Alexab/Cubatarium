@@ -4,7 +4,10 @@ atlas_size: 512
 texels_per_metre: 400
 triangle_budget: 2000
 presentation:
-  tp_euler_deg: [-65, 0, 0]
+  tp_euler_deg:
+  - -65
+  - 0
+  - 0
   right_grip:
   - 0
   - -0.12
@@ -29,7 +32,7 @@ materials:
     - 78
     - 41
     pattern: leather
-    seam: true
+    seam: false
   strap:
     color:
     - 66
@@ -66,6 +69,7 @@ parts:
   - 0
   - 0
   - 0.12
+  node: torso
 - name: back_panel
   material: leather
   shape: extrude
@@ -87,6 +91,7 @@ parts:
   - 0
   - 0
   - -0.12
+  node: torso
 - name: waist_belt
   material: strap
   shape: bevel_box
@@ -103,6 +108,7 @@ parts:
   - 0
   - 0
   - 0
+  node: torso
 - name: front_seam
   material: strap
   shape: bevel_box
@@ -119,6 +125,7 @@ parts:
   - 0
   - 0
   - 0
+  node: torso
 - name: shoulder_strap0
   material: strap
   shape: bevel_box
@@ -135,6 +142,7 @@ parts:
   - 0
   - 0
   - 0
+  node: torso
 - name: shoulder_strap1
   material: strap
   shape: bevel_box
@@ -151,6 +159,7 @@ parts:
   - 0
   - 0
   - 0
+  node: torso
 - name: buckle_frame0
   material: buckle
   shape: bevel_box
@@ -167,6 +176,7 @@ parts:
   - 0
   - 0
   - 0
+  node: torso
 - name: buckle_frame1
   material: buckle
   shape: bevel_box
@@ -183,6 +193,7 @@ parts:
   - 0
   - 0
   - 0
+  node: torso
 - name: buckle_frame2
   material: buckle
   shape: bevel_box
@@ -199,6 +210,7 @@ parts:
   - 0
   - 0
   - 0
+  node: torso
 - name: buckle_frame3
   material: buckle
   shape: bevel_box
@@ -214,4 +226,29 @@ parts:
   rotation:
   - 0
   - 0
+  - 0
+  node: torso
+nodes:
+  torso:
+    pivot:
+    - 0
+    - 0
+    - 0
+wear_sections:
+- node: torso
+  bones:
+  - body
+  slot: 1
+  region: slot
+  low:
+  - -0.19
+  - -0.22
+  - -0.105
+  high:
+  - 0.19
+  - 0.22
+  - 0.105
+  euler_deg:
+  - 0
+  - 180
   - 0

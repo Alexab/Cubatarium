@@ -539,7 +539,8 @@ void QueueItemSurface(CreatureDrawQueue *queue,
                       const std::shared_ptr<const ItemRenderAsset> &asset,
                       const std::filesystem::path &path, const glm::mat4 &vp,
                       const glm::mat4 &model, bool loose = false,
-                      const ItemVisualInputs &inputs = {})
+                      const ItemVisualInputs &inputs = {},
+                      const std::string &visibleRoot = {})
 {
   if (!queue)
     throw std::logic_error("Item surfaces require the shared draw queue");
@@ -549,6 +550,8 @@ void QueueItemSurface(CreatureDrawQueue *queue,
   item->ViewProjection = vp;
   item->Model = model;
   item->State = EvaluateItemVisualState(*asset, inputs);
+  if (!visibleRoot.empty())
+    item->State.VisibleRoots.insert(visibleRoot);
   const auto bounds = ItemVisualBounds(*asset, item->State);
   item->Low = bounds.first;
   item->High = bounds.second;
@@ -621,6 +624,40 @@ const WornItemLocal &CachedWornItemLocal(const std::string &itemId, size_t slot)
   return *entry;
 }
 
+void SubmitAuthoredWear(CreatureDrawQueue *queue,
+                        const std::shared_ptr<const ItemRenderAsset> &asset,
+                        const std::filesystem::path &path, size_t slot,
+                        const glm::mat4 &vp, const glm::mat4 &body,
+                        const glm::mat4 &adjust,
+                        const BoneMatrixLookupFn &bones,
+                        const BoneBoundsLookupFn &bounds)
+{
+  for (const auto &section : asset->WearSections)
+  {
+    if (section.Slot != slot)
+      continue;
+    for (const auto &bone : section.Bones)
+    {
+      glm::mat4 pose(1.f);
+      glm::vec3 low, high;
+      if (!bones(bone, pose) || !bounds || !bounds(bone, low, high))
+        continue;
+      auto region = CreatureWearRegion(slot, low, high);
+      if (section.Region == "full")
+        region = {low - glm::vec3(.026f, 0, .026f),
+                  high + glm::vec3(.026f, 0, .026f)};
+      else if (section.Region == "waist")
+        region = {low - glm::vec3(.03f, 0, .03f),
+                  glm::vec3(high.x + .03f, low.y + (high.y - low.y) * .16f,
+                            high.z + .03f)};
+      const auto fit =
+          ItemWearSectionMatrix(section, region.first, region.second);
+      QueueItemSurface(queue, asset, path, vp, body * pose * adjust * fit,
+                       false, {}, section.Node);
+    }
+  }
+}
+
 void SubmitItemOnBones(CreatureDrawQueue *queue, UShaderProgram *shader,
                        const std::string &itemId, size_t slot,
                        const glm::mat4 &viewProj, const glm::mat4 &bodyMat,
@@ -634,6 +671,13 @@ void SubmitItemOnBones(CreatureDrawQueue *queue, UShaderProgram *shader,
   const auto surfacePath = ResolveGltfAbs(itemId, true);
   const auto surface = FindSurface(surfacePath);
   auto asset = surface ? nullptr : LoadItemGltf(itemId, true);
+  if (surface && !surface->WearSections.empty())
+  {
+    SubmitAuthoredWear(queue, surface, surfacePath, slot, viewProj, bodyMat,
+                       WearLocalMatrix(CachedWornItemLocal(itemId, slot).wear),
+                       bones, bounds);
+    return;
+  }
   if (!surface && (!asset || asset->primitives.empty()))
   {
     return;

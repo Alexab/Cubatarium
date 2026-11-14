@@ -69,6 +69,15 @@ struct ItemNodeBinding
   glm::vec3 StartPoint{0.f}, EndPoint{0.f};
 };
 
+struct ItemWearSection
+{
+  std::string Node, Region{"slot"};
+  std::vector<std::string> Bones;
+  size_t Slot{0};
+  glm::vec3 Low{0.f}, High{0.f};
+  glm::vec3 EulerDeg{0.f};
+};
+
 struct ItemRenderAsset
 {
   std::vector<ItemRenderPrimitive> Primitives;
@@ -77,6 +86,7 @@ struct ItemRenderAsset
   glm::vec3 Low{0.f}, High{0.f};
   ItemGripProfile Grip;
   std::vector<ItemNodeBinding> Bindings;
+  std::vector<ItemWearSection> WearSections;
 };
 
 /// Strict static item glTF subset. Throws with an actionable reason; callers
@@ -93,6 +103,7 @@ struct ItemVisualState
 {
   std::unordered_map<std::string, glm::mat4> NodeTransforms;
   std::unordered_set<std::string> HiddenNodes;
+  std::unordered_set<std::string> VisibleRoots;
 };
 ItemVisualState EvaluateItemVisualState(const ItemRenderAsset &asset,
                                         const ItemVisualInputs &inputs);

@@ -1,10 +1,22 @@
 """Geometry contracts for the item redesign; no runtime assets are rewritten."""
 import math
 import unittest
-from itemgen.mesh import bevel_box, blade, extrude, shell, transform, triangulate, revolve, ring
+from itemgen.mesh import bevel_box, blade, extrude, shell, tube, transform, triangulate, revolve, ring
 
 
 class MeshTests(unittest.TestCase):
+    def test_sleeve_is_open_at_both_ends_and_has_closed_walls(self):
+        faces=tube((.2,.3,.16),.015)
+        self.assertEqual(len(triangulate(faces)),32)
+        edges={}
+        for face in faces:
+            if '.top' in face.name:self.assertEqual(face.normal(),(0,1,0))
+            if '.bottom' in face.name:self.assertEqual(face.normal(),(0,-1,0))
+            for a,b in zip(face.points,face.points[1:]+face.points[:1]):
+                key=tuple(sorted((a,b)));edges[key]=edges.get(key,0)+1
+        self.assertTrue(all(value==2 for value in edges.values()))
+        self.assertTrue(all(abs(p[0])>=.0849 or abs(p[2])>=.0649 for f in faces for p in f.points))
+
     def test_anisotropic_scale_preserves_pivot_and_outward_normals(self):
         faces=bevel_box((.2,.4,.2),.02)
         scaled=transform(faces,scale=(2,.5,1),pivot=(0,0,0))

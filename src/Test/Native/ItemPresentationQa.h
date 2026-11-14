@@ -20,6 +20,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <nlohmann/json.hpp>
 #include <set>
 #include <sstream>
@@ -371,18 +372,52 @@ RunItemPresentationQa(const std::filesystem::path &path,
                           names[i]) != def->Armor.Slots.end())
               slots[i].ItemId = id;
           int draws = 0;
+          size_t expectedSections = 0;
+          std::set<std::string> expectedRoots, observedRoots;
+          for (const auto &section : surface->WearSections)
+            if (!slots[section.Slot].ItemId.empty())
+            {
+              expectedSections += section.Bones.size();
+              expectedRoots.insert(section.Node);
+            }
+          float minimumY = std::numeric_limits<float>::max();
           preview.SetItemSurfaceObserver(
               [&](const ItemDrawRequest &r)
               {
                 if (r.Path.parent_path().filename() == id)
+                {
                   ++draws;
+                  observedRoots.insert(r.State.VisibleRoots.begin(),
+                                       r.State.VisibleRoots.end());
+                  const auto transforms =
+                      ResolveItemNodeTransforms(*r.Asset, r.State);
+                  for (const auto &primitive : r.Asset->Primitives)
+                    if (ItemNodeVisible(*r.Asset, r.State, primitive.Node))
+                      for (size_t i = 0; i + 7 < primitive.Vertices.size();
+                           i += 8)
+                        minimumY = std::min(
+                            minimumY, (r.Model * transforms[primitive.Node] *
+                                       glm::vec4(primitive.Vertices[i],
+                                                 primitive.Vertices[i + 1],
+                                                 primitive.Vertices[i + 2], 1))
+                                          .y);
+                }
               });
           const auto tex = preview.RenderToUniqueTexture(
               "human", "", 512, 30, 12, phase * .35f, phase != 0, &slots,
               nullptr, nullptr, &appearance);
           const auto label =
               id + "-" + body + "-armor-" + std::to_string(phase);
-          check(label + " draws item surface", draws > 0);
+          check(label + " draws item surface",
+                expectedSections ? size_t(draws) == expectedSections &&
+                                       observedRoots == expectedRoots
+                                 : draws > 0);
+          report["wear_geometry"][label] = {{"draws", draws},
+                                            {"minimum_y", minimumY},
+                                            {"roots", observedRoots}};
+          if (!slots[3].ItemId.empty())
+            check(label + " sole remains above support tolerance",
+                  minimumY >= -.025f);
           check(label + " capture",
                 SaveItemQaTexture(tex, frames / (label + ".png")));
           glDeleteTextures(1, &tex);

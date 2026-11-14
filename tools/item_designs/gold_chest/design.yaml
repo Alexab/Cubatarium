@@ -1,0 +1,309 @@
+version: 3
+id: gold_chest
+atlas_size: 512
+texels_per_metre: 230
+triangle_budget: 2000
+presentation:
+  tp_euler_deg:
+  - -65
+  - 0
+  - 0
+  right_grip:
+  - 0
+  - -0.05
+  - 0
+  left_grip:
+  - 0
+  - -0.05
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.5
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+materials:
+  body:
+    color:
+    - 212
+    - 171
+    - 72
+    pattern: forged
+    metallic: 0.65
+    roughness: 0.55
+  trim:
+    color:
+    - 239
+    - 198
+    - 99
+    pattern: plain
+    metallic: 0.7
+    roughness: 0.7
+  lining:
+    color:
+    - 66
+    - 49
+    - 35
+    pattern: leather
+  strap:
+    color:
+    - 87
+    - 57
+    - 34
+    pattern: leather
+    seam: true
+  fastener:
+    color:
+    - 252
+    - 211
+    - 112
+    pattern: hammered
+    metallic: 0.6
+    roughness: 0.6
+parts:
+- name: front_panel
+  material: body
+  shape: extrude
+  contour:
+  - - -0.22
+    - 0.15
+  - - -0.19
+    - -0.22
+  - - 0.19
+    - -0.22
+  - - 0.22
+    - 0.15
+  - - 0.13
+    - 0.23
+  - - -0.13
+    - 0.23
+  depth: 0.022
+  offset:
+  - 0
+  - 0
+  - 0.12
+  node: torso
+- name: rear_panel
+  material: body
+  shape: extrude
+  contour:
+  - - -0.22
+    - 0.15
+  - - -0.19
+    - -0.22
+  - - 0.19
+    - -0.22
+  - - 0.22
+    - 0.15
+  - - 0.13
+    - 0.23
+  - - -0.13
+    - 0.23
+  depth: 0.022
+  offset:
+  - 0
+  - 0
+  - -0.12
+  node: torso
+- name: left_shoulder_strap
+  material: strap
+  shape: bevel_box
+  size:
+  - 0.055
+  - 0.03
+  - 0.26
+  bevel: 0.005399999999999999
+  offset:
+  - -0.145
+  - 0.21
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: torso
+- name: left_side_lacing
+  material: strap
+  shape: bevel_box
+  size:
+  - 0.018
+  - 0.23
+  - 0.21
+  bevel: 0.00324
+  offset:
+  - -0.185
+  - -0.04
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: torso
+- name: right_shoulder_strap
+  material: strap
+  shape: bevel_box
+  size:
+  - 0.055
+  - 0.03
+  - 0.26
+  bevel: 0.005399999999999999
+  offset:
+  - 0.145
+  - 0.21
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: torso
+- name: right_side_lacing
+  material: strap
+  shape: bevel_box
+  size:
+  - 0.018
+  - 0.23
+  - 0.21
+  bevel: 0.00324
+  offset:
+  - 0.185
+  - -0.04
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: torso
+- name: fine_chest_chevron
+  material: trim
+  shape: extrude
+  contour:
+  - - -0.16
+    - 0.13
+  - - 0
+    - -0.06
+  - - 0.16
+    - 0.13
+  depth: 0.01
+  offset:
+  - 0
+  - 0
+  - 0.143
+  node: torso
+- name: dark_inlay
+  material: lining
+  shape: extrude
+  contour:
+  - - -0.025
+    - 0.13
+  - - 0
+    - 0.09
+  - - 0.025
+    - 0.13
+  - - 0
+    - 0.17
+  depth: 0.003
+  offset:
+  - 0
+  - 0
+  - 0.15
+  node: torso
+- name: side_clasp0
+  material: fastener
+  shape: bevel_box
+  size:
+  - 0.035
+  - 0.009
+  - 0.009
+  bevel: 0.00162
+  offset:
+  - 0.15
+  - -0.1375
+  - 0.15
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: torso
+- name: side_clasp1
+  material: fastener
+  shape: bevel_box
+  size:
+  - 0.035
+  - 0.009
+  - 0.009
+  bevel: 0.00162
+  offset:
+  - 0.15
+  - -0.1025
+  - 0.15
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: torso
+- name: side_clasp2
+  material: fastener
+  shape: bevel_box
+  size:
+  - 0.009
+  - 0.035
+  - 0.009
+  bevel: 0.00162
+  offset:
+  - 0.1325
+  - -0.12
+  - 0.15
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: torso
+- name: side_clasp3
+  material: fastener
+  shape: bevel_box
+  size:
+  - 0.009
+  - 0.035
+  - 0.009
+  bevel: 0.00162
+  offset:
+  - 0.16749999999999998
+  - -0.12
+  - 0.15
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: torso
+nodes:
+  torso:
+    pivot:
+    - 0
+    - 0
+    - 0
+wear_sections:
+- node: torso
+  bones:
+  - body
+  slot: 1
+  region: slot
+  low:
+  - -0.19
+  - -0.22
+  - -0.105
+  high:
+  - 0.19
+  - 0.22
+  - 0.105
+  euler_deg:
+  - 0
+  - 180
+  - 0
+authorship:
+  construction: Cubatarium armor coordinate drawings
+  reference_kind: functional sewn and worked armor
+  external_meshes: false
+  external_pixels: false

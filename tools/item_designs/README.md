@@ -21,6 +21,9 @@ before uniform fitting into the unchanged gameplay physical envelope.
 
 An optional positive XYZ `scale` flattens or elongates a part around its pivot
 before rotation. This does not alter the gameplay physical profile.
+`tube` creates a hollow rectangular sleeve with open ends. Anatomical
+`wear_sections` select named subtrees and independent fitting/orientation per
+bone; see [the armor guide](ARMOR.md).
 
 `blade` uses a convex contour, web `depth`, thinner `edge_depth`,
 `bevel_fraction` and optional `edge_material` to construct sloping cutting

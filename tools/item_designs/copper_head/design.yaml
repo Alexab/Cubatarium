@@ -1,0 +1,265 @@
+version: 3
+id: copper_head
+atlas_size: 512
+texels_per_metre: 230
+triangle_budget: 2000
+presentation:
+  tp_euler_deg:
+  - -65
+  - 0
+  - 0
+  right_grip:
+  - 0
+  - -0.05
+  - 0
+  left_grip:
+  - 0
+  - -0.05
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.5
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+materials:
+  body:
+    color:
+    - 179
+    - 103
+    - 65
+    pattern: hammered
+    metallic: 0.65
+    roughness: 0.55
+  trim:
+    color:
+    - 206
+    - 130
+    - 92
+    pattern: plain
+    metallic: 0.7
+    roughness: 0.7
+  lining:
+    color:
+    - 66
+    - 49
+    - 35
+    pattern: leather
+  strap:
+    color:
+    - 87
+    - 57
+    - 34
+    pattern: leather
+    seam: true
+  fastener:
+    color:
+    - 219
+    - 143
+    - 105
+    pattern: hammered
+    metallic: 0.6
+    roughness: 0.6
+parts:
+- name: cap_shell
+  material: body
+  shape: shell
+  size:
+  - 0.33
+  - 0.17
+  - 0.3
+  thickness: 0.017
+  rotation:
+  - 180
+  - 0
+  - 0
+  offset:
+  - 0
+  - 0.12
+  - 0
+  node: helmet
+- name: brow
+  material: trim
+  shape: bevel_box
+  size:
+  - 0.34
+  - 0.032
+  - 0.026
+  bevel: 0.0057599999999999995
+  offset:
+  - 0
+  - -0.004
+  - 0.15
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: helmet
+- name: crown_segment0
+  material: trim
+  shape: bevel_box
+  size:
+  - 0.08
+  - 0.025
+  - 0.3
+  bevel: 0.0045
+  offset:
+  - -0.09
+  - 0.13
+  - 0
+  rotation:
+  - 0
+  - 0
+  - -8
+  node: helmet
+- name: crown_segment1
+  material: trim
+  shape: bevel_box
+  size:
+  - 0.08
+  - 0.025
+  - 0.3
+  bevel: 0.0045
+  offset:
+  - 0
+  - 0.13
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 8
+  node: helmet
+- name: crown_segment2
+  material: trim
+  shape: bevel_box
+  size:
+  - 0.08
+  - 0.025
+  - 0.3
+  bevel: 0.0045
+  offset:
+  - 0.09
+  - 0.13
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 8
+  node: helmet
+- name: brow_rivet0
+  material: fastener
+  shape: bevel_box
+  size:
+  - 0.014
+  - 0.014
+  - 0.012
+  bevel: 0.00252
+  offset:
+  - -0.12
+  - -0.005
+  - 0.17
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: helmet
+- name: brow_rivet1
+  material: fastener
+  shape: bevel_box
+  size:
+  - 0.014
+  - 0.014
+  - 0.012
+  bevel: 0.00252
+  offset:
+  - -0.06
+  - -0.005
+  - 0.17
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: helmet
+- name: brow_rivet2
+  material: fastener
+  shape: bevel_box
+  size:
+  - 0.014
+  - 0.014
+  - 0.012
+  bevel: 0.00252
+  offset:
+  - 0
+  - -0.005
+  - 0.17
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: helmet
+- name: brow_rivet3
+  material: fastener
+  shape: bevel_box
+  size:
+  - 0.014
+  - 0.014
+  - 0.012
+  bevel: 0.00252
+  offset:
+  - 0.06
+  - -0.005
+  - 0.17
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: helmet
+- name: brow_rivet4
+  material: fastener
+  shape: bevel_box
+  size:
+  - 0.014
+  - 0.014
+  - 0.012
+  bevel: 0.00252
+  offset:
+  - 0.12
+  - -0.005
+  - 0.17
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: helmet
+nodes:
+  helmet:
+    pivot:
+    - 0
+    - 0
+    - 0
+wear_sections:
+- node: helmet
+  bones:
+  - hat
+  slot: 0
+  region: slot
+  low:
+  - -0.145
+  - -0.05
+  - -0.13
+  high:
+  - 0.145
+  - 0.12
+  - 0.13
+  euler_deg:
+  - 0
+  - 180
+  - 0
+authorship:
+  construction: Cubatarium armor coordinate drawings
+  reference_kind: functional sewn and worked armor
+  external_meshes: false
+  external_pixels: false

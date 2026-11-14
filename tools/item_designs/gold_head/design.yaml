@@ -1,0 +1,164 @@
+version: 3
+id: gold_head
+atlas_size: 512
+texels_per_metre: 230
+triangle_budget: 2000
+presentation:
+  tp_euler_deg:
+  - -65
+  - 0
+  - 0
+  right_grip:
+  - 0
+  - -0.05
+  - 0
+  left_grip:
+  - 0
+  - -0.05
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.5
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+materials:
+  body:
+    color:
+    - 212
+    - 171
+    - 72
+    pattern: forged
+    metallic: 0.65
+    roughness: 0.55
+  trim:
+    color:
+    - 239
+    - 198
+    - 99
+    pattern: plain
+    metallic: 0.7
+    roughness: 0.7
+  lining:
+    color:
+    - 66
+    - 49
+    - 35
+    pattern: leather
+  strap:
+    color:
+    - 87
+    - 57
+    - 34
+    pattern: leather
+    seam: true
+  fastener:
+    color:
+    - 252
+    - 211
+    - 112
+    pattern: hammered
+    metallic: 0.6
+    roughness: 0.6
+parts:
+- name: cap_shell
+  material: body
+  shape: shell
+  size:
+  - 0.33
+  - 0.17
+  - 0.3
+  thickness: 0.017
+  rotation:
+  - 180
+  - 0
+  - 0
+  offset:
+  - 0
+  - 0.12
+  - 0
+  node: helmet
+- name: brow
+  material: trim
+  shape: bevel_box
+  size:
+  - 0.34
+  - 0.032
+  - 0.026
+  bevel: 0.0057599999999999995
+  offset:
+  - 0
+  - -0.004
+  - 0.15
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: helmet
+- name: thin_crown_band
+  material: trim
+  shape: bevel_box
+  size:
+  - 0.025
+  - 0.015
+  - 0.3
+  bevel: 0.0026999999999999997
+  offset:
+  - 0
+  - 0.128
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: helmet
+- name: forehead_inlay
+  material: lining
+  shape: extrude
+  contour:
+  - - -0.035
+    - -0.01
+  - - 0
+    - -0.035
+  - - 0.035
+    - -0.01
+  - - 0
+    - 0.03
+  depth: 0.004
+  offset:
+  - 0
+  - 0.025
+  - 0.166
+  node: helmet
+nodes:
+  helmet:
+    pivot:
+    - 0
+    - 0
+    - 0
+wear_sections:
+- node: helmet
+  bones:
+  - hat
+  slot: 0
+  region: slot
+  low:
+  - -0.145
+  - -0.05
+  - -0.13
+  high:
+  - 0.145
+  - 0.12
+  - 0.13
+  euler_deg:
+  - 0
+  - 180
+  - 0
+authorship:
+  construction: Cubatarium armor coordinate drawings
+  reference_kind: functional sewn and worked armor
+  external_meshes: false
+  external_pixels: false
