@@ -14,6 +14,8 @@ from PIL import Image, ImageDraw
 def paint_surface(width, height, material, name):
     color=material['color']
     style=material.get('pattern','plain')
+    if material.get('grain_axis','v') not in ('u','v'):
+        raise ValueError('Wood grain axis must be u or v')
     if style not in ('plain','wood','leather','forged','hammered','stone','food','fiber','water'):
         raise ValueError(f'Unknown surface pattern: {style}')
     phase=int.from_bytes(hashlib.sha256(name.encode()).digest()[:2],'little')/1000
@@ -24,8 +26,9 @@ def paint_surface(width, height, material, name):
             # Broad variation, then clustered manufacturing marks; no white noise.
             shade=3*math.sin(u*4+phase)+2*math.sin(v*3-phase)
             if style=='wood':
-                grain=math.sin(u*35+math.sin(v*7+phase)*1.8)
-                shade+=-10*max(0,grain)**8+4*math.sin(u*12+v)
+                along,across=(u,v) if material.get('grain_axis')=='u' else (v,u)
+                grain=math.sin(across*35+math.sin(along*7+phase)*1.8)
+                shade+=-10*max(0,grain)**8+4*math.sin(across*12+along)
             elif style=='leather':
                 shade+=2*math.sin(x*.7)*math.sin(y*.9)
             elif style in ('forged','hammered'):
@@ -42,6 +45,30 @@ def paint_surface(width, height, material, name):
             pixel=tuple(max(0,min(255,round(c+shade))) for c in color)
             image.putpixel((x,y),pixel+(255,))
     draw=ImageDraw.Draw(image)
+    marks=material.get('marks','')
+    if marks not in ('','joinery','knapped','rivet','forge','inlay','grain_knots'):
+        raise ValueError(f'Unknown surface marks: {marks}')
+    # Construction marks belong to broad working faces, not every side/bevel.
+    if min(width,height)>=10 and name.endswith(('.front','.back')):
+        dark=tuple(max(0,c-25) for c in color)+(255,)
+        light=tuple(min(255,c+24) for c in color)+(255,)
+        line=max(1,round(min(width,height)/70))
+        if marks=='forge':
+            for i in range(3):
+                x=width*(.22+i*.13);y=height*(.40+i*.06)
+                draw.line((x,y,x+width*.13,y-height*.05),fill=dark,width=line)
+            draw.line((width*.62,height*.68,width*.67,height*.58,width*.72,height*.68),fill=light,width=line)
+        elif marks=='inlay':
+            draw.line((width*.34,height*.24,width*.45,height*.35,width*.34,height*.46,width*.23,height*.35,width*.34,height*.24),fill=dark,width=line)
+        elif marks=='knapped':
+            for i in range(3):
+                x=width*(.22+i*.22);y=height*(.25+(i%2)*.25)
+                draw.line((x,y,x+width*.09,y+height*.05,x+width*.04,y+height*.13),fill=dark,width=line)
+        elif marks=='rivet':
+            draw.line((width*.2,height*.32,width*.6,height*.34),fill=dark,width=line)
+        elif marks=='joinery':
+            draw.line((width*.30,height*.16,width*.33,height*.83),fill=dark,width=line)
+            draw.line((width*.34,height*.16,width*.37,height*.83),fill=light,width=line)
     if style=='water':
         accent=tuple(min(255,c+18) for c in color)+(255,)
         for shift in (.15,.48):

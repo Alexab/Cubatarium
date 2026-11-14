@@ -1,6 +1,7 @@
 """Offline comparison sheets for staged v3 designs; never native acceptance."""
 from pathlib import Path
 import argparse
+import hashlib
 import json
 import math
 import numpy as np
@@ -26,13 +27,21 @@ def presentation_parts(folder):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--id')
+    parser.add_argument('--read-staged',action='store_true',help='Read existing staging without rebuilding; reject changed author sources')
     args=parser.parse_args()
     ids=[args.id] if args.id else sorted(p.parent.name for p in (ROOT/'tools/item_designs').glob('*/design.yaml'))
     out=ROOT/'assetgen_output/items/redesign/previews';out.mkdir(exist_ok=True,parents=True)
     overview=Image.new('RGBA',(1280,220*((len(ids)+3)//4)),(24,24,28,255))
     draw=ImageDraw.Draw(overview)
     for i,id in enumerate(ids):
-        folder=build_design(id)
+        if args.read_staged:
+            folder=ROOT/'assetgen_output/items/redesign'/id
+            report=json.loads((folder/'design_build.json').read_text(encoding='utf-8'))
+            current={p.relative_to(ROOT).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((ROOT/'tools/item_designs'/id).rglob('*')) if p.is_file()}
+            if report.get('id')!=id or report.get('sources')!=current:
+                raise ValueError(f'Stale staging for {id}; build the authored design first')
+        else:
+            folder=build_design(id)
         old=presentation_parts(ROOT/'models/items'/id)
         new=presentation_parts(folder)
         sheet=Image.new('RGBA',(960,220),(24,24,28,255)); label=ImageDraw.Draw(sheet)

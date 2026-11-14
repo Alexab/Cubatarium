@@ -167,8 +167,7 @@ def render(primitives: list[dict], *, mode='color', size=160, yaw=35., pitch=-25
             if mode == 'silhouette':
                 rgb[:] = 0
             elif mode == 'gray':
-                gray = rgb @ np.array([.2126, .7152, .0722])
-                rgb = np.repeat(gray[..., None], 3, axis=-1)
+                rgb[:] = 170*shade
             patch = pixels[region]
             patch[mask, :3] = rgb[mask].astype(np.uint8)
             patch[mask, 3] = 255

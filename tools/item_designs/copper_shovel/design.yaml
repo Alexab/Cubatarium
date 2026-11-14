@@ -1,0 +1,281 @@
+version: 3
+id: copper_shovel
+atlas_size: 256
+texels_per_metre: 185
+triangle_budget: 1200
+presentation:
+  tp_euler_deg:
+  - -25
+  - 0
+  - 20
+  right_grip:
+  - 0
+  - -0.22
+  - 0
+  left_grip:
+  - 0
+  - -0.22
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.67
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+  tp_scale: 1.65
+materials:
+  wood:
+    color:
+    - 109
+    - 69
+    - 37
+    pattern: wood
+    uv_direction:
+    - 0
+    - 1
+    - 0
+    grain_axis: u
+  binding:
+    color:
+    - 82
+    - 53
+    - 35
+    pattern: leather
+    seam: true
+  head:
+    color:
+    - 184
+    - 102
+    - 60
+    pattern: hammered
+    metallic: 0.7
+    roughness: 0.6
+    marks: rivet
+  edge:
+    color:
+    - 214
+    - 132
+    - 90
+    pattern: plain
+    metallic: 0.8
+    roughness: 0.45
+  dark:
+    color:
+    - 63
+    - 74
+    - 80
+    pattern: plain
+    metallic: 0.5
+    roughness: 0.7
+parts:
+- name: shaped_haft
+  material: wood
+  shape: revolve
+  profile:
+  - - -0.39
+    - 0.025
+  - - -0.3
+    - 0.029
+  - - 0.13
+    - 0.023
+  - - 0.32
+    - 0.02
+  sides: 8
+  offset:
+  - 0
+  - 0
+  - 0
+- name: grip_binding0
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.059
+  - 0.022
+  - 0.057
+  bevel: 0.00396
+  offset:
+  - 0
+  - -0.19
+  - 0
+  rotation:
+  - 0
+  - 0
+  - -7
+- name: grip_binding1
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.059
+  - 0.022
+  - 0.057
+  bevel: 0.00396
+  offset:
+  - 0
+  - -0.24
+  - 0
+  rotation:
+  - 0
+  - 0
+  - -7
+- name: grip_binding2
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.059
+  - 0.022
+  - 0.057
+  bevel: 0.00396
+  offset:
+  - 0
+  - -0.29
+  - 0
+  rotation:
+  - 0
+  - 0
+  - -7
+- name: dished_spade_web
+  material: head
+  shape: blade
+  contour:
+  - - -0.09
+    - 0.35
+  - - -0.055
+    - 0.15
+  - - 0.055
+    - 0.15
+  - - 0.09
+    - 0.35
+  - - 0.045
+    - 0.46
+  - - -0.045
+    - 0.46
+  depth: 0.022
+  offset:
+  - 0
+  - 0
+  - 0
+  edge_depth: 0.0035199999999999997
+  bevel_fraction: 0.13
+  edge_material: edge
+- name: left_spade_cheek
+  material: head
+  shape: blade
+  contour:
+  - - -0.017
+    - 0.36
+  - - -0.012
+    - 0.2
+  - - 0.012
+    - 0.2
+  - - 0.017
+    - 0.36
+  depth: 0.016
+  offset:
+  - -0.074
+  - 0
+  - 0.012
+  edge_depth: 0.00256
+  bevel_fraction: 0.13
+  edge_material: edge
+  rotation:
+  - 0
+  - -24
+  - 0
+- name: right_spade_cheek
+  material: head
+  shape: blade
+  contour:
+  - - -0.017
+    - 0.36
+  - - -0.012
+    - 0.2
+  - - 0.012
+    - 0.2
+  - - 0.017
+    - 0.36
+  depth: 0.016
+  offset:
+  - 0.074
+  - 0
+  - 0.012
+  edge_depth: 0.00256
+  bevel_fraction: 0.13
+  edge_material: edge
+  rotation:
+  - 0
+  - 24
+  - 0
+- name: spade_spine
+  material: dark
+  shape: bevel_box
+  size:
+  - 0.023
+  - 0.19
+  - 0.027
+  bevel: 0.00414
+  offset:
+  - 0
+  - 0.22
+  - -0.018
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: socket
+  material: dark
+  shape: bevel_box
+  size:
+  - 0.077
+  - 0.12
+  - 0.075
+  bevel: 0.013859999999999999
+  offset:
+  - 0
+  - 0.23
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: socket_rivet0
+  material: edge
+  shape: revolve
+  profile:
+  - - -0.008
+    - 0.012
+  - - 0.008
+    - 0.012
+  sides: 6
+  offset:
+  - 0.019
+  - 0.195
+  - 0.044
+  rotation:
+  - 90
+  - 0
+  - 0
+- name: socket_rivet1
+  material: edge
+  shape: revolve
+  profile:
+  - - -0.008
+    - 0.012
+  - - 0.008
+    - 0.012
+  sides: 6
+  offset:
+  - 0.019
+  - 0.265
+  - 0.044
+  rotation:
+  - 90
+  - 0
+  - 0
+authorship:
+  construction: Cubatarium workshop coordinate drawings
+  reference_kind: functional real-world archetypes
+  external_meshes: false
+  external_pixels: false

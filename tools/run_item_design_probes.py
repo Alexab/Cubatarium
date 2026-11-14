@@ -40,12 +40,19 @@ def main():
     parser.add_argument('--skip-build',action='store_true')
     parser.add_argument('--fp-id',default='bucket')
     parser.add_argument('--fp-only',action='store_true',help='Presentation probe only; does not claim full native regression')
+    parser.add_argument('--presentation-only',action='store_true',help='Native attachment/FP/loose inspection only; no gameplay regression claim')
+    parser.add_argument('--id',action='append',dest='selected',help='Substitute only these authored IDs; existing v3 production assets may also be inspected')
     args=parser.parse_args()
     if not args.world.endswith('QA') or '/' in args.world or '\\' in args.world:
         parser.error('Use a dedicated world ending in QA')
     ids=sorted(p.parent.name for p in (ROOT/'tools/item_designs').glob('*/design.yaml'))
     if args.fp_id not in ids: parser.error('--fp-id must have an authored design')
-    summary_path=ROOT/'bin/items_acceptance/design-probe.json'
+    if args.presentation_only and args.fp_only: parser.error('Choose only one narrow probe scope')
+    if args.selected:
+        if not args.presentation_only: parser.error('--id requires --presentation-only')
+        if any(id not in ids for id in args.selected): parser.error('--id must have an authored design')
+        ids=sorted(set(args.selected))
+    summary_path=ROOT/'bin/items_acceptance'/('presentation-probe.json' if args.presentation_only else 'design-probe.json')
     summary_path.parent.mkdir(parents=True,exist_ok=True)
     summary_path.unlink(missing_ok=True)
     logs=ROOT/'build';logs.mkdir(exist_ok=True)
@@ -62,8 +69,23 @@ def main():
     staged={id:build_design(id) for id in ids}
     env=os.environ.copy();env['PYTHONIOENCODING']='utf-8'
     # Ambient diagnostic switches from a developer shell must not alter this run.
-    for key in ('CUBA_FLIGHT_QA_FP_ITEM','CUBA_ITEMS_INVENTORY_QA','CUBA_ITEMS_CARRY_VISUAL_QA','CUBA_OWNERSHIP_CATALOG_VISUAL_QA','CUBA_ITEM_LAB_QA','CUBA_ITEM_PRESENTATION_QA'):
+    for key in ('CUBA_FLIGHT_QA_FP_ITEM','CUBA_ITEMS_INVENTORY_QA','CUBA_ITEMS_SURVIVAL_LOOP_QA','CUBA_ITEMS_CARRY_VISUAL_QA','CUBA_OWNERSHIP_CATALOG_VISUAL_QA','CUBA_ITEM_LAB_QA','CUBA_ITEM_PRESENTATION_QA'):
         env.pop(key,None)
+    if args.presentation_only:
+        report=summary_path.with_name('design-presentations.json')
+        report.unlink(missing_ok=True)
+        env['CUBA_ITEM_PRESENTATION_QA']=str(report)
+        with runtime_designs(staged) as restored_count:
+            run([sys.executable,'tools/flight_sim_run.py','--world',args.world,'--require-existing-world','--seconds','3','--process-timeout',str(180+6*len(ids)),'--no-fly','--no-hold-forward','--idle-sec','0','--report',logs/'item-design-presentations-flight.json'],'item-design-presentations',env)
+            coverage=json.loads(report.read_text(encoding='utf-8'))
+            if not coverage.get('passed') or not set(ids).issubset(coverage.get('surface_ids',[])):
+                raise RuntimeError('Presentation probe failed or substituted coverage is incomplete')
+        summary=dict(passed=True,scope='presentation_only',world=args.world,staged_ids=ids,inspected_surface_ids=coverage['surface_ids'],
+                     presentation_checks=len(coverage['checks']),restored_runtime_files=restored_count,
+                     executable_sha256=hashlib.sha256(exe.read_bytes()).hexdigest())
+        summary_path.write_text(json.dumps(summary,indent=2)+'\n',encoding='utf-8')
+        print('Native presentation-only probe passed; gameplay/artistic acceptance is separate')
+        return 0
     with runtime_designs(staged) as restored_count:
         if not args.fp_only:
             run([sys.executable,'tools/run_items_acceptance.py','--skip-build','--extended','--world',args.world],'item-design-native',env)

@@ -10,7 +10,7 @@ from itemgen.surface_paint import bake
 
 
 def write_asset(destination: Path, item_id, faces, materials, *, size, density, overlays=None, presentation=None, nodes=None, face_nodes=None, bindings=None):
-    islands=pack(faces,size=size,texels_per_metre=density)
+    islands=pack(faces,size=size,texels_per_metre=density,directions={role:m['uv_direction'] for role,m in materials.items() if 'uv_direction' in m})
     lookup={i.name:i for i in islands}
     destination.mkdir(parents=True,exist_ok=True)
     bake(islands,materials,size,destination/'textures/diffuse.png',overlays=overlays)

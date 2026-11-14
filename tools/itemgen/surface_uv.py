@@ -14,7 +14,7 @@ class Island:
     uv: tuple[tuple[float,float], ...]
 
 
-def pack(faces: list[Face], *, size: int, texels_per_metre: float, gutter: int = 4):
+def pack(faces: list[Face], *, size: int, texels_per_metre: float, gutter: int = 4, directions=None):
     """Project each face in its own orthonormal frame; never stretch to a tile.
 
     Islands are not silently rescaled, rotated or mirrored. Overflow is an
@@ -24,10 +24,20 @@ def pack(faces: list[Face], *, size: int, texels_per_metre: float, gutter: int =
         raise ValueError("Invalid atlas dimensions, gutter or texel density")
     if len({f.name for f in faces}) != len(faces):
         raise ValueError("Surface names must be unique")
+    directions=directions or {}
+    if not isinstance(directions,dict): raise ValueError('UV directions must map material names to vectors')
+    for direction in directions.values():
+        if not isinstance(direction,(list,tuple)) or len(direction)!=3 or any(isinstance(v,bool) or not isinstance(v,(int,float)) or not math.isfinite(v) for v in direction) or sum(v*v for v in direction)<1e-10:
+            raise ValueError('UV direction must be a finite nonzero vector')
     projected=[]
     for face in faces:
         n=face.normal()
         edge=tuple(face.points[1][i]-face.points[0][i] for i in range(3))
+        if face.role in directions:
+            direction=directions[face.role]
+            dot=sum(direction[i]*n[i] for i in range(3))
+            aligned=tuple(direction[i]-dot*n[i] for i in range(3))
+            if sum(v*v for v in aligned)>1e-10: edge=aligned
         length=math.sqrt(sum(x*x for x in edge))
         u=tuple(x/length for x in edge)
         v=(n[1]*u[2]-n[2]*u[1],n[2]*u[0]-n[0]*u[2],n[0]*u[1]-n[1]*u[0])

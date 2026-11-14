@@ -5,7 +5,7 @@ import json
 import math
 import yaml
 
-from itemgen.mesh import Face, bevel_box, extrude, shell, transform, revolve, ring
+from itemgen.mesh import Face, bevel_box, blade, extrude, shell, transform, revolve, ring
 from itemgen.surface_export import write_asset
 from itemgen.visual_bindings import prepare_bindings
 
@@ -30,6 +30,7 @@ def build_design(item_id, *, root=ROOT, output=None):
         kind=part['shape']
         if kind=='bevel_box': geometry=bevel_box(part['size'],part['bevel'],**kwargs)
         elif kind=='extrude': geometry=extrude(part['contour'],part['depth'],**kwargs)
+        elif kind=='blade': geometry=blade(part['contour'],part['depth'],part['edge_depth'],part.get('bevel_fraction',.18),edge_role=part.get('edge_material'),**kwargs)
         elif kind=='shell': geometry=shell(part['size'],part['thickness'],**kwargs)
         elif kind=='revolve': geometry=revolve(part['profile'],sides=part.get('sides',8),**kwargs)
         elif kind=='ring': geometry=ring(part['outer_radius'],part['inner_radius'],part['depth'],sides=part.get('sides',8),**kwargs)

@@ -1,0 +1,286 @@
+version: 3
+id: gold_pickaxe
+atlas_size: 256
+texels_per_metre: 150
+triangle_budget: 1200
+presentation:
+  tp_euler_deg:
+  - -25
+  - 0
+  - 20
+  right_grip:
+  - 0
+  - -0.22
+  - 0
+  left_grip:
+  - 0
+  - -0.22
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.67
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+  tp_scale: 1.65
+materials:
+  wood:
+    color:
+    - 109
+    - 69
+    - 37
+    pattern: wood
+    uv_direction:
+    - 0
+    - 1
+    - 0
+    grain_axis: u
+  binding:
+    color:
+    - 82
+    - 53
+    - 35
+    pattern: leather
+    seam: true
+  head:
+    color:
+    - 224
+    - 177
+    - 72
+    pattern: forged
+    metallic: 0.7
+    roughness: 0.6
+    marks: inlay
+  edge:
+    color:
+    - 254
+    - 207
+    - 102
+    pattern: plain
+    metallic: 0.8
+    roughness: 0.45
+  dark:
+    color:
+    - 63
+    - 74
+    - 80
+    pattern: plain
+    metallic: 0.5
+    roughness: 0.7
+parts:
+- name: shaped_haft
+  material: wood
+  shape: revolve
+  profile:
+  - - -0.39
+    - 0.025
+  - - -0.3
+    - 0.029
+  - - 0.13
+    - 0.023
+  - - 0.32
+    - 0.02
+  sides: 8
+  offset:
+  - 0
+  - 0
+  - 0
+- name: grip_binding0
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.059
+  - 0.022
+  - 0.057
+  bevel: 0.00396
+  offset:
+  - 0
+  - -0.19
+  - 0
+  rotation:
+  - 0
+  - 0
+  - -7
+- name: grip_binding1
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.059
+  - 0.022
+  - 0.057
+  bevel: 0.00396
+  offset:
+  - 0
+  - -0.24
+  - 0
+  rotation:
+  - 0
+  - 0
+  - -7
+- name: grip_binding2
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.059
+  - 0.022
+  - 0.057
+  bevel: 0.00396
+  offset:
+  - 0
+  - -0.29
+  - 0
+  rotation:
+  - 0
+  - 0
+  - -7
+- name: grip_end_collar
+  material: edge
+  shape: bevel_box
+  size:
+  - 0.056
+  - 0.015
+  - 0.052
+  bevel: 0.0026999999999999997
+  offset:
+  - 0
+  - -0.33
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: slender_bridge
+  material: head
+  shape: blade
+  contour:
+  - - -0.18
+    - 0.29
+  - - 0.18
+    - 0.29
+  - - 0.13
+    - 0.34
+  - - -0.14
+    - 0.34
+  depth: 0.035
+  offset:
+  - 0
+  - 0
+  - 0
+  edge_depth: 0.005600000000000001
+  bevel_fraction: 0.13
+  edge_material: edge
+- name: needle_pick
+  material: head
+  shape: blade
+  contour:
+  - - 0.1
+    - 0.33
+  - - 0.15
+    - 0.25
+  - - 0.29
+    - 0.12
+  - - 0.31
+    - 0.13
+  - - 0.17
+    - 0.31
+  depth: 0.027
+  offset:
+  - 0
+  - 0
+  - 0
+  edge_depth: 0.00432
+  bevel_fraction: 0.13
+  edge_material: edge
+- name: gold_chisel
+  material: head
+  shape: blade
+  contour:
+  - - -0.27
+    - 0.22
+  - - -0.1
+    - 0.29
+  - - -0.14
+    - 0.33
+  - - -0.27
+    - 0.25
+  depth: 0.031
+  offset:
+  - 0
+  - 0
+  - 0
+  edge_depth: 0.00496
+  bevel_fraction: 0.13
+  edge_material: edge
+- name: decorative_spine
+  material: dark
+  shape: extrude
+  contour:
+  - - -0.16
+    - 0.3
+  - - 0.12
+    - 0.3
+  - - 0.15
+    - 0.32
+  - - -0.15
+    - 0.32
+  depth: 0.041
+  offset:
+  - 0
+  - 0
+  - 0
+- name: socket
+  material: dark
+  shape: bevel_box
+  size:
+  - 0.077
+  - 0.12
+  - 0.075
+  bevel: 0.013859999999999999
+  offset:
+  - 0
+  - 0.23
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: lower_fine_collar
+  material: edge
+  shape: bevel_box
+  size:
+  - 0.083
+  - 0.016
+  - 0.079
+  bevel: 0.0028799999999999997
+  offset:
+  - 0
+  - 0.17500000000000002
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: upper_fine_collar
+  material: edge
+  shape: bevel_box
+  size:
+  - 0.083
+  - 0.016
+  - 0.079
+  bevel: 0.0028799999999999997
+  offset:
+  - 0
+  - 0.28500000000000003
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+authorship:
+  construction: Cubatarium workshop coordinate drawings
+  reference_kind: functional real-world archetypes
+  external_meshes: false
+  external_pixels: false

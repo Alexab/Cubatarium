@@ -299,6 +299,57 @@ v3 replacements**. The remaining 58 authored designs, final texture/geometry
 review, two-hand contacts, full Item Lab presentation scenes, import/publication
 and comparative performance acceptance are still required.
 
+## Workshop tool wave
+
+There are now **33 authored candidates**: the twelve pilots plus 21 missing
+wood/stone/copper/iron/gold tool designs. All 25 tool IDs have candidate sources.
+The wave preserves gameplay definitions and the four existing tool pilots;
+seeding never replaces a source that already exists. Production still has
+**zero v3 replacements**. The other **37 item designs** remain to be authored.
+
+The generator has a closed blade primitive with a thick web, sloping cutting
+bevels and thin edge walls. Shovels combine it with angled cheeks to produce a
+shallow dish. Hoes have a separate angled neck and working plate. Wood joinery,
+stone lashing/flakes, copper rivets, iron sockets/polls and slim gold inlays
+create construction differences across tiers. Handles remain wooden. Preferred
+UV directions align grain with each wooden part; working faces receive local
+manufacturing marks instead of a frame repeated on every face.
+
+The first offline comparison exposed a construction error: taking the convex
+hull of a whole curved pick head filled the space under its bridge. Those heads
+now use separate bridge, point and opposing chisel/adze members. A separate QA
+issue was fixed: offline gray-material inspection now ignores albedo instead
+of merely desaturating the texture. It therefore exposes form and faceting.
+
+Native review also found foreshortened, undersized TP tools. Their authored TP
+angle/scale and mirrored outward cant were adjusted independently of FP and
+physics, while preserving the palm anchors. This does not change mass, collision dimensions, ground-model
+scale, recipes or inventory state. Full world interaction and final artistic
+acceptance remain open. In particular, narrow primitive hoe blades and tool
+proportions must be compared with the completed armor/material waves.
+
+The native suite's fixed route timeout was insufficient for the larger number
+of offscreen captures: the 33-item presentation report had completed, but the
+wrapper stopped the process before all GUI fixtures finished. The process was
+confirmed terminal and all 99 substituted files were restored. The runner now
+provides a bounded per-design fixture allowance before simulated route time.
+This change is not a frame-performance relaxation and does not claim a p95
+performance result. A separate `--presentation-only` probe supports selected
+IDs for fast pose iteration. Its reports have a separate path and explicitly
+limited scope. The full ownership/GUI regression was run with the same tool
+geometry; final presentation-only checks cover the last TP-cant adjustment
+across all 33 candidates.
+
+[Workshop construction cards](../../../tools/item_designs/WORKSHOP_TOOLS.md)
+and [the checkpoint evidence](workshop-checkpoint/summary.json) document the
+sources, technical results, comparative sheets and selected native frames.
+Geometry tests compare actual position data independently of UV/texture bytes;
+uniqueness, triangle count and a successful draw are not artistic acceptance.
+The Windows Release workflow now runs the geometry/UV/design/workshop and
+restoration tests with checked exit codes. Its optional native profile also
+invokes the staged presentation probe and uploads the fresh evidence. The
+workflow YAML was parsed locally; no remote CI run is claimed.
+
 ## Remaining implementation, in order
 
 1. Native baseline and actual resource-path trace, before/after references and
@@ -320,8 +371,9 @@ and comparative performance acceptance are still required.
    instances must not mutate saved player property.
 6. Twelve pilots: stone_pickaxe, iron_pickaxe, copper_axe, gold_sword, iron_head,
    leather_chest, wood_bow, bucket, shears, apple, bread, raw_iron.
-7. Remaining models in waves: tools/weapons, utilities/containers, armor,
-   food/materials. Remove unrelated family aliases and color-only armor tiers.
+7. Finalize the 25 authored tool candidates and author the other 37 items:
+   remaining weapons, utilities/containers, armor and food/materials. Remove
+   unrelated family aliases and color-only armor tiers.
 8. Full native visual audit and performance acceptance. No final completion
    checkbox until every item and gameplay representation has evidence.
 

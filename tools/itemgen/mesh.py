@@ -57,6 +57,35 @@ def bevel_box(size, bevel, *, role="body", name="box"):
                     (-x,y-bevel),(-x,-y+bevel)),z,role=role,name=name)
 
 
+def blade(contour, depth, edge_depth, bevel_fraction=.18, *, role='body',
+          edge_role=None, name='blade'):
+    """Convex blade with a thick central web and bevels to its thin edge.
+
+    Both faces are constructed, not painted-on bevels. The web outline is a
+    homothetic inset, which stays convex and preserves the authored silhouette.
+    """
+    extrude(contour,depth,role=role,name=name)  # Validate winding/convexity.
+    if not math.isfinite(edge_depth) or not 0<edge_depth<depth:
+        raise ValueError('Blade edge thickness must be below web thickness')
+    if not math.isfinite(bevel_fraction) or not 0<bevel_fraction<.5:
+        raise ValueError('Blade bevel fraction must be between zero and .5')
+    cx=sum(p[0] for p in contour)/len(contour)
+    cy=sum(p[1] for p in contour)/len(contour)
+    inner=[(cx+(x-cx)*(1-bevel_fraction),cy+(y-cy)*(1-bevel_fraction)) for x,y in contour]
+    front=tuple((x,y,depth/2) for x,y in inner)
+    back=tuple((x,y,-depth/2) for x,y in inner)
+    outer_front=tuple((x,y,edge_depth/2) for x,y in contour)
+    outer_back=tuple((x,y,-edge_depth/2) for x,y in contour)
+    faces=[Face(front,role,name+'.front'),Face(tuple(reversed(back)),role,name+'.back')]
+    for i in range(len(contour)):
+        j=(i+1)%len(contour)
+        edge=edge_role or role
+        faces.extend((Face((outer_front[i],outer_front[j],front[j],front[i]),edge,name+f'.bevel{i}'),
+                      Face((outer_back[j],outer_back[i],back[i],back[j]),edge,name+f'.back_bevel{i}'),
+                      Face((outer_back[i],outer_back[j],outer_front[j],outer_front[i]),edge,name+f'.edge{i}')))
+    return faces
+
+
 def shell(size, thickness, *, role="body", name="shell"):
     """Open rectangular shell with bottom, inner walls and a closed top rim."""
     x,y,z = map(float,size)

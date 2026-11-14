@@ -1,0 +1,1288 @@
+[
+  {
+    "id": "wood_pickaxe",
+    "family": "pickaxe",
+    "material": "wood",
+    "triangles": 332,
+    "atlas_size": 256,
+    "density": 150,
+    "parts": [
+      "shaped_haft",
+      "grip_binding0",
+      "grip_binding1",
+      "grip_binding2",
+      "laminated_bridge",
+      "hardwood_point",
+      "hardwood_adze",
+      "cross_grain_spline",
+      "head_lashing_a",
+      "head_lashing_b",
+      "wooden_key"
+    ],
+    "source_sha256": "8ad4ed84f377c45ddca511586b356698748b006f1487edb6340063072c9eb899",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.67,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "stone_pickaxe",
+    "family": "pickaxe",
+    "material": "stone",
+    "triangles": 180,
+    "atlas_size": 256,
+    "density": 200,
+    "parts": [
+      "shaft",
+      "eye",
+      "knapped_bridge",
+      "chipped_pick",
+      "adze",
+      "grip_wrap0",
+      "grip_wrap1",
+      "grip_wrap2"
+    ],
+    "source_sha256": "ba1262b7b1e2e61eef38f452f5c2fe5ac65113ecad16da02fee405dbd631dfce",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.24,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.24,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.7,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "copper_pickaxe",
+    "family": "pickaxe",
+    "material": "copper",
+    "triangles": 324,
+    "atlas_size": 256,
+    "density": 150,
+    "parts": [
+      "shaped_haft",
+      "grip_binding0",
+      "grip_binding1",
+      "grip_binding2",
+      "cast_bridge",
+      "cast_point",
+      "broad_cast_adze",
+      "reinforcing_web",
+      "socket",
+      "socket_rivet0",
+      "socket_rivet1"
+    ],
+    "source_sha256": "5c34ee8bc7eda16267b00ab7988ce820e71c915e35942c6fef5ec081509f9ef5",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.67,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "iron_pickaxe",
+    "family": "pickaxe",
+    "material": "iron",
+    "triangles": 224,
+    "atlas_size": 256,
+    "density": 240,
+    "parts": [
+      "shaft",
+      "eye",
+      "forged_bridge",
+      "tapered_pick",
+      "chisel",
+      "wedge",
+      "grip_wrap0",
+      "grip_wrap1",
+      "grip_wrap2"
+    ],
+    "source_sha256": "5a552e80faaf6ccbc2df8396447d6d6c0f2d2accd8a82181223d3000ef8efc67",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.24,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.24,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.7,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "gold_pickaxe",
+    "family": "pickaxe",
+    "material": "gold",
+    "triangles": 360,
+    "atlas_size": 256,
+    "density": 150,
+    "parts": [
+      "shaped_haft",
+      "grip_binding0",
+      "grip_binding1",
+      "grip_binding2",
+      "grip_end_collar",
+      "slender_bridge",
+      "needle_pick",
+      "gold_chisel",
+      "decorative_spine",
+      "socket",
+      "lower_fine_collar",
+      "upper_fine_collar"
+    ],
+    "source_sha256": "0b152d1f168e539b33781717e2c51a8e5eac0229cd64624c25e3315506507fc9",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.67,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "wood_axe",
+    "family": "axe",
+    "material": "wood",
+    "triangles": 276,
+    "atlas_size": 256,
+    "density": 185,
+    "parts": [
+      "shaped_haft",
+      "grip_binding0",
+      "grip_binding1",
+      "grip_binding2",
+      "axe_cheek",
+      "blade_dowel",
+      "head_lashing_a",
+      "head_lashing_b",
+      "wooden_key"
+    ],
+    "source_sha256": "b81a24f8134e4f881a25443e21f7aafaa796d029a5b6d205e209e063380c6280",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.67,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "stone_axe",
+    "family": "axe",
+    "material": "stone",
+    "triangles": 268,
+    "atlas_size": 256,
+    "density": 185,
+    "parts": [
+      "shaped_haft",
+      "grip_binding0",
+      "grip_binding1",
+      "grip_binding2",
+      "axe_cheek",
+      "flaked_ear",
+      "head_lashing_a",
+      "head_lashing_b",
+      "wooden_key"
+    ],
+    "source_sha256": "ff5be812bd5ec9219b6e2973a109f7edf8af5096c01dc04794f6686668180bd6",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.67,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "copper_axe",
+    "family": "axe",
+    "material": "copper",
+    "triangles": 240,
+    "atlas_size": 256,
+    "density": 240,
+    "parts": [
+      "haft",
+      "broad_copper_cheek",
+      "polished_edge",
+      "socket",
+      "eye_wedge",
+      "wrap0",
+      "wrap1",
+      "wrap2",
+      "rivet0",
+      "rivet1"
+    ],
+    "source_sha256": "9c90da199b84022f02a924dcbe764d02de5449e5f76328d13eaac18adacb46d3",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.24,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.24,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.7,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "iron_axe",
+    "family": "axe",
+    "material": "iron",
+    "triangles": 272,
+    "atlas_size": 256,
+    "density": 185,
+    "parts": [
+      "shaped_haft",
+      "grip_binding0",
+      "grip_binding1",
+      "grip_binding2",
+      "axe_cheek",
+      "square_poll",
+      "forged_socket",
+      "socket_wedge"
+    ],
+    "source_sha256": "06f72ab508fcabbaf5d3352e2a463f95948c487a943e79213628346d26e878f2",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.67,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "gold_axe",
+    "family": "axe",
+    "material": "gold",
+    "triangles": 312,
+    "atlas_size": 256,
+    "density": 185,
+    "parts": [
+      "shaped_haft",
+      "grip_binding0",
+      "grip_binding1",
+      "grip_binding2",
+      "grip_end_collar",
+      "axe_cheek",
+      "cheek_inlay",
+      "socket",
+      "lower_fine_collar",
+      "upper_fine_collar"
+    ],
+    "source_sha256": "f86fb86a4e61244e799777e26b8e716f4b53acba61750d329d6c9e18592d9b0d",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.67,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "wood_shovel",
+    "family": "shovel",
+    "material": "wood",
+    "triangles": 340,
+    "atlas_size": 256,
+    "density": 185,
+    "parts": [
+      "shaped_haft",
+      "grip_binding0",
+      "grip_binding1",
+      "grip_binding2",
+      "dished_spade_web",
+      "left_spade_cheek",
+      "right_spade_cheek",
+      "spade_spine",
+      "head_lashing_a",
+      "head_lashing_b",
+      "wooden_key"
+    ],
+    "source_sha256": "44b2659619269341b44ed27cf0caa4567aaa90e882ee6bc406f4691abf171621",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.67,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "stone_shovel",
+    "family": "shovel",
+    "material": "stone",
+    "triangles": 340,
+    "atlas_size": 256,
+    "density": 185,
+    "parts": [
+      "shaped_haft",
+      "grip_binding0",
+      "grip_binding1",
+      "grip_binding2",
+      "dished_spade_web",
+      "left_spade_cheek",
+      "right_spade_cheek",
+      "spade_spine",
+      "head_lashing_a",
+      "head_lashing_b",
+      "wooden_key"
+    ],
+    "source_sha256": "96b1c61352af0cbab8ec89f46bcb75536a85c761f17ae4cd7db493a065d9e3c9",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.67,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "copper_shovel",
+    "family": "shovel",
+    "material": "copper",
+    "triangles": 340,
+    "atlas_size": 256,
+    "density": 185,
+    "parts": [
+      "shaped_haft",
+      "grip_binding0",
+      "grip_binding1",
+      "grip_binding2",
+      "dished_spade_web",
+      "left_spade_cheek",
+      "right_spade_cheek",
+      "spade_spine",
+      "socket",
+      "socket_rivet0",
+      "socket_rivet1"
+    ],
+    "source_sha256": "6886f355db241301d7f441494a4732a6de96b5c52b149e137d35e9bfa34c5902",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.67,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "iron_shovel",
+    "family": "shovel",
+    "material": "iron",
+    "triangles": 320,
+    "atlas_size": 256,
+    "density": 185,
+    "parts": [
+      "shaped_haft",
+      "grip_binding0",
+      "grip_binding1",
+      "grip_binding2",
+      "dished_spade_web",
+      "left_spade_cheek",
+      "right_spade_cheek",
+      "spade_spine",
+      "forged_socket",
+      "socket_wedge"
+    ],
+    "source_sha256": "051d8b30b423aba7a9d11623549a9c2ba9c5ace9fd7ed2ab5e6763e52ea3f5e4",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.67,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "gold_shovel",
+    "family": "shovel",
+    "material": "gold",
+    "triangles": 384,
+    "atlas_size": 256,
+    "density": 185,
+    "parts": [
+      "shaped_haft",
+      "grip_binding0",
+      "grip_binding1",
+      "grip_binding2",
+      "grip_end_collar",
+      "dished_spade_web",
+      "left_spade_cheek",
+      "right_spade_cheek",
+      "spade_spine",
+      "socket",
+      "lower_fine_collar",
+      "upper_fine_collar"
+    ],
+    "source_sha256": "88ae20d74b8517a24c55e374515f166f5ee6361f526d63532a8a8263d15c19fc",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.67,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "wood_hoe",
+    "family": "hoe",
+    "material": "wood",
+    "triangles": 256,
+    "atlas_size": 256,
+    "density": 185,
+    "parts": [
+      "shaped_haft",
+      "grip_binding0",
+      "grip_binding1",
+      "grip_binding2",
+      "angled_neck",
+      "hoe_working_blade",
+      "head_lashing_a",
+      "head_lashing_b",
+      "wooden_key"
+    ],
+    "source_sha256": "bc3f20516924538b199a2fd216ff5d791fac73bcac639453aaa529373577ed22",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.67,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "stone_hoe",
+    "family": "hoe",
+    "material": "stone",
+    "triangles": 256,
+    "atlas_size": 256,
+    "density": 185,
+    "parts": [
+      "shaped_haft",
+      "grip_binding0",
+      "grip_binding1",
+      "grip_binding2",
+      "angled_neck",
+      "hoe_working_blade",
+      "head_lashing_a",
+      "head_lashing_b",
+      "wooden_key"
+    ],
+    "source_sha256": "2b619353b4ead0d6ad76540e6d0d71c6923a6fbc1d5ec7834aa9683b7037db30",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.67,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "copper_hoe",
+    "family": "hoe",
+    "material": "copper",
+    "triangles": 284,
+    "atlas_size": 256,
+    "density": 185,
+    "parts": [
+      "shaped_haft",
+      "grip_binding0",
+      "grip_binding1",
+      "grip_binding2",
+      "angled_neck",
+      "hoe_working_blade",
+      "blade_tang",
+      "socket",
+      "socket_rivet0",
+      "socket_rivet1"
+    ],
+    "source_sha256": "9ec18aa3d251adaa4de0547ed0083e8267f49c2596b09195848e183ee7219c15",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.67,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "iron_hoe",
+    "family": "hoe",
+    "material": "iron",
+    "triangles": 272,
+    "atlas_size": 256,
+    "density": 185,
+    "parts": [
+      "shaped_haft",
+      "grip_binding0",
+      "grip_binding1",
+      "grip_binding2",
+      "angled_neck",
+      "hoe_working_blade",
+      "blade_tang",
+      "forged_socket",
+      "socket_wedge"
+    ],
+    "source_sha256": "4b16b7bcbffdad22f66e5179b52e30e1f8cfada2f69e4d64f6e10dbaebeff97a",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.67,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "gold_hoe",
+    "family": "hoe",
+    "material": "gold",
+    "triangles": 328,
+    "atlas_size": 256,
+    "density": 185,
+    "parts": [
+      "shaped_haft",
+      "grip_binding0",
+      "grip_binding1",
+      "grip_binding2",
+      "grip_end_collar",
+      "angled_neck",
+      "hoe_working_blade",
+      "blade_tang",
+      "socket",
+      "lower_fine_collar",
+      "upper_fine_collar"
+    ],
+    "source_sha256": "cac836c30935911ed66486079e8de87fd1d9ba509644de2ad5fde2e1ac7be2c8",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.67,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "wood_sword",
+    "family": "sword",
+    "material": "wood",
+    "triangles": 204,
+    "atlas_size": 256,
+    "density": 185,
+    "parts": [
+      "working_blade",
+      "grip_core",
+      "pommel",
+      "left_guard",
+      "right_guard",
+      "laminate_key"
+    ],
+    "source_sha256": "fe6cf89842d65b47c7bf968060f10118e9c945a75991f57206a023e9f776bda3",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.67,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "stone_sword",
+    "family": "sword",
+    "material": "stone",
+    "triangles": 240,
+    "atlas_size": 256,
+    "density": 185,
+    "parts": [
+      "working_blade",
+      "grip_core",
+      "pommel",
+      "left_guard",
+      "right_guard",
+      "blade_lashing0",
+      "blade_lashing1"
+    ],
+    "source_sha256": "e28e5698de5fb93443815a76cfbe5938d5c52e78f77cf59c37bf143c904afcbc",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.67,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "copper_sword",
+    "family": "sword",
+    "material": "copper",
+    "triangles": 200,
+    "atlas_size": 256,
+    "density": 185,
+    "parts": [
+      "working_blade",
+      "grip_core",
+      "pommel",
+      "left_guard",
+      "right_guard",
+      "back_fuller",
+      "front_fuller"
+    ],
+    "source_sha256": "a4994041241959e9f6aed47a2bb7dc66fca27a84be3afcc9de4bfc9c371bbcdf",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.67,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "iron_sword",
+    "family": "sword",
+    "material": "iron",
+    "triangles": 200,
+    "atlas_size": 256,
+    "density": 185,
+    "parts": [
+      "working_blade",
+      "grip_core",
+      "pommel",
+      "left_guard",
+      "right_guard",
+      "back_fuller",
+      "front_fuller"
+    ],
+    "source_sha256": "1db648617e4ca7fce5af637c72c7b0b632c4edc3d842e939874d95ffc5b406cb",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.22,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.67,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  },
+  {
+    "id": "gold_sword",
+    "family": "sword",
+    "material": "gold",
+    "triangles": 200,
+    "atlas_size": 256,
+    "density": 240,
+    "parts": [
+      "grip",
+      "pommel",
+      "blade",
+      "fuller",
+      "guard_left",
+      "guard_right",
+      "grip_band0",
+      "grip_band1",
+      "grip_band2"
+    ],
+    "source_sha256": "3d79691559f1340c31fd9c4fd70b8992d34be952a9186e1cab8ef10d0465a65e",
+    "presentation": {
+      "tp_euler_deg": [
+        -25,
+        0,
+        20
+      ],
+      "right_grip": [
+        0,
+        -0.24,
+        0
+      ],
+      "left_grip": [
+        0,
+        -0.24,
+        0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.68,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.65
+    },
+    "artistic_acceptance": "pending",
+    "external_source_files_used": false
+  }
+]

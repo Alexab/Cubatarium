@@ -1,9 +1,18 @@
 import unittest
-from itemgen.mesh import bevel_box
+from itemgen.mesh import Face, bevel_box
 from itemgen.surface_uv import pack
 
 
 class SurfaceUvTests(unittest.TestCase):
+    def test_authored_grain_axis_follows_world_direction(self):
+        face=Face(((-1,-2,0),(1,-2,0),(1,2,0),(-1,2,0)),role='wood')
+        island=pack([face],size=256,texels_per_metre=25,directions={'wood':[0,1,0]})[0]
+        # Movement along Y follows U; X follows V. Neither axis is stretched.
+        self.assertAlmostEqual(island.uv[2][0]-island.uv[1][0],100/256)
+        self.assertAlmostEqual(island.uv[1][1]-island.uv[0][1],-50/256)
+        for direction in ([0,0,0],[1,float('nan'),0],[0,1],None,[0,True,0]):
+            with self.assertRaises(ValueError): pack([face],size=256,texels_per_metre=25,directions={'wood':direction})
+
     def test_repeatable_nonoverlapping_islands(self):
         faces=bevel_box((.3,.6,.06),.02)
         a=pack(faces,size=256,texels_per_metre=80)

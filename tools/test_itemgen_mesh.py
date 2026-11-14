@@ -1,10 +1,24 @@
 """Geometry contracts for the item redesign; no runtime assets are rewritten."""
 import math
 import unittest
-from itemgen.mesh import bevel_box, extrude, shell, transform, triangulate, revolve, ring
+from itemgen.mesh import bevel_box, blade, extrude, shell, transform, triangulate, revolve, ring
 
 
 class MeshTests(unittest.TestCase):
+    def test_blade_web_edge_winding_and_closed_surface(self):
+        faces=blade(((-1,-2),(1,-2),(1,2),(-1,2)),.2,.02,edge_role='edge')
+        edges={}
+        for face in faces:
+            centre=[sum(p[i] for p in face.points)/len(face.points) for i in range(3)]
+            self.assertGreater(sum(a*b for a,b in zip(centre,face.normal())),0)
+            for a,b in zip(face.points,face.points[1:]+face.points[:1]):
+                key=tuple(sorted((a,b)));edges[key]=edges.get(key,0)+1
+        self.assertTrue(all(count==2 for count in edges.values()))
+        self.assertTrue(any(0<f.normal()[2]<1 for f in faces))
+        self.assertEqual({f.role for f in faces},{'body','edge'})
+        for depth,edge,fraction in ((.1,.2,.2),(.1,0,.2),(.1,.01,0),(.1,.01,.5)):
+            with self.assertRaises(ValueError): blade(((-1,-1),(1,-1),(0,1)),depth,edge,fraction)
+
     def test_hollow_ring_retains_its_open_center(self):
         faces=ring(.05,.03,.02)
         self.assertEqual(len(triangulate(faces)),64)

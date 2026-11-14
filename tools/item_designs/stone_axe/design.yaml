@@ -1,0 +1,232 @@
+version: 3
+id: stone_axe
+atlas_size: 256
+texels_per_metre: 185
+triangle_budget: 1200
+presentation:
+  tp_euler_deg:
+  - -25
+  - 0
+  - 20
+  right_grip:
+  - 0
+  - -0.22
+  - 0
+  left_grip:
+  - 0
+  - -0.22
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.67
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+  tp_scale: 1.65
+materials:
+  wood:
+    color:
+    - 109
+    - 69
+    - 37
+    pattern: wood
+    uv_direction:
+    - 0
+    - 1
+    - 0
+    grain_axis: u
+  binding:
+    color:
+    - 82
+    - 53
+    - 35
+    pattern: leather
+    seam: true
+  head:
+    color:
+    - 104
+    - 107
+    - 99
+    pattern: stone
+    metallic: 0
+    roughness: 0.8
+    marks: knapped
+  edge:
+    color:
+    - 134
+    - 137
+    - 129
+    pattern: plain
+    metallic: 0
+    roughness: 0.45
+  dark:
+    color:
+    - 63
+    - 74
+    - 80
+    pattern: plain
+    metallic: 0.5
+    roughness: 0.7
+parts:
+- name: shaped_haft
+  material: wood
+  shape: revolve
+  profile:
+  - - -0.39
+    - 0.025
+  - - -0.3
+    - 0.029
+  - - 0.13
+    - 0.023
+  - - 0.32
+    - 0.02
+  sides: 6
+  offset:
+  - 0
+  - 0
+  - 0
+- name: grip_binding0
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.059
+  - 0.022
+  - 0.057
+  bevel: 0.00396
+  offset:
+  - 0
+  - -0.19
+  - 0
+  rotation:
+  - 0
+  - 0
+  - -7
+- name: grip_binding1
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.059
+  - 0.022
+  - 0.057
+  bevel: 0.00396
+  offset:
+  - 0
+  - -0.24
+  - 0
+  rotation:
+  - 0
+  - 0
+  - -7
+- name: grip_binding2
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.059
+  - 0.022
+  - 0.057
+  bevel: 0.00396
+  offset:
+  - 0
+  - -0.29
+  - 0
+  rotation:
+  - 0
+  - 0
+  - -7
+- name: axe_cheek
+  material: head
+  shape: blade
+  contour:
+  - - -0.035
+    - 0.32
+  - - -0.025
+    - 0.17
+  - - 0.14
+    - 0.12
+  - - 0.27
+    - 0.22
+  - - 0.24
+    - 0.41
+  - - 0.1
+    - 0.45
+  depth: 0.07
+  offset:
+  - 0
+  - 0
+  - 0
+  edge_depth: 0.022400000000000003
+  bevel_fraction: 0.24
+  edge_material: edge
+- name: flaked_ear
+  material: edge
+  shape: extrude
+  contour:
+  - - 0.065
+    - 0.29
+  - - 0.09
+    - 0.18
+  - - 0.2
+    - 0.22
+  - - 0.14
+    - 0.32
+  depth: 0.012
+  offset:
+  - 0
+  - 0
+  - 0.039
+- name: head_lashing_a
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.088
+  - 0.019
+  - 0.08
+  bevel: 0.00342
+  offset:
+  - 0
+  - 0.20800000000000002
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 18
+- name: head_lashing_b
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.088
+  - 0.019
+  - 0.08
+  bevel: 0.00342
+  offset:
+  - 0
+  - 0.248
+  - 0
+  rotation:
+  - 0
+  - 0
+  - -18
+- name: wooden_key
+  material: wood
+  shape: bevel_box
+  size:
+  - 0.023
+  - 0.035
+  - 0.087
+  bevel: 0.00414
+  offset:
+  - 0
+  - 0.29000000000000004
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+authorship:
+  construction: Cubatarium workshop coordinate drawings
+  reference_kind: functional real-world archetypes
+  external_meshes: false
+  external_pixels: false

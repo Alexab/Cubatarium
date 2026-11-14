@@ -9,6 +9,18 @@ from itemgen.pipeline import load_materials
 from itemgen.raster import load_primitives, render
 
 class RasterTests(unittest.TestCase):
+    def test_gray_material_ignores_albedo_and_retains_shape_lighting(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder=Path(tmp)
+            write_gltf(folder,'gray',[dict(role='head',offset=[0,0,0],size=[.4,.4,.2])],load_materials()['iron'])
+            primitives=load_primitives(folder)
+            before=np.asarray(render(primitives,mode='gray',size=96))
+            for part in primitives:
+                part['factor']=np.array([.01,0,0,1])
+                part['texture'][:,:,:3]=[0,1,0]
+            np.testing.assert_array_equal(before,np.asarray(render(primitives,mode='gray',size=96)))
+            self.assertGreater(len(set(map(tuple,before.reshape(-1,4)))),2)
+
     def test_disconnected_boxes_in_one_primitive_keep_gap(self):
         with tempfile.TemporaryDirectory() as tmp:
             folder=Path(tmp)

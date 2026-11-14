@@ -19,6 +19,13 @@ Additional shapes: `revolve` (Y/radius profile, 3..16 sides) and `ring`
 XYZ rotation in degrees, pivot and positive taper are applied
 before uniform fitting into the unchanged gameplay physical envelope.
 
+`blade` uses a convex contour, web `depth`, thinner `edge_depth`,
+`bevel_fraction` and optional `edge_material` to construct sloping cutting
+bevels on both faces. A material `uv_direction` projects its preferred U axis
+onto each surface without mirroring or stretching; `grain_axis: u` aligns wood
+grain with that axis. `marks` selects restrained construction details on broad
+working faces. See [the workshop tool cards](WORKSHOP_TOOLS.md) for all 25 tools.
+
 Materials have an RGB color, pattern (plain/wood/leather/forged/hammered/stone/
 food/fiber/water), optional seam, metallic and roughness. Textures contain surface-local
 variation, not imported pixels. This is a base layer for authored work, not a
@@ -42,3 +49,8 @@ for the binding/attachment contract and candidate limitations, and the
 [Item Lab guide](ITEM_LAB.md) for read-only inspection and pose controls.
 Manual glTF import, publication and the remaining Item Lab presentations are
 still under development.
+
+Generate comparative sheets with `python tools/preview_item_designs.py`. Use
+`--read-staged` to inspect existing output without rebuilding; it refuses a
+staging directory whose recorded author-source hashes have changed. This is
+offline geometry inspection, separate from native acceptance.
