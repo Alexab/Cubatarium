@@ -64,7 +64,16 @@ def resolve_palette(
     return dict(materials[key])
 
 
-def build_item(item_id: str, *, publish: bool = True) -> Path:
+def guard_legacy_publication(item_id, *, models=None):
+    destination=Path(models or MODELS)/item_id/'model.gltf'
+    if destination.is_file():
+        current=json.loads(destination.read_text(encoding='utf-8'))
+        if current.get('extras',{}).get('design_version',0)>=3:
+            raise ValueError(f'{item_id}: versioned authored asset is protected; use publish-design')
+
+
+def build_item(item_id: str, *, publish: bool = False) -> Path:
+    if publish:guard_legacy_publication(item_id)
     materials = load_materials()
     recipe = load_recipe(item_id)
     family = str(recipe["family"])
@@ -142,6 +151,7 @@ def validate_item(item_id: str) -> dict:
 
 
 def publish_item(item_id: str) -> Path:
+    guard_legacy_publication(item_id)
     validate_item(item_id)
     recipe=load_recipe(item_id)
     staging=STAGING/item_id
@@ -223,7 +233,7 @@ def list_recipe_ids() -> list[str]:
     return sorted(p.stem for p in RECIPES.glob("*.yaml"))
 
 
-def build_all(*, publish: bool = True) -> list[str]:
+def build_all(*, publish: bool = False) -> list[str]:
     """Build every recipe. One failing item does not abort the run: the
     failure is reported and the rest keep building; the summary error is
     raised at the end so CI still fails."""

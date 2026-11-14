@@ -3,6 +3,7 @@ from pathlib import Path
 import hashlib
 import json
 import math
+import tempfile
 import yaml
 
 from itemgen.mesh import Face, bevel_box, blade, extrude, shell, tube, transform, revolve, ring
@@ -13,7 +14,7 @@ from itemgen.wear_sections import prepare_sections
 ROOT=Path(__file__).resolve().parents[2]
 
 
-def build_design(item_id, *, root=ROOT, output=None):
+def _build_design(item_id, *, root=ROOT, output=None):
     if not item_id or any(c not in 'abcdefghijklmnopqrstuvwxyz0123456789_' for c in item_id):
         raise ValueError('Invalid item ID')
     source=root/'tools/item_designs'/item_id
@@ -73,4 +74,44 @@ def build_design(item_id, *, root=ROOT, output=None):
     if triangles>recipe['triangle_budget']: raise ValueError('Item exceeds triangle budget')
     sources={p.relative_to(root).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(source.rglob('*')) if p.is_file()}
     (destination/'design_build.json').write_text(json.dumps(dict(id=item_id,version=3,triangles=triangles,sources=sources,physical_fit=dict(scale=scale,centre=centre)),indent=2)+'\n',encoding='utf-8')
+    return destination
+
+
+def build_design(item_id, *, root=ROOT, output=None):
+    """Build/validate privately, then replace staging; failed work keeps last output."""
+    from itemgen.artifact_contract import validate_model,digest
+    from itemgen.filesystem import replace_path
+    root=Path(root).resolve()
+    if not item_id or any(c not in 'abcdefghijklmnopqrstuvwxyz0123456789_' for c in item_id):raise ValueError('Invalid item ID')
+    destination=Path(output or root/'assetgen_output/items/redesign'/item_id).resolve()
+    if root.is_relative_to(destination) or (destination.is_relative_to(root) and not destination.is_relative_to(root/'assetgen_output')):
+        raise ValueError('Staging cannot overwrite author sources or runtime')
+    destination.parent.mkdir(parents=True,exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='.itemgen-build-',dir=destination.parent) as temp:
+        staged=Path(temp)/'next'
+        _build_design(item_id,root=root,output=staged)
+        recipe=yaml.safe_load((root/'tools/item_designs'/item_id/'design.yaml').read_text(encoding='utf-8'))
+        validated=validate_model(staged,budget=recipe['triangle_budget'])
+        record=json.loads((staged/'design_build.json').read_text(encoding='utf-8'))
+        definition=root/'content/items'/f'{item_id}.json'
+        record['definition']={definition.relative_to(root).as_posix():digest(definition)}
+        record['generator']={'version':3,'sha256':{p.relative_to(ROOT).as_posix():digest(p) for p in sorted([*(ROOT/'tools/itemgen').glob('*.py'),ROOT/'shaders/item_surface.vert',ROOT/'shaders/item_surface.frag'])}}
+        provenance=root/'tools/item_designs/provenance.json'
+        if provenance.is_file():
+            entry=json.loads(provenance.read_text(encoding='utf-8'))['items'][item_id]
+            record['sources'][provenance.relative_to(root).as_posix()]=digest(provenance)
+            (staged/'ATTRIBUTION.json').write_text(json.dumps(entry,indent=2)+'\n',encoding='utf-8')
+        license=root/'LICENSE'
+        if license.is_file():
+            record['sources']['LICENSE']=digest(license)
+            (staged/'LICENSE.txt').write_bytes(license.read_bytes())
+        record['outputs']={p.relative_to(staged).as_posix():digest(p) for p in sorted(staged.rglob('*')) if p.is_file() and p.name!='design_build.json'}
+        record['validated_resources']=validated['resources']
+        (staged/'design_build.json').write_text(json.dumps(record,indent=2)+'\n',encoding='utf-8')
+        backup=Path(temp)/'previous'
+        if destination.exists():replace_path(destination,backup)
+        try:replace_path(staged,destination)
+        except BaseException:
+            if backup.exists():replace_path(backup,destination)
+            raise
     return destination

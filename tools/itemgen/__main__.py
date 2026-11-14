@@ -20,12 +20,28 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Cubatarium original item mesh generator")
     ap.add_argument(
         "command",
-        choices=["list", "build", "build-design", "seed-workshop", "seed-supplies", "seed-armor", "build-all", "validate", "publish", "preview", "preview-all", "audit"],
+        choices=["list", "build", "build-design", "validate-design", "publish-design", "recover-publication", "seed-workshop", "seed-supplies", "seed-armor", "build-all", "validate", "publish", "preview", "preview-all", "audit"],
     )
     ap.add_argument("--id", help="item id for build/preview")
     ap.add_argument("--family", help="family for preview sheet")
     ap.add_argument("--staging-only", action="store_true")
+    ap.add_argument("--all", action="store_true",help="Select all authored designs for versioned validation/publication")
     args = ap.parse_args(argv)
+
+    if args.command == 'recover-publication':
+        from itemgen.design_publication import recover_publication
+        print(recover_publication())
+        return 0
+    if args.command in ('validate-design','publish-design'):
+        from itemgen.design_publication import validate_design,publish_designs
+        if bool(args.id)==bool(args.all):ap.error('Choose --id or --all')
+        ids=[args.id] if args.id else sorted(p.parent.name for p in (_TOOLS/'item_designs').glob('*/design.yaml'))
+        if args.command=='publish-design':print(publish_designs(ids))
+        else:
+            for id in ids:
+                result=validate_design(id)
+                print(f"VALIDATED {id}: {result['triangles']} triangles")
+        return 0
 
     if args.command == "seed-workshop":
         from itemgen.workshop_designs import seed_missing
@@ -60,11 +76,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "build":
         if not args.id:
             ap.error("--id required for build")
-        path = build_item(args.id, publish=not args.staging_only)
+        path = build_item(args.id, publish=False)
         print(f"WROTE {path}")
         return 0
     if args.command == "build-all":
-        done = build_all(publish=not args.staging_only)
+        done = build_all(publish=False)
         print(f"Done. {len(done)} item(s).")
         return 0
     if args.command == "preview":

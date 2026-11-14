@@ -15,6 +15,12 @@ if(NOT EXISTS "${SYNC_SRC}")
   return()
 endif()
 
+# Never package a mixed item generation after an interrupted publication.
+if(EXISTS "${SYNC_SRC}/items/PUBLICATION_TRANSACTION.json" OR
+   EXISTS "${SYNC_SRC}/PUBLICATION_TRANSACTION.json")
+  message(FATAL_ERROR "Unfinished item publication: run python tools/itemgen.py recover-publication before syncing runtime models")
+endif()
+
 file(MAKE_DIRECTORY "${SYNC_DST}")
 
 if(DEFINED SYNC_MIRROR AND SYNC_MIRROR)

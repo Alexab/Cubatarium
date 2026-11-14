@@ -1,0 +1,1125 @@
+{
+  "version": 1,
+  "items": {
+    "apple": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/apple/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/PILOTS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "arrow": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/arrow/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "bread": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/bread/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/PILOTS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "bucket": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/bucket/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/PILOTS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "charcoal": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/charcoal/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "coal": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/coal/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "cooked_meat": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/cooked_meat/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "copper_axe": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/copper_axe/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "copper_chest": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/copper_chest/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/ARMOR.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "copper_feet": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/copper_feet/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/ARMOR.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "copper_head": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/copper_head/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/ARMOR.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "copper_hoe": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/copper_hoe/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "copper_ingot": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/copper_ingot/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "copper_legs": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/copper_legs/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/ARMOR.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "copper_pickaxe": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/copper_pickaxe/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "copper_shovel": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/copper_shovel/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "copper_sword": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/copper_sword/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "cord": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/cord/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "flint_and_steel": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/flint_and_steel/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "gold_axe": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/gold_axe/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "gold_chest": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/gold_chest/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/ARMOR.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "gold_feet": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/gold_feet/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/ARMOR.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "gold_head": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/gold_head/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/ARMOR.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "gold_hoe": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/gold_hoe/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "gold_ingot": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/gold_ingot/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "gold_legs": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/gold_legs/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/ARMOR.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "gold_pickaxe": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/gold_pickaxe/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "gold_shovel": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/gold_shovel/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "gold_sword": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/gold_sword/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "grain": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/grain/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "iron_axe": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/iron_axe/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "iron_chest": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/iron_chest/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/ARMOR.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "iron_feet": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/iron_feet/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/ARMOR.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "iron_head": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/iron_head/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/ARMOR.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "iron_hoe": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/iron_hoe/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "iron_ingot": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/iron_ingot/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "iron_legs": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/iron_legs/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/ARMOR.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "iron_pickaxe": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/iron_pickaxe/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "iron_shield": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/iron_shield/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "iron_shovel": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/iron_shovel/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "iron_sword": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/iron_sword/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "leather": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/leather/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "leather_chest": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/leather_chest/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/ARMOR.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "leather_feet": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/leather_feet/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/ARMOR.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "leather_head": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/leather_head/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/ARMOR.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "leather_legs": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/leather_legs/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/ARMOR.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "plant_fiber": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/plant_fiber/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "raw_copper": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/raw_copper/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "raw_gold": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/raw_gold/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "raw_iron": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/raw_iron/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/PILOTS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "raw_meat": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/raw_meat/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "seeds": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/seeds/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "shears": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/shears/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/PILOTS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "stick": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/stick/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "stone_axe": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/stone_axe/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "stone_hoe": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/stone_hoe/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "stone_pickaxe": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/stone_pickaxe/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "stone_shovel": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/stone_shovel/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "stone_sword": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/stone_sword/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "waterskin": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/waterskin/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "wood_axe": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/wood_axe/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "wood_bow": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/wood_bow/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/PILOTS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "wood_hoe": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/wood_hoe/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "wood_pickaxe": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/wood_pickaxe/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "wood_shield": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/wood_shield/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "wood_shovel": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/wood_shovel/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "wood_spear": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/wood_spear/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "wood_sword": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/wood_sword/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "wood_torch": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/wood_torch/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    },
+    "wool": {
+      "geometry": {
+        "method": "project-authored coordinate recipe",
+        "source": "tools/item_designs/wool/design.yaml",
+        "external_mesh_inputs": []
+      },
+      "texture": {
+        "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+        "external_pixel_inputs": []
+      },
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "license": "MIT",
+      "license_source": "LICENSE",
+      "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+    }
+  }
+}

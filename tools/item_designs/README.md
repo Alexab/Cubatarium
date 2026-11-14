@@ -8,7 +8,9 @@ python tools/itemgen.py build-design --id bucket
 
 Output is `assetgen_output/items/redesign/<id>`. The command does not publish,
 retarget gameplay definitions or rewrite the current runtime asset manifest.
-Legacy recipe build/publish behavior is retained during migration.
+All generation commands now stage by default. Versioned validation/publication,
+transaction recovery and protection from legacy overwrites are documented in
+[the publication guide](PUBLICATION.md).
 
 `<id>/design.yaml` declares version 3, existing item ID, atlas_size (128/256/512),
 texels_per_metre, triangle_budget, named materials and parts. Every part has a
@@ -44,7 +46,8 @@ pixels replace it. Regeneration reads but never modifies those source images.
 Changing geometry or density can change a required overlay size, in which case
 the build fails with the surface name instead of silently resampling the image.
 
-`design_build.json` records source hashes and triangle count. glTF normals are
+`design_build.json` freezes source, generator, shader, gameplay-definition and
+output hashes as well as triangle count. glTF normals are
 flat per face; material properties use standard glTF 2.0 fields. Presentation
 metadata supplies right_grip, left_grip, fp_euler_deg, fp_scale, fp_hand_offset
 and icon_euler_deg. Contact anchors follow the physical fitting transformation;
@@ -55,8 +58,9 @@ for the binding/attachment contract and candidate limitations, and the
 [Item Lab guide](ITEM_LAB.md) for read-only inspection and pose controls.
 See [equipment and supply cards](SUPPLIES.md) for the new weapon, utility,
 container, food and material constructions and the supported emission factor.
-Manual glTF import, publication and the remaining Item Lab presentations are
-still under development.
+Manual glTF import and the remaining Item Lab presentations are still under
+development. Publication is available as a separate validated transaction;
+production promotion remains part of final acceptance.
 
 Generate comparative sheets with `python tools/preview_item_designs.py`. Use
 `--read-staged` to inspect existing output without rebuilding; it refuses a

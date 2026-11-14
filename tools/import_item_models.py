@@ -165,6 +165,8 @@ def import_from_pack(
             continue
 
         dest_dir = MODELS / item_id
+        from itemgen.pipeline import guard_legacy_publication
+        guard_legacy_publication(item_id,models=MODELS)
         dest = dest_dir / "model.gltf"
         print(f"{'DRY ' if dry_run else ''}COPY {src} -> {dest}")
         if not dry_run:
@@ -242,7 +244,10 @@ def main() -> None:
             "or pass --list here to only inspect the manifest."
         )
     manifest = ensure_manifest()
-    if args.list or not args.pack_root:
+    if args.list:
+        list_items(manifest)
+        return
+    if not args.pack_root:
         list_items(manifest)
         if not args.pack_root:
             print("\nPass --source-id <id> --pack-root <extracted_pack> to import.")

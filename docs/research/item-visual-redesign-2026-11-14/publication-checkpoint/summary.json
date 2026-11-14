@@ -1,0 +1,60 @@
+{
+  "passed": true,
+  "status": "partial_versioned_publication_and_provenance_checkpoint",
+  "authored_count": 70,
+  "validated_count": 70,
+  "production_v3_count": 0,
+  "tests": {
+    "test_itemgen_publication": 2,
+    "test_itemgen_design_publication": 7,
+    "test_itemgen_artifact_contract": 3,
+    "test_itemgen_design": 8,
+    "test_item_design_probes": 4
+  },
+  "total_python_tests": 24,
+  "native_selected_ids": [
+    "bucket",
+    "copper_legs",
+    "iron_head",
+    "iron_pickaxe"
+  ],
+  "native_presentation_checks": 167,
+  "runtime_files_verified_restored": 210,
+  "probe_runtime_files_restored": 12,
+  "executable_sha256": "916a1eb90c9190632506dc10f062ec95384ab45322413ff3dee68b97e6d65df9",
+  "crash_tests": [
+    "separate process exits before manifest commit: previous bytes restored",
+    "separate process exits after manifest commit: new generation retained",
+    "corrupt recovery snapshot: no further mutation"
+  ],
+  "limitations": [
+    "No production promotion or final artistic/performance acceptance.",
+    "Manual glTF source import remains open.",
+    "Item Lab still needs packaged-reference wiring and full presentation/thumbnail/contact views.",
+    "Current resource contract rejects non-clamp/non-trilinear atlas samplers; conversion is not implemented.",
+    "Transactions cover process interruption, not a power-loss durability certification.",
+    "No remote CI execution."
+  ],
+  "files_sha256": {
+    "all-item-contracts.json": "89bb03663f2e8ff03f87dae51221adb7bd491fd87027edc331e2e6942a6944e1",
+    "build-all.log": "b24602eb0a7d8ccfb9cc1ca0f756f3ab43acbea1396ec92ceeb8ca2e20d9170a",
+    "desktop-release.log": "3ab722b186bed620c72bfb9a39c6a3de2c73063385ecae1cae7217efb8a2d1ab",
+    "includes.log": "3e02176a66e9887c36635120171a991d151d94d59b878f50006ea97853cbd6c9",
+    "native/bucket-fp-male-right.png": "96b011e598745cd719c134c232413536e9d162bf974fc9ba856d75152fa50444",
+    "native/copper_legs-female-armor-1.png": "c899720b34439b086c8125d33376c8e79a5af9548d3d9abe6a00295b43de91c8",
+    "native/copper_legs-male-armor-0.png": "3e94b57b3ab58a5f42b8625e80448f8b6b83b4eaa5539f16c2dbd693a012119b",
+    "native/iron_head-female-armor-1.png": "6a1ec3c26c0662b4e77305d2a60760aeac8ae89cca4cdd898ba0ef982b25bc80",
+    "native/iron_head-male-armor-0.png": "316c7a5b312692b8e1d4292c4af0b265393b08ed189c6a1b89c2432ad0a3f171",
+    "native/iron_pickaxe-fp-male-right.png": "b3982e0e5cfd9f31e515d6ddfc2a108d7af056bf597e2873ec6c303a6c03c341",
+    "native-presentations.json": "8a28a088fd975e1a3bbe0d62bac2a080d8cb590a6ad22b4ff8de59c919238393",
+    "native-probes.log": "09a6a6107d0d391e16d54e714a0db88cf5dc8c42ca88571e5d7f91a937b15985",
+    "presentation-probe.json": "8721ee4261ac59eb9c3d72ea9854c4872831143c31e45bc47aae45deb099eba2",
+    "style.log": "7b00bf7ed2d292a49c34b6aa610a5f9c00e46637a909909cdd9e7eff91839996",
+    "test_item_design_probes.log": "52dc34f8908e620856fd054ce0415e180eece8d1e6ebc6716a3187063bdc686b",
+    "test_itemgen_artifact_contract.log": "5c488b17301d5a8f1eaaee586a5b9e376802462702af251630e09800805871a3",
+    "test_itemgen_design.log": "a434865353dd414420f459fa4036d5f7941539a02b1119865ee752e95e644ba1",
+    "test_itemgen_design_publication.log": "3873b412a3207bb2f5c088c332413cb9ba2ae3757ac8c15811f5dc83029a7fe5",
+    "test_itemgen_publication.log": "d9fbf2df4b27227ed07f89f2e001e8e225cfa9415ad095184951945b5e5c6044",
+    "validate-all-cli.log": "c17aa0aab8ff1d7dfc1c1fa1d78f1f1aba1fa31843792f7ab9220fd3dab12feb"
+  }
+}

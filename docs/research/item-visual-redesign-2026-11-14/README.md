@@ -492,13 +492,44 @@ CI was run, and no performance or final artistic acceptance is claimed. The
 current item atlas sampler uses linear/trilinear clamp; general imported sampler
 settings still need support or explicit rejection before import/publication.
 
+## Versioned publication and provenance checkpoint, 2026-11-15
+
+All 70 candidates now pass a fail-closed publication contract: real geometry,
+unit normals/winding, UVs, index/buffer bounds, node hierarchy, materials,
+explicit atlas sampler and budgets. Generation validates a private directory
+before replacing staging. Build records freeze authored sources/layers,
+provenance/license, gameplay definition, generator modules, item shaders and
+output hashes. Generation commands stage by default; old publication/import
+paths reject authored v3 destinations. Current production geometry stays legacy.
+
+The versioned publisher preserves grip/wear/other author sidecars and installs
+all selected items under a writer lock and recovery journal. The manifest is
+the commit marker. The first replacement retains the full prior resource,
+including its original attribution, for packaged old/new comparison. Actual
+separate Python processes are terminated before and after commit in tests:
+recovery restores the prior byte contents or retains the completed generation.
+A corrupt recovery snapshot fails without further mutation. Runtime sync refuses
+an unfinished journal. A transient Windows rename failure observed during the
+70-item build is handled with bounded retries, never deleting a locked target.
+
+The [publication guide](../../../tools/item_designs/PUBLICATION.md) documents
+commands, supported subset, recovery and remaining import/Lab integration.
+[Explicit origin records](../../../tools/item_designs/provenance.json) cover
+all 70; geometry/texturing origin and pending visual-independence review are
+separate fields, without an automatic originality stamp. See
+[checkpoint evidence](publication-checkpoint/summary.json) for source/transaction
+tests, all-item validation, incremental Release build and scoped native probes.
+This checkpoint does not publish the candidates or close final artistic,
+performance, manual-import or full Item Lab requirements.
+
 ## Remaining implementation, in order
 
 1. Native baseline and actual resource-path trace, before/after references and
    individual design cards. No claim of direct Luanti mesh copying is established.
-2. Finish the versioned design adapter and surface glTF exporter with animated
-   nodes/pivots, manual glTF import and preserved authored overrides.
-   Build to staging; validate and publish separately; preserve sidecars and layers.
+2. Implement the remaining manual glTF source import on the versioned artifact
+   contract. Authored generation, separate validation/publication, crash recovery
+   and source/sidecar preservation now have coverage. Wire the archived prior
+   resource into Item Lab before production promotion.
 3. Surface-space painted layers and authored overlays: base, broad variation,
    construction detail, manufacturing marks. 128 small materials, 256 hand items,
    512 armor. Albedo and optional standard metallic/roughness parameters.
@@ -526,8 +557,9 @@ factors. Also close these known integration gaps: share the final arrow
 resource with the bow's temporary nocked-arrow geometry; project the full
 consume-duration/cancel state into presentations; and complete carry/two-hand
 contact wiring. The sRGB filtering and cold disk-icon dependency problems are
-covered by the newer checkpoint above. General imported sampler handling,
-resource publication and measured performance remain open.
+covered by the newer checkpoint above. General imported sampler conversion,
+manual source import, final publication acceptance and measured performance
+remain open.
 
 
 ## Acceptance contract

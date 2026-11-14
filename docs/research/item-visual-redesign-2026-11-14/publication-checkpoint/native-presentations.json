@@ -1,0 +1,764 @@
+{
+  "checks": [
+    {
+      "name": "item renderer initializes",
+      "passed": true
+    },
+    {
+      "name": "color fixture PNG writes",
+      "passed": true
+    },
+    {
+      "name": "albedo path aliases share texture",
+      "passed": true
+    },
+    {
+      "name": "item albedo uses sRGB storage and complete mip chain",
+      "passed": true
+    },
+    {
+      "name": "mip average is linear-light black and white",
+      "passed": true
+    },
+    {
+      "name": "bilinear sampling precedes display encoding",
+      "passed": true
+    },
+    {
+      "name": "linear material factor applies once",
+      "passed": true
+    },
+    {
+      "name": "state preview renderer initializes",
+      "passed": true
+    },
+    {
+      "name": "bucket FP male right",
+      "passed": true
+    },
+    {
+      "name": "bucket FP male left",
+      "passed": true
+    },
+    {
+      "name": "bucket FP female right",
+      "passed": true
+    },
+    {
+      "name": "bucket FP female left",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-0 orbit",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-0 TP male right",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-0 TP male left",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-0 FP male",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-0 TP female right",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-0 TP female left",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-0 FP female",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-1 orbit",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-1 TP male right",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-1 TP male left",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-1 FP male",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-1 TP female right",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-1 TP female left",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-1 FP female",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-2 orbit",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-2 TP male right",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-2 TP male left",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-2 FP male",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-2 TP female right",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-2 TP female left",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-2 FP female",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-3 orbit",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-3 TP male right",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-3 TP male left",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-3 FP male",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-3 TP female right",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-3 TP female left",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-3 FP female",
+      "passed": true
+    },
+    {
+      "name": "bucket active state changes rendered pixels",
+      "passed": true
+    },
+    {
+      "name": "bucket cancellation restores rendered pixels",
+      "passed": true
+    },
+    {
+      "name": "bucket-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_legs FP male right",
+      "passed": true
+    },
+    {
+      "name": "copper_legs FP male left",
+      "passed": true
+    },
+    {
+      "name": "copper_legs FP female right",
+      "passed": true
+    },
+    {
+      "name": "copper_legs FP female left",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-male-armor-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-male-armor-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-male-armor-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-male-armor-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-female-armor-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-female-armor-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-female-armor-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-female-armor-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_legs-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head FP male right",
+      "passed": true
+    },
+    {
+      "name": "iron_head FP male left",
+      "passed": true
+    },
+    {
+      "name": "iron_head FP female right",
+      "passed": true
+    },
+    {
+      "name": "iron_head FP female left",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-armor-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-armor-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-armor-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-armor-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-armor-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-armor-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-armor-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-armor-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe FP male right",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe FP male left",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe FP female right",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe FP female left",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "all requested item surfaces inspected",
+      "passed": true
+    }
+  ],
+  "color_pipeline": {
+    "filtered_encoded_rgb": 188,
+    "half_factor_encoded_rgb": 137,
+    "mip_encoded_rgb": 188
+  },
+  "inventory_unchanged": true,
+  "passed": true,
+  "scope": "synthetic native attachments and loose item submissions",
+  "state_ids": [
+    "bucket"
+  ],
+  "surface_count": 4,
+  "surface_ids": [
+    "bucket",
+    "copper_legs",
+    "iron_head",
+    "iron_pickaxe"
+  ],
+  "wear_geometry": {
+    "copper_legs-female-armor-0": {
+      "draws": 5,
+      "minimum_y": 0.11142349243164063,
+      "roots": [
+        "left_shin",
+        "left_thigh",
+        "right_shin",
+        "right_thigh",
+        "waist"
+      ]
+    },
+    "copper_legs-female-armor-1": {
+      "draws": 5,
+      "minimum_y": -0.017295271158218384,
+      "roots": [
+        "left_shin",
+        "left_thigh",
+        "right_shin",
+        "right_thigh",
+        "waist"
+      ]
+    },
+    "copper_legs-male-armor-0": {
+      "draws": 5,
+      "minimum_y": 0.11142349243164063,
+      "roots": [
+        "left_shin",
+        "left_thigh",
+        "right_shin",
+        "right_thigh",
+        "waist"
+      ]
+    },
+    "copper_legs-male-armor-1": {
+      "draws": 5,
+      "minimum_y": -0.017295271158218384,
+      "roots": [
+        "left_shin",
+        "left_thigh",
+        "right_shin",
+        "right_thigh",
+        "waist"
+      ]
+    },
+    "iron_head-female-armor-0": {
+      "draws": 1,
+      "minimum_y": 1.548132300376892,
+      "roots": [
+        "helmet"
+      ]
+    },
+    "iron_head-female-armor-1": {
+      "draws": 1,
+      "minimum_y": 1.4525372982025146,
+      "roots": [
+        "helmet"
+      ]
+    },
+    "iron_head-male-armor-0": {
+      "draws": 1,
+      "minimum_y": 1.548132300376892,
+      "roots": [
+        "helmet"
+      ]
+    },
+    "iron_head-male-armor-1": {
+      "draws": 1,
+      "minimum_y": 1.4525372982025146,
+      "roots": [
+        "helmet"
+      ]
+    }
+  }
+}

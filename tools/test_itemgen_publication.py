@@ -15,7 +15,7 @@ class PublicationTests(unittest.TestCase):
             root=Path(temp);id="iron_head"
             for relative in [f"content/items/{id}.json",f"tools/item_recipes/{id}.yaml",*DEPENDENCIES]:
                 target=root/relative;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(ROOT/relative,target)
-            dest=root/"models/items"/id;shutil.copytree(ROOT/"models/items"/id,dest)
+            dest=root/"models/items"/id;dest.mkdir(parents=True)
             (dest/"wield_grip.json").write_text('{"artist":true}',encoding="utf-8")
             (dest/"wear.json").write_text('{"artist_wear":true}',encoding="utf-8")
             definition=root/"content/items"/(id+".json");data=json.loads(definition.read_text());data["visual"]["wield_offset"]=[.11,.22,.33];definition.write_text(json.dumps(data))

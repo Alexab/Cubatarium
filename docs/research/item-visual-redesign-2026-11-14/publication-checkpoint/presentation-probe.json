@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "scope": "presentation_only",
+  "world": "CarryAimQA",
+  "staged_ids": [
+    "bucket",
+    "copper_legs",
+    "iron_head",
+    "iron_pickaxe"
+  ],
+  "inspected_surface_ids": [
+    "bucket",
+    "copper_legs",
+    "iron_head",
+    "iron_pickaxe"
+  ],
+  "presentation_checks": 167,
+  "restored_runtime_files": 12,
+  "executable_sha256": "916a1eb90c9190632506dc10f062ec95384ab45322413ff3dee68b97e6d65df9"
+}
