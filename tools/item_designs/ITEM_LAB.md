@@ -12,10 +12,13 @@ player property.
 
 Search filters all catalog item IDs. Drag either preview to rotate both. The
 mode button cycles lit, silhouette, gray material, albedo, UV checker, normals and
-wireframe. Studio/Dim/Bright adjusts ambient lighting. Reload clears preview,
+wireframe. Studio/Dim/Bright adjusts ambient lighting. Rest/Half/Peak drives the authored
+visual channels: bow draw, a successful-use pulse and container filling. These
+are test snapshots and do not perform the corresponding gameplay action.
+Reload clears preview,
 surface and texture caches and notifies game visual caches. It does not reload
 item definitions or change gameplay balance. Export writes 512-pixel PNGs and a
-JSON source-path/camera report to `bin/item_lab_exports`.
+JSON source-path/camera/pose report to `bin/item_lab_exports`.
 
 Old resources without normals receive computed normals only in this inspection
 path. A declared v3 candidate must pass the same normal validation as production.
@@ -28,5 +31,5 @@ It checks all published items, seven candidate modes, six resolution/scale
 combinations, pointer switching, closing and unchanged player inventory.
 
 This initial studio is an orbit comparison screen. Dedicated FP/TP/ground and
-both-body armor scenes, gameplay-state controls, contacts/bounds overlays and
+both-body armor scenes, contacts/bounds overlays and
 32/48/64-pixel icon inspection are still required by the full redesign plan.

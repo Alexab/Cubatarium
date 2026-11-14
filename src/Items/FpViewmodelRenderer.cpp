@@ -957,7 +957,7 @@ void UFpViewmodelRenderer::DrawHeld(const InventoryEntryRef *entry,
   }
   if (entry->kind == InventoryEntryKind::Item && !entry->broken)
   {
-    if (!TryDrawGltfHeld(entry->Id, socket, mvpBase))
+    if (!TryDrawGltfHeld(*entry, socket, mvpBase))
     {
       DrawParts(ToolParts(entry->Id, socket), mvpBase, 0);
     }
@@ -969,10 +969,11 @@ void UFpViewmodelRenderer::DrawHeld(const InventoryEntryRef *entry,
   }
 }
 
-bool UFpViewmodelRenderer::TryDrawGltfHeld(const std::string &itemId,
+bool UFpViewmodelRenderer::TryDrawGltfHeld(const InventoryEntryRef &entry,
                                            const glm::vec3 &socket,
                                            const glm::mat4 &mvpBase)
 {
+  const auto &itemId = entry.Id;
   if (!Items || !Shader || itemId.empty())
   {
     return false;
@@ -1034,6 +1035,7 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const std::string &itemId,
       cache;
   static uint64_t cacheRevision = 0;
   std::shared_ptr<CreatureGltfMeshAsset> asset;
+  if (!surface)
   {
     std::lock_guard<std::mutex> lock(cacheMu);
     SyncItemModelCache(cache, cacheRevision);
@@ -1052,30 +1054,33 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const std::string &itemId,
       }
     }
   }
-  if (!asset || asset->primitives.empty())
+  if (!surface && (!asset || asset->primitives.empty()))
   {
     return false;
   }
 
   glm::vec3 minV(1e9f), maxV(-1e9f);
-  for (const GltfPrimitiveCpu &prim : asset->primitives)
-  {
-    const auto &posUv = prim.mesh.interleavedPosUv;
-    for (size_t i = 0; i + 4 < posUv.size(); i += 5)
+  if (asset)
+    for (const GltfPrimitiveCpu &prim : asset->primitives)
     {
-      const glm::vec3 p(posUv[i], posUv[i + 1], posUv[i + 2]);
-      minV = glm::min(minV, p);
-      maxV = glm::max(maxV, p);
+      const auto &posUv = prim.mesh.interleavedPosUv;
+      for (size_t i = 0; i + 4 < posUv.size(); i += 5)
+      {
+        const glm::vec3 p(posUv[i], posUv[i + 1], posUv[i + 2]);
+        minV = glm::min(minV, p);
+        maxV = glm::max(maxV, p);
+      }
     }
-  }
-  if (minV.x > maxV.x)
+  if (!surface && minV.x > maxV.x)
   {
     return false;
   }
   if (surface)
   {
-    minV = surface->Low;
-    maxV = surface->High;
+    const auto bounds =
+        ItemVisualBounds(*surface, EvaluateItemVisualState(*surface, {}));
+    minV = bounds.first;
+    maxV = bounds.second;
   }
   const glm::vec3 center = (minV + maxV) * 0.5f;
   const glm::vec3 ext = maxV - minV;
@@ -1113,6 +1118,10 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const std::string &itemId,
     }
     fitExtent = std::max(1e-5f, fitExtent);
   }
+  // Legacy fit axes describe the old mesh orientation. Authored item assets
+  // use their complete silhouette and an independent FP scale instead.
+  if (surface)
+    fitExtent = std::max(1e-5f, std::max(ext.x, std::max(ext.y, ext.z)));
   const float fitScale = kFpWieldTargetExtent / fitExtent;
   if (surface && surface->Grip.HasFpEuler)
     for (int i = 0; i < 3; ++i)
@@ -1160,8 +1169,44 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const std::string &itemId,
   if (surface)
   {
     ItemPresentationProfile profile;
-    profile.CameraPosition = glm::vec3(0);
-    SurfaceRenderer->Draw(surface, absGltf, mvpBase, model, {}, profile);
+    profile.CameraPosition = DrawingCameraPosition;
+    profile.LightDirection = DrawingItemLightDirection;
+    profile.LightIntensity = DrawingItemLight;
+    const auto inputs = MakeItemVisualInputs(
+        &entry, DrawingLeftArm ? 0.f : DrawingBowCharge,
+        DrawingLeftArm ? 0.f : DrawingUsePhase, DrawingHasAmmo);
+    const auto visualState = EvaluateItemVisualState(*surface, inputs);
+    SurfaceRenderer->Draw(surface, absGltf, DrawingViewProjection,
+                          glm::inverse(DrawingViewProjection) * mvpBase * model,
+                          visualState, profile);
+    if (ActiveAudit)
+    {
+      FpItemDrawAudit record;
+      record.Id = itemId;
+      record.Inputs = inputs;
+      const auto transforms = ResolveItemNodeTransforms(*surface, visualState);
+      for (const auto &p : surface->Primitives)
+        if (ItemNodeVisible(*surface, visualState, p.Node))
+        {
+          ++record.VisiblePrimitives;
+          const glm::mat4 clip = mvp * transforms[p.Node];
+          for (size_t v = 0; v + 7 < p.Vertices.size(); v += 8)
+          {
+            const glm::vec4 projected =
+                clip * glm::vec4(p.Vertices[v], p.Vertices[v + 1],
+                                 p.Vertices[v + 2], 1.f);
+            if (projected.w <= 1e-5f)
+            {
+              record.AllInFront = false;
+              continue;
+            }
+            const glm::vec2 ndc = glm::vec2(projected) / projected.w;
+            record.NdcLow = glm::min(record.NdcLow, ndc);
+            record.NdcHigh = glm::max(record.NdcHigh, ndc);
+          }
+        }
+      ActiveAudit->Items.push_back(std::move(record));
+    }
     return true;
   }
 
@@ -1499,6 +1544,11 @@ void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
     FpViewmodelDrawAudit *Previous;
     ~AuditScope() { Slot = Previous; }
   } auditScope{ActiveAudit, ActiveAudit};
+  DrawingBowCharge = params.BowCharge;
+  DrawingUsePhase = params.ItemUsePhase;
+  DrawingItemLight = params.ItemLightIntensity;
+  DrawingHasAmmo = params.HasAmmo;
+  DrawingItemLightDirection = params.ItemLightDirection;
   ActiveAudit = params.Audit;
   if (ActiveAudit)
     *ActiveAudit = {};
@@ -1518,6 +1568,8 @@ void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
       glm::perspective(glm::radians(kFovDeg), aspect, kNear, kFar);
   const glm::mat4 view = glm::lookAt(kEye, kTarget, glm::vec3(0.f, 1.f, 0.f));
   const glm::mat4 pv = projection * view;
+  DrawingViewProjection = pv;
+  DrawingCameraPosition = glm::vec3(glm::inverse(view)[3]);
   const GLuint skinAtlas =
       ResolvePlayerSkin(params.SpeciesId, params.Appearance.get());
   if (ActiveAudit)

@@ -139,6 +139,105 @@ glm::mat4 LocalMatrix(const Json &node)
          glm::mat4_cast(rotation) *
          glm::scale(glm::mat4(1), glm::vec3(s[0], s[1], s[2]));
 }
+void ReadVisualBindings(const Json &data, ItemRenderAsset &asset)
+{
+  Require(data.is_array(), "visual bindings must be an array");
+  auto nodeIndex = [&](const std::string &name)
+  {
+    size_t found = asset.Nodes.size();
+    for (size_t i = 0; i < asset.Nodes.size(); ++i)
+      if (asset.Nodes[i].Name == name)
+      {
+        Require(found == asset.Nodes.size(), "binding node name is ambiguous");
+        found = i;
+      }
+    Require(found < asset.Nodes.size(), "binding references missing node");
+    return found;
+  };
+  auto vector = [&](const Json &row, const char *key, glm::vec3 fallback)
+  {
+    if (!row.contains(key))
+      return fallback;
+    const auto values = row.at(key).get<std::vector<float>>();
+    Require(values.size() == 3, "binding vector needs three components");
+    for (int i = 0; i < 3; ++i)
+    {
+      Require(std::isfinite(values[i]), "binding vector must be finite");
+      fallback[i] = values[i];
+    }
+    return fallback;
+  };
+  std::unordered_set<size_t> controlled;
+  for (const auto &row : data)
+  {
+    ItemNodeBinding b;
+    b.Node = nodeIndex(row.at("node"));
+    Require(controlled.insert(b.Node).second,
+            "node has duplicate visual bindings");
+    if (row.contains("span"))
+    {
+      b.Span = true;
+      const auto &span = row.at("span");
+      b.StartNode = nodeIndex(span.at("start_node"));
+      b.EndNode = nodeIndex(span.at("end_node"));
+      b.StartPoint = vector(span, "start_point", glm::vec3(0));
+      b.EndPoint = vector(span, "end_point", glm::vec3(0));
+      const auto a = glm::vec3(asset.Nodes[b.StartNode].Transform *
+                               glm::vec4(b.StartPoint, 1));
+      const auto z = glm::vec3(asset.Nodes[b.EndNode].Transform *
+                               glm::vec4(b.EndPoint, 1));
+      Require(glm::length(z - a) > 1e-5f, "span has coincident rest anchors");
+      const auto parent = asset.Nodes[b.Node].Parent;
+      Require(parent >= 0 && asset.Nodes[size_t(parent)].Parent < 0,
+              "span output must be a root child");
+    }
+    else
+    {
+      const std::string channel = row.at("channel");
+      if (channel == "bow_charge")
+        b.Channel = ItemVisualChannel::BowCharge;
+      else if (channel == "bow_loaded")
+        b.Channel = ItemVisualChannel::BowLoaded;
+      else if (channel == "use_phase")
+        b.Channel = ItemVisualChannel::UsePhase;
+      else if (channel == "fill_units")
+        b.Channel = ItemVisualChannel::FillUnits;
+      else
+        Require(false, "unsupported visual input channel");
+      const auto range = row.value("range", std::vector<float>{0, 1});
+      Require(range.size() == 2 && std::isfinite(range[0]) &&
+                  std::isfinite(range[1]) && range[1] > range[0],
+              "invalid visual input range");
+      b.Minimum = range[0];
+      b.Maximum = range[1];
+      const std::string curve = row.value("curve", std::string("linear"));
+      Require(curve == "linear" || curve == "pulse",
+              "unsupported visual input curve");
+      b.Pulse = curve == "pulse";
+      b.TranslationFrom = vector(row, "translation_from", glm::vec3(0));
+      b.TranslationTo = vector(row, "translation_to", glm::vec3(0));
+      b.RotationFrom = vector(row, "rotation_from", glm::vec3(0));
+      b.RotationTo = vector(row, "rotation_to", glm::vec3(0));
+      b.ScaleFrom = vector(row, "scale_from", glm::vec3(1));
+      b.ScaleTo = vector(row, "scale_to", glm::vec3(1));
+      Require(glm::all(glm::greaterThan(b.ScaleFrom, glm::vec3(.001f))) &&
+                  glm::all(glm::greaterThan(b.ScaleTo, glm::vec3(.001f))),
+              "binding scale must stay positive");
+      b.VisibleAbove = row.value("visible_above", -1.f);
+      Require(std::isfinite(b.VisibleAbove),
+              "visibility threshold must be finite");
+    }
+    asset.Bindings.push_back(b);
+  }
+  for (const auto &span : asset.Bindings)
+    if (span.Span)
+      for (const auto source : {span.StartNode, span.EndNode})
+        for (int node = int(source); node >= 0;
+             node = asset.Nodes[size_t(node)].Parent)
+          for (const auto &other : asset.Bindings)
+            Require(!other.Span || other.Node != size_t(node),
+                    "span links must not depend on span outputs");
+}
 } // namespace
 
 std::shared_ptr<ItemRenderAsset>
@@ -187,6 +286,11 @@ LoadItemRenderAsset(const std::filesystem::path &path,
   readVector("icon_euler_deg", asset->Grip.IconEulerDeg);
   readVector("tp_euler_deg", asset->Grip.TpEulerDeg);
   readVector("fp_arm_euler_deg", asset->Grip.FpArmEulerDeg);
+  readVector("ground_euler_deg", asset->Grip.GroundEulerDeg);
+  asset->Grip.TpScale = presentation.value("tp_scale", 1.f);
+  Require(std::isfinite(asset->Grip.TpScale) && asset->Grip.TpScale >= .1f &&
+              asset->Grip.TpScale <= 3.f,
+          "invalid TP presentation scale");
   asset->Grip.FpScale = presentation.value("fp_scale", 1.f);
   Require(std::isfinite(asset->Grip.FpScale) && asset->Grip.FpScale >= .1f &&
               asset->Grip.FpScale <= 3.f,
@@ -198,6 +302,10 @@ LoadItemRenderAsset(const std::filesystem::path &path,
                 !m.contains("normalTexture") && !m.contains("extensions"),
             "only opaque base-color item materials are supported");
     const auto &pbr = m.at("pbrMetallicRoughness");
+    Require(!pbr.contains("metallicRoughnessTexture") &&
+                !m.contains("emissiveTexture") &&
+                !m.contains("occlusionTexture"),
+            "item material maps beyond albedo are not supported yet");
     ItemRenderMaterial material;
     material.Name = m.value("name", "");
     material.Metallic = pbr.value("metallicFactor", 1.f);
@@ -289,6 +397,8 @@ LoadItemRenderAsset(const std::filesystem::path &path,
                     uv.size() / 2 == positions.size() / 3,
                 "vertex attribute counts differ");
         ItemRenderPrimitive primitive;
+        primitive.Low = glm::vec3(std::numeric_limits<float>::max());
+        primitive.High = -primitive.Low;
         primitive.Node = nodeIndex;
         primitive.Material = p.at("material");
         Require(primitive.Material < asset->Materials.size(),
@@ -301,6 +411,8 @@ LoadItemRenderAsset(const std::filesystem::path &path,
                                  normals[i * 3 + 2]);
           Require(std::abs(glm::length(normal) - 1.f) < 1e-3f,
                   "normals must be unit length");
+          primitive.Low = glm::min(primitive.Low, point);
+          primitive.High = glm::max(primitive.High, point);
           const auto world = glm::vec3(matrix * glm::vec4(point, 1));
           asset->Low = glm::min(asset->Low, world);
           asset->High = glm::max(asset->High, world);
@@ -326,6 +438,15 @@ LoadItemRenderAsset(const std::filesystem::path &path,
        g.at("scenes").at(g.value("scene", size_t(0))).at("nodes"))
     visit(index.get<size_t>(), glm::mat4(1), -1);
   Require(!asset->Primitives.empty(), "scene contains no geometry");
+  ReadVisualBindings(
+      g.value("extras", Json::object()).value("visual_bindings", Json::array()),
+      *asset);
+  const auto visible =
+      ItemVisualBounds(*asset, EvaluateItemVisualState(*asset, {}));
+  asset->Low = visible.first;
+  asset->High = visible.second;
+  Require(glm::length(asset->High - asset->Low) > 1e-6f,
+          "default item state has no visible geometry");
   return asset;
 }
 std::shared_ptr<const ItemRenderAsset>

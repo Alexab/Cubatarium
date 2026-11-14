@@ -1,9 +1,11 @@
 #ifndef ITEM_ICON_CACHE_H
 #define ITEM_ICON_CACHE_H
 
+#include "Game/Inventory/InventoryTypes.h"
 #include "Gui/Cache/IconWarmupQueue.h"
 #include "Gui/Cache/InventoryIconService.h"
 #include "Items/ItemDefinitionStorage.h"
+#include "Items/ItemVisualInputs.h"
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -26,6 +28,7 @@ public:
       std::shared_ptr<UItemPreviewRenderer> itemPreview = nullptr);
 
   GLuint GetIcon(const std::string &itemId);
+  GLuint GetIcon(const InventoryEntryRef &entry);
   void Invalidate();
 
   /// UX U3: per-frame budgeted icon generation. GetIcon for a not-yet-
@@ -42,7 +45,14 @@ private:
   uint64_t CachedRevision{UItemDefinitionStorage::ContentRevision()};
   bool SkipDiskCache{false};
   void SyncRevision();
-  GLuint RenderItemIcon(const std::string &itemId);
+  struct StateRequest
+  {
+    std::string Id, Variant;
+    ItemVisualInputs Inputs;
+  };
+  std::unordered_map<std::string, StateRequest> StateRequests;
+  GLuint RenderItemIcon(const std::string &itemId,
+                        const ItemVisualInputs &inputs = {});
   void EnsureFbo(int size);
 
   std::shared_ptr<UItemDefinitionStorage> Items;

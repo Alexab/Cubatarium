@@ -276,6 +276,9 @@ bool USurvivalSystems::Use(UWorld &w, UCreature &actor, glm::vec3 eye,
     else
       return false;
   }
+  if (const auto *active = inv.GetActiveEntryRef())
+    actor.ItemAction.Begin(active->Id, active->instanceId,
+                           actor.ItemVisualSelection());
   if (auto *active = inv.GetActiveEntryRef())
     ApplyItemWear(*active, *def,
                   1.f / std::max(1, def->Tool.PunchAttackUses > 0

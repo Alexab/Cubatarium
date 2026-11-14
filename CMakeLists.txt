@@ -200,6 +200,7 @@ set(SOURCES
     src/Items/FpViewmodelRenderer.cpp
     src/Items/ItemGltfTextureCache.cpp
     src/Items/ItemRenderAsset.cpp
+    src/Items/ItemVisualState.cpp
     src/Items/ItemSurfaceRenderer.cpp
     src/Game/Survival/SurvivalSystems.cpp
     src/World/Items/WorldItemSystem.cpp
@@ -1213,7 +1214,7 @@ cubatarium_add_test(NAME armor_equipment_test
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
 cubatarium_add_test(NAME item_render_asset_test
-    SOURCES src/Items/ItemRenderAsset.cpp src/Test/ItemRenderAssetTest.cpp
+    SOURCES src/Items/ItemRenderAsset.cpp src/Items/ItemVisualState.cpp src/Test/ItemRenderAssetTest.cpp
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 add_test(NAME item_render_asset_test COMMAND $<TARGET_FILE:item_render_asset_test>)
 set_tests_properties(item_render_asset_test PROPERTIES LABELS "unit;items")

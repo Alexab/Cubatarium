@@ -10,6 +10,7 @@
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 
+#include "Items/ItemVisualInputs.h"
 #include "Items/ItemVisualPresetLibrary.h"
 
 typedef unsigned int GLuint;
@@ -40,10 +41,19 @@ struct FpArmDrawAudit
   glm::mat4 RootMvp{1.f};
 };
 
+struct FpItemDrawAudit
+{
+  std::string Id;
+  ItemVisualInputs Inputs;
+  size_t VisiblePrimitives{0};
+  glm::vec2 NdcLow{1e9f}, NdcHigh{-1e9f};
+  bool AllInFront{true};
+};
 struct FpViewmodelDrawAudit
 {
   GLuint SkinTexture{0};
   std::vector<FpArmDrawAudit> Arms;
+  std::vector<FpItemDrawAudit> Items;
 };
 
 struct FpViewmodelDrawParams
@@ -52,6 +62,9 @@ struct FpViewmodelDrawParams
   bool HasCarryContacts{false};
   glm::vec2 CarryRightNdc{0.f}, CarryLeftNdc{0.f};
   float ThrowCharge{0}, BowCharge{0};
+  float ItemUsePhase{0.f}, ItemLightIntensity{1.f};
+  bool HasAmmo{false};
+  glm::vec3 ItemLightDirection{-.4f, .8f, .6f};
   int FramebufferW{0};
   int FramebufferH{0};
   const InventoryEntryRef *Active{nullptr};
@@ -148,7 +161,7 @@ private:
                               const glm::vec3 &socket) const;
   void DrawHeld(const InventoryEntryRef *entry, const glm::vec3 &socket,
                 const glm::mat4 &mvpBase);
-  bool TryDrawGltfHeld(const std::string &itemId, const glm::vec3 &socket,
+  bool TryDrawGltfHeld(const InventoryEntryRef &entry, const glm::vec3 &socket,
                        const glm::mat4 &mvpBase);
   void DrawBlockCube(const std::string &typeName, const glm::vec3 &socket,
                      const glm::mat4 &mvpBase);
@@ -196,6 +209,11 @@ private:
   GLuint WoodTex{0};
 
   FpMotion Motion;
+  float DrawingBowCharge{0.f}, DrawingUsePhase{0.f}, DrawingItemLight{1.f};
+  bool DrawingHasAmmo{false};
+  glm::mat4 DrawingViewProjection{1.f};
+  glm::vec3 DrawingCameraPosition{0.f},
+      DrawingItemLightDirection{-.4f, .8f, .6f};
   float BobX{0.f};
   float BobY{0.f};
 };

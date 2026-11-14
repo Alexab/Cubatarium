@@ -216,6 +216,7 @@ std::array<HotbarSlotView, 10> UGameSession::GetBarSlots(size_t barIndex) const
     const HotbarSlot &slot = bar.slots[i];
     if (!slot.empty && !slot.entry.Id.empty())
     {
+      slots[i].Entry = slot.entry;
       slots[i].Id = slot.entry.Id;
       slots[i].label = HumanizeBlockName(slot.entry.Id);
       slots[i].entryKind = slot.entry.kind;

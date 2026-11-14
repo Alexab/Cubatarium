@@ -31,6 +31,9 @@ public:
   bool WantsClose() const { return CloseRequested; }
   void SelectItem(const std::string &id);
   void SetMode(int mode);
+  void SetPosePreset(int pose);
+  int GetPosePreset() const { return PosePreset; }
+  GuiRect GetPoseBounds() const;
   bool HasCandidate() const { return Textures[1] != 0; }
   unsigned GetPreviewTexture(int index) const { return Textures[index]; }
   std::string GetSelectedId() const { return Selected; }
@@ -54,13 +57,13 @@ private:
   UGuiPreviewViewport *Views[2]{nullptr, nullptr};
   UGuiLabel *Title{nullptr}, *Captions[2]{nullptr, nullptr},
       *Info[2]{nullptr, nullptr}, *Status{nullptr};
-  UGuiButton *ModeButton{nullptr}, *LightButton{nullptr},
+  UGuiButton *ModeButton{nullptr}, *LightButton{nullptr}, *PoseButton{nullptr},
       *ReloadButton{nullptr}, *ExportButton{nullptr}, *CloseButton{nullptr};
   unsigned Textures[2]{0, 0};
   std::filesystem::path Paths[2];
   std::string Selected{"bucket"};
   float Yaw{35}, Pitch{25};
-  int Mode{0}, Light{0};
+  int Mode{0}, Light{0}, PosePreset{0};
   bool Dirty{true}, CloseRequested{false};
 };
 } // namespace cutum

@@ -1,0 +1,938 @@
+[
+  {
+    "frame": "apple-fp-female-left.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      -0.2809813916683197,
+      -0.3137556314468384
+    ],
+    "ndc_low": [
+      -0.5462906360626221,
+      -0.8140862584114075
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "apple-fp-female-right.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.5017516016960144,
+      -0.2756578326225281
+    ],
+    "ndc_low": [
+      0.2618197202682495,
+      -0.7528760433197021
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "apple-fp-male-left.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      -0.2809813916683197,
+      -0.3137556314468384
+    ],
+    "ndc_low": [
+      -0.5462906360626221,
+      -0.8140862584114075
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "apple-fp-male-right.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.5017516016960144,
+      -0.2756578326225281
+    ],
+    "ndc_low": [
+      0.2618197202682495,
+      -0.7528760433197021
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "bread-fp-female-left.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      -0.24381199479103088,
+      -0.46334075927734375
+    ],
+    "ndc_low": [
+      -0.5308507084846497,
+      -0.857589602470398
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "bread-fp-female-right.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.4970611035823822,
+      -0.4299186170101166
+    ],
+    "ndc_low": [
+      0.2270137220621109,
+      -0.7942727208137512
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "bread-fp-male-left.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      -0.24381199479103088,
+      -0.46334075927734375
+    ],
+    "ndc_low": [
+      -0.5308507084846497,
+      -0.857589602470398
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "bread-fp-male-right.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.4970611035823822,
+      -0.4299186170101166
+    ],
+    "ndc_low": [
+      0.2270137220621109,
+      -0.7942727208137512
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "bucket-fp-female-left.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      -0.18025708198547363,
+      0.11967980861663818
+    ],
+    "ndc_low": [
+      -0.47591203451156616,
+      -0.5876258611679077
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "bucket-fp-female-right.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.44649866223335266,
+      0.13498227298259735
+    ],
+    "ndc_low": [
+      0.15997372567653656,
+      -0.5382254719734192
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "bucket-fp-male-left.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      -0.18025708198547363,
+      0.11967980861663818
+    ],
+    "ndc_low": [
+      -0.47591203451156616,
+      -0.5876258611679077
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "bucket-fp-male-right.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.44649866223335266,
+      0.13498227298259735
+    ],
+    "ndc_low": [
+      0.15997372567653656,
+      -0.5382254719734192
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "bucket-state-0-fp-female.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.44649866223335266,
+      0.13498227298259735
+    ],
+    "ndc_low": [
+      0.15997372567653656,
+      -0.5382254719734192
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "bucket-state-0-fp-male.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.44649866223335266,
+      0.13498227298259735
+    ],
+    "ndc_low": [
+      0.15997372567653656,
+      -0.5382254719734192
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "bucket-state-1-fp-female.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.38397517800331116,
+      -0.027874236926436424
+    ],
+    "ndc_low": [
+      0.10052482783794403,
+      -0.7386378049850464
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "bucket-state-1-fp-male.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.38397517800331116,
+      -0.027874236926436424
+    ],
+    "ndc_low": [
+      0.10052482783794403,
+      -0.7386378049850464
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "bucket-state-2-fp-female.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.3749990165233612,
+      -0.12322685867547989
+    ],
+    "ndc_low": [
+      0.10216342657804489,
+      -0.8123056292533875
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "bucket-state-2-fp-male.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.3749990165233612,
+      -0.12322685867547989
+    ],
+    "ndc_low": [
+      0.10216342657804489,
+      -0.8123056292533875
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "bucket-state-3-fp-female.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.44649866223335266,
+      0.13498227298259735
+    ],
+    "ndc_low": [
+      0.15997372567653656,
+      -0.5382254719734192
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "bucket-state-3-fp-male.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.44649866223335266,
+      0.13498227298259735
+    ],
+    "ndc_low": [
+      0.15997372567653656,
+      -0.5382254719734192
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "copper_axe-fp-female-left.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      -0.29062575101852417,
+      0.24476060271263123
+    ],
+    "ndc_low": [
+      -0.8706188201904297,
+      -0.867469310760498
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "copper_axe-fp-female-right.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.7780957221984863,
+      0.254174143075943
+    ],
+    "ndc_low": [
+      0.26937058568000793,
+      -0.8133954405784607
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "copper_axe-fp-male-left.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      -0.29062575101852417,
+      0.24476060271263123
+    ],
+    "ndc_low": [
+      -0.8706188201904297,
+      -0.867469310760498
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "copper_axe-fp-male-right.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.7780957221984863,
+      0.254174143075943
+    ],
+    "ndc_low": [
+      0.26937058568000793,
+      -0.8133954405784607
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "gold_sword-fp-female-left.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      -0.2605394124984741,
+      0.22696159780025482
+    ],
+    "ndc_low": [
+      -0.571639358997345,
+      -0.8050867915153503
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "gold_sword-fp-female-right.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.5244362354278564,
+      0.23816493153572083
+    ],
+    "ndc_low": [
+      0.24059563875198364,
+      -0.7496002912521362
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "gold_sword-fp-male-left.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      -0.2605394124984741,
+      0.22696159780025482
+    ],
+    "ndc_low": [
+      -0.571639358997345,
+      -0.8050867915153503
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "gold_sword-fp-male-right.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.5244362354278564,
+      0.23816493153572083
+    ],
+    "ndc_low": [
+      0.24059563875198364,
+      -0.7496002912521362
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "iron_head-fp-female-left.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      -0.19476467370986938,
+      -0.27260950207710266
+    ],
+    "ndc_low": [
+      -0.692818284034729,
+      -0.9936851263046265
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "iron_head-fp-female-right.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.6412768363952637,
+      -0.24264001846313477
+    ],
+    "ndc_low": [
+      0.17059631645679474,
+      -0.8949880003929138
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "iron_head-fp-male-left.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      -0.19476467370986938,
+      -0.27260950207710266
+    ],
+    "ndc_low": [
+      -0.692818284034729,
+      -0.9936851263046265
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "iron_head-fp-male-right.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.6412768363952637,
+      -0.24264001846313477
+    ],
+    "ndc_low": [
+      0.17059631645679474,
+      -0.8949880003929138
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "iron_pickaxe-fp-female-left.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      -0.22222711145877838,
+      0.35253503918647766
+    ],
+    "ndc_low": [
+      -0.8440194129943848,
+      -0.8756219744682312
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "iron_pickaxe-fp-female-right.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.7550346851348877,
+      0.35848352313041687
+    ],
+    "ndc_low": [
+      0.20362144708633423,
+      -0.8178030848503113
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "iron_pickaxe-fp-male-left.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      -0.22222711145877838,
+      0.35253503918647766
+    ],
+    "ndc_low": [
+      -0.8440194129943848,
+      -0.8756219744682312
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "iron_pickaxe-fp-male-right.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.7550346851348877,
+      0.35848352313041687
+    ],
+    "ndc_low": [
+      0.20362144708633423,
+      -0.8178030848503113
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "leather_chest-fp-female-left.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      -0.20225846767425537,
+      -0.10760548710823059
+    ],
+    "ndc_low": [
+      -0.7265188097953796,
+      -1.0081799030303955
+    ],
+    "visible_bounds_fraction": 0.9909170866012573
+  },
+  {
+    "frame": "leather_chest-fp-female-right.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.6665753126144409,
+      -0.0866902768611908
+    ],
+    "ndc_low": [
+      0.17963820695877075,
+      -0.9172382354736328
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "leather_chest-fp-male-left.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      -0.20225846767425537,
+      -0.10760548710823059
+    ],
+    "ndc_low": [
+      -0.7265188097953796,
+      -1.0081799030303955
+    ],
+    "visible_bounds_fraction": 0.9909170866012573
+  },
+  {
+    "frame": "leather_chest-fp-male-right.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.6665753126144409,
+      -0.0866902768611908
+    ],
+    "ndc_low": [
+      0.17963820695877075,
+      -0.9172382354736328
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "raw_iron-fp-female-left.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      -0.21062849462032318,
+      -0.3299759328365326
+    ],
+    "ndc_low": [
+      -0.6253591775894165,
+      -0.955737829208374
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "raw_iron-fp-female-right.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.5822416543960571,
+      -0.29781800508499146
+    ],
+    "ndc_low": [
+      0.1873684972524643,
+      -0.8862093091011047
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "raw_iron-fp-male-left.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      -0.21062849462032318,
+      -0.3299759328365326
+    ],
+    "ndc_low": [
+      -0.6253591775894165,
+      -0.955737829208374
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "raw_iron-fp-male-right.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.5822416543960571,
+      -0.29781800508499146
+    ],
+    "ndc_low": [
+      0.1873684972524643,
+      -0.8862093091011047
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "shears-fp-female-left.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      -0.2177039533853531,
+      0.07171812653541565
+    ],
+    "ndc_low": [
+      -0.5890654921531677,
+      -0.7498372793197632
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "shears-fp-female-right.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.539318859577179,
+      0.08911105990409851
+    ],
+    "ndc_low": [
+      0.20150095224380493,
+      -0.6974234580993652
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "shears-fp-male-left.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      -0.2177039533853531,
+      0.07171812653541565
+    ],
+    "ndc_low": [
+      -0.5890654921531677,
+      -0.7498372793197632
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "shears-fp-male-right.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.539318859577179,
+      0.08911105990409851
+    ],
+    "ndc_low": [
+      0.20150095224380493,
+      -0.6974234580993652
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "shears-state-0-fp-female.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.539318859577179,
+      0.08911105990409851
+    ],
+    "ndc_low": [
+      0.20150095224380493,
+      -0.6974234580993652
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "shears-state-0-fp-male.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.539318859577179,
+      0.08911105990409851
+    ],
+    "ndc_low": [
+      0.20150095224380493,
+      -0.6974234580993652
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "shears-state-1-fp-female.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.4467547833919525,
+      -0.04296134039759636
+    ],
+    "ndc_low": [
+      0.17455817759037018,
+      -0.9091994166374207
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "shears-state-1-fp-male.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.4467547833919525,
+      -0.04296134039759636
+    ],
+    "ndc_low": [
+      0.17455817759037018,
+      -0.9091994166374207
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "shears-state-2-fp-female.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.4208155572414398,
+      -0.15810565650463104
+    ],
+    "ndc_low": [
+      0.193046435713768,
+      -1.014366865158081
+    ],
+    "visible_bounds_fraction": 0.9832214117050171
+  },
+  {
+    "frame": "shears-state-2-fp-male.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.4208155572414398,
+      -0.15810565650463104
+    ],
+    "ndc_low": [
+      0.193046435713768,
+      -1.014366865158081
+    ],
+    "visible_bounds_fraction": 0.9832214117050171
+  },
+  {
+    "frame": "shears-state-3-fp-female.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.539318859577179,
+      0.08911105990409851
+    ],
+    "ndc_low": [
+      0.20150095224380493,
+      -0.6974234580993652
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "shears-state-3-fp-male.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.539318859577179,
+      0.08911105990409851
+    ],
+    "ndc_low": [
+      0.20150095224380493,
+      -0.6974234580993652
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "stone_pickaxe-fp-female-left.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      -0.20484605431556702,
+      0.39432597160339355
+    ],
+    "ndc_low": [
+      -0.8508069515228271,
+      -0.8763195276260376
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "stone_pickaxe-fp-female-right.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.7613855600357056,
+      0.3990296423435211
+    ],
+    "ndc_low": [
+      0.18618428707122803,
+      -0.8184734582901001
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "stone_pickaxe-fp-male-left.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      -0.20484605431556702,
+      0.39432597160339355
+    ],
+    "ndc_low": [
+      -0.8508069515228271,
+      -0.8763195276260376
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "stone_pickaxe-fp-male-right.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.7613855600357056,
+      0.3990296423435211
+    ],
+    "ndc_low": [
+      0.18618428707122803,
+      -0.8184734582901001
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "wood_bow-fp-female-left.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      -0.3011767864227295,
+      0.5438463687896729
+    ],
+    "ndc_low": [
+      -0.49715426564216614,
+      -0.3744870126247406
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "wood_bow-fp-female-right.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.4560912251472473,
+      0.5377410054206848
+    ],
+    "ndc_low": [
+      0.27773576974868774,
+      -0.34068313241004944
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "wood_bow-fp-male-left.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      -0.3011767864227295,
+      0.5438463687896729
+    ],
+    "ndc_low": [
+      -0.49715426564216614,
+      -0.3744870126247406
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "wood_bow-fp-male-right.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.4560912251472473,
+      0.5377410054206848
+    ],
+    "ndc_low": [
+      0.27773576974868774,
+      -0.34068313241004944
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "wood_bow-state-0-fp-female.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.4560912251472473,
+      0.5377410054206848
+    ],
+    "ndc_low": [
+      0.27773576974868774,
+      -0.34068313241004944
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "wood_bow-state-0-fp-male.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.4560912251472473,
+      0.5377410054206848
+    ],
+    "ndc_low": [
+      0.27773576974868774,
+      -0.34068313241004944
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "wood_bow-state-1-fp-female.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.4319535791873932,
+      0.4405449628829956
+    ],
+    "ndc_low": [
+      0.2179008424282074,
+      -0.5282423496246338
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "wood_bow-state-1-fp-male.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.4319535791873932,
+      0.4405449628829956
+    ],
+    "ndc_low": [
+      0.2179008424282074,
+      -0.5282423496246338
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "wood_bow-state-2-fp-female.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.4501567482948303,
+      0.312893271446228
+    ],
+    "ndc_low": [
+      0.23665188252925873,
+      -0.6564935445785522
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "wood_bow-state-2-fp-male.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.4501567482948303,
+      0.312893271446228
+    ],
+    "ndc_low": [
+      0.23665188252925873,
+      -0.6564935445785522
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "wood_bow-state-3-fp-female.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.4560912251472473,
+      0.5377410054206848
+    ],
+    "ndc_low": [
+      0.27773576974868774,
+      -0.34068313241004944
+    ],
+    "visible_bounds_fraction": 1.0
+  },
+  {
+    "frame": "wood_bow-state-3-fp-male.png.json",
+    "all_in_front": true,
+    "ndc_high": [
+      0.4560912251472473,
+      0.5377410054206848
+    ],
+    "ndc_low": [
+      0.27773576974868774,
+      -0.34068313241004944
+    ],
+    "visible_bounds_fraction": 1.0
+  }
+]

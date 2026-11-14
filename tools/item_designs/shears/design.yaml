@@ -4,7 +4,10 @@ atlas_size: 256
 texels_per_metre: 230
 triangle_budget: 1800
 presentation:
-  tp_euler_deg: [-65, 0, 0]
+  tp_euler_deg:
+  - -65
+  - 0
+  - 0
   right_grip:
   - 0.04
   - -0.12
@@ -61,52 +64,18 @@ materials:
     metallic: 0.5
     roughness: 0.7
 parts:
-- name: blade_left
-  material: head
-  shape: extrude
-  contour:
-  - - -0.065
-    - 0.005
-  - - -0.015
-    - -0.005
-  - - 0.03
-    - 0.2
-  - - 0
-    - 0.23
-  depth: 0.02
-  offset:
-  - 0
-  - 0
-  - 0
-- name: blade_right
-  material: edge
-  shape: extrude
-  contour:
-  - - -0.03
-    - 0.2
-  - - 0.015
-    - -0.005
-  - - 0.065
-    - 0.005
-  - - 0
-    - 0.23
-  depth: 0.02
-  offset:
-  - 0
-  - 0
-  - -0.025
 - name: hinge
   material: dark
   shape: bevel_box
   size:
   - 0.045
   - 0.045
-  - 0.04
+  - 0.06
   bevel: 0.0081
   offset:
   - 0
   - 0.008
-  - 0
+  - -0.01
   rotation:
   - 0
   - 0
@@ -121,6 +90,7 @@ parts:
   - -0.06
   - -0.12
   - 0
+  node: jaw_left
 - name: tang0
   material: head
   shape: bevel_box
@@ -137,6 +107,7 @@ parts:
   - 0
   - 0
   - -25
+  node: jaw_left
 - name: finger_loop1
   material: dark
   shape: ring
@@ -146,7 +117,8 @@ parts:
   offset:
   - 0.06
   - -0.12
-  - 0
+  - -0.025
+  node: jaw_right
 - name: tang1
   material: head
   shape: bevel_box
@@ -158,8 +130,71 @@ parts:
   offset:
   - 0.033
   - -0.045
-  - 0
+  - -0.025
   rotation:
   - 0
   - 0
   - 25
+  node: jaw_right
+- name: blade_left
+  material: head
+  shape: extrude
+  contour:
+  - - -0.012
+    - 0.012
+  - - 0.012
+    - 0.012
+  - - 0.11
+    - 0.26
+  - - 0.08
+    - 0.27
+  depth: 0.02
+  offset:
+  - 0
+  - 0
+  - 0
+  node: jaw_left
+- name: blade_right
+  material: edge
+  shape: extrude
+  contour:
+  - - -0.11
+    - 0.26
+  - - -0.012
+    - 0.012
+  - - 0.012
+    - 0.012
+  - - -0.08
+    - 0.27
+  depth: 0.02
+  offset:
+  - 0
+  - 0
+  - -0.025
+  node: jaw_right
+nodes:
+  jaw_left:
+    pivot:
+    - 0
+    - 0.008
+    - 0
+  jaw_right:
+    pivot:
+    - 0
+    - 0.008
+    - 0
+visual_bindings:
+- node: jaw_left
+  channel: use_phase
+  curve: pulse
+  rotation_to:
+  - 0
+  - 0
+  - 20
+- node: jaw_right
+  channel: use_phase
+  curve: pulse
+  rotation_to:
+  - 0
+  - 0
+  - -20

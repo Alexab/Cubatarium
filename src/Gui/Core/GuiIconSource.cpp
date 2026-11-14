@@ -72,6 +72,10 @@ GLuint UGuiIconSource::GetSkinIconTexture(const std::string &skinId)
   return CreatureCache->GetSkinIcon(skinId);
 }
 
+GLuint UGuiIconSource::GetItemStateIcon(const InventoryEntryRef &entry)
+{
+  return ItemCache ? ItemCache->GetIcon(entry) : 0;
+}
 GLuint UGuiIconSource::GetItemIconTexture(const std::string &itemId)
 {
   if (!ItemCache || itemId.empty())
@@ -102,8 +106,8 @@ size_t UGuiIconSource::PendingItemIcons() const
   return ItemCache ? ItemCache->PendingWarmupCount() : 0;
 }
 
-GLuint UGuiIconSource::GetBlockIconTextureIfCached(
-    const std::string &blockName) const
+GLuint
+UGuiIconSource::GetBlockIconTextureIfCached(const std::string &blockName) const
 {
   return ObjectCache ? ObjectCache->GetBlockIconTextureIfCached(blockName) : 0;
 }

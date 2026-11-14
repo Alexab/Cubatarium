@@ -198,7 +198,9 @@ void UPlayerWindowScreen::Update(double)
     slot->SetWearProgress(view.wear);
     slot->SetBroken(view.broken);
     const unsigned texture =
-        Icons ? Icons->GetEntryIcon(view.entryKind, view.Id) : 0;
+        Icons ? (view.Entry.empty ? Icons->GetEntryIcon(view.entryKind, view.Id)
+                                  : Icons->GetEntryIcon(view.Entry))
+              : 0;
     slot->SetIconTexture(texture);
   }
 }

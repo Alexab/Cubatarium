@@ -21,6 +21,10 @@ public:
   virtual GLuint GetCreatureIconTexture(const std::string &speciesId) = 0;
   virtual GLuint GetSkinIconTexture(const std::string &skinId) = 0;
   virtual GLuint GetItemIconTexture(const std::string &itemId) = 0;
+  virtual GLuint GetItemStateIcon(const InventoryEntryRef &entry)
+  {
+    return GetItemIconTexture(entry.Id);
+  }
   GLuint GetEntryIcon(InventoryEntryKind kind, const std::string &id)
   {
     if (id.empty())
@@ -42,7 +46,10 @@ public:
   }
   GLuint GetEntryIcon(const InventoryEntryRef &entry)
   {
-    return entry.empty ? 0 : GetEntryIcon(entry.kind, entry.Id);
+    return entry.empty ? 0
+           : entry.kind == InventoryEntryKind::Item
+               ? GetItemStateIcon(entry)
+               : GetEntryIcon(entry.kind, entry.Id);
   }
   /// UX U3: per-frame item icon drain + pending count for the mini bar.
   virtual void WarmupItemIcons(size_t maxPerFrame) = 0;

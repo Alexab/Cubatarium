@@ -915,8 +915,18 @@ void UCharacterSheetScreen::RefreshLabels()
       }
       if (ToolSlots[i] && !s.itemId.empty())
       {
-        const GLuint tex = s.isBlock ? Icons->GetBlockIconTexture(s.itemId)
-                                     : Icons->GetItemIconTexture(s.itemId);
+        GLuint tex = s.isBlock ? Icons->GetBlockIconTexture(s.itemId)
+                               : Icons->GetItemIconTexture(s.itemId);
+        if (auto *session = dynamic_cast<UGameSession *>(Stats))
+          if (auto world = session->GetWorld())
+            if (const auto *actor = world->GetControlledCreature())
+            {
+              const auto *entry =
+                  i == 0 ? actor->GetInventory().GetActiveEntryRef()
+                         : &actor->GetInventory().GetEquippedOffhand();
+              if (entry)
+                tex = Icons->GetEntryIcon(*entry);
+            }
         ToolSlots[i]->SetIconTexture(tex);
         ToolSlots[i]->SetWearProgress(s.wear);
         ToolSlots[i]->SetBroken(s.broken);
@@ -1410,6 +1420,7 @@ void UCharacterSheetScreen::RenderCharacterPreview()
   std::string mainId;
   std::string offId;
   std::string wieldKey;
+  ItemVisualInputs mainInputs, offInputs;
   if (Stats)
   {
     const CharacterStatsSnapshot snap = Stats->GetCharacterStatsSnapshot();
@@ -1438,6 +1449,20 @@ void UCharacterSheetScreen::RenderCharacterPreview()
     wieldKey = mainId + "|" + offId;
   }
 
+  if (auto *session = dynamic_cast<UGameSession *>(Stats))
+    if (auto world = session->GetWorld())
+      if (const auto *actor = world->GetControlledCreature())
+      {
+        const auto &inv = actor->GetInventory();
+        mainInputs = MakeItemVisualInputs(inv.GetActiveEntryRef());
+        offInputs = MakeItemVisualInputs(&inv.GetEquippedOffhand());
+        wieldKey += "|fill=" + std::to_string(mainInputs.ContentsUnits) + ":" +
+                    std::to_string(mainInputs.HasWater) + ":" +
+                    std::to_string(offInputs.ContentsUnits) + ":" +
+                    std::to_string(offInputs.HasWater);
+      }
+  wieldKey +=
+      "|revision=" + std::to_string(UItemDefinitionStorage::ContentRevision());
   const float yaw = PreviewViewport->GetYaw();
   const float pitch = PreviewViewport->GetPitch();
   const auto look = EditingAppearance
@@ -1458,7 +1483,7 @@ void UCharacterSheetScreen::RenderCharacterPreview()
   const GLuint tex = CreaturePreview->RenderToUniqueTexture(
       PreviewTypeId, PreviewSkinId, size, yaw, pitch, 0.f, false, &armorSlots,
       mainId.empty() ? nullptr : &mainId, offId.empty() ? nullptr : &offId,
-      &look);
+      &look, &mainInputs, &offInputs);
   if (tex == 0)
   {
     return;

@@ -14,7 +14,7 @@ from PIL import Image, ImageDraw
 def paint_surface(width, height, material, name):
     color=material['color']
     style=material.get('pattern','plain')
-    if style not in ('plain','wood','leather','forged','hammered','stone','food','fiber'):
+    if style not in ('plain','wood','leather','forged','hammered','stone','food','fiber','water'):
         raise ValueError(f'Unknown surface pattern: {style}')
     phase=int.from_bytes(hashlib.sha256(name.encode()).digest()[:2],'little')/1000
     image=Image.new('RGBA',(width,height))
@@ -35,11 +35,17 @@ def paint_surface(width, height, material, name):
                 shade+=5*math.sin(u*17+v*11)+3*math.cos(v*24-u*6)
             elif style=='food':
                 shade+=7*math.sin(u*6+phase)*math.sin(v*4)+2*math.sin(x*.8+y)
+            elif style=='water':
+                shade+=2*math.sin(u*8+v*3)
             elif style=='fiber':
                 shade+=5*math.sin(u*30+v*12)
             pixel=tuple(max(0,min(255,round(c+shade))) for c in color)
             image.putpixel((x,y),pixel+(255,))
     draw=ImageDraw.Draw(image)
+    if style=='water':
+        accent=tuple(min(255,c+18) for c in color)+(255,)
+        for shift in (.15,.48):
+            draw.arc((width*.12,height*shift,width*.82,height*(shift+.25)),15,150,fill=accent,width=max(1,width//50))
     if material.get('seam'):
         for y in range(3,height-3,5):
             draw.line((2,y,3,y+2),fill=(184,150,105,255))

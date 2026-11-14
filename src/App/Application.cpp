@@ -75,13 +75,18 @@
 #include "Gui/Widgets/GuiWidget.h"
 #include "Items/FpViewmodelRenderer.h"
 #include "Items/ItemDefinitionStorage.h"
+#include "Items/ItemPresentationMath.h"
+#include "Render/Engine/EnvironmentLight.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Engine/TextRenderer.h"
 #include "Render/Engine/ViewEngine.h"
 #include "Render/Textures/TextureCube.h"
+#include "World/Chunks/Chunk.h"
+#include "World/Chunks/ChunkManager.h"
 #include "World/Core/World.h"
 #include "World/Core/WorldLoadDiagnostics.h"
+#include "World/Lighting/LightUtil.h"
 #include "World/Objects/ObjectLibrary.h"
 #include "World/View/WorldViewSettings.h"
 #include "WorldGen/Core/WorldGenPack.h"
@@ -1900,6 +1905,26 @@ bool UApplication::ResolveSlotAt(int x, int y, SlotAddress &out)
   return false;
 }
 
+static float FpItemLight(UWorld &world, const UCreature &actor)
+{
+  auto light = glm::vec2(1, 0);
+  const auto cell = glm::ivec3(glm::floor(actor.GetEyePosition()));
+  const auto coord = UChunkManager::WorldToChunk(cell);
+  if (const auto *chunk =
+          world.GetBlockWorld().GetChunkManager().GetChunk(coord))
+  {
+    const auto packed = chunk->GetLightPackedLocal(cell - coord * CHUNK_SIZE);
+    light = glm::vec2(UnpackSky(packed), UnpackBlock(packed)) /
+            float(kMaxLightLevel);
+  }
+  const auto &env = world.GetEnvironmentState();
+  return ItemWorldLightIntensity(
+      light, env.DayNightFactor, env.MoonNightFactor,
+      SkyLightScaleFromWeather(env.WeatherSkyAttenuation,
+                               env.PrecipitationIntensity),
+      world.GetLightingSettings().MinAmbient);
+}
+
 static void ConfigureCarryContacts(FpViewmodelDrawParams &params,
                                    const UCreature &actor,
                                    const UCamera &camera)
@@ -2575,6 +2600,23 @@ void UApplication::RunItemLabQa(const std::string &path)
         UItemDefinitionStorage::ContentRevision() > revision &&
             ItemLabScreen->HasCandidate());
   ItemLabScreen->SetMode(0);
+  for (int pose = 0; pose < 3; ++pose)
+  {
+    ItemLabScreen->SetPosePreset(pose);
+    ItemLabScreen->Update(0);
+    check("state preview " + std::to_string(pose),
+          ItemLabScreen->HasCandidate());
+    check("state capture " + std::to_string(pose),
+          CapturePlayerWindow(*GuiContext, *ItemLabScreen->GetRoot(),
+                              ItemLabScreen->GetViewportWidth(),
+                              ItemLabScreen->GetViewportHeight(),
+                              std::filesystem::path(path + ".frames") /
+                                  ("pose_" + std::to_string(pose) + ".png")));
+  }
+  ItemLabScreen->SetPosePreset(0);
+  click(ItemLabScreen->GetPoseBounds());
+  check("pointer switches state preset", ItemLabScreen->GetPosePreset() == 1);
+  ItemLabScreen->SetPosePreset(0);
   const float scale = GuiContext->GetUiScale();
   const int originalWidth = ItemLabScreen->GetViewportWidth();
   const int originalHeight = ItemLabScreen->GetViewportHeight();
@@ -2732,6 +2774,59 @@ void UApplication::RunInventoryIconsQa(const std::string &path)
     }
   }
   reset();
+  const auto *bucketDef = World->GetItemDefinitionStorage()->Get("bucket");
+  const auto bucketAsset =
+      bucketDef
+          ? FindItemSurfaceAsset(IUPlatformPaths::Current().AssetRoot() /
+                                     bucketDef->ModelPath,
+                                 UItemDefinitionStorage::ContentRevision())
+          : nullptr;
+  report["container_state_supported"] =
+      bucketAsset && !bucketAsset->Bindings.empty();
+  if (report["container_state_supported"].get<bool>())
+  {
+    auto bucket = entry(InventoryEntryKind::Item, "bucket");
+    bucket.form = InventoryEntryForm::FiniteStack;
+    inventory.AssignToHotbar(0, 0, bucket);
+    inventory.SetActiveSlot(0, 0);
+    unsigned restIcon = 0, fullIcon = 0;
+    int step = 0;
+    for (int units : {0, 1, 0})
+    {
+      auto *current = inventory.GetSlotMutable(0);
+      current->contentsUnits = units;
+      current->contentsId = units ? "water" : "";
+      auto expected = IconSource->GetEntryIcon(*current);
+      IconSource->WarmupItemIcons(8);
+      expected = IconSource->GetEntryIcon(*current);
+      CharacterSheetScreen->Update(0);
+      PlayerWindowScreen->Update(0);
+      const auto actual = CharacterSheetScreen->GetBackpackIconTexture(0);
+      const auto footer = PlayerWindowScreen->GetHotbarIconTexture(0);
+      if (step == 0)
+        restIcon = expected;
+      if (step == 1)
+        fullIcon = expected;
+      report["checks"].push_back(
+          {{"id", "bucket"},
+           {"location", "contents-state"},
+           {"units", units},
+           {"expected", expected},
+           {"backpack", actual},
+           {"footer", footer},
+           {"passed", expected != 0 && actual == expected &&
+                          footer == expected &&
+                          (step != 1 || fullIcon != restIcon) &&
+                          (step != 2 || expected == restIcon)}});
+      if (!CapturePlayerWindow(
+              *GuiContext, *GetPlayerWindowRoot(), 1280, 720,
+              std::filesystem::path(path + ".frames") /
+                  ("bucket_fill_" + std::to_string(step) + ".png")))
+        throw std::runtime_error("Cannot capture stateful inventory icon");
+      ++step;
+    }
+  }
+  reset();
   auto sample = [&](ContentKind kind) -> std::string
   {
     for (const auto &type : catalog.GetTypeIds(kind))
@@ -2809,8 +2904,9 @@ void UApplication::UpdateNativeItemsQa(double dt)
       itemPresentationDone = true;
       nlohmann::json before, after;
       World->GetControlledCreature()->GetInventory().SerializeToJson(before);
-      RunItemPresentationQa(path, *Core->GetItemDefinitionStorage(),
-                            *CreaturePreviewRenderer, *ShaderManager);
+      RunItemPresentationQa(path, Core->GetItemDefinitionStorage(),
+                            *CreaturePreviewRenderer, ShaderManager,
+                            FpViewmodelRenderer.get());
       World->GetControlledCreature()->GetInventory().SerializeToJson(after);
       std::ifstream input(path);
       nlohmann::json report;
@@ -3501,6 +3597,13 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
                                *World->GetCurrentUserCamera());
         fpParams.ThrowCharge = creature->ThrowCharge;
         fpParams.BowCharge = creature->BowCharge;
+        fpParams.ItemUsePhase = creature->ActiveItemUsePhase();
+        fpParams.ItemLightIntensity = FpItemLight(*World, *creature);
+        fpParams.ItemLightDirection =
+            glm::mat3(World->GetCurrentUserCamera()->GetViewMatrix()) *
+            glm::vec3(-.4f, .8f, .6f);
+        fpParams.HasAmmo = inv.IsCreative() ||
+                           inv.Count(InventoryEntryKind::Item, "arrow") > 0;
         fpParams.Active =
             creature->CarryHandCount ? nullptr : inv.GetActiveEntryRef();
         fpParams.Offhand = (creature->CarryHandCount || creature->BowCharge > 0)

@@ -20,7 +20,7 @@ XYZ rotation in degrees, pivot and positive taper are applied
 before uniform fitting into the unchanged gameplay physical envelope.
 
 Materials have an RGB color, pattern (plain/wood/leather/forged/hammered/stone/
-food/fiber), optional seam, metallic and roughness. Textures contain surface-local
+food/fiber/water), optional seam, metallic and roughness. Textures contain surface-local
 variation, not imported pixels. This is a base layer for authored work, not a
 substitute for artistic review of each completed model.
 
@@ -36,5 +36,9 @@ flat per face; material properties use standard glTF 2.0 fields. Presentation
 metadata supplies right_grip, left_grip, fp_euler_deg, fp_scale, fp_hand_offset
 and icon_euler_deg. Contact anchors follow the physical fitting transformation;
 camera/hand presentation values are independent of it.
-Node animation, manual glTF import, publication and Item Lab remain under
-development. See the [pilot cards](PILOTS.md) for candidate limitations.
+Named-node visual bindings project bow draw, successful-use pulses and container
+filling without becoming an inventory store. See the [pilot cards](PILOTS.md)
+for the binding/attachment contract and candidate limitations, and the
+[Item Lab guide](ITEM_LAB.md) for read-only inspection and pose controls.
+Manual glTF import, publication and the remaining Item Lab presentations are
+still under development.

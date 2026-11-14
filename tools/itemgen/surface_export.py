@@ -9,7 +9,7 @@ from itemgen.surface_uv import pack
 from itemgen.surface_paint import bake
 
 
-def write_asset(destination: Path, item_id, faces, materials, *, size, density, overlays=None, presentation=None, nodes=None, face_nodes=None):
+def write_asset(destination: Path, item_id, faces, materials, *, size, density, overlays=None, presentation=None, nodes=None, face_nodes=None, bindings=None):
     islands=pack(faces,size=size,texels_per_metre=density)
     lookup={i.name:i for i in islands}
     destination.mkdir(parents=True,exist_ok=True)
@@ -74,7 +74,7 @@ def write_asset(destination: Path, item_id, faces, materials, *, size, density, 
               textures=[dict(source=0,sampler=0)],
               materials=[dict(name=role,pbrMetallicRoughness=dict(baseColorTexture=dict(index=0),metallicFactor=materials[role].get('metallic',0),roughnessFactor=materials[role].get('roughness',.85))) for role in roles],
               meshes=meshes,nodes=node_defs,scenes=[dict(nodes=[0])],scene=0,
-              extras=dict(authoring_source='cubatarium-surface-design',design_version=3,presentation=presentation or {}))
+              extras=dict(authoring_source='cubatarium-surface-design',design_version=3,presentation=presentation or {},visual_bindings=bindings or []))
     (destination/'model.bin').write_bytes(blob)
     (destination/'model.gltf').write_text(json.dumps(gltf,indent=2)+'\n',encoding='utf-8')
     (destination/'uv_layout.json').write_text(json.dumps(dict(size=size,density=density,islands=[dict(name=i.name,role=i.role,rect=i.rect,uv=i.uv) for i in islands]),indent=2)+'\n',encoding='utf-8')

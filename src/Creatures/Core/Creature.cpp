@@ -1,7 +1,4 @@
 #include "Creatures/Core/Creature.h"
-#include "World/Core/FluidColumnSurfaceQuery.h"
-#include "World/Core/BlockWorld.h"
-#include "World/Math/GridMath.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureFacing.h"
 #include "Creatures/Core/CreatureFeetSnap.h"
@@ -12,6 +9,8 @@
 #include "Creatures/Player/PlayerCapsule.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureVisual.h"
+#include "World/Core/BlockWorld.h"
+#include "World/Core/FluidColumnSurfaceQuery.h"
 #include "World/Core/World.h"
 #include "World/Diagnostics/CreatureMovementDiagnostics.h"
 #include "World/Math/GridMath.h"
@@ -77,7 +76,6 @@ void UCreature::SetPlayerCharacter(bool v) { PlayerCharacter = v; }
 
 void UCreature::SetPossessed(bool v) { Possessed = v; }
 
-
 void UCreature::ApplyStatsFromDefinition(const CreatureDefinition &def)
 {
   Vitals = def.stats.vitalsTemplate;
@@ -129,8 +127,7 @@ void UCreature::SyncFeetFromLocomotion(const UWorld &world,
   BodyOrigin.x = eyeAfterLocomotion.x;
   BodyOrigin.z = eyeAfterLocomotion.z;
 
-  const bool walking =
-      Locomotion.GetMode() == CreatureMovementMode::Walking;
+  const bool walking = Locomotion.GetMode() == CreatureMovementMode::Walking;
   if (walking)
   {
     const float refFeetY = FeetYFromEye(eyeAfterLocomotion, EyeOffset.y);
@@ -141,9 +138,10 @@ void UCreature::SyncFeetFromLocomotion(const UWorld &world,
     {
       const bool anchoredGround =
           Locomotion.IsFeetAnchored() && Locomotion.IsOnGround();
-      const bool clearAtGround = !world.CheckBlockCollisionVolume(
-          CollisionVolumeFromBody(glm::vec3(BodyOrigin.x, *groundY, BodyOrigin.z),
-                                  Bounds.profile.restSizeBlocks));
+      const bool clearAtGround =
+          !world.CheckBlockCollisionVolume(CollisionVolumeFromBody(
+              glm::vec3(BodyOrigin.x, *groundY, BodyOrigin.z),
+              Bounds.profile.restSizeBlocks));
       if (ShouldSnapFeetToGround(refFeetY, *groundY, maxSnap, anchoredGround,
                                  clearAtGround))
       {
@@ -329,14 +327,13 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
 
 bool UCreature::TryIdleIntentFastPath(UWorld &world, float dt,
                                       const glm::vec3 &bodyOriginBefore,
-                                      CreatureHabitat habitat,
-                                      bool airMobility)
+                                      CreatureHabitat habitat, bool airMobility)
 {
   const bool idle_intent = glm::length(Intent.moveDirWorld) < 1e-4f &&
                            Intent.moveSpeed < 1e-4f && !Intent.wantJump;
   if (!idle_intent || !Locomotion.IsOnGround() || airMobility ||
-      habitat == CreatureHabitat::Aquatic ||
-      habitat == CreatureHabitat::Lava || LocomotionFacts.inFluid)
+      habitat == CreatureHabitat::Aquatic || habitat == CreatureHabitat::Lava ||
+      LocomotionFacts.inFluid)
   {
     return false;
   }
@@ -403,9 +400,8 @@ void UCreature::ShapeMovementWishAndSpeed(const UWorld &world,
   }
   else if (habitat == CreatureHabitat::Amphibious && !airMobility)
   {
-    const EnvironmentSample env =
-        ProbeEnvironmentAtMemoized(world, BodyOrigin,
-                                   Bounds.profile.restSizeBlocks);
+    const EnvironmentSample env = ProbeEnvironmentAtMemoized(
+        world, BodyOrigin, Bounds.profile.restSizeBlocks);
     if (!env.inWater)
     {
       wish.y = 0.0f;
@@ -428,8 +424,8 @@ void UCreature::RunMotorStep(UWorld &world, glm::vec3 &eye,
                              const CreatureInput &verticalInput,
                              const glm::vec3 &wish, float speed, float dt)
 {
-  ApplyCreatureMotorStep(world, eye, Locomotion, verticalInput, wish, speed,
-                         dt, Id, world.IsStepUpEnabled());
+  ApplyCreatureMotorStep(world, eye, Locomotion, verticalInput, wish, speed, dt,
+                         Id, world.IsStepUpEnabled());
   SyncFeetFromLocomotion(world, eye);
   SyncBoundsFromStance();
   // Corner / lip traps: motor axis resolve can leave AABB intersecting solids.
@@ -681,10 +677,10 @@ void UCreature::FinishIntentFrame(UWorld &world, float dt,
       glm::length(diagIntentDir) > 1e-4f)
   {
     CreatureMovementDiagRecord rec;
-    rec.event =
-        glm::length(rawInput.bodyOriginAfter - rawInput.bodyOriginBefore) < 1e-5f
-            ? "blocked"
-            : "intent";
+    rec.event = glm::length(rawInput.bodyOriginAfter -
+                            rawInput.bodyOriginBefore) < 1e-5f
+                    ? "blocked"
+                    : "intent";
     rec.creatureId = Id;
     rec.typeId = TypeId;
     rec.body = BodyOrigin;
@@ -701,49 +697,80 @@ void UCreature::FinishIntentFrame(UWorld &world, float dt,
 
 } // namespace cutum
 
-namespace cutum {
-void UCreature::SetHumanMotionFacts(glm::vec3 velocity, bool swimming, const UWorld *world, float dt)
+namespace cutum
+{
+void UCreature::SetHumanMotionFacts(glm::vec3 velocity, bool swimming,
+                                    const UWorld *world, float dt)
 {
   auto &f = LocomotionFacts;
-  HumanMotion.actionRemaining=std::max(0.f,HumanMotion.actionRemaining-std::max(0.f,dt));
+  ItemAction.Tick(dt);
+  HumanMotion.actionRemaining =
+      std::max(0.f, HumanMotion.actionRemaining - std::max(0.f, dt));
   f.actualVelocity = velocity;
-  f.horizontalSpeed = glm::length(glm::vec2(velocity.x,velocity.z));
+  f.horizontalSpeed = glm::length(glm::vec2(velocity.x, velocity.z));
   f.verticalSpeed = velocity.y;
   f.swimming = swimming;
-  if(f.mode!=CreatureMovementMode::Flying) {
-    if(swimming)f.state=f.horizontalSpeed>.05f?LocomotionState::Swim:LocomotionState::Tread;
-    else if(f.onGround) {
-      if(f.stanceBlend>.5f)f.state=LocomotionState::Crouch;
-      else if(f.horizontalSpeed<.05f)f.state=LocomotionState::Idle;
-    } else f.state=velocity.y>.2f?LocomotionState::Jump:LocomotionState::Fall;
+  if (f.mode != CreatureMovementMode::Flying)
+  {
+    if (swimming)
+      f.state = f.horizontalSpeed > .05f ? LocomotionState::Swim
+                                         : LocomotionState::Tread;
+    else if (f.onGround)
+    {
+      if (f.stanceBlend > .5f)
+        f.state = LocomotionState::Crouch;
+      else if (f.horizontalSpeed < .05f)
+        f.state = LocomotionState::Idle;
+    }
+    else
+      f.state =
+          velocity.y > .2f ? LocomotionState::Jump : LocomotionState::Fall;
   }
-  f.animPhase=HumanMotion.audioPhase+1.57079633f;
-  if(world)for(int side=0;side<2;++side) {
-    const float x=(side?.1125f:-.1125f);
-    const float yaw=glm::radians(Yaw);
-    const glm::vec3 foot=BodyOrigin+glm::vec3(std::cos(yaw)*x,0,-std::sin(yaw)*x);
-    const auto cell=WorldPosToBlock(foot);
-    const auto support=world->QueryGroundFeetYUnder(cell.x,cell.z,BodyOrigin.y+.15f);
-    f.supportValid[side]=support.has_value() && std::abs(*support-BodyOrigin.y)<.4f;
-    f.supportY[side]=support.value_or(BodyOrigin.y);
-  }
+  f.animPhase = HumanMotion.audioPhase + 1.57079633f;
+  if (world)
+    for (int side = 0; side < 2; ++side)
+    {
+      const float x = (side ? .1125f : -.1125f);
+      const float yaw = glm::radians(Yaw);
+      const glm::vec3 foot =
+          BodyOrigin + glm::vec3(std::cos(yaw) * x, 0, -std::sin(yaw) * x);
+      const auto cell = WorldPosToBlock(foot);
+      const auto support =
+          world->QueryGroundFeetYUnder(cell.x, cell.z, BodyOrigin.y + .15f);
+      f.supportValid[side] =
+          support.has_value() && std::abs(*support - BodyOrigin.y) < .4f;
+      f.supportY[side] = support.value_or(BodyOrigin.y);
+    }
   if (world && swimming)
   {
     const auto cell = WorldPosToBlock(BodyOrigin);
-    const auto water = FindFluidColumnSurfaceAt(world->GetBlockWorld(), world->GetBlockRegistry(),cell.x,cell.z,cell.y);
-    f.liquidKind=water.fluidId;
-    f.swimClearance=1.f;
-    const float yaw=glm::radians(Yaw);
-    for(float distance:{-.6f,.6f,.9f}) {
-      CollisionVolume volume;volume.center=BodyOrigin+glm::vec3(std::sin(yaw)*distance,1.2f,std::cos(yaw)*distance);volume.halfExtents=glm::vec3(.24f);
-      if(world->CheckBlockCollisionVolume(volume))f.swimClearance=.15f;
+    const auto water = FindFluidColumnSurfaceAt(world->GetBlockWorld(),
+                                                world->GetBlockRegistry(),
+                                                cell.x, cell.z, cell.y);
+    f.liquidKind = water.fluidId;
+    f.swimClearance = 1.f;
+    const float yaw = glm::radians(Yaw);
+    for (float distance : {-.6f, .6f, .9f})
+    {
+      CollisionVolume volume;
+      volume.center = BodyOrigin + glm::vec3(std::sin(yaw) * distance, 1.2f,
+                                             std::cos(yaw) * distance);
+      volume.halfExtents = glm::vec3(.24f);
+      if (world->CheckBlockCollisionVolume(volume))
+        f.swimClearance = .15f;
     }
     f.waterSurfaceY = water.valid ? water.surfaceY : BodyOrigin.y;
     const float eyes = GetLocomotionEye().y;
     // 8cm hysteresis around the physical eye, not the animated head.
-    f.headSubmerged = water.valid && eyes < water.surfaceY + (HumanMotion.submerged ? .04f : -.04f);
+    f.headSubmerged =
+        water.valid &&
+        eyes < water.surfaceY + (HumanMotion.submerged ? .04f : -.04f);
     HumanMotion.submerged = f.headSubmerged;
   }
-  else { f.headSubmerged=false; HumanMotion.submerged=false; }
+  else
+  {
+    f.headSubmerged = false;
+    HumanMotion.submerged = false;
+  }
 }
-}
+} // namespace cutum

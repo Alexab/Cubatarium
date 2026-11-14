@@ -538,7 +538,8 @@ FindSurface(const std::filesystem::path &path)
 void QueueItemSurface(CreatureDrawQueue *queue,
                       const std::shared_ptr<const ItemRenderAsset> &asset,
                       const std::filesystem::path &path, const glm::mat4 &vp,
-                      const glm::mat4 &model, bool loose = false)
+                      const glm::mat4 &model, bool loose = false,
+                      const ItemVisualInputs &inputs = {})
 {
   if (!queue)
     throw std::logic_error("Item surfaces require the shared draw queue");
@@ -547,8 +548,10 @@ void QueueItemSurface(CreatureDrawQueue *queue,
   item->Path = path;
   item->ViewProjection = vp;
   item->Model = model;
-  item->Low = asset->Low;
-  item->High = asset->High;
+  item->State = EvaluateItemVisualState(*asset, inputs);
+  const auto bounds = ItemVisualBounds(*asset, item->State);
+  item->Low = bounds.first;
+  item->High = bounds.second;
   if (loose)
     item->LightSamplePosition = glm::vec3(model[3]);
   CreatureDrawRequest request;
@@ -879,7 +882,8 @@ void SubmitItemOnSingleBone(CreatureDrawQueue *queue, UShaderProgram *shader,
                             const float offset[3], const float euler[3],
                             const glm::mat4 &viewProj, const glm::mat4 &bodyMat,
                             const BoneMatrixLookupFn &bones, bool immediate,
-                            const BoneBoundsLookupFn &bounds)
+                            const BoneBoundsLookupFn &bounds,
+                            const ItemVisualInputs &inputs)
 {
   if (itemId.empty() || boneName.empty())
   {
@@ -911,7 +915,7 @@ void SubmitItemOnSingleBone(CreatureDrawQueue *queue, UShaderProgram *shader,
     const auto local =
         ItemWieldLocalMatrix(*surface, palm, boneName == "leftItem", scale);
     QueueItemSurface(queue, surface, surfacePath, viewProj,
-                     bodyMat * boneMat * local);
+                     bodyMat * boneMat * local, false, inputs);
     return;
   }
   auto asset = LoadItemGltf(itemId);
@@ -992,14 +996,15 @@ void WornEquipmentDrawer::SubmitLoose(CreatureDrawQueue &queue,
                                       const std::string &id,
                                       const glm::mat4 &vp,
                                       const glm::mat4 &model, glm::vec3 size,
-                                      unsigned int blockTexture, bool onSupport)
+                                      unsigned int blockTexture, bool onSupport,
+                                      const ItemVisualInputs &inputs)
 {
   const auto surfacePath = ResolveGltfAbs(id);
   if (const auto surface = FindSurface(surfacePath))
   {
     QueueItemSurface(&queue, surface, surfacePath, vp,
                      model * ItemLooseLocalMatrix(*surface, size, onSupport),
-                     true);
+                     true, inputs);
     return;
   }
   if (auto asset = LoadItemGltf(id))
@@ -1102,8 +1107,15 @@ void WornEquipmentDrawer::SubmitWieldedFromCreature(
   {
     offId = off.Id;
   }
-  SubmitWieldedPreview(&queue, nullptr, mainId, offId, items, viewProj, bodyMat,
-                       bones, false, bounds);
+  SubmitWieldedPreview(
+      &queue, nullptr, mainId, offId, items, viewProj, bodyMat, bones, false,
+      bounds,
+      MakeItemVisualInputs(active, creature.BowCharge,
+                           creature.ActiveItemUsePhase(),
+                           creature.GetInventory().IsCreative() ||
+                               creature.GetInventory().Count(
+                                   InventoryEntryKind::Item, "arrow") > 0),
+      MakeItemVisualInputs(&off));
 }
 
 void WornEquipmentDrawer::SubmitWieldedPreview(
@@ -1111,7 +1123,8 @@ void WornEquipmentDrawer::SubmitWieldedPreview(
     const std::string &mainItemId, const std::string &offhandItemId,
     const UItemDefinitionStorage *items, const glm::mat4 &viewProj,
     const glm::mat4 &bodyMat, const BoneMatrixLookupFn &bones, bool immediate,
-    const BoneBoundsLookupFn &bounds)
+    const BoneBoundsLookupFn &bounds, const ItemVisualInputs &mainInputs,
+    const ItemVisualInputs &offInputs)
 {
   float scale = 1.25f;
   float offset[3] = {0, 0, 0};
@@ -1121,14 +1134,14 @@ void WornEquipmentDrawer::SubmitWieldedPreview(
     ResolveWieldParams(items, mainItemId, scale, offset, euler);
     SubmitItemOnSingleBone(queue, shader, mainItemId, "rightItem", scale,
                            offset, euler, viewProj, bodyMat, bones, immediate,
-                           bounds);
+                           bounds, mainInputs);
   }
   if (!offhandItemId.empty())
   {
     ResolveWieldParams(items, offhandItemId, scale, offset, euler);
     SubmitItemOnSingleBone(queue, shader, offhandItemId, "leftItem", scale,
                            offset, euler, viewProj, bodyMat, bones, immediate,
-                           bounds);
+                           bounds, offInputs);
   }
 }
 

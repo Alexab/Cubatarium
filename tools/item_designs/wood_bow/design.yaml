@@ -4,7 +4,10 @@ atlas_size: 256
 texels_per_metre: 230
 triangle_budget: 1800
 presentation:
-  tp_euler_deg: [-65, 0, 0]
+  tp_euler_deg:
+  - -65
+  - 0
+  - 0
   right_grip:
   - 0
   - 0
@@ -20,7 +23,7 @@ presentation:
   fp_scale: 0.65
   fp_hand_offset:
   - -0.04
-  - 0.12
+  - 0.65
   - 0
   icon_euler_deg:
   - 0
@@ -62,6 +65,20 @@ materials:
     pattern: plain
     metallic: 0.5
     roughness: 0.7
+  arrow_steel:
+    color:
+    - 145
+    - 156
+    - 157
+    pattern: forged
+    metallic: 0.7
+    roughness: 0.5
+  fletching:
+    color:
+    - 216
+    - 204
+    - 165
+    pattern: fiber
 parts:
 - name: grip
   material: binding
@@ -102,6 +119,7 @@ parts:
   - 0
   - 90
   - 0
+  node: upper_limb
 - name: lower_limb
   material: wood
   shape: extrude
@@ -125,19 +143,193 @@ parts:
   - 0
   - 90
   - 0
-- name: string
+  node: lower_limb
+- name: string_upper
   material: edge
   shape: bevel_box
   size:
   - 0.007
-  - 0.86
+  - 0.45
   - 0.007
   bevel: 0.00126
   offset:
   - 0
-  - 0
-  - -0.03
+  - 0.225
+  - -0.025
   rotation:
   - 0
-  - 90
   - 0
+  - 0
+  node: string_upper
+  fit_reference: false
+- name: string_lower
+  material: edge
+  shape: bevel_box
+  size:
+  - 0.007
+  - 0.45
+  - 0.007
+  bevel: 0.00126
+  offset:
+  - 0
+  - -0.225
+  - -0.025
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: string_lower
+  fit_reference: false
+- name: nocked_shaft
+  material: wood
+  shape: bevel_box
+  size:
+  - 0.012
+  - 0.012
+  - 0.52
+  bevel: 0.00216
+  offset:
+  - 0
+  - 0
+  - -0.285
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: nocked_arrow
+  fit_reference: false
+- name: nocked_head
+  material: arrow_steel
+  shape: extrude
+  contour:
+  - - -0.028
+    - 0
+  - - 0.028
+    - 0
+  - - 0
+    - 0.085
+  depth: 0.012
+  offset:
+  - 0
+  - 0
+  - -0.545
+  rotation:
+  - -90
+  - 0
+  - 0
+  node: nocked_arrow
+  fit_reference: false
+- name: nocked_fletching_horizontal
+  material: fletching
+  shape: bevel_box
+  size:
+  - 0.048
+  - 0.004
+  - 0.095
+  bevel: 0.0007199999999999999
+  offset:
+  - 0
+  - 0
+  - -0.085
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: nocked_arrow
+  fit_reference: false
+- name: nocked_fletching_vertical
+  material: fletching
+  shape: bevel_box
+  size:
+  - 0.004
+  - 0.048
+  - 0.095
+  bevel: 0.0007199999999999999
+  offset:
+  - 0
+  - 0
+  - -0.085
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: nocked_arrow
+  fit_reference: false
+nodes:
+  upper_limb:
+    pivot:
+    - 0
+    - 0.07
+    - 0
+  lower_limb:
+    pivot:
+    - 0
+    - -0.07
+    - 0
+  pull:
+    pivot:
+    - 0
+    - 0
+    - -0.025
+  string_upper:
+    pivot:
+    - 0
+    - 0.225
+    - -0.025
+  string_lower:
+    pivot:
+    - 0
+    - -0.225
+    - -0.025
+  nocked_arrow:
+    parent: pull
+    pivot:
+    - 0
+    - 0
+    - -0.025
+visual_bindings:
+- node: upper_limb
+  channel: bow_charge
+  rotation_to:
+  - 12
+  - 0
+  - 0
+- node: lower_limb
+  channel: bow_charge
+  rotation_to:
+  - -12
+  - 0
+  - 0
+- node: pull
+  channel: bow_charge
+  translation_to:
+  - 0
+  - 0
+  - 0.2
+- node: string_upper
+  span:
+    start_node: upper_limb
+    start_point:
+    - 0
+    - 0.38
+    - -0.025
+    end_node: pull
+    end_point:
+    - 0
+    - 0
+    - 0
+- node: string_lower
+  span:
+    start_node: pull
+    start_point:
+    - 0
+    - 0
+    - 0
+    end_node: lower_limb
+    end_point:
+    - 0
+    - -0.38
+    - -0.025
+- node: nocked_arrow
+  channel: bow_loaded
+  visible_above: 0.001

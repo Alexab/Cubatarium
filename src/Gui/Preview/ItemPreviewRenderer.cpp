@@ -467,7 +467,8 @@ bool UItemPreviewRenderer::TryLoadPartsFromModelJson(
 bool UItemPreviewRenderer::TryDrawGltfModel(const std::string &itemId,
                                             const std::string &modelRel,
                                             const glm::mat4 &projection,
-                                            const glm::mat4 &view)
+                                            const glm::mat4 &view,
+                                            const ItemVisualInputs &inputs)
 {
   IUPlatformPaths *paths = IUPlatformPaths::TryGet();
   if (!paths || modelRel.empty())
@@ -525,13 +526,14 @@ bool UItemPreviewRenderer::TryDrawGltfModel(const std::string &itemId,
   }
 
   const std::filesystem::path absPath = paths->AssetRoot() / gltfRel;
-  return DrawGltfPath(itemId, absPath, projection, view);
+  return DrawGltfPath(itemId, absPath, projection, view, inputs);
 }
 
 bool UItemPreviewRenderer::DrawGltfPath(const std::string &itemId,
                                         const std::filesystem::path &absPath,
                                         const glm::mat4 &projection,
-                                        const glm::mat4 &view)
+                                        const glm::mat4 &view,
+                                        const ItemVisualInputs &inputs)
 {
   if (const auto surface =
           InspectionAsset
@@ -539,8 +541,11 @@ bool UItemPreviewRenderer::DrawGltfPath(const std::string &itemId,
               : FindItemSurfaceAsset(absPath,
                                      UItemDefinitionStorage::ContentRevision()))
   {
-    const auto center = (surface->Low + surface->High) * .5f;
-    const auto extent = surface->High - surface->Low;
+    const auto state = EvaluateItemVisualState(*surface, inputs);
+    const auto bounds =
+        ItemVisualBounds(*surface, EvaluateItemVisualState(*surface, {}));
+    const auto center = (bounds.first + bounds.second) * .5f;
+    const auto extent = bounds.second - bounds.first;
     const auto *definition = Items->Get(itemId);
     const float scale =
         1.2f / std::max(1e-5f, std::max({extent.x, extent.y, extent.z})) *
@@ -556,7 +561,7 @@ bool UItemPreviewRenderer::DrawGltfPath(const std::string &itemId,
     profile.InspectionMode = InspectionMode;
     profile.Ambient = InspectionAmbient;
     profile.CameraPosition = glm::vec3(glm::inverse(view)[3]);
-    SurfaceRenderer->Draw(surface, absPath, projection * view, model, {},
+    SurfaceRenderer->Draw(surface, absPath, projection * view, model, state,
                           profile);
     return true;
   }
@@ -728,9 +733,10 @@ GLuint UItemPreviewRenderer::GetOrCreateColorTexture(const std::string &itemId)
   return tex;
 }
 
-GLuint UItemPreviewRenderer::RenderToUniqueTexture(const std::string &itemId,
-                                                   int size, float yawDeg,
-                                                   float pitchDeg)
+GLuint
+UItemPreviewRenderer::RenderToUniqueTexture(const std::string &itemId, int size,
+                                            float yawDeg, float pitchDeg,
+                                            const ItemVisualInputs &inputs)
 {
   if (!Shader || !Items || itemId.empty())
   {
@@ -778,8 +784,9 @@ GLuint UItemPreviewRenderer::RenderToUniqueTexture(const std::string &itemId,
   }
 
   // Prefer static glTF when present, then parts[] cubes, then procedural.
-  if (InspectionAsset ? DrawGltfPath(itemId, InspectionPath, projection, view)
-                      : TryDrawGltfModel(itemId, modelRel, projection, view))
+  if (InspectionAsset
+          ? DrawGltfPath(itemId, InspectionPath, projection, view, inputs)
+          : TryDrawGltfModel(itemId, modelRel, projection, view, inputs))
   {
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                            ColorTex, 0);
@@ -866,7 +873,8 @@ UItemPreviewRenderer::GetInspectionAsset(const std::filesystem::path &path)
 
 GLuint UItemPreviewRenderer::RenderInspectionTexture(
     const std::string &itemId, const std::filesystem::path &path, int size,
-    float yaw, float pitch, int mode, float ambient)
+    float yaw, float pitch, int mode, float ambient,
+    const ItemVisualInputs &inputs)
 {
   InspectionAsset = GetInspectionAsset(path);
   InspectionPath = path;
@@ -874,7 +882,8 @@ GLuint UItemPreviewRenderer::RenderInspectionTexture(
   InspectionAmbient = std::clamp(ambient, 0.f, 1.f);
   try
   {
-    const auto texture = RenderToUniqueTexture(itemId, size, yaw, pitch);
+    const auto texture =
+        RenderToUniqueTexture(itemId, size, yaw, pitch, inputs);
     InspectionAsset.reset();
     InspectionMode = 0;
     InspectionAmbient = .65f;

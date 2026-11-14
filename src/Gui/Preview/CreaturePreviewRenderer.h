@@ -27,6 +27,7 @@ class UCreatureTextureStorage;
 class UShaderManager;
 class ItemSurfaceRenderer;
 struct ItemDrawRequest;
+struct ItemVisualInputs;
 class CreatureDrawQueue;
 struct CreatureGltfMeshAsset;
 
@@ -106,7 +107,9 @@ public:
           nullptr,
       const std::string *mainItemId = nullptr,
       const std::string *offhandItemId = nullptr,
-      const HumanAppearance *human = nullptr);
+      const HumanAppearance *human = nullptr,
+      const ItemVisualInputs *mainInputs = nullptr,
+      const ItemVisualInputs *offInputs = nullptr);
 
   GLuint CreateSolidColorTexture(int size, float r, float g, float b, float a);
 
@@ -146,7 +149,9 @@ private:
                                          kWornArmorSlotCount> *armor = nullptr,
                         const std::string *mainItemId = nullptr,
                         const std::string *offhandItemId = nullptr,
-                        const HumanAppearance *human = nullptr);
+                        const HumanAppearance *human = nullptr,
+                        const ItemVisualInputs *mainInputs = nullptr,
+                        const ItemVisualInputs *offInputs = nullptr);
 
   std::shared_ptr<UCreatureDefinitionStorage> Species;
   std::shared_ptr<USkinDefinitionStorage> Skins;

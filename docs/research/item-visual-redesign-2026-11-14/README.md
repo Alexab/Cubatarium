@@ -250,10 +250,54 @@ Evidence: [summary and frame hashes](world-surface-checkpoint/summary.json),
 Artistic acceptance is still open. The bucket's small physical envelope needs
 an independently authored TP scale; some tool proportions, armor construction
 and painted surface details still need work. Bread scoring remains weak.
-Gameplay-driven node states, filled containers, bow/shears motion, carry
-contacts, full Item Lab presentation controls, the remaining 58 designs,
+At that checkpoint, gameplay-driven node states, filled containers and
+bow/shears motion were unfinished; the following checkpoint covers their
+integration. Carry contacts, full Item Lab presentation controls, the remaining
+58 designs,
 publication/import and comparative performance acceptance are unfinished.
 There are still twelve candidates and **zero new production models**.
+
+## Gameplay visual-state checkpoint
+
+The candidate item renderer now projects authoritative entry contents, bow draw,
+ammunition availability and transient successful-use events into named visual
+nodes. The projection stores no property and does not change gameplay ID,
+economy, collision profiles or throw rules. Broken containers retain their
+visible contents; broken tools do not begin an active-use gesture. A use pulse
+is keyed by instance and inventory selection, so changing slots cannot animate
+the newly selected tool.
+
+The bow has independent limb pivots, two string spans connected to the moving
+limb tips/draw point, and an ammunition-dependent nocked arrow. Shears have two
+working halves and a successful-use pulse returning to rest. The bucket has a
+water surface driven by finite contents. This is an integration checkpoint:
+two-hand bow contacts and final artistic acceptance remain open.
+
+The same evaluated state reaches FP, TP, loose items, character-sheet equipment
+and Item Lab. Water-fill icon variants use a read-only entry snapshot. The
+backpack, RH/LH, player-window footer and HUD no longer disagree about a filled
+container. Variant keys normalize the fill range and do not encode ownership.
+Reload clears the state variants as well as ordinary icons. Item Lab has
+Rest/Half/Peak snapshot controls and exports the selected pose.
+
+Native review found two defects beyond the old submission-only checks: the bow
+inherited the legacy mesh's shallow-axis fitting and became oversized; at full
+draw its hand root also fell below the viewport. V3 FP fitting now uses the rest
+silhouette plus independent authored FP scale. The bow's authored root position
+was corrected. Native FP probes now record actual projected vertex bounds and
+reject a model whose visible bounds fraction is below 60%, or whose geometry
+passes behind the camera. The final candidate probe passes this gate, including
+both hands and body forms. This framing check is additional technical evidence,
+not an artistic-quality score. The bucket has independently adjusted FP and TP
+scales; its contents remain unchanged by those presentation settings.
+
+Evidence is recorded in [the state checkpoint](state-checkpoint/summary.json),
+including the Release build, 24-test CTest run, native reports and selected
+frames. These tests use twelve temporary runtime substitutions and restore all
+36 files afterward. Production remains **70 legacy resources, zero published
+v3 replacements**. The remaining 58 authored designs, final texture/geometry
+review, two-hand contacts, full Item Lab presentation scenes, import/publication
+and comparative performance acceptance are still required.
 
 ## Remaining implementation, in order
 
@@ -267,7 +311,8 @@ There are still twelve candidates and **zero new production models**.
    512 armor. Albedo and optional standard metallic/roughness parameters.
 4. Complete gameplay-state/contact wiring and acceptance across the shared
    item path. Static v3 TP/armor/loose integration and world lighting/fog now
-   exist; gameplay states and carry contacts still need full presentation acceptance.
+   exist; visual-state wiring now has candidate native coverage. Carry contacts
+   and final world/artistic acceptance remain incomplete.
    Leave creature buffer ABI and creature shaders unchanged.
 5. In-game Item Lab: catalog, old/new, fixed/orbit cameras, silhouette/gray/albedo/
    lit/UV/normals/wireframe, 32/48/64 icons, FP/TP/ground, both body types, states,

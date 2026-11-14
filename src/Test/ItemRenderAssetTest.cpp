@@ -1,4 +1,6 @@
 #include "Items/ItemRenderAsset.h"
+#include "Game/Inventory/InventoryTypes.h"
+#include "Items/ItemActionPulse.h"
 #include "Items/ItemPresentationMath.h"
 
 #include <chrono>
@@ -16,10 +18,125 @@ void Expect(bool value, const char *reason)
   if (!value)
     throw std::runtime_error(reason);
 }
+void TestVisualState()
+{
+  using namespace cutum;
+  ItemRenderAsset a;
+  a.Nodes = {{"root", glm::mat4(1), glm::mat4(1), -1},
+             {"tip", glm::translate(glm::mat4(1), {0, 1, 0}),
+              glm::translate(glm::mat4(1), {0, 1, 0}), 0},
+             {"string", glm::translate(glm::mat4(1), {0, .5f, 0}),
+              glm::translate(glm::mat4(1), {0, .5f, 0}), 0}};
+  ItemRenderPrimitive p;
+  p.Node = 2;
+  p.Low = {-.01f, -.5f, -.01f};
+  p.High = {.01f, .5f, .01f};
+  a.Primitives.push_back(p);
+  a.Low = {-.01f, 0, -.01f};
+  a.High = {.01f, 1, .01f};
+  ItemNodeBinding tip;
+  tip.Node = 1;
+  tip.TranslationTo = {0, 0, .4f};
+  ItemNodeBinding span;
+  span.Node = 2;
+  span.Span = true;
+  span.StartNode = 0;
+  span.EndNode = 1;
+  a.Bindings = {tip, span};
+  ItemVisualInputs full;
+  full.BowCharge = 1;
+  const auto state = EvaluateItemVisualState(a, full);
+  const auto transforms = ResolveItemNodeTransforms(a, state);
+  Expect(glm::length(glm::vec3(transforms[2] * glm::vec4(0, -.5f, 0, 1))) <
+             1e-5f,
+         "string remains connected to its first anchor");
+  Expect(glm::length(glm::vec3(transforms[2] * glm::vec4(0, .5f, 0, 1)) -
+                     glm::vec3(0, 1, .4f)) < 1e-5f,
+         "string follows its moving second anchor");
+  const auto bounds = ItemVisualBounds(a, state);
+  Expect(bounds.second.z >= .399f, "posed bounds include the moved string");
+  const auto cancelled =
+      ResolveItemNodeTransforms(a, EvaluateItemVisualState(a, {}));
+  Expect(glm::length(cancelled[2][3] - a.Nodes[2].Transform[3]) < 1e-5f,
+         "cancel restores the rest pivot");
+  a.Bindings.clear();
+  ItemNodeBinding fill;
+  fill.Node = 2;
+  fill.Channel = ItemVisualChannel::FillUnits;
+  fill.Maximum = 4;
+  fill.VisibleAbove = .001f;
+  fill.TranslationFrom = {0, -.6f, 0};
+  a.Bindings.push_back(fill);
+  ItemVisualInputs water;
+  water.HasWater = true;
+  water.ContentsUnits = 2;
+  const auto half = EvaluateItemVisualState(a, water);
+  Expect(ItemNodeVisible(a, half, 2), "nonempty water surface is visible");
+  Expect(!ItemNodeVisible(a, EvaluateItemVisualState(a, {}), 2),
+         "empty container hides its water surface");
+  water.HasWater = false;
+  Expect(!ItemNodeVisible(a, EvaluateItemVisualState(a, water), 2),
+         "non-water contents do not fabricate water");
+  ItemVisualState hidden;
+  hidden.HiddenNodes.insert("root");
+  Expect(!ItemNodeVisible(a, hidden, 2),
+         "node visibility inherits from parents");
+  auto loaded = fill;
+  loaded.Channel = ItemVisualChannel::BowLoaded;
+  loaded.Maximum = 1;
+  a.Bindings = {loaded};
+  full.HasAmmo = false;
+  Expect(!ItemNodeVisible(a, EvaluateItemVisualState(a, full), 2),
+         "drawing without ammunition cannot display a nocked arrow");
+  full.HasAmmo = true;
+  Expect(ItemNodeVisible(a, EvaluateItemVisualState(a, full), 2),
+         "drawing with ammunition displays the nocked arrow");
+  full.BowCharge = 0;
+  Expect(!ItemNodeVisible(a, EvaluateItemVisualState(a, full), 2),
+         "cancelling draw removes the nocked arrow");
+  fill.Channel = ItemVisualChannel::UsePhase;
+  fill.Maximum = 1;
+  fill.VisibleAbove = -1;
+  fill.Pulse = true;
+  fill.TranslationFrom = {0, 0, 0};
+  fill.RotationTo = {0, 0, 20};
+  a.Bindings = {fill};
+  ItemVisualInputs cut;
+  cut.UsePhase = .5f;
+  const auto peak =
+      ResolveItemNodeTransforms(a, EvaluateItemVisualState(a, cut));
+  Expect(std::abs(peak[2][0][1]) > .3f,
+         "successful-use pulse reaches its working pose");
+  cut.UsePhase = 1;
+  const auto end =
+      ResolveItemNodeTransforms(a, EvaluateItemVisualState(a, cut));
+  Expect(std::abs(end[2][0][1]) < 1e-5f, "completed pulse returns to rest");
+  InventoryEntryRef brokenContainer;
+  brokenContainer.empty = false;
+  brokenContainer.broken = true;
+  brokenContainer.contentsId = "water";
+  brokenContainer.contentsUnits = 1;
+  const auto preserved = MakeItemVisualInputs(&brokenContainer, 1, .5f, true);
+  Expect(preserved.HasWater && preserved.ContentsUnits == 1 &&
+             preserved.BowCharge == 0,
+         "broken containers retain their visible contents without an active "
+         "use gesture");
+  ItemActionPulse pulse;
+  pulse.Begin("shears", 7, 12);
+  pulse.Tick(.15f);
+  Expect(pulse.Phase("shears", 7, 12) > .4f,
+         "successful event advances with the actor clock");
+  Expect(pulse.Phase("shears", 8, 12) == 0 && pulse.Phase("shears", 7, 13) == 0,
+         "switching instance or selection cannot transfer an action pulse");
+  pulse.Tick(1);
+  Expect(pulse.Phase("shears", 7, 12) == 0,
+         "finished action has no persistent visual state");
+}
 } // namespace
 
 int main()
 {
+  TestVisualState();
   namespace fs = std::filesystem;
   using Json = nlohmann::json;
   const auto stamp =
@@ -144,6 +261,7 @@ int main()
     physicalAsset.Low = glm::vec3(-.2f, -.1f, -.05f);
     physicalAsset.High = glm::vec3(.2f, .1f, .05f);
     physicalAsset.Grip.TpEulerDeg = glm::vec3(15, 30, 12);
+    physicalAsset.Grip.TpScale = 2.f;
     physicalAsset.Grip.LeftGrip = glm::vec3(.02f, .08f, 0);
     physicalAsset.Grip.HasLeftGrip = true;
     const glm::vec3 palm(.3f, -.5f, .1f);
@@ -197,6 +315,13 @@ int main()
       Expect(failed, "invalid glTF was accepted");
     };
     auto bad = g;
+    bad["extras"]["visual_bindings"] =
+        Json::array({{{"node", "missing"}, {"channel", "bow_charge"}}});
+    rejected(bad);
+    bad = g;
+    bad["extras"]["presentation"]["tp_scale"] = -2;
+    rejected(bad);
+    bad = g;
     bad["accessors"][0]["count"] = 1000;
     rejected(bad);
     bad = g;

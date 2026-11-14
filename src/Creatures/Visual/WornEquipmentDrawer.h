@@ -1,6 +1,7 @@
 #ifndef WORN_EQUIPMENT_DRAWER_H
 #define WORN_EQUIPMENT_DRAWER_H
 
+#include "Items/ItemVisualInputs.h"
 #include <array>
 #include <functional>
 #include <glm/mat4x4.hpp>
@@ -38,7 +39,8 @@ public:
   static void SubmitLoose(CreatureDrawQueue &queue, const std::string &id,
                           const glm::mat4 &viewProj, const glm::mat4 &model,
                           glm::vec3 size, unsigned int blockTexture = 0,
-                          bool onSupport = true);
+                          bool onSupport = true,
+                          const ItemVisualInputs &inputs = {});
   static bool HidePossessedWield();
   static void SetItemDefinitions(const UItemDefinitionStorage *items);
   static const UItemDefinitionStorage *ItemDefinitions();
@@ -67,7 +69,9 @@ public:
       const std::string &mainItemId, const std::string &offhandItemId,
       const UItemDefinitionStorage *items, const glm::mat4 &viewProj,
       const glm::mat4 &bodyMat, const BoneMatrixLookupFn &bones, bool immediate,
-      const BoneBoundsLookupFn &bounds = {});
+      const BoneBoundsLookupFn &bounds = {},
+      const ItemVisualInputs &mainInputs = {},
+      const ItemVisualInputs &offInputs = {});
 
   /// Preview overlays use the same item queue path as world equipment.
   static void SubmitPreview(

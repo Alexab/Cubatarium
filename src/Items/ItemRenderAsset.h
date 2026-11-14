@@ -1,12 +1,14 @@
 #ifndef ITEM_RENDER_ASSET_H
 #define ITEM_RENDER_ASSET_H
 
+#include "Items/ItemVisualInputs.h"
 #include <cstdint>
 #include <filesystem>
 #include <glm/glm.hpp>
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace cutum
@@ -25,6 +27,7 @@ struct ItemRenderPrimitive
   std::vector<float> Vertices;
   std::vector<unsigned> Indices;
   size_t Material{0}, Node{0};
+  glm::vec3 Low{0.f}, High{0.f};
 };
 
 struct ItemRenderNode
@@ -40,9 +43,29 @@ struct ItemGripProfile
   glm::vec3 RightGrip{0.f}, LeftGrip{0.f};
   glm::vec3 FpEulerDeg{0.f}, FpHandOffset{0.f};
   glm::vec3 IconEulerDeg{0.f}, TpEulerDeg{0.f};
-  glm::vec3 FpArmEulerDeg{0.f};
+  glm::vec3 FpArmEulerDeg{0.f}, GroundEulerDeg{0.f};
   bool HasRightGrip{false}, HasLeftGrip{false}, HasFpEuler{false};
-  float FpScale{1.f};
+  float FpScale{1.f}, TpScale{1.f};
+};
+
+enum class ItemVisualChannel
+{
+  BowCharge,
+  BowLoaded,
+  UsePhase,
+  FillUnits
+};
+struct ItemNodeBinding
+{
+  size_t Node{0};
+  ItemVisualChannel Channel{ItemVisualChannel::BowCharge};
+  float Minimum{0.f}, Maximum{1.f}, VisibleAbove{-1.f};
+  bool Pulse{false}, Span{false};
+  glm::vec3 TranslationFrom{0.f}, TranslationTo{0.f};
+  glm::vec3 RotationFrom{0.f}, RotationTo{0.f};
+  glm::vec3 ScaleFrom{1.f}, ScaleTo{1.f};
+  size_t StartNode{0}, EndNode{0};
+  glm::vec3 StartPoint{0.f}, EndPoint{0.f};
 };
 
 struct ItemRenderAsset
@@ -52,6 +75,7 @@ struct ItemRenderAsset
   std::vector<ItemRenderNode> Nodes;
   glm::vec3 Low{0.f}, High{0.f};
   ItemGripProfile Grip;
+  std::vector<ItemNodeBinding> Bindings;
 };
 
 /// Strict static item glTF subset. Throws with an actionable reason; callers
@@ -67,7 +91,14 @@ glm::mat4 ApplyItemHandProfile(const glm::mat4 &root, const glm::vec3 &socket,
 struct ItemVisualState
 {
   std::unordered_map<std::string, glm::mat4> NodeTransforms;
+  std::unordered_set<std::string> HiddenNodes;
 };
+ItemVisualState EvaluateItemVisualState(const ItemRenderAsset &asset,
+                                        const ItemVisualInputs &inputs);
+bool ItemNodeVisible(const ItemRenderAsset &asset, const ItemVisualState &state,
+                     size_t node);
+std::pair<glm::vec3, glm::vec3> ItemVisualBounds(const ItemRenderAsset &asset,
+                                                 const ItemVisualState &state);
 std::vector<glm::mat4> ResolveItemNodeTransforms(const ItemRenderAsset &asset,
                                                  const ItemVisualState &state);
 } // namespace cutum

@@ -528,7 +528,8 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(
     float yawDeg, float pitchDeg, float animTimeSec, bool animateWalk,
     const std::array<WornArmorPreviewSlot, kWornArmorSlotCount> *armor,
     const std::string *mainItemId, const std::string *offhandItemId,
-    const HumanAppearance *human)
+    const HumanAppearance *human, const ItemVisualInputs *mainInputs,
+    const ItemVisualInputs *offInputs)
 {
   if (!Species || !Skins || !Textures || !Shader || viewportSize <= 0)
   {
@@ -870,7 +871,15 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(
             &queue, nullptr, mainItemId ? *mainItemId : std::string(),
             offhandItemId ? *offhandItemId : std::string(),
             WornEquipmentDrawer::ItemDefinitions(), viewProj, bodyMat,
-            boneLookup, false, bounds);
+            boneLookup, false, bounds,
+            mainInputs
+                ? *mainInputs
+                : MakeItemVisualInputs(
+                      previewCreature.GetInventory().GetActiveEntryRef()),
+            offInputs
+                ? *offInputs
+                : MakeItemVisualInputs(
+                      &previewCreature.GetInventory().GetEquippedOffhand()));
     }
     if (QaSubmissionObserver)
       QaSubmissionObserver(queue, viewProj);
@@ -959,7 +968,8 @@ GLuint UCreaturePreviewRenderer::RenderToUniqueTexture(
     float yawDeg, float pitchDeg, float animTimeSec, bool animateWalk,
     const std::array<WornArmorPreviewSlot, kWornArmorSlotCount> *armor,
     const std::string *mainItemId, const std::string *offhandItemId,
-    const HumanAppearance *human)
+    const HumanAppearance *human, const ItemVisualInputs *mainInputs,
+    const ItemVisualInputs *offInputs)
 {
   if (speciesId.empty() || !Shader)
   {
@@ -998,7 +1008,7 @@ GLuint UCreaturePreviewRenderer::RenderToUniqueTexture(
 
   if (!DrawSpeciesParts(speciesId, skinId, clamped, yawDeg, pitchDeg,
                         animTimeSec, animateWalk, armor, mainItemId,
-                        offhandItemId, human))
+                        offhandItemId, human, mainInputs, offInputs))
   {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glDeleteTextures(1, &tex);

@@ -1,8 +1,11 @@
 #include "Gui/Cache/ItemIconCache.h"
+#include "App/Platform/IUPlatformPaths.h"
 #include "Gui/Preview/ItemPreviewRenderer.h"
+#include "Items/ItemRenderAsset.h"
 #include "Render/GlIncludes.h"
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <vector>
 
@@ -98,14 +101,15 @@ UItemIconCache::UItemIconCache(
 
 void UItemIconCache::EnsureFbo(int) {}
 
-GLuint UItemIconCache::RenderItemIcon(const std::string &itemId)
+GLuint UItemIconCache::RenderItemIcon(const std::string &itemId,
+                                      const ItemVisualInputs &inputs)
 {
   constexpr int kSize = 64;
 
   if (ItemPreview)
   {
     const GLuint tex =
-        ItemPreview->RenderToUniqueTexture(itemId, kSize, 45.f, 20.f);
+        ItemPreview->RenderToUniqueTexture(itemId, kSize, 45.f, 20.f, inputs);
     if (tex != 0)
     {
       return tex;
@@ -125,6 +129,50 @@ GLuint UItemIconCache::RenderItemIcon(const std::string &itemId)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   return outTex;
+}
+
+GLuint UItemIconCache::GetIcon(const InventoryEntryRef &entry)
+{
+  SyncRevision();
+  if (entry.contentsId != "water" || entry.contentsUnits <= 0 || !Items)
+    return GetIcon(entry.Id);
+  const auto *def = Items->Get(entry.Id);
+  const auto *paths = IUPlatformPaths::TryGet();
+  if (!def || !paths || def->ModelPath.empty())
+    return GetIcon(entry.Id);
+  const auto asset =
+      FindItemSurfaceAsset(paths->AssetRoot() / def->ModelPath,
+                           UItemDefinitionStorage::ContentRevision());
+  int maximum = 0;
+  if (asset)
+    for (const auto &b : asset->Bindings)
+      if (b.Channel == ItemVisualChannel::FillUnits)
+        maximum = std::max(maximum, int(std::ceil(b.Maximum)));
+  if (maximum <= 0)
+    return GetIcon(entry.Id);
+  const int units = std::min(entry.contentsUnits, maximum);
+  const std::string variant = "water:" + std::to_string(units),
+                    key = entry.Id + "|" + variant;
+  const auto found = Cache.find(key);
+  if (found != Cache.end())
+    return found->second;
+  if (IconService && !SkipDiskCache)
+  {
+    GLuint texture = 0;
+    if (IconService->TryLoadIconTexture("item", entry.Id, variant,
+                                        FingerprintFor(entry.Id), kIconSize,
+                                        texture) &&
+        texture)
+    {
+      Cache[key] = texture;
+      return texture;
+    }
+  }
+  auto inputs = MakeItemVisualInputs(&entry);
+  inputs.ContentsUnits = units;
+  StateRequests[key] = {entry.Id, variant, inputs};
+  Warmup.Push(key);
+  return 0;
 }
 
 GLuint UItemIconCache::GetIcon(const std::string &itemId)
@@ -173,12 +221,19 @@ void UItemIconCache::WarmupNext(size_t count)
     {
       continue;
     }
-    const GLuint tex = RenderItemIcon(itemId);
+    const auto state = StateRequests.find(itemId);
+    const auto &definitionId =
+        state == StateRequests.end() ? itemId : state->second.Id;
+    const GLuint tex = RenderItemIcon(definitionId, state == StateRequests.end()
+                                                        ? ItemVisualInputs{}
+                                                        : state->second.Inputs);
     Cache[itemId] = tex;
     if (IconService)
     {
-      IconService->StoreIconTexture("item", itemId, "", FingerprintFor(itemId),
-                                    kIconSize, tex);
+      IconService->StoreIconTexture(
+          "item", definitionId,
+          state == StateRequests.end() ? "" : state->second.Variant,
+          FingerprintFor(definitionId), kIconSize, tex);
     }
     ++done;
   }
@@ -234,6 +289,7 @@ void UItemIconCache::Invalidate()
   CachedRevision = UItemDefinitionStorage::ContentRevision();
   SkipDiskCache = true;
   Warmup.Clear();
+  StateRequests.clear();
   if (ItemPreview)
     ItemPreview->Invalidate();
   for (auto &pair : Cache)

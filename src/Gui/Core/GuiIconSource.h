@@ -27,6 +27,7 @@ public:
   GLuint GetCreatureIconTexture(const std::string &speciesId) override;
   GLuint GetSkinIconTexture(const std::string &skinId) override;
   GLuint GetItemIconTexture(const std::string &itemId) override;
+  GLuint GetItemStateIcon(const InventoryEntryRef &entry) override;
 
   UObjectIconCache &GetObjectCache() { return *ObjectCache; }
   void ClearBlockIconCache();

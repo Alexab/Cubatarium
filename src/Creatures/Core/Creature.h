@@ -2,6 +2,7 @@
 #define CREATURE_H
 
 #include "Creatures/Core/HumanAppearance.h"
+#include "Items/ItemActionPulse.h"
 #include "Pose/HumanMotionTypes.h"
 
 #include "Creatures/Core/CreatureBounds.h"
@@ -40,6 +41,21 @@ public:
   int CarryHandCount{0};
   float ThrowCharge{0.f};
   float BowCharge{0.f};
+  ItemActionPulse
+      ItemAction; // Transient successful-use visual, never serialized.
+  uint64_t ItemVisualSelection() const
+  {
+    return uint64_t(GetInventory().GetActiveBarIndex() * 10 +
+                    GetInventory().GetActiveSlotIndex()) |
+           (uint64_t(GetInventory().IsCreative()) << 32);
+  }
+  float ActiveItemUsePhase() const
+  {
+    const auto *e = GetInventory().GetActiveEntryRef();
+    return e && !e->empty && !e->broken
+               ? ItemAction.Phase(e->Id, e->instanceId, ItemVisualSelection())
+               : 0.f;
+  }
   mutable HumanMotionState HumanMotion; // Transient; never serialized.
   void SetHumanMotionFacts(glm::vec3 velocity, bool swimming,
                            const UWorld *world, float dt);

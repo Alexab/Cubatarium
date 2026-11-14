@@ -165,7 +165,7 @@ void UAnvilScreen::Refresh()
   }
   if (Icons)
   {
-    ItemSlot->SetIconTexture(Icons->GetItemIconTexture(active->Id));
+    ItemSlot->SetIconTexture(Icons->GetEntryIcon(*active));
   }
   ItemSlot->SetBroken(active->broken);
   ItemSlot->SetWearProgress(active->wear);

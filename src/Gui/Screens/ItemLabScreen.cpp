@@ -17,6 +17,7 @@
 #include "ThirdParty/stb_image_write.h"
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <fstream>
 #include <nlohmann/json.hpp>
 
@@ -27,6 +28,7 @@ namespace
 const char *Modes[] = {"Lit",        "Silhouette", "Gray",     "Albedo",
                        "UV checker", "Normals",    "Wireframe"};
 const char *Lights[] = {"Studio", "Dim", "Bright"};
+const char *Poses[] = {"Rest", "Half", "Peak"};
 std::string Lower(std::string value)
 {
   for (auto &c : value)
@@ -89,6 +91,8 @@ void UItemLabScreen::Build(UGuiContext &ctx)
   }
   ModeButton = add(std::make_unique<UGuiButton>(theme, Modes[Mode]));
   ModeButton->SetOnClick([this] { SetMode((Mode + 1) % 7); });
+  PoseButton = add(std::make_unique<UGuiButton>(theme, Poses[PosePreset]));
+  PoseButton->SetOnClick([this] { SetPosePreset((PosePreset + 1) % 3); });
   LightButton = add(std::make_unique<UGuiButton>(theme, Lights[Light]));
   LightButton->SetOnClick(
       [this]
@@ -133,6 +137,17 @@ void UItemLabScreen::SetMode(int mode)
     ModeButton->SetLabel(Modes[Mode]);
   Dirty = true;
 }
+void UItemLabScreen::SetPosePreset(int pose)
+{
+  PosePreset = std::clamp(pose, 0, 2);
+  if (PoseButton)
+    PoseButton->SetLabel(Poses[PosePreset]);
+  Dirty = true;
+}
+GuiRect UItemLabScreen::GetPoseBounds() const
+{
+  return PoseButton->GetBounds();
+}
 void UItemLabScreen::RebuildList()
 {
   Filtered.clear();
@@ -166,17 +181,18 @@ void UItemLabScreen::Layout()
   List->SetVisibleRowCount(4);
   List->SetBounds({x + m, y + 2 * row + 3 * m, left - 2 * m,
                    std::max(row, ViewportH - 2 * row - 4 * m)});
-  UGuiButton *buttons[] = {ModeButton, LightButton, ReloadButton, ExportButton,
-                           CloseButton};
-  for (int i = 0; i < 5; ++i)
-    buttons[i]->SetBounds(
-        {right + i * width / 5, y + row + 2 * m, width / 5 - m, row});
-  const int previewY = y + 3 * row + 3 * m;
-  const int previewH = std::max(row, ViewportH - 5 * row - 6 * m);
+  UGuiButton *buttons[] = {ModeButton,   PoseButton,   LightButton,
+                           ReloadButton, ExportButton, CloseButton};
+  for (int i = 0; i < 6; ++i)
+    buttons[i]->SetBounds({right + (i % 3) * width / 3,
+                           y + (1 + i / 3) * row + (2 + i / 3) * m,
+                           width / 3 - m, row});
+  const int previewY = y + 4 * row + 4 * m;
+  const int previewH = std::max(row, ViewportH - 6 * row - 7 * m);
   for (int i = 0; i < 2; ++i)
   {
     const int px = right + i * width / 2;
-    Captions[i]->SetBounds({px, y + 2 * row + 3 * m, width / 2 - m, row});
+    Captions[i]->SetBounds({px, y + 3 * row + 4 * m, width / 2 - m, row});
     Views[i]->SetBounds({px, previewY, width / 2 - m, previewH});
     Info[i]->SetBounds({px, previewY + previewH + m, width / 2 - m, row});
   }
@@ -209,12 +225,23 @@ void UItemLabScreen::Refresh()
       unsigned next = 0;
       if (std::filesystem::is_regular_file(Paths[i]))
       {
+        const auto asset = Preview->GetInspectionAsset(Paths[i]);
+        ItemVisualInputs inputs;
+        inputs.BowCharge = PosePreset * .5f;
+        inputs.UsePhase = PosePreset * .25f;
+        inputs.HasAmmo = PosePreset > 0;
+        inputs.HasWater = PosePreset > 0;
+        for (const auto &binding : asset->Bindings)
+          if (binding.Channel == ItemVisualChannel::FillUnits)
+            inputs.ContentsUnits =
+                std::max(inputs.ContentsUnits,
+                         int(std::lround(binding.Maximum * PosePreset * .5f)));
         next = Preview->RenderInspectionTexture(Selected, Paths[i], 512, Yaw,
                                                 Pitch, Mode,
                                                 Light == 0   ? .65f
                                                 : Light == 1 ? .12f
-                                                             : .9f);
-        const auto asset = Preview->GetInspectionAsset(Paths[i]);
+                                                             : .9f,
+                                                inputs);
         size_t triangles = 0, vertices = 0;
         for (const auto &p : asset->Primitives)
         {
@@ -275,11 +302,9 @@ void UItemLabScreen::Export()
     return;
   const auto folder = platform->AssetRoot() / "item_lab_exports";
   std::filesystem::create_directories(folder);
-  nlohmann::json report = {{"id", Selected},
-                           {"mode", Modes[Mode]},
-                           {"yaw", Yaw},
-                           {"pitch", Pitch},
-                           {"read_only", true}};
+  nlohmann::json report = {
+      {"id", Selected}, {"mode", Modes[Mode]}, {"pose", Poses[PosePreset]},
+      {"yaw", Yaw},     {"pitch", Pitch},      {"read_only", true}};
   UGlStateScope scope(kGlMaskIconFbo);
   for (int i = 0; i < 2; ++i)
   {

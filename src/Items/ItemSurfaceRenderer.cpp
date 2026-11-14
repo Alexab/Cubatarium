@@ -90,6 +90,8 @@ void ItemSurfaceRenderer::Draw(
   for (size_t i = 0; i < asset->Primitives.size(); ++i)
   {
     const auto &primitive = asset->Primitives[i];
+    if (!ItemNodeVisible(*asset, state, primitive.Node))
+      continue;
     const glm::mat4 matrix = model * transforms[primitive.Node];
     const auto &material = asset->Materials[primitive.Material];
     const auto texture =

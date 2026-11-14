@@ -32,5 +32,20 @@ centre-plus-offset grips. FP Euler, scale and hand-root offset are independent
 of physical bounds; root offsets move the arm and item together.
 
 `icon_euler_deg` changes only icon/preview orientation. The bow uses it to show
-the curved plane without changing its physical orientation. TP attachments and
-gameplay-driven node poses still require integration and native checks.
+the curved plane without changing its physical orientation. TP attachments use the same surface asset and have their own `tp_scale`.
+Successful-use, bow-draw and water-fill snapshots drive named nodes in FP, TP,
+world and inspection renders. Cancellation and empty/full state icon invalidation
+are covered by the native candidate probes. Two-hand contacts and artistic
+acceptance still require work.
+
+`visual_bindings` supports normalized input ranges, linear/pulse transform
+curves and visibility thresholds. Length-valued bindings receive the same
+uniform fit as construction geometry. Span bindings stretch a root-child member
+between two named anchors; they keep bow strings connected to moving limbs and
+the draw point. Span outputs cannot be dependencies of other spans. Auxiliary
+geometry marked `fit_reference: false` does not change the physical fit.
+
+Published legacy fit axes do not apply to v3 FP assets: FP fitting uses the rest
+silhouette and authored FP scale. This avoids enlarging a YZ bow by its shallow
+Z thickness. Native FP probes record projected bounds and reject substantial
+clipping, in addition to verifying that geometry was submitted.

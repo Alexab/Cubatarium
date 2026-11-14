@@ -1,6 +1,7 @@
 #ifndef ITEM_PREVIEW_RENDERER_H
 #define ITEM_PREVIEW_RENDERER_H
 
+#include "Items/ItemVisualInputs.h"
 #include <filesystem>
 #include <memory>
 #include <string>
@@ -33,13 +34,15 @@ public:
 
   /// Renders to an owned texture (caller must keep/delete it).
   GLuint RenderToUniqueTexture(const std::string &itemId, int size,
-                               float yawDeg, float pitchDeg);
+                               float yawDeg, float pitchDeg,
+                               const ItemVisualInputs &inputs = {});
   std::shared_ptr<const struct ItemRenderAsset>
   GetInspectionAsset(const std::filesystem::path &path);
   GLuint RenderInspectionTexture(const std::string &itemId,
                                  const std::filesystem::path &path, int size,
                                  float yaw, float pitch, int mode,
-                                 float ambient);
+                                 float ambient,
+                                 const ItemVisualInputs &inputs = {});
 
 private:
   struct Part
@@ -63,12 +66,14 @@ private:
 
   /// Returns true if a static glTF mesh was drawn into the bound FBO.
   bool TryDrawGltfModel(const std::string &itemId, const std::string &modelRel,
-                        const glm::mat4 &projection, const glm::mat4 &view);
+                        const glm::mat4 &projection, const glm::mat4 &view,
+                        const ItemVisualInputs &inputs);
 
   std::vector<Part> FallbackParts(const std::string &itemId) const;
   bool DrawGltfPath(const std::string &itemId,
                     const std::filesystem::path &path,
-                    const glm::mat4 &projection, const glm::mat4 &view);
+                    const glm::mat4 &projection, const glm::mat4 &view,
+                    const ItemVisualInputs &inputs);
 
   glm::mat4 OrbitView(float yawDeg, float pitchDeg, float distance) const;
 

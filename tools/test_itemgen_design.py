@@ -68,7 +68,7 @@ class DesignTests(unittest.TestCase):
         before=np.concatenate([p['positions'] for p in load_primitives(path)])
         source=self.root/'tools/item_designs/bucket/design.yaml'
         design=yaml.safe_load(source.read_text(encoding='utf-8'))
-        design['nodes']={'handle':{'pivot':[0,.12,0]}}
+        design.setdefault('nodes',{})['handle']={'pivot':[0,.12,0]}
         for part in design['parts']:
             if part['name'].startswith('handle'): part['node']='handle'
         source.write_text(yaml.safe_dump(design,sort_keys=False),encoding='utf-8')
@@ -77,8 +77,20 @@ class DesignTests(unittest.TestCase):
         # Grouping changes vertex order, never the rest-pose surface positions.
         self.assertEqual({tuple(np.round(p,5)) for p in before}, {tuple(np.round(p,5)) for p in after})
         g=json.loads((path/'model.gltf').read_text())
-        self.assertEqual(g['nodes'][1]['name'],'handle')
-        self.assertEqual(g['nodes'][0]['children'],[1])
+        self.assertIn('handle',[n['name'] for n in g['nodes']])
+        self.assertEqual(len(g['nodes'][0]['children']),len(design['nodes']))
+
+    def test_visual_binding_units_and_presentation_are_preserved(self):
+        source=self.root/'tools/item_designs/bucket/design.yaml'
+        before=source.read_bytes()
+        design=yaml.safe_load(source.read_text(encoding='utf-8'))
+        path=build_design('bucket',root=self.root)
+        g=json.loads((path/'model.gltf').read_text(encoding='utf-8'))
+        self.assertEqual(g['extras']['presentation']['tp_scale'],2)
+        self.assertEqual(g['extras']['visual_bindings'][0]['range'],[0,1])
+        fit=json.loads((path/'design_build.json').read_text(encoding='utf-8'))['physical_fit']['scale']
+        self.assertAlmostEqual(g['extras']['visual_bindings'][0]['translation_from'][1],-.18*fit)
+        self.assertEqual(source.read_bytes(),before)
 
     def test_bad_overlay_and_source_destination_are_rejected(self):
         path=build_design('bucket',root=self.root)
@@ -87,6 +99,29 @@ class DesignTests(unittest.TestCase):
         Image.new('RGBA',(1,1)).save(source/(island['name']+'.png'))
         with self.assertRaisesRegex(ValueError,'size mismatch'): build_design('bucket',root=self.root)
         with self.assertRaisesRegex(ValueError,'overwrite'): build_design('bucket',root=self.root,output=source)
+
+
+class BindingTests(unittest.TestCase):
+    def test_span_dependencies_and_input_contracts(self):
+        from itemgen.visual_bindings import prepare_bindings
+        nodes={'tip':{'pivot':[0,1,0]},'string':{'pivot':[0,.5,0]}}
+        valid=[{'node':'tip','channel':'bow_charge','translation_to':[0,0,.2]},
+               {'node':'string','span':{'start_node':'test','end_node':'tip','start_point':[0,0,0],'end_point':[0,0,0]}}]
+        result=prepare_bindings(valid,nodes,.5,'test')
+        self.assertEqual(result[0]['translation_to'],[0,0,.1])
+        self.assertEqual(valid[0]['translation_to'],[0,0,.2])
+        import copy
+        for change in ('cycle','range','unknown','negative_scale'):
+            bad=copy.deepcopy(valid)
+            if change=='cycle': bad[1]['span']['start_node']='string'
+            if change=='range': bad[0]['range']=[1,0]
+            if change=='unknown': bad[0]['rotation_typo']=[0,0,1]
+            if change=='negative_scale': bad[0]['scale_to']=[1,0,1]
+            with self.assertRaises(ValueError):prepare_bindings(bad,nodes,.5,'test')
+        unknown_parent=copy.deepcopy(nodes)
+        unknown_parent['tip']['parent']='missing'
+        with self.assertRaisesRegex(ValueError,'unknown parent'):
+            prepare_bindings(valid,unknown_parent,.5,'test')
 
 
 class PilotTests(unittest.TestCase):

@@ -29,7 +29,7 @@ inline glm::mat4 ItemWieldLocalMatrix(const ItemRenderAsset &asset,
                           ? (left ? asset.Grip.LeftGrip : asset.Grip.RightGrip)
                           : (asset.Low + asset.High) * .5f;
   return glm::translate(glm::mat4(1), palm) * ItemEulerMatrix(angle) *
-         glm::scale(glm::mat4(1), glm::vec3(scale)) *
+         glm::scale(glm::mat4(1), glm::vec3(scale * asset.Grip.TpScale)) *
          glm::translate(glm::mat4(1), -anchor);
 }
 /// Authored geometry is already in physical units. Only position it inside the
@@ -37,10 +37,24 @@ inline glm::mat4 ItemWieldLocalMatrix(const ItemRenderAsset &asset,
 inline glm::mat4 ItemLooseLocalMatrix(const ItemRenderAsset &asset,
                                       glm::vec3 physicalSize, bool onSupport)
 {
-  auto center = (asset.Low + asset.High) * .5f;
+  const auto rotation =
+      onSupport ? ItemEulerMatrix(asset.Grip.GroundEulerDeg) : glm::mat4(1);
+  glm::vec3 low(1e9f), high(-1e9f);
+  for (int x : {0, 1})
+    for (int y : {0, 1})
+      for (int z : {0, 1})
+      {
+        const auto p =
+            glm::vec3(rotation * glm::vec4(x ? asset.High.x : asset.Low.x,
+                                           y ? asset.High.y : asset.Low.y,
+                                           z ? asset.High.z : asset.Low.z, 1));
+        low = glm::min(low, p);
+        high = glm::max(high, p);
+      }
+  auto center = (low + high) * .5f;
   if (onSupport)
-    center.y = asset.Low.y + physicalSize.y * .5f;
-  return glm::translate(glm::mat4(1), -center);
+    center.y = low.y + physicalSize.y * .5f;
+  return glm::translate(glm::mat4(1), -center) * rotation;
 }
 /// Terrain/creature sky-block curve, converted to linear intensity for items.
 inline float ItemWorldLightIntensity(glm::vec2 light, float day, float night,

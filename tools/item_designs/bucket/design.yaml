@@ -4,64 +4,189 @@ atlas_size: 256
 texels_per_metre: 300
 triangle_budget: 1800
 presentation:
-  tp_euler_deg: [-65, 0, 0]
-  right_grip: [0, 0.35, 0]
-  left_grip: [0, 0.35, 0]
-  fp_euler_deg: [-46, 0, -22]
-  fp_arm_euler_deg: [20, 0, 0]
-  fp_scale: 0.65
-  fp_hand_offset: [-0.06, 0.6, 0]
+  tp_euler_deg:
+  - -65
+  - 0
+  - 0
+  right_grip:
+  - 0
+  - 0.35
+  - 0
+  left_grip:
+  - 0
+  - 0.35
+  - 0
+  fp_euler_deg:
+  - -46
+  - 0
+  - -22
+  fp_arm_euler_deg:
+  - 20
+  - 0
+  - 0
+  fp_scale: 0.45
+  fp_hand_offset:
+  - -0.06
+  - 0.65
+  - 0
+  tp_scale: 2.0
 materials:
   forged:
-    color: [128, 143, 151]
+    color:
+    - 128
+    - 143
+    - 151
     pattern: forged
     metallic: 0.7
     roughness: 0.65
   rim:
-    color: [176, 183, 179]
+    color:
+    - 176
+    - 183
+    - 179
     pattern: hammered
     metallic: 0.75
     roughness: 0.55
   grip:
-    color: [103, 64, 34]
+    color:
+    - 103
+    - 64
+    - 34
     pattern: wood
+  water:
+    color:
+    - 48
+    - 111
+    - 156
+    pattern: water
+    metallic: 0.05
+    roughness: 0.35
 parts:
-  - name: vessel
-    material: forged
-    shape: shell
-    size: [0.26, 0.24, 0.24]
-    thickness: 0.014
-    offset: [0, -0.12, 0]
-    taper: 1.12
-  - name: front_band
-    material: rim
-    shape: bevel_box
-    size: [0.29, 0.025, 0.015]
-    bevel: 0.006
-    offset: [0, 0.11, 0.135]
-  - name: back_band
-    material: rim
-    shape: bevel_box
-    size: [0.29, 0.025, 0.015]
-    bevel: 0.006
-    offset: [0, 0.11, -0.135]
-  - name: handle_left
-    material: rim
-    shape: bevel_box
-    size: [0.018, 0.26, 0.025]
-    bevel: 0.005
-    offset: [-0.14, 0.22, 0]
-    rotation: [0, 0, -15]
-  - name: handle_right
-    material: rim
-    shape: bevel_box
-    size: [0.018, 0.26, 0.025]
-    bevel: 0.005
-    offset: [0.14, 0.22, 0]
-    rotation: [0, 0, 15]
-  - name: handle_grip
-    material: grip
-    shape: bevel_box
-    size: [0.24, 0.035, 0.035]
-    bevel: 0.009
-    offset: [0, 0.35, 0]
+- name: vessel
+  material: forged
+  shape: shell
+  size:
+  - 0.26
+  - 0.24
+  - 0.24
+  thickness: 0.014
+  offset:
+  - 0
+  - -0.12
+  - 0
+  taper: 1.12
+- name: front_band
+  material: rim
+  shape: bevel_box
+  size:
+  - 0.29
+  - 0.025
+  - 0.015
+  bevel: 0.006
+  offset:
+  - 0
+  - 0.11
+  - 0.135
+- name: back_band
+  material: rim
+  shape: bevel_box
+  size:
+  - 0.29
+  - 0.025
+  - 0.015
+  bevel: 0.006
+  offset:
+  - 0
+  - 0.11
+  - -0.135
+- name: handle_left
+  material: rim
+  shape: bevel_box
+  size:
+  - 0.018
+  - 0.26
+  - 0.025
+  bevel: 0.005
+  offset:
+  - -0.14
+  - 0.22
+  - 0
+  rotation:
+  - 0
+  - 0
+  - -15
+- name: handle_right
+  material: rim
+  shape: bevel_box
+  size:
+  - 0.018
+  - 0.26
+  - 0.025
+  bevel: 0.005
+  offset:
+  - 0.14
+  - 0.22
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 15
+- name: handle_grip
+  material: grip
+  shape: bevel_box
+  size:
+  - 0.24
+  - 0.035
+  - 0.035
+  bevel: 0.009
+  offset:
+  - 0
+  - 0.35
+  - 0
+- name: water_surface
+  material: water
+  shape: bevel_box
+  size:
+  - 0.254
+  - 0.002
+  - 0.232
+  bevel: 0.00035999999999999997
+  offset:
+  - 0
+  - 0.085
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+  node: water_surface
+  fit_reference: false
+nodes:
+  water_surface:
+    pivot:
+    - 0
+    - 0.085
+    - 0
+visual_bindings:
+- node: water_surface
+  channel: fill_units
+  range:
+  - 0
+  - 1
+  translation_from:
+  - 0
+  - -0.18
+  - 0
+  translation_to:
+  - 0
+  - 0
+  - 0
+  scale_from:
+  - 0.91
+  - 1
+  - 0.91
+  scale_to:
+  - 1
+  - 1
+  - 1
+  visible_above: 0.001

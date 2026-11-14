@@ -21,6 +21,8 @@ struct HotbarSlotView
   float wear{0.f};
   bool broken{false};
   std::string CountLabel;
+  InventoryEntryRef
+      Entry; // Read-only frame snapshot; includes instance contents.
 };
 
 class IUHotbarViewModel

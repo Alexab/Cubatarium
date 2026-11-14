@@ -376,7 +376,10 @@ void UInGameHudScreen::SyncSlotIcons()
   const auto primary = Session->GetBarSlots(0);
   for (size_t i = 0; i < PrimarySlots.size() && i < primary.size(); ++i)
   {
-    const GLuint tex = Icons->GetEntryIcon(primary[i].entryKind, primary[i].Id);
+    const GLuint tex =
+        primary[i].Entry.empty
+            ? Icons->GetEntryIcon(primary[i].entryKind, primary[i].Id)
+            : Icons->GetEntryIcon(primary[i].Entry);
     PrimarySlots[i]->SetIconTexture(tex);
     PrimarySlots[i]->SetWearProgress(
         primary[i].entryKind == InventoryEntryKind::Item ? primary[i].wear
@@ -395,7 +398,9 @@ void UInGameHudScreen::SyncSlotIcons()
   for (size_t i = 0; i < SecondarySlots.size() && i < secondary.size(); ++i)
   {
     const GLuint tex =
-        Icons->GetEntryIcon(secondary[i].entryKind, secondary[i].Id);
+        secondary[i].Entry.empty
+            ? Icons->GetEntryIcon(secondary[i].entryKind, secondary[i].Id)
+            : Icons->GetEntryIcon(secondary[i].Entry);
     SecondarySlots[i]->SetIconTexture(tex);
     SecondarySlots[i]->SetWearProgress(
         secondary[i].entryKind == InventoryEntryKind::Item ? secondary[i].wear
