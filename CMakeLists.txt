@@ -536,6 +536,7 @@ set(SOURCES
     src/Gui/Core/GuiIconSource.cpp
     src/Gui/Preview/ContentPreviewRenderer.cpp
     src/Gui/Preview/ItemPreviewRenderer.cpp
+    src/Gui/Preview/ItemLabSceneRenderer.cpp
     src/Gui/Screens/ItemLabScreen.cpp
     src/Gui/Preview/CreaturePreviewRenderer.cpp
     src/Gui/Preview/CreaturePreviewLayout.cpp

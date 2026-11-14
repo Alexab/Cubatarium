@@ -13,6 +13,7 @@
 #include "Items/ItemDefinitionStorage.h"
 #include "Items/ItemDrawRequest.h"
 #include "Items/ItemGltfTextureCache.h"
+#include "Items/ItemInspectionSource.h"
 #include "Items/ItemPresentationMath.h"
 #include "Items/ItemVisualDefaults.h"
 #include "Render/Engine/ShaderManager.h"
@@ -82,7 +83,13 @@ WearLocal LoadWear(const std::string &itemId, size_t slot)
   {
     return w;
   }
-  const std::string rel = "models/items/" + itemId + "/wear.json";
+  std::string rel = "models/items/" + itemId + "/wear.json";
+  if (const auto *source = FindItemInspectionSource(itemId))
+  {
+    const auto sidecar = source->Path.parent_path() / "wear.json";
+    if (std::filesystem::is_regular_file(sidecar))
+      rel = sidecar.generic_string();
+  }
   std::string text;
   if (!paths->ReadAssetText(rel, text))
   {
@@ -237,6 +244,8 @@ std::filesystem::path ResolveGltfAbs(const std::string &itemId,
                                      bool worn = false)
 {
   IUPlatformPaths *paths = IUPlatformPaths::TryGet();
+  if (const auto *source = FindItemInspectionSource(itemId))
+    return source->Path;
   const std::string rel = ResolveGltfRel(itemId, worn);
   if (!paths || rel.empty())
   {
@@ -531,6 +540,9 @@ glm::mat4 FitGltfToBone(const CreatureGltfMeshAsset &asset, float targetSize)
 std::shared_ptr<const ItemRenderAsset>
 FindSurface(const std::filesystem::path &path)
 {
+  const auto *source = item_inspection_detail::Current;
+  if (source && source->Path == path)
+    return source->Asset;
   return path.empty() ? nullptr
                       : FindItemSurfaceAsset(
                             path, UItemDefinitionStorage::ContentRevision());
@@ -581,7 +593,8 @@ const WornItemLocal &CachedWornItemLocal(const std::string &itemId, size_t slot)
   static uint64_t cacheRevision = 0;
   std::lock_guard<std::mutex> lock(mu);
   SyncItemModelCache(cache, cacheRevision);
-  const std::string key = itemId + "|" + std::to_string(slot);
+  const std::string key =
+      ItemInspectionCacheKey(itemId) + "|" + std::to_string(slot);
   const auto it = cache.find(key);
   if (it != cache.end())
   {

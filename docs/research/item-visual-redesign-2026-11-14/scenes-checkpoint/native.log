@@ -1,0 +1,37 @@
+Restored 4 runtime files
+{
+  "passed": true,
+  "scope": "manual glTF source and packaged Item Lab comparison",
+  "world": "CarryAimQA",
+  "restored_runtime_files": 4,
+  "lab_checks": 284,
+  "presentation_checks": 67,
+  "manual_images": 2,
+  "source_files_preserved": true,
+  "runtime_restored": true,
+  "packaged_candidate_uses_production": true,
+  "executable_sha256": "c2fae5dc3d6ff8c7182a24a5a10e3027ae7985cd12b45914f60891610511bc4a",
+  "manual_asset_sha256": {
+    "ATTRIBUTION.json": "e0d51cd5c5d8ed0b57b3efc536cfa56a20899afa179602812a9a151e27273b0a",
+    "design_build.json": "9a4bde9cf7bda7519e0f7cdf3917e24eadc6553d82e78715504b5219748dd56d",
+    "LICENSE.txt": "d5b2c2cdb51ab4c8b124dfab74f936267098953b3e78afdf67ad89b11d71006e",
+    "model.bin": "3c0a3fc5d81b59571dc997567c45faa54953d162f99f6a0b706fc0fa3803064f",
+    "model.gltf": "c8918617146828873ae9f09fa94507d424c7c02b5c033cbf94568f99fe9a4bc2",
+    "textures/albedo_0.png": "37bd3c2d34becabb2efcce83da9f31ea0710c0c35c5ea4b156349b1cf808eedc",
+    "textures/albedo_1.png": "26100f0b1819a5cc157eb27718380aabc3bf5265045e7722fae38f315b038ac3"
+  },
+  "author_source_sha256": {
+    "authored/model.bin": "3bb823b9171b6a3c0ec950642864b8d197d24c0757d8f5d2bf360cd7e37632ab",
+    "authored/model.gltf": "f243b648878b334d4cd8d110d5a2feee379e52c62207684198364f2b4c67b5bc",
+    "authored/textures/diffuse.png": "37bd3c2d34becabb2efcce83da9f31ea0710c0c35c5ea4b156349b1cf808eedc",
+    "authored/textures/second texture.png": "26100f0b1819a5cc157eb27718380aabc3bf5265045e7722fae38f315b038ac3",
+    "design.yaml": "0c938e0c02bbab5a29c80f1333d4052d70f10429c4a7459025a1da341bb7a68b"
+  },
+  "reference_asset_sha256": {
+    "ATTRIBUTION.json": "bbf2556ef2072bd69e7ce8c73ae74e59e2d94fcb5861c33ec83d208066aae1c7",
+    "LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
+    "model.bin": "2117a87c4670fc18fbfabbd910d4e40859a4f61dcb855be789455591e737c681",
+    "model.gltf": "baed22a7e5bd4ab47ee8bb3223c5ed5bc9fc8cd4ed21cdcd08a6746010b5ce7a",
+    "textures/diffuse.png": "a9a76da99e03548bcda0546069b0b8de08d65e58390a99b0b2c67a808d9f7235"
+  }
+}

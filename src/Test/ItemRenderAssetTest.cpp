@@ -1,6 +1,7 @@
 #include "Items/ItemRenderAsset.h"
 #include "Game/Inventory/InventoryTypes.h"
 #include "Items/ItemActionPulse.h"
+#include "Items/ItemInspectionSource.h"
 #include "Items/ItemLabAssets.h"
 #include "Items/ItemPresentationMath.h"
 
@@ -19,6 +20,38 @@ void Expect(bool value, const char *reason)
   if (!value)
     throw std::runtime_error(reason);
 }
+void TestInspectionIsolation()
+{
+  using namespace cutum;
+  auto first = std::make_shared<ItemRenderAsset>(),
+       second = std::make_shared<ItemRenderAsset>();
+  Expect(!FindItemInspectionSource("bucket"),
+         "world starts without inspection override");
+  {
+    UItemInspectionScope outer({"bucket", "reference.gltf", first});
+    Expect(FindItemInspectionSource("bucket")->Asset == first &&
+               !FindItemInspectionSource("apple"),
+           "override is item-specific");
+    const auto key = ItemInspectionCacheKey("bucket");
+    try
+    {
+      UItemInspectionScope nested({"bucket", "candidate.gltf", second});
+      Expect(FindItemInspectionSource("bucket")->Asset == second &&
+                 key != ItemInspectionCacheKey("bucket"),
+             "candidate has independent render cache key");
+      throw std::runtime_error("cancel render");
+    }
+    catch (const std::runtime_error &)
+    {
+    }
+    Expect(FindItemInspectionSource("bucket")->Asset == first,
+           "failed nested preview restores reference");
+  }
+  Expect(!FindItemInspectionSource("bucket") &&
+             ItemInspectionCacheKey("bucket") == "bucket",
+         "preview cannot leak into world rendering");
+}
+
 void TestLabPaths(const std::filesystem::path &folder)
 {
   namespace fs = std::filesystem;
@@ -251,6 +284,7 @@ int main()
   try
   {
     TestLabPaths(folder);
+    TestInspectionIsolation();
     const float vertices[] = {0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1,
                               0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1};
     std::vector<unsigned char> bytes(sizeof(vertices) + 3);

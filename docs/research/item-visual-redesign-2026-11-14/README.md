@@ -555,6 +555,40 @@ visual-state integration, per-item artistic approval, production promotion or
 performance acceptance. The native fixture is a tooling example, not a new
 production design or a general gameplay acceptance substitute.
 
+## Shared Item Lab scenes, 2026-11-15
+
+The studio now compares actual reference/candidate resources in six scenes:
+orbit, gameplay FP, TP equipment, loose item, anatomical armor and native-size
+32/48/64 icons. Both body forms and hands, five camera presets, static/walking
+and animated previews share the sidebar controls. A scoped, item-specific render
+source redirects the existing drawers without changing definitions or property.
+Nested scope restoration is unit-tested; native observers verify the submitted
+asset/path instead of accepting any nonempty framebuffer. Historical references
+use today's item shader, not an emulated historical renderer.
+
+Framebuffer resizing no longer discards parsed models and GPU geometry on every
+icon-size change. Armor sections keep the selected source and published fit
+sidecars. Nonarmor selection in the armor scene fails visibly; switching back
+clears that error. FP now gates synthetic bow charge by the ranged definition:
+visual review caught an incorrect bow pose on a pickaxe despite green draw checks.
+Export schema 3 records the selected scene/body/hand/camera/motion. See the
+[operator guide](../../item-lab.md) for exact controls and image dimensions.
+
+The final Release build passes. The full 70-item overlay passes 2,262 native
+presentation, 283 Item Lab, 209 icon, 51 gameplay, 57 ownership, 18 ownership-UI
+and seven player-window checks; all 210 temporary runtime files are restored.
+The separate packaged/manual-source run passes 284 Lab and 67 presentation
+checks and restores its four files. Both runs cover 1280x720 and 1920x1080 at
+100/150/200% GUI scale. Style, formatting and include checks pass. Evidence is
+in [the scene checkpoint](scenes-checkpoint/summary.json).
+
+This closes the basic scene/thumbnail/camera/body controls, not the full Lab or
+final redesign acceptance. Physical/contact/UV overlays and detailed costs,
+full carry/use-state integration, final artistic/world review, performance
+measurements and promotion of all 70 candidates remain open. Production still
+uses legacy resources. Day/night/interior world checks are distinct from the
+studio's three intensity presets.
+
 ## Remaining implementation, in order
 
 1. Native baseline and actual resource-path trace, before/after references and

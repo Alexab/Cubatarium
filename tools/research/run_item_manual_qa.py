@@ -27,6 +27,9 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--skip-build',action='store_true');parser.add_argument('--world',default='CarryAimQA');args=parser.parse_args()
     if not args.world.endswith('QA') or '/' in args.world or '\\' in args.world:parser.error('Use an existing isolated QA world')
     if not args.skip_build:subprocess.run(['cmake','--build','build/desktop-msvc','--config','Release','--target','Cubatarium','--parallel','8'],cwd=ROOT,check=True)
+    for id in ['iron_pickaxe','iron_head','copper_legs','gold_feet']:
+        if not (ROOT/'assetgen_output/items/redesign'/id/'model.gltf').is_file():build_design(id)
+        validate_design(id)
     output=ROOT/'bin/items_acceptance/manual-import';output.mkdir(parents=True,exist_ok=True)
     lab=output/'lab.json';presentations=output/'presentations.json'
     for report in [lab,presentations]:reset_report(report,output)

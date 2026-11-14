@@ -15,6 +15,7 @@
 #include "Game/Inventory/InventoryTypes.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Items/ItemGltfTextureCache.h"
+#include "Items/ItemInspectionSource.h"
 #include "Items/ItemSurfaceRenderer.h"
 #include "Items/ItemVisualDefaults.h"
 #include "Render/Engine/ShaderManager.h"
@@ -985,29 +986,13 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const InventoryEntryRef &entry,
     return false;
   }
 
-  std::string gltfRel = def->ModelPath;
-  auto endsWithIgnoreCase = [](const std::string &s, const char *suf)
-  {
-    const size_t n = std::char_traits<char>::length(suf);
-    if (s.size() < n)
-    {
-      return false;
-    }
-    for (size_t i = 0; i < n; ++i)
-    {
-      const char a = static_cast<char>(
-          std::tolower(static_cast<unsigned char>(s[s.size() - n + i])));
-      const char b =
-          static_cast<char>(std::tolower(static_cast<unsigned char>(suf[i])));
-      if (a != b)
-      {
-        return false;
-      }
-    }
-    return true;
-  };
-  const bool isGltf = endsWithIgnoreCase(gltfRel, ".gltf") ||
-                      endsWithIgnoreCase(gltfRel, ".glb");
+  const auto *inspection = FindItemInspectionSource(itemId);
+  std::string gltfRel =
+      inspection ? inspection->Path.generic_string() : def->ModelPath;
+  auto extension = std::filesystem::path(gltfRel).extension().string();
+  std::transform(extension.begin(), extension.end(), extension.begin(),
+                 [](unsigned char c) { return char(std::tolower(c)); });
+  const bool isGltf = extension == ".gltf" || extension == ".glb";
   if (!isGltf)
   {
     const std::filesystem::path sibling =
@@ -1021,14 +1006,16 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const InventoryEntryRef &entry,
       return false;
     }
   }
-  else if (!paths->AssetExists(gltfRel))
+  else if (!inspection && !paths->AssetExists(gltfRel))
   {
     return false;
   }
 
   const std::filesystem::path absGltf = paths->AssetRoot() / gltfRel;
   const auto surface =
-      FindItemSurfaceAsset(absGltf, UItemDefinitionStorage::ContentRevision());
+      inspection ? inspection->Asset
+                 : FindItemSurfaceAsset(
+                       absGltf, UItemDefinitionStorage::ContentRevision());
 
   static std::mutex cacheMu;
   static std::unordered_map<std::string, std::shared_ptr<CreatureGltfMeshAsset>>
@@ -1172,6 +1159,8 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const InventoryEntryRef &entry,
     profile.CameraPosition = DrawingCameraPosition;
     profile.LightDirection = DrawingItemLightDirection;
     profile.LightIntensity = DrawingItemLight;
+    profile.InspectionMode = DrawingInspectionMode;
+    profile.Ambient = DrawingItemAmbient;
     const auto inputs = MakeItemVisualInputs(
         &entry, DrawingLeftArm ? 0.f : DrawingBowCharge,
         DrawingLeftArm ? 0.f : DrawingUsePhase, DrawingHasAmmo);
@@ -1547,6 +1536,8 @@ void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
   DrawingBowCharge = params.BowCharge;
   DrawingUsePhase = params.ItemUsePhase;
   DrawingItemLight = params.ItemLightIntensity;
+  DrawingInspectionMode = params.ItemInspectionMode;
+  DrawingItemAmbient = params.ItemAmbient;
   DrawingHasAmmo = params.HasAmmo;
   DrawingItemLightDirection = params.ItemLightDirection;
   ActiveAudit = params.Audit;
@@ -1593,8 +1584,11 @@ void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
     if (!definition || !paths ||
         std::filesystem::path(definition->ModelPath).extension() != ".gltf")
       return root;
-    const auto asset = FindItemSurfaceAsset(
-        paths->AssetRoot() / definition->ModelPath, revision);
+    const auto *inspection = FindItemInspectionSource(entry->Id);
+    const auto asset =
+        inspection ? inspection->Asset
+                   : FindItemSurfaceAsset(
+                         paths->AssetRoot() / definition->ModelPath, revision);
     if (!asset)
       return root;
     return ApplyItemHandProfile(root, socket, asset->Grip, left);

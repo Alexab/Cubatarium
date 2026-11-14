@@ -47,6 +47,11 @@ public:
   {
     AnimationPreviewState = state;
   }
+  void SetItemInspection(int mode, float ambient)
+  {
+    ItemInspectionMode = mode;
+    ItemInspectionAmbient = ambient;
+  }
   void SetTransparentBackground(bool enabled)
   {
     TransparentBackground = enabled;
@@ -129,6 +134,8 @@ private:
       ProceduralBoundsCache;
   std::optional<LocomotionState> AnimationPreviewState;
   bool TransparentBackground{false};
+  int ItemInspectionMode{0};
+  float ItemInspectionAmbient{.65f};
   float AnimationPreviewSpeedRatio{1.f};
   std::function<void(const std::string &, const glm::mat4 &)>
       AttachmentObserver;

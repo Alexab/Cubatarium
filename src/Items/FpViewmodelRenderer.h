@@ -63,6 +63,8 @@ struct FpViewmodelDrawParams
   glm::vec2 CarryRightNdc{0.f}, CarryLeftNdc{0.f};
   float ThrowCharge{0}, BowCharge{0};
   float ItemUsePhase{0.f}, ItemLightIntensity{1.f};
+  int ItemInspectionMode{0};
+  float ItemAmbient{.65f};
   bool HasAmmo{false};
   glm::vec3 ItemLightDirection{-.4f, .8f, .6f};
   int FramebufferW{0};
@@ -211,6 +213,8 @@ private:
   FpMotion Motion;
   float DrawingBowCharge{0.f}, DrawingUsePhase{0.f}, DrawingItemLight{1.f};
   bool DrawingHasAmmo{false};
+  int DrawingInspectionMode{0};
+  float DrawingItemAmbient{.65f};
   glm::mat4 DrawingViewProjection{1.f};
   glm::vec3 DrawingCameraPosition{0.f},
       DrawingItemLightDirection{-.4f, .8f, .6f};

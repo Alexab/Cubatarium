@@ -388,12 +388,15 @@ public:
       cutum::UShaderProgram *shader, cutum::UShaderProgram *skinnedShader,
       GLuint cubeVao, GLuint headVao, GLuint bodyVao, GLuint rigidHeadVao,
       cutum::ItemSurfaceRenderer &items, const glm::vec3 &camera,
-      const std::function<void(const cutum::ItemDrawRequest &)> &observer)
+      const std::function<void(const cutum::ItemDrawRequest &)> &observer,
+      int mode, float ambient)
       : Shader(shader), SkinnedShader(skinnedShader), CubeVao(cubeVao),
         HeadVao(headVao), BodyVao(bodyVao), RigidHeadVao(rigidHeadVao),
         ItemRenderer(items), ItemObserver(observer)
   {
     ItemProfile.CameraPosition = camera;
+    ItemProfile.InspectionMode = mode;
+    ItemProfile.Ambient = ambient;
   }
   void DrawItemSurface(const cutum::ItemDrawRequest &request) override
   {
@@ -825,13 +828,15 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(
       return false;
     }
 
-    const glm::vec4 bg = def->visual.wireframeColor * 0.25f;
+    const glm::vec4 bg = ItemInspectionMode == 1
+                             ? glm::vec4(.95f)
+                             : def->visual.wireframeColor * 0.25f;
     glClearColor(bg.r, bg.g, bg.b, TransparentBackground ? 0.f : 1.f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    UPreviewCreatureDrawSink drawSink(Shader.get(), SkinnedShader.get(),
-                                      CubeVao, HeadCubeVao, BodyCubeVao,
-                                      RigidHeadCubeVao, *ItemRenderer,
-                                      ctx.CameraPosition, ItemSurfaceObserver);
+    UPreviewCreatureDrawSink drawSink(
+        Shader.get(), SkinnedShader.get(), CubeVao, HeadCubeVao, BodyCubeVao,
+        RigidHeadCubeVao, *ItemRenderer, ctx.CameraPosition,
+        ItemSurfaceObserver, ItemInspectionMode, ItemInspectionAmbient);
 
     // Armor / wielded overlays keep their own submission, aligned with the
     // backend root matrix the body was drawn with.
@@ -890,7 +895,9 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(
   const ResolvedCreatureAppearance appearance =
       ResolveCreatureAppearance(*Species, *Skins, speciesId, skinId);
 
-  const glm::vec4 bg = def->visual.wireframeColor * 0.25f;
+  const glm::vec4 bg = ItemInspectionMode == 1
+                           ? glm::vec4(.95f)
+                           : def->visual.wireframeColor * 0.25f;
   glClearColor(bg.r, bg.g, bg.b, TransparentBackground ? 0.f : 1.f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

@@ -153,22 +153,7 @@ void UItemPreviewRenderer::Invalidate()
   InspectionAssets.clear();
   if (SurfaceRenderer)
     SurfaceRenderer->Clear();
-  if (DepthRbo != 0)
-  {
-    glDeleteRenderbuffers(1, &DepthRbo);
-    DepthRbo = 0;
-  }
-  if (ColorTex != 0)
-  {
-    glDeleteTextures(1, &ColorTex);
-    ColorTex = 0;
-  }
-  if (Fbo != 0)
-  {
-    glDeleteFramebuffers(1, &Fbo);
-    Fbo = 0;
-  }
-  FboSize = 0;
+  ReleaseFramebuffer();
 
   for (auto &kv : ColorTexCache)
   {
@@ -338,15 +323,35 @@ bool UItemPreviewRenderer::InitCubeMesh()
   return true;
 }
 
+void UItemPreviewRenderer::ReleaseFramebuffer()
+{
+  if (DepthRbo != 0)
+  {
+    glDeleteRenderbuffers(1, &DepthRbo);
+    DepthRbo = 0;
+  }
+  if (ColorTex != 0)
+  {
+    glDeleteTextures(1, &ColorTex);
+    ColorTex = 0;
+  }
+  if (Fbo != 0)
+  {
+    glDeleteFramebuffers(1, &Fbo);
+    Fbo = 0;
+  }
+  FboSize = 0;
+}
+
 bool UItemPreviewRenderer::EnsureFboSize(int size)
 {
-  const int clamped = std::max(64, std::min(size, 512));
+  const int clamped = std::max(32, std::min(size, 512));
   if (Fbo != 0 && FboSize == clamped)
   {
     return true;
   }
 
-  Invalidate();
+  ReleaseFramebuffer();
 
   glGenFramebuffers(1, &Fbo);
   glGenTextures(1, &ColorTex);
@@ -747,7 +752,7 @@ UItemPreviewRenderer::RenderToUniqueTexture(const std::string &itemId, int size,
     return 0;
   }
 
-  const int clamped = std::max(64, std::min(size, 512));
+  const int clamped = std::max(32, std::min(size, 512));
 
   GLuint tex{0};
   glGenTextures(1, &tex);

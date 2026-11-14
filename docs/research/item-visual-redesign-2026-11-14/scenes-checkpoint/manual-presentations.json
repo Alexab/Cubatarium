@@ -1,0 +1,287 @@
+{
+  "checks": [
+    {
+      "name": "item renderer initializes",
+      "passed": true
+    },
+    {
+      "name": "color fixture PNG writes",
+      "passed": true
+    },
+    {
+      "name": "albedo path aliases share texture",
+      "passed": true
+    },
+    {
+      "name": "item albedo uses sRGB storage and complete mip chain",
+      "passed": true
+    },
+    {
+      "name": "mip average is linear-light black and white",
+      "passed": true
+    },
+    {
+      "name": "bilinear sampling precedes display encoding",
+      "passed": true
+    },
+    {
+      "name": "linear material factor applies once",
+      "passed": true
+    },
+    {
+      "name": "state preview renderer initializes",
+      "passed": true
+    },
+    {
+      "name": "bucket FP male right",
+      "passed": true
+    },
+    {
+      "name": "bucket FP male left",
+      "passed": true
+    },
+    {
+      "name": "bucket FP female right",
+      "passed": true
+    },
+    {
+      "name": "bucket FP female left",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-0 orbit",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-0 TP male right",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-0 TP male left",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-0 FP male",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-0 TP female right",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-0 TP female left",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-0 FP female",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-1 orbit",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-1 TP male right",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-1 TP male left",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-1 FP male",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-1 TP female right",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-1 TP female left",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-1 FP female",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-2 orbit",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-2 TP male right",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-2 TP male left",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-2 FP male",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-2 TP female right",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-2 TP female left",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-2 FP female",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-3 orbit",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-3 TP male right",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-3 TP male left",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-3 FP male",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-3 TP female right",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-3 TP female left",
+      "passed": true
+    },
+    {
+      "name": "bucket-state-3 FP female",
+      "passed": true
+    },
+    {
+      "name": "bucket active state changes rendered pixels",
+      "passed": true
+    },
+    {
+      "name": "bucket cancellation restores rendered pixels",
+      "passed": true
+    },
+    {
+      "name": "bucket-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "all requested item surfaces inspected",
+      "passed": true
+    }
+  ],
+  "color_pipeline": {
+    "filtered_encoded_rgb": 188,
+    "half_factor_encoded_rgb": 137,
+    "mip_encoded_rgb": 188
+  },
+  "inventory_unchanged": true,
+  "passed": true,
+  "scope": "synthetic native attachments and loose item submissions",
+  "state_ids": [
+    "bucket"
+  ],
+  "surface_count": 1,
+  "surface_ids": [
+    "bucket"
+  ]
+}

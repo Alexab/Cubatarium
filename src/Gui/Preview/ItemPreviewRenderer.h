@@ -58,6 +58,7 @@ private:
 
   bool InitCubeMesh();
   bool EnsureFboSize(int size);
+  void ReleaseFramebuffer();
   GLuint GetOrCreateColorTexture(const std::string &itemId);
 
   bool TryLoadPartsFromModelJson(const std::string &itemId,

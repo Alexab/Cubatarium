@@ -7,6 +7,7 @@
 #include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiTextInput.h"
+#include "Test/Native/ItemLabSceneQa.h"
 #include "Test/Native/ItemPresentationQa.h"
 #include "Test/Native/ItemsInventoryQa.h"
 #include "Test/Native/OwnershipQa.h"
@@ -55,6 +56,7 @@
 #include "Gui/Interfaces/IUGuiIconSource.h"
 #include "Gui/Preview/ContentPreviewRenderer.h"
 #include "Gui/Preview/CreaturePreviewRenderer.h"
+#include "Gui/Preview/ItemLabSceneRenderer.h"
 #include "Gui/Preview/ItemPreviewRenderer.h"
 #include "Gui/Screens/AnvilScreen.h"
 #include "Gui/Screens/CharacterSheetScreen.h"
@@ -2514,7 +2516,12 @@ void UApplication::ToggleItemLab()
   if (auto *actor = World->GetControlledCreature())
     UWorldItemSystem::Instance().CancelCharge(*actor);
   auto screen = std::make_unique<UItemLabScreen>(
-      Core->GetItemDefinitionStorage(), ShaderManager);
+      Core->GetItemDefinitionStorage(), ShaderManager,
+      std::make_unique<UItemLabSceneRenderer>(
+          Core->GetItemDefinitionStorage(), BlockDefinitions,
+          Core->GetTextureCubeStorage(), Core->GetCreatureTextureStorage(),
+          World->GetCreatureDefinitionStorage(),
+          World->GetSkinDefinitionStorage(), ShaderManager));
   ItemLabScreen = screen.get();
   GuiContext->SetScreen(std::move(screen));
   ItemLabOpen = true;
@@ -2631,6 +2638,8 @@ void UApplication::RunItemLabQa(const std::string &path)
                               std::filesystem::path(path + ".frames") /
                                   ("pose_" + std::to_string(pose) + ".png")));
   }
+  RunItemLabSceneQa(*ItemLabScreen, *GuiContext,
+                    std::filesystem::path(path + ".frames"), report);
   ItemLabScreen->SetPosePreset(0);
   click(ItemLabScreen->GetPoseBounds());
   check("pointer switches state preset", ItemLabScreen->GetPosePreset() == 1);

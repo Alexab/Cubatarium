@@ -2,6 +2,7 @@
 
 #include "App/Platform/IUPlatformPaths.h"
 #include "Gui/Core/GuiContext.h"
+#include "Gui/Preview/ItemLabSceneRenderer.h"
 #include "Gui/Preview/ItemPreviewRenderer.h"
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiLabel.h"
@@ -30,6 +31,10 @@ const char *Modes[] = {"Lit",        "Silhouette", "Gray",     "Albedo",
                        "UV checker", "Normals",    "Wireframe"};
 const char *Lights[] = {"Studio", "Dim", "Bright"};
 const char *Poses[] = {"Rest", "Half", "Peak"};
+const char *Scenes[] = {"Orbit", "FP", "TP", "Ground", "Armor", "Icons"};
+const char *Actors[] = {"Male / R", "Male / L", "Female / R", "Female / L"};
+const char *Cameras[] = {"Orbit", "Front", "Back", "Side", "Top"};
+const char *Motions[] = {"Still", "Walk pose", "Play"};
 std::string Lower(std::string value)
 {
   for (auto &c : value)
@@ -38,9 +43,11 @@ std::string Lower(std::string value)
 }
 } // namespace
 UItemLabScreen::UItemLabScreen(std::shared_ptr<UItemDefinitionStorage> items,
-                               std::shared_ptr<UShaderManager> shaders)
-    : Items(std::move(items)),
-      Preview(std::make_unique<UItemPreviewRenderer>(Items, std::move(shaders)))
+                               std::shared_ptr<UShaderManager> shaders,
+                               std::unique_ptr<UItemLabSceneRenderer> scenes)
+    : Items(std::move(items)), Preview(std::make_unique<UItemPreviewRenderer>(
+                                   Items, std::move(shaders))),
+      ScenesRenderer(std::move(scenes))
 {
   if (!Preview->Initialize())
     throw std::runtime_error("Cannot initialize Item Lab renderer");
@@ -82,6 +89,8 @@ void UItemLabScreen::Build(UGuiContext &ctx)
     Views[i]->SetOnRotationChanged(
         [this](float yaw, float pitch)
         {
+          Camera = 0;
+          CameraButton->SetLabel(std::string("Cam: ") + Cameras[0]);
           Yaw = yaw;
           Pitch = pitch;
           Dirty = true;
@@ -102,11 +111,41 @@ void UItemLabScreen::Build(UGuiContext &ctx)
         LightButton->SetLabel(Lights[Light]);
         Dirty = true;
       });
+  SceneButton = add(
+      std::make_unique<UGuiButton>(theme, std::string("3D: ") + Scenes[Scene]));
+  SceneButton->SetOnClick([this] { SetScene((Scene + 1) % 6); });
+  ActorButton = add(std::make_unique<UGuiButton>(theme, Actors[Actor]));
+  ActorButton->SetOnClick([this] { SetActor((Actor + 1) % 4); });
+  CameraButton = add(std::make_unique<UGuiButton>(theme, std::string("Cam: ") +
+                                                             Cameras[Camera]));
+  CameraButton->SetOnClick(
+      [this]
+      {
+        Camera = (Camera + 1) % 5;
+        CameraButton->SetLabel(std::string("Cam: ") + Cameras[Camera]);
+        const float yaw[] = {35, 0, 180, 90, 35},
+                    pitch[] = {25, 12, 12, 12, 75};
+        Yaw = yaw[Camera];
+        Pitch = pitch[Camera];
+        for (auto *view : Views)
+          view->SetAngles(Yaw, Pitch);
+        Dirty = true;
+      });
+  MotionButton = add(std::make_unique<UGuiButton>(theme, Motions[Motion]));
+  MotionButton->SetOnClick(
+      [this]
+      {
+        Motion = (Motion + 1) % 3;
+        MotionButton->SetLabel(Motions[Motion]);
+        AnimationTime = 0;
+        Dirty = true;
+      });
   ReloadButton = add(std::make_unique<UGuiButton>(theme, "Reload"));
   ReloadButton->SetOnClick(
       [this]
       {
         Preview->Invalidate();
+        ScenesRenderer->Invalidate();
         ClearItemSurfaceAssets();
         ItemGltfTextureCache::Instance().Clear();
         UItemDefinitionStorage::NotifyVisualAssetsChanged();
@@ -117,7 +156,7 @@ void UItemLabScreen::Build(UGuiContext &ctx)
   CloseButton = add(std::make_unique<UGuiButton>(theme, "Close"));
   CloseButton->SetOnClick([this] { CloseRequested = true; });
   Status = add(std::make_unique<UGuiLabel>(
-      theme, "Drag either preview to rotate. Export writes PNG and JSON."));
+      theme, "Drag view to rotate. Export PNG/JSON."));
   Root = std::move(root);
   AllIds = Items->ListCatalogIds();
   std::sort(AllIds.begin(), AllIds.end());
@@ -129,7 +168,36 @@ void UItemLabScreen::SelectItem(const std::string &id)
   if (std::find(AllIds.begin(), AllIds.end(), id) == AllIds.end())
     return;
   Selected = id;
+  const auto row = std::find(Filtered.begin(), Filtered.end(), id);
+  if (List && row != Filtered.end())
+    List->SetSelectedIndex(int(row - Filtered.begin()));
   Dirty = true;
+}
+void UItemLabScreen::SetScene(int scene)
+{
+  Scene = std::clamp(scene, 0, 5);
+  if (SceneButton)
+    SceneButton->SetLabel(std::string("3D: ") + Scenes[Scene]);
+  if (CameraButton)
+  {
+    CameraButton->SetEnabled(Scene != 1 && Scene != 5);
+    CameraButton->SetLabel(Scene == 1 ? "FP camera"
+                           : Scene == 5
+                               ? "Icon camera"
+                               : std::string("Cam: ") + Cameras[Camera]);
+  }
+  Dirty = true;
+}
+void UItemLabScreen::SetActor(int actor)
+{
+  Actor = std::clamp(actor, 0, 3);
+  if (ActorButton)
+    ActorButton->SetLabel(Actors[Actor]);
+  Dirty = true;
+}
+GuiRect UItemLabScreen::GetSceneBounds() const
+{
+  return SceneButton->GetBounds();
 }
 void UItemLabScreen::SetMode(int mode)
 {
@@ -174,33 +242,42 @@ void UItemLabScreen::Layout()
     return;
   const int m = Scaled(8), row = Scaled(32), x = ContentOffsetX,
             y = ContentOffsetY;
-  const int left = std::clamp(Scaled(220), 180, std::max(180, ViewportW / 4));
+  const int left = std::clamp(Scaled(260), 200, std::max(200, ViewportW / 3));
   const int right = x + left + m, width = ViewportW - left - 2 * m;
   Root->SetBounds({x, y, ViewportW, ViewportH});
   Title->SetBounds({x + m, y + m, ViewportW - 2 * m, row});
   Search->SetBounds({x + m, y + row + 2 * m, left - 2 * m, row});
-  List->SetVisibleRowCount(4);
-  List->SetBounds({x + m, y + 2 * row + 3 * m, left - 2 * m,
-                   std::max(row, ViewportH - 2 * row - 4 * m)});
-  UGuiButton *buttons[] = {ModeButton,   PoseButton,   LightButton,
-                           ReloadButton, ExportButton, CloseButton};
-  for (int i = 0; i < 6; ++i)
-    buttons[i]->SetBounds({right + (i % 3) * width / 3,
-                           y + (1 + i / 3) * row + (2 + i / 3) * m,
-                           width / 3 - m, row});
-  const int previewY = y + 4 * row + 4 * m;
-  const int previewH = std::max(row, ViewportH - 6 * row - 7 * m);
+  const int controlsY = y + ViewportH - 5 * (row + m) - m;
+  const int listY = y + 2 * row + 3 * m,
+            listH = std::max(Scaled(24), controlsY - listY - m);
+  List->SetVisibleRowCount(std::clamp(listH / std::max(1, Scaled(24)), 1, 10));
+  List->SetBounds({x + m, listY, left - 2 * m, listH});
+  List->SetSelectedIndex(List->GetSelectedIndex());
+  UGuiButton *buttons[] = {
+      ModeButton,   PoseButton,   LightButton,  SceneButton,  ActorButton,
+      CameraButton, MotionButton, ReloadButton, ExportButton, CloseButton};
+  const int column = (left - 3 * m) / 2;
+  for (int i = 0; i < 10; ++i)
+    buttons[i]->SetBounds({x + m + (i % 2) * (column + m),
+                           controlsY + (i / 2) * (row + m), column, row});
+  const int previewY = y + 2 * row + 3 * m,
+            previewH = std::max(row, ViewportH - 4 * row - 6 * m);
   for (int i = 0; i < 2; ++i)
   {
     const int px = right + i * width / 2;
-    Captions[i]->SetBounds({px, y + 3 * row + 4 * m, width / 2 - m, row});
+    Captions[i]->SetBounds({px, y + row + 2 * m, width / 2 - m, row});
     Views[i]->SetBounds({px, previewY, width / 2 - m, previewH});
     Info[i]->SetBounds({px, previewY + previewH + m, width / 2 - m, row});
   }
   Status->SetBounds({right, y + ViewportH - row - m, width, row});
 }
-void UItemLabScreen::Update(double)
+void UItemLabScreen::Update(double dt)
 {
+  if (Motion == 2)
+  {
+    AnimationTime += float(dt);
+    Dirty = true;
+  }
   if (Dirty && Root)
   {
     Dirty = false;
@@ -222,7 +299,7 @@ void UItemLabScreen::Refresh()
   Paths[1] = assets.Candidate;
   ArchivedReference = assets.Archived;
   StagedCandidate = assets.Staged;
-  Captions[0]->SetText(ArchivedReference ? "Previous published reference"
+  Captions[0]->SetText(ArchivedReference ? "Archived reference"
                                          : "Published reference");
   Captions[1]->SetText(StagedCandidate     ? "Staged candidate"
                        : ArchivedReference ? "Published candidate"
@@ -233,34 +310,50 @@ void UItemLabScreen::Refresh()
     try
     {
       unsigned next = 0;
+      SceneDraws[i] = 0;
+      SceneSources[i] = false;
       if (std::filesystem::is_regular_file(Paths[i]))
       {
         const auto asset = Preview->GetInspectionAsset(Paths[i]);
-        ItemVisualInputs inputs;
-        inputs.BowCharge = PosePreset * .5f;
-        inputs.UsePhase = PosePreset * .25f;
-        inputs.HasAmmo = PosePreset > 0;
-        inputs.HasWater = PosePreset > 0;
+        ItemLabSceneParams params;
+        params.Scene = Scene;
+        params.Mode = Mode;
+        params.Left = Actor % 2 != 0;
+        params.Female = Actor >= 2;
+        params.Walk = Motion > 0;
+        params.Time = Motion == 2 ? AnimationTime : PosePreset * .35f;
+        params.Yaw = Yaw;
+        params.Pitch = Pitch;
+        params.Ambient = Light == 0 ? .65f : Light == 1 ? .12f : .9f;
+        const float charge = Motion == 2
+                                 ? (std::sin(AnimationTime * 2.f) + 1.f) * .5f
+                                 : PosePreset * .5f;
+        params.Inputs.BowCharge = definition->Ranged.Enabled ? charge : 0.f;
+        params.Inputs.UsePhase =
+            Motion == 2 ? std::fmod(AnimationTime, 1.f) : PosePreset * .25f;
+        params.Inputs.HasAmmo = definition->Ranged.Enabled && charge > 0;
+        params.Inputs.HasWater = false;
         for (const auto &binding : asset->Bindings)
           if (binding.Channel == ItemVisualChannel::FillUnits)
-            inputs.ContentsUnits =
-                std::max(inputs.ContentsUnits,
-                         int(std::lround(binding.Maximum * PosePreset * .5f)));
-        next = Preview->RenderInspectionTexture(Selected, Paths[i], 512, Yaw,
-                                                Pitch, Mode,
-                                                Light == 0   ? .65f
-                                                : Light == 1 ? .12f
-                                                             : .9f,
-                                                inputs);
+            params.Inputs.ContentsUnits =
+                std::max(params.Inputs.ContentsUnits,
+                         int(std::lround(binding.Maximum * charge)));
+        next =
+            ScenesRenderer->Render(*Preview, Selected, Paths[i], asset, params);
+        SceneDraws[i] = ScenesRenderer->DrawCount();
+        SceneSources[i] = ScenesRenderer->SourceMatches();
         size_t triangles = 0, vertices = 0;
         for (const auto &p : asset->Primitives)
         {
           triangles += p.Indices.size() / 3;
           vertices += p.Vertices.size() / 8;
         }
-        Info[i]->SetText(std::to_string(triangles) + " tri / " +
-                         std::to_string(vertices) + " v / " +
-                         std::to_string(asset->Materials.size()) + " mat");
+        if (Scene == 5)
+          Info[i]->SetText("32 / 48 / 64 px (native)");
+        else
+          Info[i]->SetText(std::to_string(triangles) + " tri / " +
+                           std::to_string(vertices) + " v / " +
+                           std::to_string(asset->Materials.size()) + " mat");
       }
       else
         Info[i]->SetText(i == 0 ? "Missing reference model"
@@ -280,6 +373,10 @@ void UItemLabScreen::Refresh()
       Status->SetText(e.what());
     }
   }
+  if (Textures[0] && Textures[1])
+    Status->SetText(Scene == 5   ? "Icons: 32 / 48 / 64 native pixels"
+                    : Scene == 1 ? "FP: gameplay camera, 16:9"
+                                 : "Drag view to rotate. Export PNG/JSON.");
 }
 bool UItemLabScreen::LayoutValid() const
 {
@@ -313,7 +410,7 @@ void UItemLabScreen::Export()
     return;
   const auto folder = platform->AssetRoot() / "item_lab_exports";
   std::filesystem::create_directories(folder);
-  nlohmann::json report = {{"schema_version", 2},
+  nlohmann::json report = {{"schema_version", 3},
                            {"id", Selected},
                            {"mode", Modes[Mode]},
                            {"pose", Poses[PosePreset]},
@@ -322,9 +419,18 @@ void UItemLabScreen::Export()
                            {"candidate", Paths[1].generic_string()},
                            {"archived_reference", ArchivedReference},
                            {"staged_candidate", StagedCandidate},
+                           {"scene", Scenes[Scene]},
+                           {"actor", Actors[Actor]},
+                           {"motion", Motions[Motion]},
+                           {"camera", Cameras[Camera]},
+                           {"animation_time", AnimationTime},
                            {"yaw", Yaw},
                            {"pitch", Pitch},
                            {"read_only", true}};
+  const std::string stem =
+      Selected + "-" + std::to_string(Mode) +
+      (Scene ? "-" + std::string(Scenes[Scene]) + "-" + std::to_string(Actor)
+             : "");
   UGlStateScope scope(kGlMaskIconFbo);
   for (int i = 0; i < 2; ++i)
   {
@@ -347,8 +453,8 @@ void UItemLabScreen::Export()
       std::swap_ranges(pixels.begin() + y * 512 * 4,
                        pixels.begin() + (y + 1) * 512 * 4,
                        pixels.begin() + (511 - y) * 512 * 4);
-    const auto file = folder / (Selected + "-" + std::to_string(Mode) +
-                                (i == 0 ? "-reference.png" : "-candidate.png"));
+    const auto file =
+        folder / (stem + (i == 0 ? "-reference.png" : "-candidate.png"));
     const bool saved = stbi_write_png(file.string().c_str(), 512, 512, 4,
                                       pixels.data(), 512 * 4) != 0;
     glDeleteFramebuffers(1, &fbo);
@@ -358,8 +464,7 @@ void UItemLabScreen::Export()
       return;
     }
   }
-  std::ofstream output(folder /
-                       (Selected + "-" + std::to_string(Mode) + ".json"));
+  std::ofstream output(folder / (stem + ".json"));
   output << report.dump(2) << '\n';
   Status->SetText(output ? "Exported PNG and JSON to item_lab_exports"
                          : "Cannot save report");
