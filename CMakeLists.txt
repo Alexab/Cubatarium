@@ -1779,6 +1779,7 @@ set_tests_properties(creature_spawn_planner_test PROPERTIES LABELS "unit;creatur
 
 cubatarium_add_test(NAME creature_draw_queue_test
     SOURCES
+        src/Creatures/Visual/CreatureDrawQueue.cpp
         src/Test/CreatureDrawQueueTest.cpp
     LIBRARIES glm::glm)
 add_test(NAME creature_draw_queue_test

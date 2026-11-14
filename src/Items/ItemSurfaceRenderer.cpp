@@ -73,14 +73,17 @@ void ItemSurfaceRenderer::Draw(
   Shader->SetInt("uAlbedo", 0);
   Shader->SetInt("uInspectionMode", profile.InspectionMode);
 #if !defined(__ANDROID__)
-  GLint polygonMode[2];
-  glGetIntegerv(GL_POLYGON_MODE, polygonMode);
+  GLint polygonMode[2] = {GL_FILL, GL_FILL};
   if (profile.InspectionMode == 6)
+  {
+    glGetIntegerv(GL_POLYGON_MODE, polygonMode);
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  }
 #endif
   Shader->SetVec3("uCamera", profile.CameraPosition);
   Shader->SetVec3("uLightDirection", profile.LightDirection);
   Shader->SetFloat("uAmbient", profile.Ambient);
+  Shader->SetFloat("uLightIntensity", profile.LightIntensity);
   Shader->SetFloat("uFog", profile.Fog);
   Shader->SetVec3("uFogColor", profile.FogColor);
   const auto transforms = ResolveItemNodeTransforms(*asset, state);

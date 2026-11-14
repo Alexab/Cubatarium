@@ -30,6 +30,9 @@
 #include "Gui/Preview/CreatureGltfPreviewBounds.h"
 #include "Gui/Preview/CreaturePreviewBoundsSink.h"
 #include "Gui/Preview/CreaturePreviewLayout.h"
+#include "Items/ItemDefinitionStorage.h"
+#include "Items/ItemDrawRequest.h"
+#include "Items/ItemSurfaceRenderer.h"
 #include "Pose/BoneSkeleton/BoneSkeletonPoseEngine.h"
 #include "Pose/CreaturePosePresenterRegistry.h"
 #include "Render/Engine/ShaderManager.h"
@@ -157,11 +160,14 @@ bool UCreaturePreviewRenderer::Initialize()
   BindCreatureBonePaletteBlock(SkinnedShader->GetProgramID(),
                                kCreatureBonePaletteBindingPoint);
 #endif
-  return EnsureFboSize(256);
+  ItemRenderer = std::make_unique<ItemSurfaceRenderer>();
+  return ItemRenderer->Initialize(*ShaderManager) && EnsureFboSize(256);
 }
 
 void UCreaturePreviewRenderer::Invalidate()
 {
+  if (ItemRenderer)
+    ItemRenderer->Clear();
   GltfBoundsCache.clear();
   ProceduralBoundsCache.clear();
   if (DepthRbo != 0)
@@ -185,6 +191,7 @@ void UCreaturePreviewRenderer::Invalidate()
 void UCreaturePreviewRenderer::Shutdown()
 {
   Invalidate();
+  ItemRenderer.reset();
   Shader.reset();
   if (BodyCubeEbo != 0)
   {
@@ -377,12 +384,23 @@ GLuint UCreaturePreviewRenderer::CreateSolidColorTexture(int size, float r,
 class UPreviewCreatureDrawSink final : public cutum::ICreatureDrawSink
 {
 public:
-  UPreviewCreatureDrawSink(cutum::UShaderProgram *shader,
-                           cutum::UShaderProgram *skinnedShader, GLuint cubeVao,
-                           GLuint headVao, GLuint bodyVao, GLuint rigidHeadVao)
+  UPreviewCreatureDrawSink(
+      cutum::UShaderProgram *shader, cutum::UShaderProgram *skinnedShader,
+      GLuint cubeVao, GLuint headVao, GLuint bodyVao, GLuint rigidHeadVao,
+      cutum::ItemSurfaceRenderer &items, const glm::vec3 &camera,
+      const std::function<void(const cutum::ItemDrawRequest &)> &observer)
       : Shader(shader), SkinnedShader(skinnedShader), CubeVao(cubeVao),
-        HeadVao(headVao), BodyVao(bodyVao), RigidHeadVao(rigidHeadVao)
+        HeadVao(headVao), BodyVao(bodyVao), RigidHeadVao(rigidHeadVao),
+        ItemRenderer(items), ItemObserver(observer)
   {
+    ItemProfile.CameraPosition = camera;
+  }
+  void DrawItemSurface(const cutum::ItemDrawRequest &request) override
+  {
+    if (ItemObserver)
+      ItemObserver(request);
+    ItemRenderer.Draw(request.Asset, request.Path, request.ViewProjection,
+                      request.Model, request.State, ItemProfile);
   }
 
   void DrawTexturedPart(const glm::mat4 &mvp, GLuint texture,
@@ -500,6 +518,9 @@ private:
   GLuint HeadVao;
   GLuint BodyVao;
   GLuint RigidHeadVao;
+  cutum::ItemSurfaceRenderer &ItemRenderer;
+  cutum::ItemPresentationProfile ItemProfile;
+  const std::function<void(const cutum::ItemDrawRequest &)> &ItemObserver;
 };
 
 bool UCreaturePreviewRenderer::DrawSpeciesParts(
@@ -512,6 +533,11 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(
   if (!Species || !Skins || !Textures || !Shader || viewportSize <= 0)
   {
     return false;
+  }
+  if (ItemRenderer && ItemRevision != UItemDefinitionStorage::ContentRevision())
+  {
+    ItemRenderer->Clear();
+    ItemRevision = UItemDefinitionStorage::ContentRevision();
   }
   const CreatureDefinition *def = Species->Get(speciesId);
   if (!def)
@@ -528,6 +554,8 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(
       BoundsBoneRevision != boneRevision || BoundsGltfRevision != gltfRevision)
   {
     ProceduralBoundsCache.clear();
+    if (ItemRenderer)
+      ItemRenderer->Clear();
     GltfBoundsCache.clear();
     BoundsDefinitionsRevision = definitionsRevision;
     BoundsBoneRevision = boneRevision;
@@ -796,16 +824,13 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(
       return false;
     }
 
-    if (QaSubmissionObserver)
-      QaSubmissionObserver(queue, viewProj);
-
     const glm::vec4 bg = def->visual.wireframeColor * 0.25f;
     glClearColor(bg.r, bg.g, bg.b, TransparentBackground ? 0.f : 1.f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     UPreviewCreatureDrawSink drawSink(Shader.get(), SkinnedShader.get(),
                                       CubeVao, HeadCubeVao, BodyCubeVao,
-                                      RigidHeadCubeVao);
-    queue.Flush(drawSink);
+                                      RigidHeadCubeVao, *ItemRenderer,
+                                      ctx.CameraPosition, ItemSurfaceObserver);
 
     // Armor / wielded overlays keep their own submission, aligned with the
     // backend root matrix the body was drawn with.
@@ -837,16 +862,19 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(
         return true;
       };
       if (armor)
-        WornEquipmentDrawer::DrawImmediate(*armor, viewProj, bodyMat,
-                                           boneLookup, Shader.get(), bounds);
+        WornEquipmentDrawer::SubmitPreview(queue, *armor, viewProj, bodyMat,
+                                           boneLookup, bounds);
       if ((mainItemId && !mainItemId->empty()) ||
           (offhandItemId && !offhandItemId->empty()))
         WornEquipmentDrawer::SubmitWieldedPreview(
-            nullptr, Shader.get(), mainItemId ? *mainItemId : std::string(),
+            &queue, nullptr, mainItemId ? *mainItemId : std::string(),
             offhandItemId ? *offhandItemId : std::string(),
             WornEquipmentDrawer::ItemDefinitions(), viewProj, bodyMat,
-            boneLookup, true, bounds);
+            boneLookup, false, bounds);
     }
+    if (QaSubmissionObserver)
+      QaSubmissionObserver(queue, viewProj);
+    queue.Flush(drawSink);
     return true;
   }
 

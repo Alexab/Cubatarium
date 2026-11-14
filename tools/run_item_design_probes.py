@@ -62,11 +62,15 @@ def main():
     staged={id:build_design(id) for id in ids}
     env=os.environ.copy();env['PYTHONIOENCODING']='utf-8'
     # Ambient diagnostic switches from a developer shell must not alter this run.
-    for key in ('CUBA_FLIGHT_QA_FP_ITEM','CUBA_ITEMS_INVENTORY_QA','CUBA_ITEMS_CARRY_VISUAL_QA','CUBA_OWNERSHIP_CATALOG_VISUAL_QA'):
+    for key in ('CUBA_FLIGHT_QA_FP_ITEM','CUBA_ITEMS_INVENTORY_QA','CUBA_ITEMS_CARRY_VISUAL_QA','CUBA_OWNERSHIP_CATALOG_VISUAL_QA','CUBA_ITEM_LAB_QA','CUBA_ITEM_PRESENTATION_QA'):
         env.pop(key,None)
     with runtime_designs(staged) as restored_count:
         if not args.fp_only:
             run([sys.executable,'tools/run_items_acceptance.py','--skip-build','--extended','--world',args.world],'item-design-native',env)
+            result=json.loads((ROOT/'bin/items_acceptance/result.json').read_text(encoding='utf-8'))
+            coverage=result['reports']['presentations']
+            if sorted(coverage.get('surface_ids',[]))!=ids:
+                raise RuntimeError('Native presentation coverage does not match substituted designs')
         capture=ROOT/'bin/item_surface_fp';capture.mkdir(exist_ok=True)
         for old in capture.glob('frame_*.png'): old.unlink()
         env.update(CUBA_FLIGHT_QA_FP_ITEM=args.fp_id,
@@ -78,6 +82,9 @@ def main():
         summary=dict(passed=True,scope='fp_only' if args.fp_only else 'native_regression_and_fp',world=args.world,staged_ids=ids,fp_id=args.fp_id,
                      fp_frames=[p.relative_to(ROOT).as_posix() for p in frames],
                      executable_sha256=hashlib.sha256(exe.read_bytes()).hexdigest())
+    if not args.fp_only:
+        summary['presentation_checks']=len(coverage['checks'])
+        summary['surface_ids']=coverage['surface_ids']
     summary['restored_runtime_files']=restored_count
     summary_path.write_text(json.dumps(summary,indent=2)+'\n',encoding='utf-8')
     print(f"Native {summary['scope']} probes passed; artistic acceptance is separate")

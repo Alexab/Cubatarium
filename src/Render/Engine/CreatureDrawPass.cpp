@@ -13,6 +13,9 @@
 #include "Creatures/Visual/CreatureMeshGpuCache.h"
 #include "Creatures/Visual/CreatureVisibility.h"
 #include "Creatures/Visual/CreatureVisual.h"
+#include "Items/ItemDefinitionStorage.h"
+#include "Items/ItemDrawRequest.h"
+#include "Items/ItemPresentationMath.h"
 #include "Pose/CreaturePoseParams.h"
 #include "Pose/IUCreaturePosePresenter.h"
 #include "Render/Camera/Camera.h"
@@ -101,11 +104,14 @@ bool UCreatureDrawPass::InitBuffers(UShaderManager &shader_manager)
   InitCreatureBonePaletteGpu();
   BindCreatureBonePaletteBlock(creatureSkinnedShader->GetProgramID(),
                                kCreatureBonePaletteBindingPoint);
-  return InitPartBuffers() && InitHeadPartBuffers() && InitBodyPartBuffers();
+  ItemRenderer = std::make_unique<ItemSurfaceRenderer>();
+  return ItemRenderer->Initialize(shader_manager) && InitPartBuffers() &&
+         InitHeadPartBuffers() && InitBodyPartBuffers();
 }
 
 void UCreatureDrawPass::DestroyBuffers()
 {
+  ItemRenderer.reset();
   TimingProbe.Shutdown();
   if (creatureRigidHeadPartEBO)
   {
@@ -413,6 +419,58 @@ void UCreatureDrawPass::DrawBoneSkeletonMesh(
   ++Stats.CreatureDrawCalls;
 }
 
+void UCreatureDrawPass::DrawItemSurface(const ItemDrawRequest &request,
+                                        UWorld &world)
+{
+  if (!ItemRenderer || !request.Asset)
+    return;
+  if (ItemRevision != UItemDefinitionStorage::ContentRevision())
+  {
+    ItemRenderer->Clear();
+    ItemRevision = UItemDefinitionStorage::ContentRevision();
+  }
+  auto light = ActiveLight;
+  if (request.LightSamplePosition && ItemLocalLight)
+  {
+    const auto cell = glm::ivec3(glm::floor(*request.LightSamplePosition));
+    const auto coord = UChunkManager::WorldToChunk(cell);
+    if (const auto *chunk =
+            world.GetBlockWorld().GetChunkManager().GetChunk(coord))
+    {
+      const auto packed = chunk->GetLightPackedLocal(cell - coord * CHUNK_SIZE);
+      light = glm::vec2(UnpackSky(packed), UnpackBlock(packed)) /
+              float(kMaxLightLevel);
+    }
+  }
+  auto profile = ItemFrameProfile;
+  const auto &env = world.GetEnvironmentState();
+  profile.LightIntensity = ItemWorldLightIntensity(
+      light, env.DayNightFactor, env.MoonNightFactor,
+      SkyLightScaleFromWeather(env.WeatherSkyAttenuation,
+                               env.PrecipitationIntensity),
+      world.GetLightingSettings().MinAmbient);
+  profile.Fog = ActiveFog;
+  if (request.LightSamplePosition)
+  {
+    auto d = *request.LightSamplePosition - profile.CameraPosition;
+    if (ItemFogHorizontal)
+      d.y = 0;
+    profile.Fog =
+        ItemFogEnabled
+            ? std::pow(
+                  std::clamp((glm::length(d) - ItemFogStart) /
+                                 std::max(ItemFogEnd - ItemFogStart, .001f),
+                             0.f, 1.f),
+                  ItemFogDensity)
+            : 0.f;
+  }
+  glEnable(GL_DEPTH_TEST);
+  glDisable(GL_CULL_FACE);
+  ItemRenderer->Draw(request.Asset, request.Path, request.ViewProjection,
+                     request.Model, request.State, profile);
+  Stats.CreatureDrawCalls += request.Asset->Primitives.size();
+}
+
 void UCreatureDrawPass::DrawSkinnedMesh(
     const glm::mat4 &mvp, GLuint texture, const GltfPrimitiveCpu &mesh,
     const std::shared_ptr<const std::vector<glm::mat4>> &boneMatrices)
@@ -578,6 +636,17 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
   static const char *envLocal = std::getenv("CUBA_CREATURE_LOCAL_LIGHT");
   const bool localLight =
       envLocal ? std::atoi(envLocal) != 0 : render.CreatureLocalLight;
+  ItemFrameProfile.CameraPosition = cameraPos;
+  ItemFrameProfile.FogColor = engine.GetUnderwaterFogPass().GetFogColor();
+  ItemLocalLight = localLight;
+  ItemFogEnabled = creatureFogEnabled;
+  ItemFogHorizontal = render.DistanceFogHorizontal;
+  ItemFogStart = creatureFog.Start;
+  ItemFogEnd = creatureFog.End;
+  ItemFogDensity = std::max(
+      .1f,
+      creatureFog.Density *
+          std::max(.05f, world.GetEnvironmentState().WeatherFogMultiplier));
   const bool debugLabels = envLabels || render.CreatureDebugLabels;
   const bool nameLabels = render.CreatureNameLabels;
   const bool labels = debugLabels || nameLabels;
@@ -763,10 +832,19 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
 
         draw_debug_bounds();
       });
+  FlushDrawQueue(world, engine, viewProj);
+
+  FinishCreatureFrame(world, viewProj, engine, labels, lightBench, lightSamples,
+                      lightSampleMs, localLight);
+}
+
+void UCreatureDrawPass::FlushDrawQueue(UWorld &world, UGeometryEngine &engine,
+                                       const glm::mat4 &viewProj)
+{
   struct LitSink final : ICreatureDrawSink
   {
-    LitSink(UCreatureDrawPass &pass, UGeometryEngine &engine)
-        : Pass(pass), Engine(engine)
+    LitSink(UCreatureDrawPass &pass, UGeometryEngine &engine, UWorld &world)
+        : Pass(pass), Engine(engine), World(world)
     {
     }
     void DrawTexturedPart(const glm::mat4 &mvp, GLuint texture,
@@ -795,6 +873,10 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
     {
       Pass.DrawBillboard(mvp, texture, tint);
     }
+    void DrawItemSurface(const ItemDrawRequest &request) override
+    {
+      Pass.DrawItemSurface(request, World);
+    }
     void SetCreatureLight(const glm::vec2 &skyBlock) override
     {
       Pass.SetActiveLight(skyBlock);
@@ -805,15 +887,13 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
     }
     UCreatureDrawPass &Pass;
     UGeometryEngine &Engine;
-  } sink(*this, engine);
+    UWorld &World;
+  } sink(*this, engine, world);
   TimingProbe.BeginGpuDraw();
   UWorldItemSystem::Instance().Draw(world, engine.GetCreatureDrawQueue(),
                                     viewProj);
   Queue.Flush(sink);
   TimingProbe.EndGpuDraw();
-
-  FinishCreatureFrame(world, viewProj, engine, labels, lightBench, lightSamples,
-                      lightSampleMs, localLight);
 }
 
 void UCreatureDrawPass::ApplyCreatureLightUniforms(const UWorld &world,

@@ -46,7 +46,7 @@ def build_design(item_id, *, root=ROOT, output=None):
     centre=[(low[i]+high[i])/2 for i in range(3)]
     faces=[Face(tuple(tuple((p[i]-centre[i])*scale for i in range(3)) for p in f.points),f.role,f.name) for f in faces]
     presentation=dict(recipe.get('presentation',{}))
-    allowed={'right_grip','left_grip','fp_euler_deg','fp_hand_offset','fp_scale','icon_euler_deg','fp_arm_euler_deg'}
+    allowed={'right_grip','left_grip','fp_euler_deg','fp_hand_offset','fp_scale','icon_euler_deg','fp_arm_euler_deg','tp_euler_deg'}
     if set(presentation)-allowed: raise ValueError('Unknown presentation field')
     for key,value in presentation.items():
         if key=='fp_scale':

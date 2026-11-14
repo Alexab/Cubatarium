@@ -12,6 +12,8 @@ typedef unsigned int GLuint;
 namespace cutum
 {
 
+struct ItemDrawRequest;
+
 enum class CreatureDrawKind
 {
   TexturedPart,
@@ -19,6 +21,7 @@ enum class CreatureDrawKind
   SkinnedMesh,
   WireframeBox,
   Billboard,
+  ItemSurface,
 };
 
 struct CreatureDrawRequest
@@ -32,6 +35,7 @@ struct CreatureDrawRequest
   /// Shared per-creature palette: primitives of one creature reference the
   /// same immutable vector instead of copying it per primitive (audit V7).
   std::shared_ptr<const std::vector<glm::mat4>> BoneMatrices;
+  std::shared_ptr<const ItemDrawRequest> ItemSurface;
   glm::vec4 WireColor{1.f};
   glm::vec4 Tint{1.f};
   /// Local light of the owning creature: x = sky 0..1, y = block 0..1.

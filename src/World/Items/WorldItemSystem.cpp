@@ -1290,7 +1290,8 @@ void UWorldItemSystem::Draw(UWorld &world, CreatureDrawQueue &queue,
       WornEquipmentDrawer::SubmitLoose(
           queue, i.stack.Id, vp, model, Profile(world, i.stack).size,
           world.GetBlockRegistry().GetBlockAtlasTexture(
-              world.GetBlockRegistry().GetIdByTypeName(i.stack.Id)));
+              world.GetBlockRegistry().GetIdByTypeName(i.stack.Id)),
+          !i.flying && !i.carrierId);
     }
   };
   for (const auto &i : Items)

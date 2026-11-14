@@ -7,6 +7,7 @@
 #include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiTextInput.h"
+#include "Test/Native/ItemPresentationQa.h"
 #include "Test/Native/ItemsInventoryQa.h"
 #include "Test/Native/OwnershipQa.h"
 #include "Test/Native/PlayerWindowCapture.h"
@@ -2800,6 +2801,26 @@ void UApplication::RunInventoryIconsQa(const std::string &path)
 }
 void UApplication::UpdateNativeItemsQa(double dt)
 {
+  static bool itemPresentationDone = false;
+  if (!itemPresentationDone && World && World->GetControlledCreature() &&
+      CreaturePreviewRenderer)
+    if (const char *path = std::getenv("CUBA_ITEM_PRESENTATION_QA"))
+    {
+      itemPresentationDone = true;
+      nlohmann::json before, after;
+      World->GetControlledCreature()->GetInventory().SerializeToJson(before);
+      RunItemPresentationQa(path, *Core->GetItemDefinitionStorage(),
+                            *CreaturePreviewRenderer, *ShaderManager);
+      World->GetControlledCreature()->GetInventory().SerializeToJson(after);
+      std::ifstream input(path);
+      nlohmann::json report;
+      input >> report;
+      input.close();
+      report["inventory_unchanged"] = before == after;
+      report["passed"] = report.value("passed", false) && before == after;
+      std::ofstream output(path);
+      output << report.dump(2) << '\n';
+    }
   static bool itemLabQaDone = false;
   if (!itemLabQaDone && World && World->GetControlledCreature())
     if (const char *path = std::getenv("CUBA_ITEM_LAB_QA"))

@@ -1,4 +1,5 @@
 #include "Items/ItemRenderAsset.h"
+#include "Items/ItemPresentationMath.h"
 
 #include <chrono>
 #include <cstring>
@@ -139,6 +140,39 @@ int main()
     Expect(glm::length(glm::vec3(moved * glm::vec4(socket, 1)) - socket -
                        grip.FpHandOffset) < 1e-5f,
            "arm pose preserves palm contact after rotation");
+    auto physicalAsset = *asset;
+    physicalAsset.Low = glm::vec3(-.2f, -.1f, -.05f);
+    physicalAsset.High = glm::vec3(.2f, .1f, .05f);
+    physicalAsset.Grip.TpEulerDeg = glm::vec3(15, 30, 12);
+    physicalAsset.Grip.LeftGrip = glm::vec3(.02f, .08f, 0);
+    physicalAsset.Grip.HasLeftGrip = true;
+    const glm::vec3 palm(.3f, -.5f, .1f);
+    for (bool left : {false, true})
+    {
+      const auto local =
+          cutum::ItemWieldLocalMatrix(physicalAsset, palm, left, 1.4f);
+      const auto anchor =
+          left ? physicalAsset.Grip.LeftGrip : physicalAsset.Grip.RightGrip;
+      Expect(glm::length(glm::vec3(local * glm::vec4(anchor, 1)) - palm) <
+                 1e-5f,
+             "TP rotation and scale keep either grip on the palm");
+    }
+    const auto ground = cutum::ItemLooseLocalMatrix(
+        physicalAsset, glm::vec3(.5f, .8f, .2f), true);
+    Expect(std::abs(glm::vec3(ground * glm::vec4(physicalAsset.Low, 1)).y +
+                    .4f) < 1e-5f,
+           "the visual bottom rests on the collision proxy bottom");
+    Expect(glm::length(glm::vec3(ground * glm::vec4(1, 0, 0, 0))) == 1.f,
+           "loose items retain authored physical units without longest-axis "
+           "enlargement");
+    const float day = cutum::ItemWorldLightIntensity({1, 0}, 1, 0, 1, .12f);
+    const float night = cutum::ItemWorldLightIntensity({1, 0}, 0, .2f, 1, .12f);
+    const float interior =
+        cutum::ItemWorldLightIntensity({0, 0}, 0, .2f, 1, .12f);
+    const float torch = cutum::ItemWorldLightIntensity({0, 1}, 0, .2f, 1, .12f);
+    Expect(day > night && night > interior && torch > night,
+           "world item illumination distinguishes day, night, interior and "
+           "block light");
     cutum::ItemVisualState pose;
     pose.NodeTransforms["root"] =
         glm::translate(glm::mat4(1), glm::vec3(1, 0, 0));

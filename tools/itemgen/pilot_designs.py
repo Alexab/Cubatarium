@@ -43,7 +43,7 @@ def materials(metal='iron'):
 
 def design(item_id,parts,mats,grip=(0,-.24,0),atlas=256,density=240,scale=.7,budget=1200):
     return dict(version=3,id=item_id,atlas_size=atlas,texels_per_metre=density,triangle_budget=budget,
-                presentation=dict(right_grip=list(grip),left_grip=list(grip),fp_euler_deg=[-26,0,-20],fp_scale=scale,fp_hand_offset=[-.04,.12,0]),
+                presentation=dict(tp_euler_deg=[-65,0,0],right_grip=list(grip),left_grip=list(grip),fp_euler_deg=[-26,0,-20],fp_scale=scale,fp_hand_offset=[-.04,.12,0]),
                 materials=mats,parts=parts)
 
 

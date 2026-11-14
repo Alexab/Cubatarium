@@ -185,6 +185,7 @@ LoadItemRenderAsset(const std::filesystem::path &path,
   asset->Grip.HasFpEuler = readVector("fp_euler_deg", asset->Grip.FpEulerDeg);
   readVector("fp_hand_offset", asset->Grip.FpHandOffset);
   readVector("icon_euler_deg", asset->Grip.IconEulerDeg);
+  readVector("tp_euler_deg", asset->Grip.TpEulerDeg);
   readVector("fp_arm_euler_deg", asset->Grip.FpArmEulerDeg);
   asset->Grip.FpScale = presentation.value("fp_scale", 1.f);
   Require(std::isfinite(asset->Grip.FpScale) && asset->Grip.FpScale >= .1f &&

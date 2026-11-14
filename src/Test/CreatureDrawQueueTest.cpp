@@ -1,4 +1,5 @@
 #include "Creatures/Visual/CreatureDrawQueue.h"
+#include "Items/ItemDrawRequest.h"
 
 #include <iostream>
 #include <vector>
@@ -58,7 +59,7 @@ int main()
     const CreatureDrawKind expectedKinds[] = {
         CreatureDrawKind::TexturedPart, CreatureDrawKind::TexturedPart,
         CreatureDrawKind::TexturedPart, CreatureDrawKind::SkeletalMesh,
-        CreatureDrawKind::SkinnedMesh, CreatureDrawKind::WireframeBox};
+        CreatureDrawKind::SkinnedMesh,  CreatureDrawKind::WireframeBox};
     bool kindsInOrder = true;
     for (size_t i = 0; i < requests.size(); ++i)
     {
@@ -70,7 +71,8 @@ int main()
     bool texturesInOrder = true;
     for (size_t i = 0; i < requests.size(); ++i)
     {
-      texturesInOrder = texturesInOrder && requests[i].Texture == expectedTextures[i];
+      texturesInOrder =
+          texturesInOrder && requests[i].Texture == expectedTextures[i];
     }
     Expect(texturesInOrder, "equal-kind requests sort by texture id", failures);
 
@@ -79,12 +81,61 @@ int main()
   }
 
   {
-    Expect(!CreatureDrawRequestLess(MakeRequest(CreatureDrawKind::TexturedPart, 1u, 0.f),
-                                    MakeRequest(CreatureDrawKind::TexturedPart, 1u, 0.f)),
+    Expect(!CreatureDrawRequestLess(
+               MakeRequest(CreatureDrawKind::TexturedPart, 1u, 0.f),
+               MakeRequest(CreatureDrawKind::TexturedPart, 1u, 0.f)),
            "comparator is irreflexive for equal requests", failures);
-    Expect(CreatureDrawRequestLess(MakeRequest(CreatureDrawKind::TexturedPart, 1u, 0.f),
-                                   MakeRequest(CreatureDrawKind::SkeletalMesh, 0u, 0.f)),
+    Expect(CreatureDrawRequestLess(
+               MakeRequest(CreatureDrawKind::TexturedPart, 1u, 0.f),
+               MakeRequest(CreatureDrawKind::SkeletalMesh, 0u, 0.f)),
            "comparator orders kinds before textures", failures);
+  }
+
+  {
+    struct Sink : ICreatureDrawSink
+    {
+      int Items{0};
+      glm::vec2 Light{0};
+      float Fog{0};
+      const ItemDrawRequest *Received{nullptr};
+      void DrawTexturedPart(const glm::mat4 &, GLuint,
+                            CreaturePartMesh) override
+      {
+      }
+      void DrawBoneSkeletonMesh(const glm::mat4 &, GLuint,
+                                const BoneSkeletonCubeMeshCpu &) override
+      {
+      }
+      void DrawSkinnedMesh(
+          const glm::mat4 &, GLuint, const GltfPrimitiveCpu &,
+          const std::shared_ptr<const std::vector<glm::mat4>> &) override
+      {
+      }
+      void DrawBoxWireframe(const glm::mat4 &, const glm::vec4 &) override {}
+      void DrawBillboard(const glm::mat4 &, GLuint, const glm::vec4 &) override
+      {
+      }
+      void SetCreatureLight(const glm::vec2 &value) override { Light = value; }
+      void SetCreatureFog(float value) override { Fog = value; }
+      void DrawItemSurface(const ItemDrawRequest &value) override
+      {
+        ++Items;
+        Received = &value;
+      }
+    } sink;
+    auto payload = std::make_shared<ItemDrawRequest>();
+    CreatureDrawRequest request;
+    request.Kind = CreatureDrawKind::ItemSurface;
+    request.ItemSurface = payload;
+    CreatureDrawQueue queue;
+    queue.Push(std::move(request));
+    queue.StampLight(0, {.2f, .7f});
+    queue.StampFog(0, .35f);
+    queue.Flush(sink);
+    Expect(sink.Items == 1 && sink.Received == payload.get(),
+           "queue preserves the item-only payload", failures);
+    Expect(sink.Light == glm::vec2(.2f, .7f) && sink.Fog == .35f,
+           "item requests inherit carrier light and fog", failures);
   }
 
   if (failures != 0)

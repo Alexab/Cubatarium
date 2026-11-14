@@ -200,6 +200,61 @@ small-icon inspection, author glTF import, publication, the remaining 58 designs
 and comparative performance acceptance are still required. Flight metrics were
 disabled for these correctness runs; no p95 or memory-budget claim is made.
 
+## World and equipment surface integration checkpoint
+
+Declared v3 item models now use the shared item-only renderer for TP wield,
+armor, loose world bodies and the corresponding character previews. The queue
+carries an immutable item asset/pose payload with separate model and view
+matrices. It retains carrier light and fog when sorting; clip rejection uses
+the actual item envelope. Creature vertex layouts, creature shader lighting and
+legacy item resources keep their existing paths.
+
+New loose models retain authored physical units. The old longest-axis fit is
+skipped; resting models align their bottom with the bottom of the collision
+proxy. Flight/carry positions retain their centered presentation. Neither
+physical profiles nor ownership/instance state is changed. World item shading
+reads local sky/block light, day/night/weather factors and distance fog. The
+item shader has a separate linear light-intensity input, so directional shading
+does not make items fully bright at night. Wireframe GL state is queried only
+for the inspection mode, not for every normal world item draw.
+
+Both hands use authored grip anchors; TP rotations and scale pivot around the
+palm instead of moving the contact. A separate `tp_euler_deg` authoring field
+was added. Native screenshots exposed a foreshortened bucket and tools in the
+65-degree ordinary humanoid hold pose; pilot recipes now compensate in their
+TP presentation while preserving icon, FP and loose orientations.
+
+Release build, **24 CTest tests**, source-generation tests and style/include
+checks pass. Native temporary substitution covers exactly the twelve staged
+IDs and passes **305 presentation checks**: 96 wield frames across both body
+forms, hands and idle/walk, eight armor frames, and 48 loose-model frames with
+day/night/dark-interior/fog profiles. The probes use the actual equipment/loose
+submitters and item shader. These offscreen native fixtures are not a substitute
+for the final in-world day/night/indoor scenes or performance measurements.
+The full ownership/gameplay/UI/icon/Lab regression also passes, including 202
+icon checks and 104 Item Lab checks. Inventory is unchanged by the presentation
+fixture. All 36 temporarily substituted runtime files were restored and their
+bytes checked against the original resources. A separate native FP run passes.
+
+![TP grip and orientation](world-surface-checkpoint/iron_pickaxe-female-left-1.png)
+![Native worn armor](world-surface-checkpoint/iron_head-female-armor-1.png)
+![Native loose model](world-surface-checkpoint/bucket-loose-0.png)
+
+Evidence: [summary and frame hashes](world-surface-checkpoint/summary.json),
+[native presentation checks](world-surface-checkpoint/presentations.json),
+[complete regression](world-surface-checkpoint/native-result.json),
+[restoration and FP probe](world-surface-checkpoint/design-probe.json),
+[Release build](world-surface-checkpoint/desktop-release.log),
+[Release tests](world-surface-checkpoint/ctest-release.log).
+
+Artistic acceptance is still open. The bucket's small physical envelope needs
+an independently authored TP scale; some tool proportions, armor construction
+and painted surface details still need work. Bread scoring remains weak.
+Gameplay-driven node states, filled containers, bow/shears motion, carry
+contacts, full Item Lab presentation controls, the remaining 58 designs,
+publication/import and comparative performance acceptance are unfinished.
+There are still twelve candidates and **zero new production models**.
+
 ## Remaining implementation, in order
 
 1. Native baseline and actual resource-path trace, before/after references and
@@ -210,9 +265,9 @@ disabled for these correctness runs; no p95 or memory-budget claim is made.
 3. Surface-space painted layers and authored overlays: base, broad variation,
    construction detail, manufacturing marks. 128 small materials, 256 hand items,
    512 armor. Albedo and optional standard metallic/roughness parameters.
-4. Complete the item-only path across TP/armor/ground/carry and wire world
-   light, gameplay state and authored contacts. The data types, shader and
-   icon/FP dispatch exist, but have not met full presentation acceptance.
+4. Complete gameplay-state/contact wiring and acceptance across the shared
+   item path. Static v3 TP/armor/loose integration and world lighting/fog now
+   exist; gameplay states and carry contacts still need full presentation acceptance.
    Leave creature buffer ABI and creature shaders unchanged.
 5. In-game Item Lab: catalog, old/new, fixed/orbit cameras, silhouette/gray/albedo/
    lit/UV/normals/wireframe, 32/48/64 icons, FP/TP/ground, both body types, states,

@@ -1,0 +1,1242 @@
+{
+  "checks": [
+    {
+      "name": "item renderer initializes",
+      "passed": true
+    },
+    {
+      "name": "apple-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "apple-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "apple-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "apple-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "apple-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "apple-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "apple-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "apple-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "apple-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "apple-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "apple-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "apple-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "apple-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "apple-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "apple-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "apple-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "apple-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "apple-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "apple-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "apple-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "apple-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "apple-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "apple-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "apple-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "bread-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bread-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "bread-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bread-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "bread-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bread-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "bread-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bread-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "bread-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bread-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "bread-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bread-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "bread-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bread-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "bread-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bread-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "bread-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bread-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "bread-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bread-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "bread-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bread-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "bread-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bread-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "bucket-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "bucket-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_axe-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_axe-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_axe-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_axe-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_axe-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_axe-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_axe-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_axe-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_axe-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_axe-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_axe-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_axe-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_axe-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_axe-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_axe-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_axe-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_axe-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_axe-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_axe-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_axe-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_axe-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_axe-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_axe-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_axe-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_sword-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_sword-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_sword-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_sword-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_sword-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_sword-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_sword-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_sword-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_sword-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_sword-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_sword-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_sword-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_sword-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_sword-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_sword-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_sword-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_sword-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_sword-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_sword-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_sword-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_sword-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_sword-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_sword-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_sword-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-armor-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-armor-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-armor-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-armor-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-armor-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-armor-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-armor-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-armor-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-male-armor-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-male-armor-0 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-male-armor-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-male-armor-1 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-female-armor-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-female-armor-0 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-female-armor-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-female-armor-1 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "leather_chest-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "raw_iron-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "raw_iron-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "raw_iron-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "raw_iron-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "raw_iron-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "raw_iron-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "raw_iron-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "raw_iron-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "raw_iron-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "raw_iron-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "raw_iron-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "raw_iron-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "raw_iron-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "raw_iron-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "raw_iron-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "raw_iron-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "raw_iron-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "raw_iron-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "raw_iron-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "raw_iron-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "raw_iron-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "raw_iron-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "raw_iron-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "raw_iron-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "shears-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "shears-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "shears-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "shears-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "shears-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "shears-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "shears-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "shears-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "shears-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "shears-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "shears-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "shears-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "shears-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "shears-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "shears-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "shears-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "shears-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "shears-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "shears-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "shears-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "shears-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "shears-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "shears-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "shears-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-loose-3 capture",
+      "passed": true
+    }
+  ],
+  "inventory_unchanged": true,
+  "passed": true,
+  "scope": "synthetic native attachments and loose item submissions",
+  "surface_count": 12,
+  "surface_ids": [
+    "apple",
+    "bread",
+    "bucket",
+    "copper_axe",
+    "gold_sword",
+    "iron_head",
+    "iron_pickaxe",
+    "leather_chest",
+    "raw_iron",
+    "shears",
+    "stone_pickaxe",
+    "wood_bow"
+  ]
+}

@@ -21,20 +21,22 @@ void CreatureDrawQueue::Flush(ICreatureDrawSink &sink)
     case CreatureDrawKind::SkeletalMesh:
       if (req.SkeletalMesh != nullptr)
       {
-        sink.DrawBoneSkeletonMesh(req.Mvp, req.Texture,
-                                        *req.SkeletalMesh);
+        sink.DrawBoneSkeletonMesh(req.Mvp, req.Texture, *req.SkeletalMesh);
       }
       break;
     case CreatureDrawKind::SkinnedMesh:
       if (req.SkinnedPrimitive != nullptr && req.BoneMatrices != nullptr)
       {
-        sink.DrawSkinnedMesh(req.Mvp, req.Texture,
-                                       *req.SkinnedPrimitive,
-                                       req.BoneMatrices);
+        sink.DrawSkinnedMesh(req.Mvp, req.Texture, *req.SkinnedPrimitive,
+                             req.BoneMatrices);
       }
       break;
     case CreatureDrawKind::WireframeBox:
       sink.DrawBoxWireframe(req.Mvp, req.WireColor);
+      break;
+    case CreatureDrawKind::ItemSurface:
+      if (req.ItemSurface)
+        sink.DrawItemSurface(*req.ItemSurface);
       break;
     case CreatureDrawKind::Billboard:
       sink.DrawBillboard(req.Mvp, req.Texture, req.Tint);

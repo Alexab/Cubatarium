@@ -15,7 +15,7 @@ struct ItemPresentationProfile
   glm::vec3 CameraPosition{0.f, 0.f, 3.f};
   glm::vec3 LightDirection{-.4f, .8f, .6f};
   glm::vec3 FogColor{.5f};
-  float Ambient{.65f}, Fog{0.f};
+  float Ambient{.65f}, Fog{0.f}, LightIntensity{1.f};
   int InspectionMode{0};
 };
 

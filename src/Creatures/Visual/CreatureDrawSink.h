@@ -29,6 +29,7 @@ public:
                                 const glm::vec4 &color) = 0;
   virtual void DrawBillboard(const glm::mat4 &mvp, GLuint texture,
                              const glm::vec4 &tint) = 0;
+  virtual void DrawItemSurface(const ItemDrawRequest & /*request*/) {}
   /// Called before each queued request; sinks without lighting ignore it.
   virtual void SetCreatureLight(const glm::vec2 & /*skyBlock*/) {}
   /// Called before each queued request; sinks without fog ignore it.

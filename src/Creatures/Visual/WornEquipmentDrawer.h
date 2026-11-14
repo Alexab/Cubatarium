@@ -37,7 +37,8 @@ public:
   static void SetHidePossessedWield(bool hide);
   static void SubmitLoose(CreatureDrawQueue &queue, const std::string &id,
                           const glm::mat4 &viewProj, const glm::mat4 &model,
-                          glm::vec3 size, unsigned int blockTexture = 0);
+                          glm::vec3 size, unsigned int blockTexture = 0,
+                          bool onSupport = true);
   static bool HidePossessedWield();
   static void SetItemDefinitions(const UItemDefinitionStorage *items);
   static const UItemDefinitionStorage *ItemDefinitions();
@@ -68,12 +69,12 @@ public:
       const glm::mat4 &bodyMat, const BoneMatrixLookupFn &bones, bool immediate,
       const BoneBoundsLookupFn &bounds = {});
 
-  /// Direct GL draw for preview FBO (no CreatureDrawQueue).
-  static void DrawImmediate(
+  /// Preview overlays use the same item queue path as world equipment.
+  static void SubmitPreview(
+      CreatureDrawQueue &queue,
       const std::array<WornArmorPreviewSlot, kWornArmorSlotCount> &slots,
       const glm::mat4 &viewProj, const glm::mat4 &bodyMat,
-      const BoneMatrixLookupFn &bones, UShaderProgram *shader,
-      const BoneBoundsLookupFn &bounds = {});
+      const BoneMatrixLookupFn &bones, const BoneBoundsLookupFn &bounds = {});
 };
 
 } // namespace cutum

@@ -8,6 +8,7 @@
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureRenderStats.h"
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
+#include "Items/ItemSurfaceRenderer.h"
 #include "Render/Engine/CreatureLightCache.h"
 #include "Render/Engine/ShaderManager.h"
 #include <glm/glm.hpp>
@@ -44,6 +45,7 @@ public:
   void DrawSkinnedMesh(
       const glm::mat4 &mvp, GLuint texture, const GltfPrimitiveCpu &mesh,
       const std::shared_ptr<const std::vector<glm::mat4>> &boneMatrices);
+  void DrawItemSurface(const ItemDrawRequest &request, UWorld &world);
   void DrawBillboard(const glm::mat4 &mvp, GLuint texture,
                      const glm::vec4 &tint);
 
@@ -57,6 +59,8 @@ public:
   CreatureDrawQueue &GetDrawQueue() { return Queue; }
 
 private:
+  void FlushDrawQueue(UWorld &world, UGeometryEngine &engine,
+                      const glm::mat4 &viewProj);
   void FinishCreatureFrame(UWorld &world, const glm::mat4 &viewProj,
                            UGeometryEngine &engine, bool labels,
                            bool lightBench, int lightSamples,
@@ -115,6 +119,11 @@ private:
   CreatureRenderStats Stats;
   UCreaturePassTimingProbe TimingProbe;
   CreatureDrawQueue Queue;
+  std::unique_ptr<ItemSurfaceRenderer> ItemRenderer;
+  uint64_t ItemRevision{0};
+  ItemPresentationProfile ItemFrameProfile;
+  float ItemFogStart{0.f}, ItemFogEnd{1.f}, ItemFogDensity{1.f};
+  bool ItemFogEnabled{false}, ItemFogHorizontal{false}, ItemLocalLight{true};
   float ActiveHitFlash01{0.f};
   glm::vec2 ActiveLight{1.0f, 0.0f};
   float ActiveFog{0.f};

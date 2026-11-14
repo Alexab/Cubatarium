@@ -11,7 +11,9 @@
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
 #include "Game/Inventory/InventoryTypes.h"
 #include "Items/ItemDefinitionStorage.h"
+#include "Items/ItemDrawRequest.h"
 #include "Items/ItemGltfTextureCache.h"
+#include "Items/ItemPresentationMath.h"
 #include "Items/ItemVisualDefaults.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
@@ -26,6 +28,7 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -525,6 +528,36 @@ glm::mat4 FitGltfToBone(const CreatureGltfMeshAsset &asset, float targetSize)
          glm::translate(glm::mat4(1.f), -center);
 }
 
+std::shared_ptr<const ItemRenderAsset>
+FindSurface(const std::filesystem::path &path)
+{
+  return path.empty() ? nullptr
+                      : FindItemSurfaceAsset(
+                            path, UItemDefinitionStorage::ContentRevision());
+}
+void QueueItemSurface(CreatureDrawQueue *queue,
+                      const std::shared_ptr<const ItemRenderAsset> &asset,
+                      const std::filesystem::path &path, const glm::mat4 &vp,
+                      const glm::mat4 &model, bool loose = false)
+{
+  if (!queue)
+    throw std::logic_error("Item surfaces require the shared draw queue");
+  auto item = std::make_shared<ItemDrawRequest>();
+  item->Asset = asset;
+  item->Path = path;
+  item->ViewProjection = vp;
+  item->Model = model;
+  item->Low = asset->Low;
+  item->High = asset->High;
+  if (loose)
+    item->LightSamplePosition = glm::vec3(model[3]);
+  CreatureDrawRequest request;
+  request.Kind = CreatureDrawKind::ItemSurface;
+  request.Mvp = vp * model;
+  request.ItemSurface = std::move(item);
+  queue->Push(std::move(request));
+}
+
 struct WornItemLocal
 {
   WearLocal wear;
@@ -550,7 +583,18 @@ const WornItemLocal &CachedWornItemLocal(const std::string &itemId, size_t slot)
   }
   auto entry = std::make_shared<WornItemLocal>();
   entry->wear = LoadWear(itemId, slot);
-  if (const auto asset = LoadItemGltf(itemId, true))
+  if (const auto surface = FindSurface(ResolveGltfAbs(itemId, true)))
+  {
+    entry->itemLow = surface->Low;
+    entry->itemHigh = surface->High;
+    const auto extent = surface->High - surface->Low;
+    const float scale = (slot == 0 ? .55f : .7f) /
+                        std::max({extent.x, extent.y, extent.z, .0001f});
+    entry->fit =
+        glm::scale(glm::mat4(1), glm::vec3(scale)) *
+        glm::translate(glm::mat4(1), -(surface->Low + surface->High) * .5f);
+  }
+  else if (const auto asset = LoadItemGltf(itemId, true))
   {
     entry->fit = FitGltfToBone(*asset, slot == 0 ? 0.55f : 0.7f);
     entry->itemLow = glm::vec3(1e9f);
@@ -584,8 +628,10 @@ void SubmitItemOnBones(CreatureDrawQueue *queue, UShaderProgram *shader,
   {
     return;
   }
-  auto asset = LoadItemGltf(itemId, true);
-  if (!asset || asset->primitives.empty())
+  const auto surfacePath = ResolveGltfAbs(itemId, true);
+  const auto surface = FindSurface(surfacePath);
+  auto asset = surface ? nullptr : LoadItemGltf(itemId, true);
+  if (!surface && (!asset || asset->primitives.empty()))
   {
     return;
   }
@@ -638,7 +684,13 @@ void SubmitItemOnBones(CreatureDrawQueue *queue, UShaderProgram *shader,
       fit = FitCreatureWearToRegion(worn.itemLow, worn.itemHigh, region);
     }
     const glm::mat4 local = WearLocalMatrix(worn.wear) * fit;
-    const glm::mat4 mvp = viewProj * bodyMat * boneMat * local;
+    const glm::mat4 model = bodyMat * boneMat * local;
+    if (surface)
+    {
+      QueueItemSurface(queue, surface, surfacePath, viewProj, model);
+      continue;
+    }
+    const glm::mat4 mvp = viewProj * model;
     for (const GltfPrimitiveCpu &prim : asset->primitives)
     {
       if (prim.mesh.interleavedPosUv.empty() || prim.mesh.indices.empty())
@@ -847,6 +899,21 @@ void SubmitItemOnSingleBone(CreatureDrawQueue *queue, UShaderProgram *shader,
     return;
   }
 
+  const auto surfacePath = ResolveGltfAbs(itemId);
+  if (const auto surface = FindSurface(surfacePath))
+  {
+    glm::vec3 low, high, palm(0.f);
+    if (bounds && bounds(boneName, low, high))
+      palm = CreaturePalmGripPosition(low, high);
+    const auto *definition =
+        g_ItemDefinitions ? g_ItemDefinitions->Get(itemId) : nullptr;
+    const float scale = definition ? definition->Visual.TpScale : 1.f;
+    const auto local =
+        ItemWieldLocalMatrix(*surface, palm, boneName == "leftItem", scale);
+    QueueItemSurface(queue, surface, surfacePath, viewProj,
+                     bodyMat * boneMat * local);
+    return;
+  }
   auto asset = LoadItemGltf(itemId);
   if (asset && !asset->primitives.empty())
   {
@@ -925,8 +992,16 @@ void WornEquipmentDrawer::SubmitLoose(CreatureDrawQueue &queue,
                                       const std::string &id,
                                       const glm::mat4 &vp,
                                       const glm::mat4 &model, glm::vec3 size,
-                                      unsigned int blockTexture)
+                                      unsigned int blockTexture, bool onSupport)
 {
+  const auto surfacePath = ResolveGltfAbs(id);
+  if (const auto surface = FindSurface(surfacePath))
+  {
+    QueueItemSurface(&queue, surface, surfacePath, vp,
+                     model * ItemLooseLocalMatrix(*surface, size, onSupport),
+                     true);
+    return;
+  }
   if (auto asset = LoadItemGltf(id))
   {
     const auto path = ResolveGltfAbs(id);
@@ -1057,16 +1132,16 @@ void WornEquipmentDrawer::SubmitWieldedPreview(
   }
 }
 
-void WornEquipmentDrawer::DrawImmediate(
+void WornEquipmentDrawer::SubmitPreview(
+    CreatureDrawQueue &queue,
     const std::array<WornArmorPreviewSlot, kWornArmorSlotCount> &slots,
     const glm::mat4 &viewProj, const glm::mat4 &bodyMat,
-    const BoneMatrixLookupFn &bones, UShaderProgram *shader,
-    const BoneBoundsLookupFn &bounds)
+    const BoneMatrixLookupFn &bones, const BoneBoundsLookupFn &bounds)
 {
   for (size_t i = 0; i < slots.size(); ++i)
   {
-    SubmitItemOnBones(nullptr, shader, slots[i].ItemId, i, viewProj, bodyMat,
-                      bones, true, bounds);
+    SubmitItemOnBones(&queue, nullptr, slots[i].ItemId, i, viewProj, bodyMat,
+                      bones, false, bounds);
   }
 }
 
