@@ -57,6 +57,7 @@ public:
   {
     return Built && GridBuiltCount == GridPendingViews.size();
   }
+  size_t GetGridIconCount() const;
   void InvalidateGrid() { Built = false; }
   void SetPointerPosition(int x, int y);
   void SetPointerPressed(bool pressed);
@@ -69,6 +70,7 @@ private:
   void AppendGridSlotsChunk();
   void FinishGridBuild();
   void RefreshGridIconTextures();
+  size_t WarmVisibleGridIcons();
   void RelayoutPanel();
   void LayoutGridInScroll();
   void SyncPreviewDock();
@@ -112,6 +114,7 @@ private:
   /// Blocks tab (1754 entries) used to construct every widget in one tick.
   std::vector<InventoryEntryView> GridPendingViews;
   size_t GridBuiltCount{0};
+  size_t GridIconCursor{0};
   std::vector<UGuiSlot *> HotbarStripSlots;
   int PointerX{-1};
   int PointerY{-1};

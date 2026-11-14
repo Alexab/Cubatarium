@@ -348,6 +348,7 @@ void UInGameHudScreen::UpdateSlotData()
   for (size_t i = 0; i < PrimarySlots.size() && i < primary.size(); ++i)
   {
     PrimarySlots[i]->SetLabel(primary[i].label);
+    PrimarySlots[i]->SetCountHint(primary[i].CountLabel);
     PrimarySlots[i]->SetSelected(primary[i].selected);
   }
   const auto firstSecondary = Session->GetBarSlots(1);
@@ -361,6 +362,7 @@ void UInGameHudScreen::UpdateSlotData()
   for (size_t i = 0; i < SecondarySlots.size() && i < secondary.size(); ++i)
   {
     SecondarySlots[i]->SetLabel(secondary[i].label);
+    SecondarySlots[i]->SetCountHint(secondary[i].CountLabel);
     SecondarySlots[i]->SetSelected(secondary[i].selected);
   }
 }

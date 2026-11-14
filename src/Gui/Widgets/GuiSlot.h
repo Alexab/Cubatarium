@@ -24,6 +24,12 @@ public:
   void SetWearProgress(float wear01) { WearProgress = wear01; }
   void SetBroken(bool broken) { Broken = broken; }
   void SetCornerHint(const std::string &hint) { CornerHint = hint; }
+  void SetCountHint(const std::string &hint) { CountHint = hint; }
+  void SetDrawClip(const GuiRect &clip)
+  {
+    DrawClip = clip;
+    HasDrawClip = true;
+  }
   void SetDimmed(bool dimmed) { Dimmed = dimmed; }
   void SetOnActivate(std::function<void(const GuiMouseEvent &)> handler)
   {
@@ -62,6 +68,9 @@ private:
   bool Dimmed{false};
   std::string Label;
   std::string CornerHint;
+  std::string CountHint;
+  GuiRect DrawClip;
+  bool HasDrawClip{false};
   unsigned int IconTexture{0};
   float WearProgress{0.f};
   bool Broken{false};

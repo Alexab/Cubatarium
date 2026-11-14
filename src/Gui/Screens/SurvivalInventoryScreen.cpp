@@ -286,11 +286,7 @@ void USurvivalInventoryScreen::RebuildGrid()
       slot->SetIconTexture(tex);
     }
 
-    if (entry.IsCatalogReference())
-    {
-      slot->SetCornerHint("inf");
-    }
-    else if (entry.count > 0)
+    if (!entry.IsCatalogReference() && entry.count > 0)
     {
       slot->SetCornerHint(std::to_string(entry.count));
     }

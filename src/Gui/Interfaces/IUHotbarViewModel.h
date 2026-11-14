@@ -20,6 +20,7 @@ struct HotbarSlotView
   int hotkey{-1};
   float wear{0.f};
   bool broken{false};
+  std::string CountLabel;
 };
 
 class IUHotbarViewModel

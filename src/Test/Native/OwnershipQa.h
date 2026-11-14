@@ -404,7 +404,64 @@ inline void RunOwnershipQa(UWorld &world, UGameSession &session,
                      world.GetCreature(target)->GetVitals().health < health))));
         if (target)
           world.RemoveCreature(target);
+        if (std::string(id) == "stone")
+        {
+          auto ref = entry("stone", true);
+          ref.form = InventoryEntryForm::CatalogReference;
+          if (mode == WorldGameMode::Creative)
+            inv.AssignToHotbar(3, 9, ref);
+          inv.Insert(entry("stone", true));
+          for (const auto &body : physics.GetItems())
+            if (body.stack.instanceId == source.instanceId)
+            {
+              actor->SetBodyOrigin(body.position + glm::vec3(4, 0, 0));
+              tick(1);
+              actor->SetBodyOrigin(
+                  {body.position.x + 1.f, feet.y, body.position.z});
+              tick(100);
+              break;
+            }
+          const auto snapshot = session.GetCharacterStatsSnapshot();
+          int displayed = 0;
+          for (const auto &slot : snapshot.slots)
+            if (!slot.empty && !slot.IsCatalogReference() && slot.Id == id)
+              displayed += slot.count;
+          check(std::string(mode == WorldGameMode::Creative ? "creative "
+                                                            : "survival ") +
+                    (hitTarget ? "hit block pickup increments backpack"
+                               : "missed block pickup increments backpack"),
+                finite("stone") == 2 && displayed == 2 &&
+                    (mode != WorldGameMode::Creative ||
+                     inv.GetSlot(39).IsCatalogReference()));
+        }
       }
+  reset(WorldGameMode::Creative);
+  auto blockRef = entry("stone", true);
+  blockRef.form = InventoryEntryForm::CatalogReference;
+  inv.AssignToHotbar(0, 0, blockRef);
+  auto blockStack = entry("stone", true);
+  blockStack.count = 63;
+  inv.Insert(blockStack);
+  for (int i = 0; i < 38; ++i)
+    inv.Insert(entry("iron_pickaxe"));
+  blockStack.count = 3;
+  physics.SpawnStack(feet + glm::vec3(1, .5f, 0), blockStack,
+                     InventoryDomain::Creative);
+  tick(100);
+  int remainingBlocks = 0;
+  for (const auto &body : physics.GetItems())
+    if (body.stack.Id == "stone")
+      remainingBlocks += body.stack.count;
+  check("creative partial block pickup fills finite stack beside catalog",
+        finite("stone") == 64 && remainingBlocks == 2 &&
+            session.GetBarSlots(0)[1].CountLabel == "64" &&
+            session.GetBarSlots(0)[0].CountLabel.empty());
+  InventoryEntryRef removed;
+  inv.Take(1, 64, removed);
+  tick(30);
+  check("creative remaining blocks enter freed backpack slot",
+        finite("stone") == 2 && physics.Count() == 0 &&
+            session.GetBarSlots(0)[1].CountLabel == "2");
   reset(WorldGameMode::Creative);
   for (int n = 0; n < 1000; ++n)
     physics.Spawn(feet + glm::vec3(3, 3, 5), "arrow", 1, false,

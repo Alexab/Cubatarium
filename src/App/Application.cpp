@@ -2122,6 +2122,30 @@ void UApplication::RunOwnershipUiQa(const std::string &path)
       check("large Creative block catalog finishes progressive grid loading",
             PaletteScreen->IsGridComplete() &&
                 PaletteScreen->GetGridEntryCount() > 256);
+      IconSource->ClearBlockIconCache();
+      PaletteScreen->InvalidateGrid();
+      PaletteScreen->Update(0);
+      const auto iconsBefore = PaletteScreen->GetGridIconCount();
+      PaletteScreen->Update(0);
+      check("cold catalog icons appear while the background queue is pending",
+            PaletteScreen->GetGridIconCount() > iconsBefore &&
+                IconSource->PendingBlockIcons() > 0);
+      const int gridX = PaletteScreen->GetViewportWidth() * 2 / 5;
+      const int gridY = PaletteScreen->GetViewportHeight() * 11 / 20;
+      SlotAddress firstPage, nextPage, restoredPage;
+      const bool firstPicked =
+          PaletteScreen->PickGridSlot(gridX, gridY, firstPage);
+      InputRouter.RouteScroll(*this, 0, -20, gridX, gridY);
+      PaletteScreen->Update(0);
+      const bool nextPicked =
+          PaletteScreen->PickGridSlot(gridX, gridY, nextPage);
+      InputRouter.RouteScroll(*this, 0, 20, gridX, gridY);
+      PaletteScreen->Update(0);
+      check("catalog scrolling exposes new slots and restores the first page",
+            firstPicked && nextPicked &&
+                firstPage.entryId != nextPage.entryId &&
+                PaletteScreen->PickGridSlot(gridX, gridY, restoredPage) &&
+                restoredPage.entryId == firstPage.entryId);
     }
     InputRouter.RouteKey(*this, GLFW_KEY_B, GLFW_PRESS, 0);
     check("B respects mode and keeps a single player window",

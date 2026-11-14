@@ -1,0 +1,134 @@
+Версия MSBuild 17.14.60+43b635718 для .NET Framework
+
+  CubatariumObjects_render_gl.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_render_gl.dir\Release\CubatariumObjects_render_gl.lib
+  CubatariumObjects_render_primitives.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_render_primitives.dir\Release\CubatariumObjects_render_primitives.lib
+  CubatariumObjects_render_mesh.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_render_mesh.dir\Release\CubatariumObjects_render_mesh.lib
+  CubatariumObjects_render_camera.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_render_camera.dir\Release\CubatariumObjects_render_camera.lib
+  CubatariumObjects_render_backend.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_render_backend.dir\Release\CubatariumObjects_render_backend.lib
+  CubatariumObjects_render_pipeline.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_render_pipeline.dir\Release\CubatariumObjects_render_pipeline.lib
+  CubatariumObjects_render_blocks.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_render_blocks.dir\Release\CubatariumObjects_render_blocks.lib
+  CubatariumObjects_gui_batch.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_gui_batch.dir\Release\CubatariumObjects_gui_batch.lib
+  CubatariumObjects_render_engine.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_render_engine.dir\Release\CubatariumObjects_render_engine.lib
+  CubatariumObjects_gui_cache.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_gui_cache.dir\Release\CubatariumObjects_gui_cache.lib
+  CubatariumObjects_game_economy.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_game_economy.dir\Release\CubatariumObjects_game_economy.lib
+  CubatariumObjects_gui_core.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_gui_core.dir\Release\CubatariumObjects_gui_core.lib
+  CubatariumObjects_pose_boneskeleton.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_pose_boneskeleton.dir\Release\CubatariumObjects_pose_boneskeleton.lib
+  CubatariumObjects_gui_layout.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_gui_layout.dir\Release\CubatariumObjects_gui_layout.lib
+  CubatariumObjects_render_effects.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_render_effects.dir\Release\CubatariumObjects_render_effects.lib
+  CubatariumObjects_activity_helpers.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_activity_helpers.dir\Release\CubatariumObjects_activity_helpers.lib
+  CubatariumObjects_app_settings.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_app_settings.dir\Release\CubatariumObjects_app_settings.lib
+  CubatariumObjects_activity_agents.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_activity_agents.dir\Release\CubatariumObjects_activity_agents.lib
+  CubatariumObjects_app_navigation.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_app_navigation.dir\Release\CubatariumObjects_app_navigation.lib
+  CubatariumObjects_render_textures.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_render_textures.dir\Release\CubatariumObjects_render_textures.lib
+  CubatariumObjects_core_progress.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_core_progress.dir\Release\CubatariumObjects_core_progress.lib
+  CubatariumObjects_creatures_core.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_creatures_core.dir\Release\CubatariumObjects_creatures_core.lib
+  CubatariumObjects_game_survival.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_game_survival.dir\Release\CubatariumObjects_game_survival.lib
+  CubatariumObjects_creatures_influence.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_creatures_influence.dir\Release\CubatariumObjects_creatures_influence.lib
+  CubatariumObjects_app_platform.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_app_platform.dir\Release\CubatariumObjects_app_platform.lib
+  CubatariumObjects_creatures_definition.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_creatures_definition.dir\Release\CubatariumObjects_creatures_definition.lib
+  GuiSlot.cpp
+  CubatariumObjects_creatures_locomotion.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_creatures_locomotion.dir\Release\CubatariumObjects_creatures_locomotion.lib
+  CubatariumObjects_gui_preview.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_gui_preview.dir\Release\CubatariumObjects_gui_preview.lib
+  CubatariumObjects_creatures_stats.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_creatures_stats.dir\Release\CubatariumObjects_creatures_stats.lib
+  CubatariumObjects_app_input.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_app_input.dir\Release\CubatariumObjects_app_input.lib
+  CubatariumObjects_game_crafting.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_game_crafting.dir\Release\CubatariumObjects_game_crafting.lib
+  AnvilScreen.cpp
+  CubatariumObjects_creatures_combat.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_creatures_combat.dir\Release\CubatariumObjects_creatures_combat.lib
+  CubatariumObjects_render_weather.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_render_weather.dir\Release\CubatariumObjects_render_weather.lib
+  CubatariumObjects_src.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_src.dir\Release\CubatariumObjects_src.lib
+  CubatariumObjects_creatures_environment.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_creatures_environment.dir\Release\CubatariumObjects_creatures_environment.lib
+  CubatariumObjects_activity_brain.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_activity_brain.dir\Release\CubatariumObjects_activity_brain.lib
+  CubatariumObjects_blocks_input.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_blocks_input.dir\Release\CubatariumObjects_blocks_input.lib
+  CubatariumObjects_creatures_diagnostics.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_creatures_diagnostics.dir\Release\CubatariumObjects_creatures_diagnostics.lib
+  CubatariumObjects_src_audio.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_src_audio.dir\Release\CubatariumObjects_src_audio.lib
+  CubatariumObjects_src_activity.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_src_activity.dir\Release\CubatariumObjects_src_activity.lib
+  CubatariumObjects_core_jobs.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_core_jobs.dir\Release\CubatariumObjects_core_jobs.lib
+  CubatariumObjects_src_blocks.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_src_blocks.dir\Release\CubatariumObjects_src_blocks.lib
+  CubatariumObjects_creatures_spawning.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_creatures_spawning.dir\Release\CubatariumObjects_creatures_spawning.lib
+  CubatariumObjects_src_console.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_src_console.dir\Release\CubatariumObjects_src_console.lib
+  CubatariumObjects_creatures_visual.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_creatures_visual.dir\Release\CubatariumObjects_creatures_visual.lib
+  CubatariumObjects_src_commands.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_src_commands.dir\Release\CubatariumObjects_src_commands.lib
+  Application.cpp
+  CubatariumObjects_src_content.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_src_content.dir\Release\CubatariumObjects_src_content.lib
+  CubatariumObjects_creatures_player.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_creatures_player.dir\Release\CubatariumObjects_creatures_player.lib
+  CubatariumObjects_src_items.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_src_items.dir\Release\CubatariumObjects_src_items.lib
+  CubatariumObjects_src_thirdparty.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_src_thirdparty.dir\Release\CubatariumObjects_src_thirdparty.lib
+  CubatariumObjects_src_game.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_src_game.dir\Release\CubatariumObjects_src_game.lib
+  CubatariumObjects_src_pose.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_src_pose.dir\Release\CubatariumObjects_src_pose.lib
+  CubatariumObjects_world_adapters.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_world_adapters.dir\Release\CubatariumObjects_world_adapters.lib
+  CubatariumObjects_src_navigation.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_src_navigation.dir\Release\CubatariumObjects_src_navigation.lib
+  CubatariumObjects_src_resourcepacks.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_src_resourcepacks.dir\Release\CubatariumObjects_src_resourcepacks.lib
+  CubatariumObjects_world_collision.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_world_collision.dir\Release\CubatariumObjects_world_collision.lib
+  CubatariumObjects_world_environment.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_world_environment.dir\Release\CubatariumObjects_world_environment.lib
+  CubatariumObjects_world_chunks.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_world_chunks.dir\Release\CubatariumObjects_world_chunks.lib
+  CubatariumObjects_world_core.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_world_core.dir\Release\CubatariumObjects_world_core.lib
+  CubatariumObjects_world_lighting.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_world_lighting.dir\Release\CubatariumObjects_world_lighting.lib
+  CubatariumObjects_world_io.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_world_io.dir\Release\CubatariumObjects_world_io.lib
+  CubatariumObjects_world_diagnostics.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_world_diagnostics.dir\Release\CubatariumObjects_world_diagnostics.lib
+  CubatariumObjects_world_interaction.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_world_interaction.dir\Release\CubatariumObjects_world_interaction.lib
+  CubatariumObjects_world_objects.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_world_objects.dir\Release\CubatariumObjects_world_objects.lib
+  CubatariumObjects_world_items.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_world_items.dir\Release\CubatariumObjects_world_items.lib
+  CubatariumObjects_world_mesh.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_world_mesh.dir\Release\CubatariumObjects_world_mesh.lib
+  CubatariumObjects_world_persistence.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_world_persistence.dir\Release\CubatariumObjects_world_persistence.lib
+  CubatariumObjects_world_math.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_world_math.dir\Release\CubatariumObjects_world_math.lib
+  CubatariumObjects_world_streaming.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_world_streaming.dir\Release\CubatariumObjects_world_streaming.lib
+  CubatariumObjects_world_raycast.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_world_raycast.dir\Release\CubatariumObjects_world_raycast.lib
+  CubatariumObjects_world_physics.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_world_physics.dir\Release\CubatariumObjects_world_physics.lib
+  CubatariumObjects_world_view.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_world_view.dir\Release\CubatariumObjects_world_view.lib
+  CubatariumObjects_worldgen_features.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_worldgen_features.dir\Release\CubatariumObjects_worldgen_features.lib
+  CubatariumObjects_worldgen_pipelines.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_worldgen_pipelines.dir\Release\CubatariumObjects_worldgen_pipelines.lib
+  CubatariumObjects_worldgen_core.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_worldgen_core.dir\Release\CubatariumObjects_worldgen_core.lib
+  CubatariumObjects_worldgen_stages.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_worldgen_stages.dir\Release\CubatariumObjects_worldgen_stages.lib
+  CubatariumObjects_worldgen_sampling.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_worldgen_sampling.dir\Release\CubatariumObjects_worldgen_sampling.lib
+  Refreshing Cubatarium version from git
+  CubatariumObjects_gui_widgets.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_gui_widgets.dir\Release\CubatariumObjects_gui_widgets.lib
+  CharacterSheetScreen.cpp
+  CraftingScreen.cpp
+  CreativePaletteScreen.cpp
+  CubatariumObjects_src_app.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_src_app.dir\Release\CubatariumObjects_src_app.lib
+  InGameHudScreen.cpp
+  SurvivalInventoryScreen.cpp
+  WorldGenPaletteScreen.cpp
+  Generating Code...
+  CubatariumObjects_gui_screens.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_gui_screens.dir\Release\CubatariumObjects_gui_screens.lib
+  Cubatarium.vcxproj -> E:\Work\Home\Cubatarium\bin\Cubatarium.exe
+  Syncing shaders to runtime directory	Seeding config.json next to executable if missing	Syncing models to runtime directory (mirror prune)	Syncing objects to runtime directory	Syncing content data to runtime directory (mirror prune)	Syncing resource packs to runtime directory	Pruning removed generated assets from Cubatarium Worldgen runtime pack	Syncing fonts to runtime directory	Copying window icon to runtime directory	Verifying static Windows executable (no vcpkg/VC++ DLL deps)
+
+  -- Synced runtime tree: shaders -> E:/Work/Home/Cubatarium/bin/shaders
+
+  -- Synced runtime tree: models -> E:/Work/Home/Cubatarium/bin/models
+
+  -- Synced runtime tree: objects -> E:/Work/Home/Cubatarium/bin/objects
+
+  -- Synced runtime tree: content -> E:/Work/Home/Cubatarium/bin/content
+  -- sync_runtime_subdir: skipping _build_staging_128
+  -- sync_runtime_subdir: skipping _build_staging_128_full
+  -- sync_runtime_subdir: skipping _build_staging_16
+  -- sync_runtime_subdir: skipping _build_staging_16_base
+  -- sync_runtime_subdir: skipping _build_staging_16_full
+  -- sync_runtime_subdir: skipping _build_staging_goncalo_patterns_16
+  -- sync_runtime_subdir: skipping _build_staging_kenney_pattern_lines_16
+  -- sync_runtime_subdir: skipping _build_staging_kenney_pattern_pixel_16
+  -- sync_runtime_subdir: skipping _build_staging_minetest_default_16
+  -- sync_runtime_subdir: skipping _build_staging_oga_mc_inspired_16
+  -- sync_runtime_subdir: skipping _build_staging_programmer_art_16
+  -- sync_runtime_subdir: skipping _build_staging_refi_textures_16
+  -- sync_runtime_subdir: skipping _build_staging_sbs_sandbox_terrain_16
+  -- sync_runtime_subdir: skipping _build_staging_seamless_patterns_16
+  -- sync_runtime_subdir: skipping _build_staging_snez_16
+  -- sync_runtime_subdir: skipping _build_staging_too_many_stones_16
+  -- Synced runtime tree: resource_packs -> E:/Work/Home/Cubatarium/bin/resource_packs
+
+  -- Synced runtime tree: cubatarium_worldgen_cc0 -> E:/Work/Home/Cubatarium/bin/resource_packs/cubatarium_worldgen_cc0
+
+  -- Synced runtime tree: fonts -> E:/Work/Home/Cubatarium/bin/fonts
+  >> verify-windows-exe: E:/Work/Home/Cubatarium/bin/Cubatarium.exe
+  >> dumpbin: C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\dumpbin.exe
+  Dependencies:
+    opengl32.dll
+    dbghelp.dll
+    kernel32.dll
+    user32.dll
+    gdi32.dll
+    shell32.dll
+  >> verify-windows-exe: PASS (static build, 6 system DLL(s))

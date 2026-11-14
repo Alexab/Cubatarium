@@ -31,6 +31,11 @@ void UGuiSlot::Draw(UGuiRenderer &renderer)
   {
     return;
   }
+  if (HasDrawClip && (Bounds.X >= DrawClip.X + DrawClip.W ||
+                      Bounds.X + Bounds.W <= DrawClip.X ||
+                      Bounds.Y >= DrawClip.Y + DrawClip.H ||
+                      Bounds.Y + Bounds.H <= DrawClip.Y))
+    return;
   renderer.DrawFilledRect(Bounds, Theme->SlotBackground);
   if (Selected)
   {
@@ -87,6 +92,17 @@ void UGuiSlot::Draw(UGuiRenderer &renderer)
     const glm::vec4 tint =
         Broken ? glm::vec4(0.85f, 0.12f, 0.1f, 0.45f) : Theme->SlotDisabledFill;
     renderer.DrawFilledRect(Bounds, tint);
+  }
+
+  if (!CountHint.empty())
+  {
+    const int width = renderer.MeasureTextWidth(CountHint);
+    const int height = renderer.MeasureTextHeight(CountHint);
+    const int x = Bounds.X + Bounds.W - width - 3;
+    const int y = Bounds.Y + Bounds.H - height - 6;
+    renderer.DrawFilledRect({x - 1, y, width + 2, height},
+                            glm::vec4(0.f, 0.f, 0.f, .7f));
+    renderer.DrawText(CountHint, x, y, Theme->TextPrimary);
   }
 
   if (WearProgress > 0.01f && WearProgress < 1.f)

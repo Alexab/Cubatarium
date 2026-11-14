@@ -884,6 +884,14 @@ void UCharacterSheetScreen::RefreshLabels()
     for (int i = 0; i < 2 && i < static_cast<int>(ToolSlots.size()); ++i)
     {
       const auto &s = snap.equippedTools[i];
+      if (ToolSlots[i])
+      {
+        const auto &active = snap.slots[snap.activeRow * 10 + snap.activeSlot];
+        ToolSlots[i]->SetCountHint(i == 0 && !active.empty &&
+                                           !active.IsCatalogReference()
+                                       ? std::to_string(active.count)
+                                       : "");
+      }
       if (ToolSlots[i] && !s.itemId.empty())
       {
         const GLuint tex = s.isBlock ? Icons->GetBlockIconTexture(s.itemId)
@@ -926,7 +934,7 @@ void UCharacterSheetScreen::RefreshLabels()
                               ? ""
                               : (entry.pinned ? "* " : "") +
                                     (entry.IsCatalogReference()
-                                         ? std::string("inf")
+                                         ? std::string("")
                                          : std::to_string(entry.count)));
       std::string text = entry.Id;
       std::replace(text.begin(), text.end(), '_', ' ');

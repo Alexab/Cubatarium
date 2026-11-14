@@ -222,6 +222,9 @@ std::array<HotbarSlotView, 10> UGameSession::GetBarSlots(size_t barIndex) const
       slots[i].isBlock = (slot.entry.kind == InventoryEntryKind::Block);
       slots[i].wear = slot.entry.wear;
       slots[i].broken = slot.entry.broken;
+      slots[i].CountLabel = slot.entry.IsCatalogReference()
+                                ? ""
+                                : std::to_string(slot.entry.count);
     }
     slots[i].selected = (barIndex == activeBar) && (i == activeIndex);
     if (barIndex == 0)

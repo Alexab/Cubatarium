@@ -287,7 +287,7 @@ void UCreativePaletteScreen::Build(UGuiContext &ctx)
 
   auto usageHint = std::make_unique<UGuiLabel>(
       Theme,
-      "Click → selected slot · Drag onto Hotbar row below · keys 1-0 = hand");
+      "Catalog templates | Picked items: Backpack | Click: assign | 1-0: hand");
   usageHint->SetUseSecondaryColor(true);
   usageHint->SetVisible(false);
   UsageHintLabel = usageHint.get();
@@ -582,6 +582,7 @@ void UCreativePaletteScreen::SyncHotbarStrip()
     }
     slot->SetSelected(primary[i].selected);
     slot->SetLabel(primary[i].label);
+    slot->SetCountHint(primary[i].CountLabel);
     GLuint tex = 0;
     if (Icons && !primary[i].Id.empty())
     {
@@ -737,7 +738,7 @@ void UCreativePaletteScreen::Update(double dt)
   SyncHotbarStrip();
 
   // UX tail: append the next grid chunk while the tab materializes.
-  if (Visible && !GridPendingViews.empty() &&
+  if (Visible && Built && !GridPendingViews.empty() &&
       GridBuiltCount < GridPendingViews.size())
   {
     AppendGridSlotsChunk();
@@ -751,27 +752,17 @@ void UCreativePaletteScreen::Update(double dt)
     }
   }
 
-  // UX U4: drain queued icons; refresh textures in place when the queue
-  // empties (a full grid rebuild would re-create every widget).
-  if (Visible && Icons)
+  // Publish ready textures every frame; a large background queue must not
+  // prevent visible slots from receiving icons that have already completed.
+  if (Visible && Icons && Built)
   {
-    const bool hadBlockQueue = Icons->PendingBlockIcons() > 0;
-    Icons->WarmupBlockIcons(4);
+    RefreshGridIconTextures();
+    const size_t visibleWork = WarmVisibleGridIcons();
+    if (Kind == ContentKind::Block)
+      Icons->WarmupBlockIcons(4 - visibleWork);
     if (Kind == ContentKind::Item)
-    {
       Icons->WarmupItemIcons(8);
-    }
-    if (hadBlockQueue && Icons->PendingBlockIcons() == 0 &&
-        Kind == ContentKind::Block)
-    {
-      RefreshGridIconTextures();
-    }
-    // Items can finish warming via the global per-frame budget; fill any
-    // still-empty slots once the queue is idle (not only on edge).
-    if (Kind == ContentKind::Item && Icons->PendingItemIcons() == 0)
-    {
-      RefreshGridIconTextures();
-    }
+    RefreshGridIconTextures();
   }
 
   if (PointerPressed && PointerX >= 0 && PointerY >= 0)
@@ -958,6 +949,7 @@ void UCreativePaletteScreen::RebuildGrid()
   const std::string groupId = ActiveTypeId.empty() ? "misc" : ActiveTypeId;
   GridPendingViews = Session->GetEntries(Kind, groupId, CurrentListingMode());
   GridBuiltCount = 0;
+  GridIconCursor = 0;
   // Built means this catalog snapshot is current, even while its widgets are
   // still being appended. Keeping it false restarts every large grid each tick.
   Built = true;
@@ -989,6 +981,7 @@ void UCreativePaletteScreen::AppendGridSlotsChunk()
     auto slot = std::make_unique<UGuiSlot>(Theme);
     slot->SetBounds({0, 0, slotSize, slotSize});
     const std::string entryId = view.ref.Id;
+    slot->SetLabel(view.label);
     slot->SetSelected(entryId == SelectedEntryId);
     if (Icons)
     {
@@ -1005,15 +998,7 @@ void UCreativePaletteScreen::AppendGridSlotsChunk()
       }
       else if (Kind == ContentKind::Object)
       {
-        tex = Icons->GetObjectIconTexture(entryId);
-      }
-      else if (Kind == ContentKind::UCreature)
-      {
-        tex = Icons->GetCreatureIconTexture(entryId);
-      }
-      else if (Kind == ContentKind::Skin)
-      {
-        tex = Icons->GetSkinIconTexture(entryId);
+        tex = Icons->GetObjectIconTextureIfCached(entryId);
       }
       else if (Kind == ContentKind::Item)
       {
@@ -1021,11 +1006,7 @@ void UCreativePaletteScreen::AppendGridSlotsChunk()
       }
       slot->SetIconTexture(tex);
     }
-    if (view.ref.IsCatalogReference())
-    {
-      slot->SetCornerHint("inf");
-    }
-    else if (view.ref.count > 0)
+    if (!view.ref.IsCatalogReference() && view.ref.count > 0)
     {
       slot->SetCornerHint(std::to_string(view.ref.count));
     }
@@ -1119,11 +1100,50 @@ void UCreativePaletteScreen::RefreshGridIconTextures()
       // Queue is drained; cache hits only (GetItemIconTexture queues misses).
       tex = Icons->GetItemIconTexture(GridEntryIds[i]);
     }
+    else if (Kind == ContentKind::Object)
+      tex = Icons->GetObjectIconTextureIfCached(GridEntryIds[i]);
     if (tex != 0)
     {
       GridSlots[i]->SetIconTexture(tex);
     }
   }
+}
+
+size_t UCreativePaletteScreen::GetGridIconCount() const
+{
+  return std::count_if(GridSlots.begin(), GridSlots.end(),
+                       [](const UGuiSlot *slot)
+                       { return slot && slot->GetIconTexture() != 0; });
+}
+
+size_t UCreativePaletteScreen::WarmVisibleGridIcons()
+{
+  if (!Icons || !Scroll || GridSlots.empty() || Kind == ContentKind::Item)
+    return 0;
+  const auto viewport = Scroll->GetBounds();
+  size_t work = 0;
+  for (size_t scanned = 0; scanned < GridSlots.size() && work < 4; ++scanned)
+  {
+    const size_t i = GridIconCursor++ % GridSlots.size();
+    auto *slot = GridSlots[i];
+    if (!slot || slot->GetIconTexture())
+      continue;
+    const auto bounds = slot->GetBounds();
+    if (bounds.X >= viewport.X + viewport.W ||
+        bounds.X + bounds.W <= viewport.X ||
+        bounds.Y >= viewport.Y + viewport.H ||
+        bounds.Y + bounds.H <= viewport.Y)
+      continue;
+    ++work;
+    const auto &id = GridEntryIds[i];
+    const auto texture =
+        Kind == ContentKind::Block       ? Icons->GetBlockIconTexture(id)
+        : Kind == ContentKind::Object    ? Icons->GetObjectIconTexture(id)
+        : Kind == ContentKind::UCreature ? Icons->GetCreatureIconTexture(id)
+                                         : Icons->GetSkinIconTexture(id);
+    slot->SetIconTexture(texture);
+  }
+  return work;
 }
 
 void UCreativePaletteScreen::LayoutGridInScroll()
@@ -1150,6 +1170,7 @@ void UCreativePaletteScreen::LayoutGridInScroll()
       continue;
     }
     slot->SetBounds({x, y, slotSize, slotSize});
+    slot->SetDrawClip(Scroll->GetBounds());
     if ((i + 1) % static_cast<size_t>(cols) == 0)
     {
       x = contentRect.X;
