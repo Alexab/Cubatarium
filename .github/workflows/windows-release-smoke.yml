@@ -29,6 +29,10 @@ on:
       - "models/**"
   workflow_dispatch:
     inputs:
+      native_items_qa:
+        description: Run inventory ownership native QA (requires an OpenGL desktop)
+        type: boolean
+        default: false
       full_test:
         description: Run all reference seeds with determinism check
         type: boolean
@@ -67,7 +71,11 @@ jobs:
 
       - name: Build Release
         shell: pwsh
-        run: cmake --build build/desktop-msvc --config Release --parallel 4
+        run: |
+          cmake --build build/desktop-msvc --config Release --target Cubatarium --parallel 8
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cmake --build build/desktop-msvc --config Release --parallel 8
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify static exe dependencies
         shell: pwsh
@@ -127,6 +135,20 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           ctest --test-dir build/desktop-msvc -C Release -L items --no-tests=error --output-on-failure
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Native inventory ownership acceptance
+        if: github.event_name == 'workflow_dispatch' && inputs.native_items_qa
+        shell: pwsh
+        run: |
+          python tools/run_items_acceptance.py --skip-build --extended --world OwnershipCIQA
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload native inventory evidence
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.native_items_qa
+        uses: actions/upload-artifact@v4
+        with:
+          name: inventory-ownership-native-evidence
+          path: bin/items_acceptance/
 
       - name: C++ unit test (chunk load priority)
         shell: pwsh

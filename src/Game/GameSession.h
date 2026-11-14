@@ -75,6 +75,9 @@ public:
   bool DropOnSlot(const SlotAddress &target, int units = -1);
   void InventoryClick(size_t slot, bool half, bool quick, bool collect);
   void DiscardInventory();
+  void DeleteCreativeAssignment();
+  void OpenPlayerWindow(int section);
+  bool PickBlockUnderCrosshair();
   void SortInventory();
   void RecoverInventory(size_t index = static_cast<size_t>(-1));
   void CancelDrag();
@@ -105,14 +108,8 @@ public:
   bool GetCheatCreativeInventory() const { return CheatCreativeInventory; }
   void SyncToWorldGameMode(WorldGameMode mode);
   void SyncToWorldDifficulty(WorldDifficulty difficulty);
-  WorldGameMode GetWorldGameMode() const override
-  {
-    return ActiveWorldGameMode;
-  }
-  WorldDifficulty GetWorldDifficulty() const override
-  {
-    return ActiveWorldDifficulty;
-  }
+  WorldGameMode GetWorldGameMode() const override;
+  WorldDifficulty GetWorldDifficulty() const override;
   CharacterStatsSnapshot GetCharacterStatsSnapshot() const override;
   bool ApplyHumanAppearance(const HumanAppearance &,
                             const std::string &) override;

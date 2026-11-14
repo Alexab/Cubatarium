@@ -26,6 +26,7 @@ class UGuiTextInput;
 class UGuiScrollView;
 class IUGuiIconSource;
 struct GuiTheme;
+struct CharacterStatsSnapshot;
 
 class UCharacterSheetScreen : public UGuiScreenBase
 {
@@ -45,6 +46,9 @@ public:
 
   void SetVisible(bool visible);
   void Toggle();
+  GuiRect GetMainSlotBounds() const;
+  GuiRect GetDropButtonBounds() const;
+  GuiRect GetDeleteButtonBounds() const;
   void SetSection(int section);
   bool PickBackpackSlot(int x, int y, size_t &slot) const;
   bool IsEditingText() const;
@@ -71,6 +75,7 @@ private:
   void Relayout();
   void BuildEquipmentPanel(UGuiPanel &body, const GuiTheme &theme);
   void RefreshLabels();
+  void RefreshTooltip(const CharacterStatsSnapshot &snap);
   void RenderCharacterPreview();
   static std::string FormatBar(const char *name, float cur, float max);
 
@@ -85,7 +90,7 @@ private:
   UGuiTabBar *Sections{nullptr};
   UGuiTextInput *Search{nullptr};
   UGuiButton *SortButton{nullptr}, *RecoveryButton{nullptr},
-      *DropButton{nullptr};
+      *DropButton{nullptr}, *DeleteButton{nullptr};
   UGuiLabel *InventoryHint{nullptr};
   UGuiLabel *Tooltip{nullptr};
   int PointerX{-1}, PointerY{-1};

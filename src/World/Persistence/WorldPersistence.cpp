@@ -5831,11 +5831,12 @@ void UWorldPersistence::SaveUsers(UWorld &world, const std::string &file_name)
   }
 
   std::ofstream file(file_name);
-  if (file.is_open())
-  {
-    file << objects.dump(4);
-    file.close();
-  }
+  if (!file)
+    throw std::runtime_error("Cannot open user ownership snapshot");
+  file << objects.dump(4);
+  file.flush();
+  if (!file)
+    throw std::runtime_error("Cannot write user ownership snapshot");
 }
 
 void UWorldPersistence::LoadWorldData(UWorld &world,
@@ -5997,6 +5998,7 @@ void UWorldPersistence::LoadWorldData(UWorld &world,
       world.SetViewSettings(WorldViewSettings{});
     }
 
+    world.SetThrowSettings(d.value("throw_settings", ThrowSettings{}));
     if (d.contains("game_mode") && d["game_mode"].is_string())
     {
       world.SetGameMode(
@@ -6152,6 +6154,7 @@ void UWorldPersistence::SaveWorldData(UWorld &world,
       world.GetEnvironmentState().CloudCoverageOverride;
   world_data["environment"] = env;
   world_data["view"] = world.GetViewSettings().ToJson();
+  world_data["throw_settings"] = world.GetThrowSettings();
   world_data["game_mode"] = WorldGameModeToString(world.GetGameMode());
   WriteWorldDifficulty(world_data, world.GetDifficulty());
   WriteHardcoreWorldCompleted(world_data, world.IsHardcoreDead());

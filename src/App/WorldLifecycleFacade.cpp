@@ -14,6 +14,7 @@
 #include "App/Platform/Log.h"
 #include "App/ResourcePackBootstrap.h"
 #include "Creatures/Core/Creature.h"
+#include "Game/Survival/SurvivalSystems.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
 #include "Version.h"
 #include "World/Core/World.h"
@@ -133,6 +134,7 @@ void UWorldLifecycleFacade::CreateNewWorldWithCurrentSettings(UCore &core)
   try
   {
     UWorldItemSystem::Instance().Clear();
+    USurvivalSystems::Instance().Clear();
     core.WorldInstance->Create(new_world_name);
     core.WorldInstance->ApplyEnvironmentConfig(core.DefaultEnvironmentConfig,
                                                true);
@@ -172,6 +174,7 @@ void UWorldLifecycleFacade::LoadWorld(UCore &core,
     // Ground drops never persist in saves; stale ones from a previous world
     // must not leak into the newly loaded one.
     UWorldItemSystem::Instance().Clear();
+    USurvivalSystems::Instance().Clear();
     core.WorldInstance->Load(core.ActiveWorldFolder.string());
     core.ApplyRuntimeStreamingToWorld();
     if (!core.DefaultUserName.empty())

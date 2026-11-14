@@ -11,6 +11,7 @@ namespace cutum
 class IUGuiMenuHost;
 class UResourcePackPickerForm;
 class UWorldViewSettingsForm;
+class UThrowSettingsForm;
 class UGuiPanel;
 class UGuiWindow;
 class UGuiDialogFrame;
@@ -20,8 +21,7 @@ class UGuiLabel;
 class UWorldResourcePacksScreen : public UGuiScreenBase
 {
 public:
-  UWorldResourcePacksScreen(IUGuiMenuHost *host,
-                            std::function<void()> onClose);
+  UWorldResourcePacksScreen(IUGuiMenuHost *host, std::function<void()> onClose);
   ~UWorldResourcePacksScreen();
 
   void Build(UGuiContext &ctx) override;
@@ -44,6 +44,7 @@ private:
   UGuiPanel *BodyPanel{nullptr};
   UGuiLabel *WarningLabel{nullptr};
   std::unique_ptr<UWorldViewSettingsForm> ViewForm;
+  std::unique_ptr<UThrowSettingsForm> ThrowForm;
   std::unique_ptr<UResourcePackPickerForm> PackForm;
   bool NeedsBodyRelayout{false};
 };

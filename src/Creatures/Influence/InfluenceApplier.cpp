@@ -158,8 +158,10 @@ void ApplyMeleeToolWear(UWorld &world, UCreature &source,
 } // namespace
 
 void InfluenceApplier::ApplyImpact(UWorld &world, uint64_t id, uint64_t thrower,
-                                   float damage, glm::vec3 hitFrom)
+                                   float damage, glm::vec3 hitFrom,
+                                   std::optional<InventoryDomain> domain)
 {
+  UWorldItemSystem::DamageScope damageScope(domain);
   auto *target = world.GetCreature(id);
   if (!target || damage <= 0.f)
     return;
@@ -189,7 +191,6 @@ void InfluenceApplier::ApplyImpact(UWorld &world, uint64_t id, uint64_t thrower,
       damage *= shield->Block.PassiveDamageMul;
   }
   const auto position = target->GetBodyOrigin();
-  const auto *def = world.GetCreatureDefinition(target->GetTypeId());
   InfluenceEvent impact;
   impact.Kind = InfluenceEventKind::Applied;
   impact.SourceId = thrower;
@@ -205,10 +206,6 @@ void InfluenceApplier::ApplyImpact(UWorld &world, uint64_t id, uint64_t thrower,
   if (CreatureVitalsSystem::ApplyDamage(
           world, *target, damage, world.GetGameMode(), "influence", thrower))
   {
-    if (def && world.GetGameMode() == WorldGameMode::Survival)
-      for (const auto &drop : def->drops)
-        UWorldItemSystem::Instance().Spawn(position, drop.itemId, drop.count,
-                                           false);
     world.RemoveCreature(id);
     return;
   }
@@ -404,21 +401,6 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
                                             "influence", pred.SourceId))
       {
         result.AnyTargetRemoved = true;
-        if (source && source->GetId() != delta.TargetId)
-        {
-          if (const CreatureDefinition *killed =
-                  world.GetCreatureDefinition(target->GetTypeId()))
-          {
-            for (const CreatureDropEntry &drop : killed->drops)
-            {
-              if (ModePolicy::DropsBlocksOnBreak(mode))
-              {
-                UWorldItemSystem::Instance().Spawn(
-                    target->GetBodyOrigin(), drop.itemId, drop.count, false);
-              }
-            }
-          }
-        }
         world.RemoveCreature(delta.TargetId);
         continue;
       }

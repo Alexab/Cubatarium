@@ -38,5 +38,6 @@
   },
   "use": {
     "interaction": "container"
-  }
+  },
+  "throw_category": "utility"
 }

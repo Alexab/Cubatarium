@@ -49,3 +49,7 @@ effective status attributes in capabilities, finite throw parameters, projected
 FP carry contacts, publication preserving authored poses, and automatic manifest
 hash verification. [Release acceptance](research/items-completion-2026-11-13/final-audit/README.md):
 20 CTest, 47 native checks, 24 window layouts, eight audit and two publication tests.
+
+## Ownership follow-up completed, 2026-11-14
+
+Finite/catalog mixing, Creative loot, silent hand-slot deletion, creativeCopy cleanup, unbounded active drop queues and independent property-file commits have been replaced. Species-specific IK and broad world soak remain follow-up scope. [Final audit and evidence](research/inventory-ownership-refactor-2026-11-14/README.md).

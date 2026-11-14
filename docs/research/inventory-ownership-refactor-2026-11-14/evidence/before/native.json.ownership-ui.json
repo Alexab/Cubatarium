@@ -1,0 +1,65 @@
+{
+  "checks": [
+    {
+      "name": "E opens Creative catalog",
+      "passed": true
+    },
+    {
+      "name": "B respects mode and keeps a single player window",
+      "passed": true
+    },
+    {
+      "name": "rebound inventory action works",
+      "passed": true
+    },
+    {
+      "name": "full hand click retains worn instance and starts cursor transfer",
+      "passed": true
+    },
+    {
+      "name": "Drop click transfers the actual hand instance into the world",
+      "passed": true
+    },
+    {
+      "name": "clicked Drop stays in world after pickup delay",
+      "passed": false
+    },
+    {
+      "name": "explicit delete removes only a catalog assignment",
+      "passed": false
+    },
+    {
+      "name": "delete assignment cannot destroy a finite item",
+      "passed": true
+    },
+    {
+      "name": "E opens Survival backpack",
+      "passed": true
+    },
+    {
+      "name": "B respects mode and keeps a single player window",
+      "passed": true
+    },
+    {
+      "name": "rebound inventory action works",
+      "passed": true
+    },
+    {
+      "name": "full hand click retains worn instance and starts cursor transfer",
+      "passed": true
+    },
+    {
+      "name": "Drop click transfers the actual hand instance into the world",
+      "passed": true
+    },
+    {
+      "name": "clicked Drop stays in world after pickup delay",
+      "passed": false
+    },
+    {
+      "name": "middle button picks a catalog block without mining",
+      "passed": true
+    }
+  ],
+  "passed": false
+}

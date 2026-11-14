@@ -108,6 +108,9 @@ public:
 
   void Update(double dt);
   void UpdateNativeItemsQa(double dt);
+  void OpenPlayerWindow(int section);
+  void ShowInteractionMessage(const std::string &message, float seconds = 2.f);
+
   void ProcessInput();
   void RenderFrame(int width, int height, double viewDuration);
   void NotifyFpSwing(FpSwingKind kind);
@@ -186,6 +189,8 @@ public:
   ResourcePackSelection GetCurrentWorldResourcePackSelection() const override;
   bool ApplyResourcePacksToCurrentWorld(
       const ResourcePackSelection &selection) override;
+  ThrowSettings GetCurrentThrowSettings() const override;
+  bool ApplyThrowSettings(const ThrowSettings &) override;
   WorldViewSettings GetCurrentWorldViewSettings() const override;
   bool ApplyViewSettingsToCurrentWorld(const WorldViewSettings &view) override;
   bool ApplyWorldSettings(const ResourcePackSelection &selection,
@@ -219,6 +224,7 @@ private:
   void RecaptureMouseForLook();
   bool UsesUiPointer() const;
   bool BlocksGameMouseLook() const;
+  void RunOwnershipUiQa(const std::string &path);
   bool TryRouteInGameOverlay(const GuiMouseEvent &event, bool Pressed);
   bool HasAnyOverlayCapture() const;
   /// End inventory/overlay pointer gesture: drop or cancel drag, clear Pressed.

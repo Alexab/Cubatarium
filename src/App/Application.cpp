@@ -7,9 +7,11 @@
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiTextInput.h"
 #include "Test/Native/ItemsInventoryQa.h"
+#include "Test/Native/OwnershipQa.h"
 #include "World/Core/RuntimeTuning.h"
 #include "World/Diagnostics/EnterLitDiagnostics.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
+#include <thread>
 
 #include "App/Core.h"
 #include "App/Platform/CursorCapture.h"
@@ -841,6 +843,18 @@ bool UApplication::ApplyResourcePacksToCurrentWorld(
   return true;
 }
 
+ThrowSettings UApplication::GetCurrentThrowSettings() const
+{
+  return World ? World->GetThrowSettings() : ThrowSettings{};
+}
+bool UApplication::ApplyThrowSettings(const ThrowSettings &settings)
+{
+  if (!World)
+    return false;
+  World->SetThrowSettings(settings);
+  World->PersistWorldMetadata();
+  return true;
+}
 WorldViewSettings UApplication::GetCurrentWorldViewSettings() const
 {
   return Core ? Core->GetCurrentWorldViewSettings() : WorldViewSettings{};
@@ -1491,6 +1505,48 @@ bool UApplication::HasAnyOverlayCapture() const
   return false;
 }
 
+void UApplication::ShowInteractionMessage(const std::string &message,
+                                          float seconds)
+{
+  if (Geometry)
+    Geometry->ShowTransientMessage(message, seconds);
+}
+void UApplication::OpenPlayerWindow(int section)
+{
+  if (!World || !GameSession)
+    return;
+  GameSession->CancelDrag();
+  GameSession->ClearPendingAssignment();
+  const bool catalog =
+      section == 4 && World->GetGameMode() == WorldGameMode::Creative;
+  PaletteOpen = catalog;
+  CharacterSheetOpen = !catalog;
+  WorldGenOpen = false;
+  CraftingOpen = false;
+  AnvilOpen = false;
+  SurvivalInventoryOpen = false;
+  if (WorldGenScreen)
+    WorldGenScreen->SetVisible(false);
+  if (CraftingScreen)
+    CraftingScreen->SetVisible(false);
+  if (AnvilScreen)
+    AnvilScreen->SetVisible(false);
+  if (SurvivalInventoryScreen)
+    SurvivalInventoryScreen->SetVisible(false);
+  if (PaletteScreen)
+  {
+    PaletteScreen->SetVisible(catalog);
+    if (catalog)
+      PaletteScreen->OpenWithMainTab(0);
+  }
+  if (CharacterSheetScreen)
+  {
+    CharacterSheetScreen->SetVisible(!catalog);
+    if (!catalog)
+      CharacterSheetScreen->SetSection(std::clamp(section, 0, 3));
+  }
+  SyncCursorVisibility();
+}
 void UApplication::FinishInventoryPointerGesture(const GuiMouseEvent &event)
 {
   const int pointerIndex = NormalizeOverlayPointer(event.PointerId);
@@ -1805,8 +1861,12 @@ bool UApplication::ResolveSlotAt(int x, int y, SlotAddress &out)
     {
       out = SlotAddress{};
       out.surface = SlotSurface::Hotbar;
-      out.bar = 0;
-      out.slot = GameSession->GetSelectedSlot(0);
+      out.bar = World && World->GetControlledCreature()
+                    ? World->GetControlledCreature()
+                          ->GetInventory()
+                          .GetActiveBarIndex()
+                    : 0;
+      out.slot = GameSession->GetSelectedSlot(out.bar);
       return true;
     }
   }
@@ -1823,7 +1883,7 @@ static void ConfigureCarryContacts(FpViewmodelDrawParams &params,
 {
   if (params.CarryHands <= 0)
     return;
-  for (const auto &cargo : UWorldItemSystem::Instance().GetItems())
+  for (const auto &cargo : UWorldItemSystem::Instance().GetActiveItems())
   {
     if (cargo.carrierId != actor.GetId())
       continue;
@@ -2012,6 +2072,156 @@ void UApplication::OpenAnvilScreen()
   SyncCursorVisibility();
 }
 
+void UApplication::RunOwnershipUiQa(const std::string &path)
+{
+  if (!World || !GameSession || !CharacterSheetScreen || !PaletteScreen)
+    throw std::runtime_error("Ownership UI fixture unavailable");
+  auto *actor = World->GetControlledCreature();
+  auto &inv = actor->GetInventory();
+  auto savedInv = inv;
+  const auto savedMode = World->GetGameMode();
+  auto &physics = UWorldItemSystem::Instance();
+  const auto position = actor->GetBodyOrigin();
+  const auto savedInventoryKey = Ui.InventoryKey;
+  const auto savedPaletteKey = Ui.PaletteKey;
+  Ui.InventoryKey = "e";
+  Ui.PaletteKey = "b";
+  nlohmann::json report = {{"checks", nlohmann::json::array()}};
+  auto check = [&](const std::string &name, bool ok)
+  { report["checks"].push_back({{"name", name}, {"passed", ok}}); };
+  auto click = [&](GuiRect bounds, GuiMouseButton button = GuiMouseButton::Left)
+  {
+    const int x = bounds.X + bounds.W / 2, y = bounds.Y + bounds.H / 2;
+    const int physical = button == GuiMouseButton::Right
+                             ? GLFW_MOUSE_BUTTON_RIGHT
+                             : GLFW_MOUSE_BUTTON_LEFT;
+    InputRouter.RouteMouseButton(*this, physical, true, x, y, 0);
+    InputRouter.RouteMouseButton(*this, physical, false, x, y, 0);
+  };
+  for (auto mode : {WorldGameMode::Creative, WorldGameMode::Survival})
+  {
+    physics.Clear();
+    World->SetGameMode(mode);
+    inv = UCreatureInventory{};
+    inv.SetItemDefinitions(World->GetItemDefinitionStorage());
+    inv.SetCreative(mode == WorldGameMode::Creative);
+    GameSession->CancelDrag();
+    PaletteOpen = false;
+    CharacterSheetOpen = false;
+    PaletteScreen->SetVisible(false);
+    CharacterSheetScreen->SetVisible(false);
+    InputRouter.RouteKey(*this, GLFW_KEY_E, GLFW_PRESS, 0);
+    check(mode == WorldGameMode::Creative ? "E opens Creative catalog"
+                                          : "E opens Survival backpack",
+          mode == WorldGameMode::Creative ? PaletteOpen && !CharacterSheetOpen
+                                          : CharacterSheetOpen && !PaletteOpen);
+    if (mode == WorldGameMode::Creative)
+    {
+      for (int frame = 0; frame < 24; ++frame)
+        PaletteScreen->Update(0);
+      check("large Creative block catalog finishes progressive grid loading",
+            PaletteScreen->IsGridComplete() &&
+                PaletteScreen->GetGridEntryCount() > 256);
+    }
+    InputRouter.RouteKey(*this, GLFW_KEY_B, GLFW_PRESS, 0);
+    check("B respects mode and keeps a single player window",
+          mode == WorldGameMode::Creative ? PaletteOpen && !CharacterSheetOpen
+                                          : !PaletteOpen && CharacterSheetOpen);
+    Ui.InventoryKey = "i";
+    PaletteOpen = false;
+    CharacterSheetOpen = false;
+    PaletteScreen->SetVisible(false);
+    CharacterSheetScreen->SetVisible(false);
+    InputRouter.RouteKey(*this, GLFW_KEY_I, GLFW_PRESS, 0);
+    check("rebound inventory action works", PaletteOpen || CharacterSheetOpen);
+    Ui.InventoryKey = "e";
+    OpenPlayerWindow(1);
+    InventoryEntryRef tool;
+    tool.empty = false;
+    tool.kind = InventoryEntryKind::Item;
+    tool.Id = "iron_pickaxe";
+    tool.count = 1;
+    tool.wear = .53f;
+    inv.Insert(tool);
+    inv.Move(0, 21);
+    inv.SetActiveSlot(2, 1);
+    CharacterSheetScreen->Update(0);
+    const auto identity = inv.GetSlot(21).instanceId;
+    std::this_thread::sleep_for(std::chrono::milliseconds(320));
+    click(CharacterSheetScreen->GetMainSlotBounds());
+    check("full hand click retains worn instance and starts cursor transfer",
+          inv.GetSlot(21).instanceId == identity &&
+              inv.GetSlot(21).wear == .53f && GameSession->IsDragging() &&
+              physics.Count() == 0);
+    click(CharacterSheetScreen->GetDropButtonBounds());
+    nlohmann::json bodies;
+    physics.Serialize(bodies);
+    bool found = false;
+    for (const auto &r : bodies["world_physical_v2"])
+      if (r["instance"].get<uint64_t>() == identity)
+        found = true;
+    check("Drop click transfers the actual hand instance into the world",
+          inv.GetSlot(21).empty && found && !GameSession->IsDragging());
+    for (int i = 0; i < 100; ++i)
+      physics.Tick(*World, 1.f / 60);
+    check("clicked Drop stays in world after pickup delay",
+          inv.GetSlot(21).empty && physics.Count() == 1);
+    if (mode == WorldGameMode::Creative)
+    {
+      auto ref = tool;
+      ref.form = InventoryEntryForm::CatalogReference;
+      ref.wear = 0;
+      ref.instanceId = 0;
+      inv.AssignToHotbar(2, 1, ref);
+      CharacterSheetScreen->Update(0);
+      const auto count = physics.Count();
+      click(CharacterSheetScreen->GetDeleteButtonBounds());
+      check("explicit delete removes only a catalog assignment",
+            inv.GetSlot(21).empty && physics.Count() == count);
+      inv.Insert(tool);
+      inv.SetActiveSlot(0, 0);
+      CharacterSheetScreen->Update(0);
+      click(CharacterSheetScreen->GetDeleteButtonBounds());
+      check("delete assignment cannot destroy a finite item",
+            !inv.GetSlot(0).empty);
+    }
+  }
+  physics.Clear();
+  World->SetGameMode(WorldGameMode::Creative);
+  inv = UCreatureInventory{};
+  inv.SetItemDefinitions(World->GetItemDefinitionStorage());
+  inv.SetCreative(true);
+  const auto camera = World->GetCurrentUserCamera();
+  const auto node =
+      WorldPosToBlock(camera->GetPosition() + camera->GetFront() * 2.f);
+  const auto previous = World->GetBlockWorld().GetBlock(node);
+  World->ReplaceBlockAt(node, "stone");
+  PaletteOpen = false;
+  CharacterSheetOpen = false;
+  PaletteScreen->SetVisible(false);
+  CharacterSheetScreen->SetVisible(false);
+  InputRouter.RouteMouseButton(*this, GLFW_MOUSE_BUTTON_MIDDLE, true, 0, 0, 0);
+  const auto *picked = inv.GetActiveEntryRef();
+  check("middle button picks a catalog block without mining",
+        picked && picked->IsCatalogReference() && picked->Id == "stone" &&
+            World->GetBlockWorld().GetBlock(node) != BLOCK_AIR);
+  World->GetBlockWorld().SetBlock(node, previous);
+  physics.Clear();
+  World->SetGameMode(savedMode);
+  inv = savedInv;
+  actor->SetBodyOrigin(position);
+  Ui.InventoryKey = savedInventoryKey;
+  Ui.PaletteKey = savedPaletteKey;
+  GameSession->CancelDrag();
+  OpenPlayerWindow(0);
+  report["passed"] = true;
+  for (const auto &c : report["checks"])
+    if (!c["passed"].get<bool>())
+      report["passed"] = false;
+  std::ofstream out(path);
+  out << report.dump(2) << '\n';
+}
+
 void UApplication::UpdateNativeItemsQa(double dt)
 {
   static bool itemsQaDone = false;
@@ -2020,10 +2230,13 @@ void UApplication::UpdateNativeItemsQa(double dt)
     {
       itemsQaDone = true;
       RunItemsInventoryQa(*World, path);
+      RunOwnershipQa(*World, *GameSession,
+                     std::string(path) + ".ownership.json");
       GameSession->SyncToWorldGameMode(World->GetGameMode());
       if (CharacterSheetScreen)
       {
         CharacterSheetScreen->RunInventoryQa(std::string(path) + ".ui.json");
+        RunOwnershipUiQa(std::string(path) + ".ownership-ui.json");
         CharacterSheetOpen = true;
         CharacterSheetScreen->SetSection(0);
         CharacterSheetScreen->SetVisible(true);
@@ -2041,11 +2254,53 @@ void UApplication::UpdateNativeItemsQa(double dt)
     TickItemsCarryVisualQa(*World, visualTime);
   }
   else if (itemsQaDone && CharacterSheetScreen &&
+           !std::getenv("CUBA_OWNERSHIP_CATALOG_VISUAL_QA") &&
            std::getenv("CUBA_ITEMS_INVENTORY_QA"))
   {
     static float qaTime = 0;
     qaTime += float(dt);
     CharacterSheetScreen->SetSection(std::min(3, int(qaTime / 6.f)));
+  }
+  if (itemsQaDone && World && std::getenv("CUBA_OWNERSHIP_CATALOG_VISUAL_QA"))
+  {
+    static float clock = 0;
+    static int last = -1;
+    clock += float(dt);
+    const int phase = std::min(5, int(clock / 6.f));
+    if (phase != last)
+    {
+      if (last < 0)
+      {
+        GameSession->SyncToWorldGameMode(WorldGameMode::Creative);
+        auto &inv = World->GetControlledCreature()->GetInventory();
+        for (const char *id :
+             {"iron_pickaxe", "bucket", "apple", "iron_ingot", "wood_sword"})
+        {
+          InventoryEntryRef e;
+          e.empty = false;
+          e.kind = InventoryEntryKind::Item;
+          e.Id = id;
+          e.count = 1;
+          inv.Insert(e);
+        }
+        InventoryEntryRef ref;
+        ref.empty = false;
+        ref.kind = InventoryEntryKind::Block;
+        ref.Id = "stone";
+        ref.count = 1;
+        ref.form = InventoryEntryForm::CatalogReference;
+        inv.AssignToHotbar(3, 9, ref);
+      }
+      if (phase < 2)
+      {
+        OpenPlayerWindow(4);
+        if (PaletteScreen)
+          PaletteScreen->OpenWithMainTab(phase == 0 ? 0 : 4);
+      }
+      else
+        OpenPlayerWindow(phase - 2);
+      last = phase;
+    }
   }
   static bool appearanceUiQaDone = false;
   if (!appearanceUiQaDone && CharacterSheetScreen && World &&

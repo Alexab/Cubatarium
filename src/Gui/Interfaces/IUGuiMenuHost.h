@@ -1,10 +1,11 @@
 #ifndef IU_GUI_MENU_HOST_H
 #define IU_GUI_MENU_HOST_H
+#include "Game/Physics/ThrowSettings.h"
 
-#include "ResourcePacks/ResourcePackResolver.h"
-#include "World/View/WorldViewSettings.h"
 #include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
+#include "ResourcePacks/ResourcePackResolver.h"
+#include "World/View/WorldViewSettings.h"
 #include <functional>
 #include <string>
 #include <vector>
@@ -33,9 +34,9 @@ public:
   SaveAppAndTemplateSettings(const AppSettingsSnapshot &app,
                              const ProceduralSettings &procedural) = 0;
 
-  virtual void
-  CreateNewWorldWithSettings(const ProceduralSettings &settings,
-                             const std::vector<std::string> &resourcePacksEnabled) = 0;
+  virtual void CreateNewWorldWithSettings(
+      const ProceduralSettings &settings,
+      const std::vector<std::string> &resourcePacksEnabled) = 0;
   virtual void
   CreateNewWorldWithSettings(const ProceduralSettings &settings,
                              const ResourcePackSelection &selection) = 0;
@@ -48,12 +49,10 @@ public:
                              const ResourcePackSelection &selection,
                              const WorldViewSettings &view,
                              WorldGameMode gameMode) = 0;
-  virtual void
-  CreateNewWorldWithSettings(const ProceduralSettings &settings,
-                             const ResourcePackSelection &selection,
-                             const WorldViewSettings &view,
-                             WorldGameMode gameMode,
-                             WorldDifficulty difficulty) = 0;
+  virtual void CreateNewWorldWithSettings(
+      const ProceduralSettings &settings,
+      const ResourcePackSelection &selection, const WorldViewSettings &view,
+      WorldGameMode gameMode, WorldDifficulty difficulty) = 0;
   virtual void LoadSelectedWorld(const std::string &worldName) = 0;
   virtual void RefreshWorldList() = 0;
   virtual const std::vector<std::string> &GetWorldNames() const = 0;
@@ -62,15 +61,18 @@ public:
   virtual ResourcePackSelection GetDefaultResourcePackSelection() const = 0;
   virtual std::vector<std::string>
   PeekWorldResourcePacks(const std::string &worldName) const = 0;
-  virtual ResourcePackSelection GetCurrentWorldResourcePackSelection() const = 0;
+  virtual ResourcePackSelection
+  GetCurrentWorldResourcePackSelection() const = 0;
   virtual bool
   ApplyResourcePacksToCurrentWorld(const ResourcePackSelection &selection) = 0;
   virtual WorldViewSettings GetCurrentWorldViewSettings() const = 0;
-  virtual bool ApplyViewSettingsToCurrentWorld(const WorldViewSettings &view) = 0;
-  /// Apply packs + view in memory and persist world_data.json only.
   virtual bool
-  ApplyWorldSettings(const ResourcePackSelection &selection,
-                     const WorldViewSettings &view) = 0;
+  ApplyViewSettingsToCurrentWorld(const WorldViewSettings &view) = 0;
+  /// Apply packs + view in memory and persist world_data.json only.
+  virtual bool ApplyWorldSettings(const ResourcePackSelection &selection,
+                                  const WorldViewSettings &view) = 0;
+  virtual ThrowSettings GetCurrentThrowSettings() const { return {}; }
+  virtual bool ApplyThrowSettings(const ThrowSettings &) { return false; }
   virtual void ApplyLiveUiScale(float user_scale) = 0;
   /// Live audio volume preview from the Audio tab (no config write).
   virtual void ApplyLiveAudioSettings(const AudioSettings &settings) = 0;

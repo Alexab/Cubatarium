@@ -1,5 +1,6 @@
 #include "Creatures/Core/CreatureInventory.h"
 #include "Audio/AudioApi.h"
+#include "Game/Inventory/InventoryIdentity.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Items/ToolCapabilities.h"
 #include <atomic>
@@ -103,20 +104,7 @@ InventoryEntryRef UCreatureInventory::Prepare(InventoryEntryRef e)
     e.form = InventoryEntryForm::CatalogReference;
     e.count = 1;
   }
-  static std::atomic<uint64_t> serial{
-      uint64_t(std::chrono::duration_cast<std::chrono::milliseconds>(
-                   std::chrono::system_clock::now().time_since_epoch())
-                   .count())
-      << 16};
-  const uint64_t floor = std::max(
-      NextInstanceId, e.instanceId ? e.instanceId + 1 : NextInstanceId);
-  uint64_t seen = serial.load(std::memory_order_relaxed);
-  while (seen < floor &&
-         !serial.compare_exchange_weak(seen, floor, std::memory_order_relaxed))
-  {
-  }
-  if (e.instanceId == 0)
-    e.instanceId = serial.fetch_add(1, std::memory_order_relaxed);
+  e.instanceId = InventoryInstanceIdentity(e.instanceId, NextInstanceId);
   NextInstanceId = std::max(NextInstanceId, e.instanceId + 1);
   return e;
 }
@@ -243,6 +231,11 @@ InventoryOperationResult UCreatureInventory::Take(size_t i, int count,
   out.count = count;
   if (s.entry.IsCatalogReference())
   {
+    if (!Creative)
+    {
+      out = {};
+      return {0, count, "catalog_not_allowed"};
+    }
     out.form = InventoryEntryForm::FiniteStack;
     out.instanceId = 0;
     out = Prepare(out);
@@ -367,7 +360,7 @@ void UCreatureInventory::AddItem(const std::string &id, int count)
   if (r.remainder > 0)
   {
     e.count = r.remainder;
-    Recovery.push_back(Prepare(e));
+    RecoveryForMode().push_back(Prepare(e));
   }
 }
 void UCreatureInventory::SetItemDefinitions(const UItemDefinitionStorage *items)
@@ -377,40 +370,79 @@ void UCreatureInventory::SetItemDefinitions(const UItemDefinitionStorage *items)
   Items = items;
   if (!Items)
     return;
-  std::vector<InventoryEntryRef> excess;
-  for (auto &row : Hotbars)
-    for (auto &s : row.slots)
-    {
-      if (s.empty || s.entry.empty)
-        continue;
-      if (s.entry.kind == InventoryEntryKind::Block && Items->Get(s.entry.Id))
-        s.entry.kind = InventoryEntryKind::Item;
-      if (s.entry.kind == InventoryEntryKind::Item && !Items->Get(s.entry.Id))
-      {
-        Recovery.push_back(s.entry);
-        s = {};
-        continue;
-      }
-      int limit = StackLimit(s.entry);
-      if (s.entry.count > limit)
-      {
-        auto e = s.entry;
-        e.count -= limit;
-        e.instanceId = 0;
-        s.entry.count = limit;
-        excess.push_back(e);
-      }
-    }
-  for (auto e : excess)
+  const bool original = Creative;
+  for (bool creative : {false, true})
   {
-    const auto r = Insert(e);
-    if (r.remainder)
+    Creative = creative;
+    std::vector<InventoryEntryRef> excess;
+    for (auto &row : GetHotbarsMutable())
+      for (auto &slot : row.slots)
+      {
+        auto &e = slot.entry;
+        if (slot.empty || e.empty)
+          continue;
+        if (e.kind == InventoryEntryKind::Block && Items->Get(e.Id))
+          e.kind = InventoryEntryKind::Item;
+        if (e.kind == InventoryEntryKind::Item && !Items->Get(e.Id))
+        {
+          RecoveryForMode().push_back(e);
+          slot = {};
+          continue;
+        }
+        if (!e.IsCatalogReference() && e.count > StackLimit(e))
+        {
+          auto remainder = e;
+          remainder.count -= StackLimit(e);
+          remainder.instanceId = 0;
+          e.count = StackLimit(e);
+          excess.push_back(remainder);
+        }
+      }
+    for (auto e : excess)
     {
-      e.count = r.remainder;
-      Recovery.push_back(Prepare(e));
+      auto result = Insert(e);
+      if (result.remainder)
+      {
+        e.count = result.remainder;
+        RecoveryForMode().push_back(Prepare(e));
+      }
     }
   }
+  Creative = original;
   RefreshEquipment(*Items);
+}
+uint64_t UCreatureInventory::GetRevision() const
+{
+  nlohmann::json snapshot;
+  SerializeToJson(snapshot);
+  return std::hash<std::string>{}(snapshot.dump());
+}
+InventoryOperationResult
+UCreatureInventory::TakeEquipment(bool offhand, size_t slot,
+                                  InventoryEntryRef &out)
+{
+  out = {};
+  if (!offhand && slot >= 4)
+    return {0, 1, "invalid_slot"};
+  auto &source = offhand ? Offhand() : Armor()[slot];
+  if (source.empty)
+    return {0, 1, "empty_slot"};
+  out = source;
+  source = {};
+  if (Items)
+    RefreshEquipment(*Items);
+  return {1, 0, {}};
+}
+bool UCreatureInventory::MaterializeActive()
+{
+  const auto index = ActiveBarIndex * 10 + ActiveSlotIndex;
+  if (!GetSlot(index).IsCatalogReference())
+    return !GetSlot(index).empty;
+  InventoryEntryRef unit;
+  if (!Take(index, 1, unit))
+    return false;
+  GetHotbarsMutable()[index / 10].slots[index % 10] = {false, unit};
+  return true;
 }
 void UCreatureInventory::SetCreative(bool creative)
 {
@@ -470,8 +502,19 @@ bool UCreatureInventory::AssignToHotbar(size_t bar, size_t slot,
   if (bar >= 4 || slot >= 10)
     return false;
   auto e = Prepare(entry);
-  if (!e.empty && e.count > StackLimit(e) && !Creative)
+  if (!e.empty && !e.IsCatalogReference() && e.count > StackLimit(e))
     return false;
+  const auto previous = GetSlot(bar * 10 + slot);
+  if (!previous.empty && !previous.IsCatalogReference() &&
+      e.IsCatalogReference())
+  {
+    auto trial = *this;
+    trial.GetHotbarsMutable()[bar].slots[slot] = {false, e};
+    if (!trial.Insert(previous))
+      return false;
+    *this = std::move(trial);
+    return true;
+  }
   GetHotbarsMutable()[bar].slots[slot] = {e.empty, e};
   return true;
 }
@@ -785,18 +828,24 @@ void UCreatureInventory::Sort()
 }
 InventoryOperationResult UCreatureInventory::Recover(size_t index)
 {
-  if (index >= Recovery.size())
+  if (index >= RecoveryForMode().size())
     return {0, 0, "invalid_recovery_slot"};
-  auto e = Recovery[index];
+  auto e = RecoveryForMode()[index];
+  if (e.kind == InventoryEntryKind::Item && (!Items || !Items->Get(e.Id)))
+    return {0, e.count, "unknown_definition"};
   const auto r = Insert(e);
   if (r.remainder)
   {
-    Recovery[index].count = r.remainder;
+    RecoveryForMode()[index].count = r.remainder;
     if (r.transferred > 0)
-      Recovery[index].instanceId = NextInstanceId++;
+    {
+      auto &remaining = RecoveryForMode()[index];
+      remaining.instanceId = 0;
+      remaining = Prepare(remaining);
+    }
   }
   else
-    Recovery.erase(Recovery.begin() + index);
+    RecoveryForMode().erase(RecoveryForMode().begin() + index);
   return r;
 }
 void UCreatureInventory::SerializeToJson(nlohmann::json &out) const
@@ -828,6 +877,7 @@ void UCreatureInventory::SerializeToJson(nlohmann::json &out) const
   out["equipped_offhand"] = WriteEntry(EquippedOffhand);
   out["creative_offhand"] = WriteEntry(CreativeOffhand);
   out["inventory_recovery"] = armor(Recovery);
+  out["creative_recovery"] = armor(CreativeRecovery);
   out["inventory_migration_warnings"] = MigrationWarnings;
   out.erase("storage");
   out.erase("hotbars");
@@ -838,18 +888,29 @@ void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data, size_t)
   const auto *defs = Items;
   *this = UCreatureInventory{};
   Items = defs;
+  auto readGear = [&](const nlohmann::json &j)
+  {
+    auto e = ReadEntry(j);
+    if (e.IsCatalogReference())
+    {
+      e.form = InventoryEntryForm::FiniteStack;
+      e.count = 1;
+      e.instanceId = 0;
+    }
+    return Prepare(e);
+  };
   auto readArmor = [&](const char *key, auto &set)
   {
     if (!data.contains(key) || !data[key].is_array())
       return;
     for (size_t i = 0; i < std::min(set.size(), data[key].size()); ++i)
-      set[i] = Prepare(ReadEntry(data[key][i]));
+      set[i] = readGear(data[key][i]);
   };
   if (data.value("inventory_version", 0) >= 3)
   {
     NextInstanceId = std::max(std::uint64_t{1},
                               data.value("next_instance_id", std::uint64_t{1}));
-    auto readRows = [&](const char *key, auto &rows)
+    auto readRows = [&](const char *key, auto &rows, bool creative = false)
     {
       if (!data.contains(key) || !data[key].is_array())
         return;
@@ -860,24 +921,31 @@ void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data, size_t)
         if (i < 40)
           rows[i / 10].slots[i % 10] = {e.empty, e};
         else if (!e.empty)
-          Recovery.push_back(e);
+          (creative ? CreativeRecovery : Recovery).push_back(e);
         ++i;
       }
     };
     readRows("owned_slots", Hotbars);
-    readRows("creative_slots", CreativeHotbars);
+    readRows("creative_slots", CreativeHotbars, true);
     readArmor("equipped_armor", EquippedArmor);
     readArmor("creative_armor", CreativeArmor);
-    EquippedOffhand = Prepare(
-        ReadEntry(data.value("equipped_offhand", nlohmann::json::object())));
-    CreativeOffhand = Prepare(
-        ReadEntry(data.value("creative_offhand", nlohmann::json::object())));
+    EquippedOffhand =
+        readGear(data.value("equipped_offhand", nlohmann::json::object()));
+    CreativeOffhand =
+        readGear(data.value("creative_offhand", nlohmann::json::object()));
     if (data.contains("inventory_recovery"))
       for (const auto &j : data["inventory_recovery"])
       {
         auto e = Prepare(ReadEntry(j));
         if (!e.empty)
-          Recovery.push_back(e);
+          RecoveryForMode().push_back(e);
+      }
+    if (data.contains("creative_recovery"))
+      for (const auto &j : data["creative_recovery"])
+      {
+        auto e = Prepare(ReadEntry(j));
+        if (!e.empty)
+          CreativeRecovery.push_back(e);
       }
     MigrationWarnings =
         data.value("inventory_migration_warnings", std::vector<std::string>{});
@@ -966,7 +1034,7 @@ void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data, size_t)
         if (r.remainder)
         {
           e.count = r.remainder;
-          Recovery.push_back(Prepare(e));
+          RecoveryForMode().push_back(Prepare(e));
         }
       }
     }
@@ -984,7 +1052,7 @@ void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data, size_t)
         {
           auto e = Prepare(ReadEntry(a[s]));
           if (!e.empty)
-            Recovery.push_back(e);
+            RecoveryForMode().push_back(e);
         }
     }
     EquippedOffhand = Prepare(
@@ -1014,8 +1082,12 @@ void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data, size_t)
         auto e = s.entry;
         e.form = InventoryEntryForm::CatalogReference;
         e.count = 1;
-        CreativeHotbars[&row - &Hotbars[0]].slots[&s - &row.slots[0]] = {false,
-                                                                         e};
+        auto &destination =
+            CreativeHotbars[&row - &Hotbars[0]].slots[&s - &row.slots[0]];
+        if (!destination.empty && !destination.entry.empty)
+          CreativeRecovery.push_back(e);
+        else
+          destination = {false, e};
         s = {};
       }
       unique(s.entry);
@@ -1023,6 +1095,14 @@ void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data, size_t)
   for (auto &e : EquippedArmor)
     unique(e);
   unique(EquippedOffhand);
+  for (auto &row : CreativeHotbars)
+    for (auto &slot : row.slots)
+      unique(slot.entry);
+  for (auto &e : CreativeArmor)
+    unique(e);
+  unique(CreativeOffhand);
+  for (auto &e : CreativeRecovery)
+    unique(e);
   for (auto &e : Recovery)
     unique(e);
   Items = nullptr;

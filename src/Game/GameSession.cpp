@@ -14,13 +14,21 @@
 #include "Creatures/Player/User.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Game/Interfaces/IUGameContent.h"
+#include "Game/Inventory/InventoryOperations.h"
 #include "Game/ModePolicy.h"
+#include "Gui/Screens/AnvilScreen.h"
+#include "Gui/Screens/CharacterSheetScreen.h"
+#include "Gui/Screens/CraftingScreen.h"
+#include "Gui/Screens/CreativePaletteScreen.h"
+#include "Gui/Screens/SurvivalInventoryScreen.h"
+#include "Gui/Screens/WorldGenPaletteScreen.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Render/Camera/Camera.h"
 #include "ResourcePacks/BlockNameUtil.h"
 #include "World/Core/World.h"
 #include "World/Items/WorldItemSystem.h"
 #include "World/Objects/ObjectLibrary.h"
+#include "World/Raycast/BlockRaycast.h"
 #include "WorldGen/Core/WorldGenContentReload.h"
 
 #include <algorithm>
@@ -255,9 +263,14 @@ bool UGameSession::AssignSlot(size_t barIndex, size_t slotIndex,
     return false;
   }
   inv->EnsureHotbarCount(static_cast<size_t>(GetHotbarCountSetting()));
-  return GetInventoryMode() == InventoryMode::Creative
-             ? inv->AssignToHotbar(barIndex, slotIndex, entry)
-             : inv->AssignOwned(barIndex, slotIndex, entry);
+  const bool ok = GetInventoryMode() == InventoryMode::Creative &&
+                          entry.IsCatalogReference()
+                      ? inv->AssignToHotbar(barIndex, slotIndex, entry)
+                      : inv->AssignOwned(barIndex, slotIndex, entry);
+  if (!ok && Application)
+    Application->ShowInteractionMessage(
+        "Cannot assign: item unavailable or inventory full");
+  return ok;
 }
 
 void UGameSession::BeginPendingAssignment(const InventoryEntryRef &entry)
@@ -388,6 +401,13 @@ void UGameSession::BeginDragFromSlot(const SlotAddress &source,
   Drag.Active = true;
   Drag.entry = entry;
   Drag.source = source;
+  if (auto *inv = GetControlledInventory(World.get()))
+  {
+    Drag.sourceRevision = inv->GetRevision();
+    Drag.sourceCreative = inv->IsCreative();
+  }
+  if (World && World->GetControlledCreature())
+    Drag.sourceOwner = World->GetControlledCreature()->GetId();
   PostInventoryClickAudio(AudioEventKind::Pickup);
 }
 
@@ -407,6 +427,15 @@ bool UGameSession::DropOnSlot(const SlotAddress &target, int units)
   auto *inventory = GetControlledInventory(World.get());
   const auto *items = World ? World->GetItemDefinitionStorage() : nullptr;
   if (!inventory || !items)
+    return false;
+  if (drag.source.surface == SlotSurface::PaletteGrid &&
+      !inventory->IsCreative())
+    return false;
+  if (drag.source.surface != SlotSurface::PaletteGrid &&
+      (!UInventoryOperations::Matches(*inventory, drag.sourceRevision,
+                                      drag.sourceCreative) ||
+       !World->GetControlledCreature() ||
+       World->GetControlledCreature()->GetId() != drag.sourceOwner))
     return false;
   if (SameSlotAddress(target, drag.source))
     return true;
@@ -470,7 +499,7 @@ bool UGameSession::DropOnSlot(const SlotAddress &target, int units)
       }
     }
     else if (releaseSource())
-      ok = trial.IsCreative()
+      ok = drag.source.surface == SlotSurface::PaletteGrid && trial.IsCreative()
                ? trial.AssignToHotbar(destination.bar, destination.slot, entry)
                : trial.AssignOwned(destination.bar, destination.slot, entry);
     if (ok)
@@ -486,23 +515,17 @@ bool UGameSession::DropOnSlot(const SlotAddress &target, int units)
     if (releaseSource())
       ok = trial.EquipOffhand(entry, *items);
   }
-  else if (destination.surface == SlotSurface::PaletteGrid)
+  else if (destination.surface == SlotSurface::BackpackReturn)
   {
     if (drag.source.surface == SlotSurface::Hotbar)
     {
-      if (trial.IsCreative())
-      {
-        trial.ClearHotbarSlot(drag.source.bar, drag.source.slot);
-        ok = true;
-      }
-      else
-        for (size_t i = 10; i < UCreatureInventory::kSlotCount; ++i)
-          if (trial.GetSlot(i).empty)
-          {
-            ok = static_cast<bool>(
-                trial.Move(drag.source.bar * 10 + drag.source.slot, i));
-            break;
-          }
+      for (size_t i = 10; i < UCreatureInventory::kSlotCount; ++i)
+        if (trial.GetSlot(i).empty)
+        {
+          ok = static_cast<bool>(
+              trial.Move(drag.source.bar * 10 + drag.source.slot, i));
+          break;
+        }
     }
     else
       ok = releaseSource();
@@ -512,6 +535,9 @@ bool UGameSession::DropOnSlot(const SlotAddress &target, int units)
     *inventory = std::move(trial);
     PostInventoryClickAudio(AudioEventKind::UiClick);
   }
+  if (!ok && Application)
+    Application->ShowInteractionMessage(
+        "Cannot move or equip: check compatibility and free space");
   return ok;
 }
 
@@ -567,33 +593,124 @@ void UGameSession::InventoryClick(size_t slot, bool half, bool quick,
     selection.count = (selection.count + 1) / 2;
   BeginDragFromSlot(address, selection);
 }
+void UGameSession::OpenPlayerWindow(int section)
+{
+  if (Application)
+    Application->OpenPlayerWindow(section);
+}
+void UGameSession::DeleteCreativeAssignment()
+{
+  auto *inv = GetControlledInventory(World.get());
+  if (!inv || !inv->IsCreative())
+    return;
+  const size_t row = inv->GetActiveBarIndex(), slot = inv->GetActiveSlotIndex();
+  if (!inv->GetSlot(row * 10 + slot).IsCatalogReference())
+    return;
+  CancelDrag();
+  inv->ClearHotbarSlot(row, slot);
+}
+bool UGameSession::PickBlockUnderCrosshair()
+{
+  if (!World || World->GetGameMode() != WorldGameMode::Creative)
+    return false;
+  auto *actor = World->GetControlledCreature();
+  auto camera = World->GetCurrentUserCamera();
+  if (!actor || !camera || actor->CarryHandCount)
+    return false;
+  auto hit = RaycastSolidBlocks(
+      World->GetBlockWorld(), World->GetBlockRegistry(), camera->GetPosition(),
+      camera->GetFront(), 6.f, BlockRaycastTargetMode::Pointable);
+  if (!hit)
+    return false;
+  const auto id = World->GetBlockRegistry().GetTypeNameById(
+      World->GetBlockWorld().GetBlock(hit->blockPos));
+  auto &inv = actor->GetInventory();
+  for (size_t i = 0; i < 40; ++i)
+    if (!inv.GetSlot(i).empty && inv.GetSlot(i).Id == id &&
+        inv.GetSlot(i).kind == InventoryEntryKind::Block)
+    {
+      inv.SetActiveSlot(i / 10, i % 10);
+      return true;
+    }
+  InventoryEntryRef ref;
+  ref.empty = false;
+  ref.kind = InventoryEntryKind::Block;
+  ref.Id = id;
+  ref.count = 1;
+  ref.form = InventoryEntryForm::CatalogReference;
+  auto assign = [&](size_t i)
+  {
+    inv.AssignToHotbar(i / 10, i % 10, ref);
+    inv.SetActiveSlot(i / 10, i % 10);
+    return true;
+  };
+  const size_t active = inv.GetActiveBarIndex() * 10 + inv.GetActiveSlotIndex();
+  if (inv.GetSlot(active).empty || inv.GetSlot(active).IsCatalogReference())
+    return assign(active);
+  for (size_t i = 0; i < 40; ++i)
+    if (inv.GetSlot(i).empty)
+      return assign(i);
+  if (Application)
+    Application->ShowInteractionMessage(
+        "Inventory full: free a slot to pick this block", 2.f);
+  return false;
+}
 void UGameSession::DiscardInventory()
 {
   auto *inv = GetControlledInventory(World.get());
   auto *actor = World ? World->GetControlledCreature() : nullptr;
   if (!inv || !actor)
     return;
+  SlotSurface surface = SlotSurface::Hotbar;
   size_t index = inv->GetActiveBarIndex() * 10 + inv->GetActiveSlotIndex();
   int count = 1;
   if (Drag.Active)
   {
-    if (Drag.source.surface != SlotSurface::Hotbar)
+    if (!UInventoryOperations::Matches(*inv, Drag.sourceRevision,
+                                       Drag.sourceCreative) ||
+        Drag.sourceOwner != actor->GetId())
+    {
+      CancelDrag();
       return;
-    index = Drag.source.bar * 10 + Drag.source.slot;
+    }
+    surface = Drag.source.surface;
+    index = surface == SlotSurface::Hotbar
+                ? Drag.source.bar * 10 + Drag.source.slot
+                : Drag.source.slot;
     count = std::max(1, Drag.entry.count);
   }
-  const auto actual = inv->GetSlot(index);
-  if (actual.kind != InventoryEntryKind::Item &&
-      actual.kind != InventoryEntryKind::Block)
+  InventoryEntryRef actual;
+  if (surface == SlotSurface::Hotbar)
+    actual = inv->GetSlot(index);
+  else if (surface == SlotSurface::CharacterArmor)
+    actual = inv->GetEquippedArmor(index);
+  else if (surface == SlotSurface::CharacterOffhand)
+    actual = inv->GetEquippedOffhand();
+  else
     return;
-  InventoryEntryRef out;
-  if (!inv->Take(index, count, out))
+  if (actual.empty || (actual.kind != InventoryEntryKind::Item &&
+                       actual.kind != InventoryEntryKind::Block))
     return;
-  auto cam = World->GetCurrentUserCamera();
-  UWorldItemSystem::Instance().SpawnStack(
-      actor->GetEyePosition() + (cam ? cam->GetFront() * .9f : glm::vec3(0)),
-      out, inv->IsCreative());
-  CancelDrag();
+  auto &physics = UWorldItemSystem::Instance();
+  if (!physics.CanActivate() || !physics.ReserveDrops(1))
+  {
+    if (Application)
+      Application->ShowInteractionMessage("Physical body budget is busy");
+    return;
+  }
+  std::string reason;
+  auto publish = [&](const InventoryEntryRef &out)
+  { return physics.DropFromActor(*World, *actor, out, reason); };
+  const auto result =
+      surface == SlotSurface::Hotbar
+          ? UInventoryOperations::TransferToWorld(*inv, index, count, publish)
+          : UInventoryOperations::TransferEquipmentToWorld(
+                *inv, surface == SlotSurface::CharacterOffhand, index, publish);
+  if (result)
+    CancelDrag();
+  else if (Application)
+    Application->ShowInteractionMessage(reason.empty() ? result.reason
+                                                       : reason);
 }
 void UGameSession::SortInventory()
 {
@@ -606,13 +723,31 @@ void UGameSession::RecoverInventory(size_t index)
   CancelDrag();
   if (auto *inv = GetControlledInventory(World.get()))
   {
+    auto recover = [&](size_t slot)
+    {
+      if (slot >= inv->GetRecovery().size())
+        return;
+      const auto &entry = inv->GetRecovery()[slot];
+      if (entry.kind == InventoryEntryKind::Block &&
+          World->GetBlockRegistry().GetPackBlockIdByTypeName(entry.Id) ==
+              BLOCK_AIR)
+      {
+        if (Application)
+          Application->ShowInteractionMessage(
+              "Restore the missing resource pack before recovering this item");
+        return;
+      }
+      const auto result = inv->Recover(slot);
+      if (!result && Application)
+        Application->ShowInteractionMessage(result.reason);
+    };
     if (index != static_cast<size_t>(-1))
     {
-      inv->Recover(index);
+      recover(index);
       return;
     }
     for (size_t i = inv->GetRecovery().size(); i-- > 0;)
-      inv->Recover(i);
+      recover(i);
   }
 }
 
@@ -661,11 +796,12 @@ size_t UGameSession::GetInventorySignature() const
   size_t signature = inv->IsCreative() ? 1 : 0;
   auto mix = [&](size_t value)
   { signature ^= value + 0x9e3779b9u + (signature << 6) + (signature >> 2); };
-  for (const auto &row : inv->GetOwnedHotbars())
+  for (const auto &row : inv->GetHotbars())
     for (const auto &slot : row.slots)
     {
       const auto &e = slot.entry;
       mix(e.instanceId);
+      mix(static_cast<size_t>(e.form));
       mix(std::hash<std::string>{}(e.Id));
       mix(static_cast<size_t>(e.count));
       mix(std::hash<float>{}(e.wear));
@@ -710,12 +846,13 @@ UGameSession::GetEntries(ContentKind tab, const std::string &groupId,
     if (tab == ContentKind::UCreature || tab == ContentKind::Skin)
     {
       ref.count = 1;
+      ref.form = InventoryEntryForm::CatalogReference;
       result.push_back({ref, e.displayName});
       continue;
     }
     if (mode == InventoryMode::Owned && creatureInv)
     {
-      for (const auto &row : creatureInv->GetOwnedHotbars())
+      for (const auto &row : creatureInv->GetHotbars())
         for (const auto &slot : row.slots)
           if (!slot.empty && !slot.entry.empty && slot.entry.kind == ref.kind &&
               slot.entry.Id == e.Id)
@@ -783,7 +920,8 @@ bool UGameSession::CanAssignToHotbar(const InventoryEntryRef &entry,
   switch (entry.kind)
   {
   case InventoryEntryKind::Block:
-    if (World->GetBlockRegistry().GetIdByTypeName(entry.Id) == BLOCK_AIR)
+    if (World->GetBlockRegistry().GetPackBlockIdByTypeName(entry.Id) ==
+        BLOCK_AIR)
     {
       std::cerr
           << "GameSession: block not in registry, hotbar assign rejected: "
@@ -850,7 +988,7 @@ bool UGameSession::CanAssignToHotbar(const InventoryEntryRef &entry,
   case InventoryEntryKind::Skin:
   {
     if (inventoryMode == InventoryMode::Owned &&
-        !ModePolicy::AllowsMobSpawnFromPalette(ActiveWorldGameMode))
+        !ModePolicy::AllowsMobSpawnFromPalette(GetWorldGameMode()))
     {
       return false;
     }
@@ -902,6 +1040,14 @@ UGameSession::GetCreatureSpawnBlockedHint(const std::string &speciesId) const
   return World->GetCreatureSpawnBlockedHint(speciesId);
 }
 
+WorldGameMode UGameSession::GetWorldGameMode() const
+{
+  return World ? World->GetGameMode() : ActiveWorldGameMode;
+}
+WorldDifficulty UGameSession::GetWorldDifficulty() const
+{
+  return World ? World->GetDifficulty() : ActiveWorldDifficulty;
+}
 InventoryMode UGameSession::GetInventoryMode() const
 {
   if (CheatCreativeInventory)
@@ -919,6 +1065,7 @@ InventoryMode UGameSession::GetInventoryMode() const
 
 void UGameSession::SyncToWorldGameMode(WorldGameMode mode)
 {
+  CancelDrag();
   const WorldGameMode previous = ActiveWorldGameMode;
   ActiveWorldGameMode = mode;
   if (World)
@@ -983,8 +1130,8 @@ bool UGameSession::ApplyHumanAppearance(const HumanAppearance &value,
 CharacterStatsSnapshot UGameSession::GetCharacterStatsSnapshot() const
 {
   CharacterStatsSnapshot snap;
-  snap.gameMode = ActiveWorldGameMode;
-  snap.difficulty = ActiveWorldDifficulty;
+  snap.gameMode = World ? World->GetGameMode() : ActiveWorldGameMode;
+  snap.difficulty = World ? World->GetDifficulty() : ActiveWorldDifficulty;
   if (!World)
   {
     return snap;

@@ -44,10 +44,10 @@ int main()
   Expect(!ResourceEconomyService::ConsumeUnits(WorldGameMode::Survival, inv,
                                                block.kind, block.Id),
          "missing source cannot consume successfully");
-  ResourceEconomyService::GrantItemDrop(WorldGameMode::Survival, inv,
-                                        "raw_meat", 2);
+  InventoryEntryRef meat{InventoryEntryKind::Item, "raw_meat", 2, false};
+  inv.Insert(meat);
   Expect(inv.Count(InventoryEntryKind::Item, "raw_meat") == 2,
-         "item drop uses item kind");
+         "finite item seed is separate from block stock");
   inv.SetCreative(true);
   inv.InitCreativeDefaults();
   inv.SetActiveSlot(0, 1);

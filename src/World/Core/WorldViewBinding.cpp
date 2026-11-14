@@ -57,6 +57,17 @@ float gMountYawBefore = 0.0f;
 
 namespace cutum
 {
+void UWorld::SetGameMode(WorldGameMode mode)
+{
+  if (mode == GameMode)
+    return;
+  if (auto *actor = GetControlledCreature())
+  {
+    UWorldItemSystem::Instance().ReleaseCarrier(*this, actor->GetId());
+    actor->GetInventory().SetCreative(mode == WorldGameMode::Creative);
+  }
+  GameMode = mode;
+}
 
 namespace
 {

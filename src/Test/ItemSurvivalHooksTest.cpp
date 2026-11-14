@@ -1,6 +1,6 @@
 #include "Creatures/Core/CreatureInventory.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
-#include "Game/Economy/ResourceEconomy.h"
+#include "Game/ModePolicy.h"
 #include "Game/WorldGameMode.h"
 #include "Items/ItemDefinition.h"
 #include "Items/ItemUseRegistry.h"
@@ -40,22 +40,24 @@ int main()
     Expect(ItemUseConsumes(ItemUseAction::Eat), "eat consumes");
   }
 
-  // Creative grants no item drops; Survival does.
+  // Both modes permit world loot; finite Creative stock remains mode-local.
   {
-    UCreatureInventory creative;
-    creative.InitCreativeDefaults();
-    ResourceEconomyService::GrantItemDrop(WorldGameMode::Creative, creative,
-                                          "raw_meat", 1);
-    Expect(creative.GetStorage().count("raw_meat") == 0,
-           "creative skips meat drop");
-
-    UCreatureInventory survival;
-    ResourceEconomyService::GrantItemDrop(WorldGameMode::Survival, survival,
-                                          "raw_meat", 1);
-    ResourceEconomyService::GrantItemDrop(WorldGameMode::Survival, survival,
-                                          "leather", 1);
-    Expect(survival.GetStorage().at("raw_meat") == 1, "survival meat grant");
-    Expect(survival.GetStorage().at("leather") == 1, "survival leather grant");
+    Expect(ModePolicy::DropsFromCreatureDeath(WorldGameMode::Creative) &&
+               ModePolicy::DropsFromCreatureDeath(WorldGameMode::Survival),
+           "creatures drop loot in both modes");
+    Expect(ModePolicy::DropsBlocksOnBreak(WorldGameMode::Creative) &&
+               ModePolicy::AllowsWorldPickup(WorldGameMode::Creative),
+           "creative mining and pickup enabled");
+    UCreatureInventory inventory;
+    inventory.SetCreative(true);
+    InventoryEntryRef seed{InventoryEntryKind::Item, "raw_meat", 1, false};
+    inventory.Insert(seed);
+    Expect(inventory.Count(seed.kind, seed.Id) == 1 &&
+               !inventory.GetSlot(0).IsCatalogReference(),
+           "creative loot stock is finite");
+    inventory.SetCreative(false);
+    Expect(inventory.Count(seed.kind, seed.Id) == 0,
+           "creative loot stock stays out of survival");
   }
 
   // Creature drops field parse (cow-like).
@@ -85,21 +87,17 @@ int main()
     Expect(def && def->drops[1].itemId == "leather" && def->drops[1].count == 1,
            "leather drop");
 
-    // Simulate killer grant from parsed drops (same path InfluenceApplier
-    // uses).
+    // Validate parsed loot quantities; native fixtures exercise death and
+    // pickup.
     UCreatureInventory killer;
     for (const CreatureDropEntry &drop : def->drops)
     {
-      ResourceEconomyService::GrantItemDrop(WorldGameMode::Survival, killer,
-                                            drop.itemId, drop.count);
+      InventoryEntryRef item{InventoryEntryKind::Item, drop.itemId, drop.count,
+                             false};
+      killer.Insert(item);
     }
     Expect(killer.GetStorage().at("raw_meat") == 1, "killer received meat");
     Expect(killer.GetStorage().at("leather") == 1, "killer received leather");
-
-    // Unequipped RemoveCreature analogue: no automatic grant without killer
-    // loop.
-    UCreatureInventory empty;
-    Expect(empty.GetStorage().empty(), "no grant without killer path");
   }
 
   // Legacy 6-slot armor migrates arms/hands into storage.

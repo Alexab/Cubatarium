@@ -64,5 +64,6 @@
   },
   "use": {
     "interaction": "till"
-  }
+  },
+  "throw_category": "tool"
 }

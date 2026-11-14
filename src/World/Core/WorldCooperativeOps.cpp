@@ -15,11 +15,13 @@
 #include "World/Fluids/FluidColumnSummary.h"
 #include "World/Fluids/FluidSurfaceColumnSlice.h"
 #include "World/IO/ChunkStorageService.h"
+#include "World/Items/WorldItemSystem.h"
 #include "World/Lighting/ChunkLighting.h"
 #include "World/Lighting/IULightingPipeline.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Objects/ObjectLibrary.h"
+#include "World/Persistence/OwnershipSnapshot.h"
 #include "World/Persistence/WorldPersistence.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Streaming/ChunkRenderDemand.h"
@@ -1429,10 +1431,12 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   case Phase::Entities:
   {
     world.ResetCreaturesBeforeEntityLoad();
+    RestoreOwnershipBundle(FolderPath);
     world.LoadUsers(FolderPath + "/users.json");
     world.LoadCreatures(FolderPath + "/creatures.json");
     world.LinkUsersToPlayerCreatures();
     world.RefreshBlockRegistry();
+    UWorldItemSystem::Instance().ReconcileOwnership(world);
     world.GetChunkStorage().ApplyStorageMarkerFromDisk(FolderPath);
     Spatial.SpatialStreamingLoad =
         world.IsStreamingEnabled() && world.HasPersistedSave;
@@ -1613,6 +1617,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   case Phase::SaveMetadataCreatures:
   {
     world.SaveCreatures(FolderPath + "/creatures.json");
+    SaveOwnershipBundle(FolderPath);
     CurrentPhase = Phase::SaveMetadataWorldData;
     Report(sink, "save_metadata", -1.f, "Saving world metadata...");
     break;

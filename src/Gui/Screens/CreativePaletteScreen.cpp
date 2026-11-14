@@ -206,6 +206,7 @@ void UCreativePaletteScreen::ApplyMainTab(int tab)
 
 void UCreativePaletteScreen::OpenWithMainTab(int tab)
 {
+  SetListingBackpack(false);
   ApplyMainTab(tab);
   SetVisible(true);
 }
@@ -251,7 +252,7 @@ void UCreativePaletteScreen::Build(UGuiContext &ctx)
   Panel = panel.get();
 
   auto mainTabs = std::make_unique<UGuiTabBar>(Theme);
-  mainTabs->SetTabs({"Blocks", "Objects", "Creatures", "Skins", "Tools"});
+  mainTabs->SetTabs({"Blocks", "Objects", "Creatures", "Skins", "Items"});
   MainTabs = mainTabs.get();
   mainTabs->SetOnTabChanged([this](int tab) { ApplyMainTab(tab); });
 
@@ -297,20 +298,37 @@ void UCreativePaletteScreen::Build(UGuiContext &ctx)
   HotbarStripLabel = stripLabel.get();
   rootShell->AddChild(std::move(stripLabel));
 
-  auto catalogBtn = std::make_unique<UGuiButton>(Theme, "Cat");
+  auto catalogBtn = std::make_unique<UGuiButton>(Theme, "Catalog");
   CatalogButton = catalogBtn.get();
   CatalogButton->SetOnClick([this]() { SetListingBackpack(false); });
   rootShell->AddChild(std::move(catalogBtn));
 
-  auto bagBtn = std::make_unique<UGuiButton>(Theme, "Bag");
+  auto bagBtn = std::make_unique<UGuiButton>(Theme, "Backpack");
   BackpackButton = bagBtn.get();
-  BackpackButton->SetOnClick([this]() { SetListingBackpack(true); });
+  BackpackButton->SetOnClick(
+      [this]()
+      {
+        if (Session)
+          Session->OpenPlayerWindow(0);
+      });
   rootShell->AddChild(std::move(bagBtn));
 
   panel->AddChild(std::move(mainTabs));
   panel->AddChild(std::move(subTabs));
   panel->AddChild(std::move(scroll));
   rootShell->AddChild(std::move(panel));
+  auto navigation = std::make_unique<UGuiTabBar>(Theme);
+  PlayerTabs = navigation.get();
+  navigation->SetTabs(
+      {"Backpack", "Equipment", "Status", "Appearance", "Catalog"});
+  navigation->SetActiveTab(4);
+  navigation->SetOnTabChanged(
+      [this](int section)
+      {
+        if (section != 4 && Session)
+          Session->OpenPlayerWindow(section);
+      });
+  rootShell->AddChild(std::move(navigation));
 
   PreviewDock = std::make_unique<UContentPreviewDock>(Theme, PreviewRenderer);
   rootShell->AddChild(PreviewDock->ReleasePanel());
@@ -361,8 +379,17 @@ void UCreativePaletteScreen::RelayoutPanel()
     RootShell->SetBounds(
         {GetContentOffsetX(), GetContentOffsetY(), ViewportW, ViewportH});
   }
+  const int navH = Theme->TabBarHeight + Theme->Padding;
+  if (PlayerTabs)
+  {
+    PlayerTabs->SetBounds(
+        {layout.main.X, layout.main.Y, layout.main.W, Theme->TabBarHeight});
+    PlayerTabs->SetActiveTab(4);
+  }
+  layout.main.Y += navH;
+  layout.main.H = std::max(120, layout.main.H - navH);
   Panel->SetBounds(layout.main);
-  const int modeW = 56;
+  const int modeW = 100;
   GuiRect panelRect = layout.main;
   panelRect.X += modeW;
   panelRect.W = std::max(160, panelRect.W - modeW);
@@ -370,14 +397,14 @@ void UCreativePaletteScreen::RelayoutPanel()
   if (CatalogButton)
   {
     CatalogButton->SetVisible(CatalogAllowed);
-    CatalogButton->SetLabel(Listing == PaletteListing::Catalog ? "[Cat]"
-                                                               : "Cat");
+    CatalogButton->SetLabel(Listing == PaletteListing::Catalog ? "Catalog"
+                                                               : "Catalog");
     CatalogButton->SetBounds({panelRect.X - modeW, panelRect.Y, modeW - 6, 40});
   }
   if (BackpackButton)
   {
-    BackpackButton->SetLabel(Listing == PaletteListing::Backpack ? "[Bag]"
-                                                                 : "Bag");
+    BackpackButton->SetLabel(Listing == PaletteListing::Backpack ? "Backpack"
+                                                                 : "Backpack");
     BackpackButton->SetBounds(
         {panelRect.X - modeW, panelRect.Y + 46, modeW - 6, 40});
   }
@@ -931,11 +958,15 @@ void UCreativePaletteScreen::RebuildGrid()
   const std::string groupId = ActiveTypeId.empty() ? "misc" : ActiveTypeId;
   GridPendingViews = Session->GetEntries(Kind, groupId, CurrentListingMode());
   GridBuiltCount = 0;
+  // Built means this catalog snapshot is current, even while its widgets are
+  // still being appended. Keeping it false restarts every large grid each tick.
+  Built = true;
 
   // UX tail: materialize the first chunk only; Update appends the rest per
   // frame so the Blocks tab (1754 entries) does not construct every widget
   // in one tick.
   AppendGridSlotsChunk();
+  LayoutGridInScroll();
   if (GridBuiltCount >= GridPendingViews.size())
   {
     FinishGridBuild();

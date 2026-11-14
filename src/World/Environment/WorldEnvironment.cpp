@@ -1146,13 +1146,13 @@ void UWorldEnvironment::LoadCreatures(const std::string &file_name)
     {
       return;
     }
-    bool legacyInventory = false;
+    bool legacyInventory = data.contains("world_physical_v1");
     for (const auto &saved : data["creatures"])
-      legacyInventory |= saved.value("inventory_version", 0) < 3;
+      legacyInventory |= saved.value("inventory_version", 0) < 4;
     if (legacyInventory)
     {
       std::error_code backupError;
-      std::filesystem::copy_file(file_name, file_name + ".inventory-v2.bak",
+      std::filesystem::copy_file(file_name, file_name + ".inventory-pre-v4.bak",
                                  std::filesystem::copy_options::skip_existing,
                                  backupError);
       if (backupError)
@@ -1260,8 +1260,6 @@ void UWorldEnvironment::LoadCreatures(const std::string &file_name)
       ReadCreatureEffects(c, creature->GetStatusEffects());
       creature->GetInventory().SetItemDefinitions(
           Owner.GetItemDefinitionStorage());
-      creature->GetInventory().SetCreative(Owner.GetGameMode() ==
-                                           WorldGameMode::Creative);
       Creatures[id] = std::move(creature);
       ActivityDirector.OnCreatureAdded(id, def->behavior.Id, &def->behavior);
       NextCreatureId = std::max(NextCreatureId, id + 1);
@@ -1334,7 +1332,7 @@ void UWorldEnvironment::SaveCreatures(const std::string &file_name)
     {
       std::cerr << "SaveCreatures: cannot open " << tmp.string()
                 << " for writing" << std::endl;
-      return;
+      throw std::runtime_error("Cannot write creature ownership snapshot");
     }
     file << root.dump(2);
     file.flush();
@@ -1345,7 +1343,7 @@ void UWorldEnvironment::SaveCreatures(const std::string &file_name)
       file.close();
       std::error_code ignored;
       std::filesystem::remove(tmp, ignored);
-      return;
+      throw std::runtime_error("Cannot write creature ownership snapshot");
     }
   }
   std::error_code ec;
@@ -1361,6 +1359,7 @@ void UWorldEnvironment::SaveCreatures(const std::string &file_name)
   {
     std::cerr << "SaveCreatures: could not move " << tmp.string() << " to "
               << target.string() << ": " << ec.message() << std::endl;
+    throw std::runtime_error("Cannot commit creature ownership snapshot");
   }
 }
 

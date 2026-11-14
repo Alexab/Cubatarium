@@ -38,5 +38,6 @@
   },
   "use": {
     "interaction": "shear"
-  }
+  },
+  "throw_category": "utility"
 }

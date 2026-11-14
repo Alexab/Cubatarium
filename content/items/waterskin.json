@@ -47,5 +47,6 @@
       0.12
     ],
     "hardness": 1
-  }
+  },
+  "throw_category": "utility"
 }

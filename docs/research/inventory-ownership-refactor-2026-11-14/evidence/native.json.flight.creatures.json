@@ -1,0 +1,8507 @@
+{
+  "creatures": [
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 8,
+        "endurance": 10,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 8,
+        "strength": 6
+      },
+      "body_origin": [
+        -26.980724334716797,
+        78.5,
+        74.1592788696289
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "footprint_swapped": true,
+      "id": 2,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "hedgehog",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 24.0,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 24.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": 57.55887985229492
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 8,
+        "endurance": 10,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 8,
+        "strength": 6
+      },
+      "body_origin": [
+        -25.0812931060791,
+        64.5,
+        48.80489730834961
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "id": 3,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "hedgehog",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 21.900529861450195,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 24.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": 18.594806671142578
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 8,
+        "endurance": 10,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 8,
+        "strength": 6
+      },
+      "body_origin": [
+        18.96868324279785,
+        63.5,
+        57.55413818359375
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "footprint_swapped": true,
+      "id": 4,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "hedgehog",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 22.256088256835938,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 24.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": 96.4297866821289
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 10,
+        "endurance": 12,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 8,
+        "strength": 6
+      },
+      "body_origin": [
+        -32.265380859375,
+        59.07500076293945,
+        -9.641976356506348
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "id": 5,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "lobster",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 30.0,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 30.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": -7.481044769287109
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 10,
+        "endurance": 12,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 8,
+        "strength": 6
+      },
+      "body_origin": [
+        -42.14075469970703,
+        58.07500076293945,
+        -28.970123291015625
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "footprint_swapped": true,
+      "id": 6,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "lobster",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 30.0,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 30.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": -36.44021224975586
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 10,
+        "endurance": 12,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 8,
+        "strength": 6
+      },
+      "body_origin": [
+        -43.185768127441406,
+        59.07500076293945,
+        -11.503159523010254
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "id": 7,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "lobster",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 30.0,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 30.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": -17.678014755249023
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 10,
+        "endurance": 12,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 8,
+        "strength": 6
+      },
+      "body_origin": [
+        -41.409324645996094,
+        58.07500076293945,
+        -20.026369094848633
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "id": 8,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "lobster",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 30.0,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 30.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": 168.85435485839844
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 8,
+        "endurance": 10,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 8,
+        "strength": 6
+      },
+      "body_origin": [
+        36.54830551147461,
+        61.5,
+        57.74005889892578
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "id": 9,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "golem",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 24.0,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 24.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": -50.19234848022461
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 12,
+        "endurance": 10,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 8,
+        "strength": 6
+      },
+      "body_origin": [
+        -51.73891067504883,
+        64.5,
+        37.89677429199219
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "footprint_swapped": true,
+      "id": 10,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "bunny",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 5.7489213943481445,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 16.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": 79.62522888183594
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 12,
+        "endurance": 10,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 8,
+        "strength": 6
+      },
+      "body_origin": [
+        -52.51304244995117,
+        59.5,
+        24.826595306396484
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "footprint_swapped": true,
+      "id": 11,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "bunny",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 2.587264060974121,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 16.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": 107.00079345703125
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 12,
+        "endurance": 10,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 8,
+        "strength": 6
+      },
+      "body_origin": [
+        -26.352100372314453,
+        63.5,
+        34.28548812866211
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "id": 12,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "bunny",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 16.0,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 16.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": -23.838939666748047
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 12,
+        "endurance": 8,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 10,
+        "strength": 4
+      },
+      "body_origin": [
+        -22.882497787475586,
+        68.5,
+        105.34258270263672
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "id": 13,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "chicken",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 16.0,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 16.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": -90.43729400634766
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 8,
+        "endurance": 10,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 8,
+        "strength": 6
+      },
+      "body_origin": [
+        -16.44029998779297,
+        64.5,
+        104.58756256103516
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "id": 14,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "hedgehog",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 24.0,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 24.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": -27.734189987182617
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 8,
+        "endurance": 10,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 8,
+        "strength": 6
+      },
+      "body_origin": [
+        -17.19124984741211,
+        64.5,
+        104.67469024658203
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "id": 15,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "hedgehog",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 24.0,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 24.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": 4.0821027755737305
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 8,
+        "endurance": 10,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 8,
+        "strength": 6
+      },
+      "body_origin": [
+        -50.818450927734375,
+        66.5,
+        62.48125076293945
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "footprint_swapped": true,
+      "id": 16,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "tortoise",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 24.0,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 24.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": 70.65845489501953
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 8,
+        "endurance": 10,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 8,
+        "strength": 6
+      },
+      "body_origin": [
+        -48.10962677001953,
+        66.5,
+        61.62464141845703
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "id": 17,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "tortoise",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 24.0,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 24.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": -178.1625213623047
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 8,
+        "endurance": 10,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 8,
+        "strength": 6
+      },
+      "body_origin": [
+        -37.4656982421875,
+        65.5,
+        59.515621185302734
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "footprint_swapped": true,
+      "id": 18,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "tortoise",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 24.0,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 24.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": 85.95874786376953
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 8,
+        "endurance": 10,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 8,
+        "strength": 6
+      },
+      "body_origin": [
+        -55.87404251098633,
+        67.5,
+        70.4062728881836
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "id": 19,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "tortoise",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 24.0,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 24.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": 18.721532821655273
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 8,
+        "endurance": 10,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 8,
+        "strength": 6
+      },
+      "body_origin": [
+        -35.28835678100586,
+        65.5,
+        56.689422607421875
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "id": 20,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "tortoise",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 24.0,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 24.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": -5.525956630706787
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 8,
+        "endurance": 10,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 8,
+        "strength": 6
+      },
+      "body_origin": [
+        -52.68924331665039,
+        63.5,
+        33.18321228027344
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "footprint_swapped": true,
+      "id": 21,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "tortoise",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 24.0,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 24.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": 86.15640258789063
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 12,
+        "endurance": 10,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 8,
+        "strength": 6
+      },
+      "body_origin": [
+        -7.43769645690918,
+        63.5,
+        43.06300354003906
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "id": 22,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "bunny",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 16.0,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 16.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": 10.065228462219238
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 12,
+        "endurance": 8,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 10,
+        "strength": 4
+      },
+      "body_origin": [
+        -64.99836730957031,
+        63.5,
+        32.90177917480469
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "id": 23,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "chicken",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 16.0,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 16.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": 20.68608283996582
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 12,
+        "endurance": 8,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 10,
+        "strength": 4
+      },
+      "body_origin": [
+        -39.30828094482422,
+        65.5,
+        56.3326530456543
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "id": 24,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "chicken",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 16.0,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 16.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": 84.90656280517578
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 6,
+        "agility": 16,
+        "endurance": 8,
+        "intelligence": 4,
+        "luck": 8,
+        "perception": 12,
+        "strength": 4
+      },
+      "body_origin": [
+        -49.66346740722656,
+        68.40612030029297,
+        21.3930721282959
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "id": 25,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "flying",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "butterfly",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 12.0,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 12.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": -38.196983337402344
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 6,
+        "endurance": 12,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 8,
+        "strength": 8
+      },
+      "body_origin": [
+        -42.94209289550781,
+        67.5,
+        69.74795532226563
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "id": 26,
+      "inventory_creative": true,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 1,
+      "owned_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "natural_population",
+      "status_effects": [],
+      "type": "cow",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 32.0,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 32.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": -169.389404296875
+    },
+    {
+      "active_bar": 0,
+      "active_slot": 0,
+      "attributes": {
+        "accuracy": 4,
+        "agility": 12,
+        "endurance": 10,
+        "intelligence": 3,
+        "luck": 6,
+        "perception": 8,
+        "strength": 6
+      },
+      "body_origin": [
+        -52.0,
+        73.4825439453125,
+        45.41577911376953
+      ],
+      "creative_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "creative_offhand": {
+        "empty": true
+      },
+      "creative_recovery": [],
+      "creative_slots": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_armor": [
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "equipped_offhand": {
+        "empty": true
+      },
+      "id": 27,
+      "inventory_creative": false,
+      "inventory_migration_warnings": [],
+      "inventory_recovery": [],
+      "inventory_version": 4,
+      "movement_mode": "walking",
+      "next_instance_id": 117614272094076932,
+      "owned_slots": [
+        {
+          "broken": false,
+          "contents_id": "",
+          "contents_units": 0,
+          "count": 2,
+          "empty": false,
+          "form": "finite",
+          "id": "apple",
+          "instance_id": 117614272094076931,
+          "kind": "item",
+          "pinned": false,
+          "wear": 0.0
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        },
+        {
+          "empty": true
+        }
+      ],
+      "pitch": 0.0,
+      "spawn_source": "qa",
+      "status_effects": [
+        {
+          "accumulator": 0.0,
+          "id": "slow",
+          "remaining": 6.0,
+          "stacks": 1
+        }
+      ],
+      "type": "rat",
+      "vitals": {
+        "armor": 0.0,
+        "breath": 100.0,
+        "fatal_wounds": 0,
+        "fatigue": 0.0,
+        "health": 16.0,
+        "max_breath": 100.0,
+        "max_fatal_wounds": 1,
+        "max_fatigue": 100.0,
+        "max_health": 16.0,
+        "max_satiety": 100.0,
+        "max_thirst": 100.0,
+        "satiety": 100.0,
+        "thirst": 100.0
+      },
+      "yaw": 0.0
+    }
+  ],
+  "format_version": 2,
+  "physical_deaths": [],
+  "physical_recovery": [],
+  "survival_v1": {
+    "crops": [],
+    "sheared": []
+  },
+  "world_physical_v2": [
+    {
+      "action_domain": "survival",
+      "age": 0.0,
+      "arrow": false,
+      "broken": false,
+      "carrier": 0,
+      "carrier_domain": "survival",
+      "charge": 0.0,
+      "contact_cooldown": 0.0,
+      "contents": "",
+      "count": 1,
+      "creature": 27,
+      "damage": 0.0,
+      "domain": "survival",
+      "flying": true,
+      "hardness": 1.0,
+      "held_time": 0.0,
+      "id": 1,
+      "instance": 0,
+      "item": "",
+      "kind": 0,
+      "last_contact": 0,
+      "mass": 3.004849910736084,
+      "motion": "flight",
+      "pickup_separated": false,
+      "pinned": false,
+      "position": [
+        -52.0,
+        73.6075439453125,
+        45.41577911376953
+      ],
+      "size": [
+        0.33000001311302185,
+        0.25,
+        0.8700000047683716
+      ],
+      "thrower": 1,
+      "units": 0,
+      "velocity": [
+        0.0,
+        0.0,
+        13.979422569274902
+      ],
+      "wear": 0.0
+    }
+  ]
+}

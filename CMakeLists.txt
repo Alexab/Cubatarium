@@ -1208,6 +1208,10 @@ cubatarium_add_test(NAME armor_equipment_test
         src/Test/ArmorEquipmentTest.cpp
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
+cubatarium_add_test(NAME ownership_snapshot_test SOURCES src/Test/OwnershipSnapshotTest.cpp LIBRARIES nlohmann_json::nlohmann_json)
+add_test(NAME ownership_snapshot_test COMMAND $<TARGET_FILE:ownership_snapshot_test>)
+set_tests_properties(ownership_snapshot_test PROPERTIES LABELS "unit;items")
+
 cubatarium_add_test(NAME throw_math_test SOURCES src/Test/ThrowMathTest.cpp LIBRARIES glm::glm)
 add_test(NAME throw_math_test COMMAND $<TARGET_FILE:throw_math_test>)
 set_tests_properties(throw_math_test PROPERTIES LABELS "unit;items")

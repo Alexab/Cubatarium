@@ -5,9 +5,9 @@
 #include "Gui/Core/GuiScreenBase.h"
 #include "Gui/Interfaces/IUContentCatalog.h"
 #include "Gui/Interfaces/IUInventoryViewModel.h"
-#include <vector>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace cutum
 {
@@ -52,6 +52,11 @@ public:
   /// Creative may show the full catalog. Survival is backpack-only.
   void SetCatalogAllowed(bool allowed);
   int GetActiveMainTab() const;
+  size_t GetGridEntryCount() const { return GridEntryIds.size(); }
+  bool IsGridComplete() const
+  {
+    return Built && GridBuiltCount == GridPendingViews.size();
+  }
   void InvalidateGrid() { Built = false; }
   void SetPointerPosition(int x, int y);
   void SetPointerPressed(bool pressed);
@@ -91,6 +96,7 @@ private:
   std::vector<std::string> GridEntryLabels;
   std::vector<std::string> GridSpawnHints;
   UGuiPanel *Panel{nullptr};
+  UGuiTabBar *PlayerTabs{nullptr};
   UGuiTabBar *MainTabs{nullptr};
   UGuiTabBar *SubTabs{nullptr};
   UGuiButton *CatalogButton{nullptr};

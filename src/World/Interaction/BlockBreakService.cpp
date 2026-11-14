@@ -88,6 +88,8 @@ bool UBlockBreakService::Complete(UWorld &world)
           IsToolWearEnabled(world.GetGameMode(), world.GetDifficulty()));
     }
   }
+  if (!UWorldItemSystem::Instance().ReserveDrops(3))
+    return false;
   world.GetPhysicsTelemetryMutable().BreakCompleteN++;
   if (!world.DelBlockAt(pos))
   {

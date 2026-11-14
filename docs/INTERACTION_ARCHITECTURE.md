@@ -65,3 +65,7 @@ Example: sword has `damage.fleshy` for melee and `groupcaps.snappy` for leaves â
 | `Use` | Eat and drink shipped; `place_block` places from the held item (torch). Social UI remains TD-INF-004 |
 | `Ranged` | Charged physical bow/arrow; swept collisions call the shared impact damage path. Aura still future |
 | `None` | No influence this tick |
+
+## Property ownership and physical actions, 2026-11-14
+
+Finite transfers use inventory operations with source revisions and preflight publication; Creative action costs remain a separate policy. Block breaks reserve drop capacity before mutation. NPC death dispatches once through WorldItemSystem; action domain is frozen at release. Physical payload domain remains independent. [Final audit and evidence](research/inventory-ownership-refactor-2026-11-14/README.md).

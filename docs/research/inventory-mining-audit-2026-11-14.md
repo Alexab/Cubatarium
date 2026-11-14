@@ -212,3 +212,7 @@ cmake --build build/desktop-msvc --config Release --target Cubatarium --parallel
 рассматривать отдельно: сейчас общий `DropsBlocksOnBreak` используется в melee,
 а физическое убийство проверяет Survival напрямую, поэтому смена одного bool
 даст разные правила для двух способов убийства.
+
+## Итог реализации
+
+Причины INV-01–INV-07 устранены системным рефакторингом; исходный аудит выше сохранён как историческое основание. [Final audit and evidence](inventory-ownership-refactor-2026-11-14/README.md).

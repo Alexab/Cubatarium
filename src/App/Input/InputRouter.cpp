@@ -300,7 +300,8 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
       return true;
     }
     if (!app.ConsoleOpen && app.World &&
-        (key == GLFW_KEY_Q || key == GLFW_KEY_E))
+        (key == GLFW_KEY_Q ||
+         (key == GLFW_KEY_E && !KeyNameIs(app.Ui.InventoryKey, key))))
     {
       if (auto cam = app.World->GetCurrentUserCamera())
       {
@@ -313,47 +314,12 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
     }
     if (!app.ConsoleOpen && KeyNameIs(app.Ui.PaletteKey, key))
     {
-      if (!app.World ||
-          !ModePolicy::AllowsCreativePalette(app.World->GetGameMode()))
-      {
-        if (app.Geometry)
-        {
-          app.Geometry->ShowTransientMessage(
-              "Creative palette is not available in Survival mode", 2.5);
-        }
-        return true;
-      }
-      const bool sameTabOpen = app.PaletteOpen && app.PaletteScreen &&
-                               app.PaletteScreen->GetActiveMainTab() == 0;
-      if (sameTabOpen)
-      {
-        app.PaletteOpen = false;
-        if (app.PaletteScreen)
-        {
-          app.PaletteScreen->SetVisible(false);
-        }
-        app.GuiContext->ClearInputState();
-      }
-      else
-      {
-        app.PaletteOpen = true;
-        app.WorldGenOpen = false;
-        if (app.WorldGenScreen)
-        {
-          app.WorldGenScreen->SetVisible(false);
-        }
-        if (app.PaletteScreen)
-        {
-          app.PaletteScreen->OpenWithMainTab(0);
-        }
-      }
-#if defined(__ANDROID__)
-      if (app.PaletteOpen && app.HudScreen)
-      {
-        app.HudScreen->ReleaseTouchCaptures();
-      }
-#endif
-      app.SyncCursorVisibility();
+      if (app.GameSession && app.World &&
+          ModePolicy::AllowsCreativePalette(app.World->GetGameMode()))
+        app.GameSession->OpenPlayerWindow(4);
+      else if (app.Geometry)
+        app.Geometry->ShowTransientMessage("Catalog is available in Creative",
+                                           2.f);
       return true;
     }
     if (!app.ConsoleOpen && KeyNameIs(app.Ui.CraftKey, key))
@@ -363,21 +329,20 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
     }
     if (!app.ConsoleOpen && KeyNameIs(app.Ui.InventoryKey, key))
     {
-      app.CharacterSheetOpen = !app.CharacterSheetOpen;
-      app.PaletteOpen = false;
-      app.WorldGenOpen = false;
-      if (app.PaletteScreen)
-        app.PaletteScreen->SetVisible(false);
-      if (app.WorldGenScreen)
-        app.WorldGenScreen->SetVisible(false);
-      if (app.CharacterSheetScreen)
+      if (app.CharacterSheetOpen || app.PaletteOpen)
       {
-        app.CharacterSheetScreen->SetVisible(app.CharacterSheetOpen);
-        if (app.CharacterSheetOpen)
-          app.CharacterSheetScreen->SetSection(0);
+        app.CharacterSheetOpen = false;
+        app.PaletteOpen = false;
+        if (app.CharacterSheetScreen)
+          app.CharacterSheetScreen->SetVisible(false);
+        if (app.PaletteScreen)
+          app.PaletteScreen->SetVisible(false);
+        app.SyncCursorVisibility();
       }
+      else if (app.GameSession && app.World)
+        app.GameSession->OpenPlayerWindow(
+            app.World->GetGameMode() == WorldGameMode::Creative ? 4 : 0);
       app.GuiContext->ClearInputState();
-      app.SyncCursorVisibility();
       return true;
     }
 
@@ -579,6 +544,11 @@ bool UInputRouter::RouteMouseButton(UApplication &app, int button, bool pressed,
     app.WorldGenScreen->SetPointerPressed(pressed);
   }
 
+  if (app.State == AppState::InGame && pressed &&
+      event.Button == GuiMouseButton::Middle && !app.ConsoleOpen &&
+      !app.PaletteOpen && !app.CharacterSheetOpen && !app.CraftingOpen &&
+      !app.AnvilOpen && !app.WorldGenOpen && app.GameSession)
+    return app.GameSession->PickBlockUnderCrosshair();
   if (app.State == AppState::InGame)
   {
     app.DragCursorX = x;

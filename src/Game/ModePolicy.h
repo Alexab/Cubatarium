@@ -1,8 +1,8 @@
 #ifndef MODE_POLICY_H
 #define MODE_POLICY_H
 
-#include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Creatures/Core/CreatureSpawnSource.h"
+#include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
 
@@ -52,8 +52,7 @@ struct ModePolicy
     return true;
   }
 
-  static bool AllowsHostileAggro(WorldGameMode mode,
-                                 WorldDifficulty difficulty)
+  static bool AllowsHostileAggro(WorldGameMode mode, WorldDifficulty difficulty)
   {
     if (mode != WorldGameMode::Survival)
     {
@@ -65,8 +64,8 @@ struct ModePolicy
   static bool AllowsHostileSpawning(WorldGameMode mode,
                                     WorldDifficulty difficulty)
   {
-    const bool knownMode = mode == WorldGameMode::Creative ||
-                           mode == WorldGameMode::Survival;
+    const bool knownMode =
+        mode == WorldGameMode::Creative || mode == WorldGameMode::Survival;
     return knownMode && difficulty != WorldDifficulty::Peaceful;
   }
 
@@ -84,8 +83,7 @@ struct ModePolicy
     case CreatureSpawnSource::DebugCommand:
       return mode == WorldGameMode::Creative;
     case CreatureSpawnSource::NaturalPopulation:
-      return mode == WorldGameMode::Creative ||
-             mode == WorldGameMode::Survival;
+      return mode == WorldGameMode::Creative || mode == WorldGameMode::Survival;
     case CreatureSpawnSource::Qa:
       return AllowsQaSpawner(mode);
     case CreatureSpawnSource::LegacySave:
@@ -146,7 +144,16 @@ struct ModePolicy
 
   static bool DropsBlocksOnBreak(WorldGameMode mode)
   {
-    return mode == WorldGameMode::Survival;
+    return mode == WorldGameMode::Survival || mode == WorldGameMode::Creative;
+  }
+
+  static bool DropsFromCreatureDeath(WorldGameMode mode)
+  {
+    return mode == WorldGameMode::Creative || mode == WorldGameMode::Survival;
+  }
+  static bool AllowsWorldPickup(WorldGameMode mode)
+  {
+    return mode == WorldGameMode::Creative || mode == WorldGameMode::Survival;
   }
 
   static bool AllowsMobSpawnFromPalette(WorldGameMode mode)

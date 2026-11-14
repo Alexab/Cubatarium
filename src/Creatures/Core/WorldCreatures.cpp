@@ -1,13 +1,14 @@
+#include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Definition/SkinDefinitionStorage.h"
 #include "Creatures/Environment/CreatureEnvironment.h"
+#include "Creatures/Player/PlayerCapsule.h"
 #include "Creatures/Visual/CreatureAppearance.h"
 #include "Render/Camera/Camera.h"
-#include "Creatures/Core/CreatureBounds.h"
-#include "Creatures/Player/PlayerCapsule.h"
+#include "World/Core/World.h"
+#include "World/Items/WorldItemSystem.h"
 #include "World/Math/GridMath.h"
 #include "World/Streaming/WorldStreaming.h"
-#include "World/Core/World.h"
 #include <algorithm>
 
 namespace cutum
@@ -51,8 +52,9 @@ UWorld::QueryCreatureNeighborsOverlappingVolume(const CollisionVolume &vol,
   return Environment.QueryCreatureNeighborsOverlappingVolume(vol, skip_id);
 }
 
-std::vector<CreatureNeighborView> UWorld::QueryCreatureNeighborsInRadius(
-    const glm::vec3 &center, float radius, CreatureId skip_id) const
+std::vector<CreatureNeighborView>
+UWorld::QueryCreatureNeighborsInRadius(const glm::vec3 &center, float radius,
+                                       CreatureId skip_id) const
 {
   return Environment.QueryCreatureNeighborsInRadius(center, radius, skip_id);
 }
@@ -76,8 +78,8 @@ std::optional<glm::vec3> UWorld::GetCreatureBodyOrigin(CreatureId id) const
 }
 
 bool UWorld::CanCreatureOccupyAt(CreatureHabitat habitat,
-                               const glm::vec3 &bodyOrigin,
-                               const glm::vec3 &sizeBlocks) const
+                                 const glm::vec3 &bodyOrigin,
+                                 const glm::vec3 &sizeBlocks) const
 {
   return cutum::CanCreatureOccupyAt(*this, habitat, bodyOrigin, sizeBlocks);
 }
@@ -129,8 +131,7 @@ bool UWorld::IsWithinActivityRange(const glm::vec3 &body_origin) const
     return true;
   }
   const glm::vec3 eyePos = camera->GetPosition();
-  float feetY =
-      FeetYFromEye(eyePos, controlled_creature->GetEyeOffset().y);
+  float feetY = FeetYFromEye(eyePos, controlled_creature->GetEyeOffset().y);
   if (!camera->GetFreeMove() && camera->HasAnchoredFeet())
   {
     feetY = BoundsFeetY(controlled_creature->GetBodyOrigin());
@@ -181,7 +182,10 @@ const UCreature *UWorld::GetControlledCreature() const
   return Environment.GetControlledCreature();
 }
 
-UCreature *UWorld::GetPlayerCreature() { return Environment.GetPlayerCreature(); }
+UCreature *UWorld::GetPlayerCreature()
+{
+  return Environment.GetPlayerCreature();
+}
 
 const UCreature *UWorld::GetPlayerCreature() const
 {
@@ -190,11 +194,21 @@ const UCreature *UWorld::GetPlayerCreature() const
 
 bool UWorld::SetControlledCreature(CreatureId id)
 {
-  return Environment.SetControlledCreature(id);
+  if (!GetCreature(id))
+    return false;
+  if (auto *previous = GetControlledCreature();
+      previous && previous->GetId() != id)
+    UWorldItemSystem::Instance().ReleaseCarrier(*this, previous->GetId());
+  const auto result = Environment.SetControlledCreature(id);
+  if (result)
+    if (auto *creature = GetControlledCreature())
+      creature->GetInventory().SetCreative(GetGameMode() ==
+                                           WorldGameMode::Creative);
+  return result;
 }
 
-void UWorld::ApplyLocomotionDefinitionToCamera(UCamera &camera,
-                                               const CreatureDefinition &def) const
+void UWorld::ApplyLocomotionDefinitionToCamera(
+    UCamera &camera, const CreatureDefinition &def) const
 {
   camera.ApplyCreatureLocomotion(def.locomotion, def.bounds, def.eyeHeight);
 }
@@ -231,7 +245,13 @@ CreatureId UWorld::SpawnCreature(const std::string &speciesId,
   return Environment.SpawnCreature(speciesId, bodyOrigin, skinId, source);
 }
 
-void UWorld::RemoveCreature(CreatureId id) { Environment.RemoveCreature(id); }
+void UWorld::RemoveCreature(CreatureId id)
+{
+  if (auto *creature = GetCreature(id);
+      creature && creature->GetVitals().health <= 0)
+    UWorldItemSystem::Instance().HandleDeath(*this, *creature);
+  Environment.RemoveCreature(id);
+}
 
 uint64_t UWorld::GetCreatureGeneration() const
 {

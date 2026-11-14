@@ -1,5 +1,6 @@
 #include "Creatures/Core/CreatureInventory.h"
 #include "Game/Crafting/RecipeRegistry.h"
+#include "Game/Inventory/InventoryOperations.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Items/ToolCapabilities.h"
 #include <iostream>
@@ -209,6 +210,65 @@ int main()
              creativeLoaded.GetSlot(0).count == 1 &&
              creativeLoaded.GetSlot(1).count == 3,
          "v3 negative catalog counts migrate without converting finite stock");
+  const auto beforeTransfer = Snapshot(creativeFinite);
+  auto rejected = UInventoryOperations::TransferToWorld(
+      creativeFinite, 1, 1, [](const InventoryEntryRef &) { return false; });
+  Expect(!rejected && Snapshot(creativeFinite) == beforeTransfer,
+         "world rejection preserves original inventory");
+  auto revision = creativeFinite.GetRevision();
+  Expect(UInventoryOperations::Matches(creativeFinite, revision, true),
+         "current revision validates");
+  creativeFinite.Take(1, 1, extracted);
+  Expect(!UInventoryOperations::Matches(creativeFinite, revision, true),
+         "stale revision rejects transfer");
+  creativeFinite.AddItem("unknown-mod-item", 1);
+  // Overflow is domain-local even when there are no free slots.
+  UCreatureInventory recoveries;
+  recoveries.SetItemDefinitions(&defs);
+  recoveries.SetCreative(true);
+  for (int i = 0; i < 40; ++i)
+    recoveries.Insert(Item("iron_pickaxe"));
+  recoveries.AddItem("iron_pickaxe");
+  Expect(recoveries.GetRecovery().size() == 1, "creative overflow recorded");
+  recoveries.SetCreative(false);
+  Expect(recoveries.GetRecovery().empty(),
+         "survival cannot recover creative overflow");
+  auto recoverySave = Snapshot(recoveries);
+  recoveries.DeserializeFromJson(recoverySave);
+  recoveries.SetCreative(true);
+  Expect(recoveries.GetRecovery().size() == 1,
+         "creative recovery persists across mode and load");
+  UCreatureInventory partial;
+  partial.SetItemDefinitions(&defs);
+  for (int i = 0; i < 39; ++i)
+    partial.Insert(Item("iron_pickaxe"));
+  InventoryEntryRef stone;
+  stone.empty = false;
+  stone.kind = InventoryEntryKind::Block;
+  stone.Id = "stone";
+  stone.count = 63;
+  partial.Insert(stone);
+  auto partialSave = Snapshot(partial);
+  auto overflow = partialSave["owned_slots"][39];
+  overflow["count"] = 2;
+  overflow["instance_id"] = 0;
+  partialSave["inventory_recovery"].push_back(overflow);
+  partial.DeserializeFromJson(partialSave);
+  UCreatureInventory recoveryOtherOwner;
+  recoveryOtherOwner.SetItemDefinitions(&defs);
+  stone.count = 1;
+  recoveryOtherOwner.Insert(stone);
+  const auto recovered = partial.Recover(0);
+  Expect(recovered.transferred == 1 && recovered.remainder == 1 &&
+             partial.GetRecovery()[0].instanceId !=
+                 recoveryOtherOwner.GetSlot(0).instanceId,
+         "partial recovery uses globally unique remainder identity");
+  Expect(defs.Get("wood_bow")->ThrowClass == ThrowCategory::Weapon &&
+             defs.Get("wood_spear")->ThrowClass == ThrowCategory::Weapon &&
+             defs.Get("wood_torch")->ThrowClass == ThrowCategory::Utility &&
+             defs.Get("apple")->ThrowClass == ThrowCategory::Food,
+         "throw roles classify existing weapons utilities and food "
+         "independently of catalog tabs");
   std::cout << "inventory_transactions_test failures=" << failures << '\n';
   return failures ? 1 : 0;
 }

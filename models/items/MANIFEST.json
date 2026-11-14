@@ -13,7 +13,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/apple.json": "fdd3a3184be326eac615267c3f953f66587bde9204ab9b0eb1fff33ae4443e0b",
+        "content/items/apple.json": "12194366da3a4ce5e8c72e62a8053ab166b08cd0a418169cb9b696a60f758bf7",
         "tools/item_recipes/apple.yaml": "fbd548749be7b7ed494ab568d57271da292bbdccdfc9857a94b0ded238ce6a61",
         "models/items/apple/ATTRIBUTION.json": "c705d31f2ac4f51e5ab15539a5cc5b77c6d384ef1387914756c7c1308ba62622",
         "models/items/apple/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -38,7 +38,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/arrow.json": "dda9c869117d832e34856570a26974f7cbdc3e7c2131e0467cbb09f668a65316",
+        "content/items/arrow.json": "eec4ab7fef782d0a1266b8700143c38354b0e322eee9de6fc59b26c442211fc3",
         "tools/item_recipes/arrow.yaml": "45447ee62d38fb7484262e43e82c1c46ffd73da6a38b5d6826e8c3f805831193",
         "models/items/arrow/ATTRIBUTION.json": "bd5496936e198f5be5a5bc86940a9d31fcdbef512ed0d78f085b517905d32fd9",
         "models/items/arrow/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -63,7 +63,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/bread.json": "cd8c477167ad87587b74ee38556155ffa16ff4b5269bec070c560a348823bea6",
+        "content/items/bread.json": "191465a1bf2835c8a1ce2f07782527889e0eeadc7839b4bc9a0877852c18e246",
         "tools/item_recipes/bread.yaml": "0776148365782bad16030a2619d67e70b62eeb53597e1314b09ab9ad3fd34ecc",
         "models/items/bread/ATTRIBUTION.json": "41c9496f61cde70514ef984149c34ef4cb8a870310b6e1e38f8d64ca08635f2b",
         "models/items/bread/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -88,7 +88,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/bucket.json": "73557191bb70b942213fe72736dc9381d79b8272fcb5ed4740370acb6ea941fe",
+        "content/items/bucket.json": "76140cc4db3ab271b1a8c6d8f9b38223c3ff84a77e18a81b975c4ee87d751ff1",
         "tools/item_recipes/bucket.yaml": "894f0118038952a14ca6a9d48b19181a0f177365515420a8640b2c405cb6da3a",
         "models/items/bucket/ATTRIBUTION.json": "bbf2556ef2072bd69e7ce8c73ae74e59e2d94fcb5861c33ec83d208066aae1c7",
         "models/items/bucket/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -113,7 +113,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/charcoal.json": "650269779a481d8c9eff005b02f6d7467581964cf9286590a1d568fc523d652d",
+        "content/items/charcoal.json": "bee6b2dfd93c51dc7392c1d7a28e825c0e4bd2c76e82a013f73a5ce5a70a970e",
         "tools/item_recipes/charcoal.yaml": "36212592a03af46d8b341422456154c371f28caf01d0ee9df76eecf67e8e8fbe",
         "models/items/charcoal/ATTRIBUTION.json": "3d146474645f94a75867dac5b1cf8e32de441ccc2f73376afd141b2a1664597b",
         "models/items/charcoal/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -138,7 +138,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/coal.json": "960481c230fe45aca5c0cd0856702a08d924ebb29c7d7f3ee7d90bb065864be8",
+        "content/items/coal.json": "eb64c7d4761cb7931f8741848cc23bceedcc76054838255b5a7ceb697f2086f7",
         "tools/item_recipes/coal.yaml": "4c21d195ea3a2fed549efa608c27fc510816314ba3b296d8704589a44e5f21d0",
         "models/items/coal/ATTRIBUTION.json": "52a25b31029a89bfa603f299d8112852567eb61c0bd328277c5cbc46d75eb193",
         "models/items/coal/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -163,7 +163,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/cooked_meat.json": "f27b430231b1a8fea1c16a9c92a810cd0d821a6c93f9b7574c36c843902cb468",
+        "content/items/cooked_meat.json": "2ae5fe939a1f2d0854ac8e43ea645e81af27a7a2d3636318782300839bdfc72d",
         "tools/item_recipes/cooked_meat.yaml": "ed4402c6d2cf402f53f75702afc78fef061c25975d8fe22515052bdb56842310",
         "models/items/cooked_meat/ATTRIBUTION.json": "a4495a7d2834452d99e9183787d29e60c9c0be3e25b3f2b8563764346005cece",
         "models/items/cooked_meat/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -188,7 +188,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/copper_axe.json": "bf73173698a7b2424e11f1aae8d38faa5917375cc085a56622b96cca4be92458",
+        "content/items/copper_axe.json": "d80d67beb92d69b9de3087d0849a94cb9922bfa60bf570bb65615e3c72066e26",
         "tools/item_recipes/copper_axe.yaml": "48eb8caaa2136eb0be010394b5fff3af488fd1850df81acdabd0eeeb163e7d18",
         "models/items/copper_axe/ATTRIBUTION.json": "8386c797a44179ac73652d6a123c7db72a263c6f138c1c1262e86d57528892c5",
         "models/items/copper_axe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -214,7 +214,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/copper_chest.json": "cc65c6aec2cd8f106da85c9893a813f8eade0af739038f37336d56e167bbef17",
+        "content/items/copper_chest.json": "2fd732524d60dd7297cef42c7e5db1970741e43decc073b79c90b45b02eb478d",
         "tools/item_recipes/copper_chest.yaml": "2e1f12ff24a77baf6431af85eb2463c539d980ca5cadec14b26fa4b362d1fd0a",
         "models/items/copper_chest/ATTRIBUTION.json": "c8e997d6b9f8986f1111c8b2cfccafdb9126b3c37fc8ab3adb87334a13745ae7",
         "models/items/copper_chest/gltf_buffer_0.bin": "24c5fd76306c37677bd634232230315644f4ab18d2254b6340d4ac94bace116a",
@@ -245,7 +245,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/copper_feet.json": "cecc40ad83e6bb42d6743504ec0cba3701fb645db85f1fe70fd05eff858c3671",
+        "content/items/copper_feet.json": "ecc56259a515122cdc2dacae0232ea614262d5bdd1cbbd6084d664b324723c3b",
         "tools/item_recipes/copper_feet.yaml": "5c5c6f501d9d280f31eb37abee1366bd9b4687d433ce6efd1d6bbe5173962749",
         "models/items/copper_feet/ATTRIBUTION.json": "aeecf05a070e3f780ad46ba555f010294fb862984d2108a01be9e9fe74d2dcd7",
         "models/items/copper_feet/gltf_buffer_0.bin": "1c0fd5389192104f25978864a5144afa515d44bcb9e064ae921356b294f4dbd6",
@@ -274,7 +274,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/copper_head.json": "31da5581389a72e73b0fed815ba040bbef699107b1cace7ec8321d894c0683cb",
+        "content/items/copper_head.json": "ad53186a493eab71d6706e3009bd5b2619897f41713b592aad629815f80b3b24",
         "tools/item_recipes/copper_head.yaml": "ab17e326bebc416b9128ac567d8101d29d63c2e01dac333cb2c4282f2d687f29",
         "models/items/copper_head/ATTRIBUTION.json": "37609a11a7d8d6001560af91f34cd80c965b540b3fd4a69aacfe123f7d1074f2",
         "models/items/copper_head/gltf_buffer_0.bin": "343f83f2df60c4917a99956803480976f4030d73dec3ce6a9013a052aeb03409",
@@ -302,7 +302,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/copper_hoe.json": "4deffb4d2f38a2063fe08f4c5159b9e79d3ba701628e85f689e70e4d7e6a01ae",
+        "content/items/copper_hoe.json": "fabeb7937e6e0caf4f14185d4ebbebf366b0ee26c33fbdc84573ee71a4ab8720",
         "tools/item_recipes/copper_hoe.yaml": "8f01c2450c62691d023c9c5390ee347ff4e88c1a4ea86d9ea3887bb62e8a485b",
         "models/items/copper_hoe/ATTRIBUTION.json": "085d322836b2b894afbed8239ac13554d7061f7dfa31be06bfd64b25d223e13c",
         "models/items/copper_hoe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -327,7 +327,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/copper_ingot.json": "112d03e21b1cba55c5fba0985aa6d1cff8fcf26e5d7f6586b857bfb139035c0c",
+        "content/items/copper_ingot.json": "b8289b4e9855bf387b281fdd8e588e61115a98acd51ad392c5fce96a5fabc3a4",
         "tools/item_recipes/copper_ingot.yaml": "fb83671ecf646b3795be13e5ef837720f8e629abf85b746391fce6640696de88",
         "models/items/copper_ingot/ATTRIBUTION.json": "3a52c77d3d216830448ac545b9cc54857efd68058e2c193b75daa7faecd9f85e",
         "models/items/copper_ingot/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -352,7 +352,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/copper_legs.json": "ead18f16aed6f8ef730976a89a25c105c689e6dfb50656600d5ee274744dbbed",
+        "content/items/copper_legs.json": "e7579d8f82217c2ab9fd259ab5e0b5db361147756ae66c4b1b720b98dc39b2a1",
         "tools/item_recipes/copper_legs.yaml": "e6caf59e92344c03159628a7a306e64255340aad232425fd23b3761e54d5b391",
         "models/items/copper_legs/ATTRIBUTION.json": "223f68997cf235781f2c59aa8d58d5ae984dc6a1c0619ccd1b9ef10644e27c60",
         "models/items/copper_legs/gltf_buffer_0.bin": "24c5fd76306c37677bd634232230315644f4ab18d2254b6340d4ac94bace116a",
@@ -383,7 +383,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/copper_pickaxe.json": "5bf9a29c4efed70925ba6374c7f977a0e7ed7ead43eb0abb8b77739ab30d4045",
+        "content/items/copper_pickaxe.json": "286343a4b4122956d095a755bdd0e0651f7a3af26072579446c38f91b2b9d913",
         "tools/item_recipes/copper_pickaxe.yaml": "4f8200a541abfa6ff23ed28967465c98db5c0bf8a07333f72300f12e1ad7919f",
         "models/items/copper_pickaxe/ATTRIBUTION.json": "15161cfa9b16f707d7a631a64a94c920b4e0538bdc0f9927ace8260971b20a6b",
         "models/items/copper_pickaxe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -409,7 +409,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/copper_shovel.json": "86524830227e3a9628f52de5f3034fd11cad0b57a22f5368f7ed998a411ea9ca",
+        "content/items/copper_shovel.json": "9f567a1bdd7c873adb6195242193231ddeafa08bc3d5064fdbb2dc3f1e10b0de",
         "tools/item_recipes/copper_shovel.yaml": "9d7aee6f11bcc486a6b74aa6a6f7b180468eef47a1fa54321782bc858a6e39f5",
         "models/items/copper_shovel/ATTRIBUTION.json": "bb0de038424b0793c88b42bf0d213543abfa4df2c172d92591efab2ced385e84",
         "models/items/copper_shovel/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -435,7 +435,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/copper_sword.json": "672bc269ea7ab42f5cdefccdabca84d7e2de17f97c4d6e2e5e2183189092f1f5",
+        "content/items/copper_sword.json": "2bc8d16ee4bdd6833c3455dacbe174e2520dffd1795f9835ccbf95274da193bd",
         "tools/item_recipes/copper_sword.yaml": "27e427571967ccb4c03c43219e29b38760bdf720fedfe1b998561a6f1a30e068",
         "models/items/copper_sword/arrow_A.bin": "6ad254651117d72fbeb6f4da2415bbf1f47e4f44c196d845355fb7376898f3ca",
         "models/items/copper_sword/arrow_B.bin": "3685a0a4feedcbdff6b1097374be565b67341a9c5be9ea1cab799d1235a9b972",
@@ -492,7 +492,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/cord.json": "9f6a0c980606ffa64c41199d0a86f705b5c01f337582ba349db2a96e2c640bdd",
+        "content/items/cord.json": "89743b7f4b4c844fb858eac1df12253b406f19bd9f8faba6b3f2101c4387f448",
         "tools/item_recipes/cord.yaml": "d22b8f73d442335e607799bba0d9b98dee2a44c6bafbd6f6103cdea3945e0f72",
         "models/items/cord/ATTRIBUTION.json": "6234414f5069155a1fb59b201f8a7be4bd1748b48f94b406287a5c9f0f5a32e6",
         "models/items/cord/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -517,7 +517,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/flint_and_steel.json": "bfe9f546df279b37ac24bc1716930bb299778f4aa5ea2e982c6fead9333b01cc",
+        "content/items/flint_and_steel.json": "5612daec24e02cf269cdfaeeed2473a3a669d20392a9228f658065693f95a03a",
         "tools/item_recipes/flint_and_steel.yaml": "be776e46a6cd539cce21f490d47e814161f9ab4756e023ee7af7c0529a080ac8",
         "models/items/flint_and_steel/ATTRIBUTION.json": "45f97315b7fec8c92e48ba6fbbb203d4e41271587d9056032ca127c40500321b",
         "models/items/flint_and_steel/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -542,7 +542,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/gold_axe.json": "17bdd2c0734ff5048ae41acfb832508319f50a4583d4273a888dea201568031e",
+        "content/items/gold_axe.json": "68ff0c781ffb9d92ce2a6c36e909b109e3074d5fd7659acbde51034d3aff0a8a",
         "tools/item_recipes/gold_axe.yaml": "9a2b7f9a4205e6450788420cd0eecb3743e0136fa5db5ba1d0272bd3def78d7a",
         "models/items/gold_axe/ATTRIBUTION.json": "cd25a766747ffb9557dfca7b09db2d9bfda36e019568959804900dbb623fad7d",
         "models/items/gold_axe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -567,7 +567,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/gold_chest.json": "98f15555b4c261660857309d931531ad9674c470bac69e6a3a165b50cd0884ec",
+        "content/items/gold_chest.json": "ba49d01eea4db8bc4a599bc943ba636c1d6577ffea14fe9a37ebef85c31d8d81",
         "tools/item_recipes/gold_chest.yaml": "19bc8f62491d0e3854bdc9c641249b3e857f48728b1bab5b66c53e074e719c70",
         "models/items/gold_chest/ATTRIBUTION.json": "8792679b567d0a70e8b6296a683c322d705abbc66b18825beee59f0d413cb776",
         "models/items/gold_chest/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -593,7 +593,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/gold_feet.json": "5361ac6b5a112e08578def4d5e1e6a68f6a061e7e83e97578104363105207303",
+        "content/items/gold_feet.json": "8c78eea30e58ed324f8a7762619dd573d19fd05a5faa860c3c4df14326755b54",
         "tools/item_recipes/gold_feet.yaml": "a9224a8655f474074a68cfd248c526e6a5c8012f35f8c641cffe6a11b405a49a",
         "models/items/gold_feet/ATTRIBUTION.json": "f3141e8611f8808e4cce817abe1e506f085433430a2810e80be219f479283e39",
         "models/items/gold_feet/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -619,7 +619,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/gold_head.json": "4b002a364c71b9384b54e06209864c74612d4d70818d5cf90353dc7977006f4f",
+        "content/items/gold_head.json": "5787eefaa67707a619f70bc7708660e17fce3dca921b5e6174026639334ca40e",
         "tools/item_recipes/gold_head.yaml": "28b560baecfbcf54ae18a59a561adb840e5dccdc74812bd9c26e59de42243a4d",
         "models/items/gold_head/ATTRIBUTION.json": "b05ca3d9ecf835014fac04916767cef84e40018fe8102a8b8a32655b3fc7bee3",
         "models/items/gold_head/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -645,7 +645,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/gold_hoe.json": "89f9e0d126f41d5345261e246eb5fceb4f73fd9111c53fe3ebc4ab2ede2604a3",
+        "content/items/gold_hoe.json": "a2ae15c9169a563821577a3491bb02080f6f3730a701a67fa04750d3a03b050d",
         "tools/item_recipes/gold_hoe.yaml": "caa9930db3b4ea17e4bcfd20c2e14fb084897f11210b371ae288837eb31aac06",
         "models/items/gold_hoe/ATTRIBUTION.json": "8d06d35a311e9feeee6bc19ecb30b55a379dd95947f70c28235aa4e7d5c8b931",
         "models/items/gold_hoe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -670,7 +670,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/gold_ingot.json": "ef312f0297b961b6840ad5a285645c408e1d3583369e9bcaae789742a41d1dc4",
+        "content/items/gold_ingot.json": "3a0d6c09b41d29ffbae2f456f9a8dddd7f7f0d9c312561b03833a462144969e4",
         "tools/item_recipes/gold_ingot.yaml": "f22bcfdbf2f154f0885ee14b562247c5b436675b78e599c319824ae1f7b2acbe",
         "models/items/gold_ingot/ATTRIBUTION.json": "0e4d9d6b7e524a1528906eeac044c5032fa2b761e452c02bc44bd2b98a554f92",
         "models/items/gold_ingot/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -695,7 +695,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/gold_legs.json": "318fd26b4f421f232a8cdb8739615603dbfdb0e74cc78e056475d5e659cae58a",
+        "content/items/gold_legs.json": "13fbb4c4696b34fdc347f35505ad3a5fc49c6602afd167578c3fdac4ba20bb24",
         "tools/item_recipes/gold_legs.yaml": "97eb2ded79d65a60710c8eb128b91b922163352628f3c7de4c675a067be724f6",
         "models/items/gold_legs/ATTRIBUTION.json": "ebad95246b64941cca8487ace0e62135d88d0248873ec376e700e3d7f8c99255",
         "models/items/gold_legs/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -721,7 +721,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/gold_pickaxe.json": "3d3e23732cccdb0f68a5ca09a42f4629f816e04e385500f48425f1e0990d14a5",
+        "content/items/gold_pickaxe.json": "4586da20304850bfc13aac0a0018a26d8c0393953efc7477369a7bc93e55cd63",
         "tools/item_recipes/gold_pickaxe.yaml": "1a54412739351da3e616284b7f087eba5b5dead397938c2cb63ffd9999043f33",
         "models/items/gold_pickaxe/ATTRIBUTION.json": "17df43dc44bcb5e456276362fb8377f2848249a47410e92b135f705869ca9df3",
         "models/items/gold_pickaxe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -746,7 +746,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/gold_shovel.json": "7920d3245a5a7aac34635de136f0de06fe4ccbda92f4fccea5c79cf22494da2a",
+        "content/items/gold_shovel.json": "da46286014e1d1e63db38be0903fd3f8e932441011738cc2126a12c2733508be",
         "tools/item_recipes/gold_shovel.yaml": "ec428f23847d949a6d247a3756e63d009a0d292788bfbb069102af3753bc44bc",
         "models/items/gold_shovel/ATTRIBUTION.json": "a8a5084b55d5a94eca29af4c781b9c379fff502b2cc96be31166a203813254ef",
         "models/items/gold_shovel/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -771,7 +771,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/gold_sword.json": "b0716f96d926ffe994c3de3609c0d0d11e4d1210df414cdfa83dc5a988637928",
+        "content/items/gold_sword.json": "08c8af3fbc15e777d769c6441661f2bdeb74fd851051ba755038d75a69b5d130",
         "tools/item_recipes/gold_sword.yaml": "f7661a9dd01066909462ad80706a54c047b2d73044135450dbbebd6ae388020c",
         "models/items/gold_sword/arrow_A.bin": "6ad254651117d72fbeb6f4da2415bbf1f47e4f44c196d845355fb7376898f3ca",
         "models/items/gold_sword/arrow_B.bin": "3685a0a4feedcbdff6b1097374be565b67341a9c5be9ea1cab799d1235a9b972",
@@ -828,7 +828,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/grain.json": "2408723e5b7e2b6aef0030ba2bf8c1b2c28089bc46be932f556e7035d94db418",
+        "content/items/grain.json": "effff56385d19f8630264c442e31c85bf41b2156a7e6e8a5e69b999e192412e0",
         "tools/item_recipes/grain.yaml": "37541f971365df87e6077829dbd325494967ac81c966d71df9b7b8f89ee5ebde",
         "models/items/grain/ATTRIBUTION.json": "8981e35364a9e8f6d53d3cc8718c8cb08f71df98fa6afefed238f274ddf0e8fa",
         "models/items/grain/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -853,7 +853,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/iron_axe.json": "5f95d7ba4cf59126cc8025f26bec56b54c64a610102bc9fd99886f75a2d7de6a",
+        "content/items/iron_axe.json": "ca5c30364f1f9455b192a7c4287f773df798845cc77b89300abf92a49a3781a3",
         "tools/item_recipes/iron_axe.yaml": "8723748539358a71297a877ab4a483a2ce7f16fc0117f96f4b3620212b4ae566",
         "models/items/iron_axe/ATTRIBUTION.json": "2d3a8ac5436af4b8bcc3e187b9623afeb6f38994f07b66a4b63fd188cc0251ae",
         "models/items/iron_axe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -879,7 +879,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/iron_chest.json": "c79a209d8fce8276ef5f348f4c880fdd10ea659d7f5576678e64c4ff9fa3f484",
+        "content/items/iron_chest.json": "2b546c5e210e9b4a9ccdadca5cc1918b66b5b2a73e84faea0a3cc5bb85f8846d",
         "tools/item_recipes/iron_chest.yaml": "9216bcfc873c1c95b1497fc63f04d7fc624a45238b00a8d822a5d1058bd7c75f",
         "models/items/iron_chest/ATTRIBUTION.json": "10007b2018cb68fa1d073af9fab9487712bcbbf3271f799326790aa0783b28ce",
         "models/items/iron_chest/gltf_buffer_0.bin": "234c65a076d97a3cf2dea059459abc958e3fb1e3ba04eb6bcd1440c700432725",
@@ -910,7 +910,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/iron_feet.json": "aca16a059979da278e6f9790155deeca644c1cf6aa7acaf21da5d41bf0b83d0e",
+        "content/items/iron_feet.json": "d3bb32198037294bedafe0272c5cbe81366db5f91132d56fc110f9bd8dd7868e",
         "tools/item_recipes/iron_feet.yaml": "24f3f5fe2bc1ffb9aa082d0d2eab0c143b3ccd506e9a00cc2e0533aa4f930f04",
         "models/items/iron_feet/ATTRIBUTION.json": "ad2517b0e5653ca8c4c6e36b266c5359d760836c4cef98e1cb0732d69d2f991e",
         "models/items/iron_feet/gltf_buffer_0.bin": "1c0fd5389192104f25978864a5144afa515d44bcb9e064ae921356b294f4dbd6",
@@ -939,7 +939,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/iron_head.json": "d628f20473932df4782fa0426605440d54ff973981f716bca72c5b5e1e59aadf",
+        "content/items/iron_head.json": "527ca23f0d26fbb2802b9e72faf9740ccf408e5b9f0885fee2528a9fcbb81ec4",
         "tools/item_recipes/iron_head.yaml": "c0616115ad8ebb494beb394d707126c1a1f35e27ec8b2829ba305a8f48ecbb6a",
         "models/items/iron_head/ATTRIBUTION.json": "26310a26e6f2607b631c5190bf0fc656a825ebf2186b58824ca5d8dfff54bce2",
         "models/items/iron_head/gltf_buffer_0.bin": "787cafe2db5f3f79e8c9b9c14ed9c25f3277002c8d2a8005c332afb9b4cbb85c",
@@ -969,7 +969,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/iron_hoe.json": "bc1a1f76816c76c56b8c29cbd5051f85041050624672ab8c0c21f25f3b515345",
+        "content/items/iron_hoe.json": "063bbfe3d998d409b5ab9ef1db4bb8fe0124ac97b65b99004325f46820459bba",
         "tools/item_recipes/iron_hoe.yaml": "736236487cf79e7819643dc1ad10cca031feaf08c76845337a3fd357966479cc",
         "models/items/iron_hoe/ATTRIBUTION.json": "d44782e4649b33b4e79952c567e0c8f0a86f4593a99564db26cfa40bea86c945",
         "models/items/iron_hoe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -995,7 +995,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/iron_ingot.json": "c7dfdf349040c05dcbecf2c51c5172dcb5233c328103aca41b50d6ac78d5a918",
+        "content/items/iron_ingot.json": "d453b170ae35cb74b49f948cb047cc3ccd0f284d0572ef6338290d0461869f04",
         "tools/item_recipes/iron_ingot.yaml": "9a40fa5fb7840f86efd7409c3560cbcad33377576929416d0eb5b7392a9c38e3",
         "models/items/iron_ingot/ATTRIBUTION.json": "4ed0f83358151267ef4e3f569c54c9a0cfb87dfc6f161a8ae74596d9fca53199",
         "models/items/iron_ingot/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -1020,7 +1020,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/iron_legs.json": "f6a91645528468db5e500eae615c6233ac37d5d007fe7b66ebbccfb01607dd3c",
+        "content/items/iron_legs.json": "d8d1adda8e04deeb976a155385e8147fcd00e636de8312f7c7cb619e8bb40201",
         "tools/item_recipes/iron_legs.yaml": "c67d866f8624e52d3c3adefde5cdf6e188c7d246a07e0e03b9e621ba81457273",
         "models/items/iron_legs/ATTRIBUTION.json": "4531c0d2a7233bf8fefb130e75293d71cddc4df5522d722543cf00a49b433045",
         "models/items/iron_legs/gltf_buffer_0.bin": "234c65a076d97a3cf2dea059459abc958e3fb1e3ba04eb6bcd1440c700432725",
@@ -1051,7 +1051,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/iron_pickaxe.json": "d965c8282dc4126b9ccbd3ec48ce98a44398ae93e4b84b8128d96d20bbc15e3d",
+        "content/items/iron_pickaxe.json": "cb2a943ba83a8b6e941b6b6313db39d35773e96869230ed06272424dd464c29c",
         "tools/item_recipes/iron_pickaxe.yaml": "c38423995f1315637499d2e2b713b17a5797d97f3a4df49943a3259a9ff77fef",
         "models/items/iron_pickaxe/ATTRIBUTION.json": "08bc01fb8ab1d1747f86e579d6b9a92988f9c7dc6a462d866ec2b5bb443c4b6f",
         "models/items/iron_pickaxe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -1077,7 +1077,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/iron_shield.json": "035a54b16c6112bc4f940c42eb107b28b7134e348e82aa8bb83bbac94dd66bb6",
+        "content/items/iron_shield.json": "1ac35670c5e2b365c83200f4c91c5be32e49e06f2b099cb198b81b85bfa283b2",
         "tools/item_recipes/iron_shield.yaml": "54a6a4f521aae6f95336f4c63443ae5d62b49431fef755df1cef7ab923fe036b",
         "models/items/iron_shield/arrow_A.bin": "6ad254651117d72fbeb6f4da2415bbf1f47e4f44c196d845355fb7376898f3ca",
         "models/items/iron_shield/arrow_B.bin": "3685a0a4feedcbdff6b1097374be565b67341a9c5be9ea1cab799d1235a9b972",
@@ -1134,7 +1134,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/iron_shovel.json": "51b4bb8c94226cc16e611aec690ddd38fde701cda660b88f03a6c636ab3d1162",
+        "content/items/iron_shovel.json": "26e8680d039437d471e703c85a38e25a3f2b8a38123462e4ddff84c6aa6c2b88",
         "tools/item_recipes/iron_shovel.yaml": "2a38d6451937b7ed7554d5c1aba56450b577f10c2f212fc0af6eff93d5b98ccf",
         "models/items/iron_shovel/ATTRIBUTION.json": "dc71cd8618d0fe9b24c110164608ab52b041494e05e5f2b4ec77e021a0ca414a",
         "models/items/iron_shovel/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -1160,7 +1160,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/iron_sword.json": "afe62baaf58cf1b3b70d57c6173b0312532b42810598bcc094ce75dda86bfda2",
+        "content/items/iron_sword.json": "64efb2b4190ef1163003bceb83d8c8974ff6264a500a68ecd846cb8b1a99ede8",
         "tools/item_recipes/iron_sword.yaml": "7402dcaadd8d998528ec6b358c6b6a4263485a0a7f2310ff96ed5fb3ec19e98a",
         "models/items/iron_sword/arrow_A.bin": "6ad254651117d72fbeb6f4da2415bbf1f47e4f44c196d845355fb7376898f3ca",
         "models/items/iron_sword/arrow_B.bin": "3685a0a4feedcbdff6b1097374be565b67341a9c5be9ea1cab799d1235a9b972",
@@ -1217,7 +1217,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/leather.json": "377b169d333dc153e7c8e2e6e64dc71d6d78d65ec5583b5a12194ff751010628",
+        "content/items/leather.json": "663f70752d1ed9abc1e8ce99b229f1df6a017025855a15d7a5c845c6c89005dc",
         "tools/item_recipes/leather.yaml": "702bd511984043bcaf42026500403d9d2586a0c5b3dbff0a2c9bdfe7b89e84e0",
         "models/items/leather/ATTRIBUTION.json": "c92ec759a9a7962302678951c8dc83394ef6b6390cbdce8cb9bb932bf474ca38",
         "models/items/leather/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -1242,7 +1242,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/leather_chest.json": "6a9431960f2e243c9321c9f1d3d76d421bbc5b916766a94057b1c807e955ec93",
+        "content/items/leather_chest.json": "73a83c07df0fa1c68fff0bba909affdae948abc8629a81dd4bd199ef94b0f0a4",
         "tools/item_recipes/leather_chest.yaml": "f142795ecf6cbf2f0319b006e815d6c7fa29691c92b7eb1c1787688ed01951c7",
         "models/items/leather_chest/ATTRIBUTION.json": "67a7b7215bd0e06a76f4595988a3d1e08128c5f927620ff7d6c1743eaf23f692",
         "models/items/leather_chest/gltf_buffer_0.bin": "354de2da6f3f3dc858dfcc9ccfbe3ef432f9e82e46dc3302462aecf09fa8d4ea",
@@ -1273,7 +1273,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/leather_feet.json": "5b8379c2e914511544ab78b96e339ab6db43cdc94abd29061d0bc95187d31c0b",
+        "content/items/leather_feet.json": "2b9a9813b5b7c69648585a506fa26f91fa155c3071f7c08bc9044778f46287aa",
         "tools/item_recipes/leather_feet.yaml": "c8e29dbbac01ba1ed8d9b6a33c4a38166c4b9236976eac197f71b2ceb02510d8",
         "models/items/leather_feet/ATTRIBUTION.json": "fe2ff225bdafa9dc502ee16a7510e43631fcc1feb834b8816089b1fab09aadac",
         "models/items/leather_feet/gltf_buffer_0.bin": "1c0fd5389192104f25978864a5144afa515d44bcb9e064ae921356b294f4dbd6",
@@ -1302,7 +1302,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/leather_head.json": "ef1fbce0550790774d2da8b32905f6588476ee5fd93a77b2f0318be1b48452c7",
+        "content/items/leather_head.json": "085342e98e4d95c13002622962923c710a0dde50c33e205428dfb18a418e64ae",
         "tools/item_recipes/leather_head.yaml": "c2b306e00934f8f48c805a1476bc3bf6c8a3d0af7192b5c4a3d80236f4c7878b",
         "models/items/leather_head/ATTRIBUTION.json": "b620a59aac8953eac29239bbae0b164a43e645dffd78be6f4376355a0111c179",
         "models/items/leather_head/gltf_buffer_0.bin": "343f83f2df60c4917a99956803480976f4030d73dec3ce6a9013a052aeb03409",
@@ -1330,7 +1330,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/leather_legs.json": "c185e51b8c3cce95f3d6e7dca827cce2f64164a3123a31ed194d0f72edca90f4",
+        "content/items/leather_legs.json": "2a02ce4254c01408fec830c35e0034cd431ce60646f3192e31629f589867a7a1",
         "tools/item_recipes/leather_legs.yaml": "8c790cfc87c146809ae0fed8cfa0e43f2c3d15cd707bf989940da883050a9a4b",
         "models/items/leather_legs/ATTRIBUTION.json": "4fb0f53d4b4a577c59754cf77ea8a0146944678627224309444f415d27e28d97",
         "models/items/leather_legs/gltf_buffer_0.bin": "354de2da6f3f3dc858dfcc9ccfbe3ef432f9e82e46dc3302462aecf09fa8d4ea",
@@ -1361,7 +1361,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/plant_fiber.json": "24f47d8b8dbe3e25234de4a72aaa50c38c7d51f6c8ccfdb6d3a586b214476838",
+        "content/items/plant_fiber.json": "d7d51a758329a15e6850c7cea8defa63dca60ba0830def053718f21bc8295a17",
         "tools/item_recipes/plant_fiber.yaml": "61272cd76a0312130c40b51d518eefbbee4b813acae5e559f1607b66a9ae570b",
         "models/items/plant_fiber/ATTRIBUTION.json": "a904baf658c26df4c5def7a9d4893e13e7ac6f1f72ebdb099fb4a99af927f4bb",
         "models/items/plant_fiber/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -1386,7 +1386,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/raw_copper.json": "b23d72a343f7e98656e596fc5b4caa103b473ea8af4e21d87c8cd2b524c24127",
+        "content/items/raw_copper.json": "d0ed56425ed9e8f47c0e3632913b8ecdd8018fd15aba1eb21f9c16639f714ca5",
         "tools/item_recipes/raw_copper.yaml": "d846e3a3d71e69c9d1b69e0ec3f64cd98dcce4f79c82b638cbf0fbb2bcdb3c82",
         "models/items/raw_copper/ATTRIBUTION.json": "31e9fa5c9ab7e9a79f6be235328b5ed554524fb20223c40ca416bc9da52d30bf",
         "models/items/raw_copper/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -1411,7 +1411,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/raw_gold.json": "5fcc756403fdf505854f28c0a6cf653a492efd6e50574eb0e8e81fcd339e0f68",
+        "content/items/raw_gold.json": "fed754949f1c5ab361f239717707a588027822228f3f241304ccb6d7817cc442",
         "tools/item_recipes/raw_gold.yaml": "29782bd9c81fd3d783253c9523337c0b5a9d9e75aad4ec4a2197d10e9d799ec3",
         "models/items/raw_gold/ATTRIBUTION.json": "7e85ee3d16c7b5c4bb24c7c7857c340fd368d4ac91f7d24846ba1b83630d2db9",
         "models/items/raw_gold/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -1436,7 +1436,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/raw_iron.json": "ab08f268fe4bc6a09c116031bd66c4d099fc8923638d186f7e5c60200d222b63",
+        "content/items/raw_iron.json": "c1bdc16b22ff0d7afa79f44a6e06140e48e7cc7a4affa8ce827f39bb342c89ad",
         "tools/item_recipes/raw_iron.yaml": "ce8e25d383f8e1d92dc674e9406d74ed7e63825be13ae66777c0536332cbeb57",
         "models/items/raw_iron/ATTRIBUTION.json": "911f82c422d43ef18a46f1368bda08caea50afe7c33d7c3ae812bb6fa5577123",
         "models/items/raw_iron/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -1461,7 +1461,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/raw_meat.json": "c4ba33820455539c8a1cdde7f1c0079a4cb687aaecf2145927d260e4175c22d9",
+        "content/items/raw_meat.json": "348320322ef8068b53dc8e4003dbcb7e4cb60c8b4b110f4dbaec0d0b35c8719c",
         "tools/item_recipes/raw_meat.yaml": "6512c71d6869d725ed638bbc5adc26491f74a6785dc7b70c3a4cfa6a7be173d7",
         "models/items/raw_meat/ATTRIBUTION.json": "7c1d220eb72e0e85aa41ede302895169808e35a6569e1d007f14eed8d67b96ec",
         "models/items/raw_meat/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -1486,7 +1486,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/seeds.json": "a0927f1333e0c74c42a8373aa4bda806cb7dbc3efc781634ddfaebebe628652d",
+        "content/items/seeds.json": "91b6f2e6a64206718d41c83ec5cae53822ce8a867548b92d845d65346774d507",
         "tools/item_recipes/seeds.yaml": "080f6e25fa9a5a8312693c64f5d4906570ced61ae6aa80b6e6a3d4ee41de5813",
         "models/items/seeds/ATTRIBUTION.json": "a67d46e3b276e63cac329597c1b5a20183eb12436750f57d0cfd9594bd2ed548",
         "models/items/seeds/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -1511,7 +1511,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/shears.json": "7e7b41b973b7cc86ac046a91942e031c830c7b185f416cb8211bca203439f06c",
+        "content/items/shears.json": "467a415078c2ea71b5c97dbf9fa2f1013f318e40e46b9fd5e4abc06600761863",
         "tools/item_recipes/shears.yaml": "663143f6d059b7c5a771fc961fbf4513fe963452687b2abfc693af51bc5fc594",
         "models/items/shears/ATTRIBUTION.json": "98dba56ecc5fdb63b1ad3982b0933e4268e8950d41eb33d17cd8f284c9a67934",
         "models/items/shears/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -1536,7 +1536,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/stick.json": "bc8dd2f0565a294835893e55b1684d08600346ec4b22416e4f7ea22b607269bc",
+        "content/items/stick.json": "6d704589158d4864c6e878cad1e294c6ef5b8d384546f7f9d0428b3cc1cf49fb",
         "tools/item_recipes/stick.yaml": "45317bfcc9de4abde618010ab6997a247c0fddc5324e98c0861d26a0309af13d",
         "models/items/stick/ATTRIBUTION.json": "61b03fc7697702aa4a91e117d48098da2564672046dad1f62f148577bf36888c",
         "models/items/stick/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -1561,7 +1561,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/stone_axe.json": "109eea7553cda3baeae1e9c8fee32e505fdd409f9a6bb28f0a588fb956f01025",
+        "content/items/stone_axe.json": "6f387f6526c8280805bba97b9d1b091570a682a0bc15e14d38122bc670bfc3c4",
         "tools/item_recipes/stone_axe.yaml": "534bccf3629b5a60d843fe4d4cd0a5b48dbe3ce8537a79836dd81c5dc09ee0c3",
         "models/items/stone_axe/ATTRIBUTION.json": "fdc61943bc16e33b88a7fc665caffeb778e3e01aa5a43e74403f20304738766e",
         "models/items/stone_axe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -1587,7 +1587,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/stone_hoe.json": "e7bed6d638c8d87e6b9c8a4832940e2a591df1cda919ee1a23ff86bba0144629",
+        "content/items/stone_hoe.json": "fcc6fae6458d18338a944e4ea67a087c9987478df960838d5def572d33725e51",
         "tools/item_recipes/stone_hoe.yaml": "018757ebfa81132c3842d69df013f4423a3a93f8807e47bb225058b5b78f162a",
         "models/items/stone_hoe/ATTRIBUTION.json": "83c0c0279961a8779e0f02936ceb7a6191608a81ad8cf8c4e06dc1a152291870",
         "models/items/stone_hoe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -1612,7 +1612,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/stone_pickaxe.json": "b66f4f5f340b8e053dd1de812b08230235d3a8724229957ea0bfdc3e82ca567c",
+        "content/items/stone_pickaxe.json": "881bbe9d164f0612bc476005939809a746e85be7bf2736732399cd6d777c874d",
         "tools/item_recipes/stone_pickaxe.yaml": "5e452bb345c788ff356eca3e62e5bff9d802aa60882cad26d843232c65d46b36",
         "models/items/stone_pickaxe/ATTRIBUTION.json": "b4ea4b633f06c27e585c66b124af1a221b9ef1727f4dcf074e69e1afa095a307",
         "models/items/stone_pickaxe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -1638,7 +1638,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/stone_shovel.json": "e5b6c75e63c3c958fd94511f994671f9d1cdf68317b273d095aec609324914d4",
+        "content/items/stone_shovel.json": "bf236b64847ead417a0f5d8a245875717c22fc512850d9e3e62826370ea2a45a",
         "tools/item_recipes/stone_shovel.yaml": "7e3e2960ccbb2553e633de9e06bebd8079517103ac6e02f9e2b13dbf0938e209",
         "models/items/stone_shovel/ATTRIBUTION.json": "de42219add557108cf4074cef54622876393722d12e4a322caa7e4214792a565",
         "models/items/stone_shovel/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -1664,7 +1664,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/stone_sword.json": "a8aa0617a3b3ed8c77e78f3fb68c16f444a0d910f691b751906adbb9d3ec4d8e",
+        "content/items/stone_sword.json": "6087ce008c7e437972d96f21b92f9a19c5c1410954d0087f85b36b73f8558922",
         "tools/item_recipes/stone_sword.yaml": "9822231f1120d28f65753b2293f63d7eb361c184a1c10ecbcb56231d6d9629e3",
         "models/items/stone_sword/arrow_A.bin": "6ad254651117d72fbeb6f4da2415bbf1f47e4f44c196d845355fb7376898f3ca",
         "models/items/stone_sword/arrow_B.bin": "3685a0a4feedcbdff6b1097374be565b67341a9c5be9ea1cab799d1235a9b972",
@@ -1721,7 +1721,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/waterskin.json": "614408787638579a45378456d02b2299bcdcaed3f3a9555b6a91063ad1b322b7",
+        "content/items/waterskin.json": "b2401642fa1d66b6c861a23321e209408976bf5bbc56b081d6f7d99c46b2fd0f",
         "tools/item_recipes/waterskin.yaml": "df5f5628f9a91e16ac86f159ed2542f53a6fc9c49d96ec145dc905f36b88fc9b",
         "models/items/waterskin/ATTRIBUTION.json": "aa50bb1a6a8334eb2a849038a5ea1c2595057e74d3f9f7d7fa4bfa64263de688",
         "models/items/waterskin/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -1746,7 +1746,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/wood_axe.json": "f6d9d4068a64c0ba2cd97b33e7ca1301d971f978c2688cec1daaf510c84d7050",
+        "content/items/wood_axe.json": "e2f69499c4cfa111c977c012cc2a96eab40680dc1438ef95889da9504fc0919c",
         "tools/item_recipes/wood_axe.yaml": "89588294974f089673babbaebc8e120d5d7b2fa1de39cf5fff9fcee426d495c9",
         "models/items/wood_axe/ATTRIBUTION.json": "b38160adf46801f1280cff858ce108b41d2d88354afa741db1ccf1f40ebe7953",
         "models/items/wood_axe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -1772,7 +1772,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/wood_bow.json": "6c6d3b4a95b2c5f023120d44beaeb8341b35df5238d248c306862494b59ade5f",
+        "content/items/wood_bow.json": "96d33178ec4ed01b6f0d77c73b39260a1a1c1bd190a924555b09117682bd7f6c",
         "tools/item_recipes/wood_bow.yaml": "0733f064e05a752c7432ea8c272f95da3c3a91d4c90a473562e98942eeb0dcdc",
         "models/items/wood_bow/arrow_A.bin": "6ad254651117d72fbeb6f4da2415bbf1f47e4f44c196d845355fb7376898f3ca",
         "models/items/wood_bow/arrow_B.bin": "3685a0a4feedcbdff6b1097374be565b67341a9c5be9ea1cab799d1235a9b972",
@@ -1829,7 +1829,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/wood_hoe.json": "a4c1dee1d20b25168c02a44bc6c95e5258f10a05e74307be0433d8b7bb66112e",
+        "content/items/wood_hoe.json": "6b63411c4c57d9c94cee3e0ed90369477e21af010d79c433434ad18f1ef5df67",
         "tools/item_recipes/wood_hoe.yaml": "10b54fd3e8b5e94b44fdcd057b54c331b0a59f951f00b1f8b192b98b2aa3e533",
         "models/items/wood_hoe/ATTRIBUTION.json": "f499c57ad362cc418213f234b031feae56f90795b358f50377553ba323933a6d",
         "models/items/wood_hoe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -1854,7 +1854,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/wood_pickaxe.json": "579ada7fe5feccf1c14b6808b325f0f343de0df55237fa955c722c20b6bec00b",
+        "content/items/wood_pickaxe.json": "28b79aef86306077ec405869d1e5dc64f75b0611ce696fcf94550abb2f4d60ff",
         "tools/item_recipes/wood_pickaxe.yaml": "8ee601ed44ab97b995498ac85883a5890210ebd92be42f2c0bd8b4a1503e3b36",
         "models/items/wood_pickaxe/ATTRIBUTION.json": "c0e814bd1cae691f72a010c0fd7c991a74b952b1ca1f7abd3d720a9647268468",
         "models/items/wood_pickaxe/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -1880,7 +1880,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/wood_shield.json": "323fa5089cba41c0d4450692e743d3d2a807af45b68b746c115eb6d36c7af87c",
+        "content/items/wood_shield.json": "f5a3aeff079d606048109d009fc714ab4b63d7c543561edeb2ae8e99522730dd",
         "tools/item_recipes/wood_shield.yaml": "0bc0c7ad3f61cc4dd55094b68076997b76ee81ded06591e056bab13da2ffb06d",
         "models/items/wood_shield/arrow_A.bin": "6ad254651117d72fbeb6f4da2415bbf1f47e4f44c196d845355fb7376898f3ca",
         "models/items/wood_shield/arrow_B.bin": "3685a0a4feedcbdff6b1097374be565b67341a9c5be9ea1cab799d1235a9b972",
@@ -1937,7 +1937,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/wood_shovel.json": "4a65184ac551e25db1654d500433e04595a05031666f34af024dfca103e68e21",
+        "content/items/wood_shovel.json": "e28052a860169ae034323cc489075d39cdf5eb46a0b43ce65deb78c4df1fd3e0",
         "tools/item_recipes/wood_shovel.yaml": "5e616ec8d1b41c82e48d827a827b076a4a8a6a7e594b74c9831550d64df2a97c",
         "models/items/wood_shovel/ATTRIBUTION.json": "3cf915035c630268781567647e450d0761b76d63d55198ef095467dfe0d552af",
         "models/items/wood_shovel/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -1963,7 +1963,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/wood_spear.json": "8cb781dccb2a8e54c0558205a41c104e3b26344cc2c2b5c65d245609185b05a0",
+        "content/items/wood_spear.json": "98968eaa05f48396e24a01e8a5456850d02f460217abe49e5f1475851855762a",
         "tools/item_recipes/wood_spear.yaml": "a19d3b6536b40ce895205e3782d89da68d30de76dd7a9d36a02bd3c98e9d3698",
         "models/items/wood_spear/ATTRIBUTION.json": "f7891ae6e2837badd59aa916604c41e77ce79cd329597703c7c709577cb8bbe6",
         "models/items/wood_spear/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
@@ -1988,7 +1988,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/wood_sword.json": "31d85407c7f0ea9a38cd6630b37cda23a344d897f4a412a852538b9a6e067c35",
+        "content/items/wood_sword.json": "48eaedb6095edd8e9ac5e137949e6087e020f904e792e99d2e0999854f324250",
         "tools/item_recipes/wood_sword.yaml": "6740e26c5d8ee2c16257b144afa25c8d27c9b061a93db62a7c9b52229f1bdf02",
         "models/items/wood_sword/arrow_A.bin": "6ad254651117d72fbeb6f4da2415bbf1f47e4f44c196d845355fb7376898f3ca",
         "models/items/wood_sword/arrow_B.bin": "3685a0a4feedcbdff6b1097374be565b67341a9c5be9ea1cab799d1235a9b972",
@@ -2046,7 +2046,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/wood_torch.json": "3108edd19c2f0c8d7a8dd45dab537ab197cd14618306b66612d95090e0a385eb",
+        "content/items/wood_torch.json": "ef8f429e0344796706c5fa490b2446567e47ff2a64b34ffffd586f6c16a7d148",
         "tools/item_recipes/wood_torch.yaml": "41e3490333658ad06ec94242557eaf024fdc692c5c9b570f9f895bd8f7887b4d",
         "models/items/wood_torch/anvil.bin": "4dabc949ce4c0876731693c2e70e7020da9d48592c7a469803ba2aaa23ff88d2",
         "models/items/wood_torch/ATTRIBUTION.json": "907ed3bff78ca0297a80b5c35042405b6afaa681128211df1007afea4e5a173a",
@@ -2125,7 +2125,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/wool.json": "fd6960c67e3d26ce88107e0e5f575bb7b09665299703734f0110cd01141182d6",
+        "content/items/wool.json": "ddd2a9234769615666bed441c667d890d4af5b3d04aaba23405a49b6c205f97a",
         "tools/item_recipes/wool.yaml": "47429d76b737ff7fd97c4de90261d097def307b4207f761ce7ab48c945379a13",
         "models/items/wool/ATTRIBUTION.json": "9805268243bfa945147168d230ba34b48b54588665a88dfdb91d0822f57ac277",
         "models/items/wool/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",

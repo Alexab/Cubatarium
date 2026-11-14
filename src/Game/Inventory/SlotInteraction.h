@@ -13,6 +13,8 @@ enum class SlotSurface
 {
   None,
   PaletteGrid,
+  BackpackReturn,
+  CreativeDelete,
   Hotbar,
   CharacterArmor,
   CharacterOffhand,
@@ -32,6 +34,8 @@ struct SlotAddress
 struct DragState
 {
   bool Active{false};
+  uint64_t sourceRevision{0}, sourceOwner{0};
+  bool sourceCreative{false};
   InventoryEntryRef entry;
   SlotAddress source;
 };

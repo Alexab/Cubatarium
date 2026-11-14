@@ -44,3 +44,7 @@ Research and implementation checkboxes remain open until evidence exists.
 survival stages, 24 UI layouts and active-row hand drag pass. Style/include gates now pass; eight auditor regressions and two publication
 regressions pass. Remaining configured legacy dependencies and measurement limits
 are recorded in the [final audit](research/items-completion-2026-11-13/final-audit/README.md).
+
+## Ownership refactor, 2026-11-14
+
+The subsequent systemic refactor completes finite/catalog ownership, Creative mining and pickup, per-world throw policies, physical domains, coordinated property snapshots and E/B player-window routing. [Final audit and evidence](research/inventory-ownership-refactor-2026-11-14/README.md).

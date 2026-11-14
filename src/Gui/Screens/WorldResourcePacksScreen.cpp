@@ -1,6 +1,6 @@
 #include "Gui/Screens/WorldResourcePacksScreen.h"
-#include "Gui/Core/GuiMetrics.h"
 #include "Gui/Core/GuiContext.h"
+#include "Gui/Core/GuiMetrics.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Interfaces/IUGuiMenuHost.h"
 #include "Gui/Widgets/GuiButton.h"
@@ -10,6 +10,7 @@
 #include "Gui/Widgets/GuiScrollView.h"
 #include "Gui/Widgets/GuiWindow.h"
 #include "Gui/Widgets/ResourcePackPickerForm.h"
+#include "Gui/Widgets/ThrowSettingsForm.h"
 #include "Gui/Widgets/WorldViewSettingsForm.h"
 #include <algorithm>
 
@@ -50,6 +51,8 @@ void UWorldResourcePacksScreen::OnApply()
   {
     return;
   }
+  if (ThrowForm && !Host->ApplyThrowSettings(ThrowForm->ReadSettings()))
+    return;
   if (OnClose)
   {
     OnClose();
@@ -72,8 +75,8 @@ void UWorldResourcePacksScreen::Build(UGuiContext &ctx)
 
   const int winW =
       std::min(theme.DialogResourcePacksWidth, ViewportW - theme.DialogMargin);
-  const int winH = std::min(theme.DialogResourcePacksHeight,
-                              ViewportH - theme.DialogMargin);
+  const int winH =
+      std::min(theme.DialogResourcePacksHeight, ViewportH - theme.DialogMargin);
   auto window = std::make_unique<UGuiWindow>(&theme, "World settings");
   Window = window.get();
   window->SetBounds(
@@ -84,16 +87,15 @@ void UWorldResourcePacksScreen::Build(UGuiContext &ctx)
 
   auto scroll = std::make_unique<UGuiScrollView>(&theme);
   BodyScroll = scroll.get();
-  scroll->SetAfterScrollLayout(
-      [this](UGuiScrollView &sv) { LayoutBody(sv); });
+  scroll->SetAfterScrollLayout([this](UGuiScrollView &sv) { LayoutBody(sv); });
 
   auto body = std::make_unique<UGuiPanel>(&theme);
   body->SetDrawBackground(false);
   BodyPanel = body.get();
 
   auto warn = std::make_unique<UGuiLabel>(
-      &theme,
-      "View / Projection is at the top. Changing packs may alter block textures.");
+      &theme, "View / Projection is at the top. Changing packs may alter block "
+              "textures.");
   WarningLabel = warn.get();
   body->AddChild(std::move(warn));
 
@@ -103,6 +105,9 @@ void UWorldResourcePacksScreen::Build(UGuiContext &ctx)
   ViewForm->SetOnLayoutChanged([this]() { RequestBodyRelayout(); });
   ViewForm->BuildInto(*body);
 
+  ThrowForm = std::make_unique<UThrowSettingsForm>(
+      &theme, Host ? Host->GetCurrentThrowSettings() : ThrowSettings{});
+  ThrowForm->BuildInto(*body);
   PackForm = std::make_unique<UResourcePackPickerForm>(&theme);
   PackForm->SetPacks(Host ? Host->ListInstalledResourcePacks()
                           : std::vector<InstalledPackInfo>{});
@@ -117,12 +122,14 @@ void UWorldResourcePacksScreen::Build(UGuiContext &ctx)
   frame->AddFooterButton(std::make_unique<UGuiButton>(&theme, "Apply"))
       .SetOnClick([this]() { OnApply(); });
   frame->AddFooterButton(std::make_unique<UGuiButton>(&theme, "Cancel"))
-      .SetOnClick([this]() {
-        if (OnClose)
-        {
-          OnClose();
-        }
-      });
+      .SetOnClick(
+          [this]()
+          {
+            if (OnClose)
+            {
+              OnClose();
+            }
+          });
 
   window->AddChild(std::move(frame));
   backdrop->AddChild(std::move(window));
@@ -167,10 +174,10 @@ void UWorldResourcePacksScreen::Relayout()
   {
     return;
   }
-  const int winW =
-      std::min(theme->DialogResourcePacksWidth, ViewportW - theme->DialogMargin);
+  const int winW = std::min(theme->DialogResourcePacksWidth,
+                            ViewportW - theme->DialogMargin);
   const int winH = std::min(theme->DialogResourcePacksHeight,
-                              ViewportH - theme->DialogMargin);
+                            ViewportH - theme->DialogMargin);
   Window->SetBounds(
       {(ViewportW - winW) / 2, (ViewportH - winH) / 2, winW, winH});
   DialogFrame->SetBounds(Window->GetClientArea());
@@ -193,6 +200,8 @@ int UWorldResourcePacksScreen::MeasureBodyHeight(int width) const
   {
     h += ViewForm->MeasureHeight(area) + gap;
   }
+  if (ThrowForm)
+    h += ThrowForm->MeasureHeight() + gap;
   if (PackForm)
   {
     h += PackForm->MeasureHeight(area);
@@ -230,6 +239,12 @@ void UWorldResourcePacksScreen::LayoutBody(UGuiScrollView &scroll) const
     const int viewH = ViewForm->MeasureHeight(layoutArea);
     ViewForm->Layout({layoutArea.X, y, layoutArea.W, viewH});
     y += viewH + gap;
+  }
+  if (ThrowForm)
+  {
+    const int th = ThrowForm->MeasureHeight();
+    ThrowForm->Layout({layoutArea.X, y, layoutArea.W, th});
+    y += th + gap;
   }
   if (PackForm)
   {

@@ -11,6 +11,7 @@
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Influence/DigSessionState.h"
 #include "Creatures/Player/PlayerCapsule.h"
+#include "Game/Physics/ThrowSettings.h"
 #include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
 #include "World/Chunks/ChunkManager.h"
@@ -325,8 +326,10 @@ public:
   }
   uint32_t GetWorldSeed() const { return WorldSeed; }
   const std::string &GetTerrainType() const { return TerrainType; }
+  const ThrowSettings &GetThrowSettings() const { return ThrowRules; }
+  void SetThrowSettings(const ThrowSettings &rules) { ThrowRules = rules; }
   WorldGameMode GetGameMode() const { return GameMode; }
-  void SetGameMode(WorldGameMode mode) { GameMode = mode; }
+  void SetGameMode(WorldGameMode mode);
   WorldDifficulty GetDifficulty() const { return Difficulty; }
   void SetDifficulty(WorldDifficulty difficulty) { Difficulty = difficulty; }
   /// Survival: disable creative double-space fly for non-aerial species.
@@ -1732,6 +1735,7 @@ private:
   std::string CurrentUserName;
   uint32_t WorldSeed{12345};
   std::string TerrainType{"heightmap"};
+  ThrowSettings ThrowRules;
   WorldGameMode GameMode{WorldGameMode::Creative};
   WorldDifficulty Difficulty{WorldDifficulty::Normal};
   ProceduralSettings ProceduralTemplate;

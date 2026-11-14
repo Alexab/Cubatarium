@@ -9,8 +9,8 @@
 namespace cutum
 {
 
-/// Centralized consume/drop rules for survival economy.
-/// Creative mode should be treated as "free" at this layer.
+/// Gameplay action costs. Physical rewards are published to the world loot
+/// ledger. Creative mode should be treated as "free" at this layer.
 struct ResourceEconomyService
 {
   /// True when the active entry is available for placement in current mode.
@@ -27,17 +27,6 @@ struct ResourceEconomyService
   static bool ConsumeUnits(WorldGameMode mode, UCreatureInventory &inv,
                            InventoryEntryKind kind, const std::string &itemId,
                            int units = 1);
-
-  /// Grants a dropped stack. `kind` selects the hotbar entry written into an
-  /// empty hand.
-  static void
-  GrantBlockDrop(WorldGameMode mode, UCreatureInventory &inv,
-                 const std::string &blockTypeName, int count = 1,
-                 InventoryEntryKind kind = InventoryEntryKind::Block);
-
-  /// Grants a creature/item drop into inventory (same Creative gate as blocks).
-  static void GrantItemDrop(WorldGameMode mode, UCreatureInventory &inv,
-                            const std::string &itemId, int count = 1);
 };
 
 } // namespace cutum

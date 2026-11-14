@@ -33,25 +33,4 @@ bool ResourceEconomyService::ConsumeUnits(WorldGameMode mode,
     return true;
   return static_cast<bool>(inv.Consume(kind, id, units));
 }
-void ResourceEconomyService::GrantBlockDrop(WorldGameMode mode,
-                                            UCreatureInventory &inv,
-                                            const std::string &id, int count,
-                                            InventoryEntryKind kind)
-{
-  if (!ModePolicy::DropsBlocksOnBreak(mode) || id.empty() || count <= 0)
-    return;
-  InventoryEntryRef e;
-  e.kind = kind;
-  e.Id = id;
-  e.count = count;
-  e.empty = false;
-  (void)inv.Insert(
-      e); // world pickup retains any remainder; see WorldItemSystem
-}
-void ResourceEconomyService::GrantItemDrop(WorldGameMode mode,
-                                           UCreatureInventory &inv,
-                                           const std::string &id, int count)
-{
-  GrantBlockDrop(mode, inv, id, count, InventoryEntryKind::Item);
-}
 } // namespace cutum

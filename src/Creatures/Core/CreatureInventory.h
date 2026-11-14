@@ -35,7 +35,10 @@ public:
   void Sort();
   InventoryOperationResult QuickMove(size_t slot);
   void CollectMatching(size_t slot);
-  const std::vector<InventoryEntryRef> &GetRecovery() const { return Recovery; }
+  const std::vector<InventoryEntryRef> &GetRecovery() const
+  {
+    return RecoveryForMode();
+  }
   InventoryOperationResult Recover(size_t index);
   const std::vector<std::string> &GetMigrationWarnings() const
   {
@@ -44,6 +47,10 @@ public:
   bool NeedsMigrationBackup() const { return LegacyMigration; }
   bool IsCreative() const { return Creative; }
   void SetCreative(bool creative);
+  uint64_t GetRevision() const;
+  bool MaterializeActive();
+  InventoryOperationResult TakeEquipment(bool offhand, size_t slot,
+                                         InventoryEntryRef &out);
   void AddItem(const std::string &id, int count = 1);
   void AddToInventory(const std::string &id) { AddItem(id); }
   void InitCreativeDefaults();
@@ -109,6 +116,14 @@ public:
   bool RepairActive(const UItemDefinitionStorage &items, std::string &reason);
 
 private:
+  std::vector<InventoryEntryRef> &RecoveryForMode()
+  {
+    return Creative ? CreativeRecovery : Recovery;
+  }
+  const std::vector<InventoryEntryRef> &RecoveryForMode() const
+  {
+    return Creative ? CreativeRecovery : Recovery;
+  }
   static bool CanMerge(const InventoryEntryRef &a, const InventoryEntryRef &b);
   InventoryEntryRef Prepare(InventoryEntryRef entry);
   bool Equip(InventoryEntryRef &target, const InventoryEntryRef &entry,
@@ -137,7 +152,7 @@ private:
   InventoryEntryRef EquippedOffhand{}, CreativeOffhand{};
   ArmorGroups EquippedArmorGroups{}, OffhandArmorGroups{};
   mutable std::map<std::string, int> StorageView;
-  std::vector<InventoryEntryRef> Recovery;
+  std::vector<InventoryEntryRef> Recovery, CreativeRecovery;
   std::vector<std::string> MigrationWarnings;
   const UItemDefinitionStorage *Items{nullptr};
   std::uint64_t NextInstanceId{1};

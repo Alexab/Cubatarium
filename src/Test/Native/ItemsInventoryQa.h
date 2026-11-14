@@ -124,7 +124,7 @@ inline void RunItemsInventoryQa(UWorld &world, const std::string &path)
             inv.Count(InventoryEntryKind::Item, "iron_pickaxe") == 1 &&
             actor->CarryHandCount == 1);
   tick(1);
-  actor->ThrowCharge = 1;
+  physics.SetThrowCharge(*actor, 1);
   check("release charged item", physics.Release(world, *actor, forward));
   nlohmann::json flying;
   physics.Serialize(flying);
@@ -161,7 +161,7 @@ inline void RunItemsInventoryQa(UWorld &world, const std::string &path)
           c && c->GetId() == small &&
               c->GetInventory().Count(InventoryEntryKind::Item, "apple") == 2 &&
               c->GetStatusEffects().size() == 1 && c->GetVitals().health == hp);
-    actor->ThrowCharge = 1;
+    physics.SetThrowCharge(*actor, 1);
     physics.Release(world, *actor, forward);
     world.SaveCreatures(path + ".flight.creatures.json");
     world.LoadCreatures(path + ".flight.creatures.json");
@@ -189,7 +189,7 @@ inline void RunItemsInventoryQa(UWorld &world, const std::string &path)
     tick(1);
     auto cargo =
         physics.GetItems().empty() ? eye : physics.GetItems().front().position;
-    actor->ThrowCharge = 1;
+    physics.SetThrowCharge(*actor, 1);
     bool released = physics.Release(
         world, *actor, glm::normalize(v->GetCollisionVolume().center - cargo));
     tick(60);
@@ -220,7 +220,7 @@ inline void RunItemsInventoryQa(UWorld &world, const std::string &path)
     tick(1);
     auto cargo =
         physics.GetItems().empty() ? eye : physics.GetItems().front().position;
-    actor->ThrowCharge = 1;
+    physics.SetThrowCharge(*actor, 1);
     bool released = physics.Release(
         world, *actor, glm::normalize(v->GetCollisionVolume().center - cargo));
     tick(60);
@@ -517,7 +517,7 @@ inline void RunItemsInventoryQa(UWorld &world, const std::string &path)
       auto cargo = physics.GetItems().empty()
                        ? eye
                        : physics.GetItems().front().position;
-      actor->ThrowCharge = 1;
+      physics.SetThrowCharge(*actor, 1);
       bool released = physics.Release(
           world, *actor,
           glm::normalize(target->GetCollisionVolume().center - cargo));
@@ -652,7 +652,15 @@ inline void RunItemsInventoryQa(UWorld &world, const std::string &path)
       std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - begin)
           .count();
-  check("body budget retains all property", physics.Count() == 64);
+  auto propertyUnits = [&]
+  {
+    int count = 0;
+    for (const auto &body : physics.GetItems())
+      if (!body.creatureId)
+        count += body.stack.count;
+    return count;
+  };
+  check("body budget retains all property", propertyUnits() == 64);
   for (int i = 0; i < 600; ++i)
     physics.Spawn(glm::vec3(floor) + glm::vec3(2, 3, 2), "arrow", 1, false);
   nlohmann::json budgetSave;
@@ -660,7 +668,7 @@ inline void RunItemsInventoryQa(UWorld &world, const std::string &path)
   const auto savedCount = physics.Count();
   physics.Deserialize(budgetSave);
   check("budget overflow is serialized without silent deletion",
-        savedCount == 664 && physics.Count() == savedCount);
+        propertyUnits() == 664 && physics.Count() == savedCount);
   const auto fullBegin = std::chrono::steady_clock::now();
   tick(60);
   report["physics_512_active_bodies_60_steps_ms"] =
@@ -676,7 +684,7 @@ inline void RunItemsInventoryQa(UWorld &world, const std::string &path)
   physics.BeginThrow(world, *actor, reason);
   nlohmann::json brokenLink;
   physics.Serialize(brokenLink);
-  brokenLink["world_physical_v1"][0]["carrier"] = uint64_t(999999);
+  brokenLink["world_physical_v2"][0]["carrier"] = uint64_t(999999);
   physics.Deserialize(brokenLink);
   tick(2);
   check("missing carrier safely releases cargo and frees hands",
@@ -721,7 +729,7 @@ inline void RunItemsInventoryQa(UWorld &world, const std::string &path)
     inv.SetActiveSlot(0, 0);
     bool armed = physics.BeginThrow(world, *actor, reason);
     tick(1);
-    actor->ThrowCharge = 1;
+    physics.SetThrowCharge(*actor, 1);
     bool released = physics.Release(world, *actor, forward);
     for (int frame = 0; frame < fps; ++frame)
       physics.Tick(world, 1.f / fps);
@@ -745,7 +753,7 @@ inline void RunItemsInventoryQa(UWorld &world, const std::string &path)
   inv.SetActiveSlot(0, 0);
   const auto lagIdentity = inv.GetSlot(0).instanceId;
   bool lagArmed = physics.BeginThrow(world, *actor, reason);
-  actor->ThrowCharge = 1;
+  physics.SetThrowCharge(*actor, 1);
   bool lagReleased = physics.Release(world, *actor, forward);
   physics.Tick(world, .5f);
   check("long frame keeps a swept body and its exact instance",
@@ -892,10 +900,10 @@ inline void TickItemsCarryVisualQa(UWorld &world, float elapsed)
     last = phase;
   }
   if (phase < 2)
-    actor->ThrowCharge = std::clamp(time / 3.f, 0.f, 1.f);
+    physics.SetThrowCharge(*actor, std::clamp(time / 3.f, 0.f, 1.f));
   else if (phase < 5 && time > 2.f && !released)
   {
-    actor->ThrowCharge = 1;
+    physics.SetThrowCharge(*actor, 1);
     physics.Release(world, *actor, camera->GetFront() + glm::vec3(0, .1f, 0));
     released = true;
   }

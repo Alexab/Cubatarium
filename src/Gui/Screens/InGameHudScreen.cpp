@@ -655,6 +655,8 @@ void UInGameHudScreen::UpdateModeBadge()
                        : "Target is too heavy or too large";
         }
     }
+    if (text.empty())
+      text = UWorldItemSystem::Instance().GetFeedback();
     CarryHint->SetText(text);
     CarryHint->SetVisible(!text.empty());
   }

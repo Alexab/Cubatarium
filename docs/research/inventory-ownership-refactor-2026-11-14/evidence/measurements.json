@@ -1,0 +1,7 @@
+{
+  "physics_512_active_bodies_60_steps_ms": 55.7406,
+  "physics_64_bodies_60_steps_ms": 8.4899,
+  "executable_sha256": "da0f200d3cf86520a535832e9c08002d6de7cf3144060e54a45ea1d87f3fc228",
+  "configuration": "Release",
+  "world": "CarryAimQA"
+}

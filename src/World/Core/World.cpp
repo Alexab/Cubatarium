@@ -1,10 +1,10 @@
+#include "World/Persistence/OwnershipSnapshot.h"
 // #include <QPainter>
 // #include <QJsonDocument>
 // #include <QJsonObject>
 // #include <QJsonValue>
 // #include <QJsonArray>
 // #include <QFile>
-#include "World/Core/World.h"
 #include "Activity/WorldCreatureActivitySink.h"
 #include "App/Platform/Log.h"
 #include "App/Settings/GraphicsQualityProfile.h"
@@ -37,6 +37,7 @@
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/FluidColumnSurfaceQuery.h"
 #include "World/Core/RuntimeTuning.h"
+#include "World/Core/World.h"
 #include "World/Core/WorldFluidFacade.h"
 #include "World/Core/WorldViewBinding.h"
 #include "World/Diagnostics/JobStageTrace.h"
@@ -14371,6 +14372,7 @@ void UWorld::SaveSessionSnapshotMetadataOnly(
   GetChunkStorage().WriteStorageMarker(world_folder_path);
   SaveUsers(world_folder_path + "/users.json");
   SaveCreatures(world_folder_path + "/creatures.json");
+  SaveOwnershipBundle(world_folder_path);
   SaveWorldData(world_folder_path + "/world_data.json");
   SaveMovementDiagnostics(world_folder_path + "/movement_diagnostics.json");
   ModifiedChunks.clear();
@@ -14431,6 +14433,7 @@ void UWorld::SaveSessionSnapshot(const std::string &world_folder_path,
   GetChunkStorage().WriteStorageMarker(world_folder_path);
   SaveUsers(world_folder_path + "/users.json");
   SaveCreatures(world_folder_path + "/creatures.json");
+  SaveOwnershipBundle(world_folder_path);
   SaveWorldData(world_folder_path + "/world_data.json");
   ModifiedChunks.clear();
   // Quit path must not recreate the chunk scheduler (join while populate

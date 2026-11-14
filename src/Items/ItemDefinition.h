@@ -2,6 +2,7 @@
 #define ITEM_DEFINITION_H
 
 #include "Game/Physics/ThrowMath.h"
+#include "Game/Physics/ThrowSettings.h"
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -147,6 +148,7 @@ struct ItemDefinition
   ItemArmorDef Armor;
   ToolCapabilitiesDef Tool;
   ItemUseDef Use;
+  ThrowCategory ThrowClass{ThrowCategory::General};
   PhysicalProfile Physical;
   ItemVisualDef Visual;
   ItemRangedDef Ranged;

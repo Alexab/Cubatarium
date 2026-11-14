@@ -45,5 +45,6 @@
     ],
     "hardness": 1
   },
-  "use": {}
+  "use": {},
+  "throw_category": "equipment"
 }

@@ -267,6 +267,8 @@ bool UItemDefinitionStorage::LoadFile(const std::string &path)
         }
       }
     }
+    def.ThrowClass = ThrowCategoryFromString(
+        data.value("throw_category", std::string("general")));
     if (data.contains("repair") && data["repair"].is_object())
     {
       const auto &r = data["repair"];

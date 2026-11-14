@@ -24,6 +24,7 @@
 #include "Gui/Widgets/GuiWindow.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "World/Core/World.h"
+#include "World/Items/WorldItemSystem.h"
 #include "World/Persistence/WorldPersistence.h"
 #include <algorithm>
 #include <cctype>
@@ -106,6 +107,18 @@ void UCharacterSheetScreen::SetVisible(bool visible)
   }
 }
 
+GuiRect UCharacterSheetScreen::GetMainSlotBounds() const
+{
+  return ToolSlots.empty() ? GuiRect{} : ToolSlots[0]->GetBounds();
+}
+GuiRect UCharacterSheetScreen::GetDropButtonBounds() const
+{
+  return DropButton ? DropButton->GetBounds() : GuiRect{};
+}
+GuiRect UCharacterSheetScreen::GetDeleteButtonBounds() const
+{
+  return DeleteButton ? DeleteButton->GetBounds() : GuiRect{};
+}
 void UCharacterSheetScreen::Toggle() { SetVisible(!Visible); }
 
 bool UCharacterSheetScreen::IsSearchFocused() const
@@ -181,9 +194,24 @@ void UCharacterSheetScreen::BuildEquipmentPanel(UGuiPanel &body,
               return;
             }
             session->BeginDragFromSlot(address, entry);
-            SlotAddress bag;
-            bag.surface = SlotSurface::PaletteGrid;
-            session->DropOnSlot(bag);
+          });
+      slot->SetOnActivate(
+          [this, address, armorIndex](const GuiMouseEvent &event)
+          {
+            auto *session = dynamic_cast<UGameSession *>(Stats);
+            if (!session)
+              return;
+            const auto entry = session->GetArmorEntryRef(armorIndex);
+            if (entry.empty)
+              return;
+            session->BeginDragFromSlot(address, entry);
+            if (event.Mods & GuiKey::ModShift)
+            {
+              SlotAddress bag;
+              bag.surface = SlotSurface::BackpackReturn;
+              session->DropOnSlot(bag);
+            }
+            RefreshLabels();
           });
       ArmorSlots.push_back(slot.get());
       DollPanel->AddChild(std::move(slot));
@@ -230,13 +258,27 @@ void UCharacterSheetScreen::BuildEquipmentPanel(UGuiPanel &body,
                   session->GetHotbarEntryRef(address.bar, address.slot);
               if (!entry.empty)
               {
-                session->BeginDragFromSlot(address, entry);
-                SlotAddress bag;
-                bag.surface = SlotSurface::PaletteGrid;
-                session->DropOnSlot(bag);
+                session->InventoryClick(address.bar * 10 + address.slot, false,
+                                        false, false);
                 return;
               }
               session->ApplyPendingAssignment(address.bar, address.slot);
+            });
+        slot->SetOnActivate(
+            [this](const GuiMouseEvent &event)
+            {
+              auto *session = dynamic_cast<UGameSession *>(Stats);
+              if (!session)
+                return;
+              const auto snapshot = session->GetCharacterStatsSnapshot();
+              const auto index = snapshot.activeRow * 10 +
+                                 session->GetSelectedSlot(snapshot.activeRow);
+              session->InventoryClick(index,
+                                      event.Button == GuiMouseButton::Right,
+                                      (event.Mods & GuiKey::ModShift) != 0,
+                                      event.ClickCount == 2 &&
+                                          event.Button == GuiMouseButton::Left);
+              RefreshLabels();
             });
       }
       else
@@ -271,11 +313,29 @@ void UCharacterSheetScreen::BuildEquipmentPanel(UGuiPanel &body,
                 return;
               }
               session->BeginDragFromSlot(address, entry);
-              SlotAddress bag;
-              bag.surface = SlotSurface::PaletteGrid;
-              session->DropOnSlot(bag);
             });
       }
+      if (i == 1)
+        slot->SetOnActivate(
+            [this](const GuiMouseEvent &event)
+            {
+              auto *session = dynamic_cast<UGameSession *>(Stats);
+              if (!session)
+                return;
+              const auto entry = session->GetOffhandEntryRef();
+              if (entry.empty)
+                return;
+              SlotAddress source;
+              source.surface = SlotSurface::CharacterOffhand;
+              session->BeginDragFromSlot(source, entry);
+              if (event.Mods & GuiKey::ModShift)
+              {
+                SlotAddress bag;
+                bag.surface = SlotSurface::BackpackReturn;
+                session->DropOnSlot(bag);
+              }
+              RefreshLabels();
+            });
       ToolSlots.push_back(slot.get());
       DollPanel->AddChild(std::move(slot));
     }
@@ -320,9 +380,20 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
 
   auto tabs = std::make_unique<UGuiTabBar>(&theme);
   Sections = tabs.get();
-  Sections->SetTabs({"Backpack", "Equipment", "Status", "Appearance"});
+  Sections->SetTabs(
+      {"Backpack", "Equipment", "Status", "Appearance", "Catalog"});
   Sections->SetActiveTab(Section);
-  Sections->SetOnTabChanged([this](int section) { SetSection(section); });
+  Sections->SetOnTabChanged(
+      [this](int section)
+      {
+        if (section == 4)
+        {
+          if (auto *session = dynamic_cast<UGameSession *>(Stats))
+            session->OpenPlayerWindow(4);
+        }
+        else
+          SetSection(section);
+      });
   body->AddChild(std::move(tabs));
   auto search = std::make_unique<UGuiTextInput>(&theme);
   Search = search.get();
@@ -354,6 +425,16 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
         RefreshLabels();
       });
   body->AddChild(std::move(drop));
+  auto remove = std::make_unique<UGuiButton>(&theme, "Delete assignment");
+  DeleteButton = remove.get();
+  remove->SetOnClick(
+      [this]
+      {
+        if (auto *session = dynamic_cast<UGameSession *>(Stats))
+          session->DeleteCreativeAssignment();
+        RefreshLabels();
+      });
+  body->AddChild(std::move(remove));
   auto recovery = std::make_unique<UGuiButton>(&theme, "Recover");
   RecoveryButton = recovery.get();
   RecoveryButton->SetOnClick(
@@ -594,6 +675,12 @@ void UCharacterSheetScreen::Relayout()
                                      (contentH - line * 3) / 4 - pad)) +
            pad * 5,
        Scaled(75), line + pad});
+  auto dropBounds = DropButton->GetBounds();
+  DeleteButton->SetBounds(
+      {dropBounds.X - Scaled(150), dropBounds.Y, Scaled(145), dropBounds.H});
+  DeleteButton->SetVisible(bagVisible && Stats &&
+                           Stats->GetCharacterStatsSnapshot().gameMode ==
+                               WorldGameMode::Creative);
   const int gridTop = top + line + pad * 2;
   const int slot = std::max(20, std::min((mainW - pad) / 10 - pad / 2,
                                          (contentH - line * 3) / 4 - pad));
@@ -602,8 +689,8 @@ void UCharacterSheetScreen::Relayout()
     BagSlots[i]->SetBounds({mainX + pad / 2 + int(i % 10) * (slot + pad / 2),
                             gridTop + pad / 2 + int(i / 10) * (slot + pad),
                             slot, slot});
-  InventoryHint->SetBounds(
-      {mainX, gridTop + 4 * (slot + pad) + pad, mainW, line * 2});
+  InventoryHint->SetBounds({mainX, gridTop + 4 * (slot + pad) + pad,
+                            std::max(40, mainW - Scaled(235)), line * 2});
   StatsScroll->SetVisible(Section == 2);
   StatsScroll->SetBounds({mainX, top, mainW, contentH});
   auto labelHeight = [&](UGuiLabel *label)
@@ -722,11 +809,14 @@ void UCharacterSheetScreen::RefreshLabels()
     }
     TitleMeta->SetText(oss.str());
   }
+  Sections->SetTabEnabled(
+      {true, true, true, true, snap.gameMode == WorldGameMode::Creative});
   if (ModeLabel)
   {
     if (snap.gameMode == WorldGameMode::Creative)
     {
-      ModeLabel->SetText("Mode: Creative (vitals frozen)");
+      ModeLabel->SetText(
+          "Creative: instant mining + loot; no wear; vitals frozen");
     }
     else
     {
@@ -886,6 +976,16 @@ void UCharacterSheetScreen::RefreshLabels()
     }
   }
   Relayout();
+  RefreshTooltip(snap);
+  PreviewValid = snap.valid && !snap.typeId.empty();
+  PreviewTypeId = snap.typeId;
+  PreviewSkinId = EditingAppearance ? DraftSkin : snap.skinId;
+  RefreshAppearanceControls();
+  RenderCharacterPreview();
+}
+
+void UCharacterSheetScreen::RefreshTooltip(const CharacterStatsSnapshot &snap)
+{
   if (Tooltip)
   {
     Tooltip->SetVisible(false);
@@ -949,6 +1049,13 @@ void UCharacterSheetScreen::RefreshLabels()
       text += "\nCount: " + (hover.IsCatalogReference()
                                  ? std::string("Unlimited")
                                  : std::to_string(hover.count));
+      std::string throwReason;
+      if (hover.kind == InventoryEntryKind::Block ||
+          hover.kind == InventoryEntryKind::Item)
+        text +=
+            UWorldItemSystem::Instance().CanThrow(*world, hover, throwReason)
+                ? "\nR: charge and throw"
+                : "\n" + throwReason;
       if (!hover.contentsId.empty())
         text += "\n" + hover.contentsId + ": " +
                 std::to_string(hover.contentsUnits);
@@ -989,11 +1096,6 @@ void UCharacterSheetScreen::RefreshLabels()
                                   &Context->GetRenderer()));
     }
   }
-  PreviewValid = snap.valid && !snap.typeId.empty();
-  PreviewTypeId = snap.typeId;
-  PreviewSkinId = EditingAppearance ? DraftSkin : snap.skinId;
-  RefreshAppearanceControls();
-  RenderCharacterPreview();
 }
 
 void UCharacterSheetScreen::RunInventoryQa(const std::string &path)

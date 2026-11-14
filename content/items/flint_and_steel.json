@@ -38,5 +38,6 @@
   },
   "use": {
     "interaction": "ignite"
-  }
+  },
+  "throw_category": "utility"
 }

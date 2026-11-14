@@ -45,7 +45,8 @@ struct DifficultyVitalsScale
 
 DifficultyVitalsScale ScaleForDifficulty(WorldDifficulty difficulty)
 {
-  const float needs = WorldDifficultyProfileFor(difficulty).NeedsDrainMultiplier;
+  const float needs =
+      WorldDifficultyProfileFor(difficulty).NeedsDrainMultiplier;
   return {needs, needs, needs, difficulty != WorldDifficulty::Peaceful};
 }
 
@@ -74,10 +75,10 @@ void CreatureVitalsSystem::Tick(UWorld &world, WorldGameMode mode,
         const float endMul =
             1.f / std::max(0.5f, 0.5f + static_cast<float>(a.endurance) / 20.f);
 
-        v.satiety =
-            std::max(0.f, v.satiety - kSatietyDrainPerSec * scale.NeedsDrain * dt);
-        v.thirst =
-            std::max(0.f, v.thirst - kThirstDrainPerSec * scale.NeedsDrain * dt);
+        v.satiety = std::max(0.f, v.satiety - kSatietyDrainPerSec *
+                                                  scale.NeedsDrain * dt);
+        v.thirst = std::max(0.f, v.thirst - kThirstDrainPerSec *
+                                                scale.NeedsDrain * dt);
 
         const bool sprinting =
             creature.GetLocomotionFacts().state == LocomotionState::Run;
@@ -98,11 +99,12 @@ void CreatureVitalsSystem::Tick(UWorld &world, WorldGameMode mode,
           {
             if (scale.BreathDrain > 0.f)
             {
-              v.breath = std::max(
-                  0.f, v.breath - kBreathDrainPerSec * scale.BreathDrain * dt);
+              v.breath = std::max(0.f, v.breath - kBreathDrainPerSec *
+                                                      scale.BreathDrain * dt);
               if (v.breath <= 0.f && scale.DrownDamage)
               {
-                if (ApplyDamage(world, creature, kStarveDamagePerSec * dt, mode))
+                if (ApplyDamage(world, creature, kStarveDamagePerSec * dt,
+                                mode))
                 {
                   toRemove.push_back(creature.GetId());
                 }
@@ -121,22 +123,22 @@ void CreatureVitalsSystem::Tick(UWorld &world, WorldGameMode mode,
         }
         else
         {
-          v.breath = std::min(v.maxBreath, v.breath + kBreathRecoverPerSec * dt);
+          v.breath =
+              std::min(v.maxBreath, v.breath + kBreathRecoverPerSec * dt);
         }
 
         if (fatigueGain > 0.f && scale.FatigueGain > 0.f)
         {
-          v.fatigue = std::min(
-              v.maxFatigue,
-              v.fatigue + fatigueGain * scale.FatigueGain * endMul * dt);
+          v.fatigue = std::min(v.maxFatigue, v.fatigue + fatigueGain *
+                                                             scale.FatigueGain *
+                                                             endMul * dt);
         }
         else if (fatigueGain <= 0.f)
         {
           v.fatigue = std::max(0.f, v.fatigue - kFatigueRecoverPerSec * dt);
         }
 
-        if (scale.NeedsDrain > 0.f &&
-            (v.satiety <= 0.f || v.thirst <= 0.f))
+        if (scale.NeedsDrain > 0.f && (v.satiety <= 0.f || v.thirst <= 0.f))
         {
           if (ApplyDamage(world, creature, kStarveDamagePerSec * dt, mode))
           {
@@ -171,8 +173,7 @@ bool CreatureVitalsSystem::ApplyDamage(UWorld &world, UCreature &target,
   float mitigated = amount;
   // reason "influence": already group-mitigated (ResolveHitParams). Other
   // reasons (starve/drown/status/null) still use flat armor*0.5.
-  const bool pre_mitigated =
-      reason && (std::strcmp(reason, "influence") == 0);
+  const bool pre_mitigated = reason && (std::strcmp(reason, "influence") == 0);
   if (!pre_mitigated)
   {
     mitigated = std::max(0.f, amount - v.armor * 0.5f);
@@ -252,8 +253,8 @@ bool CreatureVitalsSystem::HandleLethal(UWorld &world, UCreature &target,
   v.FillFull();
   v.health = v.maxHealth;
   const glm::vec3 spawn = world.GetSpawnPoint();
-  target.SetBodyOrigin(glm::vec3(spawn.x, spawn.y - target.GetEyeOffset().y,
-                                 spawn.z));
+  target.SetBodyOrigin(
+      glm::vec3(spawn.x, spawn.y - target.GetEyeOffset().y, spawn.z));
   return false;
 }
 

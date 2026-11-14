@@ -38,5 +38,6 @@
   },
   "use": {
     "interaction": "plant"
-  }
+  },
+  "throw_category": "material"
 }

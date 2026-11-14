@@ -103,6 +103,12 @@ bool USurvivalSystems::Use(UWorld &w, UCreature &actor, glm::vec3 eye,
         reason = "Water is unavailable";
         return true;
       }
+      if (!inv.MaterializeActive())
+      {
+        reason = "Cannot materialize container";
+        return true;
+      }
+      e = inv.GetActiveEntryRef();
       e->contentsId = "water";
       e->contentsUnits = e->Id == "bucket" ? 1 : 4;
       reason = "Filled with water";
@@ -161,7 +167,8 @@ bool USurvivalSystems::Use(UWorld &w, UCreature &actor, glm::vec3 eye,
         return true;
       }
       UWorldItemSystem::Instance().SpawnStack(
-          c->GetBodyOrigin() + glm::vec3(0, .5f, 0), Entry("wool", 3));
+          c->GetBodyOrigin() + glm::vec3(0, .5f, 0), Entry("wool", 3),
+          DomainForMode(w.GetGameMode()));
       Sheared.push_back({*target, 300});
     }
     else if (hit)
@@ -181,7 +188,8 @@ bool USurvivalSystems::Use(UWorld &w, UCreature &actor, glm::vec3 eye,
         return true;
       }
       UWorldItemSystem::Instance().SpawnStack(glm::vec3(hit->blockPos),
-                                              Entry("plant_fiber", 2));
+                                              Entry("plant_fiber", 2),
+                                              DomainForMode(w.GetGameMode()));
     }
     else
     {
@@ -311,7 +319,8 @@ void USurvivalSystems::BlockDrops(UWorld &w, glm::ivec3 p,
   }
   else if (id == "wheat" || id == "cu_crop_ripe")
   {
-    UWorldItemSystem::Instance().Spawn(glm::vec3(p), "seeds", 2, false);
+    UWorldItemSystem::Instance().Spawn(glm::vec3(p), "seeds", 2, false,
+                                       DomainForMode(w.GetGameMode()));
     drop = "grain";
     count = 3;
     block = false;
@@ -326,14 +335,16 @@ void USurvivalSystems::BlockDrops(UWorld &w, glm::ivec3 p,
   {
     drop = "plant_fiber";
     block = false;
-    UWorldItemSystem::Instance().Spawn(glm::vec3(p), "seeds", 1, false);
+    UWorldItemSystem::Instance().Spawn(glm::vec3(p), "seeds", 1, false,
+                                       DomainForMode(w.GetGameMode()));
   }
   else if (id.find("leaves") != std::string::npos)
   {
     drop = "plant_fiber";
     block = false;
   }
-  UWorldItemSystem::Instance().Spawn(glm::vec3(p), drop, count, block);
+  UWorldItemSystem::Instance().Spawn(glm::vec3(p), drop, count, block,
+                                     DomainForMode(w.GetGameMode()));
 }
 void USurvivalSystems::Tick(UWorld &w, float dt)
 {

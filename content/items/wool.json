@@ -36,5 +36,6 @@
     ],
     "hardness": 0.7
   },
-  "use": {}
+  "use": {},
+  "throw_category": "material"
 }
