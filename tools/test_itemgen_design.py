@@ -5,6 +5,7 @@ import json
 import shutil
 import tempfile
 import unittest
+import yaml
 import numpy as np
 from PIL import Image
 
@@ -39,6 +40,11 @@ class DesignTests(unittest.TestCase):
         with Image.open(path/'textures/diffuse.png') as image:
             self.assertEqual(image.size,(256,256))
         self.assertEqual(source.read_bytes(),before)
+        grip=g['extras']['presentation']['right_grip']
+        self.assertTrue(np.all(np.array(grip)>=points.min(axis=0)-1e-6))
+        self.assertTrue(np.all(np.array(grip)<=points.max(axis=0)+1e-6))
+        authored=yaml.safe_load(source.read_text(encoding='utf-8'))
+        self.assertEqual(g['extras']['presentation']['fp_euler_deg'],authored['presentation']['fp_euler_deg'])
         files={p.relative_to(path):hashlib.sha256(p.read_bytes()).hexdigest() for p in path.rglob('*') if p.is_file()}
         build_design('bucket',root=self.root)
         self.assertEqual(files,{p.relative_to(path):hashlib.sha256(p.read_bytes()).hexdigest() for p in path.rglob('*') if p.is_file()})
@@ -57,6 +63,23 @@ class DesignTests(unittest.TestCase):
             self.assertEqual(image.getpixel((x-1,y-1)),(255,0,255,255))
         self.assertEqual(overlay.read_bytes(),before)
 
+    def test_authored_node_pivots_preserve_rest_geometry(self):
+        path=build_design('bucket',root=self.root)
+        before=np.concatenate([p['positions'] for p in load_primitives(path)])
+        source=self.root/'tools/item_designs/bucket/design.yaml'
+        design=yaml.safe_load(source.read_text(encoding='utf-8'))
+        design['nodes']={'handle':{'pivot':[0,.12,0]}}
+        for part in design['parts']:
+            if part['name'].startswith('handle'): part['node']='handle'
+        source.write_text(yaml.safe_dump(design,sort_keys=False),encoding='utf-8')
+        path=build_design('bucket',root=self.root)
+        after=np.concatenate([p['positions'] for p in load_primitives(path)])
+        # Grouping changes vertex order, never the rest-pose surface positions.
+        self.assertEqual({tuple(np.round(p,5)) for p in before}, {tuple(np.round(p,5)) for p in after})
+        g=json.loads((path/'model.gltf').read_text())
+        self.assertEqual(g['nodes'][1]['name'],'handle')
+        self.assertEqual(g['nodes'][0]['children'],[1])
+
     def test_bad_overlay_and_source_destination_are_rejected(self):
         path=build_design('bucket',root=self.root)
         island=json.loads((path/'uv_layout.json').read_text())['islands'][0]
@@ -64,6 +87,32 @@ class DesignTests(unittest.TestCase):
         Image.new('RGBA',(1,1)).save(source/(island['name']+'.png'))
         with self.assertRaisesRegex(ValueError,'size mismatch'): build_design('bucket',root=self.root)
         with self.assertRaisesRegex(ValueError,'overwrite'): build_design('bucket',root=self.root,output=source)
+
+
+class PilotTests(unittest.TestCase):
+    def test_all_twelve_pilot_sources_build_without_aliases(self):
+        ids=['stone_pickaxe','iron_pickaxe','copper_axe','gold_sword','iron_head','leather_chest','wood_bow','bucket','shears','apple','bread','raw_iron']
+        hashes=set()
+        with tempfile.TemporaryDirectory() as tmp:
+            for id in ids:
+                path=build_design(id,output=Path(tmp)/id)
+                g=json.loads((path/'model.gltf').read_text())
+                recipe=json.loads((path/'design_build.json').read_text())
+                self.assertLessEqual(recipe['triangles'],2000)
+                value=hashlib.sha256((path/'model.bin').read_bytes()).hexdigest()
+                self.assertNotIn(value,hashes)
+                hashes.add(value)
+                self.assertIn('right_grip',g['extras']['presentation'])
+                load_primitives(path)
+
+    def test_seeding_never_overwrites_an_author_design(self):
+        from itemgen.pilot_designs import seed_missing
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); seed_missing(root)
+            p=root/'tools/item_designs/apple/design.yaml'
+            p.write_text('artist-authored sentinel',encoding='utf-8')
+            self.assertEqual(seed_missing(root),[])
+            self.assertEqual(p.read_text(),'artist-authored sentinel')
 
 
 if __name__=='__main__': unittest.main()

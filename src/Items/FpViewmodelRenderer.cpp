@@ -1026,7 +1026,8 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const std::string &itemId,
   }
 
   const std::filesystem::path absGltf = paths->AssetRoot() / gltfRel;
-  const auto surface = FindItemSurfaceAsset(absGltf);
+  const auto surface =
+      FindItemSurfaceAsset(absGltf, UItemDefinitionStorage::ContentRevision());
 
   static std::mutex cacheMu;
   static std::unordered_map<std::string, std::shared_ptr<CreatureGltfMeshAsset>>
@@ -1113,7 +1114,11 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const std::string &itemId,
     fitExtent = std::max(1e-5f, fitExtent);
   }
   const float fitScale = kFpWieldTargetExtent / fitExtent;
-  const float wieldScale = DefaultWieldScale(*def) * def->Visual.FpScale;
+  if (surface && surface->Grip.HasFpEuler)
+    for (int i = 0; i < 3; ++i)
+      poseEuler[i] = surface->Grip.FpEulerDeg[i];
+  const float wieldScale = DefaultWieldScale(*def) * def->Visual.FpScale *
+                           (surface ? surface->Grip.FpScale : 1.f);
   const glm::vec3 visualOff(poseOff[0], poseOff[1], poseOff[2]);
   // kToolWieldLeanDeg is an arm-local bias applied in `orient` below.
   // poseEuler is the tool-local grip (family default or
@@ -1132,11 +1137,24 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const std::string &itemId,
                   glm::vec3(1.f, 0.f, 0.f)) *
       glm::mat4(glm::vec4(1, 0, 0, 0), glm::vec4(0, 0, -1, 0),
                 glm::vec4(0, 1, 0, 0), glm::vec4(0, 0, 0, 1));
+  glm::vec3 gripCenter = center;
+  if (surface)
+  {
+    if (DrawingLeftArm && surface->Grip.HasLeftGrip)
+      gripCenter = surface->Grip.LeftGrip;
+    else if (surface->Grip.HasRightGrip)
+      gripCenter = surface->Grip.RightGrip;
+  }
+  const glm::vec3 gripOffset =
+      (surface && (surface->Grip.HasRightGrip ||
+                   (DrawingLeftArm && surface->Grip.HasLeftGrip)))
+          ? glm::vec3(0)
+          : visualOff;
   const glm::mat4 model =
       glm::translate(glm::mat4(1.f), socket) * orient * visualRot *
       glm::scale(glm::mat4(1.f),
                  glm::vec3(fitScale * kToolWieldScale * wieldScale)) *
-      glm::translate(glm::mat4(1.f), -center + visualOff);
+      glm::translate(glm::mat4(1.f), -gripCenter + gripOffset);
   const glm::mat4 mvp = mvpBase * model;
 
   if (surface)
@@ -1457,6 +1475,13 @@ void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
   {
     return;
   }
+  const auto revision = UItemDefinitionStorage::ContentRevision();
+  if (revision != SurfaceRevision)
+  {
+    if (SurfaceRenderer)
+      SurfaceRenderer->Clear();
+    SurfaceRevision = revision;
+  }
   if (params.Active && !params.Active->empty &&
       params.Active->kind == InventoryEntryKind::Item)
   {
@@ -1505,6 +1530,24 @@ void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
   Shader->SetInt("uAnimFrameCount", 1);
 
   glm::mat4 rootR = BuildRootMatrix(false);
+  auto handProfile = [&](const glm::mat4 &root, const glm::vec3 &socket,
+                         const InventoryEntryRef *entry, bool left)
+  {
+    if (!entry || entry->empty || entry->broken ||
+        entry->kind != InventoryEntryKind::Item || !Items)
+      return root;
+    const auto *definition = Items->Get(entry->Id);
+    auto *paths = IUPlatformPaths::TryGet();
+    if (!definition || !paths ||
+        std::filesystem::path(definition->ModelPath).extension() != ".gltf")
+      return root;
+    const auto asset = FindItemSurfaceAsset(
+        paths->AssetRoot() / definition->ModelPath, revision);
+    if (!asset)
+      return root;
+    return ApplyItemHandProfile(root, socket, asset->Grip, left);
+  };
+  rootR = handProfile(rootR, kHandSocketR, params.Active, false);
   if (params.CarryHands > 0)
     rootR = glm::translate(glm::mat4(1),
                            glm::vec3(-.12f, .28f + params.ThrowCharge * .12f,
@@ -1524,6 +1567,7 @@ void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
   DrawHeld(params.Active, kHandSocketR, pv * rootR);
 
   glm::mat4 rootL = BuildRootMatrix(true);
+  rootL = handProfile(rootL, kHandSocketL, params.Offhand, true);
   if (params.CarryHands == 2)
     rootL = glm::translate(glm::mat4(1),
                            glm::vec3(.12f, .28f + params.ThrowCharge * .12f,

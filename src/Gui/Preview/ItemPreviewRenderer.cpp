@@ -524,7 +524,8 @@ bool UItemPreviewRenderer::TryDrawGltfModel(const std::string &itemId,
   }
 
   const std::filesystem::path absPath = paths->AssetRoot() / gltfRel;
-  if (const auto surface = FindItemSurfaceAsset(absPath))
+  if (const auto surface = FindItemSurfaceAsset(
+          absPath, UItemDefinitionStorage::ContentRevision()))
   {
     const auto center = (surface->Low + surface->High) * .5f;
     const auto extent = surface->High - surface->Low;
@@ -532,7 +533,12 @@ bool UItemPreviewRenderer::TryDrawGltfModel(const std::string &itemId,
     const float scale =
         1.2f / std::max(1e-5f, std::max({extent.x, extent.y, extent.z})) *
         (definition ? definition->Visual.IconScale : 1.f);
-    const auto model = glm::scale(glm::mat4(1), glm::vec3(scale)) *
+    const auto angles = glm::radians(surface->Grip.IconEulerDeg);
+    const auto rotation =
+        glm::rotate(glm::mat4(1), angles.x, glm::vec3(1, 0, 0)) *
+        glm::rotate(glm::mat4(1), angles.y, glm::vec3(0, 1, 0)) *
+        glm::rotate(glm::mat4(1), angles.z, glm::vec3(0, 0, 1));
+    const auto model = glm::scale(glm::mat4(1), glm::vec3(scale)) * rotation *
                        glm::translate(glm::mat4(1), -center);
     ItemPresentationProfile profile;
     profile.CameraPosition = glm::vec3(glm::inverse(view)[3]);

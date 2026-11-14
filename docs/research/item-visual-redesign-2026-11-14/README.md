@@ -94,6 +94,60 @@ and the publication manifest were not replaced.
 
 Checkpoint logs/reports are in [surface-checkpoint](surface-checkpoint/).
 
+## Pilot construction and contact checkpoint
+
+There are now **12 authored v3 candidate sources; 0 production replacements**.
+All 70 gameplay definitions and the canonical production manifest remain unchanged.
+The candidates cover both picks, copper axe, gold sword, iron helmet, leather
+chest, bow, bucket, shears, apple, bread and raw iron. Construction and unresolved
+art gates are recorded in [pilot cards](../../../tools/item_designs/PILOTS.md).
+
+New mesh capabilities include faceted ring-built solids and genuinely hollow
+finger loops. UV packing now reuses free rectangles rather than wasting the
+space beside long shafts; density and texture dimensions remain explicit.
+Authored source seeding preserves existing files. Optional named nodes have
+hierarchical pivots and part-local geometry; tests compare reconstructed rest
+surfaces before and after grouping to ensure the model does not move.
+
+Authored right/left contact points follow the same physical fitting as the mesh.
+FP pose, scale, hand-root offset and arm rotation are independent of world size.
+Arm rotation pivots around the palm, preserving the contact point. The bucket's
+handle has more clearance; its mesh is no longer centred through the hand.
+The FP view was iterated with actual screenshots, not accepted from unit tests.
+The icon camera has a separate rotation, used to reveal the bow's curved plane.
+
+The surface cache now observes content revisions; FP clears owned GPU geometry
+on resource reload. A Release regression verifies a cached legacy dispatch can
+be replaced by a declared v3 resource after the revision changes.
+
+`tools/run_item_design_probes.py` builds staged designs, temporarily substitutes
+runtime resources, runs Release native checks on a QA world, captures an FP
+probe and restores every runtime file. Dedicated regressions cover restoration
+after a probe exception and after partially missing staging data. `--fp-only`
+is explicitly a narrower presentation probe, not a full regression pass.
+
+The full run passed **22 Release CTest tests and 202 icon checks**, including
+all 70 catalog items. It also checks the runtime catalog against the item
+storage's complete catalog IDs. Twelve candidates were substituted for this
+probe; the other 58 items retained their previous production graphics. FP probes
+are synthetic presentation inputs and do not equip or consume player property.
+Style/include/format checks and the geometry/design/probe test suites pass.
+
+![Twelve candidate comparisons, offline](pilot-checkpoint/overview.png)
+![Native FP contact probe](pilot-checkpoint/bucket-fp.png)
+
+Evidence: [native result](pilot-checkpoint/native-result.json),
+[icon coverage](pilot-checkpoint/icons.json),
+[Release tests](pilot-checkpoint/ctest-release.log),
+[Release build](pilot-checkpoint/desktop-release.log),
+[probe summary](pilot-checkpoint/design-probe.json).
+
+This checkpoint is not artistic acceptance of all twelve: bread scores still
+need surface work, armor needs both-body motion/fit verification, bow/shears
+need gameplay-driven node poses, and containers need visible fill. Item Lab,
+world/TP/armor/carry integration, author glTF import, versioned publication,
+the remaining 58 designs and comparative performance gates are still required.
+
 ## Remaining implementation, in order
 
 1. Native baseline and actual resource-path trace, before/after references and

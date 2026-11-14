@@ -1,0 +1,102 @@
+version: 3
+id: bread
+atlas_size: 256
+texels_per_metre: 370
+triangle_budget: 600
+presentation:
+  right_grip:
+  - 0
+  - -0.02
+  - 0
+  left_grip:
+  - 0
+  - -0.02
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.45
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+materials:
+  crust:
+    color:
+    - 174
+    - 113
+    - 49
+    pattern: food
+  score:
+    color:
+    - 230
+    - 190
+    - 122
+    pattern: plain
+parts:
+- name: loaf
+  material: crust
+  shape: revolve
+  profile:
+  - - -0.06
+    - 0.1
+  - - 0
+    - 0.15
+  - - 0.06
+    - 0.12
+  - - 0.09
+    - 0.045
+  sides: 8
+  offset:
+  - 0
+  - 0
+  - 0
+- name: score0
+  material: score
+  shape: bevel_box
+  size:
+  - 0.022
+  - 0.014
+  - 0.11
+  bevel: 0.00252
+  offset:
+  - -0.06
+  - 0.067
+  - 0
+  rotation:
+  - 0
+  - 0
+  - -12
+- name: score1
+  material: score
+  shape: bevel_box
+  size:
+  - 0.022
+  - 0.014
+  - 0.11
+  bevel: 0.00252
+  offset:
+  - 0
+  - 0.067
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 12
+- name: score2
+  material: score
+  shape: bevel_box
+  size:
+  - 0.022
+  - 0.014
+  - 0.11
+  bevel: 0.00252
+  offset:
+  - 0.06
+  - 0.067
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 12

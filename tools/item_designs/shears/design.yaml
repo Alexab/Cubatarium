@@ -1,0 +1,164 @@
+version: 3
+id: shears
+atlas_size: 256
+texels_per_metre: 230
+triangle_budget: 1800
+presentation:
+  right_grip:
+  - 0.04
+  - -0.12
+  - 0
+  left_grip:
+  - 0.04
+  - -0.12
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.65
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+materials:
+  wood:
+    color:
+    - 109
+    - 69
+    - 37
+    pattern: wood
+  binding:
+    color:
+    - 82
+    - 53
+    - 35
+    pattern: leather
+    seam: true
+  head:
+    color:
+    - 142
+    - 158
+    - 165
+    pattern: forged
+    metallic: 0.7
+    roughness: 0.6
+  edge:
+    color:
+    - 172
+    - 188
+    - 195
+    pattern: plain
+    metallic: 0.8
+    roughness: 0.45
+  dark:
+    color:
+    - 63
+    - 74
+    - 80
+    pattern: plain
+    metallic: 0.5
+    roughness: 0.7
+parts:
+- name: blade_left
+  material: head
+  shape: extrude
+  contour:
+  - - -0.065
+    - 0.005
+  - - -0.015
+    - -0.005
+  - - 0.03
+    - 0.2
+  - - 0
+    - 0.23
+  depth: 0.02
+  offset:
+  - 0
+  - 0
+  - 0
+- name: blade_right
+  material: edge
+  shape: extrude
+  contour:
+  - - -0.03
+    - 0.2
+  - - 0.015
+    - -0.005
+  - - 0.065
+    - 0.005
+  - - 0
+    - 0.23
+  depth: 0.02
+  offset:
+  - 0
+  - 0
+  - -0.025
+- name: hinge
+  material: dark
+  shape: bevel_box
+  size:
+  - 0.045
+  - 0.045
+  - 0.04
+  bevel: 0.0081
+  offset:
+  - 0
+  - 0.008
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: finger_loop0
+  material: dark
+  shape: ring
+  outer_radius: 0.05
+  inner_radius: 0.031
+  depth: 0.02
+  offset:
+  - -0.06
+  - -0.12
+  - 0
+- name: tang0
+  material: head
+  shape: bevel_box
+  size:
+  - 0.022
+  - 0.1
+  - 0.02
+  bevel: 0.00396
+  offset:
+  - -0.033
+  - -0.045
+  - 0
+  rotation:
+  - 0
+  - 0
+  - -25
+- name: finger_loop1
+  material: dark
+  shape: ring
+  outer_radius: 0.05
+  inner_radius: 0.031
+  depth: 0.02
+  offset:
+  - 0.06
+  - -0.12
+  - 0
+- name: tang1
+  material: head
+  shape: bevel_box
+  size:
+  - 0.022
+  - 0.1
+  - 0.02
+  bevel: 0.00396
+  offset:
+  - 0.033
+  - -0.045
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 25

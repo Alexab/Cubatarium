@@ -103,3 +103,35 @@ def triangulate(faces):
         for i in range(1,len(f.points)-1):
             result.append((f.name,f.role,(f.points[0],f.points[i],f.points[i+1]),n))
     return result
+
+
+def revolve(profile, *, sides=8, role='body', name='turned'):
+    """Faceted solid from increasing (Y, radius) rings; explicit flat end caps."""
+    if not isinstance(sides,int) or not 3<=sides<=16 or len(profile)<2:
+        raise ValueError('Revolve requires 3..16 sides and two rings')
+    if any(len(p)!=2 or not all(math.isfinite(v) for v in p) or p[1]<=0 for p in profile):
+        raise ValueError('Revolve rings need finite positive radii')
+    if any(a[0]>=b[0] for a,b in zip(profile,profile[1:])):
+        raise ValueError('Revolve rings must increase along Y')
+    rings=[tuple((r*math.cos(2*math.pi*i/sides),y,r*math.sin(2*math.pi*i/sides)) for i in range(sides)) for y,r in profile]
+    result=[Face(rings[0],role,name+'.bottom'),Face(tuple(reversed(rings[-1])),role,name+'.top')]
+    for level,(low,high) in enumerate(zip(rings,rings[1:])):
+        for i in range(sides):
+            j=(i+1)%sides
+            result.append(Face((low[i],high[i],high[j],low[j]),role,name+f'.ring{level}.{i}'))
+    return result
+
+
+def ring(outer, inner, depth, *, sides=8, role='body', name='loop'):
+    """Hollow faceted XY loop, including both rims and inner/outer walls."""
+    if not all(math.isfinite(v) for v in (outer,inner,depth)) or not 0<inner<outer or depth<=0 or not isinstance(sides,int) or not 3<=sides<=16:
+        raise ValueError('Invalid hollow ring dimensions')
+    def points(radius,z): return tuple((radius*math.cos(i*2*math.pi/sides),radius*math.sin(i*2*math.pi/sides),z) for i in range(sides))
+    of,ob=points(outer,depth/2),points(outer,-depth/2)
+    inf,ib=points(inner,depth/2),points(inner,-depth/2)
+    result=[]
+    for i in range(sides):
+        j=(i+1)%sides
+        for suffix,p in (('front',(of[i],of[j],inf[j],inf[i])),('back',(ob[j],ob[i],ib[i],ib[j])),('outer',(ob[i],ob[j],of[j],of[i])),('inner',(ib[i],inf[i],inf[j],ib[j]))):
+            result.append(Face(p,role,name+f'.{suffix}{i}'))
+    return result

@@ -1,10 +1,24 @@
 """Geometry contracts for the item redesign; no runtime assets are rewritten."""
 import math
 import unittest
-from itemgen.mesh import bevel_box, extrude, shell, transform, triangulate
+from itemgen.mesh import bevel_box, extrude, shell, transform, triangulate, revolve, ring
 
 
 class MeshTests(unittest.TestCase):
+    def test_hollow_ring_retains_its_open_center(self):
+        faces=ring(.05,.03,.02)
+        self.assertEqual(len(triangulate(faces)),64)
+        for face in faces:
+            self.assertTrue(all((p[0]*p[0]+p[1]*p[1])**.5>=.03-1e-8 for p in face.points))
+            if '.front' in face.name: self.assertAlmostEqual(face.normal()[2],1)
+            if '.back' in face.name: self.assertAlmostEqual(face.normal()[2],-1)
+    def test_revolved_solid_winding_and_bounds(self):
+        faces=revolve(((-.1,.05),(0,.12),(.1,.06)))
+        for face in faces:
+            centre=[sum(p[i] for p in face.points)/len(face.points) for i in range(3)]
+            self.assertGreater(sum(a*b for a,b in zip(centre,face.normal())),0)
+        self.assertEqual(len(triangulate(faces)),44)
+        with self.assertRaises(ValueError): revolve(((0,.1),(0,.2)))
     def test_extrusion_normals_point_outside(self):
         for face in extrude(((-1,-1),(1,-1),(1,1),(-1,1)),2):
             centre=[sum(p[i] for p in face.points)/len(face.points) for i in range(3)]

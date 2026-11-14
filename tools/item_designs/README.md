@@ -14,7 +14,9 @@ Legacy recipe build/publish behavior is retained during migration.
 texels_per_metre, triangle_budget, named materials and parts. Every part has a
 unique name, material and shape. Supported shapes: convex CCW XY `extrude`
 (contour/depth), `bevel_box` (size/bevel) and open `shell` (size/thickness).
-Optional offset, XYZ rotation in degrees, pivot and positive taper are applied
+Additional shapes: `revolve` (Y/radius profile, 3..16 sides) and `ring`
+(outer_radius/inner_radius/depth, real hollow loops). Optional offset,
+XYZ rotation in degrees, pivot and positive taper are applied
 before uniform fitting into the unchanged gameplay physical envelope.
 
 Materials have an RGB color, pattern (plain/wood/leather/forged/hammered/stone/
@@ -30,5 +32,9 @@ Changing geometry or density can change a required overlay size, in which case
 the build fails with the surface name instead of silently resampling the image.
 
 `design_build.json` records source hashes and triangle count. glTF normals are
-flat per face; material properties use standard glTF 2.0 fields. Node animation,
-manual glTF import, production publication and Item Lab are still under development.
+flat per face; material properties use standard glTF 2.0 fields. Presentation
+metadata supplies right_grip, left_grip, fp_euler_deg, fp_scale, fp_hand_offset
+and icon_euler_deg. Contact anchors follow the physical fitting transformation;
+camera/hand presentation values are independent of it.
+Node animation, manual glTF import, publication and Item Lab remain under
+development. See the [pilot cards](PILOTS.md) for candidate limitations.

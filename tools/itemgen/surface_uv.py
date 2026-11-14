@@ -37,16 +37,26 @@ def pack(faces: list[Face], *, size: int, texels_per_metre: float, gutter: int =
         w,h=(max(1,math.ceil((high[i]-low[i])*texels_per_metre)+1) for i in range(2))
         projected.append((face,points,low,w,h))
     projected.sort(key=lambda row: (-row[4],-row[3],row[0].name))
-    x=y=row_height=0
+    free=[(0,0,size,size)]
     islands=[]
     for face,points,low,w,h in projected:
         width,height=w+2*gutter,h+2*gutter
-        if x+width>size:
-            x=0; y+=row_height; row_height=0
-        if width>size or y+height>size:
+        candidates=[(min(r[2]-width,r[3]-height),max(r[2]-width,r[3]-height),r[1],r[0],r) for r in free if r[2]>=width and r[3]>=height]
+        if not candidates:
             raise ValueError(f"UV atlas overflow at {face.name}; requested {size}px")
+        _,_,y,x,_=min(candidates)
         uv=tuple(((x+gutter+.5+(a-low[0])*texels_per_metre)/size,
                   (y+gutter+.5+(b-low[1])*texels_per_metre)/size) for a,b in points)
         islands.append(Island(face.name,face.role,(x+gutter,y+gutter,w,h),uv))
-        x+=width; row_height=max(row_height,height)
+        # MaxRects split: reclaim the tall side spaces left by long tool shafts.
+        split=[]
+        for fx,fy,fw,fh in free:
+            if x>=fx+fw or x+width<=fx or y>=fy+fh or y+height<=fy:
+                split.append((fx,fy,fw,fh)); continue
+            if x>fx: split.append((fx,fy,x-fx,fh))
+            if x+width<fx+fw: split.append((x+width,fy,fx+fw-x-width,fh))
+            if y>fy: split.append((fx,fy,fw,y-fy))
+            if y+height<fy+fh: split.append((fx,y+height,fw,fy+fh-y-height))
+        split=sorted(set(split))
+        free=[r for r in split if not any(r!=s and r[0]>=s[0] and r[1]>=s[1] and r[0]+r[2]<=s[0]+s[2] and r[1]+r[3]<=s[1]+s[3] for s in split)]
     return sorted(islands,key=lambda island:island.name)

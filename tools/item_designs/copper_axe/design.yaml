@@ -1,0 +1,222 @@
+version: 3
+id: copper_axe
+atlas_size: 256
+texels_per_metre: 240
+triangle_budget: 1200
+presentation:
+  right_grip:
+  - 0
+  - -0.24
+  - 0
+  left_grip:
+  - 0
+  - -0.24
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.7
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+materials:
+  wood:
+    color:
+    - 109
+    - 69
+    - 37
+    pattern: wood
+  binding:
+    color:
+    - 82
+    - 53
+    - 35
+    pattern: leather
+    seam: true
+  head:
+    color:
+    - 184
+    - 102
+    - 60
+    pattern: hammered
+    metallic: 0.7
+    roughness: 0.6
+  edge:
+    color:
+    - 214
+    - 132
+    - 90
+    pattern: plain
+    metallic: 0.8
+    roughness: 0.45
+  dark:
+    color:
+    - 63
+    - 74
+    - 80
+    pattern: plain
+    metallic: 0.5
+    roughness: 0.7
+parts:
+- name: haft
+  material: wood
+  shape: bevel_box
+  size:
+  - 0.055
+  - 0.71
+  - 0.055
+  bevel: 0.009899999999999999
+  offset:
+  - 0
+  - -0.02
+  - 0
+  rotation:
+  - 0
+  - 0
+  - -5
+- name: broad_copper_cheek
+  material: head
+  shape: extrude
+  contour:
+  - - 0.02
+    - 0.17
+  - - 0.13
+    - 0.12
+  - - 0.3
+    - 0.22
+  - - 0.29
+    - 0.43
+  - - 0.17
+    - 0.47
+  - - 0.03
+    - 0.38
+  depth: 0.075
+  offset:
+  - 0
+  - 0
+  - 0
+- name: polished_edge
+  material: edge
+  shape: extrude
+  contour:
+  - - 0.26
+    - 0.19
+  - - 0.31
+    - 0.21
+  - - 0.31
+    - 0.42
+  - - 0.26
+    - 0.46
+  depth: 0.03
+  offset:
+  - 0
+  - 0
+  - 0.038
+- name: socket
+  material: dark
+  shape: bevel_box
+  size:
+  - 0.085
+  - 0.13
+  - 0.09
+  bevel: 0.015300000000000001
+  offset:
+  - 0.015
+  - 0.32
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: eye_wedge
+  material: edge
+  shape: bevel_box
+  size:
+  - 0.045
+  - 0.03
+  - 0.055
+  bevel: 0.005399999999999999
+  offset:
+  - 0.015
+  - 0.395
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: wrap0
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.07
+  - 0.026
+  - 0.07
+  bevel: 0.004679999999999999
+  offset:
+  - 0.02
+  - -0.17
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: wrap1
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.07
+  - 0.026
+  - 0.07
+  bevel: 0.004679999999999999
+  offset:
+  - 0.02
+  - -0.22
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: wrap2
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.07
+  - 0.026
+  - 0.07
+  bevel: 0.004679999999999999
+  offset:
+  - 0.02
+  - -0.27
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: rivet0
+  material: edge
+  shape: revolve
+  profile:
+  - - -0.01
+    - 0.012
+  - - 0.01
+    - 0.012
+  sides: 6
+  offset:
+  - 0.1
+  - 0.25
+  - 0.05
+- name: rivet1
+  material: edge
+  shape: revolve
+  profile:
+  - - -0.01
+    - 0.012
+  - - 0.01
+    - 0.012
+  sides: 6
+  offset:
+  - 0.1
+  - 0.36
+  - 0.05

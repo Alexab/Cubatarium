@@ -19,6 +19,7 @@ namespace
 {
 using Json = nlohmann::json;
 std::mutex AssetMutex;
+uint64_t AssetsRevision = 0;
 std::unordered_map<std::string, std::shared_ptr<const ItemRenderAsset>> Assets;
 void Require(bool condition, const char *reason)
 {
@@ -162,6 +163,32 @@ LoadItemRenderAsset(const std::filesystem::path &path)
             "buffer length mismatch");
   }
   auto asset = std::make_shared<ItemRenderAsset>();
+  const auto presentation =
+      g.value("extras", Json::object()).value("presentation", Json::object());
+  auto readVector = [&](const char *key, glm::vec3 &result)
+  {
+    if (!presentation.contains(key))
+      return false;
+    const auto values = presentation.at(key).get<std::vector<float>>();
+    Require(values.size() == 3,
+            "presentation vector requires three components");
+    for (size_t i = 0; i < 3; ++i)
+    {
+      Require(std::isfinite(values[i]), "non-finite presentation vector");
+      result[int(i)] = values[i];
+    }
+    return true;
+  };
+  asset->Grip.HasRightGrip = readVector("right_grip", asset->Grip.RightGrip);
+  asset->Grip.HasLeftGrip = readVector("left_grip", asset->Grip.LeftGrip);
+  asset->Grip.HasFpEuler = readVector("fp_euler_deg", asset->Grip.FpEulerDeg);
+  readVector("fp_hand_offset", asset->Grip.FpHandOffset);
+  readVector("icon_euler_deg", asset->Grip.IconEulerDeg);
+  readVector("fp_arm_euler_deg", asset->Grip.FpArmEulerDeg);
+  asset->Grip.FpScale = presentation.value("fp_scale", 1.f);
+  Require(std::isfinite(asset->Grip.FpScale) && asset->Grip.FpScale >= .1f &&
+              asset->Grip.FpScale <= 3.f,
+          "invalid FP presentation scale");
   for (const auto &m : g.at("materials"))
   {
     Require(!m.value("doubleSided", false) &&
@@ -264,10 +291,15 @@ LoadItemRenderAsset(const std::filesystem::path &path)
   return asset;
 }
 std::shared_ptr<const ItemRenderAsset>
-FindItemSurfaceAsset(const std::filesystem::path &path)
+FindItemSurfaceAsset(const std::filesystem::path &path, uint64_t revision)
 {
   const auto key = std::filesystem::weakly_canonical(path).generic_string();
   std::lock_guard<std::mutex> lock(AssetMutex);
+  if (revision != AssetsRevision)
+  {
+    Assets.clear();
+    AssetsRevision = revision;
+  }
   const auto found = Assets.find(key);
   if (found != Assets.end())
     return found->second;
@@ -281,6 +313,27 @@ FindItemSurfaceAsset(const std::filesystem::path &path)
     asset = LoadItemRenderAsset(path);
   Assets.emplace(key, asset);
   return asset;
+}
+
+glm::mat4 ApplyItemHandProfile(const glm::mat4 &root, const glm::vec3 &socket,
+                               const ItemGripProfile &profile, bool left)
+{
+  auto offset = profile.FpHandOffset;
+  auto angles = glm::radians(profile.FpArmEulerDeg);
+  if (left)
+  {
+    offset.x = -offset.x;
+    angles.y = -angles.y;
+    angles.z = -angles.z;
+  }
+  const auto translated = glm::translate(glm::mat4(1), offset) * root;
+  const auto palm = glm::vec3(translated * glm::vec4(socket, 1));
+  const auto rotation =
+      glm::rotate(glm::mat4(1), angles.x, glm::vec3(1, 0, 0)) *
+      glm::rotate(glm::mat4(1), angles.y, glm::vec3(0, 1, 0)) *
+      glm::rotate(glm::mat4(1), angles.z, glm::vec3(0, 0, 1));
+  return glm::translate(glm::mat4(1), palm) * rotation *
+         glm::translate(glm::mat4(1), -palm) * translated;
 }
 
 void ClearItemSurfaceAssets()

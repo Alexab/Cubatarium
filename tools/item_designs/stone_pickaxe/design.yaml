@@ -1,0 +1,195 @@
+version: 3
+id: stone_pickaxe
+atlas_size: 256
+texels_per_metre: 200
+triangle_budget: 1200
+presentation:
+  right_grip:
+  - 0
+  - -0.24
+  - 0
+  left_grip:
+  - 0
+  - -0.24
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.7
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+materials:
+  wood:
+    color:
+    - 109
+    - 69
+    - 37
+    pattern: wood
+  binding:
+    color:
+    - 82
+    - 53
+    - 35
+    pattern: leather
+    seam: true
+  head:
+    color:
+    - 104
+    - 107
+    - 99
+    pattern: stone
+    metallic: 0
+    roughness: 0.8
+  edge:
+    color:
+    - 134
+    - 137
+    - 129
+    pattern: plain
+    metallic: 0
+    roughness: 0.45
+  dark:
+    color:
+    - 63
+    - 74
+    - 80
+    pattern: plain
+    metallic: 0.5
+    roughness: 0.7
+parts:
+- name: shaft
+  material: wood
+  shape: bevel_box
+  size:
+  - 0.05
+  - 0.65
+  - 0.05
+  bevel: 0.009
+  offset:
+  - 0
+  - -0.025
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: eye
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.09
+  - 0.11
+  - 0.09
+  bevel: 0.0162
+  offset:
+  - 0
+  - 0.25
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: knapped_bridge
+  material: head
+  shape: extrude
+  contour:
+  - - -0.24
+    - 0.25
+  - - 0.16
+    - 0.24
+  - - 0.24
+    - 0.29
+  - - 0.18
+    - 0.36
+  - - -0.19
+    - 0.35
+  depth: 0.085
+  offset:
+  - 0
+  - 0
+  - 0
+- name: chipped_pick
+  material: head
+  shape: extrude
+  contour:
+  - - 0.12
+    - 0.31
+  - - 0.27
+    - 0.16
+  - - 0.33
+    - 0.13
+  - - 0.24
+    - 0.3
+  depth: 0.07
+  offset:
+  - 0
+  - 0
+  - 0
+- name: adze
+  material: edge
+  shape: extrude
+  contour:
+  - - -0.31
+    - 0.23
+  - - -0.27
+    - 0.15
+  - - -0.12
+    - 0.26
+  - - -0.16
+    - 0.34
+  depth: 0.075
+  offset:
+  - 0
+  - 0
+  - 0
+- name: grip_wrap0
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.059
+  - 0.025
+  - 0.059
+  bevel: 0.0045
+  offset:
+  - 0
+  - -0.18
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: grip_wrap1
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.059
+  - 0.025
+  - 0.059
+  bevel: 0.0045
+  offset:
+  - 0
+  - -0.23
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: grip_wrap2
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.059
+  - 0.025
+  - 0.059
+  bevel: 0.0045
+  offset:
+  - 0
+  - -0.28
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0

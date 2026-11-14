@@ -1,6 +1,7 @@
 #ifndef ITEM_RENDER_ASSET_H
 #define ITEM_RENDER_ASSET_H
 
+#include <cstdint>
 #include <filesystem>
 #include <glm/glm.hpp>
 #include <memory>
@@ -34,12 +35,23 @@ struct ItemRenderNode
   int Parent{-1};
 };
 
+struct ItemGripProfile
+{
+  glm::vec3 RightGrip{0.f}, LeftGrip{0.f};
+  glm::vec3 FpEulerDeg{0.f}, FpHandOffset{0.f};
+  glm::vec3 IconEulerDeg{0.f};
+  glm::vec3 FpArmEulerDeg{0.f};
+  bool HasRightGrip{false}, HasLeftGrip{false}, HasFpEuler{false};
+  float FpScale{1.f};
+};
+
 struct ItemRenderAsset
 {
   std::vector<ItemRenderPrimitive> Primitives;
   std::vector<ItemRenderMaterial> Materials;
   std::vector<ItemRenderNode> Nodes;
   glm::vec3 Low{0.f}, High{0.f};
+  ItemGripProfile Grip;
 };
 
 /// Strict static item glTF subset. Throws with an actionable reason; callers
@@ -47,8 +59,10 @@ struct ItemRenderAsset
 std::shared_ptr<ItemRenderAsset>
 LoadItemRenderAsset(const std::filesystem::path &path);
 std::shared_ptr<const ItemRenderAsset>
-FindItemSurfaceAsset(const std::filesystem::path &path);
+FindItemSurfaceAsset(const std::filesystem::path &path, uint64_t revision = 0);
 void ClearItemSurfaceAssets();
+glm::mat4 ApplyItemHandProfile(const glm::mat4 &root, const glm::vec3 &socket,
+                               const ItemGripProfile &profile, bool left);
 struct ItemVisualState
 {
   std::unordered_map<std::string, glm::mat4> NodeTransforms;

@@ -1,0 +1,213 @@
+version: 3
+id: gold_sword
+atlas_size: 256
+texels_per_metre: 240
+triangle_budget: 1200
+presentation:
+  right_grip:
+  - 0
+  - -0.24
+  - 0
+  left_grip:
+  - 0
+  - -0.24
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.68
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+materials:
+  wood:
+    color:
+    - 109
+    - 69
+    - 37
+    pattern: wood
+  binding:
+    color:
+    - 82
+    - 53
+    - 35
+    pattern: leather
+    seam: true
+  head:
+    color:
+    - 224
+    - 177
+    - 72
+    pattern: forged
+    metallic: 0.7
+    roughness: 0.6
+  edge:
+    color:
+    - 254
+    - 207
+    - 102
+    pattern: plain
+    metallic: 0.8
+    roughness: 0.45
+  dark:
+    color:
+    - 63
+    - 74
+    - 80
+    pattern: plain
+    metallic: 0.5
+    roughness: 0.7
+parts:
+- name: grip
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.055
+  - 0.23
+  - 0.05
+  bevel: 0.009899999999999999
+  offset:
+  - 0
+  - -0.2
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: pommel
+  material: head
+  shape: revolve
+  profile:
+  - - -0.33
+    - 0.03
+  - - -0.31
+    - 0.045
+  - - -0.28
+    - 0.03
+  sides: 6
+  offset:
+  - 0
+  - 0
+  - 0
+- name: blade
+  material: head
+  shape: extrude
+  contour:
+  - - -0.065
+    - -0.07
+  - - 0.065
+    - -0.07
+  - - 0.075
+    - 0.3
+  - - 0.008
+    - 0.5
+  - - -0.06
+    - 0.38
+  depth: 0.045
+  offset:
+  - 0
+  - 0
+  - 0
+- name: fuller
+  material: dark
+  shape: extrude
+  contour:
+  - - -0.017
+    - 0.29
+  - - -0.012
+    - 0.01
+  - - 0.012
+    - 0.01
+  - - 0.017
+    - 0.29
+  - - 0
+    - 0.37
+  depth: 0.005
+  offset:
+  - 0
+  - 0
+  - 0.025
+- name: guard_left
+  material: head
+  shape: extrude
+  contour:
+  - - -0.19
+    - -0.11
+  - - -0.02
+    - -0.13
+  - - -0.01
+    - -0.075
+  - - -0.16
+    - -0.055
+  depth: 0.07
+  offset:
+  - 0
+  - 0
+  - 0
+- name: guard_right
+  material: head
+  shape: extrude
+  contour:
+  - - 0.01
+    - -0.075
+  - - 0.02
+    - -0.13
+  - - 0.19
+    - -0.11
+  - - 0.16
+    - -0.055
+  depth: 0.07
+  offset:
+  - 0
+  - 0
+  - 0
+- name: grip_band0
+  material: wood
+  shape: bevel_box
+  size:
+  - 0.06
+  - 0.014
+  - 0.055
+  bevel: 0.00252
+  offset:
+  - 0
+  - -0.14
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: grip_band1
+  material: wood
+  shape: bevel_box
+  size:
+  - 0.06
+  - 0.014
+  - 0.055
+  bevel: 0.00252
+  offset:
+  - 0
+  - -0.19
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: grip_band2
+  material: wood
+  shape: bevel_box
+  size:
+  - 0.06
+  - 0.014
+  - 0.055
+  bevel: 0.00252
+  offset:
+  - 0
+  - -0.24
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0

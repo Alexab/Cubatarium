@@ -180,6 +180,7 @@ private:
   std::shared_ptr<UShaderManager> ShaderManager;
   std::shared_ptr<class UShaderProgram> Shader;
   std::unique_ptr<class ItemSurfaceRenderer> SurfaceRenderer;
+  uint64_t SurfaceRevision{0};
 
   GLuint CubeVao{0};
   GLuint CubeVbo{0};

@@ -2538,21 +2538,29 @@ void UApplication::RunInventoryIconsQa(const std::string &path)
     return ok;
   };
   const auto &catalog = GameSession->GetContentCatalog();
-  for (auto kind :
-       {ContentKind::Object, ContentKind::UCreature, ContentKind::Skin})
+  for (auto kind : {ContentKind::Object, ContentKind::UCreature,
+                    ContentKind::Skin, ContentKind::Item})
   {
     const auto inventoryKind =
         kind == ContentKind::Object      ? InventoryEntryKind::Object
         : kind == ContentKind::UCreature ? InventoryEntryKind::UCreature
+        : kind == ContentKind::Item      ? InventoryEntryKind::Item
                                          : InventoryEntryKind::Skin;
     const std::string label = kind == ContentKind::Object      ? "objects"
                               : kind == ContentKind::UCreature ? "creatures"
+                              : kind == ContentKind::Item      ? "items"
                                                                : "skins";
     std::set<std::string> ids;
     for (const auto &type : catalog.GetTypeIds(kind))
       for (const auto &e : catalog.GetEntries(kind, type))
         ids.insert(e.Id);
     report["counts"][label] = ids.size();
+    if (kind == ContentKind::Item)
+    {
+      const auto expected = World->GetItemDefinitionStorage()->ListCatalogIds();
+      report["items_catalog_complete"] =
+          (ids == std::set<std::string>(expected.begin(), expected.end()));
+    }
     size_t index = 0;
     for (const auto &id : ids)
     {
@@ -2635,7 +2643,7 @@ void UApplication::RunInventoryIconsQa(const std::string &path)
   PlayerWindowScreen->OnMetricsChanged(GuiContext->GetMetrics());
   PlayerWindowScreen->OnViewportChanged(originalWidth, originalHeight);
   OpenPlayerWindow(0);
-  report["passed"] = true;
+  report["passed"] = report.value("items_catalog_complete", false);
   for (const auto &row : report["checks"])
     if (!row["passed"].get<bool>())
       report["passed"] = false;

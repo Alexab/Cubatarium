@@ -28,7 +28,7 @@ def main():
     if not args.skip_build:
         run(['cmake','--build','build/desktop-msvc','--config','Release','--target','Cubatarium','--parallel','8'],'desktop-release')
         run(['cmake','--build','build/desktop-msvc','--config','Release','--target',*targets,'--parallel','8'],'unit-release')
-    for file in ['test_cpp_audits.py','test_itemgen_publication.py','test_itemgen_mesh.py','test_itemgen_surface_uv.py','test_itemgen_design.py','validate_item_defs.py','audit_item_visuals.py','test_itemgen_raster.py','test_survival_chains.py','research/throw_prototype.py']:
+    for file in ['test_cpp_audits.py','test_itemgen_publication.py','test_itemgen_mesh.py','test_itemgen_surface_uv.py','test_itemgen_design.py','test_item_design_probes.py','validate_item_defs.py','audit_item_visuals.py','test_itemgen_raster.py','test_survival_chains.py','research/throw_prototype.py']:
         run([sys.executable,ROOT/'tools'/file],Path(file).stem)
     test_filter=['-R','^('+'|'.join(targets)+')$'] if args.extended else ['-L','items']
     run(['ctest','--test-dir','build/desktop-msvc','-C','Release',*test_filter,'--no-tests=error','--output-on-failure'],'ctest-items')

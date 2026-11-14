@@ -1,0 +1,210 @@
+version: 3
+id: iron_pickaxe
+atlas_size: 256
+texels_per_metre: 240
+triangle_budget: 1200
+presentation:
+  right_grip:
+  - 0
+  - -0.24
+  - 0
+  left_grip:
+  - 0
+  - -0.24
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.7
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+materials:
+  wood:
+    color:
+    - 109
+    - 69
+    - 37
+    pattern: wood
+  binding:
+    color:
+    - 82
+    - 53
+    - 35
+    pattern: leather
+    seam: true
+  head:
+    color:
+    - 142
+    - 158
+    - 165
+    pattern: forged
+    metallic: 0.7
+    roughness: 0.6
+  edge:
+    color:
+    - 172
+    - 188
+    - 195
+    pattern: plain
+    metallic: 0.8
+    roughness: 0.45
+  dark:
+    color:
+    - 63
+    - 74
+    - 80
+    pattern: plain
+    metallic: 0.5
+    roughness: 0.7
+parts:
+- name: shaft
+  material: wood
+  shape: bevel_box
+  size:
+  - 0.05
+  - 0.65
+  - 0.05
+  bevel: 0.009
+  offset:
+  - 0
+  - -0.025
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: eye
+  material: dark
+  shape: bevel_box
+  size:
+  - 0.09
+  - 0.11
+  - 0.09
+  bevel: 0.0162
+  offset:
+  - 0
+  - 0.25
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: forged_bridge
+  material: head
+  shape: bevel_box
+  size:
+  - 0.34
+  - 0.08
+  - 0.065
+  bevel: 0.0144
+  offset:
+  - 0
+  - 0.3
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: tapered_pick
+  material: head
+  shape: extrude
+  contour:
+  - - 0.12
+    - 0.33
+  - - 0.18
+    - 0.24
+  - - 0.31
+    - 0.11
+  - - 0.34
+    - 0.12
+  - - 0.2
+    - 0.3
+  depth: 0.05
+  offset:
+  - 0
+  - 0
+  - 0
+- name: chisel
+  material: edge
+  shape: extrude
+  contour:
+  - - -0.3
+    - 0.25
+  - - -0.28
+    - 0.18
+  - - -0.1
+    - 0.28
+  - - -0.16
+    - 0.34
+  depth: 0.055
+  offset:
+  - 0
+  - 0
+  - 0
+- name: wedge
+  material: edge
+  shape: bevel_box
+  size:
+  - 0.065
+  - 0.025
+  - 0.085
+  bevel: 0.0045
+  offset:
+  - 0
+  - 0.35
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: grip_wrap0
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.059
+  - 0.025
+  - 0.059
+  bevel: 0.0045
+  offset:
+  - 0
+  - -0.18
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: grip_wrap1
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.059
+  - 0.025
+  - 0.059
+  bevel: 0.0045
+  offset:
+  - 0
+  - -0.23
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: grip_wrap2
+  material: binding
+  shape: bevel_box
+  size:
+  - 0.059
+  - 0.025
+  - 0.059
+  bevel: 0.0045
+  offset:
+  - 0
+  - -0.28
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0

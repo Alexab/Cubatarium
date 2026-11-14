@@ -1,0 +1,29 @@
+{
+  "passed": true,
+  "scope": "native_regression_and_fp",
+  "world": "CarryAimQA",
+  "staged_ids": [
+    "apple",
+    "bread",
+    "bucket",
+    "copper_axe",
+    "gold_sword",
+    "iron_head",
+    "iron_pickaxe",
+    "leather_chest",
+    "raw_iron",
+    "shears",
+    "stone_pickaxe",
+    "wood_bow"
+  ],
+  "fp_id": "bucket",
+  "fp_frames": [
+    "bin/item_surface_fp/frame_000.png",
+    "bin/item_surface_fp/frame_001.png",
+    "bin/item_surface_fp/frame_002.png",
+    "bin/item_surface_fp/frame_003.png",
+    "bin/item_surface_fp/frame_004.png"
+  ],
+  "executable_sha256": "e7c3dbc97f428d352b52b741ba5d6a2d1370abc4bf477b48e1e4e930f5ba38b7",
+  "restored_runtime_files": 36
+}

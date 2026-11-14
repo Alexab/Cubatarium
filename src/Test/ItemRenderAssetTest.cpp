@@ -102,6 +102,9 @@ int main()
         {"scene", 0}};
     auto write = [&](const Json &data)
     { std::ofstream(folder / "model.gltf") << data.dump(); };
+    g["extras"]["presentation"] = {{"right_grip", {0, .25, 0}},
+                                   {"fp_euler_deg", {62, 0, 0}},
+                                   {"fp_scale", .65}};
     write(g);
     const auto asset = cutum::LoadItemRenderAsset(folder / "model.gltf");
     Expect(asset->Primitives.size() == 1 && asset->Nodes.size() == 2,
@@ -114,6 +117,28 @@ int main()
            "bounds include hierarchical transforms");
     Expect(std::abs(asset->Materials[0].Metallic - .7f) < .001f,
            "material factors are retained");
+    Expect(asset->Grip.HasRightGrip &&
+               asset->Grip.RightGrip == glm::vec3(0, .25, 0),
+           "authored grip anchor is retained");
+    Expect(asset->Grip.HasFpEuler && asset->Grip.FpEulerDeg.x == 62,
+           "authored FP orientation is retained");
+    Expect(!cutum::FindItemSurfaceAsset(folder / "model.gltf", 0),
+           "legacy cache entries remain on the legacy path");
+    auto versioned = g;
+    versioned["extras"]["design_version"] = 3;
+    write(versioned);
+    Expect(bool(cutum::FindItemSurfaceAsset(folder / "model.gltf", 1)),
+           "content revision invalidates a cached legacy result");
+    cutum::ClearItemSurfaceAssets();
+    auto grip = asset->Grip;
+    grip.FpHandOffset = glm::vec3(.1, .2, .3);
+    grip.FpArmEulerDeg = glm::vec3(45, 10, 5);
+    const glm::vec3 socket(.04, -.62, -.14);
+    const auto moved =
+        cutum::ApplyItemHandProfile(glm::mat4(1), socket, grip, false);
+    Expect(glm::length(glm::vec3(moved * glm::vec4(socket, 1)) - socket -
+                       grip.FpHandOffset) < 1e-5f,
+           "arm pose preserves palm contact after rotation");
     cutum::ItemVisualState pose;
     pose.NodeTransforms["root"] =
         glm::translate(glm::mat4(1), glm::vec3(1, 0, 0));

@@ -1,0 +1,174 @@
+version: 3
+id: iron_head
+atlas_size: 512
+texels_per_metre: 420
+triangle_budget: 2000
+presentation:
+  right_grip:
+  - 0
+  - -0.05
+  - 0
+  left_grip:
+  - 0
+  - -0.05
+  - 0
+  fp_euler_deg:
+  - -26
+  - 0
+  - -20
+  fp_scale: 0.5
+  fp_hand_offset:
+  - -0.04
+  - 0.12
+  - 0
+materials:
+  wood:
+    color:
+    - 109
+    - 69
+    - 37
+    pattern: wood
+  binding:
+    color:
+    - 82
+    - 53
+    - 35
+    pattern: leather
+    seam: true
+  head:
+    color:
+    - 142
+    - 158
+    - 165
+    pattern: forged
+    metallic: 0.7
+    roughness: 0.6
+  edge:
+    color:
+    - 172
+    - 188
+    - 195
+    pattern: plain
+    metallic: 0.8
+    roughness: 0.45
+  dark:
+    color:
+    - 63
+    - 74
+    - 80
+    pattern: plain
+    metallic: 0.5
+    roughness: 0.7
+parts:
+- name: cap
+  material: head
+  shape: shell
+  size:
+  - 0.34
+  - 0.17
+  - 0.31
+  thickness: 0.022
+  rotation:
+  - 180
+  - 0
+  - 0
+  offset:
+  - 0
+  - 0.12
+  - 0
+- name: crown_ridge
+  material: dark
+  shape: bevel_box
+  size:
+  - 0.055
+  - 0.04
+  - 0.3
+  bevel: 0.0072
+  offset:
+  - 0
+  - 0.145
+  - 0
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: brow
+  material: edge
+  shape: bevel_box
+  size:
+  - 0.35
+  - 0.038
+  - 0.035
+  bevel: 0.00684
+  offset:
+  - 0
+  - 0.002
+  - 0.16
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: cheek0
+  material: head
+  shape: bevel_box
+  size:
+  - 0.035
+  - 0.1
+  - 0.1
+  bevel: 0.0063
+  offset:
+  - -0.16
+  - -0.03
+  - 0.1
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: cheek_rivet0
+  material: edge
+  shape: bevel_box
+  size:
+  - 0.018
+  - 0.018
+  - 0.02
+  bevel: 0.00324
+  offset:
+  - -0.16
+  - -0.015
+  - 0.16
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: cheek1
+  material: head
+  shape: bevel_box
+  size:
+  - 0.035
+  - 0.1
+  - 0.1
+  bevel: 0.0063
+  offset:
+  - 0.16
+  - -0.03
+  - 0.1
+  rotation:
+  - 0
+  - 0
+  - 0
+- name: cheek_rivet1
+  material: edge
+  shape: bevel_box
+  size:
+  - 0.018
+  - 0.018
+  - 0.02
+  bevel: 0.00324
+  offset:
+  - 0.16
+  - -0.015
+  - 0.16
+  rotation:
+  - 0
+  - 0
+  - 0
