@@ -12,6 +12,8 @@ UGuiWindow::UGuiWindow(const GuiTheme *theme, std::string title)
 
 GuiRect UGuiWindow::GetClientArea() const
 {
+  if (!ChromeVisible)
+    return Bounds;
   const int title_h = Theme ? Theme->TitleBarHeight : 24;
   return {Bounds.X, Bounds.Y + title_h, Bounds.W,
           std::max(0, Bounds.H - title_h)};
@@ -21,6 +23,11 @@ void UGuiWindow::Draw(UGuiRenderer &renderer)
 {
   if (!Visible || !Theme)
   {
+    return;
+  }
+  if (!ChromeVisible)
+  {
+    UGuiWidget::Draw(renderer);
     return;
   }
   if (DrawBackground)

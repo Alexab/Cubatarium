@@ -50,3 +50,5 @@ are recorded in the [final audit](research/items-completion-2026-11-13/final-aud
 The subsequent systemic refactor completes finite/catalog ownership, Creative mining and pickup, per-world throw policies, physical domains, coordinated property snapshots and E/B player-window routing. [Final audit and evidence](research/inventory-ownership-refactor-2026-11-14/README.md).
 
 Follow-up: [finite pickup counters and progressive catalog icons](research/inventory-pickup-icons-2026-11-14/README.md).
+
+Player window: [shared shell, section state and Release acceptance](research/player-window-unification-2026-11-14/README.md).

@@ -1,11 +1,11 @@
 #include "Gui/Preview/ContentPreviewDock.h"
 
+#include "Gui/Core/GuiTheme.h"
 #include "Gui/Preview/ContentPreviewRenderer.h"
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiPreviewViewport.h"
-#include "Gui/Core/GuiTheme.h"
 
 #include "Render/GlIncludes.h"
 
@@ -37,8 +37,7 @@ UContentPreviewDock::UContentPreviewDock(const GuiTheme *theme,
   auto title = std::make_unique<UGuiLabel>(theme, "Preview");
   TitleLabel = title.get();
 
-  auto placeholder =
-      std::make_unique<UGuiLabel>(theme, "Select an item");
+  auto placeholder = std::make_unique<UGuiLabel>(theme, "Select an item");
   PlaceholderLabel = placeholder.get();
 
   auto viewport = std::make_unique<UGuiPreviewViewport>(theme);
@@ -57,12 +56,14 @@ UContentPreviewDock::UContentPreviewDock(const GuiTheme *theme,
 
   auto changeBtn = std::make_unique<UGuiButton>(theme, "Change...");
   changeBtn->SetVisible(false);
-  changeBtn->SetOnClick([this]() {
-    if (OnChange)
-    {
-      OnChange();
-    }
-  });
+  changeBtn->SetOnClick(
+      [this]()
+      {
+        if (OnChange)
+        {
+          OnChange();
+        }
+      });
   ChangeButton = changeBtn.get();
 
   PanelShell->AddChild(std::move(title));
@@ -89,16 +90,18 @@ UContentPreviewDock::~UContentPreviewDock()
 void UContentPreviewDock::SetSelection(ContentKind kind, const std::string &id,
                                        const std::string &displayName)
 {
+  const bool changed = Kind != kind || EntryId != id;
   Kind = kind;
   EntryId = id;
   DisplayName = displayName;
   HasSelection = !id.empty();
-  Yaw = 45.0f;
-  Pitch = 32.0f;
-  PreviewAnimTime = 0.f;
-  if (Viewport)
+  if (changed)
   {
-    Viewport->SetAngles(Yaw, Pitch);
+    Yaw = 45.0f;
+    Pitch = 32.0f;
+    PreviewAnimTime = 0.f;
+    if (Viewport)
+      Viewport->SetAngles(Yaw, Pitch);
   }
   if (TitleLabel)
   {
@@ -126,7 +129,7 @@ void UContentPreviewDock::ClearSelection()
 }
 
 void UContentPreviewDock::SetOnChange(std::function<void()> handler,
-                                     const std::string &buttonLabel)
+                                      const std::string &buttonLabel)
 {
   OnChange = std::move(handler);
   if (ChangeButton)
@@ -142,10 +145,7 @@ void UContentPreviewDock::MarkRenderDirty()
   RenderThrottle = 0.0;
 }
 
-void UContentPreviewDock::RenderIfDirty()
-{
-  RenderPreviewIfNeeded();
-}
+void UContentPreviewDock::RenderIfDirty() { RenderPreviewIfNeeded(); }
 
 void UContentPreviewDock::SyncVisibility()
 {
@@ -191,6 +191,10 @@ void UContentPreviewDock::Relayout(const GuiRect &bounds)
   {
     return;
   }
+  const auto previous = PanelShell->GetBounds();
+  if (previous.X == bounds.X && previous.Y == bounds.Y &&
+      previous.W == bounds.W && previous.H == bounds.H)
+    return;
   PanelShell->SetBounds(bounds);
   RenderSize = std::max(128, std::min(bounds.W, bounds.H) - Theme->Padding * 4);
 
@@ -201,8 +205,9 @@ void UContentPreviewDock::Relayout(const GuiRect &bounds)
 
   if (TitleLabel)
   {
-    TitleLabel->SetBounds({bounds.X + pad, y, innerW, 24});
-    y += 28;
+    const int titleH = Theme->FontSizeBody + pad;
+    TitleLabel->SetBounds({bounds.X + pad, y, innerW, titleH});
+    y += titleH + pad / 2;
   }
   if (ChangeButton && ChangeButton->IsVisible())
   {
@@ -211,7 +216,7 @@ void UContentPreviewDock::Relayout(const GuiRect &bounds)
   }
   if (PlaceholderLabel)
   {
-  const int placeholderH = std::max(40, bounds.H - (y - bounds.Y) - pad);
+    const int placeholderH = std::max(40, bounds.H - (y - bounds.Y) - pad);
     PlaceholderLabel->SetBounds({bounds.X + pad, y, innerW, placeholderH});
   }
   const int hintH = Theme->FontSizeBody + pad;
@@ -227,6 +232,15 @@ void UContentPreviewDock::Relayout(const GuiRect &bounds)
         {bounds.X + pad, bounds.Y + bounds.H - hintH - pad, innerW, hintH});
   }
   MarkRenderDirty();
+}
+
+std::string UContentPreviewDock::GetViewStateKey() const
+{
+  return EntryId + "|" + std::to_string(Yaw) + "|" + std::to_string(Pitch);
+}
+GuiRect UContentPreviewDock::GetViewportBounds() const
+{
+  return Viewport ? Viewport->GetBounds() : GuiRect{};
 }
 
 void UContentPreviewDock::Update(double dt)

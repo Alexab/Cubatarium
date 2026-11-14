@@ -10,6 +10,7 @@
 #include "Gui/Layout/DockedOverlayLayout.h"
 #include "Gui/Layout/GuiLayout.h"
 #include "Gui/Layout/GuiTooltipLayout.h"
+#include "Gui/Layout/PlayerWindowLayout.h"
 #include "Gui/Preview/ContentPreviewDock.h"
 #include "Gui/Preview/ContentPreviewRenderer.h"
 #include "Gui/Widgets/GuiButton.h"
@@ -109,7 +110,7 @@ void UCreativePaletteScreen::SetVisible(bool visible)
   {
     Root->SetVisible(visible);
   }
-  if (!visible)
+  if (!visible && !Hosted)
   {
     SelectedEntryId.clear();
     if (PreviewDock)
@@ -335,7 +336,9 @@ void UCreativePaletteScreen::Build(UGuiContext &ctx)
 
   Root = std::move(rootShell);
   Kind = ContentKind::Block;
-  ActiveTypeId = "misc";
+  const auto initialTypes =
+      Catalog ? Catalog->GetTypeIds(Kind) : std::vector<std::string>{};
+  ActiveTypeId = initialTypes.empty() ? "misc" : initialTypes.front();
   Built = false;
   EnsureHotbarStrip();
 }
@@ -352,67 +355,91 @@ void UCreativePaletteScreen::RelayoutPanel()
   {
     return;
   }
-  DockedLayout layout =
-      DockedOverlayLayout::Compute(ViewportW, ViewportH, GetContentOffsetX(),
-                                   GetContentOffsetY(), 70, 28, *Theme);
-  const int slotSize = Theme->HotbarSlotSize;
-  const int hotbarReserve =
-      slotSize + Theme->HotbarMarginBottom + Theme->Padding * 2;
-  const int maxPanelH =
-      std::max(Scaled(120), ViewportH - hotbarReserve - ViewportH / 12);
-  if (layout.main.H > maxPanelH)
+  GuiRect panelRect;
+  if (Hosted)
   {
-    const int shrink = layout.main.H - maxPanelH;
-    layout.main.H = maxPanelH;
-    layout.main.Y += shrink / 2;
-    layout.preview.H = maxPanelH;
-    layout.preview.Y = layout.main.Y;
-  }
-  const int maxBottom = GetContentOffsetY() + ViewportH - hotbarReserve;
-  if (layout.main.Y + layout.main.H > maxBottom)
-  {
-    layout.main.Y = maxBottom - layout.main.H;
-    layout.preview.Y = layout.main.Y;
-  }
-  if (RootShell)
-  {
+    const auto shared =
+        PlayerWindowLayout::Compute(ViewportW, ViewportH, Metrics,
+                                    GetContentOffsetX(), GetContentOffsetY());
     RootShell->SetBounds(
         {GetContentOffsetX(), GetContentOffsetY(), ViewportW, ViewportH});
+    PlayerTabs->SetVisible(false);
+    CatalogButton->SetVisible(false);
+    BackpackButton->SetVisible(false);
+    HotbarStripLabel->SetVisible(false);
+    if (HotbarStripDivider)
+      HotbarStripDivider->SetVisible(false);
+    for (auto *slot : HotbarStripSlots)
+      slot->SetVisible(false);
+    panelRect = shared.Content;
+    Panel->SetBounds(panelRect);
+    if (PreviewDock)
+      PreviewDock->Relayout(shared.Preview);
   }
-  const int navH = Theme->TabBarHeight + Theme->Padding;
-  if (PlayerTabs)
+  else
   {
-    PlayerTabs->SetBounds(
-        {layout.main.X, layout.main.Y, layout.main.W, Theme->TabBarHeight});
-    PlayerTabs->SetActiveTab(4);
+    DockedLayout layout =
+        DockedOverlayLayout::Compute(ViewportW, ViewportH, GetContentOffsetX(),
+                                     GetContentOffsetY(), 70, 28, *Theme);
+    const int slotSize = Theme->HotbarSlotSize;
+    const int hotbarReserve =
+        slotSize + Theme->HotbarMarginBottom + Theme->Padding * 2;
+    const int maxPanelH =
+        std::max(Scaled(120), ViewportH - hotbarReserve - ViewportH / 12);
+    if (layout.main.H > maxPanelH)
+    {
+      const int shrink = layout.main.H - maxPanelH;
+      layout.main.H = maxPanelH;
+      layout.main.Y += shrink / 2;
+      layout.preview.H = maxPanelH;
+      layout.preview.Y = layout.main.Y;
+    }
+    const int maxBottom = GetContentOffsetY() + ViewportH - hotbarReserve;
+    if (layout.main.Y + layout.main.H > maxBottom)
+    {
+      layout.main.Y = maxBottom - layout.main.H;
+      layout.preview.Y = layout.main.Y;
+    }
+    if (RootShell)
+    {
+      RootShell->SetBounds(
+          {GetContentOffsetX(), GetContentOffsetY(), ViewportW, ViewportH});
+    }
+    const int navH = Theme->TabBarHeight + Theme->Padding;
+    if (PlayerTabs)
+    {
+      PlayerTabs->SetBounds(
+          {layout.main.X, layout.main.Y, layout.main.W, Theme->TabBarHeight});
+      PlayerTabs->SetActiveTab(4);
+    }
+    layout.main.Y += navH;
+    layout.main.H = std::max(120, layout.main.H - navH);
+    Panel->SetBounds(layout.main);
+    const int modeW = 100;
+    panelRect = layout.main;
+    panelRect.X += modeW;
+    panelRect.W = std::max(160, panelRect.W - modeW);
+    Panel->SetBounds(panelRect);
+    if (CatalogButton)
+    {
+      CatalogButton->SetVisible(CatalogAllowed);
+      CatalogButton->SetLabel(Listing == PaletteListing::Catalog ? "Catalog"
+                                                                 : "Catalog");
+      CatalogButton->SetBounds(
+          {panelRect.X - modeW, panelRect.Y, modeW - 6, 40});
+    }
+    if (BackpackButton)
+    {
+      BackpackButton->SetLabel(
+          Listing == PaletteListing::Backpack ? "Backpack" : "Backpack");
+      BackpackButton->SetBounds(
+          {panelRect.X - modeW, panelRect.Y + 46, modeW - 6, 40});
+    }
+    if (PreviewDock)
+    {
+      PreviewDock->Relayout(layout.preview);
+    }
   }
-  layout.main.Y += navH;
-  layout.main.H = std::max(120, layout.main.H - navH);
-  Panel->SetBounds(layout.main);
-  const int modeW = 100;
-  GuiRect panelRect = layout.main;
-  panelRect.X += modeW;
-  panelRect.W = std::max(160, panelRect.W - modeW);
-  Panel->SetBounds(panelRect);
-  if (CatalogButton)
-  {
-    CatalogButton->SetVisible(CatalogAllowed);
-    CatalogButton->SetLabel(Listing == PaletteListing::Catalog ? "Catalog"
-                                                               : "Catalog");
-    CatalogButton->SetBounds({panelRect.X - modeW, panelRect.Y, modeW - 6, 40});
-  }
-  if (BackpackButton)
-  {
-    BackpackButton->SetLabel(Listing == PaletteListing::Backpack ? "Backpack"
-                                                                 : "Backpack");
-    BackpackButton->SetBounds(
-        {panelRect.X - modeW, panelRect.Y + 46, modeW - 6, 40});
-  }
-  if (PreviewDock)
-  {
-    PreviewDock->Relayout(layout.preview);
-  }
-
   const int panelX = panelRect.X;
   const int panelY = panelRect.Y;
   const int panelW = panelRect.W;
@@ -429,10 +456,11 @@ void UCreativePaletteScreen::RelayoutPanel()
     SubTabs->SetBounds(
         {panelX + pad, panelY + pad + tabH + pad, panelW - pad * 2, tabH});
   }
-  const int hintH = Theme->FontSizeBody + 4;
+  const bool showHint = panelW >= Scaled(650);
+  const int hintH = showHint ? Theme->FontSizeBody + 4 : 0;
   if (UsageHintLabel)
   {
-    UsageHintLabel->SetVisible(true);
+    UsageHintLabel->SetVisible(showHint);
     UsageHintLabel->SetBounds({panelX + pad,
                                panelY + pad + tabH + pad + tabH + pad / 2,
                                panelW - pad * 2, hintH});
@@ -513,6 +541,8 @@ void UCreativePaletteScreen::EnsureHotbarStrip()
 
 void UCreativePaletteScreen::LayoutHotbarStrip()
 {
+  if (Hosted)
+    return;
   if (!HotbarStripBuilt || !Theme)
   {
     return;
@@ -652,8 +682,18 @@ void UCreativePaletteScreen::UpdateTooltip()
     return {};
   };
 
-  if (HoldTimer >= kHoldTooltipSeconds && HoldSlotIndex >= 0 &&
-      static_cast<size_t>(HoldSlotIndex) < GridEntryIds.size())
+  if (SubTabs && SubTabs->GetBounds().Contains(PointerX, PointerY) &&
+      !TypeTabLabels.empty())
+  {
+    const auto bounds = SubTabs->GetBounds();
+    const int index =
+        std::min(int(TypeTabLabels.size()) - 1,
+                 (PointerX - bounds.X) /
+                     std::max(1, bounds.W / int(TypeTabLabels.size())));
+    text = TypeTabLabels[size_t(index)];
+  }
+  else if (HoldTimer >= kHoldTooltipSeconds && HoldSlotIndex >= 0 &&
+           static_cast<size_t>(HoldSlotIndex) < GridEntryIds.size())
   {
     text = labelAt(static_cast<size_t>(HoldSlotIndex));
     if (Kind == ContentKind::UCreature &&
@@ -721,8 +761,17 @@ void UCreativePaletteScreen::UpdateTooltip()
     return;
   }
 
-  const GuiRect viewport{GetContentOffsetX(), GetContentOffsetY(), ViewportW,
-                         ViewportH};
+  GuiRect viewport{GetContentOffsetX(), GetContentOffsetY(), ViewportW,
+                   ViewportH};
+  if (Hosted)
+  {
+    viewport =
+        PlayerWindowLayout::Compute(ViewportW, ViewportH, Metrics,
+                                    GetContentOffsetX(), GetContentOffsetY())
+            .Window;
+    viewport.Y += Theme->TitleBarHeight;
+    viewport.H -= Theme->TitleBarHeight;
+  }
   const int textW = MeasureTooltipTextWidth(text, *Theme, Renderer);
   LayoutTooltipNearPointer(*TooltipLabel, text, tipX, tipY, viewport, *Theme,
                            textW);
@@ -1028,7 +1077,8 @@ void UCreativePaletteScreen::AppendGridSlotsChunk()
           }
           SelectedEntryId = entry.Id;
           SyncPreviewDock();
-          const size_t bar = 0;
+          const size_t bar =
+              Hosted ? Session->GetCharacterStatsSnapshot().activeRow : 0;
           const size_t slot = Session->GetSelectedSlot(bar);
           if (Session->AssignToHotbar(entry, bar, slot))
           {
@@ -1191,4 +1241,14 @@ void UCreativePaletteScreen::LayoutGridInScroll()
       {contentRect.X, contentTop, viewportW, contentHeight});
 }
 
+std::string UCreativePaletteScreen::GetSectionStateKey() const
+{
+  return std::to_string(int(Kind)) + "|" + ActiveTypeId + "|" +
+         SelectedEntryId + "|" + std::to_string(Scroll->GetScrollY()) + "|" +
+         (PreviewDock ? PreviewDock->GetViewStateKey() : "");
+}
+GuiRect UCreativePaletteScreen::GetPreviewBounds() const
+{
+  return PreviewDock ? PreviewDock->GetViewportBounds() : GuiRect{};
+}
 } // namespace cutum

@@ -22,6 +22,7 @@
 #include "Gui/Screens/CreativePaletteScreen.h"
 #include "Gui/Screens/DeathScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
+#include "Gui/Screens/PlayerWindowScreen.h"
 #include "Gui/Screens/SurvivalInventoryScreen.h"
 #include "Gui/Screens/WorldGenPaletteScreen.h"
 #include "Gui/Screens/WorldProgressScreen.h"
@@ -109,6 +110,8 @@ public:
   void Update(double dt);
   void UpdateNativeItemsQa(double dt);
   void OpenPlayerWindow(int section);
+  UGuiWidget *GetPlayerWindowRoot();
+  void RunPlayerWindowQa(const std::string &path);
   void ShowInteractionMessage(const std::string &message, float seconds = 2.f);
 
   void ProcessInput();
@@ -313,6 +316,7 @@ private:
   std::unique_ptr<UAnvilScreen> AnvilScreen;
   std::unique_ptr<UDeathScreen> DeathScreen;
   std::unique_ptr<UCharacterSheetScreen> CharacterSheetScreen;
+  std::unique_ptr<UPlayerWindowScreen> PlayerWindowScreen;
   std::unique_ptr<UWorldGenPaletteScreen> WorldGenScreen;
   std::unique_ptr<IUGuiClipboard> Clipboard;
   std::unique_ptr<UGuiPopupMenu> OverlayPopup;

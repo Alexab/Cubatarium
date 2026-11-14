@@ -4,6 +4,7 @@
 #include "Creatures/Core/HumanAppearance.h"
 #include "Gui/Core/GuiScreenBase.h"
 #include "Gui/Core/GuiTypes.h"
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -50,6 +51,15 @@ public:
   GuiRect GetDropButtonBounds() const;
   GuiRect GetDeleteButtonBounds() const;
   void SetSection(int section);
+  int GetSection() const { return Section; }
+  std::string GetSectionStateKey() const;
+  GuiRect GetSearchBounds() const;
+  GuiRect GetBackpackSlotBounds(size_t index) const;
+  void SetHosted(bool hosted)
+  {
+    Hosted = hosted;
+    Relayout();
+  }
   bool PickBackpackSlot(int x, int y, size_t &slot) const;
   bool IsEditingText() const;
   /// Opt-in native QA exercises the same buttons and session commands as user
@@ -135,6 +145,10 @@ private:
   std::vector<UGuiLabel *> AttrLabels;
   bool Visible{false};
   bool Built{false};
+  bool Hosted{false};
+  bool DraftInitialized{false};
+  uint64_t DraftOwnerId{0};
+  std::string DraftBase;
 };
 
 } // namespace cutum

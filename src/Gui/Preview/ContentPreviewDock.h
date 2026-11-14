@@ -35,6 +35,8 @@ public:
   void Relayout(const GuiRect &bounds);
   void Update(double dt);
   void RenderIfDirty();
+  std::string GetViewStateKey() const;
+  GuiRect GetViewportBounds() const;
 
 private:
   void MarkRenderDirty();

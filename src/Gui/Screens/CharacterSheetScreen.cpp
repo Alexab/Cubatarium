@@ -12,6 +12,7 @@
 #include "Gui/Interfaces/IUHotbarViewModel.h"
 #include "Gui/Layout/GuiLayout.h"
 #include "Gui/Layout/GuiTooltipLayout.h"
+#include "Gui/Layout/PlayerWindowLayout.h"
 #include "Gui/Preview/CreaturePreviewRenderer.h"
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiLabel.h"
@@ -89,7 +90,8 @@ void UCharacterSheetScreen::SetVisible(bool visible)
   if (visible != Visible)
   {
     EditingAppearance = Section == 3;
-    ResetAppearanceDraft();
+    if (!DraftInitialized)
+      ResetAppearanceDraft();
   }
   Visible = visible;
   if (Root)
@@ -425,7 +427,7 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
         RefreshLabels();
       });
   body->AddChild(std::move(drop));
-  auto remove = std::make_unique<UGuiButton>(&theme, "Delete assignment");
+  auto remove = std::make_unique<UGuiButton>(&theme, "Clear template");
   DeleteButton = remove.get();
   remove->SetOnClick(
       [this]
@@ -607,7 +609,8 @@ void UCharacterSheetScreen::SetSection(int section)
     Search->SetFocused(false);
   if (auto *session = dynamic_cast<UGameSession *>(Stats))
     session->CancelDrag();
-  ResetAppearanceDraft();
+  if (!DraftInitialized)
+    ResetAppearanceDraft();
   Relayout();
   RefreshLabels();
 }
@@ -646,35 +649,48 @@ void UCharacterSheetScreen::Relayout()
   TitleMeta->SetBounds({c.X + pad, c.Y + pad, c.W - Scaled(155), line});
   ModeLabel->SetBounds({c.X + pad, c.Y + pad + line, c.W - pad * 2, line});
   Sections->SetBounds({c.X + pad, c.Y + pad + line * 2, c.W - pad * 2, tabH});
-  const int top = c.Y + pad + line * 2 + tabH + pad;
-  const int contentH = std::max(100, c.Y + c.H - top - pad);
-  const int dollW = (WideLayout || Section == 1 || Section == 3)
-                        ? std::min(Scaled(320), c.W / 3)
-                        : 0;
-  const int mainX = c.X + pad + (dollW ? dollW + pad : 0),
-            mainW = c.W - pad * 2 - (dollW ? dollW + pad : 0);
+  const auto shared = PlayerWindowLayout::Compute(
+      ViewportW, ViewportH, Metrics, GetContentOffsetX(), GetContentOffsetY());
+  if (Hosted)
+  {
+    Window->SetChromeVisible(false);
+    Window->SetBounds(shared.Body);
+    BodyPanel->SetBounds(shared.Body);
+    TitleMeta->SetVisible(false);
+    ModeLabel->SetVisible(false);
+    Sections->SetVisible(false);
+    AppearanceToggle->SetVisible(false);
+  }
+  const int top = Hosted ? shared.Body.Y : c.Y + pad + line * 2 + tabH + pad;
+  const int contentH =
+      Hosted ? shared.Body.H : std::max(100, c.Y + c.H - top - pad);
+  const int dollW = Hosted ? shared.Preview.W
+                           : ((WideLayout || Section == 1 || Section == 3)
+                                  ? std::min(Scaled(320), c.W / 3)
+                                  : 0);
+  const int mainX = Hosted ? shared.Content.X
+                           : c.X + pad + (dollW ? dollW + pad : 0),
+            mainW = Hosted ? shared.Content.W
+                           : c.W - pad * 2 - (dollW ? dollW + pad : 0);
   DollPanel->SetVisible(dollW > 0 || Section == 3);
-  DollPanel->SetBounds({c.X + pad, top, dollW ? dollW : c.W / 3, contentH});
+  DollPanel->SetBounds(
+      Hosted ? shared.Preview
+             : GuiRect{c.X + pad, top, dollW ? dollW : c.W / 3, contentH});
   const bool bagVisible = Section < 2;
   BagPanel->SetVisible(bagVisible);
   Search->SetVisible(bagVisible);
   SortButton->SetVisible(bagVisible);
   RecoveryButton->SetVisible(bagVisible);
   DropButton->SetVisible(bagVisible);
-  InventoryHint->SetVisible(bagVisible);
+  InventoryHint->SetVisible(bagVisible && mainW >= Scaled(650));
   Search->SetBounds(
       {mainX, top, std::max(40, mainW - Scaled(190)), line + pad});
   SortButton->SetBounds(
       {mainX + mainW - Scaled(182), top, Scaled(65), line + pad});
   RecoveryButton->SetBounds(
       {mainX + mainW - Scaled(110), top, Scaled(110), line + pad});
-  DropButton->SetBounds(
-      {mainX + mainW - Scaled(75),
-       top + line + pad * 2 +
-           4 * std::max(20, std::min((mainW - pad) / 10 - pad / 2,
-                                     (contentH - line * 3) / 4 - pad)) +
-           pad * 5,
-       Scaled(75), line + pad});
+  DropButton->SetBounds({mainX + mainW - Scaled(75),
+                         top + contentH - line - pad, Scaled(75), line + pad});
   auto dropBounds = DropButton->GetBounds();
   DeleteButton->SetBounds(
       {dropBounds.X - Scaled(150), dropBounds.Y, Scaled(145), dropBounds.H});
@@ -682,14 +698,15 @@ void UCharacterSheetScreen::Relayout()
                            Stats->GetCharacterStatsSnapshot().gameMode ==
                                WorldGameMode::Creative);
   const int gridTop = top + line + pad * 2;
-  const int slot = std::max(20, std::min((mainW - pad) / 10 - pad / 2,
-                                         (contentH - line * 3) / 4 - pad));
+  const int slot =
+      std::max(20, std::min((mainW - pad) / 10 - pad / 2,
+                            (contentH - (line + pad) * 2 - pad * 4) / 4 - pad));
   BagPanel->SetBounds({mainX, gridTop, mainW, 4 * (slot + pad)});
   for (size_t i = 0; i < 40; ++i)
     BagSlots[i]->SetBounds({mainX + pad / 2 + int(i % 10) * (slot + pad / 2),
                             gridTop + pad / 2 + int(i / 10) * (slot + pad),
                             slot, slot});
-  InventoryHint->SetBounds({mainX, gridTop + 4 * (slot + pad) + pad,
+  InventoryHint->SetBounds({mainX, top + contentH - line - pad,
                             std::max(40, mainW - Scaled(235)), line * 2});
   StatsScroll->SetVisible(Section == 2);
   StatsScroll->SetBounds({mainX, top, mainW, contentH});
@@ -714,10 +731,11 @@ void UCharacterSheetScreen::Relayout()
     AppearanceButtons[i]->SetBounds({mainX + pad,
                                      top + pad + int(i) * (line + pad),
                                      mainW - pad * 2, line + pad / 2});
-  const int left = c.X + pad, dw = dollW ? dollW : c.W / 3;
-  const int eqSlot =
-      std::max(24, std::min({Scaled(42), (dw - pad * 4) / 4,
-                             (contentH - line - pad * 5 - 48) / 3}));
+  const int left = Hosted ? shared.Preview.X : c.X + pad,
+            dw = dollW ? dollW : c.W / 3;
+  const int eqSlot = std::max(
+      24, std::min({Scaled(42), (contentH - line - pad * 5) / 6,
+                    (dw - pad * 4) / 4, (contentH - line - pad * 5 - 48) / 3}));
   const int preview =
       std::max(48, std::min({dw - eqSlot * 2 - pad * 4, Scaled(180),
                              contentH - line - eqSlot * 3 - pad * 5}));
@@ -795,6 +813,9 @@ void UCharacterSheetScreen::RefreshLabels()
     return;
   }
   const CharacterStatsSnapshot snap = Stats->GetCharacterStatsSnapshot();
+  if (!DraftInitialized || DraftOwnerId != snap.OwnerId ||
+      DraftBase != snap.humanAppearance.Key() + "|" + snap.skinId)
+    ResetAppearanceDraft();
   if (TitleMeta)
   {
     std::ostringstream oss;
@@ -930,12 +951,10 @@ void UCharacterSheetScreen::RefreshLabels()
       slot->SetIconTexture(tex);
       slot->SetWearProgress(entry.wear);
       slot->SetBroken(entry.broken);
-      slot->SetCornerHint(entry.empty
-                              ? ""
-                              : (entry.pinned ? "* " : "") +
-                                    (entry.IsCatalogReference()
-                                         ? std::string("")
-                                         : std::to_string(entry.count)));
+      slot->SetCornerHint(!entry.empty && entry.pinned ? "*" : "");
+      slot->SetCountHint(entry.empty || entry.IsCatalogReference()
+                             ? ""
+                             : std::to_string(entry.count));
       std::string text = entry.Id;
       std::replace(text.begin(), text.end(), '_', ' ');
       std::transform(text.begin(), text.end(), text.begin(),
@@ -1097,9 +1116,18 @@ void UCharacterSheetScreen::RefreshTooltip(const CharacterStatsSnapshot &snap)
               }
             }
         }
+      GuiRect tooltipArea{0, 0, ViewportW, ViewportH};
+      if (Hosted)
+      {
+        tooltipArea = PlayerWindowLayout::Compute(ViewportW, ViewportH, Metrics,
+                                                  GetContentOffsetX(),
+                                                  GetContentOffsetY())
+                          .Window;
+        tooltipArea.Y += Context->GetTheme().TitleBarHeight;
+        tooltipArea.H -= Context->GetTheme().TitleBarHeight;
+      }
       LayoutTooltipNearPointer(
-          *Tooltip, text, PointerX, PointerY, {0, 0, ViewportW, ViewportH},
-          Context->GetTheme(),
+          *Tooltip, text, PointerX, PointerY, tooltipArea, Context->GetTheme(),
           MeasureTooltipTextWidth(text, Context->GetTheme(),
                                   &Context->GetRenderer()));
     }
@@ -1205,7 +1233,10 @@ void UCharacterSheetScreen::RunAppearanceQa(const std::string &reportPath)
     throw std::runtime_error("Appearance UI QA requires controlled human");
   const auto original = Stats->GetCharacterStatsSnapshot();
   SetVisible(true);
-  AppearanceToggle->Activate();
+  if (Hosted)
+    SetSection(3);
+  else
+    AppearanceToggle->Activate();
   AppearanceButtons[0]->Activate();
   AppearanceButtons[1]->Activate();
   AppearanceButtons[2]->Activate();
@@ -1239,7 +1270,10 @@ void UCharacterSheetScreen::RunAppearanceQa(const std::string &reportPath)
         row.value("selected_skin_id", "") == outfit &&
         world->GetCurrentUser()->GetHumanAppearance().Key() == desired.Key();
   }
-  AppearanceToggle->Activate();
+  if (Hosted)
+    SetSection(3);
+  else
+    AppearanceToggle->Activate();
   AppearanceButtons[2]->Activate();
   AppearanceButtons[5]->Activate();
   const bool cancelled =
@@ -1247,7 +1281,10 @@ void UCharacterSheetScreen::RunAppearanceQa(const std::string &reportPath)
           desired.Key() &&
       Stats->GetCharacterStatsSnapshot().skinId == outfit;
   nlohmann::json layouts = nlohmann::json::array();
-  AppearanceToggle->Activate();
+  if (Hosted)
+    SetSection(3);
+  else
+    AppearanceToggle->Activate();
   for (auto size :
        std::array<std::pair<int, int>, 2>{{{1280, 720}, {640, 480}}})
   {
@@ -1271,7 +1308,10 @@ void UCharacterSheetScreen::RunAppearanceQa(const std::string &reportPath)
   ResetAppearanceDraft();
   OnViewportChanged(1280, 720);
   RefreshLabels();
-  AppearanceToggle->Activate();
+  if (Hosted)
+    SetSection(3);
+  else
+    AppearanceToggle->Activate();
   AppearanceButtons[0]->Activate();
   AppearanceButtons[2]->Activate();
   AppearanceButtons[2]->Activate();
@@ -1296,9 +1336,12 @@ void UCharacterSheetScreen::RunAppearanceQa(const std::string &reportPath)
 
 void UCharacterSheetScreen::ResetAppearanceDraft()
 {
+  DraftInitialized = true;
   if (!Stats)
     return;
   const auto snap = Stats->GetCharacterStatsSnapshot();
+  DraftOwnerId = snap.OwnerId;
+  DraftBase = snap.humanAppearance.Key() + "|" + snap.skinId;
   DraftAppearance = snap.humanAppearance;
   DraftSkin = snap.skinId;
 }
@@ -1307,7 +1350,7 @@ void UCharacterSheetScreen::RefreshAppearanceControls()
   if (!Stats || !AppearanceToggle)
     return;
   const bool human = Stats->GetCharacterStatsSnapshot().typeId == "human";
-  AppearanceToggle->SetVisible(human);
+  AppearanceToggle->SetVisible(!Hosted && human);
   if (!human && EditingAppearance)
   {
     EditingAppearance = false;
@@ -1456,4 +1499,21 @@ void UCharacterSheetScreen::OnViewportChanged(int width, int height)
   Relayout();
 }
 
+std::string UCharacterSheetScreen::GetSectionStateKey() const
+{
+  return (Search ? Search->GetText() : "") + "|" +
+         std::to_string(RecoveryMode) + "|" + std::to_string(RecoveryOffset) +
+         "|" + std::to_string(StatsScroll->GetScrollY()) + "|" +
+         DraftAppearance.Key() + "|" + DraftSkin + "|" +
+         std::to_string(PreviewViewport->GetYaw()) + "|" +
+         std::to_string(PreviewViewport->GetPitch());
+}
+GuiRect UCharacterSheetScreen::GetSearchBounds() const
+{
+  return Search->GetBounds();
+}
+GuiRect UCharacterSheetScreen::GetBackpackSlotBounds(size_t index) const
+{
+  return index < BagSlots.size() ? BagSlots[index]->GetBounds() : GuiRect{};
+}
 } // namespace cutum

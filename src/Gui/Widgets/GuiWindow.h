@@ -13,10 +13,13 @@ public:
   UGuiWindow(const GuiTheme *theme, std::string title);
 
   GuiRect GetClientArea() const;
+  void SetChromeVisible(bool visible) { ChromeVisible = visible; }
+  void SetTitle(const std::string &title) { Title = title; }
   void Draw(UGuiRenderer &renderer) override;
 
 private:
   std::string Title;
+  bool ChromeVisible{true};
 };
 
 } // namespace cutum

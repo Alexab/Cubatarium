@@ -8,6 +8,7 @@
 #include "Gui/Widgets/GuiTextInput.h"
 #include "Test/Native/ItemsInventoryQa.h"
 #include "Test/Native/OwnershipQa.h"
+#include "Test/Native/PlayerWindowCapture.h"
 #include "World/Core/RuntimeTuning.h"
 #include "World/Diagnostics/EnterLitDiagnostics.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
@@ -1184,6 +1185,12 @@ void UApplication::ShowInGameHud()
   CharacterSheetScreen->OnAttach(*GuiContext);
   CharacterSheetScreen->Build(*GuiContext);
   CharacterSheetScreen->SetVisible(false);
+  PlayerWindowScreen = std::make_unique<UPlayerWindowScreen>(
+      GameSession.get(), CharacterSheetScreen.get(), PaletteScreen.get(),
+      icons);
+  PlayerWindowScreen->OnAttach(*GuiContext);
+  PlayerWindowScreen->Build(*GuiContext);
+  CharacterSheetScreen->SetVisible(false);
 
   WorldGenScreen = std::make_unique<UWorldGenPaletteScreen>(
       World.get(), &GameSession->GetContentCatalog(), icons, preview);
@@ -1533,19 +1540,17 @@ void UApplication::OpenPlayerWindow(int section)
     AnvilScreen->SetVisible(false);
   if (SurvivalInventoryScreen)
     SurvivalInventoryScreen->SetVisible(false);
-  if (PaletteScreen)
-  {
-    PaletteScreen->SetVisible(catalog);
-    if (catalog)
-      PaletteScreen->OpenWithMainTab(0);
-  }
-  if (CharacterSheetScreen)
-  {
-    CharacterSheetScreen->SetVisible(!catalog);
-    if (!catalog)
-      CharacterSheetScreen->SetSection(std::clamp(section, 0, 3));
-  }
+  if (PlayerWindowScreen)
+    PlayerWindowScreen->SelectSection(catalog ? 4 : std::clamp(section, 0, 3));
   SyncCursorVisibility();
+}
+UGuiWidget *UApplication::GetPlayerWindowRoot()
+{
+  if (!PlayerWindowScreen)
+    return nullptr;
+  PlayerWindowScreen->SelectSection(
+      PaletteOpen ? 4 : CharacterSheetScreen->GetSection());
+  return PlayerWindowScreen->GetRoot();
 }
 void UApplication::FinishInventoryPointerGesture(const GuiMouseEvent &event)
 {
@@ -1607,7 +1612,7 @@ void UApplication::FinishInventoryPointerGesture(const GuiMouseEvent &event)
     case OverlayPointerCapture::Palette:
       if (PaletteOpen && PaletteScreen)
       {
-        routeUp(PaletteScreen->GetRoot());
+        routeUp(GetPlayerWindowRoot());
       }
       break;
     case OverlayPointerCapture::SurvivalInventory:
@@ -1637,7 +1642,7 @@ void UApplication::FinishInventoryPointerGesture(const GuiMouseEvent &event)
     case OverlayPointerCapture::CharacterSheet:
       if (CharacterSheetOpen && CharacterSheetScreen)
       {
-        routeUp(CharacterSheetScreen->GetRoot());
+        routeUp(GetPlayerWindowRoot());
       }
       break;
     case OverlayPointerCapture::WorldGen:
@@ -1691,6 +1696,11 @@ bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
         focusText(child.get());
     };
     focusText(root);
+    if (PlayerWindowScreen && root == PlayerWindowScreen->GetRoot())
+    {
+      focusText(CharacterSheetScreen->GetRoot());
+      focusText(PaletteScreen->GetRoot());
+    }
     if (auto *input = dynamic_cast<UGuiTextInput *>(hit))
     {
       return input->PointerDown(event, GuiContext->GetRenderer()) ? hit
@@ -1737,7 +1747,7 @@ bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
     }
     if (PaletteOpen)
     {
-      if (UGuiWidget *hit = routeRootDown(PaletteScreen->GetRoot()))
+      if (UGuiWidget *hit = routeRootDown(GetPlayerWindowRoot()))
       {
         OverlayCaptures[pointerIndex] = OverlayPointerCapture::Palette;
         OverlayPressedWidget = hit;
@@ -1774,7 +1784,7 @@ bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
     }
     if (CharacterSheetOpen && CharacterSheetScreen)
     {
-      if (UGuiWidget *hit = routeRootDown(CharacterSheetScreen->GetRoot()))
+      if (UGuiWidget *hit = routeRootDown(GetPlayerWindowRoot()))
       {
         OverlayCaptures[pointerIndex] = OverlayPointerCapture::CharacterSheet;
         OverlayPressedWidget = hit;
@@ -1790,6 +1800,8 @@ bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
         return true;
       }
     }
+    if (PaletteOpen || CharacterSheetOpen)
+      return true;
     if (UGuiWidget *hit =
             routeRootDown(HudScreen ? HudScreen->GetRoot() : nullptr))
     {
@@ -1817,12 +1829,17 @@ bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
 
 bool UApplication::ResolveSlotAt(int x, int y, SlotAddress &out)
 {
+  if ((PaletteOpen || CharacterSheetOpen) && PlayerWindowScreen &&
+      PlayerWindowScreen->PickHotbarSlot(x, y, out))
+    return true;
+
   // Hotbar targets first so Tools grid never swallows drops meant for hotbar.
   if (PaletteOpen && PaletteScreen && PaletteScreen->PickHotbarStrip(x, y, out))
   {
     return true;
   }
-  if (HudScreen && HudScreen->PickSlot(x, y, out))
+  if (HudScreen && !PaletteOpen && !CharacterSheetOpen &&
+      HudScreen->PickSlot(x, y, out))
   {
     return true;
   }
@@ -2246,6 +2263,224 @@ void UApplication::RunOwnershipUiQa(const std::string &path)
   out << report.dump(2) << '\n';
 }
 
+void UApplication::RunPlayerWindowQa(const std::string &path)
+{
+  const auto originalMode = World->GetGameMode();
+  const auto originalScale = GuiContext->GetMetrics().Scale;
+  const auto originalWidth = PlayerWindowScreen->GetViewportWidth();
+  const auto originalHeight = PlayerWindowScreen->GetViewportHeight();
+  auto originalInventory = World->GetControlledCreature()->GetInventory();
+  auto &qaInventory = World->GetControlledCreature()->GetInventory();
+  qaInventory = UCreatureInventory{};
+  qaInventory.SetItemDefinitions(World->GetItemDefinitionStorage());
+  qaInventory.SetCreative(true);
+  InventoryEntryRef qaTool;
+  qaTool.empty = false;
+  qaTool.kind = InventoryEntryKind::Item;
+  qaTool.Id = "iron_pickaxe";
+  qaTool.count = 1;
+  qaTool.wear = .27f;
+  qaInventory.Insert(qaTool);
+  auto qaBlock = qaTool;
+  qaBlock.kind = InventoryEntryKind::Block;
+  qaBlock.Id = "stone";
+  qaBlock.count = 64;
+  qaBlock.wear = 0;
+  qaInventory.Insert(qaBlock);
+  auto qaFood = qaTool;
+  qaFood.Id = "apple";
+  qaFood.count = 3;
+  qaFood.wear = 0;
+  qaInventory.Insert(qaFood);
+  qaBlock.form = InventoryEntryForm::CatalogReference;
+  qaBlock.count = 1;
+  qaInventory.AssignToHotbar(3, 9, qaBlock);
+  nlohmann::json report = {{"checks", nlohmann::json::array()},
+                           {"layouts", nlohmann::json::array()}};
+  auto equal = [](GuiRect a, GuiRect b)
+  { return a.X == b.X && a.Y == b.Y && a.W == b.W && a.H == b.H; };
+  auto check = [&](const std::string &name, bool ok)
+  { report["checks"].push_back({{"name", name}, {"passed", ok}}); };
+  auto click = [&](GuiRect b)
+  {
+    InputRouter.RouteMouseButton(*this, GLFW_MOUSE_BUTTON_LEFT, true,
+                                 b.X + b.W / 2, b.Y + b.H / 2, 0);
+    InputRouter.RouteMouseButton(*this, GLFW_MOUSE_BUTTON_LEFT, false,
+                                 b.X + b.W / 2, b.Y + b.H / 2, 0);
+  };
+  for (auto mode : {WorldGameMode::Creative, WorldGameMode::Survival})
+  {
+    GameSession->SyncToWorldGameMode(mode);
+    for (auto size : {std::pair<int, int>{1280, 720}, {1920, 1080}})
+      for (float scale : {1.f, 1.5f, 2.f})
+      {
+        GuiContext->ApplyUiScale(scale);
+        PlayerWindowScreen->OnMetricsChanged(GuiContext->GetMetrics());
+        PlayerWindowScreen->OnViewportChanged(size.first, size.second);
+        OpenPlayerWindow(0);
+        PlayerWindowScreen->Update(0);
+        const auto reference = PlayerWindowScreen->GetLayout();
+        auto *root = GetPlayerWindowRoot();
+        for (int section : {4, 0, 1, 2, 3, 0})
+        {
+          click(PlayerWindowScreen->GetTabBounds(section));
+          if (CharacterSheetOpen)
+            CharacterSheetScreen->Update(0);
+          if (PaletteOpen)
+            PaletteScreen->Update(0);
+          PlayerWindowScreen->Update(0);
+          const auto current = PlayerWindowScreen->GetLayout();
+          const int expected =
+              section == 4 && mode == WorldGameMode::Survival ? 0 : section;
+          bool ok = GetPlayerWindowRoot() == root &&
+                    PlayerWindowScreen->GetSection() == expected &&
+                    equal(reference.Window, current.Window) &&
+                    equal(reference.Tabs, current.Tabs) &&
+                    equal(reference.Preview, current.Preview) &&
+                    equal(reference.Content, current.Content) &&
+                    equal(reference.Footer, current.Footer) &&
+                    current.Window.X >= 0 && current.Window.Y >= 0 &&
+                    current.Window.X + current.Window.W <= size.first &&
+                    current.Window.Y + current.Window.H <= size.second;
+          if (mode == WorldGameMode::Creative && (section == 0 || section == 4))
+          {
+            if (section == 4)
+              PaletteScreen->RenderPreview();
+            const auto imagePath =
+                std::filesystem::path(path + ".frames") /
+                (std::to_string(size.first) + "x" +
+                 std::to_string(size.second) + "_" +
+                 std::to_string(int(scale * 100)) +
+                 (section == 4 ? "_catalog.png" : "_backpack.png"));
+            ok = CapturePlayerWindow(*GuiContext, *root, size.first,
+                                     size.second, imagePath) &&
+                 ok;
+          }
+          report["layouts"].push_back(
+              {{"mode",
+                mode == WorldGameMode::Creative ? "creative" : "survival"},
+               {"width", size.first},
+               {"height", size.second},
+               {"scale", scale},
+               {"section", section},
+               {"passed", ok},
+               {"window",
+                {current.Window.X, current.Window.Y, current.Window.W,
+                 current.Window.H}}});
+        }
+      }
+  }
+  GameSession->SyncToWorldGameMode(WorldGameMode::Creative);
+  GuiContext->ApplyUiScale(1.f);
+  PlayerWindowScreen->OnMetricsChanged(GuiContext->GetMetrics());
+  PlayerWindowScreen->OnViewportChanged(1280, 720);
+  OpenPlayerWindow(0);
+  CharacterSheetScreen->Update(0);
+  qaInventory.SetActiveSlot(2, 3);
+  CharacterSheetScreen->Update(0);
+  PlayerWindowScreen->Update(0);
+  const auto toolIdentity = qaInventory.GetSlot(0).instanceId;
+  const auto from = CharacterSheetScreen->GetBackpackSlotBounds(0);
+  const auto to = PlayerWindowScreen->GetHotbarBounds(3);
+  InputRouter.RouteMouseButton(*this, GLFW_MOUSE_BUTTON_LEFT, true,
+                               from.X + from.W / 2, from.Y + from.H / 2, 0);
+  InputRouter.RouteMouseMove(*this, to.X + to.W / 2, to.Y + to.H / 2, 0);
+  InputRouter.RouteMouseButton(*this, GLFW_MOUSE_BUTTON_LEFT, false,
+                               to.X + to.W / 2, to.Y + to.H / 2, 0);
+  check("shared footer transfers worn instances into the active inventory row",
+        qaInventory.GetSlot(0).empty &&
+            qaInventory.GetSlot(23).instanceId == toolIdentity &&
+            qaInventory.GetSlot(23).wear == .27f);
+  click(PlayerWindowScreen->GetHotbarBounds(4));
+  check("shared footer selects within the active inventory row",
+        qaInventory.GetActiveBarIndex() == 2 &&
+            qaInventory.GetActiveSlotIndex() == 4);
+  click(CharacterSheetScreen->GetSearchBounds());
+  for (char c : std::string("stone"))
+    InputRouter.RouteChar(*this, unsigned(c));
+  const auto backpackState = CharacterSheetScreen->GetSectionStateKey();
+  click(PlayerWindowScreen->GetTabBounds(4));
+  PaletteScreen->OpenWithMainTab(0);
+  for (int i = 0; i < 4; ++i)
+    PaletteScreen->Update(0);
+  const auto catalogArea = PlayerWindowScreen->GetLayout().Content;
+  const auto unscrolled = PaletteScreen->GetSectionStateKey();
+  InputRouter.RouteScroll(*this, 0, -5, catalogArea.X + catalogArea.W / 2,
+                          catalogArea.Y + catalogArea.H / 2);
+  PaletteScreen->Update(0);
+  const auto scrolled = PaletteScreen->GetSectionStateKey();
+  click(PlayerWindowScreen->GetTabBounds(0));
+  click(PlayerWindowScreen->GetTabBounds(4));
+  PaletteScreen->Update(0);
+  check("nonzero catalog scroll survives backpack roundtrip",
+        scrolled != unscrolled &&
+            PaletteScreen->GetSectionStateKey() == scrolled);
+  PaletteScreen->OpenWithMainTab(4);
+  for (int i = 0; i < 4; ++i)
+    PaletteScreen->Update(0);
+  const auto gridArea = PlayerWindowScreen->GetLayout().Content;
+  const auto &theme = GuiContext->GetTheme();
+  const int gridY = gridArea.Y + theme.Padding * 4 + theme.TabBarHeight * 2 +
+                    theme.FontSizeBody + 4 + theme.Padding / 2;
+  click({gridArea.X + theme.Padding, gridY, theme.HotbarSlotSize,
+         theme.HotbarSlotSize});
+  PaletteScreen->Update(0);
+  const auto beforeRotation = PaletteScreen->GetSectionStateKey();
+  const auto previewBounds = PaletteScreen->GetPreviewBounds();
+  const int previewX = previewBounds.X + previewBounds.W / 2;
+  const int previewY = previewBounds.Y + previewBounds.H / 2;
+  InputRouter.RouteMouseButton(*this, GLFW_MOUSE_BUTTON_LEFT, true, previewX,
+                               previewY, 0);
+  InputRouter.RouteMouseMove(*this, previewX + 30, previewY + 12, 0);
+  InputRouter.RouteMouseButton(*this, GLFW_MOUSE_BUTTON_LEFT, false,
+                               previewX + 30, previewY + 12, 0);
+  check("catalog selection and preview rotation use the shared input tree",
+        PaletteScreen->GetSectionStateKey() != beforeRotation);
+  const auto catalogState = PaletteScreen->GetSectionStateKey();
+  click(PlayerWindowScreen->GetTabBounds(0));
+  CharacterSheetScreen->Update(0);
+  check("backpack search and section state survive catalog roundtrip",
+        CharacterSheetScreen->GetSectionStateKey() == backpackState);
+  click(PlayerWindowScreen->GetTabBounds(4));
+  PaletteScreen->Update(0);
+  check("catalog category selection and scroll survive backpack roundtrip",
+        PaletteScreen->GetSectionStateKey() == catalogState &&
+            PaletteScreen->GetActiveMainTab() == 4);
+  click(PlayerWindowScreen->GetTabBounds(3));
+  CharacterSheetScreen->Update(0);
+  const auto area = PlayerWindowScreen->GetLayout().Content;
+  const int pad = GuiContext->GetMetrics().Dp(8),
+            line = GuiContext->GetMetrics().Dp(24);
+  click({area.X + pad, area.Y + pad, area.W - pad * 2, line + pad / 2});
+  CharacterSheetScreen->Update(0);
+  const auto appearanceState = CharacterSheetScreen->GetSectionStateKey();
+  click(PlayerWindowScreen->GetTabBounds(4));
+  click(PlayerWindowScreen->GetTabBounds(3));
+  CharacterSheetScreen->Update(0);
+  check("unapplied appearance draft survives catalog roundtrip",
+        CharacterSheetScreen->GetSectionStateKey() == appearanceState);
+  // Cancel the draft through the same button as the player.
+  click({area.X + pad, area.Y + pad + 5 * (line + pad), area.W - pad * 2,
+         line + pad / 2});
+  OpenPlayerWindow(0);
+  click(CharacterSheetScreen->GetSearchBounds());
+  InputRouter.RouteKey(*this, GLFW_KEY_A, GLFW_PRESS, GLFW_MOD_CONTROL);
+  InputRouter.RouteKey(*this, GLFW_KEY_BACKSPACE, GLFW_PRESS, 0);
+  GameSession->CancelDrag();
+  GameSession->SyncToWorldGameMode(originalMode);
+  World->GetControlledCreature()->GetInventory() = originalInventory;
+  GuiContext->ApplyUiScale(originalScale);
+  PlayerWindowScreen->OnMetricsChanged(GuiContext->GetMetrics());
+  PlayerWindowScreen->OnViewportChanged(originalWidth, originalHeight);
+  OpenPlayerWindow(0);
+  report["passed"] = true;
+  for (const auto *rows : {"checks", "layouts"})
+    for (const auto &entry : report[rows])
+      if (!entry["passed"].get<bool>())
+        report["passed"] = false;
+  std::ofstream out(path);
+  out << report.dump(2) << '\n';
+}
 void UApplication::UpdateNativeItemsQa(double dt)
 {
   static bool itemsQaDone = false;
@@ -2261,6 +2496,7 @@ void UApplication::UpdateNativeItemsQa(double dt)
       {
         CharacterSheetScreen->RunInventoryQa(std::string(path) + ".ui.json");
         RunOwnershipUiQa(std::string(path) + ".ownership-ui.json");
+        RunPlayerWindowQa(std::string(path) + ".player-window.json");
         CharacterSheetOpen = true;
         CharacterSheetScreen->SetSection(0);
         CharacterSheetScreen->SetVisible(true);
@@ -2576,6 +2812,12 @@ void UApplication::Update(double dt)
     {
       ConsoleScreen->Update(dt);
     }
+    if (PlayerWindowScreen && (PaletteOpen || CharacterSheetOpen))
+    {
+      PlayerWindowScreen->SelectSection(
+          PaletteOpen ? 4 : CharacterSheetScreen->GetSection());
+      PlayerWindowScreen->Update(dt);
+    }
     if (PaletteScreen)
     {
       PaletteScreen->Update(dt);
@@ -2734,7 +2976,11 @@ void UApplication::NotifyAllScreensMetricsChanged(const GuiMetrics &metrics)
   {
     ConsoleScreen->OnMetricsChanged(metrics);
   }
-  if (PaletteScreen)
+  if (PlayerWindowScreen)
+  {
+    PlayerWindowScreen->OnMetricsChanged(metrics);
+  }
+  else if (PaletteScreen)
   {
     PaletteScreen->OnMetricsChanged(metrics);
   }
@@ -2936,11 +3182,13 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
     OverlayPopup->Draw(renderer);
     renderer.EndFrame();
   }
-  if (PaletteOpen && PaletteScreen && PaletteScreen->GetRoot())
+  if ((PaletteOpen || CharacterSheetOpen) && PlayerWindowScreen)
   {
-    PaletteScreen->RenderPreview();
-    notifyViewport(PaletteScreen.get());
-    GuiContext->RenderOverlay(*PaletteScreen->GetRoot(), width, height, false);
+    auto *root = GetPlayerWindowRoot();
+    notifyViewport(PlayerWindowScreen.get());
+    if (PaletteOpen)
+      PaletteScreen->RenderPreview();
+    GuiContext->RenderOverlay(*root, width, height, false);
   }
   if (SurvivalInventoryOpen && SurvivalInventoryScreen &&
       SurvivalInventoryScreen->GetRoot())
@@ -2963,13 +3211,6 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
   {
     notifyViewport(DeathScreen.get());
     GuiContext->RenderOverlay(*DeathScreen->GetRoot(), width, height, false);
-  }
-  if (CharacterSheetOpen && CharacterSheetScreen &&
-      CharacterSheetScreen->GetRoot())
-  {
-    notifyViewport(CharacterSheetScreen.get());
-    GuiContext->RenderOverlay(*CharacterSheetScreen->GetRoot(), width, height,
-                              false);
   }
   if (WorldGenOpen && WorldGenScreen && WorldGenScreen->GetRoot())
   {

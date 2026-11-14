@@ -10,6 +10,7 @@
 #include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
 #include <array>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -27,6 +28,7 @@ struct CharacterStatsSnapshot
   };
 
   std::string displayName;
+  uint64_t OwnerId{0};
   std::string typeId;
   std::string skinId;
   HumanAppearance humanAppearance;

@@ -641,7 +641,7 @@ bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y,
       switch (capture)
       {
       case UApplication::OverlayPointerCapture::Palette:
-        if (app.PaletteOpen && routeCapturedMove(app.PaletteScreen->GetRoot()))
+        if (app.PaletteOpen && routeCapturedMove(app.GetPlayerWindowRoot()))
         {
           return true;
         }
@@ -668,7 +668,7 @@ bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y,
         break;
       case UApplication::OverlayPointerCapture::CharacterSheet:
         if (app.CharacterSheetOpen && app.CharacterSheetScreen &&
-            routeCapturedMove(app.CharacterSheetScreen->GetRoot()))
+            routeCapturedMove(app.GetPlayerWindowRoot()))
         {
           return true;
         }
@@ -721,7 +721,7 @@ bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y,
     bool handled = false;
     if (app.PaletteOpen)
     {
-      handled |= routeMove(app.PaletteScreen->GetRoot());
+      handled |= routeMove(app.GetPlayerWindowRoot());
     }
     if (app.WorldGenOpen)
     {
@@ -729,7 +729,7 @@ bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y,
     }
     if (app.CharacterSheetOpen && app.CharacterSheetScreen)
     {
-      handled |= routeMove(app.CharacterSheetScreen->GetRoot());
+      handled |= routeMove(app.GetPlayerWindowRoot());
     }
     if (app.SurvivalInventoryOpen && app.SurvivalInventoryScreen)
     {
@@ -760,7 +760,7 @@ bool UInputRouter::RouteScroll(UApplication &app, double xoffset,
     { return root && root->ScrollAtPoint(mouse_x, mouse_y, event); };
     if (app.CharacterSheetOpen)
     {
-      routeScroll(app.CharacterSheetScreen ? app.CharacterSheetScreen->GetRoot()
+      routeScroll(app.CharacterSheetScreen ? app.GetPlayerWindowRoot()
                                            : nullptr);
       return true;
     }
@@ -778,7 +778,7 @@ bool UInputRouter::RouteScroll(UApplication &app, double xoffset,
       return true;
     }
     if (app.PaletteOpen &&
-        routeScroll(app.PaletteScreen ? app.PaletteScreen->GetRoot() : nullptr))
+        routeScroll(app.PaletteScreen ? app.GetPlayerWindowRoot() : nullptr))
     {
       return true;
     }

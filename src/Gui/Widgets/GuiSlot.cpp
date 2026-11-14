@@ -51,7 +51,7 @@ void UGuiSlot::Draw(UGuiRenderer &renderer)
   }
   else if (!Label.empty())
   {
-    const int maxW = std::max(4, Bounds.W - Theme->Padding);
+    const int maxW = std::max(4, Bounds.W - std::min(4, Theme->Padding));
     std::string text = Label;
     while (text.size() > 1 && renderer.MeasureTextWidth(text) > maxW)
     {

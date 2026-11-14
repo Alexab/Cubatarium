@@ -577,6 +577,7 @@ set(SOURCES
     src/Gui/Screens/WorldResourcePacksScreen.cpp
     src/Gui/Screens/InGameHudScreen.cpp
     src/Gui/Screens/ConsoleScreen.cpp
+    src/Gui/Screens/PlayerWindowScreen.cpp
     src/Gui/Screens/CharacterSheetScreen.cpp
     src/Gui/Screens/CreativePaletteScreen.cpp
     src/Gui/Screens/SurvivalInventoryScreen.cpp

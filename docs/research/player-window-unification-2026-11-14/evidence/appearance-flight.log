@@ -1,0 +1,4 @@
+preflight: killing orphan Cubatarium.exe (if any)
+running: E:\Work\Home\Cubatarium\bin\Cubatarium.exe --flight-sim --world CarryAimQA --seconds 12.0 --report E:\Work\Home\Cubatarium\bin\flight_sim_report.json --no-fly --no-hold-forward --idle 2.0 --no-teleport-cruise
+runtime resources: {"available": false, "sample_count": 0, "host_cpu_percent": null, "app_cpu_machine_percent": null, "other_cpu_machine_percent_estimate": null, "app_rss_mb_max": null, "system_available_memory_mb_min": null, "timed_out": false}
+metrics disabled: route was executed; diagnostic gates were not evaluated

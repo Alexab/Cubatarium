@@ -3,6 +3,7 @@
 
 #include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Core/GuiScreenBase.h"
+#include "Gui/Core/GuiTypes.h"
 #include "Gui/Interfaces/IUContentCatalog.h"
 #include "Gui/Interfaces/IUInventoryViewModel.h"
 #include <memory>
@@ -47,6 +48,11 @@ public:
   bool BlocksGameInput() const override { return Visible; }
 
   void SetVisible(bool visible);
+  void SetHosted(bool hosted)
+  {
+    Hosted = hosted;
+    RelayoutPanel();
+  }
   void Toggle();
   void OpenWithMainTab(int tab);
   /// Creative may show the full catalog. Survival is backpack-only.
@@ -58,6 +64,8 @@ public:
     return Built && GridBuiltCount == GridPendingViews.size();
   }
   size_t GetGridIconCount() const;
+  std::string GetSectionStateKey() const;
+  GuiRect GetPreviewBounds() const;
   void InvalidateGrid() { Built = false; }
   void SetPointerPosition(int x, int y);
   void SetPointerPressed(bool pressed);
@@ -130,6 +138,7 @@ private:
   const GuiTheme *Theme{nullptr};
   bool Visible{false};
   bool Built{false};
+  bool Hosted{false};
   bool HotbarStripBuilt{false};
   // Per-frame type-tab cache (see SyncTypeTabs): emptiness of the catalog
   // groups is only recomputed when the inventory signature changes.

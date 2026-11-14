@@ -345,7 +345,10 @@ bool UGameSession::OnPrimaryHotbarKey(int slotIndex)
   }
   if (HasPendingAssignment())
   {
-    return ApplyPendingAssignment(0, static_cast<size_t>(slotIndex));
+    const auto *inventory = GetControlledInventory(World.get());
+    return ApplyPendingAssignment(inventory ? inventory->GetActiveBarIndex()
+                                            : 0,
+                                  static_cast<size_t>(slotIndex));
   }
   auto *inv = GetControlledInventory(World.get());
   SelectSlot(inv ? inv->GetActiveBarIndex() : 0,
@@ -1145,6 +1148,7 @@ CharacterStatsSnapshot UGameSession::GetCharacterStatsSnapshot() const
     return snap;
   }
   snap.valid = true;
+  snap.OwnerId = creature->GetId();
   snap.typeId = creature->GetTypeId();
   snap.skinId = creature->GetSkinId();
   if (const auto resolved = World->GetResolvedAppearanceShared(*creature))
