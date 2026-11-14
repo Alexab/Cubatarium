@@ -78,7 +78,7 @@ def load_primitives(item_dir: Path) -> list[dict]:
                 raise ValueError('invalid UV payload')
             mat = gltf.get('materials', [{}])[prim.get('material', 0)]
             pbr = mat.get('pbrMetallicRoughness', {})
-            factor = np.asarray(pbr.get('baseColorFactor', [1, 1, 1, 1]))
+            factor = np.asarray(pbr.get('baseColorFactor', [1, 1, 1, 1]), dtype=float)
             tex = None
             if 'baseColorTexture' in pbr:
                 source = gltf['textures'][pbr['baseColorTexture']['index']]['source']

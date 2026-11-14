@@ -31,9 +31,31 @@ Existing production assets are deliberately unchanged at this checkpoint.
 - Eight meaningful geometry/UV regressions cover winding, shell cavity,
   degenerate geometry, bounds, pivots, packing, overflow and repeatability.
 
-The modules are not yet connected to the production exporter. This is an additive
-foundation; it does not claim that existing assets have acquired new geometry,
-textures, normals or lighting.
+The new surface path is connected to a separate staging exporter through
+`python tools/itemgen.py build-design --id bucket`. It writes real NORMAL,
+POSITION and TEXCOORD_0 attributes, indexed triangles, glTF material parameters,
+an explicit mipmapped sampler and a per-face UV layout. Layered surface painting
+supports material-specific broad variation and read-only authored RGBA overlays
+under `tools/item_designs/<id>/surfaces/<surface-name>.png`. Wrong overlay sizes
+fail rather than stretching an author's work. Gutters include corner dilation.
+
+The first bucket prototype has an open vessel, separate rim, raised handle and
+wooden grip. It is fitted uniformly into the unchanged physical envelope. This
+prototype is not yet a finished artistic pilot or a production replacement.
+
+![Offline bucket prototype, four angles](prototype-bucket.png)
+
+Three additional staging/export regressions verify actual normals, raster
+round-trip, unchanged physical bounds, determinism, read-only overlay application
+and rejection of unsafe staging destinations. The existing raster reader was
+fixed to handle a valid glTF material with an omitted baseColorFactor; its integer
+default previously failed during floating-point texture multiplication.
+
+Validation at this checkpoint: 11 new geometry/UV/design tests, four existing
+raster tests and two publication tests pass. Style/include checks pass. The
+profiled acceptance runner now includes the three new test scripts. No new
+native visual acceptance or performance result is claimed yet; runtime shaders,
+Item Lab and production assets remain pending.
 
 ## Remaining implementation, in order
 
