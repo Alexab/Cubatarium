@@ -23,8 +23,10 @@ capture success nor triangle counts automatically approve artistic quality.
 
 ## Findings and actual corrections
 
-The 16 overview pages were inspected across all 70 items, with detailed sheets
-for the iron helmet, raw gold, bow and cooked meat. The comparison confirms the
+The 16 overview pages were inspected across all 70 items. Detailed sheet review
+now covers all 12 pilots plus raw gold and cooked meat, with observations signed
+against sheet hashes in `studio-review.json`. The other 56 detailed reviews are
+explicitly pending. The comparison confirms the
 replacement of unrelated-family placeholders and clear construction differences
 from the old box/texture-tile catalog. Two concrete defects required correction:
 
@@ -72,3 +74,9 @@ Detailed remaining-item review, world day/night/interior and carry/contact
 acceptance, final publication and final performance/property gates still remain.
 This checkpoint does not claim all 70 have completed every artistic check.
 Production promotion is **0/70** and the full goal remains active.
+
+After implementation commit `91932727e`, fresh disposable checkouts in both
+autocrlf modes preserve 981 signed files and regenerate/publish all 70 assets
+byte-identically. Reference archives, working production and author sources
+remain unchanged. `checkout-summary.json` and `checkout-output.zip` retain these
+results; publication occurs only inside the disposable clones.

@@ -84,6 +84,10 @@
     "sheets-manifest.json": "39b9e56e9462cfbbc995663391d73d774efd672a7bba1d6a0c52bdc101e255cc",
     "style-output.txt": "7b00bf7ed2d292a49c34b6aa610a5f9c00e46637a909909cdd9e7eff91839996",
     "wood_bow.png": "d7510baaab57c00cc8b3554cfc39e0e19d11f4d6cbf267b696f2a00d45510dfb",
-    "ctest-output.txt": "170cb72944aa3cc11b5402b1bab7411eee952bd2302be8db138f4d4155679c16"
-  }
+    "ctest-output.txt": "170cb72944aa3cc11b5402b1bab7411eee952bd2302be8db138f4d4155679c16",
+    "studio-review.json": "3e61bb06591ad74509e44387aa89b5036fa62f35a030948813970c22df2b62b0",
+    "checkout-summary.json": "97765c4d32960ca88bb6ba3d766bba68e6f0402c0bdd56a14393d9da1257bc1b",
+    "checkout-output.zip": "28712464717c0fa043b4ceb5a26481868cf0648a840626f33b879e2d7ec2a6d6"
+  },
+  "implementation_revision": "91932727e1ebb283b37b1791daaa17352ce44af3"
 }

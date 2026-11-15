@@ -1,0 +1,441 @@
+{
+  "scope": "studio views only; not final world, carry, performance or licensing certification",
+  "reviewed_detailed": 14,
+  "remaining_detailed": 56,
+  "items": {
+    "apple": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "reviewed_no_studio_blocker",
+      "sheet": "apple.png",
+      "sheet_sha256": "a23b08cf0240dc890c61425e7b332ad67d0303eff93674b1520d5320bdf3c624",
+      "observations": "Unequal fruit facets, short stem and leaf read across views; red peel stays distinct at native icon sizes."
+    },
+    "arrow": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "arrow.png",
+      "sheet_sha256": "dddfa1b4a5e26e935d5bb4e4a947a118e70c96f5a1532321637a1d9379c713e1"
+    },
+    "bread": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "reviewed_no_studio_blocker",
+      "sheet": "bread.png",
+      "sheet_sha256": "2be97a5dc23b726e4200e8a4d06a38cd944611760f76fa55d4f43034898fc6a4",
+      "observations": "Oval loaf and exposed cuts remain visible; underside/side are simple crust, not decorative box panels."
+    },
+    "bucket": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "reviewed_no_studio_blocker",
+      "sheet": "bucket.png",
+      "sheet_sha256": "b3a6ca8d84e49d8395fd055a847058662dcf89e39cf0e4b82c776148a1812f33",
+      "observations": "Real opening, rim and arched handle; side view is deliberately thin. Water-state checks are separate."
+    },
+    "charcoal": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "charcoal.png",
+      "sheet_sha256": "124c77674165e4d99ac68d80135deff69de3d60a8ad6e53a825b4c93849ec6ba"
+    },
+    "coal": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "coal.png",
+      "sheet_sha256": "5d54a1bd3761bed262054c2298fe995b6a95bb0a58d116982623d2e2e3d88ee3"
+    },
+    "cooked_meat": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "reviewed_no_studio_blocker",
+      "sheet": "cooked_meat.png",
+      "sheet_sha256": "8dae61069a4be4963fb6a4107a28511cce273eaafa70fbc3156e45ec6e7a2953",
+      "observations": "Final exposed fat and localized sear bands read on top; broad organic cut differs from raw meat."
+    },
+    "copper_axe": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "reviewed_no_studio_blocker",
+      "sheet": "copper_axe.png",
+      "sheet_sha256": "b6505b5ac3e2e022500c50969ddf08573b6e0b1b1c926116971021b09b29f2f0",
+      "observations": "Broad bevelled cheek, socket and wooden haft; front/back distinction is intentional, no full-metal handle."
+    },
+    "copper_chest": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "copper_chest.png",
+      "sheet_sha256": "ae90ba258e87e9ffd69bb043c4b3f2c6099bc09d7e0a6df495356185f4ebdac6"
+    },
+    "copper_feet": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "copper_feet.png",
+      "sheet_sha256": "5e53fef14adbbd8154b59069be211d0826ec005def3a39d46fb7ed4e47efb5be"
+    },
+    "copper_head": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "copper_head.png",
+      "sheet_sha256": "b26653ff3f5dc3366877014e55431eb18935e7fe2e7fb477787ec58ee3d6b375"
+    },
+    "copper_hoe": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "copper_hoe.png",
+      "sheet_sha256": "690bf5c2c4a1e72c971df0d4859b909056570500f557356e75ef59335c9d404a"
+    },
+    "copper_ingot": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "copper_ingot.png",
+      "sheet_sha256": "97e14e606240a5f6cd122314336ae63d5585a892463c3e31aa582bb82b9b166f"
+    },
+    "copper_legs": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "copper_legs.png",
+      "sheet_sha256": "1f43517793d410c18eef236a958bfe8116bf5b5039b40f257619b01571bab1b0"
+    },
+    "copper_pickaxe": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "copper_pickaxe.png",
+      "sheet_sha256": "9dd6961c7cea8f2d1e421b5e3dc0d275318ddabfeabd6ec39d08564faf164661"
+    },
+    "copper_shovel": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "copper_shovel.png",
+      "sheet_sha256": "5026b2600709a5ea3aed615dc5bfeb21951c58907e0a8452c9f68c2c512a33b4"
+    },
+    "copper_sword": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "copper_sword.png",
+      "sheet_sha256": "82bc2f28e3b1ab96f4b8b4b6729f5668b52aa0615b9433a616a6ae81196e4003"
+    },
+    "cord": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "cord.png",
+      "sheet_sha256": "77f9a6ee091d7da36cac8911ab7ab49b20978212efba755bfa13c8903cf41995"
+    },
+    "flint_and_steel": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "flint_and_steel.png",
+      "sheet_sha256": "c07a098dc342dfc137a1c22694199616c3e7f181eac0a7aceec6d823863e8ab1"
+    },
+    "gold_axe": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "gold_axe.png",
+      "sheet_sha256": "601fd693c9dbb3f164161f1d80cab7874560cba33c73cc4535e721354a105b47"
+    },
+    "gold_chest": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "gold_chest.png",
+      "sheet_sha256": "e60efee9b60af8f11dd920581ffe0cf235df7acff1d6258f84471dc3dec9b233"
+    },
+    "gold_feet": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "gold_feet.png",
+      "sheet_sha256": "4be30a629c2c1dcadd3e74c895ff9699808dc98a603ad80dce953852c2922465"
+    },
+    "gold_head": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "gold_head.png",
+      "sheet_sha256": "85e9f8e12499946e90b29432feaf54e9e8c596e8df1c36fb43ca2ce5e11690bb"
+    },
+    "gold_hoe": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "gold_hoe.png",
+      "sheet_sha256": "035de346bed4c468ccce9ce00b88a37ae8ab1154e54e3883b75a30563ae19192"
+    },
+    "gold_ingot": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "gold_ingot.png",
+      "sheet_sha256": "6e55a674271fb0a1f8cc5cb1c021210df29de8ad91a72d78eaa77699ea427640"
+    },
+    "gold_legs": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "gold_legs.png",
+      "sheet_sha256": "dfad5085bd1a0faf9276850842bea07251ca78147ef8172cfe11143c4cf8990c"
+    },
+    "gold_pickaxe": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "gold_pickaxe.png",
+      "sheet_sha256": "f377a418a7048960dc5e6a267d8b1a79453b407c7eeff9247c157fb2db63b62c"
+    },
+    "gold_shovel": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "gold_shovel.png",
+      "sheet_sha256": "21ef42cda420cc96bd5e8acc6bc55033790b5265ee0872e3131fadf01512e71a"
+    },
+    "gold_sword": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "reviewed_no_studio_blocker",
+      "sheet": "gold_sword.png",
+      "sheet_sha256": "855f0656decedd30eaf7e8fb0350e873c56fc72fbb240b6bf58cd1321a54d1a0",
+      "observations": "Bevelled point, split guard and narrow warm fuller; no former apparent hole through the blade."
+    },
+    "grain": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "grain.png",
+      "sheet_sha256": "9b77b497f9d2261c13414f4e0281508e4042bf706b1c689d1572ba246a2dfdeb"
+    },
+    "iron_axe": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "iron_axe.png",
+      "sheet_sha256": "855deba9504e33c87409acb8621a11a87fa1423b210541f9a8b73d2e683e4162"
+    },
+    "iron_chest": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "iron_chest.png",
+      "sheet_sha256": "01f34da052d1a551ecb1165dfe5039f4f60d697bd72aaf5616678b4ffcfc3a9e"
+    },
+    "iron_feet": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "iron_feet.png",
+      "sheet_sha256": "9a27c9ee1e982d87c1aa4d60cdc8f2670c0027c481146df3bfeaadd7aaa64fe2"
+    },
+    "iron_head": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "reviewed_no_studio_blocker",
+      "sheet": "iron_head.png",
+      "sheet_sha256": "878b4d824186da4c188eb20adae009db8f6e8102c7dc10f152701fbf541079e6",
+      "observations": "Ridged roof, brow and cheek silhouette; eye clearance is proven separately on both worn body forms."
+    },
+    "iron_hoe": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "iron_hoe.png",
+      "sheet_sha256": "2806959257db30a5a34172fab9a2a5510cb2e293095a69430d7aeb416dcafebc"
+    },
+    "iron_ingot": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "iron_ingot.png",
+      "sheet_sha256": "3d17bdc1fbb398ae155e9b8dc38a80b83d6636ec379f194634cbd84595cd3cc5"
+    },
+    "iron_legs": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "iron_legs.png",
+      "sheet_sha256": "9708561f0c7e07b7f25a551fc6a06bc00c7c9401f10d03e83438bb6636e692d4"
+    },
+    "iron_pickaxe": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "reviewed_no_studio_blocker",
+      "sheet": "iron_pickaxe.png",
+      "sheet_sha256": "6e743eda5bb8fa603b1fbcd28bc338b8f9cf2efc5edfba7bad95d6b4ec1adddd",
+      "observations": "Asymmetric point/adze, socket pin and wood/binding remain identifiable in small icons."
+    },
+    "iron_shield": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "iron_shield.png",
+      "sheet_sha256": "5d439047095c51b1dbda5cd33f59affb7cd11567af953673bf794d9725871ba8"
+    },
+    "iron_shovel": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "iron_shovel.png",
+      "sheet_sha256": "ca40f44e56b298a9ffbb68ec2d11e21433fd747d94250e884a047519947a8340"
+    },
+    "iron_sword": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "iron_sword.png",
+      "sheet_sha256": "a491bebe01552a7a635743a4e356cb0b07eee7ea23917bb592c2898f3c4152a4"
+    },
+    "leather": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "leather.png",
+      "sheet_sha256": "dbca0d3b791a4c09d53f2941d6131e4d346af7920670c42b354fc1571633152c"
+    },
+    "leather_chest": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "reviewed_no_studio_blocker",
+      "sheet": "leather_chest.png",
+      "sheet_sha256": "ffef604cdce2bb75800264b43b68356c48975171a7dfe4330303f94c14b908f3",
+      "observations": "Separate front/back panels, shoulder straps, seam and buckle; open sides are intentional arm/torso clearance."
+    },
+    "leather_feet": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "leather_feet.png",
+      "sheet_sha256": "caf9c8a441616a3c53a3624f182c94b014ee83436cc20b0ea4b766628ee1beaf"
+    },
+    "leather_head": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "leather_head.png",
+      "sheet_sha256": "bc402e22ba4e22149a118682df6169b2cc3f649f2d436745dd8da18acdac6b1f"
+    },
+    "leather_legs": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "leather_legs.png",
+      "sheet_sha256": "3fa5da6e5da838dbde6ed9212f1fe23da4026ef4c7cfd51848568e93f40ef8fa"
+    },
+    "plant_fiber": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "plant_fiber.png",
+      "sheet_sha256": "b49af4b77515cd684595ff52a200e0498e1e99d909b6e10e1674dcec78cae870"
+    },
+    "raw_copper": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "raw_copper.png",
+      "sheet_sha256": "9e5ac6ab812abbb9f854b55540675d5eeb2979008094f2b87880ec9599f666e0"
+    },
+    "raw_gold": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "reviewed_no_studio_blocker",
+      "sheet": "raw_gold.png",
+      "sheet_sha256": "02915ed7dba3324780e04941c0d575ebf690ad7baf172d941d6db365d3fd9e05",
+      "observations": "Faceted pale matrix and visible gold lobe differ from iron/copper; simple rear matrix is intentional."
+    },
+    "raw_iron": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "reviewed_no_studio_blocker",
+      "sheet": "raw_iron.png",
+      "sheet_sha256": "a6c81355af1767e70d882766fe9dba89cdcc29a6a318b9dcf04268310f1557f4",
+      "observations": "Rough matrix, oxide and embedded pale inclusions; no former flat rectangular applied plates."
+    },
+    "raw_meat": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "raw_meat.png",
+      "sheet_sha256": "264b1123c88bcefb96c861265a9de83dbbb1f881201817d7c0b96204cbe0ccd8"
+    },
+    "seeds": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "seeds.png",
+      "sheet_sha256": "f0e1c5f9efadb78afc3f83dd775199a5dd0497646568bdb1704a4a4f268d3729"
+    },
+    "shears": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "reviewed_no_studio_blocker",
+      "sheet": "shears.png",
+      "sheet_sha256": "6731b75ec62973f086585417476e4c8faa16d500032d33e6d0bd695ab45fd8a9",
+      "observations": "Two loops, hinge and separate cutting halves; thin edge-on view is intentional, not a missing mesh."
+    },
+    "stick": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "stick.png",
+      "sheet_sha256": "9fed92754266600ac2c6cd0098f6f5d4246649c4c14886c52fcca53b817b2518"
+    },
+    "stone_axe": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "stone_axe.png",
+      "sheet_sha256": "5945841bd0a70d2700a972d8630184ba52ee7666e5f9fc1e2b9823d90f542391"
+    },
+    "stone_hoe": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "stone_hoe.png",
+      "sheet_sha256": "3d2695b4a62e8ab7bc16889f19f57e2a8b8ab506ed033e4a525bfcd018328faa"
+    },
+    "stone_pickaxe": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "reviewed_no_studio_blocker",
+      "sheet": "stone_pickaxe.png",
+      "sheet_sha256": "03f0314cca762201a141540718fc1d7abdd083eb0928339949ac9c25b1d02f32",
+      "observations": "Knapped head profile and crossing lashings distinguish it from the steel socket construction."
+    },
+    "stone_shovel": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "stone_shovel.png",
+      "sheet_sha256": "f622e018c2a848be29323c6f8ceb2141be573d67983d0ae6db122abd05548897"
+    },
+    "stone_sword": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "stone_sword.png",
+      "sheet_sha256": "f65daf591bfcf0c8cf4c9399a6ecc002272a0b74e5b27099623a3d11a28dae3b"
+    },
+    "waterskin": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "waterskin.png",
+      "sheet_sha256": "68b942e6e5595128ba4772cc1649f97d8f65b285fc618c0e8254f06dc670a4da"
+    },
+    "wood_axe": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "wood_axe.png",
+      "sheet_sha256": "3ab5deac86bd2bc0e257411214fedd57a1bcf338ee145aff7c5bca3e0203940c"
+    },
+    "wood_bow": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "reviewed_no_studio_blocker",
+      "sheet": "wood_bow.png",
+      "sheet_sha256": "d7510baaab57c00cc8b3554cfc39e0e19d11f4d6cbf267b696f2a00d45510dfb",
+      "observations": "Final narrow bent staves and separated string expose the gap in silhouette; full draw/contacts tested separately."
+    },
+    "wood_hoe": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "wood_hoe.png",
+      "sheet_sha256": "722681ce73e4261ba3a8805eca0d89ee9a7bf86c09baaae2cb6625fd36a9402d"
+    },
+    "wood_pickaxe": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "wood_pickaxe.png",
+      "sheet_sha256": "f988d03454ac02b1eba9f61e78804f38025598a51bf32981b924350d5ee20a10"
+    },
+    "wood_shield": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "wood_shield.png",
+      "sheet_sha256": "182b69020ce575d0c897ef91bc37f1530b08c9074f2a051178c1ca2bc69badb4"
+    },
+    "wood_shovel": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "wood_shovel.png",
+      "sheet_sha256": "5035a0bb0ccfe20dfef4fc31f76ee5c83115155b7b12b9c15c85d84efa94a257"
+    },
+    "wood_spear": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "wood_spear.png",
+      "sheet_sha256": "feb17cf00b753a391819ae6372acc08ab00a1f154057f4a752cd2c9411ed62c2"
+    },
+    "wood_sword": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "wood_sword.png",
+      "sheet_sha256": "64f775250a8f6fe946c43398dcd8f81283acfd37fa1357f6fb14a4188e5cde95"
+    },
+    "wood_torch": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "wood_torch.png",
+      "sheet_sha256": "bfa9c7b47d00c01c1fb222d2993e102506289a202d40c1c0d0f9abd49307d999"
+    },
+    "wool": {
+      "catalog_overview_reviewed": true,
+      "detailed_sheet_review": "pending",
+      "sheet": "wool.png",
+      "sheet_sha256": "489750e84e0209fa6e485155effba01a8a4d17653613e06ecbd7bd509ae443f1"
+    }
+  }
+}
