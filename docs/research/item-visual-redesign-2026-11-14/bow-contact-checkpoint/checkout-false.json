@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "signed_files": 981,
+  "validated_stages": 70,
+  "byte_identical_regenerated": 70,
+  "published_in_disposable_clone": 70,
+  "reference_archives_preserved": 70,
+  "published_artifacts_identical": 70,
+  "manifest_version": 4
+}

@@ -55,6 +55,11 @@ Physics, economy and inventory definitions are unchanged.
 - `conservation.json` compares raw Git object content against `b9e27ed59`:
   all 70 gameplay definitions, 70 recipes and 775 legacy resource/manifest files
   are unchanged. This checkpoint has not promoted staged models to production.
+- Fresh checkouts of implementation commit `2553c1235` in both autocrlf modes
+  retain 981 signed files and regenerate all 70 designs byte-identically. Each
+  disposable clone publishes all 70, preserves all 70 reference archives and
+  produces identical published artifacts. Main author/production data remain
+  unchanged; raw clone reports and complete output are retained here.
 
 The regression does not establish all-item art acceptance or final performance.
 The overall goal remains active, with no production v3 promotion yet. Actual

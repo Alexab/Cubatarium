@@ -16,16 +16,21 @@
   "source_state": "Bow contact implementation following b9e27ed59; full regression verified before commit",
   "note": "Focused pose/contact proof; full all-item regression and artistic approval are separate.",
   "evidence_sha256": {
+    "checkout-false-output.txt": "cfdfdacf2720ce89fe2c5e9e73a2054b94ed5a07ef76b2238e897bf5f3d2e725",
+    "checkout-false.json": "af298cd7bd45237a7110e956d86e77fe52e1f93b59fa1ae913eab1dd9cc64ee0",
+    "checkout-true-output.txt": "bd4371caf61e1b24ac913ee3ecc29adc5d17e43a136d1beb8a8574b127e2d004",
+    "checkout-true.json": "af298cd7bd45237a7110e956d86e77fe52e1f93b59fa1ae913eab1dd9cc64ee0",
+    "checkout.json": "db6a20b91ca91528d5aa8d0fe8155178c526198fdfadbb6b19565f46f754378f",
     "conservation.json": "0c3b092fbd273ef42e39885fa26634a0a4911a01eb108dc1498dd1018ccd1eb2",
-    "ctest.log": "4c457012224c3267f3ad83671f300586493e1221e603e29064970dfdb7b24687",
+    "ctest-output.txt": "4c457012224c3267f3ad83671f300586493e1221e603e29064970dfdb7b24687",
     "focused-design-presentations.json": "187a91ee58ac2ce584042672e66d646ede7691f0a58e23a4e02602a6556ed47f",
     "focused-presentation-probe.json": "b429fbee526cd9bdcfdfe3e6de25c57da4432a7c1ea8ac85327c3319e357adf0",
-    "format.log": "9a26c17e6c926640c882a7d9615a600ba43904166d64b1b7fb1dbdf7de57a4cc",
+    "format-output.txt": "9a26c17e6c926640c882a7d9615a600ba43904166d64b1b7fb1dbdf7de57a4cc",
     "full-design-probe.json": "decfae65dee6d924f43774d2626e34a7bc71a93b919e59ab95fdfd8bef3c0cec",
     "full-result.json.gz": "7431a75ad52bb86d05bde652c37b30ab0077c64b5b555fb90002a2b145b29d0e",
-    "include.log": "3e02176a66e9887c36635120171a991d151d94d59b878f50006ea97853cbd6c9",
-    "release.log": "164e43c275de625185d04edb77e2e3c7fa22fd4db72bb3e9425f1cb59ee21165",
-    "style.log": "7b00bf7ed2d292a49c34b6aa610a5f9c00e46637a909909cdd9e7eff91839996",
+    "include-output.txt": "3e02176a66e9887c36635120171a991d151d94d59b878f50006ea97853cbd6c9",
+    "release-output.txt": "164e43c275de625185d04edb77e2e3c7fa22fd4db72bb3e9425f1cb59ee21165",
+    "style-output.txt": "7b00bf7ed2d292a49c34b6aa610a5f9c00e46637a909909cdd9e7eff91839996",
     "wood_bow-bow-tp-female-walk-0-2.png": "0287e9b1784939005adb82f5668ef8c45164169ba5e96d498a0996a175a60091",
     "wood_bow-bow-tp-male-still-90-2.png": "0007b941a9b32c49f91b887f3c77d05fd27646de4c7159e94b87cb51d1c4a813",
     "wood_bow-state-2-fp-female.png": "bd4e30797f2292345987f61d039f371c482655aaa1b07c89303fc93cefdd3c28",
@@ -199,5 +204,37 @@
       "item_lab": 291,
       "presentations": 3571
     }
+  },
+  "implementation_revision": "2553c1235",
+  "checkout": {
+    "passed": true,
+    "clones": {
+      "true": {
+        "passed": true,
+        "signed_files": 981,
+        "validated_stages": 70,
+        "byte_identical_regenerated": 70,
+        "published_in_disposable_clone": 70,
+        "reference_archives_preserved": 70,
+        "published_artifacts_identical": 70,
+        "manifest_version": 4
+      },
+      "false": {
+        "passed": true,
+        "signed_files": 981,
+        "validated_stages": 70,
+        "byte_identical_regenerated": 70,
+        "published_in_disposable_clone": 70,
+        "reference_archives_preserved": 70,
+        "published_artifacts_identical": 70,
+        "manifest_version": 4
+      }
+    },
+    "production_unchanged": true,
+    "authors_unchanged": true,
+    "revision": "2553c12350479b7b5eadafdf6e1935f13cf7ce31",
+    "item_count": 70,
+    "signed_files": 981,
+    "verifier_sha256": "a6350bebe1614a841042762a3474dd39945901ae5f2bc3a3e2154e1415e0f1d4"
   }
 }
