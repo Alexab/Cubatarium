@@ -1,0 +1,73 @@
+Measuring fp-0-baseline
+Restored 210 runtime files
+{"scene": "fp", "repeat": 0, "mode": "baseline", "frames": 932, "p50_ms": 8.58005, "p95_ms": 10.229949999999999, "p99_ms": 10.591097999999997, "cold_catalog_ms": 0.0, "item_texture_rgba_mip_bytes": 32768, "runtime_files_restored": 210, "report": "bin/items_performance/fp-0-baseline/frame-benchmark.json"}
+Measuring fp-0-candidate
+Restored 210 runtime files
+{"scene": "fp", "repeat": 0, "mode": "candidate", "frames": 906, "p50_ms": 8.794, "p95_ms": 10.32775, "p99_ms": 10.6064, "cold_catalog_ms": 0.0, "item_texture_rgba_mip_bytes": 349524, "runtime_files_restored": 210, "report": "bin/items_performance/fp-0-candidate/frame-benchmark.json"}
+Measuring fp-1-candidate
+Restored 210 runtime files
+{"scene": "fp", "repeat": 1, "mode": "candidate", "frames": 898, "p50_ms": 8.988949999999999, "p95_ms": 10.34132, "p99_ms": 10.601039, "cold_catalog_ms": 0.0, "item_texture_rgba_mip_bytes": 349524, "runtime_files_restored": 210, "report": "bin/items_performance/fp-1-candidate/frame-benchmark.json"}
+Measuring fp-1-baseline
+Restored 210 runtime files
+{"scene": "fp", "repeat": 1, "mode": "baseline", "frames": 953, "p50_ms": 8.2654, "p95_ms": 10.32968, "p99_ms": 10.63364, "cold_catalog_ms": 0.0, "item_texture_rgba_mip_bytes": 32768, "runtime_files_restored": 210, "report": "bin/items_performance/fp-1-baseline/frame-benchmark.json"}
+Measuring fp-2-baseline
+Restored 210 runtime files
+{"scene": "fp", "repeat": 2, "mode": "baseline", "frames": 912, "p50_ms": 8.77165, "p95_ms": 10.267395, "p99_ms": 10.604353, "cold_catalog_ms": 0.0, "item_texture_rgba_mip_bytes": 32768, "runtime_files_restored": 210, "report": "bin/items_performance/fp-2-baseline/frame-benchmark.json"}
+Measuring fp-2-candidate
+Restored 210 runtime files
+{"scene": "fp", "repeat": 2, "mode": "candidate", "frames": 939, "p50_ms": 8.5886, "p95_ms": 10.0226, "p99_ms": 10.311404000000001, "cold_catalog_ms": 0.0, "item_texture_rgba_mip_bytes": 349524, "runtime_files_restored": 210, "report": "bin/items_performance/fp-2-candidate/frame-benchmark.json"}
+Measuring armor-0-baseline
+Restored 210 runtime files
+{"scene": "armor", "repeat": 0, "mode": "baseline", "frames": 891, "p50_ms": 8.7835, "p95_ms": 10.98025, "p99_ms": 13.04385, "cold_catalog_ms": 0.0, "item_texture_rgba_mip_bytes": 720896, "runtime_files_restored": 210, "report": "bin/items_performance/armor-0-baseline/frame-benchmark.json"}
+Measuring armor-0-candidate
+Restored 210 runtime files
+{"scene": "armor", "repeat": 0, "mode": "candidate", "frames": 869, "p50_ms": 8.9161, "p95_ms": 12.533779999999998, "p99_ms": 13.241643999999999, "cold_catalog_ms": 0.0, "item_texture_rgba_mip_bytes": 22369600, "runtime_files_restored": 210, "report": "bin/items_performance/armor-0-candidate/frame-benchmark.json"}
+Measuring armor-1-candidate
+Restored 210 runtime files
+{"scene": "armor", "repeat": 1, "mode": "candidate", "frames": 884, "p50_ms": 8.753, "p95_ms": 12.118659999999993, "p99_ms": 13.228830999999998, "cold_catalog_ms": 0.0, "item_texture_rgba_mip_bytes": 22369600, "runtime_files_restored": 210, "report": "bin/items_performance/armor-1-candidate/frame-benchmark.json"}
+Measuring armor-1-baseline
+Restored 210 runtime files
+{"scene": "armor", "repeat": 1, "mode": "baseline", "frames": 904, "p50_ms": 8.6669, "p95_ms": 11.082754999999999, "p99_ms": 12.838182000000003, "cold_catalog_ms": 0.0, "item_texture_rgba_mip_bytes": 720896, "runtime_files_restored": 210, "report": "bin/items_performance/armor-1-baseline/frame-benchmark.json"}
+Measuring armor-2-baseline
+Restored 210 runtime files
+{"scene": "armor", "repeat": 2, "mode": "baseline", "frames": 868, "p50_ms": 8.93755, "p95_ms": 12.107774999999998, "p99_ms": 13.229194000000001, "cold_catalog_ms": 0.0, "item_texture_rgba_mip_bytes": 720896, "runtime_files_restored": 210, "report": "bin/items_performance/armor-2-baseline/frame-benchmark.json"}
+Measuring armor-2-candidate
+Restored 210 runtime files
+{"scene": "armor", "repeat": 2, "mode": "candidate", "frames": 878, "p50_ms": 8.848500000000001, "p95_ms": 12.07509, "p99_ms": 13.426019, "cold_catalog_ms": 0.0, "item_texture_rgba_mip_bytes": 22369600, "runtime_files_restored": 210, "report": "bin/items_performance/armor-2-candidate/frame-benchmark.json"}
+Measuring drops-0-baseline
+Restored 210 runtime files
+{"scene": "drops", "repeat": 0, "mode": "baseline", "frames": 374, "p50_ms": 21.03715, "p95_ms": 24.189845, "p99_ms": 25.886346999999994, "cold_catalog_ms": 0.0, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/drops-0-baseline/frame-benchmark.json"}
+Measuring drops-0-candidate
+Restored 210 runtime files
+{"scene": "drops", "repeat": 0, "mode": "candidate", "frames": 656, "p50_ms": 11.958200000000001, "p95_ms": 14.7208, "p99_ms": 17.34620000000001, "cold_catalog_ms": 0.0, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 210, "report": "bin/items_performance/drops-0-candidate/frame-benchmark.json"}
+Measuring drops-1-candidate
+Restored 210 runtime files
+{"scene": "drops", "repeat": 1, "mode": "candidate", "frames": 664, "p50_ms": 11.9071, "p95_ms": 14.22132, "p99_ms": 15.783224000000002, "cold_catalog_ms": 0.0, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 210, "report": "bin/items_performance/drops-1-candidate/frame-benchmark.json"}
+Measuring drops-1-baseline
+Restored 210 runtime files
+{"scene": "drops", "repeat": 1, "mode": "baseline", "frames": 392, "p50_ms": 21.3104, "p95_ms": 23.714525, "p99_ms": 26.396784999999976, "cold_catalog_ms": 0.0, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/drops-1-baseline/frame-benchmark.json"}
+Measuring drops-2-baseline
+Restored 210 runtime files
+{"scene": "drops", "repeat": 2, "mode": "baseline", "frames": 550, "p50_ms": 14.52215, "p95_ms": 17.888329999999996, "p99_ms": 20.099106, "cold_catalog_ms": 0.0, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/drops-2-baseline/frame-benchmark.json"}
+Measuring drops-2-candidate
+Restored 210 runtime files
+{"scene": "drops", "repeat": 2, "mode": "candidate", "frames": 659, "p50_ms": 12.0196, "p95_ms": 14.39043, "p99_ms": 16.882645999999966, "cold_catalog_ms": 0.0, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 210, "report": "bin/items_performance/drops-2-candidate/frame-benchmark.json"}
+Measuring catalog-0-baseline
+Restored 210 runtime files
+{"scene": "catalog", "repeat": 0, "mode": "baseline", "frames": 844, "p50_ms": 9.56785, "p95_ms": 10.62181, "p99_ms": 11.70239599999997, "cold_catalog_ms": 929.0581, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/catalog-0-baseline/frame-benchmark.json"}
+Measuring catalog-0-candidate
+Restored 210 runtime files
+{"scene": "catalog", "repeat": 0, "mode": "candidate", "frames": 856, "p50_ms": 9.3906, "p95_ms": 10.481724999999999, "p99_ms": 11.415855000000004, "cold_catalog_ms": 982.4673, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 210, "report": "bin/items_performance/catalog-0-candidate/frame-benchmark.json"}
+Measuring catalog-1-candidate
+Restored 210 runtime files
+{"scene": "catalog", "repeat": 1, "mode": "candidate", "frames": 825, "p50_ms": 10.0442, "p95_ms": 10.72978, "p99_ms": 11.214652, "cold_catalog_ms": 1005.9963999999999, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 210, "report": "bin/items_performance/catalog-1-candidate/frame-benchmark.json"}
+Measuring catalog-1-baseline
+Restored 210 runtime files
+{"scene": "catalog", "repeat": 1, "mode": "baseline", "frames": 839, "p50_ms": 9.6217, "p95_ms": 10.623240000000001, "p99_ms": 11.510054, "cold_catalog_ms": 883.7261, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/catalog-1-baseline/frame-benchmark.json"}
+Measuring catalog-2-baseline
+Restored 210 runtime files
+{"scene": "catalog", "repeat": 2, "mode": "baseline", "frames": 820, "p50_ms": 9.999600000000001, "p95_ms": 10.644155, "p99_ms": 11.055299999999999, "cold_catalog_ms": 877.5072, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/catalog-2-baseline/frame-benchmark.json"}
+Measuring catalog-2-candidate
+Restored 210 runtime files
+{"scene": "catalog", "repeat": 2, "mode": "candidate", "frames": 836, "p50_ms": 9.80535, "p95_ms": 10.576875, "p99_ms": 11.023474999999998, "cold_catalog_ms": 970.6936000000001, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 210, "report": "bin/items_performance/catalog-2-candidate/frame-benchmark.json"}
+passed=True; evidence=E:\Work\Home\Cubatarium\bin\items_performance\summary.json

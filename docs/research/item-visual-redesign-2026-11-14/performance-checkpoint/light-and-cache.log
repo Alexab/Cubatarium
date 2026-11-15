@@ -1,0 +1,15 @@
+Internal ctest changing into directory: E:/Work/Home/Cubatarium/build/desktop-msvc
+Test project E:/Work/Home/Cubatarium/build/desktop-msvc
+    Start  6: creature_light_cache_test
+1/2 Test  #6: creature_light_cache_test ........   Passed    0.01 sec
+    Start 12: item_render_asset_test
+2/2 Test #12: item_render_asset_test ...........   Passed    0.06 sec
+
+100% tests passed, 0 tests failed out of 2
+
+Label Time Summary:
+creatures    =   0.01 sec*proc (1 test)
+items        =   0.06 sec*proc (1 test)
+unit         =   0.07 sec*proc (2 tests)
+
+Total Test time (real) =   0.10 sec
