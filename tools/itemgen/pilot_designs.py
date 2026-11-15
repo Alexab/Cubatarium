@@ -110,6 +110,23 @@ def make_pilots():
     wood=materials('iron'); wood['edge']=dict(color=[193,177,136],pattern='fiber')
     result['wood_bow']=design('wood_bow',parts,wood,grip=(0,0,0),density=230,scale=.65,budget=1800)
     result['wood_bow']['presentation']['icon_euler_deg']=[0,90,0]
+    bow=result['wood_bow']
+    bow['parts']=[p for p in bow['parts'] if p['name']!='string']
+    for p in bow['parts']:
+        if p['name'] in ('upper_limb','lower_limb'):p['node']=p['name']
+    for name,y in (('string_upper',.225),('string_lower',-.225)):
+        p=box(name,'edge',[.007,.45,.007],(0,y,-.025));p.update(node=name,fit_reference=False);bow['parts'].append(p)
+    bow['nodes']={name:dict(pivot=pivot) for name,pivot in (
+        ('upper_limb',[0,.07,0]),('lower_limb',[0,-.07,0]),('pull',[0,0,-.025]),
+        ('string_upper',[0,.225,-.025]),('string_lower',[0,-.225,-.025]))}
+    bow['nodes']['nocked_arrow']=dict(parent='pull',pivot=[0,0,-.025])
+    bow['visual_bindings']=[dict(node='upper_limb',channel='bow_charge',rotation_to=[12,0,0]),
+        dict(node='lower_limb',channel='bow_charge',rotation_to=[-12,0,0]),
+        dict(node='pull',channel='bow_charge',translation_to=[0,0,.2]),
+        dict(node='string_upper',span=dict(start_node='upper_limb',start_point=[0,.38,-.025],end_node='pull',end_point=[0,0,0])),
+        dict(node='string_lower',span=dict(start_node='pull',start_point=[0,0,0],end_node='lower_limb',end_point=[0,-.38,-.025])),
+        dict(node='nocked_arrow',channel='bow_loaded',visible_above=.001)]
+    bow['components']=[dict(name='loaded_arrow',item='arrow',parent='nocked_arrow',source_anchor='nock',rotation_deg=[-90,0,0])]
     steel=materials('iron')
     parts=[profile('blade_left','head',[(-.065,.005),(-.015,-.005),(.03,.20),(0,.23)],.02),
            profile('blade_right','edge',[(.065,.005),(.015,-.005),(-.03,.20),(0,.23)],.02,(0,0,-.025)),

@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "status": "partial_shared_arrow_component_checkpoint",
+  "staged_count": 70,
+  "production_v3_count": 0,
+  "cpp_tests": 25,
+  "component_tests": 7,
+  "native_checks": {
+    "gameplay": 59,
+    "window": 0,
+    "ownership": 57,
+    "ownership_ui": 18,
+    "player_window": 7,
+    "icons": 209,
+    "item_lab": 283,
+    "presentations": 3355
+  },
+  "native_exe_sha256": "bc3250013e5646143e19dcccbb27a9ccfbe5e02640be1cf693d149ad8f719a22",
+  "final_release_exe_sha256": "08406832c25f424deb310eb8c4ff654bb095909d8845e690daee9fa358f3ad47",
+  "restored_runtime_files": 212,
+  "max_nock_gap_metres": 7.450580596923828e-09,
+  "shared_buffer_sha256": "0b790fac404e96caeed57bd3e2fbc52b07485cade8dd6609f8da6201ebdf1e5c",
+  "shared_albedo_sha256": "1e8c520e58a7a2b8405f0ab3a8a3c82062f2120e6ac70097f519160ec6ffce43",
+  "checkout_verification": "pending after source commit",
+  "remaining_bow_art": "FP/TP orientation and support-hand contacts not accepted"
+}

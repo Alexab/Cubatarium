@@ -80,8 +80,10 @@ def build_design(item_id, *, root=ROOT, output=None):
     """Build/validate privately, then replace staging; failed work keeps last output."""
     from itemgen.artifact_contract import validate_model,digest
     from itemgen.filesystem import replace_path
+    from itemgen.components import source_files, assemble
     root=Path(root).resolve()
     if not item_id or any(c not in 'abcdefghijklmnopqrstuvwxyz0123456789_' for c in item_id):raise ValueError('Invalid item ID')
+    authored_sources=source_files(root,item_id)
     destination=Path(output or root/'assetgen_output/items/redesign'/item_id).resolve()
     if root.is_relative_to(destination) or (destination.is_relative_to(root) and not destination.is_relative_to(root/'assetgen_output')):
         raise ValueError('Staging cannot overwrite author sources or runtime')
@@ -90,8 +92,12 @@ def build_design(item_id, *, root=ROOT, output=None):
         staged=Path(temp)/'next'
         _build_design(item_id,root=root,output=staged)
         recipe=yaml.safe_load((root/'tools/item_designs'/item_id/'design.yaml').read_text(encoding='utf-8'))
-        validated=validate_model(staged,budget=recipe['triangle_budget'])
         record=json.loads((staged/'design_build.json').read_text(encoding='utf-8'))
+        assembled=assemble(staged,recipe,record['physical_fit']['scale'],lambda id,folder:build_design(id,root=root,output=folder))
+        if assembled:record['components']=assembled
+        record['sources']={name:digest(root/name) for name in sorted(authored_sources)}
+        validated=validate_model(staged,budget=recipe['triangle_budget'])
+        record['triangles']=validated['triangles']
         definition=root/'content/items'/f'{item_id}.json'
         record['definition']={definition.relative_to(root).as_posix():digest(definition)}
         record['generator']={'version':3,'sha256':{p.relative_to(ROOT).as_posix():digest(p) for p in sorted([*(ROOT/'tools/itemgen').glob('*.py'),ROOT/'shaders/item_surface.vert',ROOT/'shaders/item_surface.frag'])}}
@@ -104,7 +110,7 @@ def build_design(item_id, *, root=ROOT, output=None):
         if license.is_file():
             record['sources']['LICENSE']=digest(license)
             (staged/'LICENSE.txt').write_bytes(license.read_bytes())
-        record['outputs']={p.relative_to(staged).as_posix():digest(p) for p in sorted(staged.rglob('*')) if p.is_file() and p.name!='design_build.json'}
+        record['outputs']={p.relative_to(staged).as_posix():digest(p) for p in sorted(staged.rglob('*')) if p.is_file() and p!=staged/'design_build.json'}
         record['validated_resources']=validated['resources']
         (staged/'design_build.json').write_text(json.dumps(record,indent=2)+'\n',encoding='utf-8')
         backup=Path(temp)/'previous'

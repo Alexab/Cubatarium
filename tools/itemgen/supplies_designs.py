@@ -52,6 +52,7 @@ def equipment():
                   box('nock_left','shaft',[.004,.025,.009],(-.005,-.32,0)),
                   box('nock_right','shaft',[.004,.025,.009],(.005,-.32,0))))
     result['arrow']=resource('arrow',parts,m,grip=(0,-.20,0),scale=.65,density=165,budget=1200)
+    result['arrow']['nodes']={'nock':dict(pivot=[0,-.32,0])}
     for metal in (False,True):
         id='iron_shield' if metal else 'wood_shield';m=materials('iron')
         m['paint']=dict(color=[62,94,102] if metal else [137,62,39],pattern='painted')

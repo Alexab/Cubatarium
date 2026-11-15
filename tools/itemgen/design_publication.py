@@ -17,6 +17,7 @@ from itemgen.artifact_contract import digest,relative_file,validate_model
 from itemgen.visual_bindings import prepare_bindings
 from itemgen.wear_sections import prepare_sections
 from itemgen.filesystem import replace_path
+from itemgen.components import source_files, components
 
 ROOT=Path(__file__).resolve().parents[2]
 
@@ -43,7 +44,7 @@ def validate_design(item_id, *, root=ROOT, staging=None):
     definition_path=f'content/items/{item_id}.json'
     if set(record['definition'])!={definition_path}:raise ValueError('Definition identity mismatch')
     source=root/'tools/item_designs'/item_id
-    expected={p.relative_to(root).as_posix() for p in source.rglob('*') if p.is_file()}|{'tools/item_designs/provenance.json','LICENSE'}
+    expected=source_files(root,item_id)|{'tools/item_designs/provenance.json','LICENSE'}
     if set(record['sources'])!=expected:raise ValueError('Authored source set changed; rebuild design')
     dependencies={p.relative_to(ROOT).as_posix() for p in [*(ROOT/'tools/itemgen').glob('*.py'),ROOT/'shaders/item_surface.vert',ROOT/'shaders/item_surface.frag']}
     if set(record['generator'].get('sha256',{}))!=dependencies:raise ValueError('Generator dependency set changed; rebuild design')
@@ -57,6 +58,13 @@ def validate_design(item_id, *, root=ROOT, staging=None):
         if not provenance.get(key):raise ValueError(f'Missing explicit provenance field: {key}')
     if provenance['license_source']!='LICENSE' or (folder/'LICENSE.txt').read_bytes()!=(root/'LICENSE').read_bytes():raise ValueError('License source differs')
     recipe=yaml.safe_load((source/'design.yaml').read_text(encoding='utf-8'))
+    component_records=record.get('components',[])
+    if len(component_records)!=len(components(recipe)):raise ValueError('Component lineage is incomplete')
+    for spec,lineage in zip(components(recipe),component_records):
+        if any(lineage.get(key)!=spec[key] for key in ('name','item','parent','source_anchor')):raise ValueError('Component lineage differs from recipe')
+        dependency=folder/'components'/spec['name']
+        validate_design(spec['item'],root=root,staging=dependency)
+        if digest(dependency/'model.gltf')!=lineage.get('model_sha256') or digest(dependency/'design_build.json')!=lineage.get('build_sha256'):raise ValueError('Embedded component differs from its validated build')
     if recipe.get('id')!=item_id or recipe.get('version')!=3:raise ValueError('Recipe identity mismatch')
     if 'geometry_source' in recipe:
         expected_source=f"tools/item_designs/{item_id}/{recipe['geometry_source']['path']}"
@@ -70,6 +78,7 @@ def validate_design(item_id, *, root=ROOT, staging=None):
     if inspected['triangles']!=record.get('triangles') or inspected['resources']!=record.get('validated_resources'):raise ValueError('Build statistics do not match resources')
     g=json.loads((folder/'model.gltf').read_text(encoding='utf-8'))
     extras=g.get('extras',{})
+    if extras.get('components',[])!=component_records:raise ValueError('glTF component lineage differs from build record')
     if extras.get('design_version')!=3:raise ValueError('Missing v3 item marker')
     parents={child:node.get('name','') for node in g['nodes'] for child in node.get('children',[])}
     nodes={node['name']:{'parent':parents.get(i,'') if parents.get(i,'')!=item_id else ''} for i,node in enumerate(g['nodes']) if node['name']!=item_id}
@@ -167,6 +176,28 @@ def _install_directory(source,destination,displaced):
     replace_path(source,destination)
 
 
+def _check_retained_components(root,before,builds):
+    """Do not publish a changed item beside a retained, stale embedded copy."""
+    for owner,entry in before.get('items',{}).items():
+        if owner in builds or entry.get('design_version')!=3:continue
+        checked_id(owner)
+        visited=set()
+        def visit(folder):
+            folder=folder.resolve()
+            if not folder.is_relative_to((root/'models/items'/owner).resolve()) or folder in visited:
+                raise ValueError('Invalid retained component hierarchy: '+owner)
+            visited.add(folder)
+            record=json.loads((folder/'design_build.json').read_text(encoding='utf-8'))
+            for lineage in record.get('components',[]):
+                id=checked_id(lineage['item']);name=checked_id(lineage['name'])
+                if id in builds:
+                    source=builds[id]['folder']
+                    if digest(source/'model.gltf')!=lineage.get('model_sha256') or digest(source/'design_build.json')!=lineage.get('build_sha256'):
+                        raise ValueError(f'Republish dependent item {owner} together with changed component {id}')
+                visit(folder/'components'/name)
+        visit(root/'models/items'/owner)
+
+
 def publish_designs(item_ids, *, root=ROOT, staging=None):
     root=Path(root).resolve();ids=sorted(set(checked_id(id) for id in item_ids))
     if not ids:raise ValueError('No item designs selected')
@@ -175,6 +206,7 @@ def publish_designs(item_ids, *, root=ROOT, staging=None):
         builds={id:validate_design(id,root=root,staging=Path(staging)/id if staging else None) for id in ids}
         manifest=root/'models/items/MANIFEST.json'
         before=json.loads(manifest.read_text(encoding='utf-8')) if manifest.exists() else {'items':{}}
+        _check_retained_components(root,before,builds)
         token=uuid.uuid4().hex;workspace=root/'assetgen_output/items/publications'/token
         workspace.mkdir(parents=True)
         try:

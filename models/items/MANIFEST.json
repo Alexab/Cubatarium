@@ -25,7 +25,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "arrow": {
@@ -50,7 +50,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "bread": {
@@ -75,7 +75,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "bucket": {
@@ -100,7 +100,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "charcoal": {
@@ -125,7 +125,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "coal": {
@@ -150,7 +150,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "cooked_meat": {
@@ -175,7 +175,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "copper_axe": {
@@ -201,7 +201,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "copper_chest": {
@@ -232,7 +232,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "copper_feet": {
@@ -261,7 +261,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "copper_head": {
@@ -289,7 +289,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "copper_hoe": {
@@ -314,7 +314,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "copper_ingot": {
@@ -339,7 +339,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "copper_legs": {
@@ -370,7 +370,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "copper_pickaxe": {
@@ -396,7 +396,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "copper_shovel": {
@@ -422,7 +422,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "copper_sword": {
@@ -479,7 +479,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "cord": {
@@ -504,7 +504,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "flint_and_steel": {
@@ -529,7 +529,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "gold_axe": {
@@ -554,7 +554,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "gold_chest": {
@@ -580,7 +580,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "gold_feet": {
@@ -606,7 +606,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "gold_head": {
@@ -632,7 +632,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "gold_hoe": {
@@ -657,7 +657,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "gold_ingot": {
@@ -682,7 +682,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "gold_legs": {
@@ -708,7 +708,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "gold_pickaxe": {
@@ -733,7 +733,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "gold_shovel": {
@@ -758,7 +758,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "gold_sword": {
@@ -815,7 +815,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "grain": {
@@ -840,7 +840,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "iron_axe": {
@@ -866,7 +866,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "iron_chest": {
@@ -897,7 +897,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "iron_feet": {
@@ -926,7 +926,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "iron_head": {
@@ -956,7 +956,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "iron_hoe": {
@@ -982,7 +982,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "iron_ingot": {
@@ -1007,7 +1007,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "iron_legs": {
@@ -1038,7 +1038,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "iron_pickaxe": {
@@ -1064,7 +1064,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "iron_shield": {
@@ -1121,7 +1121,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "iron_shovel": {
@@ -1147,7 +1147,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "iron_sword": {
@@ -1204,7 +1204,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "leather": {
@@ -1229,7 +1229,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "leather_chest": {
@@ -1260,7 +1260,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "leather_feet": {
@@ -1289,7 +1289,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "leather_head": {
@@ -1317,7 +1317,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "leather_legs": {
@@ -1348,7 +1348,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "plant_fiber": {
@@ -1373,7 +1373,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "raw_copper": {
@@ -1398,7 +1398,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "raw_gold": {
@@ -1423,7 +1423,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "raw_iron": {
@@ -1448,7 +1448,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "raw_meat": {
@@ -1473,7 +1473,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "seeds": {
@@ -1498,7 +1498,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "shears": {
@@ -1523,7 +1523,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "stick": {
@@ -1548,7 +1548,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "stone_axe": {
@@ -1574,7 +1574,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "stone_hoe": {
@@ -1599,7 +1599,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "stone_pickaxe": {
@@ -1625,7 +1625,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "stone_shovel": {
@@ -1651,7 +1651,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "stone_sword": {
@@ -1708,7 +1708,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "waterskin": {
@@ -1733,7 +1733,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "wood_axe": {
@@ -1759,7 +1759,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "wood_bow": {
@@ -1816,7 +1816,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "wood_hoe": {
@@ -1841,7 +1841,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "wood_pickaxe": {
@@ -1867,7 +1867,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "wood_shield": {
@@ -1924,7 +1924,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "wood_shovel": {
@@ -1950,7 +1950,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "wood_spear": {
@@ -1975,7 +1975,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "wood_sword": {
@@ -2033,7 +2033,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "wood_torch": {
@@ -2112,7 +2112,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     },
     "wool": {
@@ -2137,7 +2137,7 @@
         "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
         "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
         "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-        "tools/itemgen/manifest.py": "e3a3c7172f877c9db91272bdc89d20c87e9a91c17f869ae2902d4f5dc8fe80cd"
+        "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d"
       }
     }
   }

@@ -35,8 +35,12 @@ def validate_manifest(root: Path) -> list[str]:
         if not isinstance(id,str) or not re.fullmatch('[a-z0-9_]+',id):errors.append('invalid manifest item ID');continue
         versioned=entry.get('design_version')==3
         if versioned:
+            from itemgen.components import source_files as design_sources
             dependencies=[p.relative_to(root).as_posix() for p in (root/'tools/itemgen').glob('*.py')]+['shaders/item_surface.vert','shaders/item_surface.frag']
-            source_files=[*sorted((root/'tools/item_designs'/id).rglob('*')),root/'tools/item_designs/provenance.json',root/'LICENSE']
+            try:
+                source_files=[*[root/p for p in sorted(design_sources(root,id))],root/'tools/item_designs/provenance.json',root/'LICENSE']
+            except (ValueError,OSError) as error:
+                errors.append(f'{id}: invalid authored component dependencies: {error}');continue
             required=[root/'content/items'/(id+'.json'),*source_files,*[root/p for p in dependencies],*sorted((root/'models/items'/id).rglob('*'))]
             if any(not (root/'models/items'/id/name).is_file() for name in entry.get('owned_files',[])):errors.append(f'{id}: missing owned publication file')
             if not entry.get('provenance'):errors.append(f'{id}: missing explicit provenance')

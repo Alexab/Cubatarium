@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "baseline_commit": "49475dfe282f190dddd9488b5599d0e52a298714",
+  "counts": {
+    "definitions": 70,
+    "legacy_resource_files": 774,
+    "recipes": 70
+  },
+  "changed_property_or_resource_files": [],
+  "manifest_only_delta": "Refresh tools/itemgen/manifest.py checker SHA-256 in 70 existing legacy records; provenance and all other fields unchanged",
+  "production_v3_count": 0
+}

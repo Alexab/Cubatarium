@@ -1,0 +1,90 @@
+{
+  "id": "wood_bow",
+  "version": 3,
+  "triangles": 276,
+  "sources": {
+    "content/items/arrow.json": "eec4ab7fef782d0a1266b8700143c38354b0e322eee9de6fc59b26c442211fc3",
+    "tools/item_designs/arrow/design.yaml": "94fb6cbb1250453ac821edb2a4c756ebb94ffa62b8a3cd1607d8db38dc135005",
+    "tools/item_designs/wood_bow/design.yaml": "d408e480b48d31880dee90337fbe93bd67d72627b7d6554166cf1b2ac60fa972",
+    "tools/item_designs/provenance.json": "cb60a50d9e08a37447ff116c9b5b3731ee1550a5a250a521bfa025f60264ef49",
+    "LICENSE": "d5b2c2cdb51ab4c8b124dfab74f936267098953b3e78afdf67ad89b11d71006e"
+  },
+  "physical_fit": {
+    "scale": 0.7692307692307693,
+    "centre": [
+      0.0,
+      0.0,
+      -0.045
+    ]
+  },
+  "components": [
+    {
+      "name": "loaded_arrow",
+      "item": "arrow",
+      "parent": "nocked_arrow",
+      "source_anchor": "nock",
+      "model_sha256": "e090f90a637c7886b67413fc01a4ce3bcc713aa825edc4faa698a2c22a63fb25",
+      "build_sha256": "9f799d194c54e93994953dbbd55b95e804f61c59da76a3d8e29f6d093dd16b6e"
+    }
+  ],
+  "definition": {
+    "content/items/wood_bow.json": "96d33178ec4ed01b6f0d77c73b39260a1a1c1bd190a924555b09117682bd7f6c"
+  },
+  "generator": {
+    "version": 3,
+    "sha256": {
+      "shaders/item_surface.frag": "599880f34ca01bd4d52caaad89239a41bb3ee3eeaac5283304fd56a6ecc02d19",
+      "shaders/item_surface.vert": "9fcd0a6657f34552fa98797ab7da9e1c323f195148c6583a8bff07841ff2b9c5",
+      "tools/itemgen/__init__.py": "3816a80e472ceca3be260a4fc6e82678c8d3da4ff2248154f53987a4a6a16275",
+      "tools/itemgen/__main__.py": "d2323fe9ae7ee8c896b833dd8e03c0c2405c2103e0964c5b5d9b4a830be69900",
+      "tools/itemgen/armor_designs.py": "a84b5a15585432dbf2831f12431cc6016e76eae365d0702453eaabac194d14ed",
+      "tools/itemgen/artifact_contract.py": "3c208e8de93720ca13b995383d770bb7de966b1cbafef4a684e6a315895eae71",
+      "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+      "tools/itemgen/components.py": "f64e50d69ede429287e93a684c5acca87940f665a05758e324974beda091f902",
+      "tools/itemgen/design.py": "80ae1a97440e01463e5f4d317c5087663cfd41ac344deea24304e79fdce5e8f3",
+      "tools/itemgen/design_publication.py": "343e902c829d14b27eed8c311713ac12676484598e14d6a25f35f6efee13f5ef",
+      "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+      "tools/itemgen/filesystem.py": "d2c1819e51b7da134f1b76d337f0e5311648b15ea83a2458956d01850a28ab14",
+      "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d",
+      "tools/itemgen/manual.py": "2d920305a0ca7b0453f4d2ff0fcdeb57146a47d455934e81211b46ebd8b5be5c",
+      "tools/itemgen/mesh.py": "aaacbdbc2681db750fb7127db023dd0124416f055aa01ead9832748185b4f448",
+      "tools/itemgen/pilot_designs.py": "61c13daf4cb9096a15ec0b72f93a83cc62e4fd604f594245baa7fc825c6f5cdb",
+      "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
+      "tools/itemgen/presentation.py": "3a8eb9a639165b8c7f2f45df32bc545443af6deb090872114d70a0c600c2771b",
+      "tools/itemgen/preview.py": "f707ee5f6389bfc74704cdce31dff47e316c9085a980dd2668abf43bd29ace3a",
+      "tools/itemgen/quality.py": "105852852307434143a244e3786da15a92c3f6faf2540716dab5278fe854c2aa",
+      "tools/itemgen/raster.py": "8974c41252e04b030d39b6bf42b160ded4a927f11bb1a073e830f30e01603fa1",
+      "tools/itemgen/resource_uri.py": "a8f1688d402729a87cb998f78d5de2fccd8380a73f7528a400051de7421d5ee7",
+      "tools/itemgen/supplies_designs.py": "f5d73e8e9654c1e6cee320d2a0639a05c627df080a12c7fbc24bfd470be1f42a",
+      "tools/itemgen/surface_export.py": "5a9c2f39f6481fb8ff394ae30e8816a276c589e07805d3a289e05730c6c4fbd3",
+      "tools/itemgen/surface_paint.py": "3f740e19073a360616de7efefeb1f8b46b4b3eeffbe16c5b139c9fc78587c515",
+      "tools/itemgen/surface_uv.py": "781d306211b448e7da8118b5f2ae1e6f6ceab4e12a89fcaee70ee20af11d02fa",
+      "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+      "tools/itemgen/visual_bindings.py": "880719ae181b227aa0ea87258cbc8be89cbcd40b4edcf6c842ca1d68860eab22",
+      "tools/itemgen/wear_sections.py": "7c509db2e83f38af469d60b19319dd52b67844864a688620bb523eed5dc742b0",
+      "tools/itemgen/workshop_designs.py": "e760de707ababb90793b170c15d0fe860ada3b0ab3f19d1f1486cfc4772d5571"
+    }
+  },
+  "outputs": {
+    "ATTRIBUTION.json": "0f5c1d2d23758d2a56990722dd85799e0d548169e52fec4fa89cb3e0bc191ba8",
+    "components/loaded_arrow/ATTRIBUTION.json": "19b6ccf27db41c7718493bd33a77f0290b03016220e534c51c1586249021545e",
+    "components/loaded_arrow/design_build.json": "9f799d194c54e93994953dbbd55b95e804f61c59da76a3d8e29f6d093dd16b6e",
+    "components/loaded_arrow/LICENSE.txt": "d5b2c2cdb51ab4c8b124dfab74f936267098953b3e78afdf67ad89b11d71006e",
+    "components/loaded_arrow/model.bin": "0b790fac404e96caeed57bd3e2fbc52b07485cade8dd6609f8da6201ebdf1e5c",
+    "components/loaded_arrow/model.gltf": "e090f90a637c7886b67413fc01a4ce3bcc713aa825edc4faa698a2c22a63fb25",
+    "components/loaded_arrow/textures/diffuse.png": "1e8c520e58a7a2b8405f0ab3a8a3c82062f2120e6ac70097f519160ec6ffce43",
+    "components/loaded_arrow/uv_layout.json": "6316ef867ea9bb62884425a699b8b6b844c5eca456ce6a4e4c079c41555a84ae",
+    "LICENSE.txt": "d5b2c2cdb51ab4c8b124dfab74f936267098953b3e78afdf67ad89b11d71006e",
+    "model.bin": "9713306a16b322c5e1d10fc680dc538d60079dc4ede80b12c4c7c86fc4a41250",
+    "model.gltf": "041a08f00fe4b14e06e66b9e76cc0ef4dedbd8df841f4684f0ce4972fb47a64c",
+    "textures/diffuse.png": "f41715f7f856a4c809692901e45a7b1b9961742a0cc9391e1089c583dfe3feff",
+    "uv_layout.json": "f08d16673ff37725d5ed49c260831e9f73f7d69a22a9b7d2d8a4778cb3adcdc3"
+  },
+  "validated_resources": [
+    "components/loaded_arrow/model.bin",
+    "components/loaded_arrow/textures/diffuse.png",
+    "model.bin",
+    "model.gltf",
+    "textures/diffuse.png"
+  ]
+}

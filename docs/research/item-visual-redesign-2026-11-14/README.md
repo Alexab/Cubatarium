@@ -737,9 +737,9 @@ the publication path; remote Windows/Linux CI execution remains unverified here.
 Before publication, adapt the existing creature equipment/reload/culling QA
 collectors for typed item surfaces, final texture semantics and gold sets.
 The legacy equipment matrix currently assumes `wear.gltf` and source color
-factors. Also close these known integration gaps: share the final arrow
-resource with the bow's temporary nocked-arrow geometry; and complete bow/carry/two-hand
-contact wiring. The sRGB filtering and cold disk-icon dependency problems are
+factors. The bow now composes the actual authored arrow resource, as recorded
+in the newer components checkpoint below. Complete bow/carry/two-hand contact
+wiring and actual hand-pose acceptance. The sRGB filtering and cold disk-icon dependency problems are
 covered by the newer checkpoint above. Unsupported imported samplers are explicitly rejected; optional conversion,
 final publication acceptance and measured performance remain open.
 
@@ -777,10 +777,26 @@ native-tested Release build, which also includes CLI/audio cleanup and equipment
 cache invalidation when switching definition storage. No production model was
 promoted (0 of 70).
 
-Continue with shared nocked-arrow geometry, complete authored hand contacts,
+Continue with complete authored hand contacts,
 Item Lab overlays/cost information and final all-item/world artistic review.
 Then publish and repeat full acceptance/performance with final assets.
 The overall goal remains active.
+
+## Shared authored arrow component checkpoint
+
+[Implementation and evidence](components-checkpoint/README.md) replace the bow's
+temporary arrow geometry with a byte-preserving build of `arrow`. Geometry,
+UVs, normals and pixels come from the same authoritative source, including
+manual glTF overrides. Named nock/string transforms match in native rendering
+through partial/full draw and cancellation. Publication enforces consistent
+source/host updates; seven component tests cover dependencies and failure safety.
+
+The full staged regression passes 25 CTests and 3355 presentation checks, plus
+the existing gameplay/UI/ownership checks. Legacy properties, recipes and
+resources remain byte-identical; only the old manifest's checker hash changed.
+The saved FP/TP images also expose remaining bow pose problems. Resource reuse
+is verified; correct character orientation/support-hand contact and overall art
+acceptance are still required. No v3 production promotion has occurred.
 
 ## Acceptance contract
 

@@ -14,7 +14,7 @@ including lashed stone heads, forged tools, vessels, sewn leather and baked food
 | gold_sword | Asymmetric point, divided guard, fuller and six-sided pommel; gold and wrapped grip | Small-icon ornament clarity |
 | iron_head | Open underside, brow band, ridge and cheek plates; forged steel | Both body forms, motion and skin clearance |
 | leather_chest | Separate panels, straps, belt and open buckle; stitched leather and brass | Both body forms and motion |
-| wood_bow | Curved members in YZ, wrapped grip and separate fiber string | Articulated draw, string contacts, two hands |
+| wood_bow | Curved YZ members, wrapped grip, articulated fiber string and a byte-preserving component of the authored arrow | Nock/string alignment verified; FP/TP hand pose and two-hand contacts still require correction |
 | bucket | Open shell, rim, raised handle and cross-grip; metal and wood | Corrected FP grip, water and TP attachment |
 | shears | Crossing blades, two hollow loops, tangs and hinge; contrasting steel | Articulated opening and finger contacts |
 | apple | Ring-built faceted body, narrowed ends, stem and leaf; red skin fields | Leaf scale and eating pose |

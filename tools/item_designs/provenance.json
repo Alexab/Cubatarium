@@ -981,7 +981,14 @@
       "geometry": {
         "method": "project-authored coordinate recipe",
         "source": "tools/item_designs/wood_bow/design.yaml",
-        "external_mesh_inputs": []
+        "external_mesh_inputs": [],
+        "components": [
+          {
+            "item": "arrow",
+            "source": "tools/item_designs/arrow/design.yaml",
+            "assembly": "byte-preserving internal glTF component; authored nock anchor"
+          }
+        ]
       },
       "texture": {
         "method": "project-authored surface_paint layers with optional read-only RGBA overlays",

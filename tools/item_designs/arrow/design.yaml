@@ -201,3 +201,9 @@ authorship:
   reference_kind: functional real-world objects and materials
   external_meshes: false
   external_pixels: false
+nodes:
+  nock:
+    pivot:
+    - 0
+    - -0.32
+    - 0

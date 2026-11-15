@@ -65,20 +65,6 @@ materials:
     pattern: plain
     metallic: 0.5
     roughness: 0.7
-  arrow_steel:
-    color:
-    - 145
-    - 156
-    - 157
-    pattern: forged
-    metallic: 0.7
-    roughness: 0.5
-  fletching:
-    color:
-    - 216
-    - 204
-    - 165
-    pattern: fiber
 parts:
 - name: grip
   material: binding
@@ -180,81 +166,6 @@ parts:
   - 0
   node: string_lower
   fit_reference: false
-- name: nocked_shaft
-  material: wood
-  shape: bevel_box
-  size:
-  - 0.012
-  - 0.012
-  - 0.52
-  bevel: 0.00216
-  offset:
-  - 0
-  - 0
-  - -0.285
-  rotation:
-  - 0
-  - 0
-  - 0
-  node: nocked_arrow
-  fit_reference: false
-- name: nocked_head
-  material: arrow_steel
-  shape: extrude
-  contour:
-  - - -0.028
-    - 0
-  - - 0.028
-    - 0
-  - - 0
-    - 0.085
-  depth: 0.012
-  offset:
-  - 0
-  - 0
-  - -0.545
-  rotation:
-  - -90
-  - 0
-  - 0
-  node: nocked_arrow
-  fit_reference: false
-- name: nocked_fletching_horizontal
-  material: fletching
-  shape: bevel_box
-  size:
-  - 0.048
-  - 0.004
-  - 0.095
-  bevel: 0.0007199999999999999
-  offset:
-  - 0
-  - 0
-  - -0.085
-  rotation:
-  - 0
-  - 0
-  - 0
-  node: nocked_arrow
-  fit_reference: false
-- name: nocked_fletching_vertical
-  material: fletching
-  shape: bevel_box
-  size:
-  - 0.004
-  - 0.048
-  - 0.095
-  bevel: 0.0007199999999999999
-  offset:
-  - 0
-  - 0
-  - -0.085
-  rotation:
-  - 0
-  - 0
-  - 0
-  node: nocked_arrow
-  fit_reference: false
 nodes:
   upper_limb:
     pivot:
@@ -333,3 +244,12 @@ visual_bindings:
 - node: nocked_arrow
   channel: bow_loaded
   visible_above: 0.001
+components:
+- name: loaded_arrow
+  item: arrow
+  parent: nocked_arrow
+  source_anchor: nock
+  rotation_deg:
+  - -90
+  - 0
+  - 0

@@ -235,6 +235,35 @@ RunItemStateQa(const ItemDefinition &definition, const ItemRenderAsset &asset,
   {
     const auto inputs = ItemQaInputs(definition, asset, step == 3 ? 0 : step);
     const auto label = id + "-state-" + std::to_string(step);
+    if (id == "wood_bow")
+    {
+      const auto nock = std::find_if(
+          asset.Nodes.begin(), asset.Nodes.end(), [](const auto &node)
+          { return node.Name == "component_loaded_arrow__nock"; });
+      const auto pull =
+          std::find_if(asset.Nodes.begin(), asset.Nodes.end(),
+                       [](const auto &node) { return node.Name == "pull"; });
+      const bool anchors =
+          nock != asset.Nodes.end() && pull != asset.Nodes.end();
+      check(label + " shared arrow anchors exist", anchors);
+      if (anchors)
+      {
+        const auto state = EvaluateItemVisualState(asset, inputs);
+        const auto transforms = ResolveItemNodeTransforms(asset, state);
+        const auto nockIndex = size_t(nock - asset.Nodes.begin());
+        const auto nockPoint = glm::vec3(transforms[nockIndex][3]);
+        const auto pullPoint =
+            glm::vec3(transforms[size_t(pull - asset.Nodes.begin())][3]);
+        const auto gap = glm::length(nockPoint - pullPoint);
+        const bool visible = ItemNodeVisible(asset, state, nockIndex);
+        check(label + " shared arrow nock follows string", gap < .00001f);
+        check(label + " shared arrow visibility follows ammunition/draw",
+              visible == (inputs.HasAmmo && inputs.BowCharge > .001f));
+        report["bow_nock_contacts"].push_back({{"charge", inputs.BowCharge},
+                                               {"gap_metres", gap},
+                                               {"arrow_visible", visible}});
+      }
+    }
     const auto texture =
         orbit.RenderInspectionTexture(id, model, 512, 35, 25, 0, .65f, inputs);
     check(label + " orbit",
