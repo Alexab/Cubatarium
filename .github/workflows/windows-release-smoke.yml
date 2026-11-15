@@ -179,12 +179,23 @@ jobs:
           python tools/research/run_item_manual_qa.py --skip-build --world OwnershipCIQA
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      - name: Native world item lighting captures
+        if: github.event_name == 'workflow_dispatch' && inputs.native_items_qa
+        shell: pwsh
+        run: |
+          foreach ($qaLight in @('day', 'night', 'interior', 'interior-lit')) {
+            python tools/run_item_world_visual_qa.py --skip-build --world OwnershipCIQA --light $qaLight
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
       - name: Upload native inventory evidence
         if: always() && github.event_name == 'workflow_dispatch' && inputs.native_items_qa
         uses: actions/upload-artifact@v4
         with:
           name: inventory-ownership-native-evidence
-          path: bin/items_acceptance/
+          path: |
+            bin/items_acceptance/
+            bin/item_world_visual/
 
       - name: C++ unit test (chunk load priority)
         shell: pwsh

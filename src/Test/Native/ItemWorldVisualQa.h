@@ -68,18 +68,12 @@ public:
             edits.push_back(pos);
           }
         }
-    if (Request.at("light") == "interior-lit")
-    {
-      const auto torch = world.GetBlockRegistry().GetIdByTypeName("torch");
-      if (torch == BLOCK_AIR)
-        throw std::runtime_error(
-            "World capture cannot resolve torch light source");
-      const auto pos = Base + glm::ivec3(-1, 1, 1);
-      world.GetBlockWorld().SetBlock(pos, torch);
-      edits.push_back(pos);
-    }
     world.RelightPlayerEdit(edits, Base.y);
     world.InvalidateBlockMesh();
+    if (Request.at("light") == "interior-lit" &&
+        !world.AddObject("torch",
+                         glm::vec3(Base) + glm::vec3(-.5f, 1.5f, 1.5f)))
+      throw std::runtime_error("Cannot place the real room light source");
     world.SetGameMode(WorldGameMode::Creative);
     world.SetTimeOfDayNormalized(Request.at("light") == "night" ? .85f : .35f);
     world.SetTimeFrozen(true);

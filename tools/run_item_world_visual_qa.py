@@ -40,6 +40,8 @@ def main():
     if world.parent != world_parent or not world.is_dir():
         parser.error('Existing QA world required')
     name = f'{args.light}-{args.width}-{int(args.scale*100)}'
+    if args.ids:
+        name += '-selected-'+hashlib.sha256(','.join(ids).encode()).hexdigest()[:8]
     output = ROOT/'bin/item_world_visual'/name
     output.mkdir(parents=True, exist_ok=True)
     report = output/'native.json'
@@ -101,12 +103,14 @@ def main():
             config.unlink(missing_ok=True)
         else:
             config.write_bytes(config_before)
-        summary.update(world_restored=hashes(world) == before_world,
+        summary.update(sources_unchanged=all(hashlib.sha256((ROOT/name).read_bytes()).hexdigest() == value
+                                           for name, value in summary['sources'].items()),
+                       world_restored=hashes(world) == before_world,
                        runtime_restored=hashes(ROOT/'bin/models/items') == before_runtime,
                        authors_unchanged=hashes(ROOT/'tools/item_designs') == before_authors,
                        config_restored=(config.read_bytes() if config.exists() else None) == config_before)
         summary['passed'] = summary['passed'] and all(summary[k] for k in
-            ('world_restored', 'runtime_restored', 'authors_unchanged', 'config_restored'))
+            ('world_restored', 'runtime_restored', 'authors_unchanged', 'config_restored', 'sources_unchanged'))
         summary_path.write_text(json.dumps(summary, indent=2)+'\n', encoding='utf-8')
     if summary['world_restored'] and summary['config_restored']:
         target = temporary.resolve()
