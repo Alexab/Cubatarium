@@ -669,6 +669,39 @@ neutral-view contacts, not every head pitch, cosmetic variation or combined
 action. Bow/carry contacts, final art/world/performance review, source-byte
 checkout validation and production promotion remain required.
 
+## Signed-byte checkout and full-catalog publication proof, 2026-11-15
+
+Item sources and published payloads now have explicit `-text` Git attributes,
+matching the byte-preservation approach already used by creature resources.
+This preserves the actual mixed source line endings instead of rewriting inputs
+or refreshing stale hashes. Comparison against the preceding checkpoint covers
+980 signed files: 469 Git blobs change only newline storage, with zero semantic
+or binary resource changes. The working files retain their prior byte contents,
+and the legacy manifest passes without re-stamping its hashes.
+
+`tools/verify_item_checkout.py` exercises real sparse local Git clones for both
+`core.autocrlf=true` and `false`. Each clone verifies all 980 signed files,
+validates the copied 70-item staging, regenerates every artifact byte-identically,
+publishes all 70 only inside the disposable clone, validates the v4 manifest,
+checks identical published artifacts and checks all 70 retained references.
+The added reference metadata is validated separately from the unchanged archived
+payload. The original catalog and authored source trees remain byte-identical.
+The working production catalog still contains zero promoted v3 items.
+
+A dedicated Windows/Linux CI matrix runs the same verifier, propagates each
+failure and uploads fresh reports. Local Windows runs pass both checkout modes;
+the remote matrix has not been executed in this session. This closes the observed
+Windows source-byte/hash mismatch, not final art or performance acceptance.
+
+The subsequent required Release build and full 70-item native regression pass:
+25 CTests, 59 gameplay checks, 3,342 presentation checks, 283 Item Lab checks,
+209 icon checks and the ownership/UI checks. All 210 temporary runtime files
+are restored. The 240 TP consumption frames match the preceding checkpoint
+byte-for-byte. See [checkout evidence](checkout-checkpoint/summary.json) for both
+clone/publication logs, signed-file comparison, executable hash, native reports
+and image hashes. Production promotion and final visual/performance acceptance
+remain open.
+
 ## Remaining implementation, in order
 
 1. Native baseline and actual resource-path trace, before/after references and
@@ -697,11 +730,9 @@ checkout validation and production promotion remain required.
 8. Full native visual audit and performance acceptance. No final completion
    checkbox until every item and gameplay representation has evidence.
 
-Before publication, verify exact source/resource hashes after a fresh Git checkout.
-Several generator modules and `item_surface.vert` currently have LF working-tree
-bytes while repository attributes request CRLF; raw provenance hashes must not
-be accepted across a checkout without checking the byte-preservation policy.
-The manual checkpoint payload is explicitly stored without text normalization.
+Exact signed bytes and regeneration after fresh Windows checkout are verified
+for both autocrlf settings by the newer checkpoint above. Keep this verifier in
+the publication path; remote Windows/Linux CI execution remains unverified here.
 
 Before publication, adapt the existing creature equipment/reload/culling QA
 collectors for typed item surfaces, final texture semantics and gold sets.

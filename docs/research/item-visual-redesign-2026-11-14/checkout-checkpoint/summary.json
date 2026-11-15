@@ -1,0 +1,48 @@
+{
+  "passed": true,
+  "status": "partial_signed_byte_checkout_checkpoint",
+  "signed_files": 980,
+  "item_count": 70,
+  "checkout_modes": [
+    "true",
+    "false"
+  ],
+  "native_image_parity": 240,
+  "semantic_source_changes": 0,
+  "production_v3_count": 0,
+  "production_unchanged": true,
+  "authors_unchanged": true,
+  "executable_sha256": "fdffd47cdc729c9a5fea28a1d159a4f66626382e8eb6aecfa43e701a7dd8d600",
+  "native_checks": {
+    "gameplay": 59,
+    "window": 0,
+    "ownership": 57,
+    "ownership_ui": 18,
+    "player_window": 7,
+    "icons": 209,
+    "item_lab": 283,
+    "presentations": 3342
+  },
+  "limitations": [
+    "Remote Windows/Linux CI matrix added but not run in this session.",
+    "No final artistic/world/performance acceptance or production promotion.",
+    "Bow/carry contacts, nocked arrow sharing, final Item Lab overlays/costs and adapted creature equipment collectors remain open."
+  ],
+  "files_sha256": {
+    "byte-policy-diff.json": "b5fccd973c215209e9afba200f9d1b8d45462a1bfa5be68207ad194b35f8c3d9",
+    "checkout-false.json": "ffc0927083123a8c2e20038ba117b35e27cbc4121aa9d9144c3dcdc1ee243fd8",
+    "checkout-false.log": "ac184e6d20f3f5922fa79cfbf02501457f540c130362f4689ca180b6d1b159de",
+    "checkout-run.log": "b4d3fb8f850e6f64df10cd061240d89a0035fb0ac06ca805ed475d48f26369a6",
+    "checkout-true.json": "ffc0927083123a8c2e20038ba117b35e27cbc4121aa9d9144c3dcdc1ee243fd8",
+    "checkout-true.log": "517c3206a183319b56ec8161c5a517a5538fa8b1620c491a015f19edad44981f",
+    "checkout.json": "603f4b90644a59b53fbae32310a34cbdee13805e77edc6138ab5c61e4703d160",
+    "ctest.log": "3407a36f18d55157fc5cc47b8af2a5bfc4f031c5fc4f6c33b3e7155a71fd57fe",
+    "design-probe.json": "2a0b87d20382bbcaa37fc481f4c6542bc352dc10f2003df17e1217e19dd72627",
+    "includes.log": "1fe5868a25fb476183bedce64d99af228760b1551b2290c01bdb60a60a1f4fe5",
+    "native-image-parity.json": "f21f73a0d0c7a58fc09e506e66e12327ee05294ba1fc0359a8ee89ba008bebee",
+    "native-run.log": "69c9e75eecbb6c4c995fa812e34443147aeae87959e3df854c17aa85cb02b062",
+    "native.json": "630f63aa5bc268a236246fea86da2d88120d597f729033808c66c2a679bdc8f8",
+    "release.log": "384d4cec6f1cd40860137f0d88f1e84d14c0c0ee98b0283487b66028174b7f57",
+    "style.log": "99b0e76ae664f14ec8cf51df948b288c3687ce489c8327e5f7d9c5b8a3342b90"
+  }
+}
