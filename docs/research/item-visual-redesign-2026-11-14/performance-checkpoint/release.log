@@ -84,13 +84,13 @@
   CubatariumObjects_creatures_visual.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\CubatariumObjects_creatures_visual.dir\Release\CubatariumObjects_creatures_visual.lib
   Cubatarium.vcxproj -> E:\Work\Home\Cubatarium\bin\Cubatarium.exe
   Syncing shaders to runtime directory	Seeding config.json next to executable if missing	Syncing models to runtime directory (mirror prune)	Syncing objects to runtime directory	Syncing content data to runtime directory (mirror prune)	Syncing resource packs to runtime directory	Pruning removed generated assets from Cubatarium Worldgen runtime pack	Syncing fonts to runtime directory	Copying window icon to runtime directory	Verifying static Windows executable (no vcpkg/VC++ DLL deps)
-  
+
   -- Synced runtime tree: shaders -> E:/Work/Home/Cubatarium/bin/shaders
-  
+
   -- Synced runtime tree: models -> E:/Work/Home/Cubatarium/bin/models
-  
+
   -- Synced runtime tree: objects -> E:/Work/Home/Cubatarium/bin/objects
-  
+
   -- Synced runtime tree: content -> E:/Work/Home/Cubatarium/bin/content
   -- sync_runtime_subdir: skipping _build_staging_128
   -- sync_runtime_subdir: skipping _build_staging_128_full
@@ -109,9 +109,9 @@
   -- sync_runtime_subdir: skipping _build_staging_snez_16
   -- sync_runtime_subdir: skipping _build_staging_too_many_stones_16
   -- Synced runtime tree: resource_packs -> E:/Work/Home/Cubatarium/bin/resource_packs
-  
+
   -- Synced runtime tree: cubatarium_worldgen_cc0 -> E:/Work/Home/Cubatarium/bin/resource_packs/cubatarium_worldgen_cc0
-  
+
   -- Synced runtime tree: fonts -> E:/Work/Home/Cubatarium/bin/fonts
   >> verify-windows-exe: E:/Work/Home/Cubatarium/bin/Cubatarium.exe
   >> dumpbin: C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\dumpbin.exe
