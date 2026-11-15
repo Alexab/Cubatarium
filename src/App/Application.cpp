@@ -7,6 +7,7 @@
 #include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiTextInput.h"
+#include "Test/Native/ItemLabArtQa.h"
 #include "Test/Native/ItemLabDiagnosticsQa.h"
 #include "Test/Native/ItemLabSceneQa.h"
 #include "Test/Native/ItemPerformanceQa.h"
@@ -2704,6 +2705,11 @@ void UApplication::RunItemLabQa(const std::string &path)
       *ItemLabScreen, *GuiContext,
       Core->GetItemDefinitionStorage()->ListCatalogIds(),
       std::filesystem::path(path + ".frames") / "diagnostics", report);
+  if (const char *art = std::getenv("CUBA_ITEM_LAB_ART_QA");
+      art && std::string(art) == "1")
+    RunItemLabArtQa(*ItemLabScreen,
+                    Core->GetItemDefinitionStorage()->ListCatalogIds(),
+                    std::filesystem::path(path + ".frames") / "art", report);
   ItemLabScreen->SetPosePreset(0);
   click(ItemLabScreen->GetPoseBounds());
   check("pointer switches state preset", ItemLabScreen->GetPosePreset() == 1);

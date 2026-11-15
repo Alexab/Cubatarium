@@ -39,6 +39,12 @@ materials:
     - 133
     - 68
     pattern: food
+  charred:
+    color:
+    - 69
+    - 41
+    - 25
+    pattern: roast
 parts:
 - name: roasted_cut
   material: crust
@@ -51,7 +57,7 @@ parts:
   - - 0.025
     - 0.12
   - - 0.06
-    - 0.035
+    - 0.085
   sides: 7
   offset:
   - 0
@@ -66,16 +72,79 @@ parts:
   shape: bevel_box
   size:
   - 0.1
-  - 0.008
-  - 0.018
-  bevel: 0.0014399999999999999
+  - 0.003
+  - 0.014
+  bevel: 0.0005
   offset:
   - 0.012
-  - 0.04
-  - 0.025
+  - 0.0615
+  - 0.012
   rotation:
   - 0
   - -22
+  - 0
+- name: sear0
+  material: charred
+  shape: extrude
+  contour:
+  - - -0.003
+    - -0.001
+  - - 0.003
+    - -0.001
+  - - 0.003
+    - 0.001
+  - - -0.003
+    - 0.001
+  depth: 0.05
+  offset:
+  - -0.045
+  - 0.0607
+  - -0.01
+  rotation:
+  - 0
+  - -18
+  - 0
+- name: sear1
+  material: charred
+  shape: extrude
+  contour:
+  - - -0.003
+    - -0.001
+  - - 0.003
+    - -0.001
+  - - 0.003
+    - 0.001
+  - - -0.003
+    - 0.001
+  depth: 0.05
+  offset:
+  - 0
+  - 0.0607
+  - -0.01
+  rotation:
+  - 0
+  - -18
+  - 0
+- name: sear2
+  material: charred
+  shape: extrude
+  contour:
+  - - -0.003
+    - -0.001
+  - - 0.003
+    - -0.001
+  - - 0.003
+    - 0.001
+  - - -0.003
+    - 0.001
+  depth: 0.05
+  offset:
+  - 0.045
+  - 0.0607
+  - -0.01
+  rotation:
+  - 0
+  - -18
   - 0
 authorship:
   construction: Cubatarium supply coordinate drawings

@@ -88,3 +88,13 @@ acceptance remain in development. Run the focused Release/native checks with
 still rebuilds authored candidates and checks the entire catalog. It uses
 `tools/flight_sim_run.py` on an existing dedicated QA world and never overlays
 or publishes production item resources.
+
+For a complete native comparison gallery, use
+`python tools/run_item_lab_qa.py --art-gallery` (or `--skip-build --art-gallery`
+after the required Release build). It additionally captures both actual sources
+for all 70 IDs in five lit views, silhouette, gray, albedo and native 32/48/64
+icon targets. Output is under `bin/item_lab_art`; normal diagnostics stay under
+`bin/item_lab_diagnostics`. These are evidence captures, not automatic artistic
+approval. Run `python tools/build_item_art_sheets.py` to arrange the raw captures
+into per-item and catalog comparison sheets under `build/item_art_review`.
+The icon strips in the per-item sheets preserve their original pixel sizes.

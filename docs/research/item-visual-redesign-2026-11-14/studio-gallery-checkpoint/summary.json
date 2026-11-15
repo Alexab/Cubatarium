@@ -1,0 +1,89 @@
+{
+  "scope": "all-70 native studio comparisons and two source corrections; not final production acceptance",
+  "implementation_parent": "90ab898b551d26e01a0bf8ece19242d19449093d",
+  "executable_sha256": "5e1744354a5db6534bb731c425decd64d2cccc5e9a13de929f1f04b3e65e44ea",
+  "native_checks": 3560,
+  "focused_checks": 596,
+  "source_sha256": {
+    ".gitignore": "03c4509a3d7516ec61f6f994d9d4ff9fde873ba81b09beedebac984c147ab046",
+    "docs/item-lab.md": "0505889b954092c9cd2bf3865c7bfb4cc635e38ca419d22925576b388f277ac5",
+    "src/App/Application.cpp": "e1a6b58a863eca10a64daaa14259c1a9a40151f0359ee9a66364c1d642b8cb0c",
+    "src/Gui/Screens/ItemLabScreen.cpp": "df189254231ef812c0ceda278e8efb2240ae503458635cf9503b94d403b0c600",
+    "src/Gui/Screens/ItemLabScreen.h": "a2b98755ec046e6376d7f0d3acf63e131efbbccb1ecbf38c2d3863ad97218098",
+    "tools/item_designs/PILOTS.md": "2ce8ccea1f657abb280f2a8b6638a75664fe7ae98f2d9477b507800ab52ef875",
+    "tools/item_designs/cooked_meat/design.yaml": "2afa83f1350c930774f8ca4c229b44a1d1b49a47648848d30fd250cc037826fa",
+    "tools/item_designs/wood_bow/design.yaml": "9a6ccfdf32b1a53bc19011d1fb55ee5f6dcdfbc144d4c22b07938afe7aef08c2",
+    "tools/run_item_design_probes.py": "b206db594881cd3f8e638b826c1683969b28eff48f1c4658590034ecf62c0531",
+    "tools/run_item_lab_qa.py": "1a98ed8ee1d6a91f1d1486118c76b3fd8233eca9fc8d2bb219ab39a712b8a485",
+    "src/Test/Native/ItemLabArtQa.h": "442f0dcde92d20ada3486e66fdbaebb0cdd2ce878d412bfaf9b892febaf23833",
+    "tools/build_item_art_sheets.py": "0a3a4366398421fea4440f3a6ec46e8d9a37d2cb354e4dc31cc240a6e168f5ea"
+  },
+  "corrected": {
+    "wood_bow": {
+      "triangles_before": 276,
+      "triangles_after": 292,
+      "fit_before": {
+        "scale": 0.9777777777777777,
+        "centre": [
+          0.0,
+          0.0,
+          -0.04625
+        ]
+      },
+      "fit_after": {
+        "scale": 0.9777777777777777,
+        "centre": [
+          0.0,
+          0.0,
+          -0.04625
+        ]
+      }
+    },
+    "cooked_meat": {
+      "triangles_before": 80,
+      "triangles_after": 116,
+      "fit_before": {
+        "scale": 1.1397696739018277,
+        "centre": [
+          0.005941867925854848,
+          0.0024999999999999988,
+          0.0
+        ]
+      },
+      "fit_after": {
+        "scale": 1.1397696739018277,
+        "centre": [
+          0.005941867925854848,
+          0.004,
+          0.0
+        ]
+      }
+    }
+  },
+  "production_promoted": 0,
+  "frames": 1260,
+  "sheets": 86,
+  "files": {
+    "comparison-sheets.zip": "a24e4be0db638f2f76f837900a6a5c9b5b3474a29b518fc90dc3beb5151058c0",
+    "cooked_meat.png": "8dae61069a4be4963fb6a4107a28511cce273eaafa70fbc3156e45ec6e7a2953",
+    "correction-before-after.zip": "1addf8a09a0f77617ef98d17a0ebb0eb10f7289722fc0456e4bafc2798ea7fb2",
+    "correction-files.json": "ebe49f27e72089d5a6abf3a59a713cbef6f6739fb4bfbcf0d2ff7b0686a20ace",
+    "design-tests-output.txt": "430b63e982afe862947fbb4866d1d9d32bbfde5474667fc48051a83515c19acd",
+    "flight.json": "b10cb1fe66abb6d0cd24c052c0a51296dd48df1dd6e090723ee66ff45dc31851",
+    "focused-first-failure.json": "7697069d25717452011b80319ab9070bca450bfde33bef935ce443cc03d816e8",
+    "focused-report.json.gz": "529c1c75b3f6b727108f6c1eb9cbba7e86e373f77f1a7693f4f7254a2848ab21",
+    "focused-summary.json": "2335d13beae4bceaf2d2e4c2e82b43d1152c0fd1744b44954c4143303dcfc3e0",
+    "format-output.txt": "758d526215021db6dc966f34fd79c0627ef76bfa60acbd6145c5d4a9c94c1b7d",
+    "includes-output.txt": "3e02176a66e9887c36635120171a991d151d94d59b878f50006ea97853cbd6c9",
+    "invalidated-intermediate-summary.json": "9925ec301a182f381c31ce83f43f6b90023f1da576f3a469975fbf6385ec1261",
+    "native-comparisons.zip": "1e0956ce6d2cf16e89aa5225be743141a7bd7ade685ee8340bdc1b28d8c97bb9",
+    "native-report.json.gz": "6b10b1b084ad4bda9fefa1cf2dcdb01ed9da1f5065fd021a791aeca4a79250b2",
+    "native-summary.json": "7ce2619bc0909a34fe1004eb911aa0804e42e7d38915b4edb936447cf8ae531a",
+    "probe-tests-output.txt": "f0cc528f2940562235a1774a8885d0bedb603793312fa34d31772c703fa481c4",
+    "release-output.txt": "5e0678d3d48b4cdf4448b7419dd3bcca54115c2b33c8704c24bb9d5df5972c21",
+    "sheets-manifest.json": "39b9e56e9462cfbbc995663391d73d774efd672a7bba1d6a0c52bdc101e255cc",
+    "style-output.txt": "7b00bf7ed2d292a49c34b6aa610a5f9c00e46637a909909cdd9e7eff91839996",
+    "wood_bow.png": "d7510baaab57c00cc8b3554cfc39e0e19d11f4d6cbf267b696f2a00d45510dfb",
+    "ctest-output.txt": "170cb72944aa3cc11b5402b1bab7411eee952bd2302be8db138f4d4155679c16"
+  }
+}

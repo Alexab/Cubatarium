@@ -1,0 +1,101 @@
+{
+  "checks": 540,
+  "failures": [
+    {
+      "name": "wood_bow-bow-tp-male-still-0 shield occupancy 0",
+      "passed": false
+    },
+    {
+      "name": "wood_bow-bow-tp-male-still-0 shield occupancy 3",
+      "passed": false
+    },
+    {
+      "name": "wood_bow-bow-tp-male-still-90 shield occupancy 0",
+      "passed": false
+    },
+    {
+      "name": "wood_bow-bow-tp-male-still-90 shield occupancy 3",
+      "passed": false
+    },
+    {
+      "name": "wood_bow-bow-tp-male-still-180 shield occupancy 0",
+      "passed": false
+    },
+    {
+      "name": "wood_bow-bow-tp-male-still-180 shield occupancy 3",
+      "passed": false
+    },
+    {
+      "name": "wood_bow-bow-tp-male-walk-0 shield occupancy 0",
+      "passed": false
+    },
+    {
+      "name": "wood_bow-bow-tp-male-walk-0 shield occupancy 3",
+      "passed": false
+    },
+    {
+      "name": "wood_bow-bow-tp-male-walk-90 shield occupancy 0",
+      "passed": false
+    },
+    {
+      "name": "wood_bow-bow-tp-male-walk-90 shield occupancy 3",
+      "passed": false
+    },
+    {
+      "name": "wood_bow-bow-tp-male-walk-180 shield occupancy 0",
+      "passed": false
+    },
+    {
+      "name": "wood_bow-bow-tp-male-walk-180 shield occupancy 3",
+      "passed": false
+    },
+    {
+      "name": "wood_bow-bow-tp-female-still-0 shield occupancy 0",
+      "passed": false
+    },
+    {
+      "name": "wood_bow-bow-tp-female-still-0 shield occupancy 3",
+      "passed": false
+    },
+    {
+      "name": "wood_bow-bow-tp-female-still-90 shield occupancy 0",
+      "passed": false
+    },
+    {
+      "name": "wood_bow-bow-tp-female-still-90 shield occupancy 3",
+      "passed": false
+    },
+    {
+      "name": "wood_bow-bow-tp-female-still-180 shield occupancy 0",
+      "passed": false
+    },
+    {
+      "name": "wood_bow-bow-tp-female-still-180 shield occupancy 3",
+      "passed": false
+    },
+    {
+      "name": "wood_bow-bow-tp-female-walk-0 shield occupancy 0",
+      "passed": false
+    },
+    {
+      "name": "wood_bow-bow-tp-female-walk-0 shield occupancy 3",
+      "passed": false
+    },
+    {
+      "name": "wood_bow-bow-tp-female-walk-90 shield occupancy 0",
+      "passed": false
+    },
+    {
+      "name": "wood_bow-bow-tp-female-walk-90 shield occupancy 3",
+      "passed": false
+    },
+    {
+      "name": "wood_bow-bow-tp-female-walk-180 shield occupancy 0",
+      "passed": false
+    },
+    {
+      "name": "wood_bow-bow-tp-female-walk-180 shield occupancy 3",
+      "passed": false
+    }
+  ]
+}

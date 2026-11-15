@@ -873,6 +873,18 @@ ownership 57, ownership UI 18, player window 7, icons 209, Item Lab 1040,
 presentations 3587 and 25 CTests. All 212 runtime substitutions are restored;
 the checkpoint retains the integrated report separately from the focused run.
 
+## All-item studio comparison gallery
+
+[Native gallery and corrections](studio-gallery-checkpoint/README.md) retain
+1260 actual reference/candidate PNGs, 70 individual comparison sheets and 16
+overview sheets. Five lit cameras, silhouette/gray/albedo and real-size small
+icons now cover every ID. The overview review exposed a hidden rest string and
+buried cooked-fat detail; the authored bow and cooked meat are corrected, with
+before/after sources and native proof. The final Release run passes 3560 gallery
+and studio checks; the focused bow/food run passes 596 presentation checks.
+Detailed remaining-item and world/carry review, publication and final performance
+acceptance remain. Production promotion is 0/70; capture success is not art approval.
+
 ## Acceptance contract
 
 Deterministic publication preserves author work and grips. Missing production

@@ -37,6 +37,7 @@ public:
   void SetMode(int mode);
   void SetScene(int scene);
   void SetActor(int actor);
+  void SetCamera(int camera);
   int GetScene() const { return Scene; }
   size_t GetSceneDrawCount(int panel) const { return SceneDraws[panel]; }
   bool SceneSourceMatches(int panel) const { return SceneSources[panel]; }

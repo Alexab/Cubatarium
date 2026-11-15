@@ -127,19 +127,7 @@ void UItemLabScreen::Build(UGuiContext &ctx)
   ActorButton->SetOnClick([this] { SetActor((Actor + 1) % 4); });
   CameraButton = add(std::make_unique<UGuiButton>(theme, std::string("Cam: ") +
                                                              Cameras[Camera]));
-  CameraButton->SetOnClick(
-      [this]
-      {
-        Camera = (Camera + 1) % 5;
-        CameraButton->SetLabel(std::string("Cam: ") + Cameras[Camera]);
-        const float yaw[] = {35, 0, 180, 90, 35},
-                    pitch[] = {25, 12, 12, 12, 75};
-        Yaw = yaw[Camera];
-        Pitch = pitch[Camera];
-        for (auto *view : Views)
-          view->SetAngles(Yaw, Pitch);
-        Dirty = true;
-      });
+  CameraButton->SetOnClick([this] { SetCamera((Camera + 1) % 5); });
   MotionButton = add(std::make_unique<UGuiButton>(theme, Motions[Motion]));
   MotionButton->SetOnClick(
       [this]
@@ -248,6 +236,19 @@ void UItemLabScreen::SetActor(int actor)
   Actor = std::clamp(actor, 0, 3);
   if (ActorButton)
     ActorButton->SetLabel(Actors[Actor]);
+  Dirty = true;
+}
+void UItemLabScreen::SetCamera(int camera)
+{
+  Camera = std::clamp(camera, 0, 4);
+  if (CameraButton)
+    CameraButton->SetLabel(std::string("Cam: ") + Cameras[Camera]);
+  const float yaw[] = {35, 0, 180, 90, 35}, pitch[] = {25, 12, 12, 12, 75};
+  Yaw = yaw[Camera];
+  Pitch = pitch[Camera];
+  for (auto *view : Views)
+    if (view)
+      view->SetAngles(Yaw, Pitch);
   Dirty = true;
 }
 GuiRect UItemLabScreen::GetSceneBounds() const

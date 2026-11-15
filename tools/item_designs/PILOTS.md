@@ -14,7 +14,7 @@ including lashed stone heads, forged tools, vessels, sewn leather and baked food
 | gold_sword | Bevelled asymmetric blade, divided guard, narrow warm-metal fuller on both sides and six-sided pommel | Final small-icon ornament review |
 | iron_head | Shallow ridged crown, raised face opening, brow band and cheek plates; forged steel | Eye clearance now checked on both body forms; full motion/world review remains |
 | leather_chest | Separate panels, straps, belt and open buckle; stitched leather and brass | Both body forms and motion |
-| wood_bow | Curved YZ members, wrapped grip, articulated fiber string and a byte-preserving component of the authored arrow | Nock/string and FP/TP palm contacts verified; real-input transitions/world review remain |
+| wood_bow | Curved YZ members, wrapped grip, separated braced string and a byte-preserving component of the authored arrow | Rest string clearance and nock/FP/TP contacts checked; real-input transitions/world review remain |
 | bucket | Open shell, rim, raised handle and cross-grip; metal and wood | Corrected FP grip, water and TP attachment |
 | shears | Crossing bevelled blades, two hollow loops, tangs and visible front/back hexagonal hinge pins | Native opening/cancellation checked; final finger-contact/world review remains |
 | apple | Authored unequal radial facets, short stem, veined leaf and clustered peel details | Final world/eating review |

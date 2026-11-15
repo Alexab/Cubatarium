@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "scope": "presentation_only",
+  "world": "CarryAimQA",
+  "staged_ids": [
+    "cooked_meat",
+    "iron_shield",
+    "wood_bow",
+    "wood_shield"
+  ],
+  "inspected_surface_ids": [
+    "cooked_meat",
+    "iron_shield",
+    "wood_bow",
+    "wood_shield"
+  ],
+  "presentation_checks": 596,
+  "restored_runtime_files": 14,
+  "executable_sha256": "5e1744354a5db6534bb731c425decd64d2cccc5e9a13de929f1f04b3e65e44ea"
+}

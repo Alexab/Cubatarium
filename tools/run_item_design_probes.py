@@ -57,7 +57,7 @@ def main():
     parser.add_argument('--fp-id',default='bucket')
     parser.add_argument('--fp-only',action='store_true',help='Presentation probe only; does not claim full native regression')
     parser.add_argument('--presentation-only',action='store_true',help='Native attachment/FP/loose inspection only; no gameplay regression claim')
-    parser.add_argument('--id',action='append',dest='selected',help='Limit candidate substitutions and presentation inspection to these authored IDs')
+    parser.add_argument('--id',action='append',dest='selected',help='Limit candidate substitutions and inspection; bow checks also include both shield candidates')
     args=parser.parse_args()
     if not args.world.endswith('QA') or '/' in args.world or '\\' in args.world:
         parser.error('Use a dedicated world ending in QA')
@@ -68,6 +68,11 @@ def main():
         if not args.presentation_only: parser.error('--id requires --presentation-only')
         if any(id not in ids for id in args.selected): parser.error('--id must have an authored design')
         ids=sorted(set(args.selected))
+        # Bow occupancy fixtures inspect both shield surface submissions. Keep
+        # their typed candidates present in a focused run, just as in the full
+        # catalog run; legacy shield draws use another submission interface.
+        if 'wood_bow' in ids:
+            ids=sorted(set(ids)|{'wood_shield','iron_shield'})
     summary_path=ROOT/'bin/items_acceptance'/('presentation-probe.json' if args.presentation_only else 'design-probe.json')
     summary_path.parent.mkdir(parents=True,exist_ok=True)
     summary_path.unlink(missing_ok=True)

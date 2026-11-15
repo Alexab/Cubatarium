@@ -26,10 +26,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--world', default='CarryAimQA')
     parser.add_argument('--skip-build', action='store_true', help='Reuse existing Release binaries; still build authored candidates and run checks')
+    parser.add_argument('--art-gallery', action='store_true', help='Also capture all-item native reference/candidate artistic comparison views')
     args = parser.parse_args()
     if not args.world.endswith('QA') or '/' in args.world or '\\' in args.world:
         parser.error('Use an existing dedicated QA world')
-    output = ROOT / 'bin/item_lab_diagnostics'
+    output = ROOT / ('bin/item_lab_art' if args.art_gallery else 'bin/item_lab_diagnostics')
     output.mkdir(parents=True, exist_ok=True)
     summary_path = output / 'summary.json'
     summary_path.unlink(missing_ok=True)
@@ -56,12 +57,24 @@ def main():
             if key.startswith('CUBA_') and ('QA' in key or key.startswith('CUBA_FLIGHT')):
                 env.pop(key)
         env['CUBA_ITEM_LAB_QA'] = str(report)
+        if args.art_gallery:
+            env['CUBA_ITEM_LAB_ART_QA'] = '1'
         run([sys.executable, 'tools/flight_sim_run.py', '--world', args.world,
-             '--require-existing-world', '--seconds', '12', '--process-timeout', str(240 + 6 * len(ids)),
+             '--require-existing-world', '--seconds', '12', '--process-timeout', str(240 + (12 if args.art_gallery else 6) * len(ids)),
              '--no-fly', '--no-hold-forward', '--idle-sec', '0', '--report', output / 'flight.json'], 'native-flight', env)
         native = json.loads(report.read_text(encoding='utf-8'))
         if native.get('passed') is not True or sorted(native.get('diagnostics', {})) != ids:
             raise ValueError('Native Item Lab failed or does not cover the whole catalog')
+        if args.art_gallery:
+            gallery = native.get('art_gallery', {})
+            if sorted(gallery) != ids or any(len(row.get('frames', [])) != 18 or not row.get('staged_candidate') for row in gallery.values()):
+                raise ValueError('Art gallery must cover every staged item and both sources in nine views')
+            frame_root = Path(str(report) + '.frames/art')
+            for row in gallery.values():
+                for name in row['frames']:
+                    if Path(name).name != name or not (frame_root / name).is_file():
+                        raise ValueError('Missing or unsafe art-gallery frame: ' + name)
+            result.update(art_gallery_frames=sum(len(row['frames']) for row in gallery.values()), artistic_acceptance='not evaluated by capture checks')
         result.update(passed=True, checks=len(native['checks']), catalog_ids=ids,
                       executable_sha256=hashlib.sha256((ROOT / 'bin/Cubatarium.exe').read_bytes()).hexdigest(),
                       report_sha256=hashlib.sha256(report.read_bytes()).hexdigest(),

@@ -91,7 +91,43 @@ parts:
   - 0
   - 90
   - 0
-- name: upper_limb
+- name: string_upper
+  material: edge
+  shape: bevel_box
+  size:
+  - 0.007
+  - 0.455411901
+  - 0.007
+  bevel: 0.00126
+  offset:
+  - 0
+  - 0.225
+  - 0.009999999999999998
+  rotation:
+  - -8.84181456
+  - 0
+  - 0
+  node: string_upper
+  fit_reference: false
+- name: string_lower
+  material: edge
+  shape: bevel_box
+  size:
+  - 0.007
+  - 0.455411901
+  - 0.007
+  bevel: 0.00126
+  offset:
+  - 0
+  - -0.225
+  - 0.009999999999999998
+  rotation:
+  - 8.84181456
+  - 0
+  - 0
+  node: string_lower
+  fit_reference: false
+- name: upper_limb_stave0
   material: wood
   shape: extrude
   contour:
@@ -101,9 +137,29 @@ parts:
     - 0.07
   - - 0.12
     - 0.28
-  - - 0.06
-    - 0.43
+  - - 0.085
+    - 0.28
+  depth: 0.04
+  offset:
+  - 0
+  - 0
+  - 0
+  rotation:
+  - 0
+  - 90
+  - 0
+  node: upper_limb
+- name: upper_limb_stave1
+  material: wood
+  shape: extrude
+  contour:
   - - 0.025
+    - 0.45
+  - - 0.085
+    - 0.28
+  - - 0.12
+    - 0.28
+  - - 0.045
     - 0.45
   depth: 0.04
   offset:
@@ -115,16 +171,14 @@ parts:
   - 90
   - 0
   node: upper_limb
-- name: lower_limb
+- name: lower_limb_stave0
   material: wood
   shape: extrude
   contour:
   - - -0.015
     - -0.07
-  - - 0.025
-    - -0.45
-  - - 0.06
-    - -0.43
+  - - 0.085
+    - -0.28
   - - 0.12
     - -0.28
   - - 0.025
@@ -139,42 +193,28 @@ parts:
   - 90
   - 0
   node: lower_limb
-- name: string_upper
-  material: edge
-  shape: bevel_box
-  size:
-  - 0.007
-  - 0.45
-  - 0.007
-  bevel: 0.00126
+- name: lower_limb_stave1
+  material: wood
+  shape: extrude
+  contour:
+  - - 0.025
+    - -0.45
+  - - 0.045
+    - -0.45
+  - - 0.12
+    - -0.28
+  - - 0.085
+    - -0.28
+  depth: 0.04
   offset:
   - 0
-  - 0.225
-  - -0.025
+  - 0
+  - 0
   rotation:
   - 0
+  - 90
   - 0
-  - 0
-  node: string_upper
-  fit_reference: false
-- name: string_lower
-  material: edge
-  shape: bevel_box
-  size:
-  - 0.007
-  - 0.45
-  - 0.007
-  bevel: 0.00126
-  offset:
-  - 0
-  - -0.225
-  - -0.025
-  rotation:
-  - 0
-  - 0
-  - 0
-  node: string_lower
-  fit_reference: false
+  node: lower_limb
 nodes:
   upper_limb:
     pivot:
@@ -190,23 +230,23 @@ nodes:
     pivot:
     - 0
     - 0
-    - -0.025
+    - 0.045
   string_upper:
     pivot:
     - 0
     - 0.225
-    - -0.025
+    - 0.009999999999999998
   string_lower:
     pivot:
     - 0
     - -0.225
-    - -0.025
+    - 0.009999999999999998
   nocked_arrow:
     parent: pull
     pivot:
     - 0
     - 0
-    - -0.025
+    - 0.045
 visual_bindings:
 - node: upper_limb
   channel: bow_charge
@@ -225,7 +265,7 @@ visual_bindings:
   translation_to:
   - 0
   - 0
-  - 0.30
+  - 0.23000000000000004
 - node: string_upper
   span:
     start_node: upper_limb
