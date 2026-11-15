@@ -38,8 +38,7 @@ void UGuiLabel::Draw(UGuiRenderer &renderer)
   }
   if (InfoBadge)
   {
-    fprintf(stderr, "[badge] '%s' bounds=%d,%d %dx%d\n", Text.c_str(),
-            Bounds.X, Bounds.Y, Bounds.W, Bounds.H);
+    renderer.PushClipRect(Bounds);
     const int pad = std::max(2, Theme->Padding / 2);
     const int w = renderer.MeasureTextWidth(Text) + pad * 2;
     const int x = InfoBadgeAlignRight ? Bounds.X + Bounds.W - w : Bounds.X;
@@ -48,6 +47,7 @@ void UGuiLabel::Draw(UGuiRenderer &renderer)
     const int textY =
         Bounds.Y + (Bounds.H - renderer.MeasureTextHeight()) / 2;
     renderer.DrawText(Text, x + pad, textY, glm::vec3(0.0f));
+    renderer.PopClipRect();
     return;
   }
   if (DrawBackground)

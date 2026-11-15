@@ -928,6 +928,15 @@ the bow produces a real arrow which remains after contact. This closes that
 specific transition gap; utility success pulses, creature cargo, the full display
 matrix and final performance acceptance remain separate gates.
 
+## HUD display matrix corrected
+
+[HUD footer correction](hud-footer-checkpoint/README.md) removes the large-scale
+version/hotbar overlap. Both resolutions and all three UI scales pass real bow
+input captures (48 stages / 330 checks). Badge clipping and removal of the
+per-frame debug trace are included. The full Release regression passes again.
+This closes the named HUD defect, not the remaining Item Lab/display-lighting,
+creature-cargo, utility-pulse or final performance gates.
+
 ## Acceptance contract
 
 Deterministic publication preserves author work and grips. Missing production

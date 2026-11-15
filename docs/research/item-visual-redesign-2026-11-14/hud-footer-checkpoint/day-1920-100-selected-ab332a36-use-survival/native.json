@@ -1,0 +1,485 @@
+{
+  "checks": [
+    {
+      "name": "wood_bow equipped use changes finite count only on successful completion",
+      "passed": true
+    },
+    {
+      "name": "wood_bow equipped use preserves the selected stack/instance identity",
+      "passed": true
+    },
+    {
+      "name": "wood_bow equipped bow spends ammunition exactly once and respects mode policy",
+      "passed": true
+    },
+    {
+      "name": "wood_bow equipped only the completed bow input creates a persistent arrow",
+      "passed": true
+    },
+    {
+      "name": "wood_bow equipped idle, completion and cancellation clear the use phase",
+      "passed": true
+    },
+    {
+      "name": "wood_bow equipped actual FP draw consumes the authoritative use phase",
+      "passed": true
+    },
+    {
+      "name": "wood_bow equipped active item is drawn during real use input",
+      "passed": true
+    },
+    {
+      "name": "wood_bow partial use changes finite count only on successful completion",
+      "passed": true
+    },
+    {
+      "name": "wood_bow partial use preserves the selected stack/instance identity",
+      "passed": true
+    },
+    {
+      "name": "wood_bow partial bow spends ammunition exactly once and respects mode policy",
+      "passed": true
+    },
+    {
+      "name": "wood_bow partial only the completed bow input creates a persistent arrow",
+      "passed": true
+    },
+    {
+      "name": "wood_bow partial held input advances a partial visual phase",
+      "passed": true
+    },
+    {
+      "name": "wood_bow partial actual FP draw consumes the authoritative use phase",
+      "passed": true
+    },
+    {
+      "name": "wood_bow partial active item is drawn during real use input",
+      "passed": true
+    },
+    {
+      "name": "wood_bow canceled use changes finite count only on successful completion",
+      "passed": true
+    },
+    {
+      "name": "wood_bow canceled use preserves the selected stack/instance identity",
+      "passed": true
+    },
+    {
+      "name": "wood_bow canceled bow spends ammunition exactly once and respects mode policy",
+      "passed": true
+    },
+    {
+      "name": "wood_bow canceled only the completed bow input creates a persistent arrow",
+      "passed": true
+    },
+    {
+      "name": "wood_bow canceled idle, completion and cancellation clear the use phase",
+      "passed": true
+    },
+    {
+      "name": "wood_bow canceled routed hotbar key selects the empty cancellation slot",
+      "passed": true
+    },
+    {
+      "name": "wood_bow restored use changes finite count only on successful completion",
+      "passed": true
+    },
+    {
+      "name": "wood_bow restored use preserves the selected stack/instance identity",
+      "passed": true
+    },
+    {
+      "name": "wood_bow restored bow spends ammunition exactly once and respects mode policy",
+      "passed": true
+    },
+    {
+      "name": "wood_bow restored only the completed bow input creates a persistent arrow",
+      "passed": true
+    },
+    {
+      "name": "wood_bow restored idle, completion and cancellation clear the use phase",
+      "passed": true
+    },
+    {
+      "name": "wood_bow restored actual FP draw consumes the authoritative use phase",
+      "passed": true
+    },
+    {
+      "name": "wood_bow restored active item is drawn during real use input",
+      "passed": true
+    },
+    {
+      "name": "wood_bow ready use changes finite count only on successful completion",
+      "passed": true
+    },
+    {
+      "name": "wood_bow ready use preserves the selected stack/instance identity",
+      "passed": true
+    },
+    {
+      "name": "wood_bow ready bow spends ammunition exactly once and respects mode policy",
+      "passed": true
+    },
+    {
+      "name": "wood_bow ready only the completed bow input creates a persistent arrow",
+      "passed": true
+    },
+    {
+      "name": "wood_bow ready fully held input reaches its ready phase",
+      "passed": true
+    },
+    {
+      "name": "wood_bow ready actual FP draw consumes the authoritative use phase",
+      "passed": true
+    },
+    {
+      "name": "wood_bow ready active item is drawn during real use input",
+      "passed": true
+    },
+    {
+      "name": "wood_bow ready mouse release creates a flying arrow before collision resolution",
+      "passed": true
+    },
+    {
+      "name": "wood_bow completed use changes finite count only on successful completion",
+      "passed": true
+    },
+    {
+      "name": "wood_bow completed use preserves the selected stack/instance identity",
+      "passed": true
+    },
+    {
+      "name": "wood_bow completed bow spends ammunition exactly once and respects mode policy",
+      "passed": true
+    },
+    {
+      "name": "wood_bow completed only the completed bow input creates a persistent arrow",
+      "passed": true
+    },
+    {
+      "name": "wood_bow completed idle, completion and cancellation clear the use phase",
+      "passed": true
+    },
+    {
+      "name": "wood_bow completed actual FP draw consumes the authoritative use phase",
+      "passed": true
+    },
+    {
+      "name": "wood_bow completed active item is drawn during real use input",
+      "passed": true
+    },
+    {
+      "name": "wood_bow restarted use changes finite count only on successful completion",
+      "passed": true
+    },
+    {
+      "name": "wood_bow restarted use preserves the selected stack/instance identity",
+      "passed": true
+    },
+    {
+      "name": "wood_bow restarted bow spends ammunition exactly once and respects mode policy",
+      "passed": true
+    },
+    {
+      "name": "wood_bow restarted only the completed bow input creates a persistent arrow",
+      "passed": true
+    },
+    {
+      "name": "wood_bow restarted held input advances a partial visual phase",
+      "passed": true
+    },
+    {
+      "name": "wood_bow restarted actual FP draw consumes the authoritative use phase",
+      "passed": true
+    },
+    {
+      "name": "wood_bow restarted active item is drawn during real use input",
+      "passed": true
+    },
+    {
+      "name": "wood_bow canceled-again use changes finite count only on successful completion",
+      "passed": true
+    },
+    {
+      "name": "wood_bow canceled-again use preserves the selected stack/instance identity",
+      "passed": true
+    },
+    {
+      "name": "wood_bow canceled-again bow spends ammunition exactly once and respects mode policy",
+      "passed": true
+    },
+    {
+      "name": "wood_bow canceled-again only the completed bow input creates a persistent arrow",
+      "passed": true
+    },
+    {
+      "name": "wood_bow canceled-again idle, completion and cancellation clear the use phase",
+      "passed": true
+    },
+    {
+      "name": "wood_bow canceled-again routed hotbar key selects the empty cancellation slot",
+      "passed": true
+    }
+  ],
+  "frames": [
+    {
+      "active_count": 1,
+      "active_item": "wood_bow",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_bow-equipped.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 0,
+          "has_ammo": true,
+          "has_water": false,
+          "id": "wood_bow",
+          "use_phase": 0.0,
+          "visible_primitives": 5
+        }
+      ],
+      "id": "wood_bow",
+      "left_palm_ndc_gap": 0.9850373864173889,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 0.30980271100997925,
+      "stage": "equipped",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 1,
+      "active_item": "wood_bow",
+      "bow_charge": 0.16447217762470245,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_bow-partial.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.16447217762470245,
+          "contents_units": 0,
+          "has_ammo": true,
+          "has_water": false,
+          "id": "wood_bow",
+          "use_phase": 0.0,
+          "visible_primitives": 9
+        }
+      ],
+      "id": "wood_bow",
+      "left_palm_ndc_gap": 0.33320292830467224,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 0.3051393926143646,
+      "stage": "partial",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_bow-canceled.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "wood_bow",
+      "left_palm_ndc_gap": 0.9899037480354309,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 0.9022864103317261,
+      "stage": "canceled",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 1,
+      "active_item": "wood_bow",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_bow-restored.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 0,
+          "has_ammo": true,
+          "has_water": false,
+          "id": "wood_bow",
+          "use_phase": 0.0,
+          "visible_primitives": 5
+        }
+      ],
+      "id": "wood_bow",
+      "left_palm_ndc_gap": 0.9784281849861145,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 0.30235451459884644,
+      "stage": "restored",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 1,
+      "active_item": "wood_bow",
+      "bow_charge": 1.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_bow-ready.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 1.0,
+          "contents_units": 0,
+          "has_ammo": true,
+          "has_water": false,
+          "id": "wood_bow",
+          "use_phase": 0.0,
+          "visible_primitives": 9
+        }
+      ],
+      "id": "wood_bow",
+      "left_palm_ndc_gap": 0.4137784242630005,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 0.29987505078315735,
+      "stage": "ready",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 1,
+      "active_item": "wood_bow",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_bow-completed.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 0,
+          "has_ammo": true,
+          "has_water": false,
+          "id": "wood_bow",
+          "use_phase": 0.0,
+          "visible_primitives": 5
+        }
+      ],
+      "id": "wood_bow",
+      "left_palm_ndc_gap": 0.9805273413658142,
+      "matching_body": false,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.3059576749801636,
+      "stage": "completed",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 1,
+      "active_item": "wood_bow",
+      "bow_charge": 0.16733945906162262,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_bow-restarted.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.16733945906162262,
+          "contents_units": 0,
+          "has_ammo": true,
+          "has_water": false,
+          "id": "wood_bow",
+          "use_phase": 0.0,
+          "visible_primitives": 9
+        }
+      ],
+      "id": "wood_bow",
+      "left_palm_ndc_gap": 0.3206980526447296,
+      "matching_body": false,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.2935526967048645,
+      "stage": "restarted",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_bow-canceled-again.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "wood_bow",
+      "left_palm_ndc_gap": 0.9870092868804932,
+      "matching_body": false,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.8985525965690613,
+      "stage": "canceled-again",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0
+    }
+  ],
+  "passed": true,
+  "request": {
+    "body": "male",
+    "height": 1080,
+    "ids": [
+      "wood_bow"
+    ],
+    "interaction": "use",
+    "light": "day",
+    "mode": "survival",
+    "perspective": "first",
+    "scale": 1.0,
+    "width": 1920
+  },
+  "scope": "actual world FP and physical drop rendering"
+}

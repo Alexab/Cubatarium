@@ -25,3 +25,6 @@ performance acceptance. The long HUD version badge still overlaps slots at
 UI 200%; it remains an explicit defect to fix before final display acceptance.
 World, runtime models, authors, input configuration and measured sources are
 verified unchanged/restored by each runner summary.
+
+The historical UI 200% badge overlap above is now resolved by the
+[HUD footer checkpoint](../hud-footer-checkpoint/README.md).

@@ -188,6 +188,15 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
 
+      - name: Native food drink and bow input
+        if: github.event_name == 'workflow_dispatch' && inputs.native_items_qa
+        shell: pwsh
+        run: |
+          foreach ($qaMode in @('creative', 'survival')) {
+            python tools/run_item_world_visual_qa.py --skip-build --world OwnershipCIQA --interaction use --mode $qaMode
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
       - name: Native finite item carry and throw input
         if: github.event_name == 'workflow_dispatch' && inputs.native_items_qa
         shell: pwsh

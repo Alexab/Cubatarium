@@ -1,0 +1,10 @@
+{
+  "wood_bow-equipped.png": "f327f8f049e53eb72f44949f674a4882bc283cf1d0f662e97cb029e50a459cec",
+  "wood_bow-partial.png": "2d1595a20514720ac45f9a446b33b57ad04762c276f873f058b4b0d6832dfab9",
+  "wood_bow-canceled.png": "6770e44647fa63a2cea229945bfd09b0933db165b5e1082fa18e7f984df1c92c",
+  "wood_bow-restored.png": "9ee22cbdf4deafe921ef65787213194a054bc3b6dcb2457857ab63bd031591bf",
+  "wood_bow-ready.png": "0ea32b92b8e10ff152fe25a2fa822f1e3b46b14e5905cc7ee84e3b4da5e03ed3",
+  "wood_bow-completed.png": "18bb1c7c46e2dcbfe9f0bfe05bfc5733b7d8beb50c5a979ec6da03f1c01e4f69",
+  "wood_bow-restarted.png": "632ecf306fa3282e7bf74a28f40019542868f0912c1f0df572b1b1254dac7db5",
+  "wood_bow-canceled-again.png": "aad0db00993cc7cb7dfeeaf353b12ebc0a2c7c3b0e6027480dfe87a663bc5476"
+}

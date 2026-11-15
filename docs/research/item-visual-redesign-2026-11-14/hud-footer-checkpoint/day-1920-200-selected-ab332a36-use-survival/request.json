@@ -1,0 +1,13 @@
+{
+  "ids": [
+    "wood_bow"
+  ],
+  "light": "day",
+  "width": 1920,
+  "height": 1080,
+  "scale": 2.0,
+  "interaction": "use",
+  "perspective": "first",
+  "mode": "survival",
+  "body": "male"
+}

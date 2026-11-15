@@ -89,7 +89,8 @@ def main():
                   'src/Creatures/Visual/CreatureDrawContext.h', 'src/Creatures/Visual/CreatureVisual.h',
                   'src/Creatures/Visual/CreatureVisualBase.cpp', 'src/Creatures/Core/Creature.h',
                   'src/App/Platform/InputManager.cpp', 'src/App/Platform/WindowManager.cpp',
-                  'src/App/Input/InputRouter.cpp', 'src/Blocks/Input/BlockInputController.cpp']})
+                  'src/App/Input/InputRouter.cpp', 'src/Blocks/Input/BlockInputController.cpp',
+                  'src/Gui/Screens/InGameHudScreen.cpp', 'src/Gui/Widgets/GuiLabel.cpp']})
     backups = ROOT/'build/item-world-visual-backups'
     backups.mkdir(exist_ok=True)
     temporary = Path(tempfile.mkdtemp(prefix='snapshot-', dir=backups))

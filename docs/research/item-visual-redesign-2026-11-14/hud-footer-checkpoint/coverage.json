@@ -1,0 +1,48 @@
+{
+  "passed": true,
+  "total_frames": 48,
+  "cases": [
+    {
+      "width": 1280,
+      "height": 720,
+      "ui_scale_percent": 100,
+      "frames": 8,
+      "checks": 55
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "ui_scale_percent": 150,
+      "frames": 8,
+      "checks": 55
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "ui_scale_percent": 200,
+      "frames": 8,
+      "checks": 55
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "ui_scale_percent": 100,
+      "frames": 8,
+      "checks": 55
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "ui_scale_percent": 150,
+      "frames": 8,
+      "checks": 55
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "ui_scale_percent": 200,
+      "frames": 8,
+      "checks": 55
+    }
+  ]
+}
