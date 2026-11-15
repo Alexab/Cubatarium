@@ -1,7 +1,7 @@
 #include "Audio/AudioDirector.h"
 
-#include "Audio/AudioApi.h"
 #include "App/Platform/Log.h"
+#include "Audio/AudioApi.h"
 #include "ThirdParty/miniaudio.h"
 
 #include <algorithm>
@@ -104,7 +104,8 @@ std::vector<std::string> ListMusicFiles(const std::filesystem::path &root)
   for (; !error && it != end; it.increment(error))
   {
     std::error_code fileError;
-    if (!it->is_regular_file(fileError) || fileError || !IsMusicFile(it->path()))
+    if (!it->is_regular_file(fileError) || fileError ||
+        !IsMusicFile(it->path()))
     {
       continue;
     }
@@ -120,7 +121,8 @@ std::vector<std::string> ListMusicFiles(const std::filesystem::path &root)
   return files;
 }
 
-bool ContainsPath(const std::vector<std::string> &paths, const std::string &path)
+bool ContainsPath(const std::vector<std::string> &paths,
+                  const std::string &path)
 {
   return std::find(paths.begin(), paths.end(), path) != paths.end();
 }
@@ -174,7 +176,8 @@ bool StartLoopCrossfade(UAudioEngine &engine, ma_engine *maEngine,
   }
   const int freeSlot = loop.Active < 0 ? 0 : 1 - loop.Active;
   loop.FreeSlot(freeSlot);
-  ma_sound_group *group = static_cast<ma_sound_group *>(engine.GetRawGroup(bus));
+  ma_sound_group *group =
+      static_cast<ma_sound_group *>(engine.GetRawGroup(bus));
   const ma_sound_flags flags = static_cast<ma_sound_flags>(
       MA_SOUND_FLAG_STREAM | MA_SOUND_FLAG_NO_SPATIALIZATION);
   const ma_result result =
@@ -283,17 +286,15 @@ const char *ArchetypeKey(std::uint8_t value)
   }
 }
 
-const CreatureSoundDefaultDef *
-FindCreatureFlavor(std::uint8_t archetype)
+const CreatureSoundDefaultDef *FindCreatureFlavor(std::uint8_t archetype)
 {
   if (archetype == 255)
   {
     return nullptr;
   }
   const UMaterialSoundMap *materialMap = GetAudioMaterialMap();
-  return materialMap
-             ? materialMap->FindCreatureDefault(ArchetypeKey(archetype))
-             : nullptr;
+  return materialMap ? materialMap->FindCreatureDefault(ArchetypeKey(archetype))
+                     : nullptr;
 }
 
 /// Last-resort set per event kind when no material/creature mapping hit —
@@ -433,21 +434,17 @@ void UAudioDirector::LoadContent()
   {
     return;
   }
-  LoadAudioMaterialMap(
-      (ContentAudioDir / "material_sounds.json").string());
+  LoadAudioMaterialMap((ContentAudioDir / "material_sounds.json").string());
   if (!MusicManifest.LoadFromFile(
           (ContentAudioDir / "music_manifest.json").string()))
   {
-    CubatariumLogInfo("Audio",
-                      "music: no manifest — running without music");
+    CubatariumLogInfo("Audio", "music: no manifest — running without music");
   }
 
-  const std::size_t usableSets =
-      Bank.Init(&Engine, Manifest, SoundsRoot);
-  CubatariumLogInfo("Audio",
-                    "sound bank: " + std::to_string(usableSets) + "/" +
-                        std::to_string(Manifest.GetSetCount()) +
-                        " sets with files");
+  const std::size_t usableSets = Bank.Init(&Engine, Manifest, SoundsRoot);
+  CubatariumLogInfo("Audio", "sound bank: " + std::to_string(usableSets) + "/" +
+                                 std::to_string(Manifest.GetSetCount()) +
+                                 " sets with files");
   if (!Hk)
   {
     Hk = new HousekeepingState();
@@ -481,6 +478,8 @@ void UAudioDirector::EnsureEngine(const AudioSettings &settings)
   if (Engine.IsReady())
   {
     ResetHousekeeping();
+    // Voices refer to the engine's node graph and must be freed first.
+    Bank.Shutdown();
     Engine.Shutdown();
     ContentLoaded = false;
   }
@@ -508,8 +507,8 @@ std::uint32_t UAudioDirector::ResolveEventSet(const UAudioEvent &event) const
         break;
       case AudioEventKind::DigComplete:
       case AudioEventKind::Place:
-        setName = material->DugSet.empty() ? material->DigSet
-                                           : material->DugSet;
+        setName =
+            material->DugSet.empty() ? material->DigSet : material->DugSet;
         break;
       default:
         break;
@@ -550,9 +549,9 @@ void UAudioDirector::Run()
   std::vector<UAudioEvent> drained;
   while (Running.load())
   {
-    NowSec = std::chrono::duration<float>(
-                 std::chrono::steady_clock::now() - start)
-                 .count();
+    NowSec =
+        std::chrono::duration<float>(std::chrono::steady_clock::now() - start)
+            .count();
     const AudioSettings settings = ReadSettingsSnapshot();
     EnsureEngine(settings);
     if (Engine.IsReady())
@@ -581,6 +580,7 @@ void UAudioDirector::Run()
     TickHousekeeping(static_cast<float>(kIdleTickMs) / 1000.f);
   }
   ResetHousekeeping();
+  Bank.Shutdown();
   if (Engine.IsReady())
   {
     Engine.Shutdown();
@@ -670,8 +670,7 @@ void UAudioDirector::TickMusic(const AudioAmbienceSnapshot &amb, float fadeStep)
     Hk->PlayPos = 0;
     Hk->MusicGiveUp = false;
     Hk->Unopenable.clear();
-    CubatariumLogInfo("Audio", "music: context '" + Hk->Context +
-                                   "' tracks=" +
+    CubatariumLogInfo("Audio", "music: context '" + Hk->Context + "' tracks=" +
                                    std::to_string(Hk->Playlist.size()));
     if (Hk->Playlist.empty())
     {
@@ -680,9 +679,9 @@ void UAudioDirector::TickMusic(const AudioAmbienceSnapshot &amb, float fadeStep)
   }
   if (!Hk->Playlist.empty() && !Hk->MusicGiveUp)
   {
-    const bool finished =
-        Hk->Music.Active >= 0 && Hk->Music.Ready[Hk->Music.Active] &&
-        ma_sound_at_end(&Hk->Music.Slots[Hk->Music.Active]);
+    const bool finished = Hk->Music.Active >= 0 &&
+                          Hk->Music.Ready[Hk->Music.Active] &&
+                          ma_sound_at_end(&Hk->Music.Slots[Hk->Music.Active]);
     const bool idle = Hk->Music.Active < 0 && Hk->Music.FadingOut < 0 &&
                       Hk->Music.FadingIn < 0;
     if (selectionChanged || finished || idle)
@@ -775,9 +774,9 @@ void UAudioDirector::TickHousekeeping(float dt)
       {
         Hk->LastBiomeId = amb.BiomeId;
         CubatariumLogInfo(
-            "Audio", std::string("biome '") + amb.BiomeId + "' ambience: " +
-                         (targetSet.empty() ? std::string("(none)")
-                                            : targetSet));
+            "Audio",
+            std::string("biome '") + amb.BiomeId + "' ambience: " +
+                (targetSet.empty() ? std::string("(none)") : targetSet));
       }
     }
     if (!targetSet.empty())
@@ -877,8 +876,8 @@ void UAudioDirector::TickHousekeeping(float dt)
       if (!pool.empty())
       {
         const std::uint32_t id =
-            pool[std::uniform_int_distribution<std::size_t>(
-                0, pool.size() - 1)(Random)];
+            pool[std::uniform_int_distribution<std::size_t>(0, pool.size() -
+                                                                   1)(Random)];
         const AudioListenerSnapshot listener = UAudioApi::ReadListener();
         std::uniform_real_distribution<float> offset(-8.f, 8.f);
         Bank.Play(id, listener.X + offset(Random),

@@ -97,6 +97,11 @@ LoadItemRenderAsset(const std::filesystem::path &path,
 std::shared_ptr<const ItemRenderAsset>
 FindItemSurfaceAsset(const std::filesystem::path &path, uint64_t revision = 0);
 void ClearItemSurfaceAssets();
+struct ItemAssetLookupStats
+{
+  uint64_t FastHits{0}, CanonicalResolutions{0};
+};
+ItemAssetLookupStats GetItemAssetLookupStats();
 glm::mat4 ApplyItemHandProfile(const glm::mat4 &root, const glm::vec3 &socket,
                                const ItemGripProfile &profile, bool left);
 struct ItemVisualState

@@ -752,7 +752,8 @@ void UWindowManager::ApplyPresentSettings()
   {
     return;
   }
-  const bool vsync = Core->GetRenderSettings().VSync;
+  const bool vsync =
+      Core->GetRenderSettings().VSync && !std::getenv("CUBA_ITEM_PERF_QA");
   const int interval = vsync ? 1 : 0;
   glfwSwapInterval(interval);
   CubatariumLogInfo("Window", std::string("ApplyPresentSettings vsync=") +
@@ -1093,6 +1094,7 @@ void UWindowManager::RecordFrameTiming(double swap_wait_ms,
     UCreaturePassTimingProbe::CompleteWindowFrame(frame_wall_ms, swap_wait_ms);
     UFramePerfMonitor::OnInGameFrame(*World, swap_wait_ms, interval,
                                      frame_wall_ms);
+    Application->RecordItemPerformanceFrame(frame_wall_ms, swap_wait_ms);
   }
 }
 

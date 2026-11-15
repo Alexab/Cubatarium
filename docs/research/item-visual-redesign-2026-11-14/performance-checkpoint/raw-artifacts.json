@@ -1,0 +1,194 @@
+{
+  "bin\\items_performance\\fp-0-baseline\\frame-benchmark.json": {
+    "sha256": "470d17fb58a94a73015d9c6a8e6f266ffc94f72f57c64957b8739c71201ad12e",
+    "bytes": 183318
+  },
+  "bin\\items_performance\\fp-0-baseline\\creature-pass.jsonl": {
+    "sha256": "fe250ec2bc1e5c7e8e281bf0f23f6dce89ff072a189a56cf21f445002e7bd7b4",
+    "bytes": 534394
+  },
+  "bin\\items_performance\\fp-0-candidate\\frame-benchmark.json": {
+    "sha256": "801979a9769d59f10767bd16f457c5d5880a82cdbb4a0a5766a32d03245c4521",
+    "bytes": 178276
+  },
+  "bin\\items_performance\\fp-0-candidate\\creature-pass.jsonl": {
+    "sha256": "47a298bf2b03763d5282bb7258b8179b17b77c1accb32d6cdb6a637c0f6ef0bb",
+    "bytes": 516499
+  },
+  "bin\\items_performance\\fp-1-candidate\\frame-benchmark.json": {
+    "sha256": "b86758cf097db5a1f36ea55cafa3cb707017bd7bc9b982d42906e2174898f490",
+    "bytes": 176738
+  },
+  "bin\\items_performance\\fp-1-candidate\\creature-pass.jsonl": {
+    "sha256": "4acd9abf8f5109c33934d92ed6b836a8eaced680671e1cded53f6ab97d683b95",
+    "bytes": 514687
+  },
+  "bin\\items_performance\\fp-1-baseline\\frame-benchmark.json": {
+    "sha256": "5e6a609008a7350b6e832751529c80a4184198239de68d4045b0af3543ba74cd",
+    "bytes": 187456
+  },
+  "bin\\items_performance\\fp-1-baseline\\creature-pass.jsonl": {
+    "sha256": "cb122a8cd62cdc29d6f375e21d19f42671fef7ee4a756a4f1455b90e18b0f8ef",
+    "bytes": 540949
+  },
+  "bin\\items_performance\\fp-2-baseline\\frame-benchmark.json": {
+    "sha256": "8e9a0dd1d3bbca772019d0defaf50803b6c0afef32555eba862ddd1cebea0d81",
+    "bytes": 179453
+  },
+  "bin\\items_performance\\fp-2-baseline\\creature-pass.jsonl": {
+    "sha256": "09b11c7fff5082d5084dc25a64753b0764ad89498330482c28a0aae2984ab2b6",
+    "bytes": 524959
+  },
+  "bin\\items_performance\\fp-2-candidate\\frame-benchmark.json": {
+    "sha256": "eec70d67b88310f92ad5af77101e9ad40edd219ee66d26b820857cf676f72dff",
+    "bytes": 184594
+  },
+  "bin\\items_performance\\fp-2-candidate\\creature-pass.jsonl": {
+    "sha256": "02afd42922c7e3edc8f4e93de23e120795b6048fdd81e90b703e9a7cacccddd9",
+    "bytes": 533506
+  },
+  "bin\\items_performance\\armor-0-baseline\\frame-benchmark.json": {
+    "sha256": "cc5ad9ed54274e30a078963c6dc8853209fc5c85607a11e39f102428fc145588",
+    "bytes": 179663
+  },
+  "bin\\items_performance\\armor-0-baseline\\creature-pass.jsonl": {
+    "sha256": "280fb8a6ae821b1f2a0cb8e47d484a9e92a08f68fae44d52e6ae97df6a00fb85",
+    "bytes": 543769
+  },
+  "bin\\items_performance\\armor-0-candidate\\frame-benchmark.json": {
+    "sha256": "b590ae422f08d07a9d0ce85899bf411c2e24000f22b18bfffa2a98ba34fae254",
+    "bytes": 175255
+  },
+  "bin\\items_performance\\armor-0-candidate\\creature-pass.jsonl": {
+    "sha256": "32749074d002e33506aa61fd62c2ea0e341887f0359bc438be4f998d72849852",
+    "bytes": 528432
+  },
+  "bin\\items_performance\\armor-1-candidate\\frame-benchmark.json": {
+    "sha256": "b74cf678ced4c2952760f11d9843a24ba5a169e8d249f25bfa840fa39d10bb0e",
+    "bytes": 178246
+  },
+  "bin\\items_performance\\armor-1-candidate\\creature-pass.jsonl": {
+    "sha256": "c84890510dd2f81ed84d89f0f3490cf6e4b738f2f6924ee0881546de73e225c5",
+    "bytes": 535599
+  },
+  "bin\\items_performance\\armor-1-baseline\\frame-benchmark.json": {
+    "sha256": "61b34a6cabc24a12014c2dad71fe805743b0d200547a5639a7df1c80082298ec",
+    "bytes": 182206
+  },
+  "bin\\items_performance\\armor-1-baseline\\creature-pass.jsonl": {
+    "sha256": "bca63a9298e6fd94bd6724447068ddeaf966b385cc2cb367ab1369ed09d52111",
+    "bytes": 551736
+  },
+  "bin\\items_performance\\armor-2-baseline\\frame-benchmark.json": {
+    "sha256": "37de28b397f2c8404ad7cb835e04e0dd38c067cc07b5167d2e94d22c780ceedb",
+    "bytes": 175144
+  },
+  "bin\\items_performance\\armor-2-baseline\\creature-pass.jsonl": {
+    "sha256": "2201699161607bbb1645585eff260bcf8ac9bf5e147d1439fa4f4668b7c9414d",
+    "bytes": 532854
+  },
+  "bin\\items_performance\\armor-2-candidate\\frame-benchmark.json": {
+    "sha256": "ab92a298f4f59960d702a73021dfe9cf15791764b96a072bf1d2b1cbad94b8df",
+    "bytes": 177082
+  },
+  "bin\\items_performance\\armor-2-candidate\\creature-pass.jsonl": {
+    "sha256": "4506b2d6956f83051250c7473bb331e40534b34057ef74cd6e96c54c58526564",
+    "bytes": 538065
+  },
+  "bin\\items_performance\\drops-0-baseline\\frame-benchmark.json": {
+    "sha256": "b99688594df86c4be449ef6eef2e3d1e09aa22e027c3c80ff5379fca2da6d083",
+    "bytes": 83571
+  },
+  "bin\\items_performance\\drops-0-baseline\\creature-pass.jsonl": {
+    "sha256": "7f3ce49b4229a35f7097bd71e0813c19a6d91da715bfd18127569ae585dc1a87",
+    "bytes": 227368
+  },
+  "bin\\items_performance\\drops-0-candidate\\frame-benchmark.json": {
+    "sha256": "e7b51906faa44b032917b0dea24af4b2cd690499142c1a47341bf71c558a356c",
+    "bytes": 136436
+  },
+  "bin\\items_performance\\drops-0-candidate\\creature-pass.jsonl": {
+    "sha256": "804a3f2b4d18450a86d79442f74e102133597d05ed59de09f0c10b31a7c67609",
+    "bytes": 369993
+  },
+  "bin\\items_performance\\drops-1-candidate\\frame-benchmark.json": {
+    "sha256": "5955f37af6698d14c5fde0319e8d191ed44b9a2c72ff92b2457cbfb986dd7fef",
+    "bytes": 138118
+  },
+  "bin\\items_performance\\drops-1-candidate\\creature-pass.jsonl": {
+    "sha256": "a3383ab30835124b73c8f75863462529fab86857e8acffe1b5f8b184f7c7894a",
+    "bytes": 370377
+  },
+  "bin\\items_performance\\drops-1-baseline\\frame-benchmark.json": {
+    "sha256": "8695a6cbbd4c824de64adde8144e581274cf4c41c3c3cc1dc14ece9ad318b3ec",
+    "bytes": 87222
+  },
+  "bin\\items_performance\\drops-1-baseline\\creature-pass.jsonl": {
+    "sha256": "fdeb4981db69f4e032ebf68fd071458ba62445ca6a06425acbee0b6f5724544d",
+    "bytes": 246780
+  },
+  "bin\\items_performance\\drops-2-baseline\\frame-benchmark.json": {
+    "sha256": "61fa14a352db84186eab6ebefa1d25d8e23a16d97322753bc44dd5ab15c4bb99",
+    "bytes": 119046
+  },
+  "bin\\items_performance\\drops-2-baseline\\creature-pass.jsonl": {
+    "sha256": "8850571e5e608f79802b5f5c24a453661cba6984ca3ab0fc0fdbb3f159b862ec",
+    "bytes": 292440
+  },
+  "bin\\items_performance\\drops-2-candidate\\frame-benchmark.json": {
+    "sha256": "0c25b6b32039c880befc76566cca94ccde8f0e138ecec8c2c9ccf01d714c4eea",
+    "bytes": 137096
+  },
+  "bin\\items_performance\\drops-2-candidate\\creature-pass.jsonl": {
+    "sha256": "39e9d42aa92ea6c632415d51628c11f446deb60ec957ddce8dbaabde8e4b2117",
+    "bytes": 356574
+  },
+  "bin\\items_performance\\catalog-0-baseline\\frame-benchmark.json": {
+    "sha256": "882ca46edee6218615f83e4864f0150fe2e3447c90678257583f7f9af8da02bf",
+    "bytes": 173687
+  },
+  "bin\\items_performance\\catalog-0-baseline\\creature-pass.jsonl": {
+    "sha256": "696cfe99da0f95b8c3abb13845cd78499a2fb83e4f3c49322043affa012570f8",
+    "bytes": 516197
+  },
+  "bin\\items_performance\\catalog-0-candidate\\frame-benchmark.json": {
+    "sha256": "41f6641d2b7b48ad8c355f2a48f0e19e1cf0b8c0a37c310555291ae4c5948aa0",
+    "bytes": 171998
+  },
+  "bin\\items_performance\\catalog-0-candidate\\creature-pass.jsonl": {
+    "sha256": "bf6a543a4edea0f181aba2df21dc0408b86acb6927bd4cd2ce9b683ffeb7813e",
+    "bytes": 520621
+  },
+  "bin\\items_performance\\catalog-1-candidate\\frame-benchmark.json": {
+    "sha256": "143fdd10e035bc3b6b201abce22a4ecdee4bbbcb6c90c6cec0f0c9fd7ff777ae",
+    "bytes": 166160
+  },
+  "bin\\items_performance\\catalog-1-candidate\\creature-pass.jsonl": {
+    "sha256": "f67414b4459f3f70e5f316280910f8288d269e909582be17d9e5b8bedae26c40",
+    "bytes": 502576
+  },
+  "bin\\items_performance\\catalog-1-baseline\\frame-benchmark.json": {
+    "sha256": "06ae08b24395027f44c92f1893299f169c59819fb4e94facca2239301458cd25",
+    "bytes": 172697
+  },
+  "bin\\items_performance\\catalog-1-baseline\\creature-pass.jsonl": {
+    "sha256": "04c5ce3b5058002ff0475b8985bb5085d4ff960ed3af9e70031cca656b2b839c",
+    "bytes": 507979
+  },
+  "bin\\items_performance\\catalog-2-baseline\\frame-benchmark.json": {
+    "sha256": "d9f720e3052fc2e22d2971b67819dc913128c8e7a9105063c0e79c10fa71b6a2",
+    "bytes": 169123
+  },
+  "bin\\items_performance\\catalog-2-baseline\\creature-pass.jsonl": {
+    "sha256": "d7609a7f2ef24933690b249b8592c93dd5609f0a03945e9610099f286f712eb9",
+    "bytes": 501404
+  },
+  "bin\\items_performance\\catalog-2-candidate\\frame-benchmark.json": {
+    "sha256": "96b1c79a845c8131f588dd7053aff84a63325fd4741667d518ca2d5ac58d9e32",
+    "bytes": 168260
+  },
+  "bin\\items_performance\\catalog-2-candidate\\creature-pass.jsonl": {
+    "sha256": "abd2c7f2a7c613c311360e14bd02db42870f95620691f2cd7f3711408e9dc646",
+    "bytes": 503596
+  }
+}

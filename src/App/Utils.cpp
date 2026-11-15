@@ -276,13 +276,16 @@ int RunCreateWorld(int argc, char **argv, int create_world_index)
     return 1;
   }
 
-  auto headless = MakeHeadlessCore();
-  auto core = headless.Core;
-  core->LoadConfig("config.json");
-
-  CreateWorldReport report;
-  const bool ok = core->CreateWorldHeadless(cli_args, report);
-  WriteCreateWorldReport(report, cli_args.ReportJsonPath);
+  bool ok = false;
+  {
+    // Core/world own GL resources; release them before destroying the context.
+    auto headless = MakeHeadlessCore();
+    auto core = headless.Core;
+    core->LoadConfig("config.json");
+    CreateWorldReport report;
+    ok = core->CreateWorldHeadless(cli_args, report);
+    WriteCreateWorldReport(report, cli_args.ReportJsonPath);
+  }
 
   glfwDestroyWindow(ctx);
   glfwTerminate();

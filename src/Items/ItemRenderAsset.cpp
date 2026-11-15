@@ -21,6 +21,8 @@ using Json = nlohmann::json;
 std::mutex AssetMutex;
 uint64_t AssetsRevision = 0;
 std::unordered_map<std::string, std::shared_ptr<const ItemRenderAsset>> Assets;
+std::unordered_map<std::string, std::string> AssetAliases;
+ItemAssetLookupStats AssetLookupStats;
 void Require(bool condition, const char *reason)
 {
   if (!condition)
@@ -514,16 +516,28 @@ LoadItemRenderAsset(const std::filesystem::path &path,
 std::shared_ptr<const ItemRenderAsset>
 FindItemSurfaceAsset(const std::filesystem::path &path, uint64_t revision)
 {
-  const auto key = std::filesystem::weakly_canonical(path).generic_string();
   std::lock_guard<std::mutex> lock(AssetMutex);
   if (revision != AssetsRevision)
   {
     Assets.clear();
+    AssetAliases.clear();
     AssetsRevision = revision;
   }
+  const auto spelling = path.generic_string();
+  if (const auto alias = AssetAliases.find(spelling);
+      alias != AssetAliases.end())
+  {
+    ++AssetLookupStats.FastHits;
+    return Assets.at(alias->second);
+  }
+  ++AssetLookupStats.CanonicalResolutions;
+  const auto key = std::filesystem::weakly_canonical(path).generic_string();
   const auto found = Assets.find(key);
   if (found != Assets.end())
+  {
+    AssetAliases.emplace(spelling, key);
     return found->second;
+  }
   std::ifstream in(path);
   Json data;
   if (!in)
@@ -533,6 +547,7 @@ FindItemSurfaceAsset(const std::filesystem::path &path, uint64_t revision)
   if (data.value("extras", Json::object()).value("design_version", 0) == 3)
     asset = LoadItemRenderAsset(path);
   Assets.emplace(key, asset);
+  AssetAliases.emplace(spelling, key);
   return asset;
 }
 
@@ -561,6 +576,12 @@ void ClearItemSurfaceAssets()
 {
   std::lock_guard<std::mutex> lock(AssetMutex);
   Assets.clear();
+  AssetAliases.clear();
+}
+ItemAssetLookupStats GetItemAssetLookupStats()
+{
+  std::lock_guard<std::mutex> lock(AssetMutex);
+  return AssetLookupStats;
 }
 std::vector<glm::mat4> ResolveItemNodeTransforms(const ItemRenderAsset &asset,
                                                  const ItemVisualState &state)

@@ -1,0 +1,58 @@
+{
+  "passed": true,
+  "status": "partial_staged_render_performance_checkpoint",
+  "staged_count": 70,
+  "production_v3_count": 0,
+  "performance_exe_sha256": "0f7ca997783ce9e35176332e49f5f9cb31adb965c483316f1e54d85505dd5233",
+  "native_exe_sha256": "43cc8d36e21d5713e8f37326aea4bec780309b0929e22ebde3afde0bd5b2770d",
+  "final_release_exe_sha256": "43cc8d36e21d5713e8f37326aea4bec780309b0929e22ebde3afde0bd5b2770d",
+  "final_release_delta": "None: complete native regression and CLI smoke use the final Release executable; performance uses the earlier measured item renderer checkpoint",
+  "cpp_checks": 25,
+  "focused_light_cache_checks": 2,
+  "native_checks": {
+    "gameplay": 59,
+    "window": 0,
+    "ownership": 57,
+    "ownership_ui": 18,
+    "player_window": 7,
+    "icons": 209,
+    "item_lab": 283,
+    "presentations": 3343
+  },
+  "performance_runs": 24,
+  "measured_frames": 19149,
+  "comparisons": [
+    {
+      "scene": "fp",
+      "baseline_p95_ms": 10.267395,
+      "candidate_p95_ms": 10.32775,
+      "ratio": 1.0058783167492824,
+      "within_ten_percent": true
+    },
+    {
+      "scene": "armor",
+      "baseline_p95_ms": 11.082754999999999,
+      "candidate_p95_ms": 12.118659999999993,
+      "ratio": 1.0934699900882041,
+      "within_ten_percent": true
+    },
+    {
+      "scene": "drops",
+      "baseline_p95_ms": 23.714525,
+      "candidate_p95_ms": 14.39043,
+      "ratio": 0.6068192384203352,
+      "within_ten_percent": true
+    },
+    {
+      "scene": "catalog",
+      "baseline_p95_ms": 10.623240000000001,
+      "candidate_p95_ms": 10.576875,
+      "ratio": 0.9956355123295716,
+      "within_ten_percent": true
+    }
+  ],
+  "world_restored": true,
+  "runtime_restored": true,
+  "config_restored": true,
+  "native_runtime_files_restored": 210
+}

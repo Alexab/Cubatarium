@@ -399,6 +399,22 @@ int main()
     write(versioned);
     Expect(bool(cutum::FindItemSurfaceAsset(folder / "model.gltf", 1)),
            "content revision invalidates a cached legacy result");
+    const auto beforeLookups = cutum::GetItemAssetLookupStats();
+    for (int i = 0; i < 10; ++i)
+      Expect(bool(cutum::FindItemSurfaceAsset(folder / "model.gltf", 1)),
+             "warm asset lookup retains the loaded model");
+    const auto afterLookups = cutum::GetItemAssetLookupStats();
+    Expect(afterLookups.CanonicalResolutions ==
+                   beforeLookups.CanonicalResolutions &&
+               afterLookups.FastHits == beforeLookups.FastHits + 10,
+           "warm asset lookup does not resolve filesystem paths again");
+    const auto cached = cutum::FindItemSurfaceAsset(folder / "model.gltf", 1);
+    Expect(cutum::FindItemSurfaceAsset(folder / "." / "model.gltf", 1) ==
+               cached,
+           "alternate spelling shares canonical ownership");
+    cutum::ClearItemSurfaceAssets();
+    Expect(cutum::FindItemSurfaceAsset(folder / "model.gltf", 1) != cached,
+           "explicit reload invalidates spelling aliases as well as assets");
     cutum::ClearItemSurfaceAssets();
     auto grip = asset->Grip;
     grip.FpHandOffset = glm::vec3(.1, .2, .3);

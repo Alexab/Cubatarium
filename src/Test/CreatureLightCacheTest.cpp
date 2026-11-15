@@ -66,6 +66,12 @@ int main()
   const glm::ivec3 clipped =
       CreatureLightSampleCell(glm::vec3(0.0f, 64.2f, 0.0f), groundOnly);
   Expect(clipped == glm::ivec3(0, 65, 0), "solid centre cell: sample above");
+  for (const float x : {-3.6f, 10.3f})
+  {
+    const auto drop =
+        CreatureLightSampleCell(glm::vec3(x, 64.501f, 0), groundOnly);
+    Expect(drop.y == 65, "small ground item samples air above the floor");
+  }
 
   std::cout << "creature_light_cache_test: ok" << std::endl;
   return 0;

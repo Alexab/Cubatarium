@@ -184,7 +184,7 @@ std::string ResolveWornGltfRel(const std::string &itemId,
   return result;
 }
 
-std::string ResolveGltfRel(const std::string &itemId, bool worn = false)
+std::string ResolveGltfRelUncached(const std::string &itemId, bool worn)
 {
   IUPlatformPaths *paths = IUPlatformPaths::TryGet();
   if (!paths || itemId.empty())
@@ -238,6 +238,28 @@ std::string ResolveGltfRel(const std::string &itemId, bool worn = false)
     return sibling;
   }
   return {};
+}
+
+std::string ResolveGltfRel(const std::string &itemId, bool worn = false)
+{
+  static std::mutex mutex;
+  static std::unordered_map<std::string, std::string> cache;
+  static uint64_t revision = 0;
+  static const UItemDefinitionStorage *definitions = nullptr;
+  std::lock_guard<std::mutex> lock(mutex);
+  if (definitions != g_ItemDefinitions)
+  {
+    cache.clear();
+    definitions = g_ItemDefinitions;
+  }
+  SyncItemModelCache(cache, revision);
+  const auto key = itemId + (worn ? "|wear" : "|held");
+  if (const auto found = cache.find(key); found != cache.end())
+    return found->second;
+  const auto resolved = ResolveGltfRelUncached(itemId, worn);
+  if (!resolved.empty())
+    cache.emplace(key, resolved);
+  return resolved;
 }
 
 std::filesystem::path ResolveGltfAbs(const std::string &itemId,

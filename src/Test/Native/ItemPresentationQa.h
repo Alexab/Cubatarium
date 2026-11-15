@@ -359,6 +359,14 @@ inline void RunItemColorQa(ItemSurfaceRenderer &renderer,
   check("albedo path aliases share texture",
         texture && texture == cache.GetLinearAlbedo(frames / "." /
                                                     "srgb-checker.png"));
+  const auto beforeLookups = cache.GetLookupStats();
+  for (int i = 0; i < 10; ++i)
+    cache.GetLinearAlbedo(image);
+  const auto afterLookups = cache.GetLookupStats();
+  check("warm albedo lookup avoids repeated filesystem resolution",
+        afterLookups.CanonicalResolutions ==
+                beforeLookups.CanonicalResolutions &&
+            afterLookups.FastHits == beforeLookups.FastHits + 10);
   glBindTexture(GL_TEXTURE_2D, texture);
   GLint format = 0, filter = 0, width = 0;
   glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT,

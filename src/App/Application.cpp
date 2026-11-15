@@ -8,6 +8,7 @@
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiTextInput.h"
 #include "Test/Native/ItemLabSceneQa.h"
+#include "Test/Native/ItemPerformanceQa.h"
 #include "Test/Native/ItemPresentationQa.h"
 #include "Test/Native/ItemsInventoryQa.h"
 #include "Test/Native/OwnershipQa.h"
@@ -112,6 +113,7 @@ namespace cutum
 
 namespace
 {
+std::unique_ptr<UItemPerformanceQa> ItemPerformanceQa;
 
 #ifndef __ANDROID__
 UWindowManager *GetWindowManager(GLFWwindow *window)
@@ -1910,7 +1912,7 @@ bool UApplication::ResolveSlotAt(int x, int y, SlotAddress &out)
 static float FpItemLight(UWorld &world, const UCreature &actor)
 {
   auto light = glm::vec2(1, 0);
-  const auto cell = glm::ivec3(glm::floor(actor.GetEyePosition()));
+  const auto cell = WorldPosToBlock(actor.GetEyePosition());
   const auto coord = UChunkManager::WorldToChunk(cell);
   if (const auto *chunk =
           world.GetBlockWorld().GetChunkManager().GetChunk(coord))
@@ -2935,6 +2937,42 @@ void UApplication::RunInventoryIconsQa(const std::string &path)
 }
 void UApplication::UpdateNativeItemsQa(double dt)
 {
+  if (World && World->GetControlledCreature() && IconSource)
+    if (const char *path = std::getenv("CUBA_ITEM_PERF_QA"))
+    {
+      if (!ItemPerformanceQa)
+      {
+        const char *scene = std::getenv("CUBA_ITEM_PERF_SCENE");
+        ItemPerformanceQa = std::make_unique<UItemPerformanceQa>(
+            *World, path, scene ? scene : "drops");
+        glfwSetWindowSize(Window, 1920, 1080);
+        Ui.UiScaleUser = 1.f;
+        MinimalOverlayForBench =
+            !ItemPerformanceQa->IsCatalog() && !ItemPerformanceQa->IsFp();
+      }
+      ItemPerformanceQa->Update(*World);
+      if (ItemPerformanceQa->NeedsCatalog())
+      {
+        UItemDefinitionStorage::NotifyVisualAssetsChanged();
+        ClearItemSurfaceAssets();
+        ItemGltfTextureCache::Instance().Clear();
+        IconSource->ClearItemIconCache();
+        ItemPerformanceQa->BeginCatalog();
+        for (const auto &id : ItemPerformanceQa->GetIds())
+          IconSource->GetItemIconTexture(id);
+        OpenPlayerWindow(4);
+        PaletteScreen->OpenWithMainTab(4);
+      }
+      if (ItemPerformanceQa->CatalogActive())
+      {
+        IconSource->WarmupItemIcons(2);
+        bool ready = true;
+        for (const auto &id : ItemPerformanceQa->GetIds())
+          ready = IconSource->GetItemIconTexture(id) != 0 && ready;
+        ItemPerformanceQa->SetCatalogReady(ready &&
+                                           !IconSource->PendingItemIcons());
+      }
+    }
   static bool itemPresentationDone = false;
   if (!itemPresentationDone && World && World->GetControlledCreature() &&
       CreaturePreviewRenderer)
@@ -3054,6 +3092,18 @@ void UApplication::UpdateNativeItemsQa(double dt)
       CharacterSheetScreen->RunAppearanceQa(path);
       SyncCursorVisibility();
     }
+  }
+}
+
+void UApplication::RecordItemPerformanceFrame(double wallMs, double swapMs)
+{
+  if (ItemPerformanceQa && World && Geometry)
+  {
+    ItemPerformanceQa->Record(*World, Geometry->GetCreatureRenderStats(),
+                              LastFramebufferWidth, LastFramebufferHeight,
+                              wallMs, swapMs);
+    if (ItemPerformanceQa->IsDone())
+      RequestQuit();
   }
 }
 

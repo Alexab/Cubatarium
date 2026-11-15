@@ -86,6 +86,8 @@ void ItemSurfaceRenderer::Draw(
   Shader->SetFloat("uFog", profile.Fog);
   Shader->SetVec3("uFogColor", profile.FogColor);
   const auto transforms = ResolveItemNodeTransforms(*asset, state);
+  size_t lastNode = size_t(-1);
+  unsigned lastTexture = 0;
   for (size_t i = 0; i < asset->Primitives.size(); ++i)
   {
     const auto &primitive = asset->Primitives[i];
@@ -97,14 +99,22 @@ void ItemSurfaceRenderer::Draw(
         ItemGltfTextureCache::Instance().GetLinearAlbedo(material.Albedo);
     if (!texture)
       continue;
-    Shader->SetMat4("uModel", matrix);
-    Shader->SetMat4("uMvp", viewProjection * matrix);
+    if (lastNode != primitive.Node)
+    {
+      Shader->SetMat4("uModel", matrix);
+      Shader->SetMat4("uMvp", viewProjection * matrix);
+      lastNode = primitive.Node;
+    }
     Shader->SetVec4("uColor", material.Color);
     Shader->SetFloat("uMetallic", material.Metallic);
     Shader->SetFloat("uRoughness", material.Roughness);
     Shader->SetVec3("uEmissive", material.Emissive);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture);
+    if (lastTexture != texture)
+    {
+      glActiveTexture(GL_TEXTURE0);
+      glBindTexture(GL_TEXTURE_2D, texture);
+      lastTexture = texture;
+    }
     glBindVertexArray(found->second.Primitives[i].Vao);
     glDrawElements(GL_TRIANGLES, GLsizei(primitive.Indices.size()),
                    GL_UNSIGNED_INT, nullptr);

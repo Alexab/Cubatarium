@@ -110,6 +110,7 @@ public:
 
   void Update(double dt);
   void UpdateNativeItemsQa(double dt);
+  void RecordItemPerformanceFrame(double wallMs, double swapMs);
   void UpdateItemLab(double dt);
   void OpenPlayerWindow(int section);
   UGuiWidget *GetPlayerWindowRoot();

@@ -747,6 +747,41 @@ The earlier generic native helper's spurious bow inputs are fixed in the newer
 checkpoint above. Passing capture checks still does not replace final art review.
 
 
+## Staged whole-frame performance checkpoint
+
+See [performance-checkpoint](performance-checkpoint/README.md), its exact
+[results](performance-checkpoint/performance.json) and
+[summary](performance-checkpoint/summary.json). This closes the first measured
+flat-scene comparison for the staged catalog, not final production acceptance.
+Twenty-four paired Release runs retain 19,149 real window-frame samples.
+Median run p95 changes: FP +0.6%, twelve armored humans +9.3%, 512 resting drops
+−39.3%, warm catalog −0.4%. All meet the unchanged 10% gate on this hardware.
+Armor has little margin. Cold completion of 70 icon textures increased from
+883.7 to 982.5 ms and is reported separately. This is not a moving-projectile
+stress test or universal performance approval.
+
+Rendering now caches successful path spellings/canonical ownership until
+revision/reload, and avoids repeated matrix uploads/texture binds within one
+node. All twelve warm candidate runs recorded zero canonical filesystem
+resolutions. Ground-item light sampling now respects centered block cells,
+fixing black small drops near the floor. Release CLI creation also exposed an
+audio cleanup use-after-free; sound voices now shut down before their engine,
+and headless GL owners before their context. Creation returns zero again.
+
+The subsequent full staged native regression passed 25 CTests, gameplay 59,
+ownership 57, ownership UI 18, player window 7, icons 209, Item Lab 283 and
+presentations 3343; the extra presentation check covers warm albedo lookups.
+Two focused cache/light tests and style/include/format audits also pass.
+Summary hashes distinguish the earlier measured executable from the final
+native-tested Release build, which also includes CLI/audio cleanup and equipment
+cache invalidation when switching definition storage. No production model was
+promoted (0 of 70).
+
+Continue with shared nocked-arrow geometry, complete authored hand contacts,
+Item Lab overlays/cost information and final all-item/world artistic review.
+Then publish and repeat full acceptance/performance with final assets.
+The overall goal remains active.
+
 ## Acceptance contract
 
 Deterministic publication preserves author work and grips. Missing production

@@ -432,7 +432,13 @@ void UCreatureDrawPass::DrawItemSurface(const ItemDrawRequest &request,
   auto light = ActiveLight;
   if (request.LightSamplePosition && ItemLocalLight)
   {
-    const auto cell = glm::ivec3(glm::floor(*request.LightSamplePosition));
+    const auto cell = CreatureLightSampleCell(
+        *request.LightSamplePosition,
+        [&](glm::ivec3 c)
+        {
+          return world.GetBlockRegistry().BlocksMovement(
+              world.GetBlockWorld().GetBlock(c));
+        });
     const auto coord = UChunkManager::WorldToChunk(cell);
     if (const auto *chunk =
             world.GetBlockWorld().GetChunkManager().GetChunk(coord))

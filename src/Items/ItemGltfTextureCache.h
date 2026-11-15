@@ -1,10 +1,13 @@
 #ifndef ITEM_GLTF_TEXTURE_CACHE_H
 #define ITEM_GLTF_TEXTURE_CACHE_H
 
+#include <array>
+#include <cstdint>
 #include <filesystem>
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 typedef unsigned int GLuint;
 
@@ -26,6 +29,18 @@ public:
   GLuint GetLinearAlbedo(const std::filesystem::path &imageAbs);
 
   void Clear();
+  struct MemoryStats
+  {
+    uint64_t Textures{0}, RgbaMipBytes{0}, InvalidTextures{0};
+    std::vector<std::array<int, 3>> Dimensions;
+  };
+  struct LookupStats
+  {
+    uint64_t FastHits{0}, CanonicalResolutions{0};
+  };
+  LookupStats GetLookupStats();
+  /// Allocated uncompressed RGBA texels, including mip levels; not driver VRAM.
+  MemoryStats InspectMemory(bool itemsOnly = false);
 
 private:
   ItemGltfTextureCache() = default;
@@ -37,6 +52,8 @@ private:
   std::unordered_map<std::string, std::unordered_map<std::string, GLuint>>
       ByModel;
   std::unordered_map<std::string, GLuint> LinearAlbedo;
+  std::unordered_map<std::string, GLuint> LinearAliases;
+  LookupStats LookupCounters;
 };
 
 } // namespace cutum

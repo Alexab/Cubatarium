@@ -322,10 +322,21 @@ GLuint
 ItemGltfTextureCache::GetLinearAlbedo(const std::filesystem::path &imageAbs)
 {
   std::lock_guard<std::mutex> lock(Mu);
+  const auto spelling = imageAbs.generic_string();
+  if (const auto alias = LinearAliases.find(spelling);
+      alias != LinearAliases.end())
+  {
+    ++LookupCounters.FastHits;
+    return alias->second;
+  }
+  ++LookupCounters.CanonicalResolutions;
   const auto key = std::filesystem::weakly_canonical(imageAbs).generic_string();
   const auto found = LinearAlbedo.find(key);
   if (found != LinearAlbedo.end())
+  {
+    LinearAliases.emplace(spelling, found->second);
     return found->second;
+  }
   int width = 0, height = 0, channels = 0;
   auto *pixels =
       stbi_load(imageAbs.string().c_str(), &width, &height, &channels, 4);
@@ -347,7 +358,67 @@ ItemGltfTextureCache::GetLinearAlbedo(const std::filesystem::path &imageAbs)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glBindTexture(GL_TEXTURE_2D, GLuint(previous));
   LinearAlbedo.emplace(key, texture);
+  LinearAliases.emplace(spelling, texture);
   return texture;
+}
+ItemGltfTextureCache::LookupStats ItemGltfTextureCache::GetLookupStats()
+{
+  std::lock_guard<std::mutex> lock(Mu);
+  return LookupCounters;
+}
+
+ItemGltfTextureCache::MemoryStats
+ItemGltfTextureCache::InspectMemory(bool itemsOnly)
+{
+  std::lock_guard<std::mutex> lock(Mu);
+  const auto isItem = [](const std::string &path)
+  {
+    auto normalized = std::filesystem::path(path).generic_string();
+    return normalized.find("/models/items/") != std::string::npos ||
+           normalized.rfind("models/items/", 0) == 0;
+  };
+  std::unordered_set<GLuint> textures;
+  for (const auto &model : ByModel)
+    if (!itemsOnly || isItem(model.first))
+      for (const auto &entry : model.second)
+        if (entry.second)
+          textures.insert(entry.second);
+  for (const auto &entry : LinearAlbedo)
+    if (entry.second && (!itemsOnly || isItem(entry.first)))
+      textures.insert(entry.second);
+  GLint previous = 0;
+  glGetIntegerv(GL_TEXTURE_BINDING_2D, &previous);
+  MemoryStats result;
+  for (const auto texture : textures)
+  {
+    if (!glIsTexture(texture))
+    {
+      ++result.InvalidTextures;
+      continue;
+    }
+    ++result.Textures;
+    glBindTexture(GL_TEXTURE_2D, texture);
+    std::array<int, 3> dimensions{};
+    for (int level = 0; level < 16; ++level)
+    {
+      GLint width = 0, height = 0;
+      glGetTexLevelParameteriv(GL_TEXTURE_2D, level, GL_TEXTURE_WIDTH, &width);
+      glGetTexLevelParameteriv(GL_TEXTURE_2D, level, GL_TEXTURE_HEIGHT,
+                               &height);
+      if (!width || !height)
+        break;
+      if (!level)
+      {
+        dimensions[0] = width;
+        dimensions[1] = height;
+      }
+      ++dimensions[2];
+      result.RgbaMipBytes += uint64_t(width) * uint64_t(height) * 4;
+    }
+    result.Dimensions.push_back(dimensions);
+  }
+  glBindTexture(GL_TEXTURE_2D, GLuint(previous));
+  return result;
 }
 
 void ItemGltfTextureCache::Clear()
@@ -368,6 +439,7 @@ void ItemGltfTextureCache::Clear()
   for (const auto &entry : LinearAlbedo)
     glDeleteTextures(1, &entry.second);
   LinearAlbedo.clear();
+  LinearAliases.clear();
 }
 
 } // namespace cutum
