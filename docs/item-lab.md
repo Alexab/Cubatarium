@@ -34,7 +34,25 @@ The same sidebar controls apply to both panels:
   In FP and TP, eat/drink definitions also use their consumption arm gesture;
   gameplay supplies the actual held duration and clears it on cancellation.
   Fill presets set both water identity and quantity; they do not consume water.
-- **Still/Walk pose/Play** sets static or animated preview motion. This is a
+- The row above the previews edits **Bow** (draw) and **Use** independently in 25%
+  steps, plus **Fill** in the candidate's supported whole units and **Ammo on/off**.
+  Editing changes the preset label to
+  **Custom**. Controls are shared by both sources; channels unsupported by the
+  candidate are disabled. An item without capacity shows **No fill**.
+  Fill shows quantity/capacity: a bucket cycles 0/1
+  and 1/1; a waterskin cycles 0/4 through 4/4. The normalized setting maps to
+  each source's declared capacity and sets quantity and water identity.
+- **Anim off/draw/use/fill** at the top right animates one selected channel independently of
+  the others. Editing that same channel stops its animation; editing another
+  channel preserves it. The button skips unsupported channels. Turning animation
+  off restores the manual value. A retained animation for an unsupported channel
+  has no visible effect after switching items; manual values remain available
+  when returning to a supported item.
+  Fill animation also uses whole gameplay units. Presets stop state animation
+  and reset all four inputs together. Values are
+  retained across item/scene/reload switches; UV disables the state controls.
+- **Still/Walk pose/Walk play** sets static or animated character motion,
+  independently of the item state animation. This is a
   presentation inspection, not a simulation of combat or carrying mechanics.
 - The material mode cycles lit, silhouette, gray, albedo, UV checker, normals
   and wireframe. Lighting cycles Studio, Dim and Bright intensity presets.
@@ -54,8 +72,9 @@ VRAM, whole-process memory, or the cost of duplicate renderer instances. Costs
 are cached per inspected source and refreshed by Reload. Hidden parts still
 cost memory and are included.
 
-Exports use schema 4 and include source paths, scene, actor, camera, motion,
-animation time and the selected state preset. Panels export at 512x512.
+Exports use schema 5 and include source paths, scene, actor, camera, motion,
+character animation time, selected preset or Custom, manual state inputs,
+selected state-animation channel and its separate clock. Panels export at 512x512.
 Each available panel also exports exact byte counts, image sizes/mip levels and
 encoded file sizes, physical profile, grip coordinates, current visual inputs,
 all evaluated node matrices (column-major), and diagnostic line counts.
@@ -63,7 +82,7 @@ FP renders at 1280x720 and is letterboxed in that square. Icons are rendered
 at real 32/48/64-pixel target sizes and placed at native size in the exported
 mosaic; fitting the mosaic into a GUI panel can scale the on-screen display.
 
-Full carry poses, independent state controls and final artistic/performance
+Full carry poses and final artistic/performance
 acceptance remain in development. Run the focused Release/native checks with
 `python tools/run_item_lab_qa.py`; `--skip-build` reuses the Release binaries but
 still rebuilds authored candidates and checks the entire catalog. It uses

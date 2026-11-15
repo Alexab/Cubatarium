@@ -1,0 +1,192 @@
+{
+  "actor": "Male / R",
+  "animation_time": 0.0,
+  "archived_reference": false,
+  "camera": "Orbit",
+  "candidate": "E:/Work/Home/Cubatarium/assetgen_output/items/redesign/bucket/model.gltf",
+  "id": "bucket",
+  "mode": "Wireframe",
+  "motion": "Still",
+  "panels": [
+    {
+      "available": true,
+      "contacts": {
+        "left": null,
+        "right": null,
+        "space": "asset physical metres; UV origin top-left",
+        "support_node": ""
+      },
+      "diagnostic_line_vertices": 0,
+      "diagnostics_framed": true,
+      "geometry_buffer_bytes": 3648,
+      "materials": 4,
+      "nodes": [
+        {
+          "matrix_column_major": [
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "name": "bucket"
+        }
+      ],
+      "physical": {
+        "mass": 2.5999999046325684,
+        "size": [
+          0.1599999964237213,
+          0.3149999976158142,
+          0.11999999731779099
+        ]
+      },
+      "primitives": 4,
+      "rgba8_mip_bytes": 21844,
+      "scene_draws": 1,
+      "scope": "one item renderer buffer payload and referenced RGBA8 mip texels; not driver VRAM",
+      "textures": [
+        {
+          "encoded_bytes": 527,
+          "height": 64,
+          "levels": 7,
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/bucket/textures/diffuse.png",
+          "rgba8_mip_bytes": 21844,
+          "width": 64
+        }
+      ],
+      "triangles": 48,
+      "vertices": 96,
+      "visual_inputs": {
+        "bow_charge": 0.0,
+        "contents_units": 0,
+        "has_ammo": false,
+        "has_water": false,
+        "use_phase": 0.25
+      }
+    },
+    {
+      "available": true,
+      "contacts": {
+        "left": [
+          0.0,
+          0.09526316076517105,
+          0.0
+        ],
+        "right": [
+          0.0,
+          0.09526316076517105,
+          0.0
+        ],
+        "space": "asset physical metres; UV origin top-left",
+        "support_node": ""
+      },
+      "diagnostic_line_vertices": 0,
+      "diagnostics_framed": true,
+      "geometry_buffer_bytes": 13360,
+      "materials": 4,
+      "nodes": [
+        {
+          "matrix_column_major": [
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "name": "bucket"
+        },
+        {
+          "matrix_column_major": [
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            -0.01631578989326954,
+            0.0,
+            1.0
+          ],
+          "name": "water_surface"
+        }
+      ],
+      "physical": {
+        "mass": 2.5999999046325684,
+        "size": [
+          0.1599999964237213,
+          0.3149999976158142,
+          0.11999999731779099
+        ]
+      },
+      "primitives": 4,
+      "rgba8_mip_bytes": 349524,
+      "scene_draws": 1,
+      "scope": "one item renderer buffer payload and referenced RGBA8 mip texels; not driver VRAM",
+      "textures": [
+        {
+          "encoded_bytes": 12903,
+          "height": 256,
+          "levels": 9,
+          "path": "E:/Work/Home/Cubatarium/assetgen_output/items/redesign/bucket/textures/diffuse.png",
+          "rgba8_mip_bytes": 349524,
+          "width": 256
+        }
+      ],
+      "triangles": 196,
+      "vertices": 344,
+      "visual_inputs": {
+        "bow_charge": 0.0,
+        "contents_units": 1,
+        "has_ammo": false,
+        "has_water": true,
+        "use_phase": 0.25
+      }
+    }
+  ],
+  "pitch": 25.0,
+  "pose": "Custom",
+  "published": "E:/Work/Home/Cubatarium/bin/models/items/bucket/model.gltf",
+  "read_only": true,
+  "reference": "E:/Work/Home/Cubatarium/bin/models/items/bucket/model.gltf",
+  "scene": "Orbit",
+  "schema_version": 5,
+  "staged_candidate": true,
+  "state_animation": "Anim off",
+  "state_controls": {
+    "ammo": false,
+    "draw": 0.0,
+    "fill": 1.0,
+    "use": 0.25
+  },
+  "state_time": 0.0,
+  "yaw": 35.0
+}

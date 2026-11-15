@@ -2616,6 +2616,32 @@ void UApplication::RunItemLabQa(const std::string &path)
       InputRouter.RouteMouseButton(*this, GLFW_MOUSE_BUTTON_LEFT, pressed,
                                    b.X + b.W / 2, b.Y + b.H / 2, 0);
   };
+  click(ItemLabScreen->GetStateControlBounds(2));
+  ItemLabScreen->Update(0);
+  check("independent fill click does not activate use",
+        ItemLabScreen->VisualInputs(1).HasWater &&
+            ItemLabScreen->VisualInputs(1).UsePhase == 0 &&
+            ItemLabScreen->GetPosePreset() == -1);
+  click(ItemLabScreen->GetStateControlBounds(1));
+  ItemLabScreen->Update(0);
+  check("unsupported bucket use control cannot change state",
+        ItemLabScreen->VisualInputs(1).UsePhase == 0);
+  ItemLabScreen->SelectItem("waterskin");
+  ItemLabScreen->Update(0);
+  click(ItemLabScreen->GetStateControlBounds(1));
+  ItemLabScreen->Update(0);
+  check("independent use click preserves fill",
+        ItemLabScreen->VisualInputs(1).HasWater &&
+            ItemLabScreen->VisualInputs(1).UsePhase == .25f);
+  click(ItemLabScreen->GetMotionBounds());
+  click(ItemLabScreen->GetMotionBounds());
+  ItemLabScreen->Update(.5);
+  check("playing character motion does not animate item state",
+        ItemLabScreen->VisualInputs(1).HasWater &&
+            ItemLabScreen->VisualInputs(1).UsePhase == .25f);
+  click(ItemLabScreen->GetMotionBounds());
+  ItemLabScreen->SelectItem("bucket");
+  ItemLabScreen->Update(0);
   const auto exports =
       IUPlatformPaths::Current().AssetRoot() / "item_lab_exports";
   const auto exportReport = exports / "bucket-6.json";
@@ -2630,7 +2656,10 @@ void UApplication::RunItemLabQa(const std::string &path)
     std::ifstream file(exportReport);
     const auto exported = nlohmann::json::parse(file);
     check("export includes exact resource costs and authoritative contacts",
-          exported.value("schema_version", 0) == 4 &&
+          exported.value("schema_version", 0) == 5 &&
+              exported.at("pose") == "Custom" &&
+              exported.at("state_controls").at("fill") == 1.f &&
+              exported.at("state_controls").at("use") == .25f &&
               exported.at("panels").size() == 2 &&
               exported.at("panels")[1]
                       .at("geometry_buffer_bytes")
@@ -2650,6 +2679,11 @@ void UApplication::RunItemLabQa(const std::string &path)
   check("reload invalidates gameplay visual caches",
         UItemDefinitionStorage::ContentRevision() > revision &&
             ItemLabScreen->HasCandidate());
+  check("reload preserves independent custom container state",
+        ItemLabScreen->VisualInputs(1).HasWater &&
+            ItemLabScreen->VisualInputs(1).UsePhase == .25f &&
+            ItemLabScreen->GetPosePreset() == -1);
+  ItemLabScreen->SetPosePreset(0);
   ItemLabScreen->SetMode(0);
   for (int pose = 0; pose < 3; ++pose)
   {

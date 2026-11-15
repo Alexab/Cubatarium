@@ -40,7 +40,9 @@ const char *Scenes[] = {"Orbit", "FP",    "TP",       "Ground",
                         "Armor", "Icons", "Contacts", "UV"};
 const char *Actors[] = {"Male / R", "Male / L", "Female / R", "Female / L"};
 const char *Cameras[] = {"Orbit", "Front", "Back", "Side", "Top"};
-const char *Motions[] = {"Still", "Walk pose", "Play"};
+const char *Motions[] = {"Still", "Walk pose", "Walk play"};
+const char *StateAnimations[] = {"Anim off", "Anim draw", "Anim use",
+                                 "Anim fill"};
 std::string Lower(std::string value)
 {
   for (auto &c : value)
@@ -107,7 +109,8 @@ void UItemLabScreen::Build(UGuiContext &ctx)
   }
   ModeButton = add(std::make_unique<UGuiButton>(theme, Modes[Mode]));
   ModeButton->SetOnClick([this] { SetMode((Mode + 1) % 7); });
-  PoseButton = add(std::make_unique<UGuiButton>(theme, Poses[PosePreset]));
+  PoseButton = add(std::make_unique<UGuiButton>(
+      theme, PosePreset < 0 ? "Custom" : Poses[PosePreset]));
   PoseButton->SetOnClick([this] { SetPosePreset((PosePreset + 1) % 3); });
   LightButton = add(std::make_unique<UGuiButton>(theme, Lights[Light]));
   LightButton->SetOnClick(
@@ -146,6 +149,33 @@ void UItemLabScreen::Build(UGuiContext &ctx)
         AnimationTime = 0;
         Dirty = true;
       });
+  for (auto &button : StateButtons)
+    button = add(std::make_unique<UGuiButton>(theme, ""));
+  const auto nextQuarter = [](float value)
+  { return float((int(std::lround(value * 4)) + 1) % 5) * .25f; };
+  StateButtons[0]->SetOnClick([this, nextQuarter]
+                              { SetDrawFraction(nextQuarter(DrawFraction)); });
+  StateButtons[1]->SetOnClick([this, nextQuarter]
+                              { SetUsePhase(nextQuarter(UsePhase)); });
+  StateButtons[2]->SetOnClick(
+      [this]
+      {
+        const int next = (int(std::lround(FillFraction * FillCapacity)) + 1) %
+                         (FillCapacity + 1);
+        SetFillFraction(float(next) / float(FillCapacity));
+      });
+  StateButtons[3]->SetOnClick([this] { SetAmmunition(!Ammunition); });
+  StateButtons[4]->SetOnClick(
+      [this]
+      {
+        int next = StateAnimation;
+        do
+          next = (next + 1) % 4;
+        while ((next == 1 && !SupportsDraw) || (next == 2 && !SupportsUse) ||
+               (next == 3 && !SupportsFill));
+        SetStateAnimation(next);
+      });
+  RefreshStateControls();
   ReloadButton = add(std::make_unique<UGuiButton>(theme, "Reload"));
   ReloadButton->SetOnClick(
       [this]
@@ -205,6 +235,9 @@ void UItemLabScreen::SetScene(int scene)
     MotionButton->SetEnabled(Scene != 7);
   if (LightButton)
     LightButton->SetEnabled(Scene != 7);
+  for (auto *button : StateButtons)
+    if (button)
+      button->SetEnabled(Scene != 7);
   for (auto *view : Views)
     if (view)
       view->SetEnabled(Scene != 7);
@@ -231,13 +264,97 @@ void UItemLabScreen::SetMode(int mode)
 void UItemLabScreen::SetPosePreset(int pose)
 {
   PosePreset = std::clamp(pose, 0, 2);
-  if (PoseButton)
-    PoseButton->SetLabel(Poses[PosePreset]);
+  DrawFraction = FillFraction = PosePreset * .5f;
+  UsePhase = PosePreset * .25f;
+  Ammunition = PosePreset > 0;
+  StateAnimation = 0;
+  StateTime = 0;
+  RefreshStateControls();
   Dirty = true;
+}
+void UItemLabScreen::SetDrawFraction(float value)
+{
+  if (!std::isfinite(value))
+    return;
+  DrawFraction = std::clamp(value, 0.f, 1.f);
+  if (StateAnimation == 1)
+    StateAnimation = 0;
+  PosePreset = -1;
+  RefreshStateControls();
+  Dirty = true;
+}
+void UItemLabScreen::SetUsePhase(float value)
+{
+  if (!std::isfinite(value))
+    return;
+  UsePhase = std::clamp(value, 0.f, 1.f);
+  if (StateAnimation == 2)
+    StateAnimation = 0;
+  PosePreset = -1;
+  RefreshStateControls();
+  Dirty = true;
+}
+void UItemLabScreen::SetFillFraction(float value)
+{
+  if (!std::isfinite(value))
+    return;
+  FillFraction = std::clamp(value, 0.f, 1.f);
+  if (StateAnimation == 3)
+    StateAnimation = 0;
+  PosePreset = -1;
+  RefreshStateControls();
+  Dirty = true;
+}
+void UItemLabScreen::SetAmmunition(bool value)
+{
+  Ammunition = value;
+  PosePreset = -1;
+  RefreshStateControls();
+  Dirty = true;
+}
+void UItemLabScreen::SetStateAnimation(int channel)
+{
+  StateAnimation = std::clamp(channel, 0, 3);
+  StateTime = 0;
+  PosePreset = -1;
+  RefreshStateControls();
+  Dirty = true;
+}
+void UItemLabScreen::RefreshStateControls()
+{
+  if (PoseButton)
+    PoseButton->SetLabel(PosePreset < 0 ? "Custom" : Poses[PosePreset]);
+  if (!StateButtons[0])
+    return;
+  const auto percent = [](float value)
+  { return std::to_string(int(std::lround(value * 100))) + "%"; };
+  StateButtons[0]->SetLabel("Bow " + percent(DrawFraction));
+  StateButtons[1]->SetLabel("Use " + percent(UsePhase));
+  StateButtons[2]->SetLabel(
+      SupportsFill
+          ? "Fill " +
+                std::to_string(int(std::lround(FillFraction * FillCapacity))) +
+                "/" + std::to_string(FillCapacity)
+          : "No fill");
+  StateButtons[3]->SetLabel(Ammunition ? "Ammo on" : "Ammo off");
+  StateButtons[4]->SetLabel(StateAnimations[StateAnimation]);
+  const bool supported[] = {SupportsDraw, SupportsUse, SupportsFill,
+                            SupportsDraw,
+                            SupportsDraw || SupportsUse || SupportsFill};
+  for (int i = 0; i < 5; ++i)
+    StateButtons[i]->SetEnabled(Scene != 7 && supported[i]);
+}
+GuiRect UItemLabScreen::GetStateControlBounds(int channel) const
+{
+  return StateButtons[std::clamp(channel, 0, 4)]->GetBounds();
 }
 GuiRect UItemLabScreen::GetPoseBounds() const
 {
   return PoseButton->GetBounds();
+}
+GuiRect UItemLabScreen::GetMotionBounds() const
+{
+  return MotionButton->GetBounds();
 }
 void UItemLabScreen::RebuildList()
 {
@@ -267,7 +384,10 @@ void UItemLabScreen::Layout()
   const int left = std::clamp(Scaled(260), 200, std::max(200, ViewportW / 3));
   const int right = x + left + m, width = ViewportW - left - 2 * m;
   Root->SetBounds({x, y, ViewportW, ViewportH});
-  Title->SetBounds({x + m, y + m, ViewportW - 2 * m, row});
+  const int stateWidth = width / 4 - m;
+  Title->SetBounds({x + m, y + m, ViewportW - 3 * m - stateWidth, row});
+  StateButtons[4]->SetBounds(
+      {x + ViewportW - m - stateWidth, y + m, stateWidth, row});
   Search->SetBounds({x + m, y + row + 2 * m, left - 2 * m, row});
   const int controlsY = y + ViewportH - 5 * (row + m) - m;
   const int listY = y + 2 * row + 3 * m,
@@ -282,8 +402,12 @@ void UItemLabScreen::Layout()
   for (int i = 0; i < 10; ++i)
     buttons[i]->SetBounds({x + m + (i % 2) * (column + m),
                            controlsY + (i / 2) * (row + m), column, row});
-  const int previewY = y + 2 * row + 3 * m,
-            previewH = std::max(row, ViewportH - 5 * row - 6 * m);
+  const int stateY = y + 2 * row + 3 * m;
+  for (int i = 0; i < 4; ++i)
+    StateButtons[i]->SetBounds(
+        {right + i * width / 4, stateY, stateWidth, row});
+  const int previewY = stateY + row + m,
+            previewH = std::max(row, ViewportH - 6 * row - 7 * m);
   for (int i = 0; i < 2; ++i)
   {
     const int px = right + i * width / 2;
@@ -298,6 +422,11 @@ void UItemLabScreen::Update(double dt)
   if (Motion == 2)
   {
     AnimationTime += float(dt);
+    Dirty = true;
+  }
+  if (StateAnimation != 0)
+  {
+    StateTime += float(dt);
     Dirty = true;
   }
   if (Dirty && Root)
@@ -327,6 +456,11 @@ void UItemLabScreen::Refresh()
                        : ArchivedReference ? "Published candidate"
                                            : "No staged candidate");
   Title->SetText("Item Lab / " + Selected + " / Ctrl+F8 or Esc closes");
+  FillCapacity = 1;
+  SupportsDraw = definition->Ranged.Enabled;
+  SupportsUse = definition->Use.Action == ItemUseActionKind::Eat ||
+                definition->Use.Action == ItemUseActionKind::Drink;
+  SupportsFill = false;
   for (int i = 0; i < 2; ++i)
   {
     try
@@ -341,6 +475,18 @@ void UItemLabScreen::Refresh()
       if (std::filesystem::is_regular_file(Paths[i]))
       {
         const auto asset = Preview->GetInspectionAsset(Paths[i]);
+        if (i == 1)
+          for (const auto &binding : asset->Bindings)
+          {
+            SupportsUse =
+                SupportsUse || binding.Channel == ItemVisualChannel::UsePhase;
+            if (binding.Channel == ItemVisualChannel::FillUnits)
+            {
+              SupportsFill = true;
+              FillCapacity =
+                  std::max(FillCapacity, int(std::lround(binding.Maximum)));
+            }
+          }
         auto metrics = MetricsCache.find(Paths[i]);
         if (metrics == MetricsCache.end())
           metrics =
@@ -366,23 +512,24 @@ void UItemLabScreen::Refresh()
         params.Left = Actor % 2 != 0;
         params.Female = Actor >= 2;
         params.Walk = Motion > 0;
-        params.Time = Motion == 2 ? AnimationTime : PosePreset * .35f;
+        params.Time = Motion == 2 ? AnimationTime : .35f;
         params.Yaw = Yaw;
         params.Pitch = Pitch;
         params.Ambient = Light == 0 ? .65f : Light == 1 ? .12f : .9f;
-        const float charge = Motion == 2
-                                 ? (std::sin(AnimationTime * 2.f) + 1.f) * .5f
-                                 : PosePreset * .5f;
+        const float animated = (1.f - std::cos(StateTime * 2.f)) * .5f;
+        const float charge = StateAnimation == 1 ? animated : DrawFraction;
         params.Inputs.BowCharge = definition->Ranged.Enabled ? charge : 0.f;
         params.Inputs.UsePhase =
-            Motion == 2 ? std::fmod(AnimationTime, 1.f) : PosePreset * .25f;
-        params.Inputs.HasAmmo = definition->Ranged.Enabled && charge > 0;
+            StateAnimation == 2 ? std::fmod(StateTime, 1.f) : UsePhase;
+        params.Inputs.HasAmmo = definition->Ranged.Enabled && Ammunition;
         params.Inputs.HasWater = false;
         for (const auto &binding : asset->Bindings)
           if (binding.Channel == ItemVisualChannel::FillUnits)
             params.Inputs.ContentsUnits =
                 std::max(params.Inputs.ContentsUnits,
-                         int(std::lround(binding.Maximum * charge)));
+                         int(std::lround(
+                             binding.Maximum *
+                             (StateAnimation == 3 ? animated : FillFraction))));
         params.Inputs.HasWater = params.Inputs.ContentsUnits > 0;
         next =
             ScenesRenderer->Render(*Preview, Selected, Paths[i], asset, params);
@@ -421,6 +568,7 @@ void UItemLabScreen::Refresh()
       Status->SetText(e.what());
     }
   }
+  RefreshStateControls();
   if (Textures[0] && Textures[1])
     Status->SetText(Scene == 7   ? "UV: albedo + indexed triangles"
                     : Scene == 6 ? "R red | L cyan | pull gold | box purple"
@@ -439,6 +587,12 @@ bool UItemLabScreen::LayoutValid() const
         b.X + b.W > r.X + r.W || b.Y + b.H > r.Y + r.H)
       return false;
   }
+  if (Context)
+    for (const auto *button : StateButtons)
+      if (Context->GetRenderer().MeasureTextWidth(button->GetLabel()) +
+              2 * Context->GetTheme().Padding >
+          button->GetBounds().W)
+        return false;
   if (Context)
     for (const auto *label :
          {Info[0], Info[1], Captions[0], Captions[1], Status})
@@ -515,23 +669,31 @@ void UItemLabScreen::Export()
     return;
   const auto folder = platform->AssetRoot() / "item_lab_exports";
   std::filesystem::create_directories(folder);
-  nlohmann::json report = {{"schema_version", 4},
-                           {"id", Selected},
-                           {"mode", Modes[Mode]},
-                           {"pose", Poses[PosePreset]},
-                           {"published", PublishedPath.generic_string()},
-                           {"reference", Paths[0].generic_string()},
-                           {"candidate", Paths[1].generic_string()},
-                           {"archived_reference", ArchivedReference},
-                           {"staged_candidate", StagedCandidate},
-                           {"scene", Scenes[Scene]},
-                           {"actor", Actors[Actor]},
-                           {"motion", Motions[Motion]},
-                           {"camera", Cameras[Camera]},
-                           {"animation_time", AnimationTime},
-                           {"yaw", Yaw},
-                           {"pitch", Pitch},
-                           {"read_only", true}};
+  nlohmann::json report = {
+      {"schema_version", 5},
+      {"id", Selected},
+      {"mode", Modes[Mode]},
+      {"pose", PosePreset < 0 ? "Custom" : Poses[PosePreset]},
+      {"state_animation", StateAnimations[StateAnimation]},
+      {"state_time", StateTime},
+      {"state_controls",
+       {{"draw", DrawFraction},
+        {"use", UsePhase},
+        {"fill", FillFraction},
+        {"ammo", Ammunition}}},
+      {"published", PublishedPath.generic_string()},
+      {"reference", Paths[0].generic_string()},
+      {"candidate", Paths[1].generic_string()},
+      {"archived_reference", ArchivedReference},
+      {"staged_candidate", StagedCandidate},
+      {"scene", Scenes[Scene]},
+      {"actor", Actors[Actor]},
+      {"motion", Motions[Motion]},
+      {"camera", Cameras[Camera]},
+      {"animation_time", AnimationTime},
+      {"yaw", Yaw},
+      {"pitch", Pitch},
+      {"read_only", true}};
   report["panels"] = nlohmann::json::array();
   try
   {

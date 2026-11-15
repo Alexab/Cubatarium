@@ -1,0 +1,29 @@
+{
+  "passed": false,
+  "failures": [
+    {
+      "name": "independent fill click does not activate use",
+      "passed": false
+    },
+    {
+      "name": "independent use click preserves fill",
+      "passed": false
+    },
+    {
+      "name": "animated fill preserves manual use",
+      "passed": false
+    },
+    {
+      "name": "contacts-1280x720-200 labels and layout fit",
+      "passed": false
+    },
+    {
+      "name": "uv-1280x720-200 labels and layout fit",
+      "passed": false
+    },
+    {
+      "name": "layout 1280x720_200",
+      "passed": false
+    }
+  ]
+}

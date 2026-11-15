@@ -29,6 +29,7 @@ public:
     OnClick = std::move(handler);
   }
   void SetLabel(const std::string &label) { Label = label; }
+  const std::string &GetLabel() const { return Label; }
 
   bool CanFocus() const override;
   bool Activate() override;

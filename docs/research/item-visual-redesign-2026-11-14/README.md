@@ -856,6 +856,19 @@ were restored. Defaults and original game/property profiles remain intact.
 Final artistic acceptance, publication and performance verification still remain;
 production promotion is 0/70 and the overall goal stays active.
 
+## Independent studio states and animations
+
+[Independent Item Lab controls](lab-independent-checkpoint/README.md) resolve
+the coupled preset-only controls left open by earlier checkpoints. Bow draw,
+use, whole-unit fill and ammunition can be selected independently; one state
+channel can animate separately from character motion. Unsupported controls are
+disabled. Custom state survives item/scene/reload switches and exports in schema
+5 with both manual and evaluated values. The final Release native run passes
+1040 checks with all 70 candidates, including routed input, rendered arrow
+differences and both resolutions at all three scales. All 25 profile CTests
+and style/include/format audits pass. This does not replace the remaining final
+artistic/world/carry and performance gates, and promotion remains 0/70.
+
 ## Acceptance contract
 
 Deterministic publication preserves author work and grips. Missing production

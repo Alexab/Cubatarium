@@ -118,6 +118,78 @@ inline void RunItemLabDiagnosticsQa(UItemLabScreen &lab, UGuiContext &gui,
   }
   check("filled bucket changes actual rendered water pixels",
         !emptyWater.empty() && !fullWater.empty() && emptyWater != fullWater);
+  lab.SelectItem("waterskin");
+  lab.SetPosePreset(0);
+  lab.SetFillFraction(1);
+  lab.SetUsePhase(.75f);
+  lab.Update(0);
+  const int fullUnits = lab.VisualInputs(1).ContentsUnits;
+  check("independent full container and use phase",
+        fullUnits > 0 && lab.VisualInputs(1).HasWater &&
+            lab.VisualInputs(1).UsePhase == .75f &&
+            lab.VisualInputs(1).BowCharge == 0);
+  lab.SetStateAnimation(2);
+  lab.Update(.25);
+  check("animated use preserves full contents and idle draw",
+        lab.VisualInputs(1).ContentsUnits == fullUnits &&
+            lab.VisualInputs(1).UsePhase == .25f &&
+            lab.VisualInputs(1).BowCharge == 0);
+  lab.SetStateAnimation(3);
+  lab.SetUsePhase(.75f);
+  lab.Update(.5);
+  check("animated fill preserves manual use",
+        lab.VisualInputs(1).ContentsUnits > 0 &&
+            lab.VisualInputs(1).ContentsUnits < fullUnits &&
+            lab.VisualInputs(1).UsePhase == .75f);
+  lab.SetFillFraction(1);
+  lab.Update(.5);
+  check("manual fill cancels fill animation and stays full",
+        lab.VisualInputs(1).ContentsUnits == fullUnits);
+  lab.SelectItem("wood_bow");
+  lab.SetPosePreset(0);
+  lab.SetDrawFraction(1);
+  lab.SetUsePhase(.75f);
+  std::vector<char> noArrow, withArrow;
+  for (bool ammo : {false, true})
+  {
+    lab.SetAmmunition(ammo);
+    lab.Update(0);
+    const auto &inputs = lab.VisualInputs(1);
+    check(std::string("full bow independent ammo ") + (ammo ? "on" : "off"),
+          inputs.BowCharge == 1 && inputs.HasAmmo == ammo &&
+              inputs.UsePhase == .75f);
+    const auto path = frames / (ammo ? "bow-with-ammo.png" : "bow-no-ammo.png");
+    check("capture independent bow ammunition",
+          SaveItemQaTexture(lab.GetPreviewTexture(1), path, 512, 512));
+    std::ifstream file(path, std::ios::binary);
+    (ammo ? withArrow : noArrow) =
+        std::vector<char>(std::istreambuf_iterator<char>(file), {});
+  }
+  check("independent ammunition changes actual arrow pixels",
+        !noArrow.empty() && !withArrow.empty() && noArrow != withArrow);
+  lab.SetStateAnimation(1);
+  lab.Update(.5);
+  check("draw animation preserves ammunition and use",
+        lab.VisualInputs(1).BowCharge > 0 &&
+            lab.VisualInputs(1).BowCharge < 1 && lab.VisualInputs(1).HasAmmo &&
+            lab.VisualInputs(1).UsePhase == .75f);
+  lab.SetStateAnimation(0);
+  lab.SetDrawFraction(1);
+  lab.SetScene(7);
+  lab.Update(0);
+  lab.SetScene(0);
+  lab.Update(0);
+  check("static UV view preserves independently selected states",
+        lab.VisualInputs(1).BowCharge == 1 && lab.VisualInputs(1).HasAmmo &&
+            lab.VisualInputs(1).UsePhase == .75f);
+  lab.SetPosePreset(0);
+  lab.Update(0);
+  check("rest preset resets custom states and animation",
+        lab.VisualInputs(1).BowCharge == 0 && !lab.VisualInputs(1).HasAmmo &&
+            lab.VisualInputs(1).UsePhase == 0);
+  lab.SetDrawFraction(1);
+  lab.SetUsePhase(1);
+  lab.SetFillFraction(1);
   const int originalW = lab.GetViewportWidth(),
             originalH = lab.GetViewportHeight();
   const float originalScale = gui.GetUiScale();

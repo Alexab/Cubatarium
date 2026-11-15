@@ -56,8 +56,15 @@ public:
   }
   GuiRect GetSceneBounds() const;
   void SetPosePreset(int pose);
+  void SetDrawFraction(float value);
+  void SetUsePhase(float value);
+  void SetFillFraction(float value);
+  void SetAmmunition(bool value);
+  void SetStateAnimation(int channel);
+  GuiRect GetStateControlBounds(int channel) const;
   int GetPosePreset() const { return PosePreset; }
   GuiRect GetPoseBounds() const;
+  GuiRect GetMotionBounds() const;
   bool UsesArchivedReference() const { return ArchivedReference; }
   bool UsesStagedCandidate() const { return StagedCandidate; }
   std::filesystem::path GetReferencePath() const { return Paths[0]; }
@@ -76,6 +83,7 @@ private:
   void Layout();
   void RebuildList();
   void Refresh();
+  void RefreshStateControls();
   void Export();
   nlohmann::json ExportPanelMetadata(int panel);
   std::shared_ptr<UItemDefinitionStorage> Items;
@@ -91,6 +99,7 @@ private:
       *ReloadButton{nullptr}, *ExportButton{nullptr}, *CloseButton{nullptr},
       *SceneButton{nullptr}, *ActorButton{nullptr}, *CameraButton{nullptr},
       *MotionButton{nullptr};
+  UGuiButton *StateButtons[5]{nullptr, nullptr, nullptr, nullptr, nullptr};
   unsigned Textures[2]{0, 0};
   size_t SceneDraws[2]{0, 0};
   bool SceneSources[2]{false, false};
@@ -107,6 +116,11 @@ private:
   int Mode{0}, Light{0}, PosePreset{0}, Scene{0}, Actor{0}, Camera{0},
       Motion{0};
   float AnimationTime{0.f};
+  float DrawFraction{0.f}, UsePhase{0.f}, FillFraction{0.f}, StateTime{0.f};
+  bool Ammunition{false};
+  int StateAnimation{0};
+  int FillCapacity{1};
+  bool SupportsDraw{false}, SupportsUse{false}, SupportsFill{false};
   bool Dirty{true}, CloseRequested{false};
 };
 } // namespace cutum
