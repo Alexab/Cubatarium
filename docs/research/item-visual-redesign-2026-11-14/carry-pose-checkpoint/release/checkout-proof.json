@@ -1,0 +1,31 @@
+{
+  "passed": true,
+  "clones": {
+    "true": {
+      "passed": true,
+      "signed_files": 981,
+      "validated_stages": 70,
+      "byte_identical_regenerated": 70,
+      "published_in_disposable_clone": 70,
+      "reference_archives_preserved": 70,
+      "published_artifacts_identical": 70,
+      "manifest_version": 4
+    },
+    "false": {
+      "passed": true,
+      "signed_files": 981,
+      "validated_stages": 70,
+      "byte_identical_regenerated": 70,
+      "published_in_disposable_clone": 70,
+      "reference_archives_preserved": 70,
+      "published_artifacts_identical": 70,
+      "manifest_version": 4
+    }
+  },
+  "production_unchanged": true,
+  "authors_unchanged": true,
+  "revision": "327c80dc7cb9f246098b55e8cd248853e43f4287",
+  "item_count": 70,
+  "signed_files": 981,
+  "verifier_sha256": "a6350bebe1614a841042762a3474dd39945901ae5f2bc3a3e2154e1415e0f1d4"
+}

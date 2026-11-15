@@ -58,6 +58,12 @@ player window 7, icons 209, Item Lab 1040, presentations 3660. See `release/`.
 Desktop builds used only Release.
 Style/include audits pass (the FP draw path was extracted from RenderFrame).
 
+Fresh-checkout proof at `327c80dc7` passes for both `core.autocrlf=true` and
+`false`: 981 signed files, all 70 stages valid, all 70 byte-identical regenerated
+and published artifacts, all 70 reference archives preserved. Publication occurs
+only in disposable clones. Working production and authored sources are unchanged;
+see `release/checkout-proof.json`.
+
 ## Remaining completion gates
 
 Repeat the final body/mode and display acceptance matrix; inspect actual use and
