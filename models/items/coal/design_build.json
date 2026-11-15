@@ -1,0 +1,69 @@
+{
+  "id": "coal",
+  "version": 3,
+  "triangles": 56,
+  "sources": {
+    "tools/item_designs/coal/design.yaml": "e34363fee8d09f92733126700a5ed26eb82a2aa83ec0993c5aebdf46de6fdb0b",
+    "tools/item_designs/provenance.json": "021d0a020e5b9e24c0b059ecf54f87f54c3de052b6da214d0ad0687ec9ed2b45",
+    "LICENSE": "d5b2c2cdb51ab4c8b124dfab74f936267098953b3e78afdf67ad89b11d71006e"
+  },
+  "physical_fit": {
+    "scale": 1.1215597058541515,
+    "centre": [
+      0.017049150281252617,
+      0.0,
+      -6.938893903907228e-18
+    ]
+  },
+  "definition": {
+    "content/items/coal.json": "eb64c7d4761cb7931f8741848cc23bceedcc76054838255b5a7ceb697f2086f7"
+  },
+  "generator": {
+    "version": 3,
+    "sha256": {
+      "shaders/item_surface.frag": "599880f34ca01bd4d52caaad89239a41bb3ee3eeaac5283304fd56a6ecc02d19",
+      "shaders/item_surface.vert": "9fcd0a6657f34552fa98797ab7da9e1c323f195148c6583a8bff07841ff2b9c5",
+      "tools/itemgen/__init__.py": "3816a80e472ceca3be260a4fc6e82678c8d3da4ff2248154f53987a4a6a16275",
+      "tools/itemgen/__main__.py": "d2323fe9ae7ee8c896b833dd8e03c0c2405c2103e0964c5b5d9b4a830be69900",
+      "tools/itemgen/armor_designs.py": "4b3c4fa6659ad19bd311e12a23272f6bd8ecfea08e9ac72c94c6fa7c3de3f6b6",
+      "tools/itemgen/artifact_contract.py": "88c446606a3c9643a3b327242eb27cd895769f2eb0c17b92108fc7de2e436e17",
+      "tools/itemgen/builders.py": "31f841c7504c19ed5f4487293934e789a1658de1cc5096e4d1e97979618708e4",
+      "tools/itemgen/components.py": "f64e50d69ede429287e93a684c5acca87940f665a05758e324974beda091f902",
+      "tools/itemgen/design.py": "d53b90af1100c01e0463b7fb06293a26a8ea45f00420bab6d784f5e95dbff896",
+      "tools/itemgen/design_publication.py": "343e902c829d14b27eed8c311713ac12676484598e14d6a25f35f6efee13f5ef",
+      "tools/itemgen/export_gltf.py": "7532084a26931a86517c3b0c0990d11700408685fcf6d599b051513984a607a3",
+      "tools/itemgen/filesystem.py": "d2c1819e51b7da134f1b76d337f0e5311648b15ea83a2458956d01850a28ab14",
+      "tools/itemgen/manifest.py": "47c5b8c8e6efb88e41a28076edd042b30bb873c7a594e1cedfe3a5c552d17a3d",
+      "tools/itemgen/manual.py": "2d920305a0ca7b0453f4d2ff0fcdeb57146a47d455934e81211b46ebd8b5be5c",
+      "tools/itemgen/mesh.py": "ebd7ed9b272b6fdadc95018c278868a7a52ea9f7fdd4f610f70b35e9cea63410",
+      "tools/itemgen/pilot_designs.py": "f5c4ebc522c06d058bdf005b136adb33e9be3283515b1993d6adb00525b6c25d",
+      "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
+      "tools/itemgen/presentation.py": "fdea0aeed83ef3ccc6dd38e55ade896d7cd5a473138e9a20922d9daa27c586a2",
+      "tools/itemgen/preview.py": "f707ee5f6389bfc74704cdce31dff47e316c9085a980dd2668abf43bd29ace3a",
+      "tools/itemgen/quality.py": "105852852307434143a244e3786da15a92c3f6faf2540716dab5278fe854c2aa",
+      "tools/itemgen/raster.py": "8974c41252e04b030d39b6bf42b160ded4a927f11bb1a073e830f30e01603fa1",
+      "tools/itemgen/resource_uri.py": "a8f1688d402729a87cb998f78d5de2fccd8380a73f7528a400051de7421d5ee7",
+      "tools/itemgen/supplies_designs.py": "f5d73e8e9654c1e6cee320d2a0639a05c627df080a12c7fbc24bfd470be1f42a",
+      "tools/itemgen/surface_export.py": "5a9c2f39f6481fb8ff394ae30e8816a276c589e07805d3a289e05730c6c4fbd3",
+      "tools/itemgen/surface_paint.py": "192c061e1077690b8d51fc4d201535b5e4dacbb1691ddbc689052c842e304b13",
+      "tools/itemgen/surface_uv.py": "781d306211b448e7da8118b5f2ae1e6f6ceab4e12a89fcaee70ee20af11d02fa",
+      "tools/itemgen/texturegen.py": "d23be5cd077147b6ad9cf48e987ae939692ee6d7a99629791c545a7ddb8b3661",
+      "tools/itemgen/visual_bindings.py": "880719ae181b227aa0ea87258cbc8be89cbcd40b4edcf6c842ca1d68860eab22",
+      "tools/itemgen/wear_sections.py": "7c509db2e83f38af469d60b19319dd52b67844864a688620bb523eed5dc742b0",
+      "tools/itemgen/workshop_designs.py": "e760de707ababb90793b170c15d0fe860ada3b0ab3f19d1f1486cfc4772d5571"
+    }
+  },
+  "outputs": {
+    "ATTRIBUTION.json": "cf1c5a7370426ea0098ddcef3b2134798e1f32972da3d1b66b9de101399763a7",
+    "LICENSE.txt": "d5b2c2cdb51ab4c8b124dfab74f936267098953b3e78afdf67ad89b11d71006e",
+    "model.bin": "a005d86a7097097fc432cb6a939cae0ac3c5fd0765421759e2317f2e40b15134",
+    "model.gltf": "3c1afa896c3f0d52a04c40cca6fa3eed65f92eac50802c2b174374b4f88ebe85",
+    "textures/diffuse.png": "ad04bf2b719935d5335bce4327c52f7d5527b0c0ebb5a59a830db0c2f42d80ba",
+    "uv_layout.json": "5488ef795427c79c1eab40f6ab76c3e83b0e2cf96b860a29bd9570c09c935e55"
+  },
+  "validated_resources": [
+    "model.bin",
+    "model.gltf",
+    "textures/diffuse.png"
+  ]
+}

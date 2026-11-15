@@ -1,10 +1,20 @@
 {
-  "id": "gold_shovel",
-  "format": "gltf",
-  "license": "CC0-1.0",
-  "authoring_source": "cubatarium-recipe",
-  "family": "shovel",
-  "material": "gold",
-  "recipe_version": 1,
-  "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+  "geometry": {
+    "method": "project-authored coordinate recipe",
+    "source": "tools/item_designs/gold_shovel/design.yaml",
+    "external_mesh_inputs": []
+  },
+  "texture": {
+    "method": "project-authored surface_paint layers with optional read-only RGBA overlays",
+    "external_pixel_inputs": []
+  },
+  "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+  "license": "MIT",
+  "license_source": "LICENSE",
+  "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
+  "visual_independence_review": "Project construction and native studio review completed: Thin pointed blade, dark socket and fine gold framing; icon remains a shovel rather than a sword. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+  "review_evidence": [
+    "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+    "tools/item_designs/WORKSHOP_TOOLS.md"
+  ]
 }

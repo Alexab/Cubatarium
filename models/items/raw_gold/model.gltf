@@ -1,153 +1,207 @@
 {
   "asset": {
     "version": "2.0",
-    "generator": "cubatarium-itemgen"
+    "generator": "cubatarium-itemgen-v3"
   },
   "buffers": [
     {
       "uri": "model.bin",
-      "byteLength": 1656
+      "byteLength": 6496
     }
   ],
   "bufferViews": [
     {
       "buffer": 0,
       "byteOffset": 0,
-      "byteLength": 288,
-      "target": 34962
+      "byteLength": 600
     },
     {
       "buffer": 0,
-      "byteOffset": 288,
-      "byteLength": 192,
-      "target": 34962
+      "byteOffset": 600,
+      "byteLength": 600
     },
     {
       "buffer": 0,
-      "byteOffset": 480,
-      "byteLength": 72,
-      "target": 34963
+      "byteOffset": 1200,
+      "byteLength": 400
     },
     {
       "buffer": 0,
-      "byteOffset": 552,
-      "byteLength": 288,
-      "target": 34962
+      "byteOffset": 1600,
+      "byteLength": 312
     },
     {
       "buffer": 0,
-      "byteOffset": 840,
-      "byteLength": 192,
-      "target": 34962
+      "byteOffset": 1912,
+      "byteLength": 840
     },
     {
       "buffer": 0,
-      "byteOffset": 1032,
-      "byteLength": 72,
-      "target": 34963
+      "byteOffset": 2752,
+      "byteLength": 840
     },
     {
       "buffer": 0,
-      "byteOffset": 1104,
-      "byteLength": 288,
-      "target": 34962
+      "byteOffset": 3592,
+      "byteLength": 560
     },
     {
       "buffer": 0,
-      "byteOffset": 1392,
-      "byteLength": 192,
-      "target": 34962
+      "byteOffset": 4152,
+      "byteLength": 432
     },
     {
       "buffer": 0,
-      "byteOffset": 1584,
-      "byteLength": 72,
-      "target": 34963
+      "byteOffset": 4584,
+      "byteLength": 600
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 5184,
+      "byteLength": 600
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 5784,
+      "byteLength": 400
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 6184,
+      "byteLength": 312
     }
   ],
   "accessors": [
     {
       "bufferView": 0,
       "componentType": 5126,
-      "count": 24,
+      "count": 50,
       "type": "VEC3",
       "min": [
-        -0.12,
-        -0.095,
-        -0.105
+        -0.030086899879999872,
+        -0.014156742366935938,
+        0.0016266637713801915
       ],
       "max": [
-        0.12,
-        0.095,
-        0.105
+        0.07298226773287463,
+        0.08554991814724695,
+        0.11
       ]
     },
     {
       "bufferView": 1,
       "componentType": 5126,
-      "count": 24,
-      "type": "VEC2"
+      "count": 50,
+      "type": "VEC3",
+      "min": [
+        -0.938551819885193,
+        -1.0,
+        -0.892615824182488
+      ],
+      "max": [
+        0.759304372388656,
+        1.0,
+        0.8926158241824881
+      ]
     },
     {
       "bufferView": 2,
-      "componentType": 5123,
-      "count": 36,
-      "type": "SCALAR"
+      "componentType": 5126,
+      "count": 50,
+      "type": "VEC2"
     },
     {
       "bufferView": 3,
-      "componentType": 5126,
-      "count": 24,
-      "type": "VEC3",
-      "min": [
-        0.015,
-        0.035,
-        -0.09
-      ],
-      "max": [
-        0.14500000000000002,
-        0.125,
-        0.010000000000000002
-      ]
+      "componentType": 5125,
+      "count": 78,
+      "type": "SCALAR"
     },
     {
       "bufferView": 4,
       "componentType": 5126,
-      "count": 24,
-      "type": "VEC2"
+      "count": 70,
+      "type": "VEC3",
+      "min": [
+        -0.09722574954339568,
+        -0.09361054350121882,
+        -0.11
+      ],
+      "max": [
+        0.09927833227600305,
+        0.09361054350121882,
+        0.08868444975246967
+      ]
     },
     {
       "bufferView": 5,
-      "componentType": 5123,
-      "count": 36,
-      "type": "SCALAR"
+      "componentType": 5126,
+      "count": 70,
+      "type": "VEC3",
+      "min": [
+        -0.9498330921391382,
+        -0.9135454576426009,
+        -0.9462304185944869
+      ],
+      "max": [
+        0.8304048540472267,
+        0.9142767280634847,
+        0.9462304185944869
+      ]
     },
     {
       "bufferView": 6,
       "componentType": 5126,
-      "count": 24,
-      "type": "VEC3",
-      "min": [
-        -0.13,
-        -0.095,
-        0.045
-      ],
-      "max": [
-        -0.010000000000000009,
-        0.035,
-        0.115
-      ]
-    },
-    {
-      "bufferView": 7,
-      "componentType": 5126,
-      "count": 24,
+      "count": 70,
       "type": "VEC2"
     },
     {
+      "bufferView": 7,
+      "componentType": 5125,
+      "count": 108,
+      "type": "SCALAR"
+    },
+    {
       "bufferView": 8,
-      "componentType": 5123,
-      "count": 36,
+      "componentType": 5126,
+      "count": 50,
+      "type": "VEC3",
+      "min": [
+        -0.09927833227600305,
+        -0.061636104516546844,
+        -0.008566350274847792
+      ],
+      "max": [
+        -0.021976456566347165,
+        0.019078811137791692,
+        0.07271365189661705
+      ]
+    },
+    {
+      "bufferView": 9,
+      "componentType": 5126,
+      "count": 50,
+      "type": "VEC3",
+      "min": [
+        -0.9066973630761144,
+        -1.0,
+        -0.8623204354611714
+      ],
+      "max": [
+        0.7335335754835285,
+        1.0,
+        0.8623204354611717
+      ]
+    },
+    {
+      "bufferView": 10,
+      "componentType": 5126,
+      "count": 50,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 11,
+      "componentType": 5125,
+      "count": 78,
       "type": "SCALAR"
     }
   ],
@@ -156,58 +210,64 @@
       "uri": "textures/diffuse.png"
     }
   ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987,
+      "wrapS": 33071,
+      "wrapT": 33071
+    }
+  ],
   "textures": [
     {
-      "source": 0
+      "source": 0,
+      "sampler": 0
     }
   ],
   "materials": [
     {
-      "name": "head",
+      "name": "exposed",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
       "pbrMetallicRoughness": {
-        "baseColorFactor": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ],
         "baseColorTexture": {
           "index": 0
         },
-        "metallicFactor": 0.05,
-        "roughnessFactor": 0.75
+        "metallicFactor": 0.45,
+        "roughnessFactor": 0.65
       }
     },
     {
-      "name": "edge",
+      "name": "matrix",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
       "pbrMetallicRoughness": {
-        "baseColorFactor": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ],
         "baseColorTexture": {
           "index": 0
         },
-        "metallicFactor": 0.05,
-        "roughnessFactor": 0.75
+        "metallicFactor": 0,
+        "roughnessFactor": 0.85
       }
     },
     {
-      "name": "binding",
+      "name": "oxide",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
       "pbrMetallicRoughness": {
-        "baseColorFactor": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ],
         "baseColorTexture": {
           "index": 0
         },
-        "metallicFactor": 0.0,
-        "roughnessFactor": 0.95
+        "metallicFactor": 0,
+        "roughnessFactor": 0.85
       }
     }
   ],
@@ -218,37 +278,40 @@
         {
           "attributes": {
             "POSITION": 0,
-            "TEXCOORD_0": 1
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
           },
-          "indices": 2,
-          "mode": 4,
-          "material": 0
+          "indices": 3,
+          "material": 0,
+          "mode": 4
         },
         {
           "attributes": {
-            "POSITION": 3,
-            "TEXCOORD_0": 4
+            "POSITION": 4,
+            "NORMAL": 5,
+            "TEXCOORD_0": 6
           },
-          "indices": 5,
-          "mode": 4,
-          "material": 1
+          "indices": 7,
+          "material": 1,
+          "mode": 4
         },
         {
           "attributes": {
-            "POSITION": 6,
-            "TEXCOORD_0": 7
+            "POSITION": 8,
+            "NORMAL": 9,
+            "TEXCOORD_0": 10
           },
-          "indices": 8,
-          "mode": 4,
-          "material": 2
+          "indices": 11,
+          "material": 2,
+          "mode": 4
         }
       ]
     }
   ],
   "nodes": [
     {
-      "mesh": 0,
-      "name": "raw_gold"
+      "name": "raw_gold",
+      "mesh": 0
     }
   ],
   "scenes": [
@@ -260,6 +323,53 @@
   ],
   "scene": 0,
   "extras": {
-    "authoring_source": "cubatarium-recipe"
+    "authoring_source": "cubatarium-surface-design",
+    "design_version": 3,
+    "presentation": {
+      "carry_euler_deg": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "carry_right_grip": [
+        0.06314359430823227,
+        0.016424714793628448,
+        0.0558133318856901
+      ],
+      "carry_left_grip": [
+        -0.09194489339174276,
+        -0.008545631348094922,
+        0.051863048954842464
+      ],
+      "tp_euler_deg": [
+        -30,
+        0,
+        20
+      ],
+      "right_grip": [
+        -0.007732647921463895,
+        8.706627794733248e-05,
+        -0.010657775123765173
+      ],
+      "left_grip": [
+        -0.007732647921463895,
+        8.706627794733248e-05,
+        -0.010657775123765173
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.45,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "visual_bindings": [],
+    "wear_sections": []
   }
 }

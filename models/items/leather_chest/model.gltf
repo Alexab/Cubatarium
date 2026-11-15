@@ -1,199 +1,207 @@
 {
   "asset": {
     "version": "2.0",
-    "generator": "cubatarium-itemgen"
+    "generator": "cubatarium-itemgen-v3"
   },
   "buffers": [
     {
       "uri": "model.bin",
-      "byteLength": 2760
+      "byteLength": 17760
     }
   ],
   "bufferViews": [
     {
       "buffer": 0,
       "byteOffset": 0,
-      "byteLength": 288,
-      "target": 34962
+      "byteLength": 2304
     },
     {
       "buffer": 0,
-      "byteOffset": 288,
-      "byteLength": 192,
-      "target": 34962
+      "byteOffset": 2304,
+      "byteLength": 2304
     },
     {
       "buffer": 0,
-      "byteOffset": 480,
-      "byteLength": 72,
-      "target": 34963
+      "byteOffset": 4608,
+      "byteLength": 1536
     },
     {
       "buffer": 0,
-      "byteOffset": 552,
-      "byteLength": 288,
-      "target": 34962
+      "byteOffset": 6144,
+      "byteLength": 1344
     },
     {
       "buffer": 0,
-      "byteOffset": 840,
-      "byteLength": 192,
-      "target": 34962
+      "byteOffset": 7488,
+      "byteLength": 864
     },
     {
       "buffer": 0,
-      "byteOffset": 1032,
-      "byteLength": 72,
-      "target": 34963
+      "byteOffset": 8352,
+      "byteLength": 864
     },
     {
       "buffer": 0,
-      "byteOffset": 1104,
-      "byteLength": 288,
-      "target": 34962
+      "byteOffset": 9216,
+      "byteLength": 576
     },
     {
       "buffer": 0,
-      "byteOffset": 1392,
-      "byteLength": 192,
-      "target": 34962
+      "byteOffset": 9792,
+      "byteLength": 480
     },
     {
       "buffer": 0,
-      "byteOffset": 1584,
-      "byteLength": 72,
-      "target": 34963
+      "byteOffset": 10272,
+      "byteLength": 2304
     },
     {
       "buffer": 0,
-      "byteOffset": 1656,
-      "byteLength": 576,
-      "target": 34962
+      "byteOffset": 12576,
+      "byteLength": 2304
     },
     {
       "buffer": 0,
-      "byteOffset": 2232,
-      "byteLength": 384,
-      "target": 34962
+      "byteOffset": 14880,
+      "byteLength": 1536
     },
     {
       "buffer": 0,
-      "byteOffset": 2616,
-      "byteLength": 144,
-      "target": 34963
+      "byteOffset": 16416,
+      "byteLength": 1344
     }
   ],
   "accessors": [
     {
       "bufferView": 0,
       "componentType": 5126,
-      "count": 24,
+      "count": 192,
       "type": "VEC3",
       "min": [
-        -0.21,
-        -0.19,
-        -0.11
+        0.031999999999999994,
+        -0.13028571428571425,
+        0.12380952380952379
       ],
       "max": [
-        0.21,
-        0.29,
-        0.11
+        0.08990476190476189,
+        -0.0754285714285714,
+        0.13523809523809524
       ]
     },
     {
       "bufferView": 1,
       "componentType": 5126,
-      "count": 24,
-      "type": "VEC2"
+      "count": 192,
+      "type": "VEC3",
+      "min": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "max": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     {
       "bufferView": 2,
-      "componentType": 5123,
-      "count": 36,
-      "type": "SCALAR"
+      "componentType": 5126,
+      "count": 192,
+      "type": "VEC2"
     },
     {
       "bufferView": 3,
-      "componentType": 5126,
-      "count": 24,
-      "type": "VEC3",
-      "min": [
-        -0.23,
-        -0.21000000000000002,
-        -0.06
-      ],
-      "max": [
-        0.23,
-        0.31,
-        0.06
-      ]
+      "componentType": 5125,
+      "count": 336,
+      "type": "SCALAR"
     },
     {
       "bufferView": 4,
       "componentType": 5126,
-      "count": 24,
-      "type": "VEC2"
+      "count": 72,
+      "type": "VEC3",
+      "min": [
+        -0.15999999999999998,
+        -0.15238095238095237,
+        -0.10476190476190475
+      ],
+      "max": [
+        0.15999999999999998,
+        0.17523809523809522,
+        0.10476190476190475
+      ]
     },
     {
       "bufferView": 5,
-      "componentType": 5123,
-      "count": 36,
-      "type": "SCALAR"
+      "componentType": 5126,
+      "count": 72,
+      "type": "VEC3",
+      "min": [
+        -0.9909924304103234,
+        -1.0,
+        -1.0
+      ],
+      "max": [
+        0.9909924304103234,
+        1.0,
+        1.0
+      ]
     },
     {
       "bufferView": 6,
       "componentType": 5126,
-      "count": 24,
-      "type": "VEC3",
-      "min": [
-        -0.12,
-        0.01999999999999999,
-        0.07
-      ],
-      "max": [
-        0.12,
-        0.22,
-        0.13
-      ]
-    },
-    {
-      "bufferView": 7,
-      "componentType": 5126,
-      "count": 24,
+      "count": 72,
       "type": "VEC2"
     },
     {
-      "bufferView": 8,
-      "componentType": 5123,
-      "count": 36,
+      "bufferView": 7,
+      "componentType": 5125,
+      "count": 120,
       "type": "SCALAR"
+    },
+    {
+      "bufferView": 8,
+      "componentType": 5126,
+      "count": 192,
+      "type": "VEC3",
+      "min": [
+        -0.1409523809523809,
+        -0.13714285714285712,
+        -0.10285714285714284
+      ],
+      "max": [
+        0.1409523809523809,
+        0.1695238095238095,
+        0.12380952380952379
+      ]
     },
     {
       "bufferView": 9,
       "componentType": 5126,
-      "count": 48,
+      "count": 192,
       "type": "VEC3",
       "min": [
-        -0.22999999999999998,
-        0.10999999999999999,
-        -0.09
+        -1.0,
+        -1.0,
+        -1.0
       ],
       "max": [
-        0.22999999999999998,
-        0.25,
-        0.09
+        1.0,
+        1.0,
+        1.0
       ]
     },
     {
       "bufferView": 10,
       "componentType": 5126,
-      "count": 48,
+      "count": 192,
       "type": "VEC2"
     },
     {
       "bufferView": 11,
-      "componentType": 5123,
-      "count": 72,
+      "componentType": 5125,
+      "count": 336,
       "type": "SCALAR"
     }
   ],
@@ -202,124 +210,119 @@
       "uri": "textures/diffuse.png"
     }
   ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987,
+      "wrapS": 33071,
+      "wrapT": 33071
+    }
+  ],
   "textures": [
     {
-      "source": 0
+      "source": 0,
+      "sampler": 0
     }
   ],
   "materials": [
     {
-      "name": "head",
+      "name": "buckle",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
       "pbrMetallicRoughness": {
-        "baseColorFactor": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ],
         "baseColorTexture": {
           "index": 0
         },
-        "metallicFactor": 0.05,
-        "roughnessFactor": 0.75
+        "metallicFactor": 0.3,
+        "roughnessFactor": 0.85
       }
     },
     {
-      "name": "edge",
+      "name": "leather",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
       "pbrMetallicRoughness": {
-        "baseColorFactor": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ],
         "baseColorTexture": {
           "index": 0
         },
-        "metallicFactor": 0.05,
-        "roughnessFactor": 0.75
+        "metallicFactor": 0,
+        "roughnessFactor": 0.85
       }
     },
     {
-      "name": "accent",
+      "name": "strap",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
       "pbrMetallicRoughness": {
-        "baseColorFactor": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ],
         "baseColorTexture": {
           "index": 0
         },
-        "metallicFactor": 0.05,
-        "roughnessFactor": 0.95
-      }
-    },
-    {
-      "name": "binding",
-      "pbrMetallicRoughness": {
-        "baseColorFactor": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ],
-        "baseColorTexture": {
-          "index": 0
-        },
-        "metallicFactor": 0.0,
-        "roughnessFactor": 0.95
+        "metallicFactor": 0,
+        "roughnessFactor": 0.85
       }
     }
   ],
   "meshes": [
     {
-      "name": "leather_chest",
+      "name": "torso",
       "primitives": [
         {
           "attributes": {
             "POSITION": 0,
-            "TEXCOORD_0": 1
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
           },
-          "indices": 2,
-          "mode": 4,
-          "material": 0
+          "indices": 3,
+          "material": 0,
+          "mode": 4
         },
         {
           "attributes": {
-            "POSITION": 3,
-            "TEXCOORD_0": 4
+            "POSITION": 4,
+            "NORMAL": 5,
+            "TEXCOORD_0": 6
           },
-          "indices": 5,
-          "mode": 4,
-          "material": 1
+          "indices": 7,
+          "material": 1,
+          "mode": 4
         },
         {
           "attributes": {
-            "POSITION": 6,
-            "TEXCOORD_0": 7
-          },
-          "indices": 8,
-          "mode": 4,
-          "material": 2
-        },
-        {
-          "attributes": {
-            "POSITION": 9,
+            "POSITION": 8,
+            "NORMAL": 9,
             "TEXCOORD_0": 10
           },
           "indices": 11,
-          "mode": 4,
-          "material": 3
+          "material": 2,
+          "mode": 4
         }
       ]
     }
   ],
   "nodes": [
     {
-      "mesh": 0,
-      "name": "leather_chest"
+      "name": "leather_chest",
+      "children": [
+        1
+      ]
+    },
+    {
+      "name": "torso",
+      "translation": [
+        0.0,
+        -0.011428571428571425,
+        -0.015238095238095238
+      ],
+      "mesh": 0
     }
   ],
   "scenes": [
@@ -331,6 +334,76 @@
   ],
   "scene": 0,
   "extras": {
-    "authoring_source": "cubatarium-recipe"
+    "authoring_source": "cubatarium-surface-design",
+    "design_version": 3,
+    "presentation": {
+      "carry_euler_deg": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "carry_right_grip": [
+        0.144327619047619,
+        0.002118095238095239,
+        0.07199999999999998
+      ],
+      "carry_left_grip": [
+        -0.144327619047619,
+        0.002118095238095239,
+        0.07199999999999998
+      ],
+      "tp_euler_deg": [
+        -65,
+        0,
+        0
+      ],
+      "right_grip": [
+        0.0,
+        -0.10285714285714284,
+        -0.015238095238095238
+      ],
+      "left_grip": [
+        0.0,
+        -0.10285714285714284,
+        -0.015238095238095238
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.55,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ]
+    },
+    "visual_bindings": [],
+    "wear_sections": [
+      {
+        "node": "torso",
+        "bones": [
+          "body"
+        ],
+        "slot": 1,
+        "region": "slot",
+        "low": [
+          -0.14476190476190473,
+          -0.179047619047619,
+          -0.09523809523809522
+        ],
+        "high": [
+          0.14476190476190473,
+          0.15619047619047616,
+          0.06476190476190474
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      }
+    ]
   }
 }

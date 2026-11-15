@@ -1,0 +1,2002 @@
+{
+  "scope": "Source lineage, prior-generation difference and recorded human studio review; hashes alone do not establish artistic independence or certify legal rights.",
+  "reviewed_items": 70,
+  "external_mesh_uv_pixel_inputs": 0,
+  "gameplay_definition_changes": 0,
+  "items": [
+    {
+      "id": "apple",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/apple/design.yaml",
+      "design_card": "tools/item_designs/PILOTS.md",
+      "construction_parts": [
+        "fruit",
+        "stem",
+        "leaf"
+      ],
+      "old_triangles": 48,
+      "new_triangles": 104,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "49ea85154badbed9481a83aad28300f74d56be72b77ea37d96d1a31668f3888b"
+      ],
+      "new_binary_sha256": [
+        "7f21be07f0e705709e21bdf3af32b4b44a8456773e42aaf85748a020086b80de"
+      ],
+      "studio_sheet_sha256": "af07a064c29e73ba45c3aa793c211a6a4d61b491f1a3f1715bcab799aca02c96",
+      "review_observations": "Unequal fruit facets, short stem and leaf read across views; red peel stays distinct at native icon sizes."
+    },
+    {
+      "id": "arrow",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/arrow/design.yaml",
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "construction_parts": [
+        "arrow_shaft",
+        "forged_arrow_point",
+        "feather0",
+        "feather1",
+        "feather2",
+        "nock_binding",
+        "nock_left",
+        "nock_right"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 160,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "f424449700835cbe1e13095eac7a053111dcd2f35ee93a31e692505f86c7c8c6"
+      ],
+      "new_binary_sha256": [
+        "0b790fac404e96caeed57bd3e2fbc52b07485cade8dd6609f8da6201ebdf1e5c"
+      ],
+      "studio_sheet_sha256": "c3768d468868817a63c0ed2965304a670f74db4b9b3dba3c6cd30cfc963bfe29",
+      "review_observations": "Point, shaft and fletching replace the former capped stick. Supersampled native icons retain the formerly missing thin shaft."
+    },
+    {
+      "id": "bread",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/bread/design.yaml",
+      "design_card": "tools/item_designs/PILOTS.md",
+      "construction_parts": [
+        "loaf",
+        "score0_rim",
+        "score0_crumb",
+        "score1_rim",
+        "score1_crumb",
+        "score2_rim",
+        "score2_crumb"
+      ],
+      "old_triangles": 36,
+      "new_triangles": 132,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "f40303f4c8f58813827223038b75501319741b805852b19e68d09f4167db46ad"
+      ],
+      "new_binary_sha256": [
+        "d8600b44b7808c9c5d6f76424df1547fda0ca4492b07dcec3274136e44045843"
+      ],
+      "studio_sheet_sha256": "925652f50c216b8cb42c03c939cec601a92de77bf8e691f089be09c4a1b89119",
+      "review_observations": "Oval loaf and exposed cuts remain visible; underside/side are simple crust, not decorative box panels."
+    },
+    {
+      "id": "bucket",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/bucket/design.yaml",
+      "design_card": "tools/item_designs/PILOTS.md",
+      "construction_parts": [
+        "vessel",
+        "front_band",
+        "back_band",
+        "handle_left",
+        "handle_right",
+        "handle_grip",
+        "water_surface"
+      ],
+      "old_triangles": 48,
+      "new_triangles": 196,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "2117a87c4670fc18fbfabbd910d4e40859a4f61dcb855be789455591e737c681"
+      ],
+      "new_binary_sha256": [
+        "3bb823b9171b6a3c0ec950642864b8d197d24c0757d8f5d2bf360cd7e37632ab"
+      ],
+      "studio_sheet_sha256": "7208e0fdaacf7ce124a342b117c5e3ffb6f725e673d443d6bfdbefddefc91066",
+      "review_observations": "Real opening, rim and arched handle; side view is deliberately thin. Water-state checks are separate."
+    },
+    {
+      "id": "charcoal",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/charcoal/design.yaml",
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "construction_parts": [
+        "charred_branch",
+        "exposed_end"
+      ],
+      "old_triangles": 24,
+      "new_triangles": 76,
+      "atlas_size": 128,
+      "old_binary_sha256": [
+        "39314574a9ca0a25b329a7e32c00c1b3226b54b80ac9bfc7aec04ce85d680a38"
+      ],
+      "new_binary_sha256": [
+        "2e00ed8a5ff982ef64aaf2c3103887c96ac399e7b3b55866ade59cf51620e82d"
+      ],
+      "studio_sheet_sha256": "13240ad7dcfe55f07d224ec49019af8f0f1bf7c8cf1e3aa72bcc8a1e9ec0c3fa",
+      "review_observations": "Elongated charred branch differs from lumpy coal; brighter neutral char and an exposed ash-coloured end now separate it from the dark UI background."
+    },
+    {
+      "id": "coal",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/coal/design.yaml",
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "construction_parts": [
+        "coal_mass",
+        "cleaved_lobe"
+      ],
+      "old_triangles": 24,
+      "new_triangles": 56,
+      "atlas_size": 128,
+      "old_binary_sha256": [
+        "bbafd0645663cc041222a1cdb3b8351c5886982df849cdb73c04dc295fd36835"
+      ],
+      "new_binary_sha256": [
+        "a005d86a7097097fc432cb6a939cae0ac3c5fd0765421759e2317f2e40b15134"
+      ],
+      "studio_sheet_sha256": "2e380c6bef368ae8f3ed9ed17cfb4c7d75ed4321d43f27b9f1874f66e6f902ce",
+      "review_observations": "Unequal dark mineral lobes and angular facets read as coal; dark blue-gray is intentional, distinct from brown-gray charred wood."
+    },
+    {
+      "id": "cooked_meat",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/cooked_meat/design.yaml",
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "construction_parts": [
+        "roasted_cut",
+        "rendered_fat",
+        "sear0",
+        "sear1",
+        "sear2"
+      ],
+      "old_triangles": 24,
+      "new_triangles": 116,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "d9dc700dc8069ca0b49caa59dd76350d753d44c27566255a9a349823423e7105"
+      ],
+      "new_binary_sha256": [
+        "c2310aeadb7475ca940fd7a6b131149ee2496415156b624298b95aafbc83680f"
+      ],
+      "studio_sheet_sha256": "c4484410d5761d2246fb33dd9586a9d6b25f435352e48eef7507f4d07582c9e3",
+      "review_observations": "Final exposed fat and localized sear bands read on top; broad organic cut differs from raw meat."
+    },
+    {
+      "id": "copper_axe",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/copper_axe/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "haft",
+        "broad_copper_cheek",
+        "polished_edge",
+        "socket",
+        "eye_wedge",
+        "wrap0",
+        "wrap1",
+        "wrap2",
+        "rivet0",
+        "rivet1"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 280,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "2d488e863f54068ff24912a6410bdbd67ccf0143dc06c979b9e48b51e458e6c4"
+      ],
+      "new_binary_sha256": [
+        "ab1ebc97fd9967f42c0c28f952f0af04e0e12ec0d186ad7dbd1cca575c450da6"
+      ],
+      "studio_sheet_sha256": "00d97618d4683bc94cb8edb1a74cc570a3bbfaeecbdf743a861fc55ebb638309",
+      "review_observations": "Broad bevelled cheek, socket and wooden haft; front/back distinction is intentional, no full-metal handle."
+    },
+    {
+      "id": "copper_chest",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/copper_chest/design.yaml",
+      "design_card": "tools/item_designs/ARMOR.md",
+      "construction_parts": [
+        "front_panel",
+        "rear_panel",
+        "left_shoulder_strap",
+        "left_side_lacing",
+        "right_shoulder_strap",
+        "right_side_lacing",
+        "overlapping_lamella0",
+        "lamella_rivet0_-1",
+        "lamella_rivet0_1",
+        "overlapping_lamella1",
+        "lamella_rivet1_-1",
+        "lamella_rivet1_1",
+        "overlapping_lamella2",
+        "lamella_rivet2_-1",
+        "lamella_rivet2_1"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 404,
+      "atlas_size": 512,
+      "old_binary_sha256": [
+        "5b05ad7c567576f74bc73b9d0b3ecda7117c9f5359321bbe2081c48839cfa1d3"
+      ],
+      "new_binary_sha256": [
+        "55fbc841a77a6fa8358b76af59930f6960554587da0e07435deaf49f50a44ee2"
+      ],
+      "studio_sheet_sha256": "e7c0f869af67826b224f4e36e538d3ae1f39710894a07918ebcfa7151e8fadb0",
+      "review_observations": "Overlapping/riveted front plates, stitched shoulder supports and side panels differ from iron ridges and gold decoration."
+    },
+    {
+      "id": "copper_feet",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/copper_feet/design.yaml",
+      "design_card": "tools/item_designs/ARMOR.md",
+      "construction_parts": [
+        "left_boot_sole",
+        "left_boot_toe",
+        "left_boot_ankle",
+        "left_boot_toe_plate",
+        "left_boot_toe_rivet-1",
+        "left_boot_toe_rivet1",
+        "right_boot_sole",
+        "right_boot_toe",
+        "right_boot_ankle",
+        "right_boot_toe_plate",
+        "right_boot_toe_rivet-1",
+        "right_boot_toe_rivet1"
+      ],
+      "old_triangles": 72,
+      "new_triangles": 344,
+      "atlas_size": 512,
+      "old_binary_sha256": [
+        "b5bcda1561e06d68ca95ecc1230c491794ec9f32f6a1445ae545bbdb09c5905c"
+      ],
+      "new_binary_sha256": [
+        "42c8cd7d014df5f7366c01fabd529e1d9714f2ef8084ed9647a5e28e47c204ec"
+      ],
+      "studio_sheet_sha256": "3aef829db890036392c7396c46a7eaf6d4b269cc5065b0b450de1da22efcadab",
+      "review_observations": "Hollow cuffs, layered toe plates and dark soles; copper rivets remain construction accents, not all-surface trim."
+    },
+    {
+      "id": "copper_head",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/copper_head/design.yaml",
+      "design_card": "tools/item_designs/ARMOR.md",
+      "construction_parts": [
+        "cap_shell",
+        "brow",
+        "crown_segment0",
+        "crown_segment1",
+        "crown_segment2",
+        "brow_rivet0",
+        "brow_rivet1",
+        "brow_rivet2",
+        "brow_rivet3",
+        "brow_rivet4"
+      ],
+      "old_triangles": 48,
+      "new_triangles": 280,
+      "atlas_size": 512,
+      "old_binary_sha256": [
+        "243436908e46a64eb44698b4e484a84f2a2979de220d0adc6e3ba1cddfa9325b"
+      ],
+      "new_binary_sha256": [
+        "1b6ff690d182ff507ff686c176e2294b755e29f457c2d842a03a6736fa1dad70"
+      ],
+      "studio_sheet_sha256": "21bce3c85e2a0c3e397b8bc1ab08ae985e041eaf4c8fcbb46f88ec81ade66f3f",
+      "review_observations": "Separate crown panels and riveted brow are visible; side opening rises toward the face. Worn eye checks remain separate evidence."
+    },
+    {
+      "id": "copper_hoe",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/copper_hoe/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "shaped_haft",
+        "grip_binding0",
+        "grip_binding1",
+        "grip_binding2",
+        "angled_neck",
+        "hoe_working_blade",
+        "blade_tang",
+        "socket",
+        "socket_rivet0",
+        "socket_rivet1"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 284,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "cc692868b62bb9685e6d5077e5bf794e625a6dd1ce61b33e1fd4f2d400fdf573"
+      ],
+      "new_binary_sha256": [
+        "9f62b040c54ee4f0d4dd4add53d06c2273aadca9aaddc3d04141247738755d77"
+      ],
+      "studio_sheet_sha256": "49c3c89fa2fe991184899cabd41439ab2a0ecb1169a95f1ae87df188a7394321",
+      "review_observations": "Angled broad working plate with a riveted socket; recognizable hoe profile from top/side."
+    },
+    {
+      "id": "copper_ingot",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/copper_ingot/design.yaml",
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "construction_parts": [
+        "cast_bar"
+      ],
+      "old_triangles": 36,
+      "new_triangles": 28,
+      "atlas_size": 128,
+      "old_binary_sha256": [
+        "e2164c08e4ff695a1679be3861229696f5a42718da055c4d774cbd10af2bff1f"
+      ],
+      "new_binary_sha256": [
+        "e2f70f80c9419b82cfb48d087b59d8806d016f8435e7313a3373e9df55883669"
+      ],
+      "studio_sheet_sha256": "469366df4be8430183b7a55ca7e7e9cbfedc4ae45dbc36480857c85f9e94154f",
+      "review_observations": "Bevelled billet with copper surface treatment and small stamping; shared billet archetype is intentional."
+    },
+    {
+      "id": "copper_legs",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/copper_legs/design.yaml",
+      "design_card": "tools/item_designs/ARMOR.md",
+      "construction_parts": [
+        "waist_band",
+        "waist_buckle0",
+        "waist_buckle1",
+        "waist_buckle2",
+        "waist_buckle3",
+        "left_thigh_liner",
+        "left_thigh_lamella0",
+        "left_thigh_lamella1",
+        "left_thigh_lamella2",
+        "left_thigh_rivet",
+        "left_shin_liner",
+        "left_shin_lamella0",
+        "left_shin_lamella1",
+        "left_shin_lamella2",
+        "left_shin_rivet",
+        "right_thigh_liner",
+        "right_thigh_lamella0",
+        "right_thigh_lamella1",
+        "right_thigh_lamella2",
+        "right_thigh_rivet",
+        "right_shin_liner",
+        "right_shin_lamella0",
+        "right_shin_lamella1",
+        "right_shin_lamella2",
+        "right_shin_rivet"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 720,
+      "atlas_size": 512,
+      "old_binary_sha256": [
+        "bffd6730e7d429a7856d5d14382045c446a29be6035f1651619763abb6949a67"
+      ],
+      "new_binary_sha256": [
+        "f1887708682f09810af8dcfb0ba51dddbb47a9cbba3401e99b46ea54b3b531c5"
+      ],
+      "studio_sheet_sha256": "98023635a93dcb6b86f10896213653db28ab8d2f2f33c205f39b26c0232f70a7",
+      "review_observations": "Four riveted front plates on a dark carrier, belt and buckle; the unplated rear is intentional backing."
+    },
+    {
+      "id": "copper_pickaxe",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/copper_pickaxe/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "shaped_haft",
+        "grip_binding0",
+        "grip_binding1",
+        "grip_binding2",
+        "cast_bridge",
+        "cast_point",
+        "broad_cast_adze",
+        "reinforcing_web",
+        "socket",
+        "socket_rivet0",
+        "socket_rivet1"
+      ],
+      "old_triangles": 72,
+      "new_triangles": 324,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "8650c462b91a4c1a2fa87497389108a1e1318894c3c71cd7dbb58a9797c6c711"
+      ],
+      "new_binary_sha256": [
+        "a76e402707a993264d748f59931a37b842be8719a721e101f780df14faf49464"
+      ],
+      "studio_sheet_sha256": "d0f8af1defa0591b60eca707dcc4d4107a398d4b2ce56b38b41144984e225dcd",
+      "review_observations": "Reinforced bridge, cast point/adze, riveted socket and wooden haft; not an iron head recolour."
+    },
+    {
+      "id": "copper_shovel",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/copper_shovel/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "shaped_haft",
+        "grip_binding0",
+        "grip_binding1",
+        "grip_binding2",
+        "dished_spade_web",
+        "left_spade_cheek",
+        "right_spade_cheek",
+        "spade_spine",
+        "socket",
+        "socket_rivet0",
+        "socket_rivet1"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 340,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "4038d987b3422137c8b7bfe1f9478e9dce5b1a97f54bead4855e828747799510"
+      ],
+      "new_binary_sha256": [
+        "468123403f53c09d66e4f058bc3c16c4395f8fe7d30bf3cad16bfd7ca19e806b"
+      ],
+      "studio_sheet_sha256": "cce21ecee425307e03952cd9fc9396f26f921cf0f89e3dd80301760e66b96200",
+      "review_observations": "Bevelled pointed blade with reinforcing socket and copper fasteners; side thickness and rear attachment read correctly."
+    },
+    {
+      "id": "copper_sword",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/copper_sword/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "working_blade",
+        "grip_core",
+        "pommel",
+        "left_guard",
+        "right_guard",
+        "back_fuller",
+        "front_fuller"
+      ],
+      "old_triangles": 72,
+      "new_triangles": 200,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "4ddc149756ef24cd86dcff1e74ed68b76b48baa940531b4d896ced5f85aea0cd"
+      ],
+      "new_binary_sha256": [
+        "291ed8dfe4496cba9179c7e2993820102130b0ea5a2616777e5757799073e163"
+      ],
+      "studio_sheet_sha256": "6ac6c59a30f7c304b0a666955e16ed81b0ab8b70daa76500980997616d4572bd",
+      "review_observations": "Broad angular point, narrow dark central line and curved guard; gray view confirms a solid blade rather than a cutout."
+    },
+    {
+      "id": "cord",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/cord/design.yaml",
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "construction_parts": [
+        "coil0",
+        "coil1",
+        "coil2",
+        "loose_tail",
+        "coil_tie"
+      ],
+      "old_triangles": 36,
+      "new_triangles": 200,
+      "atlas_size": 128,
+      "old_binary_sha256": [
+        "d9ed1652afb34c8d5034f9b59c2933f04654482c75761596ed231a04426a556a"
+      ],
+      "new_binary_sha256": [
+        "ddca29cca3fee76d6047909961e4af75a69d1193f47159a23cb11413f0ab6455"
+      ],
+      "studio_sheet_sha256": "300299554c4815909500fbd3bef10841f3357a4445e0f90283d9e02f1f6cf6a3",
+      "review_observations": "Open polygonal coil, layered loops and loose end read in silhouette and small icons; no former plank placeholder."
+    },
+    {
+      "id": "flint_and_steel",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/flint_and_steel/design.yaml",
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "construction_parts": [
+        "forged_striker",
+        "knapped_flint",
+        "fresh_flint_facet",
+        "link_cord"
+      ],
+      "old_triangles": 48,
+      "new_triangles": 120,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "e2f8aacda3a1dd4d34a4ff79ee7c4278b8fa055cac61cf7803735da8773f4bc9"
+      ],
+      "new_binary_sha256": [
+        "3877780cecca7bdaa6865a0ef645d457f2dc01f397e34e53700bed880ea8a9eb"
+      ],
+      "studio_sheet_sha256": "5d84b3b32b25a03703c74383fcaa7e7b0dcd20f801223bd636f4d9098b58f02e",
+      "review_observations": "Separate flint and hollow steel striker, linked at the rear; thin side view is intentional, not a missing surface."
+    },
+    {
+      "id": "gold_axe",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/gold_axe/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "shaped_haft",
+        "grip_binding0",
+        "grip_binding1",
+        "grip_binding2",
+        "grip_end_collar",
+        "axe_cheek",
+        "cheek_inlay",
+        "socket",
+        "lower_fine_collar",
+        "upper_fine_collar"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 312,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "2d488e863f54068ff24912a6410bdbd67ccf0143dc06c979b9e48b51e458e6c4"
+      ],
+      "new_binary_sha256": [
+        "93b63484f1e33ae41ca2dfcb9d02f305167ed5422f5742afbb4d911ae03608e6"
+      ],
+      "studio_sheet_sha256": "3f9722d5fd34b08430c10fa6888229fc8b3a3ab0ef7e764712c0b9a92209de94",
+      "review_observations": "Thin shaped cheek, decorative lozenge and collars distinguish the fragile gold tier; rear cheek is complete."
+    },
+    {
+      "id": "gold_chest",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/gold_chest/design.yaml",
+      "design_card": "tools/item_designs/ARMOR.md",
+      "construction_parts": [
+        "front_panel",
+        "rear_panel",
+        "left_shoulder_strap",
+        "left_side_lacing",
+        "right_shoulder_strap",
+        "right_side_lacing",
+        "fine_chest_chevron",
+        "dark_inlay",
+        "side_clasp0",
+        "side_clasp1",
+        "side_clasp2",
+        "side_clasp3"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 284,
+      "atlas_size": 512,
+      "old_binary_sha256": [
+        "5b05ad7c567576f74bc73b9d0b3ecda7117c9f5359321bbe2081c48839cfa1d3"
+      ],
+      "new_binary_sha256": [
+        "83536ed5af57459b916d089a13edcc57de6b0ee618a9d646373942018a7038fb"
+      ],
+      "studio_sheet_sha256": "208514efb66d52bbc8e52bcd4e29444eafef2462745a636c78ab1554245e68fe",
+      "review_observations": "Faceted central front detail and lozenge accent with shoulder straps; plain rear panel and distinct side backing."
+    },
+    {
+      "id": "gold_feet",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/gold_feet/design.yaml",
+      "design_card": "tools/item_designs/ARMOR.md",
+      "construction_parts": [
+        "left_boot_sole",
+        "left_boot_toe",
+        "left_boot_ankle",
+        "left_boot_fine_toe_band",
+        "left_boot_clasp0",
+        "left_boot_clasp1",
+        "left_boot_clasp2",
+        "left_boot_clasp3",
+        "right_boot_sole",
+        "right_boot_toe",
+        "right_boot_ankle",
+        "right_boot_fine_toe_band",
+        "right_boot_clasp0",
+        "right_boot_clasp1",
+        "right_boot_clasp2",
+        "right_boot_clasp3"
+      ],
+      "old_triangles": 72,
+      "new_triangles": 456,
+      "atlas_size": 512,
+      "old_binary_sha256": [
+        "b5bcda1561e06d68ca95ecc1230c491794ec9f32f6a1445ae545bbdb09c5905c"
+      ],
+      "new_binary_sha256": [
+        "2693e0a9b5471627bb042563c3fa34e66601ba77f9b310871e61a73c2e0e2e3f"
+      ],
+      "studio_sheet_sha256": "8b7b27d3b28bece30d6f8f2b1c9a7b6b7ea3245438ba6fff68939bd9b7d7da09",
+      "review_observations": "Front fittings, lower bands and hollow cuffs distinguish the gold construction; dark soles stay consistent."
+    },
+    {
+      "id": "gold_head",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/gold_head/design.yaml",
+      "design_card": "tools/item_designs/ARMOR.md",
+      "construction_parts": [
+        "cap_shell",
+        "brow",
+        "thin_crown_band",
+        "forehead_inlay"
+      ],
+      "old_triangles": 48,
+      "new_triangles": 96,
+      "atlas_size": 512,
+      "old_binary_sha256": [
+        "243436908e46a64eb44698b4e484a84f2a2979de220d0adc6e3ba1cddfa9325b"
+      ],
+      "new_binary_sha256": [
+        "7f56359923fb9c5f4a2bd10a7ade96b601d5475fccd108521928c6c0978d9db1"
+      ],
+      "studio_sheet_sha256": "7ad5d89c48a4bd24aa0bb14c9e4bcd949de9a0974922155752ea385056a98236",
+      "review_observations": "Fine central crest and brow lozenge differ from copper paneling and iron ridge; front opening remains clear in worn tests."
+    },
+    {
+      "id": "gold_hoe",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/gold_hoe/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "shaped_haft",
+        "grip_binding0",
+        "grip_binding1",
+        "grip_binding2",
+        "grip_end_collar",
+        "angled_neck",
+        "hoe_working_blade",
+        "blade_tang",
+        "socket",
+        "lower_fine_collar",
+        "upper_fine_collar"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 328,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "cc692868b62bb9685e6d5077e5bf794e625a6dd1ce61b33e1fd4f2d400fdf573"
+      ],
+      "new_binary_sha256": [
+        "9afe377a80ed58d774efbc9f39c8baa70ed5474df47e7b10c88278fbcad9d637"
+      ],
+      "studio_sheet_sha256": "39a49bb5199457cdec98223e1a663d17cf3926acb013eeaca7eef20955d22309",
+      "review_observations": "Fine angled plate and narrow collars retain the hoe function without turning the haft gold."
+    },
+    {
+      "id": "gold_ingot",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/gold_ingot/design.yaml",
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "construction_parts": [
+        "cast_bar"
+      ],
+      "old_triangles": 36,
+      "new_triangles": 28,
+      "atlas_size": 128,
+      "old_binary_sha256": [
+        "e2164c08e4ff695a1679be3861229696f5a42718da055c4d774cbd10af2bff1f"
+      ],
+      "new_binary_sha256": [
+        "e2f70f80c9419b82cfb48d087b59d8806d016f8435e7313a3373e9df55883669"
+      ],
+      "studio_sheet_sha256": "4ac84c9c314ae97aec501b9d78159754688323a05034ae0c246c1b21337df26d",
+      "review_observations": "Bevelled gold billet with restrained lozenge stamp; not an armour/utility placeholder."
+    },
+    {
+      "id": "gold_legs",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/gold_legs/design.yaml",
+      "design_card": "tools/item_designs/ARMOR.md",
+      "construction_parts": [
+        "waist_band",
+        "waist_buckle0",
+        "waist_buckle1",
+        "waist_buckle2",
+        "waist_buckle3",
+        "left_thigh_liner",
+        "left_thigh_slender_plate",
+        "left_thigh_gold_binding0",
+        "left_thigh_gold_binding1",
+        "left_shin_liner",
+        "left_shin_slender_plate",
+        "left_shin_gold_binding0",
+        "left_shin_gold_binding1",
+        "right_thigh_liner",
+        "right_thigh_slender_plate",
+        "right_thigh_gold_binding0",
+        "right_thigh_gold_binding1",
+        "right_shin_liner",
+        "right_shin_slender_plate",
+        "right_shin_gold_binding0",
+        "right_shin_gold_binding1"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 592,
+      "atlas_size": 512,
+      "old_binary_sha256": [
+        "bffd6730e7d429a7856d5d14382045c446a29be6035f1651619763abb6949a67"
+      ],
+      "new_binary_sha256": [
+        "87ade6747b2a146158a838d8525aa8da5989ab162bcf0209fd5160b65bed067c"
+      ],
+      "studio_sheet_sha256": "57a78953fab2efd175cd05475c0b325e3a2b0d2945c556e75652d0965141a301",
+      "review_observations": "Faceted plates with thin securing bands wrap front/side differently from copper rivets and iron kneecaps."
+    },
+    {
+      "id": "gold_pickaxe",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/gold_pickaxe/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "shaped_haft",
+        "grip_binding0",
+        "grip_binding1",
+        "grip_binding2",
+        "grip_end_collar",
+        "slender_bridge",
+        "needle_pick",
+        "gold_chisel",
+        "decorative_spine",
+        "socket",
+        "lower_fine_collar",
+        "upper_fine_collar"
+      ],
+      "old_triangles": 72,
+      "new_triangles": 360,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "8650c462b91a4c1a2fa87497389108a1e1318894c3c71cd7dbb58a9797c6c711"
+      ],
+      "new_binary_sha256": [
+        "56e91ccabecbb4dbddd2b7b6bf68e520a47d45da0e81443099463dd945a99456"
+      ],
+      "studio_sheet_sha256": "47a60fbbb50d128a5cd8d086dd45d913ccbde8deb1bfa4296f953cba2fce34ec",
+      "review_observations": "Slender asymmetrical tips, decorated spine and collars communicate a lighter construction than iron/copper."
+    },
+    {
+      "id": "gold_shovel",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/gold_shovel/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "shaped_haft",
+        "grip_binding0",
+        "grip_binding1",
+        "grip_binding2",
+        "grip_end_collar",
+        "dished_spade_web",
+        "left_spade_cheek",
+        "right_spade_cheek",
+        "spade_spine",
+        "socket",
+        "lower_fine_collar",
+        "upper_fine_collar"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 384,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "4038d987b3422137c8b7bfe1f9478e9dce5b1a97f54bead4855e828747799510"
+      ],
+      "new_binary_sha256": [
+        "9a067078d1cd8ea7a537bdb493ebd22435a95e7b10a1a5c06db6d83449f48c54"
+      ],
+      "studio_sheet_sha256": "c1d7e61e6778884a102d9ab0082046264bb17606cfed22afd9e8e037c020394e",
+      "review_observations": "Thin pointed blade, dark socket and fine gold framing; icon remains a shovel rather than a sword."
+    },
+    {
+      "id": "gold_sword",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/gold_sword/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "grip",
+        "pommel",
+        "blade",
+        "fuller",
+        "guard_left",
+        "guard_right",
+        "grip_band0",
+        "grip_band1",
+        "grip_band2",
+        "fuller_back"
+      ],
+      "old_triangles": 72,
+      "new_triangles": 236,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "4ddc149756ef24cd86dcff1e74ed68b76b48baa940531b4d896ced5f85aea0cd"
+      ],
+      "new_binary_sha256": [
+        "b87e6dff1b727dc14aeabdc2bc8a421ab379cf97c3aa55fee943bf45b831253e"
+      ],
+      "studio_sheet_sha256": "5e69dcb8ccac9a89a8c72fa8463ef2805746574f0c80fafab46e0cfa95604b34",
+      "review_observations": "Bevelled point, split guard and narrow warm fuller; no former apparent hole through the blade."
+    },
+    {
+      "id": "grain",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/grain/design.yaml",
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "construction_parts": [
+        "kernel0",
+        "kernel1",
+        "kernel2",
+        "kernel3",
+        "kernel4",
+        "kernel5"
+      ],
+      "old_triangles": 36,
+      "new_triangles": 156,
+      "atlas_size": 128,
+      "old_binary_sha256": [
+        "7ce57a6ad2201914367ec25bb2bd9cd4a0353df94f77c57c9c8406a225785c7f"
+      ],
+      "new_binary_sha256": [
+        "5cf41bc7ae8355f4b50c1012367b0803f819c5daf27ac18bc88c549b9f17e9d8"
+      ],
+      "studio_sheet_sha256": "be2dc15f4322b2f02377137e261f10d63c41a572f6f44280c893a13094fa272a",
+      "review_observations": "Unequal gold kernels replace boxes; the grouped icon reads as grain rather than a solid ingot."
+    },
+    {
+      "id": "iron_axe",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/iron_axe/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "shaped_haft",
+        "grip_binding0",
+        "grip_binding1",
+        "grip_binding2",
+        "axe_cheek",
+        "square_poll",
+        "forged_socket",
+        "socket_wedge"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 272,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "2d488e863f54068ff24912a6410bdbd67ccf0143dc06c979b9e48b51e458e6c4"
+      ],
+      "new_binary_sha256": [
+        "3e2a44c070e9998e9fa71fa0abeb0d164b767463127a5e4fca4b4b465e58b0f8"
+      ],
+      "studio_sheet_sha256": "f3babd1aacaa07fe5b0810ffb71abe30aea6cb7eb0e16ebf96fceb9a61bc2e9b",
+      "review_observations": "Broad forged cheek, square poll and socket over wooden handle; working bevel is visible in side/top views."
+    },
+    {
+      "id": "iron_chest",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/iron_chest/design.yaml",
+      "design_card": "tools/item_designs/ARMOR.md",
+      "construction_parts": [
+        "front_panel",
+        "rear_panel",
+        "left_shoulder_strap",
+        "left_side_lacing",
+        "right_shoulder_strap",
+        "right_side_lacing",
+        "left_breastplate",
+        "right_breastplate",
+        "lower_fauld"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 236,
+      "atlas_size": 512,
+      "old_binary_sha256": [
+        "5b05ad7c567576f74bc73b9d0b3ecda7117c9f5359321bbe2081c48839cfa1d3"
+      ],
+      "new_binary_sha256": [
+        "d73d848c7b4a75426610105f9dbb8f3b0cd114a7f6fd554c19de8b4e788fdd25"
+      ],
+      "studio_sheet_sha256": "f51856a257208f687d2d0bcf550416efcdb7acb4ddfbdbf914546da52dbc5091",
+      "review_observations": "Raised front ridges, plain rear and stitched side backing form a restrained steel construction."
+    },
+    {
+      "id": "iron_feet",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/iron_feet/design.yaml",
+      "design_card": "tools/item_designs/ARMOR.md",
+      "construction_parts": [
+        "left_boot_sole",
+        "left_boot_toe",
+        "left_boot_ankle",
+        "left_boot_toe_ridge",
+        "left_boot_ankle_band",
+        "right_boot_sole",
+        "right_boot_toe",
+        "right_boot_ankle",
+        "right_boot_toe_ridge",
+        "right_boot_ankle_band"
+      ],
+      "old_triangles": 72,
+      "new_triangles": 288,
+      "atlas_size": 512,
+      "old_binary_sha256": [
+        "b5bcda1561e06d68ca95ecc1230c491794ec9f32f6a1445ae545bbdb09c5905c"
+      ],
+      "new_binary_sha256": [
+        "fa6f56d061335b271477610a55531698716f72f0dc008ce867d372dd079c4e60"
+      ],
+      "studio_sheet_sha256": "b32c22166e1c15ce5cafedb588b7d73f60aa8bbb47f2fe86ef81e25c684e3eff",
+      "review_observations": "Steel cuffs, contrasting upper band and toe ribs are readable; openings and rear heel faces are complete."
+    },
+    {
+      "id": "iron_head",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/iron_head/design.yaml",
+      "design_card": "tools/item_designs/ARMOR.md",
+      "construction_parts": [
+        "cap",
+        "crown_ridge",
+        "brow",
+        "cheek0",
+        "cheek_rivet0",
+        "cheek1",
+        "cheek_rivet1"
+      ],
+      "old_triangles": 48,
+      "new_triangles": 200,
+      "atlas_size": 512,
+      "old_binary_sha256": [
+        "243436908e46a64eb44698b4e484a84f2a2979de220d0adc6e3ba1cddfa9325b"
+      ],
+      "new_binary_sha256": [
+        "629cd394432ac52892eda493a79503733b3a605d04fda44021478596c02bb963"
+      ],
+      "studio_sheet_sha256": "30958402e798db10952e696c976aa9912080efccd1de1506dc843fc40813da65",
+      "review_observations": "Ridged roof, brow and cheek silhouette; eye clearance is proven separately on both worn body forms."
+    },
+    {
+      "id": "iron_hoe",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/iron_hoe/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "shaped_haft",
+        "grip_binding0",
+        "grip_binding1",
+        "grip_binding2",
+        "angled_neck",
+        "hoe_working_blade",
+        "blade_tang",
+        "forged_socket",
+        "socket_wedge"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 272,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "cc692868b62bb9685e6d5077e5bf794e625a6dd1ce61b33e1fd4f2d400fdf573"
+      ],
+      "new_binary_sha256": [
+        "126f182c56b07c4f7c204a0b5c119eb22599a57f454560597139b412d299ba34"
+      ],
+      "studio_sheet_sha256": "c73dae0f6c349b71d649a8bad74f484a24bac13996d7fc3faf8775b757858c0e",
+      "review_observations": "Forged angled working plate, wedge and socket are distinct from pickaxe and axe heads."
+    },
+    {
+      "id": "iron_ingot",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/iron_ingot/design.yaml",
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "construction_parts": [
+        "cast_bar"
+      ],
+      "old_triangles": 36,
+      "new_triangles": 28,
+      "atlas_size": 128,
+      "old_binary_sha256": [
+        "e2164c08e4ff695a1679be3861229696f5a42718da055c4d774cbd10af2bff1f"
+      ],
+      "new_binary_sha256": [
+        "e2f70f80c9419b82cfb48d087b59d8806d016f8435e7313a3373e9df55883669"
+      ],
+      "studio_sheet_sha256": "64bf11dd36332f41f5f0d74032f10a6c7f5d60179aaa55dc82c72848fcc3019d",
+      "review_observations": "Bevelled steel billet with forge/stamp details; intentional shared ingot shape differs from ores."
+    },
+    {
+      "id": "iron_legs",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/iron_legs/design.yaml",
+      "design_card": "tools/item_designs/ARMOR.md",
+      "construction_parts": [
+        "waist_band",
+        "waist_buckle0",
+        "waist_buckle1",
+        "waist_buckle2",
+        "waist_buckle3",
+        "left_thigh_liner",
+        "left_thigh_forged_plate",
+        "left_shin_liner",
+        "left_shin_forged_plate",
+        "left_shin_knee_guard",
+        "right_thigh_liner",
+        "right_thigh_forged_plate",
+        "right_shin_liner",
+        "right_shin_forged_plate",
+        "right_shin_knee_guard"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 472,
+      "atlas_size": 512,
+      "old_binary_sha256": [
+        "bffd6730e7d429a7856d5d14382045c446a29be6035f1651619763abb6949a67"
+      ],
+      "new_binary_sha256": [
+        "ed9aef76f07e8b7718b181299d86744761ea7cafc5a04c4fac80bd669bb88908"
+      ],
+      "studio_sheet_sha256": "ed5b3064575717a52be9014256f8a01fab393f6678815ac306321e3e5f4a9931",
+      "review_observations": "Angled thigh and shin plates over dark backing, buckle and knee articulation; no copied copper-rivet pattern."
+    },
+    {
+      "id": "iron_pickaxe",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/iron_pickaxe/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "shaft",
+        "eye",
+        "forged_bridge",
+        "tapered_pick",
+        "chisel",
+        "wedge",
+        "grip_wrap0",
+        "grip_wrap1",
+        "grip_wrap2",
+        "socket_pin_front",
+        "socket_pin_back"
+      ],
+      "old_triangles": 72,
+      "new_triangles": 300,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "8650c462b91a4c1a2fa87497389108a1e1318894c3c71cd7dbb58a9797c6c711"
+      ],
+      "new_binary_sha256": [
+        "ef4b20e7ae36629dfdfde07d3869321bed127c84161f01c179a35f50cdf5837e"
+      ],
+      "studio_sheet_sha256": "807155817d1b2885cacbe361fa9032661846433118996d43d06672a0ab2b34d0",
+      "review_observations": "Asymmetric point/adze, socket pin and wood/binding remain identifiable in small icons."
+    },
+    {
+      "id": "iron_shield",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/iron_shield/design.yaml",
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "construction_parts": [
+        "rim",
+        "face_panel",
+        "front_spine",
+        "hammered_boss",
+        "rim_rivet0",
+        "rim_rivet1",
+        "rim_rivet2",
+        "rim_rivet3",
+        "back_grip",
+        "reverse_arm_strap",
+        "left_grip_mount",
+        "right_grip_mount"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 376,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "7a60d26cd28da8c21fe2d1b3563b0cbc6b36e9977af7021d34d4440eb0453b70"
+      ],
+      "new_binary_sha256": [
+        "eecd95e12698be1c24fc12aeaa2e8ef373b2e6baba44dd6c7d65b87983d242d6"
+      ],
+      "studio_sheet_sha256": "ed28d63fc11edaafc4a2827b5373db983612dda145ab2e42f44034e51a73d09a",
+      "review_observations": "Octagonal face, central boss/spine, rear handle ring and strap; actual reverse construction replaces flat trim."
+    },
+    {
+      "id": "iron_shovel",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/iron_shovel/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "shaped_haft",
+        "grip_binding0",
+        "grip_binding1",
+        "grip_binding2",
+        "dished_spade_web",
+        "left_spade_cheek",
+        "right_spade_cheek",
+        "spade_spine",
+        "forged_socket",
+        "socket_wedge"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 320,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "4038d987b3422137c8b7bfe1f9478e9dce5b1a97f54bead4855e828747799510"
+      ],
+      "new_binary_sha256": [
+        "7aec92bd061ddb4b6d1fd364af5e387c58b7ae8ab31a07bfba61689e25e1228f"
+      ],
+      "studio_sheet_sha256": "c0867310a669e89962b30c5c42a7b3ebf65fcd29682915df8f550cb5863ea4e7",
+      "review_observations": "Pointed steel blade and attachment socket, subtle forge marks and bindings; edge-on thinness is intentional."
+    },
+    {
+      "id": "iron_sword",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/iron_sword/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "working_blade",
+        "grip_core",
+        "pommel",
+        "left_guard",
+        "right_guard",
+        "back_fuller",
+        "front_fuller"
+      ],
+      "old_triangles": 72,
+      "new_triangles": 200,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "4ddc149756ef24cd86dcff1e74ed68b76b48baa940531b4d896ced5f85aea0cd"
+      ],
+      "new_binary_sha256": [
+        "be20e260cf9bed8578dc94fd4a802cfc447278dd3d001a035f2ce66de36f47cb"
+      ],
+      "studio_sheet_sha256": "0176abf087c0345203230ec99c96c47d5a100247523ef872a8d3d544fbcb4bc8",
+      "review_observations": "Tapered solid blade, fuller line, straight guard and bound grip; geometry and steel finish are coherent."
+    },
+    {
+      "id": "leather",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/leather/design.yaml",
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "construction_parts": [
+        "cut_hide",
+        "folded_corner"
+      ],
+      "old_triangles": 36,
+      "new_triangles": 32,
+      "atlas_size": 128,
+      "old_binary_sha256": [
+        "3892ef4ec2812b916c626fa9cc5e763b2cab3043e18de61716d6be4ee198d0e9"
+      ],
+      "new_binary_sha256": [
+        "9b6841e2945f18b7b7fb05500e2b0de90b4be30608bf1d790cf6f740fbf390d1"
+      ],
+      "studio_sheet_sha256": "2407dd2c2440c61c7e9321bb53ac4daf222811b550b52abdd11a15d766e62e32",
+      "review_observations": "Unequal sheet and rolled/folded edge replace a decorative rectangular material block."
+    },
+    {
+      "id": "leather_chest",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/leather_chest/design.yaml",
+      "design_card": "tools/item_designs/ARMOR.md",
+      "construction_parts": [
+        "front_panel",
+        "back_panel",
+        "waist_belt",
+        "front_seam",
+        "shoulder_strap0",
+        "shoulder_strap1",
+        "buckle_frame0",
+        "buckle_frame1",
+        "buckle_frame2",
+        "buckle_frame3"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 264,
+      "atlas_size": 512,
+      "old_binary_sha256": [
+        "5b05ad7c567576f74bc73b9d0b3ecda7117c9f5359321bbe2081c48839cfa1d3"
+      ],
+      "new_binary_sha256": [
+        "4696d41ed510f7b871b4be8ccf58c601e78b1b4366d1b034044922a6d8558093"
+      ],
+      "studio_sheet_sha256": "0963f883fdc2782056cc6ade48fc29ad5c01e9b607ef97fefbe2d06256741d1f",
+      "review_observations": "Separate front/back panels, shoulder straps, seam and buckle; open sides are intentional arm/torso clearance."
+    },
+    {
+      "id": "leather_feet",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/leather_feet/design.yaml",
+      "design_card": "tools/item_designs/ARMOR.md",
+      "construction_parts": [
+        "left_boot_sole",
+        "left_boot_toe",
+        "left_boot_ankle",
+        "left_boot_lace0",
+        "left_boot_lace1",
+        "left_boot_lace2",
+        "right_boot_sole",
+        "right_boot_toe",
+        "right_boot_ankle",
+        "right_boot_lace0",
+        "right_boot_lace1",
+        "right_boot_lace2"
+      ],
+      "old_triangles": 72,
+      "new_triangles": 344,
+      "atlas_size": 512,
+      "old_binary_sha256": [
+        "b5bcda1561e06d68ca95ecc1230c491794ec9f32f6a1445ae545bbdb09c5905c"
+      ],
+      "new_binary_sha256": [
+        "e737c65f1876d3421989264ac94f947b403c630ed791f941fcab914b1f981c01"
+      ],
+      "studio_sheet_sha256": "fd75637de96d26912893575ab1ac8fe666624c6c13e375a4ec426afa98b2259a",
+      "review_observations": "Visible laces, soft leather cuffs and dark soles give a distinct nonmetal boot construction."
+    },
+    {
+      "id": "leather_head",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/leather_head/design.yaml",
+      "design_card": "tools/item_designs/ARMOR.md",
+      "construction_parts": [
+        "sewn_crown",
+        "rear_panel",
+        "left_ear_flap",
+        "right_ear_flap",
+        "crown_cross_seam",
+        "forehead_binding"
+      ],
+      "old_triangles": 48,
+      "new_triangles": 136,
+      "atlas_size": 512,
+      "old_binary_sha256": [
+        "243436908e46a64eb44698b4e484a84f2a2979de220d0adc6e3ba1cddfa9325b"
+      ],
+      "new_binary_sha256": [
+        "9d24821ba7466d321fe49d13331716c30761c8b39a0110f059c15fd07f4d0a17"
+      ],
+      "studio_sheet_sha256": "706854e08ba4fe11f8ba593392a6209080872c6b05c15a93b9bf8d9a6ef7933b",
+      "review_observations": "Open face, cheek flaps and stitched central strip read as leather headwear; deliberate gaps are not missing model parts."
+    },
+    {
+      "id": "leather_legs",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/leather_legs/design.yaml",
+      "design_card": "tools/item_designs/ARMOR.md",
+      "construction_parts": [
+        "waist_band",
+        "waist_buckle0",
+        "waist_buckle1",
+        "waist_buckle2",
+        "waist_buckle3",
+        "left_thigh_liner",
+        "left_thigh_front_patch",
+        "left_thigh_cuff",
+        "left_shin_liner",
+        "left_shin_front_patch",
+        "left_shin_cuff",
+        "right_thigh_liner",
+        "right_thigh_front_patch",
+        "right_thigh_cuff",
+        "right_shin_liner",
+        "right_shin_front_patch",
+        "right_shin_cuff"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 512,
+      "atlas_size": 512,
+      "old_binary_sha256": [
+        "bffd6730e7d429a7856d5d14382045c446a29be6035f1651619763abb6949a67"
+      ],
+      "new_binary_sha256": [
+        "f4d3de1003d460dbb8d792ea1c2ab900087708158811c5491e44bff8ee209f92"
+      ],
+      "studio_sheet_sha256": "f4f976048960cca801a384961d7589df32def4abf7d1a856f31b37aaf7bbc5a3",
+      "review_observations": "Separate sewn panels, knee bands, waist stitching and buckle; seams continue across side/rear."
+    },
+    {
+      "id": "plant_fiber",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/plant_fiber/design.yaml",
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "construction_parts": [
+        "stripped_fiber0",
+        "stripped_fiber1",
+        "stripped_fiber2",
+        "stripped_fiber3",
+        "stripped_fiber4",
+        "fiber_tie"
+      ],
+      "old_triangles": 36,
+      "new_triangles": 128,
+      "atlas_size": 128,
+      "old_binary_sha256": [
+        "42718b45d633e2604e6ee6fc48aecd681f1e45667fc19f041edff3ed3534e11a"
+      ],
+      "new_binary_sha256": [
+        "8276b7a59b56c7c33690defc66b7b4403e34feff4bb33345f48a7a3714845d27"
+      ],
+      "studio_sheet_sha256": "ce8169ad5027a1195de224f6c25bb5782d91c685ab1168676947a3ea0e0c111f",
+      "review_observations": "Tapered loose strands and central tie read as a bundle; flattened edge view is intentional."
+    },
+    {
+      "id": "raw_copper",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/raw_copper/design.yaml",
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "construction_parts": [
+        "matrix",
+        "ore_lobe",
+        "oxide_lobe"
+      ],
+      "old_triangles": 36,
+      "new_triangles": 88,
+      "atlas_size": 128,
+      "old_binary_sha256": [
+        "3c01e78a456bb82e40aa00f864c492e74151e3774a44b0d27ba176c269afae2f"
+      ],
+      "new_binary_sha256": [
+        "5f7acc84c8b9e6284fef9a9c83ba4293558d01193533d4559ed2a0784c72670f"
+      ],
+      "studio_sheet_sha256": "404f70e723ff44e8dd31f82f821c483ec0fd8c2a198960fcdedb9a63e63bc91d",
+      "review_observations": "Green mineral matrix with copper lobe and a smaller inclusion; rear matrix is plain by construction, not an untextured fallback."
+    },
+    {
+      "id": "raw_gold",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/raw_gold/design.yaml",
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "construction_parts": [
+        "matrix",
+        "ore_lobe",
+        "oxide_lobe"
+      ],
+      "old_triangles": 36,
+      "new_triangles": 88,
+      "atlas_size": 128,
+      "old_binary_sha256": [
+        "3c01e78a456bb82e40aa00f864c492e74151e3774a44b0d27ba176c269afae2f"
+      ],
+      "new_binary_sha256": [
+        "d1ba7d2b8aec9be13225fabf2f9650051bc990d90ad949bdee8568595ce75a5c"
+      ],
+      "studio_sheet_sha256": "1c5d7f95bfab9a4071a718ac41b4e9896408cdec34a17b202694d6df63987391",
+      "review_observations": "Faceted pale matrix and visible gold lobe differ from iron/copper; simple rear matrix is intentional."
+    },
+    {
+      "id": "raw_iron",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/raw_iron/design.yaml",
+      "design_card": "tools/item_designs/PILOTS.md",
+      "construction_parts": [
+        "matrix",
+        "lobe",
+        "exposed_vein0",
+        "exposed_vein1",
+        "exposed_vein2"
+      ],
+      "old_triangles": 36,
+      "new_triangles": 130,
+      "atlas_size": 128,
+      "old_binary_sha256": [
+        "3c01e78a456bb82e40aa00f864c492e74151e3774a44b0d27ba176c269afae2f"
+      ],
+      "new_binary_sha256": [
+        "6dd0ccfb04fbdb45730a1d8f00e62c9d98a77490b09213bd6630a26a14404af6"
+      ],
+      "studio_sheet_sha256": "29f43b1955dc4c79d62c51f0521828f1b1ffbd4521244fd0824aa7c8df80d7be",
+      "review_observations": "Rough matrix, oxide and embedded pale inclusions; no former flat rectangular applied plates."
+    },
+    {
+      "id": "raw_meat",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/raw_meat/design.yaml",
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "construction_parts": [
+        "fresh_cut",
+        "marrow",
+        "fat_ribbon"
+      ],
+      "old_triangles": 36,
+      "new_triangles": 68,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "9720a6eb3d6345d148560a587b1d6a2a6783eef0e363dae8e4a5db1b66a1ef15"
+      ],
+      "new_binary_sha256": [
+        "04bc70eedfc1e026ec716b5e7e82e2afcb3abee0254d3c9ed1c36f0a351afea8"
+      ],
+      "studio_sheet_sha256": "f9eafa661049270a0be3e0f3c9fa4524d6d90201a4d6a4e246874a3671367471",
+      "review_observations": "Red irregular cut, pale fat/bone details and top marbling remain distinct from the cooked cut and bread."
+    },
+    {
+      "id": "seeds",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/seeds/design.yaml",
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "construction_parts": [
+        "kernel0",
+        "kernel1",
+        "kernel2",
+        "kernel3",
+        "kernel4",
+        "kernel5"
+      ],
+      "old_triangles": 36,
+      "new_triangles": 156,
+      "atlas_size": 128,
+      "old_binary_sha256": [
+        "3892ef4ec2812b916c626fa9cc5e763b2cab3043e18de61716d6be4ee198d0e9"
+      ],
+      "new_binary_sha256": [
+        "4d670fd9f255448de2691b3bd1be9fd58338233c7bad21ea39ea6a13eb0f7b18"
+      ],
+      "studio_sheet_sha256": "3826a87593b6c39f0b6f25b1576c1b2430d7609dbcb9c5e61d4dece10512d88c",
+      "review_observations": "Unequal brown seeds arranged as a small group, distinct from gold grain and material sheets."
+    },
+    {
+      "id": "shears",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/shears/design.yaml",
+      "design_card": "tools/item_designs/PILOTS.md",
+      "construction_parts": [
+        "hinge",
+        "finger_loop0",
+        "tang0",
+        "finger_loop1",
+        "tang1",
+        "blade_left",
+        "blade_right",
+        "hinge_pin_front",
+        "hinge_pin_back"
+      ],
+      "old_triangles": 72,
+      "new_triangles": 308,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "4ddc149756ef24cd86dcff1e74ed68b76b48baa940531b4d896ced5f85aea0cd"
+      ],
+      "new_binary_sha256": [
+        "23bbdf685447597195a22ed93325f04fc80d4938f171b70eab8d5f38defa08ef"
+      ],
+      "studio_sheet_sha256": "6d21198367ce68f943b474fb64d4329d62fffd890ed0de992dfc615fe3c2b249",
+      "review_observations": "Two loops, hinge and separate cutting halves; thin edge-on view is intentional, not a missing mesh."
+    },
+    {
+      "id": "stick",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/stick/design.yaml",
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "construction_parts": [
+        "branch",
+        "cut_end",
+        "branch_knot"
+      ],
+      "old_triangles": 24,
+      "new_triangles": 80,
+      "atlas_size": 128,
+      "old_binary_sha256": [
+        "5f1664f1c9bbfc5961968a78646ca48c95aa5ceb7f7488dfb6e1251b75b20d8b"
+      ],
+      "new_binary_sha256": [
+        "e72daa1b53976ab0077d123b68d1ed857a59dcb29e9e54149888791f40868032"
+      ],
+      "studio_sheet_sha256": "556c1cb443b78429695546cc22611bc55dc89e96c909cc2e0a834893eb54d6cb",
+      "review_observations": "Tapered branch with short side twig; side/top views retain a simple believable material form."
+    },
+    {
+      "id": "stone_axe",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/stone_axe/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "shaped_haft",
+        "grip_binding0",
+        "grip_binding1",
+        "grip_binding2",
+        "axe_cheek",
+        "flaked_ear",
+        "head_lashing_a",
+        "head_lashing_b",
+        "wooden_key"
+      ],
+      "old_triangles": 48,
+      "new_triangles": 268,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "aaf61bd3d5ccc614a64e3b01784e56ca302e7c9b90b1ebeeb7d49b16ccf17ef3"
+      ],
+      "new_binary_sha256": [
+        "0e05098b55d7ba433cfed81b5b7ad37fe4904f35c64f2c4226593ea1a1581b28"
+      ],
+      "studio_sheet_sha256": "fc3b2d7d0565a19c4769fa3db9512508604f2fe963b53beb11e9c526003f03ca",
+      "review_observations": "Chipped faceted cheek and lashing rather than metal socket; stone colour and grain differ from forged iron."
+    },
+    {
+      "id": "stone_hoe",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/stone_hoe/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "shaped_haft",
+        "grip_binding0",
+        "grip_binding1",
+        "grip_binding2",
+        "angled_neck",
+        "hoe_working_blade",
+        "head_lashing_a",
+        "head_lashing_b",
+        "wooden_key"
+      ],
+      "old_triangles": 48,
+      "new_triangles": 256,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "12527479dc45bdbf6d53561120a681ff80cecf9f3515de03dd51de631e4ef464"
+      ],
+      "new_binary_sha256": [
+        "65f331878a33242bc822931bf3b62618c881033956e6182fcfdf6e1bbc2f2ea8"
+      ],
+      "studio_sheet_sha256": "9582356ac5a7536384db90538c783924a617f48f88138bc2efbf6cefc655cbcc",
+      "review_observations": "Knapped angled plate held by crossed binding; complete top/rear faces and wood haft."
+    },
+    {
+      "id": "stone_pickaxe",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/stone_pickaxe/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "shaft",
+        "knapped_bridge",
+        "chipped_pick",
+        "adze",
+        "grip_wrap0",
+        "grip_wrap1",
+        "grip_wrap2",
+        "head_lash_front0",
+        "head_lash_front1",
+        "head_lash_back0",
+        "head_lash_back1"
+      ],
+      "old_triangles": 72,
+      "new_triangles": 252,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "f6cabd5aef0315f0706929e00365b2f66c33abe0b6a3797a4a6756e70e9d9648"
+      ],
+      "new_binary_sha256": [
+        "a434d85d4b2eb6d7151623463ac3f551b8c439d65adca06f2fc69cbdc32d7748"
+      ],
+      "studio_sheet_sha256": "1e5cd82cee32ff8e885c91c6dcf42fbb203958dfefca95941da8ec980d4b5717",
+      "review_observations": "Knapped head profile and crossing lashings distinguish it from the steel socket construction."
+    },
+    {
+      "id": "stone_shovel",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/stone_shovel/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "shaped_haft",
+        "grip_binding0",
+        "grip_binding1",
+        "grip_binding2",
+        "dished_spade_web",
+        "left_spade_cheek",
+        "right_spade_cheek",
+        "spade_spine",
+        "head_lashing_a",
+        "head_lashing_b",
+        "wooden_key"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 340,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "5af0dfdbad856c262188ae87ed138d71a321c13578532aeda0dcfbb7d688bbc8"
+      ],
+      "new_binary_sha256": [
+        "9107492095dec1713ef8c1ede544d9ff17978c67e3b5c8caf03914f929332c74"
+      ],
+      "studio_sheet_sha256": "c845759483a22a97ca5f80070bc3a566702939a2f467289dd1ea1aeb7522b1cc",
+      "review_observations": "Stone blade with knapped inset and visible lashings; no automatic metallic handle recolour."
+    },
+    {
+      "id": "stone_sword",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/stone_sword/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "working_blade",
+        "grip_core",
+        "pommel",
+        "left_guard",
+        "right_guard",
+        "blade_lashing0",
+        "blade_lashing1"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 240,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "87c3cd71aadd5c50a104864f2a914429211e63f001bc8d2f07c4903a20ad3116"
+      ],
+      "new_binary_sha256": [
+        "798a1a71502893f1ce53831eec6c5ecd7d6ea5af5b074a2144085caed3b10757"
+      ],
+      "studio_sheet_sha256": "41af1ffd58f2b6e2169fe1d384bae95474cbc9c9c21aaa2a952bf9ea6a4dbee7",
+      "review_observations": "Faceted stone blade and wrapped lower fastening; profile and texture read as stone rather than painted steel."
+    },
+    {
+      "id": "waterskin",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": "waterskin drink animation: eat_hand -> drink_hand",
+      "source": "tools/item_designs/waterskin/design.yaml",
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "construction_parts": [
+        "sewn_pouch",
+        "neck",
+        "stopper",
+        "left_edge_seam0",
+        "left_edge_seam1",
+        "right_edge_seam0",
+        "right_edge_seam1",
+        "stopper_tie",
+        "tether"
+      ],
+      "old_triangles": 48,
+      "new_triangles": 256,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "2117a87c4670fc18fbfabbd910d4e40859a4f61dcb855be789455591e737c681"
+      ],
+      "new_binary_sha256": [
+        "f65aec4588f638ec3805dea2fdd74a5d341f0647155cc97a09c30f010b5452cc"
+      ],
+      "studio_sheet_sha256": "db499f9aae96258564dd67a8c367a41463c60dba1b5acf8eaeb7e26ea59e384e",
+      "review_observations": "Sewn flattened organic vessel, cork and neck binding; unlike bucket in every inspected view."
+    },
+    {
+      "id": "wood_axe",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/wood_axe/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "shaped_haft",
+        "grip_binding0",
+        "grip_binding1",
+        "grip_binding2",
+        "axe_cheek",
+        "blade_dowel",
+        "head_lashing_a",
+        "head_lashing_b",
+        "wooden_key"
+      ],
+      "old_triangles": 48,
+      "new_triangles": 276,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "aaf61bd3d5ccc614a64e3b01784e56ca302e7c9b90b1ebeeb7d49b16ccf17ef3"
+      ],
+      "new_binary_sha256": [
+        "f0af98f1b5c07bc662a1b1e34444c2ebf6eabba81a71b4b838a0ecc717221dc2"
+      ],
+      "studio_sheet_sha256": "d0f79a4abf46ce6b66f0bb2c99edee5fcbb599e2078423dc7f3ee3dbcb8ceeb1",
+      "review_observations": "Laminated wooden cheek, binding and visible joinery on both faces; no steel-coloured functional parts."
+    },
+    {
+      "id": "wood_bow",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/wood_bow/design.yaml",
+      "design_card": "tools/item_designs/PILOTS.md",
+      "construction_parts": [
+        "grip",
+        "string_upper",
+        "string_lower",
+        "upper_limb_stave0",
+        "upper_limb_stave1",
+        "lower_limb_stave0",
+        "lower_limb_stave1"
+      ],
+      "old_triangles": 72,
+      "new_triangles": 292,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "51e7667fda19c8b91615cd7945075b5fc25d13d02f81e5576600486d64fb13ce"
+      ],
+      "new_binary_sha256": [
+        "0b790fac404e96caeed57bd3e2fbc52b07485cade8dd6609f8da6201ebdf1e5c",
+        "26405d4d1f6988b184dbbc0e44c7985ef4854c26f9f20a712c316f772ff60db3"
+      ],
+      "studio_sheet_sha256": "6a4767d51595e29434a13acfe81250941f97fc212b7667426cfe13da44837007",
+      "review_observations": "Final narrow bent staves and separated string expose the gap in silhouette; full draw/contacts tested separately."
+    },
+    {
+      "id": "wood_hoe",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/wood_hoe/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "shaped_haft",
+        "grip_binding0",
+        "grip_binding1",
+        "grip_binding2",
+        "angled_neck",
+        "hoe_working_blade",
+        "head_lashing_a",
+        "head_lashing_b",
+        "wooden_key"
+      ],
+      "old_triangles": 48,
+      "new_triangles": 256,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "12527479dc45bdbf6d53561120a681ff80cecf9f3515de03dd51de631e4ef464"
+      ],
+      "new_binary_sha256": [
+        "c7469534153ffc6362247c5ad6e7b522a5160d8d76c203714aded2849d0d6465"
+      ],
+      "studio_sheet_sha256": "a4745357ee35b5b9bd665bc54aabe3c318c2a657666f6014e64b7f679677351e",
+      "review_observations": "Wooden angled working member with key/bindings; top and rear construction remain readable."
+    },
+    {
+      "id": "wood_pickaxe",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/wood_pickaxe/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "shaped_haft",
+        "grip_binding0",
+        "grip_binding1",
+        "grip_binding2",
+        "laminated_bridge",
+        "hardwood_point",
+        "hardwood_adze",
+        "cross_grain_spline",
+        "head_lashing_a",
+        "head_lashing_b",
+        "wooden_key"
+      ],
+      "old_triangles": 72,
+      "new_triangles": 332,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "36a4b17b0b3320945566629667344f85791c7b864b86b991ebbd26205a233cda"
+      ],
+      "new_binary_sha256": [
+        "f4fa851f46f87873ae54bbc07cda3979542f38abbb29942b0e8e725e32737eb8"
+      ],
+      "studio_sheet_sha256": "1f8a9d7023ebe0e73de548282c33cf1794bcbc02e8c359dda924b2e87f5c7067",
+      "review_observations": "Shaped laminated bridge, point/adze and spline, with wooden joinery and lashings."
+    },
+    {
+      "id": "wood_shield",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/wood_shield/design.yaml",
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "construction_parts": [
+        "rim",
+        "face_panel",
+        "front_spine",
+        "rim_rivet0",
+        "rim_rivet1",
+        "rim_rivet2",
+        "rim_rivet3",
+        "back_grip",
+        "reverse_arm_strap",
+        "left_grip_mount",
+        "right_grip_mount"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 304,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "7a60d26cd28da8c21fe2d1b3563b0cbc6b36e9977af7021d34d4440eb0453b70"
+      ],
+      "new_binary_sha256": [
+        "39588bb8f625e5198331fb66388fd4ae2ddca8716e5f091e8486d915cc5e40cb"
+      ],
+      "studio_sheet_sha256": "d7c7edd08c63190430616c11eb0edfaedd700b63245b7085249a051ba141359b",
+      "review_observations": "Shaped plank face, painted spine, metal edge/fasteners and actual rear handle/strap; clear distinction from iron shield."
+    },
+    {
+      "id": "wood_shovel",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/wood_shovel/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "shaped_haft",
+        "grip_binding0",
+        "grip_binding1",
+        "grip_binding2",
+        "dished_spade_web",
+        "left_spade_cheek",
+        "right_spade_cheek",
+        "spade_spine",
+        "head_lashing_a",
+        "head_lashing_b",
+        "wooden_key"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 340,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "5af0dfdbad856c262188ae87ed138d71a321c13578532aeda0dcfbb7d688bbc8"
+      ],
+      "new_binary_sha256": [
+        "e56ecb0b0f887c40059fd397f56828a6e1ab3fc156c052484c0c5fed1d0f19ba"
+      ],
+      "studio_sheet_sha256": "c00bc15d592de461dc2fed456a6d7eb8f30568700dde1bc7fbf14995c4b9b089",
+      "review_observations": "Bevelled wooden blade and binding, with grain aligned to the working member."
+    },
+    {
+      "id": "wood_spear",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/wood_spear/design.yaml",
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "construction_parts": [
+        "spear_shaft",
+        "leaf_point",
+        "socket",
+        "butt_cap",
+        "haft_binding0",
+        "haft_binding1",
+        "haft_binding2",
+        "haft_binding3",
+        "haft_binding4"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 276,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "87c3cd71aadd5c50a104864f2a914429211e63f001bc8d2f07c4903a20ad3116"
+      ],
+      "new_binary_sha256": [
+        "b9540336e6dfd1000c1f85ad5f5701adbb835eeeab2ae7761fdc0f4502df3c61"
+      ],
+      "studio_sheet_sha256": "1686618c4bdb07d3ae4af7e23d81568b2d702ee92f5aabb0d2dbd2ece1ba0ae7",
+      "review_observations": "Separate pointed metal tip, lashing and long wooden shaft; supersampled icons retain the former missing shaft at 32 px."
+    },
+    {
+      "id": "wood_sword",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/wood_sword/design.yaml",
+      "design_card": "tools/item_designs/WORKSHOP_TOOLS.md",
+      "construction_parts": [
+        "working_blade",
+        "grip_core",
+        "pommel",
+        "left_guard",
+        "right_guard",
+        "laminate_key"
+      ],
+      "old_triangles": 60,
+      "new_triangles": 204,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "87c3cd71aadd5c50a104864f2a914429211e63f001bc8d2f07c4903a20ad3116"
+      ],
+      "new_binary_sha256": [
+        "2c7f117d76351a5b92be8e32502c610d9571424aee3a5d9ad60bad572e9be67a"
+      ],
+      "studio_sheet_sha256": "dccd4c89ecf55dfa53bbb45cb2fe3bfcd2834982b635f57e863e97ce93100f39",
+      "review_observations": "Shaped wooden blade, central spline, crossguard and wrapped grip replace the plain rod."
+    },
+    {
+      "id": "wood_torch",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/wood_torch/design.yaml",
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "construction_parts": [
+        "torch_staff",
+        "resin_bundle",
+        "flame",
+        "hot_core",
+        "binding0",
+        "binding1",
+        "binding2"
+      ],
+      "old_triangles": 48,
+      "new_triangles": 192,
+      "atlas_size": 256,
+      "old_binary_sha256": [
+        "e2f8aacda3a1dd4d34a4ff79ee7c4278b8fa055cac61cf7803735da8773f4bc9"
+      ],
+      "new_binary_sha256": [
+        "f60e15d41997b6d52f3e62f8e46890c914ddd05ad575ddf5929d5518c852c5b4"
+      ],
+      "studio_sheet_sha256": "f6db0c84aca7cd16362baa3d6b53e0c1d039ed35c537ff7a17e7e8c7aebfcb46",
+      "review_observations": "Bound fuel head and separate faceted flame distinguish it from flint/steel; bright tip remains readable."
+    },
+    {
+      "id": "wool",
+      "gameplay_definition_unchanged": true,
+      "visual_definition_changes": null,
+      "source": "tools/item_designs/wool/design.yaml",
+      "design_card": "tools/item_designs/SUPPLIES.md",
+      "construction_parts": [
+        "fleece_bundle",
+        "side_lock",
+        "tie"
+      ],
+      "old_triangles": 24,
+      "new_triangles": 112,
+      "atlas_size": 128,
+      "old_binary_sha256": [
+        "00abd918c219022cac713277e8c5b29a02d300060472be4013c9a06022a5f5a1"
+      ],
+      "new_binary_sha256": [
+        "b3fae7becae37cd9d259fcb46057149ccd7bd99577f117df1e0cb9c2c89017e0"
+      ],
+      "studio_sheet_sha256": "17006736e6771f6123554a7321f892bc11173aad88384bcbbbffb6b3b51a168f",
+      "review_observations": "Unequal pale fleece lobes with a securing tie; recognisable soft bundle rather than a textured box."
+    }
+  ]
+}

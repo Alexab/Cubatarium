@@ -1,0 +1,15 @@
+{
+  "source": "previous published runtime asset",
+  "sha256": {
+    "ATTRIBUTION.json": "26310a26e6f2607b631c5190bf0fc656a825ebf2186b58824ca5d8dfff54bce2",
+    "gltf_buffer_0.bin": "787cafe2db5f3f79e8c9b9c14ed9c25f3277002c8d2a8005c332afb9b4cbb85c",
+    "gltf_buffer_1.bin": "1abf3f61c5f4053e0c6dbffa04c4f0ec45d3f084a664cbd7c0a5cd2459cd1815",
+    "gltf_buffer_2.bin": "11c61e62f96dc4ff854f3a4b3517db1f78190992819a9b10a3fe7bdccd163536",
+    "gltf_buffer_3.bin": "0d9e0fd8d99366a6cca8230cbd11035101033dec0142c274dfbabebdd92edef9",
+    "LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
+    "model.bin": "243436908e46a64eb44698b4e484a84f2a2979de220d0adc6e3ba1cddfa9325b",
+    "model.gltf": "52eb67e6663aa1a1991676f3478033c0e54edcdb50433ff6fb1011e2be1c76d6",
+    "textures/diffuse.png": "a9a76da99e03548bcda0546069b0b8de08d65e58390a99b0b2c67a808d9f7235",
+    "wear.json": "1c4a3a8f81945e581316b520c44989b9a7c403b4f798febf8d5bf69caf955f5f"
+  }
+}

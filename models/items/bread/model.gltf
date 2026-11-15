@@ -1,153 +1,207 @@
 {
   "asset": {
     "version": "2.0",
-    "generator": "cubatarium-itemgen"
+    "generator": "cubatarium-itemgen-v3"
   },
   "buffers": [
     {
       "uri": "model.bin",
-      "byteLength": 1656
+      "byteLength": 9776
     }
   ],
   "bufferViews": [
     {
       "buffer": 0,
       "byteOffset": 0,
-      "byteLength": 288,
-      "target": 34962
+      "byteLength": 1344
     },
     {
       "buffer": 0,
-      "byteOffset": 288,
-      "byteLength": 192,
-      "target": 34962
+      "byteOffset": 1344,
+      "byteLength": 1344
     },
     {
       "buffer": 0,
-      "byteOffset": 480,
-      "byteLength": 72,
-      "target": 34963
+      "byteOffset": 2688,
+      "byteLength": 896
     },
     {
       "buffer": 0,
-      "byteOffset": 552,
-      "byteLength": 288,
-      "target": 34962
+      "byteOffset": 3584,
+      "byteLength": 720
     },
     {
       "buffer": 0,
-      "byteOffset": 840,
-      "byteLength": 192,
-      "target": 34962
+      "byteOffset": 4304,
+      "byteLength": 864
     },
     {
       "buffer": 0,
-      "byteOffset": 1032,
-      "byteLength": 72,
-      "target": 34963
+      "byteOffset": 5168,
+      "byteLength": 864
     },
     {
       "buffer": 0,
-      "byteOffset": 1104,
-      "byteLength": 288,
-      "target": 34962
+      "byteOffset": 6032,
+      "byteLength": 576
     },
     {
       "buffer": 0,
-      "byteOffset": 1392,
-      "byteLength": 192,
-      "target": 34962
+      "byteOffset": 6608,
+      "byteLength": 432
     },
     {
       "buffer": 0,
-      "byteOffset": 1584,
-      "byteLength": 72,
-      "target": 34963
+      "byteOffset": 7040,
+      "byteLength": 864
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 7904,
+      "byteLength": 864
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 8768,
+      "byteLength": 576
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 9344,
+      "byteLength": 432
     }
   ],
   "accessors": [
     {
       "bufferView": 0,
       "componentType": 5126,
-      "count": 24,
+      "count": 112,
       "type": "VEC3",
       "min": [
-        -0.14,
-        -0.06,
+        -0.125,
+        -0.05499999999999999,
         -0.08
       ],
       "max": [
-        0.14,
-        0.06,
+        0.125,
+        0.05214285714285713,
         0.08
       ]
     },
     {
       "bufferView": 1,
       "componentType": 5126,
-      "count": 24,
-      "type": "VEC2"
+      "count": 112,
+      "type": "VEC3",
+      "min": [
+        -0.8367908872327553,
+        -1.0,
+        -0.9649061514353594
+      ],
+      "max": [
+        0.8367908872327553,
+        1.0,
+        0.9649061514353594
+      ]
     },
     {
       "bufferView": 2,
-      "componentType": 5123,
-      "count": 36,
-      "type": "SCALAR"
+      "componentType": 5126,
+      "count": 112,
+      "type": "VEC2"
     },
     {
       "bufferView": 3,
-      "componentType": 5126,
-      "count": 24,
-      "type": "VEC3",
-      "min": [
-        -0.12,
-        0.030000000000000002,
-        -0.06
-      ],
-      "max": [
-        0.12,
-        0.07,
-        0.06
-      ]
+      "componentType": 5125,
+      "count": 180,
+      "type": "SCALAR"
     },
     {
       "bufferView": 4,
       "componentType": 5126,
-      "count": 24,
-      "type": "VEC2"
+      "count": 72,
+      "type": "VEC3",
+      "min": [
+        -0.0624498089000641,
+        0.05357142857142856,
+        -0.03279590432785854
+      ],
+      "max": [
+        0.0624498089000641,
+        0.05499999999999999,
+        0.03279590432785854
+      ]
     },
     {
       "bufferView": 5,
-      "componentType": 5123,
-      "count": 36,
-      "type": "SCALAR"
+      "componentType": 5126,
+      "count": 72,
+      "type": "VEC3",
+      "min": [
+        -0.9271838545667875,
+        -1.0,
+        -0.9271838545667876
+      ],
+      "max": [
+        0.9271838545667875,
+        1.0,
+        0.9271838545667876
+      ]
     },
     {
       "bufferView": 6,
       "componentType": 5126,
-      "count": 24,
-      "type": "VEC3",
-      "min": [
-        -0.13,
-        -0.06,
-        -0.07
-      ],
-      "max": [
-        0.13,
-        -0.02,
-        0.07
-      ]
-    },
-    {
-      "bufferView": 7,
-      "componentType": 5126,
-      "count": 24,
+      "count": 72,
       "type": "VEC2"
     },
     {
+      "bufferView": 7,
+      "componentType": 5125,
+      "count": 108,
+      "type": "SCALAR"
+    },
+    {
       "bufferView": 8,
-      "componentType": 5123,
-      "count": 36,
+      "componentType": 5126,
+      "count": 72,
+      "type": "VEC3",
+      "min": [
+        -0.06509890562739779,
+        0.05214285714285713,
+        -0.03386620888047543
+      ],
+      "max": [
+        0.06509890562739779,
+        0.05428571428571428,
+        0.03386620888047543
+      ]
+    },
+    {
+      "bufferView": 9,
+      "componentType": 5126,
+      "count": 72,
+      "type": "VEC3",
+      "min": [
+        -0.9271838545667874,
+        -1.0,
+        -0.9271838545667875
+      ],
+      "max": [
+        0.9271838545667874,
+        1.0,
+        0.9271838545667875
+      ]
+    },
+    {
+      "bufferView": 10,
+      "componentType": 5126,
+      "count": 72,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 11,
+      "componentType": 5125,
+      "count": 108,
       "type": "SCALAR"
     }
   ],
@@ -156,58 +210,64 @@
       "uri": "textures/diffuse.png"
     }
   ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987,
+      "wrapS": 33071,
+      "wrapT": 33071
+    }
+  ],
   "textures": [
     {
-      "source": 0
+      "source": 0,
+      "sampler": 0
     }
   ],
   "materials": [
     {
-      "name": "body",
+      "name": "crust",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
       "pbrMetallicRoughness": {
-        "baseColorFactor": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ],
         "baseColorTexture": {
           "index": 0
         },
-        "metallicFactor": 0.0,
-        "roughnessFactor": 0.95
+        "metallicFactor": 0,
+        "roughnessFactor": 0.85
       }
     },
     {
-      "name": "accent",
+      "name": "score",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
       "pbrMetallicRoughness": {
-        "baseColorFactor": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ],
         "baseColorTexture": {
           "index": 0
         },
-        "metallicFactor": 0.05,
-        "roughnessFactor": 0.95
+        "metallicFactor": 0,
+        "roughnessFactor": 0.85
       }
     },
     {
-      "name": "edge",
+      "name": "score_shadow",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
       "pbrMetallicRoughness": {
-        "baseColorFactor": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ],
         "baseColorTexture": {
           "index": 0
         },
-        "metallicFactor": 0.05,
-        "roughnessFactor": 0.75
+        "metallicFactor": 0,
+        "roughnessFactor": 0.85
       }
     }
   ],
@@ -218,37 +278,40 @@
         {
           "attributes": {
             "POSITION": 0,
-            "TEXCOORD_0": 1
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
           },
-          "indices": 2,
-          "mode": 4,
-          "material": 0
+          "indices": 3,
+          "material": 0,
+          "mode": 4
         },
         {
           "attributes": {
-            "POSITION": 3,
-            "TEXCOORD_0": 4
+            "POSITION": 4,
+            "NORMAL": 5,
+            "TEXCOORD_0": 6
           },
-          "indices": 5,
-          "mode": 4,
-          "material": 1
+          "indices": 7,
+          "material": 1,
+          "mode": 4
         },
         {
           "attributes": {
-            "POSITION": 6,
-            "TEXCOORD_0": 7
+            "POSITION": 8,
+            "NORMAL": 9,
+            "TEXCOORD_0": 10
           },
-          "indices": 8,
-          "mode": 4,
-          "material": 2
+          "indices": 11,
+          "material": 2,
+          "mode": 4
         }
       ]
     }
   ],
   "nodes": [
     {
-      "mesh": 0,
-      "name": "bread"
+      "name": "bread",
+      "mesh": 0
     }
   ],
   "scenes": [
@@ -260,6 +323,52 @@
   ],
   "scene": 0,
   "extras": {
-    "authoring_source": "cubatarium-recipe"
+    "authoring_source": "cubatarium-surface-design",
+    "design_version": 3,
+    "presentation": {
+      "carry_euler_deg": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "carry_right_grip": [
+        0.10146785714285712,
+        -0.002262857142857143,
+        0.03276928571428571
+      ],
+      "carry_left_grip": [
+        -0.10146785714285712,
+        -0.002262857142857143,
+        0.03276928571428571
+      ],
+      "tp_euler_deg": [
+        -65,
+        0,
+        0
+      ],
+      "right_grip": [
+        0.0,
+        -0.02642857142857143,
+        0.0
+      ],
+      "left_grip": [
+        0.0,
+        -0.02642857142857143,
+        0.0
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.45,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ]
+    },
+    "visual_bindings": [],
+    "wear_sections": []
   }
 }

@@ -1,0 +1,10 @@
+{
+  "source": "previous published runtime asset",
+  "sha256": {
+    "ATTRIBUTION.json": "c92ec759a9a7962302678951c8dc83394ef6b6390cbdce8cb9bb932bf474ca38",
+    "LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
+    "model.bin": "3892ef4ec2812b916c626fa9cc5e763b2cab3043e18de61716d6be4ee198d0e9",
+    "model.gltf": "7e553f8a3f31481c643e45bda4f0c87a8aae34bd9bddc87562d334216309bbaf",
+    "textures/diffuse.png": "e20bc891524477430943e7b826e6a84963bd49fa59a0da72175be25f277fdddc"
+  }
+}

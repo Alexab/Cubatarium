@@ -15,7 +15,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Unequal fruit facets, short stem and leaf read across views; red peel stays distinct at native icon sizes. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/PILOTS.md"
+      ]
     },
     "arrow": {
       "geometry": {
@@ -31,7 +35,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Point, shaft and fletching replace the former capped stick. Supersampled native icons retain the formerly missing thin shaft. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/SUPPLIES.md"
+      ]
     },
     "bread": {
       "geometry": {
@@ -47,7 +55,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Oval loaf and exposed cuts remain visible; underside/side are simple crust, not decorative box panels. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/PILOTS.md"
+      ]
     },
     "bucket": {
       "geometry": {
@@ -63,7 +75,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Real opening, rim and arched handle; side view is deliberately thin. Water-state checks are separate. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/PILOTS.md"
+      ]
     },
     "charcoal": {
       "geometry": {
@@ -79,7 +95,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Elongated charred branch differs from lumpy coal; brighter neutral char and an exposed ash-coloured end now separate it from the dark UI background. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/SUPPLIES.md"
+      ]
     },
     "coal": {
       "geometry": {
@@ -95,7 +115,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Unequal dark mineral lobes and angular facets read as coal; dark blue-gray is intentional, distinct from brown-gray charred wood. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/SUPPLIES.md"
+      ]
     },
     "cooked_meat": {
       "geometry": {
@@ -111,7 +135,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Final exposed fat and localized sear bands read on top; broad organic cut differs from raw meat. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/SUPPLIES.md"
+      ]
     },
     "copper_axe": {
       "geometry": {
@@ -127,7 +155,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Broad bevelled cheek, socket and wooden haft; front/back distinction is intentional, no full-metal handle. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "copper_chest": {
       "geometry": {
@@ -143,7 +175,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Overlapping/riveted front plates, stitched shoulder supports and side panels differ from iron ridges and gold decoration. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/ARMOR.md"
+      ]
     },
     "copper_feet": {
       "geometry": {
@@ -159,7 +195,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Hollow cuffs, layered toe plates and dark soles; copper rivets remain construction accents, not all-surface trim. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/ARMOR.md"
+      ]
     },
     "copper_head": {
       "geometry": {
@@ -175,7 +215,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Separate crown panels and riveted brow are visible; side opening rises toward the face. Worn eye checks remain separate evidence. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/ARMOR.md"
+      ]
     },
     "copper_hoe": {
       "geometry": {
@@ -191,7 +235,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Angled broad working plate with a riveted socket; recognizable hoe profile from top/side. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "copper_ingot": {
       "geometry": {
@@ -207,7 +255,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Bevelled billet with copper surface treatment and small stamping; shared billet archetype is intentional. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/SUPPLIES.md"
+      ]
     },
     "copper_legs": {
       "geometry": {
@@ -223,7 +275,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Four riveted front plates on a dark carrier, belt and buckle; the unplated rear is intentional backing. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/ARMOR.md"
+      ]
     },
     "copper_pickaxe": {
       "geometry": {
@@ -239,7 +295,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Reinforced bridge, cast point/adze, riveted socket and wooden haft; not an iron head recolour. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "copper_shovel": {
       "geometry": {
@@ -255,7 +315,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Bevelled pointed blade with reinforcing socket and copper fasteners; side thickness and rear attachment read correctly. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "copper_sword": {
       "geometry": {
@@ -271,7 +335,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Broad angular point, narrow dark central line and curved guard; gray view confirms a solid blade rather than a cutout. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "cord": {
       "geometry": {
@@ -287,7 +355,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Open polygonal coil, layered loops and loose end read in silhouette and small icons; no former plank placeholder. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/SUPPLIES.md"
+      ]
     },
     "flint_and_steel": {
       "geometry": {
@@ -303,7 +375,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Separate flint and hollow steel striker, linked at the rear; thin side view is intentional, not a missing surface. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/SUPPLIES.md"
+      ]
     },
     "gold_axe": {
       "geometry": {
@@ -319,7 +395,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Thin shaped cheek, decorative lozenge and collars distinguish the fragile gold tier; rear cheek is complete. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "gold_chest": {
       "geometry": {
@@ -335,7 +415,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Faceted central front detail and lozenge accent with shoulder straps; plain rear panel and distinct side backing. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/ARMOR.md"
+      ]
     },
     "gold_feet": {
       "geometry": {
@@ -351,7 +435,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Front fittings, lower bands and hollow cuffs distinguish the gold construction; dark soles stay consistent. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/ARMOR.md"
+      ]
     },
     "gold_head": {
       "geometry": {
@@ -367,7 +455,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Fine central crest and brow lozenge differ from copper paneling and iron ridge; front opening remains clear in worn tests. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/ARMOR.md"
+      ]
     },
     "gold_hoe": {
       "geometry": {
@@ -383,7 +475,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Fine angled plate and narrow collars retain the hoe function without turning the haft gold. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "gold_ingot": {
       "geometry": {
@@ -399,7 +495,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Bevelled gold billet with restrained lozenge stamp; not an armour/utility placeholder. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/SUPPLIES.md"
+      ]
     },
     "gold_legs": {
       "geometry": {
@@ -415,7 +515,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Faceted plates with thin securing bands wrap front/side differently from copper rivets and iron kneecaps. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/ARMOR.md"
+      ]
     },
     "gold_pickaxe": {
       "geometry": {
@@ -431,7 +535,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Slender asymmetrical tips, decorated spine and collars communicate a lighter construction than iron/copper. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "gold_shovel": {
       "geometry": {
@@ -447,7 +555,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Thin pointed blade, dark socket and fine gold framing; icon remains a shovel rather than a sword. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "gold_sword": {
       "geometry": {
@@ -463,7 +575,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Bevelled point, split guard and narrow warm fuller; no former apparent hole through the blade. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "grain": {
       "geometry": {
@@ -479,7 +595,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Unequal gold kernels replace boxes; the grouped icon reads as grain rather than a solid ingot. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/SUPPLIES.md"
+      ]
     },
     "iron_axe": {
       "geometry": {
@@ -495,7 +615,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Broad forged cheek, square poll and socket over wooden handle; working bevel is visible in side/top views. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "iron_chest": {
       "geometry": {
@@ -511,7 +635,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Raised front ridges, plain rear and stitched side backing form a restrained steel construction. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/ARMOR.md"
+      ]
     },
     "iron_feet": {
       "geometry": {
@@ -527,7 +655,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Steel cuffs, contrasting upper band and toe ribs are readable; openings and rear heel faces are complete. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/ARMOR.md"
+      ]
     },
     "iron_head": {
       "geometry": {
@@ -543,7 +675,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Ridged roof, brow and cheek silhouette; eye clearance is proven separately on both worn body forms. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/ARMOR.md"
+      ]
     },
     "iron_hoe": {
       "geometry": {
@@ -559,7 +695,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Forged angled working plate, wedge and socket are distinct from pickaxe and axe heads. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "iron_ingot": {
       "geometry": {
@@ -575,7 +715,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Bevelled steel billet with forge/stamp details; intentional shared ingot shape differs from ores. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/SUPPLIES.md"
+      ]
     },
     "iron_legs": {
       "geometry": {
@@ -591,7 +735,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Angled thigh and shin plates over dark backing, buckle and knee articulation; no copied copper-rivet pattern. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/ARMOR.md"
+      ]
     },
     "iron_pickaxe": {
       "geometry": {
@@ -607,7 +755,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Asymmetric point/adze, socket pin and wood/binding remain identifiable in small icons. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "iron_shield": {
       "geometry": {
@@ -623,7 +775,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Octagonal face, central boss/spine, rear handle ring and strap; actual reverse construction replaces flat trim. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/SUPPLIES.md"
+      ]
     },
     "iron_shovel": {
       "geometry": {
@@ -639,7 +795,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Pointed steel blade and attachment socket, subtle forge marks and bindings; edge-on thinness is intentional. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "iron_sword": {
       "geometry": {
@@ -655,7 +815,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Tapered solid blade, fuller line, straight guard and bound grip; geometry and steel finish are coherent. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "leather": {
       "geometry": {
@@ -671,7 +835,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Unequal sheet and rolled/folded edge replace a decorative rectangular material block. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/SUPPLIES.md"
+      ]
     },
     "leather_chest": {
       "geometry": {
@@ -687,7 +855,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Separate front/back panels, shoulder straps, seam and buckle; open sides are intentional arm/torso clearance. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/ARMOR.md"
+      ]
     },
     "leather_feet": {
       "geometry": {
@@ -703,7 +875,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Visible laces, soft leather cuffs and dark soles give a distinct nonmetal boot construction. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/ARMOR.md"
+      ]
     },
     "leather_head": {
       "geometry": {
@@ -719,7 +895,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Open face, cheek flaps and stitched central strip read as leather headwear; deliberate gaps are not missing model parts. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/ARMOR.md"
+      ]
     },
     "leather_legs": {
       "geometry": {
@@ -735,7 +915,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Separate sewn panels, knee bands, waist stitching and buckle; seams continue across side/rear. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/ARMOR.md"
+      ]
     },
     "plant_fiber": {
       "geometry": {
@@ -751,7 +935,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Tapered loose strands and central tie read as a bundle; flattened edge view is intentional. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/SUPPLIES.md"
+      ]
     },
     "raw_copper": {
       "geometry": {
@@ -767,7 +955,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Green mineral matrix with copper lobe and a smaller inclusion; rear matrix is plain by construction, not an untextured fallback. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/SUPPLIES.md"
+      ]
     },
     "raw_gold": {
       "geometry": {
@@ -783,7 +975,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Faceted pale matrix and visible gold lobe differ from iron/copper; simple rear matrix is intentional. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/SUPPLIES.md"
+      ]
     },
     "raw_iron": {
       "geometry": {
@@ -799,7 +995,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Rough matrix, oxide and embedded pale inclusions; no former flat rectangular applied plates. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/PILOTS.md"
+      ]
     },
     "raw_meat": {
       "geometry": {
@@ -815,7 +1015,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Red irregular cut, pale fat/bone details and top marbling remain distinct from the cooked cut and bread. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/SUPPLIES.md"
+      ]
     },
     "seeds": {
       "geometry": {
@@ -831,7 +1035,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Unequal brown seeds arranged as a small group, distinct from gold grain and material sheets. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/SUPPLIES.md"
+      ]
     },
     "shears": {
       "geometry": {
@@ -847,7 +1055,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Two loops, hinge and separate cutting halves; thin edge-on view is intentional, not a missing mesh. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/PILOTS.md"
+      ]
     },
     "stick": {
       "geometry": {
@@ -863,7 +1075,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Tapered branch with short side twig; side/top views retain a simple believable material form. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/SUPPLIES.md"
+      ]
     },
     "stone_axe": {
       "geometry": {
@@ -879,7 +1095,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Chipped faceted cheek and lashing rather than metal socket; stone colour and grain differ from forged iron. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "stone_hoe": {
       "geometry": {
@@ -895,7 +1115,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Knapped angled plate held by crossed binding; complete top/rear faces and wood haft. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "stone_pickaxe": {
       "geometry": {
@@ -911,7 +1135,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Knapped head profile and crossing lashings distinguish it from the steel socket construction. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "stone_shovel": {
       "geometry": {
@@ -927,7 +1155,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Stone blade with knapped inset and visible lashings; no automatic metallic handle recolour. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "stone_sword": {
       "geometry": {
@@ -943,7 +1175,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Faceted stone blade and wrapped lower fastening; profile and texture read as stone rather than painted steel. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "waterskin": {
       "geometry": {
@@ -959,7 +1195,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Sewn flattened organic vessel, cork and neck binding; unlike bucket in every inspected view. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/SUPPLIES.md"
+      ]
     },
     "wood_axe": {
       "geometry": {
@@ -975,7 +1215,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Laminated wooden cheek, binding and visible joinery on both faces; no steel-coloured functional parts. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "wood_bow": {
       "geometry": {
@@ -998,7 +1242,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Final narrow bent staves and separated string expose the gap in silhouette; full draw/contacts tested separately. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/PILOTS.md"
+      ]
     },
     "wood_hoe": {
       "geometry": {
@@ -1014,7 +1262,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Wooden angled working member with key/bindings; top and rear construction remain readable. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "wood_pickaxe": {
       "geometry": {
@@ -1030,7 +1282,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Shaped laminated bridge, point/adze and spline, with wooden joinery and lashings. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "wood_shield": {
       "geometry": {
@@ -1046,7 +1302,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Shaped plank face, painted spine, metal edge/fasteners and actual rear handle/strap; clear distinction from iron shield. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/SUPPLIES.md"
+      ]
     },
     "wood_shovel": {
       "geometry": {
@@ -1062,7 +1322,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Bevelled wooden blade and binding, with grain aligned to the working member. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "wood_spear": {
       "geometry": {
@@ -1078,7 +1342,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Separate pointed metal tip, lashing and long wooden shaft; supersampled icons retain the former missing shaft at 32 px. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/SUPPLIES.md"
+      ]
     },
     "wood_sword": {
       "geometry": {
@@ -1094,7 +1362,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Shaped wooden blade, central spline, crossguard and wrapped grip replace the plain rod. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/WORKSHOP_TOOLS.md"
+      ]
     },
     "wood_torch": {
       "geometry": {
@@ -1110,7 +1382,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Bound fuel head and separate faceted flame distinguish it from flint/steel; bright tip remains readable. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/SUPPLIES.md"
+      ]
     },
     "wool": {
       "geometry": {
@@ -1126,7 +1402,11 @@
       "license": "MIT",
       "license_source": "LICENSE",
       "origin_review": "Recipe coordinates and surface generator are maintained in this repository; no external mesh, UV or pixel file is an input to this candidate. Historical pack provenance is separate.",
-      "visual_independence_review": "pending final comparison; origin metadata does not certify artistic independence"
+      "visual_independence_review": "Project construction and native studio review completed: Unequal pale fleece lobes with a securing tie; recognisable soft bundle rather than a textured box. The documented functional archetype is intentionally familiar; this review is not an exhaustive external-catalogue search or legal certification.",
+      "review_evidence": [
+        "docs/research/item-visual-redesign-2026-11-14/studio-review-completion/studio-review.json",
+        "tools/item_designs/SUPPLIES.md"
+      ]
     }
   }
 }

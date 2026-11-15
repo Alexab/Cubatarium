@@ -1,199 +1,207 @@
 {
   "asset": {
     "version": "2.0",
-    "generator": "cubatarium-itemgen"
+    "generator": "cubatarium-itemgen-v3"
   },
   "buffers": [
     {
       "uri": "model.bin",
-      "byteLength": 2208
+      "byteLength": 6784
     }
   ],
   "bufferViews": [
     {
       "buffer": 0,
       "byteOffset": 0,
-      "byteLength": 288,
-      "target": 34962
+      "byteLength": 672
     },
     {
       "buffer": 0,
-      "byteOffset": 288,
-      "byteLength": 192,
-      "target": 34962
+      "byteOffset": 672,
+      "byteLength": 672
     },
     {
       "buffer": 0,
-      "byteOffset": 480,
-      "byteLength": 72,
-      "target": 34963
+      "byteOffset": 1344,
+      "byteLength": 448
     },
     {
       "buffer": 0,
-      "byteOffset": 552,
-      "byteLength": 288,
-      "target": 34962
+      "byteOffset": 1792,
+      "byteLength": 336
     },
     {
       "buffer": 0,
-      "byteOffset": 840,
-      "byteLength": 192,
-      "target": 34962
+      "byteOffset": 2128,
+      "byteLength": 288
     },
     {
       "buffer": 0,
-      "byteOffset": 1032,
-      "byteLength": 72,
-      "target": 34963
+      "byteOffset": 2416,
+      "byteLength": 288
     },
     {
       "buffer": 0,
-      "byteOffset": 1104,
-      "byteLength": 288,
-      "target": 34962
+      "byteOffset": 2704,
+      "byteLength": 192
     },
     {
       "buffer": 0,
-      "byteOffset": 1392,
-      "byteLength": 192,
-      "target": 34962
+      "byteOffset": 2896,
+      "byteLength": 144
     },
     {
       "buffer": 0,
-      "byteOffset": 1584,
-      "byteLength": 72,
-      "target": 34963
+      "byteOffset": 3040,
+      "byteLength": 1152
     },
     {
       "buffer": 0,
-      "byteOffset": 1656,
-      "byteLength": 288,
-      "target": 34962
+      "byteOffset": 4192,
+      "byteLength": 1152
     },
     {
       "buffer": 0,
-      "byteOffset": 1944,
-      "byteLength": 192,
-      "target": 34962
+      "byteOffset": 5344,
+      "byteLength": 768
     },
     {
       "buffer": 0,
-      "byteOffset": 2136,
-      "byteLength": 72,
-      "target": 34963
+      "byteOffset": 6112,
+      "byteLength": 672
     }
   ],
   "accessors": [
     {
       "bufferView": 0,
       "componentType": 5126,
-      "count": 24,
+      "count": 56,
       "type": "VEC3",
       "min": [
-        -0.17,
-        -0.009999999999999995,
-        -0.18
+        -0.17470588235294116,
+        -0.05294117647058827,
+        -0.15882352941176467
       ],
       "max": [
-        0.17,
-        0.16999999999999998,
-        0.18
+        0.17470588235294116,
+        0.12705882352941175,
+        0.15882352941176467
       ]
     },
     {
       "bufferView": 1,
       "componentType": 5126,
-      "count": 24,
-      "type": "VEC2"
+      "count": 56,
+      "type": "VEC3",
+      "min": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "max": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     {
       "bufferView": 2,
-      "componentType": 5123,
-      "count": 36,
-      "type": "SCALAR"
+      "componentType": 5126,
+      "count": 56,
+      "type": "VEC2"
     },
     {
       "bufferView": 3,
-      "componentType": 5126,
-      "count": 24,
-      "type": "VEC3",
-      "min": [
-        -0.18,
-        -0.05,
-        -0.19
-      ],
-      "max": [
-        0.18,
-        0.009999999999999998,
-        0.19
-      ]
+      "componentType": 5125,
+      "count": 84,
+      "type": "SCALAR"
     },
     {
       "bufferView": 4,
       "componentType": 5126,
       "count": 24,
-      "type": "VEC2"
+      "type": "VEC3",
+      "min": [
+        -0.03705882352941176,
+        -0.010588235294117648,
+        0.1736470588235294
+      ],
+      "max": [
+        0.03705882352941176,
+        0.05823529411764705,
+        0.17788235294117646
+      ]
     },
     {
       "bufferView": 5,
-      "componentType": 5123,
-      "count": 36,
-      "type": "SCALAR"
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC3",
+      "min": [
+        -0.7525766947068777,
+        -0.8137334712067349,
+        -1.0
+      ],
+      "max": [
+        0.7525766947068777,
+        0.658504607868518,
+        1.0
+      ]
     },
     {
       "bufferView": 6,
       "componentType": 5126,
       "count": 24,
-      "type": "VEC3",
-      "min": [
-        -0.1,
-        0.09000000000000001,
-        0.1
-      ],
-      "max": [
-        0.1,
-        0.19,
-        0.18000000000000002
-      ]
-    },
-    {
-      "bufferView": 7,
-      "componentType": 5126,
-      "count": 24,
       "type": "VEC2"
     },
     {
-      "bufferView": 8,
-      "componentType": 5123,
+      "bufferView": 7,
+      "componentType": 5125,
       "count": 36,
       "type": "SCALAR"
     },
     {
-      "bufferView": 9,
+      "bufferView": 8,
       "componentType": 5126,
-      "count": 24,
+      "count": 96,
       "type": "VEC3",
       "min": [
-        -0.14,
-        -0.02,
-        -0.19
+        -0.17999999999999997,
+        -0.021176470588235297,
+        -0.15882352941176467
       ],
       "max": [
-        0.14,
-        0.06,
-        -0.13
+        0.17999999999999997,
+        0.1434705882352941,
+        0.17258823529411763
+      ]
+    },
+    {
+      "bufferView": 9,
+      "componentType": 5126,
+      "count": 96,
+      "type": "VEC3",
+      "min": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "max": [
+        1.0,
+        1.0,
+        1.0
       ]
     },
     {
       "bufferView": 10,
       "componentType": 5126,
-      "count": 24,
+      "count": 96,
       "type": "VEC2"
     },
     {
       "bufferView": 11,
-      "componentType": 5123,
-      "count": 36,
+      "componentType": 5125,
+      "count": 168,
       "type": "SCALAR"
     }
   ],
@@ -202,124 +210,119 @@
       "uri": "textures/diffuse.png"
     }
   ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987,
+      "wrapS": 33071,
+      "wrapT": 33071
+    }
+  ],
   "textures": [
     {
-      "source": 0
+      "source": 0,
+      "sampler": 0
     }
   ],
   "materials": [
     {
-      "name": "head",
+      "name": "body",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
       "pbrMetallicRoughness": {
-        "baseColorFactor": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ],
         "baseColorTexture": {
           "index": 0
         },
-        "metallicFactor": 0.05,
-        "roughnessFactor": 0.75
+        "metallicFactor": 0.65,
+        "roughnessFactor": 0.55
       }
     },
     {
-      "name": "edge",
+      "name": "lining",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
       "pbrMetallicRoughness": {
-        "baseColorFactor": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ],
         "baseColorTexture": {
           "index": 0
         },
-        "metallicFactor": 0.05,
-        "roughnessFactor": 0.75
+        "metallicFactor": 0,
+        "roughnessFactor": 0.85
       }
     },
     {
-      "name": "accent",
+      "name": "trim",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
       "pbrMetallicRoughness": {
-        "baseColorFactor": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ],
         "baseColorTexture": {
           "index": 0
         },
-        "metallicFactor": 0.05,
-        "roughnessFactor": 0.95
-      }
-    },
-    {
-      "name": "binding",
-      "pbrMetallicRoughness": {
-        "baseColorFactor": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ],
-        "baseColorTexture": {
-          "index": 0
-        },
-        "metallicFactor": 0.0,
-        "roughnessFactor": 0.95
+        "metallicFactor": 0.7,
+        "roughnessFactor": 0.7
       }
     }
   ],
   "meshes": [
     {
-      "name": "gold_head",
+      "name": "helmet",
       "primitives": [
         {
           "attributes": {
             "POSITION": 0,
-            "TEXCOORD_0": 1
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
           },
-          "indices": 2,
-          "mode": 4,
-          "material": 0
+          "indices": 3,
+          "material": 0,
+          "mode": 4
         },
         {
           "attributes": {
-            "POSITION": 3,
-            "TEXCOORD_0": 4
+            "POSITION": 4,
+            "NORMAL": 5,
+            "TEXCOORD_0": 6
           },
-          "indices": 5,
-          "mode": 4,
-          "material": 1
+          "indices": 7,
+          "material": 1,
+          "mode": 4
         },
         {
           "attributes": {
-            "POSITION": 6,
-            "TEXCOORD_0": 7
-          },
-          "indices": 8,
-          "mode": 4,
-          "material": 2
-        },
-        {
-          "attributes": {
-            "POSITION": 9,
+            "POSITION": 8,
+            "NORMAL": 9,
             "TEXCOORD_0": 10
           },
           "indices": 11,
-          "mode": 4,
-          "material": 3
+          "material": 2,
+          "mode": 4
         }
       ]
     }
   ],
   "nodes": [
     {
-      "mesh": 0,
-      "name": "gold_head"
+      "name": "gold_head",
+      "children": [
+        1
+      ]
+    },
+    {
+      "name": "helmet",
+      "translation": [
+        0.0,
+        -0.045264705882352915,
+        -0.009529411764705889
+      ],
+      "mesh": 0
     }
   ],
   "scenes": [
@@ -331,6 +334,76 @@
   ],
   "scene": 0,
   "extras": {
-    "authoring_source": "cubatarium-recipe"
+    "authoring_source": "cubatarium-surface-design",
+    "design_version": 3,
+    "presentation": {
+      "carry_euler_deg": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "carry_right_grip": [
+        0.17470588235294116,
+        2.2041192400646486e-17,
+        0.10101176470588233
+      ],
+      "carry_left_grip": [
+        -0.17470588235294116,
+        2.2041192400646486e-17,
+        0.10101176470588233
+      ],
+      "tp_euler_deg": [
+        -65,
+        0,
+        0
+      ],
+      "right_grip": [
+        0.0,
+        -0.09820588235294114,
+        -0.009529411764705889
+      ],
+      "left_grip": [
+        0.0,
+        -0.09820588235294114,
+        -0.009529411764705889
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.5,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ]
+    },
+    "visual_bindings": [],
+    "wear_sections": [
+      {
+        "node": "helmet",
+        "bones": [
+          "hat"
+        ],
+        "slot": 0,
+        "region": "slot",
+        "low": [
+          -0.15352941176470583,
+          -0.09820588235294114,
+          -0.14717647058823527
+        ],
+        "high": [
+          0.15352941176470583,
+          0.08179411764705882,
+          0.1281176470588235
+        ],
+        "euler_deg": [
+          0,
+          180,
+          0
+        ]
+      }
+    ]
   }
 }

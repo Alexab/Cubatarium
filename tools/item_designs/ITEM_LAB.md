@@ -3,11 +3,13 @@
 Open an existing QA world in the Release application and press **Ctrl+F8**.
 F8 keeps its existing weather action. Esc, Ctrl+F8 or Close exits the studio.
 
-The left preview uses the item definition's published resource under the runtime
+The left preview uses the preserved `_itemgen_reference/model.gltf` when available;
+otherwise it uses the item definition's published resource under the runtime
 asset root. The right preview uses
 `assetgen_output/items/redesign/<id>/model.gltf` beside that root. Build a candidate
 with `python tools/itemgen.py build-design --id <id>`; building does not publish it.
 Without staging the right preview uses current production and says so explicitly.
+After publication, the archived left view still permits old/new comparison.
 Neither view equips an item or edits player property.
 
 Search filters all catalog item IDs. Drag either preview to rotate both. The

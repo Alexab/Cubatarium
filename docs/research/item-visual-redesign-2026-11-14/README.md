@@ -2,7 +2,11 @@
 
 Branch: `codex/item-visual-redesign`, based on develop `946ef5f2d`.
 
-Status: **in progress; production acceptance has not been reached**.
+Status: **70/70 v3 item resources published; final integrated acceptance remains in progress**.
+
+The [production publication record](production-publication/README.md) supersedes
+historical checkpoint counts below. All old resources are preserved as references;
+publication does not mean the full goal has passed final acceptance.
 
 ## Fixed design
 

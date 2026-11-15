@@ -1,0 +1,18 @@
+{
+  "bones": [
+    "body"
+  ],
+  "offset": [
+    0,
+    0,
+    0
+  ],
+  "euler_deg": [
+    0,
+    0,
+    0
+  ],
+  "scale": 1.0,
+  "fit_mode": "bone_volume",
+  "model": "model.gltf"
+}

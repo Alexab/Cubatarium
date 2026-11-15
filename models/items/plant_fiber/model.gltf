@@ -1,61 +1,143 @@
 {
   "asset": {
     "version": "2.0",
-    "generator": "cubatarium-itemgen"
+    "generator": "cubatarium-itemgen-v3"
   },
   "buffers": [
     {
       "uri": "model.bin",
-      "byteLength": 1656
+      "byteLength": 9472
     }
   ],
   "bufferViews": [
     {
       "buffer": 0,
       "byteOffset": 0,
-      "byteLength": 864,
-      "target": 34962
+      "byteLength": 2400
     },
     {
       "buffer": 0,
-      "byteOffset": 864,
-      "byteLength": 576,
-      "target": 34962
+      "byteOffset": 2400,
+      "byteLength": 2400
     },
     {
       "buffer": 0,
-      "byteOffset": 1440,
-      "byteLength": 216,
-      "target": 34963
+      "byteOffset": 4800,
+      "byteLength": 1600
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 6400,
+      "byteLength": 1200
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 7600,
+      "byteLength": 576
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 8176,
+      "byteLength": 576
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 8752,
+      "byteLength": 384
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 9136,
+      "byteLength": 336
     }
   ],
   "accessors": [
     {
       "bufferView": 0,
       "componentType": 5126,
-      "count": 72,
+      "count": 200,
       "type": "VEC3",
       "min": [
-        -0.0775,
+        -0.0769510424947818,
         -0.15,
-        -0.0175
+        -0.01368421052631579
       ],
       "max": [
-        0.0775,
+        0.0769510424947818,
         0.15,
-        0.0175
+        0.013684210526315788
       ]
     },
     {
       "bufferView": 1,
       "componentType": 5126,
-      "count": 72,
-      "type": "VEC2"
+      "count": 200,
+      "type": "VEC3",
+      "min": [
+        -0.7084902067188772,
+        -1.0,
+        -0.7071034394957699
+      ],
+      "max": [
+        0.7084902067188784,
+        1.0,
+        0.7071034394957699
+      ]
     },
     {
       "bufferView": 2,
-      "componentType": 5123,
-      "count": 108,
+      "componentType": 5126,
+      "count": 200,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5125,
+      "count": 300,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5126,
+      "count": 48,
+      "type": "VEC3",
+      "min": [
+        -0.05894736842105262,
+        -0.052631578947368404,
+        -0.015263157894736841
+      ],
+      "max": [
+        0.06736842105263158,
+        -0.0263157894736842,
+        0.015263157894736841
+      ]
+    },
+    {
+      "bufferView": 5,
+      "componentType": 5126,
+      "count": 48,
+      "type": "VEC3",
+      "min": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "max": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "bufferView": 6,
+      "componentType": 5126,
+      "count": 48,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 7,
+      "componentType": 5125,
+      "count": 84,
       "type": "SCALAR"
     }
   ],
@@ -64,26 +146,49 @@
       "uri": "textures/diffuse.png"
     }
   ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987,
+      "wrapS": 33071,
+      "wrapT": 33071
+    }
+  ],
   "textures": [
     {
-      "source": 0
+      "source": 0,
+      "sampler": 0
     }
   ],
   "materials": [
     {
-      "name": "binding",
+      "name": "fiber",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
       "pbrMetallicRoughness": {
-        "baseColorFactor": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ],
         "baseColorTexture": {
           "index": 0
         },
-        "metallicFactor": 0.0,
-        "roughnessFactor": 0.95
+        "metallicFactor": 0,
+        "roughnessFactor": 0.85
+      }
+    },
+    {
+      "name": "tie",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicFactor": 0,
+        "roughnessFactor": 0.85
       }
     }
   ],
@@ -94,19 +199,30 @@
         {
           "attributes": {
             "POSITION": 0,
-            "TEXCOORD_0": 1
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
           },
-          "indices": 2,
-          "mode": 4,
-          "material": 0
+          "indices": 3,
+          "material": 0,
+          "mode": 4
+        },
+        {
+          "attributes": {
+            "POSITION": 4,
+            "NORMAL": 5,
+            "TEXCOORD_0": 6
+          },
+          "indices": 7,
+          "material": 1,
+          "mode": 4
         }
       ]
     }
   ],
   "nodes": [
     {
-      "mesh": 0,
-      "name": "plant_fiber"
+      "name": "plant_fiber",
+      "mesh": 0
     }
   ],
   "scenes": [
@@ -118,6 +234,53 @@
   ],
   "scene": 0,
   "extras": {
-    "authoring_source": "cubatarium-recipe"
+    "authoring_source": "cubatarium-surface-design",
+    "design_version": 3,
+    "presentation": {
+      "carry_euler_deg": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "carry_right_grip": [
+        0.05202315789473684,
+        0.005411578947368433,
+        -0.00631578947368421
+      ],
+      "carry_left_grip": [
+        -0.052023157894736834,
+        0.005411578947368433,
+        -0.00631578947368421
+      ],
+      "tp_euler_deg": [
+        -30,
+        0,
+        20
+      ],
+      "right_grip": [
+        0.004210526315789477,
+        -0.002631578947368409,
+        -0.00631578947368421
+      ],
+      "left_grip": [
+        0.004210526315789477,
+        -0.002631578947368409,
+        -0.00631578947368421
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.5,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "visual_bindings": [],
+    "wear_sections": []
   }
 }

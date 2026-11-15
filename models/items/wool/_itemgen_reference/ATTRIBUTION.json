@@ -1,0 +1,10 @@
+{
+  "id": "wool",
+  "format": "gltf",
+  "license": "CC0-1.0",
+  "authoring_source": "cubatarium-recipe",
+  "family": "material",
+  "material": "leather",
+  "recipe_version": 2,
+  "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+}

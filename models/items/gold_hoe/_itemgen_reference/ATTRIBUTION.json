@@ -1,0 +1,10 @@
+{
+  "id": "gold_hoe",
+  "format": "gltf",
+  "license": "CC0-1.0",
+  "authoring_source": "cubatarium-recipe",
+  "family": "hoe",
+  "material": "gold",
+  "recipe_version": 1,
+  "notes": "Original Cubatarium box mesh; silhouette familiar, geometry authored."
+}

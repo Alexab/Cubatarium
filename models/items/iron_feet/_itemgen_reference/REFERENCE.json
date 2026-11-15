@@ -1,0 +1,14 @@
+{
+  "source": "previous published runtime asset",
+  "sha256": {
+    "ATTRIBUTION.json": "ad2517b0e5653ca8c4c6e36b266c5359d760836c4cef98e1cb0732d69d2f991e",
+    "gltf_buffer_0.bin": "1c0fd5389192104f25978864a5144afa515d44bcb9e064ae921356b294f4dbd6",
+    "gltf_buffer_1.bin": "b0daaa0636a6f9cb8ecd74e224578460427847a2b14af76118a10036952aab10",
+    "gltf_buffer_2.bin": "69c22ed1d5932ecb6d8d5a08c6110ca30769e2ca512d227c272781409b42d399",
+    "LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
+    "model.bin": "b5bcda1561e06d68ca95ecc1230c491794ec9f32f6a1445ae545bbdb09c5905c",
+    "model.gltf": "ec0a468f9aa7201d72dbd9b1a4ea84c5a7f3d3340a0a1c9d5a0307a473aa4b39",
+    "textures/diffuse.png": "a9a76da99e03548bcda0546069b0b8de08d65e58390a99b0b2c67a808d9f7235",
+    "wear.json": "35fec2c6222ed4e7ac265d438ff2da2c86458af9ec1f276b4e135d85a2c83938"
+  }
+}

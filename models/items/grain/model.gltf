@@ -1,61 +1,79 @@
 {
   "asset": {
     "version": "2.0",
-    "generator": "cubatarium-itemgen"
+    "generator": "cubatarium-itemgen-v3"
   },
   "buffers": [
     {
       "uri": "model.bin",
-      "byteLength": 1656
+      "byteLength": 11472
     }
   ],
   "bufferViews": [
     {
       "buffer": 0,
       "byteOffset": 0,
-      "byteLength": 864,
-      "target": 34962
+      "byteLength": 3600
     },
     {
       "buffer": 0,
-      "byteOffset": 864,
-      "byteLength": 576,
-      "target": 34962
+      "byteOffset": 3600,
+      "byteLength": 3600
     },
     {
       "buffer": 0,
-      "byteOffset": 1440,
-      "byteLength": 216,
-      "target": 34963
+      "byteOffset": 7200,
+      "byteLength": 2400
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 9600,
+      "byteLength": 1872
     }
   ],
   "accessors": [
     {
       "bufferView": 0,
       "componentType": 5126,
-      "count": 72,
+      "count": 300,
       "type": "VEC3",
       "min": [
-        -0.0825,
-        -0.08,
-        -0.025
+        -0.056295799241251054,
+        -0.07999999999999999,
+        -0.009229784385466925
       ],
       "max": [
-        0.0825,
-        0.08,
-        0.025
+        0.056295799241251054,
+        0.07999999999999999,
+        0.009229784385466925
       ]
     },
     {
       "bufferView": 1,
       "componentType": 5126,
-      "count": 72,
-      "type": "VEC2"
+      "count": 300,
+      "type": "VEC3",
+      "min": [
+        -0.9997043611288531,
+        -1.0,
+        -0.9708829166154683
+      ],
+      "max": [
+        0.6341207765321559,
+        1.0,
+        0.9708829166154683
+      ]
     },
     {
       "bufferView": 2,
-      "componentType": 5123,
-      "count": 108,
+      "componentType": 5126,
+      "count": 300,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5125,
+      "count": 468,
       "type": "SCALAR"
     }
   ],
@@ -64,26 +82,34 @@
       "uri": "textures/diffuse.png"
     }
   ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987,
+      "wrapS": 33071,
+      "wrapT": 33071
+    }
+  ],
   "textures": [
     {
-      "source": 0
+      "source": 0,
+      "sampler": 0
     }
   ],
   "materials": [
     {
-      "name": "head",
+      "name": "kernel",
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
       "pbrMetallicRoughness": {
-        "baseColorFactor": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ],
         "baseColorTexture": {
           "index": 0
         },
-        "metallicFactor": 0.05,
-        "roughnessFactor": 0.75
+        "metallicFactor": 0,
+        "roughnessFactor": 0.85
       }
     }
   ],
@@ -94,19 +120,20 @@
         {
           "attributes": {
             "POSITION": 0,
-            "TEXCOORD_0": 1
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
           },
-          "indices": 2,
-          "mode": 4,
-          "material": 0
+          "indices": 3,
+          "material": 0,
+          "mode": 4
         }
       ]
     }
   ],
   "nodes": [
     {
-      "mesh": 0,
-      "name": "grain"
+      "name": "grain",
+      "mesh": 0
     }
   ],
   "scenes": [
@@ -118,6 +145,53 @@
   ],
   "scene": 0,
   "extras": {
-    "authoring_source": "cubatarium-recipe"
+    "authoring_source": "cubatarium-surface-design",
+    "design_version": 3,
+    "presentation": {
+      "carry_euler_deg": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "carry_right_grip": [
+        0.03876605438122757,
+        0.009280859933182997,
+        -0.002230231843706633
+      ],
+      "carry_left_grip": [
+        -0.039568608897124234,
+        -3.4818477979612424e-05,
+        0.005537665667923572
+      ],
+      "tp_euler_deg": [
+        -30,
+        0,
+        20
+      ],
+      "right_grip": [
+        -0.0012342688515727595,
+        -0.005067336633303631,
+        -0.002230231843706633
+      ],
+      "left_grip": [
+        -0.0012342688515727595,
+        -0.005067336633303631,
+        -0.002230231843706633
+      ],
+      "fp_euler_deg": [
+        -26,
+        0,
+        -20
+      ],
+      "fp_scale": 0.45,
+      "fp_hand_offset": [
+        -0.04,
+        0.12,
+        0
+      ],
+      "tp_scale": 1.5
+    },
+    "visual_bindings": [],
+    "wear_sections": []
   }
 }

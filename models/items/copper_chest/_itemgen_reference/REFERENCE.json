@@ -1,0 +1,16 @@
+{
+  "source": "previous published runtime asset",
+  "sha256": {
+    "ATTRIBUTION.json": "c8e997d6b9f8986f1111c8b2cfccafdb9126b3c37fc8ab3adb87334a13745ae7",
+    "gltf_buffer_0.bin": "24c5fd76306c37677bd634232230315644f4ab18d2254b6340d4ac94bace116a",
+    "gltf_buffer_1.bin": "db16cdf5a5ad81ac50722365486534e9c79ce285e9486c900cdd85eac1142763",
+    "LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",
+    "model.bin": "5b05ad7c567576f74bc73b9d0b3ecda7117c9f5359321bbe2081c48839cfa1d3",
+    "model.gltf": "36cd23b783a00a7871e04406bd203b77c2264b6358df6d2434d26d6f5391aa66",
+    "textures/diffuse.png": "f641ea0a48b33d5f9f5c2968fed6fbca5b1860ef57d8ba134746a122f93615fd",
+    "wear.gltf": "f147a4b2b2cede6c88aa98d71e435e1d7e6e54690326d2dce22ed54206930619",
+    "wear.json": "f9efb46f631787cdddbd2a0d4a3a82ba6bd59310afc8fb7547565fc3e3da6279",
+    "wear_indices.bin": "c6f7158d6975f7c3547942b7d449ee81d3326056099b0bcb0ee54208bb444107",
+    "wear_texture.png": "05822b4c9abe8971260d8ac0cfc0742092e22cd2926f2be2b17093b9d8458aee"
+  }
+}
