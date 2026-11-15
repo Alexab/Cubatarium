@@ -18,6 +18,7 @@
 #include "Render/Pipeline/GlStateScope.h"
 #include "Test/Native/ItemBowTpQa.h"
 #include "Test/Native/ItemConsumeTpQa.h"
+#include "Test/Native/ItemHeadwearQa.h"
 #include "ThirdParty/stb_image_write.h"
 #include <algorithm>
 #include <cstdlib>
@@ -538,6 +539,7 @@ RunItemPresentationQa(const std::filesystem::path &path,
                    report);
     RunItemConsumePoseQa(*def, preview, fp, fpTarget, frames, report);
     RunItemConsumeTpQa(*def, preview, frames, report);
+    RunItemHeadwearQa(*def, preview, frames, report);
     RunItemBowTpQa(*def, preview, frames, report);
     for (const char *body : HumanAppearance::Bodies)
       for (int phase = 0; phase < 2; ++phase)

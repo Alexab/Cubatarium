@@ -4,7 +4,10 @@ atlas_size: 256
 texels_per_metre: 370
 triangle_budget: 600
 presentation:
-  tp_euler_deg: [-65, 0, 0]
+  tp_euler_deg:
+  - -65
+  - 0
+  - 0
   right_grip:
   - 0
   - -0.02
@@ -35,69 +38,157 @@ materials:
     - 190
     - 122
     pattern: plain
+  score_shadow:
+    color:
+    - 130
+    - 75
+    - 35
+    pattern: food
 parts:
 - name: loaf
   material: crust
   shape: revolve
   profile:
   - - -0.06
-    - 0.1
-  - - 0
-    - 0.15
-  - - 0.06
-    - 0.12
+    - 0.09
+  - - -0.02
+    - 0.14
+  - - 0.045
+    - 0.135
   - - 0.09
-    - 0.045
+    - 0.095
   sides: 8
   offset:
   - 0
   - 0
   - 0
-- name: score0
-  material: score
-  shape: bevel_box
-  size:
-  - 0.022
-  - 0.014
-  - 0.11
-  bevel: 0.00252
+  scale:
+  - 1.25
+  - 1
+  - 0.8
+- name: score0_rim
+  material: score_shadow
+  shape: extrude
+  contour:
+  - - -0.009
+    - -0.0015
+  - - 0.009
+    - -0.0015
+  - - 0.009
+    - 0.0015
+  - - -0.009
+    - 0.0015
+  depth: 0.095
   offset:
-  - -0.06
-  - 0.067
+  - -0.065
+  - 0.0915
   - 0
   rotation:
   - 0
+  - -22
   - 0
-  - -12
-- name: score1
+- name: score0_crumb
   material: score
-  shape: bevel_box
-  size:
-  - 0.022
-  - 0.014
-  - 0.11
-  bevel: 0.00252
+  shape: extrude
+  contour:
+  - - -0.005
+    - -0.001
+  - - 0.005
+    - -0.001
+  - - 0.005
+    - 0.001
+  - - -0.005
+    - 0.001
+  depth: 0.095
   offset:
-  - 0
-  - 0.067
+  - -0.065
+  - 0.093
   - 0
   rotation:
   - 0
+  - -22
   - 0
-  - 12
-- name: score2
-  material: score
-  shape: bevel_box
-  size:
-  - 0.022
-  - 0.014
-  - 0.11
-  bevel: 0.00252
+- name: score1_rim
+  material: score_shadow
+  shape: extrude
+  contour:
+  - - -0.009
+    - -0.0015
+  - - 0.009
+    - -0.0015
+  - - 0.009
+    - 0.0015
+  - - -0.009
+    - 0.0015
+  depth: 0.095
   offset:
-  - 0.06
-  - 0.067
+  - 0
+  - 0.0915
   - 0
   rotation:
   - 0
+  - -22
   - 0
-  - 12
+- name: score1_crumb
+  material: score
+  shape: extrude
+  contour:
+  - - -0.005
+    - -0.001
+  - - 0.005
+    - -0.001
+  - - 0.005
+    - 0.001
+  - - -0.005
+    - 0.001
+  depth: 0.095
+  offset:
+  - 0
+  - 0.093
+  - 0
+  rotation:
+  - 0
+  - -22
+  - 0
+- name: score2_rim
+  material: score_shadow
+  shape: extrude
+  contour:
+  - - -0.009
+    - -0.0015
+  - - 0.009
+    - -0.0015
+  - - 0.009
+    - 0.0015
+  - - -0.009
+    - 0.0015
+  depth: 0.095
+  offset:
+  - 0.065
+  - 0.0915
+  - 0
+  rotation:
+  - 0
+  - -22
+  - 0
+- name: score2_crumb
+  material: score
+  shape: extrude
+  contour:
+  - - -0.005
+    - -0.001
+  - - 0.005
+    - -0.001
+  - - 0.005
+    - 0.001
+  - - -0.005
+    - 0.001
+  depth: 0.095
+  offset:
+  - 0.065
+  - 0.093
+  - 0
+  rotation:
+  - 0
+  - -22
+  - 0

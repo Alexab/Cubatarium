@@ -33,6 +33,11 @@ materials:
     - 69
     - 37
     pattern: wood
+    uv_direction:
+    - 0
+    - 1
+    - 0
+    grain_axis: u
   binding:
     color:
     - 82
@@ -48,6 +53,7 @@ materials:
     pattern: forged
     metallic: 0.7
     roughness: 0.6
+    marks: forge
   edge:
     color:
     - 172
@@ -87,7 +93,7 @@ parts:
   size:
   - 0.09
   - 0.11
-  - 0.09
+  - 0.084
   bevel: 0.0162
   offset:
   - 0
@@ -115,7 +121,7 @@ parts:
   - 0
 - name: tapered_pick
   material: head
-  shape: extrude
+  shape: blade
   contour:
   - - 0.12
     - 0.33
@@ -132,9 +138,12 @@ parts:
   - 0
   - 0
   - 0
+  edge_depth: 0.008
+  bevel_fraction: 0.24
+  edge_material: edge
 - name: chisel
-  material: edge
-  shape: extrude
+  material: head
+  shape: blade
   contour:
   - - -0.3
     - 0.25
@@ -149,6 +158,9 @@ parts:
   - 0
   - 0
   - 0
+  edge_depth: 0.008
+  bevel_fraction: 0.24
+  edge_material: edge
 - name: wedge
   material: edge
   shape: bevel_box
@@ -211,5 +223,39 @@ parts:
   - 0
   rotation:
   - 0
+  - 0
+  - 0
+- name: socket_pin_front
+  material: edge
+  shape: revolve
+  profile:
+  - - -0.002
+    - 0.013
+  - - 0.002
+    - 0.013
+  sides: 6
+  offset:
+  - 0
+  - 0.25
+  - 0.043
+  rotation:
+  - 90
+  - 0
+  - 0
+- name: socket_pin_back
+  material: edge
+  shape: revolve
+  profile:
+  - - -0.002
+    - 0.013
+  - - 0.002
+    - 0.013
+  sides: 6
+  offset:
+  - 0
+  - 0.25
+  - -0.043
+  rotation:
+  - 90
   - 0
   - 0

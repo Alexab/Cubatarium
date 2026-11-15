@@ -16,7 +16,7 @@ def paint_surface(width, height, material, name):
     style=material.get('pattern','plain')
     if material.get('grain_axis','v') not in ('u','v'):
         raise ValueError('Wood grain axis must be u or v')
-    if style not in ('plain','wood','leather','forged','hammered','stone','food','fiber','water','feather','painted','char','flame','cast','ore','coal','wool','grain','meat','roast'):
+    if style not in ('plain','wood','leather','forged','hammered','stone','food','fiber','water','feather','painted','char','flame','cast','ore','coal','wool','grain','meat','roast','fruit','leaf'):
         raise ValueError(f'Unknown surface pattern: {style}')
     phase=int.from_bytes(hashlib.sha256(name.encode()).digest()[:2],'little')/1000
     image=Image.new('RGBA',(width,height))
@@ -36,6 +36,10 @@ def paint_surface(width, height, material, name):
                 if style=='hammered': shade+=3*math.sin(x*.65+y*.35)
             elif style=='stone':
                 shade+=5*math.sin(u*17+v*11)+3*math.cos(v*24-u*6)
+            elif style=='fruit':
+                shade+=8*math.sin(u*3.5+phase*.12)*math.cos(v*2.2)+3*math.sin(u*8+v*5)
+            elif style=='leaf':
+                shade+=5*math.sin(u*4)-6*abs(v-.5)
             elif style=='food':
                 shade+=7*math.sin(u*6+phase)*math.sin(v*4)+2*math.sin(x*.8+y)
             elif style=='water':
@@ -66,7 +70,21 @@ def paint_surface(width, height, material, name):
             image.putpixel((x,y),pixel+(255,))
     draw=ImageDraw.Draw(image)
     if min(width,height)>=8:
-        if style=='meat' and name.endswith(('.front','.back')):
+        if style=='fruit' and '.ring' in name:
+            # A small, offset cluster of peel pores, not uniform texture noise.
+            warm=tuple(min(255,c+17) for c in color)+(255,)
+            for i in range(3):
+                x=width*(.27+.12*i+.035*math.sin(phase+i))
+                y=height*(.42+.11*(i%2)+.05*math.cos(phase-i))
+                draw.line((x,y,x+max(1,width//60),y),fill=warm,width=1)
+        elif style=='leaf' and name.endswith(('.front','.back')):
+            vein=tuple(min(255,c+25) for c in color)+(255,)
+            draw.line((width*.10,height*.60,width*.84,height*.43),fill=vein,width=1)
+            for u in (.34,.58):
+                v=.60-(u-.10)*.17/.74
+                draw.line((width*u,height*v,width*(u-.12),height*(v-.19)),fill=vein,width=1)
+                draw.line((width*u,height*v,width*(u-.10),height*(v+.19)),fill=vein,width=1)
+        elif style=='meat' and name.endswith(('.front','.back')):
             for shift in (.18,.60):
                 draw.arc((width*.12,height*(shift-.15),width*.83,height*(shift+.25)),15,160,fill=(211,157,136,255),width=max(1,min(width,height)//40))
         elif style=='painted':

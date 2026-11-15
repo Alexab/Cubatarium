@@ -1,7 +1,7 @@
 """Geometry contracts for the item redesign; no runtime assets are rewritten."""
 import math
 import unittest
-from itemgen.mesh import bevel_box, blade, extrude, shell, tube, transform, triangulate, revolve, ring
+from itemgen.mesh import bevel_box, blade, extrude, shell, ridged_shell, tube, transform, triangulate, revolve, ring
 
 
 class MeshTests(unittest.TestCase):
@@ -16,6 +16,41 @@ class MeshTests(unittest.TestCase):
                 key=tuple(sorted((a,b)));edges[key]=edges.get(key,0)+1
         self.assertTrue(all(value==2 for value in edges.values()))
         self.assertTrue(all(abs(p[0])>=.0849 or abs(p[2])>=.0649 for f in faces for p in f.points))
+
+    def test_ridged_shell_keeps_the_cavity_and_has_no_duplicate_cap(self):
+        faces=ridged_shell((.4,.2,.35),.02,.05)
+        self.assertFalse(any(f.name.endswith('.bottom') for f in faces))
+        self.assertEqual(next(f for f in faces if f.name.endswith('.floor')).normal(),(0,1,0))
+        self.assertLess(next(f for f in faces if f.name.endswith('.ridge_left')).normal()[0],0)
+        self.assertGreater(next(f for f in faces if f.name.endswith('.ridge_right')).normal()[0],0)
+        edges={}
+        for face in faces:
+            face.normal()
+            for a,b in zip(face.points,face.points[1:]+face.points[:1]):
+                key=tuple(sorted((a,b)));edges[key]=edges.get(key,0)+1
+        self.assertTrue(all(count==2 for count in edges.values()))
+        self.assertAlmostEqual(min(p[1] for f in faces for p in f.points),-.05)
+        self.assertAlmostEqual(max(p[1] for f in faces for p in f.points),.2)
+        for rise in (0,-.1,float('nan'),float('inf')):
+            with self.assertRaises(ValueError):ridged_shell((.4,.2,.35),.02,rise)
+
+    def test_sloping_shell_opening_is_closed_and_preserves_wall_thickness(self):
+        for builder in (lambda **kw:shell((.4,.2,.35),.02,**kw),lambda **kw:ridged_shell((.4,.2,.35),.02,.05,**kw)):
+            faces=builder(front_rim_drop=.07)
+            edges={}
+            for face in faces:
+                face.normal()
+                for a,b in zip(face.points,face.points[1:]+face.points[:1]):
+                    key=tuple(sorted((a,b)));edges[key]=edges.get(key,0)+1
+            self.assertTrue(all(count==2 for count in edges.values()))
+            front=next(f for f in faces if f.name.endswith('.outer0'))
+            back=next(f for f in faces if f.name.endswith('.outer2'))
+            self.assertAlmostEqual(max(p[1] for p in front.points),.13)
+            self.assertAlmostEqual(max(p[1] for p in back.points),.2)
+            self.assertTrue(all(p[1]==.02 for p in next(f for f in faces if f.name.endswith('.floor')).points))
+            self.assertEqual(builder(),builder(front_rim_drop=0))
+            for drop in (-.1,.18,float('nan'),True):
+                with self.assertRaises(ValueError):builder(front_rim_drop=drop)
 
     def test_anisotropic_scale_preserves_pivot_and_outward_normals(self):
         faces=bevel_box((.2,.4,.2),.02)
@@ -42,6 +77,25 @@ class MeshTests(unittest.TestCase):
         self.assertEqual({f.role for f in faces},{'body','edge'})
         for depth,edge,fraction in ((.1,.2,.2),(.1,0,.2),(.1,.01,0),(.1,.01,.5)):
             with self.assertRaises(ValueError): blade(((-1,-1),(1,-1),(0,1)),depth,edge,fraction)
+
+    def test_authored_radial_asymmetry_stays_convex_closed_and_deterministic(self):
+        profile=((-1,.5),(0,1),(1,.4))
+        scales=[1.04,.95,1.07,1.02,.94,1.06,.98,1]
+        faces=revolve(profile,radial_scales=scales)
+        self.assertEqual(faces,revolve(profile,radial_scales=scales))
+        points=[p for face in faces for p in face.points]
+        self.assertNotAlmostEqual(max(p[0] for p in points),-min(p[0] for p in points))
+        self.assertNotAlmostEqual(max(p[2] for p in points),-min(p[2] for p in points))
+        edges={}
+        for face in faces:
+            centre=[sum(p[i] for p in face.points)/len(face.points) for i in range(3)]
+            self.assertGreater(sum(a*b for a,b in zip(centre,face.normal())),0)
+            for a,b in zip(face.points,face.points[1:]+face.points[:1]):
+                key=tuple(sorted((a,b)));edges[key]=edges.get(key,0)+1
+        self.assertTrue(all(count==2 for count in edges.values()))
+        self.assertEqual(revolve(profile),revolve(profile,radial_scales=[1]*8))
+        for invalid in ([1]*7,[1]*7+[0],[1]*7+[float('nan')],[1]*7+[True],[1,.1,1,1,1,1,1,1]):
+            with self.assertRaises(ValueError):revolve(profile,radial_scales=invalid)
 
     def test_hollow_ring_retains_its_open_center(self):
         faces=ring(.05,.03,.02)

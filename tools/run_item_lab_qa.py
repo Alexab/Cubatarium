@@ -57,7 +57,7 @@ def main():
                 env.pop(key)
         env['CUBA_ITEM_LAB_QA'] = str(report)
         run([sys.executable, 'tools/flight_sim_run.py', '--world', args.world,
-             '--require-existing-world', '--seconds', '3', '--process-timeout', str(240 + 6 * len(ids)),
+             '--require-existing-world', '--seconds', '12', '--process-timeout', str(240 + 6 * len(ids)),
              '--no-fly', '--no-hold-forward', '--idle-sec', '0', '--report', output / 'flight.json'], 'native-flight', env)
         native = json.loads(report.read_text(encoding='utf-8'))
         if native.get('passed') is not True or sorted(native.get('diagnostics', {})) != ids:

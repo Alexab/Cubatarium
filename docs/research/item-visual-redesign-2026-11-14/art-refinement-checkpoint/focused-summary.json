@@ -1,0 +1,28 @@
+{
+  "passed": true,
+  "scope": "presentation_only",
+  "world": "CarryAimQA",
+  "staged_ids": [
+    "apple",
+    "bread",
+    "copper_axe",
+    "copper_head",
+    "gold_head",
+    "gold_sword",
+    "iron_head",
+    "iron_pickaxe"
+  ],
+  "inspected_surface_ids": [
+    "apple",
+    "bread",
+    "copper_axe",
+    "copper_head",
+    "gold_head",
+    "gold_sword",
+    "iron_head",
+    "iron_pickaxe"
+  ],
+  "presentation_checks": 702,
+  "restored_runtime_files": 24,
+  "executable_sha256": "afcd2f6953215f2647ad5597a067ecb59b5aae8859622c21d692ac4e4c5f5073"
+}

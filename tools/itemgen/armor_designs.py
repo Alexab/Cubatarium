@@ -45,7 +45,7 @@ def helmet(tier):
             parts.append(profile('left_ear_flap' if side<0 else 'right_ear_flap','body',[(side*.13,-.09),(side*.16,-.06),(side*.16,.10),(side*.13,.12)],.20,(0,0,-.015)))
         parts.extend((box('crown_cross_seam','strap',[.022,.018,.30],(0,.137,0)),box('forehead_binding','strap',[.32,.032,.024],(0,.045,.145))))
     else:
-        parts=[dict(name='cap_shell',material='body',shape='shell',size=[.33,.17,.30],thickness=.017,rotation=[180,0,0],offset=[0,.12,0]),
+        parts=[dict(name='cap_shell',material='body',shape='shell',size=[.33,.17,.30],thickness=.017,front_rim_drop=.07,rotation=[180,0,0],offset=[0,.12,0]),
                box('brow','trim',[.34,.032,.026],(0,-.004,.15))]
         if tier=='copper':
             for i,x in enumerate((-.09,0,.09)):
@@ -53,6 +53,7 @@ def helmet(tier):
             for i,x in enumerate((-.12,-.06,0,.06,.12)):
                 parts.append(box(f'brow_rivet{i}','fastener',[.014,.014,.012],(x,-.005,.17)))
         elif tier=='iron':
+            parts[0].update(shape='ridged_shell',ridge_rise=.035)
             parts.append(box('forged_crown_ridge','lining',[.045,.036,.30],(0,.14,0)))
             for side in (-1,1):
                 parts.append(box('left_cheek' if side<0 else 'right_cheek','body',[.025,.11,.10],(side*.16,-.06,.08),(0,0,side*5)))
@@ -142,6 +143,7 @@ def make_armor():
         for slot in SLOTS:
             id=f'{tier}_{slot}';parts,nodes,sections=builders[slot](tier)
             recipe=design(id,parts,palette(tier),grip=(0,-.05,0),atlas=512,density=180 if id=='gold_legs' else 230,scale=.5,budget=2000)
+            if slot=='head' and tier!='leather':recipe['materials']['body']['uv_direction']=[1,0,0]
             if slot=='feet':
                 recipe['presentation'].update(right_grip=[0,0,.025],left_grip=[0,0,.025])
             recipe.update(nodes=nodes,wear_sections=sections,authorship=dict(construction='Cubatarium armor coordinate drawings',reference_kind='functional sewn and worked armor',external_meshes=False,external_pixels=False))

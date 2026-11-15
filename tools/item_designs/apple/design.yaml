@@ -4,7 +4,10 @@ atlas_size: 256
 texels_per_metre: 330
 triangle_budget: 600
 presentation:
-  tp_euler_deg: [-65, 0, 0]
+  tp_euler_deg:
+  - -65
+  - 0
+  - 0
   right_grip:
   - 0
   - -0.06
@@ -28,7 +31,7 @@ materials:
     - 173
     - 46
     - 35
-    pattern: food
+    pattern: fruit
   stem:
     color:
     - 89
@@ -40,7 +43,12 @@ materials:
     - 63
     - 112
     - 47
-    pattern: plain
+    pattern: leaf
+    uv_direction:
+    - 1
+    - 0
+    - 0
+    grain_axis: u
 parts:
 - name: fruit
   material: skin
@@ -61,13 +69,22 @@ parts:
   - 0
   - 0
   - 0
+  radial_scales:
+  - 1.04
+  - 0.95
+  - 1.07
+  - 1.02
+  - 0.94
+  - 1.06
+  - 0.98
+  - 1.0
 - name: stem
   material: stem
   shape: revolve
   profile:
   - - 0.1
     - 0.012
-  - - 0.17
+  - - 0.145
     - 0.009
   sides: 5
   offset:
@@ -91,3 +108,7 @@ parts:
   - 0.005
   - 0.13
   - 0
+  scale:
+  - 0.78
+  - 0.85
+  - 1

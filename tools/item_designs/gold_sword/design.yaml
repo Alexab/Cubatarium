@@ -48,6 +48,7 @@ materials:
     pattern: forged
     metallic: 0.7
     roughness: 0.6
+    marks: inlay
   edge:
     color:
     - 254
@@ -64,6 +65,14 @@ materials:
     pattern: plain
     metallic: 0.5
     roughness: 0.7
+  recess:
+    color:
+    - 151
+    - 111
+    - 46
+    pattern: forged
+    metallic: 0.6
+    roughness: 0.72
 parts:
 - name: grip
   material: binding
@@ -98,7 +107,7 @@ parts:
   - 0
 - name: blade
   material: head
-  shape: extrude
+  shape: blade
   contour:
   - - -0.065
     - -0.07
@@ -115,25 +124,28 @@ parts:
   - 0
   - 0
   - 0
+  edge_depth: 0.006
+  bevel_fraction: 0.22
+  edge_material: edge
 - name: fuller
-  material: dark
+  material: recess
   shape: extrude
   contour:
-  - - -0.017
+  - - -0.0076500000000000005
     - 0.29
-  - - -0.012
+  - - -0.0054
     - 0.01
-  - - 0.012
+  - - 0.0054
     - 0.01
-  - - 0.017
+  - - 0.0076500000000000005
     - 0.29
-  - - 0
+  - - 0.0
     - 0.37
-  depth: 0.005
+  depth: 0.001
   offset:
   - 0
   - 0
-  - 0.025
+  - 0.0228
 - name: guard_left
   material: head
   shape: extrude
@@ -216,3 +228,22 @@ parts:
   - 0
   - 0
   - 0
+- name: fuller_back
+  material: recess
+  shape: extrude
+  contour:
+  - - -0.0076500000000000005
+    - 0.29
+  - - -0.0054
+    - 0.01
+  - - 0.0054
+    - 0.01
+  - - 0.0076500000000000005
+    - 0.29
+  - - 0.0
+    - 0.37
+  depth: 0.001
+  offset:
+  - 0
+  - 0
+  - -0.0228

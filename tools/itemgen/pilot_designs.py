@@ -155,7 +155,63 @@ def make_pilots():
     for i,(size,off) in enumerate((([.065,.012,.015],(.08,-.165,.17)),([.065,.012,.015],(.08,-.105,.17)),([.012,.065,.015],(.048,-.135,.17)),([.012,.065,.015],(.112,-.135,.17)))):
         parts.append(box(f'buckle_frame{i}','buckle',size,off))
     result['leather_chest']=design('leather_chest',parts,leather,grip=(0,-.12,0),atlas=512,density=400,scale=.55,budget=2000)
+    refine_pilot_surfaces(result)
     return result
+
+
+def refine_pilot_surfaces(designs):
+    """Construction refinements for the authored reference group; no imported data."""
+    if 'apple' in designs:
+        fruit=designs['apple']
+        fruit['materials']['skin']['pattern']='fruit'
+        fruit['materials']['leaf'].update(pattern='leaf',uv_direction=[1,0,0],grain_axis='u')
+        for part in fruit['parts']:
+            if part['name']=='fruit':part['radial_scales']=[1.04,.95,1.07,1.02,.94,1.06,.98,1.0]
+            if part['name']=='stem':part['profile']=[list(part['profile'][0]),[.145,.009]]
+            if part['name']=='leaf':part['scale']=[.78,.85,1]
+    if 'iron_head' in designs:
+        helmet=designs['iron_head']
+        helmet['materials']['head'].update(marks='forge',uv_direction=[1,0,0])
+        for part in helmet['parts']:
+            if part['name']=='cap':part.update(shape='ridged_shell',ridge_rise=.035,front_rim_drop=.07)
+    pick=designs['iron_pickaxe']
+    pick['materials']['head']['marks']='forge'
+    pick['materials']['wood'].update(uv_direction=[0,1,0],grain_axis='u')
+    pick['parts']=[p for p in pick['parts'] if not p['name'].startswith('socket_pin_')]
+    for part in pick['parts']:
+        if part['name'] in ('tapered_pick','chisel'):
+            part.update(shape='blade',material='head',edge_depth=.008,bevel_fraction=.24,edge_material='edge')
+        if part['name']=='eye':part['size'][2]=.084
+    for label,z in (('front',.043),('back',-.043)):
+        pin=turned('socket_pin_'+label,'edge',((-.002,.013),(.002,.013)),6,(0,.25,z))
+        pin['rotation']=[90,0,0];pick['parts'].append(pin)
+    axe=designs['copper_axe']
+    axe['materials']['head']['marks']='rivet'
+    axe['materials']['wood'].update(uv_direction=[0,1,0],grain_axis='u')
+    for part in axe['parts']:
+        if part['name'] in ('broad_copper_cheek','polished_edge'):
+            part.update(shape='blade',edge_depth=part['depth']*.16,bevel_fraction=.18,edge_material=part['material'])
+    sword=designs['gold_sword']
+    sword['materials']['head']['marks']='inlay'
+    sword['materials']['recess']=dict(color=[151,111,46],pattern='forged',metallic=.6,roughness=.72)
+    sword['parts']=[p for p in sword['parts'] if p['name']!='fuller_back']
+    for part in sword['parts']:
+        if part['name']=='blade':part.update(shape='blade',edge_depth=.006,bevel_fraction=.22,edge_material='edge')
+        if part['name']=='fuller':
+            # A narrow warm-metal relief reads as a groove, not an open hole.
+            if part['material']!='recess':part['contour']=[[x*.45,y] for x,y in part['contour']]
+            part.update(material='recess',depth=.001,offset=[0,0,.0228])
+    import copy
+    back=copy.deepcopy(next(p for p in sword['parts'] if p['name']=='fuller'))
+    back['name']='fuller_back';back['offset'][2]=-.0228;sword['parts'].append(back)
+    loaf=designs['bread']
+    loaf['materials']['score_shadow']=dict(color=[130,75,35],pattern='food')
+    loaf['parts']=[p for p in loaf['parts'] if p['name']=='loaf']
+    loaf['parts'][0].update(profile=[[-.06,.09],[-.02,.14],[.045,.135],[.09,.095]],scale=[1.25,1,.8])
+    for index,x in enumerate((-.065,0,.065)):
+        for suffix,material,width,y,depth in (('rim','score_shadow',.018,.0915,.003),('crumb','score',.010,.093,.002)):
+            part=profile(f'score{index}_{suffix}',material,[[-width/2,-depth/2],[width/2,-depth/2],[width/2,depth/2],[-width/2,depth/2]],.095,(x,y,0))
+            part['rotation']=[0,-22,0];loaf['parts'].append(part)
 
 
 def seed_missing(root: Path):

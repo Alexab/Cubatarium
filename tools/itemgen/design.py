@@ -6,7 +6,7 @@ import math
 import tempfile
 import yaml
 
-from itemgen.mesh import Face, bevel_box, blade, extrude, shell, tube, transform, revolve, ring
+from itemgen.mesh import Face, bevel_box, blade, extrude, shell, ridged_shell, tube, transform, revolve, ring
 from itemgen.surface_export import write_asset
 from itemgen.visual_bindings import prepare_bindings
 from itemgen.wear_sections import prepare_sections
@@ -41,9 +41,10 @@ def _build_design(item_id, *, root=ROOT, output=None):
         if kind=='bevel_box': geometry=bevel_box(part['size'],part['bevel'],**kwargs)
         elif kind=='extrude': geometry=extrude(part['contour'],part['depth'],**kwargs)
         elif kind=='blade': geometry=blade(part['contour'],part['depth'],part['edge_depth'],part.get('bevel_fraction',.18),edge_role=part.get('edge_material'),**kwargs)
-        elif kind=='shell': geometry=shell(part['size'],part['thickness'],**kwargs)
+        elif kind=='shell': geometry=shell(part['size'],part['thickness'],front_rim_drop=part.get('front_rim_drop',0),**kwargs)
+        elif kind=='ridged_shell': geometry=ridged_shell(part['size'],part['thickness'],part['ridge_rise'],front_rim_drop=part.get('front_rim_drop',0),**kwargs)
         elif kind=='tube': geometry=tube(part['size'],part['thickness'],**kwargs)
-        elif kind=='revolve': geometry=revolve(part['profile'],sides=part.get('sides',8),**kwargs)
+        elif kind=='revolve': geometry=revolve(part['profile'],sides=part.get('sides',8),radial_scales=part.get('radial_scales'),**kwargs)
         elif kind=='ring': geometry=ring(part['outer_radius'],part['inner_radius'],part['depth'],sides=part.get('sides',8),**kwargs)
         else: raise ValueError(f'Unknown geometry shape: {kind}')
         shaped=transform(geometry,offset=part.get('offset',(0,0,0)),rotation=part.get('rotation',(0,0,0)),pivot=part.get('pivot',(0,0,0)),taper=part.get('taper',1),scale=part.get('scale',(1,1,1)))

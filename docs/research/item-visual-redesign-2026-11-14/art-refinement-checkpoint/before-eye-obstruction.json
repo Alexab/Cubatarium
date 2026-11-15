@@ -1,0 +1,729 @@
+{
+  "checks": [
+    {
+      "name": "item renderer initializes",
+      "passed": true
+    },
+    {
+      "name": "color fixture PNG writes",
+      "passed": true
+    },
+    {
+      "name": "albedo path aliases share texture",
+      "passed": true
+    },
+    {
+      "name": "warm albedo lookup avoids repeated filesystem resolution",
+      "passed": true
+    },
+    {
+      "name": "item albedo uses sRGB storage and complete mip chain",
+      "passed": true
+    },
+    {
+      "name": "mip average is linear-light black and white",
+      "passed": true
+    },
+    {
+      "name": "bilinear sampling precedes display encoding",
+      "passed": true
+    },
+    {
+      "name": "linear material factor applies once",
+      "passed": true
+    },
+    {
+      "name": "state preview renderer initializes",
+      "passed": true
+    },
+    {
+      "name": "copper_head FP male right",
+      "passed": true
+    },
+    {
+      "name": "copper_head FP male left",
+      "passed": true
+    },
+    {
+      "name": "copper_head FP female right",
+      "passed": true
+    },
+    {
+      "name": "copper_head FP female left",
+      "passed": true
+    },
+    {
+      "name": "copper_head eye clearance male",
+      "passed": false
+    },
+    {
+      "name": "copper_head eye clearance male capture",
+      "passed": true
+    },
+    {
+      "name": "copper_head eye clearance female",
+      "passed": false
+    },
+    {
+      "name": "copper_head eye clearance female capture",
+      "passed": true
+    },
+    {
+      "name": "copper_head-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_head-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_head-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_head-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_head-male-armor-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_head-male-armor-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_head-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_head-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_head-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_head-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_head-male-armor-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_head-male-armor-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_head-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_head-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_head-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_head-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_head-female-armor-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_head-female-armor-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_head-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_head-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_head-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_head-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_head-female-armor-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_head-female-armor-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_head-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_head-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_head-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_head-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_head-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_head-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "copper_head-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "copper_head-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_head FP male right",
+      "passed": true
+    },
+    {
+      "name": "gold_head FP male left",
+      "passed": true
+    },
+    {
+      "name": "gold_head FP female right",
+      "passed": true
+    },
+    {
+      "name": "gold_head FP female left",
+      "passed": true
+    },
+    {
+      "name": "gold_head eye clearance male",
+      "passed": false
+    },
+    {
+      "name": "gold_head eye clearance male capture",
+      "passed": true
+    },
+    {
+      "name": "gold_head eye clearance female",
+      "passed": false
+    },
+    {
+      "name": "gold_head eye clearance female capture",
+      "passed": true
+    },
+    {
+      "name": "gold_head-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_head-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_head-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_head-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_head-male-armor-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_head-male-armor-0 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_head-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_head-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_head-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_head-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_head-male-armor-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_head-male-armor-1 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_head-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_head-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_head-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_head-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_head-female-armor-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_head-female-armor-0 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_head-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_head-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_head-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_head-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_head-female-armor-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_head-female-armor-1 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_head-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_head-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_head-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_head-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_head-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_head-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "gold_head-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "gold_head-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head FP male right",
+      "passed": true
+    },
+    {
+      "name": "iron_head FP male left",
+      "passed": true
+    },
+    {
+      "name": "iron_head FP female right",
+      "passed": true
+    },
+    {
+      "name": "iron_head FP female left",
+      "passed": true
+    },
+    {
+      "name": "iron_head eye clearance male",
+      "passed": false
+    },
+    {
+      "name": "iron_head eye clearance male capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head eye clearance female",
+      "passed": false
+    },
+    {
+      "name": "iron_head eye clearance female capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-armor-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-armor-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-armor-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-male-armor-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-armor-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-armor-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-armor-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-female-armor-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_head-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_head-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "all requested item surfaces inspected",
+      "passed": true
+    }
+  ],
+  "color_pipeline": {
+    "filtered_encoded_rgb": 188,
+    "half_factor_encoded_rgb": 137,
+    "mip_encoded_rgb": 188
+  },
+  "headwear_eye_clearance": {
+    "copper_head": {
+      "female": {
+        "armor_draws": 1,
+        "eye_height_fraction": 0.5625,
+        "head_bounds_high": [
+          0.25,
+          0.5,
+          0.25
+        ],
+        "head_bounds_low": [
+          -0.25,
+          0.0,
+          -0.25
+        ],
+        "left_blocked": true,
+        "right_blocked": true
+      },
+      "male": {
+        "armor_draws": 1,
+        "eye_height_fraction": 0.5625,
+        "head_bounds_high": [
+          0.25,
+          0.5,
+          0.25
+        ],
+        "head_bounds_low": [
+          -0.25,
+          0.0,
+          -0.25
+        ],
+        "left_blocked": true,
+        "right_blocked": true
+      }
+    },
+    "gold_head": {
+      "female": {
+        "armor_draws": 1,
+        "eye_height_fraction": 0.5625,
+        "head_bounds_high": [
+          0.25,
+          0.5,
+          0.25
+        ],
+        "head_bounds_low": [
+          -0.25,
+          0.0,
+          -0.25
+        ],
+        "left_blocked": true,
+        "right_blocked": true
+      },
+      "male": {
+        "armor_draws": 1,
+        "eye_height_fraction": 0.5625,
+        "head_bounds_high": [
+          0.25,
+          0.5,
+          0.25
+        ],
+        "head_bounds_low": [
+          -0.25,
+          0.0,
+          -0.25
+        ],
+        "left_blocked": true,
+        "right_blocked": true
+      }
+    },
+    "iron_head": {
+      "female": {
+        "armor_draws": 1,
+        "eye_height_fraction": 0.5625,
+        "head_bounds_high": [
+          0.25,
+          0.5,
+          0.25
+        ],
+        "head_bounds_low": [
+          -0.25,
+          0.0,
+          -0.25
+        ],
+        "left_blocked": true,
+        "right_blocked": true
+      },
+      "male": {
+        "armor_draws": 1,
+        "eye_height_fraction": 0.5625,
+        "head_bounds_high": [
+          0.25,
+          0.5,
+          0.25
+        ],
+        "head_bounds_low": [
+          -0.25,
+          0.0,
+          -0.25
+        ],
+        "left_blocked": true,
+        "right_blocked": true
+      }
+    }
+  },
+  "inventory_unchanged": true,
+  "passed": false,
+  "scope": "synthetic native attachments and loose item submissions",
+  "state_ids": [],
+  "surface_count": 3,
+  "surface_ids": [
+    "copper_head",
+    "gold_head",
+    "iron_head"
+  ],
+  "wear_geometry": {
+    "copper_head-female-armor-0": {
+      "draws": 1,
+      "minimum_y": 1.5997499227523804,
+      "roots": [
+        "helmet"
+      ]
+    },
+    "copper_head-female-armor-1": {
+      "draws": 1,
+      "minimum_y": 1.504154920578003,
+      "roots": [
+        "helmet"
+      ]
+    },
+    "copper_head-male-armor-0": {
+      "draws": 1,
+      "minimum_y": 1.5997499227523804,
+      "roots": [
+        "helmet"
+      ]
+    },
+    "copper_head-male-armor-1": {
+      "draws": 1,
+      "minimum_y": 1.504154920578003,
+      "roots": [
+        "helmet"
+      ]
+    },
+    "gold_head-female-armor-0": {
+      "draws": 1,
+      "minimum_y": 1.5997499227523804,
+      "roots": [
+        "helmet"
+      ]
+    },
+    "gold_head-female-armor-1": {
+      "draws": 1,
+      "minimum_y": 1.504154920578003,
+      "roots": [
+        "helmet"
+      ]
+    },
+    "gold_head-male-armor-0": {
+      "draws": 1,
+      "minimum_y": 1.5997499227523804,
+      "roots": [
+        "helmet"
+      ]
+    },
+    "gold_head-male-armor-1": {
+      "draws": 1,
+      "minimum_y": 1.504154920578003,
+      "roots": [
+        "helmet"
+      ]
+    },
+    "iron_head-female-armor-0": {
+      "draws": 1,
+      "minimum_y": 1.548132300376892,
+      "roots": [
+        "helmet"
+      ]
+    },
+    "iron_head-female-armor-1": {
+      "draws": 1,
+      "minimum_y": 1.4525372982025146,
+      "roots": [
+        "helmet"
+      ]
+    },
+    "iron_head-male-armor-0": {
+      "draws": 1,
+      "minimum_y": 1.548132300376892,
+      "roots": [
+        "helmet"
+      ]
+    },
+    "iron_head-male-armor-1": {
+      "draws": 1,
+      "minimum_y": 1.4525372982025146,
+      "roots": [
+        "helmet"
+      ]
+    }
+  }
+}

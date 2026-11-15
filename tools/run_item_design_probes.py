@@ -93,7 +93,7 @@ def main():
         env['CUBA_ITEM_PRESENTATION_QA']=str(report)
         if args.selected: env['CUBA_ITEM_PRESENTATION_IDS']=','.join(ids)
         with runtime_designs(staged) as restored_count:
-            run([sys.executable,'tools/flight_sim_run.py','--world',args.world,'--require-existing-world','--seconds','3','--process-timeout',str(180+6*len(ids)),'--no-fly','--no-hold-forward','--idle-sec','0','--report',logs/'item-design-presentations-flight.json'],'item-design-presentations',env)
+            run([sys.executable,'tools/flight_sim_run.py','--world',args.world,'--require-existing-world','--seconds','12','--process-timeout',str(180+6*len(ids)),'--no-fly','--no-hold-forward','--idle-sec','0','--report',logs/'item-design-presentations-flight.json'],'item-design-presentations',env)
             coverage=json.loads(report.read_text(encoding='utf-8'))
             if not coverage.get('passed') or not set(ids).issubset(coverage.get('surface_ids',[])):
                 raise RuntimeError('Presentation probe failed or substituted coverage is incomplete')

@@ -843,6 +843,19 @@ all 295 native diagnostic images and tested executable/source hashes are retaine
 in the checkpoint. Independent state controls, carry contact art and final
 all-item artistic/world/performance acceptance still remain; promotion is 0/70.
 
+## Authored refinement and headwear clearance
+
+[Eight-item refinement and full regression](art-refinement-checkpoint/README.md)
+improve actual working profiles, blade/shaft construction, fruit and bread
+surfaces and metal headwear openings. Native before/after sheets retain the
+visible defects and corrections. All four headwear materials on both human
+bodies now pass 12 sampled eye-area rays. The final all-70 staged run passes
+25 CTests, gameplay 59, ownership 57, ownership UI 18, player window 7,
+icons 209, Item Lab 1023 and presentations 3587 checks; 212 runtime substitutions
+were restored. Defaults and original game/property profiles remain intact.
+Final artistic acceptance, publication and performance verification still remain;
+production promotion is 0/70 and the overall goal stays active.
+
 ## Acceptance contract
 
 Deterministic publication preserves author work and grips. Missing production

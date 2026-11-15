@@ -1,0 +1,63 @@
+{
+  "scope": "eight authored refinements; all-70 staged technical regression",
+  "implementation_parent": "fe7070f8d1666d5bb159aee12efc19a98207743e",
+  "executable_sha256": "e9c80ca1e234dea4e417a697818cd7daf03055453ef5895ac1816f402afe641e",
+  "before_executable_sha256": "1ef496150bb42b614341a5ea7778b2393969d1915a19de513158104026e33f00",
+  "source_sha256": {
+    "src/Test/Native/ItemPresentationQa.h": "47b0577e8ddf5d968fa1f6412346b4894ba18abcb5422d2dd0968f44c2531131",
+    "tools/item_designs/PILOTS.md": "0eb3b1875b7727d57ac1d40f6deffd9a30ff9ecf2f31980fc1665c7168b41a14",
+    "tools/item_designs/apple/design.yaml": "fc3265baeb7178dfe9f82a42e7a9fd0d6cfc08e5e3459f54b521962dbf081f49",
+    "tools/item_designs/bread/design.yaml": "19c748ea7b0950ca1064778564867f86d211d70a93a29a3e31b4f42ceefcae99",
+    "tools/item_designs/copper_axe/design.yaml": "c64ac210e2ad839f376ac0975ad0454065742d0e4470a2927e908f17123d2b1a",
+    "tools/item_designs/copper_head/design.yaml": "1ef5359f847320ab0156634ee9b4429a48390180ae4ade574230429320abfe55",
+    "tools/item_designs/gold_head/design.yaml": "2238b6b3ea61f913f0bd05dd6d94f18865bcbee7e346698fc857c2adc48a722b",
+    "tools/item_designs/gold_sword/design.yaml": "03ef90b166836517c9011e579a09878dd6bfcb5886b821ad39f9bf2313edf2e1",
+    "tools/item_designs/iron_head/design.yaml": "714cab93a032d9c4a468fedd2df4b3524f394b59292962500c98f2f913b40a48",
+    "tools/item_designs/iron_pickaxe/design.yaml": "08c01e45cce4c42bf7d46fc0218961f609126eabd296225074b4b670276c5e8f",
+    "tools/itemgen/armor_designs.py": "4b3c4fa6659ad19bd311e12a23272f6bd8ecfea08e9ac72c94c6fa7c3de3f6b6",
+    "tools/itemgen/design.py": "d53b90af1100c01e0463b7fb06293a26a8ea45f00420bab6d784f5e95dbff896",
+    "tools/itemgen/mesh.py": "ebd7ed9b272b6fdadc95018c278868a7a52ea9f7fdd4f610f70b35e9cea63410",
+    "tools/itemgen/pilot_designs.py": "f5c4ebc522c06d058bdf005b136adb33e9be3283515b1993d6adb00525b6c25d",
+    "tools/itemgen/surface_paint.py": "192c061e1077690b8d51fc4d201535b5e4dacbb1691ddbc689052c842e304b13",
+    "tools/run_item_design_probes.py": "36a81abcc40eb3175e5fcdf33f670fad869d2e55e019e0a912d438d63a9cd555",
+    "tools/run_item_lab_qa.py": "522e29bc790360cf7ebc3ef74e389ad9da88d52ad3053ceb9df34fc237b42155",
+    "tools/test_itemgen_mesh.py": "6e8e111f37192e0463bc08c96e0820b47917dbaee7aef6589bc81b1df16ce33d",
+    "src/Test/Native/ItemHeadwearQa.h": "c6d4cdc66b1bea694bcc1aa5d0d5c98bbfc89f8a877bfc6fd90c92c452a65583"
+  },
+  "refined_ids": [
+    "apple",
+    "bread",
+    "copper_axe",
+    "copper_head",
+    "gold_head",
+    "gold_sword",
+    "iron_head",
+    "iron_pickaxe"
+  ],
+  "native_checks": {
+    "gameplay": 59,
+    "window": 0,
+    "ownership": 57,
+    "ownership_ui": 18,
+    "player_window": 7,
+    "icons": 209,
+    "item_lab": 1023,
+    "presentations": 3587
+  },
+  "production_v3_promoted": 0,
+  "files": {
+    "archive-files.json": "e6874610e7c9cfc2826b4d99481bfe7c97c45ba156e8e77e577d2e284ab1f622",
+    "armor-comparison.png": "716a8db9bce83fca185ce066a1afa78dbb0cdf1120b0878d3611f9fb915cc75b",
+    "before-after.zip": "6bfa9edeccf200e039dfc8be7c5b319f714899731da75c60d9b644abe3a54c33",
+    "before-eye-obstruction.json": "a6c401359dd609069ce1d5352234d531e89bdca7ca946a845e998dd8195e4789",
+    "ctest-output.txt": "bb0bda3f6fa6d04f1369da42d0545718a959ab651452939080d9ed3f2bf02b21",
+    "focused-native.json.gz": "58d4b87f350e35eccf0d476ff2f6dda388b93012188826487cb0b5df08407bb6",
+    "focused-summary.json": "0482230a83fef4f4b44ebce233f948e271c57716bb969b5894759b72186654a3",
+    "full-native.json.gz": "2102ecdec42e8aa5d19131e86a746fdff2a49a864c2157c9afc125c634b06861",
+    "full-output.txt": "764f741c0da88b55157b79877c1161b22d0d38039506fab34114cacfce534c07",
+    "full-summary.json": "779a14da9647bb5d7c189de9c2d649099691c32e87dd20bd982397c56abdb3b7",
+    "handheld-comparison.png": "f197c62e31bb5656384b54d3b33b22a48396857a119928342dea48ba0a0dce20",
+    "release-output.txt": "4a6ff6a4de04fc4d4367e439e1624312dec6a449df8c80d820347225576fe449",
+    "profile-output.zip": "8cfbcd48e036e1b64c53a542ec3eed439dcfcad9008696f4b14c9c4a2537614d"
+  }
+}

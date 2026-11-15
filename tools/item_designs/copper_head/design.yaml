@@ -34,6 +34,10 @@ materials:
     pattern: hammered
     metallic: 0.65
     roughness: 0.55
+    uv_direction:
+    - 1
+    - 0
+    - 0
   trim:
     color:
     - 206
@@ -81,6 +85,7 @@ parts:
   - 0.12
   - 0
   node: helmet
+  front_rim_drop: 0.07
 - name: brow
   material: trim
   shape: bevel_box

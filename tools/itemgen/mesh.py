@@ -86,22 +86,45 @@ def blade(contour, depth, edge_depth, bevel_fraction=.18, *, role='body',
     return faces
 
 
-def shell(size, thickness, *, role="body", name="shell"):
+def shell(size, thickness, *, front_rim_drop=0.0, role="body", name="shell"):
     """Open rectangular shell with bottom, inner walls and a closed top rim."""
     x,y,z = map(float,size)
     if not all(math.isfinite(v) for v in (x,y,z,thickness)) or not 0 < thickness < min(x,y,z)/2:
         raise ValueError("Invalid shell thickness")
+    if isinstance(front_rim_drop,bool) or not isinstance(front_rim_drop,(int,float)) or not math.isfinite(front_rim_drop) or not 0<=front_rim_drop<y-thickness-1e-9:
+        raise ValueError('Front rim drop must keep the opening above the inner floor')
     outer=((-x/2,-z/2),(x/2,-z/2),(x/2,z/2),(-x/2,z/2))
     inner=tuple((a-math.copysign(thickness,a),b-math.copysign(thickness,b)) for a,b in outer)
     def ring(points,h): return tuple((a,h,b) for a,b in points)
-    lo,hi=ring(outer,0),ring(outer,y)
-    il,ih=ring(inner,thickness),ring(inner,y)
+    def opening(points):
+        if front_rim_drop==0:return ring(points,y)
+        return tuple((a,y-front_rim_drop*(.5-b/z),b) for a,b in points)
+    lo,hi=ring(outer,0),opening(outer)
+    il,ih=ring(inner,thickness),opening(inner)
     faces=[Face(lo,role,name+'.bottom'),Face(tuple(reversed(il)),role,name+'.floor')]
     for i in range(4):
         j=(i+1)%4
         faces.extend((Face((lo[i],hi[i],hi[j],lo[j]),role,name+f'.outer{i}'),
                       Face((il[i],il[j],ih[j],ih[i]),role,name+f'.inner{i}'),
                       Face((hi[i],ih[i],ih[j],hi[j]),role,name+f'.rim{i}')))
+    return faces
+
+
+def ridged_shell(size, thickness, ridge_rise, *, front_rim_drop=0.0, role='body', name='shell'):
+    """Open shell with a shallow gabled exterior over its closed base.
+
+    The inner floor and wall thickness stay unchanged. A front rim drop can
+    raise the eye opening when inverted. No duplicate roof cap is retained.
+    """
+    if not math.isfinite(ridge_rise) or ridge_rise<=0:
+        raise ValueError('Shell ridge rise must be finite and positive')
+    faces=shell(size,thickness,front_rim_drop=front_rim_drop,role=role,name=name)
+    a,b,c,d=faces.pop(0).points
+    front=(0,-ridge_rise,a[2]);back=(0,-ridge_rise,c[2])
+    faces.extend((Face((a,front,back,d),role,name+'.ridge_left'),
+                  Face((front,b,c,back),role,name+'.ridge_right'),
+                  Face((a,b,front),role,name+'.front'),
+                  Face((d,back,c),role,name+'.back')))
     return faces
 
 
@@ -157,15 +180,27 @@ def triangulate(faces):
     return result
 
 
-def revolve(profile, *, sides=8, role='body', name='turned'):
-    """Faceted solid from increasing (Y, radius) rings; explicit flat end caps."""
+def revolve(profile, *, sides=8, radial_scales=None, role='body', name='turned'):
+    """Faceted solid from increasing (Y, radius) rings; explicit flat end caps.
+
+    Authored per-side radial scales can break rotational symmetry, but must
+    retain a strictly convex cross-section. Uniform defaults preserve old meshes.
+    """
     if not isinstance(sides,int) or not 3<=sides<=16 or len(profile)<2:
         raise ValueError('Revolve requires 3..16 sides and two rings')
     if any(len(p)!=2 or not all(math.isfinite(v) for v in p) or p[1]<=0 for p in profile):
         raise ValueError('Revolve rings need finite positive radii')
     if any(a[0]>=b[0] for a,b in zip(profile,profile[1:])):
         raise ValueError('Revolve rings must increase along Y')
-    rings=[tuple((r*math.cos(2*math.pi*i/sides),y,r*math.sin(2*math.pi*i/sides)) for i in range(sides)) for y,r in profile]
+    if radial_scales is None:radial_scales=[1.0]*sides
+    if not isinstance(radial_scales,(tuple,list)) or len(radial_scales)!=sides or any(isinstance(v,bool) or not isinstance(v,(int,float)) or not math.isfinite(v) or v<=0 for v in radial_scales):
+        raise ValueError('Revolve radial scales must match sides and be finite positive numbers')
+    outline=[(radial_scales[i]*math.cos(2*math.pi*i/sides),radial_scales[i]*math.sin(2*math.pi*i/sides)) for i in range(sides)]
+    for i,a in enumerate(outline):
+        b,c=outline[(i+1)%sides],outline[(i+2)%sides]
+        if (b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0])<=1e-10:
+            raise ValueError('Revolve radial scales must preserve a strictly convex outline')
+    rings=[tuple((r*x,y,r*z) for x,z in outline) for y,r in profile]
     result=[Face(rings[0],role,name+'.bottom'),Face(tuple(reversed(rings[-1])),role,name+'.top')]
     for level,(low,high) in enumerate(zip(rings,rings[1:])):
         for i in range(sides):

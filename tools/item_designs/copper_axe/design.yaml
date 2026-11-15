@@ -33,6 +33,11 @@ materials:
     - 69
     - 37
     pattern: wood
+    uv_direction:
+    - 0
+    - 1
+    - 0
+    grain_axis: u
   binding:
     color:
     - 82
@@ -48,6 +53,7 @@ materials:
     pattern: hammered
     metallic: 0.7
     roughness: 0.6
+    marks: rivet
   edge:
     color:
     - 214
@@ -83,7 +89,7 @@ parts:
   - -5
 - name: broad_copper_cheek
   material: head
-  shape: extrude
+  shape: blade
   contour:
   - - 0.02
     - 0.17
@@ -102,9 +108,12 @@ parts:
   - 0
   - 0
   - 0
+  edge_depth: 0.012
+  bevel_fraction: 0.18
+  edge_material: head
 - name: polished_edge
   material: edge
-  shape: extrude
+  shape: blade
   contour:
   - - 0.26
     - 0.19
@@ -119,6 +128,9 @@ parts:
   - 0
   - 0
   - 0.038
+  edge_depth: 0.0048
+  bevel_fraction: 0.18
+  edge_material: edge
 - name: socket
   material: dark
   shape: bevel_box
