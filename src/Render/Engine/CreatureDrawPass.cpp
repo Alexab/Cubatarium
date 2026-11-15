@@ -8,6 +8,7 @@
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Creatures/Stats/CreatureVitals.h"
+#include "Creatures/Visual/CarryPresentation.h"
 #include "Creatures/Visual/CreatureBonePaletteGpu.h"
 #include "Creatures/Visual/CreatureDrawContext.h"
 #include "Creatures/Visual/CreatureMeshGpuCache.h"
@@ -682,6 +683,24 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
 
         if (controlled_first_person)
         {
+          if (creature.CarryHandCount > 0 && creature.GetTypeId() == "human")
+          {
+            auto arms = drawContext;
+            arms.ArmsOnly = true;
+            arms.SkipWieldedItems = true;
+            const auto first = Queue.Size();
+            if (const auto *definition = world.GetCreatureDefinition(
+                    world.ResolveAnimationTypeId(creature)))
+              SubmitCreatureVisual(world, creature, *definition, dt, arms,
+                                   viewProj);
+            if (Queue.Size() > first)
+            {
+              Queue.StampLight(
+                  first, SampleCreatureLight(world, creature, dt, localLight));
+              ++Stats.CreaturesDrawn;
+              return;
+            }
+          }
           draw_debug_bounds();
           ++Stats.CreaturesCulled;
           return;
@@ -1056,6 +1075,10 @@ void UCreatureDrawPass::SubmitCreatureVisual(UWorld &world, UCreature &creature,
       pose = presenter->Compute(facts, def, dt);
     }
   }
+  if (creature.CarryHandCount > 0 &&
+      ResolveCarryContacts(world, creature, pose.CarryContacts[0],
+                           pose.CarryContacts[1]))
+    pose.CarryHands = creature.CarryHandCount;
   const bool timePose = TimingProbe.Enabled();
   const auto poseBegin = timePose ? std::chrono::steady_clock::now()
                                   : std::chrono::steady_clock::time_point{};

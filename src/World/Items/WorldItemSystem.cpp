@@ -11,6 +11,7 @@
 #include "Game/ModePolicy.h"
 #include "Game/Survival/SurvivalSystems.h"
 #include "Items/ItemDefinitionStorage.h"
+#include "Items/ItemPresentationMath.h"
 #include "Items/ToolCapabilities.h"
 #include "World/Core/World.h"
 #include "World/Math/GridMath.h"
@@ -1287,6 +1288,17 @@ void UWorldItemSystem::Draw(UWorld &world, CreatureDrawQueue &queue,
       if (auto *defs = world.GetItemDefinitionStorage())
         if (auto *d = defs->Get(i.stack.Id))
           model = glm::scale(model, glm::vec3(d->Visual.GroundScale));
+      if (const auto *carrier =
+              i.carrierId ? world.GetCreature(i.carrierId) : nullptr)
+      {
+        WornEquipmentDrawer::SubmitCarried(
+            queue, i.stack.Id, vp, model, Profile(world, i.stack).size,
+            ItemCarrierRight(carrier->GetYaw()),
+            world.GetBlockRegistry().GetBlockAtlasTexture(
+                world.GetBlockRegistry().GetIdByTypeName(i.stack.Id)),
+            MakeItemVisualInputs(&i.stack));
+        return;
+      }
       WornEquipmentDrawer::SubmitLoose(
           queue, i.stack.Id, vp, model, Profile(world, i.stack).size,
           world.GetBlockRegistry().GetBlockAtlasTexture(

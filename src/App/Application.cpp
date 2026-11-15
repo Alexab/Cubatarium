@@ -43,6 +43,7 @@
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Creatures/Player/User.h"
 #include "Creatures/Stats/CreatureVitals.h"
+#include "Creatures/Visual/CarryPresentation.h"
 #include "Creatures/Visual/WornEquipmentDrawer.h"
 #include "Game/GameSession.h"
 #include "Game/ModePolicy.h"
@@ -1939,47 +1940,23 @@ static void ConfigureCarryContacts(FpViewmodelDrawParams &params, UWorld &world,
                                    const UCreature &actor,
                                    const UCamera &camera)
 {
-  if (params.CarryHands <= 0)
+  glm::vec3 right, left;
+  if (!ResolveCarryContacts(world, actor, right, left))
     return;
-  for (const auto &cargo : UWorldItemSystem::Instance().GetActiveItems())
-  {
-    if (cargo.carrierId != actor.GetId())
-      continue;
-    const auto view = camera.GetViewMatrix();
-    const auto vp = camera.GetProjection() * view;
-    const auto right = glm::normalize(glm::vec3(glm::inverse(view)[0]));
-    // Creature colliders include extremities; grip the torso inside that
-    // volume.
-    const float width = glm::dot(glm::abs(right), cargo.physical.size) * .5f *
-                        (cargo.creatureId ? .72f : 1.f);
-    auto rightContact = cargo.position + right * width;
-    glm::vec3 authoredGrip;
-    if (!cargo.creatureId && params.CarryHands == 1 &&
-        WornEquipmentDrawer::LooseRightGrip(cargo.stack.Id, cargo.physical.size,
-                                            authoredGrip))
-    {
-      const auto *items = world.GetItemDefinitionStorage();
-      const auto *definition = items ? items->Get(cargo.stack.Id) : nullptr;
-      rightContact =
-          cargo.position +
-          authoredGrip * (definition ? definition->Visual.GroundScale : 1.f);
-    }
-    const auto rightClip = vp * glm::vec4(rightContact, 1.f);
-    const auto leftClip = vp * glm::vec4(cargo.position - right * width, 1.f);
-    if (rightClip.w <= .001f || leftClip.w <= .001f)
-      return;
-    const auto r = glm::vec2(rightClip) / rightClip.w,
-               l = glm::vec2(leftClip) / leftClip.w;
-    if (!std::isfinite(r.x) || !std::isfinite(r.y) || !std::isfinite(l.x) ||
-        !std::isfinite(l.y) ||
-        glm::any(glm::greaterThan(glm::abs(r), glm::vec2(2.f))) ||
-        glm::any(glm::greaterThan(glm::abs(l), glm::vec2(2.f))))
-      return;
-    params.CarryRightNdc = r;
-    params.CarryLeftNdc = l;
-    params.HasCarryContacts = true;
+  const auto vp = camera.GetProjection() * camera.GetViewMatrix();
+  const auto r = vp * glm::vec4(right, 1), l = vp * glm::vec4(left, 1);
+  if (r.w <= .001f || l.w <= .001f)
     return;
-  }
+  params.CarryRightNdc = glm::vec2(r) / r.w;
+  params.CarryLeftNdc = glm::vec2(l) / l.w;
+  params.HasCarryContacts =
+      std::isfinite(params.CarryRightNdc.x) &&
+      std::isfinite(params.CarryRightNdc.y) &&
+      std::isfinite(params.CarryLeftNdc.x) &&
+      std::isfinite(params.CarryLeftNdc.y) &&
+      glm::all(
+          glm::lessThanEqual(glm::abs(params.CarryRightNdc), glm::vec2(2))) &&
+      glm::all(glm::lessThanEqual(glm::abs(params.CarryLeftNdc), glm::vec2(2)));
 }
 
 void UApplication::DrawDragGhost(int width, int height)
@@ -3624,6 +3601,60 @@ void UApplication::NotifyAllScreensMetricsChanged(const GuiMetrics &metrics)
   }
 }
 
+void UApplication::DrawPlayerFpViewmodel(int width, int height)
+{
+  if (const UCreature *creature = World->GetControlledCreature())
+  {
+    const auto &inv = creature->GetInventory();
+    FpViewmodelDrawParams fpParams;
+    fpParams.FramebufferW = width;
+    fpParams.FramebufferH = height;
+    fpParams.CarryHands = creature->CarryHandCount;
+    fpParams.ActorId = creature->GetId();
+    fpParams.WorldGeneration = World->GetCreatureGeneration();
+    ConfigureCarryContacts(fpParams, *World, *creature,
+                           *World->GetCurrentUserCamera());
+    fpParams.ThrowCharge = creature->ThrowCharge;
+    fpParams.BowCharge = creature->BowCharge;
+    fpParams.ItemUsePhase = creature->ActiveItemUsePhase();
+    fpParams.ItemUseHeld = creature->ItemUse.Value > 0.f;
+    fpParams.ItemLightIntensity = FpItemLight(*World, *creature);
+    fpParams.ItemLightDirection =
+        glm::mat3(World->GetCurrentUserCamera()->GetViewMatrix()) *
+        glm::vec3(-.4f, .8f, .6f);
+    fpParams.HasAmmo = inv.IsCreative() ||
+                       inv.Count(InventoryEntryKind::Item, "arrow") > 0;
+    fpParams.Active =
+        creature->CarryHandCount ? nullptr : inv.GetActiveEntryRef();
+    fpParams.Offhand = (creature->CarryHandCount || creature->BowCharge > 0)
+                           ? nullptr
+                           : &inv.GetEquippedOffhand();
+    fpParams.SpeciesId = creature->GetTypeId();
+    fpParams.Appearance = World->GetResolvedAppearanceShared(*creature);
+    if (const auto definitions = World->GetCreatureDefinitionStorage())
+      fpParams.Definition = definitions->Get(creature->GetTypeId());
+    const auto *visual = creature->GetVisual();
+    if (creature->CarryHandCount > 0 && visual &&
+        visual->HasWorldCarryArms() &&
+        Geometry->GetRenderSettings().CreatureTexturedParts)
+    {
+      FpViewmodelRenderer->ClearHeldVisual();
+      FpViewmodelRenderer->SetActiveItemHint({});
+      if (ItemWorldVisualQa)
+        ItemWorldVisualQa->RecordWorldCarry(*World);
+    }
+    else if (ItemWorldVisualQa)
+    {
+      FpViewmodelDrawAudit audit;
+      fpParams.Audit = &audit;
+      FpViewmodelRenderer->DrawWorldOverlay(fpParams);
+      ItemWorldVisualQa->RecordFpAudit(fpParams, audit);
+    }
+    else
+      FpViewmodelRenderer->DrawWorldOverlay(fpParams);
+  }
+}
+
 void UApplication::RenderFrame(int width, int height, double viewDuration)
 {
   const auto render_frame_begin = std::chrono::high_resolution_clock::now();
@@ -3777,46 +3808,7 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
              World->GetCurrentUserCamera()->GetPerspective() ==
                  CameraPerspective::FirstPerson)
     {
-      if (const UCreature *creature = World->GetControlledCreature())
-      {
-        const auto &inv = creature->GetInventory();
-        FpViewmodelDrawParams fpParams;
-        fpParams.FramebufferW = width;
-        fpParams.FramebufferH = height;
-        fpParams.CarryHands = creature->CarryHandCount;
-        fpParams.ActorId = creature->GetId();
-        fpParams.WorldGeneration = World->GetCreatureGeneration();
-        ConfigureCarryContacts(fpParams, *World, *creature,
-                               *World->GetCurrentUserCamera());
-        fpParams.ThrowCharge = creature->ThrowCharge;
-        fpParams.BowCharge = creature->BowCharge;
-        fpParams.ItemUsePhase = creature->ActiveItemUsePhase();
-        fpParams.ItemUseHeld = creature->ItemUse.Value > 0.f;
-        fpParams.ItemLightIntensity = FpItemLight(*World, *creature);
-        fpParams.ItemLightDirection =
-            glm::mat3(World->GetCurrentUserCamera()->GetViewMatrix()) *
-            glm::vec3(-.4f, .8f, .6f);
-        fpParams.HasAmmo = inv.IsCreative() ||
-                           inv.Count(InventoryEntryKind::Item, "arrow") > 0;
-        fpParams.Active =
-            creature->CarryHandCount ? nullptr : inv.GetActiveEntryRef();
-        fpParams.Offhand = (creature->CarryHandCount || creature->BowCharge > 0)
-                               ? nullptr
-                               : &inv.GetEquippedOffhand();
-        fpParams.SpeciesId = creature->GetTypeId();
-        fpParams.Appearance = World->GetResolvedAppearanceShared(*creature);
-        if (const auto definitions = World->GetCreatureDefinitionStorage())
-          fpParams.Definition = definitions->Get(creature->GetTypeId());
-        if (ItemWorldVisualQa)
-        {
-          FpViewmodelDrawAudit audit;
-          fpParams.Audit = &audit;
-          FpViewmodelRenderer->DrawWorldOverlay(fpParams);
-          ItemWorldVisualQa->RecordFpAudit(fpParams, audit);
-        }
-        else
-          FpViewmodelRenderer->DrawWorldOverlay(fpParams);
-      }
+      DrawPlayerFpViewmodel(width, height);
     }
   }
   if (World)

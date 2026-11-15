@@ -19,8 +19,10 @@
 #include "Pose/BoneSkeleton/BoneSkeletonPoseEngine.h"
 #include "Pose/BoneSkeleton/SkeletalAnimationProfiles.h"
 #include "Pose/HumanBowPose.h"
+#include "Pose/HumanCarryPose.h"
 #include "Pose/HumanMotionController.h"
 #include "Render/Engine/GeometryEngine.h"
+#include <cmath>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 #include <limits>
@@ -29,6 +31,12 @@ namespace cutum
 {
 
 UCreatureVisualBoneSkeleton::~UCreatureVisualBoneSkeleton() = default;
+
+static bool IsCarryArmBone(const std::string &name)
+{
+  return name == "rightArm" || name == "rightForearm" || name == "rightHand" ||
+         name == "leftArm" || name == "leftForearm" || name == "leftHand";
+}
 
 bool UCreatureVisualBoneSkeleton::GetWorldBoneTransform(const std::string &name,
                                                         glm::mat4 &out) const
@@ -74,7 +82,7 @@ bool UCreatureVisualBoneSkeleton::GetBoneLocalBounds(const std::string &name,
 
 void UCreatureVisualBoneSkeleton::UpdatePose(
     const UCreature &creature, const CreatureLocomotionFacts &inputFacts,
-    const CreaturePoseParams & /*pose*/, const CreatureDefinition &animDef,
+    const CreaturePoseParams &presentation, const CreatureDefinition &animDef,
     float dt)
 {
   auto facts = inputFacts;
@@ -117,6 +125,8 @@ void UCreatureVisualBoneSkeleton::UpdatePose(
     Hierarchy.reset();
     AttachmentBounds.clear();
     CachedBoneMatrices.clear();
+    CarryPose = {};
+    CarryWeight = 0;
     GroundClearance = {};
     MeshAsset = meshCache.Load(SpeciesId, geoFile, GeometryId, LoadedDirectory);
     if (MeshAsset)
@@ -144,7 +154,8 @@ void UCreatureVisualBoneSkeleton::UpdatePose(
     const auto *active = creature.GetInventory().GetActiveEntryRef();
     input.rightHandBusy = active && !active->empty && !active->Id.empty();
     const auto &off = creature.GetInventory().GetEquippedOffhand();
-    input.leftHandBusy = !off.empty && !off.Id.empty();
+    input.leftHandBusy = creature.CarryHandCount == 0 && !off.empty &&
+                         !off.Id.empty();
     input.carryHands = creature.CarryHandCount;
     input.throwCharge = creature.ThrowCharge;
     input.bowCharge = creature.BowCharge;
@@ -185,6 +196,33 @@ void UCreatureVisualBoneSkeleton::UpdatePose(
   }
   else
     BonePose = BoneSkeletonPoseEngine::Compute(facts, animDef, dt);
+  if (humanV2)
+  {
+    const bool carrying = presentation.CarryHands > 0;
+    if (carrying)
+    {
+      auto corrected = BonePose;
+      const auto root = BuildCreatureRootMatrix(
+          BodyOrigin, BodyYawDeg, 0.f,
+          []() { return BoneSkeletonEntityConventionMatrix(); },
+          MeshAsset->geometry.modelScale);
+      const auto inverseRoot = glm::inverse(root);
+      auto targets = presentation.CarryContacts;
+      for (auto &target : targets)
+        target = glm::vec3(inverseRoot * glm::vec4(target, 1));
+      if (UHumanCarryPose::Apply(*MeshAsset, *Hierarchy, corrected, targets,
+                                 presentation.CarryHands))
+        CarryPose = std::move(corrected);
+    }
+    const float target = carrying ? 1.f : 0.f;
+    CarryWeight =
+        dt > 0 ? glm::mix(CarryWeight, target, 1.f - std::exp(-dt / .035f))
+               : target;
+    if (CarryWeight > .0001f && !CarryPose.bones.empty())
+      UHumanCarryPose::Blend(BonePose, CarryPose, CarryWeight);
+    // Do not feed this post-solve correction back into locomotion blending:
+    // doing so would accumulate torso bend on the following frame.
+  }
   CachedBoneMatrices.clear();
   if (MeshAsset && Hierarchy)
   {
@@ -219,6 +257,7 @@ void UCreatureVisualBoneSkeleton::UpdatePose(
 void UCreatureVisualBoneSkeleton::SubmitDraw(const CreatureDrawContext &ctx,
                                              const glm::mat4 &viewProj)
 {
+  CarryArmsDrawn = false;
   if (!MeshAsset || !Hierarchy || CachedBoneMatrices.empty() ||
       !DrawEnabled(ctx))
   {
@@ -246,8 +285,12 @@ void UCreatureVisualBoneSkeleton::SubmitDraw(const CreatureDrawContext &ctx,
       MeshAsset ? MeshAsset->geometry.modelScale : 1.f);
 
   CreatureDrawQueue &queue = *ctx.Queue;
+  const auto firstArmRequest = queue.Size();
   for (size_t boneIdx = 0; boneIdx < MeshAsset->boneMeshes.size(); ++boneIdx)
   {
+    if (ctx.ArmsOnly &&
+        !IsCarryArmBone(MeshAsset->geometry.bones[boneIdx].name))
+      continue;
     const auto &headGear = PoseCreature->GetInventory().GetEquippedArmor(0);
     if (MeshAsset->geometry.bones[boneIdx].name == "hair" &&
         (Appearance.hideHair || (!headGear.empty && !headGear.broken &&
@@ -270,10 +313,15 @@ void UCreatureVisualBoneSkeleton::SubmitDraw(const CreatureDrawContext &ctx,
     }
   }
 
+  CarryArmsDrawn = ctx.ArmsOnly && queue.Size() > firstArmRequest;
+
   if (settings.CreatureWireframeOverlay)
   {
     for (size_t boneIdx = 0; boneIdx < MeshAsset->boneMeshes.size(); ++boneIdx)
     {
+      if (ctx.ArmsOnly &&
+          !IsCarryArmBone(MeshAsset->geometry.bones[boneIdx].name))
+        continue;
       const auto &headGear = PoseCreature->GetInventory().GetEquippedArmor(0);
       if (MeshAsset->geometry.bones[boneIdx].name == "hair" &&
           (Appearance.hideHair ||
@@ -299,9 +347,11 @@ void UCreatureVisualBoneSkeleton::SubmitDraw(const CreatureDrawContext &ctx,
 
   if (PoseCreature)
   {
-    const auto boneLookup = [this](const std::string &boneName,
-                                   glm::mat4 &out) -> bool
+    const auto boneLookup = [this, &ctx](const std::string &boneName,
+                                         glm::mat4 &out) -> bool
     {
+      if (ctx.ArmsOnly && !IsCarryArmBone(boneName))
+        return false;
       if (!MeshAsset || !Hierarchy)
       {
         return false;

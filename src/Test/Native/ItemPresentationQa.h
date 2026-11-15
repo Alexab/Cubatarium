@@ -712,18 +712,23 @@ RunItemPresentationQa(const std::filesystem::path &path,
       const auto model = glm::translate(glm::mat4(1), glm::vec3(1, 2, 3)) *
                          glm::rotate(glm::mat4(1), .8f, glm::vec3(0, 1, 0)) *
                          glm::scale(glm::mat4(1), glm::vec3(.8f));
-      WornEquipmentDrawer::SubmitLoose(queue, id, vp, model, def->Physical.size,
-                                       0, false);
+      const auto axis = glm::normalize(glm::vec3(-.8f, 0, .6f));
+      WornEquipmentDrawer::SubmitCarried(queue, id, vp, model,
+                                         def->Physical.size, axis);
       UItemQaSink sink(renderer);
       queue.Flush(sink);
-      glm::vec3 contact;
-      check(id + " carry contact agrees with actual loose draw transform",
+      glm::vec3 right, left;
+      check(id + " both carried contacts agree with observed draw transform",
             sink.Draws == 1 &&
-                WornEquipmentDrawer::LooseRightGrip(id, def->Physical.size,
-                                                    contact) &&
-                glm::distance(glm::vec3(model * glm::vec4(contact, 1)),
+                WornEquipmentDrawer::CarriedContacts(id, axis, 1.f, 2, right,
+                                                     left) &&
+                glm::distance(glm::vec3(model * glm::vec4(right, 1)),
                               glm::vec3(sink.Last.Model *
-                                        glm::vec4(surface->Grip.RightGrip,
+                                        glm::vec4(surface->Grip.CarryRightGrip,
+                                                  1))) < .00001f &&
+                glm::distance(glm::vec3(model * glm::vec4(left, 1)),
+                              glm::vec3(sink.Last.Model *
+                                        glm::vec4(surface->Grip.CarryLeftGrip,
                                                   1))) < .00001f);
     }
     for (int light = 0; light < 4; ++light)

@@ -44,7 +44,11 @@ public:
   /// a cached asset, but must not advance a pose/clock. False requests posed
   /// queue clipping instead; nonfinite bounds explicitly disable rejection.
   virtual bool GetConservativeWorldBounds(const UCreature &,
-      const CreatureDefinition &,glm::vec3 &,glm::vec3 &){return false;}
+                                          const CreatureDefinition &,
+                                          glm::vec3 &, glm::vec3 &)
+  {
+    return false;
+  }
   /// Optional attachment anchor from the same cached pose/root used to draw
   /// the body. Consumers pass identity as bodyMat when using this full matrix.
   virtual bool GetWorldBoneTransform(const std::string &, glm::mat4 &) const
@@ -52,10 +56,14 @@ public:
     return false;
   }
   /// Rest geometry envelope expressed in the attachment bone's local space.
-  virtual bool GetBoneLocalBounds(const std::string &, glm::vec3 &, glm::vec3 &) const
+  virtual bool GetBoneLocalBounds(const std::string &, glm::vec3 &,
+                                  glm::vec3 &) const
   {
     return false;
   }
+
+  virtual bool SupportsCarryArms() const { return false; }
+  virtual bool HasWorldCarryArms() const { return false; }
 
 protected:
   ResolvedCreatureAppearance Appearance{};

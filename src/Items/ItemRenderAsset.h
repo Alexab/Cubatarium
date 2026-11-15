@@ -46,6 +46,8 @@ struct ItemGripProfile
   glm::vec3 IconEulerDeg{0.f}, TpEulerDeg{0.f};
   glm::vec3 FpArmEulerDeg{0.f}, GroundEulerDeg{0.f};
   glm::vec3 FpAimEulerDeg{0.f}, TpAimEulerDeg{0.f};
+  glm::vec3 CarryEulerDeg{0.f}, CarryRightGrip{0.f}, CarryLeftGrip{0.f};
+  bool HasCarryRightGrip{false}, HasCarryLeftGrip{false};
   std::string SupportGripNode;
   size_t SupportGripIndex{size_t(-1)};
   bool HasRightGrip{false}, HasLeftGrip{false}, HasFpEuler{false};

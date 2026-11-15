@@ -4,6 +4,7 @@
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
 #include <algorithm>
+#include <array>
 #include <glm/glm.hpp>
 #include <string>
 #include <unordered_map>
@@ -21,6 +22,8 @@ struct CreaturePoseParams
 {
   std::unordered_map<std::string, CreaturePartPose> Parts;
   float crouchUpperDrop{0.0f};
+  int CarryHands{0};
+  std::array<glm::vec3, 2> CarryContacts{};
 
   void SetPart(const std::string &Id, CreaturePartPose pose)
   {

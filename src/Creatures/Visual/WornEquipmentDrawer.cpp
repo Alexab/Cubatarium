@@ -1128,6 +1128,41 @@ void WornEquipmentDrawer::SubmitLoose(CreatureDrawQueue &queue,
         blockTexture ? blockTexture : SolidColorTex(id), cube, false);
   }
 }
+void WornEquipmentDrawer::SubmitCarried(
+    CreatureDrawQueue &queue, const std::string &id, const glm::mat4 &vp,
+    const glm::mat4 &model, glm::vec3 size, glm::vec3 carrierRight,
+    unsigned int blockTexture, const ItemVisualInputs &inputs)
+{
+  const auto path = ResolveGltfAbs(id);
+  if (const auto asset = FindSurface(path))
+  {
+    QueueItemSurface(&queue, asset, path, vp,
+                     model * ItemCarryLocalMatrix(*asset, carrierRight), true,
+                     inputs);
+    return;
+  }
+  SubmitLoose(queue, id, vp, model, size, blockTexture, false, inputs);
+}
+bool WornEquipmentDrawer::CarriedContacts(const std::string &id,
+                                          glm::vec3 carrierRight, float scale,
+                                          int hands, glm::vec3 &right,
+                                          glm::vec3 &left)
+{
+  const auto asset = FindSurface(ResolveGltfAbs(id));
+  if (!asset || !(asset->Grip.HasCarryRightGrip || asset->Grip.HasRightGrip) ||
+      (hands == 2 && !asset->Grip.HasCarryLeftGrip))
+    return false;
+  const auto model = glm::scale(glm::mat4(1), glm::vec3(scale)) *
+                     ItemCarryLocalMatrix(*asset, carrierRight);
+  right = glm::vec3(model * glm::vec4(asset->Grip.HasCarryRightGrip
+                                          ? asset->Grip.CarryRightGrip
+                                          : asset->Grip.RightGrip,
+                                      1));
+  left = asset->Grip.HasCarryLeftGrip
+             ? glm::vec3(model * glm::vec4(asset->Grip.CarryLeftGrip, 1))
+             : right;
+  return true;
+}
 bool WornEquipmentDrawer::LooseRightGrip(const std::string &id, glm::vec3 size,
                                          glm::vec3 &contact)
 {

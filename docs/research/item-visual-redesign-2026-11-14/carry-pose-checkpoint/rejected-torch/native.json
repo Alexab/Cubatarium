@@ -1,0 +1,288 @@
+{
+  "checks": [
+    {
+      "name": "wood_torch equipped instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "wood_torch equipped exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "wood_torch equipped expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "wood_torch windup instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "wood_torch windup exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "wood_torch windup expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "wood_torch windup hand occupancy supplied by gameplay",
+      "passed": true
+    },
+    {
+      "name": "wood_torch windup both TP palms are observed",
+      "passed": true
+    },
+    {
+      "name": "wood_torch windup TP palm meets actual carried model contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "wood_torch windup charge advanced through the game tick",
+      "passed": true
+    },
+    {
+      "name": "wood_torch canceled instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "wood_torch canceled exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "wood_torch canceled expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "wood_torch canceled hand occupancy supplied by gameplay",
+      "passed": true
+    },
+    {
+      "name": "wood_torch canceled both TP palms are observed",
+      "passed": true
+    },
+    {
+      "name": "wood_torch canceled TP palm meets actual carried model contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "wood_torch canceled Escape canceled charge while preserving cargo",
+      "passed": true
+    },
+    {
+      "name": "wood_torch placed instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "wood_torch placed exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "wood_torch placed expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "wood_torch placed placed body remains available for grab",
+      "passed": true
+    },
+    {
+      "name": "wood_torch grabbed instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "wood_torch grabbed exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "wood_torch grabbed expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "wood_torch grabbed hand occupancy supplied by gameplay",
+      "passed": true
+    },
+    {
+      "name": "wood_torch grabbed both TP palms are observed",
+      "passed": true
+    },
+    {
+      "name": "wood_torch grabbed TP palm meets actual carried model contact without stretching",
+      "passed": false
+    }
+  ],
+  "frames": [
+    {
+      "active_item": "wood_torch",
+      "carry_hands": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_torch-equipped.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "id": "wood_torch",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "equipped",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": []
+    },
+    {
+      "active_item": "",
+      "carry_hands": 1,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_torch-windup.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "id": "wood_torch",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "windup",
+      "throw_charge": 0.31918179988861084,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 2.468025377311278e-05,
+          "hand": "rightItem",
+          "palm": [
+            0.0017349869012832642,
+            4.147858619689941,
+            0.8144025802612305
+          ],
+          "reach_max": 0.5405625104904175,
+          "reach_min": 0.09056231379508972,
+          "shoulder": [
+            -0.2812500298023224,
+            4.497653007507324,
+            0.5639708042144775
+          ],
+          "target": [
+            0.0017461383249610662,
+            4.1478376388549805,
+            0.8143959045410156
+          ],
+          "target_distance": 0.5149469375610352
+        }
+      ]
+    },
+    {
+      "active_item": "",
+      "carry_hands": 1,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_torch-canceled.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "id": "wood_torch",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "canceled",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 6.207731928498106e-08,
+          "hand": "rightItem",
+          "palm": [
+            0.0017461180686950684,
+            4.096157073974609,
+            0.8814970850944519
+          ],
+          "reach_max": 0.5405621528625488,
+          "reach_min": 0.09056293964385986,
+          "shoulder": [
+            -0.2812500298023224,
+            4.412722587585449,
+            0.623992919921875
+          ],
+          "target": [
+            0.0017461354145780206,
+            4.096157073974609,
+            0.8814970254898071
+          ],
+          "target_distance": 0.4965973496437073
+        }
+      ]
+    },
+    {
+      "active_item": "",
+      "carry_hands": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_torch-placed.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "id": "wood_torch",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "placed",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": []
+    },
+    {
+      "active_item": "",
+      "carry_hands": 1,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_torch-grabbed.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "id": "wood_torch",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "grabbed",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 0.03979290649294853,
+          "hand": "rightItem",
+          "palm": [
+            -0.01766127347946167,
+            3.6433467864990234,
+            0.5225461721420288
+          ],
+          "reach_max": 0.5405625104904175,
+          "reach_min": 0.09056295454502106,
+          "shoulder": [
+            -0.2812500298023224,
+            4.0850396156311035,
+            0.6884947419166565
+          ],
+          "target": [
+            0.0017461515963077545,
+            3.6108362674713135,
+            0.5103030800819397
+          ],
+          "target_distance": 0.5802654027938843
+        }
+      ]
+    }
+  ],
+  "passed": false,
+  "request": {
+    "body": "female",
+    "height": 720,
+    "ids": [
+      "wood_torch"
+    ],
+    "interaction": "throw",
+    "light": "day",
+    "mode": "creative",
+    "perspective": "front",
+    "scale": 1.0,
+    "width": 1280
+  },
+  "scope": "actual world FP and physical drop rendering"
+}

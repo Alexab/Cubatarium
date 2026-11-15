@@ -27,6 +27,7 @@ def main():
     parser.add_argument('--width', type=int, choices=[1280, 1920], default=1280)
     parser.add_argument('--scale', type=float, choices=[1., 1.5, 2.], default=1.)
     parser.add_argument('--mode', choices=['creative', 'survival'], default='creative')
+    parser.add_argument('--body', choices=['male', 'female'], default='male')
     parser.add_argument('--perspective', choices=['first', 'back', 'front'], default='first')
     parser.add_argument('--interaction', choices=['throw'], help='Route real input through equip/windup/cancel/place/grab/rethrow/land')
     parser.add_argument('--skip-build', action='store_true')
@@ -49,6 +50,8 @@ def main():
         name += '-'+args.interaction
     if args.perspective != 'first':
         name += '-'+args.perspective
+    if args.body != 'male':
+        name += '-'+args.body
     if args.mode != 'creative':
         name += '-'+args.mode
     output = ROOT/'bin/item_world_visual'/name
@@ -58,7 +61,7 @@ def main():
     summary_path = output/'summary.json'
     summary_path.unlink(missing_ok=True)
     request = dict(ids=ids, light=args.light, width=args.width,
-                   height=720 if args.width == 1280 else 1080, scale=args.scale, interaction=args.interaction or "", perspective=args.perspective, mode=args.mode)
+                   height=720 if args.width == 1280 else 1080, scale=args.scale, interaction=args.interaction or "", perspective=args.perspective, mode=args.mode, body=args.body)
     (output/'request.json').write_text(json.dumps(request, indent=2), encoding='utf-8')
     config = ROOT/'bin/config.json'
     config_before = config.read_bytes() if config.exists() else None
@@ -73,7 +76,17 @@ def main():
                   'tools/run_item_world_visual_qa.py',
                   'src/Creatures/Visual/WornEquipmentDrawer.cpp',
                   'src/Creatures/Visual/WornEquipmentDrawer.h',
-                  'src/Test/Native/ItemPresentationQa.h']})
+                  'src/Test/Native/ItemPresentationQa.h',
+                  'src/Creatures/Visual/CarryPresentation.h',
+                  'src/Creatures/Visual/CreatureVisualBoneSkeleton.cpp',
+                  'src/Creatures/Visual/CreatureVisualBoneSkeleton.h',
+                  'src/Items/ItemRenderAsset.cpp', 'src/Items/ItemRenderAsset.h',
+                  'src/Items/ItemPresentationMath.h', 'src/Pose/HumanArmPose.h',
+                  'src/Pose/HumanBowPose.h', 'src/Pose/HumanCarryPose.h',
+                  'src/Pose/CreaturePoseParams.h', 'src/Render/Engine/CreatureDrawPass.cpp',
+                  'src/World/Items/WorldItemSystem.cpp',
+                  'src/Creatures/Visual/CreatureDrawContext.h', 'src/Creatures/Visual/CreatureVisual.h',
+                  'src/Creatures/Visual/CreatureVisualBase.cpp', 'src/Creatures/Core/Creature.h']})
     backups = ROOT/'build/item-world-visual-backups'
     backups.mkdir(exist_ok=True)
     temporary = Path(tempfile.mkdtemp(prefix='snapshot-', dir=backups))

@@ -67,3 +67,9 @@ Generate comparative sheets with `python tools/preview_item_designs.py`. Use
 `--read-staged` to inspect existing output without rebuilding; it refuses a
 staging directory whose recorded author-source hashes have changed. This is
 offline geometry inspection, separate from native acceptance.
+
+Physical cargo has a separate `carry_euler_deg`, `carry_right_grip` and
+`carry_left_grip`. Contact coordinates are author-space points fitted with the
+mesh; carry rotation stays independent of icon/wielded/ground framing. Runtime
+geometry and FP/TP palm targets share the same carrier-frame transform. These
+fields do not change inventory state, mass, collider sizes or throw limits.

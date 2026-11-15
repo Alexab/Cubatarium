@@ -284,6 +284,7 @@ public:
                          const glm::vec3 &diagIntentDir, float diagIntentSpeed);
 
   IUCreatureVisual *GetVisual() { return Visual.get(); }
+  const IUCreatureVisual *GetVisual() const { return Visual.get(); }
   void SetVisual(std::unique_ptr<IUCreatureVisual> visual);
 
   void SetCapabilities(const CreatureLocomotionCapabilities &caps)

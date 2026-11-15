@@ -1,7 +1,9 @@
 #pragma once
 #include "App/Application.h"
 #include "Creatures/Core/Creature.h"
+#include "Creatures/Visual/CarryPresentation.h"
 #include "Creatures/Visual/CreatureEquipmentFit.h"
+#include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureVisual.h"
 #include "Creatures/Visual/WornEquipmentDrawer.h"
 #include "Items/FpViewmodelRenderer.h"
@@ -46,6 +48,9 @@ public:
     auto camera = world.GetCurrentUserCamera();
     if (!actor || !camera || actor->GetTypeId() != "human")
       throw std::runtime_error("World item capture requires a human");
+    auto appearance = actor->GetHumanAppearance();
+    appearance.bodyVariant = Request.value("body", "male");
+    actor->SetHumanAppearance(appearance);
     std::vector<uint64_t> others;
     world.ForEachCreature(
         [&](const UCreature &c)
@@ -119,7 +124,7 @@ public:
       world.RemoveCreature(id);
     const auto feet = glm::vec3(Base) + glm::vec3(0, .501f, 0);
     actor->SetBodyOrigin(feet);
-    actor->SetOrientation(Yaw, Pitch);
+    actor->SetOrientation(ModelYawFromCameraYaw(Yaw), Pitch);
     camera->SetPosition(feet + actor->GetEyeOffset());
     camera->SetOrientation(Yaw, Pitch);
     Ready = true;
@@ -129,9 +134,32 @@ public:
                              UChunkManager::WorldToChunk(Base).x + x,
                              UChunkManager::WorldToChunk(Base).z + z));
   }
+  void RecordWorldCarry(UWorld &world)
+  {
+    FpWorldArms = true;
+    FpRightGap = FpLeftGap = 1e9f;
+    const auto contacts = TpContacts(world);
+    FpContacts = contacts.size() ==
+                 size_t(world.GetControlledCreature()->CarryHandCount);
+    const auto camera = world.GetCurrentUserCamera();
+    const auto vp = camera->GetProjection() * camera->GetViewMatrix();
+    for (const auto &contact : contacts)
+    {
+      const auto p = contact.at("palm").get<std::array<float, 3>>();
+      const auto t = contact.at("target").get<std::array<float, 3>>();
+      const auto pc = vp * glm::vec4(p[0], p[1], p[2], 1);
+      const auto tc = vp * glm::vec4(t[0], t[1], t[2], 1);
+      if (pc.w <= .001f || tc.w <= .001f)
+        continue;
+      const float gap =
+          glm::distance(glm::vec2(pc) / pc.w, glm::vec2(tc) / tc.w);
+      (contact.at("hand") == "rightItem" ? FpRightGap : FpLeftGap) = gap;
+    }
+  }
   void RecordFpAudit(const FpViewmodelDrawParams &params,
                      const FpViewmodelDrawAudit &audit)
   {
+    FpWorldArms = false;
     FpRightGap = FpLeftGap = 1e9f;
     FpContacts = params.HasCarryContacts;
     for (const auto &arm : audit.Arms)
@@ -153,8 +181,7 @@ public:
       throw std::runtime_error("Unexpected world capture framebuffer size");
     const auto name =
         Ids[Index] + (Interaction.empty() ? "" : "-" + StageName()) + ".png";
-    if (!Interaction.empty())
-      ValidateInteraction(world);
+
     std::vector<unsigned char> pixels(size_t(width) * height * 4);
     glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
     for (int y = 0; y < height / 2; ++y)
@@ -194,9 +221,12 @@ public:
          {"carry_hands", actor->CarryHandCount},
          {"throw_charge", actor->ThrowCharge},
          {"fp_contacts", FpContacts},
+         {"fp_arm_backend", FpWorldArms ? "world_skeleton" : "viewmodel"},
          {"right_palm_ndc_gap", FpRightGap},
          {"left_palm_ndc_gap", FpLeftGap},
          {"tp_contacts", TpContacts(world)}});
+    if (!Interaction.empty())
+      ValidateInteraction(world);
     if (!Interaction.empty() && AdvanceInteraction(world, app))
       return false;
     ++Index;
@@ -273,10 +303,26 @@ private:
       Require(actor->CarryHandCount > 0, "hand occupancy supplied by gameplay");
     if (held && Request.value("perspective", "first") == "first")
     {
+      Require(FpWorldArms, "carrying uses the actual world skeleton arms");
+    }
+    if (held && Request.value("perspective", "first") == "first" &&
+        !FpWorldArms)
+    {
       Require(FpContacts && FpRightGap < .001f,
               "rendered right palm meets cargo contact");
       if (actor->CarryHandCount == 2)
         Require(FpLeftGap < .001f, "rendered left palm meets cargo contact");
+    }
+    if (held &&
+        (Request.value("perspective", "first") != "first" || FpWorldArms))
+    {
+      const auto contacts = TpContacts(world);
+      Require(contacts.size() == size_t(actor->CarryHandCount),
+              "both TP palms are observed");
+      for (const auto &contact : contacts)
+        Require(
+            contact.at("gap").get<float>() < .035f,
+            "TP palm meets actual carried model contact without stretching");
     }
     if (Stage == 6 || Stage == 7)
     {
@@ -298,35 +344,32 @@ private:
     auto *actor = world.GetControlledCreature();
     auto *visual = actor->GetVisual();
     nlohmann::json result = nlohmann::json::array();
-    for (const auto &body : UWorldItemSystem::Instance().GetItems())
-      if (body.carrierId == actor->GetId() && visual)
+    glm::vec3 right, left;
+    if (visual && ResolveCarryContacts(world, *actor, right, left))
+      for (int hand = 0; hand < actor->CarryHandCount; ++hand)
       {
-        const float yaw = glm::radians(actor->GetYaw());
-        const auto right = glm::vec3(-std::sin(yaw), 0, std::cos(yaw));
-        const float width = glm::dot(glm::abs(right), body.physical.size) * .5f;
-        for (int hand = 0; hand < actor->CarryHandCount; ++hand)
-        {
-          const char *name = hand ? "leftItem" : "rightItem";
-          glm::mat4 frame;
-          glm::vec3 low, high;
-          if (!visual->GetWorldBoneTransform(name, frame) ||
-              !visual->GetBoneLocalBounds(name, low, high))
-            continue;
-          const auto palm = glm::vec3(
-              frame * glm::vec4(CreaturePalmGripPosition(low, high), 1));
-          auto target = body.position + right * (hand ? -width : width);
-          glm::vec3 grip;
-          if (!hand && actor->CarryHandCount == 1 &&
-              WornEquipmentDrawer::LooseRightGrip(body.stack.Id,
-                                                  body.physical.size, grip))
-            target = body.position + grip * world.GetItemDefinitionStorage()
-                                                ->Get(body.stack.Id)
-                                                ->Visual.GroundScale;
-          result.push_back({{"hand", name},
-                            {"gap", glm::distance(palm, target)},
-                            {"palm", {palm.x, palm.y, palm.z}},
-                            {"target", {target.x, target.y, target.z}}});
-        }
+        const char *name = hand ? "leftItem" : "rightItem";
+        glm::mat4 frame;
+        glm::vec3 low, high;
+        if (!visual->GetWorldBoneTransform(name, frame) ||
+            !visual->GetBoneLocalBounds(name, low, high))
+          continue;
+        const auto palm = glm::vec3(
+            frame * glm::vec4(CreaturePalmGripPosition(low, high), 1));
+        const auto target = hand ? left : right;
+        glm::mat4 shoulder(1), elbow(1);
+        visual->GetWorldBoneTransform(hand ? "leftArm" : "rightArm", shoulder);
+        visual->GetWorldBoneTransform(hand ? "leftForearm" : "rightForearm", elbow);
+        const float upper = glm::distance(glm::vec3(shoulder[3]), glm::vec3(elbow[3]));
+        const float lower = glm::distance(glm::vec3(elbow[3]), palm);
+        result.push_back({{"shoulder", {shoulder[3].x, shoulder[3].y, shoulder[3].z}},
+                          {"target_distance", glm::distance(glm::vec3(shoulder[3]), target)},
+                          {"reach_min", std::abs(upper - lower)},
+                          {"reach_max", upper + lower},
+                          {"hand", name},
+                          {"gap", glm::distance(palm, target)},
+                          {"palm", {palm.x, palm.y, palm.z}},
+                          {"target", {target.x, target.y, target.z}}});
       }
     return result;
   }
@@ -362,7 +405,7 @@ private:
       Yaw = glm::degrees(std::atan2(d.z, d.x));
       Pitch = glm::degrees(std::atan2(d.y, glm::length(glm::vec2(d.x, d.z))));
       camera->SetOrientation(Yaw, Pitch);
-      actor->SetOrientation(Yaw, Pitch);
+      actor->SetOrientation(ModelYawFromCameraYaw(Yaw), Pitch);
       key(GLFW_KEY_V);
     }
     else if (Stage == 5)
@@ -435,7 +478,7 @@ private:
   InventoryEntryRef Original;
   glm::ivec3 Base{};
   Clock::time_point Started, ItemStarted;
-  bool Ready{false}, Done{false}, FpContacts{false};
+  bool Ready{false}, Done{false}, FpContacts{false}, FpWorldArms{false};
   float FpRightGap{1e9f}, FpLeftGap{1e9f};
 };
 } // namespace cutum

@@ -902,6 +902,17 @@ visual defects; numerical target agreement is not their artistic acceptance.
 Fix authored two-hand/TP carry next, then mouse-driven use/bow and final release
 gates. Production remains 0/70.
 
+## Authored carry poses and world arms
+
+[Carry pose correction](carry-pose-checkpoint/README.md) replaces generic two-hand
+contact points for all 70 candidates and solves actual human-v2 arms in FP/TP.
+The complete Creative/male input sweep passes 560 frames / 3384 checks; maximum
+palm gap is 1.45 cm. A full female sweep exposed the low torch reach limit; the
+corrected focused torch/wool repeat passes all 16 frames. The shared bow solver
+is preserved, source payloads remain unchanged, and the full Release regression
+passes again. This does not replace the remaining final body/mode, use/bow,
+creature-cargo, display, publication and performance gates. Production is 0/70.
+
 ## Acceptance contract
 
 Deterministic publication preserves author work and grips. Missing production

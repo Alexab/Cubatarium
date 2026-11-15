@@ -7,8 +7,8 @@
 namespace cutum
 {
 
-float UCreatureVisualBase::ComputeBodyYawDeg(const UCreature &creature,
-                                            const CreatureDefinition &animDef) const
+float UCreatureVisualBase::ComputeBodyYawDeg(
+    const UCreature &creature, const CreatureDefinition &animDef) const
 {
   return creature.GetYaw() + animDef.visual.modelYawOffsetDeg;
 }
@@ -27,8 +27,9 @@ void UCreatureVisualBase::RefreshDefaultTextureKey(
 
 bool UCreatureVisualBase::DrawEnabled(const CreatureDrawContext &ctx) const
 {
-  return ctx.Queue != nullptr && ctx.Textures != nullptr &&
-         ctx.Settings != nullptr && ctx.Settings->CreatureTexturedParts;
+  return (!ctx.ArmsOnly || SupportsCarryArms()) && ctx.Queue != nullptr &&
+         ctx.Textures != nullptr && ctx.Settings != nullptr &&
+         ctx.Settings->CreatureTexturedParts;
 }
 
 } // namespace cutum

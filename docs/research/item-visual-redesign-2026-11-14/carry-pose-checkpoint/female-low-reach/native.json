@@ -1,0 +1,846 @@
+{
+  "checks": [
+    {
+      "name": "wood_torch equipped instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "wood_torch equipped exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "wood_torch equipped expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "wood_torch windup instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "wood_torch windup exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "wood_torch windup expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "wood_torch windup hand occupancy supplied by gameplay",
+      "passed": true
+    },
+    {
+      "name": "wood_torch windup both TP palms are observed",
+      "passed": true
+    },
+    {
+      "name": "wood_torch windup TP palm meets actual carried model contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "wood_torch windup charge advanced through the game tick",
+      "passed": true
+    },
+    {
+      "name": "wood_torch canceled instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "wood_torch canceled exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "wood_torch canceled expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "wood_torch canceled hand occupancy supplied by gameplay",
+      "passed": true
+    },
+    {
+      "name": "wood_torch canceled both TP palms are observed",
+      "passed": true
+    },
+    {
+      "name": "wood_torch canceled TP palm meets actual carried model contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "wood_torch canceled Escape canceled charge while preserving cargo",
+      "passed": true
+    },
+    {
+      "name": "wood_torch placed instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "wood_torch placed exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "wood_torch placed expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "wood_torch placed placed body remains available for grab",
+      "passed": true
+    },
+    {
+      "name": "wood_torch grabbed instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "wood_torch grabbed exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "wood_torch grabbed expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "wood_torch grabbed hand occupancy supplied by gameplay",
+      "passed": true
+    },
+    {
+      "name": "wood_torch grabbed both TP palms are observed",
+      "passed": true
+    },
+    {
+      "name": "wood_torch grabbed TP palm meets actual carried model contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "wood_torch rewound instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "wood_torch rewound exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "wood_torch rewound expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "wood_torch rewound hand occupancy supplied by gameplay",
+      "passed": true
+    },
+    {
+      "name": "wood_torch rewound both TP palms are observed",
+      "passed": true
+    },
+    {
+      "name": "wood_torch rewound TP palm meets actual carried model contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "wood_torch rewound charge advanced through the game tick",
+      "passed": true
+    },
+    {
+      "name": "wood_torch rewound R release supplies a real flight impulse before collision resolution",
+      "passed": true
+    },
+    {
+      "name": "wood_torch released instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "wood_torch released exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "wood_torch released expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "wood_torch released released finite body still exists",
+      "passed": true
+    },
+    {
+      "name": "wood_torch landed instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "wood_torch landed exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "wood_torch landed expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "wood_torch landed released finite body still exists",
+      "passed": true
+    },
+    {
+      "name": "wood_torch landed released body reaches support",
+      "passed": true
+    },
+    {
+      "name": "wool equipped instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "wool equipped exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "wool equipped expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "wool windup instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "wool windup exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "wool windup expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "wool windup hand occupancy supplied by gameplay",
+      "passed": true
+    },
+    {
+      "name": "wool windup both TP palms are observed",
+      "passed": true
+    },
+    {
+      "name": "wool windup TP palm meets actual carried model contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "wool windup charge advanced through the game tick",
+      "passed": true
+    },
+    {
+      "name": "wool canceled instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "wool canceled exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "wool canceled expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "wool canceled hand occupancy supplied by gameplay",
+      "passed": true
+    },
+    {
+      "name": "wool canceled both TP palms are observed",
+      "passed": true
+    },
+    {
+      "name": "wool canceled TP palm meets actual carried model contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "wool canceled Escape canceled charge while preserving cargo",
+      "passed": true
+    },
+    {
+      "name": "wool placed instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "wool placed exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "wool placed expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "wool placed placed body remains available for grab",
+      "passed": true
+    },
+    {
+      "name": "wool grabbed instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "wool grabbed exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "wool grabbed expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "wool grabbed hand occupancy supplied by gameplay",
+      "passed": true
+    },
+    {
+      "name": "wool grabbed both TP palms are observed",
+      "passed": true
+    },
+    {
+      "name": "wool grabbed TP palm meets actual carried model contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "wool rewound instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "wool rewound exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "wool rewound expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "wool rewound hand occupancy supplied by gameplay",
+      "passed": true
+    },
+    {
+      "name": "wool rewound both TP palms are observed",
+      "passed": true
+    },
+    {
+      "name": "wool rewound TP palm meets actual carried model contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "wool rewound charge advanced through the game tick",
+      "passed": true
+    },
+    {
+      "name": "wool rewound R release supplies a real flight impulse before collision resolution",
+      "passed": true
+    },
+    {
+      "name": "wool released instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "wool released exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "wool released expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "wool released released finite body still exists",
+      "passed": true
+    },
+    {
+      "name": "wool landed instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "wool landed exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "wool landed expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "wool landed released finite body still exists",
+      "passed": true
+    },
+    {
+      "name": "wool landed released body reaches support",
+      "passed": true
+    }
+  ],
+  "frames": [
+    {
+      "active_item": "wood_torch",
+      "carry_hands": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_torch-equipped.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "id": "wood_torch",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "equipped",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": []
+    },
+    {
+      "active_item": "",
+      "carry_hands": 1,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_torch-windup.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "id": "wood_torch",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "windup",
+      "throw_charge": 0.31918179988861084,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 1.3414494787866715e-05,
+          "hand": "rightItem",
+          "palm": [
+            0.001740194857120514,
+            4.147849082946777,
+            0.8143996000289917
+          ],
+          "reach_max": 0.5405623912811279,
+          "reach_min": 0.09056274592876434,
+          "shoulder": [
+            -0.2812500298023224,
+            4.497645378112793,
+            0.5639779567718506
+          ],
+          "target": [
+            0.0017461383249610662,
+            4.1478376388549805,
+            0.8143959045410156
+          ],
+          "target_distance": 0.5149382948875427
+        }
+      ]
+    },
+    {
+      "active_item": "",
+      "carry_hands": 1,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_torch-canceled.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "id": "wood_torch",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "canceled",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 4.809601250599371e-07,
+          "hand": "rightItem",
+          "palm": [
+            0.001746155321598053,
+            4.096156597137451,
+            0.8814970850944519
+          ],
+          "reach_max": 0.5405625104904175,
+          "reach_min": 0.09056249260902405,
+          "shoulder": [
+            -0.2812500298023224,
+            4.412722587585449,
+            0.6239929795265198
+          ],
+          "target": [
+            0.0017461354145780206,
+            4.096157073974609,
+            0.8814970254898071
+          ],
+          "target_distance": 0.4965973198413849
+        }
+      ]
+    },
+    {
+      "active_item": "",
+      "carry_hands": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_torch-placed.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "id": "wood_torch",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "placed",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": []
+    },
+    {
+      "active_item": "",
+      "carry_hands": 1,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_torch-grabbed.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "id": "wood_torch",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "grabbed",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 4.3982032366329804e-05,
+          "hand": "rightItem",
+          "palm": [
+            0.0017333254218101501,
+            3.610854387283325,
+            0.5103410482406616
+          ],
+          "reach_max": 0.5405626893043518,
+          "reach_min": 0.09056229889392853,
+          "shoulder": [
+            -0.2812500298023224,
+            4.029454231262207,
+            0.6650457978248596
+          ],
+          "target": [
+            0.0017461515963077545,
+            3.6108362674713135,
+            0.5103030800819397
+          ],
+          "target_distance": 0.5284630060195923
+        }
+      ]
+    },
+    {
+      "active_item": "",
+      "carry_hands": 1,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_torch-rewound.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "id": "wood_torch",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "rewound",
+      "throw_charge": 0.4858483076095581,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 1.800648163907681e-07,
+          "hand": "rightItem",
+          "palm": [
+            0.0017461180686950684,
+            4.271550178527832,
+            0.7929320931434631
+          ],
+          "reach_max": 0.5405626893043518,
+          "reach_min": 0.09056228399276733,
+          "shoulder": [
+            -0.2812500298023224,
+            4.572747707366943,
+            0.4868430197238922
+          ],
+          "target": [
+            0.0017461392562836409,
+            4.271550178527832,
+            0.7929319143295288
+          ],
+          "target_distance": 0.5142929553985596
+        }
+      ]
+    },
+    {
+      "active_item": "",
+      "carry_hands": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_torch-released.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "id": "wood_torch",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "released",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": []
+    },
+    {
+      "active_item": "",
+      "carry_hands": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_torch-landed.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "id": "wood_torch",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "landed",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": []
+    },
+    {
+      "active_item": "wool",
+      "carry_hands": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wool-equipped.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "id": "wool",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "equipped",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": []
+    },
+    {
+      "active_item": "",
+      "carry_hands": 1,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wool-windup.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "id": "wool",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "windup",
+      "throw_charge": 0.31918179988861084,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 2.047352791123558e-05,
+          "hand": "rightItem",
+          "palm": [
+            -0.12805123627185822,
+            4.421238422393799,
+            0.9004916548728943
+          ],
+          "reach_max": 0.5405626893043518,
+          "reach_min": 0.09056246280670166,
+          "shoulder": [
+            -0.2812500298023224,
+            4.605908393859863,
+            0.44254693388938904
+          ],
+          "target": [
+            -0.1280456781387329,
+            4.421219348907471,
+            0.9004966020584106
+          ],
+          "target_distance": 0.5170102119445801
+        }
+      ]
+    },
+    {
+      "active_item": "",
+      "carry_hands": 1,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wool-canceled.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "id": "wool",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "canceled",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 1.8431718729061686e-07,
+          "hand": "rightItem",
+          "palm": [
+            -0.12804563343524933,
+            4.3695387840271,
+            0.9675979614257813
+          ],
+          "reach_max": 0.5405623912811279,
+          "reach_min": 0.09056256711483002,
+          "shoulder": [
+            -0.2812500298023224,
+            4.536567687988281,
+            0.5274216532707214
+          ],
+          "target": [
+            -0.1280456781387329,
+            4.3695387840271,
+            0.9675977826118469
+          ],
+          "target_distance": 0.49510127305984497
+        }
+      ]
+    },
+    {
+      "active_item": "",
+      "carry_hands": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wool-placed.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "id": "wool",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "placed",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": []
+    },
+    {
+      "active_item": "",
+      "carry_hands": 1,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wool-grabbed.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "id": "wool",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "grabbed",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 3.915015986422077e-05,
+          "hand": "rightItem",
+          "palm": [
+            -0.12805214524269104,
+            3.718348503112793,
+            0.536105215549469
+          ],
+          "reach_max": 0.540562629699707,
+          "reach_min": 0.09056277573108673,
+          "shoulder": [
+            -0.2812500298023224,
+            4.17503547668457,
+            0.6884948015213013
+          ],
+          "target": [
+            -0.12804566323757172,
+            3.7183303833007813,
+            0.5360711216926575
+          ],
+          "target_distance": 0.5052564740180969
+        }
+      ]
+    },
+    {
+      "active_item": "",
+      "carry_hands": 1,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wool-rewound.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "id": "wool",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "rewound",
+      "throw_charge": 0.4858483076095581,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 5.333283752406714e-07,
+          "hand": "rightItem",
+          "palm": [
+            -0.12804566323757172,
+            4.563769340515137,
+            0.8818482160568237
+          ],
+          "reach_max": 0.540562629699707,
+          "reach_min": 0.09056244790554047,
+          "shoulder": [
+            -0.2812500298023224,
+            4.635773181915283,
+            0.3949074149131775
+          ],
+          "target": [
+            -0.1280456781387329,
+            4.563769817352295,
+            0.8818479776382446
+          ],
+          "target_distance": 0.5155261158943176
+        }
+      ]
+    },
+    {
+      "active_item": "",
+      "carry_hands": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wool-released.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "id": "wool",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "released",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": []
+    },
+    {
+      "active_item": "",
+      "carry_hands": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wool-landed.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "id": "wool",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "landed",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": []
+    }
+  ],
+  "passed": true,
+  "request": {
+    "body": "female",
+    "height": 720,
+    "ids": [
+      "wood_torch",
+      "wool"
+    ],
+    "interaction": "throw",
+    "light": "day",
+    "mode": "creative",
+    "perspective": "front",
+    "scale": 1.0,
+    "width": 1280
+  },
+  "scope": "actual world FP and physical drop rendering"
+}

@@ -121,6 +121,7 @@ public:
   void ShowInteractionMessage(const std::string &message, float seconds = 2.f);
 
   void ProcessInput();
+  void DrawPlayerFpViewmodel(int width, int height);
   void RenderFrame(int width, int height, double viewDuration);
   void NotifyFpSwing(FpSwingKind kind);
   void NotifyFpUseVisual(const std::string &presetId, bool hold);

@@ -102,6 +102,29 @@ inline glm::mat4 ItemLooseLocalMatrix(const ItemRenderAsset &asset,
     center.y = low.y + physicalSize.y * .5f;
   return glm::translate(glm::mat4(1), -center) * rotation;
 }
+/// Creature/model yaw uses local +Z forward (camera yaw instead uses +X).
+inline glm::vec3 ItemCarrierRight(float modelYawDegrees)
+{
+  const float yaw = glm::radians(modelYawDegrees);
+  return {-std::cos(yaw), 0, std::sin(yaw)};
+}
+/// Carried models follow the carrier's horizontal frame. Contact coordinates
+/// share this exact transform; physical body dimensions and position stay owned
+/// by the simulation. Released/flying models retain their existing transforms.
+inline glm::mat4 ItemCarryLocalMatrix(const ItemRenderAsset &asset,
+                                      glm::vec3 right)
+{
+  right.y = 0;
+  right =
+      glm::length(right) > .0001f ? glm::normalize(right) : glm::vec3(1, 0, 0);
+  glm::mat4 frame(1);
+  frame[0] = glm::vec4(right, 0);
+  frame[2] = glm::vec4(glm::cross(right, glm::vec3(0, 1, 0)), 0);
+  const auto rotation = frame * ItemEulerMatrix(asset.Grip.CarryEulerDeg);
+  const auto center =
+      glm::vec3(rotation * glm::vec4((asset.Low + asset.High) * .5f, 1));
+  return glm::translate(glm::mat4(1), -center) * rotation;
+}
 /// Terrain/creature sky-block curve, converted to linear intensity for items.
 inline float ItemWorldLightIntensity(glm::vec2 light, float day, float night,
                                      float skyScale, float minAmbient)

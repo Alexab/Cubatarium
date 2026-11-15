@@ -45,6 +45,14 @@ public:
   /// a held loose model; caller applies its world transform and ground scale.
   static bool LooseRightGrip(const std::string &id, glm::vec3 size,
                              glm::vec3 &contact);
+  static void SubmitCarried(CreatureDrawQueue &queue, const std::string &id,
+                            const glm::mat4 &viewProj, const glm::mat4 &model,
+                            glm::vec3 size, glm::vec3 carrierRight,
+                            unsigned int blockTexture = 0,
+                            const ItemVisualInputs &inputs = {});
+  static bool CarriedContacts(const std::string &id, glm::vec3 carrierRight,
+                              float scale, int hands, glm::vec3 &right,
+                              glm::vec3 &left);
   static bool HidePossessedWield();
   static void SetItemDefinitions(const UItemDefinitionStorage *items);
   static const UItemDefinitionStorage *ItemDefinitions();

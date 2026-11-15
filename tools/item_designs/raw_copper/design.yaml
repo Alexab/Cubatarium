@@ -4,6 +4,9 @@ atlas_size: 128
 texels_per_metre: 110
 triangle_budget: 600
 presentation:
+  carry_euler_deg: [0.0, 0.0, 0.0]
+  carry_right_grip: [0.099749, 0.011478, 0.044424]
+  carry_left_grip: [-0.086066, -0.001063, 0.06253]
   tp_euler_deg:
   - -30
   - 0

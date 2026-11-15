@@ -62,7 +62,7 @@ def main():
         g['images'].append(dict(uri='textures/second%20texture.png'));g['textures'].append(dict(source=1,sampler=0));g['materials'][0]['pbrMetallicRoughness']['baseColorTexture']['index']=1
         (author/'model.gltf').write_text(json.dumps(g,indent=2)+'\n',encoding='utf-8')
         profile=extras['presentation']
-        for key in ['right_grip','left_grip']:
+        for key in ['right_grip','left_grip','carry_right_grip','carry_left_grip']:
             if key in profile:profile[key]=[profile[key][i]*2+[.2,.3,.4][i] for i in range(3)]
         recipe=dict(version=3,id='bucket',triangle_budget=1800,geometry_source=dict(path='authored/model.gltf'),presentation=profile,visual_bindings=extras['visual_bindings'])
         (author.parent/'design.yaml').write_text(yaml.safe_dump(recipe,sort_keys=False),encoding='utf-8')

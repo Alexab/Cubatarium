@@ -23,6 +23,8 @@ struct CreatureDrawContext
   glm::vec3 CameraPosition{0.f};
   /// Item definitions for worn-equipment rendering (world path).
   const UItemDefinitionStorage *Items{nullptr};
+  bool ArmsOnly{
+      false}; // Local carry uses the same posed world arms/depth as TP.
   bool SkipWieldedItems{false}; // Preview supplies its own item overlay.
 };
 

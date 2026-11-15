@@ -338,6 +338,11 @@ LoadItemRenderAsset(const std::filesystem::path &path,
   readVector("tp_euler_deg", asset->Grip.TpEulerDeg);
   readVector("fp_arm_euler_deg", asset->Grip.FpArmEulerDeg);
   readVector("ground_euler_deg", asset->Grip.GroundEulerDeg);
+  readVector("carry_euler_deg", asset->Grip.CarryEulerDeg);
+  asset->Grip.HasCarryRightGrip =
+      readVector("carry_right_grip", asset->Grip.CarryRightGrip);
+  asset->Grip.HasCarryLeftGrip =
+      readVector("carry_left_grip", asset->Grip.CarryLeftGrip);
   readVector("fp_aim_euler_deg", asset->Grip.FpAimEulerDeg);
   readVector("tp_aim_euler_deg", asset->Grip.TpAimEulerDeg);
   asset->Grip.SupportGripNode =
