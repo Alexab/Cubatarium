@@ -1,0 +1,18 @@
+{
+  "ids": [
+    "apple",
+    "bread",
+    "cooked_meat",
+    "raw_meat",
+    "waterskin",
+    "wood_bow"
+  ],
+  "light": "day",
+  "width": 1280,
+  "height": 720,
+  "scale": 1.0,
+  "interaction": "use",
+  "perspective": "first",
+  "mode": "survival",
+  "body": "male"
+}

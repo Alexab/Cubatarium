@@ -917,6 +917,17 @@ is preserved, source payloads remain unchanged, and the full Release regression
 passes again. This does not replace the remaining final body/mode, use/bow,
 creature-cargo, display, publication and performance gates. Production is 0/70.
 
+## Completed food/drink/bow input transitions
+
+[Native mouse and hotbar input](use-input-checkpoint/README.md) now covers all
+five edible/drinkable models and the bow: 192 frames / 880 checks across both
+modes, male FP and female front TP, at 1280x720 UI 100% and 1920x1080 UI 200%.
+Partial use, slot cancellation/restoration, full completion and a second canceled
+hold preserve state and follow mode costs. FP draw inputs match gameplay phases;
+the bow produces a real arrow which remains after contact. This closes that
+specific transition gap; utility success pulses, creature cargo, the full display
+matrix and final performance acceptance remain separate gates.
+
 ## Acceptance contract
 
 Deterministic publication preserves author work and grips. Missing production

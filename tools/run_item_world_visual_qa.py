@@ -29,12 +29,13 @@ def main():
     parser.add_argument('--mode', choices=['creative', 'survival'], default='creative')
     parser.add_argument('--body', choices=['male', 'female'], default='male')
     parser.add_argument('--perspective', choices=['first', 'back', 'front'], default='first')
-    parser.add_argument('--interaction', choices=['throw'], help='Route real input through equip/windup/cancel/place/grab/rethrow/land')
+    parser.add_argument('--interaction', choices=['throw', 'use'], help='Route real throw or use/slot-cancel/complete input')
     parser.add_argument('--skip-build', action='store_true')
     args = parser.parse_args()
     if not args.world.endswith('QA') or any(c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-' for c in args.world):
         parser.error('Use a dedicated existing QA world')
-    ids = sorted(args.ids or [p.stem for p in (ROOT/'content/items').glob('*.json')])
+    defaults = ['apple', 'bread', 'raw_meat', 'cooked_meat', 'waterskin', 'wood_bow'] if args.interaction == 'use' else [p.stem for p in (ROOT/'content/items').glob('*.json')]
+    ids = sorted(args.ids or defaults)
     staged = {id: validate_design(id)['folder'] for id in ids}
     if not args.skip_build:
         subprocess.run(['cmake', '--build', 'build/desktop-msvc', '--config', 'Release',
@@ -86,7 +87,9 @@ def main():
                   'src/Pose/CreaturePoseParams.h', 'src/Render/Engine/CreatureDrawPass.cpp',
                   'src/World/Items/WorldItemSystem.cpp',
                   'src/Creatures/Visual/CreatureDrawContext.h', 'src/Creatures/Visual/CreatureVisual.h',
-                  'src/Creatures/Visual/CreatureVisualBase.cpp', 'src/Creatures/Core/Creature.h']})
+                  'src/Creatures/Visual/CreatureVisualBase.cpp', 'src/Creatures/Core/Creature.h',
+                  'src/App/Platform/InputManager.cpp', 'src/App/Platform/WindowManager.cpp',
+                  'src/App/Input/InputRouter.cpp', 'src/Blocks/Input/BlockInputController.cpp']})
     backups = ROOT/'build/item-world-visual-backups'
     backups.mkdir(exist_ok=True)
     temporary = Path(tempfile.mkdtemp(prefix='snapshot-', dir=backups))

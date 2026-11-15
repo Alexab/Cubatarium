@@ -1,5 +1,6 @@
 #pragma once
 #include "App/Application.h"
+#include "App/Platform/InputManager.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Visual/CarryPresentation.h"
 #include "Creatures/Visual/CreatureEquipmentFit.h"
@@ -137,6 +138,7 @@ public:
   void RecordWorldCarry(UWorld &world)
   {
     FpWorldArms = true;
+    FpItems = nlohmann::json::array();
     FpRightGap = FpLeftGap = 1e9f;
     const auto contacts = TpContacts(world);
     FpContacts = contacts.size() ==
@@ -162,6 +164,14 @@ public:
     FpWorldArms = false;
     FpRightGap = FpLeftGap = 1e9f;
     FpContacts = params.HasCarryContacts;
+    FpItems = nlohmann::json::array();
+    for (const auto &item : audit.Items)
+      FpItems.push_back({{"id", item.Id}, {"bow_charge", item.Inputs.BowCharge},
+                         {"use_phase", item.Inputs.UsePhase},
+                         {"contents_units", item.Inputs.ContentsUnits},
+                         {"has_water", item.Inputs.HasWater},
+                         {"has_ammo", item.Inputs.HasAmmo},
+                         {"visible_primitives", item.VisiblePrimitives}});
     for (const auto &arm : audit.Arms)
     {
       const auto clip = arm.RootMvp * glm::vec4(arm.PalmLocal, 1);
@@ -220,12 +230,19 @@ public:
          {"stage", Interaction.empty() ? "static" : StageName()},
          {"carry_hands", actor->CarryHandCount},
          {"throw_charge", actor->ThrowCharge},
+         {"bow_charge", actor->BowCharge},
+         {"use_phase", actor->ActiveItemUsePhase()},
+         {"active_count", active ? active->count : 0},
+         {"contents_units", active ? active->contentsUnits : 0},
+         {"fp_items", FpItems},
          {"fp_contacts", FpContacts},
          {"fp_arm_backend", FpWorldArms ? "world_skeleton" : "viewmodel"},
          {"right_palm_ndc_gap", FpRightGap},
          {"left_palm_ndc_gap", FpLeftGap},
          {"tp_contacts", TpContacts(world)}});
-    if (!Interaction.empty())
+    if (Interaction == "use")
+      ValidateUse(world);
+    else if (!Interaction.empty())
       ValidateInteraction(world);
     if (!Interaction.empty() && AdvanceInteraction(world, app))
       return false;
@@ -249,6 +266,12 @@ private:
   }
   std::string StageName() const
   {
+    if (Interaction == "use")
+    {
+      const char *names[] = {"equipped", "partial", "canceled", "restored",
+                             "ready", "completed", "restarted", "canceled-again"};
+      return names[Stage];
+    }
     const char *names[] = {"equipped", "windup",  "canceled", "placed",
                            "grabbed",  "rewound", "released", "landed"};
     return names[Stage];
@@ -257,6 +280,8 @@ private:
   {
     if (Interaction.empty())
       return .45;
+    if (Interaction == "use")
+      return Stage == 4 ? UseDuration + .15 : Stage == 1 || Stage == 6 ? .18 : .2;
     const double delays[] = {.45, .25, .15, .2, .25, .45, .06, 1.3};
     return delays[Stage];
   }
@@ -339,6 +364,108 @@ private:
       Require(actor->ThrowCharge > .05f,
               "charge advanced through the game tick");
   }
+  void ValidateUse(UWorld &world)
+  {
+    auto *actor = world.GetControlledCreature();
+    const auto &inv = actor->GetInventory();
+    const auto *definition = world.GetItemDefinitionStorage()->Get(Original.Id);
+    const bool ranged = definition->Ranged.Enabled;
+    const bool finiteCost = !inv.IsCreative() && Stage >= 5;
+    const bool container = Original.contentsUnits > 0;
+    const int expectedCount = Original.count - (finiteCost && !ranged && !container ? 1 : 0);
+    Require(inv.Count(InventoryEntryKind::Item, Original.Id) == expectedCount,
+            "use changes finite count only on successful completion");
+    const auto &entry = inv.GetSlot(0);
+    Require(entry.instanceId == Original.instanceId && entry.Id == Original.Id,
+            "use preserves the selected stack/instance identity");
+    if (container)
+      Require(entry.contentsUnits == Original.contentsUnits - (finiteCost ? 1 : 0),
+              "drink changes contents exactly once and respects mode policy");
+    if (ranged)
+    {
+      Require(inv.Count(InventoryEntryKind::Item, "arrow") == 3 - (finiteCost ? 1 : 0),
+              "bow spends ammunition exactly once and respects mode policy");
+      size_t arrows = 0;
+      for (const auto &body : UWorldItemSystem::Instance().GetItems())
+        if (!body.creatureId && body.stack.Id == definition->Ranged.AmmoId)
+          arrows += size_t(body.stack.count);
+      Require(arrows == (Stage >= 5 ? 1u : 0u),
+              "only the completed bow input creates a persistent arrow");
+    }
+    const float phase = ranged ? actor->BowCharge : actor->ActiveItemUsePhase();
+    if (Stage == 1 || Stage == 6)
+      Require(phase > .01f && phase < 1.f, "held input advances a partial visual phase");
+    else if (Stage == 4)
+      Require(phase >= .999f, "fully held input reaches its ready phase");
+    else
+      Require(phase == 0.f, "idle, completion and cancellation clear the use phase");
+    if (Stage == 2 || Stage == 7)
+      Require(!inv.GetActiveEntryRef() || inv.GetActiveEntryRef()->empty,
+              "routed hotbar key selects the empty cancellation slot");
+    else if (Request.value("perspective", "first") == "first")
+    {
+      bool rendered = false;
+      for (const auto &item : FpItems)
+        if (item.at("id") == Original.Id)
+        {
+          rendered = item.at("visible_primitives").get<size_t>() > 0;
+          Require(std::abs(item.at(ranged ? "bow_charge" : "use_phase").get<float>() - phase) < .001f,
+                  "actual FP draw consumes the authoritative use phase");
+          if (container)
+            Require(item.at("contents_units") == entry.contentsUnits && item.at("has_water") == true,
+                    "actual FP draw consumes current container contents");
+        }
+      Require(rendered, "active item is drawn during real use input");
+    }
+  }
+  bool AdvanceUse()
+  {
+#if defined(__ANDROID__)
+    throw std::runtime_error("Use capture requires desktop GLFW input callbacks");
+#else
+    auto *window = glfwGetCurrentContext();
+    if (!window)
+      throw std::runtime_error("Use capture has no current window");
+    int width = 0, height = 0;
+    glfwGetWindowSize(window, &width, &height);
+    glfwSetCursorPos(window, width * .5, height * .5);
+    auto mouse = [&](bool pressed)
+    {
+      UInputManager::GLFWMouseButtonCallback(
+          window, GLFW_MOUSE_BUTTON_RIGHT, pressed ? GLFW_PRESS : GLFW_RELEASE, 0);
+    };
+    auto key = [&](int code)
+    {
+      UInputManager::GLFWKeyCallback(window, code, 0, GLFW_PRESS, 0);
+      UInputManager::GLFWKeyCallback(window, code, 0, GLFW_RELEASE, 0);
+    };
+    if (Stage == 0 || Stage == 3 || Stage == 5)
+      mouse(true);
+    else if (Stage == 1 || Stage == 6)
+    {
+      key(GLFW_KEY_2);
+      mouse(false);
+    }
+    else if (Stage == 2)
+      key(GLFW_KEY_1);
+    else if (Stage == 4)
+    {
+      mouse(false);
+      if (Original.Id == "wood_bow")
+      {
+        bool launched = false;
+        for (const auto &body : UWorldItemSystem::Instance().GetItems())
+          launched |= body.arrow && body.flying && body.throwerId != 0;
+        Require(launched, "mouse release creates a flying arrow before collision resolution");
+      }
+    }
+    if (Stage == 7)
+      return false;
+    ++Stage;
+    ItemStarted = Clock::now();
+    return true;
+#endif
+  }
   nlohmann::json TpContacts(UWorld &world)
   {
     auto *actor = world.GetControlledCreature();
@@ -375,6 +502,8 @@ private:
   }
   bool AdvanceInteraction(UWorld &world, UApplication &app)
   {
+    if (Interaction == "use")
+      return AdvanceUse();
     auto *actor = world.GetControlledCreature();
     auto camera = world.GetCurrentUserCamera();
     auto key = [&](int code, int action = GLFW_PRESS)
@@ -445,6 +574,21 @@ private:
     entry.kind = InventoryEntryKind::Item;
     entry.Id = Ids[Index];
     entry.count = 1;
+    if (Interaction == "use")
+    {
+      const auto *definition = world.GetItemDefinitionStorage()->Get(entry.Id);
+      if (!definition || (!definition->Ranged.Enabled &&
+          definition->Use.Action != ItemUseActionKind::Eat &&
+          definition->Use.Action != ItemUseActionKind::Drink))
+        throw std::runtime_error("Use capture supports food, drinks and bows");
+      UseDuration = definition->Ranged.Enabled ? 1.1f : definition->Use.Duration;
+      if (definition->StackMax > 1)
+        entry.count = 3;
+      auto &vitals = world.GetControlledCreature()->GetVitals();
+      vitals.satiety = 20;
+      vitals.thirst = 20;
+      world.GetControlledCreature()->AdvanceInfluenceCooldown(10.f);
+    }
     if (!Interaction.empty())
     {
       const auto *definition = world.GetItemDefinitionStorage()->Get(entry.Id);
@@ -460,6 +604,18 @@ private:
     auto &physics = UWorldItemSystem::Instance();
     physics.Clear();
     Original = *inv.GetActiveEntryRef();
+    if (Interaction == "use" && world.GetItemDefinitionStorage()->Get(entry.Id)->Ranged.Enabled)
+    {
+      InventoryEntryRef ammo;
+      ammo.empty = false;
+      ammo.kind = InventoryEntryKind::Item;
+      ammo.Id = "arrow";
+      ammo.count = 3;
+      inv.Insert(ammo);
+      // Keep slot 2 empty: it is the real hotbar cancellation target.
+      if (!inv.GetSlot(1).empty)
+        inv.Move(1, 2);
+    }
     if (Interaction.empty())
       BodyId =
           physics.SpawnStack(glm::vec3(Base) + glm::vec3(-.55f, 1.1f, 2.1f),
@@ -469,11 +625,11 @@ private:
     ItemStarted = Clock::now();
   }
   std::filesystem::path Path;
-  nlohmann::json Request, Report;
+  nlohmann::json Request, Report, FpItems = nlohmann::json::array();
   std::vector<std::string> Ids;
   size_t Index{0};
   int BodyId{0}, Stage{0};
-  float Yaw{90}, Pitch{-12};
+  float Yaw{90}, Pitch{-12}, UseDuration{.8f};
   std::string Interaction;
   InventoryEntryRef Original;
   glm::ivec3 Base{};

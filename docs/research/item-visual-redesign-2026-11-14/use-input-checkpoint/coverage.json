@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "cases": [
+    {
+      "case": "day-1280-100-use-survival",
+      "frames": 48,
+      "checks": 259
+    },
+    {
+      "case": "day-1280-100-use",
+      "frames": 48,
+      "checks": 259
+    },
+    {
+      "case": "day-1920-200-use-front-female-survival",
+      "frames": 48,
+      "checks": 181
+    },
+    {
+      "case": "day-1920-200-use-front-female",
+      "frames": 48,
+      "checks": 181
+    }
+  ],
+  "total_frames": 192
+}
