@@ -245,3 +245,5 @@ tools/debug_uv_overlays/
 /bin/item_lab_exports/
 /bin/item_lab_diagnostics/
 /bin/item_lab_art/
+
+/bin/item_world_visual/

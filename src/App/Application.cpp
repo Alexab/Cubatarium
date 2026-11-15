@@ -12,6 +12,7 @@
 #include "Test/Native/ItemLabSceneQa.h"
 #include "Test/Native/ItemPerformanceQa.h"
 #include "Test/Native/ItemPresentationQa.h"
+#include "Test/Native/ItemWorldVisualQa.h"
 #include "Test/Native/ItemsInventoryQa.h"
 #include "Test/Native/OwnershipQa.h"
 #include "Test/Native/PlayerWindowCapture.h"
@@ -116,6 +117,7 @@ namespace cutum
 namespace
 {
 std::unique_ptr<UItemPerformanceQa> ItemPerformanceQa;
+std::unique_ptr<UItemWorldVisualQa> ItemWorldVisualQa;
 
 #ifndef __ANDROID__
 UWindowManager *GetWindowManager(GLFWwindow *window)
@@ -3005,6 +3007,26 @@ void UApplication::RunInventoryIconsQa(const std::string &path)
 }
 void UApplication::UpdateNativeItemsQa(double dt)
 {
+  if (World && World->GetControlledCreature())
+    if (const char *path = std::getenv("CUBA_ITEM_WORLD_VISUAL_QA"))
+    {
+      if (!ItemWorldVisualQa)
+      {
+        std::ifstream input(std::filesystem::path(path).parent_path() /
+                            "request.json");
+        nlohmann::json request;
+        input >> request;
+        ItemWorldVisualQa = std::make_unique<UItemWorldVisualQa>(*World, path);
+        glfwSetWindowSize(Window, request.at("width"), request.at("height"));
+        ApplyLiveUiScale(request.at("scale").get<float>());
+        Ui.ShowPerformance = false;
+        if (Geometry)
+          Geometry->SetShowPerformance(false);
+        MinimalOverlayForBench = false;
+      }
+      ItemWorldVisualQa->Update(*World);
+    }
+
   if (World && World->GetControlledCreature() && IconSource)
     if (const char *path = std::getenv("CUBA_ITEM_PERF_QA"))
     {
@@ -3869,6 +3891,9 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
             std::chrono::high_resolution_clock::now() - gui_begin)
             .count());
   }
+  if (ItemWorldVisualQa && World &&
+      ItemWorldVisualQa->Capture(*World, width, height))
+    RequestQuit();
 }
 
 bool UApplication::WantsCaptureMouse() const

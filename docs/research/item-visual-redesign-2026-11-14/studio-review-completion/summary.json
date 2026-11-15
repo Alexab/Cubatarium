@@ -46,7 +46,9 @@
     "integrated-native.json.gz": "c08c9ec17786d3f181d78fe9088fe0581567becd0f7258e22cb1a49965ef7d90",
     "integrated-summary.json": "c596fda609796478a08467302013cf70827acc5d790be6949f99aa8816d12aaa",
     "integrated-output.zip": "9dc1cf7656562922ef97097ae2d7b906d622d4346ad37c7a7ad5cbb9c8eb635f",
-    "ctest-output.txt": "8a7ed8cd2378ba0e4f29d9e03f065b5da2a1765cadc95a99585ad4653a256fad"
+    "ctest-output.txt": "8a7ed8cd2378ba0e4f29d9e03f065b5da2a1765cadc95a99585ad4653a256fad",
+    "checkout-summary.json": "cc1eeacb3f3bf9ff127a0107c5a57c23fe177cdd4b8fc96e22a5ae5763114bfb",
+    "checkout-output.zip": "854fa8c3bfe5192b44aaa4d92233d36291a90f7c1b0caec5333f7cf50a90930b"
   },
   "integrated_checks": {
     "gameplay": 59,
@@ -57,5 +59,6 @@
     "icons": 209,
     "item_lab": 1040,
     "presentations": 3590
-  }
+  },
+  "checkout_revision": "ff1942af9e76f75ac0c70a05de79ffd2d59e2056"
 }

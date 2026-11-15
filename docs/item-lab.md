@@ -103,3 +103,20 @@ Small 32/48/64-pixel item icons render at four times their output dimensions
 and resolve sixteen samples in linear light. The final texture keeps its native
 requested size. This filtering does not change geometry, physical size or the
 larger FP/TP/world representations.
+
+## Actual world captures
+
+`python tools/run_item_world_visual_qa.py --skip-build --light day` uses the
+Release executable through `flight_sim_run.py` on `ItemVisualPerfQA`.
+It temporarily installs validated staged candidates, selects each real active
+inventory item and spawns its finite physical counterpart. Captures use the
+normal world and FP render paths. `--light` also accepts `night`, `interior`
+and `interior-lit` (a closed stone room with a real torch block).
+
+Use `--id` to select representatives, `--width 1280|1920` and
+`--scale 1|1.5|2` for the display matrix. Matching frame heights are 720/1080.
+The runner restores the QA world, runtime resources and configuration, checks
+source conservation and retains a backup if restoration verification fails.
+Reports identify the actual active item and tracked finite body. Successful
+capture proves coverage; inspect the PNGs separately for artistic acceptance.
+This fixture does not exercise input-driven use, carry or throw transitions.
