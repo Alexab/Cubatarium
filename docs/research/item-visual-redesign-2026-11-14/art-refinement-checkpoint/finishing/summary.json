@@ -1,0 +1,25 @@
+{
+  "scope": "three authored candidates; focused native presentations only",
+  "ids": [
+    "raw_iron",
+    "shears",
+    "stone_pickaxe"
+  ],
+  "executable_sha256": "e9c80ca1e234dea4e417a697818cd7daf03055453ef5895ac1816f402afe641e",
+  "source_sha256": {
+    "tools/item_designs/raw_iron/design.yaml": "db519596323992df09b953a7b25246313113b61721b9b4828648caba392bf608",
+    "tools/item_designs/shears/design.yaml": "c227c1658cf4843c6a6cd6e8012d6589870c638089cc6e7980ce040d5d8683e4",
+    "tools/item_designs/stone_pickaxe/design.yaml": "fa76273099d8fa436cf77ae216348192d28b55e3d85f7dfbb583c910e609c8d7"
+  },
+  "production_promoted": 0,
+  "files": {
+    "archive-files.json": "423e0f45a3a8cfeacee9b2163292fa5d0ab4c59ec56fc6995083e35be8f881a3",
+    "assets.json": "3d171f473916867d5c305c3a0c0a0ce5d07c01a881e39156322dab95766a3e4f",
+    "before-after.zip": "e0ae314806f24aa28ef3356ec5095a0e658ee70d9577a9e0a9b34dc1e114e386",
+    "flight.json": "f48221ce1482ccb407968ea870af02123117a8083d12e3694db23454ffdc7e6b",
+    "loose-comparison.png": "ca87b1ab9d4a7ed5ed3dcf5c1222f9258a0c2322165e7b257123a571ef80df05",
+    "native-report.json.gz": "9e2e150a268750e6bea47aaaff1d1ee9b04083ac073c69faceb1959631da2a02",
+    "native-summary.json": "0f1476a12874a3d3a863d2b00ba530f0ca00e6eeca205b636045069346958a6e",
+    "release-output.txt": "d1964ab11c93c047dd39ececa1ebe8e35220f00fd622341626d03079baa1834f"
+  }
+}

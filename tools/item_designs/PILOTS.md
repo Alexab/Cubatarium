@@ -8,7 +8,7 @@ including lashed stone heads, forged tools, vessels, sewn leather and baked food
 
 | ID | Construction / surface | Remaining visual acceptance |
 |---|---|---|
-| stone_pickaxe | Asymmetric chipped bridge, adze and point; lashed wood, mineral grain | Contacts and small silhouette |
+| stone_pickaxe | Bevelled chipped bridge, adze and point; crossed fiber lashings and directed wood grain | Native fit and both-hand views checked; final small-icon/world review remains |
 | iron_pickaxe | Forged bridge, bevelled point/chisel, visible socket pins and wedge; directional wood grain and steel working marks | Final world lighting and small-icon review |
 | copper_axe | Faceted convex cheek and cutting edge, wedged socket and rivets; hammered copper | Final world lighting and small-icon review |
 | gold_sword | Bevelled asymmetric blade, divided guard, narrow warm-metal fuller on both sides and six-sided pommel | Final small-icon ornament review |
@@ -16,10 +16,10 @@ including lashed stone heads, forged tools, vessels, sewn leather and baked food
 | leather_chest | Separate panels, straps, belt and open buckle; stitched leather and brass | Both body forms and motion |
 | wood_bow | Curved YZ members, wrapped grip, articulated fiber string and a byte-preserving component of the authored arrow | Nock/string and FP/TP palm contacts verified; real-input transitions/world review remain |
 | bucket | Open shell, rim, raised handle and cross-grip; metal and wood | Corrected FP grip, water and TP attachment |
-| shears | Crossing blades, two hollow loops, tangs and hinge; contrasting steel | Articulated opening and finger contacts |
+| shears | Crossing bevelled blades, two hollow loops, tangs and visible front/back hexagonal hinge pins | Native opening/cancellation checked; final finger-contact/world review remains |
 | apple | Authored unequal radial facets, short stem, veined leaf and clustered peel details | Final world/eating review |
 | bread | Oval faceted loaf with exposed crown scores and a darker crust rim | Score visibility fixed in native FP; final world/eating review remains |
-| raw_iron | Mineral lobes and exposed inclusions; dark matrix, oxide and pale metal | World scale and other ore consistency |
+| raw_iron | Unequal matrix facets, tilted oxide lobe and embedded angular inclusions; dark rock and rough mineral surfaces | Native fit checked; other-ore consistency and final world review remain |
 
 Seeding never overwrites an existing author design or surface layer. Canonical
 production resources are unchanged until separate publication and acceptance.

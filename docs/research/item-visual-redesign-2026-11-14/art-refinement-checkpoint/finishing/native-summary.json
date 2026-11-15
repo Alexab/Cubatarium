@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "scope": "presentation_only",
+  "world": "CarryAimQA",
+  "staged_ids": [
+    "raw_iron",
+    "shears",
+    "stone_pickaxe"
+  ],
+  "inspected_surface_ids": [
+    "raw_iron",
+    "shears",
+    "stone_pickaxe"
+  ],
+  "presentation_checks": 124,
+  "restored_runtime_files": 9,
+  "executable_sha256": "e9c80ca1e234dea4e417a697818cd7daf03055453ef5895ac1816f402afe641e"
+}

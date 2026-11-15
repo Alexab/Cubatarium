@@ -1,7 +1,7 @@
 version: 3
 id: stone_pickaxe
 atlas_size: 256
-texels_per_metre: 200
+texels_per_metre: 180
 triangle_budget: 1200
 presentation:
   tp_euler_deg:
@@ -33,6 +33,11 @@ materials:
     - 69
     - 37
     pattern: wood
+    uv_direction:
+    - 0
+    - 1
+    - 0
+    grain_axis: u
   binding:
     color:
     - 82
@@ -48,6 +53,11 @@ materials:
     pattern: stone
     metallic: 0
     roughness: 0.8
+    marks: knapped
+    uv_direction:
+    - 1
+    - 0
+    - 0
   edge:
     color:
     - 134
@@ -56,6 +66,10 @@ materials:
     pattern: plain
     metallic: 0
     roughness: 0.45
+    uv_direction:
+    - 1
+    - 0
+    - 0
   dark:
     color:
     - 63
@@ -64,6 +78,16 @@ materials:
     pattern: plain
     metallic: 0.5
     roughness: 0.7
+  lash:
+    color:
+    - 119
+    - 91
+    - 57
+    pattern: fiber
+    uv_direction:
+    - 1
+    - 0
+    - 0
 parts:
 - name: shaft
   material: wood
@@ -81,25 +105,9 @@ parts:
   - 0
   - 0
   - 0
-- name: eye
-  material: binding
-  shape: bevel_box
-  size:
-  - 0.09
-  - 0.11
-  - 0.09
-  bevel: 0.0162
-  offset:
-  - 0
-  - 0.25
-  - 0
-  rotation:
-  - 0
-  - 0
-  - 0
 - name: knapped_bridge
   material: head
-  shape: extrude
+  shape: blade
   contour:
   - - -0.24
     - 0.25
@@ -116,9 +124,12 @@ parts:
   - 0
   - 0
   - 0
+  edge_depth: 0.023800000000000005
+  bevel_fraction: 0.32
+  edge_material: head
 - name: chipped_pick
   material: head
-  shape: extrude
+  shape: blade
   contour:
   - - 0.12
     - 0.31
@@ -133,9 +144,12 @@ parts:
   - 0
   - 0
   - 0
+  edge_depth: 0.019600000000000003
+  bevel_fraction: 0.32
+  edge_material: edge
 - name: adze
   material: edge
-  shape: extrude
+  shape: blade
   contour:
   - - -0.31
     - 0.23
@@ -150,6 +164,9 @@ parts:
   - 0
   - 0
   - 0
+  edge_depth: 0.021
+  bevel_fraction: 0.32
+  edge_material: edge
 - name: grip_wrap0
   material: binding
   shape: bevel_box
@@ -198,3 +215,87 @@ parts:
   - 0
   - 0
   - 0
+- name: head_lash_front0
+  material: lash
+  shape: extrude
+  contour:
+  - - -0.048
+    - -0.006
+  - - 0.048
+    - -0.006
+  - - 0.048
+    - 0.006
+  - - -0.048
+    - 0.006
+  depth: 0.006
+  offset:
+  - 0
+  - 0.288
+  - 0.042
+  rotation:
+  - 0
+  - 0
+  - -31
+- name: head_lash_front1
+  material: lash
+  shape: extrude
+  contour:
+  - - -0.048
+    - -0.006
+  - - 0.048
+    - -0.006
+  - - 0.048
+    - 0.006
+  - - -0.048
+    - 0.006
+  depth: 0.006
+  offset:
+  - 0
+  - 0.288
+  - 0.042
+  rotation:
+  - 0
+  - 0
+  - 31
+- name: head_lash_back0
+  material: lash
+  shape: extrude
+  contour:
+  - - -0.048
+    - -0.006
+  - - 0.048
+    - -0.006
+  - - 0.048
+    - 0.006
+  - - -0.048
+    - 0.006
+  depth: 0.006
+  offset:
+  - 0
+  - 0.288
+  - -0.042
+  rotation:
+  - 0
+  - 0
+  - -31
+- name: head_lash_back1
+  material: lash
+  shape: extrude
+  contour:
+  - - -0.048
+    - -0.006
+  - - 0.048
+    - -0.006
+  - - 0.048
+    - 0.006
+  - - -0.048
+    - 0.006
+  depth: 0.006
+  offset:
+  - 0
+  - 0.288
+  - -0.042
+  rotation:
+  - 0
+  - 0
+  - 31

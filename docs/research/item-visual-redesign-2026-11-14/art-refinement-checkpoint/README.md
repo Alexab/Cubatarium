@@ -1,5 +1,9 @@
 # Authored pilot refinement and headwear eye clearance
 
+The subsequent [three-pilot finishing pass](finishing/README.md) corrects stone
+construction, shears edges/pivot and ore inclusions, with separately scoped
+same-executable native evidence.
+
 Eight candidates were refined after inspecting their real native FP, loose and
 worn views. This is an artistic correction pass over staged resources, not a
 claim that all 70 candidates have passed artistic acceptance.

@@ -47,6 +47,7 @@ materials:
     pattern: forged
     metallic: 0.7
     roughness: 0.6
+    marks: forge
   edge:
     color:
     - 172
@@ -70,7 +71,7 @@ parts:
   size:
   - 0.045
   - 0.045
-  - 0.06
+  - 0.048
   bevel: 0.0081
   offset:
   - 0
@@ -138,7 +139,7 @@ parts:
   node: jaw_right
 - name: blade_left
   material: head
-  shape: extrude
+  shape: blade
   contour:
   - - -0.012
     - 0.012
@@ -154,9 +155,12 @@ parts:
   - 0
   - 0
   node: jaw_left
+  edge_depth: 0.0025
+  bevel_fraction: 0.13
+  edge_material: edge
 - name: blade_right
-  material: edge
-  shape: extrude
+  material: head
+  shape: blade
   contour:
   - - -0.11
     - 0.26
@@ -172,6 +176,43 @@ parts:
   - 0
   - -0.025
   node: jaw_right
+  edge_depth: 0.0025
+  bevel_fraction: 0.13
+  edge_material: edge
+- name: hinge_pin_front
+  material: edge
+  shape: revolve
+  profile:
+  - - -0.002
+    - 0.014
+  - - 0.002
+    - 0.011
+  sides: 6
+  offset:
+  - 0
+  - 0.008
+  - 0.018
+  rotation:
+  - 90
+  - 0
+  - 0
+- name: hinge_pin_back
+  material: edge
+  shape: revolve
+  profile:
+  - - -0.002
+    - 0.014
+  - - 0.002
+    - 0.011
+  sides: 6
+  offset:
+  - 0
+  - 0.008
+  - -0.038
+  rotation:
+  - 90
+  - 0
+  - 0
 nodes:
   jaw_left:
     pivot:

@@ -4,7 +4,10 @@ atlas_size: 128
 texels_per_metre: 100
 triangle_budget: 600
 presentation:
-  tp_euler_deg: [-65, 0, 0]
+  tp_euler_deg:
+  - -65
+  - 0
+  - 0
   right_grip:
   - 0
   - -0.03
@@ -34,14 +37,15 @@ materials:
     - 152
     - 102
     - 68
-    pattern: stone
+    pattern: ore
   metal:
     color:
     - 169
     - 170
     - 157
-    pattern: plain
+    pattern: ore
     metallic: 0.25
+    roughness: 0.78
 parts:
 - name: matrix
   material: rock
@@ -58,6 +62,12 @@ parts:
   - 0
   - 0
   - 0
+  radial_scales:
+  - 1.02
+  - 0.93
+  - 1.07
+  - 0.98
+  - 1.04
 - name: lobe
   material: ore
   shape: revolve
@@ -73,54 +83,70 @@ parts:
   - 0.07
   - 0
   - 0.02
-- name: vein0
+  radial_scales:
+  - 1.05
+  - 0.96
+  - 1.02
+  - 0.92
+  - 1.08
+  rotation:
+  - 9
+  - 16
+  - -13
+- name: exposed_vein0
   material: metal
-  shape: extrude
-  contour:
-  - - -0.02
-    - -0.01
-  - - 0.02
-    - -0.015
-  - - 0.026
-    - 0.012
-  - - -0.01
-    - 0.025
-  depth: 0.008
+  shape: revolve
+  profile:
+  - - -0.0195
+    - 0.018000000000000002
+  - - 0
+    - 0.024
+  - - 0.010499999999999999
+    - 0.00864
+  sides: 5
   offset:
-  - -0.04
-  - 0.03
-  - 0.1
-- name: vein1
+  - -0.041
+  - 0.024
+  - 0.092
+  rotation:
+  - 64
+  - -18
+  - 9
+- name: exposed_vein1
   material: metal
-  shape: extrude
-  contour:
-  - - -0.02
-    - -0.01
-  - - 0.02
-    - -0.015
-  - - 0.026
-    - 0.012
-  - - -0.01
-    - 0.025
-  depth: 0.008
+  shape: revolve
+  profile:
+  - - -0.022750000000000003
+    - 0.013499999999999998
+  - - 0
+    - 0.018
+  - - 0.01225
+    - 0.00648
+  sides: 5
   offset:
-  - 0.05
-  - 0.06
-  - 0.07
-- name: vein2
+  - 0.047
+  - 0.052
+  - 0.067
+  rotation:
+  - 46
+  - 22
+  - -17
+- name: exposed_vein2
   material: metal
-  shape: extrude
-  contour:
-  - - -0.02
-    - -0.01
-  - - 0.02
-    - -0.015
-  - - 0.026
-    - 0.012
-  - - -0.01
-    - 0.025
-  depth: 0.008
+  shape: revolve
+  profile:
+  - - -0.0169
+    - 0.015
+  - - 0
+    - 0.02
+  - - 0.009099999999999999
+    - 0.0072
+  sides: 5
   offset:
-  - -0.08
-  - -0.02
-  - 0.07
+  - -0.073
+  - -0.026
+  - 0.061
+  rotation:
+  - 73
+  - -37
+  - 21
