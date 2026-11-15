@@ -6,7 +6,7 @@ room with a real torch. Every frame uses the ordinary active inventory item,
 FP renderer and a separately tracked finite physical drop. No preview renderer
 substitutes for the world. The real light field is sampled at the player's eye:
 open scenes have packed light 15, the closed unlit room 0, and the torch room
-176 (sky 0 / block 11). Night uses day factor 0; daylight uses 1.
+192 (sky 0 / block 12). Night uses day factor 0; daylight uses 1.
 
 Twelve pilot items also pass the lit-room capture at 1920x1080 / UI 200%.
 These are 292 accepted native frames, not a completed resolution/scale matrix.
