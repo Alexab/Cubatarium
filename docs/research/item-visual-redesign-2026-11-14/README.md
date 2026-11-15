@@ -702,50 +702,31 @@ clone/publication logs, signed-file comparison, executable hash, native reports
 and image hashes. Production promotion and final visual/performance acceptance
 remain open.
 
-## Remaining implementation, in order
+## Current completion ledger
 
-1. Native baseline and actual resource-path trace, before/after references and
-   individual design cards. No claim of direct Luanti mesh copying is established.
-2. Finish integration/acceptance of the versioned source pipeline during final
-   production promotion. Authored generation, manual glTF source overrides,
-   separate validation/publication, crash recovery, source/sidecar preservation
-   and archived Item Lab comparison now have scoped coverage.
-3. Surface-space painted layers and authored overlays: base, broad variation,
-   construction detail, manufacturing marks. 128 small materials, 256 hand items,
-   512 armor. Albedo and optional standard metallic/roughness parameters.
-4. Complete gameplay-state/contact wiring and acceptance across the shared
-   item path. Static v3 TP/armor/loose integration and world lighting/fog now
-   exist; visual-state wiring now has candidate native coverage. Carry contacts
-   and final world/artistic acceptance remain incomplete.
-   Leave creature buffer ABI and creature shaders unchanged.
-5. In-game Item Lab: catalog, old/new, fixed/orbit cameras, silhouette/gray/albedo/
-   lit/UV/normals/wireframe, 32/48/64 icons, FP/TP/ground, both body types, states,
-   anchors/bounds/cost, reload with cache invalidation, PNG/JSON export. Synthetic
-   instances must not mutate saved player property.
-6. Twelve pilots: stone_pickaxe, iron_pickaxe, copper_axe, gold_sword, iron_head,
-   leather_chest, wood_bow, bucket, shears, apple, bread, raw_iron.
-7. Finalize the 70 authored candidates, including both armor body forms,
-   complete sets/motion cycles, skin/hand clearance, small icons and all world
-   representations. Source coverage alone is not artistic acceptance.
-8. Full native visual audit and performance acceptance. No final completion
-   checkbox until every item and gameplay representation has evidence.
+The chronological checkpoints below retain their original scopes. Statements
+that a feature was still missing at an earlier checkpoint are historical.
+The latest evidence governs the following status; none of these rows alone
+establishes overall completion.
 
-Exact signed bytes and regeneration after fresh Windows checkout are verified
-for both autocrlf settings by the newer checkpoint above. Keep this verifier in
-the publication path; remote Windows/Linux CI execution remains unverified here.
+| Requirement | Current evidence / remaining work |
+|---|---|
+| All 70 authored geometries, UVs, surface painting and source preservation | Sources cover all IDs; studio-review-completion retains detailed review of all 70 and 93 sheets. Final world/carry acceptance and production promotion remain. |
+| Staging, validation, atomic publication and restricted manual glTF | Implemented and tested; fresh checkouts of ff1942af9 regenerate/publish all 70 byte-identically in disposable clones under both autocrlf modes. Final working-catalog promotion remains. |
+| Item-only renderer, normals, materials, color spaces, mips and shared representations | Native FP/TP/armor/loose/state probes pass; creature vertex ABI and shaders remain unchanged. Final real-world and carried-body review remains. |
+| Item Lab views, both bodies/hands, diagnostics, independent states, animations, reload/export and resource costs | Implemented; 1040 native checks and all-item 3560-check gallery pass with source/property conservation. |
+| Small icons and resource invalidation | All 70 reviewed at native 32/48/64 sizes; sixteen linear-light samples retain thin shafts. The numerical GPU regression resolves the encoded checker to RGB 188. Final cold-load timing remains. |
+| Complete sets, fit and movement | Native all-item both-hand/both-body probes, armor motion and headwear eye clearance pass. Actual carry and input-driven transitions still need final acceptance. |
+| Provenance and independence | Explicit per-ID sources/attribution and preserved historical references exist. Detailed comparative art review is complete; final provenance text and release comparison must be reconciled during publication. No direct Luanti-copying claim is established. |
+| Actual world lighting and display matrix | Reproducible real-world capture now exists; results are recorded in the newer world checkpoint. Full final resolution/scale matrix remains. |
+| Gameplay/property compatibility | Full staged regression passes 25 CTests, gameplay 59, ownership 57, ownership UI 18, player window 7, icons 209 and presentations 3590. Repeat against the published final resources. |
+| Performance and production | Earlier paired staged measurements are retained below. Repeat with the final resources, cold icons and moving physical workload; optimize any p95 regression above 10%. Production promotion remains 0/70. |
+| CI and release report | Profile steps check exit codes; optional Windows native lighting capture is wired. Remote CI execution is not evidenced locally. Final acceptance report remains open. |
 
-Before publication, adapt the existing creature equipment/reload/culling QA
-collectors for typed item surfaces, final texture semantics and gold sets.
-The legacy equipment matrix currently assumes `wear.gltf` and source color
-factors. The bow now composes the actual authored arrow resource, as recorded
-in the newer components checkpoint below. Complete bow/carry/two-hand contact
-wiring and actual hand-pose acceptance. The sRGB filtering and cold disk-icon dependency problems are
-covered by the newer checkpoint above. Unsupported imported samplers are explicitly rejected; optional conversion,
-final publication acceptance and measured performance remain open.
-
-The earlier generic native helper's spurious bow inputs are fixed in the newer
-checkpoint above. Passing capture checks still does not replace final art review.
-
+Next implementation work is actual input-driven carry/use/throw contact review,
+correction of any resulting defects, final provenance/publication, then the full
+final display, property and performance gates. Do not replace these gates with
+additional studio screenshots or source-count checks.
 
 ## Staged whole-frame performance checkpoint
 
@@ -896,6 +877,17 @@ readable surface and exposed ash end. The integrated Release regression passes
 The evidence retains all 1260 frames using a verified baseline plus delta and
 93 complete comparison sheets. World/carry, publication and final performance
 acceptance remain; promotion is still 0/70.
+
+## Actual world lighting
+
+[World lighting captures](world-lighting-checkpoint/README.md) retain 292 native
+frames: all 70 items in daylight, night, unlit and torch-lit rooms at 1280x720,
+plus twelve pilots at 1920x1080 / UI 200%. Day/night and torch-room FP comparisons
+were inspected for every ID. Reports track actual inventory selection and a
+specific finite ground body, sample the real light field and verify restoration.
+The rejected fixture runs and their corrections are retained. This closes the
+static all-item world-lighting capture gap, not actual input-driven carry/use/
+throw, the full final display matrix, publication or performance acceptance.
 
 ## Acceptance contract
 

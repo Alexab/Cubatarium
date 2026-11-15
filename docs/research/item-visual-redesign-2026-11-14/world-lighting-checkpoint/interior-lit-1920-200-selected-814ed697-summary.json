@@ -1,0 +1,57 @@
+{
+  "passed": true,
+  "request": {
+    "ids": [
+      "apple",
+      "bread",
+      "bucket",
+      "copper_axe",
+      "gold_sword",
+      "iron_head",
+      "iron_pickaxe",
+      "leather_chest",
+      "raw_iron",
+      "shears",
+      "stone_pickaxe",
+      "wood_bow"
+    ],
+    "light": "interior-lit",
+    "width": 1920,
+    "height": 1080,
+    "scale": 2.0
+  },
+  "implementation_revision": "5ac27bc4d8f2c8778111d60079b3fa956cc8445c",
+  "executable_sha256": "7df523c160ff9604c0621a0b0f8445acaf06b1a565b2c5a2144ae9829fc42eb7",
+  "sources": {
+    "src/App/Application.cpp": "ceae8150c1a3d8a9fd7eab2c9d8ab61dc05d1e96cc6fab86441435b3b9f50bd7",
+    "src/Test/Native/ItemWorldVisualQa.h": "b9f0e5bcc9909283fbaab8c9d71b6267896d447d860db546a133a2835000ccf6",
+    "tools/run_item_world_visual_qa.py": "71f500a88c7548fe85429255ce4f4701cb9b31ade0b42dd491a7b8715e507c12"
+  },
+  "frames": {
+    "apple.png": "34c3f46b4ececeda3fb9e5d74a02f8c983ab58ba02734054c1fcdffe49fb08a8",
+    "bread.png": "f7d61324c64a1c79f9d53b9b1c7c40ea6392edcd7fdcf0616539085036cf90e3",
+    "bucket.png": "c760cd121a532931070815e2ec267666576cbb69a96dc751cbed781446046834",
+    "copper_axe.png": "e97f038d545d0b1f38336404d0ec62ef391dfe8720b1bc4703768476527668a0",
+    "flight-artifacts/flight_sim_report.json": "36970b18dcc0219e2ad9d91f21b3fc63a9aca3ddb721c7aa7c0b4d31c4a7052c",
+    "flight-artifacts/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261115-114010.2460": "47b3d065e75ad34a27af7d21dd44e18b85dbc68feaa3d2a44b84120d6c48924b",
+    "flight-artifacts/movement_diagnostics.json": "89c44232f697b74f4c505651a4b4ecdc383eabe2ad9e08b2cc53f2bb2cc63a6e",
+    "flight.json": "28a6ca1c1593095ad2b233305e3533ef084e3df2df4e003025e29bea61ede047",
+    "flight.log": "af68ac42ced372ab9c9175b6392d495c12fa0bbf20d68c566907566403d83ce4",
+    "gold_sword.png": "37bec904e8db24a181fbe245b5f20c6232396faea0c0c6cf8a3e172e18abb384",
+    "iron_head.png": "e6b3128256bd3e7bcaf9196c67683ea01547a83a90e97829cc58e15cd28020b0",
+    "iron_pickaxe.png": "606db40b17dbae38ad35a952001118fcc678ef4bc1341f00a330fe44b989dc1b",
+    "leather_chest.png": "104e0dced65b648351a4ce0da1eb562c5227e83e098b263585e0d5fed5444900",
+    "native.json": "7f342e2169fe13a6f2cb198b14938a69cfca8ce04c723a4770fa5c30933c896a",
+    "raw_iron.png": "717cdac3c76ad1dbc688aa94c82bcae375a59d9e5b3dcb16dfbe2de0131ca795",
+    "request.json": "fb3e0c0effb589cb543ea9f41cffdb4be9e910b06d55ce1046a4dee4be70db41",
+    "shears.png": "b5ee08ccc67ec9b08cdbc4a081954493ead2b59f42b28a5bda97ddf6aff2bb14",
+    "stone_pickaxe.png": "a3ab774963439b14f2d9168821a975474ec8126ba819d83063bce47692949555",
+    "wood_bow.png": "13cbc3c84553470206f3084c41301e6c716c15eb01c3f27a789bc62682713d9b"
+  },
+  "runtime_files_restored": 38,
+  "sources_unchanged": true,
+  "world_restored": true,
+  "runtime_restored": true,
+  "authors_unchanged": true,
+  "config_restored": true
+}
