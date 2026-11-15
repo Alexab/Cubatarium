@@ -868,6 +868,10 @@ disabled. Custom state survives item/scene/reload switches and exports in schema
 differences and both resolutions at all three scales. All 25 profile CTests
 and style/include/format audits pass. This does not replace the remaining final
 artistic/world/carry and performance gates, and promotion remains 0/70.
+The subsequent full all-70 staged regression also passes: gameplay 59,
+ownership 57, ownership UI 18, player window 7, icons 209, Item Lab 1040,
+presentations 3587 and 25 CTests. All 212 runtime substitutions are restored;
+the checkpoint retains the integrated report separately from the focused run.
 
 ## Acceptance contract
 

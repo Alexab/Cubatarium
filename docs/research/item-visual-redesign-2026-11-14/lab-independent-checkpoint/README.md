@@ -58,3 +58,15 @@ This finishes the previously missing independent studio controls. It does not
 finish all-item artistic/world/carry-pose review, final publication or final
 performance/property acceptance. Production promotion remains 0/70; the overall
 goal remains active.
+
+## Integrated staged regression
+
+After implementation commit `2b0a1865a`, the full all-70 candidate runner also
+passes: 25 CTests, gameplay 59, ownership 57, ownership UI 18, player window 7,
+icons 209, Item Lab 1040 and presentations 3587. This includes the latest stone,
+shears and raw-iron source refinements. All 212 temporary runtime substitutions
+are restored and the separate in-world FP capture succeeds. The executable is
+identical to the focused run. `integrated-native.json.gz`,
+`integrated-summary.json` and `integrated-output.zip` retain the complete checks,
+source coverage and profile outputs. This adds integrated gameplay/property
+evidence; it still does not constitute final artistic or performance acceptance.

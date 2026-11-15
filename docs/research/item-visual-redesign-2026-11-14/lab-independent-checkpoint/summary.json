@@ -104,6 +104,21 @@
     "native-selected-frames.zip": "7423e7c5def313393f7299c9a178029fe1ae1dddba8ef08cebdc43894a88fe6d",
     "native-summary.json": "fb194feb7621bf51cc34d3f4f126fa8cec0683a09dea76bbddc8e859760d898c",
     "release-output.txt": "613ad16555ff19d94482179cf62e444f67009d9f788b94f82bf7d1ea42b85da8",
-    "style-output.txt": "7b00bf7ed2d292a49c34b6aa610a5f9c00e46637a909909cdd9e7eff91839996"
+    "style-output.txt": "7b00bf7ed2d292a49c34b6aa610a5f9c00e46637a909909cdd9e7eff91839996",
+    "integrated-native.json.gz": "b18606a0aed659ab92c127419fae96b6e525924a1d936c96360e5c2037112b6b",
+    "integrated-summary.json": "e6e5ca46934577054a4cc2860bacbda3d6cc6016ef4259cda95ed7346a2fb303",
+    "integrated-output.zip": "b47e9c57bc7300c7aa3d64a80927829b05f38155b4f367fb442a27040071ef99"
+  },
+  "implementation_revision": "2b0a1865a06e2975f3e0f730595615edd5447d64",
+  "integrated_scope": "all-70 staged gameplay/ownership/UI/presentation regression and FP; not artistic or performance acceptance",
+  "integrated_checks": {
+    "gameplay": 59,
+    "window": 0,
+    "ownership": 57,
+    "ownership_ui": 18,
+    "player_window": 7,
+    "icons": 209,
+    "item_lab": 1040,
+    "presentations": 3587
   }
 }
