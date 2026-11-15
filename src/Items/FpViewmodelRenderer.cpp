@@ -730,15 +730,11 @@ float UFpViewmodelRenderer::SampleEasing(float t, ItemVisualEasing easing) const
   }
 }
 
-void UFpViewmodelRenderer::ApplyPresetToOffsets(float eased, float &ox,
+void UFpViewmodelRenderer::ApplyPresetToOffsets(const ItemVisualArmKeys &arm,
+                                                float eased, float &ox,
                                                 float &oy, float &oz,
                                                 glm::mat4 &swing) const
 {
-  if (!Motion.Anim.HaveSnapshot)
-  {
-    return;
-  }
-  const ItemVisualArmKeys &arm = Motion.Anim.Snapshot.Arm;
   auto lerp2 = [eased](const float v[2], bool has)
   { return has ? (v[0] + (v[1] - v[0]) * eased) : 0.f; };
   if (arm.HasTx)
@@ -779,11 +775,28 @@ glm::mat4 UFpViewmodelRenderer::BuildRootMatrix(bool mirrorX) const
   float oy = Motion.WieldOffsetY + BobY;
   float oz = 0.f;
   glm::mat4 swing(1.f);
-  if (Motion.Anim.T >= 0.f && !mirrorX && Motion.Anim.HaveSnapshot)
+  const ItemVisualPreset *heldPreset = nullptr;
+  if (DrawingUseHeld && DrawingUsePhase > 0 && Items && !mirrorX)
+    if (const auto *definition = Items->Get(Motion.ActiveItemHint))
+    {
+      const bool drink = definition->Use.Action == ItemUseActionKind::Drink;
+      if (drink || definition->Use.Action == ItemUseActionKind::Eat)
+        heldPreset = Items->VisualPresets().Get(
+            DefaultUsePreset(*definition, drink ? "drink" : "eat"));
+    }
+  if (heldPreset)
+  {
+    // Raise during the first third, then hold until release. A one-shot sin(pi)
+    // preset would otherwise lower the item before its authoritative duration.
+    const float raised = std::clamp(DrawingUsePhase * 3.f, 0.f, 1.f);
+    const float eased = raised * raised * (3.f - 2.f * raised);
+    ApplyPresetToOffsets(heldPreset->Arm, eased, ox, oy, oz, swing);
+  }
+  else if (Motion.Anim.T >= 0.f && !mirrorX && Motion.Anim.HaveSnapshot)
   {
     const float eased =
         SampleEasing(Motion.Anim.T, Motion.Anim.Snapshot.Easing);
-    ApplyPresetToOffsets(eased, ox, oy, oz, swing);
+    ApplyPresetToOffsets(Motion.Anim.Snapshot.Arm, eased, ox, oy, oz, swing);
   }
   else if (Motion.DigAnim >= 0.f && !mirrorX)
   {
@@ -1535,6 +1548,7 @@ void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
   } auditScope{ActiveAudit, ActiveAudit};
   DrawingBowCharge = params.BowCharge;
   DrawingUsePhase = params.ItemUsePhase;
+  DrawingUseHeld = params.ItemUseHeld;
   DrawingItemLight = params.ItemLightIntensity;
   DrawingInspectionMode = params.ItemInspectionMode;
   DrawingItemAmbient = params.ItemAmbient;

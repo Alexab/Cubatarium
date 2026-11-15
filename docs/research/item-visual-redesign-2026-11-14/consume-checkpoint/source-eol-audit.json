@@ -1,0 +1,147 @@
+[
+  {
+    "path": "tools/itemgen/armor_designs.py",
+    "has_crlf": false,
+    "index_filter_changes_bytes": false
+  },
+  {
+    "path": "tools/itemgen/artifact_contract.py",
+    "has_crlf": true,
+    "index_filter_changes_bytes": true
+  },
+  {
+    "path": "tools/itemgen/builders.py",
+    "has_crlf": true,
+    "index_filter_changes_bytes": true
+  },
+  {
+    "path": "tools/itemgen/design.py",
+    "has_crlf": true,
+    "index_filter_changes_bytes": true
+  },
+  {
+    "path": "tools/itemgen/design_publication.py",
+    "has_crlf": true,
+    "index_filter_changes_bytes": true
+  },
+  {
+    "path": "tools/itemgen/export_gltf.py",
+    "has_crlf": true,
+    "index_filter_changes_bytes": true
+  },
+  {
+    "path": "tools/itemgen/filesystem.py",
+    "has_crlf": true,
+    "index_filter_changes_bytes": true
+  },
+  {
+    "path": "tools/itemgen/manifest.py",
+    "has_crlf": true,
+    "index_filter_changes_bytes": true
+  },
+  {
+    "path": "tools/itemgen/manual.py",
+    "has_crlf": true,
+    "index_filter_changes_bytes": true
+  },
+  {
+    "path": "tools/itemgen/mesh.py",
+    "has_crlf": false,
+    "index_filter_changes_bytes": false
+  },
+  {
+    "path": "tools/itemgen/pilot_designs.py",
+    "has_crlf": true,
+    "index_filter_changes_bytes": true
+  },
+  {
+    "path": "tools/itemgen/pipeline.py",
+    "has_crlf": true,
+    "index_filter_changes_bytes": true
+  },
+  {
+    "path": "tools/itemgen/presentation.py",
+    "has_crlf": true,
+    "index_filter_changes_bytes": true
+  },
+  {
+    "path": "tools/itemgen/preview.py",
+    "has_crlf": true,
+    "index_filter_changes_bytes": true
+  },
+  {
+    "path": "tools/itemgen/quality.py",
+    "has_crlf": true,
+    "index_filter_changes_bytes": true
+  },
+  {
+    "path": "tools/itemgen/raster.py",
+    "has_crlf": true,
+    "index_filter_changes_bytes": true
+  },
+  {
+    "path": "tools/itemgen/resource_uri.py",
+    "has_crlf": true,
+    "index_filter_changes_bytes": true
+  },
+  {
+    "path": "tools/itemgen/supplies_designs.py",
+    "has_crlf": false,
+    "index_filter_changes_bytes": false
+  },
+  {
+    "path": "tools/itemgen/surface_export.py",
+    "has_crlf": true,
+    "index_filter_changes_bytes": true
+  },
+  {
+    "path": "tools/itemgen/surface_paint.py",
+    "has_crlf": true,
+    "index_filter_changes_bytes": true
+  },
+  {
+    "path": "tools/itemgen/surface_uv.py",
+    "has_crlf": false,
+    "index_filter_changes_bytes": false
+  },
+  {
+    "path": "tools/itemgen/texturegen.py",
+    "has_crlf": true,
+    "index_filter_changes_bytes": true
+  },
+  {
+    "path": "tools/itemgen/visual_bindings.py",
+    "has_crlf": true,
+    "index_filter_changes_bytes": true
+  },
+  {
+    "path": "tools/itemgen/wear_sections.py",
+    "has_crlf": false,
+    "index_filter_changes_bytes": false
+  },
+  {
+    "path": "tools/itemgen/workshop_designs.py",
+    "has_crlf": false,
+    "index_filter_changes_bytes": false
+  },
+  {
+    "path": "tools/itemgen/__init__.py",
+    "has_crlf": true,
+    "index_filter_changes_bytes": true
+  },
+  {
+    "path": "tools/itemgen/__main__.py",
+    "has_crlf": true,
+    "index_filter_changes_bytes": true
+  },
+  {
+    "path": "shaders/item_surface.vert",
+    "has_crlf": false,
+    "index_filter_changes_bytes": false
+  },
+  {
+    "path": "shaders/item_surface.frag",
+    "has_crlf": true,
+    "index_filter_changes_bytes": true
+  }
+]

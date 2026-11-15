@@ -59,7 +59,8 @@ for the binding/attachment contract and candidate limitations, and the
 See [equipment and supply cards](SUPPLIES.md) for the new weapon, utility,
 container, food and material constructions and the supported emission factor.
 Manual glTF source overrides are supported; see [the import guide](MANUAL_GLTF.md).
-The remaining Item Lab presentations are still under development. Publication is available as a separate validated transaction;
+Item Lab includes the gameplay presentation scenes; contact/bounds/cost overlays
+and final acceptance remain in development. Publication is available as a separate validated transaction;
 production promotion remains part of final acceptance.
 
 Generate comparative sheets with `python tools/preview_item_designs.py`. Use

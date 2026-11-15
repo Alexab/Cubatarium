@@ -3637,6 +3637,7 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
         fpParams.ThrowCharge = creature->ThrowCharge;
         fpParams.BowCharge = creature->BowCharge;
         fpParams.ItemUsePhase = creature->ActiveItemUsePhase();
+        fpParams.ItemUseHeld = creature->ItemUse.Value > 0.f;
         fpParams.ItemLightIntensity = FpItemLight(*World, *creature);
         fpParams.ItemLightDirection =
             glm::mat3(World->GetCurrentUserCamera()->GetViewMatrix()) *

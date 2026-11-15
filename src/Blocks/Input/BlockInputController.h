@@ -51,11 +51,15 @@ private:
 
   void TryUseActiveSlot(const BlockInputContext &ctx);
   void TryInstantBreak(const BlockInputContext &ctx);
+  void ClearUseVisual();
+  bool UpdateUseVisual(const BlockInputContext &ctx);
 
   std::chrono::steady_clock::time_point LeftDownTime{};
   bool LeftHeld{false};
   std::string DrawingBow, DrawingUse;
   uint64_t UseInstance{0};
+  uint64_t UseActor{0}, UseSelection{0};
+  std::weak_ptr<UWorld> UseWorld;
   float UseDuration{.8f};
   bool UseReady{false};
   std::chrono::steady_clock::time_point UseDownTime{};

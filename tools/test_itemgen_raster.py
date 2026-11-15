@@ -2,6 +2,7 @@
 import json
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 import numpy as np
 from itemgen.export_gltf import write_gltf
@@ -9,6 +10,21 @@ from itemgen.pipeline import load_materials
 from itemgen.raster import load_primitives, render
 
 class RasterTests(unittest.TestCase):
+    def test_budget_includes_later_meshes_and_nonindexed_triangles(self):
+        from itemgen.quality import _triangle_budget
+        with tempfile.TemporaryDirectory() as tmp:
+            folder=Path(tmp)/'multi';folder.mkdir()
+            gltf=dict(accessors=[dict(count=6),dict(count=9)],meshes=[
+                dict(primitives=[dict(indices=0,attributes=dict(POSITION=0))]),
+                dict(primitives=[dict(attributes=dict(POSITION=1))])])
+            path=folder/'model.gltf';path.write_text(json.dumps(gltf))
+            with patch('itemgen.quality.MODELS',Path(tmp)):
+                self.assertEqual(_triangle_budget('multi'),5)
+                gltf['meshes'][1]['primitives'][0]['mode']=1
+                path.write_text(json.dumps(gltf))
+                with self.assertRaisesRegex(ValueError,'triangle primitives'):
+                    _triangle_budget('multi')
+
     def test_positive_camera_elevation_sees_top_surface(self):
         def face(y,color,reverse=False):
             positions=np.array([[-.2,y,-.2],[-.2,y,.2],[.2,y,.2],[.2,y,-.2]])

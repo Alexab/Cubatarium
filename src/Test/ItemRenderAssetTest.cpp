@@ -247,6 +247,18 @@ void TestVisualState()
          "broken containers retain their visible contents without an active "
          "use gesture");
   ItemActionPulse pulse;
+  ItemUseProgress held;
+  held.Update("apple", 7, 12, .4f, .8f);
+  Expect(std::abs(held.Phase("apple", 7, 12) - .5f) < 1e-5f,
+         "held action follows the authoritative duration");
+  Expect(held.Phase("apple", 8, 12) == 0 && held.Phase("apple", 7, 13) == 0,
+         "held use cannot transfer across a source or mode selection");
+  held.Update("apple", 7, 12, 10.f, .8f);
+  Expect(held.Phase("apple", 7, 12) == 1.f,
+         "ready hold stays at completion until release");
+  held.Clear();
+  Expect(held.Phase("apple", 7, 12) == 0,
+         "cancel removes held state without a successful-action pulse");
   pulse.Begin("shears", 7, 12);
   pulse.Tick(.15f);
   Expect(pulse.Phase("shears", 7, 12) > .4f,

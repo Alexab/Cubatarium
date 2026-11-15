@@ -164,6 +164,7 @@ inline bool CaptureFpItemState(UFpViewmodelRenderer &renderer,
   params.Offhand = left ? &entry : nullptr;
   params.BowCharge = left ? 0.f : inputs.BowCharge;
   params.ItemUsePhase = left ? 0.f : inputs.UsePhase;
+  params.ItemUseHeld = !left && inputs.UsePhase > 0;
   params.HasAmmo = inputs.HasAmmo;
   renderer.ClearHeldVisual();
   renderer.DrawWorldOverlay(params);
@@ -268,6 +269,69 @@ inline void RunItemStateQa(const std::string &id, const ItemRenderAsset &asset,
         !rest.empty() && rest != bytes(frames / (id + "-state-2-orbit.png")));
   check(id + " cancellation restores rendered pixels",
         !rest.empty() && rest == bytes(frames / (id + "-state-3-orbit.png")));
+}
+inline void RunItemConsumePoseQa(const ItemDefinition &definition,
+                                 UCreaturePreviewRenderer &preview,
+                                 UFpViewmodelRenderer *fp,
+                                 UItemQaTarget &target,
+                                 const std::filesystem::path &frames,
+                                 nlohmann::json &report)
+{
+  if (!fp || (definition.Use.Action != ItemUseActionKind::Eat &&
+              definition.Use.Action != ItemUseActionKind::Drink))
+    return;
+  auto check = [&](const std::string &name, bool passed)
+  {
+    report["checks"].push_back({{"name", name}, {"passed", passed}});
+    if (!passed)
+      report["passed"] = false;
+  };
+  auto bytes = [](const std::filesystem::path &path)
+  {
+    std::ifstream file(path, std::ios::binary);
+    return std::vector<char>(std::istreambuf_iterator<char>(file), {});
+  };
+  for (const char *body : HumanAppearance::Bodies)
+  {
+    std::array<std::filesystem::path, 4> images;
+    for (int step = 0; step < 4; ++step)
+    {
+      ItemVisualInputs inputs;
+      if (definition.Use.Action == ItemUseActionKind::Drink)
+      {
+        inputs.HasWater = true;
+        inputs.ContentsUnits = 1;
+      }
+      inputs.UsePhase = step == 1 ? .5f : step == 2 ? 1.f : 0.f;
+      const auto label =
+          definition.Id + "-consume-" + body + "-" + std::to_string(step);
+      images[step] = frames / (label + ".png");
+      check(label + " visible",
+            CaptureFpItemState(*fp, preview, target, definition.Id, inputs,
+                               body, false, images[step]));
+      std::ifstream file(images[step].string() + ".json");
+      nlohmann::json framing;
+      file >> framing;
+      check(label + " remains inside frame",
+            framing["visible_bounds_fraction"].get<float>() >= .98f);
+    }
+    const auto rest = bytes(images[0]);
+    const auto raised = bytes(images[1]);
+    const auto label = definition.Id + " consume " + body;
+    check(label + " raises item", !raised.empty() && raised != rest);
+    auto centerY = [](const std::filesystem::path &path)
+    {
+      std::ifstream file(path.string() + ".json");
+      nlohmann::json framing;
+      file >> framing;
+      return .5f * (framing["ndc_low"][1].get<float>() +
+                    framing["ndc_high"][1].get<float>());
+    };
+    check(label + " moves toward mouth height",
+          centerY(images[2]) > centerY(images[0]) + .05f);
+    check(label + " holds pose until release", raised == bytes(images[2]));
+    check(label + " cancellation restores pose", rest == bytes(images[3]));
+  }
 }
 inline void RunItemColorQa(ItemSurfaceRenderer &renderer,
                            const std::filesystem::path &frames,
@@ -405,6 +469,7 @@ RunItemPresentationQa(const std::filesystem::path &path,
     report["surface_ids"].push_back(id);
     RunItemStateQa(id, *surface, orbit, preview, fp, fpTarget, model, frames,
                    report);
+    RunItemConsumePoseQa(*def, preview, fp, fpTarget, frames, report);
     for (const char *body : HumanAppearance::Bodies)
       for (int phase = 0; phase < 2; ++phase)
       {

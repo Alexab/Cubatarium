@@ -5,6 +5,7 @@
 #include "Creatures/Influence/InfluenceResolver.h"
 #include "Creatures/Influence/StatusEffectCatalog.h"
 #include "Creatures/Influence/StatusEffectSystem.h"
+#include "Test/Native/ItemUseInputQa.h"
 #include "Test/Native/SurvivalLoopQa.h"
 #include "World/Physics/WorldChunkDirtyService.h"
 #pragma once
@@ -51,6 +52,7 @@ inline void RunItemsInventoryQa(UWorld &world, const std::string &path)
   inv = UCreatureInventory{};
   inv.SetItemDefinitions(world.GetItemDefinitionStorage());
   inv.SetCreative(false);
+  RunItemUseInputQa(world, check);
   const auto floor =
       WorldPosToBlock(actor->GetBodyOrigin()) + glm::ivec3(0, 6, 0);
   const auto stone = world.GetBlockRegistry().GetIdByTypeName("stone");

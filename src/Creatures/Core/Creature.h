@@ -42,7 +42,8 @@ public:
   float ThrowCharge{0.f};
   float BowCharge{0.f};
   ItemActionPulse
-      ItemAction; // Transient successful-use visual, never serialized.
+      ItemAction;          // Transient successful-use visual, never serialized.
+  ItemUseProgress ItemUse; // Transient hold; controller owns duration/cancel.
   uint64_t ItemVisualSelection() const
   {
     return uint64_t(GetInventory().GetActiveBarIndex() * 10 +
@@ -52,9 +53,11 @@ public:
   float ActiveItemUsePhase() const
   {
     const auto *e = GetInventory().GetActiveEntryRef();
-    return e && !e->empty && !e->broken
-               ? ItemAction.Phase(e->Id, e->instanceId, ItemVisualSelection())
-               : 0.f;
+    if (!e || e->empty || e->broken || CarryHandCount > 0)
+      return 0.f;
+    const auto selection = ItemVisualSelection();
+    const float held = ItemUse.Phase(e->Id, e->instanceId, selection);
+    return held > 0 ? held : ItemAction.Phase(e->Id, e->instanceId, selection);
   }
   mutable HumanMotionState HumanMotion; // Transient; never serialized.
   void SetHumanMotionFacts(glm::vec3 velocity, bool swimming,

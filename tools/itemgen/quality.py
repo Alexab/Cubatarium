@@ -42,9 +42,15 @@ def _gray_mean(item_id: str) -> float:
 def _triangle_budget(item_id: str) -> int:
     gltf = json.loads((MODELS / item_id / "model.gltf").read_text(encoding="utf-8"))
     total = 0
-    for prim in gltf["meshes"][0]["primitives"]:
-        acc = gltf["accessors"][prim["indices"]]
-        total += acc["count"] // 3
+    for mesh in gltf["meshes"]:
+        for prim in mesh["primitives"]:
+            if prim.get("mode", 4) != 4:
+                raise ValueError("Item budget requires triangle primitives")
+            index = prim.get("indices", prim["attributes"]["POSITION"])
+            count = gltf["accessors"][index]["count"]
+            if count % 3:
+                raise ValueError("Triangle primitive count is not divisible by three")
+            total += count // 3
     return total
 
 

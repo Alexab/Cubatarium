@@ -1721,7 +1721,7 @@
         "tools/itemgen/manifest.py"
       ],
       "sha256": {
-        "content/items/waterskin.json": "b2401642fa1d66b6c861a23321e209408976bf5bbc56b081d6f7d99c46b2fd0f",
+        "content/items/waterskin.json": "fb0d4299132d9a6d0cb82c0d95f78327933c2e8e658f0caeba2ea58122fcb024",
         "tools/item_recipes/waterskin.yaml": "df5f5628f9a91e16ac86f159ed2542f53a6fc9c49d96ec145dc905f36b88fc9b",
         "models/items/waterskin/ATTRIBUTION.json": "aa50bb1a6a8334eb2a849038a5ea1c2595057e74d3f9f7d7fa4bfa64263de688",
         "models/items/waterskin/LICENSE.txt": "066dfbe07d15312444cb3430e4d536677114ba30e8648823e35bbb24f47d782a",

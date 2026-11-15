@@ -20,6 +20,8 @@ The same sidebar controls apply to both panels:
   FP and Icons have fixed cameras.
 - **Rest/Half/Peak** sets synthetic item state, including container contents,
   bow charge and utility phase where supported by the definition.
+  In FP, eat/drink definitions also use their authored consumption arm gesture;
+  gameplay supplies the actual held duration and clears it on cancellation.
 - **Still/Walk pose/Play** sets static or animated preview motion. This is a
   presentation inspection, not a simulation of combat or carrying mechanics.
 - The material mode cycles lit, silhouette, gray, albedo, UV checker, normals

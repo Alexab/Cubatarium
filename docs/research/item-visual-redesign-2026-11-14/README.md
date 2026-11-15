@@ -589,6 +589,49 @@ measurements and promotion of all 70 candidates remain open. Production still
 uses legacy resources. Day/night/interior world checks are distinct from the
 studio's three intensity presets.
 
+## Authoritative consumption presentation, 2026-11-15
+
+Held food/drink now projects the controller's actual elapsed time and duration
+into transient actor visual state. The binding includes actor/world, inventory
+selection, mode and instance. Early release, pointer cancellation, selection
+change, mode change, death or cargo occupancy invalidate the hold; returning to
+the old slot cannot revive it. No visual timer consumes inventory or completes
+the action. The existing release/input/influence path remains authoritative.
+
+FP consumption uses the selected item's authored arm keys, raises during the
+first third of the real hold and stays raised until release. This fixes the old
+0.55-second sin(pi) preset returning to rest before the longer use completed.
+Other one-shot presets retain their existing curves. Item Lab and native state
+captures use the same renderer flag; held consumption is separate from a
+successful utility pulse, so filling a container cannot start a drinking pose.
+Native review also exposed the old eating key rotating downwards. Its sign is
+corrected, and the waterskin gets a separate smaller `drink_hand` gesture so the
+neck stays inside the frame. Tests require upward displacement and at least
+98% of each consume-state item's projected bounds inside the viewport, rather
+than accepting arbitrary changed pixels.
+
+Native input coverage exercises short hold/release, explicit cancel, slot and
+mode round trips, occupied hands and exactly-once consumption. New comparative
+FP captures cover every eat/drink definition and both body variants at rest,
+half hold, full hold and cancellation. These do not close TP arm/contact poses.
+
+The legacy geometry audit now sums every mesh and supports nonindexed triangle
+primitives. It rejects nontriangle topology instead of undercounting composite
+resources; a multiple-mesh regression covers that failure mode.
+
+The final Release native run passes 59 gameplay checks (including eight real-input
+consumption cases), 2,382 presentation checks, 283 Item Lab checks, 209 icon
+checks and the ownership/window regressions. All 25 Release CTests pass after
+rebuilding the affected targets. The raster suite passes eight cases. The
+temporary 70-item runtime overlay restores all 210 files. The final captures
+include all five eat/drink definitions on both body variants; their half/full
+hold images are identical and cancellation restores the rest image.
+See [the consumption checkpoint](consume-checkpoint/summary.json) for exact
+binary/resource hashes, reports, logs and forty native images with framing data.
+Style, formatting and include checks pass. This remains partial acceptance:
+TP consumption poses, carry contacts, final art/performance review, source-byte
+checkout validation and production promotion are still required.
+
 ## Remaining implementation, in order
 
 1. Native baseline and actual resource-path trace, before/after references and
@@ -627,11 +670,16 @@ Before publication, adapt the existing creature equipment/reload/culling QA
 collectors for typed item surfaces, final texture semantics and gold sets.
 The legacy equipment matrix currently assumes `wear.gltf` and source color
 factors. Also close these known integration gaps: share the final arrow
-resource with the bow's temporary nocked-arrow geometry; project the full
-consume-duration/cancel state into presentations; and complete carry/two-hand
+resource with the bow's temporary nocked-arrow geometry; complete TP consumption
+arm poses (the authoritative duration and FP hold now have coverage); and complete carry/two-hand
 contact wiring. The sRGB filtering and cold disk-icon dependency problems are
 covered by the newer checkpoint above. Unsupported imported samplers are explicitly rejected; optional conversion,
 final publication acceptance and measured performance remain open.
+
+Before final art review, also gate the generic native presentation helper's bow
+inputs by the item definition. Its synthetic utility-state inputs currently carry
+a bow charge even for non-ranged items; the Item Lab scene renderer already gates
+this correctly. Passing capture checks is not proof of a valid gameplay pose.
 
 
 ## Acceptance contract

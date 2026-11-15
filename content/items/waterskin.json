@@ -18,7 +18,7 @@
   "visual": {
     "wield_scale": 0.95,
     "use": {
-      "drink": "eat_hand"
+      "drink": "drink_hand"
     },
     "fit_axis": "longest",
     "wield_euler_deg": [

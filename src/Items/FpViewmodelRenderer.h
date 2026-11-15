@@ -63,6 +63,7 @@ struct FpViewmodelDrawParams
   glm::vec2 CarryRightNdc{0.f}, CarryLeftNdc{0.f};
   float ThrowCharge{0}, BowCharge{0};
   float ItemUsePhase{0.f}, ItemLightIntensity{1.f};
+  bool ItemUseHeld{false};
   int ItemInspectionMode{0};
   float ItemAmbient{.65f};
   bool HasAmmo{false};
@@ -149,7 +150,8 @@ private:
 
   void BeginPresetAnim(const std::string &presetId, bool holdAtEnd);
   float SampleEasing(float t, ItemVisualEasing easing) const;
-  void ApplyPresetToOffsets(float eased, float &ox, float &oy, float &oz,
+  void ApplyPresetToOffsets(const ItemVisualArmKeys &arm, float eased,
+                            float &ox, float &oy, float &oz,
                             glm::mat4 &swing) const;
 
   bool InitCubeMesh();
@@ -212,6 +214,7 @@ private:
 
   FpMotion Motion;
   float DrawingBowCharge{0.f}, DrawingUsePhase{0.f}, DrawingItemLight{1.f};
+  bool DrawingUseHeld{false};
   bool DrawingHasAmmo{false};
   int DrawingInspectionMode{0};
   float DrawingItemAmbient{.65f};

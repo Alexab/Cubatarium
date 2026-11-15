@@ -239,6 +239,7 @@ unsigned UItemLabSceneRenderer::Render(
     params.Offhand = p.Left ? &entry : nullptr;
     params.BowCharge = p.Left ? 0.f : p.Inputs.BowCharge;
     params.ItemUsePhase = p.Left ? 0.f : p.Inputs.UsePhase;
+    params.ItemUseHeld = !p.Left && p.Inputs.UsePhase > 0;
     params.HasAmmo = p.Inputs.HasAmmo;
     FpViewmodelDrawAudit audit;
     params.Audit = &audit;

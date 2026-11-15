@@ -7,8 +7,8 @@ The left preview uses the item definition's published resource under the runtime
 asset root. The right preview uses
 `assetgen_output/items/redesign/<id>/model.gltf` beside that root. Build a candidate
 with `python tools/itemgen.py build-design --id <id>`; building does not publish it.
-A missing candidate is reported explicitly. Neither view equips an item or edits
-player property.
+Without staging the right preview uses current production and says so explicitly.
+Neither view equips an item or edits player property.
 
 Search filters all catalog item IDs. Drag either preview to rotate both. The
 mode button cycles lit, silhouette, gray material, albedo, UV checker, normals and
@@ -30,9 +30,10 @@ through the application's input router. Its report is
 It checks all published items, seven candidate modes, six resolution/scale
 combinations, pointer switching, closing and unchanged player inventory.
 
-This initial studio is an orbit comparison screen. Dedicated FP/TP/ground and
-both-body armor scenes, contacts/bounds overlays and
-32/48/64-pixel icon inspection are still required by the full redesign plan.
+The studio now includes Orbit, FP, TP, Ground, Armor and native 32/48/64 icon
+scenes, both body forms/hands, camera presets and static/animated poses.
+See [the operator guide](../../docs/item-lab.md) for controls and export sizes.
+Contacts/physical/UV overlays and detailed resource costs remain in development.
 
 ## Packaged old/current comparison
 
@@ -43,8 +44,10 @@ absent. Missing resources show a diagnostic, not a cube. Both viewports retain
 shared camera, state, light, reload and inspection controls. Player property is
 not an authoring or preview store.
 
-Export schema 2 includes actual `published`, `reference` and `candidate` paths,
+Export schema 3 includes actual `published`, `reference` and `candidate` paths,
 `archived_reference` and `staged_candidate` flags. Images are named
 `<id>-<mode>-reference.png` and `<id>-<mode>-candidate.png`. These names replace
 the ambiguous old `-published.png` reference label. Native QA exercises packaged
 comparison without a staging folder at both resolutions and all three UI scales.
+Non-orbit export names additionally include scene and actor index; the JSON
+records scene, actor, camera, motion and animation time.

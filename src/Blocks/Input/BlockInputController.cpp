@@ -334,10 +334,40 @@ void UBlockInputController::TryInstantBreak(const BlockInputContext &ctx)
   ctx.World->DelObjectByView();
 }
 
+void UBlockInputController::ClearUseVisual()
+{
+  if (auto world = UseWorld.lock())
+    if (auto *actor = world->GetCreature(UseActor))
+      actor->ItemUse.Clear();
+  UseWorld.reset();
+  UseActor = 0;
+}
+
+bool UBlockInputController::UpdateUseVisual(const BlockInputContext &ctx)
+{
+  auto world = UseWorld.lock();
+  auto *actor = ctx.World ? ctx.World->GetControlledCreature() : nullptr;
+  if (!world || world != ctx.World || !actor || actor->GetId() != UseActor ||
+      actor->CarryHandCount > 0 || actor->GetVitals().health <= 0 ||
+      actor->ItemVisualSelection() != UseSelection)
+    return false;
+  const auto *entry = actor->GetInventory().GetActiveEntryRef();
+  if (!entry || entry->empty || entry->broken || entry->Id != DrawingUse ||
+      entry->instanceId != UseInstance)
+    return false;
+  const float elapsed = std::chrono::duration<float>(
+                            std::chrono::steady_clock::now() - UseDownTime)
+                            .count();
+  actor->ItemUse.Update(DrawingUse, UseInstance, UseSelection, elapsed,
+                        UseDuration);
+  return true;
+}
+
 void UBlockInputController::CancelPointerInteraction(
     const BlockInputContext &ctx)
 {
   DrawingBow.clear();
+  ClearUseVisual();
   DrawingUse.clear();
   UseReady = false;
   if (ctx.World)
@@ -345,6 +375,10 @@ void UBlockInputController::CancelPointerInteraction(
       c->BowCharge = 0;
   LeftHeld = false;
   DigStartedForHold = false;
+  RightPressed = false;
+  RightLookActive = false;
+  if (ctx.App)
+    ctx.App->ClearFpHeldVisual();
   if (ctx.World)
   {
     ctx.World->CancelBreakSession();
@@ -513,6 +547,10 @@ void UBlockInputController::HandleRightPress(glm::vec2 pos,
         UseInstance = active->instanceId;
         UseDuration = bow->Use.Duration;
         UseDownTime = std::chrono::steady_clock::now();
+        UseActor = c->GetId();
+        UseSelection = c->ItemVisualSelection();
+        UseWorld = ctx.World;
+        UpdateUseVisual(ctx);
         if (ctx.App)
           ctx.App->NotifyFpUseVisual(
               DefaultUsePreset(*bow, bow->Use.Action == ItemUseActionKind::Eat
@@ -577,12 +615,13 @@ void UBlockInputController::HandleRightRelease(const BlockInputContext &ctx)
 {
   if (!DrawingUse.empty())
   {
+    const bool validUse = UpdateUseVisual(ctx);
     if (ctx.World)
       if (auto *c = ctx.World->GetControlledCreature())
       {
         auto *e = c->GetInventory().GetActiveEntryRef();
-        if (e && e->Id == DrawingUse && e->instanceId == UseInstance &&
-            !c->CarryHandCount &&
+        if (validUse && e && e->Id == DrawingUse &&
+            e->instanceId == UseInstance && !c->CarryHandCount &&
             std::chrono::duration<float>(std::chrono::steady_clock::now() -
                                          UseDownTime)
                     .count() >= UseDuration)
@@ -592,6 +631,7 @@ void UBlockInputController::HandleRightRelease(const BlockInputContext &ctx)
           UseReady = false;
         }
       }
+    ClearUseVisual();
     DrawingUse.clear();
     RightPressed = false;
     RightLookActive = false;
@@ -757,6 +797,12 @@ void UBlockInputController::OnKeyDelete(const BlockInputContext &ctx)
 
 void UBlockInputController::Tick(float dt, const BlockInputContext &ctx)
 {
+  if (!DrawingUse.empty())
+  {
+    if (!UpdateUseVisual(ctx))
+      CancelPointerInteraction(ctx);
+    return;
+  }
   if (ctx.World)
     if (auto *c = ctx.World->GetControlledCreature())
     {
