@@ -27,6 +27,22 @@ all generator modules, both item shaders and all generated output. Added source
 files, changed code/definition, tampered staging or incomplete metadata require
 a rebuild. Every selected design is checked again after preparing the transaction.
 
+Git stores signed item inputs and published payloads without newline conversion:
+the item-specific `-text` rules in `.gitattributes` preserve authored glTF, paint
+layers, recipes, definitions, generator modules, shaders and model sidecars. This
+is a byte policy, not a source rewrite or a refresh of recorded hashes. Changes
+to any signed byte still require rebuilding and validating the affected design.
+
+Run `python tools/verify_item_checkout.py` before production promotion. It builds
+the full authored catalog, makes two disposable local Git clones with
+`core.autocrlf=true/false`, verifies all signed bytes, validates copied staging,
+requires byte-identical regeneration, and tests publication/manifest validation
+inside each clone. `--skip-build` reuses strictly validated existing staging.
+The source working catalog and author files must remain unchanged. Reports under
+`bin/items_checkout` are reset for each run; failures return a nonzero exit code.
+The checkout revision must contain the intended byte-policy/input changes.
+This test does not publish the working catalog or certify artistic quality.
+
 The glTF subset requires indexed triangles, float POSITION/NORMAL/TEXCOORD_0,
 unit normals, consistent winding, valid nonnegative indices and buffer ranges,
 finite transforms, positive TRS scales, unique named scene nodes, external PNG

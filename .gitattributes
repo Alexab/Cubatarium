@@ -20,6 +20,16 @@
 /LICENSE -text
 /tools/creature_palettes.yaml -text
 /tools/requirements-creaturegen.txt -text
+# Item provenance signs exact bytes, including authored glTF/paint layers and
+# published payloads. Checkout must preserve them under either autocrlf mode.
+/tools/itemgen/*.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/tools/item_designs/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/tools/item_recipes/*.yaml -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/tools/item_materials.yaml -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/content/items/*.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/models/items/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/shaders/item_surface.vert -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/shaders/item_surface.frag -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 # Item manual-import evidence records exact payload bytes, including source license text.
 /docs/research/item-visual-redesign-2026-11-14/manual-checkpoint/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 /docs/research/item-visual-redesign-2026-11-14/scenes-checkpoint/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

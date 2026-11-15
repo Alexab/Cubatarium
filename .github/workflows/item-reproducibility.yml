@@ -1,0 +1,33 @@
+name: Item provenance and checkout reproducibility
+
+on:
+  pull_request:
+    paths: ['.gitattributes', 'tools/itemgen/**', 'tools/itemgen.py', 'tools/item_designs/**', 'tools/item_recipes/**', 'tools/item_materials.yaml', 'tools/verify_item_checkout.py', 'content/items/**', 'models/items/**', 'shaders/item_surface.*', '.github/workflows/item-reproducibility.yml']
+  push:
+    branches: [develop, 'codex/**']
+    paths: ['.gitattributes', 'tools/itemgen/**', 'tools/itemgen.py', 'tools/item_designs/**', 'tools/item_recipes/**', 'tools/item_materials.yaml', 'tools/verify_item_checkout.py', 'content/items/**', 'models/items/**', 'shaders/item_surface.*', '.github/workflows/item-reproducibility.yml']
+  workflow_dispatch:
+
+jobs:
+  item-checkout:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install generator dependencies
+        run: python -m pip install -r requirements-assetgen.txt
+      - name: Verify both checkout modes and isolated publication
+        run: python tools/verify_item_checkout.py
+      - name: Upload fresh verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: item-checkout-${{ matrix.os }}
+          path: bin/items_checkout/**
+          if-no-files-found: error
