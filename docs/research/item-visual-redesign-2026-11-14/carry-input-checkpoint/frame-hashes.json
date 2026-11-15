@@ -1,0 +1,4482 @@
+{
+  "day-1280-100-throw/apple-equipped.png": {
+    "sha256": "7eabbcf78e5a2f893ea61869039873c2e974b831fe7ecd37c142b2769dcf397f",
+    "retained": false
+  },
+  "day-1280-100-throw/apple-windup.png": {
+    "sha256": "d0128fbf82c3aa29121009731ef4a5932e2dfe4b81d28625e2bf7be47b3cebb6",
+    "retained": true
+  },
+  "day-1280-100-throw/apple-canceled.png": {
+    "sha256": "2c499d68b2d97ec4e4099a75334383c59ca1fe17dcec7555a071fcf6d57e703f",
+    "retained": false
+  },
+  "day-1280-100-throw/apple-placed.png": {
+    "sha256": "0f29cb4e483e3ea8d6f72bc9669f38c51760b33a841b509d65b5e26bcb6d6f54",
+    "retained": false
+  },
+  "day-1280-100-throw/apple-grabbed.png": {
+    "sha256": "084d44064fad03104cd15a2f9abe6047330fabb1cd5ee65fa726810c8637e86f",
+    "retained": false
+  },
+  "day-1280-100-throw/apple-rewound.png": {
+    "sha256": "6189d7b861fe8ffcddacde31490cdffd14ffc03150ad07be7f22f5976ed08627",
+    "retained": false
+  },
+  "day-1280-100-throw/apple-released.png": {
+    "sha256": "141c3332dddf41e279df67b4dca8f78aa8c6060eb1c297d695b8d9427382e0d8",
+    "retained": false
+  },
+  "day-1280-100-throw/apple-landed.png": {
+    "sha256": "9fa61b69c230c865ed53f13b593cb8a6e6651d9a49fdcaee2da69a73efa7fd65",
+    "retained": false
+  },
+  "day-1280-100-throw/arrow-equipped.png": {
+    "sha256": "58c8de644dab7c3e432216a352267b84f48f70dfda6a6f6926b6762195af6c2e",
+    "retained": false
+  },
+  "day-1280-100-throw/arrow-windup.png": {
+    "sha256": "88499cca540b54dd29c0057afc34809f88b7390b5b18ddea6f482b047352ae90",
+    "retained": true
+  },
+  "day-1280-100-throw/arrow-canceled.png": {
+    "sha256": "fe322ba0d078ba357aea830ec2bfdcec45e33799b2f3828cf74efe5660c2c05b",
+    "retained": false
+  },
+  "day-1280-100-throw/arrow-placed.png": {
+    "sha256": "1f31bc4feddb9b2d24720765fcd66928250a31b0c2ade95a20d85e0509d8c3e3",
+    "retained": false
+  },
+  "day-1280-100-throw/arrow-grabbed.png": {
+    "sha256": "d68f520689d82e0fa0343d1dfa83d92f9bba4d1bf486d259e06d00808ba3b1de",
+    "retained": false
+  },
+  "day-1280-100-throw/arrow-rewound.png": {
+    "sha256": "ab580157fbf3aa77e9d32ab8c68117d0b7db743d765e4dd1f023b43b56a2c680",
+    "retained": false
+  },
+  "day-1280-100-throw/arrow-released.png": {
+    "sha256": "c82590c092087f4ae263ed3c104f416d45593f9b9d15525c573ffab289f40b13",
+    "retained": false
+  },
+  "day-1280-100-throw/arrow-landed.png": {
+    "sha256": "eac23cdb0b0c7a7481c849ca1cc866d73d212f68cc5fb05a138c1918f5d9617a",
+    "retained": false
+  },
+  "day-1280-100-throw/bread-equipped.png": {
+    "sha256": "920079280cbb28368e7c099809bdee3ac92d71b4b1b01eaeb3630f0ba06af405",
+    "retained": false
+  },
+  "day-1280-100-throw/bread-windup.png": {
+    "sha256": "6f0084698a7205530424f72418183591e0f0864ab87d5bf066ae1565a09b94f7",
+    "retained": true
+  },
+  "day-1280-100-throw/bread-canceled.png": {
+    "sha256": "c126a4e40c5bdac666ddaa99bdb5f2241313c55d81f0dd15b2806c793f3b2c4b",
+    "retained": false
+  },
+  "day-1280-100-throw/bread-placed.png": {
+    "sha256": "aad76bdd76ff6d65c22331f262e369f0c82cd999cf42c731e72a5ab12519ad1b",
+    "retained": false
+  },
+  "day-1280-100-throw/bread-grabbed.png": {
+    "sha256": "db6ec82f3adbf0ca6b6d5c81418189e47e0fdcef76f1aeaf591137c751f29b66",
+    "retained": false
+  },
+  "day-1280-100-throw/bread-rewound.png": {
+    "sha256": "d7735a532a8fc82fc7e32b6d8952f499bbd5012e5a73bdb67747036be88053ed",
+    "retained": false
+  },
+  "day-1280-100-throw/bread-released.png": {
+    "sha256": "a4e6614f741ef2968e96be309415c488e8f5ab092385be11147482e61cf6c4ea",
+    "retained": false
+  },
+  "day-1280-100-throw/bread-landed.png": {
+    "sha256": "3eec1120439335447f403dfe81beccb3a3bc5f84388602be39b2f793461feb32",
+    "retained": false
+  },
+  "day-1280-100-throw/bucket-equipped.png": {
+    "sha256": "f1a7a3882378c43afc7c04cf1be5a7aadc99726b70bc59c4779f4e47d20a8716",
+    "retained": false
+  },
+  "day-1280-100-throw/bucket-windup.png": {
+    "sha256": "04ac57bf8ce3d512bb1ab00739966c8a72d34a073886c75279c2a6b772900276",
+    "retained": true
+  },
+  "day-1280-100-throw/bucket-canceled.png": {
+    "sha256": "e53994196946ee22895b53bc2252d106fba0c07e6f32c93374f25371a2e9528c",
+    "retained": false
+  },
+  "day-1280-100-throw/bucket-placed.png": {
+    "sha256": "641c6a147efec1dd373874ca0dd72050af608fe0ea7eee18500c361461b0c8de",
+    "retained": false
+  },
+  "day-1280-100-throw/bucket-grabbed.png": {
+    "sha256": "19b93d58041bb9ca1e08bfaea78904fb5d5a7c8d04d5f4043c94aef07c95dda3",
+    "retained": false
+  },
+  "day-1280-100-throw/bucket-rewound.png": {
+    "sha256": "9c452eb9cea1cc64fa9667436e12dbbffdfe4f47d5544d220788aabaea3d3d5c",
+    "retained": false
+  },
+  "day-1280-100-throw/bucket-released.png": {
+    "sha256": "c461cb6f1350439138d030979a834c5dcc8f61307f545931b7a83f1583ac019b",
+    "retained": false
+  },
+  "day-1280-100-throw/bucket-landed.png": {
+    "sha256": "742992dd09dcbc552dd0c2f81e60c4a30e10042cf00a183c625d96b942f8ae63",
+    "retained": false
+  },
+  "day-1280-100-throw/charcoal-equipped.png": {
+    "sha256": "d3253b75ad1f4f6535a2293fe4f881fc8232eb1b16962141e62fdd42b4f49a4f",
+    "retained": false
+  },
+  "day-1280-100-throw/charcoal-windup.png": {
+    "sha256": "4833640a0285cd42f3f79413e0a54ed197bea20cbc42bf2f5378a5d42eec6418",
+    "retained": true
+  },
+  "day-1280-100-throw/charcoal-canceled.png": {
+    "sha256": "ac30c3160bfd6204c5b3f4c60c31f69f4f91b5569ca212a9e4f76aef9ab975ab",
+    "retained": false
+  },
+  "day-1280-100-throw/charcoal-placed.png": {
+    "sha256": "14a708a2ebfce66af4e80ed2095a2f427deff7674b7c9155ebe880ab09803298",
+    "retained": false
+  },
+  "day-1280-100-throw/charcoal-grabbed.png": {
+    "sha256": "f11ffcc2e2bcfbf73e5d1da20d564c46701ac6a33bfa590a84642ffa97801966",
+    "retained": false
+  },
+  "day-1280-100-throw/charcoal-rewound.png": {
+    "sha256": "c7f028ec5534fdf9f25ee2704b19cfc70309e4b1bc045fd38766284375a68dc2",
+    "retained": false
+  },
+  "day-1280-100-throw/charcoal-released.png": {
+    "sha256": "3f183db07ab8cbdb0edd56ee69c3c05a7a467fe4cb3fe681ff971805ee632d47",
+    "retained": false
+  },
+  "day-1280-100-throw/charcoal-landed.png": {
+    "sha256": "72912061f00a9027724768b6b15ec85418481e9c7085b7674afe790ede47ddc0",
+    "retained": false
+  },
+  "day-1280-100-throw/coal-equipped.png": {
+    "sha256": "8e3f3effe578199825b66243dbf79c73b4f6f784ea3d049abfef0d5966f8a0c9",
+    "retained": false
+  },
+  "day-1280-100-throw/coal-windup.png": {
+    "sha256": "297a0e063671ed83d0ce412f6e090bc9c9ea6d004cc1fea1f9312715196e0ff1",
+    "retained": true
+  },
+  "day-1280-100-throw/coal-canceled.png": {
+    "sha256": "aa6cfcbc8551bc35e619f40732e01dac5ab3bbffc49cdd99fdcb4cfa93cd47fd",
+    "retained": false
+  },
+  "day-1280-100-throw/coal-placed.png": {
+    "sha256": "3bfac4d06a197f9c29cf8b232090d4b20b334d49bb02646cd2dc0473e5ea888b",
+    "retained": false
+  },
+  "day-1280-100-throw/coal-grabbed.png": {
+    "sha256": "de75ec07559d8506b9c1d8b0c9f9c29c30a9b316b23888e16d3bd73200774f14",
+    "retained": false
+  },
+  "day-1280-100-throw/coal-rewound.png": {
+    "sha256": "75d5930be5dd19b65a1ab417e34f0289c7cbb7ff36d858facecfdf0b9c315137",
+    "retained": false
+  },
+  "day-1280-100-throw/coal-released.png": {
+    "sha256": "22f13d86834f6228723d58afb6ac48e4e18d3c4d8491a9a9d59b4f355f88b235",
+    "retained": false
+  },
+  "day-1280-100-throw/coal-landed.png": {
+    "sha256": "9640e7a7f08c103e93eed819d4f9c7fe07477bd176d4c85bf5741309320aa6fe",
+    "retained": false
+  },
+  "day-1280-100-throw/cooked_meat-equipped.png": {
+    "sha256": "5ec5b4dba9d508452360561368fe1430d0f146a057706bb832e505458358a72d",
+    "retained": false
+  },
+  "day-1280-100-throw/cooked_meat-windup.png": {
+    "sha256": "619e1497740db0c4a4534409fd44017111e5b5f8c3e56a56435039d9bcf451ce",
+    "retained": true
+  },
+  "day-1280-100-throw/cooked_meat-canceled.png": {
+    "sha256": "3e23de57b0a5230a128ee7692274f39a14f82afeb57fe71f9ed88bdb5db9ed59",
+    "retained": false
+  },
+  "day-1280-100-throw/cooked_meat-placed.png": {
+    "sha256": "04e70e9a1c35f7c4b5140af04026995a043ac1f3351df06a5e9ddcf8796ef856",
+    "retained": false
+  },
+  "day-1280-100-throw/cooked_meat-grabbed.png": {
+    "sha256": "fc7e238691bbc38ccd88c7ea492bbc795213c9fe9c234fdc1247c76267a06023",
+    "retained": false
+  },
+  "day-1280-100-throw/cooked_meat-rewound.png": {
+    "sha256": "685f1212a22ed8ec28bfff3e045cf597f2eccef36b9412a59a743c03023775dc",
+    "retained": false
+  },
+  "day-1280-100-throw/cooked_meat-released.png": {
+    "sha256": "83edd9a8c43825d3d1750452d87dc3ec9895d1cffcb930eee8d2d9e8ea9e16f1",
+    "retained": false
+  },
+  "day-1280-100-throw/cooked_meat-landed.png": {
+    "sha256": "68ad069d2ebadb9fab8262be30276f415cfb624f626d544d991218c43ba2aba3",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_axe-equipped.png": {
+    "sha256": "2e360e737017ebfebcf2c7adeec7a12aa0f76745a8de8005dc834730aa031899",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_axe-windup.png": {
+    "sha256": "6856d630b53b3bcd5abd029ee782a8ad952aa0d380898a683587096b1d6b80b6",
+    "retained": true
+  },
+  "day-1280-100-throw/copper_axe-canceled.png": {
+    "sha256": "93b7fd94127d44a85bf88e01ba025f92e7b61608969ebb8f39610e0275e5d3c2",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_axe-placed.png": {
+    "sha256": "0ce6b4ab450d2b469640b33959c09539f649246851be10a4c4a74cffac627ae8",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_axe-grabbed.png": {
+    "sha256": "d24b09a34464d79f7082888a4b68382343537df9fa18a7fcb1cbfbd2ce3dd1bd",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_axe-rewound.png": {
+    "sha256": "5da681962301b4f96e13094370c2e1b8756e7f83843c6f93b9d46ad4a2e17c17",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_axe-released.png": {
+    "sha256": "ca245fbe34af461ac2073925cf0d3ed39e78679e0d0a0ea26295d938e557f309",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_axe-landed.png": {
+    "sha256": "44db7e841fa35de621b939a5135100f4f5d24c9579c716b62e0d0667354737cb",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_chest-equipped.png": {
+    "sha256": "717e2492c7fe1b5c48dd8f0a44e06b74669382d51179a3e50a0cd56deced442d",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_chest-windup.png": {
+    "sha256": "f53bf6a60a871f39c07c3263f5c23b677ea428891a1413cf0f40fd2e8de040e3",
+    "retained": true
+  },
+  "day-1280-100-throw/copper_chest-canceled.png": {
+    "sha256": "4db2008766fc869e179b96e5c111618c7ab5e9001d85db29f8480ba22e4c6a02",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_chest-placed.png": {
+    "sha256": "12023dafe4bec02b47c1acebe4289ac514d82ebf71969af6428c4fa2810e1998",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_chest-grabbed.png": {
+    "sha256": "ca6424cefdf070a2e428eec3b15f1b4a3ce9f25dc37ae6808ca750777e82f4e0",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_chest-rewound.png": {
+    "sha256": "e2a00f3232c5f8ec51878d49659c69123e91c7144177e514ee30bffb8564276b",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_chest-released.png": {
+    "sha256": "37f361ae1e8fa7c1617e519a568b450be5380079e1fd8d4a185d38aace97ab32",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_chest-landed.png": {
+    "sha256": "0db53a30b5cbaef1926f22442a2b70d1d0b9bffa23bcf3a40e737718f8167f8a",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_feet-equipped.png": {
+    "sha256": "7eb11ad61145cf1e287a077e0fffc3f283b59cd85920a96f34338c872c04ae01",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_feet-windup.png": {
+    "sha256": "0df5a47312c97c3a06f97444b81ffedbd844d0dd0ef31c01b2c5263e952535e5",
+    "retained": true
+  },
+  "day-1280-100-throw/copper_feet-canceled.png": {
+    "sha256": "612414e6e00b961ca2561d9e00be854f988de855e11273f738fec7ffa2b666e1",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_feet-placed.png": {
+    "sha256": "d444e13f5efcac73625df01a818673ddf310b15e1204383c8807bf1e380cc227",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_feet-grabbed.png": {
+    "sha256": "5b0657579916f4550ef436238dd8bae06d065da9beb4cfa77ecff15c35ea61a3",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_feet-rewound.png": {
+    "sha256": "375fef8a3385eae2f8162eaf7480a012fa4a0426c8807b9eba98b56bde590d78",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_feet-released.png": {
+    "sha256": "5ea6140e0d0260bfcaff6eaeaa8e382c652f538f88f3a44532a857fda76f25a1",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_feet-landed.png": {
+    "sha256": "28b99721fa3c35419d97c3945c34f0f065d87a30c59bec579db4ff0fced92293",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_head-equipped.png": {
+    "sha256": "c89e74a00f85c9010708ee09cd6639cc26f009a76fda67aee5c7d156d2fb061f",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_head-windup.png": {
+    "sha256": "99db9ff354ebb81c64c28e1ed40b19c12b5edf416c14bed7fe52c55b3716a668",
+    "retained": true
+  },
+  "day-1280-100-throw/copper_head-canceled.png": {
+    "sha256": "f0d81fb933a203b5d4915ba33b87bf1f096a5e27e516e2f777a5bf57f1ae4517",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_head-placed.png": {
+    "sha256": "fe21db14d71bf99032ade6633bed52722f94cd4cf3727fe1544c2c01a592f2ed",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_head-grabbed.png": {
+    "sha256": "1d94070a9eaebc2e5aedaaf02ff2c47549ae756c3c73c53d32f4bc31f9727936",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_head-rewound.png": {
+    "sha256": "97a92f47dcf5cf8c235f8249273499e784b5642683c7ec4af37db7b84807cbfe",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_head-released.png": {
+    "sha256": "8199a91bed169bad5815e5f5bc3649c35fff56b34c98a26ee538fc97d51a6199",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_head-landed.png": {
+    "sha256": "1c12879353cba844497a0be5955c7b803f6119c55579c12a4cd5a5d5a14ca2cb",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_hoe-equipped.png": {
+    "sha256": "2cddbef16e74ee46777725ec2c9f05bd7557f74dada2f0715a40a0126f89ba6b",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_hoe-windup.png": {
+    "sha256": "6f20e6f21d28f9db9dd360d99df5202af0e9c25107f9667587ff0587d61b0491",
+    "retained": true
+  },
+  "day-1280-100-throw/copper_hoe-canceled.png": {
+    "sha256": "8c422dc7587399188c27f7fb836ff131e49989e4429adf9ead84b837a4525a42",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_hoe-placed.png": {
+    "sha256": "70ec259fa83605c2f88eb021040d972e2f3787c5a202480831cf5bf6f68892e0",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_hoe-grabbed.png": {
+    "sha256": "21a9dac16ac8dd424d4adf259f52236beca65ec2ae19b8e4a8bbe3fbee594ba4",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_hoe-rewound.png": {
+    "sha256": "ee0135bbc8f4552ef4aa9d40b55d182a5555d70fed3a5974be808536898065a3",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_hoe-released.png": {
+    "sha256": "3b4b705c828b2b70194d0658bd7a6a0fc50c3e38985212883541650ea8b35317",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_hoe-landed.png": {
+    "sha256": "d39412502b75666547e83b67ae9186e5a035c04df30c8f00611b1c3dbe5aa6fa",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_ingot-equipped.png": {
+    "sha256": "c379d6c95847261be1567020629ffbcebe85c673c473457a9743b6d342543bf6",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_ingot-windup.png": {
+    "sha256": "2d4dae5c5dc4880542a0db43db7dfff1ec3a35b65001cdb278b60bb35d56db04",
+    "retained": true
+  },
+  "day-1280-100-throw/copper_ingot-canceled.png": {
+    "sha256": "d099a2cba019359f517b219ac093dc1a86738edeb8e66d919601d93df5dfce0a",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_ingot-placed.png": {
+    "sha256": "1691c35715944afcd544ff384c05cc4e7d0a6b38677990ee68eec6a66ec5a8ec",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_ingot-grabbed.png": {
+    "sha256": "40bfbb2c23fdb475b21bb6ae73390cef36565d0aeea9019f5e99730b23b9b129",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_ingot-rewound.png": {
+    "sha256": "975d4b7c44f9cfca5805fdf8e59c566a69a60770acf982326ad8de893a34fdb6",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_ingot-released.png": {
+    "sha256": "cd1f6b4e028f43b21494d295bd92d700e12248c0077d12b28b92b66ef13d71ba",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_ingot-landed.png": {
+    "sha256": "bca28001bbe1e64500b99a2ff6011809e82989e50b817d1a12cde76514d1a2ff",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_legs-equipped.png": {
+    "sha256": "c6d5ed1024ab71cc2b9f27b1e0406281561b1793cf4facfda670efb36492a912",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_legs-windup.png": {
+    "sha256": "453dd5b6b772505901a6827d0af9e7ba128fb2bd1a3b99610202c21b31565ff1",
+    "retained": true
+  },
+  "day-1280-100-throw/copper_legs-canceled.png": {
+    "sha256": "7e65934a8269a2ba6d121741dcee9545a65e64ac2705b394009ffab70652fdf9",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_legs-placed.png": {
+    "sha256": "7ebb44538f92e685519a6e24f110b6156f6a372e06549f99732e7aa5872fc2b9",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_legs-grabbed.png": {
+    "sha256": "9ac8c8783017ab74627d4a5dbfd19bd80257599639f706c2bb9281c409a97432",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_legs-rewound.png": {
+    "sha256": "d3c74707008e35fa0b9f4c03d7c5e608bbb78b10204741836733c38d58561b82",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_legs-released.png": {
+    "sha256": "c52d212029349a50a4f509986b91ce2f3615a2e3066d3c1044f51d7ba409e983",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_legs-landed.png": {
+    "sha256": "3d32ca43023971e422e336c69cdea607bf2ddb3208c5cf4e515ece3c66c5e1b0",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_pickaxe-equipped.png": {
+    "sha256": "21a11d2c0c0351feb639486024bf1a8e252e0f3c1c8df5d4779926d4ef141a9d",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_pickaxe-windup.png": {
+    "sha256": "854a86ab4324cc249810a534509cbdd432ca81123532ec2551c878313f938bac",
+    "retained": true
+  },
+  "day-1280-100-throw/copper_pickaxe-canceled.png": {
+    "sha256": "2a2baad7c7dd6a4f67d9ca958c6ce02376a071c55a66004320779e1f6aad7a85",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_pickaxe-placed.png": {
+    "sha256": "58485fbf69ff71ff72d351a30b808070bef15caa39163d6b99555ca186b7d473",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_pickaxe-grabbed.png": {
+    "sha256": "27f6de0f92e343d2d1ee4bbf214378266f9ed8eada23a306aa944878b97af1f5",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_pickaxe-rewound.png": {
+    "sha256": "3278c0918860daac223f38ad771747915e61877f0a01014f368f047b7e6a91ab",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_pickaxe-released.png": {
+    "sha256": "cdbcccfcad51e7069998bf2b6fc6487da31fa2c33391fd1331cf713417604332",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_pickaxe-landed.png": {
+    "sha256": "f86040093fc8ba39faa07676043e42866ae591ed871d1047b90f38107917e21e",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_shovel-equipped.png": {
+    "sha256": "09ffe21d0181835ed070bf143d3e25d0b992d6f2ab6f8229d320edb1af98f6fd",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_shovel-windup.png": {
+    "sha256": "26e9170abab30c1e58679b886dc80d3500804952790b6e385f2c69471ad9bbb6",
+    "retained": true
+  },
+  "day-1280-100-throw/copper_shovel-canceled.png": {
+    "sha256": "d64089ac1c343be04c8e86212aaae24e34ca8b3046702d853ca5b20745a5fce8",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_shovel-placed.png": {
+    "sha256": "bbeff2563c8efaa4e9492857267daad3e5a3c0a8cc5f8506d16b4316816efa5e",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_shovel-grabbed.png": {
+    "sha256": "256785a4b6d9df7ac7a83812f37abe9701a5848757804d8f244f60cb80acf2b1",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_shovel-rewound.png": {
+    "sha256": "08f854e2c4d2e2b11f1a6e6dcab3436c7700ae082bf4857ebdd4cf9dd62c1dde",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_shovel-released.png": {
+    "sha256": "4a88d9abea98492e52ad3a3b970a8568cd50e64c96ba58117114bebf3a829e06",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_shovel-landed.png": {
+    "sha256": "9c81ac7f28d6dd165739a5ce33c55f0c1b793aa6ed78aafab09ad3f8c303bc4a",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_sword-equipped.png": {
+    "sha256": "f1f94d1c8aca55f086d0e3315eda172ae260e028ad56d152e26afd1753e59eb9",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_sword-windup.png": {
+    "sha256": "55345a4cbc481a16f6e973e3c3eb479ea27730892e3c21616b9948e0de20e9d4",
+    "retained": true
+  },
+  "day-1280-100-throw/copper_sword-canceled.png": {
+    "sha256": "87c06ca7250a986e61010f625b750a6c9048e3e1124d65c659086282c5abcbfe",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_sword-placed.png": {
+    "sha256": "e61e4b669ea92676625fce54e54d8751863821bf8c6b8246bf59623ce2fb93ed",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_sword-grabbed.png": {
+    "sha256": "bc1e08bb5a197c928f81f969003ffe6ee4a729c1f4074acf5c743decdf2e2224",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_sword-rewound.png": {
+    "sha256": "cf04414dc4e86a0b0ca1f2a7bb6250daf634c52c49ab17976450003a009c1dad",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_sword-released.png": {
+    "sha256": "f6675bf8fdd81d079ab73d5f812ce21293ad3614e3ed0b119be66ba07ae3b72e",
+    "retained": false
+  },
+  "day-1280-100-throw/copper_sword-landed.png": {
+    "sha256": "48981dc239d74f328081f22a69e034f2381a89003dd6bb028559010d0ac30d2d",
+    "retained": false
+  },
+  "day-1280-100-throw/cord-equipped.png": {
+    "sha256": "953e36f533828b93e298ec715d835d13ee030b44e99698bcfae41379644385eb",
+    "retained": false
+  },
+  "day-1280-100-throw/cord-windup.png": {
+    "sha256": "e327f9f9ee2daf5448974075169ab535915d5c187e072768740ff373d5dfd339",
+    "retained": true
+  },
+  "day-1280-100-throw/cord-canceled.png": {
+    "sha256": "5ad4349b0a8a524df335ef1dcb4af7bfffb8dc7f364f8a9e34f8b83c50f20063",
+    "retained": false
+  },
+  "day-1280-100-throw/cord-placed.png": {
+    "sha256": "39cc9756a5e82b45d4a1a49414da397d1ee28b82e6ed5943d0bfab8b279eecfb",
+    "retained": false
+  },
+  "day-1280-100-throw/cord-grabbed.png": {
+    "sha256": "129d32c0ddf112e7c9fb1ac6a8b3fe430531ffdb995cb743ad1dfa749a58d544",
+    "retained": false
+  },
+  "day-1280-100-throw/cord-rewound.png": {
+    "sha256": "6935a01d99101c2316b6df16c354f02e0885ad0058742ab259ac6e898985fa9e",
+    "retained": false
+  },
+  "day-1280-100-throw/cord-released.png": {
+    "sha256": "6adf35393e1210af5bcf314ac184f164a028c11908805fc2d1d39fb72290d94c",
+    "retained": false
+  },
+  "day-1280-100-throw/cord-landed.png": {
+    "sha256": "c6002f52a8eb29451975e681717af0fced1cf7b555ef4a3a3a405318ee19c0a7",
+    "retained": false
+  },
+  "day-1280-100-throw/flint_and_steel-equipped.png": {
+    "sha256": "d04b56f93b8655a704974545f0d3c17d9888336b6d1637889f8cd402a621c327",
+    "retained": false
+  },
+  "day-1280-100-throw/flint_and_steel-windup.png": {
+    "sha256": "5fcaa4b040077059123e70a4261fbeae4ef37ffea6fabb0411f8f1c3e33ad9b0",
+    "retained": true
+  },
+  "day-1280-100-throw/flint_and_steel-canceled.png": {
+    "sha256": "658c4f8e7fb400a05007b1df8c9955fb5998111925d443958aa723dc55bd6cd9",
+    "retained": false
+  },
+  "day-1280-100-throw/flint_and_steel-placed.png": {
+    "sha256": "81811d252622c350c876343137f48edc4e20327818f2d44a6b63c30698c8c8f7",
+    "retained": false
+  },
+  "day-1280-100-throw/flint_and_steel-grabbed.png": {
+    "sha256": "0824fd90151275e1354c45ab20c543309e55252af87b84a284f33e413d4eb35e",
+    "retained": false
+  },
+  "day-1280-100-throw/flint_and_steel-rewound.png": {
+    "sha256": "77ab3c5a04174d4dde7b71ffa7d0ae8cefb7c78a0c2d41398e03f1937338536d",
+    "retained": false
+  },
+  "day-1280-100-throw/flint_and_steel-released.png": {
+    "sha256": "99eb65f61f522fa788a5a346a0eff12ac3865e2fc60310e518fa44d72d2529b1",
+    "retained": false
+  },
+  "day-1280-100-throw/flint_and_steel-landed.png": {
+    "sha256": "09f37128415a7eda200bf57b475f0c020a37c93a8dd3b4e23248f90ffeb84ac8",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_axe-equipped.png": {
+    "sha256": "929350ae0f7426e721e3b5b12ba5956cbd3cffa1f1ff112ca28fbb6bd82fc448",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_axe-windup.png": {
+    "sha256": "2920a768dbfc25f6030d5c6d7af3c8f32d1a265050f33897ef2597997ccc03c5",
+    "retained": true
+  },
+  "day-1280-100-throw/gold_axe-canceled.png": {
+    "sha256": "c54cea874e429493258869c32727e673c42ad75bfde1a3884d7a0d2888097441",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_axe-placed.png": {
+    "sha256": "2fc97563e263b26b74173b29cafb7a7dca90c021320f6a2c94cb8e492ed85252",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_axe-grabbed.png": {
+    "sha256": "5dd600139fb5051961eaea16060a6104b7a11cf7ce69cf9d73a11503f6b15e8c",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_axe-rewound.png": {
+    "sha256": "7e11487bd241a6af0f04f57160e53e0a302cd7341ad2fe8d81e00ece8160523f",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_axe-released.png": {
+    "sha256": "3a5ddb5bbe4c15de84e736073f8a1c9e6fd118f42564062bac0f8a505f064514",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_axe-landed.png": {
+    "sha256": "723827f4330c92adf05edc1e72d6c1d800614d9ca98b1403d998b37ea8516fc6",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_chest-equipped.png": {
+    "sha256": "aed0f4fbe1c2e021530ad671fb7704ff2d4a1a134e0ff67981eb8aedb453df1a",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_chest-windup.png": {
+    "sha256": "7fc4f530a0892da909a38c598885cdb7ba43a82a9e78a01eff99dae24d10cf3d",
+    "retained": true
+  },
+  "day-1280-100-throw/gold_chest-canceled.png": {
+    "sha256": "2fb13d726f7e180829ac223a0b6667ab6e10a706438584929cc6607ed5b87098",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_chest-placed.png": {
+    "sha256": "e5588248d5335dc4c3ed86a6166940cca25d780dd136712646c66ad53f29d0d1",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_chest-grabbed.png": {
+    "sha256": "e7f5b868ba321e0532dd53c00fa971e68cca01f75c60d83ab1065860b62eef6b",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_chest-rewound.png": {
+    "sha256": "ed96324952217e24f981fafaa25ed9d8f065eba86e90d27df308749296b09c13",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_chest-released.png": {
+    "sha256": "dbd7247687e48bc43f1a8491b79ef109651d173fbcd97ac1266b3dafd29f4f6b",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_chest-landed.png": {
+    "sha256": "cea92ce9dfba1c2867e5d889c5c4be000b043e720a61479be3246de6d82b1e9f",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_feet-equipped.png": {
+    "sha256": "21ac05f2b7ba3542aca7d55c2aab97351dcd87129a7106fdf4e018d70d240a28",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_feet-windup.png": {
+    "sha256": "bae8b9702fa593ec3dba2b3110d55c184fcf85c798f04d966494782e209523e6",
+    "retained": true
+  },
+  "day-1280-100-throw/gold_feet-canceled.png": {
+    "sha256": "d5f2f0aade972433e61cfdf209e575c5980856ff335d413143d3a7cef5eca72b",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_feet-placed.png": {
+    "sha256": "fd49a2ee9399304739a51ff52c940fac3d674aae3123eb0b3e8a9c7d1bab423f",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_feet-grabbed.png": {
+    "sha256": "eaac0d2af31adbaf0dd4ac67d741a50a31c63d94f0d04dc5816ae6c3c53f364b",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_feet-rewound.png": {
+    "sha256": "ed01059f160ff1a7dd68a025abab5d8f3b5a99b4bf8d12b4f908523399679894",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_feet-released.png": {
+    "sha256": "44821aa60e132d1f5873ff2fdccbd42a18885b7c0ccdf7cf3b0c5e77b17895fb",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_feet-landed.png": {
+    "sha256": "57ade7ef5aec7679da47d325d49d1886eb5e98a0353ad796769979b398b9b63c",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_head-equipped.png": {
+    "sha256": "a4a404980bfee4753381e41a7328939c7169a781c9e8343c066b0cd5af23669e",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_head-windup.png": {
+    "sha256": "8434439a18c5a5d3ad63a71ebddb2a6e656688f1b0ccce9dfb7f677aa772c24f",
+    "retained": true
+  },
+  "day-1280-100-throw/gold_head-canceled.png": {
+    "sha256": "2886793a53e3f8ebe0c0c188982592815f15e0fd689fbad06c059ab890277bea",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_head-placed.png": {
+    "sha256": "5a99315a2b4a47f52b33f593aecf99211dca3d26f4019bfff135cbb1e869c1eb",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_head-grabbed.png": {
+    "sha256": "f5edce2f987809e50832dec3b9ecf4cd4ced0426b285acc64e6f8e2aad180a68",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_head-rewound.png": {
+    "sha256": "04f033a2bace7dac017449989d010ac0750987c772b71a60f59c407c7b813927",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_head-released.png": {
+    "sha256": "53094966e320c3dc3de5aaed9cbf9ec306eb5cf15168e9491a72f14757e723da",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_head-landed.png": {
+    "sha256": "eedfa1da41b10d2df75d28b860b710bf556445401120b9dd9e826b7991261f47",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_hoe-equipped.png": {
+    "sha256": "19ff43f32e65b7f6b41240ccc1b03441173a678ccaf6899b1693c566f5def24e",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_hoe-windup.png": {
+    "sha256": "e31ae0962770d27b0153cc8cf344494279e1fa78d20c9f23b10c875ae0e7682b",
+    "retained": true
+  },
+  "day-1280-100-throw/gold_hoe-canceled.png": {
+    "sha256": "463e431a93ab865b4a729930987221b77c700af3f4465fac418aedfa88e8ea20",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_hoe-placed.png": {
+    "sha256": "39cd90e19b786275ba65a5c57ffb5640c788271c1e32b24112365cbf3b73d5bf",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_hoe-grabbed.png": {
+    "sha256": "38d9c595f37733d771b69e34b34d8d929d54a87e09b3abc68eb0ebf76b23c6fd",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_hoe-rewound.png": {
+    "sha256": "84e89756153d7b11b3b8e67241851849231e2c5a437256e2d5c7eaf5137ba43f",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_hoe-released.png": {
+    "sha256": "082c0eb09ef2b28ecf91cc0651a47eabe37376a0c42d0dd43ab925f5ca43fd70",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_hoe-landed.png": {
+    "sha256": "b9d5d484a9b317c324fa7c225c11cf74c61a7cea4d0498bc323fa885fe56a616",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_ingot-equipped.png": {
+    "sha256": "258e009dff1c8fad6116f301ea739743184b6d021cadc2a0d6933e29e7b8d325",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_ingot-windup.png": {
+    "sha256": "730c99413af50ffe509ececea77d63b6983c850a4b99591478cf2ffad85ce4cd",
+    "retained": true
+  },
+  "day-1280-100-throw/gold_ingot-canceled.png": {
+    "sha256": "de2f378bfc6548105fb6d800c49d54e67fbae50f69438da8d09dc4f0d58c8643",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_ingot-placed.png": {
+    "sha256": "b72320e0c4a5f7923b0de04ee64f1822fa81a8cdec0dba12317850e53c6d5dc7",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_ingot-grabbed.png": {
+    "sha256": "5d2d88f45468f0709034981898dc65da9ee6253b9ff9620bca9b6d604fb4fa7a",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_ingot-rewound.png": {
+    "sha256": "a3c4df16d83bcbdc34dad2dde670b459ae2b10b3c2e686b67bd8cc96cfb55651",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_ingot-released.png": {
+    "sha256": "931d474b9b952fc02d24992c48234ee7a2d0e59586cfb6a3fd52da3427311507",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_ingot-landed.png": {
+    "sha256": "d007866f16f52f98d30cec73555df4adff706b74bd946d11c45afe684abc746a",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_legs-equipped.png": {
+    "sha256": "dd0a94ea217637119c88421582eb04984ab2ab7e4c1903159b5535dc277426dc",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_legs-windup.png": {
+    "sha256": "7dfb1ff3014b13ee11e980fca1325d09f67302f6b3cb3b77e57ad6a3a45e106c",
+    "retained": true
+  },
+  "day-1280-100-throw/gold_legs-canceled.png": {
+    "sha256": "ebfcc19eae4f36ac3e1e3034366264c68c66fcd613e10b64f3079de0c686013d",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_legs-placed.png": {
+    "sha256": "0ae78337209b03a96e8c2314caad08cbddd3dccde5de9563f9ac4c92c504754b",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_legs-grabbed.png": {
+    "sha256": "31a119cd82324aca6a1c5e79ac44f9656c041e8281965e073baa139477ef5123",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_legs-rewound.png": {
+    "sha256": "003b21dd028cc5d67d3883a99147073453d212947ba1c6cc01b9dbe9922991e8",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_legs-released.png": {
+    "sha256": "a5a236fc3fd2bd0d0542d9f2e9979e15deacfc5ec24a2c0d646124209734db57",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_legs-landed.png": {
+    "sha256": "e5a743ca6e8f0e80b405488e6c05c3ba4a875fabecd9547d5691ec93fe8f52c7",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_pickaxe-equipped.png": {
+    "sha256": "55a91d16dcdf8bdf8fe77656f2288aa09407545e6d0892957173cde40d4e1d70",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_pickaxe-windup.png": {
+    "sha256": "81558cc36a65ba55efe660486e46e5247ed3e016dc9c351217b28535ea587a17",
+    "retained": true
+  },
+  "day-1280-100-throw/gold_pickaxe-canceled.png": {
+    "sha256": "0bc493d350ecf0e5fb62ab49699a898e2ce6efee190ba77d1cabf022ada697d5",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_pickaxe-placed.png": {
+    "sha256": "b9c23ab29cd2af8e0eb5556efe5407a804ec2e54000ac852a2d107f852ec2485",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_pickaxe-grabbed.png": {
+    "sha256": "64f80f23540d00a01e2c34ed7b6537a0f804ff8b05813fa22d7f3f664467232d",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_pickaxe-rewound.png": {
+    "sha256": "9020364c78934534a19023cbad636790543f37068d936eaebd82ba5cbbabac82",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_pickaxe-released.png": {
+    "sha256": "6331e5f893cced14d125c50272f1a7c010454218eb51b6f065a5537896d40bc1",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_pickaxe-landed.png": {
+    "sha256": "e70b73c8302951e2d14d1f2372fe12324d360ba7820c2427fd7459a39e6a0e5e",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_shovel-equipped.png": {
+    "sha256": "7894069f0db84805805b066e955482f5b3c93768dfb4fe1975462fe932d310d3",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_shovel-windup.png": {
+    "sha256": "0891d3384f7ba9ae4169cd27147676f288a27126d135398a623ed08a8947a613",
+    "retained": true
+  },
+  "day-1280-100-throw/gold_shovel-canceled.png": {
+    "sha256": "c330c575daf5e510bf68731930c8a31a9ae0661279c6f6ec915c78de9a90a748",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_shovel-placed.png": {
+    "sha256": "6b941d906cc1ecf2b4b44ab283aef2fc3e70519b4e5a5df945a20ac94a3872d6",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_shovel-grabbed.png": {
+    "sha256": "94e8b89568e50792039a24570f7baccc62799efb10905d1fabeecbfa8f734ac3",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_shovel-rewound.png": {
+    "sha256": "df8104062b0f2065944723129d2409f2a0707077436af8754ae4f228018bd97d",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_shovel-released.png": {
+    "sha256": "04583af4d11b8132d2a1165102fa1876b013a203fae96400e06ed688d6cfbd44",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_shovel-landed.png": {
+    "sha256": "56ebb081671907e0d364d6e03a88b5c00ebfa1dfa187306783942fece285cf06",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_sword-equipped.png": {
+    "sha256": "020589096768a7f06809d6740f1e648ad78bdabaab7542a46ed13eaed734e7db",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_sword-windup.png": {
+    "sha256": "d53dae65249fbc12837521cb043863a1bbc9c7be77387e8bf26189c0ec747a6e",
+    "retained": true
+  },
+  "day-1280-100-throw/gold_sword-canceled.png": {
+    "sha256": "dec13521600fe59898d6a82a990e5a23218a46547b785d3c645c1b4e56172d0d",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_sword-placed.png": {
+    "sha256": "8cf432b6412cc7b510d0867b20649537b854e6efde0868841a4fc71cb397dc43",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_sword-grabbed.png": {
+    "sha256": "a3fa57c9ba8471b998192bd884325170ff8afef4d059153a57bb559627bedcbd",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_sword-rewound.png": {
+    "sha256": "54ba8eb43d6011e98f205c7d1e77d32fb28495857291d1cfc702a88637b2d091",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_sword-released.png": {
+    "sha256": "33260b3554d72682bc45aba8f57ffdf1371babb5906f96bc3d3b70105dd1f549",
+    "retained": false
+  },
+  "day-1280-100-throw/gold_sword-landed.png": {
+    "sha256": "70ed793a5902c14c719f4b016762eb87eb8678dc2bdaccf9a4ee350c4d720fa0",
+    "retained": false
+  },
+  "day-1280-100-throw/grain-equipped.png": {
+    "sha256": "1923a74201b61c4b8de7a8ea82cce71575df395ed1495bcc73479657dfb0c52b",
+    "retained": false
+  },
+  "day-1280-100-throw/grain-windup.png": {
+    "sha256": "bdde11d3f33a4d740fd997a717b2231ee2d2bde4811bc8f60ac835524d6afa29",
+    "retained": true
+  },
+  "day-1280-100-throw/grain-canceled.png": {
+    "sha256": "dc26d7ef3749ae8af9893e3569fb8841bbd85b0c959119b0f71148dc0c2ae26d",
+    "retained": false
+  },
+  "day-1280-100-throw/grain-placed.png": {
+    "sha256": "7ebecc6b1b898261f9b993e448202ccadddf125a46fd1ffe106079ba71fdd4d1",
+    "retained": false
+  },
+  "day-1280-100-throw/grain-grabbed.png": {
+    "sha256": "817024f981aa4a76d8f40f9d6646effc16a0dd19e0a6ac441169b215179b28b2",
+    "retained": false
+  },
+  "day-1280-100-throw/grain-rewound.png": {
+    "sha256": "7354710da19e9883fad2520fd59b21bd95271b30747c27ad632f9e1e2225ef3d",
+    "retained": false
+  },
+  "day-1280-100-throw/grain-released.png": {
+    "sha256": "4a881ff4f588e48e7b4df62d170891f45f5bf4ea9ce8f86bbe9e5e698f4ff1d6",
+    "retained": false
+  },
+  "day-1280-100-throw/grain-landed.png": {
+    "sha256": "5b0c0b8e2a184788b9f1d9731d5d36a8ef8063486eaf8a49a31ab9494664c777",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_axe-equipped.png": {
+    "sha256": "806f9a1498bf71329efd5b0a49d515d9058758030fd0fbbf5be97b5696ef8b2f",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_axe-windup.png": {
+    "sha256": "ada6168260c70bef0b5643e89d7ca45729b94f0cb272afec450e12106c397942",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_axe-canceled.png": {
+    "sha256": "4e86c0e7bf26f2236b7a67e7b527035f3d50e9c1fa5d947b177b4f79554116bb",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_axe-placed.png": {
+    "sha256": "8f07833f6fa0bab7d0b47e80352a799cd15eb8a08b0e55b1d7f651691603212f",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_axe-grabbed.png": {
+    "sha256": "a0ce2de7e7527566dfd8a01744c1d1a465fc047c3d1bd4587c9f45b61e009f45",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_axe-rewound.png": {
+    "sha256": "daae19f04b40557f76e9e1384a4127bbda195655cc0502e7bcb1c8628b36ccea",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_axe-released.png": {
+    "sha256": "4482254f1f50a322eb7570851977c80662f39e18f409887823940cbaeea26e32",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_axe-landed.png": {
+    "sha256": "568421a592022baf3fb1021d1f9cffa8797d73a6756d9bb121de643a8768c297",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_chest-equipped.png": {
+    "sha256": "14bdea72bdf71a298aac38da8eb87ccc69b6afb53a0c7aea94675d826afc0fea",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_chest-windup.png": {
+    "sha256": "3443f139dc1c8687291d7fbf7b4f49c9e9f0c873c50049fc243d4169af20008d",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_chest-canceled.png": {
+    "sha256": "c5945da5bccacf3dba374499706689a4a401bb6e903c5a27bf41cb933b83f1e9",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_chest-placed.png": {
+    "sha256": "3d2b6ec9d507e040c97746d464b1badad96072b7d29f1403be23d98185ab576e",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_chest-grabbed.png": {
+    "sha256": "b89a49a67e792b941a876ce624737dadbd9e81df3c60babe83ac31094c44f7ba",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_chest-rewound.png": {
+    "sha256": "99d677ca74a9920cc0ea9a2b9e607997f9b7ac4b4d8a2d7b14d9262c65ed3db5",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_chest-released.png": {
+    "sha256": "7fdb8c215b51b1f2b3910b278a2bad3a0d8bba7ddbc20aeed9a1130508b62251",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_chest-landed.png": {
+    "sha256": "fc11b41494398b4deef2bace47e601086addf17494e735c863de861b055b5bb6",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_feet-equipped.png": {
+    "sha256": "009ec3e77fe65f3dfe52865461fa0c6a09c2ac6868078b5e8795119d38a89c04",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_feet-windup.png": {
+    "sha256": "c16a4ee90ee7ecb62d626f7899978895bedff851397f1bc8a37b152c52269dfb",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_feet-canceled.png": {
+    "sha256": "5bfa139939361783cd9855a81d9680e935de8a15a5d569975a9c302096cf6174",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_feet-placed.png": {
+    "sha256": "98c3d05b9e549f9dca98558f1ca5b8535bc35f7f9cfc9a9972a8e32897fc1dce",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_feet-grabbed.png": {
+    "sha256": "40d551a30194d84bfe7af6de66173806f755a0263db584903ec2fc4867621243",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_feet-rewound.png": {
+    "sha256": "386132292274c5efd8c2109c8bf441f490b95a1735a2f1590b280bff45dfe1c5",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_feet-released.png": {
+    "sha256": "47be114aa81cfe1d70b276f1623eb1bc013fa6705655cf0e1a79fcc843a69a09",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_feet-landed.png": {
+    "sha256": "3a98874693a0763560afba5d75b1dd30d4a95c26848d87320f84bff78f63e82a",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_head-equipped.png": {
+    "sha256": "8c23be045fbc70c685d90d1d031c82a2ddb5fe9235cc33a3d4abe003127931a4",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_head-windup.png": {
+    "sha256": "03aa99b2a8a0c8870e493b35772189776d4a8c1a8efe44b4bbf92065d5478744",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_head-canceled.png": {
+    "sha256": "be4a33aea492a8db294a1f80fad9a1855aff1f07862099c24ccb430bfc79f800",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_head-placed.png": {
+    "sha256": "c3c82b6207884a5d2279560b3b629a50134f2fe65c951462b880f3c4abc59995",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_head-grabbed.png": {
+    "sha256": "a31636182e23ff0a3ccef5f4aad4aa20693a027b6627cd19e7c384eef9f21627",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_head-rewound.png": {
+    "sha256": "2776c93fcacd028ec8b32cd555bb91b8be71d7fa3be6f4277ea498789f01f4fd",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_head-released.png": {
+    "sha256": "eeaad2d45c92f7e94737385481d10d5e927d957683f68d2333f2c382ec6236c6",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_head-landed.png": {
+    "sha256": "86aea6817ae6d1d2adb42f8e224a0300973f961a2e054aee0d4e4a01770360bd",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_hoe-equipped.png": {
+    "sha256": "477d96f051ff1d8ebf3d9f792dafa404e36eba8d93ec62b2d6adb9b802b8d67b",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_hoe-windup.png": {
+    "sha256": "ceca18048ec5f7c6ad78b002d6719e15b559edda585e452061736a81002e5eec",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_hoe-canceled.png": {
+    "sha256": "96b1b91d99455eb41b8181d317e761e7c770e6a356d515c7e563d7aded912d8c",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_hoe-placed.png": {
+    "sha256": "78ae2e63a915a383fee2af6e35757ab70051c639dbf0b75182e42453e4881cbf",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_hoe-grabbed.png": {
+    "sha256": "7dd8671e240bd614743307ba0d2c4349d9a162c74ca1ea1ef89814a0d57e6e41",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_hoe-rewound.png": {
+    "sha256": "ec523938fa5fd021b91898da76ff4f9d9df91097df2709892376b413c0a905d8",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_hoe-released.png": {
+    "sha256": "e35c894d0c97dfa427bc6101c9174e2b4f137c2a8cdf97195017a42bfae2a9d4",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_hoe-landed.png": {
+    "sha256": "a52f97e9ff22097d0f1f0501af941a561c70a973ad41853d34126d3413eac29b",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_ingot-equipped.png": {
+    "sha256": "232c7aaf09ca84f3f2658754cf7314ee881fd80f3291b8457c18728861ae2177",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_ingot-windup.png": {
+    "sha256": "b18cb0c4e8430da27fda5f5cd8b990dba1cf360be44d26b3d1e3c93ec0269020",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_ingot-canceled.png": {
+    "sha256": "e4a1a08104d23ca6395fcc0ac5c2a3598618f7b2e4e82c60bb8dcaa481164a62",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_ingot-placed.png": {
+    "sha256": "32452f04e649b1682c28f2229ff71b250db9b2c052ec8d2ef3845d9a205b02c5",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_ingot-grabbed.png": {
+    "sha256": "939c30d9bf3ac3dca4e1787db06ed067d717dae676bfd34bb5b51a8f0b5567d3",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_ingot-rewound.png": {
+    "sha256": "14b564d35940ddb7d1acf796a161dbad638f4d4193ade4b4fd557bf6b9e42754",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_ingot-released.png": {
+    "sha256": "940c042e6d344966875e9cd9c1d084042432fa93025a90400f7a97426ecfe326",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_ingot-landed.png": {
+    "sha256": "ba6d68fa131c8781d09ec8edc7388d4719786599092c3501892e3bed56e0c464",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_legs-equipped.png": {
+    "sha256": "c0b1c7d78ccdbee03c9d176b76652548704b44a3e0ed3d633e286646f8d129ca",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_legs-windup.png": {
+    "sha256": "fe185f17d8f8e9ed7e831a878c87476ffb439c02323548e54d010355a187db96",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_legs-canceled.png": {
+    "sha256": "e51da0ab03eda668e3d2b5a83e2c66538b7b6a3daa3d6cb2a8e8f9a4cabae1a6",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_legs-placed.png": {
+    "sha256": "b2cfd9557d8d58c337a68f4f4dfd4c90c0e778271655c885f6abaf78c5332c38",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_legs-grabbed.png": {
+    "sha256": "bf3db05bf15c7cc95c4d480106f414d8475ced52b78c7e5784ac8534b1210e93",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_legs-rewound.png": {
+    "sha256": "f24fbb3e42b5315a2f6101aa9a9d3d4a3a54fcd75c1c02c95202f2fa3ebed44a",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_legs-released.png": {
+    "sha256": "f4df9372a40043f9d259226ea3f028cfebcfed0ae7691a70a4a563a273a9e0d3",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_legs-landed.png": {
+    "sha256": "70db5e7aefd74c788d3b2658c6d4608a2f5707762e0e3991605af19e962b2627",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_pickaxe-equipped.png": {
+    "sha256": "2e703505017a120be84f213b9bea62a27336f0fbcd5c87d0d28fbdb94fdce7d3",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_pickaxe-windup.png": {
+    "sha256": "b44265b56984bcbbefdddf28a40b7b2703d8502b57d94c4dea1e00516bec8240",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_pickaxe-canceled.png": {
+    "sha256": "4c37368aaef8e13134bf036b7da58f45d773dad7ee49fea62cd325dbb5bedf83",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_pickaxe-placed.png": {
+    "sha256": "e632365067b198eac595dc90b67a0e8e25b8b99d93fb8b0a3013340685fcbf06",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_pickaxe-grabbed.png": {
+    "sha256": "55ab6dc0346283b9c18cd4f34f5692de63910423f2d642c1442f83dec29f7091",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_pickaxe-rewound.png": {
+    "sha256": "f99674cce7c93578087d441710e2ce994d01b1a4decceb8b351afdb1c9c2d96b",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_pickaxe-released.png": {
+    "sha256": "e461bcdc3bb93e0aabb75ba8ab7b64b344b7e48a45120f56c422c5269d0c715d",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_pickaxe-landed.png": {
+    "sha256": "e26aba12196d2ed4adf000642893ebdffe8c1398fa00b77db39ebbdb5730ed0d",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_shield-equipped.png": {
+    "sha256": "789ee8b13e12ee012c76008e2cf40788940a614ca1154360c13946dd42fb960a",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_shield-windup.png": {
+    "sha256": "91c4d334e0ebd4124f2f6c8aa0b11f7a601ab2f073a9c6b4f43550ac57b0e675",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_shield-canceled.png": {
+    "sha256": "e484c498bf01645624299371745f4f781c26ae21cbb7e27144d37636b26bf254",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_shield-placed.png": {
+    "sha256": "d07a66a138c341e0aa83fc40eaa398e1bc2bdcd6d89fe4e759a302baf23f6bc4",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_shield-grabbed.png": {
+    "sha256": "92674adb0c827392bbe200513593a846ff9e4adf57156b6a8cd23f595de15992",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_shield-rewound.png": {
+    "sha256": "42f4ae62d23546eb6ef1a15b914feadc4a15867068a50828dce518001c66da09",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_shield-released.png": {
+    "sha256": "fe716a92dc9d46d09b56a41bb2cd2e1e735eb785fcfbc496601308dec09af0ae",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_shield-landed.png": {
+    "sha256": "dbb2c1f61ac706587f902331e7e756d50cb2daf84e532dc55f989bf893ce1043",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_shovel-equipped.png": {
+    "sha256": "31e39342ce9b63016769d67171fb45424f9f314cf582d26a0a4002cbb72b4022",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_shovel-windup.png": {
+    "sha256": "ef485d745e6740cba763d478bce9186936f9de8fa7c7e0de301ecbf16cb5875f",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_shovel-canceled.png": {
+    "sha256": "f67996965edd599a93dd91eed2bf35ce6c86f42060cb61ac4823115f56964054",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_shovel-placed.png": {
+    "sha256": "f35895f021caf0a0d6d38873f18264e777ff6347f844fbc81c3218d3b395a660",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_shovel-grabbed.png": {
+    "sha256": "61fc613c66c023211f83fe12a9920fdce3b27fcbc470e1a3e136ac71c0870ec1",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_shovel-rewound.png": {
+    "sha256": "af35c2a1163c1aaf3a3e3ee417685d926492c485173a67fbba1c790cbde9db3a",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_shovel-released.png": {
+    "sha256": "c4b545504f3d1b80e4341117a3956aef836804f279e8e2de4b057e6c3df87867",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_shovel-landed.png": {
+    "sha256": "e72acacaee7fa24d81761241664dae4e38abad12de8fdb02391546e18e7254c0",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_sword-equipped.png": {
+    "sha256": "cd324a870108c53767450f377bbcdaf939b343be6496bd8fab5291932fa3e0bc",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_sword-windup.png": {
+    "sha256": "61ac8663d341860ce1a2773fdf9e2dc95d4b14fede19f7ec660046ba21cc6d6d",
+    "retained": true
+  },
+  "day-1280-100-throw/iron_sword-canceled.png": {
+    "sha256": "438241f6076699f5d0f2ea86cb36c6d38c37b0ead6548e375ae5d243496a3bf6",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_sword-placed.png": {
+    "sha256": "7103d6ef53651d10b496977dbdfa18bc0dcc57d413d6dfe8d31b21bf43715f7c",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_sword-grabbed.png": {
+    "sha256": "9c0dc575f6dbb9d27ccd7c573e1f8ec6804f6835fc7e76e6cd3287bb8530bc1f",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_sword-rewound.png": {
+    "sha256": "537a569f0d5cf537e283dbee16121c847d3fd130eb66b88a22242a39fc5badd0",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_sword-released.png": {
+    "sha256": "610963ced7bfd54e76571bd1bb52bb3371fdb54f3cf6037588a495ff1e753b23",
+    "retained": false
+  },
+  "day-1280-100-throw/iron_sword-landed.png": {
+    "sha256": "3de7ebf72371c7502a30569654d6c894f1369be5244d820353b238c6e717c0c3",
+    "retained": false
+  },
+  "day-1280-100-throw/leather-equipped.png": {
+    "sha256": "2a70d6e017cf69dd3daf738901aaa6115c649aa036fb2bc67170af5141c42bd4",
+    "retained": false
+  },
+  "day-1280-100-throw/leather-windup.png": {
+    "sha256": "de8f13420364de60cd9ffe7afba08c2a214b09f1fc8c7b2ce2ecd6c571d2eab7",
+    "retained": true
+  },
+  "day-1280-100-throw/leather-canceled.png": {
+    "sha256": "366b51df8817e2a88e3ffdeb06cca6e7960de71c894de778977e3401c3d7c3ad",
+    "retained": false
+  },
+  "day-1280-100-throw/leather-placed.png": {
+    "sha256": "f4e0524d03a26c1ef82671bef43c12e4ea7a85ba9b8aa14879a3b8086c928790",
+    "retained": false
+  },
+  "day-1280-100-throw/leather-grabbed.png": {
+    "sha256": "3434c2c6f1764dae1a8a7cedac31cfc27a3cbe4679fcdd1c2b2fade9120ef3f1",
+    "retained": false
+  },
+  "day-1280-100-throw/leather-rewound.png": {
+    "sha256": "a04bf857f461d1e8dcf9819407bc40886c51d454c108470373ac07659ef9b100",
+    "retained": false
+  },
+  "day-1280-100-throw/leather-released.png": {
+    "sha256": "46b588f80ed6e27de7f46044916666cfc4d97a4815225f227345e93b65e2d9b1",
+    "retained": false
+  },
+  "day-1280-100-throw/leather-landed.png": {
+    "sha256": "33513dad526efe76ac394c9a7f4665e74106821ceb8e7c408ff1334730056b63",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_chest-equipped.png": {
+    "sha256": "f561e1f6b0316136f48ec5a4073d82ecd63eaec1126bb72d892c4d543d8a1c28",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_chest-windup.png": {
+    "sha256": "99c9cf09fe891357c92702ac41a274213d0e080380d8aa3b59146c17a658946a",
+    "retained": true
+  },
+  "day-1280-100-throw/leather_chest-canceled.png": {
+    "sha256": "580fc0c9cadf5c96c837a4bd5c0a2cb499bdb59dabacd1928c1b83331d111598",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_chest-placed.png": {
+    "sha256": "3779025d8cdf76d7c652d658bce7d1d500e63dfe522e0588f3847fab9b1531f5",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_chest-grabbed.png": {
+    "sha256": "fd3988282a76447fcdb065d8f4bc5f1fea70dec65cdb82527a84e29152a599cc",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_chest-rewound.png": {
+    "sha256": "4f1c8168a078fc2a44eb11d873df940821aa8b8b2341f126a23f531159d786d1",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_chest-released.png": {
+    "sha256": "7fc9c497fe3832e0b16cc220673ed9d50bc63db252161b3fa66f5496e002c426",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_chest-landed.png": {
+    "sha256": "55c9a3da5db744344b13282ca73d1dc3087f737b44f407f303800e4868ff614b",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_feet-equipped.png": {
+    "sha256": "4c1ea98f86a55a73363e495b5cbc418b82dc4a5151843191f8ed2f13df78cabc",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_feet-windup.png": {
+    "sha256": "cf43b7050601127b6af5b1ae50fa04774c9699b9787d3591a15e1122a0fbdb02",
+    "retained": true
+  },
+  "day-1280-100-throw/leather_feet-canceled.png": {
+    "sha256": "ccb5e034de47a0e62ff5067a7069db393b2981de11fd30406ef28eb7168eb282",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_feet-placed.png": {
+    "sha256": "ea10dbda66adf553df9172b3f9d0c19c5255dd8b5c4a5bcab58652294097d083",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_feet-grabbed.png": {
+    "sha256": "781af47b8f2a45bf927ca522324ebff6e23bcd385409122e56e0cf04a9e8a699",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_feet-rewound.png": {
+    "sha256": "13e6c1f5ef2f2660b0c5931bb9435a16e90ef22c7f5a16897b56ec312a2908c8",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_feet-released.png": {
+    "sha256": "9613db9a1fe2da3071ddb5f9301d666cc54a975d52d621baaba3cacff185f737",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_feet-landed.png": {
+    "sha256": "73be6e59155c502bf189b89d243b96aaa99a0012d30628b473e294d5fdcfc7d6",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_head-equipped.png": {
+    "sha256": "7e71df1aedeb8b5d9580fd006cc83451b2ac66bb283bfa574bed7b21f1de804f",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_head-windup.png": {
+    "sha256": "99273ea87544cdb371a72ade7cee80e9c27a211122c3249017c7643f7d2962e9",
+    "retained": true
+  },
+  "day-1280-100-throw/leather_head-canceled.png": {
+    "sha256": "80e5d5a5107c17c96d73ca85069f0c21f60989dc1b8b83f125d318221c94b621",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_head-placed.png": {
+    "sha256": "5a9fb7d87ad698fff1d6e94a1a1b2588fa5398d2abb53a25b19f54a8509729f8",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_head-grabbed.png": {
+    "sha256": "c5e8d639fc309077df8881dc98dd62be70b11e58f188ba8fd4bbae18bdb0a75b",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_head-rewound.png": {
+    "sha256": "687239dd69dca65f0dc23c9d40ddc1f570c0120129067923efea445bbbc1b19b",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_head-released.png": {
+    "sha256": "d07fe1aeb7e0156d3c3e32c6f7279edb2c7c04a56e3d2fcdac533a759190b469",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_head-landed.png": {
+    "sha256": "79a8a3025c67b9d7932843445d2003765da4b1f4fcad83923399e35030123fd1",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_legs-equipped.png": {
+    "sha256": "9c5ed8bc985ea5c1eb90ae547e1f06a829ab9b11242ef9f68e13573fa52fb509",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_legs-windup.png": {
+    "sha256": "15a4a19fdb4cab38f46e13d1deb4fa706b141a784cedbc1a68e2b4d7200b0b62",
+    "retained": true
+  },
+  "day-1280-100-throw/leather_legs-canceled.png": {
+    "sha256": "366830656ab4dffe2ecf5ca000e58e9bb1bf33164ac4b63ffee513f048cee5e3",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_legs-placed.png": {
+    "sha256": "7d7ed813eb6aa0d1ff967189951d9fe3a2a04b517708607c47bb89605117af29",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_legs-grabbed.png": {
+    "sha256": "573a27cb0da6a25bbc96aa56b7e6c939eb98565d3ecfd0ffa1b7e9d2efcf0003",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_legs-rewound.png": {
+    "sha256": "bd91da74b7605ff2a3ddd59c09cf3f028cb27739389ee65f87d5b21b4c0719d6",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_legs-released.png": {
+    "sha256": "9ba3ee5fec76e714b522a7efe8dcc88e658d7e4cf55f2809be8e87499b95b3a0",
+    "retained": false
+  },
+  "day-1280-100-throw/leather_legs-landed.png": {
+    "sha256": "bd64a9c27ef6d21fa5d25526bef1c11afacb8bbe638199420f5687b502498366",
+    "retained": false
+  },
+  "day-1280-100-throw/plant_fiber-equipped.png": {
+    "sha256": "c01efe0162ab466ca13d749165ae655fe70146e0c73476c2529e279f5ebbe668",
+    "retained": false
+  },
+  "day-1280-100-throw/plant_fiber-windup.png": {
+    "sha256": "814597c54b9425513fdf00cc001806c512d653ad8a251eee107ee10d2e1174bb",
+    "retained": true
+  },
+  "day-1280-100-throw/plant_fiber-canceled.png": {
+    "sha256": "e4cbb63926b9a58dc140fa8ab935561891d0920620e5529a42f6f05ed651c552",
+    "retained": false
+  },
+  "day-1280-100-throw/plant_fiber-placed.png": {
+    "sha256": "5b7d885493b943c4b759a95e70f1eae25035a51bdd03d3af0b507b71eef7e09d",
+    "retained": false
+  },
+  "day-1280-100-throw/plant_fiber-grabbed.png": {
+    "sha256": "7e39f0380a09f37e9ab29096e7082486831b19b3e39cc6980e0887dc69327ef8",
+    "retained": false
+  },
+  "day-1280-100-throw/plant_fiber-rewound.png": {
+    "sha256": "78e5e82da90dcbea1f55bf4923cb6f7cdb4e210fad58f3fe5e3e0d15104cc050",
+    "retained": false
+  },
+  "day-1280-100-throw/plant_fiber-released.png": {
+    "sha256": "5b001d5b67ea3a2dfdcca751520ad2e742863c54a41719c3d35451c096823458",
+    "retained": false
+  },
+  "day-1280-100-throw/plant_fiber-landed.png": {
+    "sha256": "117dd28b26efc1617e4e8299e48a159a3644b43bdd150a1cb4645d2e65097d73",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_copper-equipped.png": {
+    "sha256": "d583b4492baeaf9d50b6eaf93ec4e2c1febf80df05c7f8059d1f88e2c88daa90",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_copper-windup.png": {
+    "sha256": "47772727fe16c57f1f6a2be0ab6947925e85dc602d3c50b9b4707db82539e57d",
+    "retained": true
+  },
+  "day-1280-100-throw/raw_copper-canceled.png": {
+    "sha256": "f94ca3ea30735449cf391218f0597b1659c90c75615dd48a6a6e9ed5f91910d9",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_copper-placed.png": {
+    "sha256": "b34bed524cbedee7004c30084977e57f72bfad8defdd294229e4619402740a3b",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_copper-grabbed.png": {
+    "sha256": "77508da78d91c20e8f483210dfcb22dfa23fc3a0b138ce6f3986fd2af4d6f3b3",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_copper-rewound.png": {
+    "sha256": "bc44a5c6947cae944e297a05b66f9fe4de02aad53bc60857328c2d154adf04f1",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_copper-released.png": {
+    "sha256": "98e75ab189288fa9dda4c6de14f14f63b0784289192982a4289746d11f394a00",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_copper-landed.png": {
+    "sha256": "ae7337f9d891eff1d674b38eae3756c01dfa94931ff402a4981554744cc6cdbd",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_gold-equipped.png": {
+    "sha256": "ee11b42d328eebe904ef9d659fa4445f901d34d4c42ea13c8829958e07162f61",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_gold-windup.png": {
+    "sha256": "7a33f935c2478c22deb133a0b3a68d3a7fa017a9cfcad3c6f2c35b804ece0b9a",
+    "retained": true
+  },
+  "day-1280-100-throw/raw_gold-canceled.png": {
+    "sha256": "bf984237e0ab515b8c5f38ad246047e25d47dfc8275240a046056d9ad0c0e41d",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_gold-placed.png": {
+    "sha256": "9231969c23f5e2b891c884025df0681083777be2cda1635d1e2e300a273a5c50",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_gold-grabbed.png": {
+    "sha256": "834d9b4b7b679edc709643cd1f4c31f23e9cc23eeb7eccd80ddc6fdeb0966238",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_gold-rewound.png": {
+    "sha256": "f6bd850e0fd95c25a65a4ad37e9928a9b81800eb69052e897c12f0ae4a2ed87f",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_gold-released.png": {
+    "sha256": "d84f752fffaa7591beb6c539edf1ca9038a44c8784b8ea27a12ba8cf10c4d098",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_gold-landed.png": {
+    "sha256": "a04cc4f4dc6617658d293a4d29e86c9f0bd5b812ff50e43932783fc47fdd6640",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_iron-equipped.png": {
+    "sha256": "1d41b726e7627bfeaac580fd96e3f13be7c1614166a579c3f48869b4d724beb1",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_iron-windup.png": {
+    "sha256": "409af0bd7905bcdb1fd28c04e4bab7a5cb3fa5454b1bdc5f8bf7032641f7a2d9",
+    "retained": true
+  },
+  "day-1280-100-throw/raw_iron-canceled.png": {
+    "sha256": "b29007c16f997ea4e5e8ab5d4c44fd25beb8827a47c7824a7742037f10d452c4",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_iron-placed.png": {
+    "sha256": "11343cc78f9bccd2fa65005cd26a9d825f79fd3d851c2830d027e26f6bf5c1aa",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_iron-grabbed.png": {
+    "sha256": "ba0598e82d3366b21054d8075678fa133dbac5e4807d4672439b21bc222c526b",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_iron-rewound.png": {
+    "sha256": "264139ca3f4585794a4db1669cf50b2bffc20d5275acc6b2244dc733978c91a5",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_iron-released.png": {
+    "sha256": "345f536f1b016a31b2f86fb669eabbc08285cc8c2202d9904f9f884d716c4cc6",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_iron-landed.png": {
+    "sha256": "4ea3ae936228bc02048b92dc6895b3ee4e4199e75f9eb15952c1bccfab88ba7e",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_meat-equipped.png": {
+    "sha256": "0254e8bfc5e00427b685442fa3035020d1e3cd65f2bc8b6e24649ac9fb826bcb",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_meat-windup.png": {
+    "sha256": "db33a589cba69297994568ce18b371d4b95acd7ea8eedbc960d2490ae0a76d78",
+    "retained": true
+  },
+  "day-1280-100-throw/raw_meat-canceled.png": {
+    "sha256": "b35a5b30f6367b47fa0c25f22755737ff41e3297a53f73263dff99090a91c98f",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_meat-placed.png": {
+    "sha256": "9238669a5fdafcbed838b25ad5890387b1fed0643a9be6d3c9eb96ac802a758d",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_meat-grabbed.png": {
+    "sha256": "7425ccc1c50dbc44b5263d7e78f7cee8f8619486f1b60921b0f03a25601e0796",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_meat-rewound.png": {
+    "sha256": "c466e0c9c6236c50ad43cc437d4f45934ed82526cbf63e7e28d5b2fecfbd5674",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_meat-released.png": {
+    "sha256": "cac841a7ba098822053f653d3433ff9b47918f41be117b2461d74d3e83917fc0",
+    "retained": false
+  },
+  "day-1280-100-throw/raw_meat-landed.png": {
+    "sha256": "f28f62791feb9f5ab13485b480efd5fc6ed6fac4e370bf1e5d3b721e7ddc1746",
+    "retained": false
+  },
+  "day-1280-100-throw/seeds-equipped.png": {
+    "sha256": "1b7fcc6a6121745590373a14ad6671d1c141d7c0cca5b01555203f9858a6fba6",
+    "retained": false
+  },
+  "day-1280-100-throw/seeds-windup.png": {
+    "sha256": "b68dad32b540bf01183195b46f1273ea3217d7bfd38a6ea5bbeb5da5450441b0",
+    "retained": true
+  },
+  "day-1280-100-throw/seeds-canceled.png": {
+    "sha256": "d90fadb0890a11d5ea532b262bc6c8e1796ad61ffb83a5b6d16ee66b3fe928a8",
+    "retained": false
+  },
+  "day-1280-100-throw/seeds-placed.png": {
+    "sha256": "222d6c1068eac118aa33b0ac39727c43368ca910af1250fbbc1b780f9e5bcbc8",
+    "retained": false
+  },
+  "day-1280-100-throw/seeds-grabbed.png": {
+    "sha256": "6c3e5bdc0e086007a5f8087e52fdb67adec7a03c68ae578d92c775953cbd8f35",
+    "retained": false
+  },
+  "day-1280-100-throw/seeds-rewound.png": {
+    "sha256": "149b1a5705297bb168e2ff0aa930838484ad991ef0b825586d8eed4a4ac4d06b",
+    "retained": false
+  },
+  "day-1280-100-throw/seeds-released.png": {
+    "sha256": "731a91405a94f79ae80a0c32d8fc4037d35099074b869b7fda8eda35df0c7b8b",
+    "retained": false
+  },
+  "day-1280-100-throw/seeds-landed.png": {
+    "sha256": "79b347285359acbbc1004f4292af4050cd18af4aa3a487e98a7ffdc257f8f31f",
+    "retained": false
+  },
+  "day-1280-100-throw/shears-equipped.png": {
+    "sha256": "c8d41949314c428b9392410e15c0960c6bec48c95ddf7cc5b8d5ca50bcd38431",
+    "retained": false
+  },
+  "day-1280-100-throw/shears-windup.png": {
+    "sha256": "d2ab6463b2b2100aa7c1a36814b1ce5cc3e578adec4fe4ab854262637a639534",
+    "retained": true
+  },
+  "day-1280-100-throw/shears-canceled.png": {
+    "sha256": "0c4af314782c375120398f40b5fbeb090c406de8c90901a6fd7458b6a2278ec1",
+    "retained": false
+  },
+  "day-1280-100-throw/shears-placed.png": {
+    "sha256": "392723dce5f3d49e141aec5eef8429af1b9730fe46bf0d5b5bb6b5214bef8ba4",
+    "retained": false
+  },
+  "day-1280-100-throw/shears-grabbed.png": {
+    "sha256": "8680324a9506d2c40e85edd35297ee067389608cb677287013252b271289ea97",
+    "retained": false
+  },
+  "day-1280-100-throw/shears-rewound.png": {
+    "sha256": "bcf46608994c41a491b1054c040f5c335e69f56aaadd23a4808b9ff15afb9aeb",
+    "retained": false
+  },
+  "day-1280-100-throw/shears-released.png": {
+    "sha256": "9fe2ae55bc94c43e7ecfbdc67c7ea9edaf75769784b4dad0cfb2399d79db7f8d",
+    "retained": false
+  },
+  "day-1280-100-throw/shears-landed.png": {
+    "sha256": "3747525c8b2834df28d686fdc5187adc0b45fbcf8bdc987a235c01145577428d",
+    "retained": false
+  },
+  "day-1280-100-throw/stick-equipped.png": {
+    "sha256": "7999a03a64b8286b62251cc3d730c9cd216f1a96421139d57be9afd81eee8ffa",
+    "retained": false
+  },
+  "day-1280-100-throw/stick-windup.png": {
+    "sha256": "252aeab5e64ddcf3c3bb5cb73d523abf78ec5a31ffab7540ae3c045748820502",
+    "retained": true
+  },
+  "day-1280-100-throw/stick-canceled.png": {
+    "sha256": "02d3a26a374ecb20fcd08f364c0ffd1b3572e84464eb342ae1161e23dd8f2358",
+    "retained": false
+  },
+  "day-1280-100-throw/stick-placed.png": {
+    "sha256": "f1fe0c09f2c936dc4e23a487a67bd931043097fe9cd71b702f690596fe2735fe",
+    "retained": false
+  },
+  "day-1280-100-throw/stick-grabbed.png": {
+    "sha256": "617f0e02c77cdcd6313013d5ccfaf564ce76e17e08c4beb5a8dfb06eb9961c3a",
+    "retained": false
+  },
+  "day-1280-100-throw/stick-rewound.png": {
+    "sha256": "ec0a38fc961bb704a6670bc4442c26eb45a7f2ebd676b9fba7adcf4a2d12493d",
+    "retained": false
+  },
+  "day-1280-100-throw/stick-released.png": {
+    "sha256": "601655c02986b5c3514f5b57d83eaa6c6009d01083a0904686e84256a6782f67",
+    "retained": false
+  },
+  "day-1280-100-throw/stick-landed.png": {
+    "sha256": "6cbf0a1e22a5c3eeaa097233fe8c9602e897efa8fa405eb09769e684746efe7f",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_axe-equipped.png": {
+    "sha256": "e28d4025c8eca52dbf5594853ca24ee2c98ce1847bdf30de583d053d2f2619f5",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_axe-windup.png": {
+    "sha256": "74f7e6984b5df27f07488f3959a0ff86ee63853d5e301e131565fddff9efa07e",
+    "retained": true
+  },
+  "day-1280-100-throw/stone_axe-canceled.png": {
+    "sha256": "b1d4d3f060f3a80c6c605fef0e60eb57e3c7c1cd6810eac7a1dc2f45e5b59af2",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_axe-placed.png": {
+    "sha256": "9ebfba9fa7e3ec7a0487efab3d927944411f837e67aa1c33ce5511d1ba4c0e5e",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_axe-grabbed.png": {
+    "sha256": "ad9546ab9c9d027357afcea786c2175e482936fdc6c860da88bdbe2ad56de93d",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_axe-rewound.png": {
+    "sha256": "aa9a04c32e868cec19d560a15b5911f18c08455e4c1ed64f941b2052a57cf9ca",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_axe-released.png": {
+    "sha256": "9e4f6ed2b37584e8bab519e6d00c23b8668c559172f2d2afc5c95ea7ffd350a6",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_axe-landed.png": {
+    "sha256": "838e7ea1eebcb66acf5836da620b6227c547ceb71361225c7c61b5e4a911a771",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_hoe-equipped.png": {
+    "sha256": "e3f2e908af6ad16b6f22c295c3105fa1952a6aa999f4a771d4e407765747e13b",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_hoe-windup.png": {
+    "sha256": "a403c605c9d135fb43db4d9a4b39c95195ea44413e4240ec7975d5e329497792",
+    "retained": true
+  },
+  "day-1280-100-throw/stone_hoe-canceled.png": {
+    "sha256": "7a933754ae633297cd531e0ff31bbefa43b5fbf2871dd6dbecf2f79d896ab604",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_hoe-placed.png": {
+    "sha256": "e4c3266ab5e8823a6944b5526364064ae045dab7749aeb9698bf1ef72e26f417",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_hoe-grabbed.png": {
+    "sha256": "092b0424154acd6c10fff04a3eb90897362ef47bcf23c4743c8d467046fb0c1f",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_hoe-rewound.png": {
+    "sha256": "8e520220dd55602ec9935b80087d105535f59153baef42b86fcfbe3076d4555e",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_hoe-released.png": {
+    "sha256": "37947c27d076c4f18972177318bcaeee71647d3335bd26534f60a776644d5e0d",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_hoe-landed.png": {
+    "sha256": "9117aedaaca72044881705eb748ecefb71b604c9f1acc4d7e9f5108302021cfc",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_pickaxe-equipped.png": {
+    "sha256": "4220df59d3db9cff13d908dfc46ca2fa575a1eb90f346055d812eca2e106ef4f",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_pickaxe-windup.png": {
+    "sha256": "b80427bd06d3d13546fe4a8d5a169563247c155a700a6f871dcc9a421e602e99",
+    "retained": true
+  },
+  "day-1280-100-throw/stone_pickaxe-canceled.png": {
+    "sha256": "15c42165e487156f892e84ab84f8b189b603bbab68692cb669b9904a50d8686c",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_pickaxe-placed.png": {
+    "sha256": "eeb38d3c18ff02f25da44a91f719c92d7a7ab5b8a3f8b652c90279540b4e2e7f",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_pickaxe-grabbed.png": {
+    "sha256": "fa7ff5026268f168ebe63718baedd4da7c67ff168d80c2cb758376e6db940c47",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_pickaxe-rewound.png": {
+    "sha256": "55e193573fcc20c894e718738c45f8fcbc67b2a9573cfd687b6f432d7eb5d7c5",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_pickaxe-released.png": {
+    "sha256": "045de397bccf7b1f95b1ca88c01e848b160f9eb52377d16fc578ee0c9c7c0f98",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_pickaxe-landed.png": {
+    "sha256": "d5d9f3dcf154a9f817cabc87ae15c806933277b0ea1d851cab38f9ac02929d8e",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_shovel-equipped.png": {
+    "sha256": "4de670e499e89ade9b69ba1f592802eaae5defdb949a86370da457ad21d9c063",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_shovel-windup.png": {
+    "sha256": "1d32889ea0e4689dcda903459d51fc9e8ad420cbd8ab9923d2995062ce0f0eec",
+    "retained": true
+  },
+  "day-1280-100-throw/stone_shovel-canceled.png": {
+    "sha256": "b2aaa47f9d694a598da7ca021fc40011414d7ad813dd195196be94f75fa6e273",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_shovel-placed.png": {
+    "sha256": "5b46d3763e29f61c3b3e6cdbe793ac40d57326d82e2571a471ec45f8c9ff878b",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_shovel-grabbed.png": {
+    "sha256": "9a59e4f9d789e6a5da0475a46bdb5ecbf7f86ec8d86056cb1bc0347c6e0b7dff",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_shovel-rewound.png": {
+    "sha256": "067ff8aa3fcd8536dfdcd0879d59ea42e7601089244aad2d1891169c3f8a8ddd",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_shovel-released.png": {
+    "sha256": "2fc77547763e320feaab0960d8f785d152dc7860972a5a9ce2a3dea6bb59222c",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_shovel-landed.png": {
+    "sha256": "0f328d23b775a2ff66e70ddb5fe2f66c65f44486930226f39db0faa5f03f70ae",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_sword-equipped.png": {
+    "sha256": "a8b9ad0d82fa84d8d6d5908728d4bcdd3e86a450bced5ae20f69e8818450e2a4",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_sword-windup.png": {
+    "sha256": "2a0061c8e012ecf350bd09bf2a98352962f60bec2298e9b70c138711f6a2933a",
+    "retained": true
+  },
+  "day-1280-100-throw/stone_sword-canceled.png": {
+    "sha256": "7ded5869b76242734f495473e4224a565cd0fcd106db88f09814a5cad6e0f69c",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_sword-placed.png": {
+    "sha256": "fe7227f8a6d3bed2c23ae30ff8326c09947de204e6c090ca14dc4444970e2b6e",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_sword-grabbed.png": {
+    "sha256": "2d31ce1a7192f66e309343aa4ae4798b0e498cad78d710d7f2e7e79b5b7542a4",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_sword-rewound.png": {
+    "sha256": "0f9f416ebb8bda28b6dc431f26e576c2e8adfa0e004ac412bc6ccfca41955c6f",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_sword-released.png": {
+    "sha256": "f8788e6bfd2591486fd5d655b40d243536f1902d17e824a50324c23760ed01d8",
+    "retained": false
+  },
+  "day-1280-100-throw/stone_sword-landed.png": {
+    "sha256": "fa9a51b9e221fa343dfdf52c76019175d5e93c5912d2a7ab2c6e268bc88864c9",
+    "retained": false
+  },
+  "day-1280-100-throw/waterskin-equipped.png": {
+    "sha256": "30dcac3f00c444b9a98d817aa3d2aba6915a002a6a04c39aa5597d125f932c06",
+    "retained": true
+  },
+  "day-1280-100-throw/waterskin-windup.png": {
+    "sha256": "7d885c2d921e165f554dbc9855de2c667f72917c40d9c6150f15231c4a0862da",
+    "retained": true
+  },
+  "day-1280-100-throw/waterskin-canceled.png": {
+    "sha256": "aaf55933f3777d27459b21831fccdf23af9e9ea6be75703deb37cbc684c6402d",
+    "retained": true
+  },
+  "day-1280-100-throw/waterskin-placed.png": {
+    "sha256": "1362795213a285044a20c1259140ad5683cb239b99a48358b192a8af60e20a30",
+    "retained": true
+  },
+  "day-1280-100-throw/waterskin-grabbed.png": {
+    "sha256": "09d2a50e47d92b7fcde91e2fcd58bfc5c06bc5432185e352e226868268bac670",
+    "retained": true
+  },
+  "day-1280-100-throw/waterskin-rewound.png": {
+    "sha256": "2c20bc7d2a65ef7ab3c42f96b1917b6c8574ba6841dba5b89ae4c75cde02db34",
+    "retained": true
+  },
+  "day-1280-100-throw/waterskin-released.png": {
+    "sha256": "9837d7e941980fb8e29f978377fbc949ced771cb93c8b98b5518eda466385a56",
+    "retained": true
+  },
+  "day-1280-100-throw/waterskin-landed.png": {
+    "sha256": "867465e7e0b90f252f954c7d4ced261784c459dab57019b42c863878b7bb9e68",
+    "retained": true
+  },
+  "day-1280-100-throw/wood_axe-equipped.png": {
+    "sha256": "532e6a3e19616e32c1edbdcf82109ef5f50acd42369b40f79bcba2962556ff2d",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_axe-windup.png": {
+    "sha256": "c80448470289e97ec6c5516d2e7080a9df8462e500e0bc0d14263c7db8b95042",
+    "retained": true
+  },
+  "day-1280-100-throw/wood_axe-canceled.png": {
+    "sha256": "5d77d9da88d8dc4dd1013c3d139604e3c40d3b12be2bb615f523ffa157f1ae3c",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_axe-placed.png": {
+    "sha256": "72a4f6b02afbb52c0bea651d14f04d540c84cd26e7a77448adb1d1490b7234b6",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_axe-grabbed.png": {
+    "sha256": "744f78afd13b2adb6abdfffdfba9a97a198ed970a45f1771461b9a084b7a932b",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_axe-rewound.png": {
+    "sha256": "0f60f6a7785b367546c115e702a2abb11e63b6732cff989bef8d60f96063270d",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_axe-released.png": {
+    "sha256": "ad56c5278cba7f677c0571598338b7cf3cc6442a4319c869fb5e7cbca72de122",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_axe-landed.png": {
+    "sha256": "da2b79c1465c995f894eb63c0a675d364eaf67e32cc1a384318711362c4a506f",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_bow-equipped.png": {
+    "sha256": "c648bfb23af0956fd6a01767f19341061cf65d6769fc4d01d2b87859676e3da4",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_bow-windup.png": {
+    "sha256": "69e96990694e0367bc7a7e6040f7c4c350ef585597d678b954f669dd495ce0c5",
+    "retained": true
+  },
+  "day-1280-100-throw/wood_bow-canceled.png": {
+    "sha256": "ec9e0a33e87620b863095cb859b2ab30b3dba255a2e9bfa977ae7ee83fdaa582",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_bow-placed.png": {
+    "sha256": "48cf9d640953273fd61e9f52001c534a8507f7896e6ed79c27e580132c995b9b",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_bow-grabbed.png": {
+    "sha256": "9c6dd309e0d2205c79d403c3785e0a91efd3600406bf2608cbaca9d5dfb15734",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_bow-rewound.png": {
+    "sha256": "2828bc3a8b860c740a3b1f50c4fd0dabec29d6bfa70f9072b3a6269a2279b0b5",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_bow-released.png": {
+    "sha256": "c7de914ee45cb4b0f0216684d2a2aedfb86c9e89878488c258fe86acdc5f287e",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_bow-landed.png": {
+    "sha256": "8cd8c7dfd849084ca55f16cc9d43ec34424ac1b4e1e630b06fceb5e2c5e8be58",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_hoe-equipped.png": {
+    "sha256": "ca6c82a15a99c743600b2df671b1ef2144c09882b611f1b074df15daaa67a13d",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_hoe-windup.png": {
+    "sha256": "7869b4b7c5abd1c3fc599d33dcdcab0b2a06bc9e062492ac0c29964ea7d8a3bc",
+    "retained": true
+  },
+  "day-1280-100-throw/wood_hoe-canceled.png": {
+    "sha256": "d89fa7373ffefba9cddb19ffe05d76ba100651a25d99f45510fefa8d7c0e7239",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_hoe-placed.png": {
+    "sha256": "14ea707a79ab6a43f4b4beada4a27d5994332523b556f52f5358bae592673450",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_hoe-grabbed.png": {
+    "sha256": "18c63c14aa2ad1ec40ee9e328732e262bd4895daae9903d018b0378fc50974ac",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_hoe-rewound.png": {
+    "sha256": "03cadbe26f25f2e123b514b7f355892dc2b4d8031d709dc4047ad0ff180a04d6",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_hoe-released.png": {
+    "sha256": "3e29e10e8469a533a0687c315544e21b4c0bbf4b5613d99098bc701cc07e1e12",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_hoe-landed.png": {
+    "sha256": "32c3c745450e320ac128f28cdd0d76012b2487693ddc8fcca20e23b56d117084",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_pickaxe-equipped.png": {
+    "sha256": "d110bc1506adcd525c268cfe2fbb1394f1837dd9a88f93bbe0000963095d6526",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_pickaxe-windup.png": {
+    "sha256": "85c1d6944383fdce5d4056ea828704400b76b4059efe7b4c30ad6ec6586e6115",
+    "retained": true
+  },
+  "day-1280-100-throw/wood_pickaxe-canceled.png": {
+    "sha256": "0c32887e40c9466c4264d791abc624ab9571cfce2bac1b12128bd077b1d87695",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_pickaxe-placed.png": {
+    "sha256": "6491d5eabd6cc3735faec8b8ff899f5de0478e349849f2149c15baafc2c069b6",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_pickaxe-grabbed.png": {
+    "sha256": "bfcb13b5bda94f4b8dd0378663ba8a562999ebfbe268791a73c0331305f2010a",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_pickaxe-rewound.png": {
+    "sha256": "311c8cd0144c637fa7c9aafe505822659685e53f02c163f62c6c933772ce1759",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_pickaxe-released.png": {
+    "sha256": "7ab18944433f00ec105f2ef51567840669e0bb676464a4247f7c248c4cfd0c0f",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_pickaxe-landed.png": {
+    "sha256": "5a05101d69108c6f3a1e87c787f58391f9d3c186f09f3af44a18e3a8ef25eb0a",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_shield-equipped.png": {
+    "sha256": "eb1e387c92e0fa37af3f12e6bb7a51c81b7213c7769e6eff4a14b0461bc462b3",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_shield-windup.png": {
+    "sha256": "f0c77bb33254ffe0f7a3d8856e13ffe342034c5a3bab7a2a362b01ca905a850c",
+    "retained": true
+  },
+  "day-1280-100-throw/wood_shield-canceled.png": {
+    "sha256": "e9392f99353db085386e8167db15aff0b4a3d878a33fae7bc86d3fdf8356634b",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_shield-placed.png": {
+    "sha256": "1f18e5bcef82cd2a69618189f50aa9c90686be6fe499edcf979468a17f9f562c",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_shield-grabbed.png": {
+    "sha256": "ef21f4370aec23914740c8450d2197b75dd9e58f22ba4f7ed0776a3837190e91",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_shield-rewound.png": {
+    "sha256": "85300dda9163b9a557412ebd7dae5f68fb96bf4811809f77b70808a42654147d",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_shield-released.png": {
+    "sha256": "40b945aa71b22e12228971c0381c885e5a6ff748a829b43fe89c08a99da1f407",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_shield-landed.png": {
+    "sha256": "3727c93b649be3f44c1544605406bd24758b0e95623a12a72836eb2bb703094c",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_shovel-equipped.png": {
+    "sha256": "11d6b069615ef605f70df00c6ab4d4be09c7a815375a8175837825f687e609c4",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_shovel-windup.png": {
+    "sha256": "451c74e1d4bfc716abb7b5f8e796f906e848b2634ea156f79c6d4ce12eea4b26",
+    "retained": true
+  },
+  "day-1280-100-throw/wood_shovel-canceled.png": {
+    "sha256": "d76072d3c4da9aa4cb29f8685e1f13f2355eaad86519b8de52f903650c4a8f47",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_shovel-placed.png": {
+    "sha256": "affdfe2f62a5ebd48748e7acbcb2c7a7afd063c63c9c9e7bb1e648c56357c328",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_shovel-grabbed.png": {
+    "sha256": "08419c78da6a55ec7a3945e2a1a0e66be4e4b7ee8fb873a73f58b664835b098b",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_shovel-rewound.png": {
+    "sha256": "4fcdd96630b22a028350ce40befcb811f10ea66d862e103b5303f7feb59a5311",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_shovel-released.png": {
+    "sha256": "e82b00ffd35a777d0a6e0a01f8615004225729c5209efc839f55041403020a30",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_shovel-landed.png": {
+    "sha256": "8861d6f1c1d0141d6650cc0546b2510ba98d7073ed7316418b00b34ed25df74b",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_spear-equipped.png": {
+    "sha256": "a9dc55b7b080df1294f806c09aad7b07362e43babeafb5bf1379a53fe31dac44",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_spear-windup.png": {
+    "sha256": "f8b00b2baa8feb0f28710fea87a0e99ff92e9141604bdfe2e6375002f364d72e",
+    "retained": true
+  },
+  "day-1280-100-throw/wood_spear-canceled.png": {
+    "sha256": "3dc8847fbb5bccd3d65b6074e71dd5972ff48af1cff70d792a15e06510e5b76d",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_spear-placed.png": {
+    "sha256": "0abe133502ed4deb50acda33e1b783f8e628e1a2f0fb25de477eb6b968c573fc",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_spear-grabbed.png": {
+    "sha256": "a2dd8d71ee8b4b5f99e78fa57d40d37ed1ddc5b5b57a5ebf3a0a9d47254f80ca",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_spear-rewound.png": {
+    "sha256": "e5054bbaf9efebc21b5e8817c104e7b4f2c94bc5a549003b2f006db7fb1ce8e6",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_spear-released.png": {
+    "sha256": "3e76bacee70d48961f6281bb1556565348f4522cc7bd7eca57f05fce8c53a242",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_spear-landed.png": {
+    "sha256": "5b57678c811e515f38bdb30866e4c9537bd14c855505ac4e5d7fa59d9d5b71ef",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_sword-equipped.png": {
+    "sha256": "8d5b131fb07213468d02cbbf9c970c5d5da74d1efaafbb6f9c5e9c66f0dd8d78",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_sword-windup.png": {
+    "sha256": "335afdb7495bf6ab268069e5168b35c7d56eb503dd6d66d18f000526add86e61",
+    "retained": true
+  },
+  "day-1280-100-throw/wood_sword-canceled.png": {
+    "sha256": "931dc08c2b2107cdd781726bf3381462213dd568aa8c0878b4457ad9c3deea0f",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_sword-placed.png": {
+    "sha256": "53bff1d3511c7e07cef3fc5c86c6a012089955e6289ab7b8f91c3f1b774904c8",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_sword-grabbed.png": {
+    "sha256": "3ff3e29cdaf5fbf6b9a8fd726b024a4ac454e0b14d17eddd07bfe20e68de5d58",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_sword-rewound.png": {
+    "sha256": "56c4fd715ad9cb209e332cc7d9d074e758eb5247bc59a6c19b49bd96f7993186",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_sword-released.png": {
+    "sha256": "5ef5aff53dffdc9cc2f750482ac33ab1efa4513c60ac40e60ad15d59d4539f48",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_sword-landed.png": {
+    "sha256": "ffb7e7180e6d5492be433a9ba17abb0cc455dbb9b985c4bc5bb32c96771a7e95",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_torch-equipped.png": {
+    "sha256": "f6f792f0b9c2c3be91ff4656b3c20659f16821992971a1416c440862a38ddc4b",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_torch-windup.png": {
+    "sha256": "3fa84d7c7389eb0d731c2ec5b0a3e7171b6beaa45e87c2d17147bc3663c2f892",
+    "retained": true
+  },
+  "day-1280-100-throw/wood_torch-canceled.png": {
+    "sha256": "fb683e4e94ef0b7c2ee544f0af940a8b3562512362add1fb6d61a87bf6fcc37e",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_torch-placed.png": {
+    "sha256": "55433d2066c4040ba6e105ed2a75435411039a9864abc260e0445d318efdbf69",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_torch-grabbed.png": {
+    "sha256": "41c2fb5b13e303a155522027b8717ba0ef8656cb722a53a948aca09f28107889",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_torch-rewound.png": {
+    "sha256": "06a35374c9ea04ee847a96eaadf9ec40c5dfe00c9e2553c7e7a47ccca211d023",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_torch-released.png": {
+    "sha256": "86dd552698573c6eb521a20bef5c8bbc47e2d4752a27f25e2d988a227dc2c20d",
+    "retained": false
+  },
+  "day-1280-100-throw/wood_torch-landed.png": {
+    "sha256": "5d919df44fecd8e7f6a79ba3bf67d6290aec3188e4f28bd7503218d5857122b1",
+    "retained": false
+  },
+  "day-1280-100-throw/wool-equipped.png": {
+    "sha256": "4c05d3f98e8db618c939405e901fc2ee1b325c237668141a385a5e041e816ce7",
+    "retained": false
+  },
+  "day-1280-100-throw/wool-windup.png": {
+    "sha256": "d231a9719e4e698c107cad4962428b2c1af03cfcede4fe789a40f5b55461b604",
+    "retained": true
+  },
+  "day-1280-100-throw/wool-canceled.png": {
+    "sha256": "9dedb1fed046426835a90ffcbc8cd0af1854db36c2ae5c4ae95657c58ee71670",
+    "retained": false
+  },
+  "day-1280-100-throw/wool-placed.png": {
+    "sha256": "06cabcf170def06e468384df4832a72174947e3cdb0909739ff52ed050ac8632",
+    "retained": false
+  },
+  "day-1280-100-throw/wool-grabbed.png": {
+    "sha256": "4976cc03d288388370ba188e821dedad3ff717cdc583d610ef9bc1ac662e398c",
+    "retained": false
+  },
+  "day-1280-100-throw/wool-rewound.png": {
+    "sha256": "8c7cff7f9eea6e793adf85bda3f26dfca6fbfe0fbaf9277ab602401468d511cd",
+    "retained": false
+  },
+  "day-1280-100-throw/wool-released.png": {
+    "sha256": "cb0ccb4cce365dd1c5c667ebd05afd87400c882a1ab624eac88cc241d143bf54",
+    "retained": false
+  },
+  "day-1280-100-throw/wool-landed.png": {
+    "sha256": "d4576bb0f6d8db2f26e5ad090360b564a2a129cd212e0c4c39069313b5089175",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/apple-equipped.png": {
+    "sha256": "abd87723f58d8cdfd51b44c2e36136f56d99a75380a8ffc30766d0e91fee3eb9",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/apple-windup.png": {
+    "sha256": "8cfa1bb2038ae8acf0f7b8aec5d0f7ee8b1300aad4f62d0b76091990683a0195",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/apple-canceled.png": {
+    "sha256": "ceba3fcd5ede84be30da36eeb8609564ce32c2407d02911a5888169035de463c",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/apple-placed.png": {
+    "sha256": "b556d056c1b403c8988eb8ff3acf9dc4bef0b0d69bad9cfbc2a4f1b3623010a1",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/apple-grabbed.png": {
+    "sha256": "4aa14b6745c70e31f76d01a3cd96fa139d86979be1d5981063c88767ddfa0d3d",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/apple-rewound.png": {
+    "sha256": "6d69ffe1a826575b5adc8ac0a257671ddd82acee393902face31b656db1d8c11",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/apple-released.png": {
+    "sha256": "4b48bbadf1aabe20c03a12ecb075a4bd5169efc4b7d0def9fa9be64897cdc13d",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/apple-landed.png": {
+    "sha256": "4cef39cd20108ce9552afd1fb933ed26007cc2142c996d306aeadce5751a1ee2",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/arrow-equipped.png": {
+    "sha256": "37023a85bf13b25562e248cfb3b34da4b6196034a01194073a77c4c95bcad556",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/arrow-windup.png": {
+    "sha256": "12766d2afebc2b4b3c068a62348d8efea44b484c98f4260c466184c5ac8f56ba",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/arrow-canceled.png": {
+    "sha256": "ee05811d2f4cf6c01d8d0eb89e0690ab27f4fe3cde7123a80887fe2a5367eee9",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/arrow-placed.png": {
+    "sha256": "8f24361294fec16f48bb49443989f110f68758d21b54b3363ed1970dabd38c7a",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/arrow-grabbed.png": {
+    "sha256": "84170d68b1b03739b53d80cebee365bcbf39a280b7f1189f560be49e7fb356c5",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/arrow-rewound.png": {
+    "sha256": "9728775fbe5de2932db4db7f18e60ed5e0eed8de7c273bdb23cb7395d36fb81c",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/arrow-released.png": {
+    "sha256": "0b7361f4bb0d09f7a3394c0e3e2c3b7210ba08dc5bbc758a4711b4b367552915",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/arrow-landed.png": {
+    "sha256": "6898cde4dc70a393b1d1ae9cfaf915b1ced5b44b288bc7d5baa844592dad7028",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/bread-equipped.png": {
+    "sha256": "133fce29f517c07a3ae14e4b5280b76c95587d7cd478da96df05f1637b3076ad",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/bread-windup.png": {
+    "sha256": "adf1476d82553ed8d1dfed57dc85d56afa849ebef9eb0eb621743d574ed66ce8",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/bread-canceled.png": {
+    "sha256": "eb240ef3068985d18428154eec6e82b0846a92687b85647757166ba20c081611",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/bread-placed.png": {
+    "sha256": "b90d4327a959ebb05de192ad5b01469b7eaa5dd2b7114efb5aeacc6ada5a469e",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/bread-grabbed.png": {
+    "sha256": "2749fc2451c6a5d018c06c424d5ec751467822d9b0ccfb16af771872d3cfbfda",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/bread-rewound.png": {
+    "sha256": "4a7214f8dab9ea2827461ad9fa1e19392610b57f0d991ac7b177cf8ec2a62a35",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/bread-released.png": {
+    "sha256": "a428eccecb072972b2c915cc627054204059d87d916baa8dc923a3e0fe01645e",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/bread-landed.png": {
+    "sha256": "0e8110c623bb40603872cf60bc8e41c70cbc0e1f0ddd6a7b2cf3cad140a6f0e1",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/bucket-equipped.png": {
+    "sha256": "e7a5f5cb2cd977df70c8a255b989689c1f1e686f637a1c00512bba0a938a5794",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/bucket-windup.png": {
+    "sha256": "6138352cf47ac86b665edc17819f0b44269f12bb4c1fe534356198ce9145b20d",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/bucket-canceled.png": {
+    "sha256": "127f5a0cc5130de393b2e72c324825f8b5624ce18e5cb3d7dc4aa2944fb62c56",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/bucket-placed.png": {
+    "sha256": "9add12719c9ec6f1fdfafeaf6fb473182c84dd2bf6b91809d390df66f86ca65c",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/bucket-grabbed.png": {
+    "sha256": "56d270271323b1c5f87348d05cc24b24acd50e755d5063049969e278a762fd5a",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/bucket-rewound.png": {
+    "sha256": "6e12fa2568cef5da45edf61257f0dd55471279dae9de4ba41696a5241880e121",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/bucket-released.png": {
+    "sha256": "1499b3fbcff3411a58b4b0ec29679b6bcd1eca9431b627972737399f7c17b7ac",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/bucket-landed.png": {
+    "sha256": "3ca0ded7362fbad2c42f8a6a7aadad00951b689c83edb99ebabb400cddcc7963",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/charcoal-equipped.png": {
+    "sha256": "0f823ac158fa96c73bb84ff4c404f41af44adf277b585d7e98cab113b2d64a6d",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/charcoal-windup.png": {
+    "sha256": "9748b571115d7cc04120b287284da1707c09c596e277f74dc2f2716d5ca053a2",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/charcoal-canceled.png": {
+    "sha256": "b5fe69d22bafd31f76da87ff644e8be2c7aa11eba3058ad10e421e27d938d3fe",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/charcoal-placed.png": {
+    "sha256": "14d2af5a47b12f62f3b5d6b6860e7f59fdd4c444ba22e6f02a7d67b8e74a6973",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/charcoal-grabbed.png": {
+    "sha256": "e6bb5d06739e2b499da731239c59a118c503a555325ac2538734ec35c209773f",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/charcoal-rewound.png": {
+    "sha256": "2d9c26adf26b03138e37abb74087236560694ce5ef77d1845c9a7211e639c758",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/charcoal-released.png": {
+    "sha256": "a006eff717407e293ffc7ce58da92a9585209dee41d7f74542f741e7d4c69d88",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/charcoal-landed.png": {
+    "sha256": "508d93ab39a941e5e6346dbf309d7b37e1e745beca2239690434ac1579743dee",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/coal-equipped.png": {
+    "sha256": "fa7e0556284211424601cc6bb0f0258b42308681f47b37c741a1d540d343ea52",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/coal-windup.png": {
+    "sha256": "26a4cafff4a0bca415d440a24fd809141586eeccf62fa1ad459e74d886624701",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/coal-canceled.png": {
+    "sha256": "77ce7529d7794f28af380bb2c26d4578928678f6af691f870d6b90d3a0ae6ae0",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/coal-placed.png": {
+    "sha256": "392a6b08ed8c892be66da59686748289eee36fe66622600d033e0cfbce4600ba",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/coal-grabbed.png": {
+    "sha256": "7c78f9a8d9e04bb99aecb1b44d92e8fbb07a2e4f128dd482dcd3f1ef9d1555e3",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/coal-rewound.png": {
+    "sha256": "c3365879b2be3272b9978d86be7f82a58576c1608028994b339b04252f4f5ef5",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/coal-released.png": {
+    "sha256": "b812b94763db0b6d64e415ea6cebdbf9189c5836697737cd105f0070fdf6ecad",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/coal-landed.png": {
+    "sha256": "934054118a7588ad990c8e8cfcda02a453d7fa4d020f24176a6f00fe15168cfa",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/cooked_meat-equipped.png": {
+    "sha256": "22204e315b5d26ab1c9f9b44b55cb8567fa7eb9a2969a7321361df2574760eff",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/cooked_meat-windup.png": {
+    "sha256": "f188eed72dd187af0209de441b4643ad1715da36f29e396c819c6eaab7100d71",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/cooked_meat-canceled.png": {
+    "sha256": "b4673fb7b030c476d5e25830c251853e6cec838a2dd652087aa9fc93af298b33",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/cooked_meat-placed.png": {
+    "sha256": "1f65bbeef05e74f0dc3ccc49b59d641a2591e2817844078510c6f43523ee0eef",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/cooked_meat-grabbed.png": {
+    "sha256": "1822a108454a05d0fbbdaa9685c853cd77fb88cb9b067c7b44d3dd6e7186fed6",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/cooked_meat-rewound.png": {
+    "sha256": "85acd55993cbba84f5aa03211f086ce6e9ac47f0c4bde71e8a3aa67adfbcf764",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/cooked_meat-released.png": {
+    "sha256": "ce8da5515d89e6794812f201f9fc5b25fab7f649492802e4ce7452947112edee",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/cooked_meat-landed.png": {
+    "sha256": "3c3dae6bed2aa9e8ad770386a88ac3ef4ec9180145d1a47630208577167961de",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_axe-equipped.png": {
+    "sha256": "0e0146ee8526adccc840f44753e4b269e28aa368abcdd486a68b24cf3b10f720",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_axe-windup.png": {
+    "sha256": "0b1dbfbd8e17e837b4311c267febb16705335c78ed3254b98198c3d1ca7e69a1",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_axe-canceled.png": {
+    "sha256": "fa8007873babd62203e732fcaf6ae3cd36d0d9fe762de010a3fcf953c1e67b1c",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_axe-placed.png": {
+    "sha256": "b148ee9da21123c8687abf9214fa66944a7d2b831ccdb2cdaf6d7a16c78a32cd",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_axe-grabbed.png": {
+    "sha256": "9eb8c4169aba0c34e2c76f836b38b6303db21b2607cbe4d660e0a4486e9e57ad",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_axe-rewound.png": {
+    "sha256": "9a1424c87997cab0319e36c6450309e7abe8680ab85a5d7561f3cd8a4068a6e5",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_axe-released.png": {
+    "sha256": "3ab1d99fa63de64633e62bbadb246751847b94534174a5b1dbe4289e5ef7af6d",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_axe-landed.png": {
+    "sha256": "8d543672867b1369c1bab59614fcb20339593d178c174c5346a0f7fa67e7c8e2",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_chest-equipped.png": {
+    "sha256": "bf9a61e583e2d4e233c09d519eacbb15fc60e72545c18f4f1c42cbd0bfec0c9b",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_chest-windup.png": {
+    "sha256": "0b30f216efae118e70fccc5602ab825d1dbc4ddc23cc50ec007004bcaeec3df6",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_chest-canceled.png": {
+    "sha256": "8e86b393494c8b374ed532ccaf85a4c9ce1b96ba5d663efee0a9673284070f59",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_chest-placed.png": {
+    "sha256": "2c6be72dd19521839b030862e997e9f95a5027d20a4339461d8ec5826e2dbdd1",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_chest-grabbed.png": {
+    "sha256": "504cc4a783d4875f23a0d9c9581461b870ac0581efc0324ea57acea92f463f1d",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_chest-rewound.png": {
+    "sha256": "c9fb684f34116795096222605ea89ab982218cb82d48d85ca0549497274349bb",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_chest-released.png": {
+    "sha256": "e419e408efd359139dd888b8cf38146f6ea343fd53e426bb04f8f76927383815",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_chest-landed.png": {
+    "sha256": "9028d945010c7218fae481aa323c6ff7f31e9cb24748f46b52df7a24d814aec8",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_feet-equipped.png": {
+    "sha256": "2ab8d6267edb8e6c9ef2b137ce0db40bfaed87df98aa3a31e6af4bf0f7e10ff0",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_feet-windup.png": {
+    "sha256": "bb3064dbdfdd52e25f2c8ff05295eee4f6d7356156f38af059e8d2248113b7a6",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_feet-canceled.png": {
+    "sha256": "968d6c4ac5b175fd33e753d29ba0a6cbbfa7052e1f6215103c38d3d990b55a59",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_feet-placed.png": {
+    "sha256": "8bd5077f18dd8a6fa7073e19ce6855b0b248698344e775678478379752add8d8",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_feet-grabbed.png": {
+    "sha256": "004fb97457d131c6d6c80d3e1406b0040bf077089750b08afb40d8a7ab94f181",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_feet-rewound.png": {
+    "sha256": "b2b78712d5b0e0b7b8e5d249b7a37aa5d6ef269f4070c3fec684e2cd88ee398c",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_feet-released.png": {
+    "sha256": "abcbefc032d120edfc81d73b7fbf24c5fd2ea79063c3b71db7206593ee2b6ffa",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_feet-landed.png": {
+    "sha256": "3497826dbb724c996be15141f25bd4d21bf65ca4bdef362c04a4cd8a141f5ecf",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_head-equipped.png": {
+    "sha256": "b1a6d27433ac0d5accf824bece67ee5a5cf5f0ee200b36962d02eb8de31c99d4",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_head-windup.png": {
+    "sha256": "20aa946235cb803ccdce5a9b6a5c55179aaa60ae8732c704b7671968f283f008",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_head-canceled.png": {
+    "sha256": "75a8a8780d8d096de816b11b38ffd21fec686f0e56da65f6c5a3223dd1177028",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_head-placed.png": {
+    "sha256": "bf0b062b96667e294c7a24ce87caa7dd5f9d0cc9f94f5298e75bfa5c8f5b2e9d",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_head-grabbed.png": {
+    "sha256": "d8b72c9c2aaf7a8ea93c4e8cd288d2faaa7e1c07235e20d1b7529a0864b6b5e4",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_head-rewound.png": {
+    "sha256": "c5c3ac5310cfd5370fcd0b9a7015660e624f3acae96f3f402fb594bae79d75ed",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_head-released.png": {
+    "sha256": "47a0ce2f2781dfdc7d11bd8c505ad3ffdd9cbe4733d9fafdf0e439d5a481032f",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_head-landed.png": {
+    "sha256": "659f16710a4dd7aa788c5705c66ea80a9cf7689f5dd264708c58e319c26e3f26",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_hoe-equipped.png": {
+    "sha256": "549dcb5652b9306d8deff211d1082ea9eade937cda14355ea3d99bb881c0129c",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_hoe-windup.png": {
+    "sha256": "b2c68f474d8a8b6543affdc1fa1d86c7e5754ede27e7feb021cecebfc5caa690",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_hoe-canceled.png": {
+    "sha256": "3d2278b05f70474e997e3464a4e1c47c9214bf022f0ce33188f18852cc367ed3",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_hoe-placed.png": {
+    "sha256": "4aa6ad87d48c59e45d78d36fbfdb2701a2eba6564e98eb479e740690bf569257",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_hoe-grabbed.png": {
+    "sha256": "71c953a8875a568f402fcca7966ffd30539061f368bc4032089ed70440738bb2",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_hoe-rewound.png": {
+    "sha256": "7576b3d881630dd6bf2213764aa5020953d9b55d2a6c908c055b0327fdf65a0c",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_hoe-released.png": {
+    "sha256": "8333728d9e24221721b63e06bcd4b91da39bcdaf9ecbeea5186aa13bfbe6d9f3",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_hoe-landed.png": {
+    "sha256": "b9f87db9efe6db06d9f1c7e8a527ea50fef96dda69a5572ba601e6ccba44d713",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_ingot-equipped.png": {
+    "sha256": "b68ed34e3675cfde293dbd2070f3e982d7464a4654af98f40a5b075be541b142",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_ingot-windup.png": {
+    "sha256": "f5bd7c9347aee3c230118c813e4ee7c650514b9f287810de74aeb714315c26dc",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_ingot-canceled.png": {
+    "sha256": "c1f3c0c44204b856000ad0a028a8c2731b8f366e90ed0b69834f3129ae720104",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_ingot-placed.png": {
+    "sha256": "1c9095a4aa7a73b41e2aac097697e93296b7ae66c3ab3d403c453b4efd839450",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_ingot-grabbed.png": {
+    "sha256": "ed34dc8f4262f4190201bc4b21f4d01ae811cca5602d29a06f5c0a5fe39bc0a2",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_ingot-rewound.png": {
+    "sha256": "70268efa1ea7b2948618e756b64925ad396dc3bb0241a8a6fd81c678b09523b9",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_ingot-released.png": {
+    "sha256": "fd26e049c3a39a37a64b7c2ec1929b9895af19227a68dc9a2b943cecdd0bff7d",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_ingot-landed.png": {
+    "sha256": "c93d5dac35c46e3cdc3240eb0c8a99f37eeadde9b1437fc5a9321627b6e79f5b",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_legs-equipped.png": {
+    "sha256": "2d1bb6dfa921aeef8015b7565d0d290548ebf17d431344b257ec3de4c78ac1cd",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_legs-windup.png": {
+    "sha256": "c75c680df11d5842b0505de11536280ccc41f1159e9fc4fb9b11706417c86b71",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_legs-canceled.png": {
+    "sha256": "e5872fabfec0c51a19a1fbc175e4a6a976c5dba78885fcf9d127715418f99525",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_legs-placed.png": {
+    "sha256": "f54baf33fb15f2554bcdccd968a8b12763ca439a97afea0de21a61086343e432",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_legs-grabbed.png": {
+    "sha256": "1d91b8f62e2122a68269ff59bda3b6cc42242845d32f09ce8ecfd7387187549a",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_legs-rewound.png": {
+    "sha256": "2874865c19dd825370a79fc6c43e0ee36c2f9c7fe08f38867668707e27754947",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_legs-released.png": {
+    "sha256": "e8a63b90333732632d23e4ca835d4a5f88e783d46645a7e0a652dd20318fa7b2",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_legs-landed.png": {
+    "sha256": "ea5d1d69830ce92c9fa8c846a034ca1c8211bf2a0d26d6f57704a0c58b3d553c",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_pickaxe-equipped.png": {
+    "sha256": "9cc7e62e1713f4cf1d9bb0f45b0a686482230055078005aedbc62fc81896013d",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_pickaxe-windup.png": {
+    "sha256": "7f42c7731d0ea7444980a2364345606c0969169dc3dc4a3bb074a6f5f05d97e9",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_pickaxe-canceled.png": {
+    "sha256": "db9290e57bfc6bf4f325958ee48904d5955efaa1c15513bf76806f6e5243140d",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_pickaxe-placed.png": {
+    "sha256": "0b28b4921e2c8a20a99e501b1b187e0a45a3900da9e17967b3fd160a3cb964c5",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_pickaxe-grabbed.png": {
+    "sha256": "7b57cdae4a69f293d378688899b8dc90af72ca45829c4a98df168e75a54aee33",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_pickaxe-rewound.png": {
+    "sha256": "25abe3015974e2816e10a1d770b2ad87aa2a569255acc434f29ccdfbbff19c6b",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_pickaxe-released.png": {
+    "sha256": "0d00d0b8b31d433e71c620c226479ad7cd838a8609f05eef5295f7c77e3e9c13",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_pickaxe-landed.png": {
+    "sha256": "09f3e0bde4fb47f516d84d1b9b8d3e3ed092f30fb026e0ebbf4cc4174c36a5f5",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_shovel-equipped.png": {
+    "sha256": "d786c3ce8e870982315f749d9be76be08ee98d0d35aa3a743d00af8c122f604f",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_shovel-windup.png": {
+    "sha256": "270d95a4d05c4e137e95fa2bea9f62e8e71c208b38499db34393293ff6e5db58",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_shovel-canceled.png": {
+    "sha256": "c6ba7142c2f18ee6d2958e38857ef2675ecf5c83ae919369283ea0acb6261863",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_shovel-placed.png": {
+    "sha256": "14809afaf8f00d605d7aaa584d08768db7463349e5a1431b0debac4ea6b25163",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_shovel-grabbed.png": {
+    "sha256": "3f757eb89f1b2ea3b78646ce1ffdfd8f9d9082193241755a4b95e1ef07c5d337",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_shovel-rewound.png": {
+    "sha256": "cdd15519997b39e1e1c089e86bbef23c72873a2e1e49331386ae2b4f4fae24c5",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_shovel-released.png": {
+    "sha256": "c8b46687b0f4a1f6d94be2072f130ada2add84773600b2c3dc1b08718c82bcdf",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_shovel-landed.png": {
+    "sha256": "62456440b7112aea518fd96decc06bdb758bd1f498245932d25abcbaa4ffca56",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_sword-equipped.png": {
+    "sha256": "59029f52658f6d49b46b2659ec1a725cd62e02a23221911cb1b5b202805da616",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_sword-windup.png": {
+    "sha256": "7c22830163196da1347a45d63efb5a0f5f877b495bcc3d98cda6907aaa99c7fb",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_sword-canceled.png": {
+    "sha256": "654b67a9753b93e29dbb116039643c5bfeeed1b4cf4ccabeac31cdd63e10db8c",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_sword-placed.png": {
+    "sha256": "ef0301396ad31fba24ece8c042df659246ce87640d30a0f58f0700ba49dd9a13",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_sword-grabbed.png": {
+    "sha256": "a0ea8b88268b07819288027dd6aae874386123e969c74642c7771914ec7d16f5",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_sword-rewound.png": {
+    "sha256": "fd5b988d88d8605e73316e8da6f350cf8d9c449e56b473578132af60579b35b1",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_sword-released.png": {
+    "sha256": "0e0dab928a2981d81c7d650543c66adb3a788b2055d432dd6eaf8cf2ebc6f995",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/copper_sword-landed.png": {
+    "sha256": "63cf9cae4ee29f80589895557611229c476804217eb15e74b5c2bf14c08e26b6",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/cord-equipped.png": {
+    "sha256": "a4c3ca75e7be7af4ef34cf6053ef1c68afff5cb90fa31f5a571fa407d3adf086",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/cord-windup.png": {
+    "sha256": "4bf0742aade2de13f0567cbca30cb22e2622dc374bf045795c74bfc3785ec5b5",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/cord-canceled.png": {
+    "sha256": "0e5f1ebc5c298ea00a9aa0940615ba6ba3047a4250c41918a6fd205a4ded06f7",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/cord-placed.png": {
+    "sha256": "c8a465ba4b6274e75ee24ecfe782f14ecaae454cab80cf93abd8030af6d8d812",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/cord-grabbed.png": {
+    "sha256": "9019f7a7fcb62136e73256b822849a21801f7bce1f1831ccac254954040c6b9a",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/cord-rewound.png": {
+    "sha256": "0d199622b27bbbe782ea4e5ca52b2755b3c103309ab7deeec7c74944b8b7a33b",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/cord-released.png": {
+    "sha256": "5d1db532d42102422524d02e08873fbf10147921c011eff2a474c80c0af23002",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/cord-landed.png": {
+    "sha256": "9ceafab4a9e34fed2998de63f1f4a8198c92aa568eaa311c82708411d0d11720",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/flint_and_steel-equipped.png": {
+    "sha256": "4781180f5468cf2ab61fcf2f49440621c149b397cbbfcb3d1748c37c4877af29",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/flint_and_steel-windup.png": {
+    "sha256": "cd01b98c4f60c54049f2665a235e8cce8d6f811008700ae8636d7384a2b90b55",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/flint_and_steel-canceled.png": {
+    "sha256": "31103f43557eea71e4e834b9dc4397c8a349437967a7e4991e037d8caeed981e",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/flint_and_steel-placed.png": {
+    "sha256": "d8a053ca97c35fec9ab4fee2ba029a5ebc63e9f55d901736f45acd6abe4a1c36",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/flint_and_steel-grabbed.png": {
+    "sha256": "82eb9bd9675b6992e728f5904b7305a33ad3e7d8179297567502236e19abc7cb",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/flint_and_steel-rewound.png": {
+    "sha256": "6b6f11cde3a791edaea9aa1a54eb5662d285077aed85ab2a6d099635ce9f29e8",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/flint_and_steel-released.png": {
+    "sha256": "ff600a70657c2fd4cdf2a0ff37745c347a24643c4c442950e148c03b53789440",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/flint_and_steel-landed.png": {
+    "sha256": "21f2db4a14303665b94ff0099d6e96f1b81cc0508f5b0b9ee13dc9ef1d50c8e9",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_axe-equipped.png": {
+    "sha256": "49c0c155cc9ab52b158e0f1c9fa4dede79415ec8af5bfbe66596833eefb8ef99",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_axe-windup.png": {
+    "sha256": "1d00cf73413f9c6e1be0c28038b7f1b43c5c1d2b810620cf0eb28edec10c6631",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_axe-canceled.png": {
+    "sha256": "3a9cd2b0bfb4c03325b5a5e3f33110d09acee6a5aa3cd30231c66845d995f826",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_axe-placed.png": {
+    "sha256": "fe733c7b6409d6ca3374be2f0d922b1d22171084bccfabce738a8c53f48b208e",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_axe-grabbed.png": {
+    "sha256": "46869b852745e7ac61a497d4937bd65abc2400478b61a636deacdb5c0f1db504",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_axe-rewound.png": {
+    "sha256": "8ebe06fbec049bf7b463ee2fdb9b5fc1edc067f8145e6aa7e3f2d12be9064611",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_axe-released.png": {
+    "sha256": "768f899eb8695ad88ab91ebda40a7812197f4d308a3a64013fc13d988174d7c9",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_axe-landed.png": {
+    "sha256": "95048465e4d9b22183f231a689968985962be7db9778a7fbd3379c76dc97fd2d",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_chest-equipped.png": {
+    "sha256": "2ae2782227adb7719c67371417ad0e1b1fd2c85c03ee3b321c7ef7ff74fbdd65",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_chest-windup.png": {
+    "sha256": "c75bd0f374d3a2a7f5b976308d291ed4841ed6f5c17b3902f909a2aa2601b4e5",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_chest-canceled.png": {
+    "sha256": "7d12c083c26c7824aff84ae2aa1ec4808172b3945f7dde512edcefc9f1c8bfb6",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_chest-placed.png": {
+    "sha256": "0eb7b8e5b1c525ebe95aa1067ab35dae53dbb535fc0ddd8751c83e67f78efe12",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_chest-grabbed.png": {
+    "sha256": "c9107a4467e45252c62fde83a31caecddb080f766519d34f2a5cca083999ab92",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_chest-rewound.png": {
+    "sha256": "a5089eeaeeb549cdb41ea758e3f053cda6a4d302b89743dedc694778d03441be",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_chest-released.png": {
+    "sha256": "3d65c9783b1f700fa73f6d522196d2e67b8dda37d851f7c36b75a50cbe6e818c",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_chest-landed.png": {
+    "sha256": "40f2a602af626f23f93239fe3ebef0e290d351b2b97ed3fcdf5d14cce55ae23f",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_feet-equipped.png": {
+    "sha256": "9ee20521a8f7ce8c38365a45c7c19abaabea6e301835cdddcbe686da310b9f33",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_feet-windup.png": {
+    "sha256": "6c2902e3bf54789d592b678f8f8961fe4b5e51f9c7e180c3a1be81dfd57478ea",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_feet-canceled.png": {
+    "sha256": "48f5ec010fbe25c206aaa3032d6fc9f14bdcdeaaa23bc145340ad80572a1f30a",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_feet-placed.png": {
+    "sha256": "50a9489d03c8d26be1a81a8a825282320ba4d34f99f45fdece9cfa94bfd4f1a8",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_feet-grabbed.png": {
+    "sha256": "c8064e737888ca308b076d7e6f2c4b5fa9620f896bc20d885ec70557111da595",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_feet-rewound.png": {
+    "sha256": "4ec25c2b7820363d872faf78de9012064f9e64ab0b0e7f4ef439dc49f834fa56",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_feet-released.png": {
+    "sha256": "942db99d120ef66b1cab611fe68a130fdb50f4695f5817640809c9b18d152ff1",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_feet-landed.png": {
+    "sha256": "f7499d132ac2f3654af8e4965d4c84c1cea7e0bb7b820d0ec2a8bad6e92fb364",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_head-equipped.png": {
+    "sha256": "a382ae6688fc31e856525d2ad29b58589bbf074e4a469e61ddffda479d91cf8f",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_head-windup.png": {
+    "sha256": "41f83b07e1091c868dbdc5fa20aac0b3ac9d0b3d47cbcdf3186ce7656726c6f8",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_head-canceled.png": {
+    "sha256": "3ad6b9079de75054db2a8d2d511af4379db5a36d9cc48cec07ddc60ae414e5dd",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_head-placed.png": {
+    "sha256": "74b4543abb3240561d8907234c42a111c93b73920fbe822b6732830887a12291",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_head-grabbed.png": {
+    "sha256": "8a55effa3fe655e965a20172d5a26efca78b2d2461d514c22dbb777f1a3ef434",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_head-rewound.png": {
+    "sha256": "4276b924e8d7ff672dc9d5a9649c3a3be6fe0e597fee1b515137fe710fc480db",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_head-released.png": {
+    "sha256": "80a5846d60ec1c76cebf9c897a96f26f9f48489e2982fdef248ee26b4ae3ecd8",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_head-landed.png": {
+    "sha256": "79ee25424515cf3fd4d21adcdfcc4b4f744f6fe68319b041e03a035967dbc22f",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_hoe-equipped.png": {
+    "sha256": "fb65d02afe1e316eb332c8022c2f12d4fd526168e36fe2e64f09745b6772cfb1",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_hoe-windup.png": {
+    "sha256": "9b0874d0c001f86abd9f8990408efb9e15332c393b7e0eb25a5df905820e6ae7",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_hoe-canceled.png": {
+    "sha256": "867d62dfe43e304835fa0168b36854a772a76d48431769a53c08e2796851b7ca",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_hoe-placed.png": {
+    "sha256": "c42f7504b197373a4e6b85e0efcc019ba7e6b7b9005875da49314d520cc63b47",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_hoe-grabbed.png": {
+    "sha256": "b4a728005407236f2bceb35985a4481714d0abaa83a7dab11a144260a2f0db01",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_hoe-rewound.png": {
+    "sha256": "cb1c80002aeba88f8b71107e7d1e633ff6d69d9a2665734da9229fc1aa06f4e3",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_hoe-released.png": {
+    "sha256": "d7a63b62ceaedba672a4af505cf4683be6f9efd3f3c8e687f727734830a269e3",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_hoe-landed.png": {
+    "sha256": "7a2a0a79b28e56216feb28ba656bfd482e9025fce632872288a97ef3753238fd",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_ingot-equipped.png": {
+    "sha256": "c4ad327ab652ba72a75852f440185f66d98f6b558c5be0eab1f9cff7e35bb51e",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_ingot-windup.png": {
+    "sha256": "c629066a57caa4b64bae464a5724911f8234d93ab83b0c793835dea0d0dcf2fc",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_ingot-canceled.png": {
+    "sha256": "61d2fe85e4b3604cda03f8e741dabc3903a3f0f42fed35ccd04da7cffce3f483",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_ingot-placed.png": {
+    "sha256": "a6e91203de55f9fa7ae56320be3be5f99b0d639ccb4ad7ab78170cb5e8e64e16",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_ingot-grabbed.png": {
+    "sha256": "57cd88d082d1a7e3ed2efb8dbf2167eb271e0c6fedaa31b7558be967a0850262",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_ingot-rewound.png": {
+    "sha256": "4dd7a6cd85af3ea34bc55e27030c43bfe6b98564e2153797856058051bff3741",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_ingot-released.png": {
+    "sha256": "5257046586b3dc2c435ee9fb148c3c598fb5da719cf36d9638b9929233607bcc",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_ingot-landed.png": {
+    "sha256": "df2bc8d457a5549225b9620fed13f561b2a8ae0d83c1ecb5335c8f4d0139f591",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_legs-equipped.png": {
+    "sha256": "349565e7152656a5c3a01bc5f0868360580adf14d40870bab15ce8704871e3d6",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_legs-windup.png": {
+    "sha256": "86e8881659b34f2c2a4d2755faa910fabfe0533a63043fe5518a5a365cc48bec",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_legs-canceled.png": {
+    "sha256": "107731d5abc8bc7189aaf31c1a5b3c72de4d12cb9cc9497648bb72445858ae7f",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_legs-placed.png": {
+    "sha256": "8395cb690128c571be80b7d8762d50bf771d25e4d5b2ddb2ef41dbd8f17c9d98",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_legs-grabbed.png": {
+    "sha256": "115e852f7e3fe23861c8bd3f8da7e05f561118d85ef30483d0b2dd19b75dfc99",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_legs-rewound.png": {
+    "sha256": "0dd34ae987e9c5064c8cabda678f68227dceccaa916691cf6644347b29ef1682",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_legs-released.png": {
+    "sha256": "f1b8215a916d66e43c54ddd3b4865572e3028f2af94ab020108348ce3ed3fa6a",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_legs-landed.png": {
+    "sha256": "9c8c1c7da19658ec4637b6ea84d9b21d7d511ce85628011df054132e23970ecd",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_pickaxe-equipped.png": {
+    "sha256": "2b490145dbe6e36d4308019c65307160340f2d64d7ff5c3125e2970186b1a15b",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_pickaxe-windup.png": {
+    "sha256": "3ad667146b9e0c0a374e3f89a83ce8fc187c3c93e31886016c330027a61fa07a",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_pickaxe-canceled.png": {
+    "sha256": "58a54c40bd4eee5755ce77acff776ff21615308807ebfb2c6681b5b7145756d0",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_pickaxe-placed.png": {
+    "sha256": "0a7294f4e3bd99b15484ad3c20b43395805ae35f172e6ca78047d0111089a671",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_pickaxe-grabbed.png": {
+    "sha256": "0c6525baf18636850d4a697d04a098c844615ffea4360335343d45ebd8390d86",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_pickaxe-rewound.png": {
+    "sha256": "9ab5cf29980a85b4d5894f1df1697fdb9d3f5663310327f9b5a969e477ea4b2e",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_pickaxe-released.png": {
+    "sha256": "2b42494c27a37413feafe012790bab81c4c8a4706f8635c592ebdd1a335d05b4",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_pickaxe-landed.png": {
+    "sha256": "ad6dae7ea9a47f7b6b19b3213fd7ab70c41e706557055fe4c1acda0c233ea468",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_shovel-equipped.png": {
+    "sha256": "1cf291225119aaf92aef07a8a86addc85fa020e297c777ce0cd4b7da08900e6a",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_shovel-windup.png": {
+    "sha256": "d22257db02e46eaa24ed20ce3ffdaddabd8c78f9f7607689cfa48fe9db81921f",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_shovel-canceled.png": {
+    "sha256": "4ccfa1d6dd43f713385a1145bb414da85508714eba7939304c3d7594bf14cf56",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_shovel-placed.png": {
+    "sha256": "0fb10bdd04c4d795b338cdb16312244cf13757600a4b30b321a0cb338a9ebfcc",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_shovel-grabbed.png": {
+    "sha256": "789552a6e49a309d7b671a920080cdeeec205f16674703d7f5fce337f5331d1e",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_shovel-rewound.png": {
+    "sha256": "9a80e983c7df8237e100e91c56dfb876d22dd24908ef6fd326887d7cfb65b2d4",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_shovel-released.png": {
+    "sha256": "61795b54abf2bba106b87e710ea47e0231ff895f970eb82c4c449e6dac74c77b",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_shovel-landed.png": {
+    "sha256": "07684061c63dff528670c2fb22004bbc1ac55e045d14f57861a2ed3011bad167",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_sword-equipped.png": {
+    "sha256": "44501cf12f12b0807bc6c110e8cdad9fbcc6c0fef83c31851f2aed672e806aa3",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_sword-windup.png": {
+    "sha256": "5de46f6783ab1188dc49a4370958ff92ccb6c46b474b906a9428b01dce1b2078",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_sword-canceled.png": {
+    "sha256": "bfccf875e7f132b524a1fc3fc860d640d8c2df0c74a6b52307eaf4f5c4c63bf4",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_sword-placed.png": {
+    "sha256": "140cf3056a053f214266caa2e05fc46bc8c6d610c9fbbdfde6ef823a6bd1f2b8",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_sword-grabbed.png": {
+    "sha256": "23ce0cd0dfb173cf9e0114bb11a4d7b9a8063f4ab33b75598764e284860b13b8",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_sword-rewound.png": {
+    "sha256": "96fa008c3b5bd0d611cf2d7fb1d5dc778f879ffeb190cd9d67cace4747bb4436",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_sword-released.png": {
+    "sha256": "85a8f7c6ff4c0b1c12956f9a19179feefd62f32d7609c0108a98aa8cdead5dc8",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/gold_sword-landed.png": {
+    "sha256": "e6b5275b7b856232ab13bc1efc49dfbdf447b14c8848b6093fd3b68469393a4a",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/grain-equipped.png": {
+    "sha256": "c50c851953264cf528f8c9eb9be3158d27eb6e2b8407ac897b05397266acb4e7",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/grain-windup.png": {
+    "sha256": "7f435eb8e882f3ec6dcc45808e8c2a6f3d22a38098bb63248c9e877e99268ab8",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/grain-canceled.png": {
+    "sha256": "cf5476258b1e32b283ff02ada7abec2d3349d14fdb5d47f89b4d0f946a7f8d8d",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/grain-placed.png": {
+    "sha256": "eaed7b823226fe79f59d2d3e6b32a8ce0093fd30bf549f180cf5e081831c4b64",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/grain-grabbed.png": {
+    "sha256": "a622f7d472ce452809ea0529be3c96eb84dfb08c70ff08fd737690f611faafde",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/grain-rewound.png": {
+    "sha256": "f84f5ae4f8fa6a8ffb149bda87c1e6873c300b84c5458484f6437c14a844d251",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/grain-released.png": {
+    "sha256": "e24ad42392773863993b041f01242a386da6624768b23e5f1560dc884c088678",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/grain-landed.png": {
+    "sha256": "1d334f741e2479077862c8a11fef149670604a8024eff7971e3d4079c3296604",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_axe-equipped.png": {
+    "sha256": "acfc23fbc1bf5a5dda002c4222ca9781bf19634bd2b5cb677f04585c31169f42",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_axe-windup.png": {
+    "sha256": "3ef75f074746117f286ef03fa3673bd3f2fcc371a5094e5389f303cef2b54138",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_axe-canceled.png": {
+    "sha256": "e5e70db2539db54fbf1415aa69b979ad5cf6bc65bb732582c46da1d4bc7e9fdb",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_axe-placed.png": {
+    "sha256": "7c03ad2b9270c76877787fe5d3ec58aeab5d24dff3a90c6cf73307d7020789cf",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_axe-grabbed.png": {
+    "sha256": "de0ad74d4b6f8cdca63a7ea4847221e471da44b0b99329ae1cd6e3e7dfde7940",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_axe-rewound.png": {
+    "sha256": "0b3303fe00ccb9d3c26ae33f74579638947c6eae1d517d033dbd938d4d2a1609",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_axe-released.png": {
+    "sha256": "505431e95fa575531df9cf7824c33f91e78f3696a19f1adbab271637bbbbed7a",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_axe-landed.png": {
+    "sha256": "fbaaa430c830c43500a0e4738831a8665cd8a9831fee690d4e5c082655f83a2e",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_chest-equipped.png": {
+    "sha256": "11f6f339f6ccbb34c019780415135b9d0447b5bf21584ceb55d5217a68db60c1",
+    "retained": true
+  },
+  "day-1280-100-throw-survival/iron_chest-windup.png": {
+    "sha256": "e41aac789a545f19c30f054bcca1892be75eae82ac77c2f5301b41073759262d",
+    "retained": true
+  },
+  "day-1280-100-throw-survival/iron_chest-canceled.png": {
+    "sha256": "e715d64e7618781e67e700c8c4ee36ffd6612664c752bb630a2c3ad289efb977",
+    "retained": true
+  },
+  "day-1280-100-throw-survival/iron_chest-placed.png": {
+    "sha256": "aa64d8dd21314607c35a602d4496df115127404967b255fabbba811f73428642",
+    "retained": true
+  },
+  "day-1280-100-throw-survival/iron_chest-grabbed.png": {
+    "sha256": "92bfb524412c166473bfc92edafb23af7a51b80d28a9748ba56e4d43374cf6e2",
+    "retained": true
+  },
+  "day-1280-100-throw-survival/iron_chest-rewound.png": {
+    "sha256": "6ef852b77904e8799a9f6652ef7ded4b1c6e22389ac5a35e2ab4f0e213adb5d5",
+    "retained": true
+  },
+  "day-1280-100-throw-survival/iron_chest-released.png": {
+    "sha256": "006f2f5ada19501e5b259c8df7e18d440862b795dd05519fdec0b5219ff7f13b",
+    "retained": true
+  },
+  "day-1280-100-throw-survival/iron_chest-landed.png": {
+    "sha256": "9e2067e4555c1918b5af879c1419afc6e18b5567b44f475fbdad54a808196b65",
+    "retained": true
+  },
+  "day-1280-100-throw-survival/iron_feet-equipped.png": {
+    "sha256": "f46d5cbedc574bfe9350e1cd8c55f1061dd6b2b0596d062dd54a7fd9c3c4ac17",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_feet-windup.png": {
+    "sha256": "25da29db27abcd9f33caae4edd1a653a10935d79bd5d0c2f61ed38df9223fd75",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_feet-canceled.png": {
+    "sha256": "a7307a4194fba9edfea3ff96d5ebc487b6d2294c0fa39db74e5c818e5bddac10",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_feet-placed.png": {
+    "sha256": "bbb40b591c34ca6b17186d40dc364ecf23186a7930c4ceeb51662260333b804d",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_feet-grabbed.png": {
+    "sha256": "e433d7c7def9bf1cc7b01b8c55f3f52ea554598ae9510837bfdc32eb596cf5a8",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_feet-rewound.png": {
+    "sha256": "3a6ea3528f13677cafaa017dd0d864f0aabcbcf93f1961116f5ceea20704a66d",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_feet-released.png": {
+    "sha256": "577efea60ea204f4a94eb39d2339acad134cea918bc427d910e2b3659e01be00",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_feet-landed.png": {
+    "sha256": "617ed138eb856db86b942b4fd44af7fc8210b296b7398c08bfeb1429fcef7376",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_head-equipped.png": {
+    "sha256": "59293ad62fb508d45d2bb2311536138c83ca9cd526d4f820e7063e609badc7a7",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_head-windup.png": {
+    "sha256": "7cc24f5271c3460b80394f92c027f5167fcb864c389c7a79842cbec2c58a882e",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_head-canceled.png": {
+    "sha256": "2bd6c8b4decba045f829ca6066a4fdd04b573b3fd614d8fc77986e0c092eb826",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_head-placed.png": {
+    "sha256": "c28e157d4153f19abde17e9cf359aafb035887c599eaeaca9eb1d9bee529229c",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_head-grabbed.png": {
+    "sha256": "604a14bf1626ac1c76ce98c2fef5185756d9dedf8feab2e1360c0227916ee0a2",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_head-rewound.png": {
+    "sha256": "eb40d8e280b8549393228b5e1a2c44e833a2cc8f255fee4771b9e2dac525ea0f",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_head-released.png": {
+    "sha256": "248dd62343a0299aed9bcf64b6129495e18614457996e925ebc439d5c77a6c5e",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_head-landed.png": {
+    "sha256": "a19bf18e8fa98dcdf4802fb3b1b50c72a20a2b73bece33acc59cbab8585b581b",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_hoe-equipped.png": {
+    "sha256": "a7801c338c51e6e444349a31dc2586c013175eb7f315c440f03caa468d5ea8ba",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_hoe-windup.png": {
+    "sha256": "57faa484cfeef37639cd5dc88371b2d450d66af9bdebca31d46b24a64ebf92b7",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_hoe-canceled.png": {
+    "sha256": "c7b83dd6e10eb109e5d5a01db1cef713ef6d42e6e723d7ec14fc1af6b6582d1a",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_hoe-placed.png": {
+    "sha256": "dd93532052ed5880f83676f16e875d488cbdc536e5465530f3e539ff9bde2e69",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_hoe-grabbed.png": {
+    "sha256": "9709ea4ccaad089cd3436b266adcef4ca38a0a4148ed32f9c134c04f03d722f6",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_hoe-rewound.png": {
+    "sha256": "1e16844da822f99872e15a21106c6d716750ef868824ecb2c5cb8ed1c1d08dfc",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_hoe-released.png": {
+    "sha256": "b7055591c2fc93db9f342f91cd45c9646abce8f29d3cf52c11eb2fb3a9af6674",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_hoe-landed.png": {
+    "sha256": "1ecc9526d871a3b407e923212bd0ad5852b31007afbf4c00be62c9aadc0fd6f4",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_ingot-equipped.png": {
+    "sha256": "e442688965158697b2bef4f978e7eb638a01c9400e256aa4e14551da98894eba",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_ingot-windup.png": {
+    "sha256": "dd3f35158613bd00b45ad8804010e5506e963d3230fe25cd09147214f15c65bf",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_ingot-canceled.png": {
+    "sha256": "3f5903883ab76c634b1a8797a11b49d14f90becce0b089b3514564200b6dabd1",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_ingot-placed.png": {
+    "sha256": "17821a200410d45b7700231a7dd0d71640eafa558502052a4ea957d512eb53ca",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_ingot-grabbed.png": {
+    "sha256": "32badff67bafa3db45b18ade31d086fe1222f5f50a918c52cef70f0178f8e3fc",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_ingot-rewound.png": {
+    "sha256": "0a559910c9cf330ccfc462013bd3f017f5748082f09e57e98b7b57162b6242a2",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_ingot-released.png": {
+    "sha256": "a1ba9eb24f12dbe1324564724e7caa981bfd1ddf8da85673219b68db497343ae",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_ingot-landed.png": {
+    "sha256": "6c4e4ba1d238a116646ac5ad06b34a11739eb34e5e30e4e05fe02f27d8a95db0",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_legs-equipped.png": {
+    "sha256": "7d570356bbfc2cfd8c1b7ffa08a18ae464bc7fd43761de0850d5b479eac1cf90",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_legs-windup.png": {
+    "sha256": "066d8070b936139a2d18999ee6d6a1cfb62f476f70c65136ac2e68be99471060",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_legs-canceled.png": {
+    "sha256": "30a80d321e06cc99f0bc723fe3ed8ad12c8558612eb0bf4be1c2a3ac87812923",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_legs-placed.png": {
+    "sha256": "b3bb5f0a94fa68c7139898cd302b52cb4d81edf8731f2871bff2286defd3bfd0",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_legs-grabbed.png": {
+    "sha256": "8be686b066f6dc2a442f6044ab9c12470710bd4fe783a9aa4140e523b301df97",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_legs-rewound.png": {
+    "sha256": "233bf94bd96c9824c5b0651afadce0ad712d891da95d9b0e2c0de34dbd99bc98",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_legs-released.png": {
+    "sha256": "067c7c8245ce88b827d2a28eb2abac38ddff2f86717e7ecc35ca5e5485cae90f",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_legs-landed.png": {
+    "sha256": "837d47722b3cd46e71c1cf120f885c3a2aa7a245b5cb8c56e0bb6768028c5ddf",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_pickaxe-equipped.png": {
+    "sha256": "4e7a51317799eacbfe73e2de43ce2e679429439a90c70866e32ffd83e4f2ca33",
+    "retained": true
+  },
+  "day-1280-100-throw-survival/iron_pickaxe-windup.png": {
+    "sha256": "53fc0a05a0f396d622ff7c8edcd1f347c5c9216a79fbff0d64d59c36841f4fe3",
+    "retained": true
+  },
+  "day-1280-100-throw-survival/iron_pickaxe-canceled.png": {
+    "sha256": "dcb5de110a296bf69c13e36b7f065ba2ed219e04eb8c8d17c4049a5193657d1c",
+    "retained": true
+  },
+  "day-1280-100-throw-survival/iron_pickaxe-placed.png": {
+    "sha256": "1d756feda83f4593a17a690dea74a3aa7db421d4583582f8490e4b0b70e73cd2",
+    "retained": true
+  },
+  "day-1280-100-throw-survival/iron_pickaxe-grabbed.png": {
+    "sha256": "44d762ca7d7f993cde405a5b2dfc123293093566a2fdf0d72e756e3b7fd30331",
+    "retained": true
+  },
+  "day-1280-100-throw-survival/iron_pickaxe-rewound.png": {
+    "sha256": "af52718e2b0fb506f6852fa648f5ef14b44b082906f7e6e882f085cc4e84823e",
+    "retained": true
+  },
+  "day-1280-100-throw-survival/iron_pickaxe-released.png": {
+    "sha256": "957547d9a26f6c349440400d22e88e361b81ca250586947e022c8b439847e65a",
+    "retained": true
+  },
+  "day-1280-100-throw-survival/iron_pickaxe-landed.png": {
+    "sha256": "64d1e8069720c3c1662d2da5e13e542972cf2b1faf56a0b903813a11e8b96b93",
+    "retained": true
+  },
+  "day-1280-100-throw-survival/iron_shield-equipped.png": {
+    "sha256": "e128c135be8f9c18dab1674828d06c5c40680c6e983707184277dada808eb5b8",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_shield-windup.png": {
+    "sha256": "e0f3e1d6001ffe0eedede7bc16f7d8f7f60e756c274ca3bbe18761a06e41ebb0",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_shield-canceled.png": {
+    "sha256": "ce7ba38b4405a014ac3c5b0682335f7ceb9d9fff3e924ee0217a53ee16c72a88",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_shield-placed.png": {
+    "sha256": "638dbcf256475626b0b67c0408ac536810fdd5bd6f54e88a773935f9f78544da",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_shield-grabbed.png": {
+    "sha256": "9018873aa53c03b245365d71f650e704c31a1a1869f1c5402e17d1e4db1e6ab9",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_shield-rewound.png": {
+    "sha256": "ae63ea2c905a52e4c92da236539a493c568ed4842d5eec5c62de71a3e832974d",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_shield-released.png": {
+    "sha256": "d1b4c2e43178d40bc49fa5cd3e23264a63391b943c556c29315be5f6640f32f2",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_shield-landed.png": {
+    "sha256": "fdb231093e54229db71307daa0139beb8e2f0f4a526486f5cb15572997c8dd24",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_shovel-equipped.png": {
+    "sha256": "c8269db951e63184c50b55fbc931608ceb54cb32d77f5849a35fa89504b9a8b6",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_shovel-windup.png": {
+    "sha256": "f8de88d67bcf46d919980345f91712cac85024beb6891386d716ab9e8ba4b67d",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_shovel-canceled.png": {
+    "sha256": "fe0905396a46d26020f52be4272faf638ed2fd0b9cfca996b15bc3f38ca3804a",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_shovel-placed.png": {
+    "sha256": "c1bee9c84826ef0a50d2264acb38f0d901c08a8fccd511ae1cff65d85bfc4ade",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_shovel-grabbed.png": {
+    "sha256": "a65ceda20461ff55bef6f7e2fec6c0552ca253a638d795cc00a7cd1e81bda638",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_shovel-rewound.png": {
+    "sha256": "33575eb7a64ee7db57324bfdcd975190e4a9ad5e0831ad3f5e326f70dd3d6046",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_shovel-released.png": {
+    "sha256": "8cb7ee7642581b752d5d1336ca6bb959bfe06df8eb1be5f837271879bfa88d16",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_shovel-landed.png": {
+    "sha256": "2ae7f2b91735d941382dbcab4d24d139d983ea970e7da231701351c8838a54da",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_sword-equipped.png": {
+    "sha256": "bf530864281eb09c9e7e18d87bdbef2eb4b4762ea7624920c0681b27129e391b",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_sword-windup.png": {
+    "sha256": "6c3343ee91d7c2587e9a678c9357adee7d2aecf259a43fad4619e00212f375c5",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_sword-canceled.png": {
+    "sha256": "88db4569a19faad60cf0ef118c0c0bc567f7fe526d45b3a1a80b251de093c4c3",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_sword-placed.png": {
+    "sha256": "636cb906fed416df4ed3ed342f712778b92a1336482a798adb7bb4ed74e6da93",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_sword-grabbed.png": {
+    "sha256": "35f233b130a50bbe95f598aee46d0f54846ba104a244ce7bce27061add6e0a78",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_sword-rewound.png": {
+    "sha256": "c2bdba463b78032bac9f1937b7c764b8713840a1a88ea2c3799464946283f6bc",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_sword-released.png": {
+    "sha256": "b7c79d46dad81755c286ea668ec74dfa0afeecc36b5e9a5240164be4f37d37a0",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/iron_sword-landed.png": {
+    "sha256": "1dc41132c54820c9f8e66a85ecd54152dd8dc49826e40b676c0a27d355afe8ce",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather-equipped.png": {
+    "sha256": "caab87b36b511a038d4c9506514ca3922166ebd67cd5fd1ef536190f68ceec3e",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather-windup.png": {
+    "sha256": "7758599a5bff7830e204c399d5d410f72be79ee9bb4d15daeec35ec4c2be16f1",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather-canceled.png": {
+    "sha256": "cfb4e37e0d068303896b96c5d5f620e61c556485669b141b5914efa19aca01af",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather-placed.png": {
+    "sha256": "acd6c55a9680957308fb87b048ab19fafda3b5263f20e20e9946ef1068dd05d0",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather-grabbed.png": {
+    "sha256": "a869c5d6795260f6e886e36e17fdca58a1f4d56cf7e70306bd795eec71433a23",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather-rewound.png": {
+    "sha256": "8cd68ab8ff5bf56cd14b9cc52d0e47b71370f668972f86bda2a20883340d5fb5",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather-released.png": {
+    "sha256": "97eb3e4ff168bb32952d8b554065952948bb82695756b3b85d429422e4eb0786",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather-landed.png": {
+    "sha256": "d8a90270391a7acbdfeca386cc5e2575272266193a0b1f88dd9f3f94855deb93",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_chest-equipped.png": {
+    "sha256": "9452685d6ebaaffb1572bc53434f6cddee9d2e77fe2010c580e359eb21d263c8",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_chest-windup.png": {
+    "sha256": "fed2e97fa90a4a3960cff2f71e35c9bb1558f5b57bfbd743da728a6e514d5aca",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_chest-canceled.png": {
+    "sha256": "a6e147bf5fc94464fd1040a2646292efcb03128210f30ee53329d611a21ea183",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_chest-placed.png": {
+    "sha256": "7a53ea5b91feb6ccfc1a43713edcbdf32fcb5bca907348f9a7a942d42f56c43e",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_chest-grabbed.png": {
+    "sha256": "cf86fd7b89ae56c3a433f36829b045f6286839c27878613fbaa4c611b0809dae",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_chest-rewound.png": {
+    "sha256": "fd7fba52e4c980b315935a1d8043296dc4d1aa7911aa774af15a701a8eda8407",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_chest-released.png": {
+    "sha256": "7e4f9af5a6d1928e8a981a1237ab869778936a0753bd78123a723a81e8bdc788",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_chest-landed.png": {
+    "sha256": "5e07f6aaebac8d7245a7954f932e9e00fb4e701f74114f3ea154f6c679460a80",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_feet-equipped.png": {
+    "sha256": "ffca4c15a7659f2b15a47f420c283295e4494414ec7a74d979b1eef1722e28b5",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_feet-windup.png": {
+    "sha256": "08c0f3ada2399769ed8f6880fe1ce8da6a951ea00938db32bc1c418b07337aea",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_feet-canceled.png": {
+    "sha256": "8664dd6bb40c87d950355366cee71cf20fa5fe0883617a68a47df187327c6369",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_feet-placed.png": {
+    "sha256": "9c9c59ee6582577c9f203b849002c51ae5e2bda26e56c77c159c23eeb671b8c9",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_feet-grabbed.png": {
+    "sha256": "bb2151bef658f96f77fd3377b4d2f41a705e0bb1830d394c8e5fc3f41578007a",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_feet-rewound.png": {
+    "sha256": "cbd03b369e8e1aa67e43737e865a65b2ea54e12406246de2590887040b228658",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_feet-released.png": {
+    "sha256": "b23875b54e614b0bddb45b33e79d7cd315e3ae32469ef8bf915e72fca01c3f7d",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_feet-landed.png": {
+    "sha256": "29a041e00a03853ccaf9363a61549b189a143966cfd9a78f98553e01c0b587ca",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_head-equipped.png": {
+    "sha256": "d4d710432b940a259a86cac15423c322f3193a4dc7d68d0dbe3dfd047e15e201",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_head-windup.png": {
+    "sha256": "d3c5f4bc8ca37b08e113ef900f514c8df306e78560c14a5b48867b6bef1a624a",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_head-canceled.png": {
+    "sha256": "e8bcbe89f3bdb2b9116ed4b693abad9bf23ef0bc5298de2f6321641f4742406d",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_head-placed.png": {
+    "sha256": "cb9274a245e16ba1767c5474a17f6dc1f775dd03907a115b6a7c1b198f1ea46a",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_head-grabbed.png": {
+    "sha256": "b9ee270649e28356226e654a105541e444acf7255ab80b44d358af021ace580a",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_head-rewound.png": {
+    "sha256": "7472ee51248c562157650812babb249821b946f0d03d001ddced95fba1567f89",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_head-released.png": {
+    "sha256": "ef3555abc842cde604b7d79fd5a2bea8fa8a8b436a5c36ef1fe2fd6efc7826bf",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_head-landed.png": {
+    "sha256": "c4025118ee326ed1f21a4bb3b4bba2785a25065a3e0e52a43b4fb0175e2465f1",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_legs-equipped.png": {
+    "sha256": "a0b8321ec897cb994936474da2af1b6219139ef27f6bf907a1d632deac747797",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_legs-windup.png": {
+    "sha256": "a87bacca75c8822ddcb78d33a30e5ed5a0a78eded11fdd199958fd33e2bedcd3",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_legs-canceled.png": {
+    "sha256": "3174241ef79adaee888c23b7ba06c94b5595462062644befb141d09adb34abc8",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_legs-placed.png": {
+    "sha256": "9ce27eedc2f62e387dcf17b1d1642fe3c68958a41aeb32169012842a75e178bc",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_legs-grabbed.png": {
+    "sha256": "b2d586e797cc1cf6294cfe0e342d5e0a377496a9d738f308693a224c801d173e",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_legs-rewound.png": {
+    "sha256": "55056fd366a624739ff11d395cf4678d86ac3d7d8cf53d405845573ab238da2b",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_legs-released.png": {
+    "sha256": "c91e87a169c122c0f623a2689f1ce263e0eab6b0442d7b65339dae4c6c434db4",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/leather_legs-landed.png": {
+    "sha256": "cac9750e6f5fbf590783cc33056c223e361ceae84a25736ec6a7d26a64ed0146",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/plant_fiber-equipped.png": {
+    "sha256": "76307bc5081693125835ff12dba4610934ec7c4b90a9ccf07984b0f42a512c6f",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/plant_fiber-windup.png": {
+    "sha256": "55b4c08e857074a2b2a977cb59d503fa936acdbc8fa19c55a437f1c17ceda3c3",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/plant_fiber-canceled.png": {
+    "sha256": "287a527f3d568a0565c672246fbc708c1f28963760a7b5044d84f4edce1cfacb",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/plant_fiber-placed.png": {
+    "sha256": "7ae5a9748b24852f68aa12ef8d6befd03f96923af87a97f7dac72aaf2bb71d97",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/plant_fiber-grabbed.png": {
+    "sha256": "95c3c99d35031ed3f5b957a98b0890ff85e8557502ab8f1f13d7f87611fe9e09",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/plant_fiber-rewound.png": {
+    "sha256": "1d66c0f2a27b8ef0ce9c053334554e71aa39e0a1dc353bf1cf483252b7e5f241",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/plant_fiber-released.png": {
+    "sha256": "c743cec7e11eed5c58fc1ef13d895dd70d81bab08b2c5e59009e66dc77154f87",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/plant_fiber-landed.png": {
+    "sha256": "92ba52bf721dbc3223765aed8c5fff6863c19cc448b390a2db4899fb2e93742b",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_copper-equipped.png": {
+    "sha256": "21089eb2fe539252e8c96ee6521b2b8c64c05e65eb9f7e2a6796182d116f0e51",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_copper-windup.png": {
+    "sha256": "46735b8930fac4d1cd88d49d6077651895c6827ad56f69c2b44c112915ec22a7",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_copper-canceled.png": {
+    "sha256": "32e16060632011d462275d1bce04023a4a8ea3aef2459de13af9276ab599f788",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_copper-placed.png": {
+    "sha256": "b3aa17d643b53d09488354b61f5def718c49bfd0ca764b56549ffc0c0ee4b023",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_copper-grabbed.png": {
+    "sha256": "449aedad138db36751e5873332f545eb3c1ede0b38baa6d7ec81fa28608385f9",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_copper-rewound.png": {
+    "sha256": "6e78fecb221a27f9a3f19de70ee5bfb0d6b9939021e1d94d70a839f88cd9862f",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_copper-released.png": {
+    "sha256": "f6fe45a405e57ab589f6cb48d1c6a1ae9d88270f143570cbf1fd8f7164e833f8",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_copper-landed.png": {
+    "sha256": "c4b94637e6343fd6b7b249f05cb188cba1cde58e030a3c080dfbd09381b8db97",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_gold-equipped.png": {
+    "sha256": "d7b0921d4a8e03008bc4a95c1eec5d217ec5e5c48ee482b62ebf5ece317a9a06",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_gold-windup.png": {
+    "sha256": "9ae237b95ec1a760f1d0be14671a8ae075ffe7638e32d73baf199de604b9df12",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_gold-canceled.png": {
+    "sha256": "297470428b5d796515085254b725b3d30adc0994ae4757e92436cc72ed44d392",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_gold-placed.png": {
+    "sha256": "ec0be08af5b8efc66a2c8e8cd43148e3e64a2e25586d5156dc5d5a83c31850b3",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_gold-grabbed.png": {
+    "sha256": "0a6d104e6724fa44f8e03399cf915ecd82f2912288202561be6ab035976a7b8b",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_gold-rewound.png": {
+    "sha256": "f6cb6825c6d756e35c810290be7875bb75a441238d5cc09537f40539a99f0089",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_gold-released.png": {
+    "sha256": "5660a9961419efaaf9027a62770b0272a894910ebf551ef01e2967feee75f39f",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_gold-landed.png": {
+    "sha256": "e648b9da212613e5c364dc06a66c9050e2a0086ac0eaf9ea648d7405d0e32f7f",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_iron-equipped.png": {
+    "sha256": "6528aa92748bb832b9120301fdf6ce9385536574b4372807308da0586c6911de",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_iron-windup.png": {
+    "sha256": "7d4bb8ee00bafe2096e22c242af48cf84c223d436dbf3c86ef9ffa3e4916544d",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_iron-canceled.png": {
+    "sha256": "27a5e2634ec41de9d1a8f07f5331be722611111ec9270dc3648ed78479d99670",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_iron-placed.png": {
+    "sha256": "39ad51dd52c9728410e40d46513ee934de13436f26845f9aa5c53a7a0dcacc23",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_iron-grabbed.png": {
+    "sha256": "c22870e18b7e7137e2bfae33e616febb46711aaa02ca9520b883212f8788e86d",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_iron-rewound.png": {
+    "sha256": "12be505624563db5fd62f1d7de4a135654c7941fdb2d35c3c01aeca1278d5f99",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_iron-released.png": {
+    "sha256": "d9273fe65087429d80d435d942f309ac2784688594fc6b7be962beb83866bd5c",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_iron-landed.png": {
+    "sha256": "2bc46138f603eb89ee75c58175259e1cf187ee8fef187483549b7987fc4cce33",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_meat-equipped.png": {
+    "sha256": "adbbc3c9d6d986725863d727cda142e18f13d10f083a1d405365c8a038456240",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_meat-windup.png": {
+    "sha256": "4c52e4a057aeba6584e6b65912caf418313f45cc73816e2304a1860408dbbfb0",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_meat-canceled.png": {
+    "sha256": "2d864487e20a443c15914558318c3bed33c7704eb137155a02ae2d65e0a98b0c",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_meat-placed.png": {
+    "sha256": "25ebc0b2f1d20c35ddace7e2ea750bb5ad80107ab080708174f48b225136ba35",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_meat-grabbed.png": {
+    "sha256": "fce22e88926e38085db6fa55b4d3832bc5526568855aaef648d10c4bd372888c",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_meat-rewound.png": {
+    "sha256": "7fe4b322cc26ac28b6c9f1c48f119f21ad73cf7e8ada16f3a130a27e7968165f",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_meat-released.png": {
+    "sha256": "2b8a8b71ec224e42a1ec6aee7b7186e764bffdeb74c6eb97b3af3e24527c32ca",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/raw_meat-landed.png": {
+    "sha256": "e2a348dcbdf402ca721ff353baca064c5d7d4c4cd4c7915441840b7511b22097",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/seeds-equipped.png": {
+    "sha256": "4ff75f3946ef1bf7cc1727a0f04b14925716831db276bd6d049d910c230518a1",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/seeds-windup.png": {
+    "sha256": "6f1fd4f0f939f8cb713a6a56b795bf70087ba4d0052915e1f0d7bc17f6f55ac5",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/seeds-canceled.png": {
+    "sha256": "693598a056084cec2d185cc616466f5687ac3a7cf503586918916f4c40c32134",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/seeds-placed.png": {
+    "sha256": "15fee3f6cc6d20e7a5dbed90652b0ff0e05a58a5c2a109250e0b76dc039b68e3",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/seeds-grabbed.png": {
+    "sha256": "de630d5aaf3921bce3453fdced5769fff7b02af314de7659c3d4dfb7154cf4c4",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/seeds-rewound.png": {
+    "sha256": "d138a870bc07da8ada9b55d4e8aa6ff0c1d2b638a57b8ec63135f65d0ba185f8",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/seeds-released.png": {
+    "sha256": "0c0b418f91acdc46bff577419d5cfe89c203a6c041850a3bb4cf2842df5fdbb9",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/seeds-landed.png": {
+    "sha256": "104c035cee5bef38af7a0c7bfbf5e135fc2d388fdde8b29526c92095ff168255",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/shears-equipped.png": {
+    "sha256": "0943924621dd69501d0119fd636b518c8674aa905aa2f6575e0e33561492c029",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/shears-windup.png": {
+    "sha256": "de3aaf5faa1f45ceb9d357f71f0113e517fe8cd1a9ec739d87c2b0b7c7472f7b",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/shears-canceled.png": {
+    "sha256": "c40c049e62c1a1c85e8ae1fa91a74a415c81b4329e4a5bca4b8426690674ccde",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/shears-placed.png": {
+    "sha256": "89aacf6c527e7ca6ad5ade16aa4feb0d865228d7801195caef0b4641ee434460",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/shears-grabbed.png": {
+    "sha256": "79e790737a52346640d4e8659f070cece89dcb639c418e893a5a5c5e58fdbf35",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/shears-rewound.png": {
+    "sha256": "67d5d1976bd153d6b7b06d68e0553e90beead6863fc10424baf84611ed7645dc",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/shears-released.png": {
+    "sha256": "c5dc9e9e3f29908e0ae6c847ddfeaeacda9567dbe0eb53107911507499764896",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/shears-landed.png": {
+    "sha256": "33c76448caa1a33e46c16fbbfca0be0a359f75c0d29f6eb8241e64f3085b60a0",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stick-equipped.png": {
+    "sha256": "2b7319824d6861cdc96967b21bad5f522bfb03127fc1b5d40023db2828c3aea2",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stick-windup.png": {
+    "sha256": "845e34e0f652c270308e8f1a7fe2f5f0e8b7728d8be44f5efb9be0b3bba96e52",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stick-canceled.png": {
+    "sha256": "50844a9e37e85c8000eaa032c5d97c20776dc5bc24da9f93f622c459fa8aa3ba",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stick-placed.png": {
+    "sha256": "87e75b44fc8d5b73071a8a6465ac383d70b484cb690ecdf2987b6bda8d9efc9b",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stick-grabbed.png": {
+    "sha256": "fb8226f474267d3045d33dd2c143077b4e4a403801937158e11f90d00381da52",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stick-rewound.png": {
+    "sha256": "dfafd3783c8044306f64ba4e3e93af744ae96a3296ba1e41488127b9f92dc51e",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stick-released.png": {
+    "sha256": "fc09c05cc74c090a5ff86850130eb787adca5ecc41918be0934d46f5c5ad6177",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stick-landed.png": {
+    "sha256": "967ad299d51a97829d2d9803d74055bfc910a60c768eac87ff584e3ab470fec1",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_axe-equipped.png": {
+    "sha256": "a61707f37671fdeb20f2cbdf547e170049d883f9a2e9f28da4d11218aebfe346",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_axe-windup.png": {
+    "sha256": "5e72473bd06e3e8fc5ec47a9dd8055a833ca15610ba488c765093daf8f12a4d6",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_axe-canceled.png": {
+    "sha256": "ab7445500da3554d116b2c130adde0b4fd0248300f6ad27b78e9b9535fbf68b1",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_axe-placed.png": {
+    "sha256": "dbaa5062537afda33dd0cdd2a2a0e1b3ce6bd6697870ddfd368921f1ebd58b20",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_axe-grabbed.png": {
+    "sha256": "3c675253ca5ba28f5830b52969d0f60c434c71bbe0326b668b0909187af30309",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_axe-rewound.png": {
+    "sha256": "05fa23e1d6622a8b4db4dc4a01ddf9c93b1b729fab8727be9b3a52ea333d458c",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_axe-released.png": {
+    "sha256": "079c01d829362fda8b4231cf03123eb0071dd19fbef5001cb2c7160e5b9699f1",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_axe-landed.png": {
+    "sha256": "5b5bf649bbc6fd74055d64878811d8073a5f434f09b4030637f803bd4c38faad",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_hoe-equipped.png": {
+    "sha256": "8e166059f55ee4f5b857e39e5e1c1c562a45ae08a61bd1bb12c043d7dc0f443c",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_hoe-windup.png": {
+    "sha256": "030ab7ce5a5ae3a7486da7a8950ff560c189f29b591fdb602d3a7031ea4518c4",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_hoe-canceled.png": {
+    "sha256": "c2b6d3f5ff2f521bbe0280c4f0e42ff2fd1e99f156b82f532f48f5b8704d89b0",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_hoe-placed.png": {
+    "sha256": "ea30faff74b5111ed6816987db678a3a3d72f24611dbdb1f49af9666f045d3bd",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_hoe-grabbed.png": {
+    "sha256": "a8462f28460114da56f69376313e0f08194caa8f35fa44529ff52fef7244e631",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_hoe-rewound.png": {
+    "sha256": "6d0b7261909cdddc2f9871b3e784f194a747f35b24a0ca32e3e090740ce4c492",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_hoe-released.png": {
+    "sha256": "cb307a28c778f63f1f073e6fb44a5ea6facd9da82c670e3ffeb08037e2dfdfb1",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_hoe-landed.png": {
+    "sha256": "8df9099aef160f693f838b9793dec5cf168c71b4032f81c5bdf310c097e5ecc7",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_pickaxe-equipped.png": {
+    "sha256": "ed472df4456e98f6da892951c847c1703f0507a91d36d5b7a5f07a4214c66124",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_pickaxe-windup.png": {
+    "sha256": "8206139571d94af94afa4df77f03130699092c9f55f3569bdfb51cc657122166",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_pickaxe-canceled.png": {
+    "sha256": "af54b59e58759846dbdc6eab772b2b47854b462a9626301f323135bfb2744321",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_pickaxe-placed.png": {
+    "sha256": "78e3279bbc194370487397da0dffb0fa631ecc4456daa01d352a39034a563571",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_pickaxe-grabbed.png": {
+    "sha256": "d122f5fcb0051c6dd7eaf55c83a0cbbc49939712a63c20298e8fed307028de10",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_pickaxe-rewound.png": {
+    "sha256": "816202bda50418d1282415e67cd330a468742f0e7916f0fe0d88b7134ebc5d67",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_pickaxe-released.png": {
+    "sha256": "4e30146e2e78eed03257440ada08969554ae0ebe9a659d38cfd19bb7977f5543",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_pickaxe-landed.png": {
+    "sha256": "7da91273db05780928b2290d53a7d854ff3ee22b642965e83cced0316bc4b1c6",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_shovel-equipped.png": {
+    "sha256": "d8f57dd5ecdb344b124dedd4cfbc15fa02fa248233f862462f8f0357b0ca5a58",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_shovel-windup.png": {
+    "sha256": "f4fe4343f96ec1eca467ffdb5b0dc30875a3bb2058fef653e5ee5c3700eee48b",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_shovel-canceled.png": {
+    "sha256": "9f7eea66e61a7b0bd041de03c6d5421058208c15cc3b01fa3771c543092c7b20",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_shovel-placed.png": {
+    "sha256": "c4c8d488fba1bfe6138db2556d3fa6bb73fe8fc9d168fadb143bb9a4b3fb340f",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_shovel-grabbed.png": {
+    "sha256": "1654fc24b3f697702a331bb1a9b070c8c8a5652fb55b4c5012d56f9c4e220f93",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_shovel-rewound.png": {
+    "sha256": "7802ba4e189edc936b65c0f42e5278b42e1462aed834fd3296a8fbf50fc3e083",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_shovel-released.png": {
+    "sha256": "bde4e5bfa6ab6146d1ddb0708ec0484adf692019c1cf78ce2a0c666e5ae48182",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_shovel-landed.png": {
+    "sha256": "4355714b99e71887a75c1fd0bed196fcfc8f28c1f0b7353e7d7374e16a705be2",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_sword-equipped.png": {
+    "sha256": "5acedaa85af1271f979b2eef4b318c1806c1ebd2febf2423e21e194c432044d9",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_sword-windup.png": {
+    "sha256": "9f906f52f4ba800dcc11fb8ffca6c69fae5b1c6d9af2e302665fdb2f7712d7e5",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_sword-canceled.png": {
+    "sha256": "56579edba49e80e67afdb841da0b22c3f7c0f821577c7b9a630c76e53bee906e",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_sword-placed.png": {
+    "sha256": "13ee906a2d88555b7258a7c25a02a35885910ed40616f2d97abde9f98bb6b290",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_sword-grabbed.png": {
+    "sha256": "291aa79384bc1e0fc53928d244b762f6c6c2ead419a078a14a4e51e5b1c64084",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_sword-rewound.png": {
+    "sha256": "4342ce96dff567106586bbd18bc2937cc93cff0228023cb2920d486a8606a767",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_sword-released.png": {
+    "sha256": "d951daf5a4d642049cb3d87d6eeefcf1c6b1eb8b055926a5f298ee10ec1edcbe",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/stone_sword-landed.png": {
+    "sha256": "cb90d6fe64f9f745f6da33159c66a4f56a9e5edeb310e8fed02dc6b1264f9492",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/waterskin-equipped.png": {
+    "sha256": "f9ce41a6b362739b6bf669fbdf564c0979e26d3a9e5aeca7c69cceaaaa438c4b",
+    "retained": true
+  },
+  "day-1280-100-throw-survival/waterskin-windup.png": {
+    "sha256": "eee2d6e5040e2728610af1904b66da0620c349234b312b3c4e95477484210308",
+    "retained": true
+  },
+  "day-1280-100-throw-survival/waterskin-canceled.png": {
+    "sha256": "a88ae9fa79e8e80d8c05891aa939276a60705838ce0f8be0ac584827b980e0e2",
+    "retained": true
+  },
+  "day-1280-100-throw-survival/waterskin-placed.png": {
+    "sha256": "69dde83ec33291bce64e2d674cb2ea68ce0b2a915f5843804656361da71c4e89",
+    "retained": true
+  },
+  "day-1280-100-throw-survival/waterskin-grabbed.png": {
+    "sha256": "213455e7949ab8ecbc31cde80aee067098c471308b1471d155dc0d2314232324",
+    "retained": true
+  },
+  "day-1280-100-throw-survival/waterskin-rewound.png": {
+    "sha256": "b3741756188ca4466d8fc84c6e2064525526a8ab766bf37781d5cd4604e35815",
+    "retained": true
+  },
+  "day-1280-100-throw-survival/waterskin-released.png": {
+    "sha256": "8530657098f8c4c1ea01715ae28278f73438e1949f07f4cabac36e0fa43225b9",
+    "retained": true
+  },
+  "day-1280-100-throw-survival/waterskin-landed.png": {
+    "sha256": "abf908677c2892ca8b1008c5d9dde2a5466fd2ca4420e297180d179c6ce687fa",
+    "retained": true
+  },
+  "day-1280-100-throw-survival/wood_axe-equipped.png": {
+    "sha256": "23d0e2706fa5e556658b4da47156dba48f54206b872fd2dcf73c6cf542f04f28",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_axe-windup.png": {
+    "sha256": "6c87cd1ec4ad39792aa8b413e380119d3387b893af7be23710dff712a63425e6",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_axe-canceled.png": {
+    "sha256": "45d0a0655a654342e9f9c8b600f028930504b07feb6eb5cf2ab41132bfc709e5",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_axe-placed.png": {
+    "sha256": "7b60e2953ff70ba83b67fd831d8e209a264645772c85c74b7aca294c52f856f6",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_axe-grabbed.png": {
+    "sha256": "35b36a6bf9ceb1a1deb93becf5097e7e74aaa18bcdd2f55406c6d79b6688b8ec",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_axe-rewound.png": {
+    "sha256": "34fadbddeb1c8ce62718b874946e982fe686e43a5cbcb91a0ae4e7a3f4be6e60",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_axe-released.png": {
+    "sha256": "a3e4a1ffdae5bf03fa18f8e8275c241ab7fc44e9912271e5aea2a211b1e4ba84",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_axe-landed.png": {
+    "sha256": "913653cf8eca6875b0804dab6742297a0f1f25358de45c5e5b56304f0ba164ce",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_bow-equipped.png": {
+    "sha256": "ccc2c4d8a08b10db7f4b935a8dbb266fae52f0b7e7b6c4801d7a8585a348b7b3",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_bow-windup.png": {
+    "sha256": "c42a9d16c274e4a3daaf11545a22bc1825eda66a11603cc4f152fe6748cd63b4",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_bow-canceled.png": {
+    "sha256": "e65a7a55c46fde99d8d40bcda726d5f271b5e90c3f1c1fb70a43fcbe4c481df5",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_bow-placed.png": {
+    "sha256": "5a649fce37f68c10229f7616c6badf4af8560e77ba52e59b5dfb75294820abcf",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_bow-grabbed.png": {
+    "sha256": "919ae6544ef10d019a21446a51df83dac5fc1a9efad76705133c241c01928bdb",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_bow-rewound.png": {
+    "sha256": "66530242e9fe7aefbe1c6ba3c018469bcfc8580892ca8eaf2c15e1f5c2215347",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_bow-released.png": {
+    "sha256": "ce9ed72a563365ef561813a174a9a8739cac572a0c5c28fd58eb43d71a8d2bc7",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_bow-landed.png": {
+    "sha256": "c21ce60d8129811b2a21351d013c6583271abf51660334e574a83aa5e8b50f74",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_hoe-equipped.png": {
+    "sha256": "fe3f8af4123fe50026b69682786dd08877879b834d6a1c2ca60607564bcfa365",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_hoe-windup.png": {
+    "sha256": "2984c190c914e366f627a5667b6e1a93fa38b56bfe0260e0d25ab12907d102a3",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_hoe-canceled.png": {
+    "sha256": "228162cf03311093b2fd8a80557191f3567b3e160be3ae37f45dd1e9a97785e7",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_hoe-placed.png": {
+    "sha256": "9be9528d462defd71c56f26c791b615258ffd32287330f363c6b176fca3a50eb",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_hoe-grabbed.png": {
+    "sha256": "356f77973ace1933ecff81e42eecf78de010c4c0b8427e97d4b82f3e092523d9",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_hoe-rewound.png": {
+    "sha256": "c27a1f8e5753ba8ca3ea99027079c795b664f6f0c0559337912ace44490b26ff",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_hoe-released.png": {
+    "sha256": "9e04f8422ba02f2ec62aab51fb696fe4fcbc1ad18c5b1f68cfa1a272b3f212ab",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_hoe-landed.png": {
+    "sha256": "750169336a78a8b7403e3c689b072b92ca79c3358ffb394a7c7edbef64f5ae08",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_pickaxe-equipped.png": {
+    "sha256": "c313d7af80a5309f4be567755d1018974e0c03d22f3c5735ab272b95392efcd5",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_pickaxe-windup.png": {
+    "sha256": "2cb0d66b905f45a11cd32bfa7654de9ddb6f196bb2dbc8eae9fbb23f481735e3",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_pickaxe-canceled.png": {
+    "sha256": "c798a5dd36fc0523a7de58462ad2cc5ae4d71879c1a510d4ee60b94cc3c1d404",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_pickaxe-placed.png": {
+    "sha256": "92086ca6349de4dc6550e4a806e5764f0293086ba60361f4adfacb5725cc203a",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_pickaxe-grabbed.png": {
+    "sha256": "5e2c6147e9b23d9315c1bf97183993962e2b0a4e065077c8b2ec8f9960bc90ff",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_pickaxe-rewound.png": {
+    "sha256": "ca5b9d0cbe0d9e8e352b3925e9281fda782885b8b527fb3fac6029b0007d62f6",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_pickaxe-released.png": {
+    "sha256": "17f51765ef5ed68164553b24570021aa5625f1bf97b5f47d9841eca796f5c3e0",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_pickaxe-landed.png": {
+    "sha256": "ad12df67faf601547ac7ca4c337ad469d3966f2179cde4b0364336a26b6d96fc",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_shield-equipped.png": {
+    "sha256": "2b7519dd4e24a5d1f905502b78451835ca8455cc5cc19f64f96e506ded12aa32",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_shield-windup.png": {
+    "sha256": "971e41d26be143f06be4d8d1c4feda7c86988d5f77be123807abcd5a7535701f",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_shield-canceled.png": {
+    "sha256": "2b00b73a35103d8089b433e5e466e171d32aaea1a6282014bad9e60d8b4576f8",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_shield-placed.png": {
+    "sha256": "6b1345fd1b924089b08db86d966fcca230408892e2a1dea9f0790d90cee0ee31",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_shield-grabbed.png": {
+    "sha256": "d11ddecc4ccf2357a8c7afad48b507fb1fa078aba243d7b49860254952372d9d",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_shield-rewound.png": {
+    "sha256": "100bf59bfdccba404de0f76aea59e76a9b1518649508904068badde2549767f8",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_shield-released.png": {
+    "sha256": "2d0e630a16bd7e26e17ad386b9eb0a861f5de6f03e060acf39216314f40f61ed",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_shield-landed.png": {
+    "sha256": "c8f256ce43bd70063c405a8b47bdd6f31188e2e0b46dcc10de7ee3420d44ca17",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_shovel-equipped.png": {
+    "sha256": "069922378dc5452758e32186d588c069340ff024ce56a1d1b06ffc10329b01a5",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_shovel-windup.png": {
+    "sha256": "3811773279fc4b675ddc9d2558711251a7624d76c5200eb310f6d1016ad387f3",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_shovel-canceled.png": {
+    "sha256": "ace404ac094e899217c01167ecd94eec28005eeb34f851befef0d6bdb1080a74",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_shovel-placed.png": {
+    "sha256": "39209a07deb8a6c2823daf4ea2eda8a1a52ddd5118d913f798002ae686c7b5d3",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_shovel-grabbed.png": {
+    "sha256": "c999acac60dce8d34ca8826bcaf093bfba9d6c7b5a8becec37b826b7d08e5147",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_shovel-rewound.png": {
+    "sha256": "6e13776ff756a812a30a440f86d34e1a573a9853f42f32eb77122dc75d96f09a",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_shovel-released.png": {
+    "sha256": "a9bbc5a34be568e651d9372690fb4d8f7de0bc295e2c91d94e40a08679b4dd9e",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_shovel-landed.png": {
+    "sha256": "85b5363a68e69e02b98f6e8a1c392827757c07cd814db0f93b28848ae19c5833",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_spear-equipped.png": {
+    "sha256": "7392567064cc33eafb96b90e9cbe614a9ed315abc6c42b83ad67e9a25641767c",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_spear-windup.png": {
+    "sha256": "c6b31d123f897e020509a69b89b236048f2a61402c42df8be975d31487abd93e",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_spear-canceled.png": {
+    "sha256": "d5e01680586e6901765041e23c6835c1ccf74e0c1b21b6923007f033204acd36",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_spear-placed.png": {
+    "sha256": "223e1826ee964183772f7298f7edeb1371a1f38426ec355833ce26a7f3c29316",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_spear-grabbed.png": {
+    "sha256": "0d5d2286569cd3ce1d290ade2f082f63860cbe6ccea8e1ebfc5e2f2a94abe3bf",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_spear-rewound.png": {
+    "sha256": "5623e14c4b875057ff7a12561dd540e87480fbfe2845bfe9677d86bf92a5c616",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_spear-released.png": {
+    "sha256": "831c6f49a21e8de2086783aae10cf2964a3c6ac4f16310243efd6b6bfd133453",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_spear-landed.png": {
+    "sha256": "9c3045e9059f9616c650f1e2fd650a3ebf2f8ef1645c9a54e22216c34aeec5ea",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_sword-equipped.png": {
+    "sha256": "842ea91d82f4c2403667fa601d12dcc97df2b87c8fb67acddeaa4cfb37d27dce",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_sword-windup.png": {
+    "sha256": "fa123a23f22ee99ef8baef13f9c836b26f9d0b40e73c954dde577c845ac5877d",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_sword-canceled.png": {
+    "sha256": "c34359bfd13a1124844f1c7b593fd0605d8b9ebec7faefccbc5e05f730290557",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_sword-placed.png": {
+    "sha256": "2ec3c54a834dc6007afc4090513c5df6e4ba78b7a557e0bf07410b4a6d3f88cc",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_sword-grabbed.png": {
+    "sha256": "9f624bc47f623f4c99a9f4fe932e8abfcfe8d18e5d85026ebd070286683d7db0",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_sword-rewound.png": {
+    "sha256": "683864b9e8c8a0493d9c029439bb8c0587480078b6fe856361db9cf7d95d0f5a",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_sword-released.png": {
+    "sha256": "06d79b96edb0ba53da97e9f81326345f8c372ea07b14af2e0462cdfed605e7a9",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_sword-landed.png": {
+    "sha256": "97f17ceba313261a5622427f1d3b3455bdded940cca65cec7b324e7acd118f32",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_torch-equipped.png": {
+    "sha256": "adbd5089a666d63858cccd8d2f0afd19eef0ad545aec0d9347f7f09827307000",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_torch-windup.png": {
+    "sha256": "f1b624650a2d0668dc02cfa3af6ce4999264f954688e2134d2973e6ce0254bca",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_torch-canceled.png": {
+    "sha256": "80798cfb2943bd0eb41469d815ab6e02cf9a73637963f2cd7bda2deb05ca1ca9",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_torch-placed.png": {
+    "sha256": "2aff481a6a444c3393b92ec64139da4b5b8e1fc6daca3f56c13f09b27f78cb86",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_torch-grabbed.png": {
+    "sha256": "e431013fadb5d67fb805dbf2240c826a5f30a5c6b3ee14a4f0bc8c91f43ec78e",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_torch-rewound.png": {
+    "sha256": "b73bff1c4fe75cca7ae06c49a6af341179cdea4cc09e52abd8189a80fc48b7be",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_torch-released.png": {
+    "sha256": "04c23e7dc3033a20f3e7fc89088932520b93a8c4dea0da632b0f3cca4d1f320b",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wood_torch-landed.png": {
+    "sha256": "cfd0e38308a7e12535be4f43a28025b434a81c3e3860f2529627325d56dcd716",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wool-equipped.png": {
+    "sha256": "d364f3db6e15205541586bad5ffe6b4942a6ea09a37fb2745cc25393f9844d55",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wool-windup.png": {
+    "sha256": "7c97bcdc69e7fd88904f435dfbb4ae99273e6271fbb693af9c44c23ac9b05fa7",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wool-canceled.png": {
+    "sha256": "dcc372977f30fbd0563626f1c9fdf6e7052f2018af7a8fbf36cded4ee1535684",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wool-placed.png": {
+    "sha256": "7c0e9746156d9b8cc961bf5d687c3933443cb85b0280e763f96eba1f1dd86198",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wool-grabbed.png": {
+    "sha256": "24de36fee439870fe6c9451bc00ebfd0e0fe6a7144296251a5b170847d1431d2",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wool-rewound.png": {
+    "sha256": "eba88ce5161b72d08b93b3661ca79fab3e59ec483c4a4beab1532eaba70d312c",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wool-released.png": {
+    "sha256": "ec12e122cdc14f75e973af4d85a02563ff87a1c5fb77c031fd3dac35ff153f56",
+    "retained": false
+  },
+  "day-1280-100-throw-survival/wool-landed.png": {
+    "sha256": "7a0ec5c002ad8753d570a12679ddabe13362ff13934ee86ba22fcac0d9d74900",
+    "retained": false
+  }
+}

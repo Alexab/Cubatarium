@@ -1935,7 +1935,7 @@ static float FpItemLight(UWorld &world, const UCreature &actor)
       world.GetLightingSettings().MinAmbient);
 }
 
-static void ConfigureCarryContacts(FpViewmodelDrawParams &params,
+static void ConfigureCarryContacts(FpViewmodelDrawParams &params, UWorld &world,
                                    const UCreature &actor,
                                    const UCamera &camera)
 {
@@ -1952,7 +1952,19 @@ static void ConfigureCarryContacts(FpViewmodelDrawParams &params,
     // volume.
     const float width = glm::dot(glm::abs(right), cargo.physical.size) * .5f *
                         (cargo.creatureId ? .72f : 1.f);
-    const auto rightClip = vp * glm::vec4(cargo.position + right * width, 1.f);
+    auto rightContact = cargo.position + right * width;
+    glm::vec3 authoredGrip;
+    if (!cargo.creatureId && params.CarryHands == 1 &&
+        WornEquipmentDrawer::LooseRightGrip(cargo.stack.Id, cargo.physical.size,
+                                            authoredGrip))
+    {
+      const auto *items = world.GetItemDefinitionStorage();
+      const auto *definition = items ? items->Get(cargo.stack.Id) : nullptr;
+      rightContact =
+          cargo.position +
+          authoredGrip * (definition ? definition->Visual.GroundScale : 1.f);
+    }
+    const auto rightClip = vp * glm::vec4(rightContact, 1.f);
     const auto leftClip = vp * glm::vec4(cargo.position - right * width, 1.f);
     if (rightClip.w <= .001f || leftClip.w <= .001f)
       return;
@@ -3774,7 +3786,7 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
         fpParams.CarryHands = creature->CarryHandCount;
         fpParams.ActorId = creature->GetId();
         fpParams.WorldGeneration = World->GetCreatureGeneration();
-        ConfigureCarryContacts(fpParams, *creature,
+        ConfigureCarryContacts(fpParams, *World, *creature,
                                *World->GetCurrentUserCamera());
         fpParams.ThrowCharge = creature->ThrowCharge;
         fpParams.BowCharge = creature->BowCharge;
@@ -3795,7 +3807,15 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
         fpParams.Appearance = World->GetResolvedAppearanceShared(*creature);
         if (const auto definitions = World->GetCreatureDefinitionStorage())
           fpParams.Definition = definitions->Get(creature->GetTypeId());
-        FpViewmodelRenderer->DrawWorldOverlay(fpParams);
+        if (ItemWorldVisualQa)
+        {
+          FpViewmodelDrawAudit audit;
+          fpParams.Audit = &audit;
+          FpViewmodelRenderer->DrawWorldOverlay(fpParams);
+          ItemWorldVisualQa->RecordFpAudit(fpParams, audit);
+        }
+        else
+          FpViewmodelRenderer->DrawWorldOverlay(fpParams);
       }
     }
   }
@@ -3892,7 +3912,7 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
             .count());
   }
   if (ItemWorldVisualQa && World &&
-      ItemWorldVisualQa->Capture(*World, width, height))
+      ItemWorldVisualQa->Capture(*World, *this, width, height))
     RequestQuit();
 }
 

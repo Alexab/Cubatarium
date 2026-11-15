@@ -119,4 +119,17 @@ The runner restores the QA world, runtime resources and configuration, checks
 source conservation and retains a backup if restoration verification fails.
 Reports identify the actual active item and tracked finite body. Successful
 capture proves coverage; inspect the PNGs separately for artistic acceptance.
-This fixture does not exercise input-driven use, carry or throw transitions.
+The default fixture is static. Add `--interaction throw` to route R, Escape,
+V, V and R press/release through the normal application key handlers. Eight
+frames per item cover equipped, windup, cancellation, placement, grab, second
+windup, release and supported rest. The checks preserve a single finite unit,
+its instance identity, wear and container contents. Release velocity is checked
+at the key event, before collision resolution can end a short flight.
+`--mode creative|survival` selects the property domain; fixture fatigue resets
+between independent item cases. `--perspective first|back|front` selects the
+camera. Controls are temporarily fixed to classic R/V and restored with the
+configuration. These are application-routed input events, not OS keystrokes.
+FP palm projection is compared with its supplied carry target. That numerical
+agreement does not prove an anatomically correct authored two-hand grasp or
+TP pose; inspect the frames separately. Actual mouse-driven use transitions
+are still a separate acceptance gate.

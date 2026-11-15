@@ -26,6 +26,9 @@ def main():
     parser.add_argument('--light', choices=['day', 'night', 'interior', 'interior-lit'], default='day')
     parser.add_argument('--width', type=int, choices=[1280, 1920], default=1280)
     parser.add_argument('--scale', type=float, choices=[1., 1.5, 2.], default=1.)
+    parser.add_argument('--mode', choices=['creative', 'survival'], default='creative')
+    parser.add_argument('--perspective', choices=['first', 'back', 'front'], default='first')
+    parser.add_argument('--interaction', choices=['throw'], help='Route real input through equip/windup/cancel/place/grab/rethrow/land')
     parser.add_argument('--skip-build', action='store_true')
     args = parser.parse_args()
     if not args.world.endswith('QA') or any(c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-' for c in args.world):
@@ -42,6 +45,12 @@ def main():
     name = f'{args.light}-{args.width}-{int(args.scale*100)}'
     if args.ids:
         name += '-selected-'+hashlib.sha256(','.join(ids).encode()).hexdigest()[:8]
+    if args.interaction:
+        name += '-'+args.interaction
+    if args.perspective != 'first':
+        name += '-'+args.perspective
+    if args.mode != 'creative':
+        name += '-'+args.mode
     output = ROOT/'bin/item_world_visual'/name
     output.mkdir(parents=True, exist_ok=True)
     report = output/'native.json'
@@ -49,7 +58,7 @@ def main():
     summary_path = output/'summary.json'
     summary_path.unlink(missing_ok=True)
     request = dict(ids=ids, light=args.light, width=args.width,
-                   height=720 if args.width == 1280 else 1080, scale=args.scale)
+                   height=720 if args.width == 1280 else 1080, scale=args.scale, interaction=args.interaction or "", perspective=args.perspective, mode=args.mode)
     (output/'request.json').write_text(json.dumps(request, indent=2), encoding='utf-8')
     config = ROOT/'bin/config.json'
     config_before = config.read_bytes() if config.exists() else None
@@ -61,7 +70,10 @@ def main():
         executable_sha256=hashlib.sha256((ROOT/'bin/Cubatarium.exe').read_bytes()).hexdigest(),
         sources={name: hashlib.sha256((ROOT/name).read_bytes()).hexdigest() for name in
                  ['src/App/Application.cpp', 'src/Test/Native/ItemWorldVisualQa.h',
-                  'tools/run_item_world_visual_qa.py']})
+                  'tools/run_item_world_visual_qa.py',
+                  'src/Creatures/Visual/WornEquipmentDrawer.cpp',
+                  'src/Creatures/Visual/WornEquipmentDrawer.h',
+                  'src/Test/Native/ItemPresentationQa.h']})
     backups = ROOT/'build/item-world-visual-backups'
     backups.mkdir(exist_ok=True)
     temporary = Path(tempfile.mkdtemp(prefix='snapshot-', dir=backups))
@@ -74,20 +86,25 @@ def main():
         for key in list(env):
             if key.startswith(('CUBA_ITEMS_', 'CUBA_ITEM_', 'CUBA_FLIGHT_QA_', 'CUBA_OWNERSHIP_')):
                 env.pop(key)
+        if args.interaction:
+            configured = json.loads(config_before.decode('utf-8-sig')) if config_before else {}
+            configured.setdefault('ui', {}).update(grab_key='v', throw_key='r', control_scheme='classic')
+            config.write_text(json.dumps(configured), encoding='utf-8')
         env.update(PYTHONIOENCODING='utf-8', CUBA_ITEM_WORLD_VISUAL_QA=str(report))
         with runtime_designs(staged) as restored:
             with (output/'flight.log').open('w', encoding='utf-8') as log:
                 subprocess.run([sys.executable, 'tools/flight_sim_run.py', '--world', args.world,
-                                '--require-existing-world', '--seconds', str(30+len(ids)*2),
-                                '--process-timeout', str(180+len(ids)*3), '--no-fly',
+                                '--require-existing-world', '--seconds', str(30+len(ids)*(8 if args.interaction else 2)),
+                                '--process-timeout', str(180+len(ids)*(12 if args.interaction else 3)), '--no-fly',
                                 '--no-hold-forward', '--idle-sec', '0', '--artifact-root',
                                 str(output/'flight-artifacts'), '--report', str(output/'flight.json')],
                                cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
         data = json.loads(report.read_text(encoding='utf-8'))
-        if not data.get('passed') or [r['id'] for r in data['frames']] != ids:
+        expected = [id for id in ids for _ in range(8 if args.interaction else 1)]
+        if not data.get('passed') or [r['id'] for r in data['frames']] != expected:
             raise RuntimeError('Incomplete world capture coverage')
         for row in data['frames']:
-            if row['active_item'] != row['id'] or not row['matching_body']:
+            if not args.interaction and (row['active_item'] != row['id'] or not row['matching_body']):
                 raise RuntimeError('World frame lost its actual inventory or physical item')
         summary.update(passed=True, frames=hashes(output), runtime_files_restored=restored)
     except Exception as error:

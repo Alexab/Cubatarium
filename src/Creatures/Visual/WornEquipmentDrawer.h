@@ -41,6 +41,10 @@ public:
                           glm::vec3 size, unsigned int blockTexture = 0,
                           bool onSupport = true,
                           const ItemVisualInputs &inputs = {});
+  /// Authored right-hand contact in the same centred local frame used by
+  /// a held loose model; caller applies its world transform and ground scale.
+  static bool LooseRightGrip(const std::string &id, glm::vec3 size,
+                             glm::vec3 &contact);
   static bool HidePossessedWield();
   static void SetItemDefinitions(const UItemDefinitionStorage *items);
   static const UItemDefinitionStorage *ItemDefinitions();

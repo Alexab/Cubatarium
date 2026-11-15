@@ -53,5 +53,6 @@
 /docs/research/item-visual-redesign-2026-11-14/studio-review-completion/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 /docs/research/item-visual-redesign-2026-11-14/studio-review-completion/*-output.txt -text -whitespace
 /docs/research/item-visual-redesign-2026-11-14/world-lighting-checkpoint/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/research/item-visual-redesign-2026-11-14/carry-input-checkpoint/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 docs/research/item-visual-redesign-2026-11-14/world-lighting-checkpoint/native-world-frames.zip filter=lfs diff=lfs merge=lfs -text
 docs/research/item-visual-redesign-2026-11-14/carry-input-checkpoint/selected-native-frames.zip filter=lfs diff=lfs merge=lfs -text

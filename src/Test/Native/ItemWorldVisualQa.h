@@ -1,6 +1,10 @@
 #pragma once
 #include "App/Application.h"
 #include "Creatures/Core/Creature.h"
+#include "Creatures/Visual/CreatureEquipmentFit.h"
+#include "Creatures/Visual/CreatureVisual.h"
+#include "Creatures/Visual/WornEquipmentDrawer.h"
+#include "Items/FpViewmodelRenderer.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Render/Camera/Camera.h"
 #include "Render/GlIncludes.h"
@@ -11,9 +15,11 @@
 #include "World/Math/GridMath.h"
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace cutum
@@ -33,6 +39,7 @@ public:
     std::ifstream input(path.parent_path() / "request.json");
     input >> Request;
     Ids = Request.at("ids").get<std::vector<std::string>>();
+    Interaction = Request.value("interaction", std::string{});
     if (Ids.empty())
       throw std::runtime_error("World item capture has no IDs");
     auto *actor = world.GetControlledCreature();
@@ -74,12 +81,18 @@ public:
         !world.AddObject("torch",
                          glm::vec3(Base) + glm::vec3(-.5f, 1.5f, 1.5f)))
       throw std::runtime_error("Cannot place the real room light source");
-    world.SetGameMode(WorldGameMode::Creative);
+    world.SetGameMode(Request.value("mode", "creative") == "survival"
+                          ? WorldGameMode::Survival
+                          : WorldGameMode::Creative);
     world.SetTimeOfDayNormalized(Request.at("light") == "night" ? .85f : .35f);
     world.SetTimeFrozen(true);
     world.SetWeatherAutoEnabled(false);
     world.SetWeatherByName("clear", 0.f);
     while (camera->GetPerspective() != CameraPerspective::FirstPerson)
+      camera->CycleFpsPerspective();
+    if (Request.value("perspective", "first") != "first")
+      camera->CycleFpsPerspective();
+    if (Request.value("perspective", "first") == "front")
       camera->CycleFpsPerspective();
     camera->ResetAllKeyStatus();
     Report = {{"passed", false},
@@ -106,9 +119,9 @@ public:
       world.RemoveCreature(id);
     const auto feet = glm::vec3(Base) + glm::vec3(0, .501f, 0);
     actor->SetBodyOrigin(feet);
-    actor->SetOrientation(90, -12);
+    actor->SetOrientation(Yaw, Pitch);
     camera->SetPosition(feet + actor->GetEyeOffset());
-    camera->SetOrientation(90, -12);
+    camera->SetOrientation(Yaw, Pitch);
     Ready = true;
     for (int x = -1; x <= 1; ++x)
       for (int z = -1; z <= 1; ++z)
@@ -116,13 +129,32 @@ public:
                              UChunkManager::WorldToChunk(Base).x + x,
                              UChunkManager::WorldToChunk(Base).z + z));
   }
-  bool Capture(UWorld &world, int width, int height)
+  void RecordFpAudit(const FpViewmodelDrawParams &params,
+                     const FpViewmodelDrawAudit &audit)
   {
-    if (Done || !Ready || Seconds(Started) < 5. || Seconds(ItemStarted) < .45)
+    FpRightGap = FpLeftGap = 1e9f;
+    FpContacts = params.HasCarryContacts;
+    for (const auto &arm : audit.Arms)
+    {
+      const auto clip = arm.RootMvp * glm::vec4(arm.PalmLocal, 1);
+      if (clip.w <= .001f)
+        continue;
+      const auto target = arm.Left ? params.CarryLeftNdc : params.CarryRightNdc;
+      const float gap = glm::distance(glm::vec2(clip) / clip.w, target);
+      (arm.Left ? FpLeftGap : FpRightGap) = gap;
+    }
+  }
+  bool Capture(UWorld &world, UApplication &app, int width, int height)
+  {
+    if (Done || !Ready || Seconds(Started) < 5. ||
+        Seconds(ItemStarted) < StageDelay())
       return Done;
     if (width != Request.at("width") || height != Request.at("height"))
       throw std::runtime_error("Unexpected world capture framebuffer size");
-    const auto name = Ids[Index] + ".png";
+    const auto name =
+        Ids[Index] + (Interaction.empty() ? "" : "-" + StageName()) + ".png";
+    if (!Interaction.empty())
+      ValidateInteraction(world);
     std::vector<unsigned char> pixels(size_t(width) * height * 4);
     glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
     for (int y = 0; y < height / 2; ++y)
@@ -132,7 +164,8 @@ public:
     if (!stbi_write_png((Path.parent_path() / name).string().c_str(), width,
                         height, 4, pixels.data(), width * 4))
       throw std::runtime_error("Cannot write world item capture");
-    const auto *actor = world.GetControlledCreature();
+    auto *actor = world.GetControlledCreature();
+    const auto *active = actor->GetInventory().GetActiveEntryRef();
     const auto &env = world.GetEnvironmentState();
     const auto cell = WorldPosToBlock(actor->GetEyePosition());
     const auto coord = UChunkManager::WorldToChunk(cell);
@@ -154,9 +187,18 @@ public:
          {"time", env.TimeOfDayNormalized},
          {"day_factor", env.DayNightFactor},
          {"eye_light_packed", light},
-         {"active_item", actor->GetInventory().GetActiveEntryRef()->Id},
+         {"active_item", active ? active->Id : std::string{}},
          {"physical_bodies", UWorldItemSystem::Instance().Count()},
-         {"matching_body", bodyPresent}});
+         {"matching_body", bodyPresent},
+         {"stage", Interaction.empty() ? "static" : StageName()},
+         {"carry_hands", actor->CarryHandCount},
+         {"throw_charge", actor->ThrowCharge},
+         {"fp_contacts", FpContacts},
+         {"right_palm_ndc_gap", FpRightGap},
+         {"left_palm_ndc_gap", FpLeftGap},
+         {"tp_contacts", TpContacts(world)}});
+    if (!Interaction.empty() && AdvanceInteraction(world, app))
+      return false;
     ++Index;
     if (Index == Ids.size())
     {
@@ -175,24 +217,211 @@ private:
   {
     return std::chrono::duration<double>(Clock::now() - time).count();
   }
+  std::string StageName() const
+  {
+    const char *names[] = {"equipped", "windup",  "canceled", "placed",
+                           "grabbed",  "rewound", "released", "landed"};
+    return names[Stage];
+  }
+  double StageDelay() const
+  {
+    if (Interaction.empty())
+      return .45;
+    const double delays[] = {.45, .25, .15, .2, .25, .45, .06, 1.3};
+    return delays[Stage];
+  }
+  void Require(bool condition, const std::string &name)
+  {
+    Report["checks"].push_back(
+        {{"name", Ids[Index] + " " + StageName() + " " + name},
+         {"passed", condition}});
+    if (!condition)
+    {
+      Report["passed"] = false;
+      std::ofstream(Path) << Report.dump(2) << '\n';
+      throw std::runtime_error("World item interaction failed: " + Ids[Index] +
+                               " " + StageName() + " " + name);
+    }
+  }
+  void ValidateInteraction(UWorld &world)
+  {
+    auto *actor = world.GetControlledCreature();
+    const auto &inv = actor->GetInventory();
+    const auto bodies = UWorldItemSystem::Instance().GetItems();
+    int units = 0;
+    auto inspect = [&](const InventoryEntryRef &e)
+    {
+      if (e.empty || e.Id != Original.Id)
+        return;
+      units += e.count;
+      Require(e.instanceId == Original.instanceId && e.wear == Original.wear &&
+                  e.broken == Original.broken &&
+                  e.contentsId == Original.contentsId &&
+                  e.contentsUnits == Original.contentsUnits &&
+                  !e.IsCatalogReference(),
+              "instance, wear and contents preserved");
+    };
+    for (size_t slot = 0; slot < UCreatureInventory::kSlotCount; ++slot)
+      inspect(inv.GetSlot(slot));
+    for (const auto &body : bodies)
+      inspect(body.stack);
+    Require(units == 1, "exactly one finite unit across inventory and world");
+    const bool held = Stage == 1 || Stage == 2 || Stage == 4 || Stage == 5;
+    Require(UWorldItemSystem::Instance().HasCargo(actor->GetId()) == held,
+            "expected ownership of hands");
+    if (held)
+      Require(actor->CarryHandCount > 0, "hand occupancy supplied by gameplay");
+    if (held && Request.value("perspective", "first") == "first")
+    {
+      Require(FpContacts && FpRightGap < .001f,
+              "rendered right palm meets cargo contact");
+      if (actor->CarryHandCount == 2)
+        Require(FpLeftGap < .001f, "rendered left palm meets cargo contact");
+    }
+    if (Stage == 6 || Stage == 7)
+    {
+      auto body = std::find_if(bodies.begin(), bodies.end(),
+                               [&](const auto &b) { return b.id == BodyId; });
+      Require(body != bodies.end(), "released finite body still exists");
+      if (Stage == 7)
+        Require(!body->flying, "released body reaches support");
+    }
+    if (Stage == 2)
+      Require(actor->ThrowCharge == 0,
+              "Escape canceled charge while preserving cargo");
+    if (Stage == 1 || Stage == 5)
+      Require(actor->ThrowCharge > .05f,
+              "charge advanced through the game tick");
+  }
+  nlohmann::json TpContacts(UWorld &world)
+  {
+    auto *actor = world.GetControlledCreature();
+    auto *visual = actor->GetVisual();
+    nlohmann::json result = nlohmann::json::array();
+    for (const auto &body : UWorldItemSystem::Instance().GetItems())
+      if (body.carrierId == actor->GetId() && visual)
+      {
+        const float yaw = glm::radians(actor->GetYaw());
+        const auto right = glm::vec3(-std::sin(yaw), 0, std::cos(yaw));
+        const float width = glm::dot(glm::abs(right), body.physical.size) * .5f;
+        for (int hand = 0; hand < actor->CarryHandCount; ++hand)
+        {
+          const char *name = hand ? "leftItem" : "rightItem";
+          glm::mat4 frame;
+          glm::vec3 low, high;
+          if (!visual->GetWorldBoneTransform(name, frame) ||
+              !visual->GetBoneLocalBounds(name, low, high))
+            continue;
+          const auto palm = glm::vec3(
+              frame * glm::vec4(CreaturePalmGripPosition(low, high), 1));
+          auto target = body.position + right * (hand ? -width : width);
+          glm::vec3 grip;
+          if (!hand && actor->CarryHandCount == 1 &&
+              WornEquipmentDrawer::LooseRightGrip(body.stack.Id,
+                                                  body.physical.size, grip))
+            target = body.position + grip * world.GetItemDefinitionStorage()
+                                                ->Get(body.stack.Id)
+                                                ->Visual.GroundScale;
+          result.push_back({{"hand", name},
+                            {"gap", glm::distance(palm, target)},
+                            {"palm", {palm.x, palm.y, palm.z}},
+                            {"target", {target.x, target.y, target.z}}});
+        }
+      }
+    return result;
+  }
+  bool AdvanceInteraction(UWorld &world, UApplication &app)
+  {
+    auto *actor = world.GetControlledCreature();
+    auto camera = world.GetCurrentUserCamera();
+    auto key = [&](int code, int action = GLFW_PRESS)
+    { app.RouteKey(code, action, 0); };
+    if (Stage == 0 || Stage == 4)
+    {
+      if (Stage == 4)
+      {
+        Yaw = 90;
+        Pitch = -5;
+      }
+      key(GLFW_KEY_R);
+    }
+    else if (Stage == 1)
+    {
+      key(GLFW_KEY_ESCAPE);
+      key(GLFW_KEY_R, GLFW_RELEASE);
+    }
+    else if (Stage == 2)
+      key(GLFW_KEY_V);
+    else if (Stage == 3)
+    {
+      const auto bodies = UWorldItemSystem::Instance().GetItems();
+      auto body = std::find_if(bodies.begin(), bodies.end(),
+                               [&](const auto &b) { return b.id == BodyId; });
+      Require(body != bodies.end(), "placed body remains available for grab");
+      const auto d = body->position - camera->GetPosition();
+      Yaw = glm::degrees(std::atan2(d.z, d.x));
+      Pitch = glm::degrees(std::atan2(d.y, glm::length(glm::vec2(d.x, d.z))));
+      camera->SetOrientation(Yaw, Pitch);
+      actor->SetOrientation(Yaw, Pitch);
+      key(GLFW_KEY_V);
+    }
+    else if (Stage == 5)
+    {
+      key(GLFW_KEY_R, GLFW_RELEASE);
+      const auto bodies = UWorldItemSystem::Instance().GetItems();
+      const auto body =
+          std::find_if(bodies.begin(), bodies.end(),
+                       [&](const auto &b) { return b.id == BodyId; });
+      Require(body != bodies.end() && !body->carrierId && body->flying &&
+                  glm::length(body->velocity) > 1.f,
+              "R release supplies a real flight impulse before collision "
+              "resolution");
+    }
+    if (Stage == 7)
+      return false;
+    if (Stage == 0)
+      for (const auto &body : UWorldItemSystem::Instance().GetItems())
+        if (body.carrierId == actor->GetId())
+          BodyId = body.id;
+    ++Stage;
+    ItemStarted = Clock::now();
+    return true;
+  }
   void SetItem(UWorld &world)
   {
+    Stage = 0;
+    Yaw = 90;
+    Pitch = -12;
     auto &inv = world.GetControlledCreature()->GetInventory();
     inv = UCreatureInventory{};
     inv.SetItemDefinitions(world.GetItemDefinitionStorage());
-    inv.SetCreative(true);
+    inv.SetCreative(Request.value("mode", "creative") != "survival");
+    world.GetControlledCreature()->GetVitals().fatigue = 0;
     InventoryEntryRef entry;
     entry.empty = false;
     entry.kind = InventoryEntryKind::Item;
     entry.Id = Ids[Index];
     entry.count = 1;
+    if (!Interaction.empty())
+    {
+      const auto *definition = world.GetItemDefinitionStorage()->Get(entry.Id);
+      entry.wear = definition && definition->StackMax == 1 ? .37f : 0.f;
+      if (entry.Id == "bucket" || entry.Id == "waterskin")
+      {
+        entry.contentsId = "water";
+        entry.contentsUnits = entry.Id == "bucket" ? 1 : 3;
+      }
+    }
     inv.Insert(entry);
     inv.SetActiveSlot(0, 0);
     auto &physics = UWorldItemSystem::Instance();
     physics.Clear();
-    BodyId = physics.SpawnStack(glm::vec3(Base) + glm::vec3(-.55f, 1.1f, 2.1f),
-                                entry, InventoryDomain::Creative);
-    if (!BodyId)
+    Original = *inv.GetActiveEntryRef();
+    if (Interaction.empty())
+      BodyId =
+          physics.SpawnStack(glm::vec3(Base) + glm::vec3(-.55f, 1.1f, 2.1f),
+                             entry, InventoryDomain::Creative);
+    if (Interaction.empty() && !BodyId)
       throw std::runtime_error("Cannot spawn world presentation item");
     ItemStarted = Clock::now();
   }
@@ -200,9 +429,13 @@ private:
   nlohmann::json Request, Report;
   std::vector<std::string> Ids;
   size_t Index{0};
-  int BodyId{0};
+  int BodyId{0}, Stage{0};
+  float Yaw{90}, Pitch{-12};
+  std::string Interaction;
+  InventoryEntryRef Original;
   glm::ivec3 Base{};
   Clock::time_point Started, ItemStarted;
-  bool Ready{false}, Done{false};
+  bool Ready{false}, Done{false}, FpContacts{false};
+  float FpRightGap{1e9f}, FpLeftGap{1e9f};
 };
 } // namespace cutum

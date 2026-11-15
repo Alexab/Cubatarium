@@ -1128,6 +1128,16 @@ void WornEquipmentDrawer::SubmitLoose(CreatureDrawQueue &queue,
         blockTexture ? blockTexture : SolidColorTex(id), cube, false);
   }
 }
+bool WornEquipmentDrawer::LooseRightGrip(const std::string &id, glm::vec3 size,
+                                         glm::vec3 &contact)
+{
+  const auto surface = FindSurface(ResolveGltfAbs(id));
+  if (!surface || !surface->Grip.HasRightGrip)
+    return false;
+  contact = glm::vec3(ItemLooseLocalMatrix(*surface, size, false) *
+                      glm::vec4(surface->Grip.RightGrip, 1));
+  return true;
+}
 void WornEquipmentDrawer::SetHidePossessedWield(bool hide)
 {
   g_HidePossessedWield = hide;

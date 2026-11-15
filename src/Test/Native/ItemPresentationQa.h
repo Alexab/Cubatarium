@@ -116,9 +116,11 @@ public:
   ItemSurfaceRenderer &Renderer;
   ItemPresentationProfile Profile;
   int Draws{0};
+  ItemDrawRequest Last;
   void DrawItemSurface(const ItemDrawRequest &r) override
   {
     ++Draws;
+    Last = r;
     Renderer.Draw(r.Asset, r.Path, r.ViewProjection, r.Model, r.State, Profile);
   }
   void DrawTexturedPart(const glm::mat4 &, unsigned, CreaturePartMesh) override
@@ -705,6 +707,25 @@ RunItemPresentationQa(const std::filesystem::path &path,
                                  std::max(.15f, glm::length(extent)) * 1.7f;
     const auto vp = glm::perspective(glm::radians(45.f), 1.f, .01f, 100.f) *
                     glm::lookAt(eye, focus, glm::vec3(0, 1, 0));
+    {
+      CreatureDrawQueue queue;
+      const auto model = glm::translate(glm::mat4(1), glm::vec3(1, 2, 3)) *
+                         glm::rotate(glm::mat4(1), .8f, glm::vec3(0, 1, 0)) *
+                         glm::scale(glm::mat4(1), glm::vec3(.8f));
+      WornEquipmentDrawer::SubmitLoose(queue, id, vp, model, def->Physical.size,
+                                       0, false);
+      UItemQaSink sink(renderer);
+      queue.Flush(sink);
+      glm::vec3 contact;
+      check(id + " carry contact agrees with actual loose draw transform",
+            sink.Draws == 1 &&
+                WornEquipmentDrawer::LooseRightGrip(id, def->Physical.size,
+                                                    contact) &&
+                glm::distance(glm::vec3(model * glm::vec4(contact, 1)),
+                              glm::vec3(sink.Last.Model *
+                                        glm::vec4(surface->Grip.RightGrip,
+                                                  1))) < .00001f);
+    }
     for (int light = 0; light < 4; ++light)
     {
       target.Bind();

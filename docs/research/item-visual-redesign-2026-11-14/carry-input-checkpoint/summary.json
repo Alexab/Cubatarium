@@ -1,0 +1,76 @@
+{
+  "scope": "finite item routed-key transfer/throw conservation and FP contact projection; TP pose and authored two-hand grips remain open",
+  "passed": true,
+  "runs": [
+    {
+      "name": "day-1280-100-throw",
+      "mode": "creative",
+      "items": 70,
+      "frames": 560,
+      "checks": 2824,
+      "maximum_right_palm_ndc_gap": 2.385337438681745e-07,
+      "two_hand_frames": 24,
+      "executable_sha256": "f87c6ff510b63ec691c684dffd96b24c67364ccaf6d7b2a82cef7fb78bd93520",
+      "implementation_parent": "8f7518c84ddb09d307fac074b449b6473af45ba8",
+      "sources": {
+        "src/App/Application.cpp": "82efe47a672133bde841b5aa42d510d89ec640cabc65156dcf91341c91c62421",
+        "src/Test/Native/ItemWorldVisualQa.h": "e6960f6bb1272391ddfd723683b3742f8c216c6a79d5d77b417d257d00f45113",
+        "tools/run_item_world_visual_qa.py": "3a72da2e2740e345f9f869c178b959652b18c809d56b1029a6c95999d32cdf94",
+        "src/Creatures/Visual/WornEquipmentDrawer.cpp": "63d88236c8500ff6584374ca852e5218176b5e16e7eada33b400c8162a5328f5",
+        "src/Creatures/Visual/WornEquipmentDrawer.h": "ae71bcc6d3b64335715e059e51bae6c9ebf1c90944c2e020a4a34590fbca028a",
+        "src/Test/Native/ItemPresentationQa.h": "d99e3261eaa90af6eb090f726698036e08333767f5964f0599355231fc05d73c"
+      }
+    },
+    {
+      "name": "day-1280-100-throw-survival",
+      "mode": "survival",
+      "items": 70,
+      "frames": 560,
+      "checks": 2824,
+      "maximum_right_palm_ndc_gap": 2.3936024717841065e-07,
+      "two_hand_frames": 24,
+      "executable_sha256": "f87c6ff510b63ec691c684dffd96b24c67364ccaf6d7b2a82cef7fb78bd93520",
+      "implementation_parent": "8f7518c84ddb09d307fac074b449b6473af45ba8",
+      "sources": {
+        "src/App/Application.cpp": "82efe47a672133bde841b5aa42d510d89ec640cabc65156dcf91341c91c62421",
+        "src/Test/Native/ItemWorldVisualQa.h": "e6960f6bb1272391ddfd723683b3742f8c216c6a79d5d77b417d257d00f45113",
+        "tools/run_item_world_visual_qa.py": "3a72da2e2740e345f9f869c178b959652b18c809d56b1029a6c95999d32cdf94",
+        "src/Creatures/Visual/WornEquipmentDrawer.cpp": "63d88236c8500ff6584374ca852e5218176b5e16e7eada33b400c8162a5328f5",
+        "src/Creatures/Visual/WornEquipmentDrawer.h": "ae71bcc6d3b64335715e059e51bae6c9ebf1c90944c2e020a4a34590fbca028a",
+        "src/Test/Native/ItemPresentationQa.h": "d99e3261eaa90af6eb090f726698036e08333767f5964f0599355231fc05d73c"
+      }
+    }
+  ],
+  "flow_native_frames": 1120,
+  "retained_flow_native_frames": 115,
+  "retained_tp_diagnostic_frames": 24,
+  "retained_flow_scope": "all 70 Creative windup images; full eight-stage flows for iron_pickaxe, iron_chest and filled waterskin in both modes; remaining raw PNGs are local and independently hashed",
+  "integrated_checks": {
+    "gameplay": 59,
+    "window": 0,
+    "ownership": 57,
+    "ownership_ui": 18,
+    "player_window": 7,
+    "icons": 209,
+    "item_lab": 1040,
+    "presentations": 3660
+  },
+  "production_promoted": 0,
+  "remaining": [
+    "authored two-hand item contacts",
+    "third-person carry pose",
+    "mouse-driven use and bow transitions",
+    "final provenance and publication",
+    "final display matrix and paired performance"
+  ],
+  "files": {
+    "day-1280-100-throw-summary.json": "a9925552981b6addc4e8c4279a360811e43f5167d41c8526ec8acbcf62c73dbc",
+    "day-1280-100-throw-survival-summary.json": "99f5f9e97087a1081d5ab7a9490c3176305a5e0c791239905024a5e4f370a3a3",
+    "fp-contact-before-after.png": "19aa033ebce6cb729636b8f73651bfccde2a08660ce72389a7ddcbc4472d5baf",
+    "frame-hashes.json": "90c6aa25455a1739de81bdd8de1cc3dd5e871e420dfd1964cfdf28de96593826",
+    "native-output.zip": "6de4bc905a2fc5b76e26d0cb50ab8da0b6c230d75ae40b2db09860864b9c164d",
+    "selected-native-frames.zip": "77880abb0d55613c28b72766093884277e0e9f2bade3ef203c48f6ae738b9356",
+    "tp-pose-open-defect.png": "bed30afca6588c25631871595428d5422a82dad828c77a09c71b992cd9acee5b",
+    "two-hand-grip-open-defect.png": "b80427bd06d3d13546fe4a8d5a169563247c155a700a6f871dcc9a421e602e99"
+  }
+}

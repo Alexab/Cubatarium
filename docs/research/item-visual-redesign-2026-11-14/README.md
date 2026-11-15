@@ -889,6 +889,19 @@ The rejected fixture runs and their corrections are retained. This closes the
 static all-item world-lighting capture gap, not actual input-driven carry/use/
 throw, the full final display matrix, publication or performance acceptance.
 
+## Routed carry input and actual FP contact
+
+[Two-mode input and FP correction](carry-input-checkpoint/README.md) exercise
+all 70 finite item types through eight routed-key stages in Creative and
+Survival: 1120 frames, 2824 checks per mode, with identity/wear/contents conserved.
+One-handed FP carry now uses the actual authored grip and loose-model transform.
+The full Release regression passes 25 CTests and all native profiles, including
+3660 presentation checks. The same input coverage exposes unresolved generic
+two-hand tool contacts and the old TP carry pose. These are retained as open
+visual defects; numerical target agreement is not their artistic acceptance.
+Fix authored two-hand/TP carry next, then mouse-driven use/bow and final release
+gates. Production remains 0/70.
+
 ## Acceptance contract
 
 Deterministic publication preserves author work and grips. Missing production
