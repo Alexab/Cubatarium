@@ -1,0 +1,6 @@
+Internal ctest changing into directory: E:/Work/Home/Cubatarium/build/desktop-msvc
+Test project E:/Work/Home/Cubatarium/build/desktop-msvc
+No tests were found!!!
+Errors while running CTest
+Output from these tests are in: E:/Work/Home/Cubatarium/build/desktop-msvc/Testing/Temporary/LastTest.log
+Use "--rerun-failed --output-on-failure" to re-run the failed cases verbosely.

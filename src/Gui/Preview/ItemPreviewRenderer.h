@@ -3,7 +3,9 @@
 
 #include "Items/ItemVisualInputs.h"
 #include <filesystem>
+#include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -17,6 +19,7 @@ namespace cutum
 
 class UItemDefinitionStorage;
 class UShaderManager;
+struct ItemDrawRequest;
 
 /// Lightweight 3D preview renderer for item tools / armor props.
 /// Supports (in order): static glTF via CreatureGltfLoader, parts[] JSON cubes,
@@ -31,6 +34,16 @@ public:
   bool Initialize();
   void Shutdown();
   void Invalidate();
+  void SetInspectionDrawObserver(
+      std::function<void(const ItemDrawRequest &)> observer)
+  {
+    InspectionDrawObserver = std::move(observer);
+  }
+  void SetInspectionFramingBounds(
+      std::optional<std::pair<glm::vec3, glm::vec3>> bounds)
+  {
+    InspectionFramingBounds = std::move(bounds);
+  }
 
   /// Renders to an owned texture (caller must keep/delete it).
   GLuint RenderToUniqueTexture(const std::string &itemId, int size,
@@ -86,6 +99,8 @@ private:
   std::shared_ptr<const struct ItemRenderAsset> InspectionAsset;
   std::filesystem::path InspectionPath;
   int InspectionMode{0};
+  std::function<void(const ItemDrawRequest &)> InspectionDrawObserver;
+  std::optional<std::pair<glm::vec3, glm::vec3>> InspectionFramingBounds;
   float InspectionAmbient{.65f};
   std::unordered_map<std::string, std::shared_ptr<const ItemRenderAsset>>
       InspectionAssets;

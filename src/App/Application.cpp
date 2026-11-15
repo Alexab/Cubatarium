@@ -7,6 +7,7 @@
 #include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiTextInput.h"
+#include "Test/Native/ItemLabDiagnosticsQa.h"
 #include "Test/Native/ItemLabSceneQa.h"
 #include "Test/Native/ItemPerformanceQa.h"
 #include "Test/Native/ItemPresentationQa.h"
@@ -2624,6 +2625,21 @@ void UApplication::RunItemLabQa(const std::string &path)
   click(ItemLabScreen->GetExportBounds());
   check("export writes fresh report",
         std::filesystem::is_regular_file(exportReport));
+  if (std::filesystem::is_regular_file(exportReport))
+  {
+    std::ifstream file(exportReport);
+    const auto exported = nlohmann::json::parse(file);
+    check("export includes exact resource costs and authoritative contacts",
+          exported.value("schema_version", 0) == 4 &&
+              exported.at("panels").size() == 2 &&
+              exported.at("panels")[1]
+                      .at("geometry_buffer_bytes")
+                      .get<uint64_t>() > 0 &&
+              exported.at("panels")[1].at("rgba8_mip_bytes").get<uint64_t>() >
+                  0 &&
+              exported.at("panels")[1].at("contacts").contains("right") &&
+              exported.at("panels")[1].at("physical").contains("size"));
+  }
   for (const auto &suffix : {"-reference.png", "-candidate.png"})
     check(std::string("export image ") + suffix,
           std::filesystem::is_regular_file(exports /
@@ -2650,6 +2666,10 @@ void UApplication::RunItemLabQa(const std::string &path)
   }
   RunItemLabSceneQa(*ItemLabScreen, *GuiContext,
                     std::filesystem::path(path + ".frames"), report);
+  RunItemLabDiagnosticsQa(
+      *ItemLabScreen, *GuiContext,
+      Core->GetItemDefinitionStorage()->ListCatalogIds(),
+      std::filesystem::path(path + ".frames") / "diagnostics", report);
   ItemLabScreen->SetPosePreset(0);
   click(ItemLabScreen->GetPoseBounds());
   check("pointer switches state preset", ItemLabScreen->GetPosePreset() == 1);

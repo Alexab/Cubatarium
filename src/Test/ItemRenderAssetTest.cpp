@@ -3,6 +3,7 @@
 #include "Items/ItemActionPulse.h"
 #include "Items/ItemInspectionSource.h"
 #include "Items/ItemLabAssets.h"
+#include "Items/ItemLabDiagnostics.h"
 #include "Items/ItemPresentationMath.h"
 
 #include <chrono>
@@ -372,6 +373,55 @@ int main()
         {"support_grip_node", "blade"},   {"fp_scale", .65}};
     write(g);
     const auto asset = cutum::LoadItemRenderAsset(folder / "model.gltf");
+    auto repeated = *asset;
+    repeated.Primitives.push_back(repeated.Primitives[0]);
+    repeated.Materials.push_back(repeated.Materials[0]);
+    repeated.Primitives[1].Material = 1;
+    int probes = 0;
+    const auto metrics = cutum::MeasureItemLabResources(
+        repeated,
+        [&](const auto &image)
+        {
+          Expect(image == fs::weakly_canonical(folder / "albedo.png"),
+                 "diagnostics use the loaded referenced image");
+          ++probes;
+          return glm::ivec2(3, 5);
+        });
+    Expect(metrics.Vertices == 6 && metrics.Triangles == 2 &&
+               metrics.GeometryBytes ==
+                   2 * (24 * sizeof(float) + 3 * sizeof(unsigned)),
+           "diagnostics count actual buffer payloads, not bounds or source "
+           "index width");
+    Expect(
+        probes == 1 && metrics.Textures.size() == 1 &&
+            metrics.RgbaMipBytes == 72 && metrics.Textures[0].Levels == 3,
+        "shared images count once, including rectangular odd-size mip levels");
+    Expect(cutum::ItemLabMetricsJson(metrics)["rgba8_mip_bytes"] == 72,
+           "machine-readable costs preserve exact byte units");
+    bool invalidImage = false;
+    try
+    {
+      cutum::MeasureItemLabResources(repeated, [](const auto &)
+                                     { return glm::ivec2(0); });
+    }
+    catch (const std::exception &)
+    {
+      invalidImage = true;
+    }
+    Expect(invalidImage,
+           "invalid images cannot produce fabricated resource costs");
+    const auto uvLines =
+        cutum::ItemLabUvLines(repeated, asset->Materials[0].Albedo);
+    Expect(uvLines.size() == 12 && uvLines[0].Position == glm::vec3(0) &&
+               uvLines[1].Position == glm::vec3(1, 0, 0),
+           "UV overlay uses real indexed UVs from both primitives");
+    Expect(cutum::ItemLabUvLines(repeated, folder / "unreferenced.png").empty(),
+           "an atlas shows only primitives referencing that image");
+    const auto contacts = cutum::ItemLabContactLines(*asset, {}, {1, 2, 3});
+    Expect(contacts.size() == 38 && contacts[0].Position.x == -.5f &&
+               contacts[1].Position.x == .5f,
+           "diagnostics draw physical extents plus authored grip and support "
+           "markers");
     Expect(asset->WearSections.size() == 1 &&
                asset->WearSections[0].Node == "blade" &&
                asset->WearSections[0].Region == "full",

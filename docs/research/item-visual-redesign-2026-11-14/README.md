@@ -824,6 +824,25 @@ and earlier focused executable hashes separately. This work
 does not replace final all-item art, world-lighting or performance acceptance,
 and production v3 promotion remains 0/70.
 
+## Item Lab diagnostic scenes and costs
+
+[Diagnostic implementation and native evidence](lab-diagnostics-checkpoint/README.md)
+add physical/contact overlays, real indexed UV atlases, per-source buffer/texture
+costs and schema 4 export metadata. All 70 candidates have native contact/UV
+comparisons against their real reference; all diagnostic lines are framed.
+The focused Release flight run passes 1023 checks, including label/layout checks
+at both required resolutions and all three UI scales, unchanged player property,
+and 140 comparisons of estimated mip texels against actual OpenGL allocations.
+All 25 profile CTests and style/include/format audits pass.
+
+Fill presets now set water identity as well as quantity, fixing filled studio
+containers that previously rendered empty. The native empty/full bucket frames
+prove the correction. The new runner checks report freshness/catalog coverage
+and source conservation without substituting production models. Detailed scope,
+all 295 native diagnostic images and tested executable/source hashes are retained
+in the checkpoint. Independent state controls, carry contact art and final
+all-item artistic/world/performance acceptance still remain; promotion is 0/70.
+
 ## Acceptance contract
 
 Deterministic publication preserves author work and grips. Missing production

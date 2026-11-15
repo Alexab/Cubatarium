@@ -1,0 +1,2 @@
+clang-format: OK (8 file(s)).
+clang-format: OK (5 file(s)).

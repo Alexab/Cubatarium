@@ -6,6 +6,7 @@
 #include "Creatures/Visual/WornEquipmentDrawer.h"
 #include "Game/Inventory/InventoryTypes.h"
 #include "Gui/Preview/CreaturePreviewRenderer.h"
+#include "Gui/Preview/ItemLabOverlayRenderer.h"
 #include "Gui/Preview/ItemPreviewRenderer.h"
 #include "Items/FpViewmodelRenderer.h"
 #include "Items/ItemDefinitionStorage.h"
@@ -137,6 +138,7 @@ UItemLabSceneRenderer::UItemLabSceneRenderer(
   Fp = std::make_unique<UFpViewmodelRenderer>(Items, blocks, textures,
                                               creatureTextures, shaders);
   Surface = std::make_unique<ItemSurfaceRenderer>();
+  Overlay = std::make_unique<UItemLabOverlayRenderer>(*shaders);
   if (!Creature->Initialize() || !Fp->Initialize() ||
       !Surface->Initialize(*shaders))
     throw std::runtime_error("Cannot initialize Item Lab scenes");
@@ -157,6 +159,51 @@ unsigned UItemLabSceneRenderer::Render(
   LastDrawCount = 1;
   LastSourceMatches = true;
   LastBowSupportContact = false;
+  LastDiagnosticVertices = 0;
+  LastDiagnosticsFramed = true;
+  if (p.Scene == 6)
+  {
+    const auto *definition = Items->Get(id);
+    if (!definition)
+      throw std::runtime_error("Missing diagnostic item definition");
+    const auto state = EvaluateItemVisualState(*asset, p.Inputs);
+    const auto lines =
+        ItemLabContactLines(*asset, state, definition->Physical.size);
+    auto bounds = ItemVisualBounds(*asset, state);
+    for (const auto &line : lines)
+    {
+      bounds.first = glm::min(bounds.first, line.Position);
+      bounds.second = glm::max(bounds.second, line.Position);
+    }
+    orbit.SetInspectionFramingBounds(bounds);
+    orbit.SetInspectionDrawObserver(
+        [&](const ItemDrawRequest &request)
+        {
+          LastSourceMatches = request.Asset == asset && request.Path == path;
+          LastDiagnosticVertices = Overlay->DrawContacts(
+              *request.Asset, request.State, definition->Physical.size,
+              request.ViewProjection * request.Model);
+          for (const auto &line : lines)
+          {
+            const auto clip = request.ViewProjection * request.Model *
+                              glm::vec4(line.Position, 1);
+            LastDiagnosticsFramed = LastDiagnosticsFramed && clip.w > 0 &&
+                                    std::abs(clip.x) <= clip.w &&
+                                    std::abs(clip.y) <= clip.w;
+          }
+        });
+    struct ResetObserver
+    {
+      UItemPreviewRenderer &Renderer;
+      ~ResetObserver()
+      {
+        Renderer.SetInspectionDrawObserver({});
+        Renderer.SetInspectionFramingBounds({});
+      }
+    } reset{orbit};
+    return orbit.RenderInspectionTexture(id, path, 512, p.Yaw, p.Pitch, p.Mode,
+                                         p.Ambient, p.Inputs);
+  }
   if (p.Scene == 0)
     return orbit.RenderInspectionTexture(id, path, 512, p.Yaw, p.Pitch, p.Mode,
                                          p.Ambient, p.Inputs);
@@ -262,7 +309,12 @@ unsigned UItemLabSceneRenderer::Render(
     return result.Take();
   }
   UStudioTarget result(512, 512, p.Mode == 1);
-  if (p.Scene == 5)
+  if (p.Scene == 7)
+  {
+    LastDiagnosticVertices = Overlay->DrawUvTiles(*asset);
+    LastDrawCount = LastDiagnosticVertices > 0 ? 1 : 0;
+  }
+  else if (p.Scene == 5)
   {
     LastDrawCount = 3;
     int column = 0;

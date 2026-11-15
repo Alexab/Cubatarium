@@ -2,6 +2,8 @@
 
 #include "App/Platform/IUPlatformPaths.h"
 #include "Gui/Core/GuiContext.h"
+#include "Gui/Core/GuiRenderer.h"
+#include "Gui/Core/GuiTheme.h"
 #include "Gui/Preview/ItemLabSceneRenderer.h"
 #include "Gui/Preview/ItemPreviewRenderer.h"
 #include "Gui/Widgets/GuiButton.h"
@@ -16,12 +18,15 @@
 #include "Items/ItemRenderAsset.h"
 #include "Render/GlIncludes.h"
 #include "Render/Pipeline/GlStateScope.h"
+#include "ThirdParty/stb_image.h"
 #include "ThirdParty/stb_image_write.h"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
 #include <fstream>
 #include <nlohmann/json.hpp>
+#include <sstream>
+#include <stdexcept>
 
 namespace cutum
 {
@@ -31,7 +36,8 @@ const char *Modes[] = {"Lit",        "Silhouette", "Gray",     "Albedo",
                        "UV checker", "Normals",    "Wireframe"};
 const char *Lights[] = {"Studio", "Dim", "Bright"};
 const char *Poses[] = {"Rest", "Half", "Peak"};
-const char *Scenes[] = {"Orbit", "FP", "TP", "Ground", "Armor", "Icons"};
+const char *Scenes[] = {"Orbit", "FP",    "TP",       "Ground",
+                        "Armor", "Icons", "Contacts", "UV"};
 const char *Actors[] = {"Male / R", "Male / L", "Female / R", "Female / L"};
 const char *Cameras[] = {"Orbit", "Front", "Back", "Side", "Top"};
 const char *Motions[] = {"Still", "Walk pose", "Play"};
@@ -113,7 +119,7 @@ void UItemLabScreen::Build(UGuiContext &ctx)
       });
   SceneButton = add(
       std::make_unique<UGuiButton>(theme, std::string("3D: ") + Scenes[Scene]));
-  SceneButton->SetOnClick([this] { SetScene((Scene + 1) % 6); });
+  SceneButton->SetOnClick([this] { SetScene((Scene + 1) % 8); });
   ActorButton = add(std::make_unique<UGuiButton>(theme, Actors[Actor]));
   ActorButton->SetOnClick([this] { SetActor((Actor + 1) % 4); });
   CameraButton = add(std::make_unique<UGuiButton>(theme, std::string("Cam: ") +
@@ -145,6 +151,7 @@ void UItemLabScreen::Build(UGuiContext &ctx)
       [this]
       {
         Preview->Invalidate();
+        MetricsCache.clear();
         ScenesRenderer->Invalidate();
         ClearItemSurfaceAssets();
         ItemGltfTextureCache::Instance().Clear();
@@ -175,17 +182,32 @@ void UItemLabScreen::SelectItem(const std::string &id)
 }
 void UItemLabScreen::SetScene(int scene)
 {
-  Scene = std::clamp(scene, 0, 5);
+  Scene = std::clamp(scene, 0, 7);
   if (SceneButton)
-    SceneButton->SetLabel(std::string("3D: ") + Scenes[Scene]);
+    SceneButton->SetLabel(Scene >= 6 ? Scenes[Scene]
+                                     : std::string("3D: ") + Scenes[Scene]);
   if (CameraButton)
   {
-    CameraButton->SetEnabled(Scene != 1 && Scene != 5);
-    CameraButton->SetLabel(Scene == 1 ? "FP camera"
+    CameraButton->SetEnabled(Scene != 1 && Scene != 5 && Scene != 7);
+    CameraButton->SetLabel(Scene == 1   ? "FP camera"
+                           : Scene == 7 ? "UV sheet"
                            : Scene == 5
                                ? "Icon camera"
                                : std::string("Cam: ") + Cameras[Camera]);
   }
+  if (ModeButton)
+    ModeButton->SetEnabled(Scene != 7);
+  if (ActorButton)
+    ActorButton->SetEnabled(Scene != 7);
+  if (PoseButton)
+    PoseButton->SetEnabled(Scene != 7);
+  if (MotionButton)
+    MotionButton->SetEnabled(Scene != 7);
+  if (LightButton)
+    LightButton->SetEnabled(Scene != 7);
+  for (auto *view : Views)
+    if (view)
+      view->SetEnabled(Scene != 7);
   Dirty = true;
 }
 void UItemLabScreen::SetActor(int actor)
@@ -261,13 +283,13 @@ void UItemLabScreen::Layout()
     buttons[i]->SetBounds({x + m + (i % 2) * (column + m),
                            controlsY + (i / 2) * (row + m), column, row});
   const int previewY = y + 2 * row + 3 * m,
-            previewH = std::max(row, ViewportH - 4 * row - 6 * m);
+            previewH = std::max(row, ViewportH - 5 * row - 6 * m);
   for (int i = 0; i < 2; ++i)
   {
     const int px = right + i * width / 2;
     Captions[i]->SetBounds({px, y + row + 2 * m, width / 2 - m, row});
     Views[i]->SetBounds({px, previewY, width / 2 - m, previewH});
-    Info[i]->SetBounds({px, previewY + previewH + m, width / 2 - m, row});
+    Info[i]->SetBounds({px, previewY + previewH + m, width / 2 - m, 2 * row});
   }
   Status->SetBounds({right, y + ViewportH - row - m, width, row});
 }
@@ -313,9 +335,31 @@ void UItemLabScreen::Refresh()
       SceneDraws[i] = 0;
       SceneSources[i] = false;
       SceneBowContacts[i] = false;
+      SceneDiagnostics[i] = 0;
+      SceneDiagnosticsFramed[i] = true;
+      PanelMetrics[i] = {};
       if (std::filesystem::is_regular_file(Paths[i]))
       {
         const auto asset = Preview->GetInspectionAsset(Paths[i]);
+        auto metrics = MetricsCache.find(Paths[i]);
+        if (metrics == MetricsCache.end())
+          metrics =
+              MetricsCache
+                  .emplace(Paths[i],
+                           MeasureItemLabResources(
+                               *asset,
+                               [](const auto &path)
+                               {
+                                 int width = 0, height = 0, channels = 0;
+                                 if (!stbi_info(path.string().c_str(), &width,
+                                                &height, &channels))
+                                   throw std::runtime_error(
+                                       "Cannot inspect texture: " +
+                                       path.string());
+                                 return glm::ivec2(width, height);
+                               }))
+                  .first;
+        PanelMetrics[i] = metrics->second;
         ItemLabSceneParams params;
         params.Scene = Scene;
         params.Mode = Mode;
@@ -339,23 +383,25 @@ void UItemLabScreen::Refresh()
             params.Inputs.ContentsUnits =
                 std::max(params.Inputs.ContentsUnits,
                          int(std::lround(binding.Maximum * charge)));
+        params.Inputs.HasWater = params.Inputs.ContentsUnits > 0;
         next =
             ScenesRenderer->Render(*Preview, Selected, Paths[i], asset, params);
+        PanelInputs[i] = params.Inputs;
         SceneDraws[i] = ScenesRenderer->DrawCount();
         SceneSources[i] = ScenesRenderer->SourceMatches();
         SceneBowContacts[i] = ScenesRenderer->BowSupportContact();
-        size_t triangles = 0, vertices = 0;
-        for (const auto &p : asset->Primitives)
-        {
-          triangles += p.Indices.size() / 3;
-          vertices += p.Vertices.size() / 8;
-        }
+        SceneDiagnostics[i] = ScenesRenderer->DiagnosticVertices();
+        SceneDiagnosticsFramed[i] = ScenesRenderer->DiagnosticsFramed();
+        const auto &cost = PanelMetrics[i];
+        const auto memory =
+            "\nMesh " + std::to_string((cost.GeometryBytes + 1023) / 1024) +
+            "K | Tex " + std::to_string((cost.RgbaMipBytes + 1023) / 1024) +
+            "K";
         if (Scene == 5)
-          Info[i]->SetText("32 / 48 / 64 px (native)");
+          Info[i]->SetText("32 / 48 / 64 px" + memory);
         else
-          Info[i]->SetText(std::to_string(triangles) + " tri / " +
-                           std::to_string(vertices) + " v / " +
-                           std::to_string(asset->Materials.size()) + " mat");
+          Info[i]->SetText(std::to_string(cost.Triangles) + " tri | " +
+                           std::to_string(cost.Materials) + " mat" + memory);
       }
       else
         Info[i]->SetText(i == 0 ? "Missing reference model"
@@ -376,7 +422,9 @@ void UItemLabScreen::Refresh()
     }
   }
   if (Textures[0] && Textures[1])
-    Status->SetText(Scene == 5   ? "Icons: 32 / 48 / 64 native pixels"
+    Status->SetText(Scene == 7   ? "UV: albedo + indexed triangles"
+                    : Scene == 6 ? "R red | L cyan | pull gold | box purple"
+                    : Scene == 5 ? "Icons: 32 / 48 / 64 native pixels"
                     : Scene == 1 ? "FP: gameplay camera, 16:9"
                                  : "Drag view to rotate. Export PNG/JSON.");
 }
@@ -391,6 +439,20 @@ bool UItemLabScreen::LayoutValid() const
         b.X + b.W > r.X + r.W || b.Y + b.H > r.Y + r.H)
       return false;
   }
+  if (Context)
+    for (const auto *label :
+         {Info[0], Info[1], Captions[0], Captions[1], Status})
+    {
+      if (label->GetPreferredHeight() > label->GetBounds().H)
+        return false;
+      std::istringstream lines(label->GetText());
+      std::string line;
+      while (std::getline(lines, line))
+        if (Context->GetRenderer().MeasureTextWidth(line) +
+                2 * Context->GetTheme().Padding >
+            label->GetBounds().W)
+          return false;
+    }
   return true;
 }
 GuiRect UItemLabScreen::GetModeBounds() const
@@ -405,6 +467,47 @@ GuiRect UItemLabScreen::GetExportBounds() const
 {
   return ExportButton->GetBounds();
 }
+nlohmann::json UItemLabScreen::ExportPanelMetadata(int panel)
+{
+  if (!Textures[panel])
+    return {{"available", false}};
+  const auto asset = Preview->GetInspectionAsset(Paths[panel]);
+  auto result = ItemLabMetricsJson(PanelMetrics[panel]);
+  result["available"] = true;
+  result["scene_draws"] = SceneDraws[panel];
+  result["diagnostic_line_vertices"] = SceneDiagnostics[panel];
+  result["diagnostics_framed"] = SceneDiagnosticsFramed[panel];
+  const auto vector = [](glm::vec3 p)
+  { return nlohmann::json::array({p.x, p.y, p.z}); };
+  const auto &grip = asset->Grip;
+  result["contacts"] = {
+      {"space", "asset physical metres; UV origin top-left"},
+      {"right", grip.HasRightGrip ? vector(grip.RightGrip) : nlohmann::json()},
+      {"left", grip.HasLeftGrip ? vector(grip.LeftGrip) : nlohmann::json()},
+      {"support_node", grip.SupportGripNode}};
+  if (const auto *definition = Items->Get(Selected))
+    result["physical"] = {{"size", vector(definition->Physical.size)},
+                          {"mass", definition->Physical.mass}};
+  const auto &inputs = PanelInputs[panel];
+  result["visual_inputs"] = {{"bow_charge", inputs.BowCharge},
+                             {"has_ammo", inputs.HasAmmo},
+                             {"has_water", inputs.HasWater},
+                             {"use_phase", inputs.UsePhase},
+                             {"contents_units", inputs.ContentsUnits}};
+  result["nodes"] = nlohmann::json::array();
+  const auto nodes = ResolveItemNodeTransforms(
+      *asset, EvaluateItemVisualState(*asset, inputs));
+  for (size_t index = 0; index < asset->Nodes.size(); ++index)
+  {
+    auto matrix = nlohmann::json::array();
+    for (int column = 0; column < 4; ++column)
+      for (int row = 0; row < 4; ++row)
+        matrix.push_back(nodes[index][column][row]);
+    result["nodes"].push_back(
+        {{"name", asset->Nodes[index].Name}, {"matrix_column_major", matrix}});
+  }
+  return result;
+}
 void UItemLabScreen::Export()
 {
   auto *platform = IUPlatformPaths::TryGet();
@@ -412,7 +515,7 @@ void UItemLabScreen::Export()
     return;
   const auto folder = platform->AssetRoot() / "item_lab_exports";
   std::filesystem::create_directories(folder);
-  nlohmann::json report = {{"schema_version", 3},
+  nlohmann::json report = {{"schema_version", 4},
                            {"id", Selected},
                            {"mode", Modes[Mode]},
                            {"pose", Poses[PosePreset]},
@@ -429,6 +532,17 @@ void UItemLabScreen::Export()
                            {"yaw", Yaw},
                            {"pitch", Pitch},
                            {"read_only", true}};
+  report["panels"] = nlohmann::json::array();
+  try
+  {
+    for (int panel = 0; panel < 2; ++panel)
+      report["panels"].push_back(ExportPanelMetadata(panel));
+  }
+  catch (const std::exception &error)
+  {
+    Status->SetText(error.what());
+    return;
+  }
   const std::string stem =
       Selected + "-" + std::to_string(Mode) +
       (Scene ? "-" + std::string(Scenes[Scene]) + "-" + std::to_string(Actor)

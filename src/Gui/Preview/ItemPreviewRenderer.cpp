@@ -1,5 +1,6 @@
 #include "Gui/Preview/ItemPreviewRenderer.h"
 #include "Core/Json/JsonVec.h"
+#include "Items/ItemDrawRequest.h"
 
 #include "Items/ItemGltfTextureCache.h"
 #include "Items/ItemSurfaceRenderer.h"
@@ -547,8 +548,8 @@ bool UItemPreviewRenderer::DrawGltfPath(const std::string &itemId,
                                      UItemDefinitionStorage::ContentRevision()))
   {
     const auto state = EvaluateItemVisualState(*surface, inputs);
-    const auto bounds =
-        ItemVisualBounds(*surface, EvaluateItemVisualState(*surface, {}));
+    const auto bounds = InspectionFramingBounds.value_or(
+        ItemVisualBounds(*surface, EvaluateItemVisualState(*surface, {})));
     const auto center = (bounds.first + bounds.second) * .5f;
     const auto extent = bounds.second - bounds.first;
     const auto *definition = Items->Get(itemId);
@@ -568,6 +569,15 @@ bool UItemPreviewRenderer::DrawGltfPath(const std::string &itemId,
     profile.CameraPosition = glm::vec3(glm::inverse(view)[3]);
     SurfaceRenderer->Draw(surface, absPath, projection * view, model, state,
                           profile);
+    if (InspectionDrawObserver)
+      InspectionDrawObserver({surface,
+                              absPath,
+                              projection * view,
+                              model,
+                              state,
+                              surface->Low,
+                              surface->High,
+                              {}});
     return true;
   }
   // UX R2: route through the shared glTF cache - re-parsing the model JSON

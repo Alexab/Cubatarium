@@ -3,7 +3,9 @@
 
 #include "Gui/Core/GuiScreenBase.h"
 #include "Gui/Core/GuiTypes.h"
+#include "Items/ItemLabDiagnostics.h"
 #include <filesystem>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -39,6 +41,19 @@ public:
   size_t GetSceneDrawCount(int panel) const { return SceneDraws[panel]; }
   bool SceneSourceMatches(int panel) const { return SceneSources[panel]; }
   bool BowSupportContact(int panel) const { return SceneBowContacts[panel]; }
+  size_t DiagnosticVertices(int panel) const { return SceneDiagnostics[panel]; }
+  bool DiagnosticsFramed(int panel) const
+  {
+    return SceneDiagnosticsFramed[panel];
+  }
+  const ItemLabResourceMetrics &ResourceMetrics(int panel) const
+  {
+    return PanelMetrics[panel];
+  }
+  const ItemVisualInputs &VisualInputs(int panel) const
+  {
+    return PanelInputs[panel];
+  }
   GuiRect GetSceneBounds() const;
   void SetPosePreset(int pose);
   int GetPosePreset() const { return PosePreset; }
@@ -62,6 +77,7 @@ private:
   void RebuildList();
   void Refresh();
   void Export();
+  nlohmann::json ExportPanelMetadata(int panel);
   std::shared_ptr<UItemDefinitionStorage> Items;
   std::unique_ptr<UItemPreviewRenderer> Preview;
   std::unique_ptr<UItemLabSceneRenderer> ScenesRenderer;
@@ -79,6 +95,11 @@ private:
   size_t SceneDraws[2]{0, 0};
   bool SceneSources[2]{false, false};
   bool SceneBowContacts[2]{false, false};
+  size_t SceneDiagnostics[2]{0, 0};
+  bool SceneDiagnosticsFramed[2]{true, true};
+  ItemLabResourceMetrics PanelMetrics[2];
+  ItemVisualInputs PanelInputs[2];
+  std::map<std::filesystem::path, ItemLabResourceMetrics> MetricsCache;
   std::filesystem::path Paths[2], PublishedPath;
   bool ArchivedReference{false}, StagedCandidate{false};
   std::string Selected{"bucket"};
