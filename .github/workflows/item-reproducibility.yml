@@ -2,10 +2,10 @@ name: Item provenance and checkout reproducibility
 
 on:
   pull_request:
-    paths: ['.gitattributes', 'tools/itemgen/**', 'tools/itemgen.py', 'tools/item_designs/**', 'tools/item_recipes/**', 'tools/item_materials.yaml', 'tools/verify_item_checkout.py', 'content/items/**', 'models/items/**', 'shaders/item_surface.*', '.github/workflows/item-reproducibility.yml']
+    paths: ['.gitattributes', 'tools/itemgen/**', 'tools/itemgen.py', 'tools/item_designs/**', 'tools/item_recipes/**', 'tools/item_materials.yaml', 'tools/test_itemgen_components.py', 'tools/verify_item_checkout.py', 'content/items/**', 'models/items/**', 'shaders/item_surface.*', '.github/workflows/item-reproducibility.yml']
   push:
     branches: [develop, 'codex/**']
-    paths: ['.gitattributes', 'tools/itemgen/**', 'tools/itemgen.py', 'tools/item_designs/**', 'tools/item_recipes/**', 'tools/item_materials.yaml', 'tools/verify_item_checkout.py', 'content/items/**', 'models/items/**', 'shaders/item_surface.*', '.github/workflows/item-reproducibility.yml']
+    paths: ['.gitattributes', 'tools/itemgen/**', 'tools/itemgen.py', 'tools/item_designs/**', 'tools/item_recipes/**', 'tools/item_materials.yaml', 'tools/test_itemgen_components.py', 'tools/verify_item_checkout.py', 'content/items/**', 'models/items/**', 'shaders/item_surface.*', '.github/workflows/item-reproducibility.yml']
   workflow_dispatch:
 
 jobs:
@@ -22,6 +22,8 @@ jobs:
           python-version: '3.13'
       - name: Install generator dependencies
         run: python -m pip install -r requirements-assetgen.txt
+      - name: Verify component authoring and transactional publication
+        run: python tools/test_itemgen_components.py
       - name: Verify both checkout modes and isolated publication
         run: python tools/verify_item_checkout.py
       - name: Upload fresh verification evidence

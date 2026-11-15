@@ -797,6 +797,11 @@ resources remain byte-identical; only the old manifest's checker hash changed.
 The saved FP/TP images also expose remaining bow pose problems. Resource reuse
 is verified; correct character orientation/support-hand contact and overall art
 acceptance are still required. No v3 production promotion has occurred.
+Fresh checkouts in both autocrlf modes also preserve 981 signed files and
+regenerate/publish all 70 byte-identically in disposable clones. The final
+incremental Release executable passes the focused 108-check arrow/bow probe.
+The Windows/Linux workflow now runs component regressions too; remote CI remains
+unexecuted here.
 
 ## Acceptance contract
 

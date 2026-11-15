@@ -1,0 +1,5 @@
+Fresh checkout, core.autocrlf=true
+Checkout mode=true: passed=True
+Fresh checkout, core.autocrlf=false
+Checkout mode=false: passed=True
+passed=True; evidence=E:\Work\Home\Cubatarium\bin\items_checkout\summary.json

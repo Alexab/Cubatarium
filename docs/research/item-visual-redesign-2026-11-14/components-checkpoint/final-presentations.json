@@ -1,0 +1,474 @@
+{
+  "bow_nock_contacts": [
+    {
+      "arrow_visible": false,
+      "charge": 0.0,
+      "gap_metres": 9.313225746154785e-10
+    },
+    {
+      "arrow_visible": true,
+      "charge": 0.5,
+      "gap_metres": 7.450580596923828e-09
+    },
+    {
+      "arrow_visible": true,
+      "charge": 1.0,
+      "gap_metres": 0.0
+    },
+    {
+      "arrow_visible": false,
+      "charge": 0.0,
+      "gap_metres": 9.313225746154785e-10
+    }
+  ],
+  "checks": [
+    {
+      "name": "item renderer initializes",
+      "passed": true
+    },
+    {
+      "name": "color fixture PNG writes",
+      "passed": true
+    },
+    {
+      "name": "albedo path aliases share texture",
+      "passed": true
+    },
+    {
+      "name": "warm albedo lookup avoids repeated filesystem resolution",
+      "passed": true
+    },
+    {
+      "name": "item albedo uses sRGB storage and complete mip chain",
+      "passed": true
+    },
+    {
+      "name": "mip average is linear-light black and white",
+      "passed": true
+    },
+    {
+      "name": "bilinear sampling precedes display encoding",
+      "passed": true
+    },
+    {
+      "name": "linear material factor applies once",
+      "passed": true
+    },
+    {
+      "name": "state preview renderer initializes",
+      "passed": true
+    },
+    {
+      "name": "arrow FP male right",
+      "passed": true
+    },
+    {
+      "name": "arrow FP male left",
+      "passed": true
+    },
+    {
+      "name": "arrow FP female right",
+      "passed": true
+    },
+    {
+      "name": "arrow FP female left",
+      "passed": true
+    },
+    {
+      "name": "arrow-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "arrow-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "arrow-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "arrow-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "arrow-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "arrow-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "arrow-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "arrow-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "arrow-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "arrow-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "arrow-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "arrow-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "arrow-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "arrow-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "arrow-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "arrow-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "arrow-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "arrow-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "arrow-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "arrow-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "arrow-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "arrow-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "arrow-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "arrow-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_bow FP male right",
+      "passed": true
+    },
+    {
+      "name": "wood_bow FP male left",
+      "passed": true
+    },
+    {
+      "name": "wood_bow FP female right",
+      "passed": true
+    },
+    {
+      "name": "wood_bow FP female left",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-0 shared arrow anchors exist",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-0 shared arrow nock follows string",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-0 shared arrow visibility follows ammunition/draw",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-0 orbit",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-0 TP male right",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-0 TP male left",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-0 FP male",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-0 TP female right",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-0 TP female left",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-0 FP female",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-1 shared arrow anchors exist",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-1 shared arrow nock follows string",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-1 shared arrow visibility follows ammunition/draw",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-1 orbit",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-1 TP male right",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-1 TP male left",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-1 FP male",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-1 TP female right",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-1 TP female left",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-1 FP female",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-2 shared arrow anchors exist",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-2 shared arrow nock follows string",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-2 shared arrow visibility follows ammunition/draw",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-2 orbit",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-2 TP male right",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-2 TP male left",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-2 FP male",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-2 TP female right",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-2 TP female left",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-2 FP female",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-3 shared arrow anchors exist",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-3 shared arrow nock follows string",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-3 shared arrow visibility follows ammunition/draw",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-3 orbit",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-3 TP male right",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-3 TP male left",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-3 FP male",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-3 TP female right",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-3 TP female left",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-state-3 FP female",
+      "passed": true
+    },
+    {
+      "name": "wood_bow active state changes rendered pixels",
+      "passed": true
+    },
+    {
+      "name": "wood_bow cancellation restores rendered pixels",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_bow-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "all requested item surfaces inspected",
+      "passed": true
+    }
+  ],
+  "color_pipeline": {
+    "filtered_encoded_rgb": 188,
+    "half_factor_encoded_rgb": 137,
+    "mip_encoded_rgb": 188
+  },
+  "inventory_unchanged": true,
+  "passed": true,
+  "scope": "synthetic native attachments and loose item submissions",
+  "state_ids": [
+    "wood_bow"
+  ],
+  "surface_count": 2,
+  "surface_ids": [
+    "arrow",
+    "wood_bow"
+  ]
+}

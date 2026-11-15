@@ -41,8 +41,17 @@ disposable repository, not by promoting the actual production catalog.
   unchanged bytes for 70 gameplay definitions, 70 recipes and 774 legacy resource
   files. The only production manifest change refreshes the checker-code hash in
   its 70 old records; provenance and all other fields remain unchanged.
-- `summary.json` identifies exact executables and scopes. Fresh-checkout evidence
-  is recorded separately after committing the changed generator.
+- After the final incremental build and runtime-manifest sync, a focused native
+  run on that exact Release executable passes 108 checks for arrow/bow, restoring
+  all eight overlaid files. `summary.json` distinguishes this executable/scope
+  from the earlier full regression.
+- Real fresh checkouts of `ffad8e5d1` with `core.autocrlf=true` and `false` preserve
+  all 981 signed files, regenerate all 70 builds byte-identically and publish all
+  70 only in disposable clones. All 70 reference archives and published outputs
+  match in both modes. Main production/author sources remain unchanged.
+  See `checkout.json` and the two complete checkout logs. The component test is
+  also wired into the Windows/Linux reproducibility workflow; remote CI has not
+  been executed from this session.
 
 ```text
 cmake --build build/desktop-msvc --config Release --target Cubatarium --parallel 8

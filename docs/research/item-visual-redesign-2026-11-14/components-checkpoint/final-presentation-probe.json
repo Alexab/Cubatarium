@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "scope": "presentation_only",
+  "world": "CarryAimQA",
+  "staged_ids": [
+    "arrow",
+    "wood_bow"
+  ],
+  "inspected_surface_ids": [
+    "arrow",
+    "wood_bow"
+  ],
+  "presentation_checks": 108,
+  "restored_runtime_files": 8,
+  "executable_sha256": "08406832c25f424deb310eb8c4ff654bb095909d8845e690daee9fa358f3ad47"
+}
