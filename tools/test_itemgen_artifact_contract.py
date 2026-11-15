@@ -66,9 +66,12 @@ class ContractTests(unittest.TestCase):
                 elif kind=='zero_normal':
                     index=g['accessors'][p['attributes']['NORMAL']]['bufferView'];start=g['bufferViews'][index]['byteOffset']
                     data=bytearray(blob);struct.pack_into('<fff',data,start,0,0,0);(folder/'model.bin').write_bytes(data)
+                elif kind=='support_missing':g.setdefault('extras',{}).setdefault('presentation',{})['support_grip_node']='missing'
+                elif kind=='support_type':g.setdefault('extras',{}).setdefault('presentation',{})['support_grip_node']=3
+                elif kind=='aim_vector':g.setdefault('extras',{}).setdefault('presentation',{})['fp_aim_euler_deg']=[1,2]
                 elif kind=='nonfinite':g['materials'][0]['pbrMetallicRoughness']['metallicFactor']=float('nan')
                 return g
-            for kind in ['normal','mode','normal_map','metallic_map','alpha','extension','animation','wrapping','filtering','empty_node','node_cycle','node_scale','shared_node','quaternion','uri','negative_image','negative_accessor','negative_material','short_view','zero_normal','nonfinite']:
+            for kind in ['normal','mode','normal_map','metallic_map','alpha','extension','animation','wrapping','filtering','empty_node','node_cycle','node_scale','shared_node','quaternion','uri','negative_image','negative_accessor','negative_material','short_view','zero_normal','nonfinite','support_missing','support_type','aim_vector']:
                 with self.subTest(kind=kind):
                     (folder/'model.bin').write_bytes(blob);path.write_text(json.dumps(mutate(kind)))
                     with self.assertRaises((ValueError,KeyError,IndexError)):validate_model(folder,budget=1800)

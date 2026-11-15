@@ -62,6 +62,22 @@ inline void RunItemLabSceneQa(UItemLabScreen &lab, UGuiContext &gui,
     }
   }
   lab.SetMode(0);
+  lab.SelectItem("wood_bow");
+  lab.SetScene(1);
+  for (int actor : {0, 2})
+  {
+    lab.SetActor(actor);
+    for (int pose : {0, 1, 2, 0})
+    {
+      lab.SetPosePreset(pose);
+      lab.Update(0);
+      check("bow FP snapshot contact actor " + std::to_string(actor) +
+                " pose " + std::to_string(pose),
+            lab.HasCandidate() && lab.SceneSourceMatches(1) &&
+                lab.BowSupportContact(1) == (pose > 0));
+    }
+  }
+  lab.SetPosePreset(0);
   lab.SelectItem("bucket");
   lab.SetScene(4);
   lab.Update(0);

@@ -657,7 +657,7 @@ void UBlockInputController::HandleRightRelease(const BlockInputContext &ctx)
     RightPressed = false;
     RightLookActive = false;
     if (ctx.App)
-      ctx.App->ClearFpHeldVisual();
+      ctx.App->EndFpUseVisual();
     return;
   }
 

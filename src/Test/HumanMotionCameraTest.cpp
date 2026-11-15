@@ -3,6 +3,7 @@
 #include "Creatures/Visual/BoneSkeleton/CreatureAttachmentBounds.h"
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonLoader.h"
 #include "Creatures/Visual/CreatureEquipmentFit.h"
+#include "Pose/HumanBowPose.h"
 #include "Pose/HumanMotionController.h"
 #include "Render/Camera/CameraVolumeSweep.h"
 #include <cstdlib>
@@ -77,6 +78,92 @@ void CheckConsumePose(const CreatureBoneSkeletonGeometry &g)
             "cargo occupancy wins over stale consumption input");
   }
 }
+void CheckBowPose(const CreatureBoneSkeletonGeometry &g)
+{
+  BoneSkeletonHierarchy rig(g);
+  const auto mesh = BoneSkeletonCubeMeshBuilder::BuildMeshAsset(g);
+  ItemRenderAsset bow;
+  bow.Grip.SupportGripNode = "pull";
+  bow.Grip.SupportGripIndex = 1;
+  bow.Grip.HasRightGrip = true;
+  bow.Nodes.resize(2);
+  bow.Nodes[0].Name = "bow";
+  bow.Nodes[1].Name = "pull";
+  bow.Nodes[1].Parent = 0;
+  bow.Nodes[1].Local = glm::translate(glm::mat4(1), glm::vec3(0, 0, -.025f));
+  bow.Nodes[1].Transform = bow.Nodes[1].Local;
+  ItemNodeBinding binding;
+  binding.Node = 1;
+  binding.TranslationTo.z = .30f;
+  bow.Bindings.push_back(binding);
+  glm::vec3 lowR, highR, lowL, highL;
+  Require(
+      ResolveCreatureAttachmentBounds(mesh, rig, "rightItem", lowR, highR) &&
+          ResolveCreatureAttachmentBounds(mesh, rig, "leftItem", lowL, highL),
+      "bow uses actual drawable palm bounds");
+  const auto palmR = CreaturePalmGripPosition(lowR, highR);
+  const auto palmL = CreaturePalmGripPosition(lowL, highL);
+  for (float pitch : {-80.f, 0.f, 80.f})
+    for (float crouch : {0.f, 1.f})
+      for (float charge : {.01f, .5f, 1.f})
+      {
+        HumanMotionInput input;
+        input.facts.onGround = true;
+        input.facts.bodyPitch = pitch;
+        input.facts.stanceBlend = crouch;
+        input.rightHandBusy = input.leftHandBusy = input.bowEquipped = true;
+        input.bowCharge = charge;
+        HumanMotionState state;
+        auto pose = UHumanMotionController::Compute(input, state, 0);
+        ItemVisualInputs visual;
+        visual.BowCharge = charge;
+        visual.HasAmmo = true;
+        Require(UHumanBowPose::Apply(mesh, rig, pose, bow, visual, 1,
+                                     state.BowPresentationWeight),
+                "human bow contact solve succeeds");
+        const auto main = Point(rig, g, pose, "rightItem", palmR);
+        const auto head =
+            rig.ComputeBoneMatrix(g.boneIndexByName.at("head"), pose);
+        const auto model = ItemBowModelMatrix(bow, main, head, 1);
+        const auto nodes = ResolveItemNodeTransforms(
+            bow, EvaluateItemVisualState(bow, visual));
+        const auto support = glm::vec3(model * nodes[1][3]);
+        Require(glm::distance(Point(rig, g, pose, "leftItem", palmL), support) <
+                    .0001f,
+                "support palm touches the actual string through "
+                "pitch/crouch/charge");
+        if (pitch == 0 && charge == 1)
+        {
+          Require(glm::distance(support, Point(rig, g, pose, "head",
+                                               {0, .16f, -.28f})) < .15f,
+                  "full draw brings the string hand near the face");
+        }
+        const auto aim =
+            glm::normalize(glm::vec3(head * glm::vec4(0, 0, -1, 0)));
+        const auto arrow =
+            glm::normalize(glm::vec3(model * glm::vec4(0, 0, -1, 0)));
+        Require(glm::dot(aim, arrow) > .99999f,
+                "bow aims with the rendered head");
+        state.blended = pose;
+        const auto retained = UHumanMotionController::Compute(input, state, 0);
+        Require(glm::distance(Point(rig, g, retained, "leftItem", palmL),
+                              support) < .0001f,
+                "zero elapsed time retains the solved contacts");
+        for (int fps : {30, 60, 144})
+        {
+          auto released = state;
+          input.bowCharge = 0;
+          for (int frame = 0; frame < fps; ++frame)
+            UHumanMotionController::Compute(input, released, 1.f / fps);
+          Require(released.BowPresentationWeight == 0,
+                  "release finishes visual retraction");
+        }
+        input.carryHands = 2;
+        UHumanMotionController::Compute(input, state, 1.f / 60);
+        Require(state.BowPresentationWeight == 0,
+                "cargo immediately owns both hands");
+      }
+}
 int main(int argc, char **argv)
 {
   Require(argc == 2, "geometry path required");
@@ -104,12 +191,14 @@ int main(int argc, char **argv)
           "versioned human scale");
   BoneSkeletonHierarchy rig(g);
   CheckConsumePose(g);
+  CheckBowPose(g);
   const auto female = CreatureBoneSkeletonLoader::LoadFromFile(
       (std::filesystem::path(argv[1]).parent_path() / "female_short.geo.json")
           .string(),
       "");
   Require(female.has_value(), "load female rig for consumption contacts");
   CheckConsumePose(*female);
+  CheckBowPose(*female);
   for (float direction : {-1.f, 1.f})
   {
     HumanMotionState counter;

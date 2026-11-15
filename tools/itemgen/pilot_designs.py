@@ -99,7 +99,7 @@ def make_pilots():
     for i,(x,y,z) in enumerate(((-.04,.03,.10),(.05,.06,.07),(-.08,-.02,.07))):
         parts.append(profile(f'vein{i}','metal',[(-.02,-.01),(.02,-.015),(.026,.012),(-.01,.025)],.008,(x,y,z)))
     result['raw_iron']=design('raw_iron',parts,ore,grip=(0,-.03,0),atlas=128,density=100,scale=.45,budget=600)
-    parts=[box('grip','binding',[.06,.18,.065],(0,0,0)),
+    parts=[box('grip','binding',[.055,.18,.045],(0,0,0)),
            profile('upper_limb','wood',[(-.015,.07),(.025,.07),(.12,.28),(.06,.43),(.025,.45),(.065,.28)],.04),
            profile('lower_limb','wood',[(-.015,-.07),(.025,-.07),(.12,-.28),(.06,-.43),(.025,-.45),(.065,-.28)],.04),
            box('string','edge',[.007,.86,.007],(.03,0,0))]
@@ -111,6 +111,7 @@ def make_pilots():
     result['wood_bow']=design('wood_bow',parts,wood,grip=(0,0,0),density=230,scale=.65,budget=1800)
     result['wood_bow']['presentation']['icon_euler_deg']=[0,90,0]
     bow=result['wood_bow']
+    bow['presentation'].update(support_grip_node='pull',fp_aim_euler_deg=[0,0,-8],tp_aim_euler_deg=[0,0,0],fp_euler_deg=[-26,28,-12],fp_scale=.9,fp_hand_offset=[-.12,.45,-.12])
     bow['parts']=[p for p in bow['parts'] if p['name']!='string']
     for p in bow['parts']:
         if p['name'] in ('upper_limb','lower_limb'):p['node']=p['name']
@@ -122,7 +123,7 @@ def make_pilots():
     bow['nodes']['nocked_arrow']=dict(parent='pull',pivot=[0,0,-.025])
     bow['visual_bindings']=[dict(node='upper_limb',channel='bow_charge',rotation_to=[12,0,0]),
         dict(node='lower_limb',channel='bow_charge',rotation_to=[-12,0,0]),
-        dict(node='pull',channel='bow_charge',translation_to=[0,0,.2]),
+        dict(node='pull',channel='bow_charge',translation_to=[0,0,.30]),
         dict(node='string_upper',span=dict(start_node='upper_limb',start_point=[0,.38,-.025],end_node='pull',end_point=[0,0,0])),
         dict(node='string_lower',span=dict(start_node='pull',start_point=[0,0,0],end_node='lower_limb',end_point=[0,-.38,-.025])),
         dict(node='nocked_arrow',channel='bow_loaded',visible_above=.001)]

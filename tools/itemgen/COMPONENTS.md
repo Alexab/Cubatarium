@@ -55,3 +55,12 @@ python tools/test_itemgen_components.py
 The native presentation QA independently checks the loaded nock/string positions
 and visibility at rest, partial/full charge and cancellation. Geometric alignment
 alone does not approve the character's hand pose or final artistic appearance.
+
+For a two-handed bow, `presentation.support_grip_node` names the animated node
+the drawing palm must contact (the bow uses `pull`). This is a contact node,
+not a second inventory slot. `fp_aim_euler_deg` and `tp_aim_euler_deg` define
+the model orientation relative to the camera/rendered-head aiming frame;
+ordinary `fp_euler_deg` remains its relaxed FP orientation. The human TP solver
+keeps both palms within their mesh-derived reach, without scaling the arms.
+The support node must exist and be named; invalid nodes/vectors fail validation
+before publication. These values do not change the physical profile or ownership.

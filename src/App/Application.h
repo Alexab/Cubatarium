@@ -125,6 +125,7 @@ public:
   void NotifyFpSwing(FpSwingKind kind);
   void NotifyFpUseVisual(const std::string &presetId, bool hold);
   void ClearFpHeldVisual();
+  void EndFpUseVisual();
   void OpenCraftingScreen();
   void OpenAnvilScreen();
   void SetViewportInsets(int left, int top, int right, int bottom);

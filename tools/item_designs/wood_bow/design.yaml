@@ -18,16 +18,25 @@ presentation:
   - 0
   fp_euler_deg:
   - -26
-  - 0
-  - -20
-  fp_scale: 0.65
+  - 28
+  - -12
+  fp_scale: 0.9
   fp_hand_offset:
-  - -0.04
-  - 0.65
-  - 0
+  - -0.12
+  - 0.45
+  - -0.12
   icon_euler_deg:
   - 0
   - 90
+  - 0
+  support_grip_node: pull
+  fp_aim_euler_deg:
+  - 0
+  - 0
+  - -8
+  tp_aim_euler_deg:
+  - 0
+  - 0
   - 0
 materials:
   wood:
@@ -70,9 +79,9 @@ parts:
   material: binding
   shape: bevel_box
   size:
-  - 0.06
+  - 0.055
   - 0.18
-  - 0.065
+  - 0.045
   bevel: 0.010799999999999999
   offset:
   - 0
@@ -216,7 +225,7 @@ visual_bindings:
   translation_to:
   - 0
   - 0
-  - 0.2
+  - 0.30
 - node: string_upper
   span:
     start_node: upper_limb

@@ -366,9 +366,10 @@ int main()
                                                  {"region", "full"},
                                                  {"low", {0, 0, 0}},
                                                  {"high", {1, 1, 1}}}});
-    g["extras"]["presentation"] = {{"right_grip", {0, .25, 0}},
-                                   {"fp_euler_deg", {62, 0, 0}},
-                                   {"fp_scale", .65}};
+    g["extras"]["presentation"] = {
+        {"right_grip", {0, .25, 0}},      {"fp_euler_deg", {62, 0, 0}},
+        {"fp_aim_euler_deg", {0, 0, -8}}, {"tp_aim_euler_deg", {0, 12, 0}},
+        {"support_grip_node", "blade"},   {"fp_scale", .65}};
     write(g);
     const auto asset = cutum::LoadItemRenderAsset(folder / "model.gltf");
     Expect(asset->WearSections.size() == 1 &&
@@ -392,6 +393,11 @@ int main()
            "authored grip anchor is retained");
     Expect(asset->Grip.HasFpEuler && asset->Grip.FpEulerDeg.x == 62,
            "authored FP orientation is retained");
+    Expect(cutum::ItemHasSupportGrip(*asset) &&
+               asset->Grip.SupportGripIndex == 1 &&
+               asset->Grip.FpAimEulerDeg.z == -8 &&
+               asset->Grip.TpAimEulerDeg.y == 12,
+           "bow contact resolves a named node and independent aim frames");
     Expect(!cutum::FindItemSurfaceAsset(folder / "model.gltf", 0),
            "legacy cache entries remain on the legacy path");
     auto versioned = g;
@@ -433,6 +439,18 @@ int main()
     physicalAsset.Grip.LeftGrip = glm::vec3(.02f, .08f, 0);
     physicalAsset.Grip.HasLeftGrip = true;
     const glm::vec3 palm(.3f, -.5f, .1f);
+    const auto body = glm::translate(glm::mat4(1), glm::vec3(3, 2, 1)) *
+                      glm::rotate(glm::mat4(1), .6f, glm::vec3(0, 1, 0)) *
+                      glm::scale(glm::mat4(1), glm::vec3(.9f));
+    const auto bowLocal =
+        cutum::ItemBowModelMatrix(physicalAsset, palm, glm::mat4(1), 1.2f);
+    const auto bowWorld = cutum::ItemBowModelMatrix(
+        physicalAsset, glm::vec3(body * glm::vec4(palm, 1)), body, 1.2f);
+    for (const auto &point : {glm::vec3(0), glm::vec3(.2, .4, -.1)})
+      Expect(glm::distance(glm::vec3(body * bowLocal * glm::vec4(point, 1)),
+                           glm::vec3(bowWorld * glm::vec4(point, 1))) < 1e-5f,
+             "world-space bow frames preserve the carrier scale like local "
+             "frames");
     for (bool left : {false, true})
     {
       const auto local =
@@ -506,6 +524,15 @@ int main()
     rejected(bad);
     bad = g;
     bad["extras"]["presentation"]["tp_scale"] = -2;
+    rejected(bad);
+    bad = g;
+    bad["extras"]["presentation"]["support_grip_node"] = "missing";
+    rejected(bad);
+    bad = g;
+    bad["extras"]["presentation"]["support_grip_node"] = 3;
+    rejected(bad);
+    bad = g;
+    bad["extras"]["presentation"]["fp_aim_euler_deg"] = {1, 2};
     rejected(bad);
     bad = g;
     bad["accessors"][0]["count"] = 1000;

@@ -10,6 +10,7 @@ import math
 import numpy as np
 from PIL import Image
 from itemgen.raster import load_primitives
+from itemgen.presentation import prepare_presentation
 
 
 def digest(path):
@@ -119,6 +120,10 @@ def validate_model(folder, *, budget):
         for child in node.get('children',[]):visit(child)
     for index in at(g['scenes'],g.get('scene',0))['nodes']:visit(index)
     if len(visited)!=len(g['nodes']):raise ValueError('Unreachable scene nodes are unsupported')
+    presentation=g.get('extras',{}).get('presentation',{})
+    prepare_presentation(presentation,1,(0,0,0))
+    support=presentation.get('support_grip_node')
+    if support is not None and (not isinstance(support,str) or support not in names):raise ValueError('Support grip references missing node')
     if not triangles or triangles>budget:raise ValueError(f'Triangle budget exceeded or empty: {triangles}/{budget}')
     load_primitives(folder) # Includes world transforms, texture decode and real UV/indices.
     return dict(triangles=triangles,resources=sorted(resources),nodes=sorted(names))

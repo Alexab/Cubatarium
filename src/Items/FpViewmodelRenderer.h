@@ -27,6 +27,8 @@ struct ResolvedCreatureAppearance;
 struct CreatureDefinition;
 struct CreatureBoneSkeletonMeshAsset;
 struct InventoryEntryRef;
+struct ItemRenderAsset;
+struct ItemVisualState;
 
 struct FpArmDrawAudit
 {
@@ -39,6 +41,8 @@ struct FpArmDrawAudit
   size_t VertexFloatCount{0};
   float SourceScale{1.f};
   glm::mat4 RootMvp{1.f};
+  bool ProgramActive{false};
+  glm::vec3 PalmLocal{0.f};
 };
 
 struct FpItemDrawAudit
@@ -48,16 +52,21 @@ struct FpItemDrawAudit
   size_t VisiblePrimitives{0};
   glm::vec2 NdcLow{1e9f}, NdcHigh{-1e9f};
   bool AllInFront{true};
+  glm::vec4 GripClip{0.f};
 };
 struct FpViewmodelDrawAudit
 {
   GLuint SkinTexture{0};
   std::vector<FpArmDrawAudit> Arms;
   std::vector<FpItemDrawAudit> Items;
+  bool BowSupport{false};
+  float BowPoseWeight{0};
+  glm::vec3 BowSupportTarget{0.f}, BowSupportPalm{0.f};
 };
 
 struct FpViewmodelDrawParams
 {
+  uint64_t ActorId{0}, WorldGeneration{0};
   int CarryHands{0};
   bool HasCarryContacts{false};
   glm::vec2 CarryRightNdc{0.f}, CarryLeftNdc{0.f};
@@ -101,6 +110,7 @@ public:
   void NotifySwing(FpSwingKind kind);
   void NotifyUseVisual(const std::string &presetId, bool holdAtEnd);
   void ClearHeldVisual();
+  void EndUseVisual();
   void SetActiveItemHint(const std::string &itemId);
 
   /// AFTER Geometry::Paint, BEFORE HUD. Default framebuffer.
@@ -167,6 +177,11 @@ private:
                 const glm::mat4 &mvpBase);
   bool TryDrawGltfHeld(const InventoryEntryRef &entry, const glm::vec3 &socket,
                        const glm::mat4 &mvpBase);
+  glm::mat4 PoseBowModel(const ItemRenderAsset &asset,
+                         const ItemVisualState &state,
+                         const glm::mat4 &modelWorld, const glm::mat4 &armWorld,
+                         const glm::vec3 &socket, const glm::vec3 &grip,
+                         float scale);
   void DrawBlockCube(const std::string &typeName, const glm::vec3 &socket,
                      const glm::mat4 &mvpBase);
   GLuint ResolveBlockAtlas(const std::string &typeName) const;
@@ -180,6 +195,7 @@ private:
                         const ResolvedCreatureAppearance *appearance);
   bool TryDrawAuthoredArm(const glm::mat4 &mvpBase, bool leftHand,
                           GLuint skinAtlas);
+  glm::vec3 HandSocket(bool left) const;
 
   std::shared_ptr<const CreatureBoneSkeletonMeshAsset> ArmSource;
   std::string ArmSpecies, ArmFile, ArmGeometry, ArmDirectory;
@@ -189,6 +205,8 @@ private:
   size_t ArmIndices[2]{static_cast<size_t>(-1), static_cast<size_t>(-1)};
   glm::mat4 ArmFits[2]{glm::mat4(1.f), glm::mat4(1.f)};
   float ArmScales[2]{1.f, 1.f};
+  glm::vec3 ArmPalms[2]{};
+  bool HasArmPalm[2]{false, false};
 
   std::shared_ptr<UItemDefinitionStorage> Items;
   std::shared_ptr<UBlockDefinitionStorage> Blocks;
@@ -214,6 +232,13 @@ private:
 
   FpMotion Motion;
   float DrawingBowCharge{0.f}, DrawingUsePhase{0.f}, DrawingItemLight{1.f};
+  float FrameDt{0.f}, BowPoseWeight{0.f};
+  bool BowPoseInitialized{false}, BowPoseAdvanced{false}, HasBowSupport{false};
+  bool DrawingBowSupport{false};
+  bool DrawingAuthoredBow{false};
+  std::string BowPoseKey;
+  glm::vec3 BowSupportPoint{0.f}, DrawingBowSupportPoint{0.f};
+  glm::mat4 DrawingCameraFrame{1.f};
   bool DrawingUseHeld{false};
   bool DrawingHasAmmo{false};
   int DrawingInspectionMode{0};

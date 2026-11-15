@@ -1,5 +1,6 @@
 #include "Creatures/Visual/CreatureVisualBoneSkeleton.h"
 
+#include "App/Platform/IUPlatformPaths.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
 #include "Creatures/Definition/CreatureDefinition.h"
@@ -14,8 +15,10 @@
 #include "Creatures/Visual/WornEquipmentDrawer.h"
 #include "Game/Inventory/InventoryTypes.h"
 #include "Items/ItemDefinitionStorage.h"
+#include "Items/ItemInspectionSource.h"
 #include "Pose/BoneSkeleton/BoneSkeletonPoseEngine.h"
 #include "Pose/BoneSkeleton/SkeletalAnimationProfiles.h"
+#include "Pose/HumanBowPose.h"
 #include "Pose/HumanMotionController.h"
 #include "Render/Engine/GeometryEngine.h"
 #include <glm/gtc/matrix_transform.hpp>
@@ -99,10 +102,11 @@ void UCreatureVisualBoneSkeleton::UpdatePose(
 
   auto &meshCache = CreatureBoneSkeletonCache::Instance();
   const uint64_t revision = meshCache.GetRevision();
-  if (!MeshRequestSeen || LoadedRevision != revision ||
-      LoadedSpecies != SpeciesId || LoadedFile != geoFile ||
-      LoadedGeometry != GeometryId ||
-      LoadedDirectory != animDef.visual.sourceDirectory)
+  const bool reloaded = !MeshRequestSeen || LoadedRevision != revision ||
+                        LoadedSpecies != SpeciesId || LoadedFile != geoFile ||
+                        LoadedGeometry != GeometryId ||
+                        LoadedDirectory != animDef.visual.sourceDirectory;
+  if (reloaded)
   {
     MeshRequestSeen = true;
     LoadedRevision = revision;
@@ -144,11 +148,40 @@ void UCreatureVisualBoneSkeleton::UpdatePose(
     input.carryHands = creature.CarryHandCount;
     input.throwCharge = creature.ThrowCharge;
     input.bowCharge = creature.BowCharge;
+    const auto *items = creature.GetInventory().GetItemDefinitions();
+    const auto *held = items && active && !active->empty && !active->broken &&
+                               active->kind == InventoryEntryKind::Item
+                           ? items->Get(active->Id)
+                           : nullptr;
+    input.bowEquipped = held && held->Ranged.Enabled;
     if (active && !active->empty && !active->broken)
       input.consumePhase = creature.ItemUse.Phase(
           active->Id, active->instanceId, creature.ItemVisualSelection());
+    const bool initialized = creature.HumanMotion.initialized;
     BonePose = UHumanMotionController::Compute(input, creature.HumanMotion, dt,
                                                creature.IsPossessed());
+    if (input.bowEquipped && input.carryHands == 0 &&
+        creature.HumanMotion.BowPresentationWeight > 0 &&
+        (dt > 0 || !initialized || reloaded))
+      if (auto *paths = IUPlatformPaths::TryGet())
+      {
+        const auto *inspection = FindItemInspectionSource(active->Id);
+        const auto asset = inspection
+                               ? inspection->Asset
+                               : FindItemSurfaceAsset(
+                                     paths->AssetRoot() / held->ModelPath,
+                                     UItemDefinitionStorage::ContentRevision());
+        if (asset && UHumanBowPose::Apply(
+                         *MeshAsset, *Hierarchy, BonePose, *asset,
+                         MakeItemVisualInputs(
+                             active, creature.BowCharge, 0,
+                             creature.GetInventory().IsCreative() ||
+                                 creature.GetInventory().Count(
+                                     InventoryEntryKind::Item, "arrow") > 0),
+                         held->Visual.TpScale,
+                         creature.HumanMotion.BowPresentationWeight))
+          creature.HumanMotion.blended = BonePose;
+      }
   }
   else
     BonePose = BoneSkeletonPoseEngine::Compute(facts, animDef, dt);

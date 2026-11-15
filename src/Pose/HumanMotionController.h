@@ -51,6 +51,16 @@ public:
     // unchanged pose here introduced bit drift and broke retained/fresh parity.
     if (s.initialized && dt <= 0.f)
       return s.blended;
+    const float bowTarget = in.carryHands == 0 && in.bowCharge > 0 ? 1.f : 0.f;
+    if ((!in.bowEquipped && in.bowCharge <= 0) || in.carryHands > 0)
+      s.BowPresentationWeight = 0;
+    else if (!s.initialized)
+      s.BowPresentationWeight = bowTarget;
+    else
+      s.BowPresentationWeight = glm::mix(s.BowPresentationWeight, bowTarget,
+                                         1.f - std::exp(-dt / .05f));
+    if (std::abs(s.BowPresentationWeight - bowTarget) < .0001f)
+      s.BowPresentationWeight = bowTarget;
     const float travelled =
         s.initialized && !teleport
             ? glm::length(glm::vec2(in.feet.x - s.previousFeet.x,
@@ -228,10 +238,10 @@ public:
     }
     else if (in.bowCharge > 0)
     {
-      set("leftArm", {85, 0, 12});
-      set("leftForearm", {5, 0, 0});
-      set("rightArm", {65, 25, -15});
-      set("rightForearm", {70, 0, 0});
+      set("rightArm", {85, 0, -12});
+      set("rightForearm", {5, 0, 0});
+      set("leftArm", {65, -25, 15});
+      set("leftForearm", {70, 0, 0});
     }
     else if (in.consumePhase > 0 && s.actionRemaining <= 0.f)
     {

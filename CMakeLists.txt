@@ -3482,6 +3482,8 @@ endforeach()
 
 cubatarium_add_test(NAME human_motion_camera_test
     SOURCES src/Test/HumanMotionCameraTest.cpp
+            src/Items/ItemRenderAsset.cpp
+            src/Items/ItemVisualState.cpp
             src/Creatures/Visual/BoneSkeleton/BoneSkeletonCubeMeshBuilder.cpp
             src/Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonLoader.cpp
             src/Creatures/Visual/BoneSkeleton/BoneSkeletonHierarchy.cpp

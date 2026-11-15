@@ -590,6 +590,8 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(
       previewCreature.SetHumanAppearance(*human);
     if (speciesId == "human")
     {
+      previewCreature.GetInventory().SetItemDefinitions(
+          WornEquipmentDrawer::ItemDefinitions());
       if (mainItemId && !mainItemId->empty())
         previewCreature.GetInventory().AssignToHotbar(
             0, 0, {InventoryEntryKind::Item, *mainItemId, 1, false});

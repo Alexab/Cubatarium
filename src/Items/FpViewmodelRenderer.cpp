@@ -5,7 +5,9 @@
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonHierarchy.h"
+#include "Creatures/Visual/BoneSkeleton/CreatureAttachmentBounds.h"
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
+#include "Creatures/Visual/CreatureEquipmentFit.h"
 #include "Creatures/Visual/CreatureMeshGpuCache.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureTextureResolver.h"
@@ -16,6 +18,7 @@
 #include "Items/ItemDefinitionStorage.h"
 #include "Items/ItemGltfTextureCache.h"
 #include "Items/ItemInspectionSource.h"
+#include "Items/ItemPresentationMath.h"
 #include "Items/ItemSurfaceRenderer.h"
 #include "Items/ItemVisualDefaults.h"
 #include "Render/Engine/ShaderManager.h"
@@ -57,7 +60,7 @@ constexpr float kPi = 3.14159265358979323846f;
 
 const glm::vec3 kEye{0.f, 0.0f, 0.0f};
 const glm::vec3 kTarget{0.05f, -0.15f, -1.0f};
-// After idle Rx(+88°): local -Y = forward (-Z view); local -Z = up (+Y view).
+// After idle Rx(+88В°): local -Y = forward (-Z view); local -Z = up (+Y view).
 // Previous +Z pushed the held item down under the wrist in frame.
 const glm::vec3 kHandSocketR{0.04f, -0.62f, -0.14f};
 const glm::vec3 kHandSocketL{-0.04f, -0.62f, -0.14f};
@@ -70,8 +73,8 @@ constexpr int kArmUvH = 12;
 constexpr int kArmUvD = 4;
 
 // Tool JSON is Y-up (handle along +Y). Arm local hangs along -Y; after root
-// Rx(+88°) that is camera-forward. Mapping JSON +Y onto arm -Y made tools
-// collinear with the forearm. Wield space: JSON +Y → mostly arm -Z (up in
+// Rx(+88В°) that is camera-forward. Mapping JSON +Y onto arm -Y made tools
+// collinear with the forearm. Wield space: JSON +Y в†’ mostly arm -Z (up in
 // FP frame / above palm), with a small lean toward -Y (into the scene).
 constexpr float kToolWieldScale = 0.85f;
 constexpr float kToolWieldLeanDeg = 28.f;
@@ -80,7 +83,7 @@ constexpr float kFpWieldTargetExtent = 0.95f;
 
 glm::vec3 ToolJsonOffsetToArm(const glm::vec3 &off)
 {
-  // Base: (x, y, z)_json → (x, z, -y)_arm  (Y-up → -Z up from palm)
+  // Base: (x, y, z)_json в†’ (x, z, -y)_arm  (Y-up в†’ -Z up from palm)
   const glm::vec3 base(off.x, off.z, -off.y);
   const float lean = glm::radians(kToolWieldLeanDeg);
   const float c = std::cos(lean);
@@ -539,6 +542,8 @@ UFpViewmodelRenderer::ArmPartsLeft() const
 void UFpViewmodelRenderer::Update(float dt, float cameraYawDeg,
                                   float cameraPitchDeg, float moveSpeedHint)
 {
+  FrameDt = std::clamp(dt, 0.f, .1f);
+  BowPoseAdvanced = false;
   if (dt < 0.f)
   {
     dt = 0.f;
@@ -703,6 +708,15 @@ void UFpViewmodelRenderer::NotifyUseVisual(const std::string &presetId,
 
 void UFpViewmodelRenderer::ClearHeldVisual()
 {
+  EndUseVisual();
+  BowPoseInitialized = false;
+  BowPoseAdvanced = false;
+  BowPoseWeight = 0;
+  HasBowSupport = false;
+  BowPoseKey.clear();
+}
+void UFpViewmodelRenderer::EndUseVisual()
+{
   Motion.Anim.T = -1.f;
   Motion.Anim.Holding = false;
   Motion.Anim.HaveSnapshot = false;
@@ -792,13 +806,14 @@ glm::mat4 UFpViewmodelRenderer::BuildRootMatrix(bool mirrorX) const
     const float eased = raised * raised * (3.f - 2.f * raised);
     ApplyPresetToOffsets(heldPreset->Arm, eased, ox, oy, oz, swing);
   }
-  else if (Motion.Anim.T >= 0.f && !mirrorX && Motion.Anim.HaveSnapshot)
+  else if (!DrawingAuthoredBow && Motion.Anim.T >= 0.f && !mirrorX &&
+           Motion.Anim.HaveSnapshot)
   {
     const float eased =
         SampleEasing(Motion.Anim.T, Motion.Anim.Snapshot.Easing);
     ApplyPresetToOffsets(Motion.Anim.Snapshot.Arm, eased, ox, oy, oz, swing);
   }
-  else if (Motion.DigAnim >= 0.f && !mirrorX)
+  else if (!DrawingAuthoredBow && Motion.DigAnim >= 0.f && !mirrorX)
   {
     const float f = Motion.DigAnim;
     ox += -0.10f * std::sin(std::pow(f, 0.8f) * kPi);
@@ -812,7 +827,7 @@ glm::mat4 UFpViewmodelRenderer::BuildRootMatrix(bool mirrorX) const
     swing = glm::mat4_cast(glm::slerp(idle, punch, t));
   }
 
-  // Idle: local -Y → camera forward (-Z). Shoulder sits below the frame so
+  // Idle: local -Y в†’ camera forward (-Z). Shoulder sits below the frame so
   // the arm enters from the bottom edge (MC/Luanti FP framing). Small yaw so
   // left/right hands share nearly the same depth.
   // Held socket uses local -Z for "above palm" after this orient.
@@ -983,6 +998,33 @@ void UFpViewmodelRenderer::DrawHeld(const InventoryEntryRef *entry,
   }
 }
 
+glm::mat4 UFpViewmodelRenderer::PoseBowModel(const ItemRenderAsset &asset,
+                                             const ItemVisualState &state,
+                                             const glm::mat4 &modelWorld,
+                                             const glm::mat4 &armWorld,
+                                             const glm::vec3 &socket,
+                                             const glm::vec3 &grip, float scale)
+{
+  if (DrawingLeftArm || !ItemHasSupportGrip(asset) || BowPoseWeight <= 0)
+    return modelWorld;
+  const auto palm = glm::vec3(armWorld * glm::vec4(socket, 1));
+  const auto rest = glm::quat_cast(ItemAimRotation(modelWorld));
+  const auto aim = glm::quat_cast(DrawingCameraFrame *
+                                  ItemEulerMatrix(asset.Grip.FpAimEulerDeg));
+  const auto posed = glm::translate(glm::mat4(1), palm) *
+                     glm::mat4_cast(glm::slerp(rest, aim, BowPoseWeight)) *
+                     glm::scale(glm::mat4(1), glm::vec3(scale)) *
+                     glm::translate(glm::mat4(1), -grip);
+  if (DrawingBowCharge > 0)
+  {
+    const auto transforms = ResolveItemNodeTransforms(asset, state);
+    DrawingBowSupportPoint =
+        glm::vec3(posed * transforms[asset.Grip.SupportGripIndex][3]);
+    DrawingBowSupport = true;
+  }
+  return posed;
+}
+
 bool UFpViewmodelRenderer::TryDrawGltfHeld(const InventoryEntryRef &entry,
                                            const glm::vec3 &socket,
                                            const glm::mat4 &mvpBase)
@@ -1140,7 +1182,7 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const InventoryEntryRef &entry,
       glm::rotate(glm::mat4(1.f), glm::radians(poseEuler[2]),
                   glm::vec3(0.f, 0.f, 1.f));
 
-  // Same Y-up → arm remap as parts; lean so blade sits above palm.
+  // Same Y-up в†’ arm remap as parts; lean so blade sits above palm.
   const glm::mat4 orient =
       glm::rotate(glm::mat4(1.f), glm::radians(kToolWieldLeanDeg),
                   glm::vec3(1.f, 0.f, 0.f)) *
@@ -1164,7 +1206,7 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const InventoryEntryRef &entry,
       glm::scale(glm::mat4(1.f),
                  glm::vec3(fitScale * kToolWieldScale * wieldScale)) *
       glm::translate(glm::mat4(1.f), -gripCenter + gripOffset);
-  const glm::mat4 mvp = mvpBase * model;
+  glm::mat4 mvp = mvpBase * model;
 
   if (surface)
   {
@@ -1178,14 +1220,20 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const InventoryEntryRef &entry,
         &entry, DrawingLeftArm ? 0.f : DrawingBowCharge,
         DrawingLeftArm ? 0.f : DrawingUsePhase, DrawingHasAmmo);
     const auto visualState = EvaluateItemVisualState(*surface, inputs);
-    SurfaceRenderer->Draw(surface, absGltf, DrawingViewProjection,
-                          glm::inverse(DrawingViewProjection) * mvpBase * model,
+    auto modelWorld = glm::inverse(DrawingViewProjection) * mvpBase * model;
+    modelWorld =
+        PoseBowModel(*surface, visualState, modelWorld,
+                     glm::inverse(DrawingViewProjection) * mvpBase, socket,
+                     gripCenter, fitScale * kToolWieldScale * wieldScale);
+    mvp = DrawingViewProjection * modelWorld;
+    SurfaceRenderer->Draw(surface, absGltf, DrawingViewProjection, modelWorld,
                           visualState, profile);
     if (ActiveAudit)
     {
       FpItemDrawAudit record;
       record.Id = itemId;
       record.Inputs = inputs;
+      record.GripClip = mvp * glm::vec4(gripCenter, 1);
       const auto transforms = ResolveItemNodeTransforms(*surface, visualState);
       for (const auto &p : surface->Primitives)
         if (ItemNodeVisible(*surface, visualState, p.Node))
@@ -1329,6 +1377,7 @@ void UFpViewmodelRenderer::PrepareArmSource(
                          CreatureVisualBackend::BoneSkeleton)
   {
     ArmSource.reset();
+    HasArmPalm[0] = HasArmPalm[1] = false;
     ArmRequestSeen = false;
     return;
   }
@@ -1354,6 +1403,7 @@ void UFpViewmodelRenderer::PrepareArmSource(
   ArmSource = cache.Load(ArmSpecies, ArmFile, ArmGeometry, ArmDirectory);
   for (int side = 0; side < 2; ++side)
   {
+    HasArmPalm[side] = false;
     ArmIndices[side] = static_cast<size_t>(-1);
     ArmSegments[side].clear();
     if (!ArmSource)
@@ -1411,7 +1461,30 @@ void UFpViewmodelRenderer::PrepareArmSource(
     ArmFits[side] = glm::scale(glm::mat4(1.f), glm::vec3(ArmScales[side])) *
                     glm::translate(glm::mat4(1.f), -shoulder);
     ArmIndices[side] = index;
+    glm::vec3 palmLow, palmHigh;
+    const std::string itemBone = side ? "leftItem" : "rightItem";
+    if (ResolveCreatureAttachmentBounds(*ArmSource, hierarchy, itemBone,
+                                        palmLow, palmHigh))
+    {
+      const auto found = ArmSource->geometry.boneIndexByName.find(itemBone);
+      const auto intoArm =
+          glm::inverse(hierarchy.ComputeBoneMatrix(index, rest)) *
+          hierarchy.ComputeBoneMatrix(found->second, rest);
+      auto point =
+          glm::vec3(ArmFits[side] * intoArm *
+                    glm::vec4(CreaturePalmGripPosition(palmLow, palmHigh), 1));
+      if (side)
+        point.x = -point.x;
+      ArmPalms[side] = point;
+      HasArmPalm[side] = true;
+    }
   }
+}
+glm::vec3 UFpViewmodelRenderer::HandSocket(bool left) const
+{
+  const auto side = left ? 1 : 0;
+  return HasArmPalm[side] ? ArmPalms[side]
+                          : (left ? kHandSocketL : kHandSocketR);
 }
 
 bool UFpViewmodelRenderer::TryDrawAuthoredArm(const glm::mat4 &mvpBase,
@@ -1465,6 +1538,10 @@ bool UFpViewmodelRenderer::TryDrawAuthoredArm(const glm::mat4 &mvpBase,
         record.VertexFloatCount = cube.interleavedPosUv.size();
         record.SourceScale = ArmScales[side];
         record.RootMvp = mvpBase;
+        GLint program = 0;
+        glGetIntegerv(GL_CURRENT_PROGRAM, &program);
+        record.ProgramActive = program != 0;
+        record.PalmLocal = HandSocket(leftHand);
         ActiveAudit->Arms.push_back(std::move(record));
       }
       drew = true;
@@ -1546,7 +1623,53 @@ void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
     FpViewmodelDrawAudit *Previous;
     ~AuditScope() { Slot = Previous; }
   } auditScope{ActiveAudit, ActiveAudit};
-  DrawingBowCharge = params.BowCharge;
+  const auto *heldDefinition =
+      Items && params.Active && !params.Active->empty &&
+              !params.Active->broken &&
+              params.Active->kind == InventoryEntryKind::Item
+          ? Items->Get(params.Active->Id)
+          : nullptr;
+  const bool bowEquipped = params.CarryHands == 0 && heldDefinition &&
+                           heldDefinition->Ranged.Enabled;
+  auto bowKey = bowEquipped ? params.Active->Id + ":" +
+                                  std::to_string(params.Active->instanceId)
+                            : std::string();
+  if (bowEquipped)
+    bowKey += ":" + std::to_string(params.ActorId) + ":" +
+              std::to_string(params.WorldGeneration);
+  if (bowKey != BowPoseKey)
+  {
+    BowPoseKey = bowKey;
+    BowPoseInitialized = false;
+    HasBowSupport = false;
+    BowPoseWeight = 0;
+  }
+  DrawingBowCharge = bowEquipped ? std::clamp(params.BowCharge, 0.f, 1.f) : 0.f;
+  const float bowTarget = DrawingBowCharge > 0 ? 1.f : 0.f;
+  if (!bowEquipped)
+    BowPoseWeight = 0;
+  else if (!BowPoseInitialized)
+    BowPoseWeight = bowTarget;
+  else if (!BowPoseAdvanced)
+    BowPoseWeight =
+        glm::mix(BowPoseWeight, bowTarget, 1.f - std::exp(-FrameDt / .05f));
+  if (std::abs(BowPoseWeight - bowTarget) < .0001f)
+    BowPoseWeight = bowTarget;
+  BowPoseInitialized = true;
+  BowPoseAdvanced = true;
+  DrawingBowSupport = false;
+  DrawingAuthoredBow = false;
+  if (bowEquipped && BowPoseWeight > 0)
+  {
+    const auto *inspection = FindItemInspectionSource(params.Active->Id);
+    auto *paths = IUPlatformPaths::TryGet();
+    const auto asset =
+        inspection ? inspection->Asset
+        : paths    ? FindItemSurfaceAsset(
+                         paths->AssetRoot() / heldDefinition->ModelPath, revision)
+                   : nullptr;
+    DrawingAuthoredBow = asset && ItemHasSupportGrip(*asset);
+  }
   DrawingUsePhase = params.ItemUsePhase;
   DrawingUseHeld = params.ItemUseHeld;
   DrawingItemLight = params.ItemLightIntensity;
@@ -1575,11 +1698,13 @@ void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
   const glm::mat4 pv = projection * view;
   DrawingViewProjection = pv;
   DrawingCameraPosition = glm::vec3(glm::inverse(view)[3]);
+  DrawingCameraFrame = ItemAimRotation(glm::inverse(view));
   const GLuint skinAtlas =
       ResolvePlayerSkin(params.SpeciesId, params.Appearance.get());
   if (ActiveAudit)
     ActiveAudit->SkinTexture = skinAtlas;
   PrepareArmSource(params.Definition, params.Appearance.get());
+  const auto socketR = HandSocket(false), socketL = HandSocket(true);
 
   Shader->Use();
   Shader->SetInt("texture0", 0);
@@ -1607,43 +1732,84 @@ void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
       return root;
     return ApplyItemHandProfile(root, socket, asset->Grip, left);
   };
-  rootR = handProfile(rootR, kHandSocketR, params.Active, false);
+  rootR = handProfile(rootR, socketR, params.Active, false);
   if (params.CarryHands > 0)
     rootR = glm::translate(glm::mat4(1),
                            glm::vec3(-.12f, .28f + params.ThrowCharge * .12f,
                                      -.10f + params.ThrowCharge * .08f)) *
             rootR;
-  if (params.BowCharge > 0)
-    rootR =
-        glm::translate(rootR, glm::vec3(-.1f, .08f, .15f * params.BowCharge));
+  if (BowPoseWeight > 0)
+  {
+    rootR = glm::translate(rootR, glm::vec3(-.1f, .08f, 0) * BowPoseWeight);
+    if (DrawingAuthoredBow)
+    {
+      // Keep the bow arm outside the string's return path. Rotating around
+      // its palm preserves the grip and avoids driving the drawing hand
+      // through a forearm parallel to the arrow.
+      const auto palm = glm::vec3(rootR * glm::vec4(socketR, 1));
+      rootR = glm::translate(glm::mat4(1), palm) *
+              glm::rotate(glm::mat4(1), glm::radians(35.f * BowPoseWeight),
+                          glm::vec3(0, 1, 0)) *
+              glm::translate(glm::mat4(1), -palm) * rootR;
+    }
+  }
   if (params.CarryHands > 0 && params.HasCarryContacts)
-    rootR = AlignCarryPalm(rootR, pv, kHandSocketR, params.CarryRightNdc);
+    rootR = AlignCarryPalm(rootR, pv, socketR, params.CarryRightNdc);
   DrawingLeftArm = false;
   if (!TryDrawAuthoredArm(pv * rootR, false, skinAtlas) &&
       !TryDrawLegacyAtlasArms(pv * rootR, false, skinAtlas))
   {
     DrawParts(ArmPartsRight(), pv * rootR, skinAtlas);
   }
-  DrawHeld(params.Active, kHandSocketR, pv * rootR);
+  DrawHeld(params.Active, socketR, pv * rootR);
+  if (DrawingBowSupport)
+  {
+    BowSupportPoint = DrawingBowSupportPoint;
+    HasBowSupport = true;
+  }
 
   glm::mat4 rootL = BuildRootMatrix(true);
-  rootL = handProfile(rootL, kHandSocketL, params.Offhand, true);
+  rootL = handProfile(rootL, socketL, params.Offhand, true);
+  if (BowPoseWeight > 0 && !DrawingAuthoredBow)
+    rootL = glm::translate(rootL, glm::vec3(.10f, .10f, -.18f) * BowPoseWeight);
   if (params.CarryHands == 2)
     rootL = glm::translate(glm::mat4(1),
                            glm::vec3(.12f, .28f + params.ThrowCharge * .12f,
                                      -.10f + params.ThrowCharge * .08f)) *
             rootL;
-  if (params.BowCharge > 0)
-    rootL = glm::translate(rootL, glm::vec3(.1f, .10f, -.18f));
+  if (BowPoseWeight > 0 && HasBowSupport && params.CarryHands == 0)
+  {
+    const auto palm = glm::vec3(rootL * glm::vec4(socketL, 1));
+    const auto target = glm::mix(palm, BowSupportPoint, BowPoseWeight);
+    const auto shoulder = glm::vec3(rootL[3]);
+    const auto turn =
+        glm::mat4_cast(ItemTurnBetween(palm - shoulder, target - shoulder));
+    rootL = glm::translate(glm::mat4(1), shoulder) * turn *
+            glm::translate(glm::mat4(1), -shoulder) * rootL;
+    rootL = glm::translate(glm::mat4(1),
+                           target - glm::vec3(rootL * glm::vec4(socketL, 1))) *
+            rootL;
+    if (ActiveAudit)
+    {
+      ActiveAudit->BowSupport = true;
+      ActiveAudit->BowPoseWeight = BowPoseWeight;
+      ActiveAudit->BowSupportTarget = BowSupportPoint;
+      ActiveAudit->BowSupportPalm = glm::vec3(rootL * glm::vec4(socketL, 1));
+    }
+  }
   if (params.CarryHands == 2 && params.HasCarryContacts)
-    rootL = AlignCarryPalm(rootL, pv, kHandSocketL, params.CarryLeftNdc);
+    rootL = AlignCarryPalm(rootL, pv, socketL, params.CarryLeftNdc);
   DrawingLeftArm = true;
+  // Drawing the typed right-hand item uses another program and unbinds it.
+  // Bind the skin program again before submitting the left arm's vertices.
+  Shader->Use();
   if (!TryDrawAuthoredArm(pv * rootL, true, skinAtlas) &&
       !TryDrawLegacyAtlasArms(pv * rootL, true, skinAtlas))
   {
     DrawParts(ArmPartsLeft(), pv * rootL, skinAtlas);
   }
-  DrawHeld(params.Offhand, kHandSocketL, pv * rootL);
+  if (BowPoseWeight <= .001f)
+    DrawHeld(params.Offhand, socketL, pv * rootL);
 
   Shader->Unuse();
 }

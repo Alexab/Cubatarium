@@ -20,6 +20,7 @@ public:
   static constexpr size_t kSlotCount = kRowCount * kSlotsPerRow;
   static constexpr size_t kArmorSlotCount = 4;
   void SetItemDefinitions(const UItemDefinitionStorage *items);
+  const UItemDefinitionStorage *GetItemDefinitions() const { return Items; }
   const std::map<std::string, int> &GetStorage() const;
   InventoryOperationResult Insert(InventoryEntryRef entry);
   InventoryOperationResult Consume(InventoryEntryKind kind,

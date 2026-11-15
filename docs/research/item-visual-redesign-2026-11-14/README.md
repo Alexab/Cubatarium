@@ -803,6 +803,27 @@ incremental Release executable passes the focused 108-check arrow/bow probe.
 The Windows/Linux workflow now runs component regressions too; remote CI remains
 unexecuted here.
 
+## Bow contacts and FP skin submission
+
+[The bow contact checkpoint](bow-contact-checkpoint/README.md) replaces the
+previous generic hand poses with named animated support contact, mesh-derived
+palms and a reach-limited human arm solve. Main-slot/right-hand ownership agrees
+with both FP and TP, the offhand visual follows bow occupancy, and release/UI
+resets have separate lifetimes. Carrier scale is preserved in preview attachment
+matrices. FP also rebinds the skin program before the left arm, correcting its
+missing submission after a typed item draw.
+
+The focused Release native run passes 324 bow/shield checks. The earlier component
+checkpoint images remain historical evidence of the defect; current poses are
+retained in the new checkpoint. Item Lab's independent FP snapshots now reset
+transient pose state between reference/candidate and pose switches. This work
+also passes the full staged regression: 25 CTests, gameplay 59, ownership 57,
+ownership UI 18, player window 7, icons 209, Item Lab 291 and presentations 3571.
+All 212 runtime substitutions were restored. The checkpoint records the full
+and earlier focused executable hashes separately. This work
+does not replace final all-item art, world-lighting or performance acceptance,
+and production v3 promotion remains 0/70.
+
 ## Acceptance contract
 
 Deterministic publication preserves author work and grips. Missing production

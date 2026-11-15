@@ -991,8 +991,15 @@ void SubmitItemOnSingleBone(CreatureDrawQueue *queue, UShaderProgram *shader,
     const auto *definition =
         g_ItemDefinitions ? g_ItemDefinitions->Get(itemId) : nullptr;
     const float scale = definition ? definition->Visual.TpScale : 1.f;
-    const auto local =
+    auto local =
         ItemWieldLocalMatrix(*surface, palm, boneName == "leftItem", scale);
+    glm::mat4 head;
+    if (boneName == "rightItem" && ItemHasSupportGrip(*surface) &&
+        bones("head", head))
+      local =
+          glm::inverse(boneMat) *
+          ItemBowModelMatrix(*surface, glm::vec3(boneMat * glm::vec4(palm, 1)),
+                             head, scale);
     QueueItemSurface(queue, surface, surfacePath, viewProj,
                      bodyMat * boneMat * local, false, inputs);
     return;
@@ -1186,6 +1193,8 @@ void WornEquipmentDrawer::SubmitWieldedFromCreature(
   {
     offId = off.Id;
   }
+  if (creature.HumanMotion.BowPresentationWeight > .001f)
+    offId.clear();
   SubmitWieldedPreview(
       &queue, nullptr, mainId, offId, items, viewProj, bodyMat, bones, false,
       bounds,
@@ -1215,7 +1224,10 @@ void WornEquipmentDrawer::SubmitWieldedPreview(
                            offset, euler, viewProj, bodyMat, bones, immediate,
                            bounds, mainInputs);
   }
-  if (!offhandItemId.empty())
+  const auto *mainDefinition = items ? items->Get(mainItemId) : nullptr;
+  const bool drawingBow = mainDefinition && mainDefinition->Ranged.Enabled &&
+                          mainInputs.BowCharge > 0;
+  if (!offhandItemId.empty() && !drawingBow)
   {
     ResolveWieldParams(items, offhandItemId, scale, offset, euler);
     SubmitItemOnSingleBone(queue, shader, offhandItemId, "leftItem", scale,

@@ -16,6 +16,7 @@
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
 #include "Render/Pipeline/GlStateScope.h"
+#include "Test/Native/ItemBowTpQa.h"
 #include "Test/Native/ItemConsumeTpQa.h"
 #include "ThirdParty/stb_image_write.h"
 #include <algorithm>
@@ -183,14 +184,38 @@ inline bool CaptureFpItemState(UFpViewmodelRenderer &renderer,
                                  glm::max(item.NdcLow, glm::vec2(-1)));
   const float fraction =
       visible.x * visible.y / std::max(1e-8f, extent.x * extent.y);
+  const bool programs =
+      !audit.Arms.empty() &&
+      std::all_of(audit.Arms.begin(), audit.Arms.end(),
+                  [](const auto &arm) { return arm.ProgramActive; });
+  float gripGap = 1e9f;
+  for (const auto &arm : audit.Arms)
+    if (arm.Left == left)
+    {
+      const auto palm = arm.RootMvp * glm::vec4(arm.PalmLocal, 1);
+      if (palm.w > 0 && item.GripClip.w > 0)
+        gripGap = glm::length(glm::vec3(palm) / palm.w -
+                              glm::vec3(item.GripClip) / item.GripClip.w);
+      break;
+    }
+  const bool bowContact =
+      !params.BowCharge ||
+      (audit.BowSupport && audit.BowPoseWeight == 1 &&
+       glm::distance(audit.BowSupportTarget, audit.BowSupportPalm) < .0001f);
   const nlohmann::json framing = {
       {"ndc_low", {item.NdcLow.x, item.NdcLow.y}},
       {"ndc_high", {item.NdcHigh.x, item.NdcHigh.y}},
       {"all_in_front", item.AllInFront},
-      {"visible_bounds_fraction", fraction}};
+      {"visible_bounds_fraction", fraction},
+      {"skin_programs_active", programs},
+      {"main_grip_ndc_gap", gripGap},
+      {"bow_support_applied", audit.BowSupport},
+      {"bow_pose_weight", audit.BowPoseWeight},
+      {"bow_support_gap",
+       glm::distance(audit.BowSupportTarget, audit.BowSupportPalm)}};
   std::ofstream(path.string() + ".json") << framing.dump(2) << '\n';
   return saved && item.VisiblePrimitives > 0 && item.AllInFront &&
-         fraction >= .6f;
+         fraction >= .6f && programs && gripGap < .0001f && bowContact;
 }
 inline ItemVisualInputs ItemQaInputs(const ItemDefinition &definition,
                                      const ItemRenderAsset &asset, int pose)
@@ -513,6 +538,7 @@ RunItemPresentationQa(const std::filesystem::path &path,
                    report);
     RunItemConsumePoseQa(*def, preview, fp, fpTarget, frames, report);
     RunItemConsumeTpQa(*def, preview, frames, report);
+    RunItemBowTpQa(*def, preview, frames, report);
     for (const char *body : HumanAppearance::Bodies)
       for (int phase = 0; phase < 2; ++phase)
       {

@@ -38,6 +38,7 @@ public:
   int GetScene() const { return Scene; }
   size_t GetSceneDrawCount(int panel) const { return SceneDraws[panel]; }
   bool SceneSourceMatches(int panel) const { return SceneSources[panel]; }
+  bool BowSupportContact(int panel) const { return SceneBowContacts[panel]; }
   GuiRect GetSceneBounds() const;
   void SetPosePreset(int pose);
   int GetPosePreset() const { return PosePreset; }
@@ -77,6 +78,7 @@ private:
   unsigned Textures[2]{0, 0};
   size_t SceneDraws[2]{0, 0};
   bool SceneSources[2]{false, false};
+  bool SceneBowContacts[2]{false, false};
   std::filesystem::path Paths[2], PublishedPath;
   bool ArchivedReference{false}, StagedCandidate{false};
   std::string Selected{"bucket"};

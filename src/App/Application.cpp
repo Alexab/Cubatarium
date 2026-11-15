@@ -673,6 +673,8 @@ void UApplication::RefreshCreatureCatalog()
 
 void UApplication::EnterGameAfterWorldChange()
 {
+  if (FpViewmodelRenderer)
+    FpViewmodelRenderer->ClearHeldVisual();
   WorldSessionActive = true;
   if (Core && World)
   {
@@ -2027,8 +2029,14 @@ void UApplication::NotifyFpUseVisual(const std::string &presetId, bool hold)
 void UApplication::ClearFpHeldVisual()
 {
   if (FpViewmodelRenderer)
-  {
     FpViewmodelRenderer->ClearHeldVisual();
+}
+
+void UApplication::EndFpUseVisual()
+{
+  if (FpViewmodelRenderer)
+  {
+    FpViewmodelRenderer->EndUseVisual();
   }
 }
 
@@ -3682,6 +3690,8 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
         fpParams.FramebufferW = width;
         fpParams.FramebufferH = height;
         fpParams.CarryHands = creature->CarryHandCount;
+        fpParams.ActorId = creature->GetId();
+        fpParams.WorldGeneration = World->GetCreatureGeneration();
         ConfigureCarryContacts(fpParams, *creature,
                                *World->GetCurrentUserCamera());
         fpParams.ThrowCharge = creature->ThrowCharge;

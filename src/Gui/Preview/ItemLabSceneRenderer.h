@@ -40,6 +40,7 @@ public:
   void Invalidate();
   size_t DrawCount() const { return LastDrawCount; }
   bool SourceMatches() const { return LastSourceMatches; }
+  bool BowSupportContact() const { return LastBowSupportContact; }
   unsigned Render(UItemPreviewRenderer &orbit, const std::string &id,
                   const std::filesystem::path &path,
                   const std::shared_ptr<const ItemRenderAsset> &asset,
@@ -48,6 +49,7 @@ public:
 private:
   size_t LastDrawCount{0};
   bool LastSourceMatches{true};
+  bool LastBowSupportContact{false};
   std::shared_ptr<UItemDefinitionStorage> Items;
   std::unique_ptr<UCreaturePreviewRenderer> Creature;
   std::unique_ptr<UFpViewmodelRenderer> Fp;

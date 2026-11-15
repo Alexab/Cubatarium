@@ -23,6 +23,7 @@ struct HumanMotionInput
   float throwCharge{0}, bowCharge{0};
   float consumePhase{0.f};
   bool rightHandBusy{false}, leftHandBusy{false};
+  bool bowEquipped{false};
 };
 struct HumanMotionState
 {
@@ -33,6 +34,7 @@ struct HumanMotionState
   unsigned landingEvents{0};
   float audioPhase{0.f};
   float actionRemaining{0.f};
+  float BowPresentationWeight{0.f};
   int lastCarryHands{0};
   BoneSkeletonPose blended;
   std::array<glm::vec3, 2> contacts{};

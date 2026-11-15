@@ -312,6 +312,7 @@ void UItemLabScreen::Refresh()
       unsigned next = 0;
       SceneDraws[i] = 0;
       SceneSources[i] = false;
+      SceneBowContacts[i] = false;
       if (std::filesystem::is_regular_file(Paths[i]))
       {
         const auto asset = Preview->GetInspectionAsset(Paths[i]);
@@ -342,6 +343,7 @@ void UItemLabScreen::Refresh()
             ScenesRenderer->Render(*Preview, Selected, Paths[i], asset, params);
         SceneDraws[i] = ScenesRenderer->DrawCount();
         SceneSources[i] = ScenesRenderer->SourceMatches();
+        SceneBowContacts[i] = ScenesRenderer->BowSupportContact();
         size_t triangles = 0, vertices = 0;
         for (const auto &p : asset->Primitives)
         {

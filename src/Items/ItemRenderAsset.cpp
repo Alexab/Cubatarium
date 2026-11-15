@@ -338,6 +338,10 @@ LoadItemRenderAsset(const std::filesystem::path &path,
   readVector("tp_euler_deg", asset->Grip.TpEulerDeg);
   readVector("fp_arm_euler_deg", asset->Grip.FpArmEulerDeg);
   readVector("ground_euler_deg", asset->Grip.GroundEulerDeg);
+  readVector("fp_aim_euler_deg", asset->Grip.FpAimEulerDeg);
+  readVector("tp_aim_euler_deg", asset->Grip.TpAimEulerDeg);
+  asset->Grip.SupportGripNode =
+      presentation.value("support_grip_node", std::string());
   asset->Grip.TpScale = presentation.value("tp_scale", 1.f);
   Require(std::isfinite(asset->Grip.TpScale) && asset->Grip.TpScale >= .1f &&
               asset->Grip.TpScale <= 3.f,
@@ -499,6 +503,15 @@ LoadItemRenderAsset(const std::filesystem::path &path,
        g.at("scenes").at(g.value("scene", size_t(0))).at("nodes"))
     visit(index.get<size_t>(), glm::mat4(1), -1);
   Require(!asset->Primitives.empty(), "scene contains no geometry");
+  if (!asset->Grip.SupportGripNode.empty())
+  {
+    const auto found = std::find_if(
+        asset->Nodes.begin(), asset->Nodes.end(), [&](const auto &node)
+        { return node.Name == asset->Grip.SupportGripNode; });
+    Require(found != asset->Nodes.end(),
+            "support grip references missing node");
+    asset->Grip.SupportGripIndex = size_t(found - asset->Nodes.begin());
+  }
   ReadVisualBindings(
       g.value("extras", Json::object()).value("visual_bindings", Json::array()),
       *asset);

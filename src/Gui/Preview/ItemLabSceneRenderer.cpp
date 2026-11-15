@@ -156,6 +156,7 @@ unsigned UItemLabSceneRenderer::Render(
 {
   LastDrawCount = 1;
   LastSourceMatches = true;
+  LastBowSupportContact = false;
   if (p.Scene == 0)
     return orbit.RenderInspectionTexture(id, path, 512, p.Yaw, p.Pitch, p.Mode,
                                          p.Ambient, p.Inputs);
@@ -245,7 +246,13 @@ unsigned UItemLabSceneRenderer::Render(
     params.Audit = &audit;
     params.ItemInspectionMode = p.Mode;
     params.ItemAmbient = p.Ambient;
+    // Reference/candidate renders share the renderer but are independent
+    // snapshots, without a gameplay Update tick between them.
+    Fp->ClearHeldVisual();
     Fp->DrawWorldOverlay(params);
+    LastBowSupportContact =
+        audit.BowSupport && audit.BowPoseWeight == 1 &&
+        glm::distance(audit.BowSupportTarget, audit.BowSupportPalm) < .0001f;
     LastDrawCount = audit.Items.size();
     if (audit.Items.size() != 1 || !audit.Items[0].VisiblePrimitives)
       throw std::runtime_error(

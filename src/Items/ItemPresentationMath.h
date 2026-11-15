@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 namespace cutum
 {
@@ -14,6 +15,41 @@ inline glm::mat4 ItemEulerMatrix(glm::vec3 degrees)
   return glm::rotate(glm::mat4(1), a.x, glm::vec3(1, 0, 0)) *
          glm::rotate(glm::mat4(1), a.y, glm::vec3(0, 1, 0)) *
          glm::rotate(glm::mat4(1), a.z, glm::vec3(0, 0, 1));
+}
+inline glm::mat4 ItemAimRotation(const glm::mat4 &frame)
+{
+  glm::mat4 result(1);
+  for (int column = 0; column < 3; ++column)
+    result[column] = glm::vec4(glm::normalize(glm::vec3(frame[column])), 0);
+  return result;
+}
+inline glm::quat ItemTurnBetween(glm::vec3 from, glm::vec3 to)
+{
+  from = glm::normalize(from);
+  to = glm::normalize(to);
+  const float d = std::clamp(glm::dot(from, to), -1.f, 1.f);
+  if (d < -.99999f)
+  {
+    const auto other =
+        std::abs(from.x) < .9f ? glm::vec3(1, 0, 0) : glm::vec3(0, 1, 0);
+    return glm::angleAxis(3.14159265f, glm::normalize(glm::cross(from, other)));
+  }
+  return glm::normalize(glm::quat(1.f + d, glm::cross(from, to)));
+}
+inline glm::mat4 ItemBowModelMatrix(const ItemRenderAsset &asset,
+                                    glm::vec3 palm, const glm::mat4 &aim,
+                                    float scale)
+{
+  return glm::translate(glm::mat4(1), palm) * ItemAimRotation(aim) *
+         ItemEulerMatrix(asset.Grip.TpAimEulerDeg) *
+         glm::scale(glm::mat4(1), glm::vec3(scale * asset.Grip.TpScale *
+                                            glm::length(glm::vec3(aim[0])))) *
+         glm::translate(glm::mat4(1), -asset.Grip.RightGrip);
+}
+inline bool ItemHasSupportGrip(const ItemRenderAsset &asset)
+{
+  return !asset.Grip.SupportGripNode.empty() &&
+         asset.Grip.SupportGripIndex < asset.Nodes.size();
 }
 inline glm::mat4 ItemWearSectionMatrix(const ItemWearSection &section,
                                        glm::vec3 low, glm::vec3 high)
