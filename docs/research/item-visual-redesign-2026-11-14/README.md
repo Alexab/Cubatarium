@@ -632,6 +632,43 @@ Style, formatting and include checks pass. This remains partial acceptance:
 TP consumption poses, carry contacts, final art/performance review, source-byte
 checkout validation and production promotion are still required.
 
+## Third-person consumption and shared contact geometry, 2026-11-15
+
+The actual human motion controller now consumes the same transient held-use
+progress as FP. It raises the active hand during the first third, holds it near
+the mouth until release, and blends back after cancellation. The free arm and
+locomotion stay independent; cargo and bow occupancy have priority. No rig
+vertices, item definitions, ownership or serialization formats change here.
+
+Visual review caught an important distinction: an empty `rightItem` node's pivot
+is not the physical palm. Equipment uses the drawable ancestor's mesh bounds and
+`CreaturePalmGripPosition`. That existing bound calculation is now shared with
+the contact test rather than duplicated or replaced with a pivot approximation.
+The CPU test uses actual generated meshes for both body forms at 30/60/144 FPS.
+
+The native preview now projects held consumption and ranged state into the same
+avatar pose used in-game. A read-only final-skeleton observer lets the fixture
+compare the submitted model's authored grip with the real head transform. Each
+held grip must lie in front of the face and near mouth height. Capture checks
+also require the actual item to stay framed, maintain the held contact and
+return to the identical rest image after cancellation. Both body forms, standing
+and walking, front/side/back views and all five food/drink definitions are covered.
+
+The generic native state helper now gates bow charge/ammo by the definition and
+water visibility by finite contents, eliminating the spurious bow arm pose in
+utility captures. These inputs do not change any gameplay mechanics.
+
+The final Release overlay run passes all 25 CTests, 59 gameplay checks, 3,342
+presentation checks, 283 Item Lab checks, 209 icon checks and the ownership/UI
+regressions. Its 210 temporary runtime files are restored. The contact matrix
+contains 240 TP frames over 60 combinations, alongside FP consumption captures.
+Style, formatting and include checks pass. See the
+[TP contact checkpoint](tp-consume-checkpoint/summary.json) for reports, binary
+hashes and native images. This is still partial acceptance: the matrix verifies
+neutral-view contacts, not every head pitch, cosmetic variation or combined
+action. Bow/carry contacts, final art/world/performance review, source-byte
+checkout validation and production promotion remain required.
+
 ## Remaining implementation, in order
 
 1. Native baseline and actual resource-path trace, before/after references and
@@ -670,16 +707,13 @@ Before publication, adapt the existing creature equipment/reload/culling QA
 collectors for typed item surfaces, final texture semantics and gold sets.
 The legacy equipment matrix currently assumes `wear.gltf` and source color
 factors. Also close these known integration gaps: share the final arrow
-resource with the bow's temporary nocked-arrow geometry; complete TP consumption
-arm poses (the authoritative duration and FP hold now have coverage); and complete carry/two-hand
+resource with the bow's temporary nocked-arrow geometry; and complete bow/carry/two-hand
 contact wiring. The sRGB filtering and cold disk-icon dependency problems are
 covered by the newer checkpoint above. Unsupported imported samplers are explicitly rejected; optional conversion,
 final publication acceptance and measured performance remain open.
 
-Before final art review, also gate the generic native presentation helper's bow
-inputs by the item definition. Its synthetic utility-state inputs currently carry
-a bow charge even for non-ranged items; the Item Lab scene renderer already gates
-this correctly. Passing capture checks is not proof of a valid gameplay pose.
+The earlier generic native helper's spurious bow inputs are fixed in the newer
+checkpoint above. Passing capture checks still does not replace final art review.
 
 
 ## Acceptance contract

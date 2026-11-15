@@ -16,6 +16,7 @@
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
 #include "Render/Pipeline/GlStateScope.h"
+#include "Test/Native/ItemConsumeTpQa.h"
 #include "ThirdParty/stb_image_write.h"
 #include <algorithm>
 #include <cstdlib>
@@ -134,10 +135,12 @@ public:
 };
 inline bool CaptureFpItemState(UFpViewmodelRenderer &renderer,
                                UCreaturePreviewRenderer &preview,
-                               UItemQaTarget &target, const std::string &id,
+                               UItemQaTarget &target,
+                               const ItemDefinition &definition,
                                const ItemVisualInputs &inputs, const char *body,
                                bool left, const std::filesystem::path &path)
 {
+  const auto &id = definition.Id;
   HumanAppearance human;
   human.bodyVariant = body;
   const auto look =
@@ -162,10 +165,11 @@ inline bool CaptureFpItemState(UFpViewmodelRenderer &renderer,
   params.Appearance = look;
   params.Active = left ? nullptr : &entry;
   params.Offhand = left ? &entry : nullptr;
-  params.BowCharge = left ? 0.f : inputs.BowCharge;
+  params.BowCharge =
+      left || !definition.Ranged.Enabled ? 0.f : inputs.BowCharge;
   params.ItemUsePhase = left ? 0.f : inputs.UsePhase;
   params.ItemUseHeld = !left && inputs.UsePhase > 0;
-  params.HasAmmo = inputs.HasAmmo;
+  params.HasAmmo = definition.Ranged.Enabled && inputs.HasAmmo;
   renderer.ClearHeldVisual();
   renderer.DrawWorldOverlay(params);
   const bool saved =
@@ -188,27 +192,28 @@ inline bool CaptureFpItemState(UFpViewmodelRenderer &renderer,
   return saved && item.VisiblePrimitives > 0 && item.AllInFront &&
          fraction >= .6f;
 }
-inline ItemVisualInputs ItemQaInputs(const ItemRenderAsset &asset, int pose)
+inline ItemVisualInputs ItemQaInputs(const ItemDefinition &definition,
+                                     const ItemRenderAsset &asset, int pose)
 {
   ItemVisualInputs inputs;
-  inputs.BowCharge = pose * .5f;
+  inputs.BowCharge = definition.Ranged.Enabled ? pose * .5f : 0.f;
   inputs.UsePhase = pose * .25f;
-  inputs.HasAmmo = pose > 0;
-  inputs.HasWater = pose > 0;
+  inputs.HasAmmo = definition.Ranged.Enabled && pose > 0;
   for (const auto &b : asset.Bindings)
     if (b.Channel == ItemVisualChannel::FillUnits)
       inputs.ContentsUnits = std::max(inputs.ContentsUnits,
                                       int(std::lround(b.Maximum * pose * .5f)));
+  inputs.HasWater = inputs.ContentsUnits > 0;
   return inputs;
 }
-inline void RunItemStateQa(const std::string &id, const ItemRenderAsset &asset,
-                           UItemPreviewRenderer &orbit,
-                           UCreaturePreviewRenderer &preview,
-                           UFpViewmodelRenderer *fp, UItemQaTarget &fpTarget,
-                           const std::filesystem::path &model,
-                           const std::filesystem::path &frames,
-                           nlohmann::json &report)
+inline void
+RunItemStateQa(const ItemDefinition &definition, const ItemRenderAsset &asset,
+               UItemPreviewRenderer &orbit, UCreaturePreviewRenderer &preview,
+               UFpViewmodelRenderer *fp, UItemQaTarget &fpTarget,
+               const std::filesystem::path &model,
+               const std::filesystem::path &frames, nlohmann::json &report)
 {
+  const auto &id = definition.Id;
   auto check = [&](const std::string &name, bool passed)
   {
     report["checks"].push_back({{"name", name}, {"passed", passed}});
@@ -218,17 +223,17 @@ inline void RunItemStateQa(const std::string &id, const ItemRenderAsset &asset,
   for (const char *body : HumanAppearance::Bodies)
     for (bool left : {false, true})
       if (fp)
-        check(
-            id + " FP " + body + (left ? " left" : " right"),
-            CaptureFpItemState(*fp, preview, fpTarget, id, {}, body, left,
-                               frames / (id + "-fp-" + body +
-                                         (left ? "-left.png" : "-right.png"))));
+        check(id + " FP " + body + (left ? " left" : " right"),
+              CaptureFpItemState(
+                  *fp, preview, fpTarget, definition, {}, body, left,
+                  frames / (id + "-fp-" + body +
+                            (left ? "-left.png" : "-right.png"))));
   if (asset.Bindings.empty())
     return;
   report["state_ids"].push_back(id);
   for (int step = 0; step < 4; ++step)
   {
-    const auto inputs = ItemQaInputs(asset, step == 3 ? 0 : step);
+    const auto inputs = ItemQaInputs(definition, asset, step == 3 ? 0 : step);
     const auto label = id + "-state-" + std::to_string(step);
     const auto texture =
         orbit.RenderInspectionTexture(id, model, 512, 35, 25, 0, .65f, inputs);
@@ -254,8 +259,8 @@ inline void RunItemStateQa(const std::string &id, const ItemRenderAsset &asset,
       }
       if (fp)
         check(label + " FP " + body,
-              CaptureFpItemState(*fp, preview, fpTarget, id, inputs, body,
-                                 false,
+              CaptureFpItemState(*fp, preview, fpTarget, definition, inputs,
+                                 body, false,
                                  frames / (label + "-fp-" + body + ".png")));
     }
   }
@@ -307,8 +312,8 @@ inline void RunItemConsumePoseQa(const ItemDefinition &definition,
           definition.Id + "-consume-" + body + "-" + std::to_string(step);
       images[step] = frames / (label + ".png");
       check(label + " visible",
-            CaptureFpItemState(*fp, preview, target, definition.Id, inputs,
-                               body, false, images[step]));
+            CaptureFpItemState(*fp, preview, target, definition, inputs, body,
+                               false, images[step]));
       std::ifstream file(images[step].string() + ".json");
       nlohmann::json framing;
       file >> framing;
@@ -467,9 +472,10 @@ RunItemPresentationQa(const std::filesystem::path &path,
     if (!surface)
       continue;
     report["surface_ids"].push_back(id);
-    RunItemStateQa(id, *surface, orbit, preview, fp, fpTarget, model, frames,
+    RunItemStateQa(*def, *surface, orbit, preview, fp, fpTarget, model, frames,
                    report);
     RunItemConsumePoseQa(*def, preview, fp, fpTarget, frames, report);
+    RunItemConsumeTpQa(*def, preview, frames, report);
     for (const char *body : HumanAppearance::Bodies)
       for (int phase = 0; phase < 2; ++phase)
       {

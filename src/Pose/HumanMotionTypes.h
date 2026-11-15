@@ -21,6 +21,7 @@ struct HumanMotionInput
   float scale{.9f};
   int carryHands{0};
   float throwCharge{0}, bowCharge{0};
+  float consumePhase{0.f};
   bool rightHandBusy{false}, leftHandBusy{false};
 };
 struct HumanMotionState

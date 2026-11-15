@@ -5,6 +5,7 @@
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonHierarchy.h"
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonModelSpace.h"
+#include "Creatures/Visual/BoneSkeleton/CreatureAttachmentBounds.h"
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
 #include "Creatures/Visual/CreatureDrawRequest.h"
 #include "Creatures/Visual/CreatureRootTransform.h"
@@ -61,37 +62,8 @@ bool UCreatureVisualBoneSkeleton::GetBoneLocalBounds(const std::string &name,
     high = cached->second.second;
     return true;
   }
-  const auto anchor = MeshAsset->geometry.boneIndexByName.find(name);
-  if (anchor == MeshAsset->geometry.boneIndexByName.end())
-    return false;
-  size_t source = anchor->second;
-  while (MeshAsset->boneMeshes[source].cubes.empty())
-  {
-    const auto parent = MeshAsset->geometry.boneIndexByName.find(
-        MeshAsset->geometry.bones[source].parent);
-    if (parent == MeshAsset->geometry.boneIndexByName.end())
-      return false;
-    source = parent->second;
-  }
-  const BoneSkeletonPose rest;
-  const glm::mat4 intoAnchor =
-      glm::inverse(Hierarchy->ComputeBoneMatrix(anchor->second, rest)) *
-      Hierarchy->ComputeBoneMatrix(source, rest);
-  low = glm::vec3(std::numeric_limits<float>::max());
-  high = -low;
-  bool any = false;
-  for (const auto &cube : MeshAsset->boneMeshes[source].cubes)
-  {
-    const auto matrix = intoAnchor * cube.restLocalMatrix;
-    const auto &v = cube.interleavedPosUv;
-    for (size_t i = 0; i + 4 < v.size(); i += 5)
-    {
-      const glm::vec3 point(matrix * glm::vec4(v[i], v[i + 1], v[i + 2], 1.f));
-      low = glm::min(low, point);
-      high = glm::max(high, point);
-      any = true;
-    }
-  }
+  const bool any =
+      ResolveCreatureAttachmentBounds(*MeshAsset, *Hierarchy, name, low, high);
   if (any)
     AttachmentBounds.emplace(name, std::make_pair(low, high));
   return any;
@@ -172,6 +144,9 @@ void UCreatureVisualBoneSkeleton::UpdatePose(
     input.carryHands = creature.CarryHandCount;
     input.throwCharge = creature.ThrowCharge;
     input.bowCharge = creature.BowCharge;
+    if (active && !active->empty && !active->broken)
+      input.consumePhase = creature.ItemUse.Phase(
+          active->Id, active->instanceId, creature.ItemVisualSelection());
     BonePose = UHumanMotionController::Compute(input, creature.HumanMotion, dt,
                                                creature.IsPossessed());
   }

@@ -1,0 +1,14 @@
+CMake is re-running because E:/Work/Home/Cubatarium/build/desktop-msvc/CMakeFiles/generate.stamp is out-of-date.
+  the file 'E:/Work/Home/Cubatarium/CMakeLists.txt'
+  is newer than 'E:/Work/Home/Cubatarium/build/desktop-msvc/CMakeFiles/generate.stamp.depend'
+  result='-1'
+-- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.19045.
+-- Configuring done
+-- Generating done
+-- Build files have been written to: E:/Work/Home/Cubatarium/build/desktop-msvc
+Версия MSBuild 17.14.60+43b635718 для .NET Framework
+
+  HumanMotionCameraTest.cpp
+  BoneSkeletonCubeMeshBuilder.cpp
+  Generating Code...
+  human_motion_camera_test.vcxproj -> E:\Work\Home\Cubatarium\build\desktop-msvc\Release\human_motion_camera_test.exe

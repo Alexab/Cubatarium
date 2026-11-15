@@ -233,6 +233,15 @@ public:
       set("rightArm", {65, 25, -15});
       set("rightForearm", {70, 0, 0});
     }
+    else if (in.consumePhase > 0 && s.actionRemaining <= 0.f)
+    {
+      const float raised = std::clamp(in.consumePhase * 3.f, 0.f, 1.f);
+      const float weight = raised * raised * (3.f - 2.f * raised);
+      set("rightArm",
+          glm::mix(glm::vec3(25, 0, -6), glm::vec3(65, -40, 10), weight));
+      set("rightForearm",
+          glm::mix(glm::vec3(40, 0, 0), glm::vec3(45, 0, 0), weight));
+    }
     if (s.actionRemaining > 0.f)
     {
       const float strike = std::sin(

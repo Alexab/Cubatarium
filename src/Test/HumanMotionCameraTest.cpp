@@ -1,8 +1,12 @@
+#include "Creatures/Visual/BoneSkeleton/BoneSkeletonCubeMeshBuilder.h"
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonHierarchy.h"
+#include "Creatures/Visual/BoneSkeleton/CreatureAttachmentBounds.h"
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonLoader.h"
+#include "Creatures/Visual/CreatureEquipmentFit.h"
 #include "Pose/HumanMotionController.h"
 #include "Render/Camera/CameraVolumeSweep.h"
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
 
 using namespace cutum;
@@ -20,6 +24,58 @@ glm::vec3 Point(const BoneSkeletonHierarchy &rig,
 {
   return glm::vec3(rig.ComputeBoneMatrix(g.boneIndexByName.at(bone), pose) *
                    glm::vec4(local, 1));
+}
+void CheckConsumePose(const CreatureBoneSkeletonGeometry &g)
+{
+  BoneSkeletonHierarchy rig(g);
+  const auto mesh = BoneSkeletonCubeMeshBuilder::BuildMeshAsset(g);
+  glm::vec3 low, high;
+  Require(ResolveCreatureAttachmentBounds(mesh, rig, "rightItem", low, high),
+          "derive real palm from the drawable hand ancestor");
+  const auto grip = CreaturePalmGripPosition(low, high);
+  Require(glm::length(grip) > .1f,
+          "fixture must not substitute the item pivot for the palm");
+  for (int fps : {30, 60, 144})
+  {
+    HumanMotionInput input;
+    input.facts.onGround = true;
+    input.rightHandBusy = true;
+    HumanMotionState restState, heldState;
+    const auto rest = UHumanMotionController::Compute(input, restState, 0);
+    input.consumePhase = .5f;
+    const auto held = UHumanMotionController::Compute(input, heldState, 0);
+    const auto palm = Point(rig, g, held, "rightItem", grip);
+    const auto restingPalm = Point(rig, g, rest, "rightItem", grip);
+    const auto mouth = Point(rig, g, held, "head", {0, .16f, -.28f});
+    Require(palm.y > restingPalm.y + .2f,
+            "consumption raises the actual item socket");
+    Require(glm::distance(palm, mouth) < .35f && palm.z < mouth.z,
+            "consumption socket approaches the face from outside");
+    Require(std::abs(glm::dot(held.bones.at("leftArm").rotation,
+                              rest.bones.at("leftArm").rotation)) > .9999f,
+            "consumption leaves the free arm alone");
+    input.consumePhase = 1.f;
+    HumanMotionState fullState;
+    const auto full = UHumanMotionController::Compute(input, fullState, 0);
+    Require(glm::distance(Point(rig, g, full, "rightItem", grip), palm) <
+                .0001f,
+            "ready consumption holds the same contact");
+    input.consumePhase = 0;
+    BoneSkeletonPose canceled;
+    for (int frame = 0; frame < fps; ++frame)
+      canceled = UHumanMotionController::Compute(input, heldState, 1.f / fps);
+    Require(glm::distance(Point(rig, g, canceled, "rightItem", grip),
+                          restingPalm) < .001f,
+            "cancellation blends back to the correct wield pose");
+    input.carryHands = 2;
+    HumanMotionState carrying, conflict;
+    const auto carry = UHumanMotionController::Compute(input, carrying, 0);
+    input.consumePhase = 1;
+    const auto occupied = UHumanMotionController::Compute(input, conflict, 0);
+    Require(glm::distance(Point(rig, g, occupied, "rightItem", grip),
+                          Point(rig, g, carry, "rightItem", grip)) < .0001f,
+            "cargo occupancy wins over stale consumption input");
+  }
 }
 int main(int argc, char **argv)
 {
@@ -47,6 +103,13 @@ int main(int argc, char **argv)
   Require(g.humanRigVersion == 2 && g.modelScale == .9f,
           "versioned human scale");
   BoneSkeletonHierarchy rig(g);
+  CheckConsumePose(g);
+  const auto female = CreatureBoneSkeletonLoader::LoadFromFile(
+      (std::filesystem::path(argv[1]).parent_path() / "female_short.geo.json")
+          .string(),
+      "");
+  Require(female.has_value(), "load female rig for consumption contacts");
+  CheckConsumePose(*female);
   for (float direction : {-1.f, 1.f})
   {
     HumanMotionState counter;

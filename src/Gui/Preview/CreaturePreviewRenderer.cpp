@@ -596,6 +596,23 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(
       if (offhandItemId && !offhandItemId->empty())
         previewCreature.GetInventory().EquipOffhand(
             {InventoryEntryKind::Item, *offhandItemId, 1, false});
+      const auto *items = WornEquipmentDrawer::ItemDefinitions();
+      const auto *item =
+          items && mainItemId ? items->Get(*mainItemId) : nullptr;
+      if (item && mainInputs)
+      {
+        if (item->Ranged.Enabled)
+          previewCreature.BowCharge = mainInputs->BowCharge;
+        if (item->Use.Action == ItemUseActionKind::Eat ||
+            item->Use.Action == ItemUseActionKind::Drink)
+          if (const auto *entry =
+                  previewCreature.GetInventory().GetActiveEntryRef();
+              entry && mainInputs->UsePhase > 0)
+            previewCreature.ItemUse.Update(
+                entry->Id, entry->instanceId,
+                previewCreature.ItemVisualSelection(), mainInputs->UsePhase,
+                1.f);
+      }
     }
     CreatureLocomotionFacts facts;
     facts.supportValid[0] = facts.supportValid[1] = true;
@@ -817,6 +834,8 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(
         QaCameraPosition.value_or(glm::vec3(glm::inverse(view)[3]));
 
     visual->SubmitDraw(ctx, viewProj);
+    if (SkeletonPoseObserver)
+      SkeletonPoseObserver(*visual);
     if (queue.Size() == 0)
     {
       const std::string key = speciesId + "|preview";

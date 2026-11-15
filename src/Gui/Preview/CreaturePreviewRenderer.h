@@ -26,6 +26,7 @@ class USkinDefinitionStorage;
 class UCreatureTextureStorage;
 class UShaderManager;
 class ItemSurfaceRenderer;
+class IUCreatureVisual;
 struct ItemDrawRequest;
 struct ItemVisualInputs;
 class CreatureDrawQueue;
@@ -92,6 +93,12 @@ public:
   SetItemSurfaceObserver(std::function<void(const ItemDrawRequest &)> observer)
   {
     ItemSurfaceObserver = std::move(observer);
+  }
+  /// Read-only final pose landmarks for native contact QA and studio overlays.
+  void SetSkeletonPoseObserver(
+      std::function<void(const IUCreatureVisual &)> observer)
+  {
+    SkeletonPoseObserver = std::move(observer);
   }
 
   UCreatureDefinitionStorage *GetSpecies() const { return Species.get(); }
@@ -169,6 +176,7 @@ private:
   std::unique_ptr<ItemSurfaceRenderer> ItemRenderer;
   uint64_t ItemRevision{0};
   std::function<void(const ItemDrawRequest &)> ItemSurfaceObserver;
+  std::function<void(const IUCreatureVisual &)> SkeletonPoseObserver;
 
   GLuint CubeVao{0};
   GLuint CubeVbo{0};
