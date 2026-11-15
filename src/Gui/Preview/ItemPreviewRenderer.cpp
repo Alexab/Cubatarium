@@ -98,6 +98,11 @@ bool UItemPreviewRenderer::Initialize()
   {
     return false;
   }
+  IconResolveShader = ShaderManager->CreateShader(
+      "item_icon_resolve", "shaders/item_icon_resolve.vert",
+      "shaders/item_icon_resolve.frag");
+  if (!IconResolveShader || !IconResolveShader->IsValid())
+    return false;
 
   if (!InitCubeMesh())
   {
@@ -147,6 +152,7 @@ void UItemPreviewRenderer::Shutdown()
   }
 
   Shader.reset();
+  IconResolveShader.reset();
 }
 
 void UItemPreviewRenderer::Invalidate()
@@ -326,6 +332,11 @@ bool UItemPreviewRenderer::InitCubeMesh()
 
 void UItemPreviewRenderer::ReleaseFramebuffer()
 {
+  if (IconResolveFbo)
+  {
+    glDeleteFramebuffers(1, &IconResolveFbo);
+    IconResolveFbo = 0;
+  }
   if (DepthRbo != 0)
   {
     glDeleteRenderbuffers(1, &DepthRbo);
@@ -757,6 +768,22 @@ UItemPreviewRenderer::RenderToUniqueTexture(const std::string &itemId, int size,
   {
     return 0;
   }
+  if (!RenderingIconSamples && size >= 32 && size <= 64)
+  {
+    struct Sampling
+    {
+      bool &Active;
+      explicit Sampling(bool &active) : Active(active) { Active = true; }
+      ~Sampling() { Active = false; }
+    } sampling(RenderingIconSamples);
+    const auto source =
+        RenderToUniqueTexture(itemId, size * 4, yawDeg, pitchDeg, inputs);
+    if (!source)
+      return 0;
+    const auto result = ResolveIconTexture(source, size);
+    glDeleteTextures(1, &source);
+    return result;
+  }
   if (!EnsureFboSize(size) || FboSize <= 0)
   {
     return 0;
@@ -874,6 +901,78 @@ UItemPreviewRenderer::RenderToUniqueTexture(const std::string &itemId, int size,
   glBindTexture(GL_TEXTURE_2D, 0);
 
   return tex;
+}
+
+GLuint UItemPreviewRenderer::ResolveIconTexture(GLuint source, int size)
+{
+  if (!source || size < 1 || size > 64 || !IconResolveShader)
+    return 0;
+  UGlStateScope scope(kGlMaskIconFbo | GlStateBit::DepthMask |
+                      GlStateBit::ColorMask);
+  GLint program = 0, vao = 0, active = 0, texture = 0;
+  glGetIntegerv(GL_CURRENT_PROGRAM, &program);
+  glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vao);
+  glGetIntegerv(GL_ACTIVE_TEXTURE, &active);
+  glActiveTexture(GL_TEXTURE0);
+  glGetIntegerv(GL_TEXTURE_BINDING_2D, &texture);
+  struct Restore
+  {
+    GLint Program, Vao, Active, Texture;
+    bool Scissor;
+    ~Restore()
+    {
+      glUseProgram(GLuint(Program));
+      glBindVertexArray(GLuint(Vao));
+      glActiveTexture(GL_TEXTURE0);
+      glBindTexture(GL_TEXTURE_2D, GLuint(Texture));
+      glActiveTexture(GLenum(Active));
+      if (Scissor)
+        glEnable(GL_SCISSOR_TEST);
+      else
+        glDisable(GL_SCISSOR_TEST);
+    }
+  } restore{program, vao, active, texture, glIsEnabled(GL_SCISSOR_TEST) != 0};
+  glBindTexture(GL_TEXTURE_2D, source);
+  GLint width = 0, height = 0;
+  glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+  glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
+  if (height != size * 4 || width != size * 4)
+    return 0;
+  GLuint result = 0;
+  glGenTextures(1, &result);
+  glBindTexture(GL_TEXTURE_2D, result);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, size, size, 0, GL_RGBA,
+               GL_UNSIGNED_BYTE, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  if (!IconResolveFbo)
+    glGenFramebuffers(1, &IconResolveFbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, IconResolveFbo);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         result, 0);
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+  {
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                           0, 0);
+    glDeleteTextures(1, &result);
+    return 0;
+  }
+  glViewport(0, 0, size, size);
+  glDisable(GL_SCISSOR_TEST);
+  glDisable(GL_DEPTH_TEST);
+  glDisable(GL_CULL_FACE);
+  glDisable(GL_BLEND);
+  glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+  IconResolveShader->Use();
+  IconResolveShader->SetInt("uSamples", 0);
+  glBindTexture(GL_TEXTURE_2D, source);
+  glBindVertexArray(CubeVao);
+  glDrawArrays(GL_TRIANGLES, 0, 3);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 0,
+                         0);
+  return result;
 }
 
 std::shared_ptr<const ItemRenderAsset>

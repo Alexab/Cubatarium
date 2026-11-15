@@ -1,4 +1,4 @@
-# Stable CRLF on Windows РІР‚вЂќ avoids agent/IDE line-ending flips forcing recompiles.
+# Stable CRLF on Windows Р Р†Р вЂљРІР‚Сњ avoids agent/IDE line-ending flips forcing recompiles.
 * text=auto eol=crlf
 *.cpp text eol=crlf
 *.h text eol=crlf
@@ -48,5 +48,9 @@
 /docs/research/item-visual-redesign-2026-11-14/lab-independent-checkpoint/*-output.txt -text -whitespace
 /docs/research/item-visual-redesign-2026-11-14/studio-gallery-checkpoint/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 /docs/research/item-visual-redesign-2026-11-14/studio-gallery-checkpoint/*-output.txt -text -whitespace
+/shaders/item_icon_resolve.vert -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/shaders/item_icon_resolve.frag -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/research/item-visual-redesign-2026-11-14/studio-review-completion/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/research/item-visual-redesign-2026-11-14/studio-review-completion/*-output.txt -text -whitespace
 docs/research/item-visual-redesign-2026-11-14/world-lighting-checkpoint/native-world-frames.zip filter=lfs diff=lfs merge=lfs -text
 docs/research/item-visual-redesign-2026-11-14/carry-input-checkpoint/selected-native-frames.zip filter=lfs diff=lfs merge=lfs -text

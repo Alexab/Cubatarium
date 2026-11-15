@@ -21,6 +21,7 @@
 #include "Test/Native/ItemHeadwearQa.h"
 #include "ThirdParty/stb_image_write.h"
 #include <algorithm>
+#include <array>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -468,6 +469,71 @@ inline void RunItemColorQa(ItemSurfaceRenderer &renderer,
   }
 }
 
+inline void RunItemIconSamplingQa(UItemPreviewRenderer &preview,
+                                  nlohmann::json &report)
+{
+  UGlStateScope scope(kGlMaskIconFbo);
+  const bool oldScissor = glIsEnabled(GL_SCISSOR_TEST);
+  GLint oldActive = 0;
+  glGetIntegerv(GL_ACTIVE_TEXTURE, &oldActive);
+  auto check = [&](const std::string &name, bool ok)
+  {
+    report["checks"].push_back({{"name", name}, {"passed", ok}});
+    if (!ok)
+      report["passed"] = false;
+  };
+  std::array<unsigned char, 64> coveragePixels{};
+  for (int y = 0; y < 4; ++y)
+    for (int x = 0; x < 4; ++x)
+    {
+      const int index = (y * 4 + x) * 4;
+      coveragePixels[index] = coveragePixels[index + 1] =
+          coveragePixels[index + 2] = (x + y) % 2 ? 255 : 0;
+      coveragePixels[index + 3] = 255;
+    }
+  GLuint source = 0;
+  glGenTextures(1, &source);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, source);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 4, 4, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+               coveragePixels.data());
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glViewport(7, 9, 13, 11);
+  glEnable(GL_SCISSOR_TEST);
+  glActiveTexture(GL_TEXTURE1);
+  const auto result = preview.ResolveIconTexture(source, 1);
+  GLint viewport[4]{}, active = 0;
+  glGetIntegerv(GL_VIEWPORT, viewport);
+  glGetIntegerv(GL_ACTIVE_TEXTURE, &active);
+  check("icon sampling restores caller viewport, scissor and active unit",
+        viewport[0] == 7 && viewport[1] == 9 && viewport[2] == 13 &&
+            viewport[3] == 11 && glIsEnabled(GL_SCISSOR_TEST) &&
+            active == GL_TEXTURE1);
+  check("icon sampling rejects mismatched source dimensions",
+        preview.ResolveIconTexture(source, 2) == 0);
+  GLuint fbo = 0;
+  glGenFramebuffers(1, &fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         result, 0);
+  std::array<unsigned char, 4> pixel{};
+  if (result &&
+      glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE)
+    glReadPixels(0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel.data());
+  check("icon coverage averages in linear light then encodes once",
+        result && std::abs(int(pixel[0]) - 188) <= 2 && pixel[0] == pixel[1] &&
+            pixel[1] == pixel[2] && pixel[3] == 255);
+  report["icon_sampling"] = {{"samples_per_pixel", 16},
+                             {"encoded_checker_rgb", pixel[0]}};
+  glDeleteFramebuffers(1, &fbo);
+  glDeleteTextures(1, &result);
+  glDeleteTextures(1, &source);
+  glActiveTexture(GLenum(oldActive));
+  if (!oldScissor)
+    glDisable(GL_SCISSOR_TEST);
+}
+
 inline void
 RunItemPresentationQa(const std::filesystem::path &path,
                       std::shared_ptr<UItemDefinitionStorage> definitions,
@@ -515,7 +581,11 @@ RunItemPresentationQa(const std::filesystem::path &path,
   UItemQaTarget target;
   UItemQaTarget fpTarget(1280, 720);
   UItemPreviewRenderer orbit(definitions, shaderManager);
-  check("state preview renderer initializes", orbit.Initialize());
+  const bool initialized = orbit.Initialize();
+  check("state preview renderer initializes", initialized);
+  if (!initialized)
+    throw std::runtime_error("Cannot initialize native item inspection");
+  RunItemIconSamplingQa(orbit, report);
   std::set<std::string> requested;
   if (const char *selected = std::getenv("CUBA_ITEM_PRESENTATION_IDS"))
   {

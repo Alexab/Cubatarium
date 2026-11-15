@@ -1,0 +1,61 @@
+{
+  "scope": "completed all-70 studio review and small-icon rendering correction; remaining world/contact/performance acceptance is separate",
+  "implementation_parent": "ae7862105b218b602beb76c8cd45977d20459d21",
+  "executable_sha256": "367c649353ac2e1149583a1b41bd15ed183dff60684c9581bed15e3c1abe2f71",
+  "native_checks": 3560,
+  "source_sha256": {
+    "src/Gui/Preview/ItemPreviewRenderer.cpp": "8f0ff32e8f7c3fb50c2efaff210c300c2e66282abdd45960ce87bfc363066195",
+    "src/Gui/Preview/ItemPreviewRenderer.h": "d4f64f7c966ef506a6a261518e3d659fe6fe5b794bc3b5339c060e0267013e0a",
+    "src/Test/Native/ItemPresentationQa.h": "cce9d95989f4c0b9500052ebfbf598193beab2303d8c68949a5ab8be71eef764",
+    "tools/build_item_art_sheets.py": "be4c35006bc04112f42998c7c1a99de8bd0161983066e6320cb0a1ee00225f09",
+    "tools/item_designs/charcoal/design.yaml": "cf85f4a6a88d74b3d705e421b17f6cf767d55aee85b38baf15ea25d7879a0d2c",
+    "shaders/item_icon_resolve.vert": "8798dda9b9037843ac31f022cdc74b33da38f7813a4d5b242aaa360f049473a3",
+    "shaders/item_icon_resolve.frag": "8a356ad272d07d8f0b504053cd69bcc5d910ffe5867272a33823bdead31adbd0"
+  },
+  "runtime_shader_sha256": {
+    "item_icon_resolve.frag": "8a356ad272d07d8f0b504053cd69bcc5d910ffe5867272a33823bdead31adbd0",
+    "item_icon_resolve.vert": "8798dda9b9037843ac31f022cdc74b33da38f7813a4d5b242aaa360f049473a3"
+  },
+  "native_images": 1260,
+  "retained_delta_images": 148,
+  "reused_byte_identical_images": 1112,
+  "baseline_archive": "../studio-gallery-checkpoint/native-comparisons.zip",
+  "baseline_archive_sha256": "1e0956ce6d2cf16e89aa5225be743141a7bd7ade685ee8340bdc1b28d8c97bb9",
+  "comparison_sheets": 93,
+  "studio_reviewed": 70,
+  "production_promoted": 0,
+  "files": {
+    "arrow.png": "c3768d468868817a63c0ed2965304a670f74db4b9b3dba3c6cd30cfc963bfe29",
+    "charcoal.png": "13240ad7dcfe55f07d224ec49019af8f0f1bf7c8cf1e3aa72bcc8a1e9ec0c3fa",
+    "comparison-sheets.zip": "306129ccc4be8e4830d229e8b7f06366c1babcceb66054c48a7f925a6e9e7ec3",
+    "flight.json": "2ed63277f6d291529cae0b54e20d97747e3627aeb1173c5ca8eff1e4191fcf39",
+    "focused-report.json.gz": "a6a63cf989f7c709c55e156c78936e3ff47052b7e98364b40b535ed5eab99a40",
+    "focused-summary.json": "39d772671fd55265fe1c99e53ffd37fce9b167824c78f121f2d8212eff925687",
+    "format-output.txt": "bac153c746bd9607106c23d93ea2c1ddf3a315a9357358b1b5d3ba5ef6ef8ca0",
+    "frame-diff.json": "81245f997ed52532119b3578b0abc654a5a6411b03054044c16adbbc935aa143",
+    "includes-output.txt": "3e02176a66e9887c36635120171a991d151d94d59b878f50006ea97853cbd6c9",
+    "native-frame-delta.zip": "1bc5128cc2c512657e9ba1de1c36fa7c45576461ff210a684205c5630bbfecc5",
+    "native-report.json.gz": "369dd5b209c19e53ab9f1ca7c0ff9fd93d428e54db0a08aec79fa6fe77a2f487",
+    "native-summary.json": "b1dce2841d496e98e9116d8fd5cc33c9665ae5ead63049cf4756b51d945f3595",
+    "readability-before.zip": "a65a9063a3cb1c963289a3ff9fe851957b81b0c0e7c079bfa4ea5e19b56660d1",
+    "release-output.txt": "342943d77d4eddffd0de7d2d9bbc95d1e5da49ec699741ca8cb83122d21385b2",
+    "sheets-manifest.json": "5f3d42829b1155f63889a878b5a9cce17b261ea7c26a104d9ff22ea700524a42",
+    "studio-review.json": "b3517d60ee4b33a164b38f2f0abbecd1b401fe0668df8d7a2484d79157c36252",
+    "style-output.txt": "7b00bf7ed2d292a49c34b6aa610a5f9c00e46637a909909cdd9e7eff91839996",
+    "wood_spear.png": "1686618c4bdb07d3ae4af7e23d81568b2d702ee92f5aabb0d2dbd2ece1ba0ae7",
+    "integrated-native.json.gz": "c08c9ec17786d3f181d78fe9088fe0581567becd0f7258e22cb1a49965ef7d90",
+    "integrated-summary.json": "c596fda609796478a08467302013cf70827acc5d790be6949f99aa8816d12aaa",
+    "integrated-output.zip": "9dc1cf7656562922ef97097ae2d7b906d622d4346ad37c7a7ad5cbb9c8eb635f",
+    "ctest-output.txt": "8a7ed8cd2378ba0e4f29d9e03f065b5da2a1765cadc95a99585ad4653a256fad"
+  },
+  "integrated_checks": {
+    "gameplay": 59,
+    "window": 0,
+    "ownership": 57,
+    "ownership_ui": 18,
+    "player_window": 7,
+    "icons": 209,
+    "item_lab": 1040,
+    "presentations": 3590
+  }
+}

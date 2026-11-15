@@ -83,6 +83,17 @@ def main():
                     sheet.paste(image, (x + source_index * 164, y))
                 draw.text((x + 4, y + 164), id, fill='white')
             save(sheet, f'catalog-{view}-{page + 1}.png')
+    for page in range((len(expected) + 9) // 10):
+        sheet = Image.new('RGB', (1000, 1080), (28, 30, 36))
+        draw = ImageDraw.Draw(sheet)
+        draw.text((8, 6), 'Native 32 / 48 / 64 px | reference (left), candidate (right) | no resizing', fill='white')
+        for row, id in enumerate(expected[page * 10:(page + 1) * 10]):
+            y = 28 + row * 104
+            draw.text((8, y), id, fill='white')
+            for column, source in enumerate(('reference', 'candidate')):
+                strip = load(id, VIEWS[8], source).crop((16, 216, 496, 296))
+                sheet.paste(strip, (column * 500, y + 16))
+        save(sheet, f'catalog-icons-{page + 1}.png')
     manifest = dict(scope='native image arrangement; artistic acceptance not automated',
                     report=str(report_path), report_sha256=hashlib.sha256(report_path.read_bytes()).hexdigest(),
                     ids=expected, frames=frames, sheets=sheets, native_icon_pixels_preserved=True)

@@ -49,6 +49,9 @@ public:
   GLuint RenderToUniqueTexture(const std::string &itemId, int size,
                                float yawDeg, float pitchDeg,
                                const ItemVisualInputs &inputs = {});
+  /// Resolve a 4x encoded-sRGB source into an owned icon texture in linear
+  /// colour space. The source remains owned by its caller.
+  GLuint ResolveIconTexture(GLuint source, int size);
   std::shared_ptr<const struct ItemRenderAsset>
   GetInspectionAsset(const std::filesystem::path &path);
   GLuint RenderInspectionTexture(const std::string &itemId,
@@ -95,6 +98,9 @@ private:
   std::shared_ptr<UShaderManager> ShaderManager;
 
   std::shared_ptr<class UShaderProgram> Shader;
+  std::shared_ptr<class UShaderProgram> IconResolveShader;
+  bool RenderingIconSamples{false};
+  GLuint IconResolveFbo{0};
   std::unique_ptr<class ItemSurfaceRenderer> SurfaceRenderer;
   std::shared_ptr<const struct ItemRenderAsset> InspectionAsset;
   std::filesystem::path InspectionPath;

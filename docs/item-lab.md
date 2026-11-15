@@ -98,3 +98,8 @@ icon targets. Output is under `bin/item_lab_art`; normal diagnostics stay under
 approval. Run `python tools/build_item_art_sheets.py` to arrange the raw captures
 into per-item and catalog comparison sheets under `build/item_art_review`.
 The icon strips in the per-item sheets preserve their original pixel sizes.
+
+Small 32/48/64-pixel item icons render at four times their output dimensions
+and resolve sixteen samples in linear light. The final texture keeps its native
+requested size. This filtering does not change geometry, physical size or the
+larger FP/TP/world representations.

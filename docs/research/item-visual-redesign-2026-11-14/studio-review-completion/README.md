@@ -1,0 +1,39 @@
+# Completed studio review and icon readability
+
+All 70 candidate items have now received detailed studio review: five lit
+cameras, silhouette, gray material, albedo and native 32/48/64-pixel icons.
+`studio-review.json` records individual observations and reviewed sheet hashes.
+This completes studio review, not world/carry/performance or production acceptance.
+
+The review found thin arrow/spear shafts disappearing at small icon sizes and
+charcoal with an unreadable dark surface and buried ash end. Small icons now
+render at four times their output dimensions and resolve sixteen samples in
+linear light. The output remains the requested native size. Larger previews,
+FP/TP and physical dimensions are unchanged. Charcoal has a readable charred
+surface and an exposed ash cap; its definition and mechanics are unchanged.
+
+The native checker fixture verifies linear averaging: eight white and eight
+black samples resolve to encoded RGB 188, with alpha 255. It also checks GL
+state restoration and rejection of a mismatched source size.
+
+## Retained evidence
+
+`summary.json` signs implementation, executable and retained artifacts.
+`comparison-sheets.zip` contains all 93 current sheets. The 1260 original-size
+native frames can be reconstructed by extracting the signed baseline archive
+`../studio-gallery-checkpoint/native-comparisons.zip`, then overwriting it with
+`native-frame-delta.zip`. Exactly 148 frames changed: 140 icon panels and eight
+candidate charcoal views. The remaining 1112 are byte-identical; no unrelated
+non-icon frame changed. `sheets-manifest.json` records every current frame hash.
+`readability-before.zip` retains the three affected items before correction.
+
+The exact Release build and native flight runs passed: gallery 3560 checks,
+focused presentations 97, full presentations 3590, Item Lab 1040, icons 209,
+gameplay 59, ownership 57, ownership UI 18, player window 7 and 25 CTests.
+The window profile also passed. All 212 temporary runtime substitutions were
+restored. Raw reports, outputs and source-conservation evidence are retained.
+Style, include and formatting audits passed.
+
+Production promotion remains 0/70. Remaining gates include world lighting,
+carry/contact and actual-input transitions, final publication, performance and
+full final acceptance. These studio results do not certify those gates.

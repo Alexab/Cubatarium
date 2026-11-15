@@ -29,9 +29,9 @@ presentation:
 materials:
   charred:
     color:
-    - 46
-    - 39
-    - 32
+    - 64
+    - 59
+    - 51
     pattern: char
     uv_direction:
     - 0
@@ -40,9 +40,9 @@ materials:
     grain_axis: u
   end:
     color:
-    - 70
-    - 58
-    - 42
+    - 100
+    - 91
+    - 76
     pattern: char
 parts:
 - name: charred_branch
@@ -66,10 +66,10 @@ parts:
   material: end
   shape: revolve
   profile:
-  - - 0.115
-    - 0.036
-  - - 0.13
-    - 0.032
+  - - 0.138
+    - 0.026
+  - - 0.141
+    - 0.025
   sides: 7
   offset:
   - 0

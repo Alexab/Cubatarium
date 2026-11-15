@@ -1,4 +1,4 @@
-# Item visual redesign — implementation record
+# Item visual redesign вЂ” implementation record
 
 Branch: `codex/item-visual-redesign`, based on develop `946ef5f2d`.
 
@@ -755,7 +755,7 @@ See [performance-checkpoint](performance-checkpoint/README.md), its exact
 flat-scene comparison for the staged catalog, not final production acceptance.
 Twenty-four paired Release runs retain 19,149 real window-frame samples.
 Median run p95 changes: FP +0.6%, twelve armored humans +9.3%, 512 resting drops
-−39.3%, warm catalog −0.4%. All meet the unchanged 10% gate on this hardware.
+в€’39.3%, warm catalog в€’0.4%. All meet the unchanged 10% gate on this hardware.
 Armor has little margin. Cold completion of 70 icon textures increased from
 883.7 to 982.5 ms and is reported separately. This is not a moving-projectile
 stress test or universal performance approval.
@@ -884,6 +884,18 @@ before/after sources and native proof. The final Release run passes 3560 gallery
 and studio checks; the focused bow/food run passes 596 presentation checks.
 Detailed remaining-item and world/carry review, publication and final performance
 acceptance remain. Production promotion is 0/70; capture success is not art approval.
+
+## Completed detailed studio review
+
+[All-70 review and readability corrections](studio-review-completion/README.md)
+complete the detailed studio review left open above. All 70 individual sheets
+and native-size icon pages were inspected. Small icon filtering now preserves
+thin arrow/spear shafts using sixteen linear-light samples; charcoal has a
+readable surface and exposed ash end. The integrated Release regression passes
+25 CTests and all native profiles, including 3590 presentation checks.
+The evidence retains all 1260 frames using a verified baseline plus delta and
+93 complete comparison sheets. World/carry, publication and final performance
+acceptance remain; promotion is still 0/70.
 
 ## Acceptance contract
 
