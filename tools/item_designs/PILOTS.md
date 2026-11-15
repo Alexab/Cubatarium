@@ -1,5 +1,11 @@
 # Pilot design cards
 
+Current catalogue status: all 70 v3 resources are published. Construction notes
+and earlier acceptance lists below retain their checkpoint context. The current
+[publication and acceptance record](../../docs/research/item-visual-redesign-2026-11-14/production-publication/README.md)
+is authoritative; final integrated visual/performance acceptance is still open.
+
+
 These twelve designs are candidates, not the finished production catalog.
 Generate the comparison with `python tools/preview_item_designs.py`.
 The source path samples no imported meshes, UVs or pixels: construction uses

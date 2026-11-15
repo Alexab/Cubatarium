@@ -1,5 +1,11 @@
 # Equipment, food and material wave
 
+Current catalogue status: all 70 v3 resources are published. Construction notes
+and earlier acceptance lists below retain their checkpoint context. The current
+[publication and acceptance record](../../docs/research/item-visual-redesign-2026-11-14/production-publication/README.md)
+is authoritative; final integrated visual/performance acceptance is still open.
+
+
 This wave adds 23 authored candidates. Use `python tools/itemgen.py seed-supplies`
 to create only missing source recipes. The constructor reads no external mesh,
 UV or pixel data; after seeding, each design and its overlays remain authoritative.

@@ -28,5 +28,10 @@ gameplay 59, ownership 57, ownership UI 18, player window 7, icons 209, Item Lab
 1041 and presentations 3660. The window profile also passes. Reports, executable
 and manifest fingerprints are retained under `release/`.
 
+Fresh Git checkouts of `9311be577` pass under both autocrlf modes: all 70
+published assets validate and regenerate byte-identically; republication preserves
+all 70 previous-generation archives. Working production and author files remain
+unchanged. See `release/checkout-proof.json`.
+
 Final use/carry/display and performance gates remain; this record does not mark
 the complete redesign goal achieved.

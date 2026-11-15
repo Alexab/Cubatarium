@@ -1,5 +1,11 @@
 # Workshop tool wave
 
+Current catalogue status: all 70 v3 resources are published. Construction notes
+and earlier acceptance lists below retain their checkpoint context. The current
+[publication and acceptance record](../../docs/research/item-visual-redesign-2026-11-14/production-publication/README.md)
+is authoritative; final integrated visual/performance acceptance is still open.
+
+
 All 25 tool IDs now have authored candidate recipes. The wave adds the 21
 missing designs and retains the four pilot constructions (stone/iron picks,
 copper axe, gold sword). These remain staged candidates pending complete

@@ -1,5 +1,11 @@
 # Armor construction and anatomical sections
 
+Current catalogue status: all 70 v3 resources are published. Construction notes
+and earlier acceptance lists below retain their checkpoint context. The current
+[publication and acceptance record](../../docs/research/item-visual-redesign-2026-11-14/production-publication/README.md)
+is authoritative; final integrated visual/performance acceptance is still open.
+
+
 All sixteen armor IDs now have candidate sources: fourteen new recipes plus
 the retained iron helmet and leather cuirass pilots. Seeding with
 `python tools/itemgen.py seed-armor` creates missing sources only. Builds never
