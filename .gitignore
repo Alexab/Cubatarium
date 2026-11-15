@@ -243,3 +243,4 @@ tools/debug_uv_overlays/
 /bin/items_completion_captures*/
 
 /bin/item_lab_exports/
+/bin/item_lab_diagnostics/

@@ -121,5 +121,6 @@
     "wood_bow-uv.png": "aa71df2eb45c9a517f28dd8dc82991508c5fa5c3fa194e1144351c5b6b37f64e"
   },
   "source_hash_scope": "Actual Windows working-tree inputs tested; Git may normalize source newlines",
-  "empty_test_selection_exit_code": 8
+  "empty_test_selection_exit_code": 8,
+  "implementation_revision": "fa4cbb149"
 }
