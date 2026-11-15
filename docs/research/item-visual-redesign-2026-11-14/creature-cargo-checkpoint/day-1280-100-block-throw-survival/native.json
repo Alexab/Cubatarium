@@ -1,0 +1,610 @@
+{
+  "checks": [
+    {
+      "name": "stone equipped instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "stone equipped exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "stone equipped expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "stone windup instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "stone windup exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "stone windup expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "stone windup hand occupancy supplied by gameplay",
+      "passed": true
+    },
+    {
+      "name": "stone windup carrying uses the actual world skeleton arms",
+      "passed": true
+    },
+    {
+      "name": "stone windup both TP palms are observed",
+      "passed": true
+    },
+    {
+      "name": "stone windup TP palm meets actual carried model contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "stone windup TP palm meets actual carried model contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "stone windup charge advanced through the game tick",
+      "passed": true
+    },
+    {
+      "name": "stone canceled instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "stone canceled exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "stone canceled expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "stone canceled hand occupancy supplied by gameplay",
+      "passed": true
+    },
+    {
+      "name": "stone canceled carrying uses the actual world skeleton arms",
+      "passed": true
+    },
+    {
+      "name": "stone canceled both TP palms are observed",
+      "passed": true
+    },
+    {
+      "name": "stone canceled TP palm meets actual carried model contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "stone canceled TP palm meets actual carried model contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "stone canceled Escape canceled charge while preserving cargo",
+      "passed": true
+    },
+    {
+      "name": "stone placed instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "stone placed exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "stone placed expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "stone placed placed body remains available for grab",
+      "passed": true
+    },
+    {
+      "name": "stone grabbed instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "stone grabbed exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "stone grabbed expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "stone grabbed hand occupancy supplied by gameplay",
+      "passed": true
+    },
+    {
+      "name": "stone grabbed carrying uses the actual world skeleton arms",
+      "passed": true
+    },
+    {
+      "name": "stone grabbed both TP palms are observed",
+      "passed": true
+    },
+    {
+      "name": "stone grabbed TP palm meets actual carried model contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "stone grabbed TP palm meets actual carried model contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "stone rewound instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "stone rewound exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "stone rewound expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "stone rewound hand occupancy supplied by gameplay",
+      "passed": true
+    },
+    {
+      "name": "stone rewound carrying uses the actual world skeleton arms",
+      "passed": true
+    },
+    {
+      "name": "stone rewound both TP palms are observed",
+      "passed": true
+    },
+    {
+      "name": "stone rewound TP palm meets actual carried model contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "stone rewound TP palm meets actual carried model contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "stone rewound charge advanced through the game tick",
+      "passed": true
+    },
+    {
+      "name": "stone rewound R release supplies a real flight impulse before collision resolution",
+      "passed": true
+    },
+    {
+      "name": "stone released instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "stone released exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "stone released expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "stone released released finite body still exists",
+      "passed": true
+    },
+    {
+      "name": "stone landed instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "stone landed exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "stone landed expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "stone landed released finite body still exists",
+      "passed": true
+    },
+    {
+      "name": "stone landed released body reaches support",
+      "passed": true
+    }
+  ],
+  "frames": [
+    {
+      "active_count": 1,
+      "active_item": "stone",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "stone-equipped.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "stone",
+      "left_palm_ndc_gap": 0.9865816831588745,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 0.8981295228004456,
+      "stage": "equipped",
+      "subject": "block",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 2,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "stone-windup.png",
+      "fp_arm_backend": "world_skeleton",
+      "fp_contacts": true,
+      "fp_items": [],
+      "id": "stone",
+      "left_palm_ndc_gap": 3.3374608392477967e-06,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 3.349149892528658e-06,
+      "stage": "windup",
+      "subject": "block",
+      "throw_charge": 0.31918179988861084,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 4.10028405894991e-06,
+          "hand": "rightItem",
+          "palm": [
+            -0.4999985992908478,
+            4.161427021026611,
+            0.8993285894393921
+          ],
+          "reach_max": 0.5455369353294373,
+          "reach_min": 0.09553693234920502,
+          "shoulder": [
+            -0.2812500298023224,
+            4.497639179229736,
+            0.5639839172363281
+          ],
+          "target": [
+            -0.5000000596046448,
+            4.161423206329346,
+            0.8993282318115234
+          ],
+          "target_distance": 0.5228274464607239
+        },
+        {
+          "gap": 4.0593563426227774e-06,
+          "hand": "leftItem",
+          "palm": [
+            0.4999985992908478,
+            4.161427021026611,
+            0.8993285894393921
+          ],
+          "reach_max": 0.5455369353294373,
+          "reach_min": 0.09553693234920502,
+          "shoulder": [
+            0.2812499701976776,
+            4.497639179229736,
+            0.5639839172363281
+          ],
+          "target": [
+            0.4999999403953552,
+            4.161423206329346,
+            0.8993282318115234
+          ],
+          "target_distance": 0.5228274464607239
+        }
+      ],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 2,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "stone-canceled.png",
+      "fp_arm_backend": "world_skeleton",
+      "fp_contacts": true,
+      "fp_items": [],
+      "id": "stone",
+      "left_palm_ndc_gap": 6.006849844197859e-07,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 5.97720486439357e-07,
+      "stage": "canceled",
+      "subject": "block",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 1.1920928955078125e-07,
+          "hand": "rightItem",
+          "palm": [
+            -0.5000000596046448,
+            4.109742641448975,
+            0.9664294719696045
+          ],
+          "reach_max": 0.5455366373062134,
+          "reach_min": 0.09553684294223785,
+          "shoulder": [
+            -0.2812500298023224,
+            4.412722587585449,
+            0.6239929795265198
+          ],
+          "target": [
+            -0.5000000596046448,
+            4.109742641448975,
+            0.9664293527603149
+          ],
+          "target_distance": 0.5068640112876892
+        },
+        {
+          "gap": 1.2287812012345967e-07,
+          "hand": "leftItem",
+          "palm": [
+            0.49999991059303284,
+            4.109742641448975,
+            0.9664294719696045
+          ],
+          "reach_max": 0.5455365777015686,
+          "reach_min": 0.09553681313991547,
+          "shoulder": [
+            0.2812499701976776,
+            4.412722587585449,
+            0.6239929795265198
+          ],
+          "target": [
+            0.4999999403953552,
+            4.109742641448975,
+            0.9664293527603149
+          ],
+          "target_distance": 0.5068639516830444
+        }
+      ],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "stone-placed.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "stone",
+      "left_palm_ndc_gap": 0.9848756790161133,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.8977349996566772,
+      "stage": "placed",
+      "subject": "block",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 2,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "stone-grabbed.png",
+      "fp_arm_backend": "world_skeleton",
+      "fp_contacts": true,
+      "fp_items": [],
+      "id": "stone",
+      "left_palm_ndc_gap": 1.467594188397925e-07,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 9.42432194506182e-08,
+      "stage": "grabbed",
+      "subject": "block",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 4.995779363525799e-07,
+          "hand": "rightItem",
+          "palm": [
+            -0.49999991059303284,
+            4.000003337860107,
+            0.6926895380020142
+          ],
+          "reach_max": 0.545536458492279,
+          "reach_min": 0.09553639590740204,
+          "shoulder": [
+            -0.2812500298023224,
+            4.456250190734863,
+            0.5962584018707275
+          ],
+          "target": [
+            -0.5,
+            4.000002861022949,
+            0.6926896572113037
+          ],
+          "target_distance": 0.5150846242904663
+        },
+        {
+          "gap": 4.915124804938387e-07,
+          "hand": "leftItem",
+          "palm": [
+            0.5000000596046448,
+            4.000003337860107,
+            0.6926896572113037
+          ],
+          "reach_max": 0.5455365777015686,
+          "reach_min": 0.09553641080856323,
+          "shoulder": [
+            0.2812499701976776,
+            4.456250190734863,
+            0.5962584018707275
+          ],
+          "target": [
+            0.4999999403953552,
+            4.000002861022949,
+            0.6926896572113037
+          ],
+          "target_distance": 0.5150846242904663
+        }
+      ],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 2,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "stone-rewound.png",
+      "fp_arm_backend": "world_skeleton",
+      "fp_contacts": true,
+      "fp_items": [],
+      "id": "stone",
+      "left_palm_ndc_gap": 2.9802322387695313e-08,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 2.9802322387695313e-08,
+      "stage": "rewound",
+      "subject": "block",
+      "throw_charge": 0.4858483076095581,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 5.960464477539063e-08,
+          "hand": "rightItem",
+          "palm": [
+            -0.5,
+            4.35734748840332,
+            0.8886563777923584
+          ],
+          "reach_max": 0.5455365180969238,
+          "reach_min": 0.09553655982017517,
+          "shoulder": [
+            -0.2812500298023224,
+            4.572747230529785,
+            0.48684313893318176
+          ],
+          "target": [
+            -0.5000000596046448,
+            4.35734748840332,
+            0.8886563777923584
+          ],
+          "target_distance": 0.5056703686714172
+        },
+        {
+          "gap": 5.960464477539063e-08,
+          "hand": "leftItem",
+          "palm": [
+            0.5,
+            4.35734748840332,
+            0.8886563777923584
+          ],
+          "reach_max": 0.5455365180969238,
+          "reach_min": 0.09553655982017517,
+          "shoulder": [
+            0.2812499701976776,
+            4.572747230529785,
+            0.48684313893318176
+          ],
+          "target": [
+            0.4999999403953552,
+            4.35734748840332,
+            0.8886563777923584
+          ],
+          "target_distance": 0.5056703090667725
+        }
+      ],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "stone-released.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "stone",
+      "left_palm_ndc_gap": 0.9826377034187317,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.8969576358795166,
+      "stage": "released",
+      "subject": "block",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "stone-landed.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "stone",
+      "left_palm_ndc_gap": 0.9795558452606201,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.89158034324646,
+      "stage": "landed",
+      "subject": "block",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0
+    }
+  ],
+  "passed": true,
+  "request": {
+    "body": "male",
+    "height": 720,
+    "ids": [
+      "stone"
+    ],
+    "interaction": "throw",
+    "light": "day",
+    "mode": "survival",
+    "perspective": "first",
+    "scale": 1.0,
+    "subject": "block",
+    "width": 1280
+  },
+  "scope": "actual world FP and physical drop rendering"
+}

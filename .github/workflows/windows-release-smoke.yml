@@ -204,6 +204,10 @@ jobs:
           foreach ($qaMode in @('creative', 'survival')) {
             python tools/run_item_world_visual_qa.py --skip-build --world OwnershipCIQA --interaction throw --mode $qaMode
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            python tools/run_item_world_visual_qa.py --skip-build --world OwnershipCIQA --subject block --mode $qaMode
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            python tools/run_item_world_visual_qa.py --skip-build --world OwnershipCIQA --subject creature --mode $qaMode
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
 
       - name: Upload native inventory evidence

@@ -1,0 +1,18 @@
+{
+  "rat-equipped.png": "05c5e4f3b219078332ab7ec3d8ba0db576503502dbfecf7f81adcfc3b9795406",
+  "rat-windup.png": "6885e57b5abcc89d9d161822121da327ebd61a15ae8b3ef3312aeab6807bbc38",
+  "rat-canceled.png": "be8f280af738ee9cef9a6d056f34b269fb86efe7418e110eaf45877e21d4302e",
+  "rat-placed.png": "07e769a7358e65fa60ebdc0679aae7aa93daf8134820153451767ae59adb9499",
+  "rat-grabbed.png": "f498f88692c005d0bc620ea4a25d53424aed57b967b715bd3650cc01a0f3ca38",
+  "rat-rewound.png": "522f67c565910f06ddd1ecbd7cdf0a1a673b63e8574498f88b2eaf8f02f3d65c",
+  "rat-released.png": "eeb7e51238b61c05a0f40bd2a74f4c15ac63e29bb3a85a08eb9ae1a2299105bb",
+  "rat-landed.png": "20e142f9b3689b75ef3e39daf4f811c3172b382cea1d9c7fb120e8ae4b8a3314",
+  "sheep-equipped.png": "10cc73af31749eb9836812f44b2ecc2393a646a0fd9c9a8caf1cec0dbf8a4560",
+  "sheep-windup.png": "a2d45cbb02ecd0ba41ab86a7596db14a4a4daf3f47310fa643f8b8373566f849",
+  "sheep-canceled.png": "67fffbc30bda8a88ed972a58e541e0b55c43f8f2b51ecbe73265bb44ce293e44",
+  "sheep-placed.png": "4f492b138fe7c490705a2e8ec9a7aa01f57edf567558d85262d8b07521b31386",
+  "sheep-grabbed.png": "55be6a43baa3b12312d215aa11777f077fc4b92deb9bfb47900eb22d0c4dcadf",
+  "sheep-rewound.png": "e5c289ac11299886c85e2b002005619ea203b599574dcc6da06198d2e374ca41",
+  "sheep-released.png": "58c06e095b91e087d5f02e0d5f2b9cb8073ce4ad24faf72a6bd8f63040685464",
+  "sheep-landed.png": "b0501cbfd8913e67ee5f1e5550af370d9eed840a98cb152be541f0449d08a160"
+}

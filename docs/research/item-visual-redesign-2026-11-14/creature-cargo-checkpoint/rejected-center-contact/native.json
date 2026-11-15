@@ -1,0 +1,433 @@
+{
+  "checks": [
+    {
+      "name": "rat equipped creature hand ownership follows the routed input",
+      "passed": true
+    },
+    {
+      "name": "rat equipped finite creature property survives carry/release/death",
+      "passed": true
+    },
+    {
+      "name": "rat equipped grab and gentle placement preserve the existing living creature",
+      "passed": true
+    },
+    {
+      "name": "rat windup creature hand ownership follows the routed input",
+      "passed": true
+    },
+    {
+      "name": "rat windup finite creature property survives carry/release/death",
+      "passed": true
+    },
+    {
+      "name": "rat windup grab and gentle placement preserve the existing living creature",
+      "passed": true
+    },
+    {
+      "name": "rat windup held creature yields locomotion to the physical link",
+      "passed": true
+    },
+    {
+      "name": "rat windup small and larger prototypes use one and two hands",
+      "passed": true
+    },
+    {
+      "name": "rat windup creature cargo uses shared world-skeleton FP arms",
+      "passed": true
+    },
+    {
+      "name": "rat windup creature palms are observed",
+      "passed": true
+    },
+    {
+      "name": "rat windup creature palm reaches its contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "rat canceled creature hand ownership follows the routed input",
+      "passed": true
+    },
+    {
+      "name": "rat canceled finite creature property survives carry/release/death",
+      "passed": true
+    },
+    {
+      "name": "rat canceled grab and gentle placement preserve the existing living creature",
+      "passed": true
+    },
+    {
+      "name": "rat canceled held creature yields locomotion to the physical link",
+      "passed": true
+    },
+    {
+      "name": "rat canceled small and larger prototypes use one and two hands",
+      "passed": true
+    },
+    {
+      "name": "rat canceled creature cargo uses shared world-skeleton FP arms",
+      "passed": true
+    },
+    {
+      "name": "rat canceled creature palms are observed",
+      "passed": true
+    },
+    {
+      "name": "rat canceled creature palm reaches its contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "rat placed creature hand ownership follows the routed input",
+      "passed": true
+    },
+    {
+      "name": "rat placed finite creature property survives carry/release/death",
+      "passed": true
+    },
+    {
+      "name": "rat placed grab and gentle placement preserve the existing living creature",
+      "passed": true
+    },
+    {
+      "name": "rat placed placed creature remains in its registry",
+      "passed": true
+    },
+    {
+      "name": "rat grabbed creature hand ownership follows the routed input",
+      "passed": true
+    },
+    {
+      "name": "rat grabbed finite creature property survives carry/release/death",
+      "passed": true
+    },
+    {
+      "name": "rat grabbed grab and gentle placement preserve the existing living creature",
+      "passed": true
+    },
+    {
+      "name": "rat grabbed held creature yields locomotion to the physical link",
+      "passed": true
+    },
+    {
+      "name": "rat grabbed small and larger prototypes use one and two hands",
+      "passed": true
+    },
+    {
+      "name": "rat grabbed creature cargo uses shared world-skeleton FP arms",
+      "passed": true
+    },
+    {
+      "name": "rat grabbed creature palms are observed",
+      "passed": true
+    },
+    {
+      "name": "rat grabbed creature palm reaches its contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "rat rewound creature hand ownership follows the routed input",
+      "passed": true
+    },
+    {
+      "name": "rat rewound finite creature property survives carry/release/death",
+      "passed": true
+    },
+    {
+      "name": "rat rewound grab and gentle placement preserve the existing living creature",
+      "passed": true
+    },
+    {
+      "name": "rat rewound held creature yields locomotion to the physical link",
+      "passed": true
+    },
+    {
+      "name": "rat rewound small and larger prototypes use one and two hands",
+      "passed": true
+    },
+    {
+      "name": "rat rewound creature cargo uses shared world-skeleton FP arms",
+      "passed": true
+    },
+    {
+      "name": "rat rewound creature palms are observed",
+      "passed": true
+    },
+    {
+      "name": "rat rewound creature palm reaches its contact without stretching",
+      "passed": false
+    }
+  ],
+  "frames": [
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_health": 16.0,
+      "creature_id": 2,
+      "creature_present": true,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "rat-equipped.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "rat",
+      "left_palm_ndc_gap": 0.9860758185386658,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 0.8976306915283203,
+      "stage": "equipped",
+      "subject": "creature",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 1,
+      "contents_units": 0,
+      "creature_health": 16.0,
+      "creature_id": 2,
+      "creature_present": true,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "rat-windup.png",
+      "fp_arm_backend": "world_skeleton",
+      "fp_contacts": true,
+      "fp_items": [],
+      "id": "rat",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1.1790999678851222e-06,
+      "stage": "windup",
+      "subject": "creature",
+      "throw_charge": 0.31918179988861084,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 2.3483398763346486e-06,
+          "hand": "rightItem",
+          "palm": [
+            -0.31320008635520935,
+            3.7575607299804688,
+            1.0107440948486328
+          ],
+          "reach_max": 0.5455370545387268,
+          "reach_min": 0.09553647041320801,
+          "shoulder": [
+            -0.2812500298023224,
+            4.175001621246338,
+            0.6884998679161072
+          ],
+          "target": [
+            -0.31320005655288696,
+            3.757558584213257,
+            1.0107431411743164
+          ],
+          "target_distance": 0.5283182859420776
+        }
+      ],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 1,
+      "contents_units": 0,
+      "creature_health": 16.0,
+      "creature_id": 2,
+      "creature_present": true,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "rat-canceled.png",
+      "fp_arm_backend": "world_skeleton",
+      "fp_contacts": true,
+      "fp_items": [],
+      "id": "rat",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 3.725290298461914e-08,
+      "stage": "canceled",
+      "subject": "creature",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 2.682209014892578e-07,
+          "hand": "rightItem",
+          "palm": [
+            -0.31320005655288696,
+            3.674582004547119,
+            1.0624165534973145
+          ],
+          "reach_max": 0.5455368161201477,
+          "reach_min": 0.09553708136081696,
+          "shoulder": [
+            -0.2812500298023224,
+            4.029414176940918,
+            0.6650398969650269
+          ],
+          "target": [
+            -0.31320008635520935,
+            3.6745822429656982,
+            1.062416434288025
+          ],
+          "target_distance": 0.5336989760398865
+        }
+      ],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_health": 16.0,
+      "creature_id": 2,
+      "creature_present": true,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "rat-placed.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "rat",
+      "left_palm_ndc_gap": 0.9803815484046936,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 0.8936426043510437,
+      "stage": "placed",
+      "subject": "creature",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 1,
+      "contents_units": 0,
+      "creature_health": 16.0,
+      "creature_id": 2,
+      "creature_present": true,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "rat-grabbed.png",
+      "fp_arm_backend": "world_skeleton",
+      "fp_contacts": true,
+      "fp_items": [],
+      "id": "rat",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1.3431724710244453e-07,
+      "stage": "grabbed",
+      "subject": "creature",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 2.4575624024691933e-07,
+          "hand": "rightItem",
+          "palm": [
+            -0.590839147567749,
+            3.625000238418579,
+            0.7058866620063782
+          ],
+          "reach_max": 0.5455368161201477,
+          "reach_min": 0.0955362468957901,
+          "shoulder": [
+            -0.4853895306587219,
+            4.125975131988525,
+            0.560294508934021
+          ],
+          "target": [
+            -0.590839147567749,
+            3.625,
+            0.705886721611023
+          ],
+          "target_distance": 0.5322525501251221
+        }
+      ],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 1,
+      "contents_units": 0,
+      "creature_health": 16.0,
+      "creature_id": 2,
+      "creature_present": true,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "rat-rewound.png",
+      "fp_arm_backend": "world_skeleton",
+      "fp_contacts": true,
+      "fp_items": [],
+      "id": "rat",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.04853984713554382,
+      "stage": "rewound",
+      "subject": "creature",
+      "throw_charge": 0.5009998083114624,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 0.09549018740653992,
+          "hand": "rightItem",
+          "palm": [
+            -0.30843985080718994,
+            4.532472610473633,
+            1.2083220481872559
+          ],
+          "reach_max": 0.5455366373062134,
+          "reach_min": 0.09553655982017517,
+          "shoulder": [
+            -0.2812500298023224,
+            4.407677173614502,
+            0.6780402064323425
+          ],
+          "target": [
+            -0.31320008635520935,
+            4.554320812225342,
+            1.3011572360992432
+          ],
+          "target_distance": 0.6409367918968201
+        }
+      ],
+      "use_phase": 0.0
+    }
+  ],
+  "passed": false,
+  "request": {
+    "body": "male",
+    "height": 720,
+    "ids": [
+      "rat",
+      "sheep"
+    ],
+    "interaction": "throw",
+    "light": "day",
+    "mode": "creative",
+    "perspective": "first",
+    "scale": 1.0,
+    "subject": "creature",
+    "width": 1280
+  },
+  "scope": "actual world FP and physical drop rendering"
+}

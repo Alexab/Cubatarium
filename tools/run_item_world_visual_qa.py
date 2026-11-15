@@ -22,6 +22,7 @@ def hashes(folder):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--world', default='ItemVisualPerfQA')
+    parser.add_argument('--subject', choices=['item', 'block', 'creature'], default='item')
     parser.add_argument('--id', action='append', dest='ids')
     parser.add_argument('--light', choices=['day', 'night', 'interior', 'interior-lit'], default='day')
     parser.add_argument('--width', type=int, choices=[1280, 1920], default=1280)
@@ -35,8 +36,15 @@ def main():
     if not args.world.endswith('QA') or any(c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-' for c in args.world):
         parser.error('Use a dedicated existing QA world')
     defaults = ['apple', 'bread', 'raw_meat', 'cooked_meat', 'waterskin', 'wood_bow'] if args.interaction == 'use' else [p.stem for p in (ROOT/'content/items').glob('*.json')]
+    if args.subject != 'item':
+        if args.interaction == 'use':
+            parser.error('Use capture requires an inventory item')
+        args.interaction = 'throw'
+        defaults = ['rat', 'sheep'] if args.subject == 'creature' else ['stone']
     ids = sorted(args.ids or defaults)
-    staged = {id: validate_design(id)['folder'] for id in ids}
+    if any(not id or any(c not in 'abcdefghijklmnopqrstuvwxyz0123456789_' for c in id) for id in ids):
+        parser.error('Use simple content IDs')
+    staged = {id: validate_design(id)['folder'] for id in ids} if args.subject == 'item' else {}
     if not args.skip_build:
         subprocess.run(['cmake', '--build', 'build/desktop-msvc', '--config', 'Release',
                         '--target', 'Cubatarium', '--parallel', '8'], cwd=ROOT, check=True)
@@ -47,6 +55,8 @@ def main():
     name = f'{args.light}-{args.width}-{int(args.scale*100)}'
     if args.ids:
         name += '-selected-'+hashlib.sha256(','.join(ids).encode()).hexdigest()[:8]
+    if args.subject != 'item':
+        name += '-'+args.subject
     if args.interaction:
         name += '-'+args.interaction
     if args.perspective != 'first':
@@ -62,7 +72,7 @@ def main():
     summary_path = output/'summary.json'
     summary_path.unlink(missing_ok=True)
     request = dict(ids=ids, light=args.light, width=args.width,
-                   height=720 if args.width == 1280 else 1080, scale=args.scale, interaction=args.interaction or "", perspective=args.perspective, mode=args.mode, body=args.body)
+                   height=720 if args.width == 1280 else 1080, scale=args.scale, interaction=args.interaction or "", perspective=args.perspective, mode=args.mode, body=args.body, subject=args.subject)
     (output/'request.json').write_text(json.dumps(request, indent=2), encoding='utf-8')
     config = ROOT/'bin/config.json'
     config_before = config.read_bytes() if config.exists() else None

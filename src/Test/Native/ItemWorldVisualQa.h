@@ -43,6 +43,7 @@ public:
     input >> Request;
     Ids = Request.at("ids").get<std::vector<std::string>>();
     Interaction = Request.value("interaction", std::string{});
+    Subject = Request.value("subject", "item");
     if (Ids.empty())
       throw std::runtime_error("World item capture has no IDs");
     auto *actor = world.GetControlledCreature();
@@ -56,7 +57,7 @@ public:
     world.ForEachCreature(
         [&](const UCreature &c)
         {
-          if (c.GetId() != actor->GetId())
+          if (c.GetId() != actor->GetId() && c.GetId() != CargoCreature)
             others.push_back(c.GetId());
         });
     for (auto id : others)
@@ -118,13 +119,22 @@ public:
     world.ForEachCreature(
         [&](const UCreature &c)
         {
-          if (c.GetId() != actor->GetId())
+          if (c.GetId() != actor->GetId() && c.GetId() != CargoCreature)
             others.push_back(c.GetId());
         });
     for (auto id : others)
       world.RemoveCreature(id);
     const auto feet = glm::vec3(Base) + glm::vec3(0, .501f, 0);
     actor->SetBodyOrigin(feet);
+    if (Subject == "creature" && Stage == 0)
+      if (auto *target = world.GetCreature(CargoCreature))
+      {
+        target->SetBodyOrigin(feet + glm::vec3(0, 0, 1.7f));
+        const auto d = target->GetCollisionVolume().center -
+                       (feet + actor->GetEyeOffset());
+        Yaw = glm::degrees(std::atan2(d.z, d.x));
+        Pitch = glm::degrees(std::atan2(d.y, glm::length(glm::vec2(d.x, d.z))));
+      }
     actor->SetOrientation(ModelYawFromCameraYaw(Yaw), Pitch);
     camera->SetPosition(feet + actor->GetEyeOffset());
     camera->SetOrientation(Yaw, Pitch);
@@ -214,9 +224,11 @@ public:
     const bool bodyPresent = std::any_of(bodies.begin(), bodies.end(),
                                          [&](const auto &body)
                                          {
-                                           return body.id == BodyId &&
-                                                  body.stack.Id == Ids[Index] &&
-                                                  body.stack.count == 1;
+                                           return Subject == "creature"
+                                                      ? body.creatureId == CargoCreature
+                                                      : body.id == BodyId &&
+                                                            body.stack.Id == Ids[Index] &&
+                                                            body.stack.count == 1;
                                          });
     Report["frames"].push_back(
         {{"id", Ids[Index]},
@@ -225,6 +237,8 @@ public:
          {"day_factor", env.DayNightFactor},
          {"eye_light_packed", light},
          {"active_item", active ? active->Id : std::string{}},
+         {"subject", Subject},
+         {"creature_id", CargoCreature},
          {"physical_bodies", UWorldItemSystem::Instance().Count()},
          {"matching_body", bodyPresent},
          {"stage", Interaction.empty() ? "static" : StageName()},
@@ -240,7 +254,9 @@ public:
          {"right_palm_ndc_gap", FpRightGap},
          {"left_palm_ndc_gap", FpLeftGap},
          {"tp_contacts", TpContacts(world)}});
-    if (Interaction == "use")
+    if (Subject == "creature")
+      ValidateCreature(world);
+    else if (Interaction == "use")
       ValidateUse(world);
     else if (!Interaction.empty())
       ValidateInteraction(world);
@@ -515,6 +531,8 @@ private:
         Yaw = 90;
         Pitch = -5;
       }
+      if (Stage == 0 && Subject == "creature")
+        key(GLFW_KEY_V);
       key(GLFW_KEY_R);
     }
     else if (Stage == 1)
@@ -529,8 +547,19 @@ private:
       const auto bodies = UWorldItemSystem::Instance().GetItems();
       auto body = std::find_if(bodies.begin(), bodies.end(),
                                [&](const auto &b) { return b.id == BodyId; });
-      Require(body != bodies.end(), "placed body remains available for grab");
-      const auto d = body->position - camera->GetPosition();
+      glm::vec3 center;
+      if (Subject == "creature")
+      {
+        const auto *target = world.GetCreature(CargoCreature);
+        Require(target != nullptr, "placed creature remains in its registry");
+        center = target->GetCollisionVolume().center;
+      }
+      else
+      {
+        Require(body != bodies.end(), "placed body remains available for grab");
+        center = body->position;
+      }
+      const auto d = center - camera->GetPosition();
       Yaw = glm::degrees(std::atan2(d.z, d.x));
       Pitch = glm::degrees(std::atan2(d.y, glm::length(glm::vec2(d.x, d.z))));
       camera->SetOrientation(Yaw, Pitch);
@@ -551,13 +580,80 @@ private:
     }
     if (Stage == 7)
       return false;
-    if (Stage == 0)
+    if (Stage == 0 || Stage == 3)
       for (const auto &body : UWorldItemSystem::Instance().GetItems())
         if (body.carrierId == actor->GetId())
           BodyId = body.id;
     ++Stage;
     ItemStarted = Clock::now();
     return true;
+  }
+  void PrepareCreature(UWorld &world)
+  {
+    if (CargoCreature)
+      world.RemoveCreature(CargoCreature);
+    auto &physics = UWorldItemSystem::Instance();
+    physics.Clear();
+    auto *actor = world.GetControlledCreature();
+    actor->CarryHandCount = 0;
+    actor->ThrowCharge = 0;
+    const auto mode = world.GetGameMode();
+    world.SetGameMode(WorldGameMode::Creative);
+    CargoCreature = world.SpawnCreature(
+        Ids[Index], glm::vec3(Base) + glm::vec3(0, .501f, 1.7f),
+        "", CreatureSpawnSource::Qa);
+    world.SetGameMode(mode);
+    auto *target = world.GetCreature(CargoCreature);
+    if (!target)
+      throw std::runtime_error("Cannot spawn QA cargo creature: " + Ids[Index]);
+    auto &inventory = target->GetInventory();
+    inventory = UCreatureInventory{};
+    inventory.SetItemDefinitions(world.GetItemDefinitionStorage());
+    inventory.SetCreative(mode == WorldGameMode::Creative);
+    InventoryEntryRef seed;
+    seed.empty = false;
+    seed.kind = InventoryEntryKind::Item;
+    seed.Id = "seeds";
+    seed.count = 1;
+    inventory.Insert(seed);
+    CargoHealth = target->GetVitals().health;
+  }
+  void ValidateCreature(UWorld &world)
+  {
+    auto *actor = world.GetControlledCreature();
+    const auto *target = world.GetCreature(CargoCreature);
+    const bool held = Stage == 1 || Stage == 2 || Stage == 4 || Stage == 5;
+    Require(UWorldItemSystem::Instance().HasCargo(actor->GetId()) == held,
+            "creature hand ownership follows the routed input");
+    int seeds = actor->GetInventory().Count(InventoryEntryKind::Item, "seeds");
+    if (target)
+      seeds += target->GetInventory().Count(InventoryEntryKind::Item, "seeds");
+    for (const auto &body : UWorldItemSystem::Instance().GetItems())
+      if (!body.creatureId && body.stack.Id == "seeds")
+        seeds += body.stack.count;
+    Require(seeds == 1, "finite creature property survives carry/release/death");
+    Report["frames"].back()["creature_present"] = target != nullptr;
+    Report["frames"].back()["creature_health"] = target ? target->GetVitals().health : 0;
+    if (Stage < 6)
+      Require(target && target->GetId() == CargoCreature &&
+                  target->GetVitals().health == CargoHealth,
+              "grab and gentle placement preserve the existing living creature");
+    if (held)
+    {
+      Require(target && target->ExternalMotion,
+              "held creature yields locomotion to the physical link");
+      Require(actor->CarryHandCount == (Ids[Index] == "rat" ? 1 : 2),
+              "small and larger prototypes use one and two hands");
+      if (Request.value("perspective", "first") == "first")
+        Require(FpWorldArms, "creature cargo uses shared world-skeleton FP arms");
+      const auto contacts = TpContacts(world);
+      Require(contacts.size() == size_t(actor->CarryHandCount), "creature palms are observed");
+      for (const auto &contact : contacts)
+        Require(contact.at("gap").get<float>() < .035f,
+                "creature palm reaches its contact without stretching");
+    }
+    if (Stage == 7 && target && target->GetVitals().health > 0)
+      Require(!target->ExternalMotion, "surviving creature returns to AI locomotion");
   }
   void SetItem(UWorld &world)
   {
@@ -571,8 +667,14 @@ private:
     world.GetControlledCreature()->GetVitals().fatigue = 0;
     InventoryEntryRef entry;
     entry.empty = false;
-    entry.kind = InventoryEntryKind::Item;
+    entry.kind = Subject == "block" ? InventoryEntryKind::Block : InventoryEntryKind::Item;
     entry.Id = Ids[Index];
+    if (Subject == "creature")
+    {
+      PrepareCreature(world);
+      ItemStarted = Clock::now();
+      return;
+    }
     entry.count = 1;
     if (Interaction == "use")
     {
@@ -630,7 +732,9 @@ private:
   size_t Index{0};
   int BodyId{0}, Stage{0};
   float Yaw{90}, Pitch{-12}, UseDuration{.8f};
-  std::string Interaction;
+  std::string Interaction, Subject;
+  uint64_t CargoCreature{0};
+  float CargoHealth{0};
   InventoryEntryRef Original;
   glm::ivec3 Base{};
   Clock::time_point Started, ItemStarted;

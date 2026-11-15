@@ -1,0 +1,15 @@
+{
+  "ids": [
+    "rat",
+    "sheep"
+  ],
+  "light": "day",
+  "width": 1280,
+  "height": 720,
+  "scale": 1.0,
+  "interaction": "throw",
+  "perspective": "first",
+  "mode": "survival",
+  "body": "male",
+  "subject": "creature"
+}

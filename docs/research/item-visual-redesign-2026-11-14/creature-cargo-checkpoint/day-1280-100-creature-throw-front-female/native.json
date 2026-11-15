@@ -1,0 +1,1071 @@
+{
+  "checks": [
+    {
+      "name": "rat equipped creature hand ownership follows the routed input",
+      "passed": true
+    },
+    {
+      "name": "rat equipped finite creature property survives carry/release/death",
+      "passed": true
+    },
+    {
+      "name": "rat equipped grab and gentle placement preserve the existing living creature",
+      "passed": true
+    },
+    {
+      "name": "rat windup creature hand ownership follows the routed input",
+      "passed": true
+    },
+    {
+      "name": "rat windup finite creature property survives carry/release/death",
+      "passed": true
+    },
+    {
+      "name": "rat windup grab and gentle placement preserve the existing living creature",
+      "passed": true
+    },
+    {
+      "name": "rat windup held creature yields locomotion to the physical link",
+      "passed": true
+    },
+    {
+      "name": "rat windup small and larger prototypes use one and two hands",
+      "passed": true
+    },
+    {
+      "name": "rat windup creature palms are observed",
+      "passed": true
+    },
+    {
+      "name": "rat windup creature palm reaches its contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "rat canceled creature hand ownership follows the routed input",
+      "passed": true
+    },
+    {
+      "name": "rat canceled finite creature property survives carry/release/death",
+      "passed": true
+    },
+    {
+      "name": "rat canceled grab and gentle placement preserve the existing living creature",
+      "passed": true
+    },
+    {
+      "name": "rat canceled held creature yields locomotion to the physical link",
+      "passed": true
+    },
+    {
+      "name": "rat canceled small and larger prototypes use one and two hands",
+      "passed": true
+    },
+    {
+      "name": "rat canceled creature palms are observed",
+      "passed": true
+    },
+    {
+      "name": "rat canceled creature palm reaches its contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "rat placed creature hand ownership follows the routed input",
+      "passed": true
+    },
+    {
+      "name": "rat placed finite creature property survives carry/release/death",
+      "passed": true
+    },
+    {
+      "name": "rat placed grab and gentle placement preserve the existing living creature",
+      "passed": true
+    },
+    {
+      "name": "rat placed placed creature remains in its registry",
+      "passed": true
+    },
+    {
+      "name": "rat grabbed creature hand ownership follows the routed input",
+      "passed": true
+    },
+    {
+      "name": "rat grabbed finite creature property survives carry/release/death",
+      "passed": true
+    },
+    {
+      "name": "rat grabbed grab and gentle placement preserve the existing living creature",
+      "passed": true
+    },
+    {
+      "name": "rat grabbed held creature yields locomotion to the physical link",
+      "passed": true
+    },
+    {
+      "name": "rat grabbed small and larger prototypes use one and two hands",
+      "passed": true
+    },
+    {
+      "name": "rat grabbed creature palms are observed",
+      "passed": true
+    },
+    {
+      "name": "rat grabbed creature palm reaches its contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "rat rewound creature hand ownership follows the routed input",
+      "passed": true
+    },
+    {
+      "name": "rat rewound finite creature property survives carry/release/death",
+      "passed": true
+    },
+    {
+      "name": "rat rewound grab and gentle placement preserve the existing living creature",
+      "passed": true
+    },
+    {
+      "name": "rat rewound held creature yields locomotion to the physical link",
+      "passed": true
+    },
+    {
+      "name": "rat rewound small and larger prototypes use one and two hands",
+      "passed": true
+    },
+    {
+      "name": "rat rewound creature palms are observed",
+      "passed": true
+    },
+    {
+      "name": "rat rewound creature palm reaches its contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "rat rewound R release supplies a real flight impulse before collision resolution",
+      "passed": true
+    },
+    {
+      "name": "rat released creature hand ownership follows the routed input",
+      "passed": true
+    },
+    {
+      "name": "rat released finite creature property survives carry/release/death",
+      "passed": true
+    },
+    {
+      "name": "rat landed creature hand ownership follows the routed input",
+      "passed": true
+    },
+    {
+      "name": "rat landed finite creature property survives carry/release/death",
+      "passed": true
+    },
+    {
+      "name": "rat landed surviving creature returns to AI locomotion",
+      "passed": true
+    },
+    {
+      "name": "sheep equipped creature hand ownership follows the routed input",
+      "passed": true
+    },
+    {
+      "name": "sheep equipped finite creature property survives carry/release/death",
+      "passed": true
+    },
+    {
+      "name": "sheep equipped grab and gentle placement preserve the existing living creature",
+      "passed": true
+    },
+    {
+      "name": "sheep windup creature hand ownership follows the routed input",
+      "passed": true
+    },
+    {
+      "name": "sheep windup finite creature property survives carry/release/death",
+      "passed": true
+    },
+    {
+      "name": "sheep windup grab and gentle placement preserve the existing living creature",
+      "passed": true
+    },
+    {
+      "name": "sheep windup held creature yields locomotion to the physical link",
+      "passed": true
+    },
+    {
+      "name": "sheep windup small and larger prototypes use one and two hands",
+      "passed": true
+    },
+    {
+      "name": "sheep windup creature palms are observed",
+      "passed": true
+    },
+    {
+      "name": "sheep windup creature palm reaches its contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "sheep windup creature palm reaches its contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "sheep canceled creature hand ownership follows the routed input",
+      "passed": true
+    },
+    {
+      "name": "sheep canceled finite creature property survives carry/release/death",
+      "passed": true
+    },
+    {
+      "name": "sheep canceled grab and gentle placement preserve the existing living creature",
+      "passed": true
+    },
+    {
+      "name": "sheep canceled held creature yields locomotion to the physical link",
+      "passed": true
+    },
+    {
+      "name": "sheep canceled small and larger prototypes use one and two hands",
+      "passed": true
+    },
+    {
+      "name": "sheep canceled creature palms are observed",
+      "passed": true
+    },
+    {
+      "name": "sheep canceled creature palm reaches its contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "sheep canceled creature palm reaches its contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "sheep placed creature hand ownership follows the routed input",
+      "passed": true
+    },
+    {
+      "name": "sheep placed finite creature property survives carry/release/death",
+      "passed": true
+    },
+    {
+      "name": "sheep placed grab and gentle placement preserve the existing living creature",
+      "passed": true
+    },
+    {
+      "name": "sheep placed placed creature remains in its registry",
+      "passed": true
+    },
+    {
+      "name": "sheep grabbed creature hand ownership follows the routed input",
+      "passed": true
+    },
+    {
+      "name": "sheep grabbed finite creature property survives carry/release/death",
+      "passed": true
+    },
+    {
+      "name": "sheep grabbed grab and gentle placement preserve the existing living creature",
+      "passed": true
+    },
+    {
+      "name": "sheep grabbed held creature yields locomotion to the physical link",
+      "passed": true
+    },
+    {
+      "name": "sheep grabbed small and larger prototypes use one and two hands",
+      "passed": true
+    },
+    {
+      "name": "sheep grabbed creature palms are observed",
+      "passed": true
+    },
+    {
+      "name": "sheep grabbed creature palm reaches its contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "sheep grabbed creature palm reaches its contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "sheep rewound creature hand ownership follows the routed input",
+      "passed": true
+    },
+    {
+      "name": "sheep rewound finite creature property survives carry/release/death",
+      "passed": true
+    },
+    {
+      "name": "sheep rewound grab and gentle placement preserve the existing living creature",
+      "passed": true
+    },
+    {
+      "name": "sheep rewound held creature yields locomotion to the physical link",
+      "passed": true
+    },
+    {
+      "name": "sheep rewound small and larger prototypes use one and two hands",
+      "passed": true
+    },
+    {
+      "name": "sheep rewound creature palms are observed",
+      "passed": true
+    },
+    {
+      "name": "sheep rewound creature palm reaches its contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "sheep rewound creature palm reaches its contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "sheep rewound R release supplies a real flight impulse before collision resolution",
+      "passed": true
+    },
+    {
+      "name": "sheep released creature hand ownership follows the routed input",
+      "passed": true
+    },
+    {
+      "name": "sheep released finite creature property survives carry/release/death",
+      "passed": true
+    },
+    {
+      "name": "sheep landed creature hand ownership follows the routed input",
+      "passed": true
+    },
+    {
+      "name": "sheep landed finite creature property survives carry/release/death",
+      "passed": true
+    },
+    {
+      "name": "sheep landed surviving creature returns to AI locomotion",
+      "passed": true
+    }
+  ],
+  "frames": [
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_health": 16.0,
+      "creature_id": 2,
+      "creature_present": true,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "rat-equipped.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "rat",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "equipped",
+      "subject": "creature",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 1,
+      "contents_units": 0,
+      "creature_health": 16.0,
+      "creature_id": 2,
+      "creature_present": true,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "rat-windup.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "rat",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "windup",
+      "subject": "creature",
+      "throw_charge": 0.31918179988861084,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 8.715132025827188e-06,
+          "hand": "rightItem",
+          "palm": [
+            -0.11880146712064743,
+            3.7575628757476807,
+            0.5757505893707275
+          ],
+          "reach_max": 0.540562629699707,
+          "reach_min": 0.09056201577186584,
+          "shoulder": [
+            -0.2812500298023224,
+            4.224032402038574,
+            0.685878336429596
+          ],
+          "target": [
+            -0.11880004405975342,
+            3.757558584213257,
+            0.5757431387901306
+          ],
+          "target_distance": 0.5060806274414063
+        }
+      ],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 1,
+      "contents_units": 0,
+      "creature_health": 16.0,
+      "creature_id": 2,
+      "creature_present": true,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "rat-canceled.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "rat",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "canceled",
+      "subject": "creature",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 2.6697625798988156e-07,
+          "hand": "rightItem",
+          "palm": [
+            -0.11880005896091461,
+            3.674582004547119,
+            0.6274165511131287
+          ],
+          "reach_max": 0.5405625700950623,
+          "reach_min": 0.09056265652179718,
+          "shoulder": [
+            -0.2812500298023224,
+            4.174999713897705,
+            0.6885000467300415
+          ],
+          "target": [
+            -0.11880004405975342,
+            3.6745822429656982,
+            0.6274164319038391
+          ],
+          "target_distance": 0.5296592116355896
+        }
+      ],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_health": 16.0,
+      "creature_id": 2,
+      "creature_present": true,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "rat-placed.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "rat",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "placed",
+      "subject": "creature",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 1,
+      "contents_units": 0,
+      "creature_health": 16.0,
+      "creature_id": 2,
+      "creature_present": true,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "rat-grabbed.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "rat",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "grabbed",
+      "subject": "creature",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 2.0920126189594157e-05,
+          "hand": "rightItem",
+          "palm": [
+            -0.17486199736595154,
+            3.6250104904174805,
+            0.5474251508712769
+          ],
+          "reach_max": 0.5405623316764832,
+          "reach_min": 0.09056252241134644,
+          "shoulder": [
+            -0.3257006108760834,
+            4.125990867614746,
+            0.6659212112426758
+          ],
+          "target": [
+            -0.1748574674129486,
+            3.625,
+            0.5474076271057129
+          ],
+          "target_distance": 0.5364615321159363
+        }
+      ],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 1,
+      "contents_units": 0,
+      "creature_health": 16.0,
+      "creature_id": 2,
+      "creature_present": true,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "rat-rewound.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "rat",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "rewound",
+      "subject": "creature",
+      "throw_charge": 0.5009998083114624,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 4.826228519050346e-07,
+          "hand": "rightItem",
+          "palm": [
+            -0.11880001425743103,
+            4.5543212890625,
+            0.8661572933197021
+          ],
+          "reach_max": 0.5405625104904175,
+          "reach_min": 0.0905623584985733,
+          "shoulder": [
+            -0.2812500298023224,
+            4.635773181915283,
+            0.39490729570388794
+          ],
+          "target": [
+            -0.11880005896091461,
+            4.554320812225342,
+            0.8661572337150574
+          ],
+          "target_distance": 0.505075216293335
+        }
+      ],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_health": 16.0,
+      "creature_id": 2,
+      "creature_present": true,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "rat-released.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "rat",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "released",
+      "subject": "creature",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_health": 15.527186393737793,
+      "creature_id": 2,
+      "creature_present": true,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "rat-landed.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "rat",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "landed",
+      "subject": "creature",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_health": 20.0,
+      "creature_id": 6,
+      "creature_present": true,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "sheep-equipped.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "sheep",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "equipped",
+      "subject": "creature",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 2,
+      "contents_units": 0,
+      "creature_health": 20.0,
+      "creature_id": 6,
+      "creature_present": true,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "sheep-windup.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "sheep",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "windup",
+      "subject": "creature",
+      "throw_charge": 0.31918179988861084,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 4.956154043611605e-06,
+          "hand": "rightItem",
+          "palm": [
+            -0.32399964332580566,
+            4.050004482269287,
+            0.7310904264450073
+          ],
+          "reach_max": 0.5405622720718384,
+          "reach_min": 0.09056191146373749,
+          "shoulder": [
+            -0.2812500298023224,
+            4.536570072174072,
+            0.5274194478988647
+          ],
+          "target": [
+            -0.3240000605583191,
+            4.050000190734863,
+            0.7310879826545715
+          ],
+          "target_distance": 0.5292056798934937
+        },
+        {
+          "gap": 4.958752015227219e-06,
+          "hand": "leftItem",
+          "palm": [
+            0.3239995539188385,
+            4.050004482269287,
+            0.7310904264450073
+          ],
+          "reach_max": 0.5405622720718384,
+          "reach_min": 0.09056191146373749,
+          "shoulder": [
+            0.2812499701976776,
+            4.536570072174072,
+            0.5274194478988647
+          ],
+          "target": [
+            0.3240000009536743,
+            4.050000190734863,
+            0.7310879826545715
+          ],
+          "target_distance": 0.5292056798934937
+        }
+      ],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 2,
+      "contents_units": 0,
+      "creature_health": 20.0,
+      "creature_id": 6,
+      "creature_present": true,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "sheep-canceled.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "sheep",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "canceled",
+      "subject": "creature",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 6.664001972467304e-08,
+          "hand": "rightItem",
+          "palm": [
+            -0.3240000307559967,
+            4.050000190734863,
+            0.7885162830352783
+          ],
+          "reach_max": 0.5405627489089966,
+          "reach_min": 0.0905626118183136,
+          "shoulder": [
+            -0.2812500298023224,
+            4.497636795043945,
+            0.5639862418174744
+          ],
+          "target": [
+            -0.3240000605583191,
+            4.050000190734863,
+            0.7885162234306335
+          ],
+          "target_distance": 0.5026129484176636
+        },
+        {
+          "gap": 5.960464477539063e-08,
+          "hand": "leftItem",
+          "palm": [
+            0.32399994134902954,
+            4.050000190734863,
+            0.7885162234306335
+          ],
+          "reach_max": 0.5405627489089966,
+          "reach_min": 0.0905626118183136,
+          "shoulder": [
+            0.2812499701976776,
+            4.497636795043945,
+            0.5639862418174744
+          ],
+          "target": [
+            0.3240000009536743,
+            4.050000190734863,
+            0.7885162234306335
+          ],
+          "target_distance": 0.5026129484176636
+        }
+      ],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_health": 20.0,
+      "creature_id": 6,
+      "creature_present": true,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "sheep-placed.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "sheep",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "placed",
+      "subject": "creature",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 2,
+      "contents_units": 0,
+      "creature_health": 20.0,
+      "creature_id": 6,
+      "creature_present": true,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "sheep-grabbed.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "sheep",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "grabbed",
+      "subject": "creature",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 1.433290344721172e-05,
+          "hand": "rightItem",
+          "palm": [
+            -0.3239988684654236,
+            4.050014019012451,
+            0.8355119824409485
+          ],
+          "reach_max": 0.5405628681182861,
+          "reach_min": 0.0905628502368927,
+          "shoulder": [
+            -0.2812500298023224,
+            4.497644424438477,
+            0.5639791488647461
+          ],
+          "target": [
+            -0.3240000605583191,
+            4.050000190734863,
+            0.835508406162262
+          ],
+          "target_distance": 0.525300920009613
+        },
+        {
+          "gap": 1.433290344721172e-05,
+          "hand": "leftItem",
+          "palm": [
+            0.3239988088607788,
+            4.050014019012451,
+            0.8355119824409485
+          ],
+          "reach_max": 0.5405628681182861,
+          "reach_min": 0.0905628502368927,
+          "shoulder": [
+            0.2812499701976776,
+            4.497644424438477,
+            0.5639791488647461
+          ],
+          "target": [
+            0.3240000009536743,
+            4.050000190734863,
+            0.835508406162262
+          ],
+          "target_distance": 0.525300920009613
+        }
+      ],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 2,
+      "contents_units": 0,
+      "creature_health": 20.0,
+      "creature_id": 6,
+      "creature_present": true,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "sheep-rewound.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "sheep",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "rewound",
+      "subject": "creature",
+      "throw_charge": 0.5009998083114624,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 4.951133405484143e-07,
+          "hand": "rightItem",
+          "palm": [
+            -0.3240000009536743,
+            4.311795711517334,
+            0.9443464875221252
+          ],
+          "reach_max": 0.5405625104904175,
+          "reach_min": 0.09056296944618225,
+          "shoulder": [
+            -0.2812500298023224,
+            4.572747230529785,
+            0.48684313893318176
+          ],
+          "target": [
+            -0.3240000605583191,
+            4.311796188354492,
+            0.9443463683128357
+          ],
+          "target_distance": 0.5284242630004883
+        },
+        {
+          "gap": 5.331201577973843e-07,
+          "hand": "leftItem",
+          "palm": [
+            0.3240000009536743,
+            4.311795711517334,
+            0.9443466067314148
+          ],
+          "reach_max": 0.540562629699707,
+          "reach_min": 0.09056296944618225,
+          "shoulder": [
+            0.2812499701976776,
+            4.572747230529785,
+            0.48684313893318176
+          ],
+          "target": [
+            0.3240000009536743,
+            4.311796188354492,
+            0.9443463683128357
+          ],
+          "target_distance": 0.5284242630004883
+        }
+      ],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_health": 19.334278106689453,
+      "creature_id": 6,
+      "creature_present": true,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "sheep-released.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "sheep",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "released",
+      "subject": "creature",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_health": 19.334278106689453,
+      "creature_id": 6,
+      "creature_present": true,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "sheep-landed.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "sheep",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "landed",
+      "subject": "creature",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0
+    }
+  ],
+  "passed": true,
+  "request": {
+    "body": "female",
+    "height": 720,
+    "ids": [
+      "rat",
+      "sheep"
+    ],
+    "interaction": "throw",
+    "light": "day",
+    "mode": "creative",
+    "perspective": "front",
+    "scale": 1.0,
+    "subject": "creature",
+    "width": 1280
+  },
+  "scope": "actual world FP and physical drop rendering"
+}

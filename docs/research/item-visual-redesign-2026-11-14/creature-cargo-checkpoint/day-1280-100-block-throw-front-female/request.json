@@ -1,0 +1,14 @@
+{
+  "ids": [
+    "stone"
+  ],
+  "light": "day",
+  "width": 1280,
+  "height": 720,
+  "scale": 1.0,
+  "interaction": "throw",
+  "perspective": "front",
+  "mode": "creative",
+  "body": "female",
+  "subject": "block"
+}

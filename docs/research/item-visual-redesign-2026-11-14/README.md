@@ -937,6 +937,16 @@ per-frame debug trace are included. The full Release regression passes again.
 This closes the named HUD defect, not the remaining Item Lab/display-lighting,
 creature-cargo, utility-pulse or final performance gates.
 
+## Creature and generic cargo compatibility
+
+[Creature/block native compatibility](creature-cargo-checkpoint/README.md)
+corrects centre-plane fallback grips and verifies actual one/two-hand cargo,
+raising aim, gentle placement, release and AI return. All ten body/view/mode
+runs pass, as does the full Release regression. Typed item grips remain authored;
+physics and inventory ownership are unchanged. The remaining completion gates
+are utility success pulses, final Item Lab/display-lighting coverage, performance
+and the consolidated final report.
+
 ## Acceptance contract
 
 Deterministic publication preserves author work and grips. Missing production

@@ -1,0 +1,10 @@
+{
+  "stone-equipped.png": "a5c534040bd7de46ae8ba107927521bef2203ebc77409b681a3de6729d1d1881",
+  "stone-windup.png": "d4398e3aa7819a4b7b5afe7bf29dc163662ada2944ecf5d5970acf3a3088afd3",
+  "stone-canceled.png": "ecc1d4d005d44a12b675a406e3abb5fd4fffb8c14d743c7f772fb8477459fd2f",
+  "stone-placed.png": "74152b640c63f7291f323ccfd88d087953304f42e6008e4eb5c4e31dea9febf3",
+  "stone-grabbed.png": "49e4622c800ff843f413d4b55365bdbd60cee8d98c7d75c1ff8f29673430bc78",
+  "stone-rewound.png": "18247ba90c605702d5ed38c368223ca7500119edc5267e08ee48c1d6bba770e7",
+  "stone-released.png": "2458af7a789b1494fafe96f5e870f82400ebe03962913d77eb33341bb0c27899",
+  "stone-landed.png": "1d8c74e5ef2d5b7817b16e0bb604c61520a52e7381793cce9613305a5835a05c"
+}

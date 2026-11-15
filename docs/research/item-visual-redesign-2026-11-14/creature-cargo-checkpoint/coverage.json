@@ -1,0 +1,68 @@
+{
+  "passed": true,
+  "cases": [
+    {
+      "case": "day-1280-100-creature-throw",
+      "frames": 16,
+      "checks": 94,
+      "max_palm_gap_m": 1.0713303026932408e-06
+    },
+    {
+      "case": "day-1280-100-creature-throw-front-female",
+      "frames": 16,
+      "checks": 86,
+      "max_palm_gap_m": 2.0920126189594157e-05
+    },
+    {
+      "case": "day-1280-100-creature-throw-back",
+      "frames": 16,
+      "checks": 86,
+      "max_palm_gap_m": 9.5367431640625e-07
+    },
+    {
+      "case": "day-1280-100-block-throw",
+      "frames": 8,
+      "checks": 52,
+      "max_palm_gap_m": 4.1109924495685846e-06
+    },
+    {
+      "case": "day-1280-100-block-throw-front-female",
+      "frames": 8,
+      "checks": 48,
+      "max_palm_gap_m": 3.405820052648778e-06
+    },
+    {
+      "case": "day-1280-100-creature-throw-survival",
+      "frames": 16,
+      "checks": 94,
+      "max_palm_gap_m": 3.4405875339871272e-06
+    },
+    {
+      "case": "day-1280-100-creature-throw-front-female-survival",
+      "frames": 16,
+      "checks": 86,
+      "max_palm_gap_m": 0.00010195490904152393
+    },
+    {
+      "case": "day-1280-100-creature-throw-back-survival",
+      "frames": 16,
+      "checks": 86,
+      "max_palm_gap_m": 2.761543328233529e-06
+    },
+    {
+      "case": "day-1280-100-block-throw-survival",
+      "frames": 8,
+      "checks": 52,
+      "max_palm_gap_m": 4.10028405894991e-06
+    },
+    {
+      "case": "day-1280-100-block-throw-front-female-survival",
+      "frames": 8,
+      "checks": 48,
+      "max_palm_gap_m": 2.6147508833673783e-05
+    }
+  ],
+  "total_frames": 128,
+  "total_checks": 732,
+  "max_palm_gap_m": 0.00010195490904152393
+}
