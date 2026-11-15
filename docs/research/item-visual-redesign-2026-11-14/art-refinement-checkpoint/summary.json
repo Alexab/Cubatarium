@@ -58,6 +58,9 @@
     "full-summary.json": "779a14da9647bb5d7c189de9c2d649099691c32e87dd20bd982397c56abdb3b7",
     "handheld-comparison.png": "f197c62e31bb5656384b54d3b33b22a48396857a119928342dea48ba0a0dce20",
     "release-output.txt": "4a6ff6a4de04fc4d4367e439e1624312dec6a449df8c80d820347225576fe449",
-    "profile-output.zip": "8cfbcd48e036e1b64c53a542ec3eed439dcfcad9008696f4b14c9c4a2537614d"
-  }
+    "profile-output.zip": "8cfbcd48e036e1b64c53a542ec3eed439dcfcad9008696f4b14c9c4a2537614d",
+    "checkout-summary.json": "7fab1c8079b77006c1fdeba24319cca58791bfe634e39944fde2da6625529388",
+    "checkout-output.zip": "76eeebb26b1b8a3202e7943d479b57b7bba219aaa7e52d405b6f17cae467f1a8"
+  },
+  "implementation_revision": "9393e73cbfd3272b6ec33d09c27f8fb9864073e0"
 }

@@ -60,5 +60,11 @@ Production promotion remains **0/70**. Remaining work includes the other pilot
 and family art reviews, small-icon/silhouette/world-light comparisons across all
 70, independent Lab state controls, authored carry contacts and real-input
 transition footage, final publication and repeated performance/property gates.
-Black-on-dark loose silhouette captures are not accepted as silhouette evidence.
+Dark loose views are night-light fixtures, not silhouette acceptance evidence.
 No gameplay definition, economy, identity or physical profile was redesigned here.
+
+After implementation commit `9393e73cb`, fresh disposable checkouts with both
+`core.autocrlf=true` and `false` verify 981 signed files and regenerate/publish
+all 70 assets byte-identically. Original reference archives, author sources and
+the working production catalog are preserved. `checkout-summary.json` and
+`checkout-output.zip` retain these results; they do not promote working assets.
