@@ -1,0 +1,25 @@
+preflight: killing orphan Cubatarium.exe (if any)
+running: E:\Work\Home\Cubatarium\bin\Cubatarium.exe --flight-sim --world ItemsCompletionQA --seconds 27.0 --report E:\Work\Home\Cubatarium\bin\flight_sim_report.json --no-fly --no-hold-forward --idle 2.0 --no-teleport-cruise
+test audio: disabled (master/music/ambient/sfx/ui); restoring after exit
+runtime resources: {"audio_disabled_for_test": true, "available": false, "sample_count": 0, "host_cpu_percent": null, "app_cpu_machine_percent": null, "other_cpu_machine_percent_estimate": null, "app_rss_mb_max": null, "system_available_memory_mb_min": null, "timed_out": false}
+metrics disabled: route was executed; diagnostic gates were not evaluated
+native decode-once regression: True
+Measuring catalog-0-baseline
+Restored 210 runtime files
+{"scene": "catalog", "repeat": 0, "mode": "baseline", "frames": 636, "p50_ms": 11.96, "p95_ms": 17.0439, "p99_ms": 20.60174999999999, "cold_catalog_ms": 825.1776, "cold_frames": 29, "cold_frame_p95_ms": 49.745879999999985, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/catalog-0-baseline/frame-benchmark.json"}
+Measuring catalog-0-candidate
+Restored 212 runtime files
+{"scene": "catalog", "repeat": 0, "mode": "candidate", "frames": 676, "p50_ms": 10.98975, "p95_ms": 14.3875, "p99_ms": 26.872925, "cold_catalog_ms": 911.1681, "cold_frames": 30, "cold_frame_p95_ms": 54.75108499999998, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/catalog-0-candidate/frame-benchmark.json"}
+Measuring catalog-1-candidate
+Restored 212 runtime files
+{"scene": "catalog", "repeat": 1, "mode": "candidate", "frames": 660, "p50_ms": 11.284099999999999, "p95_ms": 17.491889999999994, "p99_ms": 23.264955999999913, "cold_catalog_ms": 879.9771, "cold_frames": 29, "cold_frame_p95_ms": 54.93365999999999, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/catalog-1-candidate/frame-benchmark.json"}
+Measuring catalog-1-baseline
+Restored 210 runtime files
+{"scene": "catalog", "repeat": 1, "mode": "baseline", "frames": 731, "p50_ms": 10.1927, "p95_ms": 15.1396, "p99_ms": 19.848840000000028, "cold_catalog_ms": 785.704, "cold_frames": 28, "cold_frame_p95_ms": 49.874815, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/catalog-1-baseline/frame-benchmark.json"}
+Measuring catalog-2-baseline
+Restored 210 runtime files
+{"scene": "catalog", "repeat": 2, "mode": "baseline", "frames": 760, "p50_ms": 10.051950000000001, "p95_ms": 14.94925999999997, "p99_ms": 18.678435999999987, "cold_catalog_ms": 858.1434, "cold_frames": 29, "cold_frame_p95_ms": 63.747879999999995, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/catalog-2-baseline/frame-benchmark.json"}
+Measuring catalog-2-candidate
+Restored 212 runtime files
+{"scene": "catalog", "repeat": 2, "mode": "candidate", "frames": 762, "p50_ms": 9.9708, "p95_ms": 12.710479999999992, "p99_ms": 19.552544, "cold_catalog_ms": 958.4735, "cold_frames": 31, "cold_frame_p95_ms": 51.03465, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/catalog-2-candidate/frame-benchmark.json"}
+passed=True; evidence=E:\Work\Home\Cubatarium\bin\items_performance\summary.json

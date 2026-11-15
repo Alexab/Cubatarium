@@ -54,5 +54,22 @@
 /docs/research/item-visual-redesign-2026-11-14/studio-review-completion/*-output.txt -text -whitespace
 /docs/research/item-visual-redesign-2026-11-14/world-lighting-checkpoint/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 /docs/research/item-visual-redesign-2026-11-14/carry-input-checkpoint/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/research/item-visual-redesign-2026-11-14/display-matrix/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/research/item-visual-redesign-2026-11-14/performance-final/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/research/item-visual-redesign-2026-11-14/test-audio/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/research/item-visual-redesign-2026-11-14/world-tp-resource-check/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/research/item-visual-redesign-2026-11-14/utility-checkpoint/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/research/item-visual-redesign-2026-11-14/final-audit/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+docs/research/item-visual-redesign-2026-11-14/utility-checkpoint/** -text
+# Raw build logs retain producer whitespace for evidence hash verification.
+docs/research/item-visual-redesign-2026-11-14/final-audit/current-release/item-fp-cached-bounds-build.txt -whitespace
+docs/research/item-visual-redesign-2026-11-14/final-audit/final-source/desktop-release.txt -whitespace
+docs/research/item-visual-redesign-2026-11-14/performance-final/budget-native-regression/build.txt -whitespace
+docs/research/item-visual-redesign-2026-11-14/performance-final/decode-once-native-regression/item-decode-once-build.txt -whitespace
+docs/research/item-visual-redesign-2026-11-14/performance-final/fp-timing-diagnostic/build.txt -whitespace
+docs/research/item-visual-redesign-2026-11-14/performance-final/packed-geometry/build.txt -whitespace
+docs/research/item-visual-redesign-2026-11-14/performance-final/readback-regression/item-icon-readback-build.txt -whitespace
+docs/research/item-visual-redesign-2026-11-14/performance-final/static-ui/native-release/item-static-ui-compatible-build.txt -whitespace
+docs/research/item-visual-redesign-2026-11-14/performance-final/ui-streaming/native-release/build.txt -whitespace
 docs/research/item-visual-redesign-2026-11-14/world-lighting-checkpoint/native-world-frames.zip filter=lfs diff=lfs merge=lfs -text
 docs/research/item-visual-redesign-2026-11-14/carry-input-checkpoint/selected-native-frames.zip filter=lfs diff=lfs merge=lfs -text

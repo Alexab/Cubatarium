@@ -1,0 +1,26 @@
+UI streaming native regression: True
+Measuring catalog-0-baseline
+Restored 210 runtime files
+{"scene": "catalog", "repeat": 0, "mode": "baseline", "frames": 2334, "measure_sec": 30.0231157, "p50_ms": 10.7192, "p95_ms": 23.171079999999996, "p99_ms": 44.746937, "cold_catalog_ms": 781.9568999999999, "cold_frames": 28, "cold_frame_p95_ms": 56.532435, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/catalog-0-baseline/frame-benchmark.json"}
+Measuring catalog-0-candidate
+Restored 212 runtime files
+{"scene": "catalog", "repeat": 0, "mode": "candidate", "frames": 2882, "measure_sec": 30.0063404, "p50_ms": 10.04655, "p95_ms": 13.304675, "p99_ms": 17.111005000000006, "cold_catalog_ms": 966.8048, "cold_frames": 33, "cold_frame_p95_ms": 46.629099999999994, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/catalog-0-candidate/frame-benchmark.json"}
+Measuring catalog-1-candidate
+Restored 212 runtime files
+{"scene": "catalog", "repeat": 1, "mode": "candidate", "frames": 2705, "measure_sec": 30.0023154, "p50_ms": 10.4464, "p95_ms": 13.899999999999999, "p99_ms": 20.502020000000005, "cold_catalog_ms": 1146.7309, "cold_frames": 33, "cold_frame_p95_ms": 67.47807999999998, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/catalog-1-candidate/frame-benchmark.json"}
+Measuring catalog-1-baseline
+Restored 210 runtime files
+{"scene": "catalog", "repeat": 1, "mode": "baseline", "frames": 2054, "measure_sec": 30.0038633, "p50_ms": 12.654150000000001, "p95_ms": 23.413354999999996, "p99_ms": 46.51123100000002, "cold_catalog_ms": 970.2484000000001, "cold_frames": 30, "cold_frame_p95_ms": 66.15710499999999, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/catalog-1-baseline/frame-benchmark.json"}
+Measuring catalog-2-baseline
+Restored 210 runtime files
+{"scene": "catalog", "repeat": 2, "mode": "baseline", "frames": 2821, "measure_sec": 30.0096067, "p50_ms": 10.2039, "p95_ms": 13.017, "p99_ms": 17.151140000000005, "cold_catalog_ms": 861.5556, "cold_frames": 30, "cold_frame_p95_ms": 48.56901, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/catalog-2-baseline/frame-benchmark.json"}
+Measuring catalog-2-candidate
+Restored 212 runtime files
+{"scene": "catalog", "repeat": 2, "mode": "candidate", "frames": 2123, "measure_sec": 30.0095146, "p50_ms": 12.7445, "p95_ms": 21.54815, "p99_ms": 45.38597600000002, "cold_catalog_ms": 1395.4271, "cold_frames": 34, "cold_frame_p95_ms": 95.66854499999998, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/catalog-2-candidate/frame-benchmark.json"}
+passed=False; evidence=E:\Work\Home\Cubatarium\bin\items_performance\summary.json
+Traceback (most recent call last):
+  File "<stdin>", line 16, in <module>
+  File "C:\Users\Bakhshiev\AppData\Local\Programs\Python\Python313\Lib\subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['C:\\Users\\Bakhshiev\\AppData\\Local\\Programs\\Python\\Python313\\python.exe', 'tools/run_item_performance.py', '--skip-build', '--scene', 'catalog', '--repeats', '3', '--measure-seconds', '30']' returned non-zero exit status 1.

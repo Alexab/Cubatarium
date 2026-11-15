@@ -1,0 +1,73 @@
+Measuring armor-0-baseline
+Restored 210 runtime files
+{"scene": "armor", "repeat": 0, "mode": "baseline", "frames": 3002, "measure_sec": 30.0051055, "p50_ms": 9.643550000000001, "p95_ms": 12.81892, "p99_ms": 15.426943999999994, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 720896, "runtime_files_restored": 210, "report": "bin/items_performance/armor-0-baseline/frame-benchmark.json"}
+Measuring armor-0-candidate
+Restored 212 runtime files
+{"scene": "armor", "repeat": 0, "mode": "candidate", "frames": 2972, "measure_sec": 30.0065433, "p50_ms": 9.738, "p95_ms": 12.827324999999998, "p99_ms": 13.570469999999998, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 22369600, "runtime_files_restored": 212, "report": "bin/items_performance/armor-0-candidate/frame-benchmark.json"}
+Measuring armor-1-candidate
+Restored 212 runtime files
+{"scene": "armor", "repeat": 1, "mode": "candidate", "frames": 3137, "measure_sec": 30.0032251, "p50_ms": 9.2673, "p95_ms": 12.549479999999999, "p99_ms": 13.112195999999999, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 22369600, "runtime_files_restored": 212, "report": "bin/items_performance/armor-1-candidate/frame-benchmark.json"}
+Measuring armor-1-baseline
+Restored 210 runtime files
+{"scene": "armor", "repeat": 1, "mode": "baseline", "frames": 2816, "measure_sec": 30.0010191, "p50_ms": 10.4137, "p95_ms": 13.697375000000001, "p99_ms": 15.251819999999991, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 720896, "runtime_files_restored": 210, "report": "bin/items_performance/armor-1-baseline/frame-benchmark.json"}
+Measuring armor-2-baseline
+Restored 210 runtime files
+{"scene": "armor", "repeat": 2, "mode": "baseline", "frames": 2538, "measure_sec": 30.0031143, "p50_ms": 11.064599999999999, "p95_ms": 15.20198, "p99_ms": 25.326141000000085, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 720896, "runtime_files_restored": 210, "report": "bin/items_performance/armor-2-baseline/frame-benchmark.json"}
+Measuring armor-2-candidate
+Restored 212 runtime files
+{"scene": "armor", "repeat": 2, "mode": "candidate", "frames": 2548, "measure_sec": 30.010473, "p50_ms": 11.693200000000001, "p95_ms": 14.617135000000001, "p99_ms": 17.84854700000003, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 22369600, "runtime_files_restored": 212, "report": "bin/items_performance/armor-2-candidate/frame-benchmark.json"}
+Measuring drops-0-baseline
+Restored 210 runtime files
+{"scene": "drops", "repeat": 0, "mode": "baseline", "frames": 1583, "measure_sec": 30.0137176, "p50_ms": 16.7873, "p95_ms": 26.75312, "p99_ms": 35.335708000000004, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/drops-0-baseline/frame-benchmark.json"}
+Measuring drops-0-candidate
+Restored 212 runtime files
+{"scene": "drops", "repeat": 0, "mode": "candidate", "frames": 2210, "measure_sec": 30.006297, "p50_ms": 13.3276, "p95_ms": 16.875335, "p99_ms": 19.43935299999998, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/drops-0-candidate/frame-benchmark.json"}
+Measuring drops-1-candidate
+Restored 212 runtime files
+{"scene": "drops", "repeat": 1, "mode": "candidate", "frames": 2169, "measure_sec": 30.0023418, "p50_ms": 13.6547, "p95_ms": 16.90428, "p99_ms": 20.84036800000002, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/drops-1-candidate/frame-benchmark.json"}
+Measuring drops-1-baseline
+Restored 210 runtime files
+{"scene": "drops", "repeat": 1, "mode": "baseline", "frames": 1218, "measure_sec": 30.0057653, "p50_ms": 24.33305, "p95_ms": 27.69554999999999, "p99_ms": 31.053010999999948, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/drops-1-baseline/frame-benchmark.json"}
+Measuring drops-2-baseline
+Restored 210 runtime files
+{"scene": "drops", "repeat": 2, "mode": "baseline", "frames": 1274, "measure_sec": 30.0241781, "p50_ms": 24.316200000000002, "p95_ms": 28.680974999999986, "p99_ms": 34.880722, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/drops-2-baseline/frame-benchmark.json"}
+Measuring drops-2-candidate
+Restored 212 runtime files
+{"scene": "drops", "repeat": 2, "mode": "candidate", "frames": 1338, "measure_sec": 30.018144, "p50_ms": 17.00155, "p95_ms": 52.26552999999995, "p99_ms": 98.34021899999998, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/drops-2-candidate/frame-benchmark.json"}
+Measuring catalog-0-baseline
+Restored 210 runtime files
+{"scene": "catalog", "repeat": 0, "mode": "baseline", "frames": 1846, "measure_sec": 30.014486, "p50_ms": 15.724799999999998, "p95_ms": 24.4627, "p99_ms": 39.23998999999998, "cold_catalog_ms": 1108.3291, "cold_frames": 31, "cold_frame_p95_ms": 82.48349999999999, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/catalog-0-baseline/frame-benchmark.json"}
+Measuring catalog-0-candidate
+Restored 212 runtime files
+{"scene": "catalog", "repeat": 0, "mode": "candidate", "frames": 2145, "measure_sec": 30.0059502, "p50_ms": 12.883, "p95_ms": 18.863519999999998, "p99_ms": 39.39216399999997, "cold_catalog_ms": 1064.234, "cold_frames": 33, "cold_frame_p95_ms": 55.66103999999999, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/catalog-0-candidate/frame-benchmark.json"}
+Measuring catalog-1-candidate
+Restored 212 runtime files
+{"scene": "catalog", "repeat": 1, "mode": "candidate", "frames": 2825, "measure_sec": 30.003945, "p50_ms": 10.3141, "p95_ms": 12.68708, "p99_ms": 14.368227999999991, "cold_catalog_ms": 997.845, "cold_frames": 31, "cold_frame_p95_ms": 53.3454, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/catalog-1-candidate/frame-benchmark.json"}
+Measuring catalog-1-baseline
+Restored 210 runtime files
+{"scene": "catalog", "repeat": 1, "mode": "baseline", "frames": 2698, "measure_sec": 30.0126909, "p50_ms": 10.68995, "p95_ms": 13.971235000000004, "p99_ms": 16.97870800000002, "cold_catalog_ms": 1124.3829999999998, "cold_frames": 30, "cold_frame_p95_ms": 85.33679999999994, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/catalog-1-baseline/frame-benchmark.json"}
+Measuring catalog-2-baseline
+Restored 210 runtime files
+{"scene": "catalog", "repeat": 2, "mode": "baseline", "frames": 2534, "measure_sec": 30.0083734, "p50_ms": 11.155000000000001, "p95_ms": 14.952295, "p99_ms": 20.721366000000014, "cold_catalog_ms": 880.8437, "cold_frames": 30, "cold_frame_p95_ms": 50.299254999999974, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/catalog-2-baseline/frame-benchmark.json"}
+Measuring catalog-2-candidate
+Restored 212 runtime files
+{"scene": "catalog", "repeat": 2, "mode": "candidate", "frames": 2401, "measure_sec": 30.0106449, "p50_ms": 11.741, "p95_ms": 16.7078, "p99_ms": 20.124, "cold_catalog_ms": 1003.9562, "cold_frames": 33, "cold_frame_p95_ms": 42.9749, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/catalog-2-candidate/frame-benchmark.json"}
+Measuring moving-0-baseline
+Restored 210 runtime files
+{"scene": "moving", "repeat": 0, "mode": "baseline", "frames": 1457, "measure_sec": 30.0042356, "p50_ms": 18.4247, "p95_ms": 30.455940000000005, "p99_ms": 51.512932000000006, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/moving-0-baseline/frame-benchmark.json", "moving_frames": 65, "moving_p95_ms": 26.26188, "peak_flying_bodies": 512, "peak_flying_arrows": 256}
+Measuring moving-0-candidate
+Restored 212 runtime files
+{"scene": "moving", "repeat": 0, "mode": "candidate", "frames": 1886, "measure_sec": 30.0086345, "p50_ms": 14.2535, "p95_ms": 24.779474999999998, "p99_ms": 59.19634500000006, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/moving-0-candidate/frame-benchmark.json", "moving_frames": 102, "moving_p95_ms": 18.007795, "peak_flying_bodies": 512, "peak_flying_arrows": 256}
+Measuring moving-1-candidate
+Restored 212 runtime files
+{"scene": "moving", "repeat": 1, "mode": "candidate", "frames": 2171, "measure_sec": 30.0009226, "p50_ms": 13.5853, "p95_ms": 16.784599999999998, "p99_ms": 22.029330000000034, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/moving-1-candidate/frame-benchmark.json", "moving_frames": 102, "moving_p95_ms": 17.66557, "peak_flying_bodies": 512, "peak_flying_arrows": 256}
+Measuring moving-1-baseline
+Restored 210 runtime files
+{"scene": "moving", "repeat": 1, "mode": "baseline", "frames": 1654, "measure_sec": 30.0036301, "p50_ms": 16.97325, "p95_ms": 23.47816499999999, "p99_ms": 47.53204200000002, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/moving-1-baseline/frame-benchmark.json", "moving_frames": 82, "moving_p95_ms": 21.657685, "peak_flying_bodies": 512, "peak_flying_arrows": 256}
+Measuring moving-2-baseline
+Restored 210 runtime files
+{"scene": "moving", "repeat": 2, "mode": "baseline", "frames": 1222, "measure_sec": 30.0200023, "p50_ms": 25.65785, "p95_ms": 32.277170000000005, "p99_ms": 43.93561999999999, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/moving-2-baseline/frame-benchmark.json", "moving_frames": 62, "moving_p95_ms": 31.178539999999984, "peak_flying_bodies": 512, "peak_flying_arrows": 256}
+Measuring moving-2-candidate
+Restored 212 runtime files
+{"scene": "moving", "repeat": 2, "mode": "candidate", "frames": 1798, "measure_sec": 30.0119567, "p50_ms": 15.2274, "p95_ms": 25.339884999999995, "p99_ms": 56.03701399999998, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/moving-2-candidate/frame-benchmark.json", "moving_frames": 88, "moving_p95_ms": 21.593099999999993, "peak_flying_bodies": 512, "peak_flying_arrows": 256}
+passed=False; evidence=E:\Work\Home\Cubatarium\bin\items_performance\summary.json

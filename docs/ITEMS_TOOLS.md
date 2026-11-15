@@ -104,12 +104,23 @@ Hardness gates unbreakable (`hardness <= 0` in Survival). On groupcap match, dur
 
 ## Visuals
 
-- Inventory / hotbar icons: `UItemIconCache` via `UItemPreviewRenderer` (glTF → parts[] → FallbackParts)
-- Hotbar: wear bar + broken dim
-- FP viewmodel: clear-Z mesh arms (`TryDrawSkinnedArms`) + held Item/Block (`ShowFpWield`, Perspective only). Held items prefer glTF (`TryDrawGltfHeld`), else parts. Scale = AABB fit × `visual.wield_scale` (category defaults via `ItemVisualDefaults` / `tools/apply_item_visual_defaults.py`). Target tool length ≫ FP block cube (~0.22).
-- Worn armor: `WornEquipmentDrawer` on `bone_skeleton`. TP tool/offhand on `rightItem`/`leftItem` (hidden for possessed player when FP viewmodel is on). Character sheet paper-doll draws the same wield attach.
-- Swing/use presets: [`content/item_visual_presets.json`](../content/item_visual_presets.json)
-- Models: [`ITEM_ASSETS.md`](ITEM_ASSETS.md)
+All 70 published items use the authored v3 surface path. `ItemRenderAsset`,
+`ItemVisualState` and `ItemSurfaceRenderer` share geometry, normals, UVs,
+materials and state bindings across icons, FP, TP, worn armor and physical cargo.
+Legacy resources remain available for migration and archived comparisons;
+missing v3 production assets fail acceptance.
+
+- Inventory/hotbar icons use fixed lighting and cached small-icon resolves.
+  Wear/broken indicators remain instance state.
+- FP handheld items keep existing action presets and arm motion. Physical cargo
+  uses the shared human world skeleton/IK for both FP arms and TP presentation.
+- TP active/offhand items attach to `rightItem`/`leftItem`; hiding the possessed
+  item requires the actual first-person camera with its viewmodel enabled.
+- Bow draw/nock, container fill, consumption and successful utility pulses use
+  authoritative gameplay inputs. Refused actions do not create a use pulse.
+- Ctrl+F8 opens Item Lab for two-source comparisons, diagnostics, state controls,
+  reload and PNG/JSON export using test state, without consuming player property.
+- Authoring, publication, provenance and native commands: [ITEM_ASSETS.md](ITEM_ASSETS.md).
 
 ## Shield / bow controls
 

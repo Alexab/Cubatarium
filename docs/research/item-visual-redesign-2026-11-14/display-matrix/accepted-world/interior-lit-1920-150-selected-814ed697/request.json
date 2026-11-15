@@ -1,0 +1,25 @@
+{
+  "ids": [
+    "apple",
+    "bread",
+    "bucket",
+    "copper_axe",
+    "gold_sword",
+    "iron_head",
+    "iron_pickaxe",
+    "leather_chest",
+    "raw_iron",
+    "shears",
+    "stone_pickaxe",
+    "wood_bow"
+  ],
+  "light": "interior-lit",
+  "width": 1920,
+  "height": 1080,
+  "scale": 1.5,
+  "interaction": "",
+  "perspective": "first",
+  "mode": "creative",
+  "body": "male",
+  "subject": "item"
+}

@@ -1,0 +1,175 @@
+{
+  "schema": "flight_sim_uninstrumented_run.v1",
+  "phase_id": "unspecified",
+  "scenario": "",
+  "world": "ItemVisualPerfQA",
+  "process_rc": 0,
+  "hang_killed": false,
+  "process_success": true,
+  "verdict": "not_evaluated_metrics_disabled",
+  "pass": null,
+  "route_observation": {
+    "loading_seen": true,
+    "ingame_frames": 735,
+    "ingame_seconds_requested": 54,
+    "start_focus": [
+      0,
+      0
+    ],
+    "end_focus": [
+      0,
+      0
+    ],
+    "chunks_traveled_cheb": 0,
+    "collision_stop_triggered": false
+  },
+  "world_startup": {
+    "requested_world": "ItemVisualPerfQA",
+    "runtime_world": "ItemVisualPerfQA",
+    "runtime_world_matches_requested": true,
+    "startup_operation": "load",
+    "storage_mode": "saved_world_terrain_loaded",
+    "cache_mode": "warm",
+    "startup_operation_ms": 1075.7064,
+    "chunk_files_seen": 0,
+    "chunk_files_read": 0,
+    "voxels_from_files": 0,
+    "spatial_columns_loaded": 121,
+    "spatial_columns_total": 121,
+    "generation_columns_completed": 0,
+    "generation_columns_total": 0,
+    "start_focus": [
+      0,
+      0
+    ],
+    "end_focus": [
+      0,
+      0
+    ]
+  },
+  "metrics": {
+    "frame_perf_collection": false,
+    "frame_perf_disk_logging": false,
+    "host_resource_sampling": false,
+    "perf_jsonl": null
+  },
+  "runtime_resources": {
+    "schema": "flight-runtime-resources.v1",
+    "available": false,
+    "disabled_by_user": true,
+    "sample_interval_sec": 1.0,
+    "sample_count": 0,
+    "logical_cpu_count": null,
+    "samples": [],
+    "unavailable_reason": "disabled_by_user",
+    "host_cpu_percent_summary": null,
+    "app_cpu_machine_percent_summary": null,
+    "other_cpu_machine_percent_estimate_summary": null,
+    "app_rss_mb_max": null,
+    "system_available_memory_mb_min": null,
+    "timed_out": false,
+    "audio_disabled_for_test": true
+  },
+  "run_manifest": {
+    "schema": "a21_run_manifest.v1",
+    "git_sha": "1eb9aef4d804cac39a264445160da4d7a2878a1c",
+    "git_branch": "codex/item-visual-redesign",
+    "dirty_diff_hash": "a5c15fee6e1e7b6666cb4e025b3a5a5d110e7d47973f129c387bfdcc5884d89a",
+    "manifest_generated_git_sha": "1eb9aef4d804cac39a264445160da4d7a2878a1c",
+    "manifest_generated_branch": "codex/item-visual-redesign",
+    "manifest_generated_dirty_diff_hash": "a5c15fee6e1e7b6666cb4e025b3a5a5d110e7d47973f129c387bfdcc5884d89a",
+    "flight_runner_sha256": "f14351bae3431410193398d68a1e643fdb55b5a0ddfde68315a77297122d6638",
+    "analyzer_script_sha256": "f01ccc60ed155064c50e61b1ddc1f2d58745d118894a1660bcbb9ec7b0fdbdc2",
+    "manifest_helper_sha256": "850e84840727a439ca18d91da1569c82f38311708797313fe329d6ef712c851d",
+    "exe_path": "E:\\Work\\Home\\Cubatarium\\bin\\Cubatarium.exe",
+    "exe_hash": "8b2380633c20156100325f0a3f8b89529637cd9d664084c84312b259443d30e2",
+    "build_flags": {
+      "config": "Release",
+      "platform": "Windows-10-10.0.19045-SP0",
+      "python": "3.13.7"
+    },
+    "backend": "desktop-gl",
+    "gl_capabilities": null,
+    "gpu_driver": null,
+    "resolution": null,
+    "light_distance_settings": null,
+    "world": "ItemVisualPerfQA",
+    "world_seed_or_hash": 15112026,
+    "world_metadata_hash": "664f6ebced0a2b9d9c66d53d0ccb53bd199ff07fec86f01830a37fed96c82b0f",
+    "scenario": "",
+    "route_hash": "25c640b270084fba3ae0b24b696eb7cf6fef69ad5e343cd91bf6028e246fb066",
+    "cold_warm_mode": "warm",
+    "fog_on": false,
+    "teleport_cruise": false,
+    "manifest_required_empty": [
+      "scenario",
+      "gl_capabilities",
+      "gpu_driver",
+      "resolution",
+      "light_distance_settings"
+    ],
+    "warm_protocol": "warmup_sec",
+    "route": {
+      "schema": "flight-route.v1",
+      "scenario": "",
+      "world": "ItemVisualPerfQA",
+      "resume": true,
+      "teleport_cruise": false,
+      "product_start_position": null,
+      "product_start_focus_expected": null,
+      "cruise_chunk": [
+        null,
+        null
+      ],
+      "cruise_eye_y": null,
+      "yaw_deg": null,
+      "pitch_deg": null,
+      "fly_phase_sec": 50.0,
+      "stop_phase_sec": 50.0,
+      "idle_sec": 0.0,
+      "reverse_course_after_sec": 0.0,
+      "dive_phase_sec": 0.0,
+      "hold_space": false,
+      "level_forward": false,
+      "sprint": false,
+      "visible": false,
+      "move_speed_scale": "1",
+      "fog_pull_in_enabled": null,
+      "fixed_time_of_day": null,
+      "require_existing_world": true,
+      "product_start_position_file_pinned": false
+    },
+    "requested_world": "ItemVisualPerfQA",
+    "world_startup": {
+      "requested_world": "ItemVisualPerfQA",
+      "runtime_world": "ItemVisualPerfQA",
+      "runtime_world_matches_requested": true,
+      "startup_operation": "load",
+      "storage_mode": "saved_world_terrain_loaded",
+      "cache_mode": "warm",
+      "startup_operation_ms": 1075.7064,
+      "chunk_files_seen": 0,
+      "chunk_files_read": 0,
+      "voxels_from_files": 0,
+      "spatial_columns_loaded": 121,
+      "spatial_columns_total": 121,
+      "generation_columns_completed": 0,
+      "generation_columns_total": 0,
+      "start_focus": [
+        0,
+        0
+      ],
+      "end_focus": [
+        0,
+        0
+      ]
+    },
+    "frame_perf_enabled": false,
+    "host_resource_sampling_enabled": false,
+    "perf_jsonl": null,
+    "info_log": "E:\\Work\\Home\\Cubatarium\\bin\\item_world_visual\\interior-lit-1280-100-selected-814ed697\\flight-artifacts\\logs\\Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261115-183821.2616",
+    "application_report": "E:\\Work\\Home\\Cubatarium\\bin\\item_world_visual\\interior-lit-1280-100-selected-814ed697\\flight-artifacts\\flight_sim_report.json",
+    "artifact_root": "E:\\Work\\Home\\Cubatarium\\bin\\item_world_visual\\interior-lit-1280-100-selected-814ed697\\flight-artifacts",
+    "analysis_status": "skipped_metrics_disabled"
+  }
+}

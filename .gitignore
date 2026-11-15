@@ -247,3 +247,6 @@ tools/debug_uv_overlays/
 /bin/item_lab_art/
 
 /bin/item_world_visual/
+
+/bin/items_decode_once_qa/
+/bin/items_readback_budget_qa/

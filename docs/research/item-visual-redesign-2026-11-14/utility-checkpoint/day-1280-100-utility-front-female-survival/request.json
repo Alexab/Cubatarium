@@ -1,0 +1,15 @@
+{
+  "ids": [
+    "flint_and_steel",
+    "shears"
+  ],
+  "light": "day",
+  "width": 1280,
+  "height": 720,
+  "scale": 1.0,
+  "interaction": "utility",
+  "perspective": "front",
+  "mode": "survival",
+  "body": "female",
+  "subject": "item"
+}

@@ -125,9 +125,11 @@ void UGuiQuadBatch::Flush()
 
   glBindVertexArray(Vao);
   glBindBuffer(GL_ARRAY_BUFFER, Vbo);
-  glBufferSubData(GL_ARRAY_BUFFER, 0,
-                  static_cast<GLsizeiptr>(Vertices.size() * sizeof(Vertex)),
-                  Vertices.data());
+  // Color and icon draws interleave, so each flush may reuse an in-flight
+  // prefix. A fresh store avoids synchronizing with the preceding batch.
+  glBufferData(GL_ARRAY_BUFFER,
+               static_cast<GLsizeiptr>(Vertices.size() * sizeof(Vertex)),
+               Vertices.data(), GL_STREAM_DRAW);
   glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(Vertices.size()));
   glBindVertexArray(0);
   Shader->Unuse();

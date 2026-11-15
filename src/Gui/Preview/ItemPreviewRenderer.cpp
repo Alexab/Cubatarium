@@ -560,7 +560,7 @@ bool UItemPreviewRenderer::DrawGltfPath(const std::string &itemId,
   {
     const auto state = EvaluateItemVisualState(*surface, inputs);
     const auto bounds = InspectionFramingBounds.value_or(
-        ItemVisualBounds(*surface, EvaluateItemVisualState(*surface, {})));
+        std::make_pair(surface->Low, surface->High));
     const auto center = (bounds.first + bounds.second) * .5f;
     const auto extent = bounds.second - bounds.first;
     const auto *definition = Items->Get(itemId);

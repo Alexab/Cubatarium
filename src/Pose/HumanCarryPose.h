@@ -55,11 +55,9 @@ public:
           if (!UHumanArmPose::ReachSphere(mesh, rig, candidate, hand != 0,
                                           center, radius, &minimum))
             return false;
-          const float distance =
-              glm::distance(center, targets[size_t(hand)]);
-          const float gap =
-              std::max({0.f, distance - radius + .003f,
-                        minimum + .003f - distance});
+          const float distance = glm::distance(center, targets[size_t(hand)]);
+          const float gap = std::max(
+              {0.f, distance - radius + .003f, minimum + .003f - distance});
           error += gap * gap;
         }
         const float score =

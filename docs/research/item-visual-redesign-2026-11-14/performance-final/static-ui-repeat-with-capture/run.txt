@@ -1,0 +1,73 @@
+Measuring fp-0-baseline
+Restored 210 runtime files
+{"scene": "fp", "repeat": 0, "mode": "baseline", "frames": 3288, "measure_sec": 30.0056372, "p50_ms": 9.15015, "p95_ms": 10.488325, "p99_ms": 10.910903000000001, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 32768, "runtime_files_restored": 210, "report": "bin/items_performance/fp-0-baseline/frame-benchmark.json"}
+Measuring fp-0-candidate
+Restored 212 runtime files
+{"scene": "fp", "repeat": 0, "mode": "candidate", "frames": 3234, "measure_sec": 30.0017703, "p50_ms": 9.4561, "p95_ms": 10.514315, "p99_ms": 11.396094000000003, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 349524, "runtime_files_restored": 212, "report": "bin/items_performance/fp-0-candidate/frame-benchmark.json"}
+Measuring fp-1-candidate
+Restored 212 runtime files
+{"scene": "fp", "repeat": 1, "mode": "candidate", "frames": 3283, "measure_sec": 30.0035255, "p50_ms": 9.3115, "p95_ms": 10.468749999999998, "p99_ms": 11.250463999999992, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 349524, "runtime_files_restored": 212, "report": "bin/items_performance/fp-1-candidate/frame-benchmark.json"}
+Measuring fp-1-baseline
+Restored 210 runtime files
+{"scene": "fp", "repeat": 1, "mode": "baseline", "frames": 3378, "measure_sec": 30.004044, "p50_ms": 8.9687, "p95_ms": 10.209819999999999, "p99_ms": 10.799709000000002, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 32768, "runtime_files_restored": 210, "report": "bin/items_performance/fp-1-baseline/frame-benchmark.json"}
+Measuring fp-2-baseline
+Restored 210 runtime files
+{"scene": "fp", "repeat": 2, "mode": "baseline", "frames": 3415, "measure_sec": 30.005009, "p50_ms": 8.822, "p95_ms": 10.12153, "p99_ms": 10.590002, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 32768, "runtime_files_restored": 210, "report": "bin/items_performance/fp-2-baseline/frame-benchmark.json"}
+Measuring fp-2-candidate
+Restored 212 runtime files
+{"scene": "fp", "repeat": 2, "mode": "candidate", "frames": 3402, "measure_sec": 30.0010905, "p50_ms": 8.9337, "p95_ms": 10.135395, "p99_ms": 10.669610999999998, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 349524, "runtime_files_restored": 212, "report": "bin/items_performance/fp-2-candidate/frame-benchmark.json"}
+Measuring armor-0-baseline
+Restored 210 runtime files
+{"scene": "armor", "repeat": 0, "mode": "baseline", "frames": 3201, "measure_sec": 30.0052489, "p50_ms": 9.1968, "p95_ms": 11.5275, "p99_ms": 13.153, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 720896, "runtime_files_restored": 210, "report": "bin/items_performance/armor-0-baseline/frame-benchmark.json"}
+Measuring armor-0-candidate
+Restored 212 runtime files
+{"scene": "armor", "repeat": 0, "mode": "candidate", "frames": 3176, "measure_sec": 30.0012279, "p50_ms": 9.2641, "p95_ms": 12.104075, "p99_ms": 12.960275000000001, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 22369600, "runtime_files_restored": 212, "report": "bin/items_performance/armor-0-candidate/frame-benchmark.json"}
+Measuring armor-1-candidate
+Restored 212 runtime files
+{"scene": "armor", "repeat": 1, "mode": "candidate", "frames": 3126, "measure_sec": 30.0011193, "p50_ms": 9.392199999999999, "p95_ms": 12.37595, "p99_ms": 12.856475, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 22369600, "runtime_files_restored": 212, "report": "bin/items_performance/armor-1-candidate/frame-benchmark.json"}
+Measuring armor-1-baseline
+Restored 210 runtime files
+{"scene": "armor", "repeat": 1, "mode": "baseline", "frames": 2734, "measure_sec": 30.0064694, "p50_ms": 10.4199, "p95_ms": 13.942879999999999, "p99_ms": 18.688053000000018, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 720896, "runtime_files_restored": 210, "report": "bin/items_performance/armor-1-baseline/frame-benchmark.json"}
+Measuring armor-2-baseline
+Restored 210 runtime files
+{"scene": "armor", "repeat": 2, "mode": "baseline", "frames": 3115, "measure_sec": 30.0070913, "p50_ms": 9.399, "p95_ms": 11.746279999999999, "p99_ms": 13.422760000000004, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 720896, "runtime_files_restored": 210, "report": "bin/items_performance/armor-2-baseline/frame-benchmark.json"}
+Measuring armor-2-candidate
+Restored 212 runtime files
+{"scene": "armor", "repeat": 2, "mode": "candidate", "frames": 3382, "measure_sec": 30.0064412, "p50_ms": 8.96755, "p95_ms": 10.45807, "p99_ms": 12.093182, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 22369600, "runtime_files_restored": 212, "report": "bin/items_performance/armor-2-candidate/frame-benchmark.json"}
+Measuring drops-0-baseline
+Restored 210 runtime files
+{"scene": "drops", "repeat": 0, "mode": "baseline", "frames": 1387, "measure_sec": 30.005322, "p50_ms": 21.7696, "p95_ms": 24.332030000000003, "p99_ms": 27.05927800000003, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/drops-0-baseline/frame-benchmark.json"}
+Measuring drops-0-candidate
+Restored 212 runtime files
+{"scene": "drops", "repeat": 0, "mode": "candidate", "frames": 2485, "measure_sec": 30.0082372, "p50_ms": 11.8571, "p95_ms": 14.736199999999998, "p99_ms": 16.512015999999996, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/drops-0-candidate/frame-benchmark.json"}
+Measuring drops-1-candidate
+Restored 212 runtime files
+{"scene": "drops", "repeat": 1, "mode": "candidate", "frames": 2533, "measure_sec": 30.009913, "p50_ms": 11.6353, "p95_ms": 14.33398, "p99_ms": 15.871947999999994, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/drops-1-candidate/frame-benchmark.json"}
+Measuring drops-1-baseline
+Restored 210 runtime files
+{"scene": "drops", "repeat": 1, "mode": "baseline", "frames": 1357, "measure_sec": 30.0050879, "p50_ms": 21.8662, "p95_ms": 24.46922, "p99_ms": 26.963712000000005, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/drops-1-baseline/frame-benchmark.json"}
+Measuring drops-2-baseline
+Restored 210 runtime files
+{"scene": "drops", "repeat": 2, "mode": "baseline", "frames": 1365, "measure_sec": 30.0025144, "p50_ms": 21.8952, "p95_ms": 24.72076, "p99_ms": 26.772075999999995, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/drops-2-baseline/frame-benchmark.json"}
+Measuring drops-2-candidate
+Restored 212 runtime files
+{"scene": "drops", "repeat": 2, "mode": "candidate", "frames": 2437, "measure_sec": 30.0110411, "p50_ms": 12.169, "p95_ms": 15.123679999999998, "p99_ms": 17.295971999999985, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/drops-2-candidate/frame-benchmark.json"}
+Measuring moving-0-baseline
+Restored 210 runtime files
+{"scene": "moving", "repeat": 0, "mode": "baseline", "frames": 1245, "measure_sec": 30.0134285, "p50_ms": 23.5616, "p95_ms": 33.48255999999999, "p99_ms": 48.87944799999997, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/moving-0-baseline/frame-benchmark.json", "moving_frames": 72, "moving_p95_ms": 31.22783, "peak_flying_bodies": 512, "peak_flying_arrows": 256}
+Measuring moving-0-candidate
+Restored 212 runtime files
+{"scene": "moving", "repeat": 0, "mode": "candidate", "frames": 2030, "measure_sec": 30.0105153, "p50_ms": 13.3423, "p95_ms": 21.450490000000002, "p99_ms": 50.374938000000014, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/moving-0-candidate/frame-benchmark.json", "moving_frames": 74, "moving_p95_ms": 32.70569999999992, "peak_flying_bodies": 512, "peak_flying_arrows": 256}
+Measuring moving-1-candidate
+Restored 212 runtime files
+{"scene": "moving", "repeat": 1, "mode": "candidate", "frames": 2474, "measure_sec": 30.001003, "p50_ms": 11.8084, "p95_ms": 14.96042, "p99_ms": 17.437689999999996, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/moving-1-candidate/frame-benchmark.json", "moving_frames": 107, "moving_p95_ms": 17.523229999999998, "peak_flying_bodies": 512, "peak_flying_arrows": 256}
+Measuring moving-1-baseline
+Restored 210 runtime files
+{"scene": "moving", "repeat": 1, "mode": "baseline", "frames": 1343, "measure_sec": 30.0076373, "p50_ms": 21.9871, "p95_ms": 24.781429999999993, "p99_ms": 27.148243999999984, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/moving-1-baseline/frame-benchmark.json", "moving_frames": 60, "moving_p95_ms": 27.720685, "peak_flying_bodies": 512, "peak_flying_arrows": 256}
+Measuring moving-2-baseline
+Restored 210 runtime files
+{"scene": "moving", "repeat": 2, "mode": "baseline", "frames": 1443, "measure_sec": 30.00959, "p50_ms": 21.8819, "p95_ms": 24.540959999999995, "p99_ms": 26.575595999999994, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/moving-2-baseline/frame-benchmark.json", "moving_frames": 96, "moving_p95_ms": 19.49865, "peak_flying_bodies": 512, "peak_flying_arrows": 256}
+Measuring moving-2-candidate
+Restored 212 runtime files
+{"scene": "moving", "repeat": 2, "mode": "candidate", "frames": 2255, "measure_sec": 30.0011537, "p50_ms": 12.876, "p95_ms": 16.221599999999995, "p99_ms": 23.942400000000017, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/moving-2-candidate/frame-benchmark.json", "moving_frames": 77, "moving_p95_ms": 42.10044000000001, "peak_flying_bodies": 512, "peak_flying_arrows": 256}
+passed=False; evidence=E:\Work\Home\Cubatarium\bin\items_performance\summary.json

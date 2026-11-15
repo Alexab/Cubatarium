@@ -1,0 +1,31 @@
+Measuring catalog-0-baseline
+Restored 210 runtime files
+{"scene": "catalog", "repeat": 0, "mode": "baseline", "frames": 2709, "measure_sec": 30.0074577, "p50_ms": 10.593, "p95_ms": 13.602559999999999, "p99_ms": 16.880228000000013, "cold_catalog_ms": 978.9452, "cold_frames": 31, "cold_frame_p95_ms": 67.1969, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/catalog-0-baseline/frame-benchmark.json"}
+Measuring catalog-0-candidate
+Restored 212 runtime files
+{"scene": "catalog", "repeat": 0, "mode": "candidate", "frames": 2848, "measure_sec": 30.0086985, "p50_ms": 10.244, "p95_ms": 12.379005, "p99_ms": 15.000118000000015, "cold_catalog_ms": 903.4128000000001, "cold_frames": 31, "cold_frame_p95_ms": 49.812349999999995, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/catalog-0-candidate/frame-benchmark.json"}
+Measuring catalog-1-candidate
+Restored 212 runtime files
+{"scene": "catalog", "repeat": 1, "mode": "candidate", "frames": 2906, "measure_sec": 30.0051924, "p50_ms": 9.943249999999999, "p95_ms": 12.854575, "p99_ms": 17.13328, "cold_catalog_ms": 876.6321, "cold_frames": 29, "cold_frame_p95_ms": 58.3716, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/catalog-1-candidate/frame-benchmark.json"}
+Measuring catalog-1-baseline
+Restored 210 runtime files
+{"scene": "catalog", "repeat": 1, "mode": "baseline", "frames": 3024, "measure_sec": 30.0073326, "p50_ms": 9.84755, "p95_ms": 11.028315, "p99_ms": 13.205483999999998, "cold_catalog_ms": 1028.1906000000001, "cold_frames": 31, "cold_frame_p95_ms": 67.7428, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/catalog-1-baseline/frame-benchmark.json"}
+Measuring catalog-2-baseline
+Restored 210 runtime files
+{"scene": "catalog", "repeat": 2, "mode": "baseline", "frames": 3078, "measure_sec": 30.0091185, "p50_ms": 9.713750000000001, "p95_ms": 10.738819999999999, "p99_ms": 13.735772, "cold_catalog_ms": 803.7721, "cold_frames": 29, "cold_frame_p95_ms": 51.51959999999998, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/catalog-2-baseline/frame-benchmark.json"}
+Measuring catalog-2-candidate
+Restored 212 runtime files
+{"scene": "catalog", "repeat": 2, "mode": "candidate", "frames": 2959, "measure_sec": 30.0015214, "p50_ms": 9.8522, "p95_ms": 11.724699999999999, "p99_ms": 16.560336000000035, "cold_catalog_ms": 753.2444, "cold_frames": 29, "cold_frame_p95_ms": 47.59705999999998, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/catalog-2-candidate/frame-benchmark.json"}
+Measuring catalog-3-candidate
+Restored 212 runtime files
+{"scene": "catalog", "repeat": 3, "mode": "candidate", "frames": 2764, "measure_sec": 30.0082791, "p50_ms": 10.0798, "p95_ms": 14.213859999999995, "p99_ms": 20.111242999999988, "cold_catalog_ms": 799.5486000000001, "cold_frames": 30, "cold_frame_p95_ms": 45.87358999999997, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/catalog-3-candidate/frame-benchmark.json"}
+Measuring catalog-3-baseline
+Restored 210 runtime files
+{"scene": "catalog", "repeat": 3, "mode": "baseline", "frames": 2894, "measure_sec": 30.0072975, "p50_ms": 9.88425, "p95_ms": 12.968909999999996, "p99_ms": 21.52515500000006, "cold_catalog_ms": 764.5705, "cold_frames": 28, "cold_frame_p95_ms": 52.69689999999999, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/catalog-3-baseline/frame-benchmark.json"}
+Measuring catalog-4-baseline
+Restored 210 runtime files
+{"scene": "catalog", "repeat": 4, "mode": "baseline", "frames": 2999, "measure_sec": 30.0099341, "p50_ms": 9.8263, "p95_ms": 11.36424, "p99_ms": 14.815093999999997, "cold_catalog_ms": 781.7652, "cold_frames": 28, "cold_frame_p95_ms": 57.77578999999999, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 43384832, "runtime_files_restored": 210, "report": "bin/items_performance/catalog-4-baseline/frame-benchmark.json"}
+Measuring catalog-4-candidate
+Restored 212 runtime files
+{"scene": "catalog", "repeat": 4, "mode": "candidate", "frames": 2865, "measure_sec": 30.0040978, "p50_ms": 10.0212, "p95_ms": 13.628719999999994, "p99_ms": 19.454368000000002, "cold_catalog_ms": 826.9304, "cold_frames": 29, "cold_frame_p95_ms": 50.391439999999996, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 37311736, "runtime_files_restored": 212, "report": "bin/items_performance/catalog-4-candidate/frame-benchmark.json"}
+passed=False; evidence=E:\Work\Home\Cubatarium\bin\items_performance\summary.json

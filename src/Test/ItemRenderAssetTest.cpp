@@ -373,6 +373,27 @@ int main()
         {"support_grip_node", "blade"},   {"fp_scale", .65}};
     write(g);
     const auto asset = cutum::LoadItemRenderAsset(folder / "model.gltf");
+    Expect(asset->StaticWearSections.at("blade").Primitives ==
+               std::vector<size_t>{0},
+           "wear cache preserves the original primitive ordering");
+    auto uncached = *asset;
+    uncached.StaticWearSections.clear();
+    cutum::ItemVisualState selected;
+    selected.VisibleRoots.insert("blade");
+    const auto cachedBounds = cutum::ItemVisualBounds(*asset, selected);
+    const auto directBounds = cutum::ItemVisualBounds(uncached, selected);
+    Expect(cachedBounds == directBounds,
+           "cached wear bounds equal hierarchy evaluation");
+    selected.NodeTransforms["root"] =
+        glm::translate(glm::mat4(1), glm::vec3(1, 0, 0));
+    Expect(cutum::ItemVisualBounds(*asset, selected) ==
+               cutum::ItemVisualBounds(uncached, selected),
+           "animated wear does not reuse bind-pose bounds");
+    selected.NodeTransforms.clear();
+    selected.HiddenNodes.insert("blade");
+    Expect(cutum::ItemVisualBounds(*asset, selected) ==
+               cutum::ItemVisualBounds(uncached, selected),
+           "hidden sections do not reuse static wear bounds");
     auto repeated = *asset;
     repeated.Primitives.push_back(repeated.Primitives[0]);
     repeated.Materials.push_back(repeated.Materials[0]);

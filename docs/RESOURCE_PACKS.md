@@ -98,6 +98,13 @@ python tools/apply_block_hardness.py --dry-run
 python tools/apply_block_hardness.py
 ```
 
+`physics.flammable` is an explicit Boolean material property (default `false`).
+It is read both with a `preset` and in a standalone physics object, for example
+`"physics": {"preset": "solid", "flammable": true}`. It permits ignition and the
+existing fire-spread reaction; texture/name changes alone never opt a block in.
+The value belongs to the definition owner pack, like the other physics fields.
+Bundled materials are not automatically reclassified by this support.
+
 Fluid-related `physics` fields:
 
 - `fluid_permeable` (`bool`, optional): explicit waterlogging/permeability override for non-liquid blocks. If omitted, fallback remains render-style + occupancy (`cross`/`cutout` with occupancy `< 1`).

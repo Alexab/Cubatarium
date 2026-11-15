@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <memory>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -27,7 +28,8 @@ public:
   };
 
   UInventoryIconService();
-  bool Initialize();
+  ~UInventoryIconService();
+  bool Initialize(const std::filesystem::path &cacheRoot = {});
   static std::string BuildCacheKey(const std::string &kind,
                                    const std::string &entityId,
                                    const std::string &variantId);
@@ -38,6 +40,7 @@ public:
                           const std::string &fingerprint, int expectedSize,
                           GLuint &outTexture);
 
+  /// Item stores enqueue GPU readback; success means accepted for persistence.
   bool StoreIconTexture(const std::string &kind, const std::string &entityId,
                         const std::string &variantId,
                         const std::string &fingerprint, int size,
@@ -52,6 +55,11 @@ public:
   const Stats &GetStats() const { return Metrics; }
 
 private:
+  struct ReadbackState;
+  std::unique_ptr<ReadbackState> Readbacks;
+  void DrainReadbacks();
+  void CancelReadbacks(const std::string &kind);
+
   struct Entry
   {
     std::string Fingerprint;
@@ -75,8 +83,9 @@ private:
                     const std::vector<unsigned char> &pixels) const;
   bool CaptureTexturePixels(GLuint texture, int size,
                             std::vector<unsigned char> &pixels) const;
-  GLuint CreateTextureFromPixels(int size,
-                                 const std::vector<unsigned char> &pixels) const;
+  GLuint
+  CreateTextureFromPixels(int size,
+                          const std::vector<unsigned char> &pixels) const;
 };
 
 } // namespace cutum

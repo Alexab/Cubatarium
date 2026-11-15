@@ -1,0 +1,885 @@
+{
+  "checks": [
+    {
+      "name": "flint_and_steel equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel equipped utility use preserves its finite instance",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel equipped idle/refused utility action has no stale animation pulse",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel equipped creative utility actions preserve wear",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel success actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel success utility use preserves its finite instance",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel success successful utility action produces a real pulse",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel success creative utility actions preserve wear",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel settled actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel settled utility use preserves its finite instance",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel settled idle/refused utility action has no stale animation pulse",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel settled refusal and slot changes do not add wear",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel settled creative utility actions preserve wear",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel refused actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel refused utility use preserves its finite instance",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel refused idle/refused utility action has no stale animation pulse",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel refused refusal and slot changes do not add wear",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel refused creative utility actions preserve wear",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel empty utility use preserves its finite instance",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel empty idle/refused utility action has no stale animation pulse",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel empty refusal and slot changes do not add wear",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel empty creative utility actions preserve wear",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel empty utility slot cancellation selects the empty slot",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel restored actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel restored utility use preserves its finite instance",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel restored idle/refused utility action has no stale animation pulse",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel restored refusal and slot changes do not add wear",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel restored creative utility actions preserve wear",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel idle actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel idle utility use preserves its finite instance",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel idle idle/refused utility action has no stale animation pulse",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel idle refusal and slot changes do not add wear",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel idle creative utility actions preserve wear",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel finished actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel finished utility use preserves its finite instance",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel finished idle/refused utility action has no stale animation pulse",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel finished refusal and slot changes do not add wear",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel finished creative utility actions preserve wear",
+      "passed": true
+    },
+    {
+      "name": "shears equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "shears equipped utility use preserves its finite instance",
+      "passed": true
+    },
+    {
+      "name": "shears equipped idle/refused utility action has no stale animation pulse",
+      "passed": true
+    },
+    {
+      "name": "shears equipped creative utility actions preserve wear",
+      "passed": true
+    },
+    {
+      "name": "shears success actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "shears success utility use preserves its finite instance",
+      "passed": true
+    },
+    {
+      "name": "shears success successful utility action produces a real pulse",
+      "passed": true
+    },
+    {
+      "name": "shears success shearing removes real foliage and preserves the harvest",
+      "passed": true
+    },
+    {
+      "name": "shears success creative utility actions preserve wear",
+      "passed": true
+    },
+    {
+      "name": "shears settled actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "shears settled utility use preserves its finite instance",
+      "passed": true
+    },
+    {
+      "name": "shears settled idle/refused utility action has no stale animation pulse",
+      "passed": true
+    },
+    {
+      "name": "shears settled refusal and slot changes do not add wear",
+      "passed": true
+    },
+    {
+      "name": "shears settled creative utility actions preserve wear",
+      "passed": true
+    },
+    {
+      "name": "shears refused actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "shears refused utility use preserves its finite instance",
+      "passed": true
+    },
+    {
+      "name": "shears refused idle/refused utility action has no stale animation pulse",
+      "passed": true
+    },
+    {
+      "name": "shears refused refusal and slot changes do not add wear",
+      "passed": true
+    },
+    {
+      "name": "shears refused creative utility actions preserve wear",
+      "passed": true
+    },
+    {
+      "name": "shears empty utility use preserves its finite instance",
+      "passed": true
+    },
+    {
+      "name": "shears empty idle/refused utility action has no stale animation pulse",
+      "passed": true
+    },
+    {
+      "name": "shears empty refusal and slot changes do not add wear",
+      "passed": true
+    },
+    {
+      "name": "shears empty creative utility actions preserve wear",
+      "passed": true
+    },
+    {
+      "name": "shears empty utility slot cancellation selects the empty slot",
+      "passed": true
+    },
+    {
+      "name": "shears restored actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "shears restored utility use preserves its finite instance",
+      "passed": true
+    },
+    {
+      "name": "shears restored idle/refused utility action has no stale animation pulse",
+      "passed": true
+    },
+    {
+      "name": "shears restored refusal and slot changes do not add wear",
+      "passed": true
+    },
+    {
+      "name": "shears restored creative utility actions preserve wear",
+      "passed": true
+    },
+    {
+      "name": "shears idle actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "shears idle utility use preserves its finite instance",
+      "passed": true
+    },
+    {
+      "name": "shears idle idle/refused utility action has no stale animation pulse",
+      "passed": true
+    },
+    {
+      "name": "shears idle refusal and slot changes do not add wear",
+      "passed": true
+    },
+    {
+      "name": "shears idle creative utility actions preserve wear",
+      "passed": true
+    },
+    {
+      "name": "shears finished actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "shears finished utility use preserves its finite instance",
+      "passed": true
+    },
+    {
+      "name": "shears finished idle/refused utility action has no stale animation pulse",
+      "passed": true
+    },
+    {
+      "name": "shears finished refusal and slot changes do not add wear",
+      "passed": true
+    },
+    {
+      "name": "shears finished creative utility actions preserve wear",
+      "passed": true
+    }
+  ],
+  "frames": [
+    {
+      "active_count": 1,
+      "active_item": "flint_and_steel",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "flint_and_steel-equipped.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "flint_and_steel",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "equipped",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.3700000047683716,
+      "world_items": [
+        {
+          "first_node": "flint_and_steel",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/flint_and_steel/model.gltf",
+          "visible_primitives": 4
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "flint_and_steel",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 175,
+      "file": "flint_and_steel-success.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "flint_and_steel",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "success",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.28724199533462524,
+      "wear": 0.3700000047683716,
+      "world_items": [
+        {
+          "first_node": "flint_and_steel",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/flint_and_steel/model.gltf",
+          "visible_primitives": 4
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "flint_and_steel",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 175,
+      "file": "flint_and_steel-settled.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "flint_and_steel",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "settled",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.3700000047683716,
+      "world_items": [
+        {
+          "first_node": "flint_and_steel",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/flint_and_steel/model.gltf",
+          "visible_primitives": 4
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "flint_and_steel",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 175,
+      "file": "flint_and_steel-refused.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "flint_and_steel",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "refused",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.3700000047683716,
+      "world_items": [
+        {
+          "first_node": "flint_and_steel",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/flint_and_steel/model.gltf",
+          "visible_primitives": 4
+        }
+      ]
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 175,
+      "file": "flint_and_steel-empty.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "flint_and_steel",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "empty",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": []
+    },
+    {
+      "active_count": 1,
+      "active_item": "flint_and_steel",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 175,
+      "file": "flint_and_steel-restored.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "flint_and_steel",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "restored",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.3700000047683716,
+      "world_items": [
+        {
+          "first_node": "flint_and_steel",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/flint_and_steel/model.gltf",
+          "visible_primitives": 4
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "flint_and_steel",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 175,
+      "file": "flint_and_steel-idle.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "flint_and_steel",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "idle",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.3700000047683716,
+      "world_items": [
+        {
+          "first_node": "flint_and_steel",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/flint_and_steel/model.gltf",
+          "visible_primitives": 4
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "flint_and_steel",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 175,
+      "file": "flint_and_steel-finished.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "flint_and_steel",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "finished",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.3700000047683716,
+      "world_items": [
+        {
+          "first_node": "flint_and_steel",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/flint_and_steel/model.gltf",
+          "visible_primitives": 4
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "shears",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 175,
+      "file": "shears-equipped.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "shears",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "equipped",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.3700000047683716,
+      "world_items": [
+        {
+          "first_node": "shears",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/shears/model.gltf",
+          "visible_primitives": 8
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "shears",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 175,
+      "file": "shears-success.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "shears",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "success",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.2876995801925659,
+      "wear": 0.3700000047683716,
+      "world_items": [
+        {
+          "first_node": "shears",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/shears/model.gltf",
+          "visible_primitives": 8
+        },
+        {
+          "first_node": "plant_fiber",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/plant_fiber/model.gltf",
+          "visible_primitives": 2
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "shears",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 175,
+      "file": "shears-settled.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "shears",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "settled",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.3700000047683716,
+      "world_items": [
+        {
+          "first_node": "shears",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/shears/model.gltf",
+          "visible_primitives": 8
+        },
+        {
+          "first_node": "plant_fiber",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/plant_fiber/model.gltf",
+          "visible_primitives": 2
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "shears",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 175,
+      "file": "shears-refused.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "shears",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "refused",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.3700000047683716,
+      "world_items": [
+        {
+          "first_node": "shears",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/shears/model.gltf",
+          "visible_primitives": 8
+        },
+        {
+          "first_node": "plant_fiber",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/plant_fiber/model.gltf",
+          "visible_primitives": 2
+        }
+      ]
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 175,
+      "file": "shears-empty.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "shears",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "empty",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "plant_fiber",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/plant_fiber/model.gltf",
+          "visible_primitives": 2
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "shears",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 175,
+      "file": "shears-restored.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "shears",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "restored",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.3700000047683716,
+      "world_items": [
+        {
+          "first_node": "shears",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/shears/model.gltf",
+          "visible_primitives": 8
+        },
+        {
+          "first_node": "plant_fiber",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/plant_fiber/model.gltf",
+          "visible_primitives": 2
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "shears",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 175,
+      "file": "shears-idle.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "shears",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "idle",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.3700000047683716,
+      "world_items": [
+        {
+          "first_node": "shears",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/shears/model.gltf",
+          "visible_primitives": 8
+        },
+        {
+          "first_node": "plant_fiber",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/plant_fiber/model.gltf",
+          "visible_primitives": 2
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "shears",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 175,
+      "file": "shears-finished.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "shears",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": false,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "finished",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.3700000047683716,
+      "world_items": [
+        {
+          "first_node": "shears",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/shears/model.gltf",
+          "visible_primitives": 8
+        },
+        {
+          "first_node": "plant_fiber",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/plant_fiber/model.gltf",
+          "visible_primitives": 2
+        }
+      ]
+    }
+  ],
+  "passed": true,
+  "qa_explicit_flammable_material": "wood",
+  "qa_material_override_restored": true,
+  "request": {
+    "body": "female",
+    "height": 720,
+    "ids": [
+      "flint_and_steel",
+      "shears"
+    ],
+    "interaction": "utility",
+    "light": "day",
+    "mode": "creative",
+    "perspective": "front",
+    "scale": 1.0,
+    "subject": "item",
+    "width": 1280
+  },
+  "scope": "actual world FP and physical drop rendering"
+}

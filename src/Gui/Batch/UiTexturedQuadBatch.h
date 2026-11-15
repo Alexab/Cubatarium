@@ -37,6 +37,7 @@ private:
   int WindowWidth{0};
   int WindowHeight{0};
   bool Initialized{false};
+  bool StaticRectUniform{false};
   bool DepthTestWasEnabled{false};
   bool BlendWasEnabled{false};
   GLuint BoundTexture{0};

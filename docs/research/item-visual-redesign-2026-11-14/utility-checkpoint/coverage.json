@@ -1,0 +1,33 @@
+{
+  "passed": true,
+  "cases": [
+    {
+      "case": "day-1280-100-utility",
+      "checks": 91,
+      "frames": 16,
+      "passed": true,
+      "material_restored": true
+    },
+    {
+      "case": "day-1280-100-utility-survival",
+      "checks": 75,
+      "frames": 16,
+      "passed": true,
+      "material_restored": true
+    },
+    {
+      "case": "day-1280-100-utility-front-female",
+      "checks": 77,
+      "frames": 16,
+      "passed": true,
+      "material_restored": true
+    },
+    {
+      "case": "day-1280-100-utility-front-female-survival",
+      "checks": 61,
+      "frames": 16,
+      "passed": true,
+      "material_restored": true
+    }
+  ]
+}

@@ -1,0 +1,233 @@
+{
+  "checks": [
+    {
+      "name": "creative instant mining produces finite pickup beside catalog reference",
+      "passed": true
+    },
+    {
+      "name": "mode change preserves independent survival inventory",
+      "passed": true
+    },
+    {
+      "name": "creative mined stock survives mode roundtrip",
+      "passed": true
+    },
+    {
+      "name": "stateful catalog bucket becomes one finite filled instance",
+      "passed": true
+    },
+    {
+      "name": "legacy creative copies migrate to v2 domains without deletion",
+      "passed": true
+    },
+    {
+      "name": "survival cannot pick a creative world drop after load",
+      "passed": true
+    },
+    {
+      "name": "creative picks a finite world drop",
+      "passed": true
+    },
+    {
+      "name": "survival drop remains visible without immediate repickup",
+      "passed": true
+    },
+    {
+      "name": "drop pickup retains finite identity and wear",
+      "passed": true
+    },
+    {
+      "name": "creative drop remains visible without immediate repickup",
+      "passed": true
+    },
+    {
+      "name": "drop pickup retains finite identity and wear",
+      "passed": true
+    },
+    {
+      "name": "restricted throw refuses sword before extraction",
+      "passed": true
+    },
+    {
+      "name": "free policy starts sword windup",
+      "passed": true
+    },
+    {
+      "name": "release rechecks policy before the next physics step",
+      "passed": true
+    },
+    {
+      "name": "policy change cancels windup but retains held item",
+      "passed": true
+    },
+    {
+      "name": "held item cannot bypass restricted policy",
+      "passed": true
+    },
+    {
+      "name": "restricted item can be gently placed",
+      "passed": true
+    },
+    {
+      "name": "survival iron_sword miss preserves payload",
+      "passed": true
+    },
+    {
+      "name": "survival iron_sword hit preserves payload",
+      "passed": true
+    },
+    {
+      "name": "survival iron_shovel miss preserves payload",
+      "passed": true
+    },
+    {
+      "name": "survival iron_shovel hit preserves payload",
+      "passed": true
+    },
+    {
+      "name": "survival apple miss preserves payload",
+      "passed": true
+    },
+    {
+      "name": "survival apple hit preserves payload",
+      "passed": true
+    },
+    {
+      "name": "survival iron_ingot miss preserves payload",
+      "passed": true
+    },
+    {
+      "name": "survival iron_ingot hit preserves payload",
+      "passed": true
+    },
+    {
+      "name": "survival stone miss preserves payload",
+      "passed": true
+    },
+    {
+      "name": "survival missed block pickup increments backpack",
+      "passed": true
+    },
+    {
+      "name": "survival stone hit preserves payload",
+      "passed": true
+    },
+    {
+      "name": "survival hit block pickup increments backpack",
+      "passed": true
+    },
+    {
+      "name": "survival bucket miss preserves payload",
+      "passed": true
+    },
+    {
+      "name": "survival bucket hit preserves payload",
+      "passed": true
+    },
+    {
+      "name": "creative iron_sword miss preserves payload",
+      "passed": true
+    },
+    {
+      "name": "creative iron_sword hit preserves payload",
+      "passed": true
+    },
+    {
+      "name": "creative iron_shovel miss preserves payload",
+      "passed": true
+    },
+    {
+      "name": "creative iron_shovel hit preserves payload",
+      "passed": true
+    },
+    {
+      "name": "creative apple miss preserves payload",
+      "passed": true
+    },
+    {
+      "name": "creative apple hit preserves payload",
+      "passed": true
+    },
+    {
+      "name": "creative iron_ingot miss preserves payload",
+      "passed": true
+    },
+    {
+      "name": "creative iron_ingot hit preserves payload",
+      "passed": true
+    },
+    {
+      "name": "creative stone miss preserves payload",
+      "passed": true
+    },
+    {
+      "name": "creative missed block pickup increments backpack",
+      "passed": true
+    },
+    {
+      "name": "creative stone hit preserves payload",
+      "passed": true
+    },
+    {
+      "name": "creative hit block pickup increments backpack",
+      "passed": true
+    },
+    {
+      "name": "creative bucket miss preserves payload",
+      "passed": true
+    },
+    {
+      "name": "creative bucket hit preserves payload",
+      "passed": true
+    },
+    {
+      "name": "creative partial block pickup fills finite stack beside catalog",
+      "passed": true
+    },
+    {
+      "name": "creative remaining blocks enter freed backpack slot",
+      "passed": true
+    },
+    {
+      "name": "active budget defers and persists every extra drop",
+      "passed": true
+    },
+    {
+      "name": "creative creature hold preserves identity without fatigue",
+      "passed": true
+    },
+    {
+      "name": "creative creatures still resist and regain motion",
+      "passed": true
+    },
+    {
+      "name": "projectile death loot keeps release context across mode change",
+      "passed": true
+    },
+    {
+      "name": "death processing issues loot once",
+      "passed": true
+    },
+    {
+      "name": "ambiguous duplicate world ownership is quarantined",
+      "passed": true
+    },
+    {
+      "name": "quarantine cannot resurrect a subsequently spent instance",
+      "passed": true
+    },
+    {
+      "name": "malformed physical property retained in recovery",
+      "passed": true
+    },
+    {
+      "name": "missing block definitions move into mode-local inventory recovery",
+      "passed": true
+    },
+    {
+      "name": "unavailable creative items stay out of survival recovery",
+      "passed": true
+    }
+  ],
+  "passed": true
+}

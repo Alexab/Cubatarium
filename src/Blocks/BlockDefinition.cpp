@@ -159,6 +159,7 @@ BlockPhysicsProfile ParsePhysicsFromJson(const nlohmann::json &j)
     {
       p.FluidPermeable = j["fluid_permeable"].get<bool>();
     }
+    p.Flammable = j.value("flammable", p.Flammable);
     const FluidKind parsed_kind = ParseFluidKindPreset(j, "fluid_kind");
     if (parsed_kind != FluidKind::None)
     {
@@ -219,6 +220,7 @@ BlockPhysicsProfile ParsePhysicsFromJson(const nlohmann::json &j)
   {
     p.FluidPermeable = j["fluid_permeable"].get<bool>();
   }
+  p.Flammable = j.value("flammable", p.Flammable);
   const FluidKind parsed_kind = ParseFluidKindPreset(j, "fluid_kind");
   if (parsed_kind != FluidKind::None)
   {
@@ -271,8 +273,8 @@ BlockRenderProfile ParseRenderFromJson(const nlohmann::json &j)
   r.DoubleSided = j.value("double_sided", false);
   if (j.contains("texture_variation") && j["texture_variation"].is_number())
   {
-    r.TextureVariation = std::clamp(j["texture_variation"].get<float>(),
-                                    0.0f, 1.0f);
+    r.TextureVariation =
+        std::clamp(j["texture_variation"].get<float>(), 0.0f, 1.0f);
   }
   if (j.contains("style") && j["style"].is_string())
   {
@@ -370,8 +372,7 @@ BlockLightingProfile ParseLightingFromJson(const nlohmann::json &j)
               << std::endl;
     return lighting;
   }
-  lighting.Emission =
-      std::clamp(emission.get<int>(), 0, 15);
+  lighting.Emission = std::clamp(emission.get<int>(), 0, 15);
   return lighting;
 }
 

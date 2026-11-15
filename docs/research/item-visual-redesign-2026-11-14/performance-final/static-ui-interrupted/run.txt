@@ -1,0 +1,28 @@
+Measuring fp-0-baseline
+Restored 210 runtime files
+{"scene": "fp", "repeat": 0, "mode": "baseline", "frames": 3273, "measure_sec": 30.0139997, "p50_ms": 9.0432, "p95_ms": 12.362379999999975, "p99_ms": 14.573987999999988, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 32768, "runtime_files_restored": 210, "report": "bin/items_performance/fp-0-baseline/frame-benchmark.json"}
+Measuring fp-0-candidate
+Restored 212 runtime files
+{"scene": "fp", "repeat": 0, "mode": "candidate", "frames": 3316, "measure_sec": 30.0033113, "p50_ms": 9.17945, "p95_ms": 10.284775, "p99_ms": 11.149444999999995, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 349524, "runtime_files_restored": 212, "report": "bin/items_performance/fp-0-candidate/frame-benchmark.json"}
+Measuring fp-1-candidate
+Restored 212 runtime files
+{"scene": "fp", "repeat": 1, "mode": "candidate", "frames": 3424, "measure_sec": 30.0019074, "p50_ms": 8.865950000000002, "p95_ms": 9.922379999999999, "p99_ms": 10.365556999999999, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 349524, "runtime_files_restored": 212, "report": "bin/items_performance/fp-1-candidate/frame-benchmark.json"}
+Measuring fp-1-baseline
+Restored 210 runtime files
+{"scene": "fp", "repeat": 1, "mode": "baseline", "frames": 3411, "measure_sec": 30.0059693, "p50_ms": 8.8615, "p95_ms": 10.12945, "p99_ms": 10.64274, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 32768, "runtime_files_restored": 210, "report": "bin/items_performance/fp-1-baseline/frame-benchmark.json"}
+Measuring fp-2-baseline
+Restored 210 runtime files
+{"scene": "fp", "repeat": 2, "mode": "baseline", "frames": 3348, "measure_sec": 30.0070889, "p50_ms": 9.109449999999999, "p95_ms": 10.180005, "p99_ms": 10.593539999999996, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 32768, "runtime_files_restored": 210, "report": "bin/items_performance/fp-2-baseline/frame-benchmark.json"}
+Measuring fp-2-candidate
+Restored 212 runtime files
+{"scene": "fp", "repeat": 2, "mode": "candidate", "frames": 3340, "measure_sec": 30.005944, "p50_ms": 9.11365, "p95_ms": 10.310484999999998, "p99_ms": 10.863467000000002, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 349524, "runtime_files_restored": 212, "report": "bin/items_performance/fp-2-candidate/frame-benchmark.json"}
+Measuring armor-0-baseline
+Restored 210 runtime files
+{"scene": "armor", "repeat": 0, "mode": "baseline", "frames": 3217, "measure_sec": 30.0063031, "p50_ms": 9.1146, "p95_ms": 11.386379999999999, "p99_ms": 13.075132000000004, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 720896, "runtime_files_restored": 210, "report": "bin/items_performance/armor-0-baseline/frame-benchmark.json"}
+Measuring armor-0-candidate
+Restored 212 runtime files
+{"scene": "armor", "repeat": 0, "mode": "candidate", "frames": 3124, "measure_sec": 30.0070768, "p50_ms": 9.3461, "p95_ms": 12.28817, "p99_ms": 12.815263, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 22369600, "runtime_files_restored": 212, "report": "bin/items_performance/armor-0-candidate/frame-benchmark.json"}
+Measuring armor-1-candidate
+Restored 212 runtime files
+Command '['C:\\Users\\Bakhshiev\\AppData\\Local\\Programs\\Python\\Python313\\python.exe', 'tools/flight_sim_run.py', '--world', 'ItemVisualPerfQA', '--require-existing-world', '--seconds', '180', '--process-timeout', '240', '--no-fly', '--no-hold-forward', '--idle-sec', '0', '--artifact-root', 'E:\\Work\\Home\\Cubatarium\\bin\\items_performance\\armor-1-candidate\\flight-artifacts', '--report', 'E:\\Work\\Home\\Cubatarium\\bin\\items_performance\\armor-1-candidate\\flight.json']' returned non-zero exit status 3221356611.
+passed=False; evidence=E:\Work\Home\Cubatarium\bin\items_performance\summary.json

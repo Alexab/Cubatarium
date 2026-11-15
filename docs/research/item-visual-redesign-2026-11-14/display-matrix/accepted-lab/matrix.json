@@ -1,0 +1,89 @@
+{
+  "passed": true,
+  "cases": [
+    {
+      "case": "1280-100",
+      "display": {
+        "effective_scale": 1.0,
+        "height": 720,
+        "scale": 1.0,
+        "width": 1280
+      },
+      "checks": 1041,
+      "frames": 373,
+      "world_restored": true,
+      "config_restored": true,
+      "sources_unchanged": true
+    },
+    {
+      "case": "1280-150",
+      "display": {
+        "effective_scale": 1.5,
+        "height": 720,
+        "scale": 1.5,
+        "width": 1280
+      },
+      "checks": 1041,
+      "frames": 373,
+      "world_restored": true,
+      "config_restored": true,
+      "sources_unchanged": true
+    },
+    {
+      "case": "1280-200",
+      "display": {
+        "effective_scale": 2.0,
+        "height": 720,
+        "scale": 2.0,
+        "width": 1280
+      },
+      "checks": 1041,
+      "frames": 373,
+      "world_restored": true,
+      "config_restored": true,
+      "sources_unchanged": true
+    },
+    {
+      "case": "1920-100",
+      "display": {
+        "effective_scale": 1.5,
+        "height": 1080,
+        "scale": 1.0,
+        "width": 1920
+      },
+      "checks": 1041,
+      "frames": 373,
+      "world_restored": true,
+      "config_restored": true,
+      "sources_unchanged": true
+    },
+    {
+      "case": "1920-150",
+      "display": {
+        "effective_scale": 2.25,
+        "height": 1080,
+        "scale": 1.5,
+        "width": 1920
+      },
+      "checks": 1041,
+      "frames": 373,
+      "world_restored": true,
+      "config_restored": true,
+      "sources_unchanged": true
+    },
+    {
+      "case": "1920-200",
+      "display": {
+        "effective_scale": 3.0,
+        "height": 1080,
+        "scale": 2.0,
+        "width": 1920
+      },
+      "checks": 1041,
+      "frames": 373,
+      "world_restored": true,
+      "config_restored": true,
+      "sources_unchanged": true
+    }
+  ]
+}

@@ -44,8 +44,7 @@ void UGuiLabel::Draw(UGuiRenderer &renderer)
     const int x = InfoBadgeAlignRight ? Bounds.X + Bounds.W - w : Bounds.X;
     const GuiRect box{x, Bounds.Y, w, Bounds.H};
     renderer.DrawFilledRect(box, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-    const int textY =
-        Bounds.Y + (Bounds.H - renderer.MeasureTextHeight()) / 2;
+    const int textY = Bounds.Y + (Bounds.H - renderer.MeasureTextHeight()) / 2;
     renderer.DrawText(Text, x + pad, textY, glm::vec3(0.0f));
     renderer.PopClipRect();
     return;
@@ -64,9 +63,8 @@ void UGuiLabel::Draw(UGuiRenderer &renderer)
   while (start <= Text.size())
   {
     const size_t nl = Text.find('\n', start);
-    const std::string line =
-        Text.substr(start, nl == std::string::npos ? std::string::npos
-                                                   : nl - start);
+    const std::string line = Text.substr(
+        start, nl == std::string::npos ? std::string::npos : nl - start);
     if (TextAlign == GuiTextAlign::Center)
     {
       GuiRect lineRect{Bounds.X, y, Bounds.W, lineH};

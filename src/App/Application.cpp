@@ -286,9 +286,8 @@ void UApplication::Startup(const std::string &configPath)
     const std::string typesPath = "content/types.json";
     if (!UWorldGenRefs::LoadFromFile("content/worldgen_refs.json"))
     {
-      CubatariumLogInfo(
-          "App",
-          "worldgen_refs.json not loaded — using legacy block name resolution");
+      CubatariumLogInfo("App", "worldgen_refs.json not loaded — using legacy "
+                               "block name resolution");
     }
     if (!UObjectFeatureConfigStorage::LoadFromFile(
             "content/object_features.json"))
@@ -2561,6 +2560,14 @@ void UApplication::RunItemLabQa(const std::string &path)
     if (!ok)
       report["passed"] = false;
   };
+  int displayWidth = 0, displayHeight = 0;
+  glfwGetFramebufferSize(Window, &displayWidth, &displayHeight);
+  ItemLabScreen->OnViewportChanged(displayWidth, displayHeight);
+  ItemLabScreen->Update(0);
+  report["display"] = {{"width", displayWidth},
+                       {"height", displayHeight},
+                       {"scale", Ui.UiScaleUser},
+                       {"effective_scale", GetUiScale()}};
   check("catalog includes every item",
         ItemLabScreen->GetItemCount() ==
             Core->GetItemDefinitionStorage()->ListCatalogIds().size());
@@ -3077,6 +3084,25 @@ void UApplication::UpdateNativeItemsQa(double dt)
   if (!itemLabQaDone && World && World->GetControlledCreature())
     if (const char *path = std::getenv("CUBA_ITEM_LAB_QA"))
     {
+      if (const char *display = std::getenv("CUBA_ITEM_LAB_DISPLAY_QA"))
+      {
+        static bool configured = false;
+        static std::chrono::steady_clock::time_point ready;
+        if (!configured)
+        {
+          std::ifstream input(display);
+          nlohmann::json request;
+          input >> request;
+          glfwSetWindowSize(Window, request.at("width"), request.at("height"));
+          ApplyLiveUiScale(request.at("scale").get<float>());
+          ready =
+              std::chrono::steady_clock::now() + std::chrono::milliseconds(500);
+          configured = true;
+          return;
+        }
+        if (std::chrono::steady_clock::now() < ready)
+          return;
+      }
       itemLabQaDone = true;
       RunItemLabQa(path);
     }
@@ -3603,6 +3629,8 @@ void UApplication::NotifyAllScreensMetricsChanged(const GuiMetrics &metrics)
 
 void UApplication::DrawPlayerFpViewmodel(int width, int height)
 {
+  if (ItemPerformanceQa)
+    ItemPerformanceQa->BeginFpTiming();
   if (const UCreature *creature = World->GetControlledCreature())
   {
     const auto &inv = creature->GetInventory();
@@ -3622,8 +3650,8 @@ void UApplication::DrawPlayerFpViewmodel(int width, int height)
     fpParams.ItemLightDirection =
         glm::mat3(World->GetCurrentUserCamera()->GetViewMatrix()) *
         glm::vec3(-.4f, .8f, .6f);
-    fpParams.HasAmmo = inv.IsCreative() ||
-                       inv.Count(InventoryEntryKind::Item, "arrow") > 0;
+    fpParams.HasAmmo =
+        inv.IsCreative() || inv.Count(InventoryEntryKind::Item, "arrow") > 0;
     fpParams.Active =
         creature->CarryHandCount ? nullptr : inv.GetActiveEntryRef();
     fpParams.Offhand = (creature->CarryHandCount || creature->BowCharge > 0)
@@ -3634,8 +3662,7 @@ void UApplication::DrawPlayerFpViewmodel(int width, int height)
     if (const auto definitions = World->GetCreatureDefinitionStorage())
       fpParams.Definition = definitions->Get(creature->GetTypeId());
     const auto *visual = creature->GetVisual();
-    if (creature->CarryHandCount > 0 && visual &&
-        visual->HasWorldCarryArms() &&
+    if (creature->CarryHandCount > 0 && visual && visual->HasWorldCarryArms() &&
         Geometry->GetRenderSettings().CreatureTexturedParts)
     {
       FpViewmodelRenderer->ClearHeldVisual();
@@ -3653,6 +3680,8 @@ void UApplication::DrawPlayerFpViewmodel(int width, int height)
     else
       FpViewmodelRenderer->DrawWorldOverlay(fpParams);
   }
+  if (ItemPerformanceQa)
+    ItemPerformanceQa->EndFpTiming();
 }
 
 void UApplication::RenderFrame(int width, int height, double viewDuration)
@@ -3733,7 +3762,10 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
       const auto equipment_setup_begin =
           std::chrono::high_resolution_clock::now();
       const WorldViewSettings &view = World->GetViewSettings();
-      WornEquipmentDrawer::SetHidePossessedWield(ShouldDrawFpViewmodel(view));
+      const auto camera = World->GetCurrentUserCamera();
+      WornEquipmentDrawer::SetHidePossessedWield(
+          ShouldDrawFpViewmodel(view) && camera &&
+          camera->GetPerspective() == CameraPerspective::FirstPerson);
       if (Core)
       {
         if (auto items = Core->GetItemDefinitionStorage())
@@ -3747,7 +3779,14 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
               .count());
       const auto geometry_paint_begin =
           std::chrono::high_resolution_clock::now();
-      Geometry->Paint(width, height, viewDuration);
+      std::vector<ItemSurfaceDrawAudit> worldItems;
+      {
+        UItemSurfaceDrawAuditScope scope(ItemWorldVisualQa ? &worldItems
+                                                           : nullptr);
+        Geometry->Paint(width, height, viewDuration);
+      }
+      if (ItemWorldVisualQa)
+        ItemWorldVisualQa->RecordWorldItems(worldItems);
       World->SetLastGeometryPaintMs(
           std::chrono::duration<double, std::milli>(
               std::chrono::high_resolution_clock::now() - geometry_paint_begin)

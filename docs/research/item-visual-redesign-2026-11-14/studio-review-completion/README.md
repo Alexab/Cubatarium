@@ -1,5 +1,8 @@
 # Completed studio review and icon readability
 
+> Historical checkpoint. Subsequent requirements and final status are recorded
+> in the [consolidated acceptance audit](../final-audit/README.md).
+
 All 70 candidate items have now received detailed studio review: five lit
 cameras, silhouette, gray material, albedo and native 32/48/64-pixel icons.
 `studio-review.json` records individual observations and reviewed sheet hashes.

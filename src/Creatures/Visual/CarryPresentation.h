@@ -36,8 +36,9 @@ inline bool ResolveCarryContacts(UWorld &world, const UCreature &actor,
         float distance = 1e9f;
         for (int coordinate : {0, 2})
           if (std::abs(towardCarrier[coordinate]) > .0001f)
-            distance = std::min(distance, half[coordinate] /
-                                              std::abs(towardCarrier[coordinate]));
+            distance =
+                std::min(distance, half[coordinate] /
+                                       std::abs(towardCarrier[coordinate]));
         surface = towardCarrier * distance;
       }
       // Generic cargo is grasped on its near face, not through its centre.

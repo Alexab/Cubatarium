@@ -1,0 +1,547 @@
+{
+  "frames": [
+    {
+      "active_count": 1,
+      "active_item": "apple",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 0.0,
+      "eye_light_packed": 15,
+      "file": "apple.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 0,
+          "has_ammo": true,
+          "has_water": false,
+          "id": "apple",
+          "use_phase": 0.0,
+          "visible_primitives": 3
+        }
+      ],
+      "id": "apple",
+      "left_palm_ndc_gap": 0.9857528805732727,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.7520689368247986,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.8500000238418579,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "apple",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/apple/model.gltf",
+          "visible_primitives": 3
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "bread",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 0.0,
+      "eye_light_packed": 15,
+      "file": "bread.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 0,
+          "has_ammo": true,
+          "has_water": false,
+          "id": "bread",
+          "use_phase": 0.0,
+          "visible_primitives": 3
+        }
+      ],
+      "id": "bread",
+      "left_palm_ndc_gap": 0.993011474609375,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.7596808671951294,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.8500000238418579,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "bread",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/bread/model.gltf",
+          "visible_primitives": 3
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "bucket",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 0.0,
+      "eye_light_packed": 15,
+      "file": "bucket.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 0,
+          "has_ammo": true,
+          "has_water": false,
+          "id": "bucket",
+          "use_phase": 0.0,
+          "visible_primitives": 3
+        }
+      ],
+      "id": "bucket",
+      "left_palm_ndc_gap": 0.9817389845848083,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.348990797996521,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.8500000238418579,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "bucket",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/bucket/model.gltf",
+          "visible_primitives": 3
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "copper_axe",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 0.0,
+      "eye_light_packed": 15,
+      "file": "copper_axe.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 0,
+          "has_ammo": true,
+          "has_water": false,
+          "id": "copper_axe",
+          "use_phase": 0.0,
+          "visible_primitives": 5
+        }
+      ],
+      "id": "copper_axe",
+      "left_palm_ndc_gap": 0.974931538105011,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.7430867552757263,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.8500000238418579,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "copper_axe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/copper_axe/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "gold_sword",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 0.0,
+      "eye_light_packed": 15,
+      "file": "gold_sword.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 0,
+          "has_ammo": true,
+          "has_water": false,
+          "id": "gold_sword",
+          "use_phase": 0.0,
+          "visible_primitives": 5
+        }
+      ],
+      "id": "gold_sword",
+      "left_palm_ndc_gap": 0.984606146812439,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.7529605627059937,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.8500000238418579,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "gold_sword",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/gold_sword/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "iron_head",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 0.0,
+      "eye_light_packed": 15,
+      "file": "iron_head.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 0,
+          "has_ammo": true,
+          "has_water": false,
+          "id": "iron_head",
+          "use_phase": 0.0,
+          "visible_primitives": 3
+        }
+      ],
+      "id": "iron_head",
+      "left_palm_ndc_gap": 0.9874110221862793,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.7551964521408081,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.8500000238418579,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "iron_head",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_head/model.gltf",
+          "visible_primitives": 3
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "iron_pickaxe",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 0.0,
+      "eye_light_packed": 15,
+      "file": "iron_pickaxe.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 0,
+          "has_ammo": true,
+          "has_water": false,
+          "id": "iron_pickaxe",
+          "use_phase": 0.0,
+          "visible_primitives": 5
+        }
+      ],
+      "id": "iron_pickaxe",
+      "left_palm_ndc_gap": 0.9794950485229492,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.746139645576477,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.8500000238418579,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "iron_pickaxe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_pickaxe/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "leather_chest",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 0.0,
+      "eye_light_packed": 15,
+      "file": "leather_chest.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 0,
+          "has_ammo": true,
+          "has_water": false,
+          "id": "leather_chest",
+          "use_phase": 0.0,
+          "visible_primitives": 3
+        }
+      ],
+      "id": "leather_chest",
+      "left_palm_ndc_gap": 0.9882218837738037,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.7545492649078369,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.8500000238418579,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "leather_chest",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/leather_chest/model.gltf",
+          "visible_primitives": 3
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "raw_iron",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 0.0,
+      "eye_light_packed": 15,
+      "file": "raw_iron.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 0,
+          "has_ammo": true,
+          "has_water": false,
+          "id": "raw_iron",
+          "use_phase": 0.0,
+          "visible_primitives": 3
+        }
+      ],
+      "id": "raw_iron",
+      "left_palm_ndc_gap": 0.9917091131210327,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.7585553526878357,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.8500000238418579,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "raw_iron",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/raw_iron/model.gltf",
+          "visible_primitives": 3
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "shears",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 0.0,
+      "eye_light_packed": 15,
+      "file": "shears.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 0,
+          "has_ammo": true,
+          "has_water": false,
+          "id": "shears",
+          "use_phase": 0.0,
+          "visible_primitives": 8
+        }
+      ],
+      "id": "shears",
+      "left_palm_ndc_gap": 0.9776809215545654,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.7453849911689758,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.8500000238418579,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "shears",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/shears/model.gltf",
+          "visible_primitives": 8
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "stone_pickaxe",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 0.0,
+      "eye_light_packed": 15,
+      "file": "stone_pickaxe.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 0,
+          "has_ammo": true,
+          "has_water": false,
+          "id": "stone_pickaxe",
+          "use_phase": 0.0,
+          "visible_primitives": 5
+        }
+      ],
+      "id": "stone_pickaxe",
+      "left_palm_ndc_gap": 0.9802533984184265,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.7486186623573303,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.8500000238418579,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "stone_pickaxe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/stone_pickaxe/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "wood_bow",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 0.0,
+      "eye_light_packed": 15,
+      "file": "wood_bow.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 0,
+          "has_ammo": true,
+          "has_water": false,
+          "id": "wood_bow",
+          "use_phase": 0.0,
+          "visible_primitives": 5
+        }
+      ],
+      "id": "wood_bow",
+      "left_palm_ndc_gap": 0.9879063963890076,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.3082147240638733,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.8500000238418579,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "wood_bow",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/wood_bow/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    }
+  ],
+  "passed": true,
+  "request": {
+    "body": "male",
+    "height": 720,
+    "ids": [
+      "apple",
+      "bread",
+      "bucket",
+      "copper_axe",
+      "gold_sword",
+      "iron_head",
+      "iron_pickaxe",
+      "leather_chest",
+      "raw_iron",
+      "shears",
+      "stone_pickaxe",
+      "wood_bow"
+    ],
+    "interaction": "",
+    "light": "night",
+    "mode": "creative",
+    "perspective": "first",
+    "scale": 1.0,
+    "subject": "item",
+    "width": 1280
+  },
+  "scope": "actual world FP and physical drop rendering"
+}

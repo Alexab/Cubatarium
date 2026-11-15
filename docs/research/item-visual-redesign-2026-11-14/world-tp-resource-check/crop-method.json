@@ -1,0 +1,11 @@
+{
+  "scope": "Diagnostic actor crops; unmodified full-frame hashes are retained separately",
+  "crop": [
+    530,
+    250,
+    760,
+    540
+  ],
+  "resampling": "none",
+  "pages_per_case": 5
+}

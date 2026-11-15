@@ -1,0 +1,1898 @@
+{
+  "checks": [
+    {
+      "backpack": 2391,
+      "expected": 2391,
+      "footer": 2391,
+      "id": "bush_acacia",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2364,
+      "expected": 2364,
+      "footer": 2364,
+      "id": "bush_blueberry",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2395,
+      "expected": 2395,
+      "footer": 2395,
+      "id": "bush_common",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2396,
+      "expected": 2396,
+      "footer": 2396,
+      "id": "bush_pine",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2397,
+      "expected": 2397,
+      "footer": 2397,
+      "id": "cactus_large",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2398,
+      "expected": 2398,
+      "footer": 2398,
+      "id": "cubatarium_worldgen_cc0::asset_flower_patch_01",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2399,
+      "expected": 2399,
+      "footer": 2399,
+      "id": "cubatarium_worldgen_cc0::asset_flower_patch_02",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2400,
+      "expected": 2400,
+      "footer": 2400,
+      "id": "cubatarium_worldgen_cc0::asset_flower_patch_03",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2401,
+      "expected": 2401,
+      "footer": 2401,
+      "id": "cubatarium_worldgen_cc0::asset_flower_patch_04",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2402,
+      "expected": 2402,
+      "footer": 2402,
+      "id": "cubatarium_worldgen_cc0::asset_flower_patch_05",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2403,
+      "expected": 2403,
+      "footer": 2403,
+      "id": "cubatarium_worldgen_cc0::asset_flower_patch_06",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2404,
+      "expected": 2404,
+      "footer": 2404,
+      "id": "cubatarium_worldgen_cc0::asset_flower_patch_07",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2405,
+      "expected": 2405,
+      "footer": 2405,
+      "id": "cubatarium_worldgen_cc0::asset_flower_patch_08",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2406,
+      "expected": 2406,
+      "footer": 2406,
+      "id": "cubatarium_worldgen_cc0::asset_flower_patch_09",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2407,
+      "expected": 2407,
+      "footer": 2407,
+      "id": "cubatarium_worldgen_cc0::asset_flower_patch_10",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2408,
+      "expected": 2408,
+      "footer": 2408,
+      "id": "cubatarium_worldgen_cc0::asset_flower_patch_11",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2409,
+      "expected": 2409,
+      "footer": 2409,
+      "id": "cubatarium_worldgen_cc0::asset_flower_patch_12",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2410,
+      "expected": 2410,
+      "footer": 2410,
+      "id": "cubatarium_worldgen_cc0::asset_flower_patch_13",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2411,
+      "expected": 2411,
+      "footer": 2411,
+      "id": "cubatarium_worldgen_cc0::asset_flower_patch_14",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2412,
+      "expected": 2412,
+      "footer": 2412,
+      "id": "cubatarium_worldgen_cc0::asset_flower_patch_15",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2413,
+      "expected": 2413,
+      "footer": 2413,
+      "id": "cubatarium_worldgen_cc0::asset_flower_patch_16",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2414,
+      "expected": 2414,
+      "footer": 2414,
+      "id": "deco_log_acacia",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2415,
+      "expected": 2415,
+      "footer": 2415,
+      "id": "deco_log_apple",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2416,
+      "expected": 2416,
+      "footer": 2416,
+      "id": "deco_log_aspen",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2417,
+      "expected": 2417,
+      "footer": 2417,
+      "id": "deco_log_jungle",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2418,
+      "expected": 2418,
+      "footer": 2418,
+      "id": "deco_log_pine",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2419,
+      "expected": 2419,
+      "footer": 2419,
+      "id": "dry_grass_clump",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2420,
+      "expected": 2420,
+      "footer": 2420,
+      "id": "fire_patch",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2421,
+      "expected": 2421,
+      "footer": 2421,
+      "id": "flower_patch_common",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2422,
+      "expected": 2422,
+      "footer": 2422,
+      "id": "flower_scatter_plains",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2423,
+      "expected": 2423,
+      "footer": 2423,
+      "id": "house_stone_cottage",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2424,
+      "expected": 2424,
+      "footer": 2424,
+      "id": "house_wood_small",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2425,
+      "expected": 2425,
+      "footer": 2425,
+      "id": "lily_pad_pair",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2426,
+      "expected": 2426,
+      "footer": 2426,
+      "id": "mushroom_brown_pair",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2427,
+      "expected": 2427,
+      "footer": 2427,
+      "id": "mushroom_red_pair",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2428,
+      "expected": 2428,
+      "footer": 2428,
+      "id": "path_cobble_3x3",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2429,
+      "expected": 2429,
+      "footer": 2429,
+      "id": "reeds_on_dirt",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2430,
+      "expected": 2430,
+      "footer": 2430,
+      "id": "reeds_on_dry_dirt",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2431,
+      "expected": 2431,
+      "footer": 2431,
+      "id": "ruin_desert",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2432,
+      "expected": 2432,
+      "footer": 2432,
+      "id": "ruin_egypt_a",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2433,
+      "expected": 2433,
+      "footer": 2433,
+      "id": "ruin_egypt_b",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2434,
+      "expected": 2434,
+      "footer": 2434,
+      "id": "ruin_house_a",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2435,
+      "expected": 2435,
+      "footer": 2435,
+      "id": "ruin_house_b",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2436,
+      "expected": 2436,
+      "footer": 2436,
+      "id": "ruin_sandstone",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2437,
+      "expected": 2437,
+      "footer": 2437,
+      "id": "ruin_stonehenge",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2438,
+      "expected": 2438,
+      "footer": 2438,
+      "id": "ruin_temple",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2439,
+      "expected": 2439,
+      "footer": 2439,
+      "id": "shed_wood",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2440,
+      "expected": 2440,
+      "footer": 2440,
+      "id": "tall_grass_patch",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2441,
+      "expected": 2441,
+      "footer": 2441,
+      "id": "tower_stone",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2442,
+      "expected": 2442,
+      "footer": 2442,
+      "id": "tree_acacia",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2443,
+      "expected": 2443,
+      "footer": 2443,
+      "id": "tree_apple",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2444,
+      "expected": 2444,
+      "footer": 2444,
+      "id": "tree_aspen",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2445,
+      "expected": 2445,
+      "footer": 2445,
+      "id": "tree_jungle",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2446,
+      "expected": 2446,
+      "footer": 2446,
+      "id": "tree_jungle_emergent",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2447,
+      "expected": 2447,
+      "footer": 2447,
+      "id": "tree_large",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2448,
+      "expected": 2448,
+      "footer": 2448,
+      "id": "tree_pine",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2449,
+      "expected": 2449,
+      "footer": 2449,
+      "id": "tree_pine_small",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2450,
+      "expected": 2450,
+      "footer": 2450,
+      "id": "tree_pine_snowy",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2451,
+      "expected": 2451,
+      "footer": 2451,
+      "id": "tree_pine_snowy_small",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2452,
+      "expected": 2452,
+      "footer": 2452,
+      "id": "tree_small",
+      "kind": 1,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2453,
+      "expected": 2453,
+      "footer": 2453,
+      "id": "badger",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2454,
+      "expected": 2454,
+      "footer": 2454,
+      "id": "bee",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2455,
+      "expected": 2455,
+      "footer": 2455,
+      "id": "bot",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2456,
+      "expected": 2456,
+      "footer": 2456,
+      "id": "bunny",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2457,
+      "expected": 2457,
+      "footer": 2457,
+      "id": "butterfly",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2458,
+      "expected": 2458,
+      "footer": 2458,
+      "id": "chicken",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2459,
+      "expected": 2459,
+      "footer": 2459,
+      "id": "cow",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2460,
+      "expected": 2460,
+      "footer": 2460,
+      "id": "crab",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2461,
+      "expected": 2461,
+      "footer": 2461,
+      "id": "dirt_monster",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2462,
+      "expected": 2462,
+      "footer": 2462,
+      "id": "dolphin",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2463,
+      "expected": 2463,
+      "footer": 2463,
+      "id": "dungeon_master",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2464,
+      "expected": 2464,
+      "footer": 2464,
+      "id": "fire_spirit",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2465,
+      "expected": 2465,
+      "footer": 2465,
+      "id": "fox",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2466,
+      "expected": 2466,
+      "footer": 2466,
+      "id": "golem",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2467,
+      "expected": 2467,
+      "footer": 2467,
+      "id": "hedgehog",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2468,
+      "expected": 2468,
+      "footer": 2468,
+      "id": "hermitcrab",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2469,
+      "expected": 2469,
+      "footer": 2469,
+      "id": "kitten",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2470,
+      "expected": 2470,
+      "footer": 2470,
+      "id": "land_guard",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2471,
+      "expected": 2471,
+      "footer": 2471,
+      "id": "lava_flan",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2472,
+      "expected": 2472,
+      "footer": 2472,
+      "id": "lobster",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2473,
+      "expected": 2473,
+      "footer": 2473,
+      "id": "manatee",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2474,
+      "expected": 2474,
+      "footer": 2474,
+      "id": "mese_monster",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2475,
+      "expected": 2475,
+      "footer": 2475,
+      "id": "octopus",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2476,
+      "expected": 2476,
+      "footer": 2476,
+      "id": "oerkki",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2477,
+      "expected": 2477,
+      "footer": 2477,
+      "id": "ogre",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2478,
+      "expected": 2478,
+      "footer": 2478,
+      "id": "orc",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2479,
+      "expected": 2479,
+      "footer": 2479,
+      "id": "owl",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2480,
+      "expected": 2480,
+      "footer": 2480,
+      "id": "panda",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2481,
+      "expected": 2481,
+      "footer": 2481,
+      "id": "penguin",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2482,
+      "expected": 2482,
+      "footer": 2482,
+      "id": "pig",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2483,
+      "expected": 2483,
+      "footer": 2483,
+      "id": "puffin",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2484,
+      "expected": 2484,
+      "footer": 2484,
+      "id": "rat",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2485,
+      "expected": 2485,
+      "footer": 2485,
+      "id": "rigid_demo_flyer",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2486,
+      "expected": 2486,
+      "footer": 2486,
+      "id": "rigid_demo_swimmer",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2487,
+      "expected": 2487,
+      "footer": 2487,
+      "id": "rigid_demo_walker",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2488,
+      "expected": 2488,
+      "footer": 2488,
+      "id": "sand_monster",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2489,
+      "expected": 2489,
+      "footer": 2489,
+      "id": "seahorse",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2490,
+      "expected": 2490,
+      "footer": 2490,
+      "id": "seal",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2491,
+      "expected": 2491,
+      "footer": 2491,
+      "id": "shark",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2492,
+      "expected": 2492,
+      "footer": 2492,
+      "id": "sheep",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2493,
+      "expected": 2493,
+      "footer": 2493,
+      "id": "skeleton",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2494,
+      "expected": 2494,
+      "footer": 2494,
+      "id": "spider",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2495,
+      "expected": 2495,
+      "footer": 2495,
+      "id": "squid",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2496,
+      "expected": 2496,
+      "footer": 2496,
+      "id": "stingray",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2497,
+      "expected": 2497,
+      "footer": 2497,
+      "id": "stone_monster",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2498,
+      "expected": 2498,
+      "footer": 2498,
+      "id": "tortoise",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2499,
+      "expected": 2499,
+      "footer": 2499,
+      "id": "tree_monster",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2500,
+      "expected": 2500,
+      "footer": 2500,
+      "id": "treeman",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2501,
+      "expected": 2501,
+      "footer": 2501,
+      "id": "trout",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2502,
+      "expected": 2502,
+      "footer": 2502,
+      "id": "warthog",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2503,
+      "expected": 2503,
+      "footer": 2503,
+      "id": "wasp",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2504,
+      "expected": 2504,
+      "footer": 2504,
+      "id": "water_dragon",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2505,
+      "expected": 2505,
+      "footer": 2505,
+      "id": "whale",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2506,
+      "expected": 2506,
+      "footer": 2506,
+      "id": "wolf",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2507,
+      "expected": 2507,
+      "footer": 2507,
+      "id": "zombie",
+      "kind": 2,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2508,
+      "expected": 2508,
+      "footer": 2508,
+      "id": "human_adventurer",
+      "kind": 3,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2509,
+      "expected": 2509,
+      "footer": 2509,
+      "id": "human_guard",
+      "kind": 3,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2510,
+      "expected": 2510,
+      "footer": 2510,
+      "id": "sheep_wool_black",
+      "kind": 3,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2511,
+      "expected": 2511,
+      "footer": 2511,
+      "id": "sheep_wool_golden",
+      "kind": 3,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2512,
+      "expected": 2512,
+      "footer": 2512,
+      "id": "wolf_snow",
+      "kind": 3,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2356,
+      "expected": 2356,
+      "footer": 2356,
+      "id": "apple",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2306,
+      "expected": 2306,
+      "footer": 2306,
+      "id": "arrow",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2343,
+      "expected": 2343,
+      "footer": 2343,
+      "id": "bread",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2317,
+      "expected": 2317,
+      "footer": 2317,
+      "id": "bucket",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2515,
+      "expected": 2515,
+      "footer": 2515,
+      "id": "charcoal",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2347,
+      "expected": 2347,
+      "footer": 2347,
+      "id": "coal",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2345,
+      "expected": 2345,
+      "footer": 2345,
+      "id": "cooked_meat",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2517,
+      "expected": 2517,
+      "footer": 2517,
+      "id": "copper_axe",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2519,
+      "expected": 2519,
+      "footer": 2519,
+      "id": "copper_chest",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2521,
+      "expected": 2521,
+      "footer": 2521,
+      "id": "copper_feet",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2523,
+      "expected": 2523,
+      "footer": 2523,
+      "id": "copper_head",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2525,
+      "expected": 2525,
+      "footer": 2525,
+      "id": "copper_hoe",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2527,
+      "expected": 2527,
+      "footer": 2527,
+      "id": "copper_ingot",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2529,
+      "expected": 2529,
+      "footer": 2529,
+      "id": "copper_legs",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2386,
+      "expected": 2386,
+      "footer": 2386,
+      "id": "copper_pickaxe",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2531,
+      "expected": 2531,
+      "footer": 2531,
+      "id": "copper_shovel",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2533,
+      "expected": 2533,
+      "footer": 2533,
+      "id": "copper_sword",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2354,
+      "expected": 2354,
+      "footer": 2354,
+      "id": "cord",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2535,
+      "expected": 2535,
+      "footer": 2535,
+      "id": "flint_and_steel",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2537,
+      "expected": 2537,
+      "footer": 2537,
+      "id": "gold_axe",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2539,
+      "expected": 2539,
+      "footer": 2539,
+      "id": "gold_chest",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2541,
+      "expected": 2541,
+      "footer": 2541,
+      "id": "gold_feet",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2543,
+      "expected": 2543,
+      "footer": 2543,
+      "id": "gold_head",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2545,
+      "expected": 2545,
+      "footer": 2545,
+      "id": "gold_hoe",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2547,
+      "expected": 2547,
+      "footer": 2547,
+      "id": "gold_ingot",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2549,
+      "expected": 2549,
+      "footer": 2549,
+      "id": "gold_legs",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2388,
+      "expected": 2388,
+      "footer": 2388,
+      "id": "gold_pickaxe",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2551,
+      "expected": 2551,
+      "footer": 2551,
+      "id": "gold_shovel",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2553,
+      "expected": 2553,
+      "footer": 2553,
+      "id": "gold_sword",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2341,
+      "expected": 2341,
+      "footer": 2341,
+      "id": "grain",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2555,
+      "expected": 2555,
+      "footer": 2555,
+      "id": "iron_axe",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2321,
+      "expected": 2321,
+      "footer": 2321,
+      "id": "iron_chest",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2329,
+      "expected": 2329,
+      "footer": 2329,
+      "id": "iron_feet",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2319,
+      "expected": 2319,
+      "footer": 2319,
+      "id": "iron_head",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2302,
+      "expected": 2302,
+      "footer": 2302,
+      "id": "iron_hoe",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2335,
+      "expected": 2335,
+      "footer": 2335,
+      "id": "iron_ingot",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2327,
+      "expected": 2327,
+      "footer": 2327,
+      "id": "iron_legs",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2298,
+      "expected": 2298,
+      "footer": 2298,
+      "id": "iron_pickaxe",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2557,
+      "expected": 2557,
+      "footer": 2557,
+      "id": "iron_shield",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2559,
+      "expected": 2559,
+      "footer": 2559,
+      "id": "iron_shovel",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2561,
+      "expected": 2561,
+      "footer": 2561,
+      "id": "iron_sword",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2563,
+      "expected": 2563,
+      "footer": 2563,
+      "id": "leather",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2565,
+      "expected": 2565,
+      "footer": 2565,
+      "id": "leather_chest",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2567,
+      "expected": 2567,
+      "footer": 2567,
+      "id": "leather_feet",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2569,
+      "expected": 2569,
+      "footer": 2569,
+      "id": "leather_head",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2571,
+      "expected": 2571,
+      "footer": 2571,
+      "id": "leather_legs",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2573,
+      "expected": 2573,
+      "footer": 2573,
+      "id": "plant_fiber",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2575,
+      "expected": 2575,
+      "footer": 2575,
+      "id": "raw_copper",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2577,
+      "expected": 2577,
+      "footer": 2577,
+      "id": "raw_gold",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2333,
+      "expected": 2333,
+      "footer": 2333,
+      "id": "raw_iron",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2579,
+      "expected": 2579,
+      "footer": 2579,
+      "id": "raw_meat",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2313,
+      "expected": 2313,
+      "footer": 2313,
+      "id": "seeds",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2581,
+      "expected": 2581,
+      "footer": 2581,
+      "id": "shears",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2583,
+      "expected": 2583,
+      "footer": 2583,
+      "id": "stick",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2585,
+      "expected": 2585,
+      "footer": 2585,
+      "id": "stone_axe",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2587,
+      "expected": 2587,
+      "footer": 2587,
+      "id": "stone_hoe",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2390,
+      "expected": 2390,
+      "footer": 2390,
+      "id": "stone_pickaxe",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2589,
+      "expected": 2589,
+      "footer": 2589,
+      "id": "stone_shovel",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2591,
+      "expected": 2591,
+      "footer": 2591,
+      "id": "stone_sword",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2315,
+      "expected": 2315,
+      "footer": 2315,
+      "id": "waterskin",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2593,
+      "expected": 2593,
+      "footer": 2593,
+      "id": "wood_axe",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2304,
+      "expected": 2304,
+      "footer": 2304,
+      "id": "wood_bow",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2595,
+      "expected": 2595,
+      "footer": 2595,
+      "id": "wood_hoe",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2393,
+      "expected": 2393,
+      "footer": 2393,
+      "id": "wood_pickaxe",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2331,
+      "expected": 2331,
+      "footer": 2331,
+      "id": "wood_shield",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2597,
+      "expected": 2597,
+      "footer": 2597,
+      "id": "wood_shovel",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2599,
+      "expected": 2599,
+      "footer": 2599,
+      "id": "wood_spear",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2300,
+      "expected": 2300,
+      "footer": 2300,
+      "id": "wood_sword",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2601,
+      "expected": 2601,
+      "footer": 2601,
+      "id": "wood_torch",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2349,
+      "expected": 2349,
+      "footer": 2349,
+      "id": "wool",
+      "kind": 4,
+      "location": "backpack",
+      "passed": true
+    },
+    {
+      "backpack": 2317,
+      "expected": 2317,
+      "footer": 2317,
+      "id": "bucket",
+      "location": "contents-state",
+      "passed": true,
+      "units": 0
+    },
+    {
+      "backpack": 2602,
+      "expected": 2602,
+      "footer": 2602,
+      "id": "bucket",
+      "location": "contents-state",
+      "passed": true,
+      "units": 1
+    },
+    {
+      "backpack": 2317,
+      "expected": 2317,
+      "footer": 2317,
+      "id": "bucket",
+      "location": "contents-state",
+      "passed": true,
+      "units": 0
+    },
+    {
+      "backpack": 2315,
+      "expected": 2315,
+      "footer": 2315,
+      "id": "waterskin",
+      "location": "contents-state",
+      "passed": true,
+      "units": 0
+    },
+    {
+      "backpack": 2603,
+      "expected": 2603,
+      "footer": 2603,
+      "id": "waterskin",
+      "location": "contents-state",
+      "passed": true,
+      "units": 2
+    },
+    {
+      "backpack": 2604,
+      "expected": 2604,
+      "footer": 2604,
+      "id": "waterskin",
+      "location": "contents-state",
+      "passed": true,
+      "units": 4
+    },
+    {
+      "backpack": 2315,
+      "expected": 2315,
+      "footer": 2315,
+      "id": "waterskin",
+      "location": "contents-state",
+      "passed": true,
+      "units": 0
+    },
+    {
+      "backpack": 2296,
+      "expected": 2296,
+      "footer": 2296,
+      "id": "stone",
+      "kind": 0,
+      "location": "mixed",
+      "passed": true
+    },
+    {
+      "backpack": 2298,
+      "expected": 2298,
+      "footer": 2298,
+      "id": "iron_pickaxe",
+      "kind": 4,
+      "location": "mixed",
+      "passed": true
+    },
+    {
+      "backpack": 2462,
+      "expected": 2462,
+      "footer": 2462,
+      "id": "dolphin",
+      "kind": 2,
+      "location": "mixed",
+      "passed": true
+    },
+    {
+      "backpack": 2442,
+      "expected": 2442,
+      "footer": 2442,
+      "id": "tree_acacia",
+      "kind": 1,
+      "location": "mixed",
+      "passed": true
+    },
+    {
+      "backpack": 2508,
+      "expected": 2508,
+      "footer": 2508,
+      "id": "human_adventurer",
+      "kind": 3,
+      "location": "mixed",
+      "passed": true
+    },
+    {
+      "backpack": 2317,
+      "expected": 2317,
+      "footer": 2317,
+      "id": "bucket",
+      "kind": 4,
+      "location": "mixed",
+      "passed": true
+    },
+    {
+      "backpack": 2296,
+      "expected": 2296,
+      "footer": 2317,
+      "id": "stone",
+      "kind": 0,
+      "location": "recovery",
+      "passed": true
+    },
+    {
+      "backpack": 2298,
+      "expected": 2298,
+      "footer": 2317,
+      "id": "iron_pickaxe",
+      "kind": 4,
+      "location": "recovery",
+      "passed": true
+    },
+    {
+      "backpack": 2462,
+      "expected": 2462,
+      "footer": 2317,
+      "id": "dolphin",
+      "kind": 2,
+      "location": "recovery",
+      "passed": true
+    },
+    {
+      "backpack": 2442,
+      "expected": 2442,
+      "footer": 2317,
+      "id": "tree_acacia",
+      "kind": 1,
+      "location": "recovery",
+      "passed": true
+    },
+    {
+      "backpack": 2508,
+      "expected": 2508,
+      "footer": 2317,
+      "id": "human_adventurer",
+      "kind": 3,
+      "location": "recovery",
+      "passed": true
+    },
+    {
+      "backpack": 2317,
+      "expected": 2317,
+      "footer": 2317,
+      "id": "bucket",
+      "kind": 4,
+      "location": "recovery",
+      "passed": true
+    }
+  ],
+  "container_state_support": {
+    "bucket": true,
+    "waterskin": true
+  },
+  "container_state_supported": true,
+  "counts": {
+    "creatures": 55,
+    "items": 70,
+    "objects": 60,
+    "skins": 5
+  },
+  "items_catalog_complete": true,
+  "passed": true
+}

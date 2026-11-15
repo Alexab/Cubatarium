@@ -1,6 +1,7 @@
 #pragma once
 #include "App/Application.h"
 #include "App/Platform/InputManager.h"
+#include "Blocks/BlockDefinitionStorage.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Visual/CarryPresentation.h"
 #include "Creatures/Visual/CreatureEquipmentFit.h"
@@ -9,6 +10,7 @@
 #include "Creatures/Visual/WornEquipmentDrawer.h"
 #include "Items/FpViewmodelRenderer.h"
 #include "Items/ItemDefinitionStorage.h"
+#include "Items/ItemSurfaceRenderer.h"
 #include "Render/Camera/Camera.h"
 #include "Render/GlIncludes.h"
 #include "ThirdParty/stb_image_write.h"
@@ -21,6 +23,7 @@
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -138,12 +141,27 @@ public:
     actor->SetOrientation(ModelYawFromCameraYaw(Yaw), Pitch);
     camera->SetPosition(feet + actor->GetEyeOffset());
     camera->SetOrientation(Yaw, Pitch);
+    if (Interaction == "utility" && UtilityPending &&
+        UtilityDispatchWait-- <= 0)
+    {
+      DispatchUtility(world);
+      UtilityPending = false;
+      ItemStarted = Clock::now();
+    }
     Ready = true;
     for (int x = -1; x <= 1; ++x)
       for (int z = -1; z <= 1; ++z)
         Ready = Ready && world.IsColumnVisualReady(glm::ivec2(
                              UChunkManager::WorldToChunk(Base).x + x,
                              UChunkManager::WorldToChunk(Base).z + z));
+  }
+  void RecordWorldItems(const std::vector<ItemSurfaceDrawAudit> &items)
+  {
+    WorldItems = nlohmann::json::array();
+    for (const auto &item : items)
+      WorldItems.push_back({{"path", item.Path.generic_string()},
+                            {"first_node", item.Asset->Nodes.front().Name},
+                            {"visible_primitives", item.VisiblePrimitives}});
   }
   void RecordWorldCarry(UWorld &world)
   {
@@ -176,7 +194,8 @@ public:
     FpContacts = params.HasCarryContacts;
     FpItems = nlohmann::json::array();
     for (const auto &item : audit.Items)
-      FpItems.push_back({{"id", item.Id}, {"bow_charge", item.Inputs.BowCharge},
+      FpItems.push_back({{"id", item.Id},
+                         {"bow_charge", item.Inputs.BowCharge},
                          {"use_phase", item.Inputs.UsePhase},
                          {"contents_units", item.Inputs.ContentsUnits},
                          {"has_water", item.Inputs.HasWater},
@@ -194,7 +213,8 @@ public:
   }
   bool Capture(UWorld &world, UApplication &app, int width, int height)
   {
-    if (Done || !Ready || Seconds(Started) < 5. ||
+    if (Done || (!Ready && !(Interaction == "utility" && Stage > 0)) ||
+        UtilityPending || Seconds(Started) < 5. ||
         Seconds(ItemStarted) < StageDelay())
       return Done;
     if (width != Request.at("width") || height != Request.at("height"))
@@ -221,15 +241,16 @@ public:
         chunk ? int(chunk->GetLightPackedLocal(cell - coord * CHUNK_SIZE)) : -1;
 
     const auto bodies = UWorldItemSystem::Instance().GetItems();
-    const bool bodyPresent = std::any_of(bodies.begin(), bodies.end(),
-                                         [&](const auto &body)
-                                         {
-                                           return Subject == "creature"
-                                                      ? body.creatureId == CargoCreature
-                                                      : body.id == BodyId &&
-                                                            body.stack.Id == Ids[Index] &&
-                                                            body.stack.count == 1;
-                                         });
+    const bool bodyPresent =
+        std::any_of(bodies.begin(), bodies.end(),
+                    [&](const auto &body)
+                    {
+                      return Subject == "creature"
+                                 ? body.creatureId == CargoCreature
+                                 : body.id == BodyId &&
+                                       body.stack.Id == Ids[Index] &&
+                                       body.stack.count == 1;
+                    });
     Report["frames"].push_back(
         {{"id", Ids[Index]},
          {"file", name},
@@ -247,15 +268,32 @@ public:
          {"bow_charge", actor->BowCharge},
          {"use_phase", actor->ActiveItemUsePhase()},
          {"active_count", active ? active->count : 0},
+         {"wear", active ? active->wear : 0},
          {"contents_units", active ? active->contentsUnits : 0},
          {"fp_items", FpItems},
+         {"world_items", WorldItems},
          {"fp_contacts", FpContacts},
          {"fp_arm_backend", FpWorldArms ? "world_skeleton" : "viewmodel"},
          {"right_palm_ndc_gap", FpRightGap},
          {"left_palm_ndc_gap", FpLeftGap},
          {"tp_contacts", TpContacts(world)}});
+    if (Request.value("perspective", "first") != "first" && Subject == "item" &&
+        active && !active->empty && active->kind == InventoryEntryKind::Item &&
+        actor->CarryHandCount == 0)
+    {
+      bool drawn = false;
+      for (const auto &item : WorldItems)
+        drawn =
+            drawn || (std::filesystem::path(item.at("path").get<std::string>())
+                              .parent_path()
+                              .filename() == active->Id &&
+                      item.at("visible_primitives").get<size_t>() > 0);
+      Require(drawn, "actual world TP draw contains the active item resource");
+    }
     if (Subject == "creature")
       ValidateCreature(world);
+    else if (Interaction == "utility")
+      ValidateUtility(world);
     else if (Interaction == "use")
       ValidateUse(world);
     else if (!Interaction.empty())
@@ -266,7 +304,16 @@ public:
     if (Index == Ids.size())
     {
       Done = true;
-      Report["passed"] = true;
+      if (UtilityCatalog)
+      {
+        world.GetBlockRegistry().GetDefinitionsShared()->ReplaceAll(
+            UtilityCatalog->ById, UtilityCatalog->NameToId);
+        Report["qa_material_override_restored"] =
+            UtilityMaterial == BLOCK_AIR ||
+            world.GetBlockRegistry().IsFlammable(UtilityMaterial) ==
+                UtilityCatalog->ById.at(UtilityMaterial).Physics.Flammable;
+      }
+      Report["passed"] = Report.value("qa_material_override_restored", true);
       std::ofstream(Path) << Report.dump(2) << '\n';
     }
     else
@@ -282,10 +329,17 @@ private:
   }
   std::string StageName() const
   {
+    if (Interaction == "utility")
+    {
+      const char *names[] = {"equipped", "success",  "settled", "refused",
+                             "empty",    "restored", "idle",    "finished"};
+      return names[Stage];
+    }
     if (Interaction == "use")
     {
-      const char *names[] = {"equipped", "partial", "canceled", "restored",
-                             "ready", "completed", "restarted", "canceled-again"};
+      const char *names[] = {"equipped",  "partial",       "canceled",
+                             "restored",  "ready",         "completed",
+                             "restarted", "canceled-again"};
       return names[Stage];
     }
     const char *names[] = {"equipped", "windup",  "canceled", "placed",
@@ -296,8 +350,12 @@ private:
   {
     if (Interaction.empty())
       return .45;
+    if (Interaction == "utility")
+      return Stage == 1 || Stage == 3 ? .08 : Stage == 2 ? .45 : .15;
     if (Interaction == "use")
-      return Stage == 4 ? UseDuration + .15 : Stage == 1 || Stage == 6 ? .18 : .2;
+      return Stage == 4                 ? UseDuration + .15
+             : Stage == 1 || Stage == 6 ? .18
+                                        : .2;
     const double delays[] = {.45, .25, .15, .2, .25, .45, .06, 1.3};
     return delays[Stage];
   }
@@ -388,18 +446,21 @@ private:
     const bool ranged = definition->Ranged.Enabled;
     const bool finiteCost = !inv.IsCreative() && Stage >= 5;
     const bool container = Original.contentsUnits > 0;
-    const int expectedCount = Original.count - (finiteCost && !ranged && !container ? 1 : 0);
+    const int expectedCount =
+        Original.count - (finiteCost && !ranged && !container ? 1 : 0);
     Require(inv.Count(InventoryEntryKind::Item, Original.Id) == expectedCount,
             "use changes finite count only on successful completion");
     const auto &entry = inv.GetSlot(0);
     Require(entry.instanceId == Original.instanceId && entry.Id == Original.Id,
             "use preserves the selected stack/instance identity");
     if (container)
-      Require(entry.contentsUnits == Original.contentsUnits - (finiteCost ? 1 : 0),
+      Require(entry.contentsUnits ==
+                  Original.contentsUnits - (finiteCost ? 1 : 0),
               "drink changes contents exactly once and respects mode policy");
     if (ranged)
     {
-      Require(inv.Count(InventoryEntryKind::Item, "arrow") == 3 - (finiteCost ? 1 : 0),
+      Require(inv.Count(InventoryEntryKind::Item, "arrow") ==
+                  3 - (finiteCost ? 1 : 0),
               "bow spends ammunition exactly once and respects mode policy");
       size_t arrows = 0;
       for (const auto &body : UWorldItemSystem::Instance().GetItems())
@@ -410,11 +471,13 @@ private:
     }
     const float phase = ranged ? actor->BowCharge : actor->ActiveItemUsePhase();
     if (Stage == 1 || Stage == 6)
-      Require(phase > .01f && phase < 1.f, "held input advances a partial visual phase");
+      Require(phase > .01f && phase < 1.f,
+              "held input advances a partial visual phase");
     else if (Stage == 4)
       Require(phase >= .999f, "fully held input reaches its ready phase");
     else
-      Require(phase == 0.f, "idle, completion and cancellation clear the use phase");
+      Require(phase == 0.f,
+              "idle, completion and cancellation clear the use phase");
     if (Stage == 2 || Stage == 7)
       Require(!inv.GetActiveEntryRef() || inv.GetActiveEntryRef()->empty,
               "routed hotbar key selects the empty cancellation slot");
@@ -425,10 +488,14 @@ private:
         if (item.at("id") == Original.Id)
         {
           rendered = item.at("visible_primitives").get<size_t>() > 0;
-          Require(std::abs(item.at(ranged ? "bow_charge" : "use_phase").get<float>() - phase) < .001f,
-                  "actual FP draw consumes the authoritative use phase");
+          Require(
+              std::abs(
+                  item.at(ranged ? "bow_charge" : "use_phase").get<float>() -
+                  phase) < .001f,
+              "actual FP draw consumes the authoritative use phase");
           if (container)
-            Require(item.at("contents_units") == entry.contentsUnits && item.at("has_water") == true,
+            Require(item.at("contents_units") == entry.contentsUnits &&
+                        item.at("has_water") == true,
                     "actual FP draw consumes current container contents");
         }
       Require(rendered, "active item is drawn during real use input");
@@ -437,7 +504,8 @@ private:
   bool AdvanceUse()
   {
 #if defined(__ANDROID__)
-    throw std::runtime_error("Use capture requires desktop GLFW input callbacks");
+    throw std::runtime_error(
+        "Use capture requires desktop GLFW input callbacks");
 #else
     auto *window = glfwGetCurrentContext();
     if (!window)
@@ -448,7 +516,8 @@ private:
     auto mouse = [&](bool pressed)
     {
       UInputManager::GLFWMouseButtonCallback(
-          window, GLFW_MOUSE_BUTTON_RIGHT, pressed ? GLFW_PRESS : GLFW_RELEASE, 0);
+          window, GLFW_MOUSE_BUTTON_RIGHT, pressed ? GLFW_PRESS : GLFW_RELEASE,
+          0);
     };
     auto key = [&](int code)
     {
@@ -472,7 +541,9 @@ private:
         bool launched = false;
         for (const auto &body : UWorldItemSystem::Instance().GetItems())
           launched |= body.arrow && body.flying && body.throwerId != 0;
-        Require(launched, "mouse release creates a flying arrow before collision resolution");
+        Require(
+            launched,
+            "mouse release creates a flying arrow before collision resolution");
       }
     }
     if (Stage == 7)
@@ -502,22 +573,27 @@ private:
         const auto target = hand ? left : right;
         glm::mat4 shoulder(1), elbow(1);
         visual->GetWorldBoneTransform(hand ? "leftArm" : "rightArm", shoulder);
-        visual->GetWorldBoneTransform(hand ? "leftForearm" : "rightForearm", elbow);
-        const float upper = glm::distance(glm::vec3(shoulder[3]), glm::vec3(elbow[3]));
+        visual->GetWorldBoneTransform(hand ? "leftForearm" : "rightForearm",
+                                      elbow);
+        const float upper =
+            glm::distance(glm::vec3(shoulder[3]), glm::vec3(elbow[3]));
         const float lower = glm::distance(glm::vec3(elbow[3]), palm);
-        result.push_back({{"shoulder", {shoulder[3].x, shoulder[3].y, shoulder[3].z}},
-                          {"target_distance", glm::distance(glm::vec3(shoulder[3]), target)},
-                          {"reach_min", std::abs(upper - lower)},
-                          {"reach_max", upper + lower},
-                          {"hand", name},
-                          {"gap", glm::distance(palm, target)},
-                          {"palm", {palm.x, palm.y, palm.z}},
-                          {"target", {target.x, target.y, target.z}}});
+        result.push_back(
+            {{"shoulder", {shoulder[3].x, shoulder[3].y, shoulder[3].z}},
+             {"target_distance", glm::distance(glm::vec3(shoulder[3]), target)},
+             {"reach_min", std::abs(upper - lower)},
+             {"reach_max", upper + lower},
+             {"hand", name},
+             {"gap", glm::distance(palm, target)},
+             {"palm", {palm.x, palm.y, palm.z}},
+             {"target", {target.x, target.y, target.z}}});
       }
     return result;
   }
   bool AdvanceInteraction(UWorld &world, UApplication &app)
   {
+    if (Interaction == "utility")
+      return AdvanceUtility(app);
     if (Interaction == "use")
       return AdvanceUse();
     auto *actor = world.GetControlledCreature();
@@ -588,6 +664,154 @@ private:
     ItemStarted = Clock::now();
     return true;
   }
+  void PrepareUtility(UWorld &world)
+  {
+    if (Original.Id != "shears" && Original.Id != "flint_and_steel")
+      throw std::runtime_error(
+          "Utility capture supports shears and flint/steel");
+    UtilityPending = false;
+    UtilityWear = Original.wear;
+    UtilityPosition = Base + glm::ivec3(Original.Id == "shears" ? -2 : 2, 1, 2);
+    auto definitions = world.GetBlockRegistry().GetDefinitionsShared();
+    if (!definitions)
+      throw std::runtime_error("Utility QA has no material definitions");
+    if (!UtilityCatalog)
+      UtilityCatalog = definitions->GetCatalogSnapshot();
+    else
+      definitions->ReplaceAll(UtilityCatalog->ById, UtilityCatalog->NameToId);
+    const auto &registry = world.GetBlockRegistry();
+    const bool shears = Original.Id == "shears";
+    const std::vector<std::string> candidates =
+        shears ? std::vector<std::string>{"tree_leaves", "mtg_leaves",
+                                          "leaves_transparent"}
+               : std::vector<std::string>{"wood", "mtg_wood", "woodPlank"};
+    BlockId chosen = BLOCK_AIR;
+    for (const auto &name : candidates)
+    {
+      const auto id = registry.GetIdByTypeName(name);
+      if (id != BLOCK_AIR)
+      {
+        chosen = id;
+        break;
+      }
+    }
+    if (chosen == BLOCK_AIR)
+      throw std::runtime_error("Cannot find utility target block");
+    if (!shears)
+    {
+      // An explicit QA material opts into the existing fire contract. Shipped
+      // pack data stays unchanged; visual QA must not rebalance every wood.
+      auto byId = UtilityCatalog->ById;
+      auto found = byId.find(chosen);
+      if (found == byId.end())
+        throw std::runtime_error("Utility QA target has no material profile");
+      UtilityMaterial = chosen;
+      found->second.Physics.Flammable =
+          ParsePhysicsFromJson(nlohmann::json{{"flammable", true}}).Flammable;
+      definitions->ReplaceAll(std::move(byId), UtilityCatalog->NameToId);
+      Report["qa_explicit_flammable_material"] =
+          registry.GetTypeNameById(chosen);
+      if (!registry.IsFlammable(chosen))
+        throw std::runtime_error("Explicit QA flammability did not load");
+    }
+    world.GetBlockWorld().SetBlock(UtilityPosition, chosen);
+    world.RelightPlayerEdit({UtilityPosition}, Base.y);
+    world.InvalidateBlockMesh();
+    const auto eye = glm::vec3(Base) + glm::vec3(0, .501f, 0) +
+                     world.GetControlledCreature()->GetEyeOffset();
+    const auto d = glm::vec3(UtilityPosition) - eye;
+    Yaw = glm::degrees(std::atan2(d.z, d.x));
+    Pitch = glm::degrees(std::atan2(d.y, glm::length(glm::vec2(d.x, d.z))));
+  }
+  void DispatchUtility(UWorld &world)
+  {
+#if defined(__ANDROID__)
+    throw std::runtime_error("Utility capture requires desktop GLFW callbacks");
+#else
+    auto *window = glfwGetCurrentContext();
+    if (!window)
+      throw std::runtime_error("Utility capture has no current window");
+    int width = 0, height = 0;
+    glfwGetWindowSize(window, &width, &height);
+    glfwSetCursorPos(window, width * .5, height * .5);
+    world.GetCurrentUserCamera()->SetOrientation(Yaw, Pitch);
+    for (int action : {GLFW_PRESS, GLFW_RELEASE})
+      UInputManager::GLFWMouseButtonCallback(window, GLFW_MOUSE_BUTTON_RIGHT,
+                                             action, 0);
+#endif
+  }
+  bool AdvanceUtility(UApplication &app)
+  {
+    if (Stage == 0 || Stage == 2)
+    {
+      // Leave one ordinary frame after PNG readback before dispatching input;
+      // its preceding wall time must not consume a newly created short pulse.
+      UtilityPending = true;
+      UtilityDispatchWait = 1;
+    }
+    else if (Stage == 3 || Stage == 4)
+    {
+      const int key = Stage == 3 ? GLFW_KEY_2 : GLFW_KEY_1;
+      app.RouteKey(key, GLFW_PRESS, 0);
+      app.RouteKey(key, GLFW_RELEASE, 0);
+    }
+    if (Stage == 7)
+      return false;
+    ++Stage;
+    ItemStarted = Clock::now();
+    return true;
+  }
+  void ValidateUtility(UWorld &world)
+  {
+    auto *actor = world.GetControlledCreature();
+    const auto &entry = actor->GetInventory().GetSlot(0);
+    Require(entry.Id == Original.Id &&
+                entry.instanceId == Original.instanceId && entry.count == 1,
+            "utility use preserves its finite instance");
+    const float phase = actor->ActiveItemUsePhase();
+    if (Stage == 1)
+    {
+      Require(phase > 0 && phase < 1,
+              "successful utility action produces a real pulse");
+      UtilityWear = entry.wear;
+      if (Original.Id == "shears")
+      {
+        int fiber = actor->GetInventory().Count(InventoryEntryKind::Item,
+                                                "plant_fiber");
+        for (const auto &body : UWorldItemSystem::Instance().GetItems())
+          if (!body.creatureId && body.stack.Id == "plant_fiber")
+            fiber += body.stack.count;
+        Require(world.GetBlockWorld().GetBlock(UtilityPosition) == BLOCK_AIR &&
+                    fiber >= 2,
+                "shearing removes real foliage and preserves the harvest");
+      }
+    }
+    else
+      Require(phase == 0,
+              "idle/refused utility action has no stale animation pulse");
+    if (Stage > 1)
+      Require(entry.wear == UtilityWear,
+              "refusal and slot changes do not add wear");
+    if (actor->GetInventory().IsCreative())
+      Require(entry.wear == Original.wear,
+              "creative utility actions preserve wear");
+    if (Stage == 4)
+      Require(!actor->GetInventory().GetActiveEntryRef() ||
+                  actor->GetInventory().GetActiveEntryRef()->empty,
+              "utility slot cancellation selects the empty slot");
+    else if (Request.value("perspective", "first") == "first")
+    {
+      bool drawn = false;
+      for (const auto &item : FpItems)
+        if (item.at("id") == Original.Id)
+        {
+          drawn = item.at("visible_primitives").get<size_t>() > 0;
+          Require(std::abs(item.at("use_phase").get<float>() - phase) < .001f,
+                  "actual utility draw receives the gameplay pulse");
+        }
+      Require(drawn, "the utility remains rendered throughout its action");
+    }
+  }
   void PrepareCreature(UWorld &world)
   {
     if (CargoCreature)
@@ -600,8 +824,8 @@ private:
     const auto mode = world.GetGameMode();
     world.SetGameMode(WorldGameMode::Creative);
     CargoCreature = world.SpawnCreature(
-        Ids[Index], glm::vec3(Base) + glm::vec3(0, .501f, 1.7f),
-        "", CreatureSpawnSource::Qa);
+        Ids[Index], glm::vec3(Base) + glm::vec3(0, .501f, 1.7f), "",
+        CreatureSpawnSource::Qa);
     world.SetGameMode(mode);
     auto *target = world.GetCreature(CargoCreature);
     if (!target)
@@ -631,13 +855,16 @@ private:
     for (const auto &body : UWorldItemSystem::Instance().GetItems())
       if (!body.creatureId && body.stack.Id == "seeds")
         seeds += body.stack.count;
-    Require(seeds == 1, "finite creature property survives carry/release/death");
+    Require(seeds == 1,
+            "finite creature property survives carry/release/death");
     Report["frames"].back()["creature_present"] = target != nullptr;
-    Report["frames"].back()["creature_health"] = target ? target->GetVitals().health : 0;
+    Report["frames"].back()["creature_health"] =
+        target ? target->GetVitals().health : 0;
     if (Stage < 6)
-      Require(target && target->GetId() == CargoCreature &&
-                  target->GetVitals().health == CargoHealth,
-              "grab and gentle placement preserve the existing living creature");
+      Require(
+          target && target->GetId() == CargoCreature &&
+              target->GetVitals().health == CargoHealth,
+          "grab and gentle placement preserve the existing living creature");
     if (held)
     {
       Require(target && target->ExternalMotion,
@@ -645,15 +872,18 @@ private:
       Require(actor->CarryHandCount == (Ids[Index] == "rat" ? 1 : 2),
               "small and larger prototypes use one and two hands");
       if (Request.value("perspective", "first") == "first")
-        Require(FpWorldArms, "creature cargo uses shared world-skeleton FP arms");
+        Require(FpWorldArms,
+                "creature cargo uses shared world-skeleton FP arms");
       const auto contacts = TpContacts(world);
-      Require(contacts.size() == size_t(actor->CarryHandCount), "creature palms are observed");
+      Require(contacts.size() == size_t(actor->CarryHandCount),
+              "creature palms are observed");
       for (const auto &contact : contacts)
         Require(contact.at("gap").get<float>() < .035f,
                 "creature palm reaches its contact without stretching");
     }
     if (Stage == 7 && target && target->GetVitals().health > 0)
-      Require(!target->ExternalMotion, "surviving creature returns to AI locomotion");
+      Require(!target->ExternalMotion,
+              "surviving creature returns to AI locomotion");
   }
   void SetItem(UWorld &world)
   {
@@ -667,7 +897,8 @@ private:
     world.GetControlledCreature()->GetVitals().fatigue = 0;
     InventoryEntryRef entry;
     entry.empty = false;
-    entry.kind = Subject == "block" ? InventoryEntryKind::Block : InventoryEntryKind::Item;
+    entry.kind = Subject == "block" ? InventoryEntryKind::Block
+                                    : InventoryEntryKind::Item;
     entry.Id = Ids[Index];
     if (Subject == "creature")
     {
@@ -680,10 +911,11 @@ private:
     {
       const auto *definition = world.GetItemDefinitionStorage()->Get(entry.Id);
       if (!definition || (!definition->Ranged.Enabled &&
-          definition->Use.Action != ItemUseActionKind::Eat &&
-          definition->Use.Action != ItemUseActionKind::Drink))
+                          definition->Use.Action != ItemUseActionKind::Eat &&
+                          definition->Use.Action != ItemUseActionKind::Drink))
         throw std::runtime_error("Use capture supports food, drinks and bows");
-      UseDuration = definition->Ranged.Enabled ? 1.1f : definition->Use.Duration;
+      UseDuration =
+          definition->Ranged.Enabled ? 1.1f : definition->Use.Duration;
       if (definition->StackMax > 1)
         entry.count = 3;
       auto &vitals = world.GetControlledCreature()->GetVitals();
@@ -706,7 +938,8 @@ private:
     auto &physics = UWorldItemSystem::Instance();
     physics.Clear();
     Original = *inv.GetActiveEntryRef();
-    if (Interaction == "use" && world.GetItemDefinitionStorage()->Get(entry.Id)->Ranged.Enabled)
+    if (Interaction == "use" &&
+        world.GetItemDefinitionStorage()->Get(entry.Id)->Ranged.Enabled)
     {
       InventoryEntryRef ammo;
       ammo.empty = false;
@@ -724,17 +957,25 @@ private:
                              entry, InventoryDomain::Creative);
     if (Interaction.empty() && !BodyId)
       throw std::runtime_error("Cannot spawn world presentation item");
+    if (Interaction == "utility")
+      PrepareUtility(world);
     ItemStarted = Clock::now();
   }
   std::filesystem::path Path;
-  nlohmann::json Request, Report, FpItems = nlohmann::json::array();
+  nlohmann::json Request, Report, FpItems = nlohmann::json::array(),
+                                  WorldItems = nlohmann::json::array();
   std::vector<std::string> Ids;
   size_t Index{0};
   int BodyId{0}, Stage{0};
   float Yaw{90}, Pitch{-12}, UseDuration{.8f};
   std::string Interaction, Subject;
   uint64_t CargoCreature{0};
-  float CargoHealth{0};
+  float CargoHealth{0}, UtilityWear{0};
+  glm::ivec3 UtilityPosition{};
+  bool UtilityPending{false};
+  int UtilityDispatchWait{0};
+  BlockId UtilityMaterial{BLOCK_AIR};
+  std::shared_ptr<const BlockDefinitionCatalog> UtilityCatalog;
   InventoryEntryRef Original;
   glm::ivec3 Base{};
   Clock::time_point Started, ItemStarted;

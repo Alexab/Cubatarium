@@ -1,0 +1,12 @@
+{
+  "wrapper_exit_code": 3221356611,
+  "wrapper_exit_hex": "0xC0020043",
+  "windows_status": "RPC_NT_INTERNAL_ERROR",
+  "status_reference": "https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-erref/596a1078-e883-4972-9bbc-49e60bebca55",
+  "game_exit_code": 0,
+  "game_measurement_passed": true,
+  "source_and_runtime_restored": true,
+  "root_cause": "not established",
+  "executable_sha256": "9eb54f488ea8a309ec49ea61283ee5064b0107d88028dcfbd1608ebdc6e40099",
+  "policy": "retain failed aggregate and repeat full four-scene series; do not ignore wrapper exit codes"
+}

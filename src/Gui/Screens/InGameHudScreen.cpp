@@ -285,7 +285,8 @@ void UInGameHudScreen::LayoutHotbar()
   const int startX = (ViewportW - totalW) / 2;
   // Reserve a separate footer row for version/coordinates at every UI scale.
   const int footer = Theme->FontSizeBody + Theme->Padding * 3;
-  const int rowY = ViewportH - std::max(Theme->HotbarMarginBottom, footer) - slotSize;
+  const int rowY =
+      ViewportH - std::max(Theme->HotbarMarginBottom, footer) - slotSize;
 
   int x = startX;
   for (size_t i = 0; i < PrimarySlots.size(); ++i)
@@ -329,8 +330,9 @@ void UInGameHudScreen::LayoutHotbar()
     slot->SetVisible(bar < Session->GetBarCount());
     slot->SetBounds({ViewportW - Theme->HotbarSecondaryMarginRight - slotSize -
                          column * (slotSize + gap),
-                     ViewportH - std::max(Theme->HotbarSecondaryMarginBottom, footer) - slotSize -
-                         row * (slotSize + gap),
+                     ViewportH -
+                         std::max(Theme->HotbarSecondaryMarginBottom, footer) -
+                         slotSize - row * (slotSize + gap),
                      slotSize, slotSize});
   }
 
@@ -580,7 +582,8 @@ void UInGameHudScreen::LayoutModeBadge()
                           GetContentOffsetY() + ViewportH -
                               Theme->HotbarSlotSize -
                               std::max(Theme->HotbarMarginBottom,
-                                       Theme->FontSizeBody + pad * 3) - line * 2,
+                                       Theme->FontSizeBody + pad * 3) -
+                              line * 2,
                           ViewportW * 2 / 3, line * 2});
 }
 

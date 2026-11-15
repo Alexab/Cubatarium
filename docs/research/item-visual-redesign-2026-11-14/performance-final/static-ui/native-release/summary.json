@@ -1,0 +1,39 @@
+{
+  "passed": true,
+  "reports": {
+    "native.json": {
+      "passed": true,
+      "checks": 59
+    },
+    "native.json.ui.json": {
+      "passed": true,
+      "checks": 0
+    },
+    "native.json.ownership.json": {
+      "passed": true,
+      "checks": 57
+    },
+    "native.json.ownership-ui.json": {
+      "passed": true,
+      "checks": 18
+    },
+    "native.json.player-window.json": {
+      "passed": true,
+      "checks": 7
+    },
+    "native.json.icons.json": {
+      "passed": true,
+      "checks": 209
+    },
+    "native.json.item-lab.json": {
+      "passed": true,
+      "checks": 1041
+    },
+    "native.json.presentations.json": {
+      "passed": true,
+      "checks": 3753
+    }
+  },
+  "gui_rgba_cases": 24,
+  "gui_resolution_scales": 6
+}

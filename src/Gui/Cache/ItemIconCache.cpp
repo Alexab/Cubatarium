@@ -7,7 +7,10 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <filesystem>
+#include <fstream>
+#include <nlohmann/json.hpp>
 #include <vector>
 
 namespace cutum
@@ -157,18 +160,6 @@ GLuint UItemIconCache::GetIcon(const InventoryEntryRef &entry)
   const auto found = Cache.find(key);
   if (found != Cache.end())
     return found->second;
-  if (IconService && !SkipDiskCache)
-  {
-    GLuint texture = 0;
-    if (IconService->TryLoadIconTexture("item", entry.Id, variant,
-                                        FingerprintFor(entry.Id), kIconSize,
-                                        texture) &&
-        texture)
-    {
-      Cache[key] = texture;
-      return texture;
-    }
-  }
   auto inputs = MakeItemVisualInputs(&entry);
   inputs.ContentsUnits = units;
   StateRequests[key] = {entry.Id, variant, inputs};
@@ -188,18 +179,6 @@ GLuint UItemIconCache::GetIcon(const std::string &itemId)
   {
     return it->second;
   }
-  if (IconService && !SkipDiskCache)
-  {
-    // Disk cache read: a previous session already rendered this icon.
-    GLuint cached = 0;
-    if (IconService->TryLoadIconTexture(
-            "item", itemId, "", FingerprintFor(itemId), kIconSize, cached) &&
-        cached != 0)
-    {
-      Cache[itemId] = cached;
-      return cached;
-    }
-  }
   // UX U3: queue for the per-frame drain instead of rendering synchronously
   // (glTF parse + FBO + glReadPixels + PNG write used to stall the frame).
   Warmup.Push(itemId);
@@ -210,7 +189,12 @@ void UItemIconCache::WarmupNext(size_t count)
 {
   SyncRevision();
   size_t done = 0;
-  while (done < count)
+  const auto started = std::chrono::steady_clock::now();
+  // Bound expensive disk validation, model loading and rendering together.
+  // Always advance one queued icon; reopening the window is never required.
+  constexpr auto budget = std::chrono::milliseconds(4);
+  while (done < count &&
+         (done == 0 || std::chrono::steady_clock::now() - started < budget))
   {
     const auto next = Warmup.PopFront();
     if (!next)
@@ -225,20 +209,54 @@ void UItemIconCache::WarmupNext(size_t count)
     const auto state = StateRequests.find(itemId);
     const auto &definitionId =
         state == StateRequests.end() ? itemId : state->second.Id;
+    ++done;
+    if (IconService && !SkipDiskCache)
+    {
+      GLuint cached = 0;
+      if (IconService->TryLoadIconTexture(
+              "item", definitionId,
+              state == StateRequests.end() ? "" : state->second.Variant,
+              FingerprintFor(definitionId), kIconSize, cached) &&
+          cached)
+      {
+        Cache[itemId] = cached;
+        continue;
+      }
+    }
+    const auto renderStart = std::chrono::steady_clock::now();
     const GLuint tex = RenderItemIcon(definitionId, state == StateRequests.end()
                                                         ? ItemVisualInputs{}
                                                         : state->second.Inputs);
+    const auto renderEnd = std::chrono::steady_clock::now();
     Cache[itemId] = tex;
+    auto fingerprintEnd = renderEnd;
+    auto storeEnd = renderEnd;
     if (IconService)
     {
+      const auto fingerprint = FingerprintFor(definitionId);
+      fingerprintEnd = std::chrono::steady_clock::now();
       IconService->StoreIconTexture(
           "item", definitionId,
           state == StateRequests.end() ? "" : state->second.Variant,
-          FingerprintFor(definitionId), kIconSize, tex);
+          fingerprint, kIconSize, tex);
+      storeEnd = std::chrono::steady_clock::now();
     }
-    ++done;
+    if (const char *path = std::getenv("CUBA_ICON_TIMING"))
+    {
+      const auto ms = [](auto a, auto b)
+      { return std::chrono::duration<double, std::milli>(b - a).count(); };
+      std::ofstream output(path, std::ios::app);
+      output << nlohmann::json{{"id", definitionId},
+                               {"render_ms", ms(renderStart, renderEnd)},
+                               {"fingerprint_ms",
+                                ms(renderEnd, fingerprintEnd)},
+                               {"store_ms", ms(fingerprintEnd, storeEnd)},
+                               {"disk_service", bool(IconService)}}
+                    .dump()
+             << '\n';
+    }
   }
-  if (done > 0 && IconService)
+  if (IconService)
   {
     IconService->FlushManifest();
   }

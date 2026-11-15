@@ -33,7 +33,8 @@ public:
 
   /// UX U3: per-frame budgeted icon generation. GetIcon for a not-yet-
   /// rendered item queues it (returning a shared placeholder) instead of
-  /// rendering synchronously; WarmupNext drains the queue.
+  /// rendering synchronously; WarmupNext drains disk reads and rendering
+  /// within both an icon-count cap and a four-millisecond work budget.
   void WarmupNext(size_t count);
   size_t PendingWarmupCount() const { return Warmup.Size(); }
 

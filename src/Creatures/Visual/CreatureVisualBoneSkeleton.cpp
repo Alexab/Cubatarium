@@ -154,8 +154,8 @@ void UCreatureVisualBoneSkeleton::UpdatePose(
     const auto *active = creature.GetInventory().GetActiveEntryRef();
     input.rightHandBusy = active && !active->empty && !active->Id.empty();
     const auto &off = creature.GetInventory().GetEquippedOffhand();
-    input.leftHandBusy = creature.CarryHandCount == 0 && !off.empty &&
-                         !off.Id.empty();
+    input.leftHandBusy =
+        creature.CarryHandCount == 0 && !off.empty && !off.Id.empty();
     input.carryHands = creature.CarryHandCount;
     input.throwCharge = creature.ThrowCharge;
     input.bowCharge = creature.BowCharge;

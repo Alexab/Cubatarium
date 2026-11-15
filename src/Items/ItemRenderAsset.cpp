@@ -12,6 +12,7 @@
 #include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <unordered_map>
+#include <utility>
 
 namespace cutum
 {
@@ -291,14 +292,14 @@ void ReadWearSections(const Json &rows, ItemRenderAsset &asset)
 }
 } // namespace
 
+namespace
+{
 std::shared_ptr<ItemRenderAsset>
-LoadItemRenderAsset(const std::filesystem::path &path,
-                    bool legacyPreviewNormals)
+DecodeItemRenderAsset(const std::filesystem::path &path, Json data,
+                      bool legacyPreviewNormals)
 {
   Reader reader;
-  std::ifstream in(path);
-  Require(bool(in), "cannot open model");
-  in >> reader.Data;
+  reader.Data = std::move(data);
   const auto &g = reader.Data;
   Require(g.at("asset").at("version") == "2.0", "expected glTF 2.0");
   Require(!g.contains("skins") && !g.contains("animations") &&
@@ -529,8 +530,36 @@ LoadItemRenderAsset(const std::filesystem::path &path,
   asset->High = visible.second;
   Require(glm::length(asset->High - asset->Low) > 1e-6f,
           "default item state has no visible geometry");
+  for (const auto &section : asset->WearSections)
+  {
+    if (asset->StaticWearSections.count(section.Node))
+      continue;
+    ItemVisualState selection;
+    selection.VisibleRoots.insert(section.Node);
+    ItemStaticWearSection cached;
+    const auto bounds = ItemVisualBounds(*asset, selection);
+    cached.Low = bounds.first;
+    cached.High = bounds.second;
+    for (size_t i = 0; i < asset->Primitives.size(); ++i)
+      if (ItemNodeVisible(*asset, selection, asset->Primitives[i].Node))
+        cached.Primitives.push_back(i);
+    asset->StaticWearSections.emplace(section.Node, std::move(cached));
+  }
   return asset;
 }
+} // namespace
+
+std::shared_ptr<ItemRenderAsset>
+LoadItemRenderAsset(const std::filesystem::path &path,
+                    bool legacyPreviewNormals)
+{
+  std::ifstream in(path);
+  Require(bool(in), "cannot open model");
+  Json data;
+  in >> data;
+  return DecodeItemRenderAsset(path, std::move(data), legacyPreviewNormals);
+}
+
 std::shared_ptr<const ItemRenderAsset>
 FindItemSurfaceAsset(const std::filesystem::path &path, uint64_t revision)
 {
@@ -563,7 +592,7 @@ FindItemSurfaceAsset(const std::filesystem::path &path, uint64_t revision)
   in >> data;
   std::shared_ptr<const ItemRenderAsset> asset;
   if (data.value("extras", Json::object()).value("design_version", 0) == 3)
-    asset = LoadItemRenderAsset(path);
+    asset = DecodeItemRenderAsset(path, std::move(data), false);
   Assets.emplace(key, asset);
   AssetAliases.emplace(spelling, key);
   return asset;

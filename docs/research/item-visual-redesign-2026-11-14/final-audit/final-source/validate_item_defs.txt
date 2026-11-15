@@ -1,0 +1,1 @@
+validate_item_defs OK (70 items)

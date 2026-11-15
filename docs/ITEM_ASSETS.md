@@ -1,66 +1,104 @@
-# Item & armor 3D assets
+# Item and armor visual assets
 
-Educational Cubatarium content under `models/items/` and `content/items/`.
+The active catalog contains 70 authored v3 items. Item IDs, recipes, statistics,
+physical profiles and inventory state remain gameplay data in `content/items/`.
+The [redesign implementation record](research/item-visual-redesign-2026-11-14/README.md)
+tracks publication, visual evidence and remaining acceptance gates.
 
-## Runtime formats
+## Production resources and renderer
 
-| Priority | Format | Path pattern | Renderer |
-|----------|--------|--------------|----------|
-| 1 | Static glTF | `models/items/<id>/model.gltf` (or `model` field ending in `.gltf`) | Icons: `UItemPreviewRenderer`; FP: `UFpViewmodelRenderer::TryDrawGltfHeld`; worn armor: `WornEquipmentDrawer` |
-| 2 | `parts[]` JSON | `models/items/<id>.json` | Cube parts FBO / FP fallback |
-| 3 | Procedural | (none) | `FallbackParts` by item id keywords |
+`models/items/MANIFEST.json` is the version 4 publication manifest. Each active
+item has `design_version: 3` glTF geometry, normals, surface UVs, material factors,
+painted albedo, grip/presentation profiles, attribution and dependency hashes.
+The prior published directory is retained under `_itemgen_reference/` for Item Lab.
 
-Item definitions in `content/items/*.json` set `"model"` to the preferred asset.
+`ItemRenderAsset` and `ItemSurfaceRenderer` form the item-only geometry/material
+path shared by icons, FP, TP, armor and physical ground/carried items. Creature
+vertex formats and creature lighting remain separate. The stylized item shader
+uses linear-light diffuse shading, a restrained roughness/metallic highlight,
+world ambient light and fog; icons use fixed studio lighting. Albedo textures
+use sRGB decoding, mipmaps and linear filtering. Small icons use a linear-light
+supersampled resolve. These are documented subsets, not a complete PBR renderer.
 
-## Folder layout (canon)
+Geometry determines silhouette, joints and thickness; per-surface paint supplies
+material variation, construction details and local manufacturing marks. Default
+albedo budgets are 128/256/512 for small supplies/handheld items/armor. Four-pixel
+UV gutters and explicit surface orientation prevent neighboring-island bleed.
+Native visual review remains necessary: budget and file-presence tests do not
+certify artistic quality.
 
+Icon framing, FP/TP grips, carry contacts, ground orientation and physical size
+are independent. World wielded equipment is hidden only when the possessed player
+actually uses the first-person camera and FP viewmodel. Bow, utility pulses,
+container fill and use phases derive from gameplay state. Rendering does not own
+or modify inventory instances.
+
+Legacy glTF and parts/procedural previews remain supported for migration and
+archived comparisons. They do not excuse a missing or malformed v3 production
+resource; production acceptance fails instead of silently substituting a cube.
+
+## Authoring and publication
+
+Author sources are `tools/item_designs/<id>/design.yaml`, optional read-only
+surface overlays and restricted manual glTF sources; family construction and
+material painting live in `tools/itemgen/`. Design cards and provenance records
+are kept beside these sources. The older `tools/item_recipes/` pipeline is
+historical and protected from overwriting the published v3 line.
+
+```text
+python tools/itemgen.py build-design --id iron_pickaxe
+python tools/itemgen.py validate-design --id iron_pickaxe
+python tools/itemgen.py publish-design --id iron_pickaxe
 ```
-models/items/<id>/
-  model.gltf
-  model.bin? / textures / model.glb (optional upstream)
-  ATTRIBUTION.json
-  LICENSE.txt
-  wear.json          # armor attach: bones, offset, euler_deg, scale
-content/items/<id>.json
-models/items/<id>.json   # parts_v1 fallback (kept)
+
+Build writes staging; validation and publication are separate operations.
+Publication checks source/dependency hashes, preserves authored grip/wear sidecars,
+archives the previous resources and commits a recoverable transaction. Author
+layers are inputs and are never overwritten by regeneration. Manual imports
+reject unsupported geometry/material features with an explanation. See the
+source-authoring documentation under `tools/item_designs/` for the exact subset.
+
+## Native inspection
+
+Ctrl+F8 opens Item Lab with archived/reference and staged/published panes. It
+supports all 70 IDs; orbit/fixed cameras; silhouette, gray, albedo, lighting, UV,
+normal and wireframe modes; 32/48/64-pixel icons; FP/TP, armor on both human forms,
+drops, contacts and physical envelopes. Pose, fill, ammo and use controls operate
+on test state. Reload invalidates resource/icon caches; Export writes PNG and JSON.
+The lab does not consume or save player property and is not a modeling editor.
+
+```text
+cmake --build build/desktop-msvc --config Release --target Cubatarium --parallel 8
+python tools/run_item_lab_qa.py --skip-build --world CarryAimQA --width 1920 --scale 2
+python tools/run_item_world_visual_qa.py --skip-build --perspective front --body female
 ```
 
-## Shipped catalog
+Native runners use `tools/flight_sim_run.py` with `bin/Cubatarium.exe` on dedicated
+QA worlds. They check report coverage and restore world/config/runtime changes.
+Display reports distinguish the user scale from the effective DPI-adjusted scale.
+Automated flight launches temporarily disable audio and zero every volume bus;
+original audio settings are restored on normal or error exit. QA world creation
+in the item runners uses the same policy.
+Use `run_items_acceptance.py --extended` for the integrated Release property,
+equipment, throw and visual regressions.
 
-The active catalog contains 70 original generated items: five tool families × five
-materials; four armor slots × leather/copper/iron/gold; weapons, finite containers,
-utility, food and processing materials. Active manifest: `models/items/MANIFEST.json`.
-Recipes and materials live in `tools/item_recipes/` and `tools/item_materials.yaml`.
-No Minecraft assets were imported. See the [completion report](research/items-completion-2026-11-13/README.md).
+## Provenance
 
-Generation, validation and publication are distinct:
+The active authored line records project coordinate recipes, surface paint and
+per-item review evidence under the repository MIT license. It imports no external
+mesh, UV or pixel input. Familiar functional archetypes are intentional. Hash
+changes alone do not establish visual independence, and the recorded review is
+not an exhaustive external-catalogue comparison or legal certification.
 
-```
-python tools/itemgen.py build --id iron_pickaxe --staging-only
-python tools/itemgen.py validate --id iron_pickaxe
-python tools/itemgen.py publish --id iron_pickaxe
-```
-
-Publishing preserves authored worn/grip sidecars and pose defaults; explicit recipe
-overrides remain authoritative. Manifest v3 updates with publication and hashes all
-published resources and generator dependencies. `audit_item_visuals.py` verifies it. QA rasterizes real triangles,
-UV and textures; it no longer replaces geometry with bounds. Icon, FP, TP and
-ground presentation scales are independent from physical dimensions.
-World drops and thrown items use their actual models; block units use the block atlas.
-
-First-person wield: glTF when present, else `parts[]` / block cubes (`DrawWorldOverlay`, clear-Z, FOV 72°). Scale via `visual.wield_scale` (category defaults). Swing/use from `content/item_visual_presets.json`. Perspective only.
-
-Third-person: hotbar/offhand on `rightItem`/`leftItem` via `WornEquipmentDrawer::SubmitWieldedFromCreature` (prefers `ItemDefinition.ModelPath` glTF, else sibling, else `parts_v1` boxes). Character sheet paper-doll uses the same attach path (`SubmitWieldedPreview`).
-
-Worn armor: attached to human `bone_skeleton` bones (`hat`, `body`, `*Arm`, `*Leg`, `*Item`) in world TP and character-sheet 3D preview. `ItemGltfTextureCache` loads PNG, bufferView images, and unnamed `baseColorFactor` materials.
-
-Tooling: `tools/audit_item_visuals.py`, `tools/apply_item_visual_defaults.py`, `tools/validate_item_defs.py`, `tools/parts_to_gltf.py`.
+Historical CC0 imports below remain separate reference records. Their attribution
+does not assign CC0 to the new authored line. Inspect each resource's
+`ATTRIBUTION.json` and `LICENSE.txt`, plus `THIRD_PARTY_NOTICES.md`.
 
 ## Historical / optional upstream CC0 import tooling
 
 | Pack | License | URL | Use |
 |------|---------|-----|------|
-| Kenney Survival Kit | CC0-1.0 | https://www.kenney.nl/assets/survival-kit | shovel/axe/pickaxe/hammer/hoe (GLB→glTF) |
+| Kenney Survival Kit | CC0-1.0 | https://www.kenney.nl/assets/survival-kit | shovel/axe/pickaxe/hammer/hoe (GLBв†’glTF) |
 | KayKit RPG Tools Bits | CC0-1.0 | https://kaylousberg.itch.io/rpg-tools-bits | hand tools (place under `third_party/asset_cache/`) |
 | KayKit Fantasy Weapons Bits | CC0-1.0 | https://kaylousberg.itch.io/fantasy-weapons-bits | swords/spears/shields |
 | Quaternius Fantasy Props | CC0-1.0 | https://quaternius.com/ | armor/weapon props |
@@ -83,6 +121,29 @@ python tools/validate_item_defs.py
 
 Historical import manifest: [`tools/item_model_manifest.json`](../tools/item_model_manifest.json). Cache: [`third_party/asset_cache/README.md`](../third_party/asset_cache/README.md) (gitignored extracts).
 
-## Attribution
+### Item icon scheduling and disk persistence
 
-See [`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md) § Item / armor models. Only CC0-1.0 content is accepted.
+Item GUI lookups queue cold disk validation and rendering instead of opening
+files synchronously. Each warmup call limits both work count and elapsed time
+(four milliseconds, with at least one queued item advanced). Rendered icons are
+available immediately in memory; optional disk persistence uses a bounded PBO
+queue and zero-timeout fence polling, draining at most two completed images per
+flush. The manifest is saved after pending item readbacks drain. Invalidation
+cancels matching queued transfers; shutdown cancels pending GPU work. Normal
+rendering does not wait for a fence. Block and creature caching retain their
+existing behavior. Native isolated-cache tests verify byte-exact RGBA reload,
+pack/read/draw state restoration and invalidation. See the latest
+[performance acceptance](research/item-visual-redesign-2026-11-14/performance-final/README.md)
+for the final gate results and measurement scope.
+
+
+Item geometry uploads preserve all vertices, rebasing primitive indices into one
+VAO/VBO/EBO per asset. Material and node draw order are unchanged. The measured
+954 -> 210 geometry-object reduction covers one renderer cache containing the
+70 authored assets. Default bounds and static wear selections are cached at load.
+World uniform reuse is restricted to an explicit consecutive item-draw scope.
+
+The desktop GUI textured-quad shader uses a static unit quad plus `rectPx`.
+Legacy/GLES shaders without that uniform retain pixel-position vertices.
+Independent native RGBA tests cover both paths at 1280x720 and 1920x1080 with
+100/150/200% scale. Colored quad streams orphan storage before reuse.

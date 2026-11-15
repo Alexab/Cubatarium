@@ -1,0 +1,61 @@
+{
+  "passed": true,
+  "branch": "codex/item-visual-redesign",
+  "implementation_parent": "1eb9aef4d804cac39a264445160da4d7a2878a1c",
+  "tested_executable_sha256": "919a81f001502e3b52d80579b78aee2c4c01c033c87f4a74cf6339aaf58d4a16",
+  "build_command": "cmake --build build/desktop-msvc --config Release --target Cubatarium --parallel 8",
+  "acceptance_command": "python tools/run_items_acceptance.py --skip-build --extended",
+  "ctest_count": 26,
+  "reports": {
+    "gameplay": {
+      "passed": true,
+      "checks": 59
+    },
+    "window": {
+      "passed": true,
+      "checks": 0
+    },
+    "ownership": {
+      "passed": true,
+      "checks": 57
+    },
+    "ownership_ui": {
+      "passed": true,
+      "checks": 18
+    },
+    "player_window": {
+      "passed": true,
+      "checks": 7
+    },
+    "icons": {
+      "passed": true,
+      "checks": 209
+    },
+    "item_lab": {
+      "passed": true,
+      "checks": 1041
+    },
+    "presentations": {
+      "passed": true,
+      "checks": 3753
+    }
+  },
+  "artifact_audit": {
+    "active_items": 70,
+    "origin_and_individual_review_coverage": true,
+    "comparison_sheets_hash_verified": 93,
+    "native_views_hash_verified": 1260,
+    "gameplay_definitions_preserved": true
+  },
+  "performance_summary": "../../performance-final/final-no-capture/summary.json",
+  "performance_executable_sha256": "9eb54f488ea8a309ec49ea61283ee5064b0107d88028dcfbd1608ebdc6e40099",
+  "post_performance_source_differences": [
+    "src/App/Application.cpp",
+    "src/Items/FpViewmodelRenderer.cpp"
+  ],
+  "exact_inverse_encoding_reconstructs_measured_source": true,
+  "post_performance_logic_changes": false,
+  "remote_ci_run": false,
+  "published_recipes_and_item_definitions_unchanged": true,
+  "final_cached_whitespace_audit_passed": true
+}

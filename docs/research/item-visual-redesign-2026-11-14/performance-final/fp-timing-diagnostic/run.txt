@@ -1,0 +1,7 @@
+Measuring fp-0-baseline
+Restored 210 runtime files
+{"scene": "fp", "repeat": 0, "mode": "baseline", "frames": 1864, "measure_sec": 30.0087735, "p50_ms": 14.477699999999999, "p95_ms": 28.581109999999963, "p99_ms": 65.44927699999992, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 32768, "runtime_files_restored": 210, "report": "bin/items_performance/fp-0-baseline/frame-benchmark.json"}
+Measuring fp-0-candidate
+Restored 212 runtime files
+{"scene": "fp", "repeat": 0, "mode": "candidate", "frames": 1598, "measure_sec": 30.0155132, "p50_ms": 15.57305, "p95_ms": 41.86140499999995, "p99_ms": 81.62274399999995, "cold_catalog_ms": 0.0, "cold_frames": 0, "cold_frame_p95_ms": null, "audio_disabled_for_test": true, "item_texture_rgba_mip_bytes": 349524, "runtime_files_restored": 212, "report": "bin/items_performance/fp-0-candidate/frame-benchmark.json"}
+passed=False; evidence=E:\Work\Home\Cubatarium\bin\items_performance\summary.json

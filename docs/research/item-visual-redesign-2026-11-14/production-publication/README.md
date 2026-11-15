@@ -1,5 +1,8 @@
 # Production publication of all 70 items
 
+> Historical checkpoint. Subsequent requirements and final status are recorded
+> in the [consolidated acceptance audit](../final-audit/README.md).
+
 All 70 published item resources now use the authored v3 geometry, UV, materials,
 textures, carry profiles and visual bindings. Publication generation and manifest
 hash are recorded in `publication.json`. The transaction is committed and no

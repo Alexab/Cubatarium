@@ -37,7 +37,8 @@ public:
     if (minimumRadius)
       *minimumRadius =
           std::abs(glm::distance(glm::vec3(a[3]), glm::vec3(b[3])) -
-                   glm::distance(glm::vec3(b[3]), glm::vec3(palm))) + .001f;
+                   glm::distance(glm::vec3(b[3]), glm::vec3(palm))) +
+          .001f;
     center = glm::vec3(rig.ComputeBoneMatrix(upper->second, pose)[3]);
     return radius > .001f;
   }

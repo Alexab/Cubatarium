@@ -1,0 +1,61 @@
+{
+  "passed": false,
+  "scope": "Complete paired gate before the current geometry-buffer packing; warm catalog fails",
+  "executable_sha256": "f0f9f3dee13665a813a8e4443af5eeee0e4f42a352d9ae65a90b8f8a034e9dcd",
+  "comparisons": [
+    {
+      "scene": "fp",
+      "baseline_p95_ms": 10.61775,
+      "candidate_p95_ms": 10.547985,
+      "ratio": 0.9934293988839444,
+      "within_ten_percent": true
+    },
+    {
+      "scene": "armor",
+      "baseline_p95_ms": 13.697375000000001,
+      "candidate_p95_ms": 12.827324999999998,
+      "ratio": 0.9364805300285637,
+      "within_ten_percent": true
+    },
+    {
+      "scene": "drops",
+      "baseline_p95_ms": 27.69554999999999,
+      "candidate_p95_ms": 16.90428,
+      "ratio": 0.6103608702481087,
+      "within_ten_percent": true
+    },
+    {
+      "scene": "moving",
+      "baseline_p95_ms": 30.455940000000005,
+      "candidate_p95_ms": 24.779474999999998,
+      "ratio": 0.8136171466058836,
+      "within_ten_percent": true
+    },
+    {
+      "scene": "moving-only frames",
+      "baseline_p95_ms": 26.26188,
+      "candidate_p95_ms": 18.007795,
+      "ratio": 0.6857009094550733,
+      "within_ten_percent": true
+    },
+    {
+      "scene": "catalog",
+      "baseline_p95_ms": 11.36424,
+      "candidate_p95_ms": 12.854575,
+      "ratio": 1.1311425137096718,
+      "within_ten_percent": false
+    },
+    {
+      "scene": "cold catalog loading frames",
+      "baseline_p95_ms": 57.77578999999999,
+      "candidate_p95_ms": 49.812349999999995,
+      "ratio": 0.8621664887663154,
+      "within_ten_percent": true
+    }
+  ],
+  "reports": [
+    "accepted/fp-five-pairs/summary.json",
+    "final-long-four-scene/summary.json",
+    "catalog-five-pairs-before-packing/summary.json"
+  ]
+}

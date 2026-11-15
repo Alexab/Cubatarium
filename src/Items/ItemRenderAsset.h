@@ -83,6 +83,11 @@ struct ItemWearSection
   glm::vec3 EulerDeg{0.f};
 };
 
+struct ItemStaticWearSection
+{
+  std::vector<size_t> Primitives;
+  glm::vec3 Low{0.f}, High{0.f};
+};
 struct ItemRenderAsset
 {
   std::vector<ItemRenderPrimitive> Primitives;
@@ -92,6 +97,9 @@ struct ItemRenderAsset
   ItemGripProfile Grip;
   std::vector<ItemNodeBinding> Bindings;
   std::vector<ItemWearSection> WearSections;
+  /// Immutable bind-pose selections prepared by the loader. Animated/hidden
+  /// state still takes the full visibility and hierarchy path.
+  std::unordered_map<std::string, ItemStaticWearSection> StaticWearSections;
 };
 
 /// Strict static item glTF subset. Throws with an actionable reason; callers

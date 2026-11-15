@@ -1,0 +1,2 @@
+audit_item_visuals: 70 items, 52 critical, 0 with issues
+wrote bin\iter_reports\item_visual_audit.json

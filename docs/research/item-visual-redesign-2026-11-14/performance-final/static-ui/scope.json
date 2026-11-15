@@ -1,0 +1,9 @@
+{
+  "status": "Release/native and both catalog gates pass; other final scenes pending",
+  "item_geometry_gl_objects": 210,
+  "old_item_geometry_gl_objects": 954,
+  "object_scope": "one renderer cache containing all 70 authored items",
+  "static_gui_rgba_cases": 12,
+  "legacy_shader_rgba_cases": 12,
+  "presentation_checks": 3753
+}

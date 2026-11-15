@@ -33,6 +33,10 @@ on:
         description: Run inventory ownership native QA (requires an OpenGL desktop)
         type: boolean
         default: false
+      native_item_performance_qa:
+        description: Run paired item performance gates (requires an OpenGL desktop)
+        type: boolean
+        default: false
       full_test:
         description: Run all reference seeds with determinism check
         type: boolean
@@ -125,6 +129,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python tools/test_itemgen_manual.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tools/test_qa_audio_config.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python tools/test_cpp_audits.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python tools/validate_item_defs.py
@@ -172,6 +178,30 @@ jobs:
           python tools/run_item_design_probes.py --skip-build --presentation-only --world OwnershipCIQA
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      - name: Native Item Lab display matrix
+        if: github.event_name == 'workflow_dispatch' && inputs.native_items_qa
+        shell: pwsh
+        run: |
+          foreach ($qaWidth in @(1280, 1920)) {
+            foreach ($qaScale in @(1, 1.5, 2)) {
+              python tools/run_item_lab_qa.py --skip-build --world OwnershipCIQA --width $qaWidth --scale $qaScale
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            }
+          }
+
+      - name: Native active wielded item resources in third person
+        if: github.event_name == 'workflow_dispatch' && inputs.native_items_qa
+        shell: pwsh
+        run: |
+          python tools/run_item_world_visual_qa.py --skip-build --world OwnershipCIQA --perspective back
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tools/run_item_world_visual_qa.py --skip-build --world OwnershipCIQA --perspective front --body female
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tools/audit_native_item_world_draws.py --report bin/item_world_visual/day-1280-100-back/native.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tools/audit_native_item_world_draws.py --report bin/item_world_visual/day-1280-100-front-female/native.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Native manual item source and packaged comparison
         if: github.event_name == 'workflow_dispatch' && inputs.native_items_qa
         shell: pwsh
@@ -195,6 +225,8 @@ jobs:
           foreach ($qaMode in @('creative', 'survival')) {
             python tools/run_item_world_visual_qa.py --skip-build --world OwnershipCIQA --interaction use --mode $qaMode
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            python tools/run_item_world_visual_qa.py --skip-build --world OwnershipCIQA --interaction utility --mode $qaMode
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
 
       - name: Native finite item carry and throw input
@@ -210,6 +242,26 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
 
+      - name: Paired native item performance gates
+        if: github.event_name == 'workflow_dispatch' && inputs.native_item_performance_qa
+        shell: pwsh
+        run: |
+          $qaStartedUtc = [DateTime]::UtcNow
+          python tools/run_item_performance.py --skip-build --repeats 3 --measure-seconds 30
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $qaSummaryPath = 'bin/items_performance/summary.json'
+          if (-not (Test-Path -LiteralPath $qaSummaryPath)) { throw 'Missing item performance report' }
+          if ((Get-Item -LiteralPath $qaSummaryPath).LastWriteTimeUtc -lt $qaStartedUtc) { throw 'Stale item performance report' }
+          $qaSummary = Get-Content -LiteralPath $qaSummaryPath -Raw | ConvertFrom-Json
+          if (-not $qaSummary.passed -or -not $qaSummary.sources_unchanged -or $qaSummary.requested_measure_sec -ne 30) { throw 'Incomplete item performance acceptance' }
+
+      - name: Upload item performance evidence
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.native_item_performance_qa
+        uses: actions/upload-artifact@v4
+        with:
+          name: item-performance-native-evidence
+          path: bin/items_performance/
+
       - name: Upload native inventory evidence
         if: always() && github.event_name == 'workflow_dispatch' && inputs.native_items_qa
         uses: actions/upload-artifact@v4
@@ -218,6 +270,7 @@ jobs:
           path: |
             bin/items_acceptance/
             bin/item_world_visual/
+            bin/item_lab_diagnostics/
 
       - name: C++ unit test (chunk load priority)
         shell: pwsh

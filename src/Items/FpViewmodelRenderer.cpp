@@ -60,8 +60,8 @@ constexpr float kPi = 3.14159265358979323846f;
 
 const glm::vec3 kEye{0.f, 0.0f, 0.0f};
 const glm::vec3 kTarget{0.05f, -0.15f, -1.0f};
-// After idle Rx(+88В°): local -Y = forward (-Z view); local -Z = up (+Y view).
-// Previous +Z pushed the held item down under the wrist in frame.
+// After idle Rx(+88В°): local -Y = forward (-Z view); local -Z = up (+Y
+// view). Previous +Z pushed the held item down under the wrist in frame.
 const glm::vec3 kHandSocketR{0.04f, -0.62f, -0.14f};
 const glm::vec3 kHandSocketL{-0.04f, -0.62f, -0.14f};
 
@@ -74,8 +74,8 @@ constexpr int kArmUvD = 4;
 
 // Tool JSON is Y-up (handle along +Y). Arm local hangs along -Y; after root
 // Rx(+88В°) that is camera-forward. Mapping JSON +Y onto arm -Y made tools
-// collinear with the forearm. Wield space: JSON +Y в†’ mostly arm -Z (up in
-// FP frame / above palm), with a small lean toward -Y (into the scene).
+// collinear with the forearm. Wield space: JSON +Y в†’ mostly arm -Z (up
+// in FP frame / above palm), with a small lean toward -Y (into the scene).
 constexpr float kToolWieldScale = 0.85f;
 constexpr float kToolWieldLeanDeg = 28.f;
 /// Target longest axis in arm-local wield space (~matches parts_v1 rod length).
@@ -83,7 +83,8 @@ constexpr float kFpWieldTargetExtent = 0.95f;
 
 glm::vec3 ToolJsonOffsetToArm(const glm::vec3 &off)
 {
-  // Base: (x, y, z)_json в†’ (x, z, -y)_arm  (Y-up в†’ -Z up from palm)
+  // Base: (x, y, z)_json в†’ (x, z, -y)_arm  (Y-up в†’ -Z up from
+  // palm)
   const glm::vec3 base(off.x, off.z, -off.y);
   const float lean = glm::radians(kToolWieldLeanDeg);
   const float c = std::cos(lean);
@@ -827,8 +828,8 @@ glm::mat4 UFpViewmodelRenderer::BuildRootMatrix(bool mirrorX) const
     swing = glm::mat4_cast(glm::slerp(idle, punch, t));
   }
 
-  // Idle: local -Y в†’ camera forward (-Z). Shoulder sits below the frame so
-  // the arm enters from the bottom edge (MC/Luanti FP framing). Small yaw so
+  // Idle: local -Y в†’ camera forward (-Z). Shoulder sits below the frame
+  // so the arm enters from the bottom edge (MC/Luanti FP framing). Small yaw so
   // left/right hands share nearly the same depth.
   // Held socket uses local -Z for "above palm" after this orient.
   const glm::quat orient =
@@ -1119,10 +1120,10 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const InventoryEntryRef &entry,
   }
   if (surface)
   {
-    const auto bounds =
-        ItemVisualBounds(*surface, EvaluateItemVisualState(*surface, {}));
-    minV = bounds.first;
-    maxV = bounds.second;
+    // Wield fitting uses the default silhouette, cached during asset load.
+    // Current bow/fill/use state is evaluated separately for the draw below.
+    minV = surface->Low;
+    maxV = surface->High;
   }
   const glm::vec3 center = (minV + maxV) * 0.5f;
   const glm::vec3 ext = maxV - minV;

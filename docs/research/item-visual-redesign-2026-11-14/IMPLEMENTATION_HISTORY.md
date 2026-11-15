@@ -1,0 +1,978 @@
+# Item visual redesign вЂ” implementation record
+
+Branch: `codex/item-visual-redesign`, based on develop `946ef5f2d`.
+
+Status: **70/70 v3 item resources published; final integrated acceptance remains in progress**.
+
+Current [performance acceptance](performance-final/README.md) records the latest
+Release/native checks, resolved armor/catalog gates and the remaining FP gate.
+The complete goal remains active.
+
+The [production publication record](production-publication/README.md) supersedes
+historical checkpoint counts below. All old resources are preserved as references;
+publication does not mean the full goal has passed final acceptance.
+
+## Fixed design
+
+All 70 items retain their IDs, crafting, statistics, finite ownership, physics and
+throw rules. Faceted handcrafted forms, authored painted surfaces and gentle
+lighting. Original meshes, UVs and pixels; reference assets remain references.
+Generator plus preserved author overrides. Item Lab is an in-game inspection
+screen, not a modelling or painting application. Only existing gameplay states
+drive animation: bow, shears, containers and use transitions.
+
+## Baseline
+
+`baseline.json` preserves all 70 definitions, active declared model paths,
+attribution records, triangle counts, texture sizes and identical geometry groups.
+These are declared disk resources, **not a runtime resource-resolution trace**.
+Existing production assets are deliberately unchanged at this checkpoint.
+
+## Implemented foundation
+
+- Independent `itemgen.mesh` surface representation, convex profile extrusion,
+  XY corner bevels, open thick-walled shells, rotation about pivots and taper.
+- Outward CCW faces and independent flat-shaded triangles with unit normals.
+- `itemgen.surface_uv` deterministic per-surface orthonormal projections,
+  explicit texel density and 128/256/512 atlas budgets with four-pixel gutters.
+  Overflow and duplicate surface names fail rather than silently scaling UVs.
+- Eight meaningful geometry/UV regressions cover winding, shell cavity,
+  degenerate geometry, bounds, pivots, packing, overflow and repeatability.
+
+The new surface path is connected to a separate staging exporter through
+`python tools/itemgen.py build-design --id bucket`. It writes real NORMAL,
+POSITION and TEXCOORD_0 attributes, indexed triangles, glTF material parameters,
+an explicit mipmapped sampler and a per-face UV layout. Layered surface painting
+supports material-specific broad variation and read-only authored RGBA overlays
+under `tools/item_designs/<id>/surfaces/<surface-name>.png`. Wrong overlay sizes
+fail rather than stretching an author's work. Gutters include corner dilation.
+
+The first bucket prototype has an open vessel, separate rim, raised handle and
+wooden grip. It is fitted uniformly into the unchanged physical envelope. This
+prototype is not yet a finished artistic pilot or a production replacement.
+
+![Offline bucket prototype, four angles](prototype-bucket.png)
+
+Three additional staging/export regressions verify actual normals, raster
+round-trip, unchanged physical bounds, determinism, read-only overlay application
+and rejection of unsafe staging destinations. The existing raster reader was
+fixed to handle a valid glTF material with an omitted baseColorFactor; its integer
+default previously failed during floating-point texture multiplication.
+
+Validation at this checkpoint: 11 new geometry/UV/design tests, four existing
+raster tests and two publication tests pass. Style/include checks pass. The
+profiled acceptance runner now includes the three new test scripts.
+
+## Runtime surface checkpoint
+
+Added independent item CPU/GPU representations without changing creature vertex
+buffers or creature shaders. The strict loader preserves hierarchical node
+transforms, unit normals, UVs and material factors; rejects escaping paths,
+truncated/oversized/invalid accessors, missing normals, cyclic/shared nodes,
+invalid scale and unsupported primitive modes. A Release C++ test covers the
+interleaved accessor stride, material values, composed bounds, parent-pose
+inheritance and returning to the authored pose after cancellation.
+
+`ItemSurfaceRenderer` uploads each immutable primitive once and retains its
+owner while the VAO exists. The shader performs linear-light diffuse shading,
+a restrained metallic/roughness-dependent highlight and display conversion.
+It supports a presentation light profile and fog; albedo gets mipmaps. Cache
+clearing and GL cleanup are explicit. Icons/previews and FP now dispatch v3
+assets through this path; legacy resources retain the previous renderer.
+
+Native probes temporarily substituted **only the runtime copy** of the staged
+bucket, restored the original three files in a finally block, and ran the
+Release executable through flight_sim_run.py on CarryAimQA. Production sources
+and the publication manifest were not replaced.
+
+- Full checkpoint regression: 22 Release CTest tests and native gameplay,
+  ownership, player window and 132 icon checks passed, including bucket in mixed
+  slots and recovery. This proves the connected icon path runs in a real GUI.
+- A separate presentation-only FP probe uses `CUBA_FLIGHT_QA_FP_ITEM=bucket`;
+  it neither equips nor consumes saved property.
+- The FP image exposes an unfinished grip: the inherited waterskin-era pose
+  places the hand inside the vessel. The bucket is **not accepted as a finished
+  pilot**. Authored contact anchors and appropriate framing remain required.
+- World lighting of FP, TP/armor/ground integration, gameplay-driven state
+  binding, imported authored meshes and Item Lab are still pending. No claim of
+  a performance-budget pass or full native visual acceptance is made.
+
+![Native mixed slots with v3 bucket](surface-checkpoint/native-bucket-icons.png)
+![Native FP probe showing the grip defect](surface-checkpoint/native-bucket-fp.png)
+
+Checkpoint logs/reports are in [surface-checkpoint](surface-checkpoint/).
+
+## Pilot construction and contact checkpoint
+
+There are now **12 authored v3 candidate sources; 0 production replacements**.
+All 70 gameplay definitions and the canonical production manifest remain unchanged.
+The candidates cover both picks, copper axe, gold sword, iron helmet, leather
+chest, bow, bucket, shears, apple, bread and raw iron. Construction and unresolved
+art gates are recorded in [pilot cards](../../../tools/item_designs/PILOTS.md).
+
+New mesh capabilities include faceted ring-built solids and genuinely hollow
+finger loops. UV packing now reuses free rectangles rather than wasting the
+space beside long shafts; density and texture dimensions remain explicit.
+Authored source seeding preserves existing files. Optional named nodes have
+hierarchical pivots and part-local geometry; tests compare reconstructed rest
+surfaces before and after grouping to ensure the model does not move.
+
+Authored right/left contact points follow the same physical fitting as the mesh.
+FP pose, scale, hand-root offset and arm rotation are independent of world size.
+Arm rotation pivots around the palm, preserving the contact point. The bucket's
+handle has more clearance; its mesh is no longer centred through the hand.
+The FP view was iterated with actual screenshots, not accepted from unit tests.
+The icon camera has a separate rotation, used to reveal the bow's curved plane.
+
+The surface cache now observes content revisions; FP clears owned GPU geometry
+on resource reload. A Release regression verifies a cached legacy dispatch can
+be replaced by a declared v3 resource after the revision changes.
+
+`tools/run_item_design_probes.py` builds staged designs, temporarily substitutes
+runtime resources, runs Release native checks on a QA world, captures an FP
+probe and restores every runtime file. Dedicated regressions cover restoration
+after a probe exception and after partially missing staging data. `--fp-only`
+is explicitly a narrower presentation probe, not a full regression pass.
+
+The full run passed **22 Release CTest tests and 202 icon checks**, including
+all 70 catalog items. It also checks the runtime catalog against the item
+storage's complete catalog IDs. Twelve candidates were substituted for this
+probe; the other 58 items retained their previous production graphics. FP probes
+are synthetic presentation inputs and do not equip or consume player property.
+Style/include/format checks and the geometry/design/probe test suites pass.
+
+![Twelve candidate comparisons, offline](pilot-checkpoint/overview.png)
+![Native FP contact probe](pilot-checkpoint/bucket-fp.png)
+
+Evidence: [native result](pilot-checkpoint/native-result.json),
+[icon coverage](pilot-checkpoint/icons.json),
+[Release tests](pilot-checkpoint/ctest-release.log),
+[Release build](pilot-checkpoint/desktop-release.log),
+[probe summary](pilot-checkpoint/design-probe.json).
+
+This checkpoint is not artistic acceptance of all twelve: bread scores still
+need surface work, armor needs both-body motion/fit verification, bow/shears
+need gameplay-driven node poses, and containers need visible fill. Item Lab,
+world/TP/armor/carry integration, author glTF import, versioned publication,
+the remaining 58 designs and comparative performance gates are still required.
+
+## Native Item Lab checkpoint
+
+The read-only orbit comparison studio opens with **Ctrl+F8**, preserving the
+existing F8 weather action. It lists all 70 item IDs and renders published and
+staged resources side by side with synchronized rotation. Seven actual-mesh
+modes are available: lit, silhouette, gray material, albedo, UV checker, normals
+and wireframe. Ambient-light presets, triangle/vertex/material costs, explicit
+missing-candidate messages, PNG/JSON export and resource reload are implemented.
+The studio does not equip items, consume stacks or write player property.
+
+Reload clears inspection geometry and GPU resources, surface/texture caches and
+notifies game item caches through the item content revision. Icon warmup drops
+stale entries and bypasses the previous disk images after invalidation. Strict
+production validation remains intact: computed normals are permitted only for
+legacy inspection, never for a declared v3 candidate. The loader regression
+covers both cases. Failed loads clear the previous image instead of displaying
+a stale successful selection.
+
+Native inspection found overlapping list text at 200% scale. List row height
+now follows the scaled theme during layout; the native layout audit checks it
+in addition to widget bounds. All six 1280x720 / 1920x1080 and 100/150/200%
+combinations were captured; the limiting 1280x720 / 200% case was visually inspected.
+The final studio run passes **104 checks**, including all 70 published previews,
+seven candidate modes, captures, real routed pointer switching, export, reload,
+closing and unchanged serialized inventory. The seven candidate preview crops
+have distinct pixel hashes; both exported images are 512x512.
+
+The general acceptance runner now stages all authored candidates and requires
+the studio report alongside the existing native reports. The full regression
+passes **22 Release CTest tests**, **202 icon checks**, 51 gameplay checks,
+57 ownership checks, 18 ownership UI checks and seven player-window checks.
+After the final label sizing adjustment, the 104-check studio run was repeated
+on the rebuilt Release executable. Style, include and clang-format checks pass.
+
+![Native studio at 100%](item-lab-checkpoint/1280x720_100.png)
+![Native studio at 200%](item-lab-checkpoint/1280x720_200.png)
+![True gray geometry comparison](item-lab-checkpoint/mode_2.png)
+
+Evidence: [summary and source hashes](item-lab-checkpoint/summary.json),
+[full native regression](item-lab-checkpoint/native-result.json),
+[final studio checks](item-lab-checkpoint/lab-final.json),
+[Release tests](item-lab-checkpoint/ctest-release.log),
+[Release build](item-lab-checkpoint/desktop-release.log),
+[studio authoring guide](../../../tools/item_designs/ITEM_LAB.md).
+
+This is an initial studio, not completion of the visual plan: twelve authored
+candidates exist and **zero production models have been replaced**. FP/TP/ground
+and both-body armor lab scenes, gameplay-state controls, contact/bounds overlays,
+small-icon inspection, author glTF import, publication, the remaining 58 designs
+and comparative performance acceptance are still required. Flight metrics were
+disabled for these correctness runs; no p95 or memory-budget claim is made.
+
+## World and equipment surface integration checkpoint
+
+Declared v3 item models now use the shared item-only renderer for TP wield,
+armor, loose world bodies and the corresponding character previews. The queue
+carries an immutable item asset/pose payload with separate model and view
+matrices. It retains carrier light and fog when sorting; clip rejection uses
+the actual item envelope. Creature vertex layouts, creature shader lighting and
+legacy item resources keep their existing paths.
+
+New loose models retain authored physical units. The old longest-axis fit is
+skipped; resting models align their bottom with the bottom of the collision
+proxy. Flight/carry positions retain their centered presentation. Neither
+physical profiles nor ownership/instance state is changed. World item shading
+reads local sky/block light, day/night/weather factors and distance fog. The
+item shader has a separate linear light-intensity input, so directional shading
+does not make items fully bright at night. Wireframe GL state is queried only
+for the inspection mode, not for every normal world item draw.
+
+Both hands use authored grip anchors; TP rotations and scale pivot around the
+palm instead of moving the contact. A separate `tp_euler_deg` authoring field
+was added. Native screenshots exposed a foreshortened bucket and tools in the
+65-degree ordinary humanoid hold pose; pilot recipes now compensate in their
+TP presentation while preserving icon, FP and loose orientations.
+
+Release build, **24 CTest tests**, source-generation tests and style/include
+checks pass. Native temporary substitution covers exactly the twelve staged
+IDs and passes **305 presentation checks**: 96 wield frames across both body
+forms, hands and idle/walk, eight armor frames, and 48 loose-model frames with
+day/night/dark-interior/fog profiles. The probes use the actual equipment/loose
+submitters and item shader. These offscreen native fixtures are not a substitute
+for the final in-world day/night/indoor scenes or performance measurements.
+The full ownership/gameplay/UI/icon/Lab regression also passes, including 202
+icon checks and 104 Item Lab checks. Inventory is unchanged by the presentation
+fixture. All 36 temporarily substituted runtime files were restored and their
+bytes checked against the original resources. A separate native FP run passes.
+
+![TP grip and orientation](world-surface-checkpoint/iron_pickaxe-female-left-1.png)
+![Native worn armor](world-surface-checkpoint/iron_head-female-armor-1.png)
+![Native loose model](world-surface-checkpoint/bucket-loose-0.png)
+
+Evidence: [summary and frame hashes](world-surface-checkpoint/summary.json),
+[native presentation checks](world-surface-checkpoint/presentations.json),
+[complete regression](world-surface-checkpoint/native-result.json),
+[restoration and FP probe](world-surface-checkpoint/design-probe.json),
+[Release build](world-surface-checkpoint/desktop-release.log),
+[Release tests](world-surface-checkpoint/ctest-release.log).
+
+Artistic acceptance is still open. The bucket's small physical envelope needs
+an independently authored TP scale; some tool proportions, armor construction
+and painted surface details still need work. Bread scoring remains weak.
+At that checkpoint, gameplay-driven node states, filled containers and
+bow/shears motion were unfinished; the following checkpoint covers their
+integration. Carry contacts, full Item Lab presentation controls, the remaining
+58 designs,
+publication/import and comparative performance acceptance are unfinished.
+There are still twelve candidates and **zero new production models**.
+
+## Gameplay visual-state checkpoint
+
+The candidate item renderer now projects authoritative entry contents, bow draw,
+ammunition availability and transient successful-use events into named visual
+nodes. The projection stores no property and does not change gameplay ID,
+economy, collision profiles or throw rules. Broken containers retain their
+visible contents; broken tools do not begin an active-use gesture. A use pulse
+is keyed by instance and inventory selection, so changing slots cannot animate
+the newly selected tool.
+
+The bow has independent limb pivots, two string spans connected to the moving
+limb tips/draw point, and an ammunition-dependent nocked arrow. Shears have two
+working halves and a successful-use pulse returning to rest. The bucket has a
+water surface driven by finite contents. This is an integration checkpoint:
+two-hand bow contacts and final artistic acceptance remain open.
+
+The same evaluated state reaches FP, TP, loose items, character-sheet equipment
+and Item Lab. Water-fill icon variants use a read-only entry snapshot. The
+backpack, RH/LH, player-window footer and HUD no longer disagree about a filled
+container. Variant keys normalize the fill range and do not encode ownership.
+Reload clears the state variants as well as ordinary icons. Item Lab has
+Rest/Half/Peak snapshot controls and exports the selected pose.
+
+Native review found two defects beyond the old submission-only checks: the bow
+inherited the legacy mesh's shallow-axis fitting and became oversized; at full
+draw its hand root also fell below the viewport. V3 FP fitting now uses the rest
+silhouette plus independent authored FP scale. The bow's authored root position
+was corrected. Native FP probes now record actual projected vertex bounds and
+reject a model whose visible bounds fraction is below 60%, or whose geometry
+passes behind the camera. The final candidate probe passes this gate, including
+both hands and body forms. This framing check is additional technical evidence,
+not an artistic-quality score. The bucket has independently adjusted FP and TP
+scales; its contents remain unchanged by those presentation settings.
+
+Evidence is recorded in [the state checkpoint](state-checkpoint/summary.json),
+including the Release build, 24-test CTest run, native reports and selected
+frames. These tests use twelve temporary runtime substitutions and restore all
+36 files afterward. Production remains **70 legacy resources, zero published
+v3 replacements**. The remaining 58 authored designs, final texture/geometry
+review, two-hand contacts, full Item Lab presentation scenes, import/publication
+and comparative performance acceptance are still required.
+
+## Workshop tool wave
+
+There are now **33 authored candidates**: the twelve pilots plus 21 missing
+wood/stone/copper/iron/gold tool designs. All 25 tool IDs have candidate sources.
+The wave preserves gameplay definitions and the four existing tool pilots;
+seeding never replaces a source that already exists. Production still has
+**zero v3 replacements**. The other **37 item designs** remain to be authored.
+
+The generator has a closed blade primitive with a thick web, sloping cutting
+bevels and thin edge walls. Shovels combine it with angled cheeks to produce a
+shallow dish. Hoes have a separate angled neck and working plate. Wood joinery,
+stone lashing/flakes, copper rivets, iron sockets/polls and slim gold inlays
+create construction differences across tiers. Handles remain wooden. Preferred
+UV directions align grain with each wooden part; working faces receive local
+manufacturing marks instead of a frame repeated on every face.
+
+The first offline comparison exposed a construction error: taking the convex
+hull of a whole curved pick head filled the space under its bridge. Those heads
+now use separate bridge, point and opposing chisel/adze members. A separate QA
+issue was fixed: offline gray-material inspection now ignores albedo instead
+of merely desaturating the texture. It therefore exposes form and faceting.
+
+Native review also found foreshortened, undersized TP tools. Their authored TP
+angle/scale and mirrored outward cant were adjusted independently of FP and
+physics, while preserving the palm anchors. This does not change mass, collision dimensions, ground-model
+scale, recipes or inventory state. Full world interaction and final artistic
+acceptance remain open. In particular, narrow primitive hoe blades and tool
+proportions must be compared with the completed armor/material waves.
+
+The native suite's fixed route timeout was insufficient for the larger number
+of offscreen captures: the 33-item presentation report had completed, but the
+wrapper stopped the process before all GUI fixtures finished. The process was
+confirmed terminal and all 99 substituted files were restored. The runner now
+provides a bounded per-design fixture allowance before simulated route time.
+This change is not a frame-performance relaxation and does not claim a p95
+performance result. A separate `--presentation-only` probe supports selected
+IDs for fast pose iteration. Its reports have a separate path and explicitly
+limited scope. The full ownership/GUI regression was run with the same tool
+geometry; final presentation-only checks cover the last TP-cant adjustment
+across all 33 candidates.
+
+[Workshop construction cards](../../../tools/item_designs/WORKSHOP_TOOLS.md)
+and [the checkpoint evidence](workshop-checkpoint/summary.json) document the
+sources, technical results, comparative sheets and selected native frames.
+Geometry tests compare actual position data independently of UV/texture bytes;
+uniqueness, triangle count and a successful draw are not artistic acceptance.
+The Windows Release workflow now runs the geometry/UV/design/workshop and
+restoration tests with checked exit codes. Its optional native profile also
+invokes the staged presentation probe and uploads the fresh evidence. The
+workflow YAML was parsed locally; no remote CI run is claimed.
+
+## Equipment, food and supply wave
+
+There are now **56 authored candidates**. This wave adds seven equipment items
+(spear, arrow, two shields, torch, flint/steel and waterskin) plus sixteen food
+and material designs. The remaining **14 missing sources are armor slots**;
+the two existing armor pilots still require final refinement. Production still
+has **zero v3 replacements**. No gameplay definitions, IDs, recipes, masses,
+collision profiles or inventory mechanics were changed.
+
+[Supply construction cards](../../../tools/item_designs/SUPPLIES.md) describe
+each item. The spear has its own socket/point and the arrow three feather vanes
+and a split nock. Shields have separate front/reverse construction, hand loops
+and arm straps. The waterskin is a sewn, flattened pouch with stopper, tether
+and curved welts; its volume follows finite water contents 0..4. Flint moves
+against a separate hollow striker through a successful-use pulse. Coal and
+charcoal, raw/cooked meat, grain/seeds, mineral ores and fibers/cord now have
+different constructions and surface fields. Cast ingots deliberately share a
+blank; the tests do not misrepresent this allowed reuse as unique geometry.
+
+The generator now supports positive anisotropic part scale around the authored
+pivot. The item renderer also supports linear glTF emissive factors, validated
+at export/load and used for the torch flame. There is no new world-light or
+held-torch mechanic. Unsupported emissive/normal/other material maps remain
+rejected. The factor/default-texture behavior follows the
+[glTF material specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#material-emissivefactor).
+Creature vertex formats, shaders and lighting remain unchanged.
+
+Native review caught and corrected a clipped flint stroke, a metal-backed
+wooden shield, pouch occlusion by the hand, straight floating side welts and
+repeated stitches across every pouch facet. Container icon QA now covers empty,
+half-full, full and restored-empty waterskins, alongside the bucket. Selected
+presentation IDs filter the actual native fixture as well as substitutions,
+including when other v3 production resources are present. Report reset verifies
+the exact owned output directory before removing stale generated frame folders;
+unit tests cover reset idempotence and refusing paths outside that directory.
+
+The offline comparison camera was found to be below the models, hiding top
+construction details. Comparison views now use positive camera elevation,
+including a steep top view; a red-top/blue-bottom fixture verifies the sign.
+Plain-gray material remains independent of albedo. A separate grayscale-albedo
+mode preserves the legacy colorblind-luminance audit instead of making that
+gate meaningless when the new gray-material view is used. The legacy published
+quality gate passes without weakening its separation checks. Marbling was
+restricted to meat cut faces; sides no longer repeat those marks.
+
+[Checkpoint evidence](supplies-checkpoint/summary.json) contains the Release
+builds, **24 CTest tests**, full native regression, **1736 presentation checks**,
+**209 icon checks**, **111 Item Lab checks**, source cards, comparative sheets
+and native frames. The final raw-meat cut-face texture mask was adjusted after
+the full run and separately passed **31 targeted native checks**. Its final
+frames are archived separately and override that item's earlier texture views;
+geometry and mechanics are unchanged. The 56-item full substitution restored
+168 files, and the final single-item probe restored its three files. These are
+partial acceptance checkpoints, not a final world/performance or artistic pass.
+
+## Armor wave, 2026-11-15
+
+**All 70 gameplay item IDs now have authored candidate recipes.** The wave adds
+fourteen missing armor sources and refines the two armor pilots. This is source
+coverage, not completion: production still has **zero v3 replacements**, and
+full artistic/world/performance acceptance, tooling and publication remain open.
+
+[Armor cards and anatomical-section contract](../../../tools/item_designs/ARMOR.md)
+describe leather, copper, iron and gold constructions. New geometry includes
+open-ended sleeves, crown/ear panels, segmented copper lamellae, forged plates,
+knee guards, slender gold bands, boot soles/cuffs and separate fasteners. The
+sixteen actual meshes differ beyond color and stay within unchanged physical
+profiles and the 2000-triangle slot cap. All armor textures use 512-pixel atlases;
+explicit gold-leg density was reduced after a packing overflow. No gameplay
+ID, recipe, statistic, mass, collision profile or property data changed.
+
+New `wear_sections` select a named node subtree, target bone, slot, anatomical
+reference volume, fitting region and local orientation. The same mesh remains a
+whole item in catalog/held/ground views. Leggings have waist, left/right thigh
+and left/right shin sections; boots have one section per foot. The old path
+copied the complete trouser mesh onto each thigh/shin. Subtree selection now
+also computes the section's actual culling bounds. Existing wear pose transforms
+still apply; the old renderer path remains for resources without annotations.
+
+Native images exposed rear-facing plates and toe caps: authored +Z front differs
+from the rig's front. Per-section 180-degree Y rotation around the fitted center
+fixes orientation while preserving left/right attachment centers and sole Y.
+Unit tests cover that center/sole invariant, selective visibility and bounds,
+invalid metadata, open-sleeve wall closure, unchanged definitions and read-only
+regeneration. Native QA verifies exact section roots/draw counts, rather than
+merely accepting any nonzero draw. It records minimum world Y and checks boot
+support tolerance in both body forms and idle/walk snapshots. Full-run minima
+were approximately 0.0 m for boots and -0.0173 m for leggings; these snapshots do
+not prove a complete animation cycle or world-contact acceptance.
+
+[Armor checkpoint](armor-checkpoint/summary.json) archives the Release build,
+**24 CTest tests**, full native regression and **2256 presentation checks** for
+all 70 candidates. The final boot hold-point refinement was separately checked
+on all four boot assets (**163 checks**), with final frames archived separately.
+No geometry or worn fitting changed in that refinement. The full run restored
+210 runtime files; the boot-only run restored its twelve files. Item Lab's
+existing six-resolution/scale QA and 209 icon checks also pass.
+
+The existing creature equipment-matrix tool was inspected for final set testing.
+It still assumes legacy `wear.gltf`, source material factors and only three
+materials; typed surfaces, texture sampling and gold need proper support there.
+Individual-slot images are not presented as completed full-set acceptance.
+This integration work, final skin/hand clearance and complete motion/world
+scenes remain required before publication.
+
+## Linear color and disk icon identity, 2026-11-15
+
+The typed item renderer now loads albedo into a separate `GL_SRGB8_ALPHA8`
+cache, shared by canonical image path. Filtering and mip generation operate
+before final display encoding. The shader applies the linear material factor
+once, without a second texture decode. It no longer changes the legacy texture
+objects' filtering or loads the same atlas through material-name fallbacks.
+The legacy loader's storage stays unchanged; alias entries are deleted only once
+when clearing that cache.
+
+This follows the [glTF base-color contract](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#metallic-roughness-material):
+texture RGB is sRGB, while the factor multiplies linear values. A native GPU
+fixture checks storage, mip completeness and path sharing, then samples a
+black/white checker through the actual item shader. Bilinear filtering and the
+1x1 mip both return encoded RGB 188; a 0.5 linear material factor returns 137.
+These are measured pixels, not screenshots judged by file existence.
+
+Disk icon identity now hashes model content, external buffers and images,
+both item shaders, the legacy fallback shaders and definition icon scale.
+Authored icon orientation/presentation extras are covered by the model content.
+Missing, malformed or escaping dependencies disable disk reuse. Hashes are
+cached once per item/definition revision; live edits still require the explicit
+Item Lab resource reload. A regression replaces each dependency with different
+bytes of the same size and timestamp and verifies invalidation, as well as
+unchanged bytes, path aliases, scale, model presentation, unrelated files and
+failure cases. The runner and Windows CI now include that regression.
+
+The exact Release desktop build, separate fingerprint CTest and 24 existing
+profile CTests pass. The complete native regression passes, including 2262
+presentation checks on all 70 candidates, property/UI checks and a separate FP
+flight. All 210 temporarily substituted runtime files are verified restored.
+See [checkpoint evidence](color-checkpoint/summary.json) and its native frames.
+This is still candidate coverage: no production assets were published, no remote
+CI was run, and no performance or final artistic acceptance is claimed. The
+current item atlas sampler uses linear/trilinear clamp; general imported sampler
+settings still need support or explicit rejection before import/publication.
+
+## Versioned publication and provenance checkpoint, 2026-11-15
+
+All 70 candidates now pass a fail-closed publication contract: real geometry,
+unit normals/winding, UVs, index/buffer bounds, node hierarchy, materials,
+explicit atlas sampler and budgets. Generation validates a private directory
+before replacing staging. Build records freeze authored sources/layers,
+provenance/license, gameplay definition, generator modules, item shaders and
+output hashes. Generation commands stage by default; old publication/import
+paths reject authored v3 destinations. Current production geometry stays legacy.
+
+The versioned publisher preserves grip/wear/other author sidecars and installs
+all selected items under a writer lock and recovery journal. The manifest is
+the commit marker. The first replacement retains the full prior resource,
+including its original attribution, for packaged old/new comparison. Actual
+separate Python processes are terminated before and after commit in tests:
+recovery restores the prior byte contents or retains the completed generation.
+A corrupt recovery snapshot fails without further mutation. Runtime sync refuses
+an unfinished journal. A transient Windows rename failure observed during the
+70-item build is handled with bounded retries, never deleting a locked target.
+
+The [publication guide](../../../tools/item_designs/PUBLICATION.md) documents
+commands, supported subset, recovery and remaining import/Lab integration.
+[Explicit origin records](../../../tools/item_designs/provenance.json) cover
+all 70; geometry/texturing origin and pending visual-independence review are
+separate fields, without an automatic originality stamp. See
+[checkpoint evidence](publication-checkpoint/summary.json) for source/transaction
+tests, all-item validation, incremental Release build and scoped native probes.
+This checkpoint does not publish the candidates or close final artistic,
+performance, manual-import or full Item Lab requirements.
+
+## Manual source and packaged Item Lab checkpoint, 2026-11-15
+
+Recipes can now override geometry with author-owned limited glTF 2.0 sources.
+The importer retains topology, UVs, normals, named hierarchy, pivots and materials;
+merges external buffers; copies multiple albedo images; and fits the result to
+the unchanged physical profile. Fitted positions get separate accessors so
+shared POSITION/NORMAL storage cannot corrupt normals. Percent-encoded source
+URIs are decoded before local containment checks. Unsupported data, invalid
+references and unreviewed source/provenance mismatches fail before publication.
+Source files remain read-only and a failed import preserves prior staging.
+
+Item Lab now resolves the archived prior model after publication, and uses
+current production as candidate when staging is absent. Export schema 2 records
+actual reference/candidate/published paths and uses explicit reference image names.
+Offline comparison uses the same prior archive; `--read-staged` now validates the
+complete frozen build instead of comparing only item-local source hashes.
+
+Five manual-source tests cover TRS/matrices, multiple buffers/textures, URI file
+names, shared attribute storage, optional fit subtrees, source preservation,
+determinism, provenance and failure. The broader source/publication tests pass,
+as does the Release C++ model/Item Lab path test. All 70 generated candidates
+still pass the strict contract. The dedicated QA world passes 113 Item Lab checks
+(including both resolutions and 100/150/200%) and 67 bucket presentation checks
+with a manually imported two-image resource and staging deliberately absent.
+Runtime and author data are verified conserved. See
+[checkpoint evidence](manual-checkpoint/summary.json), the native frames and
+[manual source guide](../../../tools/item_designs/MANUAL_GLTF.md).
+
+This does not close full Item Lab scene/thumbnail/contact controls, gameplay
+visual-state integration, per-item artistic approval, production promotion or
+performance acceptance. The native fixture is a tooling example, not a new
+production design or a general gameplay acceptance substitute.
+
+## Shared Item Lab scenes, 2026-11-15
+
+The studio now compares actual reference/candidate resources in six scenes:
+orbit, gameplay FP, TP equipment, loose item, anatomical armor and native-size
+32/48/64 icons. Both body forms and hands, five camera presets, static/walking
+and animated previews share the sidebar controls. A scoped, item-specific render
+source redirects the existing drawers without changing definitions or property.
+Nested scope restoration is unit-tested; native observers verify the submitted
+asset/path instead of accepting any nonempty framebuffer. Historical references
+use today's item shader, not an emulated historical renderer.
+
+Framebuffer resizing no longer discards parsed models and GPU geometry on every
+icon-size change. Armor sections keep the selected source and published fit
+sidecars. Nonarmor selection in the armor scene fails visibly; switching back
+clears that error. FP now gates synthetic bow charge by the ranged definition:
+visual review caught an incorrect bow pose on a pickaxe despite green draw checks.
+Export schema 3 records the selected scene/body/hand/camera/motion. See the
+[operator guide](../../item-lab.md) for exact controls and image dimensions.
+
+The final Release build passes. The full 70-item overlay passes 2,262 native
+presentation, 283 Item Lab, 209 icon, 51 gameplay, 57 ownership, 18 ownership-UI
+and seven player-window checks; all 210 temporary runtime files are restored.
+The separate packaged/manual-source run passes 284 Lab and 67 presentation
+checks and restores its four files. Both runs cover 1280x720 and 1920x1080 at
+100/150/200% GUI scale. Style, formatting and include checks pass. Evidence is
+in [the scene checkpoint](scenes-checkpoint/summary.json).
+
+This closes the basic scene/thumbnail/camera/body controls, not the full Lab or
+final redesign acceptance. Physical/contact/UV overlays and detailed costs,
+full carry/use-state integration, final artistic/world review, performance
+measurements and promotion of all 70 candidates remain open. Production still
+uses legacy resources. Day/night/interior world checks are distinct from the
+studio's three intensity presets.
+
+## Authoritative consumption presentation, 2026-11-15
+
+Held food/drink now projects the controller's actual elapsed time and duration
+into transient actor visual state. The binding includes actor/world, inventory
+selection, mode and instance. Early release, pointer cancellation, selection
+change, mode change, death or cargo occupancy invalidate the hold; returning to
+the old slot cannot revive it. No visual timer consumes inventory or completes
+the action. The existing release/input/influence path remains authoritative.
+
+FP consumption uses the selected item's authored arm keys, raises during the
+first third of the real hold and stays raised until release. This fixes the old
+0.55-second sin(pi) preset returning to rest before the longer use completed.
+Other one-shot presets retain their existing curves. Item Lab and native state
+captures use the same renderer flag; held consumption is separate from a
+successful utility pulse, so filling a container cannot start a drinking pose.
+Native review also exposed the old eating key rotating downwards. Its sign is
+corrected, and the waterskin gets a separate smaller `drink_hand` gesture so the
+neck stays inside the frame. Tests require upward displacement and at least
+98% of each consume-state item's projected bounds inside the viewport, rather
+than accepting arbitrary changed pixels.
+
+Native input coverage exercises short hold/release, explicit cancel, slot and
+mode round trips, occupied hands and exactly-once consumption. New comparative
+FP captures cover every eat/drink definition and both body variants at rest,
+half hold, full hold and cancellation. These do not close TP arm/contact poses.
+
+The legacy geometry audit now sums every mesh and supports nonindexed triangle
+primitives. It rejects nontriangle topology instead of undercounting composite
+resources; a multiple-mesh regression covers that failure mode.
+
+The final Release native run passes 59 gameplay checks (including eight real-input
+consumption cases), 2,382 presentation checks, 283 Item Lab checks, 209 icon
+checks and the ownership/window regressions. All 25 Release CTests pass after
+rebuilding the affected targets. The raster suite passes eight cases. The
+temporary 70-item runtime overlay restores all 210 files. The final captures
+include all five eat/drink definitions on both body variants; their half/full
+hold images are identical and cancellation restores the rest image.
+See [the consumption checkpoint](consume-checkpoint/summary.json) for exact
+binary/resource hashes, reports, logs and forty native images with framing data.
+Style, formatting and include checks pass. This remains partial acceptance:
+TP consumption poses, carry contacts, final art/performance review, source-byte
+checkout validation and production promotion are still required.
+
+## Third-person consumption and shared contact geometry, 2026-11-15
+
+The actual human motion controller now consumes the same transient held-use
+progress as FP. It raises the active hand during the first third, holds it near
+the mouth until release, and blends back after cancellation. The free arm and
+locomotion stay independent; cargo and bow occupancy have priority. No rig
+vertices, item definitions, ownership or serialization formats change here.
+
+Visual review caught an important distinction: an empty `rightItem` node's pivot
+is not the physical palm. Equipment uses the drawable ancestor's mesh bounds and
+`CreaturePalmGripPosition`. That existing bound calculation is now shared with
+the contact test rather than duplicated or replaced with a pivot approximation.
+The CPU test uses actual generated meshes for both body forms at 30/60/144 FPS.
+
+The native preview now projects held consumption and ranged state into the same
+avatar pose used in-game. A read-only final-skeleton observer lets the fixture
+compare the submitted model's authored grip with the real head transform. Each
+held grip must lie in front of the face and near mouth height. Capture checks
+also require the actual item to stay framed, maintain the held contact and
+return to the identical rest image after cancellation. Both body forms, standing
+and walking, front/side/back views and all five food/drink definitions are covered.
+
+The generic native state helper now gates bow charge/ammo by the definition and
+water visibility by finite contents, eliminating the spurious bow arm pose in
+utility captures. These inputs do not change any gameplay mechanics.
+
+The final Release overlay run passes all 25 CTests, 59 gameplay checks, 3,342
+presentation checks, 283 Item Lab checks, 209 icon checks and the ownership/UI
+regressions. Its 210 temporary runtime files are restored. The contact matrix
+contains 240 TP frames over 60 combinations, alongside FP consumption captures.
+Style, formatting and include checks pass. See the
+[TP contact checkpoint](tp-consume-checkpoint/summary.json) for reports, binary
+hashes and native images. This is still partial acceptance: the matrix verifies
+neutral-view contacts, not every head pitch, cosmetic variation or combined
+action. Bow/carry contacts, final art/world/performance review, source-byte
+checkout validation and production promotion remain required.
+
+## Signed-byte checkout and full-catalog publication proof, 2026-11-15
+
+Item sources and published payloads now have explicit `-text` Git attributes,
+matching the byte-preservation approach already used by creature resources.
+This preserves the actual mixed source line endings instead of rewriting inputs
+or refreshing stale hashes. Comparison against the preceding checkpoint covers
+980 signed files: 469 Git blobs change only newline storage, with zero semantic
+or binary resource changes. The working files retain their prior byte contents,
+and the legacy manifest passes without re-stamping its hashes.
+
+`tools/verify_item_checkout.py` exercises real sparse local Git clones for both
+`core.autocrlf=true` and `false`. Each clone verifies all 980 signed files,
+validates the copied 70-item staging, regenerates every artifact byte-identically,
+publishes all 70 only inside the disposable clone, validates the v4 manifest,
+checks identical published artifacts and checks all 70 retained references.
+The added reference metadata is validated separately from the unchanged archived
+payload. The original catalog and authored source trees remain byte-identical.
+The working production catalog still contains zero promoted v3 items.
+
+A dedicated Windows/Linux CI matrix runs the same verifier, propagates each
+failure and uploads fresh reports. Local Windows runs pass both checkout modes;
+the remote matrix has not been executed in this session. This closes the observed
+Windows source-byte/hash mismatch, not final art or performance acceptance.
+
+The subsequent required Release build and full 70-item native regression pass:
+25 CTests, 59 gameplay checks, 3,342 presentation checks, 283 Item Lab checks,
+209 icon checks and the ownership/UI checks. All 210 temporary runtime files
+are restored. The 240 TP consumption frames match the preceding checkpoint
+byte-for-byte. See [checkout evidence](checkout-checkpoint/summary.json) for both
+clone/publication logs, signed-file comparison, executable hash, native reports
+and image hashes. Production promotion and final visual/performance acceptance
+remain open.
+
+## Current completion ledger
+
+The chronological checkpoints below retain their original scopes. Statements
+that a feature was still missing at an earlier checkpoint are historical.
+The latest evidence governs the following status; none of these rows alone
+establishes overall completion.
+
+| Requirement | Current evidence / remaining work |
+|---|---|
+| All 70 authored geometries, UVs, surface painting and source preservation | Sources cover all IDs; studio-review-completion retains detailed review of all 70 and 93 sheets. Final world/carry acceptance and production promotion remain. |
+| Staging, validation, atomic publication and restricted manual glTF | Implemented and tested; fresh checkouts of ff1942af9 regenerate/publish all 70 byte-identically in disposable clones under both autocrlf modes. Final working-catalog promotion remains. |
+| Item-only renderer, normals, materials, color spaces, mips and shared representations | Native FP/TP/armor/loose/state probes pass; creature vertex ABI and shaders remain unchanged. Final real-world and carried-body review remains. |
+| Item Lab views, both bodies/hands, diagnostics, independent states, animations, reload/export and resource costs | Implemented; 1040 native checks and all-item 3560-check gallery pass with source/property conservation. |
+| Small icons and resource invalidation | All 70 reviewed at native 32/48/64 sizes; sixteen linear-light samples retain thin shafts. The numerical GPU regression resolves the encoded checker to RGB 188. Final cold-load timing remains. |
+| Complete sets, fit and movement | Native all-item both-hand/both-body probes, armor motion and headwear eye clearance pass. Actual carry and input-driven transitions still need final acceptance. |
+| Provenance and independence | Explicit per-ID sources/attribution and preserved historical references exist. Detailed comparative art review is complete; final provenance text and release comparison must be reconciled during publication. No direct Luanti-copying claim is established. |
+| Actual world lighting and display matrix | Reproducible real-world capture now exists; results are recorded in the newer world checkpoint. Full final resolution/scale matrix remains. |
+| Gameplay/property compatibility | Full staged regression passes 25 CTests, gameplay 59, ownership 57, ownership UI 18, player window 7, icons 209 and presentations 3590. Repeat against the published final resources. |
+| Performance and production | Earlier paired staged measurements are retained below. Repeat with the final resources, cold icons and moving physical workload; optimize any p95 regression above 10%. Production promotion remains 0/70. |
+| CI and release report | Profile steps check exit codes; optional Windows native lighting capture is wired. Remote CI execution is not evidenced locally. Final acceptance report remains open. |
+
+Next implementation work is actual input-driven carry/use/throw contact review,
+correction of any resulting defects, final provenance/publication, then the full
+final display, property and performance gates. Do not replace these gates with
+additional studio screenshots or source-count checks.
+
+## Staged whole-frame performance checkpoint
+
+See [performance-checkpoint](performance-checkpoint/README.md), its exact
+[results](performance-checkpoint/performance.json) and
+[summary](performance-checkpoint/summary.json). This closes the first measured
+flat-scene comparison for the staged catalog, not final production acceptance.
+Twenty-four paired Release runs retain 19,149 real window-frame samples.
+Median run p95 changes: FP +0.6%, twelve armored humans +9.3%, 512 resting drops
+в€’39.3%, warm catalog в€’0.4%. All meet the unchanged 10% gate on this hardware.
+Armor has little margin. Cold completion of 70 icon textures increased from
+883.7 to 982.5 ms and is reported separately. This is not a moving-projectile
+stress test or universal performance approval.
+
+Rendering now caches successful path spellings/canonical ownership until
+revision/reload, and avoids repeated matrix uploads/texture binds within one
+node. All twelve warm candidate runs recorded zero canonical filesystem
+resolutions. Ground-item light sampling now respects centered block cells,
+fixing black small drops near the floor. Release CLI creation also exposed an
+audio cleanup use-after-free; sound voices now shut down before their engine,
+and headless GL owners before their context. Creation returns zero again.
+
+The subsequent full staged native regression passed 25 CTests, gameplay 59,
+ownership 57, ownership UI 18, player window 7, icons 209, Item Lab 283 and
+presentations 3343; the extra presentation check covers warm albedo lookups.
+Two focused cache/light tests and style/include/format audits also pass.
+Summary hashes distinguish the earlier measured executable from the final
+native-tested Release build, which also includes CLI/audio cleanup and equipment
+cache invalidation when switching definition storage. No production model was
+promoted (0 of 70).
+
+Continue with complete authored hand contacts,
+Item Lab overlays/cost information and final all-item/world artistic review.
+Then publish and repeat full acceptance/performance with final assets.
+The overall goal remains active.
+
+## Shared authored arrow component checkpoint
+
+[Implementation and evidence](components-checkpoint/README.md) replace the bow's
+temporary arrow geometry with a byte-preserving build of `arrow`. Geometry,
+UVs, normals and pixels come from the same authoritative source, including
+manual glTF overrides. Named nock/string transforms match in native rendering
+through partial/full draw and cancellation. Publication enforces consistent
+source/host updates; seven component tests cover dependencies and failure safety.
+
+The full staged regression passes 25 CTests and 3355 presentation checks, plus
+the existing gameplay/UI/ownership checks. Legacy properties, recipes and
+resources remain byte-identical; only the old manifest's checker hash changed.
+The saved FP/TP images also expose remaining bow pose problems. Resource reuse
+is verified; correct character orientation/support-hand contact and overall art
+acceptance are still required. No v3 production promotion has occurred.
+Fresh checkouts in both autocrlf modes also preserve 981 signed files and
+regenerate/publish all 70 byte-identically in disposable clones. The final
+incremental Release executable passes the focused 108-check arrow/bow probe.
+The Windows/Linux workflow now runs component regressions too; remote CI remains
+unexecuted here.
+
+## Bow contacts and FP skin submission
+
+[The bow contact checkpoint](bow-contact-checkpoint/README.md) replaces the
+previous generic hand poses with named animated support contact, mesh-derived
+palms and a reach-limited human arm solve. Main-slot/right-hand ownership agrees
+with both FP and TP, the offhand visual follows bow occupancy, and release/UI
+resets have separate lifetimes. Carrier scale is preserved in preview attachment
+matrices. FP also rebinds the skin program before the left arm, correcting its
+missing submission after a typed item draw.
+
+The focused Release native run passes 324 bow/shield checks. The earlier component
+checkpoint images remain historical evidence of the defect; current poses are
+retained in the new checkpoint. Item Lab's independent FP snapshots now reset
+transient pose state between reference/candidate and pose switches. This work
+also passes the full staged regression: 25 CTests, gameplay 59, ownership 57,
+ownership UI 18, player window 7, icons 209, Item Lab 291 and presentations 3571.
+All 212 runtime substitutions were restored. The checkpoint records the full
+and earlier focused executable hashes separately. This work
+does not replace final all-item art, world-lighting or performance acceptance,
+and production v3 promotion remains 0/70.
+
+## Item Lab diagnostic scenes and costs
+
+[Diagnostic implementation and native evidence](lab-diagnostics-checkpoint/README.md)
+add physical/contact overlays, real indexed UV atlases, per-source buffer/texture
+costs and schema 4 export metadata. All 70 candidates have native contact/UV
+comparisons against their real reference; all diagnostic lines are framed.
+The focused Release flight run passes 1023 checks, including label/layout checks
+at both required resolutions and all three UI scales, unchanged player property,
+and 140 comparisons of estimated mip texels against actual OpenGL allocations.
+All 25 profile CTests and style/include/format audits pass.
+
+Fill presets now set water identity as well as quantity, fixing filled studio
+containers that previously rendered empty. The native empty/full bucket frames
+prove the correction. The new runner checks report freshness/catalog coverage
+and source conservation without substituting production models. Detailed scope,
+all 295 native diagnostic images and tested executable/source hashes are retained
+in the checkpoint. Independent state controls, carry contact art and final
+all-item artistic/world/performance acceptance still remain; promotion is 0/70.
+
+## Authored refinement and headwear clearance
+
+[Eight-item refinement and full regression](art-refinement-checkpoint/README.md)
+improve actual working profiles, blade/shaft construction, fruit and bread
+surfaces and metal headwear openings. Native before/after sheets retain the
+visible defects and corrections. All four headwear materials on both human
+bodies now pass 12 sampled eye-area rays. The final all-70 staged run passes
+25 CTests, gameplay 59, ownership 57, ownership UI 18, player window 7,
+icons 209, Item Lab 1023 and presentations 3587 checks; 212 runtime substitutions
+were restored. Defaults and original game/property profiles remain intact.
+Final artistic acceptance, publication and performance verification still remain;
+production promotion is 0/70 and the overall goal stays active.
+
+## Independent studio states and animations
+
+[Independent Item Lab controls](lab-independent-checkpoint/README.md) resolve
+the coupled preset-only controls left open by earlier checkpoints. Bow draw,
+use, whole-unit fill and ammunition can be selected independently; one state
+channel can animate separately from character motion. Unsupported controls are
+disabled. Custom state survives item/scene/reload switches and exports in schema
+5 with both manual and evaluated values. The final Release native run passes
+1040 checks with all 70 candidates, including routed input, rendered arrow
+differences and both resolutions at all three scales. All 25 profile CTests
+and style/include/format audits pass. This does not replace the remaining final
+artistic/world/carry and performance gates, and promotion remains 0/70.
+The subsequent full all-70 staged regression also passes: gameplay 59,
+ownership 57, ownership UI 18, player window 7, icons 209, Item Lab 1040,
+presentations 3587 and 25 CTests. All 212 runtime substitutions are restored;
+the checkpoint retains the integrated report separately from the focused run.
+
+## All-item studio comparison gallery
+
+[Native gallery and corrections](studio-gallery-checkpoint/README.md) retain
+1260 actual reference/candidate PNGs, 70 individual comparison sheets and 16
+overview sheets. Five lit cameras, silhouette/gray/albedo and real-size small
+icons now cover every ID. The overview review exposed a hidden rest string and
+buried cooked-fat detail; the authored bow and cooked meat are corrected, with
+before/after sources and native proof. The final Release run passes 3560 gallery
+and studio checks; the focused bow/food run passes 596 presentation checks.
+Detailed remaining-item and world/carry review, publication and final performance
+acceptance remain. Production promotion is 0/70; capture success is not art approval.
+
+## Completed detailed studio review
+
+[All-70 review and readability corrections](studio-review-completion/README.md)
+complete the detailed studio review left open above. All 70 individual sheets
+and native-size icon pages were inspected. Small icon filtering now preserves
+thin arrow/spear shafts using sixteen linear-light samples; charcoal has a
+readable surface and exposed ash end. The integrated Release regression passes
+25 CTests and all native profiles, including 3590 presentation checks.
+The evidence retains all 1260 frames using a verified baseline plus delta and
+93 complete comparison sheets. World/carry, publication and final performance
+acceptance remain; promotion is still 0/70.
+
+## Actual world lighting
+
+[World lighting captures](world-lighting-checkpoint/README.md) retain 292 native
+frames: all 70 items in daylight, night, unlit and torch-lit rooms at 1280x720,
+plus twelve pilots at 1920x1080 / UI 200%. Day/night and torch-room FP comparisons
+were inspected for every ID. Reports track actual inventory selection and a
+specific finite ground body, sample the real light field and verify restoration.
+The rejected fixture runs and their corrections are retained. This closes the
+static all-item world-lighting capture gap, not actual input-driven carry/use/
+throw, the full final display matrix, publication or performance acceptance.
+
+## Routed carry input and actual FP contact
+
+[Two-mode input and FP correction](carry-input-checkpoint/README.md) exercise
+all 70 finite item types through eight routed-key stages in Creative and
+Survival: 1120 frames, 2824 checks per mode, with identity/wear/contents conserved.
+One-handed FP carry now uses the actual authored grip and loose-model transform.
+The full Release regression passes 25 CTests and all native profiles, including
+3660 presentation checks. The same input coverage exposes unresolved generic
+two-hand tool contacts and the old TP carry pose. These are retained as open
+visual defects; numerical target agreement is not their artistic acceptance.
+Fix authored two-hand/TP carry next, then mouse-driven use/bow and final release
+gates. Production remains 0/70.
+
+## Authored carry poses and world arms
+
+[Carry pose correction](carry-pose-checkpoint/README.md) replaces generic two-hand
+contact points for all 70 candidates and solves actual human-v2 arms in FP/TP.
+The complete Creative/male input sweep passes 560 frames / 3384 checks; maximum
+palm gap is 1.45 cm. A full female sweep exposed the low torch reach limit; the
+corrected focused torch/wool repeat passes all 16 frames. The shared bow solver
+is preserved, source payloads remain unchanged, and the full Release regression
+passes again. This does not replace the remaining final body/mode, use/bow,
+creature-cargo, display, publication and performance gates. Production is 0/70.
+
+## Completed food/drink/bow input transitions
+
+[Native mouse and hotbar input](use-input-checkpoint/README.md) now covers all
+five edible/drinkable models and the bow: 192 frames / 880 checks across both
+modes, male FP and female front TP, at 1280x720 UI 100% and 1920x1080 UI 200%.
+Partial use, slot cancellation/restoration, full completion and a second canceled
+hold preserve state and follow mode costs. FP draw inputs match gameplay phases;
+the bow produces a real arrow which remains after contact. This closes that
+specific transition gap; utility success pulses, creature cargo, the full display
+matrix and final performance acceptance remain separate gates.
+
+## HUD display matrix corrected
+
+[HUD footer correction](hud-footer-checkpoint/README.md) removes the large-scale
+version/hotbar overlap. Both resolutions and all three UI scales pass real bow
+input captures (48 stages / 330 checks). Badge clipping and removal of the
+per-frame debug trace are included. The full Release regression passes again.
+This closes the named HUD defect, not the remaining Item Lab/display-lighting,
+creature-cargo, utility-pulse or final performance gates.
+
+## Creature and generic cargo compatibility
+
+[Creature/block native compatibility](creature-cargo-checkpoint/README.md)
+corrects centre-plane fallback grips and verifies actual one/two-hand cargo,
+raising aim, gentle placement, release and AI return. All ten body/view/mode
+runs pass, as does the full Release regression. Typed item grips remain authored;
+physics and inventory ownership are unchanged. The remaining completion gates
+are utility success pulses, final Item Lab/display-lighting coverage, performance
+and the consolidated final report.
+
+## Acceptance contract
+
+Deterministic publication preserves author work and grips. Missing production
+assets fail acceptance instead of substituting a cube. No accidental UV mirror,
+bleeding or stretched tiles. Item state cancellation restores the correct pose.
+Two hands, throws, pickup and armor motion retain ownership and gameplay state.
+
+Triangle caps: 1200 hand items, 1800 compound utility/bow, 2000 armor slot,
+600 food/material; no minimum count as a proxy for beauty. Measure cold catalog,
+texture memory, FP, equipped characters and 512 bodies; p95 >10% over the same
+baseline scene requires optimization. Capture 1280x720 and 1920x1080 at
+100/150/200%, day/night/interior. Review all 70 contact sheets and native views.
+
+Only Release desktop:
+
+```
+cmake --build build/desktop-msvc --config Release --target Cubatarium --parallel 8
+python tools/test_itemgen_mesh.py
+python tools/test_itemgen_surface_uv.py
+```
+
+World loading and native checks must use `tools/flight_sim_run.py` with
+`bin/Cubatarium.exe` on isolated QA worlds. The foundation tests are not native
+visual acceptance. Full ownership/equipment/throw regressions remain mandatory
+when the new runtime path is connected.

@@ -43,6 +43,8 @@ ItemVisualInputs MakeItemVisualInputs(const InventoryEntryRef *entry,
 bool ItemNodeVisible(const ItemRenderAsset &asset, const ItemVisualState &state,
                      size_t node)
 {
+  if (state.HiddenNodes.empty() && state.VisibleRoots.empty())
+    return true;
   bool selected = state.VisibleRoots.empty();
   for (int i = int(node); i >= 0; i = asset.Nodes[size_t(i)].Parent)
   {
@@ -136,6 +138,14 @@ std::pair<glm::vec3, glm::vec3> ItemVisualBounds(const ItemRenderAsset &asset,
   if (state.NodeTransforms.empty() && state.HiddenNodes.empty() &&
       state.VisibleRoots.empty())
     return {asset.Low, asset.High};
+  if (state.NodeTransforms.empty() && state.HiddenNodes.empty() &&
+      state.VisibleRoots.size() == 1)
+  {
+    const auto cached =
+        asset.StaticWearSections.find(*state.VisibleRoots.begin());
+    if (cached != asset.StaticWearSections.end())
+      return {cached->second.Low, cached->second.High};
+  }
   const auto transforms = ResolveItemNodeTransforms(asset, state);
   glm::vec3 low(std::numeric_limits<float>::max()),
       high(-std::numeric_limits<float>::max());

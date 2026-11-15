@@ -1,0 +1,12 @@
+Internal ctest changing into directory: E:/Work/Home/Cubatarium/build/desktop-msvc
+Test project E:/Work/Home/Cubatarium/build/desktop-msvc
+    Start 12: item_render_asset_test
+1/1 Test #12: item_render_asset_test ...........   Passed    0.11 sec
+
+100% tests passed, 0 tests failed out of 1
+
+Label Time Summary:
+items    =   0.11 sec*proc (1 test)
+unit     =   0.11 sec*proc (1 test)
+
+Total Test time (real) =   0.13 sec

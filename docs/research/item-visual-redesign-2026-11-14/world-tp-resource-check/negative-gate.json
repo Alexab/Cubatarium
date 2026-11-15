@@ -1,0 +1,5 @@
+{
+  "passed": true,
+  "probe": "Remove the wielded resource draw while retaining its matching physical drop",
+  "expected_rejection": "apple: require one active item and one physical drop with two actual model draws; got 1"
+}

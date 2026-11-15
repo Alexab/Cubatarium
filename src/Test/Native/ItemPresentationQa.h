@@ -5,6 +5,8 @@
 #include "Creatures/Visual/CreatureAppearance.h"
 #include "Creatures/Visual/CreatureDrawQueue.h"
 #include "Creatures/Visual/WornEquipmentDrawer.h"
+#include "Gui/Batch/UiTexturedQuadBatch.h"
+#include "Gui/Cache/InventoryIconService.h"
 #include "Gui/Preview/CreaturePreviewRenderer.h"
 #include "Gui/Preview/ItemPreviewRenderer.h"
 #include "Items/FpViewmodelRenderer.h"
@@ -396,6 +398,278 @@ inline void RunItemConsumePoseQa(const ItemDefinition &definition,
     check(label + " cancellation restores pose", rest == bytes(images[3]));
   }
 }
+// An isolated native cache exercises real GPU transfers, exact pixels and
+// cancellation without touching the player's persistent icon cache.
+inline void RunItemIconReadbackQa(const std::filesystem::path &frames,
+                                  nlohmann::json &report)
+{
+  const auto check = [&](const std::string &name, bool passed)
+  {
+    report["checks"].push_back({{"name", name}, {"passed", passed}});
+    if (!passed)
+      report["passed"] = false;
+  };
+  UGlStateScope state(kGlMaskIconFbo);
+  GLint oldPack = 0, oldAlignment = 0, oldRows = 0, oldSkipRows = 0,
+        oldSkipPixels = 0, oldRead = 0, oldDraw = 0;
+  glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &oldPack);
+  glGetIntegerv(GL_PACK_ALIGNMENT, &oldAlignment);
+  glGetIntegerv(GL_PACK_ROW_LENGTH, &oldRows);
+  glGetIntegerv(GL_PACK_SKIP_ROWS, &oldSkipRows);
+  glGetIntegerv(GL_PACK_SKIP_PIXELS, &oldSkipPixels);
+  glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &oldRead);
+  glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &oldDraw);
+  GLuint texture = 0, sentinel = 0, fbos[2]{};
+  const std::array<unsigned char, 16> expected = {
+      11, 22, 33, 255, 44, 55, 66, 127, 77, 88, 99, 0, 101, 112, 123, 255};
+  glGenTextures(1, &texture);
+  glBindTexture(GL_TEXTURE_2D, texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+               expected.data());
+  glGenBuffers(1, &sentinel);
+  glBindBuffer(GL_PIXEL_PACK_BUFFER, sentinel);
+  glBufferData(GL_PIXEL_PACK_BUFFER, 128, nullptr, GL_STREAM_READ);
+  glPixelStorei(GL_PACK_ALIGNMENT, 8);
+  glPixelStorei(GL_PACK_ROW_LENGTH, 7);
+  glPixelStorei(GL_PACK_SKIP_ROWS, 1);
+  glPixelStorei(GL_PACK_SKIP_PIXELS, 2);
+  glGenFramebuffers(2, fbos);
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, fbos[0]);
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbos[1]);
+  const auto preserved = [&]()
+  {
+    GLint buffer{}, alignment{}, rows{}, skipRows{}, skipPixels{}, read{},
+        draw{};
+    glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &buffer);
+    glGetIntegerv(GL_PACK_ALIGNMENT, &alignment);
+    glGetIntegerv(GL_PACK_ROW_LENGTH, &rows);
+    glGetIntegerv(GL_PACK_SKIP_ROWS, &skipRows);
+    glGetIntegerv(GL_PACK_SKIP_PIXELS, &skipPixels);
+    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read);
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw);
+    return buffer == GLint(sentinel) && alignment == 8 && rows == 7 &&
+           skipRows == 1 && skipPixels == 2 && read == GLint(fbos[0]) &&
+           draw == GLint(fbos[1]);
+  };
+  UInventoryIconService service;
+  check("icon readback isolated cache initializes",
+        service.Initialize(frames / "readback-cache"));
+  service.InvalidateAll();
+  check("item disk store accepts asynchronous readback",
+        service.StoreIconTexture("item", "readback-probe", "", "first", 2,
+                                 texture));
+  check("queued disk store has no premature manifest entry",
+        service.GetStats().RenderStores == 0);
+  check("enqueue preserves pack and separate framebuffer state", preserved());
+  // Only the test waits; normal frame draining always uses a zero timeout.
+  glFinish();
+  service.FlushManifest();
+  check("ready disk readback drains exactly once",
+        service.GetStats().RenderStores == 1);
+  check("drain preserves pack and separate framebuffer state", preserved());
+  GLuint loaded = 0;
+  check("completed asynchronous icon survives manifest reload",
+        [&]()
+        {
+          UInventoryIconService reload;
+          return reload.Initialize(frames / "readback-cache") &&
+                 reload.TryLoadIconTexture("item", "readback-probe", "",
+                                           "first", 2, loaded);
+        }());
+  std::array<unsigned char, 16> actual{};
+  glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+  glPixelStorei(GL_PACK_ALIGNMENT, 1);
+  glPixelStorei(GL_PACK_ROW_LENGTH, 0);
+  glPixelStorei(GL_PACK_SKIP_ROWS, 0);
+  glPixelStorei(GL_PACK_SKIP_PIXELS, 0);
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, fbos[0]);
+  glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                         GL_TEXTURE_2D, loaded, 0);
+  if (loaded)
+    glReadPixels(0, 0, 2, 2, GL_RGBA, GL_UNSIGNED_BYTE, actual.data());
+  check("asynchronous PNG roundtrip preserves every RGBA byte",
+        loaded && actual == expected);
+  check("readback invalidation probe queues",
+        service.StoreIconTexture("item", "readback-probe", "", "cancelled", 2,
+                                 texture));
+  service.InvalidateKind("item");
+  glFinish();
+  service.FlushManifest();
+  GLuint absent = 0;
+  check("invalidated pending icon cannot recreate stale disk entry",
+        service.GetStats().RenderStores == 1 &&
+            !service.TryLoadIconTexture("item", "readback-probe", "",
+                                        "cancelled", 2, absent));
+  service.InvalidateAll();
+  glBindBuffer(GL_PIXEL_PACK_BUFFER, oldPack);
+  glPixelStorei(GL_PACK_ALIGNMENT, oldAlignment);
+  glPixelStorei(GL_PACK_ROW_LENGTH, oldRows);
+  glPixelStorei(GL_PACK_SKIP_ROWS, oldSkipRows);
+  glPixelStorei(GL_PACK_SKIP_PIXELS, oldSkipPixels);
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, oldRead);
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, oldDraw);
+  glDeleteBuffers(1, &sentinel);
+  glDeleteFramebuffers(2, fbos);
+  glDeleteTextures(1, &texture);
+  glDeleteTextures(1, &loaded);
+}
+
+inline void RunGuiStaticQuadQa(UShaderManager &shaders, nlohmann::json &report)
+{
+  UGlStateScope scope(kGlMaskIconFbo | GlStateBit::DepthMask |
+                      GlStateBit::ColorMask);
+  struct RestoreEdges
+  {
+    GLint ScissorBox[4]{}, SrcRgb{}, DstRgb{}, SrcAlpha{}, DstAlpha{};
+    bool Scissor{glIsEnabled(GL_SCISSOR_TEST) != 0};
+    RestoreEdges()
+    {
+      glGetIntegerv(GL_SCISSOR_BOX, ScissorBox);
+      glGetIntegerv(GL_BLEND_SRC_RGB, &SrcRgb);
+      glGetIntegerv(GL_BLEND_DST_RGB, &DstRgb);
+      glGetIntegerv(GL_BLEND_SRC_ALPHA, &SrcAlpha);
+      glGetIntegerv(GL_BLEND_DST_ALPHA, &DstAlpha);
+    }
+    ~RestoreEdges()
+    {
+      glScissor(ScissorBox[0], ScissorBox[1], ScissorBox[2], ScissorBox[3]);
+      if (Scissor)
+        glEnable(GL_SCISSOR_TEST);
+      else
+        glDisable(GL_SCISSOR_TEST);
+      glBlendFuncSeparate(GLenum(SrcRgb), GLenum(DstRgb), GLenum(SrcAlpha),
+                          GLenum(DstAlpha));
+    }
+  } restoreEdges;
+  const auto check = [&](const std::string &name, bool passed)
+  {
+    report["checks"].push_back({{"name", name}, {"passed", passed}});
+    if (!passed)
+      report["passed"] = false;
+  };
+  const auto shader =
+      shaders.CreateShader("gui_quad_pixel_qa", "shaders/gui_textured_v.glsl",
+                           "shaders/gui_textured_f.glsl");
+  const auto legacyShader =
+      shaders.CreateShaderFromStrings("gui_quad_legacy_qa",
+                                      R"(#version 330 core
+layout(location=0) in vec2 aPos;
+layout(location=1) in vec2 aTexCoord;
+out vec2 TexCoord;
+uniform vec2 screenSize;
+void main() {
+  gl_Position=vec4((aPos/screenSize)*2.0-1.0,0.0,1.0);
+  TexCoord=aTexCoord;
+})",
+                                      R"(#version 330 core
+in vec2 TexCoord;
+out vec4 FragColor;
+uniform sampler2D texture0;
+uniform vec4 tint;
+void main() { FragColor=texture(texture0,TexCoord)*tint; }
+)");
+  UGuiTexturedQuadBatch batch, legacyBatch;
+  check("static GUI quad initializes", batch.Initialize(shader));
+  check("legacy GUI shader fallback initializes",
+        legacyBatch.Initialize(legacyShader));
+  if (!shader || !legacyShader)
+    return;
+  GLuint texture = 0, vao = 0, vbo = 0;
+  const unsigned char colors[] = {255, 20, 40,  255, 30,  255, 60, 127,
+                                  70,  80, 255, 64,  220, 100, 40, 0};
+  glGenTextures(1, &texture);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+               colors);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glGenVertexArrays(1, &vao);
+  glGenBuffers(1, &vbo);
+  glBindVertexArray(vao);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
+                        reinterpret_cast<void *>(2 * sizeof(float)));
+  glEnableVertexAttribArray(0);
+  glEnableVertexAttribArray(1);
+  for (const int width : {1280, 1920})
+    for (const float scale : {1.f, 1.5f, 2.f})
+      for (const bool clipped : {false, true})
+      {
+        const int height = width * 9 / 16;
+        UItemQaTarget target(width, height);
+        const std::array<GuiRect, 3> rects = {
+            GuiRect{-int(7 * scale), int(19 * scale), int(61 * scale),
+                    int(43 * scale)},
+            GuiRect{width / 2, height / 3, int(79 * scale), int(57 * scale)},
+            GuiRect{width - 23, height - 20, 40, 50}};
+        const auto draw = [&](int mode)
+        {
+          target.Bind();
+          auto &activeBatch = mode == 2 ? legacyBatch : batch;
+          activeBatch.Begin(width, height);
+          if (clipped)
+          {
+            glEnable(GL_SCISSOR_TEST);
+            glScissor(3, 5, width - 9, height - 13);
+          }
+          for (size_t i = 0; i < rects.size(); ++i)
+          {
+            const auto &r = rects[i];
+            const glm::vec4 tint(.6f + float(i) * .1f, .8f, 1.f, .65f);
+            if (mode != 0)
+              activeBatch.DrawTexturedRect(r, texture, tint);
+            else
+            {
+              // Independent pre-change CPU coordinates and vertex shader.
+              const float x0 = float(r.X), x1 = float(r.X + r.W),
+                          y0 = float(height) - float(r.Y + r.H),
+                          y1 = float(height) - float(r.Y);
+              const float vertices[] = {x0, y0, 0, 0, x1, y0, 1, 0,
+                                        x0, y1, 0, 1, x0, y1, 0, 1,
+                                        x1, y0, 1, 0, x1, y1, 1, 1};
+              legacyShader->Use();
+              legacyShader->SetVec2("screenSize", glm::vec2(width, height));
+              legacyShader->SetVec4("tint", tint);
+              legacyShader->SetInt("texture0", 0);
+              glActiveTexture(GL_TEXTURE0);
+              glBindTexture(GL_TEXTURE_2D, texture);
+              glBindVertexArray(vao);
+              glBindBuffer(GL_ARRAY_BUFFER, vbo);
+              glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices,
+                           GL_STREAM_DRAW);
+              glDrawArrays(GL_TRIANGLES, 0, 6);
+              legacyShader->Unuse();
+            }
+          }
+          activeBatch.End();
+          std::vector<unsigned char> pixels(size_t(width) * height * 4);
+          glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE,
+                       pixels.data());
+          return pixels;
+        };
+        const auto reference = draw(0), actual = draw(1), fallback = draw(2);
+        bool colored = false;
+        for (size_t i = 4; i < reference.size(); i += 4)
+          colored = colored || reference[i] != reference[0] ||
+                    reference[i + 1] != reference[1] ||
+                    reference[i + 2] != reference[2];
+        check("static GUI quad preserves RGBA " + std::to_string(width) +
+                  " scale " + std::to_string(scale) +
+                  (clipped ? " clipped" : " unclipped"),
+              colored && reference == actual);
+        check("legacy GUI fallback preserves RGBA " + std::to_string(width) +
+                  " scale " + std::to_string(scale) +
+                  (clipped ? " clipped" : " unclipped"),
+              colored && reference == fallback);
+      }
+  glDisable(GL_SCISSOR_TEST);
+  glDeleteBuffers(1, &vbo);
+  glDeleteVertexArrays(1, &vao);
+  glDeleteTextures(1, &texture);
+}
+
 inline void RunItemColorQa(ItemSurfaceRenderer &renderer,
                            const std::filesystem::path &frames,
                            nlohmann::json &report)
@@ -444,7 +718,8 @@ inline void RunItemColorQa(ItemSurfaceRenderer &renderer,
   auto asset = std::make_shared<ItemRenderAsset>();
   asset->Materials.push_back({});
   asset->Materials[0].Albedo = image;
-  asset->Nodes.push_back({});
+  const auto bind = glm::translate(glm::mat4(1), glm::vec3(.0625f, .03125f, 0));
+  asset->Nodes.push_back({"fixture_root", bind, bind, -1});
   ItemRenderPrimitive primitive;
   primitive.Vertices = {-1,  -1,  0,  .5f, .5f, 0,   0,   1, 1,   -1,  0,
                         .5f, .5f, 0,  0,   1,   1,   1,   0, .5f, .5f, 0,
@@ -469,6 +744,72 @@ inline void RunItemColorQa(ItemSurfaceRenderer &renderer,
     report["color_pipeline"][factor ? "half_factor_encoded_rgb"
                                     : "filtered_encoded_rgb"] = pixel[0];
   }
+
+  // Exercise every cached uniform, switching profiles/materials and inspection
+  // modes in one batch. No geometry, ordering or pixels may change.
+  auto combined = std::make_shared<ItemRenderAsset>(*asset);
+  combined->Materials.push_back(combined->Materials[0]);
+  auto rightHalf = combined->Primitives[0];
+  rightHalf.Material = 1;
+  for (size_t i = 0; i < rightHalf.Vertices.size(); i += 8)
+  {
+    rightHalf.Vertices[i] = (rightHalf.Vertices[i] + 1.f) * .5f;
+    rightHalf.Vertices[i + 2] = -.1f;
+  }
+  combined->Primitives.push_back(rightHalf);
+  combined->StaticWearSections["fixture_root"].Primitives = {0, 1};
+  auto first = std::make_shared<ItemRenderAsset>(*asset);
+  auto second = std::make_shared<ItemRenderAsset>(*asset);
+  rightHalf.Material = 0;
+  second->Primitives[0] = rightHalf;
+  const auto renderCase = [&](int index, bool split = false)
+  {
+    target.Bind();
+    auto p = profile;
+    p.InspectionMode = index % 7;
+    p.CameraPosition = {float(index % 3) * .2f, .1f, 3.f};
+    p.LightDirection = {.2f + float(index % 4) * .1f, .7f, 1.f};
+    p.Ambient = .2f + float(index % 5) * .1f;
+    p.LightIntensity = .3f + float(index % 6) * .1f;
+    p.Fog = float(index % 3) * .2f;
+    p.FogColor = {.2f, .3f + float(index % 2) * .1f, .4f};
+    auto &material = combined->Materials[0];
+    material.Color = {1.f, .4f + float(index % 4) * .1f, .6f, 1.f};
+    material.Metallic = index % 2 ? .7f : 0.f;
+    material.Roughness = .2f + float(index % 5) * .1f;
+    material.Emissive = {float(index % 3) * .03f, 0.f, .01f};
+    combined->Materials[1] = material;
+    combined->Materials[1].Color = {.5f, .7f, .9f, 1.f};
+    combined->Materials[1].Roughness = .3f + float(index % 3) * .1f;
+    ItemVisualState selected;
+    selected.VisibleRoots.insert("fixture_root");
+    if (split)
+    {
+      selected.NodeTransforms["fixture_root"] = glm::mat4(1);
+      first->Materials[0] = combined->Materials[0];
+      second->Materials[0] = combined->Materials[1];
+      renderer.Draw(first, {}, glm::mat4(1), glm::mat4(1), selected, p);
+      renderer.Draw(second, {}, glm::mat4(1), glm::mat4(1), selected, p);
+    }
+    else
+      renderer.Draw(combined, {}, glm::mat4(1), glm::mat4(1), selected, p);
+    std::vector<unsigned char> result(16 * 16 * 4);
+    glReadPixels(0, 0, 16, 16, GL_RGBA, GL_UNSIGNED_BYTE, result.data());
+    return result;
+  };
+  std::vector<std::vector<unsigned char>> reference;
+  for (int i = 0; i < 28; ++i)
+    reference.push_back(renderCase(i, true));
+  for (int i = 0; i < 28; ++i)
+    check("local item material reuse preserves pixels " + std::to_string(i),
+          reference[size_t(i)] == renderCase(i));
+  {
+    UItemSurfaceBatchScope batch(renderer);
+    for (int i = 0; i < 28; ++i)
+      check("contiguous item batch preserves pixels " + std::to_string(i),
+            reference[size_t(i)] == renderCase(i));
+  }
+  check("item uniforms reset outside batch", reference[0] == renderCase(0));
 }
 
 inline void RunItemIconSamplingQa(UItemPreviewRenderer &preview,
@@ -579,6 +920,8 @@ RunItemPresentationQa(const std::filesystem::path &path,
   };
   ItemSurfaceRenderer renderer;
   check("item renderer initializes", renderer.Initialize(shaders));
+  RunGuiStaticQuadQa(shaders, report);
+  RunItemIconReadbackQa(frames, report);
   RunItemColorQa(renderer, frames, report);
   UItemQaTarget target;
   UItemQaTarget fpTarget(1280, 720);

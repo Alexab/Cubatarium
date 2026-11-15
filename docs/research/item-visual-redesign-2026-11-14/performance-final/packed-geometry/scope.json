@@ -1,0 +1,13 @@
+{
+  "status": "Release/native and exact-pixel equivalence pass; warm-catalog performance still fails",
+  "active_items": 70,
+  "primitives": 318,
+  "old_gl_objects": 954,
+  "new_gl_objects": 210,
+  "geometry_or_texture_reduction": false,
+  "gl_object_scope": "per renderer cache with all 70 authored items loaded",
+  "presentation_checks": 3727,
+  "pixel_equivalence_checks": 57,
+  "warm_catalog_ratio": 1.280982094585897,
+  "cold_catalog_ratio": 0.8815772068386354
+}

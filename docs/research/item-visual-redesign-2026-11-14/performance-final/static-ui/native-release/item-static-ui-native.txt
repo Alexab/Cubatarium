@@ -1,0 +1,9 @@
+Current native acceptance: True
+native.json True 59
+native.json.ui.json True 0
+native.json.ownership.json True 57
+native.json.ownership-ui.json True 18
+native.json.player-window.json True 7
+native.json.icons.json True 209
+native.json.item-lab.json True 1041
+native.json.presentations.json True 3753

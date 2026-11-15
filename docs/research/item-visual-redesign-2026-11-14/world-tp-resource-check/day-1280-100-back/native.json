@@ -1,0 +1,3031 @@
+{
+  "checks": [
+    {
+      "name": "apple equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "arrow equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "bread equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "bucket equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "charcoal equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "coal equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "cooked_meat equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "copper_axe equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "copper_chest equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "copper_feet equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "copper_head equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "copper_hoe equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "copper_ingot equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "copper_legs equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "copper_pickaxe equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "copper_shovel equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "copper_sword equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "cord equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "flint_and_steel equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "gold_axe equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "gold_chest equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "gold_feet equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "gold_head equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "gold_hoe equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "gold_ingot equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "gold_legs equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "gold_pickaxe equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "gold_shovel equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "gold_sword equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "grain equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "iron_axe equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "iron_chest equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "iron_feet equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "iron_head equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "iron_ingot equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "iron_legs equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "iron_shield equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "iron_sword equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "leather equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "leather_chest equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "leather_feet equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "leather_head equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "leather_legs equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "plant_fiber equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "raw_copper equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "raw_gold equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "raw_iron equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "raw_meat equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "seeds equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "shears equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "stick equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "stone_axe equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "stone_hoe equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "stone_pickaxe equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "stone_shovel equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "stone_sword equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "waterskin equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "wood_axe equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "wood_bow equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "wood_hoe equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "wood_pickaxe equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "wood_shield equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "wood_shovel equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "wood_spear equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "wood_sword equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "wood_torch equipped actual world TP draw contains the active item resource",
+      "passed": true
+    },
+    {
+      "name": "wool equipped actual world TP draw contains the active item resource",
+      "passed": true
+    }
+  ],
+  "frames": [
+    {
+      "active_count": 1,
+      "active_item": "apple",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "apple.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "apple",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "apple",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/apple/model.gltf",
+          "visible_primitives": 3
+        },
+        {
+          "first_node": "apple",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/apple/model.gltf",
+          "visible_primitives": 3
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "arrow",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "arrow.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "arrow",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "arrow",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/arrow/model.gltf",
+          "visible_primitives": 4
+        },
+        {
+          "first_node": "arrow",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/arrow/model.gltf",
+          "visible_primitives": 4
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "bread",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "bread.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "bread",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "bread",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/bread/model.gltf",
+          "visible_primitives": 3
+        },
+        {
+          "first_node": "bread",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/bread/model.gltf",
+          "visible_primitives": 3
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "bucket",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "bucket.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "bucket",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "bucket",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/bucket/model.gltf",
+          "visible_primitives": 3
+        },
+        {
+          "first_node": "bucket",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/bucket/model.gltf",
+          "visible_primitives": 3
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "charcoal",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "charcoal.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "charcoal",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "charcoal",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/charcoal/model.gltf",
+          "visible_primitives": 2
+        },
+        {
+          "first_node": "charcoal",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/charcoal/model.gltf",
+          "visible_primitives": 2
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "coal",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "coal.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "coal",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "coal",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/coal/model.gltf",
+          "visible_primitives": 2
+        },
+        {
+          "first_node": "coal",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/coal/model.gltf",
+          "visible_primitives": 2
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "cooked_meat",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "cooked_meat.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "cooked_meat",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "cooked_meat",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/cooked_meat/model.gltf",
+          "visible_primitives": 3
+        },
+        {
+          "first_node": "cooked_meat",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/cooked_meat/model.gltf",
+          "visible_primitives": 3
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "copper_axe",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "copper_axe.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "copper_axe",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "copper_axe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/copper_axe/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "copper_axe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/copper_axe/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "copper_chest",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "copper_chest.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "copper_chest",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "copper_chest",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/copper_chest/model.gltf",
+          "visible_primitives": 3
+        },
+        {
+          "first_node": "copper_chest",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/copper_chest/model.gltf",
+          "visible_primitives": 3
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "copper_feet",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "copper_feet.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "copper_feet",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "copper_feet",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/copper_feet/model.gltf",
+          "visible_primitives": 8
+        },
+        {
+          "first_node": "copper_feet",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/copper_feet/model.gltf",
+          "visible_primitives": 8
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "copper_head",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "copper_head.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "copper_head",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "copper_head",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/copper_head/model.gltf",
+          "visible_primitives": 3
+        },
+        {
+          "first_node": "copper_head",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/copper_head/model.gltf",
+          "visible_primitives": 3
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "copper_hoe",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "copper_hoe.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "copper_hoe",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "copper_hoe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/copper_hoe/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "copper_hoe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/copper_hoe/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "copper_ingot",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "copper_ingot.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "copper_ingot",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "copper_ingot",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/copper_ingot/model.gltf",
+          "visible_primitives": 1
+        },
+        {
+          "first_node": "copper_ingot",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/copper_ingot/model.gltf",
+          "visible_primitives": 1
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "copper_legs",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "copper_legs.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "copper_legs",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "copper_legs",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/copper_legs/model.gltf",
+          "visible_primitives": 14
+        },
+        {
+          "first_node": "copper_legs",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/copper_legs/model.gltf",
+          "visible_primitives": 14
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "copper_pickaxe",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "copper_pickaxe.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "copper_pickaxe",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "copper_pickaxe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/copper_pickaxe/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "copper_pickaxe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/copper_pickaxe/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "copper_shovel",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "copper_shovel.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "copper_shovel",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "copper_shovel",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/copper_shovel/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "copper_shovel",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/copper_shovel/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "copper_sword",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "copper_sword.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "copper_sword",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "copper_sword",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/copper_sword/model.gltf",
+          "visible_primitives": 4
+        },
+        {
+          "first_node": "copper_sword",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/copper_sword/model.gltf",
+          "visible_primitives": 4
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "cord",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "cord.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "cord",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "cord",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/cord/model.gltf",
+          "visible_primitives": 2
+        },
+        {
+          "first_node": "cord",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/cord/model.gltf",
+          "visible_primitives": 2
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "flint_and_steel",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "flint_and_steel.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "flint_and_steel",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "flint_and_steel",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/flint_and_steel/model.gltf",
+          "visible_primitives": 4
+        },
+        {
+          "first_node": "flint_and_steel",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/flint_and_steel/model.gltf",
+          "visible_primitives": 4
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "gold_axe",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "gold_axe.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "gold_axe",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "gold_axe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/gold_axe/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "gold_axe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/gold_axe/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "gold_chest",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "gold_chest.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "gold_chest",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "gold_chest",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/gold_chest/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "gold_chest",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/gold_chest/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "gold_feet",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "gold_feet.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "gold_feet",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "gold_feet",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/gold_feet/model.gltf",
+          "visible_primitives": 8
+        },
+        {
+          "first_node": "gold_feet",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/gold_feet/model.gltf",
+          "visible_primitives": 8
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "gold_head",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "gold_head.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "gold_head",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "gold_head",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/gold_head/model.gltf",
+          "visible_primitives": 3
+        },
+        {
+          "first_node": "gold_head",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/gold_head/model.gltf",
+          "visible_primitives": 3
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "gold_hoe",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "gold_hoe.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "gold_hoe",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "gold_hoe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/gold_hoe/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "gold_hoe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/gold_hoe/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "gold_ingot",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "gold_ingot.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "gold_ingot",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "gold_ingot",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/gold_ingot/model.gltf",
+          "visible_primitives": 1
+        },
+        {
+          "first_node": "gold_ingot",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/gold_ingot/model.gltf",
+          "visible_primitives": 1
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "gold_legs",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "gold_legs.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "gold_legs",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "gold_legs",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/gold_legs/model.gltf",
+          "visible_primitives": 14
+        },
+        {
+          "first_node": "gold_legs",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/gold_legs/model.gltf",
+          "visible_primitives": 14
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "gold_pickaxe",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "gold_pickaxe.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "gold_pickaxe",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "gold_pickaxe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/gold_pickaxe/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "gold_pickaxe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/gold_pickaxe/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "gold_shovel",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "gold_shovel.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "gold_shovel",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "gold_shovel",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/gold_shovel/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "gold_shovel",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/gold_shovel/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "gold_sword",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "gold_sword.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "gold_sword",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "gold_sword",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/gold_sword/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "gold_sword",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/gold_sword/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "grain",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "grain.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "grain",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "grain",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/grain/model.gltf",
+          "visible_primitives": 1
+        },
+        {
+          "first_node": "grain",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/grain/model.gltf",
+          "visible_primitives": 1
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "iron_axe",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "iron_axe.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "iron_axe",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "iron_axe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_axe/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "iron_axe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_axe/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "iron_chest",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "iron_chest.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "iron_chest",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "iron_chest",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_chest/model.gltf",
+          "visible_primitives": 4
+        },
+        {
+          "first_node": "iron_chest",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_chest/model.gltf",
+          "visible_primitives": 4
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "iron_feet",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "iron_feet.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "iron_feet",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "iron_feet",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_feet/model.gltf",
+          "visible_primitives": 6
+        },
+        {
+          "first_node": "iron_feet",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_feet/model.gltf",
+          "visible_primitives": 6
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "iron_head",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "iron_head.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "iron_head",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "iron_head",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_head/model.gltf",
+          "visible_primitives": 3
+        },
+        {
+          "first_node": "iron_head",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_head/model.gltf",
+          "visible_primitives": 3
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "iron_hoe",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "iron_hoe.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "iron_hoe",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "iron_hoe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_hoe/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "iron_hoe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_hoe/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "iron_ingot",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "iron_ingot.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "iron_ingot",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "iron_ingot",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_ingot/model.gltf",
+          "visible_primitives": 1
+        },
+        {
+          "first_node": "iron_ingot",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_ingot/model.gltf",
+          "visible_primitives": 1
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "iron_legs",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "iron_legs.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "iron_legs",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "iron_legs",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_legs/model.gltf",
+          "visible_primitives": 14
+        },
+        {
+          "first_node": "iron_legs",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_legs/model.gltf",
+          "visible_primitives": 14
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "iron_pickaxe",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "iron_pickaxe.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "iron_pickaxe",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "iron_pickaxe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_pickaxe/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "iron_pickaxe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_pickaxe/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "iron_shield",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "iron_shield.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "iron_shield",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "iron_shield",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_shield/model.gltf",
+          "visible_primitives": 3
+        },
+        {
+          "first_node": "iron_shield",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_shield/model.gltf",
+          "visible_primitives": 3
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "iron_shovel",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "iron_shovel.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "iron_shovel",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "iron_shovel",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_shovel/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "iron_shovel",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_shovel/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "iron_sword",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "iron_sword.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "iron_sword",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "iron_sword",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_sword/model.gltf",
+          "visible_primitives": 4
+        },
+        {
+          "first_node": "iron_sword",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_sword/model.gltf",
+          "visible_primitives": 4
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "leather",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "leather.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "leather",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "leather",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/leather/model.gltf",
+          "visible_primitives": 2
+        },
+        {
+          "first_node": "leather",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/leather/model.gltf",
+          "visible_primitives": 2
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "leather_chest",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "leather_chest.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "leather_chest",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "leather_chest",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/leather_chest/model.gltf",
+          "visible_primitives": 3
+        },
+        {
+          "first_node": "leather_chest",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/leather_chest/model.gltf",
+          "visible_primitives": 3
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "leather_feet",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "leather_feet.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "leather_feet",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "leather_feet",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/leather_feet/model.gltf",
+          "visible_primitives": 6
+        },
+        {
+          "first_node": "leather_feet",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/leather_feet/model.gltf",
+          "visible_primitives": 6
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "leather_head",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "leather_head.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "leather_head",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "leather_head",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/leather_head/model.gltf",
+          "visible_primitives": 2
+        },
+        {
+          "first_node": "leather_head",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/leather_head/model.gltf",
+          "visible_primitives": 2
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "leather_legs",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "leather_legs.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "leather_legs",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "leather_legs",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/leather_legs/model.gltf",
+          "visible_primitives": 10
+        },
+        {
+          "first_node": "leather_legs",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/leather_legs/model.gltf",
+          "visible_primitives": 10
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "plant_fiber",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "plant_fiber.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "plant_fiber",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "plant_fiber",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/plant_fiber/model.gltf",
+          "visible_primitives": 2
+        },
+        {
+          "first_node": "plant_fiber",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/plant_fiber/model.gltf",
+          "visible_primitives": 2
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "raw_copper",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "raw_copper.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "raw_copper",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "raw_copper",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/raw_copper/model.gltf",
+          "visible_primitives": 3
+        },
+        {
+          "first_node": "raw_copper",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/raw_copper/model.gltf",
+          "visible_primitives": 3
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "raw_gold",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "raw_gold.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "raw_gold",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "raw_gold",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/raw_gold/model.gltf",
+          "visible_primitives": 3
+        },
+        {
+          "first_node": "raw_gold",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/raw_gold/model.gltf",
+          "visible_primitives": 3
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "raw_iron",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "raw_iron.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "raw_iron",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "raw_iron",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/raw_iron/model.gltf",
+          "visible_primitives": 3
+        },
+        {
+          "first_node": "raw_iron",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/raw_iron/model.gltf",
+          "visible_primitives": 3
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "raw_meat",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "raw_meat.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "raw_meat",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "raw_meat",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/raw_meat/model.gltf",
+          "visible_primitives": 3
+        },
+        {
+          "first_node": "raw_meat",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/raw_meat/model.gltf",
+          "visible_primitives": 3
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "seeds",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "seeds.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "seeds",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "seeds",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/seeds/model.gltf",
+          "visible_primitives": 1
+        },
+        {
+          "first_node": "seeds",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/seeds/model.gltf",
+          "visible_primitives": 1
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "shears",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "shears.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "shears",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "shears",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/shears/model.gltf",
+          "visible_primitives": 8
+        },
+        {
+          "first_node": "shears",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/shears/model.gltf",
+          "visible_primitives": 8
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "stick",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "stick.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "stick",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "stick",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/stick/model.gltf",
+          "visible_primitives": 2
+        },
+        {
+          "first_node": "stick",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/stick/model.gltf",
+          "visible_primitives": 2
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "stone_axe",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "stone_axe.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "stone_axe",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "stone_axe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/stone_axe/model.gltf",
+          "visible_primitives": 4
+        },
+        {
+          "first_node": "stone_axe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/stone_axe/model.gltf",
+          "visible_primitives": 4
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "stone_hoe",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "stone_hoe.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "stone_hoe",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "stone_hoe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/stone_hoe/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "stone_hoe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/stone_hoe/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "stone_pickaxe",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "stone_pickaxe.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "stone_pickaxe",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "stone_pickaxe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/stone_pickaxe/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "stone_pickaxe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/stone_pickaxe/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "stone_shovel",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "stone_shovel.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "stone_shovel",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "stone_shovel",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/stone_shovel/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "stone_shovel",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/stone_shovel/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "stone_sword",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "stone_sword.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "stone_sword",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "stone_sword",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/stone_sword/model.gltf",
+          "visible_primitives": 4
+        },
+        {
+          "first_node": "stone_sword",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/stone_sword/model.gltf",
+          "visible_primitives": 4
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "waterskin",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "waterskin.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "waterskin",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "waterskin",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/waterskin/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "waterskin",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/waterskin/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "wood_axe",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_axe.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "wood_axe",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "wood_axe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/wood_axe/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "wood_axe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/wood_axe/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "wood_bow",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_bow.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "wood_bow",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "wood_bow",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/wood_bow/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "wood_bow",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/wood_bow/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "wood_hoe",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_hoe.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "wood_hoe",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "wood_hoe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/wood_hoe/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "wood_hoe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/wood_hoe/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "wood_pickaxe",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_pickaxe.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "wood_pickaxe",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "wood_pickaxe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/wood_pickaxe/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "wood_pickaxe",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/wood_pickaxe/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "wood_shield",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_shield.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "wood_shield",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "wood_shield",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/wood_shield/model.gltf",
+          "visible_primitives": 4
+        },
+        {
+          "first_node": "wood_shield",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/wood_shield/model.gltf",
+          "visible_primitives": 4
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "wood_shovel",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_shovel.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "wood_shovel",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "wood_shovel",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/wood_shovel/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "wood_shovel",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/wood_shovel/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "wood_spear",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_spear.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "wood_spear",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "wood_spear",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/wood_spear/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "wood_spear",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/wood_spear/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "wood_sword",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_sword.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "wood_sword",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "wood_sword",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/wood_sword/model.gltf",
+          "visible_primitives": 4
+        },
+        {
+          "first_node": "wood_sword",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/wood_sword/model.gltf",
+          "visible_primitives": 4
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "wood_torch",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wood_torch.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "wood_torch",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "wood_torch",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/wood_torch/model.gltf",
+          "visible_primitives": 5
+        },
+        {
+          "first_node": "wood_torch",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/wood_torch/model.gltf",
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "wool",
+      "bow_charge": 0.0,
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "wool.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "id": "wool",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1000000000.0,
+      "stage": "static",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "world_items": [
+        {
+          "first_node": "wool",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/wool/model.gltf",
+          "visible_primitives": 3
+        },
+        {
+          "first_node": "wool",
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/wool/model.gltf",
+          "visible_primitives": 3
+        }
+      ]
+    }
+  ],
+  "passed": true,
+  "request": {
+    "body": "male",
+    "height": 720,
+    "ids": [
+      "apple",
+      "arrow",
+      "bread",
+      "bucket",
+      "charcoal",
+      "coal",
+      "cooked_meat",
+      "copper_axe",
+      "copper_chest",
+      "copper_feet",
+      "copper_head",
+      "copper_hoe",
+      "copper_ingot",
+      "copper_legs",
+      "copper_pickaxe",
+      "copper_shovel",
+      "copper_sword",
+      "cord",
+      "flint_and_steel",
+      "gold_axe",
+      "gold_chest",
+      "gold_feet",
+      "gold_head",
+      "gold_hoe",
+      "gold_ingot",
+      "gold_legs",
+      "gold_pickaxe",
+      "gold_shovel",
+      "gold_sword",
+      "grain",
+      "iron_axe",
+      "iron_chest",
+      "iron_feet",
+      "iron_head",
+      "iron_hoe",
+      "iron_ingot",
+      "iron_legs",
+      "iron_pickaxe",
+      "iron_shield",
+      "iron_shovel",
+      "iron_sword",
+      "leather",
+      "leather_chest",
+      "leather_feet",
+      "leather_head",
+      "leather_legs",
+      "plant_fiber",
+      "raw_copper",
+      "raw_gold",
+      "raw_iron",
+      "raw_meat",
+      "seeds",
+      "shears",
+      "stick",
+      "stone_axe",
+      "stone_hoe",
+      "stone_pickaxe",
+      "stone_shovel",
+      "stone_sword",
+      "waterskin",
+      "wood_axe",
+      "wood_bow",
+      "wood_hoe",
+      "wood_pickaxe",
+      "wood_shield",
+      "wood_shovel",
+      "wood_spear",
+      "wood_sword",
+      "wood_torch",
+      "wool"
+    ],
+    "interaction": "",
+    "light": "day",
+    "mode": "creative",
+    "perspective": "back",
+    "scale": 1.0,
+    "subject": "item",
+    "width": 1280
+  },
+  "scope": "actual world FP and physical drop rendering"
+}

@@ -17,7 +17,7 @@
 | TD-ITEM-019 | items-inventory-completion | Charged bow and swept physical arrows; wall/target/save tests |
 | TD-ITEM-003 | Wave 3 | Explicit `dig.groups`/`dig.level` on packs via `tools/apply_block_dig_groups.py`; InferDigGroups remains fallback only |
 | TD-ITEM-004 | tools visual | Mesh FP arms via atlas UV boxes in `TryDrawSkinnedArms`; full weighted skinning optional |
-| TD-ITEM-005 | tools visual | `SubmitWieldedFromCreature` on `rightItem`/`leftItem`; hidden when FP viewmodel on |
+| TD-ITEM-005 | tools visual | `SubmitWieldedFromCreature` on `rightItem`/`leftItem`; hidden only for the possessed first-person camera with FP viewmodel on |
 | TD-ITEM-006 | character sheet tails | Curated `models/items/*.json` parts + optional glTF via `UItemPreviewRenderer` / `import_item_models.py`; see `docs/ITEM_ASSETS.md` |
 | TD-ITEM-008 | tools visual | Hitscan `InfluenceChannel::Ranged` + `arrow` ammo; see TD-ITEM-019 for physics |
 | TD-ITEM-010 | wear | Creative + Peaceful wear gate via `IsToolWearEnabled` + `WorldDifficulty::Peaceful` |
@@ -53,3 +53,17 @@ hash verification. [Release acceptance](research/items-completion-2026-11-13/fin
 ## Ownership follow-up completed, 2026-11-14
 
 Finite/catalog mixing, Creative loot, silent hand-slot deletion, creativeCopy cleanup, unbounded active drop queues and independent property-file commits have been replaced. Species-specific IK and broad world soak remain follow-up scope. [Final audit and evidence](research/inventory-ownership-refactor-2026-11-14/README.md).
+
+## Visual redesign follow-up
+
+The [visual redesign record](research/item-visual-redesign-2026-11-14/README.md)
+tracks the authored 70-item publication and final acceptance separately from
+older tools/inventory checkpoints. A native TP regression now checks the actual
+active item resource, not only inventory IDs or FP input phases.
+
+Bundled block definitions currently omit `physics.flammable`; their default is
+false. The parser now honors an explicit Boolean with or without a preset.
+Successful striker visuals are tested using a temporary, explicitly combustible
+QA material and the original definition catalog is restored. Choosing which
+bundled woods/plants may ignite and spread fire is a separate pack/gameplay
+balance task; the visual redesign does not silently enable fire on them.

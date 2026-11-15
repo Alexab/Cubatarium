@@ -12,7 +12,9 @@
 #include "World/Items/WorldItemSystem.h"
 #include "World/Math/GridMath.h"
 #include <algorithm>
+#include <array>
 #include <chrono>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -31,11 +33,19 @@ public:
                      const std::string &scene)
       : Path(path), Scene(scene)
   {
+    if (const auto *duration = std::getenv("CUBA_ITEM_PERF_MEASURE_SECONDS"))
+    {
+      size_t end = 0;
+      MeasureSeconds = std::stoi(duration, &end);
+      if (duration[end] != '\0' || MeasureSeconds < 8 || MeasureSeconds > 60)
+        throw std::runtime_error("Measurement window must be 8..60 seconds");
+    }
+    TraceFp = scene == "fp" && std::getenv("CUBA_ITEM_PERF_FP_TIMING");
     const auto name = world.GetWorldName();
     if (name.size() < 2 || name.substr(name.size() - 2) != "QA")
       throw std::runtime_error("Item performance fixture requires a QA world");
     if (scene != "fp" && scene != "armor" && scene != "drops" &&
-        scene != "catalog")
+        scene != "catalog" && scene != "moving")
       throw std::runtime_error("Unknown item performance scene");
     auto *actor = world.GetControlledCreature();
     auto camera = world.GetCurrentUserCamera();
@@ -116,7 +126,7 @@ public:
       inventory.Insert(Entry("iron_pickaxe"));
       inventory.SetActiveSlot(0, 0);
     }
-    if (Scene == "drops")
+    if (Scene == "drops" || Scene == "moving")
       for (int i = 0; i < 512; ++i)
       {
         const auto position =
@@ -131,6 +141,57 @@ public:
       SpawnArmor(world);
     Started = Clock::now();
     Frames.reserve(10000);
+  }
+  // Opt-in observer: query results are read only when already available.
+  void BeginFpTiming()
+  {
+    if (!TraceFp || Done || !TerrainReady || Seconds(Started) < 8.)
+      return;
+    FpCpuStart = Clock::now();
+    FpTimingActive = true;
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+    if (!FpGpuInitialized)
+    {
+      FpGpuSupported = (GLEW_VERSION_3_3 || GLEW_ARB_timer_query) &&
+                       glQueryCounter && glGetQueryObjectui64v;
+      GLint bits = 0;
+      if (FpGpuSupported)
+        glGetQueryiv(GL_TIMESTAMP, GL_QUERY_COUNTER_BITS, &bits);
+      FpGpuSupported = FpGpuSupported && bits > 0;
+      if (FpGpuSupported)
+        for (auto &pair : FpQueries)
+        {
+          glGenQueries(1, &pair.Begin);
+          glGenQueries(1, &pair.End);
+        }
+      FpGpuInitialized = true;
+    }
+    PollFpTiming();
+    auto &pair = FpQueries[FpQuerySlot];
+    if (FpGpuSupported && !pair.Pending)
+    {
+      pair.FrameIndex = Frames.size();
+      glQueryCounter(pair.Begin, GL_TIMESTAMP);
+      FpQueryActive = true;
+    }
+#endif
+  }
+  void EndFpTiming()
+  {
+    if (!FpTimingActive)
+      return;
+    FpCpuMs = Seconds(FpCpuStart) * 1000.;
+    FpTimingActive = false;
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+    if (FpQueryActive)
+    {
+      auto &pair = FpQueries[FpQuerySlot];
+      glQueryCounter(pair.End, GL_TIMESTAMP);
+      pair.Pending = true;
+      FpQueryActive = false;
+      FpQuerySlot = (FpQuerySlot + 1) % FpQueries.size();
+    }
+#endif
   }
   bool IsCatalog() const { return Scene == "catalog"; }
   bool IsFp() const { return Scene == "fp"; }
@@ -156,6 +217,9 @@ public:
       TerrainReady =
           std::all_of(Columns.begin(), Columns.end(), [&](const auto &column)
                       { return world.IsColumnVisualReady(column); });
+      if (Scene == "moving" && TerrainReady && !Launched &&
+          Seconds(Started) >= 8.)
+        LaunchMovingFixture(world);
     }
   }
   void Record(UWorld &world, const CreatureRenderStats &stats, int width,
@@ -164,6 +228,13 @@ public:
     if (Done || !TerrainReady || Seconds(Started) < 8. ||
         (IsCatalog() && !CatalogStarted))
       return;
+    // Deserialize/setup belongs to fixture initialization, not a measured
+    // frame.
+    if (LaunchFresh)
+    {
+      LaunchFresh = false;
+      return;
+    }
     if (CatalogStarted && !CatalogComplete)
     {
       ColdFrames.push_back(wallMs);
@@ -181,39 +252,80 @@ public:
       AssetLookups = GetItemAssetLookupStats();
       TextureLookups = ItemGltfTextureCache::Instance().GetLookupStats();
     }
-    Frames.push_back({{"wall_ms", wallMs},
+    size_t flying = 0, arrows = 0;
+    if (Scene == "moving")
+      for (const auto &body : UWorldItemSystem::Instance().GetActiveItems())
+      {
+        flying += body.flying;
+        arrows += body.flying && body.arrow;
+      }
+    PeakFlying = std::max(PeakFlying, flying);
+    PeakArrows = std::max(PeakArrows, arrows);
+    if (flying)
+      ++MovingFrames;
+    Frames.push_back({{"flying_bodies", flying},
+                      {"flying_arrows", arrows},
+                      {"wall_ms", wallMs},
                       {"swap_ms", swapMs},
                       {"world_tick_ms", world.GetLastWorldTickMs()},
                       {"app_ms", world.GetLastAppUpdateMs()},
                       {"draw_calls", stats.CreatureDrawCalls},
                       {"creatures_drawn", stats.CreaturesDrawn},
                       {"bodies", UWorldItemSystem::Instance().Count()}});
+    if (TraceFp)
+    {
+      Frames.back()["fp_cpu_ms"] = FpCpuMs;
+      Frames.back()["fp_gpu_ms"] = nullptr;
+    }
     MinDrawn = std::min(MinDrawn, stats.CreaturesDrawn);
-    BodiesValid = BodiesValid && UWorldItemSystem::Instance().Count() ==
-                                     (Scene == "drops" ? 512u : 0u);
-    if (Seconds(MeasureStart) < 8. || Frames.size() < 120)
+    BodiesValid = BodiesValid &&
+                  UWorldItemSystem::Instance().Count() ==
+                      ((Scene == "drops" || Scene == "moving") ? 512u : 0u);
+    if (Seconds(MeasureStart) < MeasureSeconds || Frames.size() < 120)
       return;
     Done = true;
+    PollFpTiming();
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+    if (FpGpuSupported)
+      for (auto &pair : FpQueries)
+      {
+        glDeleteQueries(1, &pair.Begin);
+        glDeleteQueries(1, &pair.End);
+      }
+#endif
     const auto memory = ItemGltfTextureCache::Instance().InspectMemory(true);
     const auto sharedMemory = ItemGltfTextureCache::Instance().InspectMemory();
-    const bool passed = Frames.size() >= 120 && BodiesValid &&
-                        (Scene != "armor" || MinDrawn >= 12) &&
-                        memory.Textures > 0 && memory.InvalidTextures == 0 &&
-                        width == 1920 && height == 1080;
+    const bool passed =
+        Frames.size() >= 120 && BodiesValid &&
+        (Scene != "armor" || MinDrawn >= 12) &&
+        (Scene != "moving" || (Launched && PeakFlying == 512 &&
+                               PeakArrows == 256 && MovingFrames >= 30)) &&
+        memory.Textures > 0 && memory.InvalidTextures == 0 && width == 1920 &&
+        height == 1080;
     const auto assets = GetItemAssetLookupStats();
     const auto textures = ItemGltfTextureCache::Instance().GetLookupStats();
     nlohmann::json report = {
         {"passed", passed},
         {"scene", Scene},
-        {"schema_version", 1},
+        {"schema_version", 3},
         {"scope", "whole window frame: simulation, streaming, rendering, GUI "
                   "and swap; vsync forced off"},
         {"resolution", {width, height}},
         {"warmup_sec", 8},
         {"measure_sec", Seconds(MeasureStart)},
+        {"requested_measure_sec", MeasureSeconds},
+        {"fp_timing_enabled", TraceFp},
+        {"fp_gpu_timing_supported", FpGpuSupported},
         {"catalog_item_count", Ids.size()},
         {"runtime_v3_count", V3Count},
         {"frames", Frames},
+        {"peak_flying_bodies", PeakFlying},
+        {"peak_flying_arrows", PeakArrows},
+        {"moving_frames", MovingFrames},
+        {"moving_fixture",
+         Scene == "moving" ? "saved initial conditions: 256 arrows and 256 "
+                             "finite items; normal fixed-step physics and CCD"
+                           : ""},
         {"cold_catalog_ms", ColdMs},
         {"cold_frames_ms", ColdFrames},
         {"item_texture_count", memory.Textures},
@@ -250,6 +362,52 @@ private:
     entry.Id = id;
     entry.count = 1;
     return entry;
+  }
+  void LaunchMovingFixture(UWorld &world)
+  {
+    auto &physics = UWorldItemSystem::Instance();
+    nlohmann::json snapshot;
+    physics.Serialize(snapshot);
+    auto &rows = snapshot.at("world_physical_v2");
+    if (rows.size() != 512)
+      throw std::runtime_error(
+          "Moving benchmark requires all 512 warmed bodies");
+    for (size_t i = 0; i < rows.size(); ++i)
+    {
+      auto &row = rows[i];
+      const bool arrow = i < 256;
+      const auto entry = Entry(arrow ? "arrow" : Ids[i % Ids.size()]);
+      const auto profile = physics.Profile(world, entry);
+      row["item"] = entry.Id;
+      row["instance"] = 0;
+      row["count"] = 1;
+      row["wear"] = 0;
+      row["broken"] = false;
+      row["contents"] = "";
+      row["units"] = 0;
+      row["mass"] = profile.mass;
+      row["hardness"] = profile.hardness;
+      const auto size = arrow ? glm::vec3(.08f) : profile.size;
+      row["size"] = {size.x, size.y, size.z};
+      row["position"] = {Origin.x + (int(i % 16) - 7.5f) * .7f, Origin.y + 2.f,
+                         Origin.z + 5.f + int(i / 16) * .7f};
+      // A low-charge arrow speed and bounded item windup stay inside the
+      // loaded vertical chunk. These are initial conditions, not input tests.
+      const float speed =
+          arrow ? 14.2f : std::min(12.f, ThrowSpeed(profile, 10, .5f));
+      row["velocity"] = {0, speed, 0};
+      row["flying"] = true;
+      row["arrow"] = arrow;
+      row["thrower"] = world.GetControlledCreature()->GetId();
+      row["age"] = 0;
+      row["last_contact"] = 0;
+      row["contact_cooldown"] = 0;
+    }
+    physics.Deserialize(snapshot);
+    if (physics.Count() != 512)
+      throw std::runtime_error(
+          "Moving fixture lost bodies during initialization");
+    Launched = LaunchFresh = true;
   }
   void RemoveOthers(UWorld &world)
   {
@@ -292,6 +450,38 @@ private:
           throw std::runtime_error("Cannot equip benchmark armor actor");
     }
   }
+  void PollFpTiming()
+  {
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+    for (auto &pair : FpQueries)
+    {
+      if (!pair.Pending || pair.FrameIndex >= Frames.size())
+        continue;
+      GLint available = GL_FALSE;
+      glGetQueryObjectiv(pair.End, GL_QUERY_RESULT_AVAILABLE, &available);
+      if (!available)
+        continue;
+      GLuint64 begin = 0, end = 0;
+      glGetQueryObjectui64v(pair.Begin, GL_QUERY_RESULT, &begin);
+      glGetQueryObjectui64v(pair.End, GL_QUERY_RESULT, &end);
+      if (end >= begin)
+        Frames[pair.FrameIndex]["fp_gpu_ms"] = double(end - begin) / 1e6;
+      pair.Pending = false;
+    }
+#endif
+  }
+  struct FpQuery
+  {
+    unsigned Begin{0}, End{0};
+    size_t FrameIndex{0};
+    bool Pending{false};
+  };
+  std::array<FpQuery, 16> FpQueries{};
+  size_t FpQuerySlot{0};
+  Clock::time_point FpCpuStart;
+  double FpCpuMs{0};
+  bool TraceFp{false}, FpGpuInitialized{false}, FpGpuSupported{false},
+      FpQueryActive{false}, FpTimingActive{false};
   std::filesystem::path Path;
   std::string Scene;
   Clock::time_point Started, ColdStart, MeasureStart;
@@ -306,8 +496,11 @@ private:
   glm::ivec3 Origin{};
   uint32_t MinDrawn{UINT32_MAX};
   size_t V3Count{0}, Removed{0};
+  size_t PeakFlying{0}, PeakArrows{0}, MovingFrames{0};
+  bool Launched{false}, LaunchFresh{false};
   bool Done{false}, Measuring{false}, BodiesValid{true}, TerrainReady{false};
   bool CatalogStarted{false}, CatalogReady{false}, CatalogComplete{false};
   double ColdMs{0};
+  int MeasureSeconds{8};
 };
 } // namespace cutum

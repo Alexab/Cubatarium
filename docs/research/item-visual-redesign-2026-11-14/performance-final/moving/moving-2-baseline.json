@@ -1,0 +1,4016 @@
+{
+  "catalog_item_count": 70,
+  "cold_catalog_ms": 0.0,
+  "cold_frames_ms": [],
+  "expected_armor_creatures": 0,
+  "extra_creatures_removed": 5,
+  "frames": [
+    {
+      "app_ms": 0.1145,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1949,
+      "flying_arrows": 0,
+      "flying_bodies": 12,
+      "swap_ms": 0.1161,
+      "wall_ms": 28.1289,
+      "world_tick_ms": 1.6412
+    },
+    {
+      "app_ms": 0.0978,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.0746,
+      "wall_ms": 28.8543,
+      "world_tick_ms": 4.0165
+    },
+    {
+      "app_ms": 0.1048,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.0768,
+      "wall_ms": 26.9423,
+      "world_tick_ms": 4.3272
+    },
+    {
+      "app_ms": 0.0926,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.1115,
+      "wall_ms": 18.8258,
+      "world_tick_ms": 4.395
+    },
+    {
+      "app_ms": 0.1396,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.0911,
+      "wall_ms": 19.5296,
+      "world_tick_ms": 3.8781
+    },
+    {
+      "app_ms": 0.1202,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.1292,
+      "wall_ms": 17.5939,
+      "world_tick_ms": 2.975
+    },
+    {
+      "app_ms": 0.1529,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.1217,
+      "wall_ms": 21.5597,
+      "world_tick_ms": 4.527
+    },
+    {
+      "app_ms": 0.1673,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.0984,
+      "wall_ms": 21.6936,
+      "world_tick_ms": 3.3198
+    },
+    {
+      "app_ms": 0.1309,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.0877,
+      "wall_ms": 18.0615,
+      "world_tick_ms": 3.5022
+    },
+    {
+      "app_ms": 0.1194,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.083,
+      "wall_ms": 18.9724,
+      "world_tick_ms": 5.0356
+    },
+    {
+      "app_ms": 0.1093,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.1002,
+      "wall_ms": 18.0597,
+      "world_tick_ms": 3.5685
+    },
+    {
+      "app_ms": 0.1533,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.0879,
+      "wall_ms": 16.3877,
+      "world_tick_ms": 2.8123
+    },
+    {
+      "app_ms": 0.1187,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.1411,
+      "wall_ms": 18.3765,
+      "world_tick_ms": 3.0762
+    },
+    {
+      "app_ms": 0.1692,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.1298,
+      "wall_ms": 17.067,
+      "world_tick_ms": 3.0807
+    },
+    {
+      "app_ms": 0.1545,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.2024,
+      "wall_ms": 17.4559,
+      "world_tick_ms": 2.6379
+    },
+    {
+      "app_ms": 0.1576,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.1387,
+      "wall_ms": 17.6506,
+      "world_tick_ms": 3.3847
+    },
+    {
+      "app_ms": 0.158,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.0741,
+      "wall_ms": 28.1049,
+      "world_tick_ms": 3.3162
+    },
+    {
+      "app_ms": 0.2262,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.0735,
+      "wall_ms": 28.6568,
+      "world_tick_ms": 4.8503
+    },
+    {
+      "app_ms": 0.0995,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.1511,
+      "wall_ms": 28.3387,
+      "world_tick_ms": 2.6434
+    },
+    {
+      "app_ms": 0.1565,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.153,
+      "wall_ms": 29.1483,
+      "world_tick_ms": 4.3775
+    },
+    {
+      "app_ms": 0.1445,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.7226,
+      "wall_ms": 28.0696,
+      "world_tick_ms": 4.0667
+    },
+    {
+      "app_ms": 0.1392,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.0667,
+      "wall_ms": 26.2348,
+      "world_tick_ms": 4.2825
+    },
+    {
+      "app_ms": 0.0875,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.1722,
+      "wall_ms": 26.0234,
+      "world_tick_ms": 2.6157
+    },
+    {
+      "app_ms": 0.1673,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.0704,
+      "wall_ms": 28.1632,
+      "world_tick_ms": 4.3986
+    },
+    {
+      "app_ms": 0.103,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.0799,
+      "wall_ms": 25.4536,
+      "world_tick_ms": 2.4873
+    },
+    {
+      "app_ms": 0.0975,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.0737,
+      "wall_ms": 28.3507,
+      "world_tick_ms": 4.3074
+    },
+    {
+      "app_ms": 0.0956,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.0865,
+      "wall_ms": 26.3992,
+      "world_tick_ms": 3.983
+    },
+    {
+      "app_ms": 0.0897,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.0661,
+      "wall_ms": 23.723,
+      "world_tick_ms": 2.2382
+    },
+    {
+      "app_ms": 0.0889,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.0674,
+      "wall_ms": 27.1951,
+      "world_tick_ms": 4.5125
+    },
+    {
+      "app_ms": 0.0944,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.1591,
+      "wall_ms": 24.8901,
+      "world_tick_ms": 2.2972
+    },
+    {
+      "app_ms": 0.1702,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.1141,
+      "wall_ms": 27.8356,
+      "world_tick_ms": 3.9131
+    },
+    {
+      "app_ms": 0.1051,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.0715,
+      "wall_ms": 26.7107,
+      "world_tick_ms": 2.6783
+    },
+    {
+      "app_ms": 0.0911,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.0675,
+      "wall_ms": 25.3068,
+      "world_tick_ms": 3.8369
+    },
+    {
+      "app_ms": 0.085,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.1064,
+      "wall_ms": 26.3427,
+      "world_tick_ms": 4.0325
+    },
+    {
+      "app_ms": 0.1347,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.0896,
+      "wall_ms": 25.2004,
+      "world_tick_ms": 2.4076
+    },
+    {
+      "app_ms": 0.1142,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 512,
+      "swap_ms": 0.1199,
+      "wall_ms": 29.0354,
+      "world_tick_ms": 4.8786
+    },
+    {
+      "app_ms": 0.1486,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 508,
+      "swap_ms": 0.0768,
+      "wall_ms": 26.1539,
+      "world_tick_ms": 2.6473
+    },
+    {
+      "app_ms": 0.097,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 505,
+      "swap_ms": 0.0765,
+      "wall_ms": 27.47,
+      "world_tick_ms": 4.2521
+    },
+    {
+      "app_ms": 0.4049,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 498,
+      "swap_ms": 0.0843,
+      "wall_ms": 27.9285,
+      "world_tick_ms": 5.0088
+    },
+    {
+      "app_ms": 0.0986,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 492,
+      "swap_ms": 0.0925,
+      "wall_ms": 26.223,
+      "world_tick_ms": 2.549
+    },
+    {
+      "app_ms": 0.1014,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 489,
+      "swap_ms": 0.0749,
+      "wall_ms": 26.8424,
+      "world_tick_ms": 4.2345
+    },
+    {
+      "app_ms": 0.0992,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 483,
+      "swap_ms": 0.0705,
+      "wall_ms": 26.8311,
+      "world_tick_ms": 2.5201
+    },
+    {
+      "app_ms": 0.0919,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 472,
+      "swap_ms": 0.1367,
+      "wall_ms": 27.7767,
+      "world_tick_ms": 4.4684
+    },
+    {
+      "app_ms": 0.1382,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 450,
+      "swap_ms": 0.0709,
+      "wall_ms": 27.536,
+      "world_tick_ms": 4.475
+    },
+    {
+      "app_ms": 0.0899,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 433,
+      "swap_ms": 0.0784,
+      "wall_ms": 25.6093,
+      "world_tick_ms": 2.1978
+    },
+    {
+      "app_ms": 0.0973,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 410,
+      "swap_ms": 0.1548,
+      "wall_ms": 27.1673,
+      "world_tick_ms": 3.5191
+    },
+    {
+      "app_ms": 0.1023,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 395,
+      "swap_ms": 0.0729,
+      "wall_ms": 27.4564,
+      "world_tick_ms": 4.8238
+    },
+    {
+      "app_ms": 0.1051,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 391,
+      "swap_ms": 0.1062,
+      "wall_ms": 24.3815,
+      "world_tick_ms": 2.6648
+    },
+    {
+      "app_ms": 0.1183,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 372,
+      "swap_ms": 0.1317,
+      "wall_ms": 27.9938,
+      "world_tick_ms": 3.9676
+    },
+    {
+      "app_ms": 0.1057,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 368,
+      "swap_ms": 0.1466,
+      "wall_ms": 27.5346,
+      "world_tick_ms": 2.768
+    },
+    {
+      "app_ms": 0.1423,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 323,
+      "swap_ms": 0.2393,
+      "wall_ms": 28.9296,
+      "world_tick_ms": 4.106
+    },
+    {
+      "app_ms": 0.2292,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 256,
+      "swap_ms": 0.119,
+      "wall_ms": 27.6409,
+      "world_tick_ms": 3.5896
+    },
+    {
+      "app_ms": 0.1305,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 256,
+      "swap_ms": 0.1268,
+      "wall_ms": 29.2757,
+      "world_tick_ms": 2.666
+    },
+    {
+      "app_ms": 0.1553,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 256,
+      "swap_ms": 0.0903,
+      "wall_ms": 28.1911,
+      "world_tick_ms": 2.9403
+    },
+    {
+      "app_ms": 0.1216,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 256,
+      "swap_ms": 0.1355,
+      "wall_ms": 29.152,
+      "world_tick_ms": 2.9029
+    },
+    {
+      "app_ms": 0.139,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 256,
+      "swap_ms": 0.0836,
+      "wall_ms": 26.9441,
+      "world_tick_ms": 3.4643
+    },
+    {
+      "app_ms": 0.1092,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 256,
+      "swap_ms": 0.0988,
+      "wall_ms": 25.0133,
+      "world_tick_ms": 1.8542
+    },
+    {
+      "app_ms": 0.1216,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 256,
+      "flying_bodies": 256,
+      "swap_ms": 0.0774,
+      "wall_ms": 26.2414,
+      "world_tick_ms": 3.1835
+    },
+    {
+      "app_ms": 0.095,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.3553,
+      "wall_ms": 26.1766,
+      "world_tick_ms": 1.8124
+    },
+    {
+      "app_ms": 0.1042,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0726,
+      "wall_ms": 25.5587,
+      "world_tick_ms": 1.0576
+    },
+    {
+      "app_ms": 0.0974,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1107,
+      "wall_ms": 26.132,
+      "world_tick_ms": 1.2637
+    },
+    {
+      "app_ms": 0.1104,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.178,
+      "wall_ms": 26.7008,
+      "world_tick_ms": 1.9412
+    },
+    {
+      "app_ms": 0.1123,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0881,
+      "wall_ms": 29.2684,
+      "world_tick_ms": 2.4389
+    },
+    {
+      "app_ms": 0.1088,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1349,
+      "wall_ms": 28.6614,
+      "world_tick_ms": 0.9837
+    },
+    {
+      "app_ms": 0.1396,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1097,
+      "wall_ms": 28.983,
+      "world_tick_ms": 2.1666
+    },
+    {
+      "app_ms": 0.1395,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.3244,
+      "wall_ms": 28.1091,
+      "world_tick_ms": 1.5427
+    },
+    {
+      "app_ms": 0.1385,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1167,
+      "wall_ms": 26.3478,
+      "world_tick_ms": 1.144
+    },
+    {
+      "app_ms": 0.1477,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0954,
+      "wall_ms": 39.4838,
+      "world_tick_ms": 1.4232
+    },
+    {
+      "app_ms": 0.1254,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.092,
+      "wall_ms": 28.6083,
+      "world_tick_ms": 1.0705
+    },
+    {
+      "app_ms": 0.1141,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1889,
+      "wall_ms": 34.6134,
+      "world_tick_ms": 1.04
+    },
+    {
+      "app_ms": 0.223,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1031,
+      "wall_ms": 31.0816,
+      "world_tick_ms": 5.3282
+    },
+    {
+      "app_ms": 0.5743,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0892,
+      "wall_ms": 27.9956,
+      "world_tick_ms": 1.62
+    },
+    {
+      "app_ms": 0.11,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1552,
+      "wall_ms": 29.5774,
+      "world_tick_ms": 1.1449
+    },
+    {
+      "app_ms": 0.126,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1129,
+      "wall_ms": 31.3533,
+      "world_tick_ms": 3.8609
+    },
+    {
+      "app_ms": 0.182,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.101,
+      "wall_ms": 29.0315,
+      "world_tick_ms": 2.4961
+    },
+    {
+      "app_ms": 0.1204,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.7878,
+      "wall_ms": 27.1086,
+      "world_tick_ms": 1.0326
+    },
+    {
+      "app_ms": 0.1258,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.2005,
+      "wall_ms": 25.7883,
+      "world_tick_ms": 1.0268
+    },
+    {
+      "app_ms": 0.1541,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1499,
+      "wall_ms": 26.707,
+      "world_tick_ms": 1.4971
+    },
+    {
+      "app_ms": 0.1594,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1075,
+      "wall_ms": 25.6931,
+      "world_tick_ms": 1.6924
+    },
+    {
+      "app_ms": 0.1164,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0906,
+      "wall_ms": 26.6313,
+      "world_tick_ms": 1.3356
+    },
+    {
+      "app_ms": 0.1042,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1201,
+      "wall_ms": 29.4331,
+      "world_tick_ms": 1.0323
+    },
+    {
+      "app_ms": 0.1728,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.2778,
+      "wall_ms": 24.7904,
+      "world_tick_ms": 1.0639
+    },
+    {
+      "app_ms": 0.1327,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0979,
+      "wall_ms": 26.9002,
+      "world_tick_ms": 1.1305
+    },
+    {
+      "app_ms": 0.1186,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1182,
+      "wall_ms": 24.5451,
+      "world_tick_ms": 1.031
+    },
+    {
+      "app_ms": 0.1308,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0771,
+      "wall_ms": 26.1663,
+      "world_tick_ms": 1.321
+    },
+    {
+      "app_ms": 0.0974,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.3869,
+      "wall_ms": 27.0863,
+      "world_tick_ms": 0.9512
+    },
+    {
+      "app_ms": 0.1796,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0937,
+      "wall_ms": 25.8718,
+      "world_tick_ms": 1.7803
+    },
+    {
+      "app_ms": 0.1114,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 1.1906,
+      "wall_ms": 27.0461,
+      "world_tick_ms": 1.0337
+    },
+    {
+      "app_ms": 0.4703,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0969,
+      "wall_ms": 29.5881,
+      "world_tick_ms": 3.1294
+    },
+    {
+      "app_ms": 0.1157,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0921,
+      "wall_ms": 25.9846,
+      "world_tick_ms": 1.5959
+    },
+    {
+      "app_ms": 0.1082,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0715,
+      "wall_ms": 23.5802,
+      "world_tick_ms": 0.9714
+    },
+    {
+      "app_ms": 0.0905,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0932,
+      "wall_ms": 22.6722,
+      "world_tick_ms": 0.8642
+    },
+    {
+      "app_ms": 0.1295,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0766,
+      "wall_ms": 21.8118,
+      "world_tick_ms": 0.9706
+    },
+    {
+      "app_ms": 0.091,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0779,
+      "wall_ms": 22.8948,
+      "world_tick_ms": 0.9584
+    },
+    {
+      "app_ms": 0.1925,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0792,
+      "wall_ms": 23.99,
+      "world_tick_ms": 1.6163
+    },
+    {
+      "app_ms": 0.0929,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0851,
+      "wall_ms": 22.5858,
+      "world_tick_ms": 0.8836
+    },
+    {
+      "app_ms": 0.0904,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1719,
+      "wall_ms": 21.9035,
+      "world_tick_ms": 0.8574
+    },
+    {
+      "app_ms": 0.1704,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.084,
+      "wall_ms": 23.5127,
+      "world_tick_ms": 1.2808
+    },
+    {
+      "app_ms": 0.0936,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0742,
+      "wall_ms": 22.4135,
+      "world_tick_ms": 0.9052
+    },
+    {
+      "app_ms": 0.1044,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0945,
+      "wall_ms": 23.6087,
+      "world_tick_ms": 0.8364
+    },
+    {
+      "app_ms": 0.542,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.071,
+      "wall_ms": 24.362,
+      "world_tick_ms": 1.2815
+    },
+    {
+      "app_ms": 0.0893,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.3257,
+      "wall_ms": 25.4857,
+      "world_tick_ms": 0.9459
+    },
+    {
+      "app_ms": 0.2131,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0769,
+      "wall_ms": 27.5028,
+      "world_tick_ms": 1.5521
+    },
+    {
+      "app_ms": 0.1049,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.103,
+      "wall_ms": 28.2687,
+      "world_tick_ms": 0.9938
+    },
+    {
+      "app_ms": 0.1152,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1672,
+      "wall_ms": 28.213,
+      "world_tick_ms": 1.1988
+    },
+    {
+      "app_ms": 0.1929,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0786,
+      "wall_ms": 25.4616,
+      "world_tick_ms": 1.6412
+    },
+    {
+      "app_ms": 0.1032,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0976,
+      "wall_ms": 24.716,
+      "world_tick_ms": 1.0864
+    },
+    {
+      "app_ms": 0.1107,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0849,
+      "wall_ms": 24.8163,
+      "world_tick_ms": 0.9887
+    },
+    {
+      "app_ms": 0.1043,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0964,
+      "wall_ms": 25.8427,
+      "world_tick_ms": 1.028
+    },
+    {
+      "app_ms": 0.1192,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0823,
+      "wall_ms": 26.8022,
+      "world_tick_ms": 1.2421
+    },
+    {
+      "app_ms": 0.1114,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 4.7431,
+      "wall_ms": 77.2187,
+      "world_tick_ms": 2.5039
+    },
+    {
+      "app_ms": 3.6119,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.4913,
+      "wall_ms": 126.1025,
+      "world_tick_ms": 5.8278
+    },
+    {
+      "app_ms": 1.1391,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0952,
+      "wall_ms": 95.2836,
+      "world_tick_ms": 15.3471
+    },
+    {
+      "app_ms": 0.1278,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1153,
+      "wall_ms": 30.5716,
+      "world_tick_ms": 1.6159
+    },
+    {
+      "app_ms": 0.1693,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 20.723,
+      "wall_ms": 51.2737,
+      "world_tick_ms": 1.8478
+    },
+    {
+      "app_ms": 0.1813,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1055,
+      "wall_ms": 27.0381,
+      "world_tick_ms": 1.9939
+    },
+    {
+      "app_ms": 0.1191,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0945,
+      "wall_ms": 27.2429,
+      "world_tick_ms": 1.0648
+    },
+    {
+      "app_ms": 0.112,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1015,
+      "wall_ms": 38.1474,
+      "world_tick_ms": 1.0937
+    },
+    {
+      "app_ms": 0.131,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0926,
+      "wall_ms": 29.8147,
+      "world_tick_ms": 2.2919
+    },
+    {
+      "app_ms": 0.1359,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0791,
+      "wall_ms": 26.8716,
+      "world_tick_ms": 3.1231
+    },
+    {
+      "app_ms": 0.1025,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1232,
+      "wall_ms": 25.8107,
+      "world_tick_ms": 0.9136
+    },
+    {
+      "app_ms": 0.1535,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0812,
+      "wall_ms": 24.7909,
+      "world_tick_ms": 1.4342
+    },
+    {
+      "app_ms": 0.1119,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0709,
+      "wall_ms": 25.1725,
+      "world_tick_ms": 1.2225
+    },
+    {
+      "app_ms": 0.094,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0849,
+      "wall_ms": 25.1088,
+      "world_tick_ms": 0.9156
+    },
+    {
+      "app_ms": 0.113,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0781,
+      "wall_ms": 26.4987,
+      "world_tick_ms": 1.3212
+    },
+    {
+      "app_ms": 0.0992,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1537,
+      "wall_ms": 25.3736,
+      "world_tick_ms": 0.9798
+    },
+    {
+      "app_ms": 0.9886,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0881,
+      "wall_ms": 26.8238,
+      "world_tick_ms": 2.2933
+    },
+    {
+      "app_ms": 0.15,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.2983,
+      "wall_ms": 26.3045,
+      "world_tick_ms": 1.3334
+    },
+    {
+      "app_ms": 0.1723,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1295,
+      "wall_ms": 25.9821,
+      "world_tick_ms": 1.4122
+    },
+    {
+      "app_ms": 0.1365,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0746,
+      "wall_ms": 25.2606,
+      "world_tick_ms": 1.0493
+    },
+    {
+      "app_ms": 0.0976,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0715,
+      "wall_ms": 24.3733,
+      "world_tick_ms": 0.9124
+    },
+    {
+      "app_ms": 0.0979,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1468,
+      "wall_ms": 25.7943,
+      "world_tick_ms": 1.2273
+    },
+    {
+      "app_ms": 0.1802,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1463,
+      "wall_ms": 26.7354,
+      "world_tick_ms": 1.8212
+    },
+    {
+      "app_ms": 0.1788,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1633,
+      "wall_ms": 27.5137,
+      "world_tick_ms": 2.6361
+    },
+    {
+      "app_ms": 0.1631,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1818,
+      "wall_ms": 26.3535,
+      "world_tick_ms": 1.1522
+    },
+    {
+      "app_ms": 0.1853,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0763,
+      "wall_ms": 25.6778,
+      "world_tick_ms": 1.6089
+    },
+    {
+      "app_ms": 0.0936,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1894,
+      "wall_ms": 22.6739,
+      "world_tick_ms": 0.8816
+    },
+    {
+      "app_ms": 0.1186,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1145,
+      "wall_ms": 23.0959,
+      "world_tick_ms": 1.2011
+    },
+    {
+      "app_ms": 0.1131,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1058,
+      "wall_ms": 25.697,
+      "world_tick_ms": 0.9107
+    },
+    {
+      "app_ms": 0.1323,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0863,
+      "wall_ms": 23.082,
+      "world_tick_ms": 1.2439
+    },
+    {
+      "app_ms": 0.097,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1829,
+      "wall_ms": 21.7995,
+      "world_tick_ms": 0.8403
+    },
+    {
+      "app_ms": 0.1014,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0802,
+      "wall_ms": 22.6438,
+      "world_tick_ms": 0.8777
+    },
+    {
+      "app_ms": 0.1015,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0765,
+      "wall_ms": 24.6381,
+      "world_tick_ms": 1.3431
+    },
+    {
+      "app_ms": 0.0943,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0733,
+      "wall_ms": 21.9935,
+      "world_tick_ms": 0.8723
+    },
+    {
+      "app_ms": 0.0844,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1245,
+      "wall_ms": 22.4497,
+      "world_tick_ms": 0.8805
+    },
+    {
+      "app_ms": 0.1596,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0737,
+      "wall_ms": 22.5178,
+      "world_tick_ms": 0.9505
+    },
+    {
+      "app_ms": 0.0884,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0942,
+      "wall_ms": 22.3138,
+      "world_tick_ms": 0.8531
+    },
+    {
+      "app_ms": 0.1532,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0795,
+      "wall_ms": 23.1444,
+      "world_tick_ms": 1.2752
+    },
+    {
+      "app_ms": 0.1003,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0699,
+      "wall_ms": 23.3166,
+      "world_tick_ms": 0.95
+    },
+    {
+      "app_ms": 0.0967,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0836,
+      "wall_ms": 22.2473,
+      "world_tick_ms": 0.9627
+    },
+    {
+      "app_ms": 0.131,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.6297,
+      "wall_ms": 23.4686,
+      "world_tick_ms": 1.4513
+    },
+    {
+      "app_ms": 0.1389,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0669,
+      "wall_ms": 21.6368,
+      "world_tick_ms": 0.8839
+    },
+    {
+      "app_ms": 0.0958,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1163,
+      "wall_ms": 21.4433,
+      "world_tick_ms": 0.8513
+    },
+    {
+      "app_ms": 0.1344,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1185,
+      "wall_ms": 22.6595,
+      "world_tick_ms": 1.2393
+    },
+    {
+      "app_ms": 0.1271,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0742,
+      "wall_ms": 25.5013,
+      "world_tick_ms": 1.3268
+    },
+    {
+      "app_ms": 0.0946,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0706,
+      "wall_ms": 25.4105,
+      "world_tick_ms": 2.5738
+    },
+    {
+      "app_ms": 0.0927,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0779,
+      "wall_ms": 22.3475,
+      "world_tick_ms": 0.8906
+    },
+    {
+      "app_ms": 0.0941,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0747,
+      "wall_ms": 24.0109,
+      "world_tick_ms": 0.8266
+    },
+    {
+      "app_ms": 0.1024,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1042,
+      "wall_ms": 23.2998,
+      "world_tick_ms": 0.9051
+    },
+    {
+      "app_ms": 0.1073,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1078,
+      "wall_ms": 22.5842,
+      "world_tick_ms": 0.9472
+    },
+    {
+      "app_ms": 0.1128,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.077,
+      "wall_ms": 22.4594,
+      "world_tick_ms": 1.2624
+    },
+    {
+      "app_ms": 0.092,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.083,
+      "wall_ms": 21.2841,
+      "world_tick_ms": 0.8259
+    },
+    {
+      "app_ms": 0.1059,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0962,
+      "wall_ms": 22.7393,
+      "world_tick_ms": 0.8304
+    },
+    {
+      "app_ms": 0.1234,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0809,
+      "wall_ms": 23.1459,
+      "world_tick_ms": 1.0346
+    },
+    {
+      "app_ms": 0.1054,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0636,
+      "wall_ms": 22.0719,
+      "world_tick_ms": 0.9055
+    },
+    {
+      "app_ms": 0.0935,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0882,
+      "wall_ms": 23.2658,
+      "world_tick_ms": 1.1453
+    },
+    {
+      "app_ms": 0.1149,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0919,
+      "wall_ms": 23.389,
+      "world_tick_ms": 1.1398
+    },
+    {
+      "app_ms": 0.1042,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0777,
+      "wall_ms": 22.659,
+      "world_tick_ms": 1.2711
+    },
+    {
+      "app_ms": 0.1198,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.3169,
+      "wall_ms": 23.6846,
+      "world_tick_ms": 0.8567
+    },
+    {
+      "app_ms": 0.1796,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0749,
+      "wall_ms": 23.5289,
+      "world_tick_ms": 1.0506
+    },
+    {
+      "app_ms": 0.0969,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1034,
+      "wall_ms": 24.2534,
+      "world_tick_ms": 0.9632
+    },
+    {
+      "app_ms": 0.1284,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.084,
+      "wall_ms": 25.4826,
+      "world_tick_ms": 1.0998
+    },
+    {
+      "app_ms": 0.1213,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0947,
+      "wall_ms": 27.3784,
+      "world_tick_ms": 1.282
+    },
+    {
+      "app_ms": 0.122,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1454,
+      "wall_ms": 27.7251,
+      "world_tick_ms": 1.1797
+    },
+    {
+      "app_ms": 0.1391,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0834,
+      "wall_ms": 27.9437,
+      "world_tick_ms": 2.1094
+    },
+    {
+      "app_ms": 0.1191,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1065,
+      "wall_ms": 27.3953,
+      "world_tick_ms": 1.1063
+    },
+    {
+      "app_ms": 0.143,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 6.3878,
+      "wall_ms": 33.7792,
+      "world_tick_ms": 1.7178
+    },
+    {
+      "app_ms": 0.2022,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 3.1751,
+      "wall_ms": 31.5228,
+      "world_tick_ms": 1.6941
+    },
+    {
+      "app_ms": 0.1857,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 5.3079,
+      "wall_ms": 33.4074,
+      "world_tick_ms": 1.4753
+    },
+    {
+      "app_ms": 0.2031,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0847,
+      "wall_ms": 27.9356,
+      "world_tick_ms": 1.4921
+    },
+    {
+      "app_ms": 0.1319,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0942,
+      "wall_ms": 30.4752,
+      "world_tick_ms": 3.1089
+    },
+    {
+      "app_ms": 0.1231,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0928,
+      "wall_ms": 30.0389,
+      "world_tick_ms": 1.208
+    },
+    {
+      "app_ms": 0.1256,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1421,
+      "wall_ms": 30.26,
+      "world_tick_ms": 1.1886
+    },
+    {
+      "app_ms": 0.1771,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.3868,
+      "wall_ms": 27.9033,
+      "world_tick_ms": 1.1579
+    },
+    {
+      "app_ms": 0.1766,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0918,
+      "wall_ms": 25.9988,
+      "world_tick_ms": 1.3715
+    },
+    {
+      "app_ms": 0.1214,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0949,
+      "wall_ms": 26.2771,
+      "world_tick_ms": 1.5193
+    },
+    {
+      "app_ms": 0.1191,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1133,
+      "wall_ms": 26.3277,
+      "world_tick_ms": 1.1722
+    },
+    {
+      "app_ms": 0.1318,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1044,
+      "wall_ms": 27.2277,
+      "world_tick_ms": 1.1929
+    },
+    {
+      "app_ms": 0.157,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1289,
+      "wall_ms": 27.9141,
+      "world_tick_ms": 1.4863
+    },
+    {
+      "app_ms": 0.1279,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1193,
+      "wall_ms": 25.2798,
+      "world_tick_ms": 1.2563
+    },
+    {
+      "app_ms": 0.1155,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1219,
+      "wall_ms": 26.3673,
+      "world_tick_ms": 1.3143
+    },
+    {
+      "app_ms": 0.1301,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1113,
+      "wall_ms": 27.4647,
+      "world_tick_ms": 1.5523
+    },
+    {
+      "app_ms": 0.126,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1047,
+      "wall_ms": 28.6201,
+      "world_tick_ms": 1.1067
+    },
+    {
+      "app_ms": 0.1268,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0818,
+      "wall_ms": 29.8847,
+      "world_tick_ms": 1.3325
+    },
+    {
+      "app_ms": 0.1132,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0875,
+      "wall_ms": 25.9726,
+      "world_tick_ms": 1.0991
+    },
+    {
+      "app_ms": 0.1238,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0984,
+      "wall_ms": 27.6562,
+      "world_tick_ms": 2.5182
+    },
+    {
+      "app_ms": 0.1025,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1202,
+      "wall_ms": 24.0435,
+      "world_tick_ms": 0.9473
+    },
+    {
+      "app_ms": 0.3245,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0849,
+      "wall_ms": 28.2237,
+      "world_tick_ms": 1.3493
+    },
+    {
+      "app_ms": 0.1123,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1219,
+      "wall_ms": 25.1147,
+      "world_tick_ms": 1.0294
+    },
+    {
+      "app_ms": 0.1395,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1908,
+      "wall_ms": 25.4007,
+      "world_tick_ms": 1.5086
+    },
+    {
+      "app_ms": 0.1161,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0858,
+      "wall_ms": 26.0327,
+      "world_tick_ms": 1.7103
+    },
+    {
+      "app_ms": 0.1181,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0766,
+      "wall_ms": 24.1025,
+      "world_tick_ms": 1.0354
+    },
+    {
+      "app_ms": 0.1015,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1267,
+      "wall_ms": 24.5657,
+      "world_tick_ms": 0.9887
+    },
+    {
+      "app_ms": 0.1504,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0956,
+      "wall_ms": 24.7745,
+      "world_tick_ms": 1.2243
+    },
+    {
+      "app_ms": 0.1257,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0839,
+      "wall_ms": 27.8707,
+      "world_tick_ms": 1.1713
+    },
+    {
+      "app_ms": 0.111,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0746,
+      "wall_ms": 29.3036,
+      "world_tick_ms": 1.5281
+    },
+    {
+      "app_ms": 0.11,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0766,
+      "wall_ms": 26.8977,
+      "world_tick_ms": 1.1874
+    },
+    {
+      "app_ms": 0.1037,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0829,
+      "wall_ms": 25.0606,
+      "world_tick_ms": 0.9454
+    },
+    {
+      "app_ms": 0.1164,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0827,
+      "wall_ms": 25.0308,
+      "world_tick_ms": 1.5406
+    },
+    {
+      "app_ms": 0.1083,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0982,
+      "wall_ms": 25.9589,
+      "world_tick_ms": 0.9553
+    },
+    {
+      "app_ms": 0.1176,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0946,
+      "wall_ms": 24.0466,
+      "world_tick_ms": 1.0702
+    },
+    {
+      "app_ms": 0.1088,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0835,
+      "wall_ms": 22.9847,
+      "world_tick_ms": 0.9106
+    },
+    {
+      "app_ms": 0.1012,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0808,
+      "wall_ms": 23.3855,
+      "world_tick_ms": 0.9795
+    },
+    {
+      "app_ms": 0.1043,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.2482,
+      "wall_ms": 24.733,
+      "world_tick_ms": 1.0286
+    },
+    {
+      "app_ms": 0.1557,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.079,
+      "wall_ms": 26.0546,
+      "world_tick_ms": 1.3852
+    },
+    {
+      "app_ms": 0.1009,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.3739,
+      "wall_ms": 26.3817,
+      "world_tick_ms": 1.215
+    },
+    {
+      "app_ms": 0.159,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1159,
+      "wall_ms": 24.5229,
+      "world_tick_ms": 1.6175
+    },
+    {
+      "app_ms": 0.1335,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0769,
+      "wall_ms": 24.7761,
+      "world_tick_ms": 1.4492
+    },
+    {
+      "app_ms": 0.1058,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0696,
+      "wall_ms": 23.4305,
+      "world_tick_ms": 0.9504
+    },
+    {
+      "app_ms": 0.0922,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0864,
+      "wall_ms": 23.0747,
+      "world_tick_ms": 0.914
+    },
+    {
+      "app_ms": 0.1069,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1077,
+      "wall_ms": 24.7252,
+      "world_tick_ms": 1.6319
+    },
+    {
+      "app_ms": 0.1161,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0806,
+      "wall_ms": 24.699,
+      "world_tick_ms": 1.199
+    },
+    {
+      "app_ms": 0.1016,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0795,
+      "wall_ms": 26.1879,
+      "world_tick_ms": 1.2102
+    },
+    {
+      "app_ms": 0.1,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0951,
+      "wall_ms": 22.8559,
+      "world_tick_ms": 0.9992
+    },
+    {
+      "app_ms": 0.104,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.3082,
+      "wall_ms": 23.8735,
+      "world_tick_ms": 0.993
+    },
+    {
+      "app_ms": 0.1476,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0792,
+      "wall_ms": 26.0687,
+      "world_tick_ms": 1.4529
+    },
+    {
+      "app_ms": 0.1985,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0787,
+      "wall_ms": 26.8079,
+      "world_tick_ms": 1.2727
+    },
+    {
+      "app_ms": 0.1041,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1216,
+      "wall_ms": 26.732,
+      "world_tick_ms": 0.9501
+    },
+    {
+      "app_ms": 0.1097,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0844,
+      "wall_ms": 26.3125,
+      "world_tick_ms": 1.0278
+    },
+    {
+      "app_ms": 0.1039,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0957,
+      "wall_ms": 26.4557,
+      "world_tick_ms": 1.1798
+    },
+    {
+      "app_ms": 0.119,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0767,
+      "wall_ms": 25.5669,
+      "world_tick_ms": 1.1506
+    },
+    {
+      "app_ms": 0.0959,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1032,
+      "wall_ms": 23.6987,
+      "world_tick_ms": 0.9555
+    },
+    {
+      "app_ms": 0.1193,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.2111,
+      "wall_ms": 26.0643,
+      "world_tick_ms": 1.153
+    },
+    {
+      "app_ms": 0.1177,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.09,
+      "wall_ms": 26.1877,
+      "world_tick_ms": 1.1325
+    },
+    {
+      "app_ms": 0.1418,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1145,
+      "wall_ms": 26.2414,
+      "world_tick_ms": 1.1761
+    },
+    {
+      "app_ms": 0.1175,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0844,
+      "wall_ms": 25.819,
+      "world_tick_ms": 1.4369
+    },
+    {
+      "app_ms": 0.1047,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0729,
+      "wall_ms": 24.1418,
+      "world_tick_ms": 1.2577
+    },
+    {
+      "app_ms": 0.211,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1711,
+      "wall_ms": 24.9151,
+      "world_tick_ms": 1.4731
+    },
+    {
+      "app_ms": 0.22,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.2444,
+      "wall_ms": 25.8582,
+      "world_tick_ms": 1.8694
+    },
+    {
+      "app_ms": 0.2038,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1229,
+      "wall_ms": 24.8279,
+      "world_tick_ms": 1.7515
+    },
+    {
+      "app_ms": 0.2741,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0723,
+      "wall_ms": 24.0446,
+      "world_tick_ms": 1.8745
+    },
+    {
+      "app_ms": 0.0928,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0721,
+      "wall_ms": 24.2621,
+      "world_tick_ms": 2.0639
+    },
+    {
+      "app_ms": 0.0956,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0824,
+      "wall_ms": 23.1274,
+      "world_tick_ms": 0.889
+    },
+    {
+      "app_ms": 0.1108,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.09,
+      "wall_ms": 26.0792,
+      "world_tick_ms": 1.3627
+    },
+    {
+      "app_ms": 0.1183,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1049,
+      "wall_ms": 27.5252,
+      "world_tick_ms": 1.1343
+    },
+    {
+      "app_ms": 0.1279,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0964,
+      "wall_ms": 27.1113,
+      "world_tick_ms": 1.3535
+    },
+    {
+      "app_ms": 0.1268,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0952,
+      "wall_ms": 33.1568,
+      "world_tick_ms": 7.0551
+    },
+    {
+      "app_ms": 0.1306,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0852,
+      "wall_ms": 26.5137,
+      "world_tick_ms": 1.2259
+    },
+    {
+      "app_ms": 0.1113,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1232,
+      "wall_ms": 27.2374,
+      "world_tick_ms": 1.0417
+    },
+    {
+      "app_ms": 0.136,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1132,
+      "wall_ms": 27.9462,
+      "world_tick_ms": 1.0531
+    },
+    {
+      "app_ms": 0.125,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1509,
+      "wall_ms": 28.7865,
+      "world_tick_ms": 1.1985
+    },
+    {
+      "app_ms": 0.133,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1456,
+      "wall_ms": 27.2547,
+      "world_tick_ms": 1.5916
+    },
+    {
+      "app_ms": 0.1862,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.081,
+      "wall_ms": 27.7509,
+      "world_tick_ms": 2.6818
+    },
+    {
+      "app_ms": 0.1094,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0971,
+      "wall_ms": 24.045,
+      "world_tick_ms": 1.0171
+    },
+    {
+      "app_ms": 0.1106,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0835,
+      "wall_ms": 25.9448,
+      "world_tick_ms": 1.1899
+    },
+    {
+      "app_ms": 0.0998,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1529,
+      "wall_ms": 25.4265,
+      "world_tick_ms": 0.9648
+    },
+    {
+      "app_ms": 0.1452,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0986,
+      "wall_ms": 25.3451,
+      "world_tick_ms": 2.3029
+    },
+    {
+      "app_ms": 0.1046,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0847,
+      "wall_ms": 25.2298,
+      "world_tick_ms": 0.9391
+    },
+    {
+      "app_ms": 0.168,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0735,
+      "wall_ms": 24.3184,
+      "world_tick_ms": 1.3797
+    },
+    {
+      "app_ms": 0.0966,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0955,
+      "wall_ms": 24.658,
+      "world_tick_ms": 0.8867
+    },
+    {
+      "app_ms": 0.1774,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0734,
+      "wall_ms": 23.888,
+      "world_tick_ms": 1.1364
+    },
+    {
+      "app_ms": 0.0953,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0704,
+      "wall_ms": 23.9215,
+      "world_tick_ms": 0.9202
+    },
+    {
+      "app_ms": 0.0916,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0727,
+      "wall_ms": 26.8536,
+      "world_tick_ms": 1.8846
+    },
+    {
+      "app_ms": 0.0968,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1353,
+      "wall_ms": 24.9428,
+      "world_tick_ms": 1.0158
+    },
+    {
+      "app_ms": 0.1571,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0907,
+      "wall_ms": 23.6916,
+      "world_tick_ms": 1.0676
+    },
+    {
+      "app_ms": 0.1014,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0903,
+      "wall_ms": 23.3333,
+      "world_tick_ms": 0.9906
+    },
+    {
+      "app_ms": 0.1199,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0768,
+      "wall_ms": 23.7709,
+      "world_tick_ms": 1.0569
+    },
+    {
+      "app_ms": 0.1245,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0831,
+      "wall_ms": 26.1764,
+      "world_tick_ms": 1.6171
+    },
+    {
+      "app_ms": 0.1001,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1274,
+      "wall_ms": 25.6609,
+      "world_tick_ms": 0.9283
+    },
+    {
+      "app_ms": 0.1211,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 2.9126,
+      "wall_ms": 36.1666,
+      "world_tick_ms": 1.1217
+    },
+    {
+      "app_ms": 0.1874,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1392,
+      "wall_ms": 98.4091,
+      "world_tick_ms": 2.0861
+    },
+    {
+      "app_ms": 0.4086,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1025,
+      "wall_ms": 158.8982,
+      "world_tick_ms": 3.5053
+    },
+    {
+      "app_ms": 0.1399,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0812,
+      "wall_ms": 28.3921,
+      "world_tick_ms": 2.0186
+    },
+    {
+      "app_ms": 0.104,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 5.7387,
+      "wall_ms": 32.8183,
+      "world_tick_ms": 1.0468
+    },
+    {
+      "app_ms": 0.1548,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 23.8201,
+      "wall_ms": 48.6282,
+      "world_tick_ms": 1.1265
+    },
+    {
+      "app_ms": 0.2617,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0999,
+      "wall_ms": 28.7627,
+      "world_tick_ms": 1.5526
+    },
+    {
+      "app_ms": 0.1823,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0854,
+      "wall_ms": 30.9956,
+      "world_tick_ms": 1.7103
+    },
+    {
+      "app_ms": 0.12,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0819,
+      "wall_ms": 26.4536,
+      "world_tick_ms": 1.0969
+    },
+    {
+      "app_ms": 0.1031,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0813,
+      "wall_ms": 28.8978,
+      "world_tick_ms": 1.0054
+    },
+    {
+      "app_ms": 0.1063,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.21,
+      "wall_ms": 27.6905,
+      "world_tick_ms": 1.0401
+    },
+    {
+      "app_ms": 0.1632,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0723,
+      "wall_ms": 27.4109,
+      "world_tick_ms": 1.5279
+    },
+    {
+      "app_ms": 0.1535,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0698,
+      "wall_ms": 22.6629,
+      "world_tick_ms": 1.4965
+    },
+    {
+      "app_ms": 0.0909,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0752,
+      "wall_ms": 23.7347,
+      "world_tick_ms": 1.1105
+    },
+    {
+      "app_ms": 0.0991,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0896,
+      "wall_ms": 23.2885,
+      "world_tick_ms": 0.9143
+    },
+    {
+      "app_ms": 0.1006,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1019,
+      "wall_ms": 27.4653,
+      "world_tick_ms": 0.9167
+    },
+    {
+      "app_ms": 0.1479,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0784,
+      "wall_ms": 28.3622,
+      "world_tick_ms": 1.3194
+    },
+    {
+      "app_ms": 0.0999,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0676,
+      "wall_ms": 22.4705,
+      "world_tick_ms": 0.883
+    },
+    {
+      "app_ms": 0.0903,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.1089,
+      "wall_ms": 23.867,
+      "world_tick_ms": 0.8686
+    },
+    {
+      "app_ms": 0.1497,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0978,
+      "wall_ms": 26.4704,
+      "world_tick_ms": 1.5218
+    },
+    {
+      "app_ms": 0.1411,
+      "bodies": 512,
+      "creatures_drawn": 0,
+      "draw_calls": 1997,
+      "flying_arrows": 0,
+      "flying_bodies": 0,
+      "swap_ms": 0.0739,
+      "wall_ms": 24.2174,
+      "world_tick_ms": 1.2776
+    }
+  ],
+  "gpu": "AMD Radeon(TM) Graphics",
+  "invalid_texture_count": 0,
+  "item_texture_count": 158,
+  "item_texture_rgba_mip_bytes": 43384832,
+  "measure_sec": 8.0111398,
+  "measured_asset_canonical_resolutions": 0,
+  "measured_asset_fast_hits": 148480,
+  "measured_texture_canonical_resolutions": 0,
+  "measured_texture_fast_hits": 0,
+  "moving_fixture": "saved initial conditions: 256 arrows and 256 finite items; normal fixed-step physics and CCD",
+  "moving_frames": 58,
+  "passed": true,
+  "peak_flying_arrows": 256,
+  "peak_flying_bodies": 512,
+  "resolution": [
+    1920,
+    1080
+  ],
+  "runtime_v3_count": 0,
+  "scene": "moving",
+  "schema_version": 2,
+  "scope": "whole window frame: simulation, streaming, rendering, GUI and swap; vsync forced off",
+  "shared_cache_rgba_mip_bytes": 43384832,
+  "terrain_columns": 6,
+  "texture_dimensions_width_height_levels": [
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      1024,
+      1024,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      1024,
+      1024,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      128,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      128,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      128,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      128,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      1024,
+      1024,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      1024,
+      1024,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      128,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      1024,
+      1024,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      1024,
+      1024,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      128,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      1024,
+      1024,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      1024,
+      1024,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      512,
+      512,
+      1
+    ],
+    [
+      1024,
+      1024,
+      1
+    ],
+    [
+      512,
+      512,
+      1
+    ],
+    [
+      512,
+      512,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ],
+    [
+      64,
+      64,
+      1
+    ]
+  ],
+  "warmup_sec": 8
+}

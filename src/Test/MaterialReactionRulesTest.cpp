@@ -1,11 +1,12 @@
+#include "World/Physics/MaterialReactionRules.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Core/BlockWorld.h"
-#include "World/Physics/MaterialReactionRules.h"
 
 #include <cstdlib>
 #include <iostream>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <unordered_map>
 
 static void Expect(bool cond, const char *message)
@@ -38,8 +39,8 @@ static void InstallReactionBlocks(
   cutum::BlockDefinition grass;
   grass.Name = "grass";
   grass.Id = 13;
-  grass.Physics = cutum::BlockPhysicsProfile::Solid();
-  grass.Physics.Flammable = true;
+  grass.Physics = cutum::ParsePhysicsFromJson(
+      nlohmann::json{{"preset", "solid"}, {"flammable", true}});
 
   cutum::BlockDefinition fire;
   fire.Name = "fire";
@@ -63,6 +64,15 @@ static void InstallReactionBlocks(
 
 int main()
 {
+  Expect(!cutum::ParsePhysicsFromJson(nlohmann::json::object()).Flammable,
+         "omitted flammability must preserve nonflammable default");
+  Expect(cutum::ParsePhysicsFromJson(nlohmann::json{{"flammable", true}})
+             .Flammable,
+         "explicit flammability without a preset must be loaded");
+  Expect(!cutum::ParsePhysicsFromJson(
+              nlohmann::json{{"preset", "solid"}, {"flammable", false}})
+              .Flammable,
+         "explicit nonflammable preset override must be respected");
   auto definitions = std::make_shared<cutum::UBlockDefinitionStorage>();
   InstallReactionBlocks(definitions);
   cutum::UBlockRegistry registry(nullptr, definitions);

@@ -17,6 +17,7 @@ bool UGuiTexturedQuadBatch::Initialize(std::shared_ptr<UShaderProgram> shader)
     return false;
   }
   Shader = std::move(shader);
+  StaticRectUniform = Shader->GetUniformLocation("rectPx") >= 0;
 
   struct Vertex
   {
@@ -26,11 +27,13 @@ bool UGuiTexturedQuadBatch::Initialize(std::shared_ptr<UShaderProgram> shader)
     float v;
   };
 
+  const Vertex vertices[] = {{0, 0, 0, 0}, {1, 0, 1, 0}, {0, 1, 0, 1},
+                             {0, 1, 0, 1}, {1, 0, 1, 0}, {1, 1, 1, 1}};
   glGenVertexArrays(1, &Vao);
   glGenBuffers(1, &Vbo);
   glBindVertexArray(Vao);
   glBindBuffer(GL_ARRAY_BUFFER, Vbo);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * 6, nullptr, GL_DYNAMIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), nullptr);
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
@@ -103,23 +106,26 @@ void UGuiTexturedQuadBatch::DrawTexturedRect(const GuiRect &rect,
   float y1 = 0.0f;
   GuiRectToShaderCoords(rect, x0, y0, x1, y1);
 
-  const float vertices[] = {
-      x0, y0, 0.0f, 0.0f, x1, y0, 1.0f, 0.0f, x0, y1, 0.0f, 1.0f,
-      x0, y1, 0.0f, 1.0f, x1, y0, 1.0f, 0.0f, x1, y1, 1.0f, 1.0f,
-  };
-
   Shader->Use();
   Shader->SetVec2("screenSize", glm::vec2(static_cast<float>(WindowWidth),
                                           static_cast<float>(WindowHeight)));
   Shader->SetVec4("tint", tint);
+  if (StaticRectUniform)
+    Shader->SetVec4("rectPx", glm::vec4(x0, y0, x1 - x0, y1 - y0));
   Shader->SetInt("texture0", 0);
 
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, texture);
 
   glBindVertexArray(Vao);
-  glBindBuffer(GL_ARRAY_BUFFER, Vbo);
-  glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+  if (!StaticRectUniform)
+  {
+    // Older/GLES resource-pack shaders consume pixel positions directly.
+    const float vertices[] = {x0, y0, 0, 0, x1, y0, 1, 0, x0, y1, 0, 1,
+                              x0, y1, 0, 1, x1, y0, 1, 0, x1, y1, 1, 1};
+    glBindBuffer(GL_ARRAY_BUFFER, Vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
+  }
   glDrawArrays(GL_TRIANGLES, 0, 6);
   glBindVertexArray(0);
   Shader->Unuse();

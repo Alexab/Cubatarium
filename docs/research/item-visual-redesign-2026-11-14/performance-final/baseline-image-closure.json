@@ -1,0 +1,103 @@
+{
+  "passed": true,
+  "items": 70,
+  "active_reference_image_size": [
+    64,
+    64
+  ],
+  "active_image_uri": "textures/diffuse.png",
+  "legacy_directory_scan_extras": [
+    {
+      "item": "copper_chest",
+      "file": "wear_texture.png",
+      "sha256": "05822b4c9abe8971260d8ac0cfc0742092e22cd2926f2be2b17093b9d8458aee"
+    },
+    {
+      "item": "copper_legs",
+      "file": "wear_texture.png",
+      "sha256": "792c4ee7bbbccee855bee6b6e2e72371bb26dca593756cbcbcbf49d2aa94b93b"
+    },
+    {
+      "item": "copper_sword",
+      "file": "weapons_bits_texture.png",
+      "sha256": "c153429a49928594b00b53c07c4ab3d6352087b7f5df6c272d4aedfdb99a40be"
+    },
+    {
+      "item": "gold_sword",
+      "file": "weapons_bits_texture.png",
+      "sha256": "c153429a49928594b00b53c07c4ab3d6352087b7f5df6c272d4aedfdb99a40be"
+    },
+    {
+      "item": "iron_chest",
+      "file": "wear_texture.png",
+      "sha256": "973d015b3544b7c100d874cf02aa9222ee5145006de327e2bff502f74e56d079"
+    },
+    {
+      "item": "iron_legs",
+      "file": "wear_texture.png",
+      "sha256": "e5a23738574176757e6cd0d2962d5aba5d98c2bd052dedbb1a2c8a07f753c396"
+    },
+    {
+      "item": "iron_shield",
+      "file": "weapons_bits_texture.png",
+      "sha256": "c153429a49928594b00b53c07c4ab3d6352087b7f5df6c272d4aedfdb99a40be"
+    },
+    {
+      "item": "iron_sword",
+      "file": "weapons_bits_texture.png",
+      "sha256": "c153429a49928594b00b53c07c4ab3d6352087b7f5df6c272d4aedfdb99a40be"
+    },
+    {
+      "item": "leather_chest",
+      "file": "wear_texture.png",
+      "sha256": "2559651738726cd28bea6291a655d16ced9605add40b84c69ec24c4e160d262f"
+    },
+    {
+      "item": "leather_legs",
+      "file": "wear_texture.png",
+      "sha256": "e9c9b026cd86a6889a3c2f1cc16b3ce49d5539f80f9794c65bf390c816748d17"
+    },
+    {
+      "item": "stone_sword",
+      "file": "weapons_bits_texture.png",
+      "sha256": "c153429a49928594b00b53c07c4ab3d6352087b7f5df6c272d4aedfdb99a40be"
+    },
+    {
+      "item": "wood_bow",
+      "file": "weapons_bits_texture.png",
+      "sha256": "c153429a49928594b00b53c07c4ab3d6352087b7f5df6c272d4aedfdb99a40be"
+    },
+    {
+      "item": "wood_shield",
+      "file": "weapons_bits_texture.png",
+      "sha256": "c153429a49928594b00b53c07c4ab3d6352087b7f5df6c272d4aedfdb99a40be"
+    },
+    {
+      "item": "wood_sword",
+      "file": "weapons_bits_texture.png",
+      "sha256": "c153429a49928594b00b53c07c4ab3d6352087b7f5df6c272d4aedfdb99a40be"
+    },
+    {
+      "item": "wood_torch",
+      "file": "tools_bits_blueprint.png",
+      "sha256": "577c357193d38c2c10fe8c31e545b86ec0e3f9a5eab4bf2632791d4207d2a98e"
+    },
+    {
+      "item": "wood_torch",
+      "file": "tools_bits_map.png",
+      "sha256": "ed6a0f8e165ac68d34a1e3f40bb839dbee3d669a42202eb38e0b239ff341ea3d"
+    },
+    {
+      "item": "wood_torch",
+      "file": "tools_bits_map_empty.png",
+      "sha256": "25d521a2fc4b161357727371437e31836323627086990d38ad5647bfdcc08460"
+    },
+    {
+      "item": "wood_torch",
+      "file": "tools_bits_texture.png",
+      "sha256": "e0663527c0c0a8e9f4dba0bb15261c367de31981cb3e3ec80f84bf6a5e47fc60"
+    }
+  ],
+  "extra_count": 18,
+  "new_component_directories_not_scanned_by_legacy_loader": true
+}

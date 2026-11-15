@@ -917,7 +917,13 @@ void UCreatureDrawPass::FlushDrawQueue(UWorld &world, UGeometryEngine &engine,
   TimingProbe.BeginGpuDraw();
   UWorldItemSystem::Instance().Draw(world, engine.GetCreatureDrawQueue(),
                                     viewProj);
-  Queue.Flush(sink);
+  if (ItemRenderer)
+  {
+    UItemSurfaceBatchScope batch(*ItemRenderer);
+    Queue.Flush(sink);
+  }
+  else
+    Queue.Flush(sink);
   TimingProbe.EndGpuDraw();
 }
 

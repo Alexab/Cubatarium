@@ -13,6 +13,7 @@ import subprocess
 import sys
 import uuid
 
+from qa_audio_config import muted_test_audio
 from itemgen.design import ROOT
 from itemgen.design_publication import validate_design
 from run_item_design_probes import runtime_designs
@@ -23,6 +24,19 @@ def hashes(folder):
             for p in sorted(folder.rglob('*')) if p.is_file()}
 
 
+def source_hashes():
+    # Outside measured frames: prove that evidence refers to unchanged sources,
+    # including this runner and the native observers, not just a git revision.
+    result={}
+    for folder in ('src','shaders','content/items','tools/item_designs'):
+        for path in sorted((ROOT/folder).rglob('*')):
+            if path.is_file():
+                result[path.relative_to(ROOT).as_posix()]=hashlib.sha256(path.read_bytes()).hexdigest()
+    for name in ('tools/run_item_performance.py','tools/flight_sim_run.py'):
+        result[name]=hashlib.sha256((ROOT/name).read_bytes()).hexdigest()
+    return result
+
+
 def percentile(values, fraction):
     rows=sorted(values);index=(len(rows)-1)*fraction;low=int(index)
     return rows[low]+(rows[min(low+1,len(rows)-1)]-rows[low])*(index-low)
@@ -31,17 +45,20 @@ def percentile(values, fraction):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--world',default='ItemVisualPerfQA')
-    parser.add_argument('--scene',action='append',choices=['fp','armor','drops','catalog'])
+    parser.add_argument('--scene',action='append',choices=['fp','armor','drops','catalog','moving'])
     parser.add_argument('--repeats',type=int,default=1)
+    parser.add_argument('--measure-seconds',type=int,default=8,choices=range(8,61),help='Whole-frame sample window per variant; longer windows reduce short-run variation')
     parser.add_argument('--skip-build',action='store_true')
     parser.add_argument('--trace-pass',action='store_true')
+    parser.add_argument('--trace-fp',action='store_true',help='Diagnostic nonblocking CPU/GPU timings for the FP pass')
+    parser.add_argument('--trace-icons',action='store_true',help='Diagnostic per-icon render/fingerprint/store timings')
     args=parser.parse_args()
     if not args.world.endswith('QA') or any(c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-' for c in args.world):
         parser.error('Use a dedicated world ending in QA')
     if not 1<=args.repeats<=5:parser.error('--repeats must be 1..5')
     output=ROOT/'bin/items_performance';output.mkdir(exist_ok=True)
     summary_path=output/'summary.json';summary_path.unlink(missing_ok=True)
-    scenes=args.scene or ['fp','armor','drops','catalog']
+    scenes=args.scene or ['fp','armor','drops','catalog','moving']
     if not args.skip_build:
         subprocess.run(['cmake','--build','build/desktop-msvc','--config','Release','--target','Cubatarium','--parallel','8'],cwd=ROOT,check=True)
     ids=sorted(p.parent.name for p in (ROOT/'tools/item_designs').glob('*/design.yaml'))
@@ -52,8 +69,9 @@ def main():
     world_parent=(ROOT/'bin/worlds').resolve();world=(world_parent/args.world).resolve()
     if world.parent!=world_parent:parser.error('Invalid QA world path')
     if not world.exists() and args.world=='ItemVisualPerfQA':
-        subprocess.run([str(ROOT/'bin/Cubatarium.exe'),'--console','--create-world','--name',args.world,
-                        '--seed','15112026','--generator','flat','--radius-chunks','2'],cwd=ROOT/'bin',check=True)
+        with muted_test_audio(ROOT/'bin/config.json'):
+            subprocess.run([str(ROOT/'bin/Cubatarium.exe'),'--console','--create-world','--name',args.world,
+                            '--seed','15112026','--generator','flat','--radius-chunks','2'],cwd=ROOT/'bin',check=True)
     if not world.is_dir():parser.error('Existing dedicated flat QA world required')
     base=(ROOT/'build/item-performance-backups').resolve();base.mkdir(exist_ok=True)
     owned=base/uuid.uuid4().hex;owned.mkdir()
@@ -70,7 +88,8 @@ def main():
             raise ValueError('Unsafe QA world restore target')
         if target.exists():shutil.rmtree(target)
         shutil.copytree(backup,target)
-    results=[];summary=dict(passed=False,runs=results,world_restored=False,runtime_restored=False)
+    before_sources=source_hashes()
+    results=[];summary=dict(passed=False,runs=results,world_restored=False,runtime_restored=False,requested_measure_sec=args.measure_seconds,fp_timing_enabled=args.trace_fp,source_hashes=before_sources,frame_capture_policy='disabled; visual QA is a separate run')
     try:
         for scene in scenes:
             for repeat in range(args.repeats):
@@ -94,10 +113,17 @@ def main():
                     report=folder/'frame-benchmark.json';report.unlink(missing_ok=True)
                     env=os.environ.copy()
                     env.pop('CUBA_CREATURE_PASS_TIMING_PATH',None)
+                    env.pop('CUBA_ICON_TIMING',None)
+                    env.pop('CUBA_ITEM_PERF_FP_TIMING',None)
                     for key in list(env):
-                        if key.startswith(('CUBA_ITEMS_','CUBA_ITEM_','CUBA_FLIGHT_QA_','CUBA_OWNERSHIP_')):env.pop(key)
-                    env.update(PYTHONIOENCODING='utf-8',CUBA_ITEM_PERF_QA=str(report),CUBA_ITEM_PERF_SCENE=scene,
-                               CUBA_FLIGHT_CAPTURE_DIR=str(capture),CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='8',CUBATARIUM_PERF_LOG='0')
+                        if key.startswith(('CUBA_ITEMS_','CUBA_ITEM_','CUBA_FLIGHT_QA_','CUBA_OWNERSHIP_','CUBA_FLIGHT_CAPTURE_')):env.pop(key)
+                    env.update(CUBA_ITEM_PERF_MEASURE_SECONDS=str(args.measure_seconds),PYTHONIOENCODING='utf-8',CUBA_ITEM_PERF_QA=str(report),CUBA_ITEM_PERF_SCENE=scene,
+                               CUBATARIUM_PERF_LOG='0')
+                    if args.trace_fp:
+                        env['CUBA_ITEM_PERF_FP_TIMING']='1'
+                    if args.trace_icons:
+                        icon_trace=folder/'icon-stages.jsonl';icon_trace.unlink(missing_ok=True)
+                        env['CUBA_ICON_TIMING']=str(icon_trace)
                     if args.trace_pass:
                         trace=folder/'creature-pass.jsonl';trace.unlink(missing_ok=True)
                         env['CUBA_CREATURE_PASS_TIMING_PATH']=str(trace)
@@ -110,12 +136,26 @@ def main():
                                 cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT,check=True)
                         data=json.loads(report.read_text(encoding='utf-8'))
                         if not data.get('passed'):raise RuntimeError('Invalid measurement scene: '+name)
+                        if data.get('requested_measure_sec')!=args.measure_seconds or data.get('measure_sec',0)<args.measure_seconds:
+                            raise RuntimeError('Incomplete or mismatched measurement window: '+name)
+                        flight=json.loads((folder/'flight.json').read_text(encoding='utf-8'))
+                        if not flight.get('runtime_resources',{}).get('audio_disabled_for_test'):
+                            raise RuntimeError('Performance flight did not confirm silent test audio: '+name)
+                        if any(capture.glob('frame_*.png')):
+                            raise RuntimeError('Unexpected screenshot observer during timed run: '+name)
                         if data['runtime_v3_count']!=(len(ids) if mode=='candidate' else 0):raise RuntimeError('Wrong resource set: '+name)
                     wall=[row['wall_ms'] for row in data['frames']]
-                    row=dict(scene=scene,repeat=repeat,mode=mode,frames=len(wall),p50_ms=percentile(wall,.5),
+                    row=dict(scene=scene,repeat=repeat,mode=mode,frames=len(wall),measure_sec=data['measure_sec'],p50_ms=percentile(wall,.5),
                              p95_ms=percentile(wall,.95),p99_ms=percentile(wall,.99),
-                             cold_catalog_ms=data['cold_catalog_ms'],item_texture_rgba_mip_bytes=data['item_texture_rgba_mip_bytes'],
+                             cold_catalog_ms=data['cold_catalog_ms'],
+                             cold_frames=len(data['cold_frames_ms']),
+                             cold_frame_p95_ms=percentile(data['cold_frames_ms'],.95) if data['cold_frames_ms'] else None,
+                             audio_disabled_for_test=True,frame_capture_count=0,item_texture_rgba_mip_bytes=data['item_texture_rgba_mip_bytes'],
                              runtime_files_restored=replaced,report=report.relative_to(ROOT).as_posix())
+                    if scene=='moving':
+                        motion=[r['wall_ms'] for r in data['frames'] if r.get('flying_bodies',0)>0]
+                        row.update(moving_frames=len(motion),moving_p95_ms=percentile(motion,.95),
+                                   peak_flying_bodies=data['peak_flying_bodies'],peak_flying_arrows=data['peak_flying_arrows'])
                     results.append(row);print(json.dumps(row),flush=True)
         comparisons=[]
         for scene in scenes:
@@ -123,6 +163,19 @@ def main():
             new=[r['p95_ms'] for r in results if r['scene']==scene and r['mode']=='candidate']
             baseline=percentile(old,.5);candidate=percentile(new,.5)
             comparisons.append(dict(scene=scene,baseline_p95_ms=baseline,candidate_p95_ms=candidate,
+                                    ratio=candidate/baseline,within_ten_percent=candidate<=baseline*1.1))
+        if 'catalog' in scenes:
+            old=[r['cold_frame_p95_ms'] for r in results if r['scene']=='catalog' and r['mode']=='baseline']
+            new=[r['cold_frame_p95_ms'] for r in results if r['scene']=='catalog' and r['mode']=='candidate']
+            if any(v is None for v in old+new):raise RuntimeError('Missing cold catalog frame samples')
+            baseline=percentile(old,.5);candidate=percentile(new,.5)
+            comparisons.append(dict(scene='cold catalog loading frames',baseline_p95_ms=baseline,candidate_p95_ms=candidate,
+                                    ratio=candidate/baseline,within_ten_percent=candidate<=baseline*1.1))
+        if 'moving' in scenes:
+            old=[r['moving_p95_ms'] for r in results if r['scene']=='moving' and r['mode']=='baseline']
+            new=[r['moving_p95_ms'] for r in results if r['scene']=='moving' and r['mode']=='candidate']
+            baseline=percentile(old,.5);candidate=percentile(new,.5)
+            comparisons.append(dict(scene='moving-only frames',baseline_p95_ms=baseline,candidate_p95_ms=candidate,
                                     ratio=candidate/baseline,within_ten_percent=candidate<=baseline*1.1))
         summary.update(passed=all(c['within_ten_percent'] for c in comparisons),comparisons=comparisons,
                        executable_sha256=hashlib.sha256((ROOT/'bin/Cubatarium.exe').read_bytes()).hexdigest(),
@@ -137,7 +190,8 @@ def main():
         summary['world_restored']=hashes(world)==before_world
         summary['runtime_restored']=hashes(ROOT/'bin/models/items')==before_runtime
         summary['config_restored']=(config.read_bytes() if config.exists() else None)==before_config
-        summary['passed']=summary['passed'] and all(summary[k] for k in ('world_restored','runtime_restored','config_restored'))
+        summary['sources_unchanged']=source_hashes()==before_sources
+        summary['passed']=summary['passed'] and all(summary[k] for k in ('world_restored','runtime_restored','config_restored','sources_unchanged'))
         summary_path.write_text(json.dumps(summary,indent=2)+'\n',encoding='utf-8')
         if summary['world_restored'] and summary['config_restored']:
             target=owned.resolve()

@@ -14,6 +14,8 @@ import sys
 import time
 from pathlib import Path
 
+from qa_audio_config import muted_test_audio
+
 ROOT = Path(__file__).resolve().parents[1]
 BIN = ROOT / "bin"
 EXE = BIN / "Cubatarium.exe"
@@ -3460,10 +3462,14 @@ def main() -> int:
             process_timeout = max(process_timeout, args.seconds + 180.0)
 
         print("running:", " ".join(sim_cmd), flush=True)
-        rc, runtime_resources = run_with_timeout(
-            sim_cmd, BIN, process_timeout, sample_resources=metrics_enabled
-        )
+        with muted_test_audio(BIN / "config.json"):
+            print("test audio: disabled (master/music/ambient/sfx/ui); restoring after exit", flush=True)
+            rc, runtime_resources = run_with_timeout(
+                sim_cmd, BIN, process_timeout, sample_resources=metrics_enabled
+            )
+        runtime_resources["audio_disabled_for_test"] = True
         runtime_resources_summary = {
+            "audio_disabled_for_test": True,
             "available": runtime_resources.get("available"),
             "sample_count": runtime_resources.get("sample_count"),
             "host_cpu_percent": runtime_resources.get(

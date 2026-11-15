@@ -1,0 +1,9 @@
+{
+  "passed": false,
+  "world": "CarryAimQA",
+  "scope": "Item Lab native diagnostics/UI; no production asset substitutions",
+  "error": "Native Item Lab display metrics differ from the request",
+  "world_restored": true,
+  "config_restored": true,
+  "sources_unchanged": true
+}

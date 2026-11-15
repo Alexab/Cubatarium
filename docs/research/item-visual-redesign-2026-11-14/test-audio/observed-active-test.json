@@ -1,0 +1,16 @@
+{
+  "source": "bin/config.json during native QA",
+  "observed_at_utc": "2026-11-15T15:35:54.9721667Z",
+  "running_pids": [
+    2440
+  ],
+  "step": "world-1280-100-day",
+  "audio": {
+    "ambient": 0.0,
+    "enabled": false,
+    "master": 0.0,
+    "music": 0.0,
+    "sfx": 0.0,
+    "ui": 0.0
+  }
+}
