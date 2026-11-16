@@ -1,4 +1,5 @@
 #include "WorldGen/Stages/WorldGenStages.h"
+#include "World/Chunks/ChunkMutationSnapshot.h"
 #include "App/Platform/Log.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
@@ -967,11 +968,13 @@ bool RemoveSubmergedFloatingDecorInChunk(WorldGenContext &ctx, int base_x,
 
 } // namespace
 
-bool SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry,
+bool SealFluidShoreOnChunkCommitted(UBlockWorld &world,
+                                    UBlockRegistry &registry,
                                     const ProceduralSettings &settings,
                                     const std::string &worldgen_owner_pack_id,
                                     glm::ivec3 chunk_coord,
-                                    bool include_shore_air)
+                                    bool include_shore_air,
+                                    std::vector<glm::ivec3> *changed_chunks)
 {
   if (!settings.FillWater)
   {
@@ -986,6 +989,16 @@ bool SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry
   }
   const int base_x = chunk_coord.x * CHUNK_SIZE;
   const int base_z = chunk_coord.z * CHUNK_SIZE;
+  std::optional<ChunkMutationSnapshot> mutations;
+  if (changed_chunks)
+    mutations.emplace(
+        world,
+        glm::ivec3(chunk_coord.x - 1,
+                   settings.GetVerticalProfile().MinChunkY(CHUNK_SIZE),
+                   chunk_coord.z - 1),
+        glm::ivec3(chunk_coord.x + 1,
+                   settings.GetVerticalProfile().MaxChunkY(CHUNK_SIZE),
+                   chunk_coord.z + 1));
   const bool sealed = SealFluidPocketsInChunk(ctx, base_x, base_z, nullptr, 8);
   const bool permeable = SealFluidPermeableDecorInChunk(ctx, base_x, base_z);
   const bool sealed_after_permeable =
@@ -997,15 +1010,19 @@ bool SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry
     shore_air = SealShoreAirAdjacencyInChunk(ctx, base_x, base_z);
   }
   const bool trimmed = TrimWaterSurfaceSpikesInChunk(ctx, base_x, base_z);
-  const bool pads_fixed = RemoveSubmergedFloatingDecorInChunk(ctx, base_x, base_z);
-  return sealed || permeable || sealed_after_permeable || shore_air || trimmed ||
-         pads_fixed;
+  const bool pads_fixed =
+      RemoveSubmergedFloatingDecorInChunk(ctx, base_x, base_z);
+  if (mutations)
+    mutations->AppendChanged(world, *changed_chunks);
+  return sealed || permeable || sealed_after_permeable || shore_air ||
+         trimmed || pads_fixed;
 }
 
 bool SealFluidShoreAirOnChunkCommitted(
     UBlockWorld &world, UBlockRegistry &registry,
-    const ProceduralSettings &settings, const std::string &worldgen_owner_pack_id,
-    glm::ivec3 chunk_coord)
+    const ProceduralSettings &settings,
+    const std::string &worldgen_owner_pack_id, glm::ivec3 chunk_coord,
+    std::vector<glm::ivec3> *changed_chunks)
 {
   if (!settings.FillWater)
   {
@@ -1020,7 +1037,20 @@ bool SealFluidShoreAirOnChunkCommitted(
   }
   const int base_x = chunk_coord.x * CHUNK_SIZE;
   const int base_z = chunk_coord.z * CHUNK_SIZE;
-  return SealShoreAirAdjacencyInChunk(ctx, base_x, base_z);
+  std::optional<ChunkMutationSnapshot> mutations;
+  if (changed_chunks)
+    mutations.emplace(
+        world,
+        glm::ivec3(chunk_coord.x - 1,
+                   settings.GetVerticalProfile().MinChunkY(CHUNK_SIZE),
+                   chunk_coord.z - 1),
+        glm::ivec3(chunk_coord.x + 1,
+                   settings.GetVerticalProfile().MaxChunkY(CHUNK_SIZE),
+                   chunk_coord.z + 1));
+  const bool changed = SealShoreAirAdjacencyInChunk(ctx, base_x, base_z);
+  if (mutations)
+    mutations->AppendChanged(world, *changed_chunks);
+  return changed;
 }
 
 int PruneFloatingVegetationInChunk(WorldGenContext &ctx, int base_x, int base_z)

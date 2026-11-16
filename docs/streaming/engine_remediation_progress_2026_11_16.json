@@ -318,8 +318,8 @@
     ]
   },
   "latest_ctest_verification": {
-    "log": "build/desktop-msvc/engine-light-cache-final-tests.log",
-    "passed": 12
+    "log": "build/desktop-msvc/engine-fluid-mutation-final-tests.log",
+    "passed": 13
   },
   "six_face_dependency_verification": {
     "source_commit": "0777cc7fa40e792bb69c90be30f509413cf1cce2",
@@ -513,5 +513,21 @@
       }
     ],
     "lease_released": true
+  },
+  "fluid_mutation_tracking": {
+    "status": "native_pending",
+    "unit_log": "build/desktop-msvc/engine-fluid-mutation-final-tests.log",
+    "passed_ctest_sets": 13,
+    "behavior": "seal wrappers return changed content/incarnation coordinates across 3x3 columns and the vertical profile; sync generation and deferred sealing publish the same durable geometry/light/save/physics obligations without sea-band or backlog drop",
+    "regressions": [
+      "deep shore fill crosses x=16 at Y=-40 and reports the neighboring negative slice",
+      "fluid-only edits and creation of a previously absent chunk are captured",
+      "incarnation reuse with equal local revision remains observable",
+      "light-only updates do not invent geometry/fluid mutations"
+    ],
+    "limitations": [
+      "scoped to the seal routines bounded mutation region; not a general world mutation journal",
+      "global light dependency settlement and strict publication barrier are separate remaining stages"
+    ]
   }
 }

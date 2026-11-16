@@ -19,6 +19,7 @@
 #include <glm/glm.hpp>
 #include <memory>
 #include <unordered_set>
+#include <vector>
 
 namespace cutum
 {
@@ -114,6 +115,9 @@ private:
   void RecordGpuAllocationTelemetry(UWorld &world);
   bool PrepareChunkScheduler(UWorld &world);
   void InitChunkScheduler(UWorld &world);
+  void PublishFluidSealMutations(UWorld &world,
+                                 std::vector<glm::ivec3> changed_chunks,
+                                 bool near_column);
   void RefreshStreamingPressure(
       UWorld &world, std::chrono::high_resolution_clock::time_point stream_t0,
       double stream_budget_ms);

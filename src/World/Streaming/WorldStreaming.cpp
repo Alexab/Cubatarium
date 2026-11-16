@@ -30,6 +30,7 @@
 #include "World/Raycast/BlockRaycast.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
+#include "World/Streaming/ChunkRenderDemand.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/ColumnJobGraph.h"
 #include "World/Streaming/ColumnRecordCoordinator.h"
@@ -68,6 +69,7 @@
 #include <cstdlib>
 #include <limits>
 #include <string>
+#include <tuple>
 #include <vector>
 #ifdef _WIN32
 #ifndef NOMINMAX
@@ -3344,6 +3346,77 @@ void UWorldStreaming::RefreshStreamingPressure(
   }
 }
 
+void UWorldStreaming::PublishFluidSealMutations(
+    UWorld &world, std::vector<glm::ivec3> changed_chunks, bool near_column)
+{
+  if (changed_chunks.empty())
+    return;
+  const auto &settings = world.GetProceduralSettings();
+  std::sort(changed_chunks.begin(), changed_chunks.end(),
+            [](const glm::ivec3 &a, const glm::ivec3 &b)
+            { return std::tie(a.x, a.y, a.z) < std::tie(b.x, b.y, b.z); });
+  changed_chunks.erase(
+      std::unique(changed_chunks.begin(), changed_chunks.end()),
+      changed_chunks.end());
+  // A seal scans deep water and a one-block strip in neighboring columns.
+  // Its actual mutations, including negative slices, own durable repair;
+  // pressure may defer admission but must never discard the event.
+  auto &cache = world.MeshService->GetCache();
+  const uint64_t epoch = cache.GetCaptureStore().WorldEpoch();
+  std::unordered_map<glm::ivec2, glm::ivec2, IVec2Hash> relight_bands;
+  for (const glm::ivec3 changed_coord : changed_chunks)
+  {
+    world.ModifiedChunks.insert(changed_coord);
+    DeferredPhysicsSeedQueue.push_back(changed_coord);
+    if (const UChunk *chunk =
+            world.BlockWorld.GetChunkManager().GetChunk(changed_coord))
+      UChunkRenderDemandStore::Get().InvalidateLightCalculationSettlement(
+          changed_coord, epoch, chunk->GetIncarnation());
+    cache.QueueMeshDependencyInvalidation(
+        changed_coord, MeshRevisionBumpReason::FluidWorldGeometry);
+    if (near_column)
+      world.MeshService->MarkDirtyPriority(
+          changed_coord, MeshRevisionBumpReason::FluidWorldGeometry);
+    else
+      world.MeshService->MarkDirty(changed_coord,
+                                   MeshRevisionBumpReason::FluidWorldGeometry);
+    const auto band =
+        settings.GetVerticalProfile().SliceBounds(changed_coord.y, CHUNK_SIZE);
+    if (!band)
+      continue;
+    const glm::ivec2 column(changed_coord.x, changed_coord.z);
+    const auto [it, inserted] =
+        relight_bands.emplace(column, glm::ivec2(band->first, band->second));
+    if (!inserted)
+    {
+      it->second.x = std::min(it->second.x, band->first);
+      it->second.y = std::max(it->second.y, band->second);
+    }
+  }
+  cache.QueueMeshDependencyInvalidations(world.BlockWorld, changed_chunks,
+                                         "fluid_seal_mutation");
+  for (const auto &entry : relight_bands)
+  {
+    world.NotePendingLightBeforeMesh({entry.first.x, 0, entry.first.y},
+                                     entry.second.x, entry.second.y,
+                                     "fluid_seal_mutation");
+    world.Persistence->EnqueueBoundaryDependencyRelight(
+        world, entry.first.x * CHUNK_SIZE, entry.first.y * CHUNK_SIZE,
+        entry.second.x, entry.second.y);
+  }
+  if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+  {
+    const auto negative =
+        std::count_if(changed_chunks.begin(), changed_chunks.end(),
+                      [](glm::ivec3 c) { return c.y < 0; });
+    CubatariumLogInfo(
+        "FluidSealMutation",
+        "changed_chunks=" + std::to_string(changed_chunks.size()) +
+            " negative_slices=" + std::to_string(negative) +
+            " relight_columns=" + std::to_string(relight_bands.size()));
+  }
+}
+
 void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
 {
   CUBA_ZONE("TickAsyncChunkSystems");
@@ -4050,47 +4123,28 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     {
       const ProceduralSettings &settings = world.GetProceduralSettings();
       bool changed = false;
+      std::vector<glm::ivec3> changed_chunks;
       const auto seal_t0 = std::chrono::high_resolution_clock::now();
       if (DeferredIntraChunkSealNeeded.erase(coord) > 0)
       {
         changed = SealFluidIntraChunkOnCommitted(
                       world.BlockWorld, *world.BlockRegistry, settings,
-                      world.WorldgenOwnerPackId, coord) ||
+                      world.WorldgenOwnerPackId, coord, &changed_chunks) ||
                   changed;
       }
       changed = SealFluidShoreAirOnChunkCommitted(
                     world.BlockWorld, *world.BlockRegistry, settings,
-                    world.WorldgenOwnerPackId, coord) ||
+                    world.WorldgenOwnerPackId, coord, &changed_chunks) ||
                 changed;
       world.PhysicsTelemetryData.CommitSealMs +=
           std::chrono::duration<double, std::milli>(
               std::chrono::high_resolution_clock::now() - seal_t0)
               .count();
-      if (!changed)
+      if (!changed && changed_chunks.empty())
       {
         return;
       }
-      const glm::ivec3 ground(coord.x, 0, coord.z);
-      // Shore seal mutates fluid after the first mesh — Dirty sea band.
-      // Under Dirty backlog skip seamed fanout (ingress control).
-      const int mesh_min_y =
-          std::max(settings.MinHeight, settings.SeaLevel - CHUNK_SIZE);
-      const int mesh_max_y =
-          std::min(settings.MaxHeight - 1, settings.SeaLevel + CHUNK_SIZE * 2);
-      const bool seam =
-          near_column && world.GetMeshService().GetDirtyCount() < 350;
-      if (near_column)
-      {
-        world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-            ground, mesh_min_y, mesh_max_y, seam,
-            MeshRevisionBumpReason::PriorityWorldStreamingCommit);
-      }
-      else if (world.GetMeshService().GetDirtyCount() < 350)
-      {
-        world.MeshService->MarkTerrainChunkMeshDirtySeamed(
-            ground, mesh_min_y, mesh_max_y, false,
-            MeshRevisionBumpReason::FluidWorldGeometry);
-      }
+      PublishFluidSealMutations(world, std::move(changed_chunks), near_column);
     };
     for (auto it = DeferredShoreSealQueue.begin();
          it != DeferredShoreSealQueue.end() && near_done < near_shore_budget &&
@@ -6088,12 +6142,14 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
       [this, &world](glm::ivec3 ground)
       {
         const ProceduralSettings &settings = world.GetProceduralSettings();
+        std::vector<glm::ivec3> seal_changes;
         if (settings.FillWater && world.BlockRegistry)
         {
           // Sync gen path: IntraChunk once, ShoreAir deferred (cheap).
           SealFluidShoreOnChunkCommitted(world.BlockWorld, *world.BlockRegistry,
                                          settings, world.WorldgenOwnerPackId,
-                                         ground, /*include_shore_air=*/false);
+                                         ground, /*include_shore_air=*/false,
+                                         &seal_changes);
           DeferredShoreSealQueue.push_back(ground);
         }
         world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
@@ -6103,6 +6159,7 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         const bool near_focus =
             std::max(std::abs(ground.x - focus_ground.x),
                      std::abs(ground.z - focus_ground.z)) <= focus_radius;
+        PublishFluidSealMutations(world, std::move(seal_changes), near_focus);
         const int horiz = std::max(std::abs(ground.x - focus_ground.x),
                                    std::abs(ground.z - focus_ground.z));
         const int fifo_n =

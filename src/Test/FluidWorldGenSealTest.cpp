@@ -2,6 +2,7 @@
 
 #include "Blocks/BlockRegistry.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Chunks/ChunkMutationSnapshot.h"
 #include "World/Math/FluidCellState.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenContext.h"
@@ -428,6 +429,72 @@ static void TestIntraChunkSealMatchesShoreFalse()
                     "IntraChunkSeal fills wet pocket");
 }
 
+static void TestMutationSnapshotTracksContentAndIncarnation()
+{
+  using namespace cutum;
+  UBlockWorld world;
+  const glm::ivec3 pos(0, -40, 0), coord(0, -3, 0);
+  world.SetBlock(pos, kWater);
+  ChunkMutationSnapshot before(world, {-1, -4, -1}, {1, -2, 1});
+  world.GetChunkManager().GetChunk(coord)->SetLightLocal({0, 8, 0}, 7, 4);
+  std::vector<glm::ivec3> changed;
+  before.AppendChanged(world, changed);
+  FluidTest::Expect(changed.empty(), kTestName,
+                    "light-only changes do not invent fluid/geometry deltas");
+  world.SetFluidState(pos, FluidCellState::Source().WithKind(FluidKind::Water));
+  world.SetBlock({16, -40, 0}, kStone);
+  before.AppendChanged(world, changed);
+  FluidTest::Expect(
+      changed.size() == 2 &&
+          std::find(changed.begin(), changed.end(), coord) != changed.end() &&
+          std::find(changed.begin(), changed.end(), glm::ivec3(1, -3, 0)) !=
+              changed.end(),
+      kTestName,
+      "fluid-only edits and creation in an absent neighbor are captured");
+  ChunkMutationSnapshot reused(world, coord, coord);
+  const auto old_revision =
+      world.GetChunkManager().GetChunk(coord)->GetContentRevision();
+  world.GetChunkManager().RemoveChunk(coord);
+  world.SetBlock(pos, kWater);
+  world.SetFluidState(pos, FluidCellState::Source().WithKind(FluidKind::Water));
+  FluidTest::Expect(
+      world.GetChunkManager().GetChunk(coord)->GetContentRevision() ==
+          old_revision,
+      kTestName, "reuse fixture has the same local content revision");
+  changed.clear();
+  reused.AppendChanged(world, changed);
+  FluidTest::Expect(
+      changed.size() == 1 && changed.front() == coord, kTestName,
+      "incarnation reuse cannot hide behind an equal content revision");
+}
+
+static void TestCommittedShoreSealReportsDeepNeighborMutations()
+{
+  using namespace cutum;
+  UBlockWorld world;
+  UBlockRegistry registry(nullptr, FluidTest::MakeTestFluidDefinitions());
+  ProceduralSettings settings;
+  settings.FillWater = true;
+  settings.SeaLevel = 63;
+  world.SetBlock({15, -40, 8}, kWater);
+  world.SetFluidState({15, -40, 8},
+                      FluidCellState::Source().WithKind(FluidKind::Water));
+  std::vector<glm::ivec3> changed;
+  const bool sealed = SealFluidShoreAirOnChunkCommitted(
+      world, registry, settings, "", {0, -3, 0}, &changed);
+  FluidTest::Expect(sealed && world.GetBlock({16, -40, 8}) == kWater, kTestName,
+                    "committed shore seal mutates a deep neighboring column");
+  FluidTest::Expect(
+      std::find(changed.begin(), changed.end(), glm::ivec3(1, -3, 0)) !=
+          changed.end(),
+      kTestName,
+      "change set includes the negative neighboring slice, far below sea band");
+  FluidTest::Expect(std::find(changed.begin(), changed.end(),
+                              glm::ivec3(0, -3, 0)) != changed.end(),
+                    kTestName,
+                    "change set also includes the directly sealed column");
+}
+
 } // namespace
 
 int main()
@@ -447,6 +514,8 @@ int main()
   TestRestoreWaterColumnReplacesPrefabDirt();
   TestSealAirAboveWaterloggedDecor();
   TestIntraChunkSealMatchesShoreFalse();
+  TestMutationSnapshotTracksContentAndIncarnation();
+  TestCommittedShoreSealReportsDeepNeighborMutations();
 
   std::cout << kTestName << ": OK" << std::endl;
   return 0;

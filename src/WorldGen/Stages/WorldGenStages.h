@@ -3,6 +3,7 @@
 #include "WorldGen/Core/WorldGenContext.h"
 #include <cstdint>
 #include <glm/glm.hpp>
+#include <vector>
 
 namespace cutum
 {
@@ -52,26 +53,29 @@ struct FluidPermeableSealStats
 bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z,
                                     int *out_columns_changed = nullptr,
                                     FluidPermeableSealStats *out_stats = nullptr);
-bool SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry,
-                                    const ProceduralSettings &settings,
-                                    const std::string &worldgen_owner_pack_id,
-                                    glm::ivec3 chunk_coord,
-                                    bool include_shore_air = true);
-/// Intra-chunk pockets+permeable only (V_fluid IntraChunkSeal). Prefer this name
-/// over SealFluidShoreOnChunkCommitted(..., false) at commit sites.
+bool SealFluidShoreOnChunkCommitted(
+    UBlockWorld &world, UBlockRegistry &registry,
+    const ProceduralSettings &settings,
+    const std::string &worldgen_owner_pack_id, glm::ivec3 chunk_coord,
+    bool include_shore_air = true,
+    std::vector<glm::ivec3> *changed_chunks = nullptr);
+/// Intra-chunk pockets+permeable only (V_fluid IntraChunkSeal). Prefer this
+/// name over SealFluidShoreOnChunkCommitted(..., false) at commit sites.
 inline bool SealFluidIntraChunkOnCommitted(
     UBlockWorld &world, UBlockRegistry &registry,
-    const ProceduralSettings &settings, const std::string &worldgen_owner_pack_id,
-    glm::ivec3 chunk_coord)
+    const ProceduralSettings &settings,
+    const std::string &worldgen_owner_pack_id, glm::ivec3 chunk_coord,
+    std::vector<glm::ivec3> *changed_chunks = nullptr)
 {
-  return SealFluidShoreOnChunkCommitted(world, registry, settings,
-                                        worldgen_owner_pack_id, chunk_coord,
-                                        /*include_shore_air=*/false);
+  return SealFluidShoreOnChunkCommitted(
+      world, registry, settings, worldgen_owner_pack_id, chunk_coord,
+      /*include_shore_air=*/false, changed_chunks);
 }
 bool SealFluidShoreAirOnChunkCommitted(
     UBlockWorld &world, UBlockRegistry &registry,
-    const ProceduralSettings &settings, const std::string &worldgen_owner_pack_id,
-    glm::ivec3 chunk_coord);
+    const ProceduralSettings &settings,
+    const std::string &worldgen_owner_pack_id, glm::ivec3 chunk_coord,
+    std::vector<glm::ivec3> *changed_chunks = nullptr);
 
 int PruneFloatingVegetationInChunk(WorldGenContext &ctx, int base_x, int base_z);
 
