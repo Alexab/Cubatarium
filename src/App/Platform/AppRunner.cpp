@@ -1,4 +1,5 @@
 #include "App/Platform/AppRunner.h"
+#include "App/Diagnostics/DiagnosticFlightController.h"
 #include "App/Platform/CreatureQaCapture.h"
 #include "App/Platform/FlightSimHarness.h"
 #include "App/Platform/SampleProfiler.h"
@@ -9,6 +10,7 @@
 #include "Game/ModePolicy.h"
 #include "Render/Camera/CameraBasisLogic.h"
 #include "Render/GlIncludes.h"
+#include "World/Chunks/KnownAirTerrainSlice.h"
 #include "World/Diagnostics/MeshAuditDiagnostics.h"
 #include <fstream>
 #if !defined(__ANDROID__)
@@ -1643,6 +1645,53 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     std::cerr << "flight-sim: strict route cannot teleport" << std::endl;
     return 1;
   }
+  DiagnosticFlightController diagnostic_bot;
+  if (!options.DiagnosticRoutePath.empty())
+  {
+    if (!options.StrictNoRelocation || !options.Fly || options.BreakStandMode ||
+        options.YawSweepMode || options.ReverseCourseAfterSec > 0.0 ||
+        options.DivePhaseSec > 0.0 || !options.AssetGalleryManifest.empty())
+    {
+      std::cerr << "flight-sim: diagnostic routes require exclusive strict "
+                   "flight control\n";
+      return 1;
+    }
+    try
+    {
+      std::ifstream input(options.DiagnosticRoutePath);
+      const auto route = nlohmann::json::parse(input);
+      if (route.value("schema", "") != "diagnostic-flight-route.v1" ||
+          !route.at("waypoints").is_array() || route.at("waypoints").empty() ||
+          route.at("waypoints").size() > 256)
+        throw std::runtime_error(
+            "invalid diagnostic route schema or waypoint count");
+      std::vector<DiagnosticFlightWaypoint> waypoints;
+      for (const auto &point : route.at("waypoints"))
+      {
+        const auto &position = point.at("position");
+        if (!position.is_array() || position.size() != 3)
+          throw std::runtime_error(
+              "waypoint position must have three coordinates");
+        DiagnosticFlightWaypoint waypoint;
+        for (int axis = 0; axis < 3; ++axis)
+        {
+          waypoint.position[axis] = position.at(axis).get<float>();
+          if (!std::isfinite(waypoint.position[axis]))
+            throw std::runtime_error("waypoint coordinates must be finite");
+        }
+        waypoint.inspect = point.value("inspect", true);
+        waypoints.push_back(waypoint);
+      }
+      diagnostic_bot.SetRoute(std::move(waypoints),
+                              route.value("relative", false));
+    }
+    catch (const std::exception &error)
+    {
+      std::cerr << "flight-sim: invalid diagnostic route: " << error.what()
+                << '\n';
+      return 1;
+    }
+  }
   // Harness-only move-speed scale lives in locomotion as a plain hook; the
   // App layer owns reading the env var (audit M7).
   CreatureMoveSpeedScaleOverride() = FlightSimMoveSpeedScale();
@@ -1786,6 +1835,18 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     double last_break_request_sec = -1.0e9;
     int break_requests = 0;
     int ingame_frames_seen = 0;
+    double bot_terminal_time = -1.0;
+    double bot_last_trace_time = -1.0;
+    DiagnosticFlightState bot_last_trace_state = DiagnosticFlightState::Idle;
+    std::ofstream bot_trace;
+    if (!options.DiagnosticRoutePath.empty())
+    {
+      const auto parent =
+          std::filesystem::path(options.ReportPath).parent_path();
+      bot_trace.open(parent / "diagnostic_bot.jsonl");
+      if (!bot_trace)
+        throw std::runtime_error("cannot open diagnostic bot trace");
+    }
     std::shared_ptr<UCamera> relocation_audit_camera;
     uint64_t relocation_audit_baseline = 0;
     int start_focus_cx = 0;
@@ -1924,7 +1985,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
               if (relocation_audit_camera)
               {
                 relocation_audit_baseline =
-                    relocation_audit_camera->GetExternalPositionAssignmentCount();
+                    relocation_audit_camera
+                        ->GetExternalPositionAssignmentCount();
               }
               ingame_started = now;
               excluded_before_ingame_sec = excluded_clock_gap_sec;
@@ -2190,7 +2252,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                   world->SetTimeOfDayNormalized(0.32f);
                 }
               }
-              if (!autopilot_armed &&
+              if (options.DiagnosticRoutePath.empty() && !autopilot_armed &&
                   (options.Fly || options.HoldForward ||
                    options.BreakStandMode || options.YawSweepMode))
               {
@@ -2252,7 +2314,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                           << " idle_s=" << options.IdleBeforeFlySec
                           << std::endl;
               }
-              if (autopilot_armed)
+              if (options.DiagnosticRoutePath.empty() && autopilot_armed)
               {
                 if (options.Fly && !options.BreakStandMode &&
                     !options.YawSweepMode)
@@ -2752,6 +2814,99 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                   }
                 }
               }
+              if (!options.DiagnosticRoutePath.empty() &&
+                  ingame_sec >= options.IdleBeforeFlySec)
+              {
+                const PlayerCapsule capsule = PlayerCapsule::Standing();
+                std::unordered_map<glm::ivec3, bool, IVec3Hash> known_air;
+                const auto probe = [&](glm::vec3 from, glm::vec3 to)
+                {
+                  const float span = glm::length(to - from);
+                  const int count =
+                      std::max(1, static_cast<int>(std::ceil(span / 0.4f)));
+                  for (int sample = 1; sample <= count; ++sample)
+                  {
+                    const glm::vec3 at =
+                        from + (to - from) * (static_cast<float>(sample) /
+                                              static_cast<float>(count));
+                    if (capsule.feetY(at) <
+                        world->GetProceduralSettings().MinHeight)
+                      return DiagnosticSegmentState::Blocked;
+                    const glm::vec3 center = capsule.centerFromEye(at);
+                    const glm::ivec3 low = UChunkManager::WorldToChunk(
+                        glm::ivec3(glm::floor(center - capsule.halfExtents() +
+                                              glm::vec3(0.5001f))));
+                    const glm::ivec3 high = UChunkManager::WorldToChunk(
+                        glm::ivec3(glm::floor(center + capsule.halfExtents() +
+                                              glm::vec3(0.4999f))));
+                    for (int y = low.y; y <= high.y; ++y)
+                      for (int z = low.z; z <= high.z; ++z)
+                        for (int x = low.x; x <= high.x; ++x)
+                        {
+                          const glm::ivec3 coord(x, y, z);
+                          if (world->GetBlockWorld().GetChunkManager().HasChunk(
+                                  coord))
+                            continue;
+                          const auto [it, inserted] =
+                              known_air.try_emplace(coord, false);
+                          if (inserted)
+                            it->second = IsKnownAirTerrainSlice(*world, coord);
+                          if (!it->second)
+                            return DiagnosticSegmentState::Unknown;
+                        }
+                    if (world->CheckCollision(at, capsule) ||
+                        world->HasGroundSupport(at, capsule))
+                      return DiagnosticSegmentState::Blocked;
+                  }
+                  return DiagnosticSegmentState::Clear;
+                };
+                const DiagnosticFlightObservation observation{
+                    camera->GetPosition(), camera->GetYaw(), camera->GetPitch(),
+                    ingame_sec,
+                    world->HasGroundSupport(camera->GetPosition(), capsule)};
+                const auto action = diagnostic_bot.Tick(observation, probe);
+                // SetMode(Walking) resets vertical velocity. Repeating it on
+                // every takeoff tick would cancel the normal jump impulse.
+                if (camera->GetFreeMove() != action.flying)
+                {
+                  camera->SetFreeMove(action.flying);
+                }
+                camera->SetPlanarFreeMoveForward(true);
+                camera->SetOrientation(action.yaw, action.pitch);
+                window.ClearAutopilotKeys();
+                window.SetAutopilotKey(KeyCode::Key_W, action.forward);
+                window.SetAutopilotKey(KeyCode::Key_Space, action.up);
+                window.SetAutopilotKey(KeyCode::Key_Shift, action.down);
+                window.SetAutopilotKey(KeyCode::Key_Ctrl,
+                                       options.Sprint && action.forward);
+                autopilot_armed = true;
+                autopilot_flying = action.forward || action.up || action.down;
+                const auto state = diagnostic_bot.State();
+                if (state != bot_last_trace_state ||
+                    ingame_sec - bot_last_trace_time >= 0.5)
+                {
+                  const glm::vec3 pos = camera->GetPosition();
+                  bot_trace
+                      << "{\"schema\":\"diagnostic-bot-trace.v1\",\"time\":"
+                      << ingame_sec << ",\"position\":[" << pos.x << ','
+                      << pos.y << ',' << pos.z << "],\"state\":\""
+                      << diagnostic_bot.StateName()
+                      << "\",\"waypoints_visited\":"
+                      << diagnostic_bot.VisitedWaypoints()
+                      << ",\"forward\":" << action.forward
+                      << ",\"up\":" << action.up << ",\"down\":" << action.down
+                      << ",\"plan_expansions\":"
+                      << diagnostic_bot.PlanExpansions() << ",\"reason\":\""
+                      << diagnostic_bot.FailureReason() << "\"}\n";
+                  bot_trace.flush();
+                  bot_last_trace_state = state;
+                  bot_last_trace_time = ingame_sec;
+                }
+                if (bot_terminal_time < 0.0 &&
+                    (state == DiagnosticFlightState::Complete ||
+                     state == DiagnosticFlightState::Blocked))
+                  bot_terminal_time = ingame_sec;
+              }
               TickHumanMotionQa(*world, *camera, window, ingame_sec);
               if (!start_focus_captured && ingame_sec >= 2.0)
               {
@@ -2782,7 +2937,9 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                                end_route_lateral_deviation_blocks);
               }
             }
-            return ingame_sec >= in_game_seconds;
+            return ingame_sec >= in_game_seconds ||
+                   (bot_terminal_time >= 0.0 &&
+                    ingame_sec >= bot_terminal_time + options.StopPhaseSec);
           }
           return false;
         });
@@ -2797,6 +2954,14 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     const std::string perf_path = UFramePerfMonitor::GetLastSessionPath();
     const std::string world_name = core->GetAppSettings().DefaultWorld;
     int exit_code = 0;
+    if (!options.DiagnosticRoutePath.empty() &&
+        diagnostic_bot.State() != DiagnosticFlightState::Complete)
+    {
+      std::cerr << "flight-sim: diagnostic route unfinished state="
+                << diagnostic_bot.StateName()
+                << " reason=" << diagnostic_bot.FailureReason() << '\n';
+      exit_code = 1;
+    }
     if (!loading_seen)
     {
       std::cerr << "flight-sim: FAIL loading screen never shown" << std::endl;
@@ -2875,7 +3040,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
         const int64_t diagnostic_relocations =
             relocation_audit_complete
                 ? static_cast<int64_t>(
-                      relocation_audit_camera->GetExternalPositionAssignmentCount() -
+                      relocation_audit_camera
+                          ->GetExternalPositionAssignmentCount() -
                       relocation_audit_baseline)
                 : -1;
         const auto run_finished = std::chrono::steady_clock::now();
@@ -2902,80 +3068,86 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
           }
         }
         const glm::ivec2 report_resolution = window.GetFramebufferSize();
-        report << "{\n"
-               << "  \"exit_code\": " << exit_code << ",\n"
-               << "  \"loading_seen\": " << (loading_seen ? "true" : "false")
-               << ",\n"
-               << "  \"ingame_frames\": " << ingame_frames_seen << ",\n"
-               << "  \"ingame_seconds_requested\": " << in_game_seconds << ",\n"
-               << "  \"wall_elapsed_sec\": " << wall_elapsed_sec << ",\n"
-               << "  \"active_elapsed_sec\": " << active_elapsed_sec << ",\n"
-               << "  \"excluded_clock_gap_sec\": " << excluded_clock_gap_sec
-               << ",\n"
-               << "  \"excluded_clock_gap_count\": " << excluded_clock_gap_count
-               << ",\n"
-               << "  \"world\": \"" << EscapeFlightReportJson(world_name)
-               << "\",\n"
-               << "  \"resolution\": [" << report_resolution.x << ", "
-               << report_resolution.y << "],\n"
-               << "  \"teleport_cruise\": "
-               << (teleport_cruise ? "true" : "false") << ",\n"
-               << "  \"diagnostic_relocations_after_start\": "
-               << diagnostic_relocations << ",\n"
-               << "  \"strict_no_relocation\": "
-               << (options.StrictNoRelocation ? "true" : "false") << ",\n"
-               << "  \"manifest\": {\n"
-               << "    \"git_sha\": \"" << EscapeFlightReportJson(git_sha_str)
-               << "\",\n"
-               << "    \"build_type\": \"" << build_type << "\",\n"
-               << "    \"route\": \"flight-sim\",\n"
-               << "    \"config_hash\": \"\",\n"
-               << "    \"frame_count\": " << ingame_frames_seen << ",\n"
-               << "    \"teleport_cruise\": "
-               << (teleport_cruise ? "true" : "false") << ",\n"
-               << "    \"obstacle_avoidance_enabled\": "
-               << (options.AvoidObstacles ? "true" : "false") << ",\n"
-               << "    \"run_id\": \"" << EscapeFlightReportJson(run_id.str())
-               << "\"\n"
-               << "  },\n"
-               << "  \"autopilot_armed\": "
-               << (autopilot_armed ? "true" : "false") << ",\n"
-               << "  \"autopilot_flying\": "
-               << (autopilot_flying ? "true" : "false") << ",\n"
-               << "  \"face_yaw_deg\": " << options.FaceYawDeg << ",\n"
-               << "  \"reverse_course_after_sec\": "
-               << options.ReverseCourseAfterSec << ",\n"
-               << "  \"reverse_course_engaged\": "
-               << (reverse_course_engaged ? "true" : "false") << ",\n"
-               << "  \"face_pitch_deg\": " << options.FacePitchDeg << ",\n"
-               << "  \"level_forward\": "
-               << (options.LevelForward ? "true" : "false") << ",\n"
-               << "  \"heading_deviation_during_move_samples\": "
-               << heading_deviation_during_move_samples << ",\n"
-               << "  \"max_heading_yaw_delta_deg\": "
-               << max_heading_yaw_delta_deg << ",\n"
-               << "  \"max_heading_pitch_delta_deg\": "
-               << max_heading_pitch_delta_deg << ",\n"
-               << "  \"stop_after_blocked_sec\": "
-               << options.StopAfterBlockedSec << ",\n"
-               << "  \"collision_stop_triggered\": "
-               << (collision_stop_triggered ? "true" : "false") << ",\n"
-               << "  \"collision_stop_elapsed_sec\": "
-               << collision_stop_elapsed_sec << ",\n"
-               << "  \"obstacle_avoidance\": {\n"
-               << "    \"enabled\": "
-               << (options.AvoidObstacles ? "true" : "false") << ",\n"
-               << "    \"attempts\": " << avoidance_attempts << ",\n"
-               << "    \"detours_started\": " << avoidance_detours_started
-               << ",\n"
-               << "    \"detours_completed\": " << avoidance_detours_completed
-               << ",\n"
-               << "    \"detour_replans\": " << avoidance_detour_replans
-               << ",\n"
-               << "    \"plan_failures\": " << avoidance_plan_failures << ",\n"
-               << "    \"planned_lateral_blocks\": "
-               << avoidance_total_lateral_blocks << ",\n"
-               << "    \"events\": [\n";
+        report
+            << "{\n"
+            << "  \"exit_code\": " << exit_code << ",\n"
+            << "  \"loading_seen\": " << (loading_seen ? "true" : "false")
+            << ",\n"
+            << "  \"ingame_frames\": " << ingame_frames_seen << ",\n"
+            << "  \"ingame_seconds_requested\": " << in_game_seconds << ",\n"
+            << "  \"wall_elapsed_sec\": " << wall_elapsed_sec << ",\n"
+            << "  \"active_elapsed_sec\": " << active_elapsed_sec << ",\n"
+            << "  \"excluded_clock_gap_sec\": " << excluded_clock_gap_sec
+            << ",\n"
+            << "  \"excluded_clock_gap_count\": " << excluded_clock_gap_count
+            << ",\n"
+            << "  \"world\": \"" << EscapeFlightReportJson(world_name)
+            << "\",\n"
+            << "  \"resolution\": [" << report_resolution.x << ", "
+            << report_resolution.y << "],\n"
+            << "  \"teleport_cruise\": " << (teleport_cruise ? "true" : "false")
+            << ",\n"
+            << "  \"diagnostic_relocations_after_start\": "
+            << diagnostic_relocations << ",\n"
+            << "  \"strict_no_relocation\": "
+            << (options.StrictNoRelocation ? "true" : "false") << ",\n"
+            << "  \"diagnostic_bot\": {\"enabled\":"
+            << (options.DiagnosticRoutePath.empty() ? "false" : "true")
+            << ",\"state\":\"" << diagnostic_bot.StateName()
+            << "\",\"waypoints_visited\":" << diagnostic_bot.VisitedWaypoints()
+            << ",\"plan_attempts\":" << diagnostic_bot.PlanAttempts()
+            << ",\"plan_expansions\":" << diagnostic_bot.PlanExpansions()
+            << ",\"reason\":\"" << diagnostic_bot.FailureReason() << "\"},\n"
+            << "  \"manifest\": {\n"
+            << "    \"git_sha\": \"" << EscapeFlightReportJson(git_sha_str)
+            << "\",\n"
+            << "    \"build_type\": \"" << build_type << "\",\n"
+            << "    \"route\": \"flight-sim\",\n"
+            << "    \"config_hash\": \"\",\n"
+            << "    \"frame_count\": " << ingame_frames_seen << ",\n"
+            << "    \"teleport_cruise\": "
+            << (teleport_cruise ? "true" : "false") << ",\n"
+            << "    \"obstacle_avoidance_enabled\": "
+            << (options.AvoidObstacles ? "true" : "false") << ",\n"
+            << "    \"run_id\": \"" << EscapeFlightReportJson(run_id.str())
+            << "\"\n"
+            << "  },\n"
+            << "  \"autopilot_armed\": " << (autopilot_armed ? "true" : "false")
+            << ",\n"
+            << "  \"autopilot_flying\": "
+            << (autopilot_flying ? "true" : "false") << ",\n"
+            << "  \"face_yaw_deg\": " << options.FaceYawDeg << ",\n"
+            << "  \"reverse_course_after_sec\": "
+            << options.ReverseCourseAfterSec << ",\n"
+            << "  \"reverse_course_engaged\": "
+            << (reverse_course_engaged ? "true" : "false") << ",\n"
+            << "  \"face_pitch_deg\": " << options.FacePitchDeg << ",\n"
+            << "  \"level_forward\": "
+            << (options.LevelForward ? "true" : "false") << ",\n"
+            << "  \"heading_deviation_during_move_samples\": "
+            << heading_deviation_during_move_samples << ",\n"
+            << "  \"max_heading_yaw_delta_deg\": " << max_heading_yaw_delta_deg
+            << ",\n"
+            << "  \"max_heading_pitch_delta_deg\": "
+            << max_heading_pitch_delta_deg << ",\n"
+            << "  \"stop_after_blocked_sec\": " << options.StopAfterBlockedSec
+            << ",\n"
+            << "  \"collision_stop_triggered\": "
+            << (collision_stop_triggered ? "true" : "false") << ",\n"
+            << "  \"collision_stop_elapsed_sec\": "
+            << collision_stop_elapsed_sec << ",\n"
+            << "  \"obstacle_avoidance\": {\n"
+            << "    \"enabled\": "
+            << (options.AvoidObstacles ? "true" : "false") << ",\n"
+            << "    \"attempts\": " << avoidance_attempts << ",\n"
+            << "    \"detours_started\": " << avoidance_detours_started << ",\n"
+            << "    \"detours_completed\": " << avoidance_detours_completed
+            << ",\n"
+            << "    \"detour_replans\": " << avoidance_detour_replans << ",\n"
+            << "    \"plan_failures\": " << avoidance_plan_failures << ",\n"
+            << "    \"planned_lateral_blocks\": "
+            << avoidance_total_lateral_blocks << ",\n"
+            << "    \"events\": [\n";
         for (size_t i = 0; i < avoidance_events.size(); ++i)
         {
           const AvoidanceEvent &event = avoidance_events[i];

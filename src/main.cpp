@@ -16,9 +16,9 @@
 #include "App/Utils.h"
 #include "ResourcePacks/ResourcePackSmoke.h"
 
-#include <cstring>
-#include <cstdlib>
 #include "App/Platform/SampleProfiler.h"
+#include <cstdlib>
+#include <cstring>
 int main(int argc, char *argv[])
 {
 #ifdef _WIN32
@@ -30,20 +30,19 @@ int main(int argc, char *argv[])
   bool explicit_log_stderr = false;
   for (int i = 1; i < argc; ++i)
   {
-    flight_sim_mode = flight_sim_mode ||
-                      std::strcmp(argv[i], "--flight-sim") == 0;
-    explicit_console = explicit_console ||
-                       std::strcmp(argv[i], "--console") == 0;
-    explicit_log_stderr = explicit_log_stderr ||
-                          std::strcmp(argv[i], "--log-stderr") == 0;
+    flight_sim_mode =
+        flight_sim_mode || std::strcmp(argv[i], "--flight-sim") == 0;
+    explicit_console =
+        explicit_console || std::strcmp(argv[i], "--console") == 0;
+    explicit_log_stderr =
+        explicit_log_stderr || std::strcmp(argv[i], "--log-stderr") == 0;
   }
   // flight-sim writes periodic INFO diagnostics to the app log already.
   // Mirroring every INFO line to a captured stderr pipe can block the main
   // thread during verbose column/save traces. Keep stderr mirroring opt-in for
   // flight-sim while preserving it for the other CLI modes.
-  const bool also_stderr = argc > 1 &&
-                           (!flight_sim_mode || explicit_console ||
-                            explicit_log_stderr);
+  const bool also_stderr =
+      argc > 1 && (!flight_sim_mode || explicit_console || explicit_log_stderr);
   cutum::CubatariumInitLogging(argc > 0 ? argv[0] : "Cubatarium", also_stderr);
 
   for (int i = 1; i < argc; ++i)
@@ -202,6 +201,12 @@ int main(int argc, char *argv[])
         }
         else if (std::strcmp(argv[j], "--strict-no-relocation") == 0)
         {
+          opt.StrictNoRelocation = true;
+        }
+        else if (std::strcmp(argv[j], "--diagnostic-route") == 0 &&
+                 j + 1 < argc)
+        {
+          opt.DiagnosticRoutePath = argv[++j];
           opt.StrictNoRelocation = true;
         }
         else if (std::strcmp(argv[j], "--cruise-cx") == 0 && j + 1 < argc)

@@ -81,7 +81,7 @@ def isolated_fixture(runtime: Path, world_name: str, artifacts: Path):
         lease.unlink()
 
 
-def run(world: str, artifacts: Path, *, fly_seconds: float = 75,
+def run(world: str, artifacts: Path, *, fly_seconds: float = 100,
         stop_seconds: float = 20, idle_seconds: float = 5,
         yaw: float = 180, pitch: float = -25,
         minimum_chunks: int = 16) -> dict:
@@ -114,9 +114,19 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 75,
         git_sha = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
         env["CUBATARIUM_GIT_SHA"] = git_sha
+        import math
+        distance = minimum_chunks * 16 + 48
+        angle = math.radians(yaw)
+        bot_route = {"schema": "diagnostic-flight-route.v1", "relative": True,
+                     "waypoints": [{"position": [0, 6, 0], "inspect": True},
+                                   {"position": [distance * math.cos(angle), 6,
+                                                 distance * math.sin(angle)], "inspect": True}]}
+        bot_path = artifacts / "bot-route.json"
+        bot_path.write_text(json.dumps(bot_route, indent=2) + "\n", encoding="utf-8")
         command = [sys.executable, str(ROOT / "tools/flight_sim_run.py"),
                    "--world", fixture.name, "--require-existing-world",
-                   "--fly-stop", "--strict-no-relocation", "--level-forward", "--min-alt-above-sea", "0",
+                   "--fly-stop", "--strict-no-relocation", "--diagnostic-route", str(bot_path.resolve()),
+                   "--level-forward", "--min-alt-above-sea", "0",
                    "--idle-sec", str(idle_seconds), "--fly-phase-sec", str(fly_seconds),
                    "--stop-phase-sec", str(stop_seconds), "--yaw", str(yaw),
                    "--pitch", str(pitch), "--stop-after-blocked-sec", "8",
@@ -126,6 +136,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 75,
                  "fixture_world": fixture.name, "source_world_sha256": source_hash,
                  "exe_sha256": digest(exe), "config_sha256": digest(runtime / "config.json"),
                  "git_sha": git_sha,
+                 "bot_route_sha256": digest(bot_path),
                  "fly_seconds": fly_seconds, "stop_seconds": stop_seconds,
                  "idle_seconds": idle_seconds, "yaw": yaw, "pitch": pitch,
                  "minimum_chunks": minimum_chunks, "command": command,
@@ -158,7 +169,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--world", required=True)
     parser.add_argument("--artifacts", required=True, type=Path)
-    parser.add_argument("--fly-seconds", type=float, default=75)
+    parser.add_argument("--fly-seconds", type=float, default=100)
     parser.add_argument("--stop-seconds", type=float, default=20)
     parser.add_argument("--idle-seconds", type=float, default=5)
     parser.add_argument("--yaw", type=float, default=180)

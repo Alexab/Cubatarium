@@ -595,6 +595,7 @@ set(SOURCES
     src/Gui/Screens/WorldGenPaletteScreen.cpp
     src/Gui/Screens/WorldProgressScreen.cpp
     src/App/Platform/AppRunner.cpp
+    src/App/Diagnostics/DiagnosticFlightController.cpp
     src/App/Platform/DesktopPlatformPaths.cpp
     src/App/Platform/GameDataRoot.cpp
     src/App/Platform/DesktopPlatformWindow.cpp
@@ -984,6 +985,13 @@ cubatarium_add_test(NAME position_assignment_audit_test
     LIBRARIES glm::glm)
 add_test(NAME position_assignment_audit_test COMMAND $<TARGET_FILE:position_assignment_audit_test>)
 set_tests_properties(position_assignment_audit_test PROPERTIES LABELS "unit;streaming")
+
+cubatarium_add_test(NAME diagnostic_flight_controller_test
+    SOURCES src/Test/DiagnosticFlightControllerTest.cpp
+            src/App/Diagnostics/DiagnosticFlightController.cpp
+    LIBRARIES glm::glm)
+add_test(NAME diagnostic_flight_controller_test COMMAND $<TARGET_FILE:diagnostic_flight_controller_test>)
+set_tests_properties(diagnostic_flight_controller_test PROPERTIES LABELS "unit;streaming")
 
 cubatarium_add_test(NAME chunk_load_priority_test
     SOURCES

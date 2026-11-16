@@ -11,7 +11,8 @@ class IUPlatformWindow;
 
 int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths);
 
-/// Hidden-window GUI smoke: Enter Game with default_world, exit after N in-game frames.
+/// Hidden-window GUI smoke: Enter Game with default_world, exit after N in-game
+/// frames.
 int RunEnterGameSmoke(IUPlatformPaths &paths, int in_game_frames = 5);
 
 struct AutoloadLastWorldOptions
@@ -56,19 +57,24 @@ struct FlightSimOptions
   float CruiseEyeY{0.0f};
   /// Hold Space while flying to maintain altitude (manual FreeMove climb).
   bool HoldSpace{false};
-  /// Keep the autopilot's forward vector horizontal while the camera looks up/down.
+  /// Keep the autopilot's forward vector horizontal while the camera looks
+  /// up/down.
   bool LevelForward{false};
-  /// Flight-sim-only predictive obstacle bypass. Production locomotion is unchanged.
+  /// Flight-sim-only predictive obstacle bypass. Production locomotion is
+  /// unchanged.
   bool AvoidObstacles{true};
   bool Sprint{false};
   /// Reset to a fixed ocean cruise start each run (matches World_164 manual).
   bool TeleportToCruiseStart{false};
   /// Disable legacy altitude clamps and diagnostic water placement.
   bool StrictNoRelocation{false};
+  /// Declarative waypoint route driven by normal movement inputs.
+  std::string DiagnosticRoutePath;
   float CruiseStartChunkX{-47.0f};
   float CruiseStartChunkZ{5.0f};
-  std::string PerfOutPath;   // optional copy of perf jsonl
-  std::string ReportPath;    // JSON verdict path (default bin/flight_sim_report.json)
+  std::string PerfOutPath; // optional copy of perf jsonl
+  std::string
+      ReportPath; // JSON verdict path (default bin/flight_sim_report.json)
   /// Wall-clock from process start (covers long World_164 load + flight).
   double SafetyTimeoutSec{900.0};
   /// Fly west then release W and hold still (stop-recovery scenario).
@@ -88,7 +94,8 @@ struct FlightSimOptions
   bool BreakStandMode{false};
   double BreakPhaseSec{20.0};
   double BreakIntervalSec{1.0};
-  /// Standing yaw sweep: cycle 0/90/180/270 every YawSweepSec (visual blue repro).
+  /// Standing yaw sweep: cycle 0/90/180/270 every YawSweepSec (visual blue
+  /// repro).
   bool YawSweepMode{false};
   double YawSweepSec{3.0};
   /// Show GLFW window (default hidden). Hidden still has a GL context; lighting

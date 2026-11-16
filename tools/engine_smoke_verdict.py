@@ -51,6 +51,10 @@ def classify(report: dict[str, Any], perf: Path | None, *,
             route = component("PASS", "frontier_route_covered", displacement_chunks=distance)
 
     samples = 0
+    bot = report.get("diagnostic_bot")
+    if isinstance(bot, dict) and bot.get("enabled") is True and bot.get("state") != "complete":
+        route = component("FAIL", "bot_route_incomplete", bot_state=bot.get("state"),
+                          bot_reason=bot.get("reason"))
     captures: set[int] = set()
     faults = 0
     attributed = 0

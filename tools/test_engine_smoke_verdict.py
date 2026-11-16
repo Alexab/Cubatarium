@@ -78,6 +78,13 @@ class EngineSmokeVerdictTest(unittest.TestCase):
         self.report["diagnostic_relocations_after_start"] = False
         self.assertEqual(classify(self.report, self.perf)["status"], "UNTESTED")
 
+    def test_endpoint_travel_does_not_hide_incomplete_bot_route(self):
+        self.trace()
+        self.report["diagnostic_bot"] = dict(enabled=True, state="inspect", reason="")
+        result = classify(self.report, self.perf)
+        self.assertEqual(result["status"], "FAIL")
+        self.assertEqual(result["components"]["route"]["reason"], "bot_route_incomplete")
+
 
 class FlightProcessOwnershipTest(unittest.TestCase):
     def test_cleanup_targets_only_live_owned_child(self):

@@ -129,6 +129,11 @@ def build_flight_route_identity(args: argparse.Namespace) -> dict:
         "world": args.world,
         "resume": bool(args.resume),
         "teleport_cruise": bool(args.teleport_cruise),
+        "strict_no_relocation": bool(getattr(args, "strict_no_relocation", False)),
+        "diagnostic_route_sha256": (
+            hashlib.sha256(Path(args.diagnostic_route).read_bytes()).hexdigest()
+            if getattr(args, "diagnostic_route", None) else None
+        ),
         "product_start_position": (
             [float(v) for v in args.product_start_position]
             if product_route
@@ -1947,6 +1952,8 @@ def main() -> int:
     ap.add_argument("--no-fly", action="store_true")
     ap.add_argument("--strict-no-relocation", action="store_true",
                     help="disable native altitude resets and audit external position changes")
+    ap.add_argument("--diagnostic-route", type=Path,
+                    help="declarative native diagnostic bot waypoint route")
     ap.add_argument(
         "--no-hold-forward",
         action="store_true",
@@ -2217,6 +2224,8 @@ def main() -> int:
         help="run scenario N times; write report, report_2..N, and report_agg.json",
     )
     args = ap.parse_args()
+    if args.diagnostic_route:
+        args.strict_no_relocation = True
 
     # Instrumented flight analysis is explicit; visible route runs default to
     # no FramePerf collection, perf disk output, or host-resource polling.
@@ -3390,6 +3399,8 @@ def main() -> int:
         ]
         if args.strict_no_relocation:
             sim_cmd.append("--strict-no-relocation")
+        if args.diagnostic_route:
+            sim_cmd.extend(["--diagnostic-route", str(args.diagnostic_route.resolve())])
         break_scenarios = ("break-stand", "visual-dig", "idle-edit-smoke")
         if args.scenario in break_scenarios:
             sim_cmd.append("--break-stand")
