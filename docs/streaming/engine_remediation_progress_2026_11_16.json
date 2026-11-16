@@ -938,13 +938,12 @@
     }
   },
   "relight_absence_input_identity": {
-    "status": "unit_verified_native_pending",
+    "status": "unit_and_native_scoped_verified",
     "behavior": "relight capture records Unknown/KnownAir evidence for absent target, face-shell and upper sky context; install validates evidence through world API; mesh validation uses the same world evidence policy",
     "negative_control": "build/desktop-msvc/engine-relight-absence-red-test.log: data-only validation accepts unknown-to-completed-sky transition without residency change",
     "limitations": [
       "unknown inputs are now identities but can still participate as AIR in solver; strict completion prohibition remains pending",
-      "persistent section read-set proofs and profile/mode provenance remain pending",
-      "native regression pending"
+      "persistent section read-set proofs and profile/mode provenance remain pending"
     ],
     "next_settlement_integration_notes": [
       "async apply currently stamps each section immediately after install and MarkRelit stamps again; a shared result proof must be published only after all owned writes are installed",
@@ -954,6 +953,90 @@
     "test_log": "build/desktop-msvc/engine-relight-absence-green-tests.log",
     "passed_sets": 6,
     "release_build": "build/desktop-msvc/engine-relight-absence-release-build.log",
-    "diagnostics": "stale retry reason includes old/new absence evidence, including transitions without content/light/incarnation changes"
+    "diagnostics": "stale retry reason includes old/new absence evidence, including transitions without content/light/incarnation changes",
+    "native": {
+      "source_commit": "753181f00",
+      "artifacts": "build/desktop-msvc/engine-relight-absence-wet-native",
+      "verdict": {
+        "schema": "engine-smoke-verdict.v1",
+        "status": "UNTESTED",
+        "components": {
+          "runtime": {
+            "status": "PASS",
+            "reason": "native_process",
+            "exit_code": 0
+          },
+          "route": {
+            "status": "PASS",
+            "reason": "frontier_route_covered",
+            "displacement_chunks": 19,
+            "outside_initial_resident_samples": 2828
+          },
+          "startup": {
+            "status": "UNTESTED",
+            "reason": "missing_first_frame_ring_witness"
+          },
+          "visual": {
+            "status": "UNTESTED",
+            "reason": "missing_visual_reference",
+            "samples": 27200,
+            "captures": 170,
+            "attributed_samples": 0,
+            "faults": 0
+          },
+          "inspection": {
+            "status": "PASS",
+            "reason": "inspection_capture_coverage",
+            "requested": 24,
+            "queued": 24,
+            "verified": 24
+          },
+          "fixture": {
+            "status": "PASS",
+            "reason": "negative_wet_cave_observed",
+            "samples": 216
+          },
+          "fixture_opaque_depth": {
+            "status": "PASS",
+            "reason": "analytic_near_cave_opaque_depth",
+            "checked": 26560,
+            "faults": 0,
+            "frame_epochs": 170,
+            "skipped_unscoped_or_occluded": 640,
+            "examples": [],
+            "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+          }
+        },
+        "malformed_trace_rows": 0,
+        "scope": "one-way frontier route and sampled reference checks; not full-screen proof",
+        "runner_exit_code": 1,
+        "inspection_evidence": {
+          "verified": 24,
+          "requested": 24,
+          "reason": "inspection_views_joined_to_png"
+        }
+      },
+      "absence_transition_retry_events": 0,
+      "native_proof_transition_coverage": "UNTESTED: no proof-only stale retry in this route; both directions verified by production-validator unit regression"
+    }
+  },
+  "backend_attribution_audit": {
+    "status": "followup_required",
+    "evidence_native": "engine-signed-recovery-surface-native",
+    "caps": "AMD Radeon, GL3.3 context with compute=1, ssbo=1 and mdi=1 through extensions; GL version alone is not proof of unsupported compute",
+    "period_sample_maxima": {
+      "mesh_pipeline_gpu_extract_inflight_n": 15,
+      "gpu_opaque_emit_gpu": 0,
+      "gpu_light_seed_apply": 915,
+      "gpu_light_readback": 0,
+      "gpu_fallback": 3
+    },
+    "source_finding": "GpuSkylightColumnSeed.cpp TryGpuSeedSkylightColumns and ApplyGpuSkylightSeedToChunk execute SeedSkylightColumnsCpu; GPU-named dispatch/apply counters include CPU work. Packed mesh path has separately initialized compute programs; generic emitter counter alone does not establish packed backend execution.",
+    "risk": "UGpuFullLightingPipeline::RelightChunk skips full-height vertical propagation after per-section CPU seed initialized at 15; loaded high roof can be ignored through this optimized branch",
+    "required_followup": [
+      "full-height roof regression that exercises successful seed branch, then correct pipeline path",
+      "separate actual CPU/GPU execution metrics and per-job backend evidence",
+      "independent real compute parity acceptance; do not label machine GPU-incapable from GL3.3 alone"
+    ]
   }
 }
