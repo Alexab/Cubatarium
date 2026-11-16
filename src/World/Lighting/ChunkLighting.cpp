@@ -25,8 +25,6 @@ namespace cutum
 namespace
 {
 
-constexpr int kSkyScanAboveBlocks = 15 * CHUNK_SIZE;
-
 bool InChunkLocal(glm::ivec3 local)
 {
   return local.x >= 0 && local.x < CHUNK_SIZE && local.y >= 0 &&
@@ -177,14 +175,11 @@ void PropagateSkylightColumn(UBlockWorld &world, UBlockRegistry &registry,
   const int world_z = origin.z + local_z;
   const int top_y = origin.y + CHUNK_SIZE - 1;
   int incoming = kMaxLightLevel;
-  for (int y = top_y + 1; y < top_y + kSkyScanAboveBlocks; ++y)
+  const int world_top = world.GetVerticalProfile().MaxY;
+  for (int y = top_y + 1; y <= world_top && incoming > 0; ++y)
   {
     const BlockId id = world.GetBlock(glm::ivec3(world_x, y, world_z));
-    if (!IsLightTransparent(registry, id))
-    {
-      incoming = 0;
-      break;
-    }
+    incoming = std::max(0, incoming - VerticalSkylightStepCost(registry, id));
   }
   for (int y = top_y; y >= origin.y; --y)
   {

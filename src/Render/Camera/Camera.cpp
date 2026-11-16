@@ -1216,7 +1216,8 @@ bool UCamera::DoMovement(const UWorld *world)
             std::chrono::high_resolution_clock::now() - th0).count();
       }
 
-      if (Position.y < kMinReasonablePlayerY)
+      if (Position.y <
+          world->GetBlockWorld().GetVerticalProfile().MinimumEyeY())
       {
         break;
       }

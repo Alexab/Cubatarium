@@ -163,7 +163,7 @@ def isolated_fixture(runtime: Path, world_name: str, artifacts: Path):
 def run(world: str, artifacts: Path, *, fly_seconds: float = 100,
         stop_seconds: float = 20, idle_seconds: float = 5,
         yaw: float = 180, pitch: float = -25,
-        minimum_chunks: int = 16) -> dict:
+        minimum_chunks: int = 16, fixture_scene: str | None = None) -> dict:
     runtime = ROOT / "bin"
     # On Windows opening an active executable for writing fails. This is a
     # read-only preflight via the existing runner; it never kills another app.
@@ -171,6 +171,15 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 100,
     if not flight_sim_run.exe_writable(0.5):
         raise RuntimeError("Release executable is in use; the running session was left intact")
     with isolated_fixture(runtime, world, artifacts) as (fixture, source_hash):
+        scene = None
+        if fixture_scene == "dry-negative-cave":
+            if yaw != 180:
+                raise ValueError("dry-negative-cave route requires yaw 180")
+            from engine_smoke_fixtures import prepare_dry_negative_cave
+            scene = prepare_dry_negative_cave(fixture, minimum_chunks)
+            (artifacts / "fixture.json").write_text(json.dumps(scene, indent=2) + "\n", encoding="utf-8")
+        elif fixture_scene is not None:
+            raise ValueError("unknown fixture scene")
         metadata = fixture / "world_data.json"
         metadata.write_bytes(fixed_day_payload(metadata.read_bytes(), 0.25))
         exe = runtime / "Cubatarium.exe"
@@ -215,6 +224,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 100,
                  "fixture_world": fixture.name, "source_world_sha256": source_hash,
                  "exe_sha256": digest(exe), "config_sha256": digest(runtime / "config.json"),
                  "git_sha": git_sha,
+                 "fixture_scene": scene,
+                 "prepared_world_sha256": world_fingerprint(fixture),
                  "bot_route_sha256": digest(bot_path),
                  "fly_seconds": fly_seconds, "stop_seconds": stop_seconds,
                  "idle_seconds": idle_seconds, "yaw": yaw, "pitch": pitch,
@@ -240,6 +251,14 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 100,
             json.dumps(report, indent=2) + "\n", encoding="utf-8")
         perf = Path(report["perf_jsonl"]) if report.get("perf_jsonl") else None
         verdict = classify(report, perf, minimum_chunks=minimum_chunks)
+        if scene is not None:
+            from engine_smoke_fixtures import evaluate_fixture_trace
+            scene_verdict = evaluate_fixture_trace(scene, artifacts / "diagnostic_bot.jsonl")
+            verdict["components"]["fixture"] = scene_verdict
+            if scene_verdict["status"] == "FAIL":
+                verdict["status"] = "FAIL"
+            elif scene_verdict["status"] == "UNTESTED" and verdict["status"] == "PASS":
+                verdict["status"] = "UNTESTED"
         verdict["runner_exit_code"] = child.returncode
         verdict["inspection_evidence"] = inspection
         if not report_path.exists():
@@ -259,6 +278,7 @@ def main() -> int:
     parser.add_argument("--yaw", type=float, default=180)
     parser.add_argument("--pitch", type=float, default=-25)
     parser.add_argument("--minimum-chunks", type=int, default=16)
+    parser.add_argument("--fixture-scene", choices=["dry-negative-cave"])
     args = parser.parse_args()
     import math
     if (not all(math.isfinite(v) for v in [args.fly_seconds, args.stop_seconds,
@@ -268,7 +288,8 @@ def main() -> int:
         parser.error("finite nonnegative durations and positive coverage are required")
     verdict = run(args.world, args.artifacts.resolve(), fly_seconds=args.fly_seconds,
                   stop_seconds=args.stop_seconds, idle_seconds=args.idle_seconds,
-                  yaw=args.yaw, pitch=args.pitch, minimum_chunks=args.minimum_chunks)
+                  yaw=args.yaw, pitch=args.pitch, minimum_chunks=args.minimum_chunks,
+                  fixture_scene=args.fixture_scene)
     print(json.dumps(verdict, ensure_ascii=False))
     return {"PASS": 0, "FAIL": 1, "UNTESTED": 2}[verdict["status"]]
 

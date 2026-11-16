@@ -72,7 +72,6 @@ void UWorld::SetGameMode(WorldGameMode mode)
 namespace
 {
 
-constexpr float kMinReasonablePlayerY = -32.0f;
 // Creature simulation step cap. The raw frame delta is unbounded (a save or
 // alt-tab stall reported seconds), and one huge step teleported mobs several
 // blocks, saturated gravity and burned wander timers in a single tick.
@@ -277,6 +276,16 @@ void UWorldViewBinding::EnsurePlayerOnGround(UWorld &world)
   const PlayerCapsule cap =
       camera ? camera->GetPlayerCapsule() : PlayerCapsule::Standing();
   glm::vec3 pos = user->GetPosition();
+  // A valid saved cave floor is already ground. Choosing the highest solid
+  // block in its column would move the player onto the cave roof or ocean.
+  if (world.IsReasonablePlayerPosition(pos) &&
+      !world.CheckBlockCollisionVolume(CollisionVolumeFromEye(pos, cap)) &&
+      world.HasGroundSupport(pos, cap))
+  {
+    camera->SetPosition(pos);
+    camera->ResetVerticalPhysics();
+    return;
+  }
   const glm::ivec3 column = WorldPosToBlock(pos);
   int x = column.x;
   int z = column.z;
@@ -529,7 +538,8 @@ void UWorld::RunLegacyPhysicsFrame()
 
   auto camera = GetCurrentUserCamera();
   UCreature *controlled = GetControlledCreature();
-  if (camera && camera->GetPosition().y < kMinReasonablePlayerY)
+  if (camera &&
+      camera->GetPosition().y < BlockWorld.GetVerticalProfile().MinimumEyeY())
   {
     EnsurePlayerOnGround();
     camera->ResetVerticalPhysics();

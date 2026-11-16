@@ -31,6 +31,8 @@ struct WorldVerticalProfile
 
   constexpr bool IsValid() const { return MinY <= MaxY; }
   constexpr bool ContainsY(int y) const { return y >= MinY && y <= MaxY; }
+  /// Recovery starts below the configured world's bottom face, not datum Y.
+  float MinimumEyeY() const { return static_cast<float>(MinY) - 0.5f; }
   constexpr int ClampY(int y) const
   {
     return y < MinY ? MinY : (y > MaxY ? MaxY : y);

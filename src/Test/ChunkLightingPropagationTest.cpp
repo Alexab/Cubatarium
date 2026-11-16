@@ -43,12 +43,20 @@ static std::shared_ptr<cutum::UBlockRegistry> MakeRegistry()
   torch.Physics = cutum::BlockPhysicsProfile::Solid();
   torch.Render.Style = cutum::BlockRenderStyle::Cross;
   torch.Lighting.Emission = 14;
+  cutum::BlockDefinition water;
+  water.Name = "water";
+  water.Id = 9;
+  water.Physics = cutum::BlockPhysicsProfile::FromPreset("water");
+  water.Render.Transparent = true;
+  water.Render.Style = cutum::BlockRenderStyle::Fluid;
   std::unordered_map<cutum::BlockId, cutum::BlockDefinition> by_id;
   by_id[kStone] = stone;
   by_id[kTorch] = torch;
+  by_id[9] = water;
   std::unordered_map<std::string, cutum::BlockId> name_to_id;
   name_to_id["stone"] = kStone;
   name_to_id["torch"] = kTorch;
+  name_to_id["water"] = 9;
   definitions->ReplaceAll(std::move(by_id), std::move(name_to_id));
   return std::make_shared<cutum::UBlockRegistry>(nullptr, definitions);
 }
@@ -429,6 +437,51 @@ int main()
     // Both shafts converge in the shared flood without starving either seed.
     Expect(block_light_at(torch_a) == 14, "E: torch A keeps source emission");
     Expect(block_light_at(torch_b) == 14, "E: torch B keeps source emission");
+  }
+
+  // A partial relight at negative Y must use the entire vertical sky context,
+  // including attenuation in read-only water above its writable slice.
+  for (const bool roof : {true, false})
+  {
+    cutum::UBlockWorld deep;
+    for (int x = 0; x < cutum::CHUNK_SIZE; ++x)
+      for (int z = 0; z < cutum::CHUNK_SIZE; ++z)
+      {
+        deep.SetBlock({x, -48, z}, kStone);
+        if (roof)
+          deep.SetBlock({x, 304, z}, kStone);
+        else
+          for (int y = -32; y <= -30; ++y)
+            deep.SetBlock({x, y, z}, 9);
+      }
+    const int expected = roof ? 0 : 12;
+    cutum::RelightChunk(deep, *registry, {0, -3, 0});
+    Expect(SkyAt(deep, {8, -33, 8}) == expected,
+           roof ? "sync sky sees roof more than 240 blocks above negative slice"
+                : "sync sky retains attenuation across water slice boundary");
+    cutum::RelightJobSpec spec;
+    spec.block_positions.push_back({8, -48, 8});
+    spec.min_world_y = -48;
+    spec.max_world_y = -33;
+    spec.column_center_only = true;
+    spec.include_block_light = false;
+    auto snapshot = cutum::UChunkRelightSnapshot::Capture(deep, spec);
+    const auto result = snapshot.Compute(*registry);
+    Expect(result.chunks.size() == 1,
+           "read-only full-height sky context does not expand writable band");
+    const int idx = cutum::UChunk::LocalIndex({8, 15, 8});
+    Expect((result.chunks.front().light_packed[idx] & 0x0f) == expected,
+           roof ? "async sky sees full-height opaque roof"
+                : "async sky retains cross-slice liquid attenuation");
+    if (roof)
+    {
+      bool roof_recorded = false;
+      for (const auto &stamp : result.read_set)
+        roof_recorded |= stamp.coord == glm::ivec3(0, 19, 0) &&
+                         stamp.readsContent && !stamp.readsLight;
+      Expect(roof_recorded,
+             "far roof geometry participates in async result validation");
+    }
   }
 
   std::cout << "chunk_lighting_propagation_test: OK" << std::endl;

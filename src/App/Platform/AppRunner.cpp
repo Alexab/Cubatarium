@@ -2912,6 +2912,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     ingame_sec - bot_last_trace_time >= 0.5)
                 {
                   const glm::vec3 pos = camera->GetPosition();
+                  const auto fluid_column = world->FindFluidColumnSurface(pos);
                   bot_trace
                       << "{\"schema\":\"diagnostic-bot-trace.v1\",\"time\":"
                       << ingame_sec << ",\"position\":[" << pos.x << ','
@@ -2923,6 +2924,10 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       << ",\"up\":" << action.up << ",\"down\":" << action.down
                       << ",\"yaw\":" << camera->GetYaw()
                       << ",\"pitch\":" << camera->GetPitch()
+                      << ",\"eye_in_fluid\":"
+                      << (ContainsFluidAtHeight(fluid_column, pos.y) ? "true"
+                                                                     : "false")
+                      << ",\"eye_fluid_id\":" << fluid_column.fluidId
                       << ",\"capture_request\":" << action.capture
                       << ",\"capture_id\":" << action.captureId
                       << ",\"plan_expansions\":"

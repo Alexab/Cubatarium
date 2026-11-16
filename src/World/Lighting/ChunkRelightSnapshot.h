@@ -113,6 +113,7 @@ public:
     return CapturedSkyContextChunks;
   }
   double GetSkyContextCaptureMs() const { return SkyContextCaptureMs; }
+  int GetWorldMaxY() const { return WorldMaxY; }
 
   BlockId GetBlock(glm::ivec3 world_pos) const;
   bool HasChunk(glm::ivec3 chunk_coord) const;
@@ -145,6 +146,7 @@ private:
   int CapturedNeighborLightChunks{0};
   int CapturedSkyContextChunks{0};
   double SkyContextCaptureMs{0.0};
+  int WorldMaxY{0};
 };
 
 } // namespace cutum

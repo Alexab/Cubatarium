@@ -18,9 +18,6 @@ namespace cutum
 namespace
 {
 
-constexpr int kSkyScanAboveChunkCount = 15;
-constexpr int kSkyScanAboveBlocks = kSkyScanAboveChunkCount * CHUNK_SIZE;
-
 void CollectColumnChunkCoords(const UBlockWorld &world, int world_x, int world_z,
                               int min_y, int max_y,
                               std::unordered_set<glm::ivec3, IVec3Hash> &out)
@@ -110,14 +107,10 @@ void PropagateSkylightColumn(UChunkRelightSnapshot &grid,
   const int world_z = origin.z + local_z;
   const int top_y = origin.y + CHUNK_SIZE - 1;
   int incoming = kMaxLightLevel;
-  for (int y = top_y + 1; y < top_y + kSkyScanAboveBlocks; ++y)
+  for (int y = top_y + 1; y <= grid.GetWorldMaxY() && incoming > 0; ++y)
   {
     const BlockId id = grid.GetBlock(glm::ivec3(world_x, y, world_z));
-    if (!IsLightTransparent(registry, id))
-    {
-      incoming = 0;
-      break;
-    }
+    incoming = std::max(0, incoming - VerticalSkylightStepCost(registry, id));
   }
   for (int y = top_y; y >= origin.y; --y)
   {
@@ -647,6 +640,7 @@ UChunkRelightSnapshot UChunkRelightSnapshot::Capture(const UBlockWorld &world,
 {
   UChunkRelightSnapshot snapshot;
   snapshot.Spec = spec;
+  snapshot.WorldMaxY = world.GetVerticalProfile().MaxY;
   std::unordered_set<glm::ivec3, IVec3Hash> coords;
   for (const glm::ivec3 &block_pos : spec.block_positions)
   {
@@ -741,13 +735,9 @@ UChunkRelightSnapshot UChunkRelightSnapshot::Capture(const UBlockWorld &world,
   if (spec.include_skylight && !coords.empty())
   {
     const auto sky_context_capture_started = std::chrono::steady_clock::now();
-    // PropagateSkylightColumn scans up to 15 chunk slices above each target
-    // slice to decide whether direct sky reaches it. Capturing only the target
-    // band (plus the one-block shell) made all farther geometry look like air,
-    // so a roof or terrain slice above a partial capture could be ignored.
-    // The top of the requested band is sufficient for every lower target slice:
-    // its 15-chunk scan is contained in that band plus these 15 context slices.
-    // Context chunks are read-only and do not enter Compute's target set.
+    // Direct sky depends on every slice up to the configured world ceiling,
+    // including liquid attenuation. Context is read-only and never enlarges
+    // the write set. Absence stamps also invalidate the result on later load.
     std::unordered_map<glm::ivec3, int, IVec3Hash> top_band_by_column;
     for (const glm::ivec3 &coord : coords)
     {
@@ -762,7 +752,7 @@ UChunkRelightSnapshot UChunkRelightSnapshot::Capture(const UBlockWorld &world,
     for (const auto &entry : top_band_by_column)
     {
       for (int cy = entry.second + 1;
-           cy <= entry.second + kSkyScanAboveChunkCount; ++cy)
+           cy <= world.GetVerticalProfile().MaxChunkY(CHUNK_SIZE); ++cy)
       {
         sky_context_coords.emplace(entry.first.x, cy, entry.first.z);
       }

@@ -323,7 +323,6 @@ namespace
 {
 
 constexpr float kMaxReasonablePlayerY = 512.0f;
-constexpr float kMinReasonablePlayerY = -32.0f;
 constexpr float kSecondsPerMinute = 60.0f;
 constexpr float kMinDayLengthMinutes = 1.0f;
 constexpr float kStarOrbitPeriodDays = 0.997f;
@@ -11479,7 +11478,10 @@ bool UWorld::IsReasonablePlayerPosition(const glm::vec3 &position) const
   {
     return false;
   }
-  if (position.y <= kMinReasonablePlayerY || position.y > kMaxReasonablePlayerY)
+  const auto &profile = BlockWorld.GetVerticalProfile();
+  if (!profile.IsValid() || position.y < profile.MinimumEyeY() ||
+      position.y > std::max(kMaxReasonablePlayerY,
+                            static_cast<float>(profile.MaxY) + 0.5f))
   {
     return false;
   }

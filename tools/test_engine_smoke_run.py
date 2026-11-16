@@ -131,5 +131,58 @@ class IsolatedFixtureTest(unittest.TestCase):
         self.assertLess(inspection_evidence(self.artifacts, report)["verified"], 12)
 
 
+class NegativeCaveFixtureTest(unittest.TestCase):
+    def test_scene_is_prepared_only_in_clone_and_matches_analytic_geometry(self):
+        from engine_smoke_fixtures import prepare_dry_negative_cave
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            runtime = root / "bin"
+            source = runtime / "worlds" / "Saved"
+            (source / "chunks").mkdir(parents=True)
+            (runtime / "config.json").write_text("{}")
+            (source / "world_data.json").write_text(json.dumps({
+                "procedural": {"min_height": -64, "max_height": 319}}))
+            (source / "users.json").write_text(json.dumps({"Username": {"position": [1, 65, 1]}}))
+            (source / "chunks" / "0_-3_3.cchunk").write_bytes(b"original")
+            before = world_fingerprint(source)
+            with isolated_fixture(runtime, "Saved", root / "evidence") as (fixture, _):
+                scene = prepare_dry_negative_cave(fixture, 1)
+                self.assertFalse((fixture / "chunks" / "0_-3_3.cchunk").exists())
+                payload = json.loads((fixture / "chunks" / "0_-3_3.json").read_text())
+                voxels = {(v["lx"], v["ly"] - 48, v["lz"] + 48): v["type"]
+                          for v in payload["voxels"]}
+                self.assertEqual(voxels[(8, -44, 51)], "stone")
+                self.assertNotIn((8, -40, 51), voxels)
+                self.assertEqual(scene["starting_eye"][1], -41.88)
+                ocean = json.loads((fixture / "chunks" / "0_3_3.json").read_text())
+                self.assertTrue(any(v["type"] == "water" and v["ly"] == 15 for v in ocean["voxels"]))
+            self.assertEqual(world_fingerprint(source), before)
+            with self.assertRaises(ValueError):
+                prepare_dry_negative_cave(source, 1)
+
+    def test_trace_rejects_recovery_teleport_wet_classification_and_missing_witness(self):
+        from engine_smoke_fixtures import evaluate_fixture_trace
+        with tempfile.TemporaryDirectory() as temp:
+            trace = Path(temp) / "trace.jsonl"
+            scene = {"starting_eye": [22, -41.88, 51], "expected_max_eye_y": -30.5,
+                     "expected_eye_in_fluid": False}
+            rows = [{"schema": "diagnostic-bot-trace.v1", "position": [22, -41.88, 51],
+                     "eye_in_fluid": False},
+                    {"schema": "diagnostic-bot-trace.v1", "position": [-40, -36, 51],
+                     "eye_in_fluid": False}]
+            def check():
+                trace.write_text("\n".join(json.dumps(r) for r in rows))
+                return evaluate_fixture_trace(scene, trace)
+            self.assertEqual(check()["status"], "PASS")
+            rows[1]["eye_in_fluid"] = True
+            self.assertEqual(check()["reason"], "dry_cave_classified_as_fluid")
+            del rows[1]["eye_in_fluid"]
+            self.assertEqual(check()["status"], "UNTESTED")
+            rows[1]["position"][1] = 68
+            self.assertEqual(check()["reason"], "camera_left_negative_cave")
+            rows[0]["position"][0] = 25
+            self.assertEqual(check()["reason"], "fixture_start_position_changed")
+
+
 if __name__ == "__main__":
     unittest.main()

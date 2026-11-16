@@ -141,8 +141,6 @@ bool ColumnSurfaceBandHasUnsettledOrStaleDarkFace(const UWorld &world,
   return world.IsPendingLightBeforeMesh(ground_xz);
 }
 
-constexpr float kMaxReasonablePlayerY = 512.0f;
-constexpr float kMinReasonablePlayerY = -32.0f;
 
 bool IsWorldColumnSourceTraceEnabled()
 {

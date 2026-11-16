@@ -16,6 +16,9 @@ static void Expect(bool value, const char *message)
 int main()
 {
   const cutum::WorldVerticalProfile normal;
+  Expect(normal.MinimumEyeY() == -64.5f &&
+             cutum::WorldVerticalProfile(-128, 511).MinimumEyeY() == -128.5f,
+         "player recovery floor follows the configured bottom block face");
   const auto check = [&](int cy, int low, int high)
   {
     const auto bounds = normal.SliceBounds(cy, 16);

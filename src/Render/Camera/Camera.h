@@ -280,7 +280,6 @@ private:
   float ThirdPersonDistance{4.0f};
   float ThirdPersonHeight{0.5f};
 
-  static constexpr float kMinReasonablePlayerY = -32.0f;
   static constexpr float kFixedPhysicsDt = 1.0f / 60.0f;
   static constexpr float kMaxFrameDelta = 0.25f;
   static constexpr int kMaxPhysicsSubsteps = 12;
