@@ -1757,6 +1757,12 @@ set_tests_properties(environment_light_test PROPERTIES LABELS "unit;creatures")
 # Collision boxes must match the visible glTF model (see tools/creature_bounds_audit.py).
 find_package(Python3 COMPONENTS Interpreter QUIET)
 if(Python3_Interpreter_FOUND)
+  foreach(engine_tool_test IN ITEMS engine_smoke_verdict engine_smoke_run)
+    add_test(NAME ${engine_tool_test}_test
+        COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tools/test_${engine_tool_test}.py"
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+    set_tests_properties(${engine_tool_test}_test PROPERTIES LABELS "unit;streaming")
+  endforeach()
   add_test(NAME creature_bounds_audit_test
       COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tools/creature_bounds_audit.py" --check
       WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
