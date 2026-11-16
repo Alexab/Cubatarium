@@ -10,18 +10,18 @@ constexpr uint8_t kHorizontalLightBoundaryXNegative = 1u << 0;
 constexpr uint8_t kHorizontalLightBoundaryXPositive = 1u << 1;
 constexpr uint8_t kHorizontalLightBoundaryZNegative = 1u << 2;
 constexpr uint8_t kHorizontalLightBoundaryZPositive = 1u << 3;
+constexpr uint8_t kVerticalLightBoundaryYNegative = 1u << 4;
+constexpr uint8_t kVerticalLightBoundaryYPositive = 1u << 5;
 
-/// Return which horizontal faces differ in the light domains being installed.
-/// Vertical faces are deliberately omitted: a column relight owns the full
-/// vertical band, while adjacent columns need an explicit dependency request.
-inline uint8_t ChangedHorizontalLightBoundaryMask(
-    const std::array<uint8_t, CHUNK_VOLUME> &before,
-    const std::array<uint8_t, CHUNK_VOLUME> &computed, bool include_skylight,
-    bool include_block_light)
+/// A partial column job does not own adjacent vertical sections. All six
+/// changed boundaries must carry additions and removals to their consumers.
+inline uint8_t
+ChangedLightBoundaryMask(const std::array<uint8_t, CHUNK_VOLUME> &before,
+                         const std::array<uint8_t, CHUNK_VOLUME> &computed,
+                         bool include_skylight, bool include_block_light)
 {
   const uint8_t light_mask = static_cast<uint8_t>(
-      (include_skylight ? 0x0Fu : 0u) |
-      (include_block_light ? 0xF0u : 0u));
+      (include_skylight ? 0x0Fu : 0u) | (include_block_light ? 0xF0u : 0u));
   if (light_mask == 0)
   {
     return 0;
@@ -39,6 +39,8 @@ inline uint8_t ChangedHorizontalLightBoundaryMask(
   bool x_positive = false;
   bool z_negative = false;
   bool z_positive = false;
+  bool y_negative = false;
+  bool y_positive = false;
   for (int y = 0; y < CHUNK_SIZE; ++y)
   {
     for (int span = 0; span < CHUNK_SIZE; ++span)
@@ -47,6 +49,8 @@ inline uint8_t ChangedHorizontalLightBoundaryMask(
       x_positive = x_positive || changed(edge, y, span);
       z_negative = z_negative || changed(span, y, 0);
       z_positive = z_positive || changed(span, y, edge);
+      y_negative = y_negative || changed(y, 0, span);
+      y_positive = y_positive || changed(y, edge, span);
     }
   }
   if (x_negative)
@@ -65,7 +69,21 @@ inline uint8_t ChangedHorizontalLightBoundaryMask(
   {
     changed_faces |= kHorizontalLightBoundaryZPositive;
   }
+  if (y_negative)
+    changed_faces |= kVerticalLightBoundaryYNegative;
+  if (y_positive)
+    changed_faces |= kVerticalLightBoundaryYPositive;
   return changed_faces;
+}
+
+inline uint8_t ChangedHorizontalLightBoundaryMask(
+    const std::array<uint8_t, CHUNK_VOLUME> &before,
+    const std::array<uint8_t, CHUNK_VOLUME> &computed, bool include_skylight,
+    bool include_block_light)
+{
+  return ChangedLightBoundaryMask(before, computed, include_skylight,
+                                  include_block_light) &
+         0x0Fu;
 }
 
 // Install only computed domains after read-set/catalog validation. A vertical

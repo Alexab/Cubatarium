@@ -100,6 +100,19 @@ void TestHorizontalLightBoundaryChangeMask()
   Expect(ChangedHorizontalLightBoundaryMask(before, computed, true, true) ==
              0,
          "vertical-only boundary changes do not schedule horizontal work");
+  Expect(ChangedLightBoundaryMask(before, computed, true, true) ==
+             kVerticalLightBoundaryYNegative,
+         "bottom skylight boundary carries a vertical dependency");
+  Expect(ChangedLightBoundaryMask(computed, before, true, true) ==
+             kVerticalLightBoundaryYNegative,
+         "light removal carries the same vertical dependency as addition");
+  Expect(ChangedLightBoundaryMask(before, computed, false, true) == 0,
+         "vertical mask ignores a light domain that is not installed");
+  computed.fill(0);
+  set({6, CHUNK_SIZE - 1, 7}, 0, 3);
+  Expect(ChangedLightBoundaryMask(before, computed, false, true) ==
+             kVerticalLightBoundaryYPositive,
+         "top blocklight boundary has the correct positive Y direction");
 }
 
 void TestHorizontalBoundaryDependencyWaveSettles()
@@ -409,17 +422,88 @@ void TestSkylightContextDoesNotExpandThreeByThreeWriteSet()
          "3x3 upper context does not become a writable target");
 
   const auto result = snapshot.Compute(registry);
-  Expect(result.chunks.size() == 9,
-         "3x3 compute returns target chunks only");
-  const auto context_stamp = std::find_if(
-      result.read_set.begin(), result.read_set.end(),
-      [](const ChunkInputStamp &stamp) {
-        return stamp.coord == glm::ivec3(1, 2, 1);
-      });
+  Expect(result.chunks.size() == 9, "3x3 compute returns target chunks only");
+  const auto context_stamp =
+      std::find_if(result.read_set.begin(), result.read_set.end(),
+                   [](const ChunkInputStamp &stamp)
+                   { return stamp.coord == glm::ivec3(1, 2, 1); });
   Expect(context_stamp != result.read_set.end() &&
              context_stamp->readsContent && !context_stamp->readsLight,
          "3x3 context geometry is validated independently of its light");
 }
+void TestVerticalBoundaryDependencyAdditionAndRemoval()
+{
+  using namespace cutum;
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition stone;
+  stone.Name = "stone";
+  stone.Physics = BlockPhysicsProfile::Solid();
+  BlockDefinition torch;
+  torch.Name = "torch";
+  torch.Physics = BlockPhysicsProfile::Solid();
+  torch.Render.Style = BlockRenderStyle::Cross;
+  torch.Lighting.Emission = 14;
+  definitions->ReplaceAll({{8, stone}, {50, torch}},
+                          {{"stone", 8}, {"torch", 50}});
+  UBlockRegistry registry(nullptr, definitions);
+  UBlockWorld world;
+  world.SetBlock({0, -48, 0}, 8);
+  world.SetBlock({0, -32, 0}, 8);
+  const glm::ivec3 source(8, -33, 8);
+  world.SetBlock(source, 50);
+  const std::array<glm::ivec3, 6> offsets = {
+      glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),  glm::ivec3(0, 0, -1),
+      glm::ivec3(0, 0, 1),  glm::ivec3(0, -1, 0), glm::ivec3(0, 1, 0)};
+  const auto settle = [&]()
+  {
+    std::deque<glm::ivec3> pending{{0, -3, 0}};
+    int jobs = 0;
+    while (!pending.empty() && jobs++ < 128)
+    {
+      const glm::ivec3 coord = pending.front();
+      pending.pop_front();
+      RelightJobSpec spec;
+      spec.block_positions = {coord * CHUNK_SIZE};
+      spec.min_world_y = coord.y * CHUNK_SIZE;
+      spec.max_world_y = spec.min_world_y + CHUNK_SIZE - 1;
+      spec.column_center_only = true;
+      spec.include_skylight = false;
+      const auto result =
+          UChunkRelightSnapshot::Capture(world, spec).Compute(registry);
+      for (const auto &computed : result.chunks)
+      {
+        auto *chunk = world.GetChunkManager().GetChunk(computed.coord);
+        const uint8_t mask = ChangedLightBoundaryMask(
+            chunk->GetLightData(), computed.light_packed, false, true);
+        if (!InstallComputedLight(*chunk, computed.light_packed, false, true))
+          continue;
+        for (size_t face = 0; face < offsets.size(); ++face)
+        {
+          const glm::ivec3 neighbor = computed.coord + offsets[face];
+          if ((mask & (1u << face)) &&
+              world.GetChunkManager().HasChunk(neighbor) &&
+              std::find(pending.begin(), pending.end(), neighbor) ==
+                  pending.end())
+            pending.push_back(neighbor);
+        }
+      }
+    }
+    Expect(pending.empty(), "vertical dependency wave reaches a fixed point");
+  };
+  settle();
+  const UChunk *upper = world.GetChunkManager().GetChunk({0, -2, 0});
+  Expect(
+      upper->GetBlockLightLocal({8, 0, 8}) == 13,
+      "partial negative-height relight crosses the vertical section boundary");
+  world.SetBlock(source, BLOCK_AIR);
+  settle();
+  for (const glm::ivec3 coord : {glm::ivec3(0, -3, 0), glm::ivec3(0, -2, 0)})
+    for (const uint8_t packed :
+         world.GetChunkManager().GetChunk(coord)->GetLightData())
+      Expect(UnpackBlock(packed) == 0,
+             "removing the source clears light from both vertical neighbors");
+}
+
 } // namespace
 
 int main()
@@ -431,5 +515,6 @@ int main()
   TestHorizontalSkylightBoundarySeedsAirAndWater();
   TestSkylightReadsGeometryAbovePartialBand();
   TestSkylightContextDoesNotExpandThreeByThreeWriteSet();
+  TestVerticalBoundaryDependencyAdditionAndRemoval();
   std::cout << "relight_result_install_test: OK\n";
 }
