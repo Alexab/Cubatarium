@@ -12470,7 +12470,7 @@ bool UWorld::NeedsEnterGameVisualWarmup() const
         const bool lit_drawable =
             has_drawable && mesh.ChunkHasLitDrawableFace(coord);
         const glm::ivec2 col_xz(coord.x, coord.z);
-        const bool pending_col = IsPendingLightBeforeMesh(col_xz);
+        const bool pending_col = IsPendingLightBeforeMeshSlice(coord);
         const bool stale = fully_dark && MeshService->ChunkHasStaleDarkFaces(
                                              coord, BlockWorld);
         const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(col_xz);
@@ -13639,7 +13639,7 @@ bool UWorld::IsEnterUnderfeetPresentReady() const
                             !mesh.ChunkHasLitDrawableFace(coord);
     const bool lit_drawable = mesh.ChunkHasLitDrawableFace(coord);
     const glm::ivec2 col_xz(coord.x, coord.z);
-    const bool pending_col = IsPendingLightBeforeMesh(col_xz);
+    const bool pending_col = IsPendingLightBeforeMeshSlice(coord);
     const bool stale =
         fully_dark && MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld);
     const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(col_xz);
@@ -13969,7 +13969,7 @@ int UWorld::CountCreateNearFovWarmupDebt(bool *out_underfeet_lit_ready) const
           const bool lit_drawable =
               has_drawable && mesh.ChunkHasLitDrawableFace(coord);
           const glm::ivec2 col_xz(coord.x, coord.z);
-          const bool pending_col = IsPendingLightBeforeMesh(col_xz);
+          const bool pending_col = IsPendingLightBeforeMeshSlice(coord);
           const bool stale = fully_dark && MeshService->ChunkHasStaleDarkFaces(
                                                coord, BlockWorld);
           const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(col_xz);

@@ -9,8 +9,35 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 from pathlib import Path
 from typing import Any
+
+
+def read_startup_warmup_evidence(log_paths) -> dict[str, Any]:
+    """Recognize positive failure evidence; ordinary logs never prove readiness."""
+    observed = []
+    for path in log_paths:
+        with Path(path).open(encoding="utf-8", errors="replace") as stream:
+            for line in stream:
+                if "[EnterWarmup]" not in line:
+                    continue
+                fields = dict(re.findall(r"\b(settle_reason|elapsed_ms|visibility_debt|underfeet)=([^\s]+)", line))
+                reason = fields.get("settle_reason", "")
+                try:
+                    elapsed = float(fields["elapsed_ms"])
+                    debt = int(fields["visibility_debt"])
+                    underfeet = int(fields["underfeet"])
+                except (KeyError, ValueError):
+                    continue
+                if not math.isfinite(elapsed) or elapsed < 0 or debt < 0 or underfeet not in (0, 1):
+                    continue
+                forced = reason.startswith("force_") or reason.startswith("soft_force")
+                observed.append(dict(reason=reason, elapsed_ms=elapsed,
+                                     visibility_debt=debt, underfeet_ready=bool(underfeet),
+                                     forced_with_debt=forced and (debt > 0 or underfeet == 0)))
+    return dict(schema="startup-warmup-evidence.v1", records=observed,
+                forced_with_debt=any(row["forced_with_debt"] for row in observed))
 
 
 def component(status: str, reason: str, **evidence: Any) -> dict[str, Any]:
@@ -125,6 +152,11 @@ def classify(report: dict[str, Any], perf: Path | None, *,
     startup = component("UNTESTED", "missing_first_frame_ring_witness")
     if isinstance(ready, bool):
         startup = component("PASS" if ready else "FAIL", "first_frame_ring_witness")
+    warmup = report.get("startup_warmup_evidence")
+    if (isinstance(warmup, dict) and warmup.get("schema") == "startup-warmup-evidence.v1"
+            and warmup.get("forced_with_debt") is True):
+        startup = component("FAIL", "forced_startup_with_unresolved_coverage",
+                            evidence=warmup)
     parts = {"runtime": runtime, "route": route, "startup": startup, "visual": visual}
     if isinstance(bot, dict) and bot.get("enabled") is True:
         requested = bot.get("inspection_capture_requested_n")

@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from engine_smoke_verdict import classify
+from engine_smoke_verdict import classify, read_startup_warmup_evidence
 import flight_sim_run
 
 
@@ -30,6 +30,34 @@ class EngineSmokeVerdictTest(unittest.TestCase):
     def test_complete_evidence(self):
         self.trace()
         self.assertEqual(classify(self.report, self.perf)["status"], "PASS")
+
+    def test_forced_startup_is_a_fault_even_without_first_frame_witness(self):
+        log = Path(self.temp.name) / "runtime.log"
+        log.write_text("[EnterWarmup] settle_reason=force_ingame_no_uf elapsed_ms=150052 "
+                       "ring_ready=1 visibility_debt=10 underfeet=0 (no soft_force settle)\n",
+                       encoding="utf-8")
+        self.report.pop("first_frame_required_ring_ready")
+        self.report["startup_warmup_evidence"] = read_startup_warmup_evidence([log])
+        self.trace()
+        result = classify(self.report, self.perf)
+        self.assertEqual(result["status"], "FAIL")
+        self.assertEqual(result["components"]["startup"]["reason"],
+                         "forced_startup_with_unresolved_coverage")
+        self.report["first_frame_required_ring_ready"] = True
+        self.assertEqual(classify(self.report, self.perf)["status"], "FAIL")
+
+    def test_normal_or_malformed_warmup_logs_do_not_grant_acceptance(self):
+        log = Path(self.temp.name) / "runtime.log"
+        for text in ["[EnterWarmup] settle_reason=ready elapsed_ms=40 visibility_debt=0 underfeet=1",
+                     "[EnterWarmup] settle_reason=force_ingame_no_uf elapsed_ms=nan visibility_debt=1 underfeet=0",
+                     "[EnterWarmup] settle_reason=force_ingame_no_uf elapsed_ms=40 visibility_debt=1",
+                     "[Other] settle_reason=force_ingame_no_uf elapsed_ms=40 visibility_debt=1 underfeet=0"]:
+            log.write_text(text, encoding="utf-8")
+            self.report.pop("first_frame_required_ring_ready", None)
+            self.report["startup_warmup_evidence"] = read_startup_warmup_evidence([log])
+            self.trace()
+            result = classify(self.report, self.perf)
+            self.assertEqual(result["components"]["startup"]["status"], "UNTESTED")
 
     def test_empty_trace_is_untested(self):
         self.perf.write_text("")

@@ -20,7 +20,7 @@ import sys
 import uuid
 import zlib
 
-from engine_smoke_verdict import classify
+from engine_smoke_verdict import classify, read_startup_warmup_evidence
 from flight_sim_fixed_day import fixed_day_payload
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -192,6 +192,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 100,
             if key.startswith(("CUBA_FLIGHT_", "CUBA_VISUAL_BLACK_", "CUBA_DEBUG_")):
                 env.pop(key)
         env.update({
+            "CUBATARIUM_RELIGHT_AUDIT": "1",
             "CUBA_FIXED_TIME": "0.25",
             "CUBA_VISUAL_BLACK_TRACE": "1",
             "CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS": "1",
@@ -248,6 +249,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 100,
                 raise
         report_path = artifacts / "flight_sim_report.json"
         report = json.loads(report_path.read_text(encoding="utf-8")) if report_path.exists() else {}
+        report["startup_warmup_evidence"] = read_startup_warmup_evidence(
+            sorted((artifacts / "logs").glob("*.log.INFO.*")))
         inspection = inspection_evidence(artifacts, report)
         report["inspection_capture_files_verified_n"] = inspection["verified"]
         (artifacts / "evidence-report.json").write_text(
