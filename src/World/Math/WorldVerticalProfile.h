@@ -1,6 +1,10 @@
 #pragma once
 
 #include "World/Math/GridMath.h"
+#include <algorithm>
+#include <cstdint>
+#include <optional>
+#include <utility>
 
 namespace cutum
 {
@@ -15,10 +19,11 @@ inline constexpr int kDefaultWorldSeaLevelY = 63;
 /// terrain/water setting.
 struct WorldVerticalProfile
 {
-  constexpr WorldVerticalProfile(
-      int min_y = kDefaultWorldMinY, int max_y = kDefaultWorldMaxY,
-      int sea_level_y = kDefaultWorldSeaLevelY,
-      int bedrock_top_y = kDefaultWorldMinY, int datum_y = kWorldDatumY)
+  constexpr WorldVerticalProfile(int min_y = kDefaultWorldMinY,
+                                 int max_y = kDefaultWorldMaxY,
+                                 int sea_level_y = kDefaultWorldSeaLevelY,
+                                 int bedrock_top_y = kDefaultWorldMinY,
+                                 int datum_y = kWorldDatumY)
       : MinY(min_y), MaxY(max_y), SeaLevelY(sea_level_y),
         BedrockTopY(bedrock_top_y), DatumY(datum_y)
   {
@@ -32,6 +37,20 @@ struct WorldVerticalProfile
   }
   int MinChunkY(int chunk_size) const { return FloorDiv(MinY, chunk_size); }
   int MaxChunkY(int chunk_size) const { return FloorDiv(MaxY, chunk_size); }
+
+  /// Inclusive block range owned by a vertical slice, clipped to this world.
+  /// Missing intersection is distinct from a valid dark/empty slice.
+  std::optional<std::pair<int, int>> SliceBounds(int cy, int chunk_size) const
+  {
+    if (!IsValid() || chunk_size <= 0)
+      return std::nullopt;
+    const int64_t low = static_cast<int64_t>(cy) * chunk_size;
+    const int64_t high = low + chunk_size - 1;
+    if (high < MinY || low > MaxY)
+      return std::nullopt;
+    return std::pair<int, int>{static_cast<int>(std::max<int64_t>(MinY, low)),
+                               static_cast<int>(std::min<int64_t>(MaxY, high))};
+  }
 
   int MinY;
   int MaxY;

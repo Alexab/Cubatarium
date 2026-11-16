@@ -6,6 +6,7 @@
 #include "Blocks/BlockDefinition.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
+#include "Core/Jobs/JobThreadPool.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
@@ -1667,8 +1668,9 @@ private:
   /// signal arrives from IO/generation threads; drain on the main tick.
   void SubscribeChunkPopulationInvalidation();
   void DrainChunkPopulationInvalidations();
-  std::mutex ChunkPopulationMutex_;
-  std::vector<glm::ivec3> ChunkPopulationPending_;
+  // Unbounded storage, bounded consumer: a busy frame defers events, never
+  // retires geometry obligations that have not reached their neighbors.
+  UCompletedJobQueue<glm::ivec3> ChunkPopulationPending_;
   void DrainAsyncRelightResults();
   void TickMeshEmerge();
   void ApplyUserToCamera(const std::shared_ptr<UUser> &user);

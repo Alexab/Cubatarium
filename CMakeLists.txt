@@ -986,6 +986,18 @@ cubatarium_add_test(NAME position_assignment_audit_test
 add_test(NAME position_assignment_audit_test COMMAND $<TARGET_FILE:position_assignment_audit_test>)
 set_tests_properties(position_assignment_audit_test PROPERTIES LABELS "unit;streaming")
 
+cubatarium_add_test(NAME world_vertical_profile_test
+    SOURCES src/Test/WorldVerticalProfileTest.cpp src/World/Math/GridMath.cpp
+    LIBRARIES glm::glm)
+add_test(NAME world_vertical_profile_test COMMAND $<TARGET_FILE:world_vertical_profile_test>)
+set_tests_properties(world_vertical_profile_test PROPERTIES LABELS "unit;streaming")
+
+cubatarium_add_test(NAME mesh_reconcile_snapshot_test
+    SOURCES src/Test/MeshReconcileSnapshotTest.cpp
+    LIBRARIES glm::glm)
+add_test(NAME mesh_reconcile_snapshot_test COMMAND $<TARGET_FILE:mesh_reconcile_snapshot_test>)
+set_tests_properties(mesh_reconcile_snapshot_test PROPERTIES LABELS "unit;streaming")
+
 cubatarium_add_test(NAME diagnostic_flight_controller_test
     SOURCES src/Test/DiagnosticFlightControllerTest.cpp
             src/App/Diagnostics/DiagnosticFlightController.cpp
@@ -3307,6 +3319,7 @@ if(NOT ANDROID AND NOT CUBATARIUM_GLES)
     TIMEOUT 60)
 endif()
 set(CUBATARIUM_CTEST_UNIT_TARGETS
+  completed_job_queue_test
   view_ray_math_test
   environment_config_celestial_test
   weather_front_field_test

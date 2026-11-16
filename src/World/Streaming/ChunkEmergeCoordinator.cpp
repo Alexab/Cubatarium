@@ -6816,14 +6816,14 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
         {
           return;
         }
-        const int light_band_min = std::max(0, chunk_coord.y * CHUNK_SIZE);
-        const int light_band_max =
-            std::min(world_ref.GetProceduralSettings().MaxHeight,
-                     (chunk_coord.y + 1) * CHUNK_SIZE - 1);
-        if (light_band_max < light_band_min)
+        const auto light_band =
+            world_ref.GetBlockWorld().GetVerticalProfile().SliceBounds(
+                chunk_coord.y, CHUNK_SIZE);
+        if (!light_band)
         {
           return;
         }
+        const auto [light_band_min, light_band_max] = *light_band;
         if (!world_ref.IsPendingLightBeforeMesh(key))
         {
           // The callback names the exact chunk whose dark first-mesh was

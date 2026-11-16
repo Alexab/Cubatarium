@@ -55,6 +55,29 @@ int main()
   Expect(!q.Any([](int v) { return v == 99; }), "Any misses 99");
   (void)q.DrainAll();
 
+  // Population invalidations must survive the per-frame drain limit. New
+  // arrivals while a suffix is pending must also preserve FIFO across wrap.
+  cutum::UCompletedJobQueue<int> population;
+  for (int i = 0; i < 1800; ++i)
+    population.Push(i);
+  auto first_frame = population.DrainUpTo(512);
+  Expect(first_frame.size() == 512 && population.Size() == 1288,
+         "bounded drain retains events beyond the frame budget");
+  for (int i = 1800; i < 2500; ++i)
+    population.Push(i);
+  int expected = 0;
+  for (int value : first_frame)
+    Expect(value == expected++, "initial population batch ordered");
+  while (!population.Empty())
+  {
+    const auto frame = population.DrainUpTo(512);
+    Expect(frame.size() <= 512, "population drain work remains bounded");
+    for (int value : frame)
+      Expect(value == expected++, "no lost or duplicated population event");
+  }
+  Expect(expected == 2500 && population.DiscardedOverflow() == 0,
+         "all population events eventually delivered");
+
   std::cout << kTestName << " OK\n";
   return 0;
 }

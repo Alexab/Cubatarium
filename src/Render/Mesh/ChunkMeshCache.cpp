@@ -20,6 +20,7 @@
 #include "Render/Mesh/IUChunkMesher.h"
 #include "Render/Mesh/MeshCaptureToken.h"
 #include "Render/Mesh/MeshCaptureWorker.h"
+#include "Render/Mesh/MeshReconcileSnapshot.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Diagnostics/JobStageTrace.h"
 #include "World/Diagnostics/Profile.h"
@@ -3070,20 +3071,7 @@ void UChunkMeshCache::ReconcilePublishedMeshInputs(const UBlockWorld &world,
   {
     return;
   }
-  if (ReconcileKeys.size() != GreedyCache.size() ||
-      ReconcileCursor >= ReconcileKeys.size())
-  {
-    if (ReconcileKeys.size() != GreedyCache.size())
-    {
-      ReconcileKeys.clear();
-      ReconcileKeys.reserve(GreedyCache.size());
-      for (const auto &entry : GreedyCache)
-      {
-        ReconcileKeys.push_back(entry.first);
-      }
-    }
-    ReconcileCursor = 0;
-  }
+  RefreshMeshReconcileSnapshot(GreedyCache, ReconcileKeys, ReconcileCursor);
   constexpr uint64_t kCooldownFrames = 240;
   const UChunkManager &chunks = world.GetChunkManager();
   for (int n = 0; n < max_checks && ReconcileCursor < ReconcileKeys.size();

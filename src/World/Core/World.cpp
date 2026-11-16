@@ -10836,27 +10836,16 @@ void UWorld::InitStreamerCallbacks()
 void UWorld::SubscribeChunkPopulationInvalidation()
 {
   BlockWorld.GetChunkManager().OnChunkBecameNonAir = [this](glm::ivec3 coord)
-  {
-    std::lock_guard<std::mutex> lock(ChunkPopulationMutex_);
-    ChunkPopulationPending_.push_back(coord);
-  };
+  { ChunkPopulationPending_.Push(coord); };
 }
 
 void UWorld::DrainChunkPopulationInvalidations()
 {
-  if (ChunkPopulationPending_.empty() || !MeshService)
+  if (!MeshService)
   {
     return;
   }
-  std::vector<glm::ivec3> became;
-  {
-    std::lock_guard<std::mutex> lock(ChunkPopulationMutex_);
-    became.swap(ChunkPopulationPending_);
-  }
-  if (became.size() > 512)
-  {
-    became.resize(512);
-  }
+  const auto became = ChunkPopulationPending_.DrainUpTo(512);
   for (const glm::ivec3 &coord : became)
   {
     for (const glm::ivec3 &delta :
