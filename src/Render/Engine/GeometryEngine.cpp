@@ -1536,7 +1536,7 @@ void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
       (cache.HasPendingCaptureWork(coord) ? 1u << 7 : 0u);
   const UChunk *chunk = world.GetBlockWorld().GetChunkManager().GetChunk(coord);
   const ChunkRenderDemandRecord *slice_demand =
-      UChunkRenderDemandStore::Get().Find(coord);
+      world.GetRenderDemandStore().Find(coord);
   if (chunk)
   {
     record.non_air_blocks = chunk->GetNonAirCount();
@@ -1978,7 +1978,7 @@ void CaptureTransparentPixelProbe(
                 live_face_light.source;
           }
           if (const ChunkRenderDemandRecord *opaque_demand =
-                  UChunkRenderDemandStore::Get().Find(opaque_chunk))
+                  world.GetRenderDemandStore().Find(opaque_chunk))
           {
             record.renderer_pixel_opaque_world_epoch =
                 opaque_demand->world_epoch;
@@ -2580,7 +2580,7 @@ void CaptureTransparentPixelProbe(
                 packed_draw->drawn_index_count;
           }
           if (const ChunkRenderDemandRecord *voxel_demand =
-                  UChunkRenderDemandStore::Get().Find(voxel_chunk);
+                  world.GetRenderDemandStore().Find(voxel_chunk);
               voxel_demand && voxel_chunk_data &&
               voxel_demand->incarnation == voxel_chunk_data->GetIncarnation())
           {
@@ -2725,7 +2725,7 @@ void CaptureTransparentPixelProbe(
                 (pixel_column_state.draw_ok ? (1u << 16) : 0u) |
                 (pixel_column_state.has_repair_ticket ? (1u << 17) : 0u);
             const ChunkRenderDemandRecord *pixel_demand =
-                UChunkRenderDemandStore::Get().Find(surface_chunk);
+                world.GetRenderDemandStore().Find(surface_chunk);
             const bool pixel_demand_identity_current =
                 pixel_demand && surface_chunk_data &&
                 pixel_demand->incarnation ==
@@ -4010,7 +4010,7 @@ void NoteFrustumCoverageGaps(
     record.mesh_dirty_queue_age_frames = cache.GetDirtyQueueAgeFrames(coord);
     const double demand_sample_now_ms = VisualObligationNowMs();
     if (const ChunkRenderDemandRecord *demand =
-            UChunkRenderDemandStore::Get().Find(coord))
+            cache.GetRenderDemandStore().Find(coord))
     {
       record.world_epoch = demand->world_epoch;
       record.demand_incarnation = demand->incarnation;

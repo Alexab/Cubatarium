@@ -32,12 +32,6 @@ double DemandEventTimeMs(double requested_ms = 0.0)
 
 } // namespace
 
-UChunkRenderDemandStore &UChunkRenderDemandStore::Get()
-{
-  static UChunkRenderDemandStore instance;
-  return instance;
-}
-
 UChunkRenderDemandStore::DemandSnapshot
 UChunkRenderDemandStore::SnapshotDemand(const ChunkRenderDemandRecord &rec)
 {

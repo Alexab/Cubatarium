@@ -1491,7 +1491,7 @@ bool UWorldMeshService::HasGeometryPublicationDebt(glm::ivec3 chunk_coord,
                                                    uint64_t incarnation) const
 {
   const ChunkRenderDemandRecord *demand =
-      UChunkRenderDemandStore::Get().Find(chunk_coord);
+      Cache.GetRenderDemandStore().Find(chunk_coord);
   if (!demand || incarnation == 0 || demand->incarnation != incarnation)
   {
     return false;
@@ -1506,7 +1506,7 @@ bool UWorldMeshService::HasScreenRayRepairableGeometryDebt(
     glm::ivec3 chunk_coord, uint64_t incarnation) const
 {
   const ChunkRenderDemandRecord *demand =
-      UChunkRenderDemandStore::Get().Find(chunk_coord);
+      Cache.GetRenderDemandStore().Find(chunk_coord);
   if (!demand || incarnation == 0 || demand->incarnation != incarnation)
   {
     return false;

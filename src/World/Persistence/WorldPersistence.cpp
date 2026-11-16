@@ -2951,7 +2951,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         trace.relight_band_min_y = target.min_world_y;
         trace.relight_band_max_y = target.max_world_y;
         if (const ChunkRenderDemandRecord *demand =
-                UChunkRenderDemandStore::Get().Find(target.rejected_slice))
+                world.GetRenderDemandStore().Find(target.rejected_slice))
         {
           trace.world_epoch = demand->world_epoch;
           trace.demand_incarnation = demand->incarnation;

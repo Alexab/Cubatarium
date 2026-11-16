@@ -154,7 +154,7 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
           desired_light = ch->GetLightFieldRevision();
           incarnation = ch->GetIncarnation();
         }
-        UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+        UChunkRenderDemandStore &demand = GetRenderDemandStore();
         const uint64_t world_epoch =
             mesh->GetCache().GetCaptureStore().WorldEpoch();
         demand.BindIdentity(coord, world_epoch, incarnation);
@@ -287,7 +287,7 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
         if (!had_stale_remesh_debt &&
             mesh->GetCache().HasPendingStaleLightRemesh(coord))
         {
-          UChunkRenderDemandStore::Get().NoteLifecycleEvent(
+          GetRenderDemandStore().NoteLifecycleEvent(
               coord, DemandTransitionKind::StaleLightRemeshQueued);
         }
       }
@@ -394,13 +394,12 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
       {
         visible_remesh_priority =
             mesh->GetCache().PrioritizeVisibleLightRepairRemesh(coord);
-        UChunkRenderDemandStore::Get().NoteLifecycleEvent(
+        GetRenderDemandStore().NoteLifecycleEvent(
             coord, DemandTransitionKind::StaleLightRemeshDirtyAdmitted);
       }
       ++PhysicsTelemetryData.MarkRelitScheduleN;
       ++dirty_admitted_n;
-      UChunkRenderDemandStore &repair_demand =
-          UChunkRenderDemandStore::Get();
+      UChunkRenderDemandStore &repair_demand = GetRenderDemandStore();
       if (audit_relight && repair_demand.HasOpenSkyRepairPending(
                                coord, field_light_rev))
       {
@@ -467,7 +466,7 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
         }
         // A25 R1 / A31: stamp demand-store desired/published + active attempt.
         {
-          UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+          UChunkRenderDemandStore &demand = GetRenderDemandStore();
           uint64_t attempt_id = 0;
           if (const ChunkRenderDemandRecord *drec = demand.Find(coord))
           {
@@ -840,7 +839,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(key);
         const uint64_t open_sky_event =
             EnterVisualGateCtrl.OpenSkyEventId(key);
-        UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+        UChunkRenderDemandStore &demand = GetRenderDemandStore();
         const uint64_t world_epoch =
             MeshService->GetCache().GetCaptureStore().WorldEpoch();
         bool all_dark_slices_repaired = true;
@@ -1265,13 +1264,12 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
   PhysicsTelemetryData.MarkRelitTotalMs += ElapsedMs(total_t0, Clock::now());
   if (kChunkDemandShadow())
   {
-    const auto recon =
-        UChunkRenderDemandStore::Get().ReconcileMaintenance(
-            /*max_n=*/32, VisualObligationNowMs());
+    const auto recon = GetRenderDemandStore().ReconcileMaintenance(
+        /*max_n=*/32, VisualObligationNowMs());
     PhysicsTelemetryData.DemandReconcileMismatchN +=
         recon.mismatch_desired_vs_published;
     PhysicsTelemetryData.DemandShadowMismatchN =
-        UChunkRenderDemandStore::Get().ShadowMismatchN();
+        GetRenderDemandStore().ShadowMismatchN();
   }
 }
 

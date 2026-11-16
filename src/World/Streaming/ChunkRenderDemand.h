@@ -136,11 +136,12 @@ struct ChunkRenderDemandRecord
   uint64_t open_sky_repair_published_attempt_id{0};
 };
 
-/// Per-chunk render demand store (process singleton for Cache + World callers).
+/// Per-world section demand state, owned by its mesh service/cache.
+/// Main-thread access only; workers receive immutable trace values.
 class UChunkRenderDemandStore
 {
 public:
-  static UChunkRenderDemandStore &Get();
+  UChunkRenderDemandStore() = default;
 
   ChunkRenderDemandRecord *Find(glm::ivec3 coord);
   const ChunkRenderDemandRecord *Find(glm::ivec3 coord) const;
@@ -349,7 +350,6 @@ public:
   static constexpr double kStallFailMs = 30000.0;
 
 private:
-  UChunkRenderDemandStore() = default;
 
   struct DemandSnapshot
   {

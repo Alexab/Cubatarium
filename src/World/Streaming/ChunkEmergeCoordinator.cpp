@@ -248,7 +248,7 @@ void UChunkEmergeCoordinator::DrainFaceDebtRepairs(UWorld &world, int budget)
 
   UWorldMeshService &mesh = world.GetMeshService();
   UChunkMeshCache &cache = mesh.GetCache();
-  UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+  UChunkRenderDemandStore &demand = world.GetRenderDemandStore();
   UChunkManager &chunks = world.GetBlockWorld().GetChunkManager();
   const int attempts = std::min<int>(budget, PendingFaceDebtRepairs_.size());
   for (int i = 0; i < attempts; ++i)
@@ -1296,7 +1296,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
       const glm::ivec3 focus_g = focus_ground_horiz;
       const int scan_r = std::min(focus_radius, 4);
-      UChunkRenderDemandStore &overlay_demand = UChunkRenderDemandStore::Get();
+      UChunkRenderDemandStore &overlay_demand = world.GetRenderDemandStore();
       UChunkManager &chunk_manager = world.GetBlockWorld().GetChunkManager();
       for (int dz = -scan_r; dz <= scan_r && healed < heal_cap; ++dz)
       {
@@ -6887,7 +6887,7 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
         {
           // A27/A32: publisher lit ⇒ per-face clear only when peer-ready;
           // also satisfy subscriber neighbors facing this publisher.
-          UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+          UChunkRenderDemandStore &demand = world_ptr->GetRenderDemandStore();
           // Coverage generations are typed independently from geometry revs.
           const uint64_t pub_gen =
               PublishedCoverageGeneration(demand, chunk_coord);
@@ -7007,7 +7007,7 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
         {
           // Face wait stamps are coverage generations; geometry revisions
           // are a separate domain and cannot be used as a fallback.
-          UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+          UChunkRenderDemandStore &demand = world_ptr->GetRenderDemandStore();
           const uint64_t world_epoch = world_ref.GetMeshService()
                                            .GetCache()
                                            .GetCaptureStore()
@@ -7111,8 +7111,7 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
         // otherwise create the first dirty target with a normal revision bump.
         if (ChunkDemandAuthorityEnabled())
         {
-          const UChunkRenderDemandStore &demand =
-              UChunkRenderDemandStore::Get();
+          const UChunkRenderDemandStore &demand = world_ptr->GetRenderDemandStore();
           const ChunkRenderDemandRecord *record = demand.Find(chunk_coord);
           const uint64_t current_geom_rev =
               mesh_service.GetChunkMeshRevision(chunk_coord);
@@ -7140,7 +7139,7 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
         const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
         if (ChunkDemandAuthorityEnabled())
         {
-          UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+          UChunkRenderDemandStore &demand = world_ptr->GetRenderDemandStore();
           const uint64_t world_epoch = world_ref.GetMeshService()
                                            .GetCache()
                                            .GetCaptureStore()
@@ -7236,7 +7235,7 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
                 world_ref.GetBlockWorld().GetChunkManager().GetChunk(
                     chunk_coord))
         {
-          UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+          UChunkRenderDemandStore &demand = world_ptr->GetRenderDemandStore();
           demand.BindIdentity(chunk_coord, world_epoch,
                               chunk->GetIncarnation());
           if (chunk->GetNonAirCount() == 0)
@@ -7296,7 +7295,7 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
         if (kChunkDemandShadow() || ChunkDemandCutoverEnabled())
         {
           // A27/A32: first coverage — per-face clear + subscriber satisfy.
-          UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+          UChunkRenderDemandStore &demand = world_ptr->GetRenderDemandStore();
           const uint64_t pub_gen =
               PublishedCoverageGeneration(demand, chunk_coord);
           bool any_face_ready = false;
@@ -7402,7 +7401,7 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
               glm::ivec2(n.x, n.z), face_toward);
           // SeamCoverageManifest carries coverage generations, never mesh
           // geometry revisions. Unknown coverage remains unresolved.
-          UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+          UChunkRenderDemandStore &demand = world_ptr->GetRenderDemandStore();
           const uint64_t peer_pub =
               PublishedCoverageGeneration(demand, chunk_coord);
           uint64_t required = 1;
@@ -7480,7 +7479,7 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
         // durably requeue an already-published vertical peer that captured
         // this boundary as missing/unlit.
         {
-          UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+          UChunkRenderDemandStore &demand = world_ptr->GetRenderDemandStore();
           const UChunk *publisher_chunk =
               world_ref.GetBlockWorld().GetChunkManager().GetChunk(chunk_coord);
           const uint64_t publisher_gen =

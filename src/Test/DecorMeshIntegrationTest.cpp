@@ -370,6 +370,27 @@ static void TestPublicationRefreshesDrawRefs(cutum::UBlockRegistry &registry)
          "replacement publication immediately refreshes material draw refs");
 }
 
+static void TestWorldDemandIsolation()
+{
+  using namespace cutum;
+  UChunkMeshCache first_world;
+  UChunkMeshCache second_world;
+  const glm::ivec3 coord(1, -3, 4);
+  auto &first = first_world.GetRenderDemandStore();
+  auto &second = second_world.GetRenderDemandStore();
+  first.NoteDemand(coord, 7, 11, 0, 1.0, 1, 1);
+  Expect(!second.Find(coord), "another world must not inherit section demand");
+  second.NoteDemand(coord, 17, 19, 0, 1.0, 1, 1);
+  first.NoteLightCalculationSettled(coord, 1, 1, 11);
+  Expect(!second.Find(coord)->has_settled_light,
+         "another world's lighting proof must remain independent");
+  Expect(first.Find(coord)->desired_geom_rev == 7,
+         "identical coordinates and generation counters stay world-local");
+  second.Clear();
+  Expect(first.Find(coord) && first.Find(coord)->desired_light_rev == 11,
+         "loading or clearing another world preserves the first world's work");
+}
+
 } // namespace
 
 int main()
@@ -387,6 +408,7 @@ int main()
   TestOverflowRetryWithNoDirtyAdmission(registry);
   TestOccludedMeshDependencyRepair(registry);
   TestPublicationRefreshesDrawRefs(registry);
+  TestWorldDemandIsolation();
 
   std::cout << kTestName << ": OK" << std::endl;
   return 0;

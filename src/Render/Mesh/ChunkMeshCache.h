@@ -18,6 +18,7 @@
 #include "World/Math/BlockTypes.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/Contracts/MeshPublishContract.h"
+#include "World/Streaming/ChunkRenderDemand.h"
 #include "World/Streaming/MeshWorkAdmission.h"
 #include "World/Streaming/StreamIngressPolicy.h"
 #include <algorithm>
@@ -80,6 +81,18 @@ class UBlockWorld;
 class UChunkMeshCache
 {
 public:
+  // Publication bookkeeping can change without changing the mesh-cache data
+  // view. Publication owners use this main-thread handle explicitly.
+  std::shared_ptr<UChunkRenderDemandStore> GetRenderDemandStoreHandle() const
+  {
+    return RenderDemandStore;
+  }
+  UChunkRenderDemandStore &GetRenderDemandStore() { return *RenderDemandStore; }
+  const UChunkRenderDemandStore &GetRenderDemandStore() const
+  {
+    return *RenderDemandStore;
+  }
+
   void MarkAllDirty();
   void MarkAllDirtyFromWorld(const UBlockWorld &world,
                              bool clear_existing_caches = false);
@@ -1250,6 +1263,11 @@ public:
   float MaxCullDistance() const;
 
 private:
+  // Shared only with enqueue-side diagnostics; another world/cache gets its
+  // own state, and worker execution never reads the mutable store.
+  std::shared_ptr<UChunkRenderDemandStore> RenderDemandStore =
+      std::make_shared<UChunkRenderDemandStore>();
+
   void MarkDirtyPriorityImpl(glm::ivec3 chunkCoord,
                              MeshRevisionBumpReason reason, bool bump_revision);
 

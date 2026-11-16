@@ -6,7 +6,7 @@
     "diagnostic_bot": "verified baseline: native takeoff, route, inspection; expand scenario matrix",
     "local_streaming_mesh_underwater_defects": "in_progress: signed bands, lossless population events, same-size mesh reconciliation and eye-local fluid intervals fixed; native surface frontier routes verified; cave matrix and remaining invalidations pending",
     "correct_light_solver_and_persistence": "in_progress: full-height CPU sky, water attenuation, six-face partial-band dependency addition/removal and global persisted solver/material/profile signature verified; unknown inputs, per-section settlement and GPU still pending",
-    "single_section_lifecycle_and_publication": "pending",
+    "single_section_lifecycle_and_publication": "in_progress: world-local demand ownership being validated; strong input settlement, authoritative readiness and first-frame closure still pending",
     "independent_light_resource_and_performance": "pending",
     "full_smoke_and_regression_matrix": "in_progress: surface frontier, dry negative cave and flooded negative cave routes; independent analytic near-opaque-depth checks; startup, light/transparent reference, air pocket and eviction round trip still pending"
   },
@@ -722,5 +722,19 @@
       },
       "scope": "one sampled native route; not per-frame distribution or general performance acceptance"
     }
+  },
+  "world_local_demand_ownership": {
+    "status": "unit_verified_native_pending",
+    "ownership": "one demand store per UWorldMeshService cache, no process singleton; explicit current-world access in streaming, lighting, persistence, renderer and publication",
+    "worker_contract": "async enqueue copies demand trace values on main thread; worker bodies never read mutable store; shared handle preserves enqueue adapter lifetime",
+    "unit_case": "two cache/world owners with identical coordinate, world epoch and incarnation have isolated desire, settlement and clear operations",
+    "limitations": [
+      "ownership refactor only; existing column readiness and settlement contracts are not yet replaced",
+      "first-frame strict ring readiness remains pending",
+      "native regression pending"
+    ],
+    "unit_log": "build/desktop-msvc/engine-world-demand-tests.log",
+    "passed_sets": 6,
+    "release_build": "build/desktop-msvc/engine-world-demand-verified-release-build.log"
   }
 }

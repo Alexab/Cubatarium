@@ -1684,7 +1684,7 @@ void UWorldCooperativeSession::HandlePhaseInit(UWorld &world,
     world.MeshService->CancelAsyncMeshWork();
     world.BlockWorld.Clear();
     world.MeshService->GetCache().MarkAllDirty();
-    UChunkRenderDemandStore::Get().Clear();
+    world.GetRenderDemandStore().Clear();
     ResetFluidSurfacePackReuseCache();
     world.ResetPhysicsRuntimeState();
     world.CancelAsyncRelightWork();

@@ -1165,7 +1165,7 @@ bool UChunkMeshCache::HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const
   // des==published geom + coverage, face_debt_mask=1 against an unloaded
   // peer, census stuck at MissingMesh for the whole stop).
   if (const ChunkRenderDemandRecord *demand =
-          UChunkRenderDemandStore::Get().Find(chunk_coord))
+          GetRenderDemandStore().Find(chunk_coord))
   {
     const bool geometry_unpublished =
         demand->desired_geom_rev > it->second.PublishRevs.geom_rev;
@@ -2242,7 +2242,7 @@ void UChunkMeshCache::BumpChunkMeshRevision(glm::ivec3 chunk_coord,
   // here rather than comparing Chunk::ContentRevision with PublishedRev.
   if (kChunkDemandShadow())
   {
-    UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+    UChunkRenderDemandStore &demand = GetRenderDemandStore();
     if (const ChunkRenderDemandRecord *rec = demand.Find(chunk_coord))
     {
       if (rec->desired_geom_rev != mesh_revision &&
@@ -2299,7 +2299,7 @@ void UChunkMeshCache::BumpChunkMeshRevision(glm::ivec3 chunk_coord,
     trace.mesh_scheduled_this_frame =
         ScheduledThisFrame_.count(chunk_coord) > 0 ? 1 : 0;
     if (const ChunkRenderDemandRecord *rec =
-            UChunkRenderDemandStore::Get().Find(chunk_coord))
+            GetRenderDemandStore().Find(chunk_coord))
     {
       trace.incarnation = rec->incarnation;
       trace.previous_attempt_id = rec->active_attempt_id;
@@ -3704,7 +3704,7 @@ void UChunkMeshCache::ClearSatisfiedScreenRayRepairPin(glm::ivec3 chunkCoord)
   // ApplyMeshResult returns, so publishing one revision is not sufficient to
   // retire a ray witness for a still-visible hole.
   if (const ChunkRenderDemandRecord *demand =
-          UChunkRenderDemandStore::Get().Find(chunkCoord))
+          GetRenderDemandStore().Find(chunkCoord))
   {
     if (demand->desired_geom_rev > demand->published_geom_rev ||
         demand->desired_coverage_gen > demand->published_coverage_gen ||
@@ -4167,8 +4167,7 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(UBlockWorld &world,
     {
       continue;
     }
-    const ChunkRenderDemandRecord *demand =
-        UChunkRenderDemandStore::Get().Find(coord);
+    const ChunkRenderDemandRecord *demand = GetRenderDemandStore().Find(coord);
     if (!chunk || chunk->GetNonAirCount() == 0 || !demand ||
         demand->world_epoch != CaptureStore.WorldEpoch() ||
         demand->incarnation != chunk->GetIncarnation() ||
@@ -4232,8 +4231,7 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(UBlockWorld &world,
       continue;
     }
 
-    const ChunkRenderDemandRecord *demand =
-        UChunkRenderDemandStore::Get().Find(coord);
+    const ChunkRenderDemandRecord *demand = GetRenderDemandStore().Find(coord);
     if (!demand)
     {
       continue;
@@ -4394,7 +4392,7 @@ const UGpuMeshPipeline *UChunkMeshCache::GetGpuMeshPipeline() const
 
 void UChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
 {
-  UChunkRenderDemandStore::Get().Remove(chunkCoord);
+  GetRenderDemandStore().Remove(chunkCoord);
   PendingStaleLightRemeshes_.erase(chunkCoord);
   PendingMeshDependencyInvalidations_.erase(chunkCoord);
   if (GpuPipeline)
@@ -4453,7 +4451,7 @@ void UChunkMeshCache::RemoveColumn(glm::ivec3 ground_coord, int min_cy,
   for (int cy = min_cy; cy <= max_cy; ++cy)
   {
     const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);
-    UChunkRenderDemandStore::Get().Remove(slice);
+    GetRenderDemandStore().Remove(slice);
     PendingStaleLightRemeshes_.erase(slice);
     PendingMeshDependencyInvalidations_.erase(slice);
     if (GpuPipeline)
@@ -4739,7 +4737,7 @@ void UChunkMeshCache::RebuildFlatCrossInstances(const Frustum *frustum,
       // got).
       if (kChunkDemandShadow())
       {
-        UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+        UChunkRenderDemandStore &demand = GetRenderDemandStore();
         if (const ChunkRenderDemandRecord *rec = demand.Find(sample_kv.first))
         {
           if (rec->desired_geom_rev != 0)
@@ -4942,6 +4940,7 @@ void UChunkMeshCache::EnsureAsyncBuilder()
   if (!AsyncBuilder)
   {
     AsyncBuilder = std::make_unique<UAsyncMeshBuilder>();
+    AsyncBuilder->SetRenderDemandStore(RenderDemandStore);
   }
   if (AsyncBuilder && MesherBackend)
   {
@@ -5684,7 +5683,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   const int prior_lit_age = GetPriorLitHoldAge(coord);
   const UChunk *source_chunk = world.GetChunkManager().GetChunk(coord);
   const ChunkRenderDemandRecord *slice_demand =
-      UChunkRenderDemandStore::Get().Find(coord);
+      GetRenderDemandStore().Find(coord);
   const uint64_t current_incarnation = ChunkIncarnationAt(world, coord);
   const bool demand_identity_current =
       source_chunk && slice_demand &&
@@ -5769,7 +5768,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
           succ_geom = GetChunkMeshRevision(coord);
           succ_light = ch->GetLightFieldRevision();
         }
-        UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+        UChunkRenderDemandStore &demand = GetRenderDemandStore();
         demand.BindIdentity(coord, CaptureStore.WorldEpoch(),
                             ChunkIncarnationAt(world, coord));
         const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
@@ -5854,7 +5853,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     }
     if (kChunkDemandShadow())
     {
-      UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+      UChunkRenderDemandStore &demand = GetRenderDemandStore();
       demand.BindIdentity(coord, CaptureStore.WorldEpoch(),
                           ChunkIncarnationAt(world, coord));
       const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
@@ -5910,7 +5909,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
       }
       if (kChunkDemandShadow())
       {
-        UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+        UChunkRenderDemandStore &demand = GetRenderDemandStore();
         demand.BindIdentity(coord, CaptureStore.WorldEpoch(),
                             ChunkIncarnationAt(world, coord));
         const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
@@ -6023,7 +6022,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   }
   if (kChunkDemandShadow())
   {
-    UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+    UChunkRenderDemandStore &demand = GetRenderDemandStore();
     demand.BindIdentity(coord, CaptureStore.WorldEpoch(),
                         ChunkIncarnationAt(world, coord));
     const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
@@ -7005,7 +7004,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         continue;
       }
       const ChunkRenderDemandRecord *demand =
-          UChunkRenderDemandStore::Get().Find(pending.coord);
+          GetRenderDemandStore().Find(pending.coord);
       const bool demand_unpublished =
           demand &&
           (demand->desired_geom_rev > demand->published_geom_rev ||
@@ -7838,7 +7837,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
           succ_geom = GetChunkMeshRevision(result.coord);
           succ_light = ch->GetLightFieldRevision();
         }
-        UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+        UChunkRenderDemandStore &demand = GetRenderDemandStore();
         demand.BindIdentity(result.coord, CaptureStore.WorldEpoch(),
                             ChunkIncarnationAt(world, result.coord));
         const uint64_t attempt_id = DemandActiveAttemptId(demand, result.coord);
@@ -8039,7 +8038,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   const int prior_lit_age = GetPriorLitHoldAge(result.coord);
   const UChunk *source_chunk = world.GetChunkManager().GetChunk(result.coord);
   const ChunkRenderDemandRecord *slice_demand =
-      UChunkRenderDemandStore::Get().Find(result.coord);
+      GetRenderDemandStore().Find(result.coord);
   const uint64_t current_incarnation = ChunkIncarnationAt(world, result.coord);
   const bool demand_identity_current =
       source_chunk && slice_demand &&
@@ -8229,7 +8228,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       }
       if (kChunkDemandShadow())
       {
-        UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+        UChunkRenderDemandStore &demand = GetRenderDemandStore();
         demand.BindIdentity(result.coord, CaptureStore.WorldEpoch(),
                             ChunkIncarnationAt(world, result.coord));
         const uint64_t attempt_id = DemandActiveAttemptId(demand, result.coord);
@@ -8342,7 +8341,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   // A26 N1 / A31: sole Published lifecycle after validation commit.
   if (kChunkDemandShadow())
   {
-    UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+    UChunkRenderDemandStore &demand = GetRenderDemandStore();
     demand.BindIdentity(result.coord, CaptureStore.WorldEpoch(),
                         ChunkIncarnationAt(world, result.coord));
     const uint64_t attempt_id = DemandActiveAttemptId(demand, result.coord);
@@ -9637,7 +9636,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           trace.field_light_rev = chunk->GetLightFieldRevision();
         }
         if (const ChunkRenderDemandRecord *demand =
-                UChunkRenderDemandStore::Get().Find(schedule_coord))
+                GetRenderDemandStore().Find(schedule_coord))
         {
           trace.world_epoch = demand->world_epoch;
           trace.demand_incarnation = demand->incarnation;
@@ -9973,7 +9972,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       {
         const UChunk *chunk = world.GetChunkManager().GetChunk(*it);
         const ChunkRenderDemandRecord *demand =
-            UChunkRenderDemandStore::Get().Find(*it);
+            GetRenderDemandStore().Find(*it);
         const bool current_demand =
             chunk && demand &&
             demand->world_epoch == CaptureStore.WorldEpoch() &&
@@ -10556,7 +10555,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         if (HasDrawableGreedyMesh(*it))
         {
           if (const ChunkRenderDemandRecord *rec =
-                  UChunkRenderDemandStore::Get().Find(*it))
+                  GetRenderDemandStore().Find(*it))
           {
             drawable_with_geom_debt =
                 rec->desired_geom_rev > rec->published_geom_rev;
@@ -11266,7 +11265,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           trace.flags |= 1u << 14;
         }
         if (const ChunkRenderDemandRecord *demand =
-                UChunkRenderDemandStore::Get().Find(coord))
+                cache.GetRenderDemandStore().Find(coord))
         {
           trace.world_epoch = demand->world_epoch;
           trace.demand_incarnation = demand->incarnation;
@@ -11406,7 +11405,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             (gpu_kicked ? 1u << 5 : 0u) | (gpu_extract ? 1u << 6 : 0u);
         trace.flags = soft_defer ? 1u : 0u;
         if (const ChunkRenderDemandRecord *demand =
-                UChunkRenderDemandStore::Get().Find(selected_coord))
+                GetRenderDemandStore().Find(selected_coord))
         {
           trace.world_epoch = demand->world_epoch;
           trace.demand_incarnation = demand->incarnation;
@@ -11695,7 +11694,7 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     const int prior_lit_age = GetPriorLitHoldAge(chunkCoord);
     const UChunk *source_chunk = world.GetChunkManager().GetChunk(chunkCoord);
     const ChunkRenderDemandRecord *slice_demand =
-        UChunkRenderDemandStore::Get().Find(chunkCoord);
+        GetRenderDemandStore().Find(chunkCoord);
     const uint64_t current_incarnation = ChunkIncarnationAt(world, chunkCoord);
     const bool demand_identity_current =
         source_chunk && slice_demand &&
@@ -11860,7 +11859,7 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
                                    PubRejectSourceMismatchN, PubRejectOtherN);
         if (kChunkDemandShadow())
         {
-          UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+          UChunkRenderDemandStore &demand = GetRenderDemandStore();
           demand.BindIdentity(chunkCoord, CaptureStore.WorldEpoch(),
                               ChunkIncarnationAt(world, chunkCoord));
           const uint64_t attempt_id = DemandActiveAttemptId(demand, chunkCoord);
@@ -11918,7 +11917,7 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     }
     if (kChunkDemandShadow())
     {
-      UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+      UChunkRenderDemandStore &demand = GetRenderDemandStore();
       demand.BindIdentity(chunkCoord, CaptureStore.WorldEpoch(),
                           ChunkIncarnationAt(world, chunkCoord));
       const uint64_t attempt_id = DemandActiveAttemptId(demand, chunkCoord);

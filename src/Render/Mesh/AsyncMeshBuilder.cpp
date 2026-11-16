@@ -140,11 +140,10 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
     stage_trace.incarnation = snapshot.inputStamps[0].incarnation;
   }
   if (const ChunkRenderDemandRecord *demand =
-          UChunkRenderDemandStore::Get().Find(coord))
+          RenderDemandStore ? RenderDemandStore->Find(coord) : nullptr)
   {
     stage_trace.attempt_id = demand->active_attempt_id;
-    (void)StampChunkRenderDemandTrace(stage_trace,
-                                      UChunkRenderDemandStore::Get(), coord);
+    (void)StampChunkRenderDemandTrace(stage_trace, *RenderDemandStore, coord);
   }
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);

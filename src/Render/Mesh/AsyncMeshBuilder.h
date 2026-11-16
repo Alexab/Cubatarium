@@ -20,6 +20,7 @@ namespace cutum
 {
 
 class UBlockRegistry;
+class UChunkRenderDemandStore;
 class IUChunkMesher;
 struct BlockDefinitionCatalog;
 
@@ -59,6 +60,12 @@ class UAsyncMeshBuilder
 {
 public:
   explicit UAsyncMeshBuilder(std::size_t thread_count = 0);
+
+  void
+  SetRenderDemandStore(std::shared_ptr<const UChunkRenderDemandStore> store)
+  {
+    RenderDemandStore = std::move(store);
+  }
 
   void SetMesher(IUChunkMesher *mesher) { Mesher = mesher; }
   IUChunkMesher *GetMesher() const { return Mesher; }
@@ -116,6 +123,8 @@ public:
   std::vector<glm::ivec3> TakeDiscardedCoords();
 
 private:
+  std::shared_ptr<const UChunkRenderDemandStore> RenderDemandStore;
+
   static constexpr int kPipelineSlotsPerWorker = 6;
 
   int WorkerCount{1};

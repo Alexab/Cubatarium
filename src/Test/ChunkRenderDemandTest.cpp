@@ -38,7 +38,7 @@ int main()
   using cutum::TryPreferKickOrForceDirty;
   using cutum::UChunkRenderDemandStore;
 
-  UChunkRenderDemandStore &store = UChunkRenderDemandStore::Get();
+  UChunkRenderDemandStore store;
   store.Clear();
 
   const glm::ivec3 c{1, 2, 3};

@@ -460,7 +460,7 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
         coord, out.mesh_async_blocker_dirty_queue_index,
         out.mesh_async_blocker_dirty_queue_size);
     if (const ChunkRenderDemandRecord *demand =
-            UChunkRenderDemandStore::Get().Find(coord))
+            world.GetRenderDemandStore().Find(coord))
     {
       out.mesh_async_blocker_demand_active =
           demand->has_active_attempt ? 1 : 0;
@@ -546,7 +546,7 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
     out.focus_data_oldest_dirty_satisfying =
         cache.HasMeshSatisfyingColumnReady(oldest_dirty) ? 1 : 0;
     if (const ChunkRenderDemandRecord *demand =
-            UChunkRenderDemandStore::Get().Find(oldest_dirty))
+            world.GetRenderDemandStore().Find(oldest_dirty))
     {
       out.focus_data_oldest_dirty_demand_active =
           demand->has_active_attempt ? 1 : 0;
@@ -601,7 +601,7 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
         out.gate_miss_dirty_queue_size);
     out.gate_miss_dirty_age_frames = cache.GetDirtyQueueAgeFrames(gate_miss);
     const ChunkRenderDemandRecord *demand =
-        UChunkRenderDemandStore::Get().Find(gate_miss);
+        world.GetRenderDemandStore().Find(gate_miss);
     if (demand != nullptr)
     {
       out.gate_miss_demand_active = demand->has_active_attempt ? 1 : 0;
@@ -640,7 +640,7 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
         stuck, out.stuck_dirty_queue_index, out.stuck_dirty_queue_size);
     out.stuck_dirty_age_frames = cache.GetDirtyQueueAgeFrames(stuck);
     const ChunkRenderDemandRecord *demand =
-        UChunkRenderDemandStore::Get().Find(stuck);
+        world.GetRenderDemandStore().Find(stuck);
     if (demand != nullptr)
     {
       out.stuck_demand_active = demand->has_active_attempt ? 1 : 0;

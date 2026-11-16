@@ -649,7 +649,8 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
           mesh_cache->NoteFaceDebt(coord, /*schedule_dirty=*/true);
           if (kChunkDemandShadow())
           {
-            UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+            UChunkRenderDemandStore &demand =
+                *mesh_cache->GetRenderDemandStoreHandle();
             const MeshPublishRevs pub = mesh_cache->GetMeshPublishRevs(coord);
             if (PassMeshMatchesDemand(demand, coord, pub))
             {
@@ -700,7 +701,8 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
       SyncPooledBatchHandles(cache);
       if (kChunkDemandShadow() && mesh_cache != nullptr)
       {
-        UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+        UChunkRenderDemandStore &demand =
+            *mesh_cache->GetRenderDemandStoreHandle();
         for (const auto &coord : upload_order)
         {
           const MeshPublishRevs pub = mesh_cache->GetMeshPublishRevs(coord);
@@ -889,7 +891,8 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
         NotePubVerChangedWithoutFresh();
         if (kChunkDemandShadow() && mesh_cache != nullptr)
         {
-          UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+          UChunkRenderDemandStore &demand =
+              *mesh_cache->GetRenderDemandStoreHandle();
           for (const auto &coord : published_ok)
           {
             const MeshPublishRevs pub = mesh_cache->GetMeshPublishRevs(coord);
@@ -968,7 +971,8 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
     LastAppliedDeltaKind_ = PublicationDeltaKind::Replace;
     if (kChunkDemandShadow() && mesh_cache != nullptr)
     {
-      UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+      UChunkRenderDemandStore &demand =
+          *mesh_cache->GetRenderDemandStoreHandle();
       for (const auto &coord : published_ok)
       {
         const MeshPublishRevs pub = mesh_cache->GetMeshPublishRevs(coord);

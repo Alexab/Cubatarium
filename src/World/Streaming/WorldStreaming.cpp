@@ -3371,7 +3371,7 @@ void UWorldStreaming::PublishFluidSealMutations(
     DeferredPhysicsSeedQueue.push_back(changed_coord);
     if (const UChunk *chunk =
             world.BlockWorld.GetChunkManager().GetChunk(changed_coord))
-      UChunkRenderDemandStore::Get().InvalidateLightCalculationSettlement(
+      world.GetRenderDemandStore().InvalidateLightCalculationSettlement(
           changed_coord, epoch, chunk->GetIncarnation());
     cache.QueueMeshDependencyInvalidation(
         changed_coord, MeshRevisionBumpReason::FluidWorldGeometry);

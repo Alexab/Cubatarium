@@ -66,6 +66,7 @@ namespace cutum
 {
 
 struct RuntimeOverlayFlushResult;
+class UChunkRenderDemandStore;
 
 /// Draw readiness SoT (TD-ARCH-028). Telemetry unfinished/holes derive from
 /// this.
@@ -222,6 +223,9 @@ struct UBackgroundQuiesceState
 class UWorld : public IUWorldPerception
 {
 public:
+  UChunkRenderDemandStore &GetRenderDemandStore();
+  const UChunkRenderDemandStore &GetRenderDemandStore() const;
+
   enum class WeatherType
   {
     Clear = 0,

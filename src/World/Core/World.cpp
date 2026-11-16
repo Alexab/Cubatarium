@@ -252,7 +252,7 @@ bool ChunkSliceHasCurrentLightSettlement(const UWorld &world, glm::ivec3 coord)
 {
   const UChunk *chunk = world.GetBlockWorld().GetChunkManager().GetChunk(coord);
   const ChunkRenderDemandRecord *demand =
-      UChunkRenderDemandStore::Get().Find(coord);
+      world.GetRenderDemandStore().Find(coord);
   if (!chunk || !demand ||
       demand->world_epoch !=
           world.GetMeshService().GetCache().GetCaptureStore().WorldEpoch() ||
@@ -435,6 +435,16 @@ UWorld::UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
 }
 
 UWorld::~UWorld() = default;
+
+UChunkRenderDemandStore &UWorld::GetRenderDemandStore()
+{
+  return MeshService->GetCache().GetRenderDemandStore();
+}
+
+const UChunkRenderDemandStore &UWorld::GetRenderDemandStore() const
+{
+  return MeshService->GetCache().GetRenderDemandStore();
+}
 
 std::string UWorld::WeatherTypeToString(WeatherType value)
 {
@@ -1491,7 +1501,7 @@ void UWorld::NoteOpenSkyRepairTargets(glm::ivec2 column, int min_y, int max_y,
       std::max(FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE),
                FloorDiv(min_y, CHUNK_SIZE));
   const int max_cy = std::max(min_cy, FloorDiv(max_y, CHUNK_SIZE));
-  UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+  UChunkRenderDemandStore &demand = GetRenderDemandStore();
   const uint64_t world_epoch =
       MeshService->GetCache().GetCaptureStore().WorldEpoch();
   for (int cy = min_cy; cy <= max_cy; ++cy)
@@ -1868,8 +1878,7 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
               r <= kVisualStageLitDrawableHoriz)
           {
             const ChunkRenderDemandRecord *trace_demand =
-                UChunkRenderDemandStore::Get().Find(
-                    first_visible_missing_mesh_coord);
+                GetRenderDemandStore().Find(first_visible_missing_mesh_coord);
             const bool flow_ticket =
                 GetColumnFlowExecutor().HasRepairTicket(key);
             const std::string signature =
@@ -2031,7 +2040,7 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
                     : nullptr;
             const ChunkRenderDemandRecord *trigger_demand =
                 trigger_coord.x >= 0
-                    ? UChunkRenderDemandStore::Get().Find(trigger_coord)
+                    ? GetRenderDemandStore().Find(trigger_coord)
                     : nullptr;
             const glm::ivec3 source_coord =
                 first_stale_dark_witness.source_chunk;
@@ -2041,7 +2050,7 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
                     : nullptr;
             const ChunkRenderDemandRecord *source_demand =
                 first_stale_dark_coord.x >= 0
-                    ? UChunkRenderDemandStore::Get().Find(source_coord)
+                    ? GetRenderDemandStore().Find(source_coord)
                     : nullptr;
             const uint64_t source_field_rev =
                 source_chunk ? source_chunk->GetLightFieldRevision() : 0;
@@ -2578,7 +2587,7 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y,
       if (const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord))
       {
         const ChunkRenderDemandRecord *demand =
-            UChunkRenderDemandStore::Get().Find(coord);
+            GetRenderDemandStore().Find(coord);
         const bool had_settlement = demand && demand->has_settled_light;
         const uint64_t settled_rev = demand ? demand->settled_light_rev : 0;
         const uint64_t field_rev = chunk->GetLightFieldRevision();
@@ -2624,7 +2633,7 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y,
           }
           continue;
         }
-        UChunkRenderDemandStore::Get().InvalidateLightCalculationSettlement(
+        GetRenderDemandStore().InvalidateLightCalculationSettlement(
             coord, world_epoch, current_incarnation);
         if (audit_relight && had_settlement)
         {
@@ -3012,7 +3021,7 @@ void UWorld::NoteChunkSliceLightCalculationSettled(glm::ivec3 chunk_coord)
   {
     return;
   }
-  UChunkRenderDemandStore::Get().NoteLightCalculationSettled(
+  GetRenderDemandStore().NoteLightCalculationSettled(
       chunk_coord, MeshService->GetCache().GetCaptureStore().WorldEpoch(),
       chunk->GetIncarnation(), chunk->GetLightFieldRevision());
 }
@@ -3095,7 +3104,7 @@ void UWorld::MaintainChunkRenderDemandStore(double now_ms)
   const auto maintenance_t0 = std::chrono::high_resolution_clock::now();
   // ReconcileMaintenance visits at most 128 records and performs the orphan
   // cancellation while it walks them. Avoid a second full-map orphan scan.
-  const auto maintenance = UChunkRenderDemandStore::Get().ReconcileMaintenance(
+  const auto maintenance = GetRenderDemandStore().ReconcileMaintenance(
       /*max_n=*/128, now_ms);
   // A cancelled/reminted attempt leaves a live desire without an admission
   // owner: its Dirty entry was lost, so no producer reaches NoteDemand and
@@ -3141,7 +3150,7 @@ void UWorld::MaintainChunkRenderDemandStore(double now_ms)
       // cycle_trace: des_g 12→18, pub_g=3, no attempts between bumps). The
       // counter resets once the demand publishes.
       if (const ChunkRenderDemandRecord *rec =
-              UChunkRenderDemandStore::Get().Find(coord))
+              GetRenderDemandStore().Find(coord))
       {
         if (rec->published_geom_rev >= rec->desired_geom_rev &&
             rec->published_light_rev >= rec->desired_light_rev)
@@ -3156,14 +3165,13 @@ void UWorld::MaintainChunkRenderDemandStore(double now_ms)
         // queue-operation bumps with no build and no content change. Rebase
         // it to the published truth; the stale-light/halo scans re-raise a
         // real demand when the mesh is genuinely stale.
-        UChunkRenderDemandStore::Get().RebaseDesiredToPublished(coord);
+        GetRenderDemandStore().RebaseDesiredToPublished(coord);
         continue;
       }
       state.last_ms = now_ms;
-      const bool published_before = [&coord]()
+      const bool published_before = [this, &coord]()
       {
-        const ChunkRenderDemandRecord *rec =
-            UChunkRenderDemandStore::Get().Find(coord);
+        const ChunkRenderDemandRecord *rec = GetRenderDemandStore().Find(coord);
         return rec && rec->published_geom_rev >= rec->desired_geom_rev &&
                rec->published_light_rev >= rec->desired_light_rev;
       }();
@@ -3255,8 +3263,7 @@ void UWorld::SampleColumnEmergeStageTelemetry()
     stage_t0 = std::chrono::high_resolution_clock::now();
     if (kChunkDemandShadow())
     {
-      const auto br =
-          UChunkRenderDemandStore::Get().CountUnsatisfiedBreakdown();
+      const auto br = GetRenderDemandStore().CountUnsatisfiedBreakdown();
       PhysicsTelemetryData.DemandUnsatGeom = br.geom;
       PhysicsTelemetryData.DemandUnsatLight = br.light;
       PhysicsTelemetryData.DemandUnsatFace = br.face;
@@ -3279,7 +3286,7 @@ void UWorld::SampleColumnEmergeStageTelemetry()
     {
       s_last_scoped_converge_ms = now_ms;
       s_cached_scoped_converged =
-          UChunkRenderDemandStore::Get().StopConverged(
+          GetRenderDemandStore().StopConverged(
               now_ms,
               [this](const glm::ivec3 &peer_coord)
               {
@@ -3447,7 +3454,7 @@ bool UWorld::ShouldDrawProvisionalLightPreview(glm::ivec3 chunk_coord) const
 
   const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(chunk_coord);
   const ChunkRenderDemandRecord *demand =
-      UChunkRenderDemandStore::Get().Find(chunk_coord);
+      GetRenderDemandStore().Find(chunk_coord);
   const bool demand_identity_current =
       demand && chunk &&
       demand->world_epoch == cache.GetCaptureStore().WorldEpoch() &&
@@ -3588,7 +3595,7 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
       const glm::ivec2 col_xz(chunk_coord.x, chunk_coord.z);
       const ColumnRecord *column = ColumnRecords.Find(col_xz);
       const ChunkRenderDemandRecord *demand =
-          UChunkRenderDemandStore::Get().Find(chunk_coord);
+          GetRenderDemandStore().Find(chunk_coord);
       const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(chunk_coord);
       const bool air_only = chunk && chunk->IsAirOnly();
       const uint64_t field_light_rev =
@@ -3720,7 +3727,7 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
         const uint64_t meshed_light_rev =
             MeshService->GetCache().GetMeshedLightRevision(chunk_coord);
         const ChunkRenderDemandRecord *slice_demand =
-            UChunkRenderDemandStore::Get().Find(chunk_coord);
+            GetRenderDemandStore().Find(chunk_coord);
         const bool demand_light_current =
             !slice_demand ||
             (slice_chunk &&
@@ -4615,7 +4622,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
         }
       }
       const ChunkRenderDemandRecord *focus_demand =
-          UChunkRenderDemandStore::Get().Find(coord);
+          GetRenderDemandStore().Find(coord);
       if (focus_demand)
       {
         trace.world_epoch = focus_demand->world_epoch;
@@ -4685,7 +4692,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
           }
         }
         const ChunkRenderDemandRecord *peer_demand =
-            UChunkRenderDemandStore::Get().Find(peer_coord);
+            GetRenderDemandStore().Find(peer_coord);
         uint64_t effective_peer_gen = 0;
         if (peer_demand)
         {
@@ -5104,7 +5111,7 @@ bool UWorld::HasStablePublishedFaceDebt(glm::ivec3 coord) const
   {
     return false;
   }
-  const UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+  const UChunkRenderDemandStore &demand = GetRenderDemandStore();
   const ChunkRenderDemandRecord *active_demand = demand.Find(coord);
   const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
   const uint64_t mesh_revision = MeshService->GetChunkMeshRevision(coord);
@@ -5168,7 +5175,7 @@ void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
   {
     return;
   }
-  UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+  UChunkRenderDemandStore &demand = GetRenderDemandStore();
   const ChunkRenderDemandRecord *active_demand = demand.Find(coord);
   const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
   const uint64_t mesh_revision = MeshService->GetChunkMeshRevision(coord);
@@ -5298,7 +5305,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
   }
   std::unordered_set<glm::ivec2, IVec2Hash> first_mesh_visible_relight_columns;
   constexpr size_t kFirstMeshVisibleRelightLimit = 8;
-  UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+  UChunkRenderDemandStore &demand = GetRenderDemandStore();
   const double demand_now_ms = VisualObligationNowMs();
   const auto has_deferred_visible_relight = [&](glm::ivec2 block_key)
   {
@@ -7283,7 +7290,7 @@ int UWorld::CollectDrawGateRelightTargets(
     const glm::ivec2 column(coord.x, coord.z);
     const UChunk *slice_chunk = BlockWorld.GetChunkManager().GetChunk(coord);
     const ChunkRenderDemandRecord *slice_demand =
-        UChunkRenderDemandStore::Get().Find(coord);
+        GetRenderDemandStore().Find(coord);
     const uint64_t field_light_rev =
         slice_chunk ? slice_chunk->GetLightFieldRevision() : 0;
     const bool demand_identity_current =
@@ -7302,7 +7309,7 @@ int UWorld::CollectDrawGateRelightTargets(
       const UChunk *source_chunk =
           BlockWorld.GetChunkManager().GetChunk(witness.source_chunk);
       const ChunkRenderDemandRecord *source_demand =
-          UChunkRenderDemandStore::Get().Find(witness.source_chunk);
+          GetRenderDemandStore().Find(witness.source_chunk);
       stale_source_light_settled =
           source_chunk && source_demand && field_light_rev != 0 &&
           witness.source_incarnation == source_chunk->GetIncarnation() &&
@@ -7456,7 +7463,7 @@ bool UWorld::QueueSettledDrawGateMeshRepair(glm::ivec3 chunk_coord,
   }
   const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(chunk_coord);
   const ChunkRenderDemandRecord *demand =
-      UChunkRenderDemandStore::Get().Find(chunk_coord);
+      GetRenderDemandStore().Find(chunk_coord);
   if (!chunk || !demand || demand->incarnation != chunk->GetIncarnation() ||
       !demand->has_settled_light || chunk->GetLightFieldRevision() == 0 ||
       demand->settled_light_rev != chunk->GetLightFieldRevision())
@@ -7552,7 +7559,7 @@ bool UWorld::IsSettledDrawGateMeshRepairPending(glm::ivec3 chunk_coord) const
   }
   const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(chunk_coord);
   const ChunkRenderDemandRecord *demand =
-      UChunkRenderDemandStore::Get().Find(chunk_coord);
+      GetRenderDemandStore().Find(chunk_coord);
   if (!chunk || !demand ||
       retry->second.incarnation != chunk->GetIncarnation() ||
       retry->second.field_light_revision != chunk->GetLightFieldRevision() ||
@@ -8359,7 +8366,7 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
           (slice_stale_dark ? 1u << 13 : 0u) |
           (slice_lit_drawable ? 1u << 14 : 0u));
       if (const ChunkRenderDemandRecord *demand =
-              UChunkRenderDemandStore::Get().Find(coord))
+              GetRenderDemandStore().Find(coord))
       {
         trace.world_epoch = demand->world_epoch;
         trace.incarnation = demand->incarnation;
@@ -9377,7 +9384,7 @@ void UWorld::TraceRelightWatchdog()
       // stop convergence back, with sample coords per class.
       {
         UChunkRenderDemandStore::StopBlockerCensus census;
-        UChunkRenderDemandStore::Get().CountStopBlockers(
+        GetRenderDemandStore().CountStopBlockers(
             now_ms,
             [this](const glm::ivec3 &peer_coord)
             {
@@ -9412,7 +9419,7 @@ void UWorld::TraceRelightWatchdog()
       }
       {
         std::vector<UChunkRenderDemandStore::UnsatisfiedSample> samples;
-        UChunkRenderDemandStore::Get().SampleUnsatisfiedRecords(6, samples);
+        GetRenderDemandStore().SampleUnsatisfiedRecords(6, samples);
         for (const auto &s : samples)
         {
           CubatariumLogInfo(
@@ -9983,7 +9990,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
                   ? MeshService->GetCache().GetMeshPublishRevs(chunk_data.coord)
                   : MeshPublishRevs{};
           const ChunkRenderDemandRecord *demand =
-              UChunkRenderDemandStore::Get().Find(chunk_data.coord);
+              GetRenderDemandStore().Find(chunk_data.coord);
           const uint64_t settled_rev = demand ? demand->settled_light_rev : 0;
           const bool has_settled = demand && demand->has_settled_light;
           const uint64_t meshed_light =
@@ -10232,7 +10239,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
         const glm::ivec2 block_key(column.x * CHUNK_SIZE,
                                    column.y * CHUNK_SIZE);
         const ChunkRenderDemandRecord *demand =
-            UChunkRenderDemandStore::Get().Find(chunk_data.coord);
+            GetRenderDemandStore().Find(chunk_data.coord);
         const MeshPublishRevs published =
             MeshService->GetCache().GetMeshPublishRevs(chunk_data.coord);
         const uint64_t field_light_rev = chunk->GetLightFieldRevision();
@@ -11476,7 +11483,7 @@ void UWorld::AbandonTerrainForWorldReplace()
   {
     MeshService->GetCache().MarkAllDirty();
   }
-  UChunkRenderDemandStore::Get().Clear();
+  GetRenderDemandStore().Clear();
   ResetFluidSurfacePackReuseCache();
   ModifiedChunks.clear();
   BlockWorldReady = false;
