@@ -6,7 +6,7 @@
     "diagnostic_bot": "verified baseline: native takeoff, route, inspection; expand scenario matrix",
     "local_streaming_mesh_underwater_defects": "in_progress: signed bands, lossless population events, same-size mesh reconciliation and eye-local fluid intervals fixed; native surface frontier routes verified; cave matrix and remaining invalidations pending",
     "correct_light_solver_and_persistence": "in_progress: common sync/async geometry solver and v6 compatibility verified; native sky-boundary integration passed scoped geometry checks; per-domain certificates, durable generation/coverage obligations and repeated-work control pending",
-    "single_section_lifecycle_and_publication": "in_progress: world-local demand ownership being validated; strong input settlement, authoritative readiness and first-frame closure still pending",
+    "single_section_lifecycle_and_publication": "in_progress: world-local demand ownership and world-owned per-domain exact input provenance implemented; native performance regression under correction; durable coverage obligations, authoritative column closure and strict first-frame gate pending",
     "independent_light_resource_and_performance": "pending",
     "full_smoke_and_regression_matrix": "in_progress: surface frontier, dry negative cave and flooded negative cave routes; independent analytic near-opaque-depth checks; startup, light/transparent reference, air pocket and eviction round trip still pending"
   },
@@ -1631,7 +1631,7 @@
         "queue_analysis": "relight-queue-analysis.txt"
       }
     },
-    "next_implementation": "Validate complete per-domain publication gates natively; replace unconditional coarse pending closeouts and dropped expanded bands with preserved generation/coverage obligations. Then strict first-frame readiness, durable cache proof and independent light resource."
+    "next_implementation": "Fix repeated full certificate validation in rendering/readiness loops without relaxing truth: deduplicate within genuinely immutable read batches or introduce authoritative geometry/residency/evidence revisions with immediate invalidation for every mutation path. No TTL/frame-only cache may hide neighbor, direct chunk, recycled identity or known-absence changes. Keep the same bot duration/route. Then preserve pending generation/coverage and remove coarse optimistic closeout."
   },
   "synchronous_geometry_solver_unification": {
     "status": "unit_and_native_sky_boundary_integration_verified_completion_and_performance_pending",
@@ -1787,7 +1787,7 @@
     }
   },
   "world_owned_light_domain_certificates": {
-    "status": "unit_verified_native_performance_regression_under_correction",
+    "status": "in_memory_provenance_and_gates_unit_verified_native_performance_still_fails_smoke",
     "implementation": [
       "Resident sections own independent sky/block calculation provenance; all output sections share one immutable input context without retaining light voxel arrays.",
       "World identity, incarnation, selected channel revision, full geometry/absence read set, immutable catalog, vertical profile and configuration are validated.",
@@ -1818,7 +1818,7 @@
       "Certificates are currently in-memory; durable persistence still needs content identities rather than runtime incarnations.",
       "Coarse column closeout and pending generation/coverage preservation remain pending. These certificates alone do not prevent every legacy pending-work erase.",
       "Strict first-frame barrier, native physical light reference, independent GPU light resource and complete scenario matrix remain pending.",
-      "Native candidate publication and certificate-validation overhead pending."
+      "Native input certificates/gates execute and scoped depth checks pass; frame cost still prevents full inspection before the unchanged deadline. Performance remains a required correction."
     ],
     "native_first_attempt": {
       "source_commit": "7439a1c0a",
@@ -1911,11 +1911,111 @@
       "analysis": "Route failed to finish; only 295 in-game frames during requested 125 seconds. Full per-stamp absence proof calls amplified readiness/probe loops. No relaxation of correctness gates accepted."
     },
     "absence_batch_refinement": {
-      "status": "unit_verified_native_pending",
+      "status": "unit_verified_native_route_reaches_destination_but_inspection_deadline_still_fails",
       "change": "Production absence evidence exposes a monotonic column floor. One read-only validation call collects each column floor once, still checks every captured resident/content stamp and compares each absent slice with that floor. No evidence cache survives the call. Arbitrary per-slice callbacks keep exact per-slice queries.",
       "log": "build/desktop-msvc/engine-light-proof-batch-regression-tests.log",
       "ctest": "23/23 Release passed",
-      "controls": "162+ input stamps reduce to 9 column-evidence reads; changed evidence is observed on the next validation without resident mutation; arbitrary nonmonotonic callback still uses more than 100 independent slice reads."
+      "controls": "162+ input stamps reduce to 9 column-evidence reads; changed evidence is observed on the next validation without resident mutation; arbitrary nonmonotonic callback still uses more than 100 independent slice reads.",
+      "native": {
+        "source_commit": "dc6cda4200eec3375b2f07c53484ceeaebd51e6c",
+        "artifacts": "build/desktop-msvc/engine-light-proof-batch-wet-native",
+        "release_build_log": "build/desktop-msvc/engine-light-proof-batch-release-build.log",
+        "verdict": {
+          "schema": "engine-smoke-verdict.v1",
+          "status": "FAIL",
+          "components": {
+            "runtime": {
+              "status": "FAIL",
+              "reason": "native_process",
+              "exit_code": 1
+            },
+            "route": {
+              "status": "FAIL",
+              "reason": "bot_route_incomplete",
+              "bot_state": "inspect",
+              "bot_reason": ""
+            },
+            "startup": {
+              "status": "UNTESTED",
+              "reason": "missing_first_frame_ring_witness"
+            },
+            "visual": {
+              "status": "UNTESTED",
+              "reason": "missing_visual_reference",
+              "samples": 22720,
+              "captures": 142,
+              "attributed_samples": 0,
+              "faults": 0
+            },
+            "inspection": {
+              "status": "PASS",
+              "reason": "inspection_capture_coverage",
+              "requested": 19,
+              "queued": 19,
+              "verified": 19
+            },
+            "fixture": {
+              "status": "PASS",
+              "reason": "negative_wet_cave_observed",
+              "samples": 225
+            },
+            "fixture_opaque_depth": {
+              "status": "PASS",
+              "reason": "analytic_near_cave_opaque_depth",
+              "checked": 22154,
+              "faults": 0,
+              "frame_epochs": 142,
+              "skipped_unscoped_or_occluded": 566,
+              "examples": [],
+              "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+            }
+          },
+          "malformed_trace_rows": 0,
+          "backend_observations": {
+            "maxima": {
+              "cpu_light_seed_apply": 0,
+              "gpu_light_seed_apply": 0,
+              "gpu_light_readback": 0
+            },
+            "positive_records": {},
+            "records_by_kind": {
+              "spike": 319,
+              "period": 61,
+              "blink": 26,
+              "visual_holes_enter": 92,
+              "near_focus_witness_entered_fog_unready": 1,
+              "near_focus_witness_exited_fog_unready": 1,
+              "shutdown": 1
+            },
+            "invalid_counter_rows": 0,
+            "scope": "observed CPU/GPU sky counters; not per-job correctness or compute parity"
+          },
+          "scope": "one-way frontier route and sampled reference checks; not full-screen proof",
+          "runner_exit_code": 1,
+          "inspection_evidence": {
+            "verified": 19,
+            "requested": 19,
+            "reason": "inspection_views_joined_to_png"
+          }
+        },
+        "performance_median_ms": {
+          "wall_ms": 97.3636,
+          "render_total_ms": 54.3439,
+          "geometry_paint_ms": 53.9032,
+          "scene_filter_ready_ms": 4.47591,
+          "world_streaming_phase_ms": 40.4079
+        },
+        "strict_relocations": 0,
+        "ingame_frames": 1271,
+        "audit": {
+          "sync_computations": 717,
+          "sync_reuses": 292,
+          "async_certificate_records": 1424,
+          "known_input_records": 459,
+          "transient_input_records": 965,
+          "scope": "Input classification and existing gate integration only; no physical native light or persistence acceptance."
+        }
+      }
     }
   }
 }
