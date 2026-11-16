@@ -20,3 +20,5 @@ context. Current publication is manifest v4, generation
 the current production catalog. IDs, recipes, statistics, ownership, physical
 profiles and throw rules are preserved. Only Release desktop builds and native
 QA-world launches are used. Test audio is muted temporarily and restored.
+
+Large retained evidence uses Git LFS. See [storage migration and checkpoint SHA mapping](history-storage-2026-11-16/README.md).

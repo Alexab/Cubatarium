@@ -73,3 +73,6 @@ docs/research/item-visual-redesign-2026-11-14/performance-final/static-ui/native
 docs/research/item-visual-redesign-2026-11-14/performance-final/ui-streaming/native-release/build.txt -whitespace
 docs/research/item-visual-redesign-2026-11-14/world-lighting-checkpoint/native-world-frames.zip filter=lfs diff=lfs merge=lfs -text
 docs/research/item-visual-redesign-2026-11-14/carry-input-checkpoint/selected-native-frames.zip filter=lfs diff=lfs merge=lfs -text
+
+# Preserve the original-to-LFS commit correspondence as recorded.
+/docs/research/item-visual-redesign-2026-11-14/history-storage-2026-11-16/** -text

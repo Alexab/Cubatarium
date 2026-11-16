@@ -1,0 +1,29 @@
+{
+  "passed": true,
+  "published_base": "946ef5f2d022fa383938aa2dd13823134e733d12",
+  "original_tip": "e73cbc7a4386b7b237f715dd665ec2d35bfc59d4",
+  "migrated_tip": "4fb793b95ee22f446ca54d8f74c7126336616a5d",
+  "rewritten_commits": 51,
+  "every_commit_changes_only_attributes_and_two_archive_storage_blobs": true,
+  "source_and_asset_git_blobs_unchanged": true,
+  "hydrated_archive_hashes_preserved": true,
+  "archives": [
+    {
+      "oid": "d0d35b99081d5c052e5c5daad124079b1bd7a4a6",
+      "size": 94268344,
+      "path": "docs/research/item-visual-redesign-2026-11-14/carry-input-checkpoint/selected-native-frames.zip",
+      "sha256": "77880abb0d55613c28b72766093884277e0e9f2bade3ef203c48f6ae738b9356"
+    },
+    {
+      "oid": "43015aa96c07abac610112f4f7644489ddb4d5b1",
+      "size": 166566333,
+      "path": "docs/research/item-visual-redesign-2026-11-14/world-lighting-checkpoint/native-world-frames.zip",
+      "sha256": "1f3d9a6d3115e36334479aa04ac62cd59dfe8316b01bc7faa48ff8fc8a589e46"
+    }
+  ],
+  "backup_refs": {
+    "refs/backup/pre-item-lfs-2026-11-16/develop": "e73cbc7a4386b7b237f715dd665ec2d35bfc59d4",
+    "refs/backup/pre-item-lfs-2026-11-16/codex/item-visual-redesign": "e73cbc7a4386b7b237f715dd665ec2d35bfc59d4"
+  },
+  "force_push_required": false
+}
