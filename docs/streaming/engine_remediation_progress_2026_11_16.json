@@ -594,7 +594,7 @@
     "native_mutation_event_coverage": "UNTESTED: route did not trigger a new seal mutation; targeted native mutation fixture still required"
   },
   "absence_evidence_verification": {
-    "status": "unit_verified_native_pending",
+    "status": "unit_verified_native_geometry_fault_found",
     "negative_controls": [
       "build/desktop-msvc/engine-absent-proof-red-test.log: old lower-resident heuristic claims sky below a resident roof",
       "build/desktop-msvc/engine-absence-fact-red-test.log: old stamps ignore proof transition without chunk load"
@@ -608,6 +608,38 @@
     "limitations": [
       "proof changes are validated on capture/apply/reconciliation; immediate event scheduling and first-frame closure remain lifecycle work",
       "not a solver proof for unknown lighting inputs"
+    ],
+    "native_artifacts": "build/desktop-msvc/engine-absence-wide-cave-native"
+  },
+  "draw_publication_generation_verification": {
+    "status": "unit_verified_native_pending",
+    "native_negative_control": {
+      "source_commit": "06302500e",
+      "artifacts": "build/desktop-msvc/engine-absence-wide-cave-native",
+      "overall": "FAIL",
+      "faults": 29,
+      "fault_frame_epoch": 150,
+      "voxel_chunk": [
+        0,
+        -3,
+        4
+      ],
+      "voxel_hit_present": true,
+      "new_live_slot_quads": 91,
+      "old_draw_range_quads": 1,
+      "route_chunks": 19,
+      "external_position_assignments": 0,
+      "verified_inspection_captures": 24
+    },
+    "mechanism": "50ms flat-ref rebuild throttle permits old copied block ranges to draw a newly replaced packed slot; live coordinate/slot validation does not establish publication-generation coherence",
+    "correction": "dirty draw refs rebuild before next draw; remove timer and partial force-bypass exceptions; normal unchanged-input reuse remains",
+    "unit_negative_control": "decor_mesh_integration_test failed on old implementation: replacement publication immediately refreshes material draw refs",
+    "unit_log": "build/desktop-msvc/engine-draw-ref-green-tests.log",
+    "passed_sets": 7,
+    "performance_risk": "full dirty-ref rebuild can increase CPU maintenance cost; measure native before considering incremental per-section publication updates",
+    "limitations": [
+      "native fixed-case rerun pending",
+      "voxel_mesh_ray_intersects=0 alone does not prove absent packed geometry: this witness uses CPU batches, which are empty for a packed-only publication"
     ]
   }
 }

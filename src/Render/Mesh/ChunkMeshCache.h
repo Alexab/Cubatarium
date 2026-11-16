@@ -1592,9 +1592,6 @@ private:
   void AgeSoftDeferEmptyAvoidFrames();
   IUChunkCull *CullBackend{nullptr};
   IUChunkMesher *MesherBackend{nullptr};
-  std::chrono::steady_clock::time_point LastFlatRebuildAt{};
-  /// Era21 I-R2: bypass 50ms flat rate-limit after residency demote / keep-GPU.
-  bool ForceFlatRebuildNext{false};
   bool PendingMeshRevisionBump{false};
   UChunkMeshRevisionRegistry MeshRevisions;
   std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> ActiveMeshSourceRevision;

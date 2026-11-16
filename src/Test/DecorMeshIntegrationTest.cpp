@@ -342,6 +342,34 @@ static void TestOccludedMeshDependencyRepair(cutum::UBlockRegistry &registry)
          "single dependency entry point also retains zero-quad repair");
 }
 
+static void TestPublicationRefreshesDrawRefs(cutum::UBlockRegistry &registry)
+{
+  using namespace cutum;
+  UBlockWorld world;
+  world.SetBlock({4, 4, 4}, kStone);
+  UChunkMeshCache cache;
+  auto settings = MakeFrustumMeshSettings();
+  settings.FrustumCulling = false;
+  cache.SetRenderSettings(settings);
+  cache.RebuildAll(world, registry);
+  const Frustum frustum{};
+  const glm::mat4 view_projection(1.0f);
+  const glm::vec3 eye(4.0f, 4.0f, 8.0f);
+  cache.UpdateVisibleInstances(frustum, view_projection, eye);
+  Expect(!cache.GetGreedyOpaqueCutoutRefs().empty(),
+         "publication fixture must have a preceding live draw list");
+  // A newly published material changes the draw ranges even when the same
+  // section and GPU slot remain resident. There must be no timer during which
+  // old ranges can be used with the replacement payload.
+  world.SetBlock({6, 4, 4}, kFire);
+  cache.MarkDirty({0, 0, 0});
+  cache.RebuildDirtyChunksWithStats(world, registry, 100, 100);
+  cache.UpdateVisibleInstances(frustum, view_projection, eye);
+  Expect(CountGreedyVerticesForBlock(
+             cache, cache.GetGreedyTransparentRefs(), kFire) > 0,
+         "replacement publication immediately refreshes material draw refs");
+}
+
 } // namespace
 
 int main()
@@ -358,6 +386,7 @@ int main()
   TestGreedyAlphaCutoutIsMaterialScoped(world, registry);
   TestOverflowRetryWithNoDirtyAdmission(registry);
   TestOccludedMeshDependencyRepair(registry);
+  TestPublicationRefreshesDrawRefs(registry);
 
   std::cout << kTestName << ": OK" << std::endl;
   return 0;

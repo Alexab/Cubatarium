@@ -1034,7 +1034,6 @@ bool UChunkMeshCache::TryEvictFarthestGpuMeshForStagingSlot(
   ++GpuSlotEvictionCount_;
   ++MeshRevision;
   GreedyBatchesDirty = true;
-  ForceFlatRebuildNext = true;
   LastFlatCullInputKey = {};
   return true;
 }
@@ -4582,25 +4581,10 @@ void UChunkMeshCache::RebuildFlatGreedyBatches(const Frustum *frustum,
                                                const glm::vec3 *cameraPos,
                                                float maxCullDistance)
 {
-  // Rate-limit full greedy batch rebuilds: light edits can produce many mesh
-  // results per second; rebuilding the full flat batch list every frame can
-  // dominate CPU time. Era21 I-R2: never skip after residency demote / keep-GPU
-  // (stale GpuPacked refs → sky hole while GetSlot null).
-  if (GreedyBatchesDirty)
-  {
-    const auto now = std::chrono::steady_clock::now();
-    const bool have_draw_refs = HasAnyValidatedDrawRefs();
-    // Empty refs + live cache is a sky hole — do not keep the last empty
-    // rebuild across the 50ms rate limit (manual 083819: 265k verts, opaque=0).
-    // Stale GpuPacked list (non-empty but no live slots) is the same class.
-    if (!ForceFlatRebuildNext && have_draw_refs &&
-        LastFlatRebuildAt != std::chrono::steady_clock::time_point{} &&
-        now - LastFlatRebuildAt < std::chrono::milliseconds(50))
-    {
-      return;
-    }
-    ForceFlatRebuildNext = false;
-  }
+  // Draw refs contain material ranges and batch indices into the published
+  // representation. Once its payload changes, the old refs are invalid even
+  // if its coordinate and slot remain live. Rebuild before the next draw;
+  // rate-limiting this step mixes publication generations and drops surfaces.
   if (frustum && cameraPos && !GreedyBatchesDirty &&
       TrySkipFlatRebuildForVisibleChunks(frustum, cameraPos, maxCullDistance))
   {
@@ -4698,7 +4682,6 @@ void UChunkMeshCache::RebuildFlatGreedyBatches(const Frustum *frustum,
 
   GreedyBatchesDirty = false;
   ++CullRevision;
-  LastFlatRebuildAt = std::chrono::steady_clock::now();
   LastFlatRebuildMs = std::chrono::duration<double, std::milli>(
                           std::chrono::high_resolution_clock::now() - t0)
                           .count();
@@ -4860,7 +4843,6 @@ void UChunkMeshCache::RebuildFlatGreedyFromVisibilityMask(
   }
   GreedyBatchesDirty = false;
   ++CullRevision;
-  LastFlatRebuildAt = std::chrono::steady_clock::now();
   LastFlatRebuildMs = std::chrono::duration<double, std::milli>(
                           std::chrono::high_resolution_clock::now() - t0)
                           .count();
@@ -8506,7 +8488,6 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
         ++FreeChunkLiveN;
       }
       GpuPipeline->FreeChunk(result.coord);
-      ForceFlatRebuildNext = true;
       chunkMesh.GpuResident = false;
       chunkMesh.GpuSlotIndex = -1;
       chunkMesh.GpuQuadCount = 0;
@@ -12052,7 +12033,6 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
         ++FreeChunkLiveN;
       }
       GpuPipeline->FreeChunk(chunkCoord);
-      ForceFlatRebuildNext = true;
     }
     chunkMesh.GpuResident = false;
     chunkMesh.GpuSlotIndex = -1;
