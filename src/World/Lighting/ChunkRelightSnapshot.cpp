@@ -351,45 +351,106 @@ UChunkRelightSnapshot::Compute(const UBlockRegistry &registry)
                 WriteBlockLight(c * CHUNK_SIZE + glm::ivec3(x, y, z),
                                 info.emission);
             }
+  // Resolve topology once per computation. The flood touches millions of
+  // neighbors in a tall band; world-coordinate hashes in that inner loop can
+  // otherwise dominate the bounded solver. No map is mutated below.
+  struct Tile
+  {
+    glm::ivec3 coord;
+    const Geometry *geometry;
+    LightData *light;
+    int min_local_y;
+    int max_local_y;
+    std::array<Tile *, 6> neighbors{};
+  };
+  std::vector<Tile> tiles;
+  tiles.reserve(Light.size());
+  std::unordered_map<glm::ivec3, size_t, IVec3Hash> tile_indices;
+  for (auto &entry : Light)
+  {
+    const auto bounds = InputProfile.SliceBounds(entry.first.y, CHUNK_SIZE);
+    if (!bounds)
+      continue;
+    tile_indices.emplace(entry.first, tiles.size());
+    tiles.push_back({entry.first,
+                     GeometryData(entry.first),
+                     &entry.second,
+                     bounds->first - entry.first.y * CHUNK_SIZE,
+                     bounds->second - entry.first.y * CHUNK_SIZE,
+                     {}});
+  }
+  for (auto &tile : tiles)
+    for (size_t face = 0; face < 6; ++face)
+    {
+      const auto it = tile_indices.find(tile.coord + NEIGHBOR_OFFSETS[face]);
+      if (it != tile_indices.end())
+        tile.neighbors[face] = &tiles[it->second];
+    }
   const auto flood = [&](bool sky)
   {
-    std::array<std::deque<glm::ivec3>, kMaxLightLevel + 1> buckets;
-    for (const auto &chunk : Light)
-      for (int y = 0; y < CHUNK_SIZE; ++y)
-        for (int z = 0; z < CHUNK_SIZE; ++z)
-          for (int x = 0; x < CHUNK_SIZE; ++x)
-          {
-            const auto packed = chunk.second[UChunk::LocalIndex({x, y, z})];
-            const int level = sky ? UnpackSky(packed) : UnpackBlock(packed);
-            if (level > 1)
-              buckets[level].push_back(chunk.first * CHUNK_SIZE +
-                                       glm::ivec3(x, y, z));
-          }
+    static_assert(CHUNK_VOLUME <=
+                  static_cast<int>(std::numeric_limits<uint16_t>::max()) + 1);
+    struct Node
+    {
+      Tile *tile;
+      uint16_t index;
+    };
+    std::array<std::deque<Node>, kMaxLightLevel + 1> buckets;
+    for (auto &tile : tiles)
+      for (int i = 0; i < CHUNK_VOLUME; ++i)
+      {
+        const auto packed = (*tile.light)[i];
+        const int level = sky ? UnpackSky(packed) : UnpackBlock(packed);
+        if (level > 1)
+          buckets[level].push_back({&tile, static_cast<uint16_t>(i)});
+      }
     for (int level = kMaxLightLevel; level > 1; --level)
       while (!buckets[level].empty())
       {
-        const auto pos = buckets[level].front();
+        const auto node = buckets[level].front();
         buckets[level].pop_front();
-        if ((sky ? GetSkyLight(pos) : GetBlockLight(pos)) != level)
+        const auto packed = (*node.tile->light)[node.index];
+        if ((sky ? UnpackSky(packed) : UnpackBlock(packed)) != level)
           continue;
-        for (const auto offset : NEIGHBOR_OFFSETS)
+        const glm::ivec3 local(node.index % CHUNK_SIZE,
+                               (node.index / CHUNK_SIZE) % CHUNK_SIZE,
+                               node.index / (CHUNK_SIZE * CHUNK_SIZE));
+        for (size_t face = 0; face < 6; ++face)
         {
-          const auto next_pos = pos + offset;
-          const auto c = UChunkManager::WorldToChunk(next_pos);
-          if (!HasComputeChunk(c) || !InputProfile.ContainsY(next_pos.y))
+          auto next_local = local + NEIGHBOR_OFFSETS[face];
+          Tile *tile = node.tile;
+          if (!InChunkLocal(next_local))
+          {
+            tile = tile->neighbors[face];
+            if (!tile)
+              continue;
+            for (int axis = 0; axis < 3; ++axis)
+            {
+              if (next_local[axis] < 0)
+                next_local[axis] += CHUNK_SIZE;
+              else if (next_local[axis] >= CHUNK_SIZE)
+                next_local[axis] -= CHUNK_SIZE;
+            }
+          }
+          if (next_local.y < tile->min_local_y ||
+              next_local.y > tile->max_local_y)
             continue;
-          const auto &info = materials.Get(GetBlock(next_pos));
+          const int index = UChunk::LocalIndex(next_local);
+          auto &target = (*tile->light)[index];
+          const int current = sky ? UnpackSky(target) : UnpackBlock(target);
+          if (current >= level - 1)
+            continue;
+          const auto &info = materials.Get(
+              tile->geometry ? (*tile->geometry)[index] : BLOCK_AIR);
           if (!info.transparent)
             continue;
           const int next = level - (sky && info.liquid ? 2 : 1);
-          if (next <= (sky ? GetSkyLight(next_pos) : GetBlockLight(next_pos)))
+          if (next <= current)
             continue;
-          if (sky)
-            WriteSkyLight(next_pos, next);
-          else
-            WriteBlockLight(next_pos, next);
+          target = sky ? PackLight(next, UnpackBlock(target))
+                       : PackLight(UnpackSky(target), next);
           if (next > 1)
-            buckets[next].push_back(next_pos);
+            buckets[next].push_back({tile, static_cast<uint16_t>(index)});
         }
       }
   };

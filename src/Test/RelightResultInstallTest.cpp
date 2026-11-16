@@ -893,6 +893,38 @@ void TestUnknownGeometryAndPinnedCatalog()
          "new computation uses changed material emission");
 }
 
+void TestClippedProfileDoesNotSeedOutOfWorldSource()
+{
+  using namespace cutum;
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition torch;
+  torch.Physics = BlockPhysicsProfile::Solid();
+  torch.Render.Style = BlockRenderStyle::Cross;
+  torch.Lighting.Emission = 14;
+  definitions->ReplaceAll({{50, torch}}, {{"torch", 50}});
+  UBlockRegistry registry(nullptr, definitions);
+  UBlockWorld world;
+  world.SetVerticalProfile(WorldVerticalProfile(-63, 318));
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  // A loaded legacy slice can contain cells outside a clipped runtime profile.
+  world.GetChunkManager().EnsureChunk({0, -4, 0});
+  world.GetChunkManager().GetChunk({0, -4, 0})->SetBlockLocal({8, 0, 8}, 50);
+  RelightJobSpec spec;
+  spec.block_positions = {{8, -63, 8}};
+  spec.min_world_y = -63;
+  spec.max_world_y = -49;
+  spec.column_center_only = true;
+  spec.include_skylight = false;
+  const auto result =
+      UChunkRelightSnapshot::Capture(world, spec).Compute(registry);
+  Expect(result.inputs_complete && result.chunks.size() == 1,
+         "clipped profile retains known section inputs");
+  Expect(UnpackBlock(
+             result.chunks[0].light_packed[UChunk::LocalIndex({8, 1, 8})]) == 0,
+         "source below runtime profile cannot emit through its clipped lower "
+         "face");
+}
+
 } // namespace
 
 int main(int argc, char **argv)
@@ -902,6 +934,7 @@ int main(int argc, char **argv)
     TestSectionLightUsesKnownEmitterGeometry();
     TestGeometryHaloAgainstDenseReference();
     TestUnknownGeometryAndPinnedCatalog();
+    TestClippedProfileDoesNotSeedOutOfWorldSource();
     std::cout << "section_light_geometry_test: OK\n";
     return 0;
   }
@@ -919,5 +952,6 @@ int main(int argc, char **argv)
   TestSectionLightUsesKnownEmitterGeometry();
   TestGeometryHaloAgainstDenseReference();
   TestUnknownGeometryAndPinnedCatalog();
+  TestClippedProfileDoesNotSeedOutOfWorldSource();
   std::cout << "relight_result_install_test: OK\n";
 }

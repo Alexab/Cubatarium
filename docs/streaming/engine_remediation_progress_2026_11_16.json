@@ -1478,6 +1478,13 @@
         "scope": "worker wall timings under concurrent native workload; no hardware parity or performance budget acceptance"
       },
       "cache_signature": "light-v5:0:-64:319:17038976160172985471"
+    },
+    "topology_optimization": {
+      "status": "unit_verified_native_pending",
+      "change": "Compute-local tile pointers and six cached neighbors replace world-position hash lookups in flood inner loop; clipped profile bounds retained. No change to material/source semantics.",
+      "test_log": "build/desktop-msvc/engine-light-topology-final-tests.log",
+      "reference": "same independent dense full-field reference, unknown/pinned catalog controls and clipped lower-profile source exclusion",
+      "scope": "No performance acceptance from test timings; native comparison pending."
     }
   }
 }
