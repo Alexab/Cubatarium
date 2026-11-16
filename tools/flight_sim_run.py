@@ -1655,17 +1655,23 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
         }
 
 
+_owned_flight_processes: dict[int, subprocess.Popen] = {}
+
+
 def kill_cubatarium_orphans() -> int:
-    """Force-kill any Cubatarium.exe trees. Returns number of taskkill attempts."""
-    if sys.platform != "win32":
-        return 0
-    r = subprocess.run(
-        ["taskkill", "/F", "/T", "/IM", "Cubatarium.exe"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
-    )
-    return 0 if r.returncode == 128 else 1
+    """Clean up this runner's children without touching another game session.
+
+    Keep Popen objects, not stale PID files: poll reaps an exited child before
+    deciding whether its PID can still be targeted.
+    """
+    attempts = 0
+    for pid, process in list(_owned_flight_processes.items()):
+        if process.poll() is None:
+            kill_process_tree(pid)
+            attempts += 1
+        else:
+            _owned_flight_processes.pop(pid, None)
+    return attempts
 
 
 def exe_writable(timeout_sec: float = 5.0) -> bool:
@@ -1689,7 +1695,7 @@ def preflight_cleanup() -> None:
     kill_cubatarium_orphans()
     if not exe_writable(5.0):
         raise SystemExit(
-            "FAIL: Cubatarium.exe still locked after kill — abort before build/sim"
+            "FAIL: Cubatarium.exe is locked by another session — abort before build/sim"
         )
 
 
@@ -1716,6 +1722,7 @@ def run_with_timeout(
 ) -> tuple[int, dict]:
     """Run flight-sim while sampling host and app CPU/memory when psutil exists."""
     proc = subprocess.Popen(cmd, cwd=str(cwd))
+    _owned_flight_processes[proc.pid] = proc
     monitor = {
         "schema": "flight-runtime-resources.v1",
         "available": False,
@@ -1833,6 +1840,7 @@ def run_with_timeout(
         min(available_memory) if available_memory else None
     )
     monitor["timed_out"] = timed_out
+    _owned_flight_processes.pop(proc.pid, None)
     return (124 if timed_out else int(proc.returncode or 0)), monitor
 
 
