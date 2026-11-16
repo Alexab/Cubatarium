@@ -515,7 +515,7 @@
     "lease_released": true
   },
   "fluid_mutation_tracking": {
-    "status": "native_pending",
+    "status": "unit_verified_native_regression_only",
     "unit_log": "build/desktop-msvc/engine-fluid-mutation-final-tests.log",
     "passed_ctest_sets": 13,
     "behavior": "seal wrappers return changed content/incarnation coordinates across 3x3 columns and the vertical profile; sync generation and deferred sealing publish the same durable geometry/light/save/physics obligations without sea-band or backlog drop",
@@ -528,6 +528,69 @@
     "limitations": [
       "scoped to the seal routines bounded mutation region; not a general world mutation journal",
       "global light dependency settlement and strict publication barrier are separate remaining stages"
-    ]
+    ],
+    "release_build": "build/desktop-msvc/engine-fluid-mutation-final-release-build.log",
+    "native_artifacts": "build/desktop-msvc/engine-fluid-mutation-wet-native",
+    "native_verdict": {
+      "schema": "engine-smoke-verdict.v1",
+      "status": "UNTESTED",
+      "components": {
+        "runtime": {
+          "status": "PASS",
+          "reason": "native_process",
+          "exit_code": 0
+        },
+        "route": {
+          "status": "PASS",
+          "reason": "frontier_route_covered",
+          "displacement_chunks": 19,
+          "outside_initial_resident_samples": 2789
+        },
+        "startup": {
+          "status": "UNTESTED",
+          "reason": "missing_first_frame_ring_witness"
+        },
+        "visual": {
+          "status": "UNTESTED",
+          "reason": "missing_visual_reference",
+          "samples": 27040,
+          "captures": 169,
+          "attributed_samples": 0,
+          "faults": 0
+        },
+        "inspection": {
+          "status": "PASS",
+          "reason": "inspection_capture_coverage",
+          "requested": 24,
+          "queued": 24,
+          "verified": 24
+        },
+        "fixture": {
+          "status": "PASS",
+          "reason": "negative_wet_cave_observed",
+          "samples": 216
+        },
+        "fixture_opaque_depth": {
+          "status": "PASS",
+          "reason": "analytic_near_cave_opaque_depth",
+          "checked": 26409,
+          "faults": 0,
+          "frame_epochs": 169,
+          "skipped_unscoped_or_occluded": 631,
+          "examples": [],
+          "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+        }
+      },
+      "malformed_trace_rows": 0,
+      "scope": "one-way frontier route and sampled reference checks; not full-screen proof",
+      "runner_exit_code": 1,
+      "inspection_evidence": {
+        "verified": 24,
+        "requested": 24,
+        "reason": "inspection_views_joined_to_png"
+      }
+    },
+    "native_mutation_event_count": 0,
+    "native_mutation_event_coverage": "UNTESTED: route did not trigger a new seal mutation; targeted native mutation fixture still required"
   }
 }
