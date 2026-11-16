@@ -58,13 +58,14 @@ void UAsyncRelightBuilder::Enqueue(UChunkRelightSnapshot snapshot,
   }
 
   auto catalogKeep = registry.GetDefinitionsCatalogSnapshot();
+  snapshot.SetInputCatalog(catalogKeep);
 
   Pool.Enqueue([this, snapshot = std::move(snapshot), registryPtr = &registry,
                 catalogKeep = std::move(catalogKeep), job_id,
                 submit_epoch]() mutable
                {
-                 // Catalog pin proves immutable input identity for install checks;
-                 // Compute still needs registry physics maps (catalog-only flood = follow-on).
+                 // Compute uses the pinned immutable material catalog throughout
+                 // the flood; the registry is only a fallback for legacy callers.
                  RelightComputeResult result = snapshot.Compute(*registryPtr);
                  result.job_id = job_id;
                  result.submitEpoch = submit_epoch;
@@ -138,6 +139,7 @@ AsyncRelightEnqueueTimings UAsyncRelightBuilder::EnqueueJob(
   const int captured_full_n = snapshot.GetCapturedFullChunks();
   const int captured_neighbor_light_n =
       snapshot.GetCapturedNeighborLightChunks();
+  const int captured_geometry_halo_n = snapshot.GetCapturedGeometryHaloChunks();
   const int captured_sky_context_n = snapshot.GetCapturedSkyContextChunks();
   const double sky_context_capture_ms = snapshot.GetSkyContextCaptureMs();
   if (audit_relight)
@@ -149,16 +151,17 @@ AsyncRelightEnqueueTimings UAsyncRelightBuilder::EnqueueJob(
         "RelightAudit",
         "snapshot job=" + std::to_string(job_id) + " source=(" +
             std::to_string(source.x) + "," + std::to_string(source.y) + "," +
-            std::to_string(source.z) + ") band=" +
-            std::to_string(spec.min_world_y) + ":" +
-            std::to_string(spec.max_world_y) + " capture_ms=" +
-            std::to_string(capture_ms) + " full=" +
-            std::to_string(captured_full_n) + " neighbor_light=" +
-            std::to_string(captured_neighbor_light_n) + " sky_context=" +
-            std::to_string(captured_sky_context_n) + " sky_context_ms=" +
-            std::to_string(sky_context_capture_ms) + " finalize=" +
-            std::to_string(spec.finalize_pending_gate) + " draw_gate=" +
-            std::to_string(spec.visible_draw_gate_repair));
+            std::to_string(source.z) +
+            ") band=" + std::to_string(spec.min_world_y) + ":" +
+            std::to_string(spec.max_world_y) +
+            " capture_ms=" + std::to_string(capture_ms) +
+            " full=" + std::to_string(captured_full_n) +
+            " neighbor_light=" + std::to_string(captured_neighbor_light_n) +
+            " geometry_halo=" + std::to_string(captured_geometry_halo_n) +
+            " sky_context=" + std::to_string(captured_sky_context_n) +
+            " sky_context_ms=" + std::to_string(sky_context_capture_ms) +
+            " finalize=" + std::to_string(spec.finalize_pending_gate) +
+            " draw_gate=" + std::to_string(spec.visible_draw_gate_repair));
   }
 
   {
@@ -168,6 +171,7 @@ AsyncRelightEnqueueTimings UAsyncRelightBuilder::EnqueueJob(
   }
 
   auto catalogKeep = registry.GetDefinitionsCatalogSnapshot();
+  snapshot.SetInputCatalog(catalogKeep);
 
   // A21 P5: share work-slot envelope with mesh workers. If denied, still
   // enqueue (do not drop light demand) under a limited bypass counter —
@@ -192,53 +196,56 @@ AsyncRelightEnqueueTimings UAsyncRelightBuilder::EnqueueJob(
   }
 
   const auto submit_started = std::chrono::steady_clock::now();
-  Pool.Enqueue([this, snapshot = std::move(snapshot), registry = &registry,
-                catalogKeep = std::move(catalogKeep), job_id, submit_epoch,
-                work_slot = std::move(work_slot), audit_relight,
-                captured_full_n, captured_neighbor_light_n,
-                captured_sky_context_n, sky_context_capture_ms]() mutable
-               {
-                 (void)work_slot;
-                 const auto compute_started = std::chrono::steady_clock::now();
-                 if (audit_relight)
-                 {
-                   CubatariumLogInfo("RelightAudit",
-                       "worker_start job=" + std::to_string(job_id));
-                 }
-                 RelightComputeResult result = snapshot.Compute(*registry);
-                 const double compute_ms = std::chrono::duration<double, std::milli>(
-                                               std::chrono::steady_clock::now() - compute_started)
-                                               .count();
-                 if (audit_relight)
-                 {
-                   CubatariumLogInfo(
-                       "RelightAudit",
-                       "worker_done job=" + std::to_string(job_id) +
-                           " compute_ms=" + std::to_string(compute_ms) +
-                           " full=" + std::to_string(captured_full_n) +
-                           " neighbor_light=" +
-                           std::to_string(captured_neighbor_light_n) +
-                           " sky_context=" +
-                           std::to_string(captured_sky_context_n) +
-                           " sky_context_ms=" +
-                           std::to_string(sky_context_capture_ms) +
-                           " chunks=" + std::to_string(result.chunks.size()) +
-                           " read_set=" + std::to_string(result.read_set.size()) +
-                           " frontier_unfinished=" +
-                           std::to_string(result.frontier_unfinished));
-                 }
-                 result.job_id = job_id;
-                 result.submitEpoch = submit_epoch;
-                 result.work_token = snapshot.GetWorkToken();
-                 result.work_token.world_epoch = submit_epoch;
-                 result.dependency_stamp = snapshot.GetDependencyStamp();
-                 result.input_catalog = std::move(catalogKeep);
-                 RelightComputeResult dropped;
-                 if (Completed.PushDropOldest(std::move(result), &dropped))
-                 {
-                   NoteCompletedOverflow(std::move(dropped));
-                 }
-               });
+  Pool.Enqueue(
+      [this, snapshot = std::move(snapshot), registry = &registry,
+       catalogKeep = std::move(catalogKeep), job_id, submit_epoch,
+       work_slot = std::move(work_slot), audit_relight, captured_full_n,
+       captured_neighbor_light_n, captured_geometry_halo_n,
+       captured_sky_context_n, sky_context_capture_ms]() mutable
+      {
+        (void)work_slot;
+        const auto compute_started = std::chrono::steady_clock::now();
+        if (audit_relight)
+        {
+          CubatariumLogInfo("RelightAudit",
+                            "worker_start job=" + std::to_string(job_id));
+        }
+        RelightComputeResult result = snapshot.Compute(*registry);
+        const double compute_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - compute_started)
+                .count();
+        if (audit_relight)
+        {
+          CubatariumLogInfo(
+              "RelightAudit",
+              "worker_done job=" + std::to_string(job_id) +
+                  " compute_ms=" + std::to_string(compute_ms) + " full=" +
+                  std::to_string(captured_full_n) + " neighbor_light=" +
+                  std::to_string(captured_neighbor_light_n) +
+                  " geometry_halo=" + std::to_string(captured_geometry_halo_n) +
+                  " inputs_complete=" + std::to_string(result.inputs_complete) +
+                  " unknown_inputs=" +
+                  std::to_string(result.unknown_input_chunks) +
+                  " sky_context=" + std::to_string(captured_sky_context_n) +
+                  " sky_context_ms=" + std::to_string(sky_context_capture_ms) +
+                  " chunks=" + std::to_string(result.chunks.size()) +
+                  " read_set=" + std::to_string(result.read_set.size()) +
+                  " frontier_unfinished=" +
+                  std::to_string(result.frontier_unfinished));
+        }
+        result.job_id = job_id;
+        result.submitEpoch = submit_epoch;
+        result.work_token = snapshot.GetWorkToken();
+        result.work_token.world_epoch = submit_epoch;
+        result.dependency_stamp = snapshot.GetDependencyStamp();
+        result.input_catalog = std::move(catalogKeep);
+        RelightComputeResult dropped;
+        if (Completed.PushDropOldest(std::move(result), &dropped))
+        {
+          NoteCompletedOverflow(std::move(dropped));
+        }
+      });
   const auto submit_complete = std::chrono::steady_clock::now();
   timings.queue_submit_ms =
       std::chrono::duration<double, std::milli>(submit_complete -

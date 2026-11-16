@@ -1993,6 +1993,10 @@ cubatarium_add_test(NAME relight_result_install_test
     DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
+add_test(NAME section_light_geometry_test
+    COMMAND $<TARGET_FILE:relight_result_install_test> --geometry-halo)
+set_tests_properties(section_light_geometry_test PROPERTIES LABELS "unit;streaming;lighting;cpu")
+
 cubatarium_add_test(NAME gpu_skylight_seed_fluid_test
     SOURCES
         ${PHYSICS_MATERIAL_UNIT_SOURCES}

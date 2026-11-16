@@ -1,781 +1,261 @@
 #include "World/Lighting/ChunkRelightSnapshot.h"
 
+#include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
-#include "World/Chunks/Chunk.h"
-#include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
-#include "World/Lighting/LightUtil.h"
-#include "World/Math/GridMath.h"
-
 #include <algorithm>
 #include <chrono>
 #include <deque>
-#include <unordered_set>
+#include <limits>
+#include <tuple>
 
 namespace cutum
 {
-
 namespace
 {
+using Geometry = std::array<BlockId, CHUNK_VOLUME>;
+using LightData = std::array<uint8_t, CHUNK_VOLUME>;
 
-void CollectColumnChunkCoords(const UBlockWorld &world, int world_x, int world_z,
-                              int min_y, int max_y,
-                              std::unordered_set<glm::ivec3, IVec3Hash> &out)
+bool CoordLess(glm::ivec3 a, glm::ivec3 b)
 {
-  const glm::ivec3 base =
-      UChunkManager::WorldToChunk(glm::ivec3(world_x, min_y, world_z));
-  const glm::ivec3 top =
-      UChunkManager::WorldToChunk(glm::ivec3(world_x, max_y, world_z));
-  for (int dx = -1; dx <= 1; ++dx)
-  {
-    for (int dz = -1; dz <= 1; ++dz)
-    {
-      for (int cy = base.y; cy <= top.y; ++cy)
-      {
-        const glm::ivec3 coord(base.x + dx, cy, base.z + dz);
-        out.insert(coord); // Record absence, too: a later load changes inputs.
-      }
-    }
-  }
+  return std::tie(a.x, a.y, a.z) < std::tie(b.x, b.y, b.z);
 }
 
-void CollectCenterColumnChunkCoords(const UBlockWorld &world, int world_x,
-                                    int world_z, int min_y, int max_y,
-                                    std::unordered_set<glm::ivec3, IVec3Hash> &out)
+bool InChunkLocal(glm::ivec3 p)
 {
-  const glm::ivec3 base =
-      UChunkManager::WorldToChunk(glm::ivec3(world_x, min_y, world_z));
-  const glm::ivec3 top =
-      UChunkManager::WorldToChunk(glm::ivec3(world_x, max_y, world_z));
-  for (int cy = base.y; cy <= top.y; ++cy)
-  {
-    const glm::ivec3 coord(base.x, cy, base.z);
-    out.insert(coord);
-  }
+  return p.x >= 0 && p.x < CHUNK_SIZE && p.y >= 0 && p.y < CHUNK_SIZE &&
+         p.z >= 0 && p.z < CHUNK_SIZE;
 }
 
-bool InChunkLocal(glm::ivec3 local)
+// One immutable material view for the whole computation. Registry lookups
+// during a flood could otherwise observe different catalogs after a reload.
+class LightMaterials
 {
-  return local.x >= 0 && local.x < CHUNK_SIZE && local.y >= 0 &&
-         local.y < CHUNK_SIZE && local.z >= 0 && local.z < CHUNK_SIZE;
-}
-
-int SkylightStepCost(const UBlockRegistry &registry, BlockId id)
-{
-  if (!IsLightTransparent(registry, id))
+public:
+  struct Info
   {
-    return kMaxLightLevel + 1;
-  }
-  if (registry.IsLiquid(id))
-  {
-    return 2;
-  }
-  return 1;
-}
-
-int VerticalSkylightStepCost(const UBlockRegistry &registry, BlockId id)
-{
-  if (!IsLightTransparent(registry, id))
-  {
-    return kMaxLightLevel + 1;
-  }
-  if (registry.IsLiquid(id))
-  {
-    return 1;
-  }
-  return 0;
-}
-
-bool SharesChunkFace(glm::ivec3 world_pos, glm::ivec3 chunk_coord)
-{
-  const glm::ivec3 origin = chunk_coord * CHUNK_SIZE;
-  const glm::ivec3 local = world_pos - origin;
-  if (!InChunkLocal(local))
-  {
-    return false;
-  }
-  return local.x == 0 || local.x == CHUNK_SIZE - 1 || local.y == 0 ||
-         local.y == CHUNK_SIZE - 1 || local.z == 0 || local.z == CHUNK_SIZE - 1;
-}
-
-void PropagateSkylightColumn(UChunkRelightSnapshot &grid,
-                             const UBlockRegistry &registry,
-                             glm::ivec3 chunk_coord, int local_x, int local_z)
-{
-  const glm::ivec3 origin = chunk_coord * CHUNK_SIZE;
-  const int world_x = origin.x + local_x;
-  const int world_z = origin.z + local_z;
-  const int top_y = origin.y + CHUNK_SIZE - 1;
-  int incoming = kMaxLightLevel;
-  for (int y = top_y + 1; y <= grid.GetWorldMaxY() && incoming > 0; ++y)
-  {
-    const BlockId id = grid.GetBlock(glm::ivec3(world_x, y, world_z));
-    incoming = std::max(0, incoming - VerticalSkylightStepCost(registry, id));
-  }
-  for (int y = top_y; y >= origin.y; --y)
-  {
-    const glm::ivec3 world_pos(world_x, y, world_z);
-    const BlockId id = grid.GetBlock(world_pos);
-    const glm::ivec3 local(local_x, y - origin.y, local_z);
-    if (IsLightTransparent(registry, id))
-    {
-      grid.WriteSkyLight(world_pos, incoming);
-    }
-    incoming = std::max(0, incoming - VerticalSkylightStepCost(registry, id));
-  }
-}
-
-void SeedSkylightHorizontalQueue(UChunkRelightSnapshot &grid,
-                                 const UBlockRegistry &registry,
-                                 glm::ivec3 chunk_coord,
-                                 std::deque<glm::ivec3> &queue)
-{
-  const glm::ivec3 origin = chunk_coord * CHUNK_SIZE;
-  const auto try_seed = [&](glm::ivec3 world_pos, int sky_level)
-  {
-    if (sky_level <= 0)
-    {
-      return;
-    }
-    if (!IsLightTransparent(registry, grid.GetBlock(world_pos)))
-    {
-      return;
-    }
-    // The snapshot target band is cleared before the flood. Queueing a face
-    // position without writing its incoming level loses skylight that enters
-    // from a read-only neighbor chunk: the consumer reads the target's still
-    // zero value back from the grid. Install the attenuated boundary seed so
-    // the normal flood can continue from the actual incoming intensity.
-    if (sky_level > grid.GetSkyLight(world_pos))
-    {
-      grid.WriteSkyLight(world_pos, sky_level);
-    }
-    queue.push_back(world_pos);
+    bool transparent{false};
+    bool liquid{false};
+    uint8_t emission{0};
+    bool known{false};
   };
-
-  if (grid.HasChunk(chunk_coord))
+  LightMaterials(std::shared_ptr<const BlockDefinitionCatalog> catalog,
+                 const UBlockRegistry &fallback)
+      : Catalog(std::move(catalog)), Fallback(fallback),
+        Entries(static_cast<size_t>(std::numeric_limits<BlockId>::max()) + 1)
   {
-    for (int ly = 0; ly < CHUNK_SIZE; ++ly)
-    {
-      for (int lz = 0; lz < CHUNK_SIZE; ++lz)
+    Entries[BLOCK_AIR] = {true, false, 0, true};
+    if (Catalog)
+      for (const auto &entry : Catalog->ById)
       {
-        for (int lx = 0; lx < CHUNK_SIZE; ++lx)
-        {
-          const glm::ivec3 local(lx, ly, lz);
-          try_seed(origin + local,
-                   grid.GetSkyLightLocal(chunk_coord, local));
-        }
-      }
-    }
-  }
-
-  for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-  {
-    const glm::ivec3 neighbor_coord = chunk_coord + offset;
-    if (!grid.HasLight(neighbor_coord) || !grid.HasChunk(chunk_coord))
-    {
-      continue;
-    }
-    int axis = 0;
-    if (offset.y != 0)
-    {
-      axis = 1;
-    }
-    else if (offset.z != 0)
-    {
-      axis = 2;
-    }
-    const int center_face = offset[axis] > 0 ? (CHUNK_SIZE - 1) : 0;
-    const int neighbor_face = offset[axis] > 0 ? 0 : (CHUNK_SIZE - 1);
-    const int u_axis = (axis + 1) % 3;
-    const int v_axis = (axis + 2) % 3;
-    const glm::ivec3 origin = chunk_coord * CHUNK_SIZE;
-    for (int u = 0; u < CHUNK_SIZE; ++u)
-    {
-      for (int v = 0; v < CHUNK_SIZE; ++v)
-      {
-        glm::ivec3 center_local(0);
-        glm::ivec3 neighbor_local(0);
-        center_local[axis] = center_face;
-        center_local[u_axis] = u;
-        center_local[v_axis] = v;
-        neighbor_local[axis] = neighbor_face;
-        neighbor_local[u_axis] = u;
-        neighbor_local[v_axis] = v;
-        const int incoming =
-            grid.GetSkyLightLocal(neighbor_coord, neighbor_local);
-        const glm::ivec3 center_world = origin + center_local;
-        const BlockId center_id = grid.GetBlock(center_world);
-        const int seed_level =
-            std::max(0, incoming - SkylightStepCost(registry, center_id));
-        try_seed(center_world, seed_level);
-      }
-    }
-  }
-}
-
-// One max-plus BFS over pre-seeded positions. Skylight propagation is
-// monotone (values only rise), so one flood over the union of per-chunk
-// seeds reaches the same fixed point as repeated per-chunk floods — the
-// batch path uses this to avoid O(chunks × grid) re-walks on tall bands.
-void FloodSkylightSeeds(UChunkRelightSnapshot &grid,
-                        const UBlockRegistry &registry,
-                        std::deque<glm::ivec3> &queue)
-{
-  while (!queue.empty())
-  {
-    const glm::ivec3 pos = queue.front();
-    queue.pop_front();
-    if (!grid.HasChunk(UChunkManager::WorldToChunk(pos)))
-    {
-      continue;
-    }
-    const int light = grid.GetSkyLight(pos);
-    if (light <= 1)
-    {
-      continue;
-    }
-    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-    {
-      const glm::ivec3 neighbor = pos + offset;
-      // Missing chunk reads as AIR and Write* is a no-op — without this guard
-      // BFS expands forever (hang + RAM), e.g. placing a light near capture edge.
-      if (!grid.HasChunk(UChunkManager::WorldToChunk(neighbor)))
-      {
-        continue;
-      }
-      const BlockId neighbor_id = grid.GetBlock(neighbor);
-      if (!IsLightTransparent(registry, neighbor_id))
-      {
-        continue;
-      }
-      const int next =
-          std::max(0, light - SkylightStepCost(registry, neighbor_id));
-      if (next <= grid.GetSkyLight(neighbor))
-      {
-        continue;
-      }
-      grid.WriteSkyLight(neighbor, next);
-      queue.push_back(neighbor);
-    }
-  }
-}
-
-// Seeds emission sources of one chunk plus the captured light of its
-// out-of-grid face neighbors (same seed set as the former per-chunk call).
-void SeedBlocklightQueue(UChunkRelightSnapshot &grid,
-                         const UBlockRegistry &registry, glm::ivec3 chunk_coord,
-                         std::deque<std::pair<glm::ivec3, int>> &queue)
-{
-  const auto seed_chunk = [&](glm::ivec3 seed_coord)
-  {
-    if (!grid.HasChunk(seed_coord))
-    {
-      return;
-    }
-    const glm::ivec3 seed_origin = seed_coord * CHUNK_SIZE;
-    for (int ly = 0; ly < CHUNK_SIZE; ++ly)
-    {
-      for (int lz = 0; lz < CHUNK_SIZE; ++lz)
-      {
-        for (int lx = 0; lx < CHUNK_SIZE; ++lx)
-        {
-          const glm::ivec3 local(lx, ly, lz);
-          const BlockId id = grid.GetBlock(seed_origin + local);
-          const int emission = registry.GetLightEmission(id);
-          if (emission > 0)
-          {
-            queue.emplace_back(seed_origin + local, emission);
-          }
-        }
-      }
-    }
-  };
-  seed_chunk(chunk_coord);
-  for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-  {
-    const glm::ivec3 neighbor_coord = chunk_coord + offset;
-    if (grid.HasChunk(neighbor_coord))
-    {
-      seed_chunk(neighbor_coord);
-      continue;
-    }
-    if (!grid.HasLight(neighbor_coord) || !grid.HasChunk(chunk_coord))
-    {
-      continue;
-    }
-    int axis = 0;
-    if (offset.y != 0)
-    {
-      axis = 1;
-    }
-    else if (offset.z != 0)
-    {
-      axis = 2;
-    }
-    const int center_face = offset[axis] > 0 ? (CHUNK_SIZE - 1) : 0;
-    const int neighbor_face = offset[axis] > 0 ? 0 : (CHUNK_SIZE - 1);
-    const int u_axis = (axis + 1) % 3;
-    const int v_axis = (axis + 2) % 3;
-    const glm::ivec3 origin = chunk_coord * CHUNK_SIZE;
-    for (int u = 0; u < CHUNK_SIZE; ++u)
-    {
-      for (int v = 0; v < CHUNK_SIZE; ++v)
-      {
-        glm::ivec3 neighbor_local(0);
-        glm::ivec3 center_local(0);
-        neighbor_local[axis] = neighbor_face;
-        neighbor_local[u_axis] = u;
-        neighbor_local[v_axis] = v;
-        center_local[axis] = center_face;
-        center_local[u_axis] = u;
-        center_local[v_axis] = v;
-        const int incoming =
-            grid.GetBlockLightLocal(neighbor_coord, neighbor_local);
-        if (incoming > 1)
-        {
-          queue.emplace_back(origin + center_local, incoming - 1);
-        }
-      }
-    }
-  }
-}
-
-// Same max-plus convergence argument as FloodSkylightSeeds: one BFS over the
-// union of per-chunk seeds replaces the repeated per-chunk floods.
-void FloodBlocklightSeeds(UChunkRelightSnapshot &grid,
-                          const UBlockRegistry &registry,
-                          std::deque<std::pair<glm::ivec3, int>> &queue)
-{
-  while (!queue.empty())
-  {
-    const auto [pos, light] = queue.front();
-    queue.pop_front();
-    if (!grid.HasChunk(UChunkManager::WorldToChunk(pos)))
-    {
-      continue;
-    }
-    if (light <= grid.GetBlockLight(pos))
-    {
-      continue;
-    }
-    grid.WriteBlockLight(pos, light);
-    if (light <= 1)
-    {
-      continue;
-    }
-    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-    {
-      const glm::ivec3 neighbor = pos + offset;
-      if (!grid.HasChunk(UChunkManager::WorldToChunk(neighbor)))
-      {
-        continue;
-      }
-      if (!IsLightTransparent(registry, grid.GetBlock(neighbor)))
-      {
-        continue;
-      }
-      const int next = light - 1;
-      if (next > grid.GetBlockLight(neighbor))
-      {
-        queue.emplace_back(neighbor, next);
-      }
-    }
-  }
-}
-
-void RelightChunkCoordsOnGrid(UChunkRelightSnapshot &grid,
-                              const UBlockRegistry &registry,
-                              const std::vector<glm::ivec3> &coords,
-                              bool include_block_light, bool include_skylight)
-{
-  for (const glm::ivec3 &coord : coords)
-  {
-    if (!grid.HasChunk(coord))
-    {
-      continue;
-    }
-    if (include_skylight && include_block_light)
-    {
-      grid.ClearChunkLight(coord);
-    }
-    else if (include_skylight)
-    {
-      for (int ly = 0; ly < CHUNK_SIZE; ++ly)
-      {
-        for (int lz = 0; lz < CHUNK_SIZE; ++lz)
-        {
-          for (int lx = 0; lx < CHUNK_SIZE; ++lx)
-          {
-            grid.WriteSkyLight(coord * CHUNK_SIZE + glm::ivec3(lx, ly, lz), 0);
-          }
-        }
-      }
-    }
-    else if (include_block_light)
-    {
-      for (int ly = 0; ly < CHUNK_SIZE; ++ly)
-      {
-        for (int lz = 0; lz < CHUNK_SIZE; ++lz)
-        {
-          for (int lx = 0; lx < CHUNK_SIZE; ++lx)
-          {
-            grid.WriteBlockLight(coord * CHUNK_SIZE + glm::ivec3(lx, ly, lz), 0);
-          }
-        }
-      }
-    }
-  }
-  if (include_skylight)
-  {
-    for (const glm::ivec3 &coord : coords)
-    {
-      if (!grid.HasChunk(coord))
-      {
-        continue;
-      }
-      for (int lx = 0; lx < CHUNK_SIZE; ++lx)
-      {
-        for (int lz = 0; lz < CHUNK_SIZE; ++lz)
-        {
-          PropagateSkylightColumn(grid, registry, coord, lx, lz);
-        }
-      }
-    }
-    // One union flood instead of one flood per chunk: each per-chunk flood
-    // re-walks the whole grid snapshot, so tall bands paid O(chunks × grid).
-    std::deque<glm::ivec3> sky_queue;
-    for (const glm::ivec3 &coord : coords)
-    {
-      SeedSkylightHorizontalQueue(grid, registry, coord, sky_queue);
-    }
-    FloodSkylightSeeds(grid, registry, sky_queue);
-  }
-  if (!include_block_light)
-  {
-    return;
-  }
-  std::deque<std::pair<glm::ivec3, int>> block_queue;
-  for (const glm::ivec3 &coord : coords)
-  {
-    SeedBlocklightQueue(grid, registry, coord, block_queue);
-  }
-  FloodBlocklightSeeds(grid, registry, block_queue);
-}
-
-bool FaceHasLitTransparentVoxel(UChunkRelightSnapshot &grid,
-                                const UBlockRegistry &registry,
-                                glm::ivec3 chunk_coord,
-                                const glm::ivec3 &neighbor_offset)
-{
-  if (!grid.HasChunk(chunk_coord))
-  {
-    return false;
-  }
-  const auto check_face = [&](int fixed_axis, int fixed_value, int axis_a,
-                              int axis_b)
-  {
-    for (int a = 0; a < CHUNK_SIZE; ++a)
-    {
-      for (int b = 0; b < CHUNK_SIZE; ++b)
-      {
-        glm::ivec3 local(0);
-        local[fixed_axis] = fixed_value;
-        local[axis_a] = a;
-        local[axis_b] = b;
-        const glm::ivec3 world = chunk_coord * CHUNK_SIZE + local;
-        if (!IsLightTransparent(registry, grid.GetBlock(world)))
-        {
+        if (entry.first == BLOCK_AIR)
           continue;
-        }
-        if (grid.GetSkyLight(world) > 0 || grid.GetBlockLight(world) > 0)
-        {
-          return true;
-        }
+        const auto &d = entry.second;
+        Entries[entry.first] = {d.Physics.IsLiquid ||
+                                    d.Render.Style == BlockRenderStyle::Cross ||
+                                    !(d.Physics.Movement.Occupancy >= 1.0f),
+                                d.Physics.IsLiquid,
+                                static_cast<uint8_t>(std::clamp(
+                                    d.Lighting.Emission, 0, kMaxLightLevel)),
+                                true};
       }
-    }
-    return false;
-  };
-  if (neighbor_offset.x == 1)
-  {
-    return check_face(0, CHUNK_SIZE - 1, 1, 2);
   }
-  if (neighbor_offset.x == -1)
+  const Info &Get(BlockId id)
   {
-    return check_face(0, 0, 1, 2);
+    auto &info = Entries[id];
+    if (!info.known && !Catalog)
+      info = {IsLightTransparent(Fallback, id), Fallback.IsLiquid(id),
+              static_cast<uint8_t>(
+                  std::clamp(Fallback.GetLightEmission(id), 0, kMaxLightLevel)),
+              true};
+    if (!info.known)
+      UnknownMaterialRead = true;
+    return info;
   }
-  if (neighbor_offset.y == 1)
-  {
-    return check_face(1, CHUNK_SIZE - 1, 0, 2);
-  }
-  if (neighbor_offset.y == -1)
-  {
-    return check_face(1, 0, 0, 2);
-  }
-  if (neighbor_offset.z == 1)
-  {
-    return check_face(2, CHUNK_SIZE - 1, 0, 1);
-  }
-  if (neighbor_offset.z == -1)
-  {
-    return check_face(2, 0, 0, 1);
-  }
-  return false;
-}
+  bool Complete() const { return Catalog && !UnknownMaterialRead; }
+
+private:
+  std::shared_ptr<const BlockDefinitionCatalog> Catalog;
+  const UBlockRegistry &Fallback;
+  std::vector<Info> Entries;
+  bool UnknownMaterialRead{false};
+};
 
 } // namespace
 
-BlockId UChunkRelightSnapshot::GetBlock(glm::ivec3 world_pos) const
+BlockId UChunkRelightSnapshot::GetBlock(glm::ivec3 p) const
 {
-  const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(world_pos);
-  const glm::ivec3 local = UChunkManager::WorldToLocal(world_pos);
-  const auto it = Blocks.find(chunk_coord);
-  if (it != Blocks.end() && InChunkLocal(local))
-  {
-    return it->second[local.x + CHUNK_SIZE * (local.y + CHUNK_SIZE * local.z)];
-  }
-  const auto sky_context = SkyContextBlocks.find(chunk_coord);
-  if (sky_context != SkyContextBlocks.end() && InChunkLocal(local))
-  {
-    return sky_context->second[local.x +
-                               CHUNK_SIZE * (local.y + CHUNK_SIZE * local.z)];
-  }
-  const auto shell = ShellBlocks.find(world_pos);
-  if (shell != ShellBlocks.end())
-  {
-    return shell->second;
-  }
-  return BLOCK_AIR;
+  const auto *data = GeometryData(UChunkManager::WorldToChunk(p));
+  return data ? (*data)[static_cast<size_t>(
+                    UChunk::LocalIndex(UChunkManager::WorldToLocal(p)))]
+              : BLOCK_AIR;
 }
 
-bool UChunkRelightSnapshot::HasChunk(glm::ivec3 chunk_coord) const
+const Geometry *UChunkRelightSnapshot::GeometryData(glm::ivec3 c) const
 {
-  return Blocks.count(chunk_coord) > 0;
+  const auto main = Blocks.find(c);
+  if (main != Blocks.end())
+    return &main->second;
+  const auto upper = SkyContextBlocks.find(c);
+  return upper == SkyContextBlocks.end() ? nullptr : &upper->second;
 }
-
-bool UChunkRelightSnapshot::HasLight(glm::ivec3 chunk_coord) const
+bool UChunkRelightSnapshot::HasChunk(glm::ivec3 c) const
 {
-  return Light.count(chunk_coord) > 0;
+  return WriteChunks.count(c) != 0;
 }
-
-int UChunkRelightSnapshot::GetSkyLight(glm::ivec3 world_pos) const
+bool UChunkRelightSnapshot::HasComputeChunk(glm::ivec3 c) const
 {
-  const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(world_pos);
-  const glm::ivec3 local = UChunkManager::WorldToLocal(world_pos);
-  return GetSkyLightLocal(chunk_coord, local);
+  return ComputeChunks.count(c) != 0;
 }
-
-int UChunkRelightSnapshot::GetBlockLight(glm::ivec3 world_pos) const
+bool UChunkRelightSnapshot::IsKnownGeometry(glm::ivec3 c) const
 {
-  const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(world_pos);
-  const glm::ivec3 local = UChunkManager::WorldToLocal(world_pos);
-  return GetBlockLightLocal(chunk_coord, local);
+  return KnownGeometry.count(c) != 0;
 }
-
-void UChunkRelightSnapshot::WriteSkyLight(glm::ivec3 world_pos, int level)
+bool UChunkRelightSnapshot::HasLight(glm::ivec3 c) const
 {
-  const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(world_pos);
-  const glm::ivec3 local = UChunkManager::WorldToLocal(world_pos);
-  SetLightLocal(chunk_coord, local, level, GetBlockLightLocal(chunk_coord, local));
+  return Light.count(c) != 0;
 }
-
-void UChunkRelightSnapshot::WriteBlockLight(glm::ivec3 world_pos, int level)
+int UChunkRelightSnapshot::GetSkyLight(glm::ivec3 p) const
 {
-  const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(world_pos);
-  const glm::ivec3 local = UChunkManager::WorldToLocal(world_pos);
-  SetLightLocal(chunk_coord, local, GetSkyLightLocal(chunk_coord, local), level);
+  return GetSkyLightLocal(UChunkManager::WorldToChunk(p),
+                          UChunkManager::WorldToLocal(p));
 }
-
-int UChunkRelightSnapshot::GetSkyLightLocal(glm::ivec3 chunk_coord,
-                                            glm::ivec3 local) const
+int UChunkRelightSnapshot::GetBlockLight(glm::ivec3 p) const
 {
-  const auto it = Light.find(chunk_coord);
-  if (it == Light.end() || !InChunkLocal(local))
-  {
-    return 0;
-  }
-  const uint8_t packed =
-      it->second[local.x + CHUNK_SIZE * (local.y + CHUNK_SIZE * local.z)];
-  return packed & 0x0F;
+  return GetBlockLightLocal(UChunkManager::WorldToChunk(p),
+                            UChunkManager::WorldToLocal(p));
 }
-
-int UChunkRelightSnapshot::GetBlockLightLocal(glm::ivec3 chunk_coord,
-                                              glm::ivec3 local) const
+int UChunkRelightSnapshot::GetSkyLightLocal(glm::ivec3 c, glm::ivec3 p) const
 {
-  const auto it = Light.find(chunk_coord);
-  if (it == Light.end() || !InChunkLocal(local))
-  {
-    return 0;
-  }
-  const uint8_t packed =
-      it->second[local.x + CHUNK_SIZE * (local.y + CHUNK_SIZE * local.z)];
-  return (packed >> 4) & 0x0F;
+  const auto it = Light.find(c);
+  return it == Light.end() || !InChunkLocal(p)
+             ? 0
+             : UnpackSky(it->second[UChunk::LocalIndex(p)]);
 }
-
-void UChunkRelightSnapshot::ClearChunkLight(glm::ivec3 chunk_coord)
+int UChunkRelightSnapshot::GetBlockLightLocal(glm::ivec3 c, glm::ivec3 p) const
 {
-  auto it = Light.find(chunk_coord);
+  const auto it = Light.find(c);
+  return it == Light.end() || !InChunkLocal(p)
+             ? 0
+             : UnpackBlock(it->second[UChunk::LocalIndex(p)]);
+}
+void UChunkRelightSnapshot::SetLightLocal(glm::ivec3 c, glm::ivec3 p, int sky,
+                                          int block)
+{
+  const auto it = Light.find(c);
+  if (it != Light.end() && InChunkLocal(p))
+    it->second[UChunk::LocalIndex(p)] = PackLight(sky, block);
+}
+void UChunkRelightSnapshot::WriteSkyLight(glm::ivec3 p, int level)
+{
+  SetLightLocal(UChunkManager::WorldToChunk(p), UChunkManager::WorldToLocal(p),
+                level, GetBlockLight(p));
+}
+void UChunkRelightSnapshot::WriteBlockLight(glm::ivec3 p, int level)
+{
+  SetLightLocal(UChunkManager::WorldToChunk(p), UChunkManager::WorldToLocal(p),
+                GetSkyLight(p), level);
+}
+void UChunkRelightSnapshot::ClearChunkLight(glm::ivec3 c)
+{
+  const auto it = Light.find(c);
   if (it != Light.end())
-  {
     it->second.fill(0);
-  }
-}
-
-void UChunkRelightSnapshot::SetLightLocal(glm::ivec3 chunk_coord,
-                                          glm::ivec3 local, int sky,
-                                          int block_level)
-{
-  auto it = Light.find(chunk_coord);
-  if (it == Light.end() || !InChunkLocal(local))
-  {
-    return;
-  }
-  const int idx = local.x + CHUNK_SIZE * (local.y + CHUNK_SIZE * local.z);
-  it->second[idx] = static_cast<uint8_t>((std::clamp(block_level, 0, 15) << 4) |
-                                         std::clamp(sky, 0, 15));
 }
 
 UChunkRelightSnapshot UChunkRelightSnapshot::Capture(const UBlockWorld &world,
-                                                    const RelightJobSpec &spec)
+                                                     const RelightJobSpec &spec)
 {
   UChunkRelightSnapshot snapshot;
   snapshot.Spec = spec;
-  snapshot.WorldMaxY = world.GetVerticalProfile().MaxY;
   snapshot.InputProfile = world.GetVerticalProfile();
+  snapshot.WorldMaxY = snapshot.InputProfile.MaxY;
   snapshot.InputLightingConfiguration =
       world.GetLightingConfigurationIdentity();
-  snapshot.InputContextCaptured = true;
-  std::unordered_set<glm::ivec3, IVec3Hash> coords;
-  for (const glm::ivec3 &block_pos : spec.block_positions)
+  snapshot.InputContextCaptured = snapshot.InputProfile.IsValid();
+  if (!snapshot.InputContextCaptured || spec.max_world_y < spec.min_world_y)
+    return snapshot;
+  const int low_y = std::max(spec.min_world_y, snapshot.InputProfile.MinY);
+  const int high_y = std::min(spec.max_world_y, snapshot.InputProfile.MaxY);
+  if (high_y < low_y)
+    return snapshot;
+  std::unordered_set<glm::ivec3, IVec3Hash> targets;
+  for (const auto source : spec.block_positions)
   {
-    if (spec.column_center_only)
-    {
-      CollectCenterColumnChunkCoords(world, block_pos.x, block_pos.z,
-                                     spec.min_world_y, spec.max_world_y, coords);
-    }
-    else
-    {
-      CollectColumnChunkCoords(world, block_pos.x, block_pos.z, spec.min_world_y,
-                               spec.max_world_y, coords);
-    }
+    const auto ground = UChunkManager::WorldToChunk(source);
+    const int radius = spec.column_center_only ? 0 : 1;
+    for (int dx = -radius; dx <= radius; ++dx)
+      for (int dz = -radius; dz <= radius; ++dz)
+        for (int cy = FloorDiv(low_y, CHUNK_SIZE);
+             cy <= FloorDiv(high_y, CHUNK_SIZE); ++cy)
+          targets.insert({ground.x + dx, cy, ground.z + dz});
   }
-  for (const glm::ivec3 &coord : coords)
+  std::unordered_set<glm::ivec3, IVec3Hash> context;
+  for (const auto target : targets)
   {
-    const UChunk *chunk = world.GetChunkManager().GetChunk(coord);
-    snapshot.ReadSet.push_back(world.CaptureInputStamp(coord));
-    if (!chunk)
-    {
+    if (world.GetChunkManager().HasChunk(target))
+      snapshot.WriteChunks.insert(target);
+    for (int dx = -1; dx <= 1; ++dx)
+      for (int dy = -1; dy <= 1; ++dy)
+        for (int dz = -1; dz <= 1; ++dz)
+        {
+          const auto c = target + glm::ivec3(dx, dy, dz);
+          if (snapshot.InputProfile.SliceBounds(c.y, CHUNK_SIZE))
+            context.insert(c);
+        }
+  }
+  std::vector<glm::ivec3> ordered(context.begin(), context.end());
+  std::sort(ordered.begin(), ordered.end(), CoordLess);
+  std::unordered_map<glm::ivec3, int, IVec3Hash> tops;
+  for (const auto c : ordered)
+  {
+    snapshot.ReadSet.push_back(world.CaptureInputStamp(c, false, true));
+    const UChunk *chunk = world.GetChunkManager().GetChunk(c);
+    const bool known = chunk || snapshot.ReadSet.back().missingEvidence ==
+                                    MissingChunkEvidence::KnownAir;
+    auto [it, inserted] = tops.emplace(glm::ivec3(c.x, 0, c.z), c.y);
+    if (!inserted)
+      it->second = std::max(it->second, c.y);
+    if (!known)
       continue;
-    }
-    snapshot.Blocks[coord] = chunk->GetData();
-    snapshot.Light[coord] = chunk->GetLightData();
-    ++snapshot.CapturedFullChunks;
-    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    snapshot.KnownGeometry.insert(c);
+    snapshot.ComputeChunks.insert(c);
+    snapshot.Light.emplace(c, LightData{});
+    if (chunk)
     {
-      const glm::ivec3 neighbor_coord = coord + offset;
-      if (coords.count(neighbor_coord))
-      {
-        continue;
-      }
-      const UChunk *neighbor = world.GetChunkManager().GetChunk(neighbor_coord);
-      snapshot.ReadSet.push_back(
-          world.CaptureInputStamp(neighbor_coord, spec.column_center_only));
-      if (!neighbor)
-      {
-        continue;
-      }
-      int axis = 0;
-      if (offset.y != 0)
-      {
-        axis = 1;
-      }
-      else if (offset.z != 0)
-      {
-        axis = 2;
-      }
-      const int face_local = offset[axis] > 0 ? 0 : (CHUNK_SIZE - 1);
-      const int u_axis = (axis + 1) % 3;
-      const int v_axis = (axis + 2) % 3;
-      const glm::ivec3 neighbor_origin = neighbor_coord * CHUNK_SIZE;
-      for (int u = 0; u < CHUNK_SIZE; ++u)
-      {
-        for (int v = 0; v < CHUNK_SIZE; ++v)
-        {
-          glm::ivec3 local(0);
-          local[axis] = face_local;
-          local[u_axis] = u;
-          local[v_axis] = v;
-          snapshot.ShellBlocks[neighbor_origin + local] =
-              neighbor->GetBlockLocal(local);
-        }
-      }
-      if (spec.column_center_only &&
-          snapshot.Light.find(neighbor_coord) == snapshot.Light.end())
-      {
-        // CheapRemesh C2: face-shell neighbor light (BC for center flood), not
-        // full CHUNK_VOLUME memcpy — Apply writes primary only.
-        std::array<uint8_t, CHUNK_VOLUME> face_light{};
-        face_light.fill(0);
-        const auto &src = neighbor->GetLightData();
-        for (int u = 0; u < CHUNK_SIZE; ++u)
-        {
-          for (int v = 0; v < CHUNK_SIZE; ++v)
-          {
-            glm::ivec3 local(0);
-            local[axis] = face_local;
-            local[u_axis] = u;
-            local[v_axis] = v;
-            const int idx =
-                local.x + CHUNK_SIZE * (local.y + CHUNK_SIZE * local.z);
-            face_light[idx] = src[idx];
-          }
-        }
-        snapshot.Light[neighbor_coord] = face_light;
-        ++snapshot.CapturedNeighborLightChunks;
-      }
+      if (!chunk->IsAirOnly())
+        snapshot.Blocks.emplace(c, chunk->GetData());
+      if (snapshot.WriteChunks.count(c))
+        ++snapshot.CapturedFullChunks;
+      else
+        ++snapshot.CapturedGeometryHaloChunks;
     }
   }
-
-  if (spec.include_skylight && !coords.empty())
+  if (spec.include_skylight)
   {
-    const auto sky_context_capture_started = std::chrono::steady_clock::now();
-    // Direct sky depends on every slice up to the configured world ceiling,
-    // including liquid attenuation. Context is read-only and never enlarges
-    // the write set. Absence stamps also invalidate the result on later load.
-    std::unordered_map<glm::ivec3, int, IVec3Hash> top_band_by_column;
-    for (const glm::ivec3 &coord : coords)
+    const auto started = std::chrono::steady_clock::now();
+    ordered.clear();
+    for (const auto &top : tops)
+      for (int cy = top.second + 1;
+           cy <= snapshot.InputProfile.MaxChunkY(CHUNK_SIZE); ++cy)
+        ordered.emplace_back(top.first.x, cy, top.first.z);
+    std::sort(ordered.begin(), ordered.end(), CoordLess);
+    for (const auto c : ordered)
     {
-      const glm::ivec3 column(coord.x, 0, coord.z);
-      auto [it, inserted] = top_band_by_column.emplace(column, coord.y);
-      if (!inserted)
-      {
-        it->second = std::max(it->second, coord.y);
-      }
-    }
-    std::unordered_set<glm::ivec3, IVec3Hash> sky_context_coords;
-    for (const auto &entry : top_band_by_column)
-    {
-      for (int cy = entry.second + 1;
-           cy <= world.GetVerticalProfile().MaxChunkY(CHUNK_SIZE); ++cy)
-      {
-        sky_context_coords.emplace(entry.first.x, cy, entry.first.z);
-      }
-    }
-    for (const glm::ivec3 &coord : sky_context_coords)
-    {
-      const UChunk *chunk = world.GetChunkManager().GetChunk(coord);
-      // Geometry-only stamp: lighting edits above must not invalidate the
-      // result, while appearance, removal, reuse, or voxel edits must.
-      snapshot.ReadSet.push_back(world.CaptureInputStamp(coord, false, true));
+      snapshot.ReadSet.push_back(world.CaptureInputStamp(c, false, true));
+      const UChunk *chunk = world.GetChunkManager().GetChunk(c);
+      if (chunk || snapshot.ReadSet.back().missingEvidence ==
+                       MissingChunkEvidence::KnownAir)
+        snapshot.KnownGeometry.insert(c);
       if (chunk && !chunk->IsAirOnly())
       {
-        snapshot.SkyContextBlocks[coord] = chunk->GetData();
+        snapshot.SkyContextBlocks.emplace(c, chunk->GetData());
         ++snapshot.CapturedSkyContextChunks;
       }
     }
     snapshot.SkyContextCaptureMs =
         std::chrono::duration<double, std::milli>(
-            std::chrono::steady_clock::now() - sky_context_capture_started)
+            std::chrono::steady_clock::now() - started)
             .count();
   }
   return snapshot;
@@ -789,7 +269,9 @@ UChunkRelightSnapshot::Compute(const UBlockRegistry &registry)
   result.input_profile = InputProfile;
   result.input_lighting_configuration = InputLightingConfiguration;
   result.input_context_captured = InputContextCaptured;
-  result.input_catalog = registry.GetDefinitionsCatalogSnapshot();
+  result.input_catalog = InputCatalogPinned
+                             ? InputCatalog
+                             : registry.GetDefinitionsCatalogSnapshot();
   result.retry_spec = Spec;
   result.job_id = Spec.job_id;
   result.source_block_positions = Spec.block_positions;
@@ -797,73 +279,135 @@ UChunkRelightSnapshot::Compute(const UBlockRegistry &registry)
   result.visible_draw_gate_repair = Spec.visible_draw_gate_repair;
   result.include_skylight = Spec.include_skylight;
   result.include_block_light = Spec.include_block_light;
-  if (Blocks.empty())
-  {
-    return result;
-  }
-
-  std::unordered_set<glm::ivec3, IVec3Hash> relit_set;
-  for (const auto &entry : Blocks)
-  {
-    relit_set.insert(entry.first);
-  }
-  std::vector<glm::ivec3> batch(relit_set.begin(), relit_set.end());
-  RelightChunkCoordsOnGrid(*this, registry, batch, Spec.include_block_light,
-                           Spec.include_skylight);
-
-  bool frontier_unfinished = false;
-  const int frontier_iters = Spec.column_center_only
-                                 ? std::min(Spec.frontier_iterations, 1)
-                                 : Spec.frontier_iterations;
-  for (int iter = 0; iter < frontier_iters; ++iter)
-  {
-    std::unordered_set<glm::ivec3, IVec3Hash> frontier;
-    for (const glm::ivec3 &coord : relit_set)
-    {
-      for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-      {
-        const glm::ivec3 neighbor_coord = coord + offset;
-        if (relit_set.count(neighbor_coord) || !HasChunk(neighbor_coord))
-        {
-          continue;
-        }
-        if (FaceHasLitTransparentVoxel(*this, registry, coord, offset))
-        {
-          frontier.insert(neighbor_coord);
-        }
-      }
-    }
-    if (frontier.empty())
-    {
-      break;
-    }
-    batch.assign(frontier.begin(), frontier.end());
-    RelightChunkCoordsOnGrid(*this, registry, batch, Spec.include_block_light,
-                             Spec.include_skylight);
-    relit_set.insert(frontier.begin(), frontier.end());
-    frontier_unfinished = (iter == frontier_iters - 1);
-  }
-  result.frontier_unfinished = frontier_unfinished;
   result.work_token = CapturedWorkToken;
   result.dependency_stamp = CapturedDepStamp;
-  result.chunks.reserve(relit_set.size());
-  for (const glm::ivec3 &coord : relit_set)
+  for (const auto &stamp : ReadSet)
+    if (stamp.incarnation == 0 &&
+        stamp.missingEvidence != MissingChunkEvidence::KnownAir)
+      ++result.unknown_input_chunks;
+  for (auto &entry : Light)
+    entry.second.fill(0);
+  LightMaterials materials(result.input_catalog, registry);
+  if (Spec.include_skylight)
   {
-    if (Spec.column_center_only && Blocks.find(coord) == Blocks.end())
+    // Carry all 256 incoming columns through each upper section once. Empty
+    // read-only sections cost one lookup, not 4096 per-cell world lookups.
+    std::unordered_map<glm::ivec3, int, IVec3Hash> bottoms;
+    for (const auto c : ComputeChunks)
     {
-      continue;
+      auto [it, inserted] = bottoms.emplace(glm::ivec3(c.x, 0, c.z), c.y);
+      if (!inserted)
+        it->second = std::min(it->second, c.y);
     }
-    const auto it = Light.find(coord);
-    if (it == Light.end())
+    for (const auto &bottom : bottoms)
     {
-      continue;
+      std::array<uint8_t, CHUNK_SIZE * CHUNK_SIZE> incoming;
+      incoming.fill(kMaxLightLevel);
+      for (int cy = InputProfile.MaxChunkY(CHUNK_SIZE); cy >= bottom.second;
+           --cy)
+      {
+        const glm::ivec3 c(bottom.first.x, cy, bottom.first.z);
+        if (!IsKnownGeometry(c))
+          break; // unknown cannot act as clear sky
+        const auto *data = GeometryData(c);
+        const auto light = Light.find(c);
+        if (!data && light == Light.end())
+          continue;
+        const auto bounds = InputProfile.SliceBounds(cy, CHUNK_SIZE);
+        if (!bounds)
+          continue;
+        const int base_y = cy * CHUNK_SIZE;
+        for (int y = bounds->second - base_y; y >= bounds->first - base_y; --y)
+          for (int z = 0; z < CHUNK_SIZE; ++z)
+            for (int x = 0; x < CHUNK_SIZE; ++x)
+            {
+              auto &level = incoming[x + CHUNK_SIZE * z];
+              const auto index =
+                  static_cast<size_t>(UChunk::LocalIndex({x, y, z}));
+              const auto &info =
+                  materials.Get(data ? (*data)[index] : BLOCK_AIR);
+              if (!info.transparent)
+                level = 0;
+              if (light != Light.end())
+                light->second[index] = PackLight(level, 0);
+              if (info.liquid && level)
+                --level;
+            }
+      }
     }
-    RelightChunkLightData chunk_data;
-    chunk_data.coord = coord;
-    chunk_data.light_packed = it->second;
-    result.chunks.push_back(std::move(chunk_data));
+  }
+  if (Spec.include_block_light)
+    for (const auto c : ComputeChunks)
+      if (const auto *data = GeometryData(c))
+        for (int y = 0; y < CHUNK_SIZE; ++y)
+          for (int z = 0; z < CHUNK_SIZE; ++z)
+            for (int x = 0; x < CHUNK_SIZE; ++x)
+            {
+              if (!InputProfile.ContainsY(c.y * CHUNK_SIZE + y))
+                continue;
+              const auto &info =
+                  materials.Get((*data)[UChunk::LocalIndex({x, y, z})]);
+              if (info.emission)
+                WriteBlockLight(c * CHUNK_SIZE + glm::ivec3(x, y, z),
+                                info.emission);
+            }
+  const auto flood = [&](bool sky)
+  {
+    std::array<std::deque<glm::ivec3>, kMaxLightLevel + 1> buckets;
+    for (const auto &chunk : Light)
+      for (int y = 0; y < CHUNK_SIZE; ++y)
+        for (int z = 0; z < CHUNK_SIZE; ++z)
+          for (int x = 0; x < CHUNK_SIZE; ++x)
+          {
+            const auto packed = chunk.second[UChunk::LocalIndex({x, y, z})];
+            const int level = sky ? UnpackSky(packed) : UnpackBlock(packed);
+            if (level > 1)
+              buckets[level].push_back(chunk.first * CHUNK_SIZE +
+                                       glm::ivec3(x, y, z));
+          }
+    for (int level = kMaxLightLevel; level > 1; --level)
+      while (!buckets[level].empty())
+      {
+        const auto pos = buckets[level].front();
+        buckets[level].pop_front();
+        if ((sky ? GetSkyLight(pos) : GetBlockLight(pos)) != level)
+          continue;
+        for (const auto offset : NEIGHBOR_OFFSETS)
+        {
+          const auto next_pos = pos + offset;
+          const auto c = UChunkManager::WorldToChunk(next_pos);
+          if (!HasComputeChunk(c) || !InputProfile.ContainsY(next_pos.y))
+            continue;
+          const auto &info = materials.Get(GetBlock(next_pos));
+          if (!info.transparent)
+            continue;
+          const int next = level - (sky && info.liquid ? 2 : 1);
+          if (next <= (sky ? GetSkyLight(next_pos) : GetBlockLight(next_pos)))
+            continue;
+          if (sky)
+            WriteSkyLight(next_pos, next);
+          else
+            WriteBlockLight(next_pos, next);
+          if (next > 1)
+            buckets[next].push_back(next_pos);
+        }
+      }
+  };
+  if (Spec.include_skylight)
+    flood(true);
+  if (Spec.include_block_light)
+    flood(false);
+  result.inputs_complete = InputContextCaptured && !ReadSet.empty() &&
+                           result.unknown_input_chunks == 0 &&
+                           materials.Complete();
+  std::vector<glm::ivec3> targets(WriteChunks.begin(), WriteChunks.end());
+  std::sort(targets.begin(), targets.end(), CoordLess);
+  for (const auto c : targets)
+  {
+    const auto it = Light.find(c);
+    if (it != Light.end())
+      result.chunks.push_back({c, it->second});
   }
   return result;
 }
-
 } // namespace cutum

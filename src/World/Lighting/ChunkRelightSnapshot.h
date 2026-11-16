@@ -12,6 +12,7 @@
 #include <cstring>
 #include <glm/glm.hpp>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace cutum
@@ -33,7 +34,7 @@ struct RelightJobSpec
   bool finalize_pending_gate{true};
   /// Renderer-rejected exact slice may remesh before the column gate finalizes.
   bool visible_draw_gate_repair{false};
-  /// Terrain column FIFO: copy center column full + neighbor shell/light only.
+  /// Write only the center column; neighboring geometry remains read-only.
   bool column_center_only{false};
 };
 
@@ -44,17 +45,16 @@ struct RelightChunkLightData
 };
 
 /// CheapRemesh C3: skip MarkRelit Dirty when Apply light equals current chunk.
-inline bool PrimaryLightUnchanged(
-    const std::array<uint8_t, CHUNK_VOLUME> &before,
-    const std::array<uint8_t, CHUNK_VOLUME> &after)
+inline bool
+PrimaryLightUnchanged(const std::array<uint8_t, CHUNK_VOLUME> &before,
+                      const std::array<uint8_t, CHUNK_VOLUME> &after)
 {
   return std::memcmp(before.data(), after.data(), CHUNK_VOLUME) == 0;
 }
 
 /// FZ2.7-B: after GPU sky seed, skip packed merge when block nibbles match.
-inline bool BlockLightUnchanged(
-    const std::array<uint8_t, CHUNK_VOLUME> &before,
-    const std::array<uint8_t, CHUNK_VOLUME> &after)
+inline bool BlockLightUnchanged(const std::array<uint8_t, CHUNK_VOLUME> &before,
+                                const std::array<uint8_t, CHUNK_VOLUME> &after)
 {
   for (int i = 0; i < CHUNK_VOLUME; ++i)
   {
@@ -79,6 +79,8 @@ struct RelightComputeResult
   WorldVerticalProfile input_profile;
   uint64_t input_lighting_configuration{0};
   bool input_context_captured{false};
+  bool inputs_complete{false};
+  int unknown_input_chunks{0};
   std::vector<RelightChunkLightData> chunks;
   bool frontier_unfinished{false};
   bool finalize_pending_gate{true};
@@ -88,7 +90,7 @@ struct RelightComputeResult
   std::vector<glm::ivec3> source_block_positions;
 };
 
-/// Read-only voxel grid for background relight (center chunks + one-block shell).
+/// Immutable geometry input for relight with a full-section influence halo.
 class UChunkRelightSnapshot
 {
 public:
@@ -96,12 +98,14 @@ public:
                                        const RelightJobSpec &spec);
 
   RelightComputeResult Compute(const UBlockRegistry &registry);
+  void SetInputCatalog(std::shared_ptr<const BlockDefinitionCatalog> catalog)
+  {
+    InputCatalog = std::move(catalog);
+    InputCatalogPinned = true;
+  }
   uint64_t GetJobId() const { return Spec.job_id; }
   const WorkToken &GetWorkToken() const { return CapturedWorkToken; }
-  const DependencyStamp &GetDependencyStamp() const
-  {
-    return CapturedDepStamp;
-  }
+  const DependencyStamp &GetDependencyStamp() const { return CapturedDepStamp; }
   void SetSubmitContext(WorkToken token, DependencyStamp deps)
   {
     CapturedWorkToken = token;
@@ -112,15 +116,20 @@ public:
   {
     return CapturedNeighborLightChunks;
   }
-  int GetCapturedSkyContextChunks() const
+  int GetCapturedGeometryHaloChunks() const
   {
-    return CapturedSkyContextChunks;
+    return CapturedGeometryHaloChunks;
   }
+  int GetCapturedSkyContextChunks() const { return CapturedSkyContextChunks; }
   double GetSkyContextCaptureMs() const { return SkyContextCaptureMs; }
   int GetWorldMaxY() const { return WorldMaxY; }
+  int GetWorldMinY() const { return InputProfile.MinY; }
 
   BlockId GetBlock(glm::ivec3 world_pos) const;
   bool HasChunk(glm::ivec3 chunk_coord) const;
+  bool HasComputeChunk(glm::ivec3 chunk_coord) const;
+  bool IsKnownGeometry(glm::ivec3 chunk_coord) const;
+  const std::array<BlockId, CHUNK_VOLUME> *GeometryData(glm::ivec3 coord) const;
   bool HasLight(glm::ivec3 chunk_coord) const;
   int GetSkyLight(glm::ivec3 world_pos) const;
   int GetBlockLight(glm::ivec3 world_pos) const;
@@ -141,19 +150,24 @@ private:
       SkyContextBlocks;
   std::unordered_map<glm::ivec3, std::array<uint8_t, CHUNK_VOLUME>, IVec3Hash>
       Light;
-  std::unordered_map<glm::ivec3, BlockId, IVec3Hash> ShellBlocks;
+  std::unordered_set<glm::ivec3, IVec3Hash> WriteChunks;
+  std::unordered_set<glm::ivec3, IVec3Hash> ComputeChunks;
+  std::unordered_set<glm::ivec3, IVec3Hash> KnownGeometry;
   RelightJobSpec Spec;
   WorkToken CapturedWorkToken{};
   DependencyStamp CapturedDepStamp{};
   std::vector<ChunkInputStamp> ReadSet;
   int CapturedFullChunks{0};
   int CapturedNeighborLightChunks{0};
+  int CapturedGeometryHaloChunks{0};
   int CapturedSkyContextChunks{0};
   double SkyContextCaptureMs{0.0};
   int WorldMaxY{0};
   WorldVerticalProfile InputProfile;
   uint64_t InputLightingConfiguration{0};
   bool InputContextCaptured{false};
+  std::shared_ptr<const BlockDefinitionCatalog> InputCatalog;
+  bool InputCatalogPinned{false};
 };
 
 } // namespace cutum

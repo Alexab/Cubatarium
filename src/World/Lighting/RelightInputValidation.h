@@ -61,6 +61,8 @@ inline RelightInputValidation ValidateRelightInputs(
       return RelightInputValidation::UnknownInput;
     }
   }
+  if (require_known_inputs && !result.inputs_complete)
+    return RelightInputValidation::UnknownInput;
   return RelightInputValidation::Current;
 }
 

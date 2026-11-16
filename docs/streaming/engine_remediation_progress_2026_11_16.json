@@ -1361,5 +1361,21 @@
       "retry_reason_records": {},
       "native_mode_or_profile_switch_coverage": "UNTESTED: fixed configuration route; stale profile/mode behavior verified by production-validator unit controls"
     }
+  },
+  "geometry_derived_light_solver": {
+    "status": "implemented_unit_verified_native_pending",
+    "contract": "One-section geometry halo contains every indirect path affecting a requested section (maximum light 15; positive attenuation). Direct sky reads geometry to the profile ceiling. Neighbour light bytes are never inputs; requested resident sections alone are written.",
+    "evidence": {
+      "red": "build/desktop-msvc/engine-geometry-light-red-test.log",
+      "green": "build/desktop-msvc/engine-geometry-halo-tests.log",
+      "reference": "Dense independent Jacobi relaxation; all 4096 cells, six face sources, source removal, emission reload, deterministic obstacles; repeated immutable snapshot; unknown upper geometry and pinned catalog controls",
+      "ctest": "12/12 Release passed"
+    },
+    "compatibility": "Global solver signature v5 invalidates cached completion from neighboring-field solver; terrain payload unchanged.",
+    "limitations": [
+      "Sync flood paths still require unification.",
+      "Unknown inputs permit transient computation only; per-domain durable completion and coverage obligations remain pending.",
+      "Native performance and visual verification pending."
+    ]
   }
 }

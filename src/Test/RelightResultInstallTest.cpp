@@ -285,6 +285,7 @@ void TestLateralSkylightSurvivesInstall()
   definitions->ReplaceAll({{8, stone}}, {{"stone", 8}});
   UBlockRegistry registry(nullptr, definitions);
   UBlockWorld world;
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
   // Small roof leaves open sky around it; horizontal flood lights its
   // underside.
   for (int x = 5; x <= 9; ++x)
@@ -349,6 +350,7 @@ void TestHorizontalSkylightBoundarySeedsAirAndWater()
                           {{"stone", kStone}, {"water", kWater}});
   UBlockRegistry registry(nullptr, definitions);
   UBlockWorld world;
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
 
   // A complete opaque ceiling suppresses direct skylight in the target
   // chunk. Only the pre-lit x- neighbor face can seed the two cells below it.
@@ -398,13 +400,14 @@ void TestSkylightReadsGeometryAbovePartialBand()
   definitions->ReplaceAll({{8, stone}}, {{"stone", 8}});
   UBlockRegistry registry(nullptr, definitions);
   UBlockWorld world;
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
 
   // Target only chunk y=0, with an opaque ceiling two chunks above it.
   // The source light solver scans above each target slice, so this geometry
   // must be part of the immutable read context even though it is not relit.
   world.SetBlock({0, 0, 0}, 8);
-  for (int x = 0; x < CHUNK_SIZE; ++x)
-    for (int z = 0; z < CHUNK_SIZE; ++z)
+  for (int x = -CHUNK_SIZE; x < 2 * CHUNK_SIZE; ++x)
+    for (int z = -CHUNK_SIZE; z < 2 * CHUNK_SIZE; ++z)
       world.SetBlock({x, 32, z}, 8);
 
   RelightJobSpec spec;
@@ -622,6 +625,10 @@ void TestRelightInputContextAndSeparateChannels()
   UBlockWorld world;
   world.SetBlock({8, -40, 8}, 8);
   auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition stone;
+  stone.Name = "stone";
+  stone.Physics = BlockPhysicsProfile::Solid();
+  definitions->ReplaceAll({{8, stone}}, {{"stone", 8}});
   UBlockRegistry registry(nullptr, definitions);
   RelightJobSpec spec;
   spec.block_positions = {{8, -40, 8}};
@@ -631,6 +638,9 @@ void TestRelightInputContextAndSeparateChannels()
   spec.include_skylight = true;
   spec.include_block_light = false;
   auto result = UChunkRelightSnapshot::Capture(world, spec).Compute(registry);
+  // Exercise the validator's explicit light-reading contract independently of
+  // the geometry-only backend, which no longer reads neighboring light bytes.
+  result.read_set.push_back(world.CaptureInputStamp({0, -3, 0}));
   const auto validate = [&](bool known = false)
   {
     return ValidateRelightInputs(
@@ -650,6 +660,7 @@ void TestRelightInputContextAndSeparateChannels()
   spec.include_skylight = false;
   spec.include_block_light = true;
   result = UChunkRelightSnapshot::Capture(world, spec).Compute(registry);
+  result.read_set.push_back(world.CaptureInputStamp({0, -3, 0}));
   chunk->SetLightLocal({2, 3, 4}, 10, 7);
   Expect(validate() == RelightInputValidation::Current,
          "sky-only mutation does not reject a block-only computation");
@@ -682,10 +693,218 @@ void TestRelightInputContextAndSeparateChannels()
          "missing provenance cannot inherit the current configuration");
 }
 
+void TestSectionLightUsesKnownEmitterGeometry()
+{
+  using namespace cutum;
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition torch;
+  torch.Name = "torch";
+  torch.Physics = BlockPhysicsProfile::Solid();
+  torch.Render.Style = BlockRenderStyle::Cross;
+  torch.Lighting.Emission = 14;
+  definitions->ReplaceAll({{50, torch}}, {{"torch", 50}});
+  UBlockRegistry registry(nullptr, definitions);
+  UBlockWorld world;
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  world.GetChunkManager().EnsureChunk({0, -3, 0});
+  world.SetBlock({16, -40, 8}, 50);
+  auto *source = world.GetChunkManager().GetChunk({1, -3, 0});
+  for (int neighbor_field : {0, 15})
+  {
+    source->SetLightLocal({0, 8, 8}, 0, neighbor_field);
+    for (bool center_only : {false, true})
+    {
+      RelightJobSpec spec;
+      spec.block_positions = {{8, -40, 8}};
+      spec.min_world_y = -48;
+      spec.max_world_y = -33;
+      spec.column_center_only = center_only;
+      spec.include_skylight = false;
+      const auto result =
+          UChunkRelightSnapshot::Capture(world, spec).Compute(registry);
+      const auto target = std::find_if(
+          result.chunks.begin(), result.chunks.end(),
+          [](const auto &c) { return c.coord == glm::ivec3(0, -3, 0); });
+      Expect(target != result.chunks.end(), "section target is computed");
+      Expect(UnpackBlock(
+                 target->light_packed[UChunk::LocalIndex({15, 8, 8})]) == 13,
+             "known neighbor emitter lights section independently of neighbor "
+             "light readiness");
+      Expect(source->GetBlockLightLocal({0, 8, 8}) == neighbor_field,
+             "read-only halo computation does not mutate source world light");
+    }
+  }
+}
+
+// Independent finite-volume reference: Jacobi relaxation over a dense voxel
+// array, without production chunk traversal, input stamps, or bucket queues.
+void TestGeometryHaloAgainstDenseReference()
+{
+  using namespace cutum;
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition stone, torch;
+  stone.Physics = BlockPhysicsProfile::Solid();
+  torch.Physics = BlockPhysicsProfile::Solid();
+  torch.Render.Style = BlockRenderStyle::Cross;
+  torch.Lighting.Emission = 14;
+  definitions->ReplaceAll({{8, stone}, {50, torch}},
+                          {{"stone", 8}, {"torch", 50}});
+  UBlockRegistry registry(nullptr, definitions);
+  UBlockWorld world;
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  const glm::ivec3 origin(-32, -48, -16);
+  world.GetChunkManager().EnsureChunk({-1, -2, 0});
+  constexpr int width = 48;
+  const auto index = [=](int x, int y, int z)
+  { return x + width * (y + width * z); };
+  std::vector<BlockId> cells(width * width * width, BLOCK_AIR);
+  uint32_t random = 0x23a94u;
+  for (int z = 1; z < width - 1; ++z)
+    for (int y = 1; y < width - 1; ++y)
+      for (int x = 1; x < width - 1; ++x)
+      {
+        random = random * 1664525u + 1013904223u;
+        if ((random >> 24) < 28)
+        {
+          cells[index(x, y, z)] = 8;
+          world.SetBlock(origin + glm::ivec3(x, y, z), 8);
+        }
+      }
+  const std::array<glm::ivec3, 6> sources = {{{15, 23, 24},
+                                              {32, 24, 23},
+                                              {24, 15, 23},
+                                              {23, 32, 24},
+                                              {23, 24, 15},
+                                              {24, 23, 32}}};
+  RelightJobSpec spec;
+  spec.block_positions = {origin + glm::ivec3(24)};
+  spec.min_world_y = -32;
+  spec.max_world_y = -17;
+  spec.column_center_only = true;
+  spec.include_skylight = false;
+  for (int scenario = 0; scenario < 3; ++scenario)
+  {
+    for (size_t n = 0; n < sources.size(); ++n)
+    {
+      const auto pos = sources[n];
+      const BlockId id = scenario == 1 && n % 2 == 0 ? BLOCK_AIR : 50;
+      cells[index(pos.x, pos.y, pos.z)] = id;
+      world.SetBlock(origin + pos, id);
+    }
+    if (scenario == 2)
+    {
+      torch.Lighting.Emission = 6;
+      definitions->ReplaceAll({{8, stone}, {50, torch}},
+                              {{"stone", 8}, {"torch", 50}});
+    }
+    const int emission = scenario == 2 ? 6 : 14;
+    std::vector<uint8_t> reference(cells.size(), 0), next;
+    for (size_t i = 0; i < cells.size(); ++i)
+      if (cells[i] == 50)
+        reference[i] = static_cast<uint8_t>(emission);
+    for (int iteration = 0; iteration < 15; ++iteration)
+    {
+      next = reference;
+      for (int z = 1; z < width - 1; ++z)
+        for (int y = 1; y < width - 1; ++y)
+          for (int x = 1; x < width - 1; ++x)
+          {
+            const int i = index(x, y, z);
+            if (cells[i] == 8)
+              continue;
+            const int adjacent = std::max(
+                {reference[i - 1], reference[i + 1], reference[i - width],
+                 reference[i + width], reference[i - width * width],
+                 reference[i + width * width]});
+            next[i] =
+                static_cast<uint8_t>(std::max<int>(reference[i], adjacent - 1));
+          }
+      reference.swap(next);
+    }
+    auto snapshot = UChunkRelightSnapshot::Capture(world, spec);
+    auto result = snapshot.Compute(registry);
+    Expect(result.inputs_complete && result.chunks.size() == 1,
+           "complete geometry halo computes exactly one requested section");
+    for (const auto &stamp : result.read_set)
+      Expect(!stamp.readsLight,
+             "geometry solver has no neighboring field dependency");
+    for (int z = 0; z < 16; ++z)
+      for (int y = 0; y < 16; ++y)
+        for (int x = 0; x < 16; ++x)
+          Expect(UnpackBlock(result.chunks[0].light_packed[UChunk::LocalIndex(
+                     {x, y, z})]) == reference[index(x + 16, y + 16, z + 16)],
+                 "all 4096 target cells match independent dense reference "
+                 "after source changes");
+    const auto repeated = snapshot.Compute(registry);
+    Expect(repeated.chunks[0].light_packed == result.chunks[0].light_packed,
+           "reusing immutable snapshot recomputes the same field");
+  }
+}
+
+void TestUnknownGeometryAndPinnedCatalog()
+{
+  using namespace cutum;
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition torch;
+  torch.Physics = BlockPhysicsProfile::Solid();
+  torch.Render.Style = BlockRenderStyle::Cross;
+  torch.Lighting.Emission = 14;
+  definitions->ReplaceAll({{50, torch}}, {{"torch", 50}});
+  UBlockRegistry registry(nullptr, definitions);
+  UBlockWorld world;
+  world.GetChunkManager().EnsureChunk({0, -3, 0});
+  RelightJobSpec spec;
+  spec.block_positions = {{8, -40, 8}};
+  spec.min_world_y = -48;
+  spec.max_world_y = -33;
+  spec.column_center_only = true;
+  auto unknown = UChunkRelightSnapshot::Capture(world, spec).Compute(registry);
+  Expect(!unknown.inputs_complete && unknown.unknown_input_chunks > 0,
+         "unknown upper geometry cannot certify lighting");
+  Expect(UnpackSky(
+             unknown.chunks[0].light_packed[UChunk::LocalIndex({8, 8, 8})]) ==
+             0,
+         "unknown upper geometry is never interpreted as clear sky");
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  auto clear = UChunkRelightSnapshot::Capture(world, spec).Compute(registry);
+  Expect(clear.inputs_complete &&
+             UnpackSky(
+                 clear.chunks[0].light_packed[UChunk::LocalIndex({8, 8, 8})]) ==
+                 15,
+         "proven empty upper geometry admits direct sky");
+  world.SetBlock({16, -40, 8}, 50);
+  spec.include_skylight = false;
+  auto captured = UChunkRelightSnapshot::Capture(world, spec);
+  captured.SetInputCatalog(registry.GetDefinitionsCatalogSnapshot());
+  torch.Lighting.Emission = 6;
+  definitions->ReplaceAll({{50, torch}}, {{"torch", 50}});
+  const auto old = captured.Compute(registry);
+  Expect(UnpackBlock(
+             old.chunks[0].light_packed[UChunk::LocalIndex({15, 8, 8})]) == 13,
+         "captured immutable catalog survives a concurrent material reload");
+  Expect(ValidateRelightInputs(old, world,
+                               registry.GetDefinitionsCatalogSnapshot()) ==
+             RelightInputValidation::Catalog,
+         "old catalog result is rejected for installation");
+  const auto fresh =
+      UChunkRelightSnapshot::Capture(world, spec).Compute(registry);
+  Expect(UnpackBlock(
+             fresh.chunks[0].light_packed[UChunk::LocalIndex({15, 8, 8})]) == 5,
+         "new computation uses changed material emission");
+}
+
 } // namespace
 
-int main()
+int main(int argc, char **argv)
 {
+  if (argc == 2 && std::string(argv[1]) == "--geometry-halo")
+  {
+    TestSectionLightUsesKnownEmitterGeometry();
+    TestGeometryHaloAgainstDenseReference();
+    TestUnknownGeometryAndPinnedCatalog();
+    std::cout << "section_light_geometry_test: OK\n";
+    return 0;
+  }
   TestDomainsAndRevision();
   TestLightChannelIdentityAndBufferedWrites();
   TestHorizontalLightBoundaryChangeMask();
@@ -697,5 +916,8 @@ int main()
   TestVerticalBoundaryDependencyAdditionAndRemoval();
   TestRelightAbsenceEvidenceChangesWithoutResidency();
   TestRelightInputContextAndSeparateChannels();
+  TestSectionLightUsesKnownEmitterGeometry();
+  TestGeometryHaloAgainstDenseReference();
+  TestUnknownGeometryAndPinnedCatalog();
   std::cout << "relight_result_install_test: OK\n";
 }

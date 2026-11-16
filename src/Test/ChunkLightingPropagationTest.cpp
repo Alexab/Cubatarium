@@ -321,9 +321,11 @@ int main()
     Expect(!snap.HasChunk(glm::ivec3(1, 0, 0)),
            "D: neighbor not in Blocks");
     Expect(snap.HasLight(glm::ivec3(1, 0, 0)),
-           "D: neighbor light copied as seed");
-    Expect(snap.GetCapturedNeighborLightChunks() >= 1,
-           "D: neighbor light count >= 1");
+           "D: neighbor has scratch light for geometry-derived propagation");
+    Expect(snap.GetCapturedNeighborLightChunks() == 0,
+           "D: no neighboring light bytes are dependencies");
+    Expect(snap.GetCapturedGeometryHaloChunks() >= 1,
+           "D: neighboring geometry is captured");
     auto result = snap.Compute(*registry);
     Expect(result.chunks.size() == 1,
            "D: apply only center light");
@@ -447,8 +449,9 @@ int main()
   for (const bool roof : {true, false})
   {
     cutum::UBlockWorld deep;
-    for (int x = 0; x < cutum::CHUNK_SIZE; ++x)
-      for (int z = 0; z < cutum::CHUNK_SIZE; ++z)
+    deep.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+    for (int x = -16; x < 32; ++x)
+      for (int z = -16; z < 32; ++z)
       {
         deep.SetBlock({x, -48, z}, kStone);
         if (roof)
