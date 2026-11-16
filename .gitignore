@@ -252,3 +252,4 @@ tools/debug_uv_overlays/
 /bin/items_readback_budget_qa/
 
 /bin/item_hand_acceptance/
+/bin/.engine-smoke.lock

@@ -1,0 +1,46 @@
+{
+  "schema": "engine-remediation-progress.v1",
+  "goal_status": "active",
+  "stages": {
+    "isolated_automated_test_stand": "in_progress: first-frame and visual-reference witnesses still missing",
+    "diagnostic_bot": "verified baseline: native takeoff, route, inspection; expand scenario matrix",
+    "local_streaming_mesh_underwater_defects": "pending",
+    "correct_light_solver_and_persistence": "pending",
+    "single_section_lifecycle_and_publication": "pending",
+    "independent_light_resource_and_performance": "pending",
+    "full_smoke_and_regression_matrix": "pending"
+  },
+  "native_baseline": {
+    "artifacts": "build/desktop-msvc/diagnostic-bot-frontier-v2",
+    "source_commit": "7bd03c1811a3229e3d575a79a4bb75453e0a6cc5",
+    "exe_sha256": "ba399a9b60d3a465a6f98cbf285d16a704e44c5d0ef3f4f1832bdd1e6c5f165d",
+    "source_world_sha256": "820e89c6c84294655a4f38b0abdc009439799e81edbe8d629c2c11fbfe3fee75",
+    "chunks_traveled": 19,
+    "external_position_assignments": 0,
+    "initial_resident_columns": 109,
+    "samples_outside_initial_footprint": 2005,
+    "bot": {
+      "enabled": true,
+      "state": "complete",
+      "waypoints_visited": 2,
+      "plan_attempts": 0,
+      "plan_expansions": 0,
+      "inspection_capture_requested_n": 24,
+      "inspection_capture_queued_n": 24,
+      "reason": ""
+    },
+    "verified_inspection_images": 24,
+    "verdict": "UNTESTED",
+    "missing_evidence": [
+      "first_frame_required_ring_ready",
+      "independent_visual_reference"
+    ]
+  },
+  "next_defects": [
+    "negative-Y deferred light range",
+    "lossy chunk population event drain",
+    "same-size mesh-cache reconciliation",
+    "vertical skylight context and six-face light convergence"
+  ],
+  "verification_policy": "Release only; native baseline above is not full rendering acceptance; preserve all original goal stages."
+}
