@@ -64,6 +64,7 @@ UChunkStorageService::UChunkStorageService(ChunkStorageSettings settings)
 void UChunkStorageService::SetSettings(const ChunkStorageSettings &settings)
 {
   Settings = settings;
+  KnownAirEvidenceRevision.fetch_add(1, std::memory_order_release);
 }
 
 bool UChunkStorageService::HasChunkFilesOnDisk(const std::string &worldFolder)
@@ -104,6 +105,7 @@ void UChunkStorageService::BuildHighestChunkSliceIndex(
       !std::filesystem::is_directory(chunks_dir))
   {
     index.initialized = true;
+    KnownAirEvidenceRevision.fetch_add(1, std::memory_order_release);
     return;
   }
 
@@ -139,6 +141,7 @@ void UChunkStorageService::BuildHighestChunkSliceIndex(
     }
   }
   index.initialized = true;
+  KnownAirEvidenceRevision.fetch_add(1, std::memory_order_release);
 }
 
 int UChunkStorageService::ScanHighestChunkSliceOnDisk(
@@ -352,6 +355,7 @@ void UChunkStorageService::RecordChunkSliceSaved(
       }
     }
   }
+  KnownAirEvidenceRevision.fetch_add(1, std::memory_order_release);
 }
 
 int UChunkStorageService::LoadChunk(glm::ivec3 chunkCoord, UBlockWorld &world,
@@ -394,6 +398,7 @@ int UChunkStorageService::GetHighestChunkSliceOnDisk(
   const DiskTerrainColumnKey column{groundCoord.x, groundCoord.z};
   if (index.dirty_columns.erase(column) > 0)
   {
+    KnownAirEvidenceRevision.fetch_add(1, std::memory_order_release);
     const int highest = ScanHighestChunkSliceOnDisk(worldFolder, groundCoord);
     if (highest != kNoChunkSliceOnDisk)
     {
@@ -440,6 +445,7 @@ bool UChunkStorageService::RemoveChunkSliceFromDisk(
           chunkCoord.y >= cached->second)
       {
         folder_index->second.dirty_columns.insert(column);
+        KnownAirEvidenceRevision.fetch_add(1, std::memory_order_release);
       }
     }
   };
@@ -655,7 +661,8 @@ void UChunkStorageService::MarkColumnSavePending(glm::ivec3 groundCoord)
   {
     groundCoord.y = 0;
   }
-  PendingSaveColumns.insert(groundCoord);
+  if (PendingSaveColumns.insert(groundCoord).second)
+    KnownAirEvidenceRevision.fetch_add(1, std::memory_order_release);
 }
 
 void UChunkStorageService::ClearColumnSavePending(glm::ivec3 groundCoord)
@@ -664,7 +671,8 @@ void UChunkStorageService::ClearColumnSavePending(glm::ivec3 groundCoord)
   {
     groundCoord.y = 0;
   }
-  PendingSaveColumns.erase(groundCoord);
+  if (PendingSaveColumns.erase(groundCoord))
+    KnownAirEvidenceRevision.fetch_add(1, std::memory_order_release);
 }
 
 } // namespace cutum

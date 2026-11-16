@@ -1631,7 +1631,7 @@
         "queue_analysis": "relight-queue-analysis.txt"
       }
     },
-    "next_implementation": "Fix repeated full certificate validation in rendering/readiness loops without relaxing truth: deduplicate within genuinely immutable read batches or introduce authoritative geometry/residency/evidence revisions with immediate invalidation for every mutation path. No TTL/frame-only cache may hide neighbor, direct chunk, recycled identity or known-absence changes. Keep the same bot duration/route. Then preserve pending generation/coverage and remove coarse optimistic closeout."
+    "next_implementation": "Validate authoritative revision-based dependency reuse with the unchanged Release cave route. Keep all correctness gates. Then preserve pending generation/coverage obligations and remove optimistic coarse closeout before strict startup and independent light resource work."
   },
   "synchronous_geometry_solver_unification": {
     "status": "unit_and_native_sky_boundary_integration_verified_completion_and_performance_pending",
@@ -2017,5 +2017,41 @@
         }
       }
     }
+  },
+  "versioned_light_input_validation": {
+    "status": "unit_verified_native_pending",
+    "implementation": [
+      "Each managed chunk notifies its owning manager input revision on content, fluid, light, bulk replacement and generation reuse. Residency insert/remove/clear also advance the revision.",
+      "Snapshot copies do not borrow the source manager clock; assignment preserves the destination clock/coordinate and retires its incarnation/proofs. This prevents same-revision, different-geometry ABA.",
+      "Terrain completeness and disk/save-pending evidence expose producer identity and revision. Profile, algorithm, catalog and actual folder identity remain explicit cache keys.",
+      "Certificate dependency validation is memoized only while all authoritative input/evidence identities match. Unversioned absence callbacks remain uncached. A metadata publication overlapping validation is never memoized across the change.",
+      "Manager identity and weak certificate identity prevent reuse across counter/address recycling. Optional memo entries are bounded; no work obligation is stored or erased there.",
+      "Audit certificate records include cumulative dependency checks, memo hits, full walks and epoch resets."
+    ],
+    "verification": {
+      "green": "build/desktop-msvc/engine-light-revision-final-contracts-tests.log",
+      "ctest": "24/24 Release passed",
+      "negative_controls": {
+        "data": "build/desktop-msvc/engine-light-revision-final-red-data-test.log",
+        "evidence": "build/desktop-msvc/engine-light-revision-final-red-evidence-test.log",
+        "managed_assignment": "build/desktop-msvc/engine-light-revision-final-red-copy-test.log"
+      },
+      "restored": "build/desktop-msvc/engine-light-revision-final-restored-test.log",
+      "controls": [
+        "200 repeated stable readiness queries perform no new evidence reads",
+        "direct chunk/neighbor/fluid/light writes, bulk updates, clear/recycle/residency transitions invalidate synchronously",
+        "snapshot copying isolates clocks; cross-world ownership remains explicit",
+        "equal numeric revisions cannot identify a replacement manager or a different geometry snapshot",
+        "catalog/profile/mode/folder/producer changes and publication during validation are observed",
+        "real storage save-pending, higher signed disk slice and disk removal invalidate evidence without writes to the probe world",
+        "managed bulk assignment preserves destination coordinate; self-assignment preserves the generation"
+      ]
+    },
+    "compatibility": "Terrain/chunk serialization and geometry-derived light algorithm remain unchanged; these are runtime provenance/validation identities.",
+    "limits": [
+      "Native runtime/performance and all inspection poses still need verification.",
+      "Persistent per-section certificates, durable generation/coverage obligations and strict first-frame closure remain pending.",
+      "Independent light resource, visual/physical light reference and full smoke matrix remain pending."
+    ]
   }
 }

@@ -4,6 +4,7 @@
 #include "World/IO/BinaryChunkSerializer.h"
 #include "World/IO/ChunkStorageTypes.h"
 #include "World/IO/JsonChunkSerializer.h"
+#include <atomic>
 #include <cstdint>
 #include <limits>
 #include <memory>
@@ -87,6 +88,14 @@ public:
   void WriteStorageMarker(const std::string &worldFolder) const;
   void ApplyStorageMarkerFromDisk(const std::string &worldFolder);
 
+  uint64_t GetKnownAirEvidenceRevision() const
+  {
+    return KnownAirEvidenceRevision.load(std::memory_order_acquire);
+  }
+  uint64_t GetKnownAirEvidenceIdentity() const
+  {
+    return KnownAirEvidenceIdentity;
+  }
   bool IsColumnSavePending(glm::ivec3 groundCoord) const;
   void MarkColumnSavePending(glm::ivec3 groundCoord);
   void ClearColumnSavePending(glm::ivec3 groundCoord);
@@ -136,6 +145,9 @@ private:
   int ScanHighestChunkSliceOnDisk(const std::string &worldFolder,
                                   glm::ivec3 groundCoord) const;
 
+  inline static std::atomic<uint64_t> NextKnownAirEvidenceIdentity{1};
+  uint64_t KnownAirEvidenceIdentity{NextKnownAirEvidenceIdentity.fetch_add(1)};
+  mutable std::atomic<uint64_t> KnownAirEvidenceRevision{0};
   ChunkStorageSettings Settings;
   UJsonChunkSerializer JsonSerializer;
   UBinaryChunkSerializer BinarySerializer;

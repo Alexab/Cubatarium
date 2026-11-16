@@ -17,6 +17,8 @@ int UBlockWorld::RecordLightCalculation(
   if (ValidateRelightInputs(result, *this, current_catalog) !=
       RelightInputValidation::Current)
     return 0;
+  if (!LightCalculationOwner)
+    LightCalculationOwner = std::make_shared<const int>(0);
   // Retain provenance once per batch, never its output voxel arrays or retry
   // payload. All section/domain records share this immutable input context.
   auto context = std::make_shared<RelightComputeResult>();
@@ -76,6 +78,78 @@ int UBlockWorld::RecordLightCalculation(
   return recorded;
 }
 
+bool UBlockWorld::StoredLightInputsStillMatch(
+    const std::shared_ptr<const RelightComputeResult> &context,
+    const std::shared_ptr<const BlockDefinitionCatalog> &catalog) const
+{
+  ++LightInputStats.requests;
+  if (!catalog || !context->input_catalog)
+    return false;
+  // An arbitrary callback may change without touching voxel residency. It is
+  // deliberately never cached unless its owner supplies a revision contract.
+  if (!KnownAirEvidenceVersionQuery)
+  {
+    ++LightInputStats.dependency_validations;
+    return ValidateRelightInputs(*context, *this, catalog) ==
+           RelightInputValidation::Current;
+  }
+  const auto evidence = KnownAirEvidenceVersionQuery();
+  const auto revision = Chunks.GetInputRevision();
+  const auto &p = VerticalProfile;
+  const auto matches = [&](const KnownAirEvidenceVersion &e)
+  {
+    const auto &m = LightInputMemo;
+    return m.initialized && m.input_revision == Chunks.GetInputRevision() &&
+           m.evidence_producers == e.producers && m.min_y == e.min_y &&
+           m.max_y == e.max_y && m.folder == e.folder && m.catalog == catalog &&
+           m.lighting_configuration == LightingConfigurationIdentity &&
+           m.profile.MinY == p.MinY && m.profile.MaxY == p.MaxY &&
+           m.profile.SeaLevelY == p.SeaLevelY &&
+           m.profile.BedrockTopY == p.BedrockTopY &&
+           m.profile.DatumY == p.DatumY;
+  };
+  auto &memo = LightInputMemo;
+  if (!matches(evidence))
+  {
+    ++LightInputStats.epoch_resets;
+    memo.entries.clear();
+    memo.initialized = true;
+    memo.input_revision = revision;
+    memo.evidence_producers = evidence.producers;
+    memo.min_y = evidence.min_y;
+    memo.max_y = evidence.max_y;
+    memo.folder = std::string(evidence.folder);
+    memo.profile = p;
+    memo.lighting_configuration = LightingConfigurationIdentity;
+    memo.catalog = catalog;
+  }
+  const auto found = memo.entries.find(context.get());
+  if (found != memo.entries.end() && found->second.input.lock() == context &&
+      found->second.input_identity == Chunks.GetInputRevisionIdentity())
+  {
+    ++LightInputStats.memo_hits;
+    return found->second.current;
+  }
+  ++LightInputStats.dependency_validations;
+  const bool current = ValidateRelightInputs(*context, *this, catalog) ==
+                       RelightInputValidation::Current;
+  // Filling a terrain/disk index during validation can itself publish new
+  // evidence. Do not memoize a result across that publication boundary.
+  if (!matches(KnownAirEvidenceVersionQuery()))
+  {
+    memo.initialized = false;
+    memo.entries.clear();
+    return current;
+  }
+  // This is an optional validation memo, not work ownership. Retiring old weak
+  // entries is safe even when a stationary world produces many no-op receipts.
+  if (memo.entries.size() >= 1024)
+    memo.entries.clear();
+  memo.entries[context.get()] = {context, Chunks.GetInputRevisionIdentity(),
+                                 current};
+  return current;
+}
+
 LightCalculationState UBlockWorld::GetLightCalculationState(
     glm::ivec3 coord, LightDomain domain,
     const std::shared_ptr<const BlockDefinitionCatalog> &current_catalog) const
@@ -89,8 +163,7 @@ LightCalculationState UBlockWorld::GetLightCalculationState(
       proof.field_revision != (domain == LightDomain::Sky
                                    ? chunk->GetSkyLightRevision()
                                    : chunk->GetBlockLightRevision()) ||
-      ValidateRelightInputs(*proof.input, *this, current_catalog) !=
-          RelightInputValidation::Current)
+      !StoredLightInputsStillMatch(proof.input, current_catalog))
     return LightCalculationState::Missing;
   // Every input was known at record time and the full read set still matches.
   // Rechecking the same known stamps a second time adds no evidence.
@@ -102,7 +175,9 @@ bool UBlockWorld::LightCalculationsStillCurrent(
     const std::vector<glm::ivec3> &sections, bool sky, bool block,
     const std::shared_ptr<const BlockDefinitionCatalog> &current_catalog) const
 {
-  std::unordered_set<const RelightComputeResult *> contexts;
+  std::unordered_map<const RelightComputeResult *,
+                     std::shared_ptr<const RelightComputeResult>>
+      contexts;
   bool any = false;
   for (const auto coord : sections)
   {
@@ -121,14 +196,13 @@ bool UBlockWorld::LightCalculationsStillCurrent(
                                        ? chunk->GetSkyLightRevision()
                                        : chunk->GetBlockLightRevision()))
         return false;
-      contexts.insert(proof.input.get());
+      contexts.emplace(proof.input.get(), proof.input);
     }
   }
   if (!any || (!sky && !block))
     return false;
-  for (const auto *context : contexts)
-    if (ValidateRelightInputs(*context, *this, current_catalog) !=
-        RelightInputValidation::Current)
+  for (const auto &context : contexts)
+    if (!StoredLightInputsStillMatch(context.second, current_catalog))
       return false;
   return true;
 }
@@ -360,6 +434,8 @@ bool UBlockWorld::IsAir(glm::ivec3 pos) const
 void UBlockWorld::Clear()
 {
   Chunks.Clear();
+  LightInputMemo = {};
+  LightInputStats = {};
   LightCalculationOwner = std::make_shared<const int>(0);
 }
 

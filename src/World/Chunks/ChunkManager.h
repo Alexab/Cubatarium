@@ -52,6 +52,16 @@ public:
       const std::function<void(const glm::ivec3 &)> &fn) const;
   /// O(1) resident chunk count (loaded map size, not free-list).
   size_t GetResidentChunkCount() const { return Chunks.size(); }
+  /// Changes for every resident data/light mutation and residency transition.
+  /// Keeps a revision counter's identity distinct across manager replacement.
+  std::shared_ptr<const uint64_t> GetInputRevisionIdentity() const
+  {
+    return InputRevision;
+  }
+  uint64_t GetInputRevision() const
+  {
+    return InputRevision ? *InputRevision : 0;
+  }
   /// O(1) count of unique horizontal columns with one or more resident slices.
   size_t GetResidentColumnCount() const
   {
@@ -67,6 +77,13 @@ public:
 private:
   UChunk &GetOrCreateChunk(glm::ivec3 chunk_coord);
 
+  void NoteInputMutation()
+  {
+    if (!InputRevision)
+      InputRevision = std::make_shared<uint64_t>(0);
+    ++*InputRevision;
+  }
+  std::shared_ptr<uint64_t> InputRevision{std::make_shared<uint64_t>(0)};
   std::unordered_map<glm::ivec3, std::unique_ptr<UChunk>, IVec3Hash> Chunks;
   std::unordered_map<glm::ivec3, size_t, IVec3Hash> ResidentColumnChunkCounts;
   std::vector<std::unique_ptr<UChunk>> FreeList;

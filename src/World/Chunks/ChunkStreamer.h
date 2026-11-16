@@ -6,6 +6,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
 #include <algorithm>
+#include <atomic>
 #include <cstdint>
 #include <deque>
 #include <functional>
@@ -94,6 +95,8 @@ struct StreamingFrameStats
 class UChunkStreamer
 {
 public:
+  UChunkStreamer(const UChunkStreamer &) = delete;
+  UChunkStreamer &operator=(const UChunkStreamer &) = delete;
   using LoadChunkFn = std::function<bool(glm::ivec3, uint64_t demand_id)>;
   using SaveChunkFn = std::function<void(glm::ivec3)>;
   using MarkDirtyFn = std::function<void(glm::ivec3)>;
@@ -230,6 +233,14 @@ public:
   /// Cached terrain-column complete (invalidated on commit). R4.5.1 public for
   /// Refresh / UpdateStreaming camera-complete reuse. Const: fills mutable cache.
   bool IsTerrainChunkCompleteCached(glm::ivec3 groundCoord) const;
+  uint64_t GetTerrainEvidenceRevision() const
+  {
+    return TerrainEvidenceRevision;
+  }
+  uint64_t GetTerrainEvidenceIdentity() const
+  {
+    return TerrainEvidenceIdentity;
+  }
 
 private:
   bool EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync = false,
@@ -300,6 +311,9 @@ private:
     bool onlyEmptyColumns{false};
   };
   std::unordered_map<glm::ivec3, ColumnGenState, IVec3Hash> ColumnGenStates;
+  inline static std::atomic<uint64_t> NextTerrainEvidenceIdentity{1};
+  uint64_t TerrainEvidenceIdentity{NextTerrainEvidenceIdentity.fetch_add(1)};
+  mutable uint64_t TerrainEvidenceRevision{0};
   mutable std::unordered_map<glm::ivec3, bool, IVec3Hash> TerrainCompleteCache;
   glm::ivec3 LoadPriorityCenter{0};
   StreamingFrameStats LastFrameStats;

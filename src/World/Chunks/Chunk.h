@@ -35,6 +35,10 @@ class UChunk
 {
 public:
   explicit UChunk(glm::ivec3 chunkCoord);
+  UChunk(const UChunk &) = default;
+  /// A managed destination keeps its coordinate/clock and starts a fresh
+  /// identity.
+  UChunk &operator=(const UChunk &other);
 
   glm::ivec3 GetCoord() const { return Coord; }
   BlockId GetBlockLocal(glm::ivec3 local) const;
@@ -79,7 +83,11 @@ public:
   uint64_t GetBlockLightRevision() const { return BlockLightRevision; }
   uint64_t GetIncarnation() const { return Incarnation; }
   uint64_t GetContentRevision() const { return ContentRevision; }
-  void BumpLightFieldRevision() { ++LightFieldRevision; }
+  void BumpLightFieldRevision()
+  {
+    ++LightFieldRevision;
+    InputRevision.NoteMutation();
+  }
 
   /// Main-thread calculation provenance is owned by this resident generation.
   void ClearLightCalculationProofs() { LightProofs = {}; }
@@ -113,6 +121,26 @@ public:
 
 private:
   friend class UBlockWorld;
+  friend class UChunkManager;
+  /// Copies of voxel data do not acquire ownership of the source world's
+  /// clock. Assignment preserves the destination binding and invalidates it.
+  struct InputRevisionBinding
+  {
+    std::shared_ptr<uint64_t> clock;
+    InputRevisionBinding() = default;
+    InputRevisionBinding(const InputRevisionBinding &) {}
+    InputRevisionBinding &operator=(const InputRevisionBinding &)
+    {
+      NoteMutation();
+      return *this;
+    }
+    void NoteMutation() const
+    {
+      if (clock)
+        ++*clock;
+    }
+  };
+  InputRevisionBinding InputRevision;
   struct LightDomainProof
   {
     std::shared_ptr<const RelightComputeResult> input;

@@ -100,6 +100,8 @@ UChunkStreamer::UChunkStreamer(UBlockWorld &world, UBlockRegistry &registry,
 
 void UChunkStreamer::SetWorldFolder(const std::string &path)
 {
+  if (WorldFolder != path)
+    ++TerrainEvidenceRevision;
   WorldFolder = path;
 }
 
@@ -146,10 +148,12 @@ void UChunkStreamer::NotifyChunkCommitted(glm::ivec3 chunkCoord)
   InvalidateTerrainCompleteCache(ground);
   if (IsTerrainChunkCompleteCached(ground))
   {
+    ++TerrainEvidenceRevision;
     ProcedurallyGenerated.insert(ground);
   }
   else
   {
+    ++TerrainEvidenceRevision;
     ProcedurallyGenerated.erase(ground);
   }
 }
@@ -170,12 +174,14 @@ bool UChunkStreamer::IsTerrainChunkCompleteCached(glm::ivec3 groundCoord) const
       AreTerrainColumnSlicesLoaded(World, groundCoord, MaxHeight,
                                    kNoTerrainChunkSlice, MinHeight))
   {
+    ++TerrainEvidenceRevision;
     TerrainCompleteCache.emplace(groundCoord, true);
     return true;
   }
   const bool complete =
       IsTerrainChunkComplete(World, groundCoord, MaxHeight,
                              kNoTerrainChunkSlice, MinHeight);
+  ++TerrainEvidenceRevision;
   TerrainCompleteCache.emplace(groundCoord, complete);
   return complete;
 }
@@ -186,6 +192,7 @@ void UChunkStreamer::InvalidateTerrainCompleteCache(glm::ivec3 groundCoord)
   {
     groundCoord.y = 0;
   }
+  ++TerrainEvidenceRevision;
   TerrainCompleteCache.erase(groundCoord);
   ColumnGenStates.erase(groundCoord);
   TerrainSeamRemeshNotified.erase(groundCoord);
@@ -305,6 +312,7 @@ void UChunkStreamer::MarkPersistedColumnsFromWorld()
   {
     if (IsTerrainChunkCompleteCached(ground))
     {
+      ++TerrainEvidenceRevision;
       ProcedurallyGenerated.insert(ground);
     }
   }
@@ -360,10 +368,12 @@ bool UChunkStreamer::AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord,
     // Synchronous world generation writes blocks directly and does not pass
     // through NotifyChunkCommitted. Any earlier false result may therefore be
     // stale once the cursor has examined the full column.
+    ++TerrainEvidenceRevision;
     TerrainCompleteCache.erase(chunkCoord);
     const UChunk *existing = World.GetChunkManager().GetChunk(chunkCoord);
     if (existing != nullptr && IsTerrainChunkCompleteCached(chunkCoord))
     {
+      ++TerrainEvidenceRevision;
       ProcedurallyGenerated.insert(chunkCoord);
     }
     return IsTerrainChunkCompleteCached(chunkCoord);
@@ -379,10 +389,12 @@ bool UChunkStreamer::AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord,
   // then a previously cached false must not prevent the completion scan.
   if (state.cursor < kTerrainSubColumnsPerChunk)
   {
+    ++TerrainEvidenceRevision;
     ProcedurallyGenerated.erase(chunkCoord);
     return false;
   }
 
+  ++TerrainEvidenceRevision;
   TerrainCompleteCache.erase(chunkCoord);
   const bool complete = IsTerrainChunkCompleteCached(chunkCoord);
   if (complete)
@@ -394,10 +406,12 @@ bool UChunkStreamer::AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord,
     }
     MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord,
                                TerrainSeamRemeshNotified);
+    ++TerrainEvidenceRevision;
     ProcedurallyGenerated.insert(chunkCoord);
   }
   else
   {
+    ++TerrainEvidenceRevision;
     ProcedurallyGenerated.erase(chunkCoord);
   }
   return complete;
@@ -469,6 +483,7 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
   if (existing != nullptr &&
       IsTerrainChunkCompleteCached(chunkCoord))
   {
+    ++TerrainEvidenceRevision;
     ProcedurallyGenerated.insert(chunkCoord);
     MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord,
                                TerrainSeamRemeshNotified);
@@ -479,6 +494,7 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
   {
     if (IsTerrainChunkCompleteCached(chunkCoord))
     {
+      ++TerrainEvidenceRevision;
       ProcedurallyGenerated.insert(chunkCoord);
       MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord,
                                  TerrainSeamRemeshNotified);
@@ -489,6 +505,7 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
     // Drop the completion marker too: Update uses it as its cheap candidate
     // filter, so retaining it would make the now-absent column permanently
     // invisible to reload and leave its neighbors with unresolvable face debt.
+    ++TerrainEvidenceRevision;
     ProcedurallyGenerated.erase(chunkCoord);
     InvalidateTerrainCompleteCache(chunkCoord);
     if (OnRequestAsyncChunk)
@@ -510,6 +527,7 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
     {
       if (IsTerrainChunkCompleteCached(chunkCoord))
       {
+        ++TerrainEvidenceRevision;
         ProcedurallyGenerated.insert(chunkCoord);
         MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord,
                                    TerrainSeamRemeshNotified);
@@ -555,6 +573,7 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
     // Drop the completion marker too: Update uses it as its cheap candidate
     // filter, so retaining it would make the now-absent column permanently
     // invisible to reload and leave its neighbors with unresolvable face debt.
+    ++TerrainEvidenceRevision;
     ProcedurallyGenerated.erase(chunkCoord);
     InvalidateTerrainCompleteCache(chunkCoord);
     ColumnGenStates.erase(chunkCoord);
@@ -863,6 +882,7 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
               " removed_slices=" + std::to_string(removed_slices) +
               " max_cy=" + std::to_string(maxCy));
     }
+    ++TerrainEvidenceRevision;
     ProcedurallyGenerated.erase(ground);
     InvalidateTerrainCompleteCache(ground);
     DeferredUnloadSaveSet.erase(ground);
@@ -996,6 +1016,7 @@ void UChunkStreamer::DrainDeferredUnloadSaves(glm::ivec3 feetBlockPos,
       LastFrameStats.unloadedCoords.push_back(slice);
       ++LastFrameStats.unloadsThisFrame;
     }
+    ++TerrainEvidenceRevision;
     ProcedurallyGenerated.erase(ground);
     InvalidateTerrainCompleteCache(ground);
     ++ops;

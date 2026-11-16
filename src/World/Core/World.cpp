@@ -428,7 +428,27 @@ UWorld::UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
   MeshService->GetCache().SetRepairGuardWorld(&BlockWorld);
   BlockWorld.SetKnownAirColumnFloorQuery(
       [this](glm::ivec3 column)
-      { return KnownAirTerrainColumnFloor(*this, column); });
+      { return KnownAirTerrainColumnFloor(*this, column); },
+      [this]()
+      {
+        UBlockWorld::KnownAirEvidenceVersion version;
+        if (Streaming)
+          if (const auto *streamer = Streaming->GetStreamer())
+          {
+            version.producers[0] = streamer->GetTerrainEvidenceIdentity();
+            version.producers[1] = streamer->GetTerrainEvidenceRevision();
+          }
+        if (Persistence)
+        {
+          const auto &storage = Persistence->GetChunkStorage();
+          version.producers[2] = storage.GetKnownAirEvidenceIdentity();
+          version.producers[3] = storage.GetKnownAirEvidenceRevision();
+          version.folder = Persistence->GetWorldFolderPath();
+        }
+        version.min_y = ProceduralTemplate.MinHeight;
+        version.max_y = ProceduralTemplate.MaxHeight;
+        return version;
+      });
   SubscribeChunkPopulationInvalidation();
   IsIntersectionExists = false;
   HasIntersectionBlock = false;
@@ -10066,7 +10086,19 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
               " sections=" + std::to_string(certificate_sections) +
               " include_sky=" + std::to_string(result.include_skylight) +
               " include_block=" + std::to_string(result.include_block_light) +
-              " inputs_complete=" + std::to_string(result.inputs_complete));
+              " inputs_complete=" + std::to_string(result.inputs_complete) +
+              " input_checks=" +
+              std::to_string(
+                  BlockWorld.GetLightInputValidationStats().requests) +
+              " input_memo_hits=" +
+              std::to_string(
+                  BlockWorld.GetLightInputValidationStats().memo_hits) +
+              " input_walks=" +
+              std::to_string(BlockWorld.GetLightInputValidationStats()
+                                 .dependency_validations) +
+              " input_epoch_resets=" +
+              std::to_string(
+                  BlockWorld.GetLightInputValidationStats().epoch_resets));
     for (const auto &data : result.chunks)
       NoteChunkSliceLightCalculationSettled(data.coord);
     for (const auto &dependency : boundary_dependency_bands)

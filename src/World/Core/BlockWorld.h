@@ -10,6 +10,8 @@
 #include <functional>
 #include <glm/glm.hpp>
 #include <optional>
+#include <string>
+#include <string_view>
 
 namespace cutum
 {
@@ -36,16 +38,28 @@ public:
   /// completion evidence. A lower resident chunk alone is not proof of sky.
   void SetKnownOpenSkyAbsentQuery(std::function<bool(glm::ivec3)> query)
   {
+    KnownAirEvidenceVersionQuery = {};
+    LightInputMemo = {};
     KnownAirColumnFloorQuery = {};
     KnownOpenSkyAbsentQuery = std::move(query);
   }
+  struct KnownAirEvidenceVersion
+  {
+    // Producer identity and revision for terrain and disk evidence.
+    std::array<uint64_t, 4> producers{};
+    int min_y{0}, max_y{0};
+    std::string_view folder;
+  };
   /// Production terrain evidence is a column floor: every absent slice above
   /// that floor is proven air. No evidence is inferred for arbitrary callbacks.
   void SetKnownAirColumnFloorQuery(
-      std::function<std::optional<int>(glm::ivec3)> query)
+      std::function<std::optional<int>(glm::ivec3)> query,
+      std::function<KnownAirEvidenceVersion()> version = {})
   {
     KnownOpenSkyAbsentQuery = {};
     KnownAirColumnFloorQuery = std::move(query);
+    KnownAirEvidenceVersionQuery = std::move(version);
+    LightInputMemo = {};
   }
   bool HasKnownOpenSkyAbsentProof(glm::ivec3 coord) const;
 
@@ -73,6 +87,16 @@ public:
   uint64_t GetLightingConfigurationIdentity() const
   {
     return LightingConfigurationIdentity;
+  }
+
+  struct LightInputValidationStats
+  {
+    uint64_t requests{0}, memo_hits{0}, dependency_validations{0},
+        epoch_resets{0};
+  };
+  const LightInputValidationStats &GetLightInputValidationStats() const
+  {
+    return LightInputStats;
   }
 
   /// Record only installed channels, after every write in a validated batch.
@@ -135,6 +159,29 @@ public:
       void *neighbor_drawable_ctx = nullptr) const;
 
 private:
+  bool StoredLightInputsStillMatch(
+      const std::shared_ptr<const RelightComputeResult> &context,
+      const std::shared_ptr<const BlockDefinitionCatalog> &catalog) const;
+  struct LightInputValidationMemo
+  {
+    bool initialized{false};
+    uint64_t input_revision{0};
+    std::array<uint64_t, 4> evidence_producers{};
+    int min_y{0}, max_y{0};
+    std::string folder;
+    WorldVerticalProfile profile;
+    uint64_t lighting_configuration{0};
+    std::shared_ptr<const BlockDefinitionCatalog> catalog;
+    struct Entry
+    {
+      std::weak_ptr<const RelightComputeResult> input;
+      std::shared_ptr<const uint64_t> input_identity;
+      bool current{false};
+    };
+    std::unordered_map<const RelightComputeResult *, Entry> entries;
+  };
+  mutable LightInputValidationMemo LightInputMemo;
+  mutable LightInputValidationStats LightInputStats;
   UChunkManager Chunks;
   std::shared_ptr<const void> LightCalculationOwner{
       std::make_shared<const int>(0)};
@@ -144,6 +191,7 @@ private:
   UChunkBuffer *CaptureBuffer{nullptr};
   std::function<bool(glm::ivec3)> KnownOpenSkyAbsentQuery;
   std::function<std::optional<int>(glm::ivec3)> KnownAirColumnFloorQuery;
+  std::function<KnownAirEvidenceVersion()> KnownAirEvidenceVersionQuery;
 };
 
 } // namespace cutum

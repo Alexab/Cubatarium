@@ -79,6 +79,7 @@ void UChunkManager::ClearFluidState(glm::ivec3 worldPos)
 
 void UChunkManager::Clear()
 {
+  NoteInputMutation();
   Chunks.clear();
   ResidentColumnChunkCounts.clear();
   FreeList.clear();
@@ -163,6 +164,7 @@ void UChunkManager::RemoveChunk(glm::ivec3 chunkCoord)
   {
     return;
   }
+  NoteInputMutation();
   std::unique_ptr<UChunk> chunk = std::move(it->second);
   chunk->ClearLightCalculationProofs();
   Chunks.erase(it);
@@ -208,6 +210,8 @@ UChunk &UChunkManager::GetOrCreateChunk(glm::ivec3 chunkCoord)
   {
     chunk = std::make_unique<UChunk>(chunkCoord);
   }
+  NoteInputMutation();
+  chunk->InputRevision.clock = InputRevision;
   const auto inserted = Chunks.emplace(chunkCoord, std::move(chunk));
   const glm::ivec3 groundCoord(chunkCoord.x, 0, chunkCoord.z);
   if (inserted.second)

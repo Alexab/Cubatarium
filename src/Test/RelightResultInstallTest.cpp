@@ -1017,20 +1017,15 @@ void TestWorldOwnedLightCertificates()
   publish(result);
   UBlockWorld other;
   other.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
-  other.GetChunkManager().EnsureChunk(coord);
-  world.GetChunkManager().ForEachChunk(
-      [&](const UChunk &source)
-      {
-        other.GetChunkManager().EnsureChunk(source.GetCoord());
-        *other.GetChunkManager().GetChunk(source.GetCoord()) = source;
-      });
+  other.GetChunkManager() = std::move(world.GetChunkManager());
   Expect(ValidateRelightInputs(result, other, catalog) ==
              RelightInputValidation::Current,
-         "copied comparison world deliberately matches every captured input "
-         "stamp");
+         "transferred comparison world deliberately matches every captured "
+         "input stamp");
   Expect(!other.HasCompleteLightCalculation(coord, catalog),
-         "even copied bytes and incarnation cannot transfer a certificate to "
+         "moving data and incarnation cannot transfer calculation authority to "
          "another world");
+  world.GetChunkManager() = std::move(other.GetChunkManager());
   auto profile = world.GetVerticalProfile();
   auto changed_profile = profile;
   changed_profile.MaxY += 16;
@@ -1161,12 +1156,315 @@ void TestBatchAbsenceEvidenceIsFreshAndExact()
                                   "replaced by column-floor inference");
 }
 
+void TestVersionedLightInputMemoInvalidatesImmediately()
+{
+  using namespace cutum;
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition stone;
+  stone.Physics = BlockPhysicsProfile::Solid();
+  definitions->ReplaceAll({{8, stone}}, {{"stone", 8}});
+  UBlockRegistry registry(nullptr, definitions);
+  const auto catalog = registry.GetDefinitionsCatalogSnapshot();
+  UBlockWorld world;
+  std::optional<int> floor = -4;
+  UBlockWorld::KnownAirEvidenceVersion version;
+  version.producers = {11, 0, 22, 0};
+  version.min_y = -64;
+  version.max_y = 319;
+  std::string folder = "world_A";
+  int evidence_queries = 0;
+  bool publish_during_validation = false;
+  world.SetKnownAirColumnFloorQuery(
+      [&](glm::ivec3)
+      {
+        ++evidence_queries;
+        if (publish_during_validation)
+        {
+          publish_during_validation = false;
+          ++version.producers[1];
+        }
+        return floor;
+      },
+      [&]()
+      {
+        auto v = version;
+        v.folder = folder;
+        return v;
+      });
+  const glm::ivec3 root(0, -3, 0), neighbor(1, -3, 0);
+  auto &manager = world.GetChunkManager();
+  manager.EnsureChunk(root);
+  manager.EnsureChunk(neighbor);
+  auto *chunk = manager.GetChunk(root);
+  auto *halo = manager.GetChunk(neighbor);
+  RelightJobSpec spec;
+  spec.min_world_y = -64;
+  spec.max_world_y = 319;
+  const auto refresh = [&]()
+  {
+    const auto result =
+        UChunkRelightSnapshot::CaptureSections(world, spec, {root})
+            .Compute(registry);
+    InstallComputedLight(*chunk, result.chunks[0].light_packed, true, true);
+    world.RecordLightCalculation(result, catalog);
+    Expect(world.HasCompleteLightCalculation(root, catalog),
+           "known geometry replacement certifies current field");
+  };
+  refresh();
+  evidence_queries = 0;
+  for (int n = 0; n < 200; ++n)
+    Expect(world.HasCompleteLightCalculation(root, catalog),
+           "stable certificate remains current");
+  Expect(
+      evidence_queries == 0,
+      "unchanged authoritative revisions avoid all repeated dependency walks");
+  ++version.producers[1];
+  publish_during_validation = true;
+  Expect(world.HasCompleteLightCalculation(root, catalog),
+         "index publication during validation preserves truthful output");
+  const int primed_queries = evidence_queries;
+  Expect(world.HasCompleteLightCalculation(root, catalog) &&
+             evidence_queries > primed_queries,
+         "a validation overlapping new evidence cannot be cached across that "
+         "publication");
+  const int stable_queries = evidence_queries;
+  Expect(world.HasCompleteLightCalculation(root, catalog) &&
+             evidence_queries == stable_queries,
+         "stable index revision admits reuse after a fresh validation");
+  const auto before_self = manager.GetInputRevision();
+  *chunk = *chunk;
+  Expect(manager.GetInputRevision() == before_self &&
+             world.HasCompleteLightCalculation(root, catalog),
+         "self-assignment preserves current generation and input revision");
+  const auto initial_revision = manager.GetInputRevision();
+  halo->SetBlockLocal({0, 8, 8}, 8);
+  Expect(manager.GetInputRevision() > initial_revision &&
+             !world.HasCompleteLightCalculation(root, catalog),
+         "direct neighbor chunk write invalidates memo before the next query "
+         "in the same frame");
+  refresh();
+  const auto before_noop = manager.GetInputRevision();
+  halo->SetBlockLocal({0, 8, 8}, 8);
+  halo->ReplaceLightData(halo->GetLightData());
+  Expect(manager.GetInputRevision() == before_noop,
+         "unchanged voxel and light replacements do not churn input revision");
+  const auto old_field = chunk->GetLightFieldRevision();
+  UChunk copied = *halo;
+  copied.SetBlockLocal({0, 8, 8}, BLOCK_AIR);
+  Expect(manager.GetInputRevision() == before_noop,
+         "unmanaged copied chunk cannot mutate the source world's clock");
+  *halo = copied;
+  Expect(manager.GetInputRevision() > before_noop &&
+             chunk->GetLightFieldRevision() == old_field &&
+             !world.HasCompleteLightCalculation(root, catalog),
+         "copy assignment retains destination ownership and invalidates "
+         "dependent field");
+  refresh();
+  UChunk same_revision_snapshot = *halo;
+  halo->SetBlockLocal({2, 2, 2}, 8);
+  refresh();
+  same_revision_snapshot.SetBlockLocal({3, 3, 3}, 8);
+  Expect(same_revision_snapshot.GetContentRevision() ==
+             halo->GetContentRevision(),
+         "comparison snapshots deliberately share a numeric content revision "
+         "but differ in geometry");
+  const auto previous_generation = halo->GetIncarnation();
+  *halo = same_revision_snapshot;
+  Expect(halo->GetIncarnation() != previous_generation &&
+             !world.HasCompleteLightCalculation(root, catalog),
+         "wholesale assignment retires generation even when copied content "
+         "revision collides");
+  refresh();
+  UBlockWorld other;
+  other.GetChunkManager().EnsureChunk(neighbor);
+  const auto source_clock = manager.GetInputRevision();
+  const auto target_clock = other.GetChunkManager().GetInputRevision();
+  *other.GetChunkManager().GetChunk(neighbor) = *halo;
+  Expect(manager.GetInputRevision() == source_clock &&
+             other.GetChunkManager().GetInputRevision() > target_clock,
+         "cross-world assignment notifies only the destination clock");
+  const auto current_data = manager.GetInputRevision();
+  floor = 0;
+  ++version.producers[1];
+  Expect(manager.GetInputRevision() == current_data &&
+             !world.HasCompleteLightCalculation(root, catalog),
+         "terrain evidence revision immediately invalidates a cached proof "
+         "without resident mutation");
+  floor = -4;
+  ++version.producers[1];
+  Expect(world.HasCompleteLightCalculation(root, catalog),
+         "restored exact evidence can validate the original proof again");
+  floor = 0;
+  ++version.producers[3];
+  Expect(!world.HasCompleteLightCalculation(root, catalog),
+         "disk evidence revision invalidates cached proof");
+  floor = -4;
+  ++version.producers[3];
+  Expect(world.HasCompleteLightCalculation(root, catalog),
+         "disk evidence restoration is freshly checked");
+  evidence_queries = 0;
+  folder = "world_B";
+  Expect(world.HasCompleteLightCalculation(root, catalog) &&
+             evidence_queries == 9,
+         "folder change triggers fresh validation even when producer counters "
+         "match");
+  evidence_queries = 0;
+  ++version.producers[0];
+  Expect(world.HasCompleteLightCalculation(root, catalog) &&
+             evidence_queries == 9,
+         "replacement terrain producer cannot reuse a previous instance's "
+         "revision");
+  const auto profile = world.GetVerticalProfile();
+  auto extended = profile;
+  extended.MaxY += 16;
+  world.SetVerticalProfile(extended);
+  Expect(!world.HasCompleteLightCalculation(root, catalog),
+         "profile change invalidates positive cache entry");
+  world.SetVerticalProfile(profile);
+  world.SetLightingConfigurationIdentity(1);
+  Expect(!world.HasCompleteLightCalculation(root, catalog),
+         "mode change invalidates cached input context");
+  world.SetLightingConfigurationIdentity(0);
+  Expect(world.HasCompleteLightCalculation(root, catalog),
+         "unchanged restored inputs can be checked again");
+  auto foreign_catalog = std::make_shared<UBlockDefinitionStorage>();
+  Expect(!world.HasCompleteLightCalculation(
+             root, foreign_catalog->GetCatalogSnapshot()),
+         "different catalog cannot use positive context memo");
+  Expect(world.HasCompleteLightCalculation(root, catalog),
+         "restoring pinned material identity triggers a current check");
+  std::vector<UChunk> saved_chunks;
+  manager.ForEachChunk([&](const UChunk &c) { saved_chunks.push_back(c); });
+  UChunkManager replacement_manager;
+  for (const auto &c : saved_chunks)
+  {
+    replacement_manager.EnsureChunk(c.GetCoord());
+    *replacement_manager.GetChunk(c.GetCoord()) = c;
+  }
+  replacement_manager.GetChunk(neighbor)->SetBlockLocal({1, 1, 1}, 8);
+  const uint64_t equal_revision =
+      std::max(manager.GetInputRevision(),
+               replacement_manager.GetInputRevision()) +
+      16;
+  const auto pad_revision = [&](UChunkManager &m)
+  {
+    m.EnsureChunk({777, 0, 777});
+    auto *outside = m.GetChunk({777, 0, 777});
+    while (m.GetInputRevision() < equal_revision)
+      outside->SetBlockLocal(
+          {0, 0, 0},
+          outside->GetBlockLocal({0, 0, 0}) == BLOCK_AIR ? 8 : BLOCK_AIR);
+  };
+  pad_revision(manager);
+  pad_revision(replacement_manager);
+  Expect(world.HasCompleteLightCalculation(root, catalog),
+         "unrelated padding mutation preserves the root's exact inputs");
+  Expect(manager.GetInputRevisionIdentity() !=
+             replacement_manager.GetInputRevisionIdentity(),
+         "equal counter values belong to distinct manager identities");
+  Expect(manager.GetInputRevision() == replacement_manager.GetInputRevision(),
+         "comparison managers deliberately have equal numeric revisions");
+  manager = std::move(replacement_manager);
+  chunk = manager.GetChunk(root);
+  halo = manager.GetChunk(neighbor);
+  Expect(!world.HasCompleteLightCalculation(root, catalog),
+         "replacement manager cannot inherit old proof at a matching numeric "
+         "revision");
+  refresh();
+  manager.RemoveChunk(neighbor);
+  Expect(!world.HasCompleteLightCalculation(root, catalog),
+         "residency removal invalidates shared context memo");
+  manager.EnsureChunk(neighbor);
+  halo = manager.GetChunk(neighbor);
+  Expect(!world.HasCompleteLightCalculation(root, catalog),
+         "recycled equal air bytes have a different incarnation");
+  refresh();
+  halo->SetBlockLocal({0, 0, 0}, 8);
+  refresh();
+  const auto before_fluid = manager.GetInputRevision();
+  const auto water = FluidCellState::Flowing(3).WithKind(FluidKind::Water);
+  halo->SetFluidLocal({0, 0, 0}, water);
+  Expect(manager.GetInputRevision() > before_fluid &&
+             !world.HasCompleteLightCalculation(root, catalog),
+         "direct fluid mutation alone invalidates geometry provenance");
+  refresh();
+  const auto fluid_noop = manager.GetInputRevision();
+  halo->SetFluidLocal({0, 0, 0}, water);
+  Expect(manager.GetInputRevision() == fluid_noop,
+         "unchanged fluid state preserves memo input revision");
+  halo->ClearFluidLocal({0, 0, 0});
+  Expect(manager.GetInputRevision() > fluid_noop &&
+             !world.HasCompleteLightCalculation(root, catalog),
+         "clearing fluid alone invalidates current certificate");
+  refresh();
+  const auto before_light = manager.GetInputRevision();
+  halo->SetLightLocal({0, 0, 0}, 5, 7);
+  evidence_queries = 0;
+  Expect(manager.GetInputRevision() > before_light &&
+             world.HasCompleteLightCalculation(root, catalog) &&
+             evidence_queries == 9,
+         "light writes notify input readers while geometry-only solver remains "
+         "correct after revalidation");
+  auto replacement = halo->GetLightData();
+  replacement[0] = PackLight(9, 9);
+  const auto before_bulk = manager.GetInputRevision();
+  halo->ReplaceLightData(replacement);
+  Expect(manager.GetInputRevision() > before_bulk &&
+             world.HasCompleteLightCalculation(root, catalog),
+         "bulk light replacement notifies input readers without invalidating "
+         "geometry-only truth");
+  const auto before_clear_light = manager.GetInputRevision();
+  halo->ClearLightLocal({0, 0, 0});
+  Expect(manager.GetInputRevision() > before_clear_light &&
+             world.HasCompleteLightCalculation(root, catalog),
+         "clearing light notifies current input identity");
+  halo->ResetForReuse(neighbor);
+  Expect(!world.HasCompleteLightCalculation(root, catalog),
+         "direct reset changes neighbor generation before cached query");
+  refresh();
+  manager.EnsureChunk({-1, -3, 0});
+  Expect(!world.HasCompleteLightCalculation(root, catalog),
+         "appearance of a proven absent air section invalidates memo");
+  refresh();
+  UChunk relocated({123, 7, 456});
+  relocated.SetBlockLocal({4, 5, 6}, 8);
+  *halo = relocated;
+  Expect(halo->GetCoord() == neighbor && halo->GetBlockLocal({4, 5, 6}) == 8 &&
+             !world.HasCompleteLightCalculation(root, catalog),
+         "bulk assignment preserves the managed coordinate and invalidates "
+         "dependencies");
+  refresh();
+  world.SetKnownOpenSkyAbsentQuery(
+      [&](glm::ivec3)
+      {
+        ++evidence_queries;
+        return floor.has_value();
+      });
+  Expect(world.HasCompleteLightCalculation(root, catalog),
+         "arbitrary callback clears the optional memo");
+  floor.reset();
+  Expect(
+      !world.HasCompleteLightCalculation(root, catalog),
+      "unversioned callbacks remain fresh without any revision notification");
+  auto unidentified =
+      UChunkRelightSnapshot::CaptureSections(world, spec, {root})
+          .Compute(registry);
+  unidentified.input_catalog.reset();
+  unidentified.inputs_complete = false;
+  InstallComputedLight(*chunk, unidentified.chunks[0].light_packed, true, true);
+  world.RecordLightCalculation(unidentified, nullptr);
+  Expect(!world.LightCalculationsStillCurrent({root}, true, true, nullptr),
+         "missing immutable material identity never grants cached reuse of "
+         "fallback physics");
+}
+
 } // namespace
 
 int main(int argc, char **argv)
 {
   if (argc == 2 && std::string(argv[1]) == "--light-proof")
   {
+    TestVersionedLightInputMemoInvalidatesImmediately();
     TestWorldOwnedLightCertificates();
     TestBatchAbsenceEvidenceIsFreshAndExact();
     std::cout << "light_calculation_certificate_test: OK\n";
@@ -1181,6 +1479,7 @@ int main(int argc, char **argv)
     std::cout << "section_light_geometry_test: OK\n";
     return 0;
   }
+  TestVersionedLightInputMemoInvalidatesImmediately();
   TestWorldOwnedLightCertificates();
   TestBatchAbsenceEvidenceIsFreshAndExact();
   TestDomainsAndRevision();

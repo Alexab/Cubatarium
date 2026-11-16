@@ -1078,6 +1078,8 @@ cubatarium_add_test(NAME negative_height_storage_test
         src/World/Chunks/ChunkBuffer.cpp
         src/World/Chunks/TerrainColumnUtil.cpp
         src/World/Core/BlockWorld.cpp
+        src/World/Lighting/ChunkRelightSnapshot.cpp
+        src/World/Lighting/LightUtil.cpp
         src/World/Core/IUBlockWriter.cpp
         src/World/IO/BinaryChunkSerializer.cpp
         src/World/IO/JsonChunkSerializer.cpp

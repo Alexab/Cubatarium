@@ -17,8 +17,36 @@ UChunk::UChunk(glm::ivec3 chunkCoord) : Coord(chunkCoord)
   WeatherLastUpdateSec = 0.0;
 }
 
+UChunk &UChunk::operator=(const UChunk &other)
+{
+  if (this == &other)
+    return *this;
+  const bool managed = static_cast<bool>(InputRevision.clock);
+  InputRevision.NoteMutation();
+  if (!managed)
+    Coord = other.Coord;
+  Data = other.Data;
+  FluidData = other.FluidData;
+  LightData = other.LightData;
+  SurfaceWetness = other.SurfaceWetness;
+  WeatherLastUpdateSec = other.WeatherLastUpdateSec;
+  LightFieldRevision = other.LightFieldRevision;
+  SkyLightRevision = other.SkyLightRevision;
+  BlockLightRevision = other.BlockLightRevision;
+  ContentRevision = other.ContentRevision;
+  Dirty = other.Dirty;
+  NonAirCount = other.NonAirCount;
+  Incarnation = managed
+                    ? NextIncarnation.fetch_add(1, std::memory_order_relaxed)
+                    : other.Incarnation;
+  LightProofs = managed ? std::array<LightDomainProof, 2>{} : other.LightProofs;
+  HaloSigCache = other.HaloSigCache;
+  return *this;
+}
+
 void UChunk::ResetForReuse(glm::ivec3 chunkCoord)
 {
+  InputRevision.NoteMutation();
   ClearLightCalculationProofs();
   Coord = chunkCoord;
   Data.fill(BLOCK_AIR);
@@ -82,6 +110,7 @@ void UChunk::SetBlockLocal(glm::ivec3 local, BlockId Id)
   }
   Data[idx] = Id;
   ++ContentRevision;
+  InputRevision.NoteMutation();
   if (prev == BLOCK_AIR && Id != BLOCK_AIR)
   {
     ++NonAirCount;
@@ -128,6 +157,7 @@ void UChunk::SetFluidLocal(glm::ivec3 local, FluidCellState state)
   {
     packed = next;
     ++ContentRevision;
+    InputRevision.NoteMutation();
   }
   Dirty = true;
 }
@@ -144,6 +174,7 @@ void UChunk::ClearFluidLocal(glm::ivec3 local)
   {
     packed = 0;
     ++ContentRevision;
+    InputRevision.NoteMutation();
   }
   Dirty = true;
 }
@@ -161,6 +192,7 @@ bool UChunk::ReplaceLightData(const std::array<uint8_t, CHUNK_VOLUME> &data)
     return false;
   LightData = data;
   ++LightFieldRevision;
+  InputRevision.NoteMutation();
   SkyLightRevision += sky_changed;
   BlockLightRevision += block_changed;
   return true;
@@ -201,6 +233,7 @@ void UChunk::SetLightLocal(glm::ivec3 local, int sky_level, int block_level)
     BlockLightRevision += (packed & 0xF0) != (next & 0xF0);
     packed = next;
     ++LightFieldRevision;
+    InputRevision.NoteMutation();
   }
 }
 
@@ -218,6 +251,7 @@ void UChunk::ClearLightLocal(glm::ivec3 local)
     BlockLightRevision += (packed & 0xF0) != 0;
     packed = 0;
     ++LightFieldRevision;
+    InputRevision.NoteMutation();
   }
 }
 
