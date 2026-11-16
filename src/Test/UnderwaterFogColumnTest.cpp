@@ -53,12 +53,6 @@ static std::shared_ptr<cutum::UBlockDefinitionStorage> MakeDefinitions()
   return definitions;
 }
 
-static bool CameraInsideFluidRule(const cutum::FluidColumnSurface &column,
-                                  float eyeY)
-{
-  return column.valid && eyeY < column.surfaceY;
-}
-
 int main()
 {
   const auto definitions = MakeDefinitions();
@@ -80,7 +74,8 @@ int main()
   Expect(ocean.valid, "water column has surface");
   Expect(ocean.fluidId == kWater, "top liquid is water");
   Expect(ocean.surfaceBlockY == kSeaY, "surface block y matches sea level");
-  Expect(ocean.bottomBlockY == kSeaY, "single-block water bottom matches surface");
+  Expect(ocean.bottomBlockY == kSeaY,
+         "single-block water bottom matches surface");
   Expect(std::abs(ocean.surfaceY - cutum::BlockTopY(kSeaY)) < 1e-4f,
          "surfaceY is BlockTopY");
 
@@ -94,20 +89,17 @@ int main()
   Expect(stacked.valid && stacked.fluidId == kWater,
          "water above lava wins for column surface");
 
-  Expect(CameraInsideFluidRule(ocean, cutum::BlockTopY(kSeaY) - 0.1f),
+  Expect(cutum::ContainsFluidAtHeight(ocean, cutum::BlockTopY(kSeaY) - 0.1f),
          "eye below surface is inside fluid");
-  Expect(!CameraInsideFluidRule(ocean, cutum::BlockTopY(kSeaY)),
+  Expect(!cutum::ContainsFluidAtHeight(ocean, cutum::BlockTopY(kSeaY)),
          "eye at surface top is not inside fluid");
-  Expect(!CameraInsideFluidRule(ocean, cutum::BlockTopY(kSeaY) + 0.5f),
+  Expect(!cutum::ContainsFluidAtHeight(ocean, cutum::BlockTopY(kSeaY) + 0.5f),
          "eye above surface is not inside fluid");
-  Expect(!CameraInsideFluidRule(empty, 32.0f),
+  Expect(!cutum::ContainsFluidAtHeight(empty, 32.0f),
          "empty column never counts as inside fluid");
 
-  // Deep underwater cave: the ocean FLOOR is 40 blocks above the cave eyes —
-  // beyond the default slice-builder window (ScanUp=32), so no water is
-  // visible in it at all. The EYE query uses the deep window and must still
-  // classify the camera as submerged (underwater caves otherwise lose all
-  // fog: water audit follow-up).
+  // Dry cave under an ocean: water above the rock ceiling must not classify
+  // the eye as submerged, regardless of the surface-map scan window.
   constexpr int kCaveEyeY = 20;
   constexpr int kOceanFloorY = 60;
   for (int y = 22; y <= kOceanFloorY; ++y) // cave ceiling + floor mass
@@ -124,15 +116,42 @@ int main()
   Expect(!cave_default.valid,
          "default (slice-builder) window misses water 40 blocks up");
 
-  const cutum::FluidColumnSurface cave_eye = cutum::FindFluidColumnSurfaceAt(
-      world, registry, bx, bz, kCaveEyeY,
-      cutum::FluidSurfaceScanTuning::EyeScanUp,
-      cutum::FluidSurfaceScanTuning::EyeScanDown);
-  Expect(cave_eye.valid, "eye deep scan finds the ocean surface above cave");
-  Expect(cave_eye.fluidId == kWater && cave_eye.surfaceBlockY == kSeaY,
-         "eye deep scan returns the ocean water surface");
-  Expect(CameraInsideFluidRule(cave_eye, kCaveEyeY + 0.5f),
-         "camera in a deep underwater cave is submerged");
+  const auto at = [&](float y)
+  {
+    return cutum::FindFluidColumnSurfaceForEye(world, registry,
+                                               glm::vec3(bx, y, bz));
+  };
+  Expect(!at(kCaveEyeY).valid, "dry cave ignores ocean behind stone ceiling");
+  Expect(!cutum::ContainsFluidAtHeight(ocean, kCaveEyeY),
+         "even a distant surface sample excludes eyes below its bottom");
+
+  for (int y = -48; y <= 21; ++y)
+    world.SetBlock(glm::ivec3(bx, y, bz), kWater);
+  const auto flooded = at(-40.0f);
+  Expect(flooded.valid && flooded.fluidId == kWater &&
+             flooded.bottomBlockY == -48 && flooded.surfaceBlockY == 21 &&
+             cutum::ContainsFluidAtHeight(flooded, -40.0f),
+         "negative-height flooded cave uses its own interval below rock");
+
+  world.SetBlock(glm::ivec3(bx, -40, bz), cutum::BLOCK_AIR);
+  world.SetBlock(glm::ivec3(bx, -39, bz), cutum::BLOCK_AIR);
+  Expect(!at(-40.0f).valid, "air pocket inside flooded cave stays dry");
+  const auto lower = at(-42.0f);
+  Expect(lower.valid && lower.surfaceBlockY == -41,
+         "air pocket separates liquid intervals");
+  world.SetBlock(glm::ivec3(bx, -43, bz), kLava);
+  const auto lava_eye = at(-43.0f);
+  Expect(lava_eye.fluidId == kLava && lava_eye.surfaceBlockY == -43 &&
+             lava_eye.bottomBlockY == -43,
+         "adjacent liquid types retain their own fog material");
+  const float top = cutum::BlockTopY(kSeaY);
+  Expect(at(top + 0.1f).valid &&
+             !cutum::ContainsFluidAtHeight(at(top + 0.1f), top + 0.1f),
+         "just-emerged eye retains surface transition without submersion");
+  Expect(!at(top + 0.3f).valid,
+         "surface transition cannot reach through a distant air gap");
+  Expect(cutum::ContainsFluidAtHeight(at(-48.5f), -48.5f) && !at(-48.51f).valid,
+         "negative-coordinate bottom boundary matches block geometry");
 
   std::cout << "underwater_fog_column_test: ok" << std::endl;
   return 0;

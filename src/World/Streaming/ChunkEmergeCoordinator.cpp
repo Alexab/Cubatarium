@@ -933,7 +933,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     const glm::vec3 eye = camera->GetPosition();
     preferred_cy = FloorDiv(static_cast<int>(std::floor(eye.y)), CHUNK_SIZE);
     const FluidColumnSurface column = world.FindFluidColumnSurface(eye);
-    if (column.valid && eye.y < column.surfaceY)
+    if (ContainsFluidAtHeight(column, eye.y))
     {
       preferred_cy = FloorDiv(column.surfaceBlockY, CHUNK_SIZE);
       prefer_lower_cy = true;

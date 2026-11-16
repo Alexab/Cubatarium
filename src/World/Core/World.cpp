@@ -15344,7 +15344,7 @@ bool UWorld::HasNearbyFluidSurface(glm::ivec3 cameraBlock,
 bool UWorld::IsCameraInsideFluid(const glm::vec3 &eye, BlockId *outFluid) const
 {
   const FluidColumnSurface column = FindFluidColumnSurface(eye);
-  if (!column.valid || eye.y >= column.surfaceY)
+  if (!ContainsFluidAtHeight(column, eye.y))
   {
     return false;
   }

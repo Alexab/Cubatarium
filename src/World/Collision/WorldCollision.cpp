@@ -1292,15 +1292,7 @@ UWorldCollision::FindFluidColumnSurfaceEye(const glm::vec3 &eye) const
   {
     return FluidColumnSurface{};
   }
-  const int bx = WorldCoordToBlockIndex(eye.x);
-  const int bz = WorldCoordToBlockIndex(eye.z);
-  const int by = WorldCoordToBlockIndex(eye.y);
-  // Eye query uses the deep scan window: the camera can sit in an underwater
-  // cave far below the ocean surface (beyond the slice-builder window) and
-  // must still classify as submerged for underwater fog.
-  return ::cutum::FindFluidColumnSurfaceAt(
-      BlockWorld, *BlockRegistry, bx, bz, by,
-      FluidSurfaceScanTuning::EyeScanUp, FluidSurfaceScanTuning::EyeScanDown);
+  return ::cutum::FindFluidColumnSurfaceForEye(BlockWorld, *BlockRegistry, eye);
 }
 
 SampledFluidState

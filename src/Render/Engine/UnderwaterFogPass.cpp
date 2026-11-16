@@ -37,7 +37,7 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
       world.SampleFluidPhysics(eye, camera->GetPlayerCapsule());
   const FluidColumnSurface column = world.FindFluidColumnSurface(eye);
   BlockId eye_fluid = BLOCK_AIR;
-  const bool camera_submerged = column.valid && eye.y < column.surfaceY;
+  const bool camera_submerged = ContainsFluidAtHeight(column, eye.y);
   CameraInFluid = camera_submerged;
   if (camera_submerged)
   {
