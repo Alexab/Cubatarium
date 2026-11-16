@@ -197,5 +197,39 @@ class NegativeCaveFixtureTest(unittest.TestCase):
             self.assertEqual(check()["reason"], "fixture_start_position_changed")
 
 
+class AnalyticCaveDepthReferenceTest(unittest.TestCase):
+    def test_framebuffer_depth_negative_controls_and_coverage(self):
+        from engine_fixture_reference import evaluate
+        scene = {"schema": "engine-smoke-fixture.v1", "name": "dry-negative-cave",
+                 "chunk_x_bounds": [-20, 3]}
+        with tempfile.TemporaryDirectory() as temp:
+            perf = Path(temp) / "perf.jsonl"
+            rows = []
+            for i in range(120):
+                rows.append({"kind": "renderer_pixel_probe", "frame_epoch": i // 40,
+                    "renderer_pixel_ray_origin_x": 22, "renderer_pixel_ray_origin_y": -36,
+                    "renderer_pixel_ray_origin_z": 51, "renderer_pixel_ray_direction_x": 0,
+                    "renderer_pixel_ray_direction_y": 1, "renderer_pixel_ray_direction_z": 0,
+                    "renderer_pixel_opaque_hit_distance": 5.5})
+            def check():
+                perf.write_text("\n".join(json.dumps(r) for r in rows))
+                return evaluate(scene, perf)
+            self.assertEqual(check()["status"], "PASS")
+            rows[0]["renderer_pixel_opaque_hit_distance"] = -1
+            self.assertEqual(check()["faults"], 1, "hidden ceiling must fail")
+            self.assertEqual(check()["status"], "FAIL")
+            rows[0]["renderer_pixel_opaque_hit_distance"] = 8
+            self.assertEqual(check()["status"], "FAIL", "a farther wall cannot mask the hole")
+            for row in rows:
+                row["renderer_pixel_opaque_hit_distance"] = 2
+            self.assertEqual(check()["status"], "UNTESTED", "near occluders cannot prove the ceiling")
+            for row in rows:
+                row["renderer_pixel_opaque_hit_distance"] = 5.5
+                row["frame_epoch"] = 0
+            self.assertEqual(check()["status"], "UNTESTED", "one frame is insufficient")
+            perf.write_text("invalid JSON")
+            self.assertEqual(evaluate(scene, perf)["status"], "FAIL")
+
+
 if __name__ == "__main__":
     unittest.main()

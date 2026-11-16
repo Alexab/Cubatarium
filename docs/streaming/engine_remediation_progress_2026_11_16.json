@@ -8,7 +8,7 @@
     "correct_light_solver_and_persistence": "in_progress: CPU full-height occlusion and vertical fluid attenuation fixed; convergence, unknown inputs, GPU paths and persistence signatures pending",
     "single_section_lifecycle_and_publication": "pending",
     "independent_light_resource_and_performance": "pending",
-    "full_smoke_and_regression_matrix": "pending"
+    "full_smoke_and_regression_matrix": "in_progress: surface frontier, dry negative cave and flooded negative cave routes; independent analytic near-opaque-depth checks; startup, light/transparent reference, air pocket and eviction round trip still pending"
   },
   "native_baseline": {
     "artifacts": "build/desktop-msvc/diagnostic-bot-frontier-v2",
@@ -37,7 +37,6 @@
     ]
   },
   "next_defects": [
-    "zero-quad/bulk mesh dependency invalidation",
     "absent slice versus proven air semantics",
     "exact fluid mutation change sets",
     "six-face light convergence/removal and persistence validation",
@@ -224,5 +223,102 @@
       "saved positions on a safe supported cave floor are retained; airborne/swimming restore behavior still needs audit",
       "native dry cave is analytic fixture coverage, not independent pixel/light reference acceptance"
     ]
+  },
+  "zero_quad_dependency_verification": {
+    "negative_control": "build/desktop-msvc/engine-zero-quad-red-test.log: FAIL bulk dependency changes retain zero-quad section repair",
+    "tests": "build/desktop-msvc/engine-zero-quad-tests.log: decor_mesh_integration_test and mesh_neighbor_policy_test PASS",
+    "release_build": "build/desktop-msvc/engine-zero-quad-release-build.log",
+    "behavior": "all cached resident publications retain input-change repair, including zero-quad with no overlay; bulk and single queue entry points plus drain share this contract"
+  },
+  "wet_negative_cave_verification": {
+    "source_commit": "e25cfd11142167665d944701f195ec44a713bad3",
+    "release_build": "build/desktop-msvc/engine-zero-quad-committed-release-build.log",
+    "artifacts": "build/desktop-msvc/engine-wet-negative-cave-v1",
+    "exe_sha256": "076f6279af6a8fe7a3c2241d47677a3ad6036083075323ac689c58b6f695b559",
+    "source_world_sha256": "820e89c6c84294655a4f38b0abdc009439799e81edbe8d629c2c11fbfe3fee75",
+    "prepared_world_sha256": "cb4a1f496734025f43d5a76f7fab8580e5bc518baa09c339e89021d51624466e",
+    "native_verdict": {
+      "schema": "engine-smoke-verdict.v1",
+      "status": "UNTESTED",
+      "components": {
+        "runtime": {
+          "status": "PASS",
+          "reason": "native_process",
+          "exit_code": 0
+        },
+        "route": {
+          "status": "PASS",
+          "reason": "frontier_route_covered",
+          "displacement_chunks": 19,
+          "outside_initial_resident_samples": 2292
+        },
+        "startup": {
+          "status": "UNTESTED",
+          "reason": "missing_first_frame_ring_witness"
+        },
+        "visual": {
+          "status": "UNTESTED",
+          "reason": "missing_visual_reference",
+          "samples": 20640,
+          "captures": 129,
+          "attributed_samples": 0,
+          "faults": 0
+        },
+        "inspection": {
+          "status": "PASS",
+          "reason": "inspection_capture_coverage",
+          "requested": 24,
+          "queued": 24,
+          "verified": 24
+        },
+        "fixture": {
+          "status": "PASS",
+          "reason": "negative_wet_cave_observed",
+          "samples": 216
+        }
+      },
+      "malformed_trace_rows": 0,
+      "scope": "one-way frontier route and sampled reference checks; not full-screen proof",
+      "runner_exit_code": 1,
+      "inspection_evidence": {
+        "verified": 24,
+        "requested": 24,
+        "reason": "inspection_views_joined_to_png"
+      }
+    },
+    "config_restored": true,
+    "lease_released": true
+  },
+  "analytic_cave_depth_verification": {
+    "reference": "tools/engine_fixture_reference.py",
+    "dry": {
+      "status": "PASS",
+      "reason": "analytic_near_cave_opaque_depth",
+      "checked": 15344,
+      "faults": 0,
+      "frame_epochs": 98,
+      "skipped_unscoped_or_occluded": 336,
+      "examples": [],
+      "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+    },
+    "wet": {
+      "status": "PASS",
+      "reason": "analytic_near_cave_opaque_depth",
+      "checked": 20160,
+      "faults": 0,
+      "frame_epochs": 129,
+      "skipped_unscoped_or_occluded": 480,
+      "examples": [],
+      "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+    },
+    "negative_controls": "tools/test_engine_smoke_run.py: absent/farther ceiling FAIL; nearer occluder or one-frame coverage UNTESTED; malformed trace FAIL",
+    "limitations": [
+      "reference was applied offline to these two existing native traces; future wrapper runs integrate it automatically",
+      "covers near opaque cave geometry only; generic visual and startup remain UNTESTED"
+    ]
+  },
+  "latest_ctest_verification": {
+    "log": "build/desktop-msvc/engine-local-fixes-final-tests.log",
+    "passed": 11
   }
 }

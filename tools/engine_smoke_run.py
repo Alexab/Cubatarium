@@ -256,9 +256,18 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 100,
             from engine_smoke_fixtures import evaluate_fixture_trace
             scene_verdict = evaluate_fixture_trace(scene, artifacts / "diagnostic_bot.jsonl")
             verdict["components"]["fixture"] = scene_verdict
+            from engine_fixture_reference import evaluate as evaluate_reference
+            depth_verdict = evaluate_reference(scene, perf)
+            verdict["components"]["fixture_opaque_depth"] = depth_verdict
+            (artifacts / "fixture-depth-reference.json").write_text(
+                json.dumps(depth_verdict, indent=2) + "\n", encoding="utf-8")
             if scene_verdict["status"] == "FAIL":
                 verdict["status"] = "FAIL"
             elif scene_verdict["status"] == "UNTESTED" and verdict["status"] == "PASS":
+                verdict["status"] = "UNTESTED"
+            if depth_verdict["status"] == "FAIL":
+                verdict["status"] = "FAIL"
+            elif depth_verdict["status"] == "UNTESTED" and verdict["status"] == "PASS":
                 verdict["status"] = "UNTESTED"
         verdict["runner_exit_code"] = child.returncode
         verdict["inspection_evidence"] = inspection
