@@ -1631,7 +1631,7 @@
         "queue_analysis": "relight-queue-analysis.txt"
       }
     },
-    "next_implementation": "Replace optimistic own-field settlement and unconditional column closeout with world-owned per-domain input certificates and generation/coverage obligations. Preserve newly expanded bands during in-flight work; unknown-input completion waits for changed evidence rather than repeated recomputation. Retire legacy frontier expansion and enforce strict first-frame readiness afterward."
+    "next_implementation": "Validate complete per-domain publication gates natively; replace unconditional coarse pending closeouts and dropped expanded bands with preserved generation/coverage obligations. Then strict first-frame readiness, durable cache proof and independent light resource."
   },
   "synchronous_geometry_solver_unification": {
     "status": "unit_and_native_sky_boundary_integration_verified_completion_and_performance_pending",
@@ -1785,5 +1785,40 @@
       "saved_cache_signature": "light-v6:0:-64:319:17038976160172985471",
       "native_coverage_limit": "All observed sync calls are sky-only; edit and block-only sync contracts covered by units, not exercised by this route."
     }
+  },
+  "world_owned_light_domain_certificates": {
+    "status": "unit_verified_native_pending",
+    "implementation": [
+      "Resident sections own independent sky/block calculation provenance; all output sections share one immutable input context without retaining light voxel arrays.",
+      "World identity, incarnation, selected channel revision, full geometry/absence read set, immutable catalog, vertical profile and configuration are validated.",
+      "Missing, current-transient and complete are separate states; unknown input never grants complete per-domain/section provenance.",
+      "After every selected output is installed, sync/async record matching channels. Recycle/unload/clear retire proof ownership.",
+      "World settlement, mesh candidate/preview/repair gates and renderer dark-image gate require complete provenance in Full mode; Flat retains its explicit algorithm behavior.",
+      "Synchronous repeated work reuses current fields after deduplicated input-context validation. Unchanged transient output is reusable without claiming completion."
+    ],
+    "verification": {
+      "log": "build/desktop-msvc/engine-light-proof-regression-tests.log",
+      "ctest": "21/21 Release passed",
+      "controls": [
+        "pre-install proof rejection",
+        "one-domain installation does not certify the other",
+        "neighbor edit invalidates with unchanged own field",
+        "outside-read-set mutation preserves proof",
+        "known/unknown absence changes without residency",
+        "channel independence",
+        "profile/config/catalog invalidation",
+        "copied entire input world with identical stamps rejects foreign owner",
+        "unload/recycle/clear retirement",
+        "known zero-revision dark field",
+        "actual renderer/mesh settlement helper rejects old own-revision shortcut",
+        "transient reuse invalidates when absence evidence changes"
+      ]
+    },
+    "limits": [
+      "Certificates are currently in-memory; durable persistence still needs content identities rather than runtime incarnations.",
+      "Coarse column closeout and pending generation/coverage preservation remain pending. These certificates alone do not prevent every legacy pending-work erase.",
+      "Strict first-frame barrier, native physical light reference, independent GPU light resource and complete scenario matrix remain pending.",
+      "Native candidate publication and certificate-validation overhead pending."
+    ]
   }
 }

@@ -33,6 +33,19 @@ RelightChunkCoords(UBlockWorld &world, UBlockRegistry &registry,
   if (coords.empty() || (!include_skylight && !include_block_light))
     return {};
   const bool audit = IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
+  if (world.LightCalculationsStillCurrent(
+          coords, include_skylight, include_block_light,
+          registry.GetDefinitionsCatalogSnapshot()))
+  {
+    if (audit)
+      CubatariumLogInfo(
+          "RelightAudit",
+          "sync_geometry event=reuse requested=" +
+              std::to_string(coords.size()) +
+              " include_sky=" + std::to_string(include_skylight) +
+              " include_block=" + std::to_string(include_block_light));
+    return {};
+  }
   const auto capture_started = std::chrono::steady_clock::now();
   RelightJobSpec spec;
   spec.min_world_y = world.GetVerticalProfile().MinY;
@@ -56,6 +69,8 @@ RelightChunkCoords(UBlockWorld &world, UBlockRegistry &registry,
       if (InstallComputedLight(*chunk, data.light_packed, include_skylight,
                                include_block_light))
         changed.push_back(data.coord);
+  world.RecordLightCalculation(result,
+                               registry.GetDefinitionsCatalogSnapshot());
   if (audit)
     CubatariumLogInfo(
         "RelightAudit",

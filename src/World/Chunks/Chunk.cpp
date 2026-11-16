@@ -19,6 +19,7 @@ UChunk::UChunk(glm::ivec3 chunkCoord) : Coord(chunkCoord)
 
 void UChunk::ResetForReuse(glm::ivec3 chunkCoord)
 {
+  ClearLightCalculationProofs();
   Coord = chunkCoord;
   Data.fill(BLOCK_AIR);
   FluidData.fill(0);

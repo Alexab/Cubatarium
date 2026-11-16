@@ -164,6 +164,7 @@ void UChunkManager::RemoveChunk(glm::ivec3 chunkCoord)
     return;
   }
   std::unique_ptr<UChunk> chunk = std::move(it->second);
+  chunk->ClearLightCalculationProofs();
   Chunks.erase(it);
   const glm::ivec3 groundCoord(chunkCoord.x, 0, chunkCoord.z);
   auto columnIt = ResidentColumnChunkCounts.find(groundCoord);

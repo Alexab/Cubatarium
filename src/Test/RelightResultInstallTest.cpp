@@ -5,6 +5,7 @@
 #include "World/Core/BlockWorld.h"
 #include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Lighting/GpuSkylightColumnSeed.h"
+#include "World/Lighting/LightCalculationSettlement.h"
 #include "World/Lighting/RelightInputValidation.h"
 #include "World/Streaming/MeshLitGate.h"
 
@@ -925,10 +926,195 @@ void TestClippedProfileDoesNotSeedOutOfWorldSource()
          "face");
 }
 
+void TestWorldOwnedLightCertificates()
+{
+  using namespace cutum;
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition stone, torch;
+  stone.Physics = BlockPhysicsProfile::Solid();
+  torch.Physics = BlockPhysicsProfile::Solid();
+  torch.Render.Style = BlockRenderStyle::Cross;
+  torch.Lighting.Emission = 14;
+  definitions->ReplaceAll({{8, stone}, {50, torch}},
+                          {{"stone", 8}, {"torch", 50}});
+  UBlockRegistry registry(nullptr, definitions);
+  auto catalog = registry.GetDefinitionsCatalogSnapshot();
+  UBlockWorld world;
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  const glm::ivec3 coord(0, -3, 0);
+  world.SetBlock({8, -40, 8}, 50);
+  auto *chunk = world.GetChunkManager().GetChunk(coord);
+  RelightJobSpec spec;
+  spec.min_world_y = -64;
+  spec.max_world_y = 319;
+  auto compute = [&]()
+  {
+    return UChunkRelightSnapshot::CaptureSections(world, spec, {coord})
+        .Compute(registry);
+  };
+  auto publish = [&](const RelightComputeResult &result)
+  {
+    for (const auto &data : result.chunks)
+      InstallComputedLight(*world.GetChunkManager().GetChunk(data.coord),
+                           data.light_packed, result.include_skylight,
+                           result.include_block_light);
+    return world.RecordLightCalculation(result, catalog);
+  };
+  auto result = compute();
+  Expect(world.RecordLightCalculation(result, catalog) == 0,
+         "calculation does not certify channels before output installation");
+  InstallComputedLight(*chunk, result.chunks[0].light_packed, true, false);
+  Expect(
+      world.RecordLightCalculation(result, catalog) == 1 &&
+          world.GetLightCalculationState(coord, LightDomain::Sky, catalog) ==
+              LightCalculationState::Complete &&
+          world.GetLightCalculationState(coord, LightDomain::Block, catalog) ==
+              LightCalculationState::Missing &&
+          !world.HasCompleteLightCalculation(coord, catalog),
+      "sky-only installation cannot certify block light or whole-section "
+      "completion");
+  Expect(world.LightCalculationsStillCurrent({coord}, true, false, catalog) &&
+             !world.LightCalculationsStillCurrent({coord}, true, true, catalog),
+         "reuse checks only requested independently installed channels");
+  Expect(publish(result) == 1 &&
+             world.HasCompleteLightCalculation(coord, catalog),
+         "installed known sky and block channels certify the section");
+  world.SetBlock({1024, -40, 1024}, 8);
+  Expect(world.HasCompleteLightCalculation(coord, catalog),
+         "unrelated remote mutation preserves exact dependency certificate");
+  ChunkRenderDemandRecord legacy;
+  legacy.world_epoch = 7;
+  legacy.incarnation = chunk->GetIncarnation();
+  legacy.has_settled_light = true;
+  legacy.settled_content_rev = chunk->GetContentRevision();
+  legacy.settled_light_rev = chunk->GetLightFieldRevision();
+  Expect(LightSettlementMatchesCurrentCalculation(&legacy, chunk, 7, world,
+                                                  catalog),
+         "render gate admits current explicit complete calculation");
+  const auto own_field = chunk->GetLightFieldRevision();
+  world.SetBlock({16, -40, 8}, 8);
+  Expect(
+      own_field == chunk->GetLightFieldRevision() &&
+          !world.HasCompleteLightCalculation(coord, catalog),
+      "neighbor geometry invalidates certificate without own field mutation");
+  Expect(LightSettlementMatchesCurrentChunk(&legacy, chunk, 7) &&
+             !LightSettlementMatchesCurrentCalculation(&legacy, chunk, 7, world,
+                                                       catalog),
+         "own revision shortcut stays true after neighbor edit while "
+         "production gate correctly closes");
+  Expect(!world.LightCalculationsStillCurrent({coord}, true, true, catalog),
+         "stale neighboring geometry prevents cached computation reuse");
+  result = compute();
+  publish(result);
+  chunk->SetLightLocal({2, 3, 4}, chunk->GetSkyLightLocal({2, 3, 4}), 7);
+  Expect(
+      world.GetLightCalculationState(coord, LightDomain::Sky, catalog) ==
+              LightCalculationState::Complete &&
+          world.GetLightCalculationState(coord, LightDomain::Block, catalog) ==
+              LightCalculationState::Missing,
+      "independent block field write preserves current sky certificate only");
+  result = compute();
+  publish(result);
+  UBlockWorld other;
+  other.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  other.GetChunkManager().EnsureChunk(coord);
+  world.GetChunkManager().ForEachChunk(
+      [&](const UChunk &source)
+      {
+        other.GetChunkManager().EnsureChunk(source.GetCoord());
+        *other.GetChunkManager().GetChunk(source.GetCoord()) = source;
+      });
+  Expect(ValidateRelightInputs(result, other, catalog) ==
+             RelightInputValidation::Current,
+         "copied comparison world deliberately matches every captured input "
+         "stamp");
+  Expect(!other.HasCompleteLightCalculation(coord, catalog),
+         "even copied bytes and incarnation cannot transfer a certificate to "
+         "another world");
+  auto profile = world.GetVerticalProfile();
+  auto changed_profile = profile;
+  changed_profile.MaxY += 16;
+  world.SetVerticalProfile(changed_profile);
+  Expect(!world.HasCompleteLightCalculation(coord, catalog),
+         "ceiling change invalidates all channel proofs");
+  world.SetVerticalProfile(profile);
+  world.SetLightingConfigurationIdentity(1);
+  Expect(!world.HasCompleteLightCalculation(coord, catalog),
+         "algorithm change invalidates proof");
+  world.SetLightingConfigurationIdentity(0);
+  auto other_catalog = std::make_shared<UBlockDefinitionStorage>();
+  Expect(!world.HasCompleteLightCalculation(
+             coord, other_catalog->GetCatalogSnapshot()),
+         "material identity is part of calculation provenance");
+  world.GetChunkManager().RemoveChunk(coord);
+  world.GetChunkManager().EnsureChunk(coord);
+  Expect(world.GetLightCalculationState(coord, LightDomain::Sky, catalog) ==
+             LightCalculationState::Missing,
+         "recycled section starts without inherited certificate");
+  world.Clear();
+  world.GetChunkManager().EnsureChunk(coord);
+  Expect(!world.HasCompleteLightCalculation(coord, catalog),
+         "world clear retires all proof ownership");
+
+  UBlockWorld unknown;
+  unknown.GetChunkManager().EnsureChunk(coord);
+  auto lower = UChunkRelightSnapshot::CaptureSections(unknown, spec, {coord})
+                   .Compute(registry);
+  InstallComputedLight(*unknown.GetChunkManager().GetChunk(coord),
+                       lower.chunks[0].light_packed, true, true);
+  unknown.RecordLightCalculation(lower, catalog);
+  Expect(unknown.GetLightCalculationState(coord, LightDomain::Sky, catalog) ==
+                 LightCalculationState::Transient &&
+             !unknown.HasCompleteLightCalculation(coord, catalog),
+         "unknown input yields current transient output without completion");
+  Expect(
+      unknown.LightCalculationsStillCurrent({coord}, true, true, catalog),
+      "unchanged transient result can be reused without claiming completion");
+  unknown.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  Expect(unknown.GetLightCalculationState(coord, LightDomain::Sky, catalog) ==
+             LightCalculationState::Missing,
+         "new absence proof invalidates transient calculation without "
+         "residency change");
+  Expect(!unknown.LightCalculationsStillCurrent({coord}, true, true, catalog),
+         "changed absence evidence forces recomputation of transient result");
+  auto known = UChunkRelightSnapshot::CaptureSections(unknown, spec, {coord})
+                   .Compute(registry);
+  InstallComputedLight(*unknown.GetChunkManager().GetChunk(coord),
+                       known.chunks[0].light_packed, true, true);
+  unknown.RecordLightCalculation(known, catalog);
+  Expect(unknown.HasCompleteLightCalculation(coord, catalog),
+         "known replacement can finally certify the section");
+  unknown.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return false; });
+  Expect(!unknown.HasCompleteLightCalculation(coord, catalog),
+         "withdrawn absence proof closes completion again");
+
+  UBlockWorld dark;
+  dark.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  dark.GetChunkManager().EnsureChunk(coord);
+  for (int x = -16; x < 32; ++x)
+    for (int z = -16; z < 32; ++z)
+      dark.SetBlock({x, -32, z}, 8);
+  auto zero = UChunkRelightSnapshot::CaptureSections(dark, spec, {coord})
+                  .Compute(registry);
+  InstallComputedLight(*dark.GetChunkManager().GetChunk(coord),
+                       zero.chunks[0].light_packed, true, true);
+  dark.RecordLightCalculation(zero, catalog);
+  Expect(dark.GetChunkManager().GetChunk(coord)->GetLightFieldRevision() == 0 &&
+             dark.HasCompleteLightCalculation(coord, catalog),
+         "known completely dark zero-revision field has explicit complete "
+         "provenance");
+}
+
 } // namespace
 
 int main(int argc, char **argv)
 {
+  if (argc == 2 && std::string(argv[1]) == "--light-proof")
+  {
+    TestWorldOwnedLightCertificates();
+    std::cout << "light_calculation_certificate_test: OK\n";
+    return 0;
+  }
   if (argc == 2 && std::string(argv[1]) == "--geometry-halo")
   {
     TestSectionLightUsesKnownEmitterGeometry();
@@ -938,6 +1124,7 @@ int main(int argc, char **argv)
     std::cout << "section_light_geometry_test: OK\n";
     return 0;
   }
+  TestWorldOwnedLightCertificates();
   TestDomainsAndRevision();
   TestLightChannelIdentityAndBufferedWrites();
   TestHorizontalLightBoundaryChangeMask();

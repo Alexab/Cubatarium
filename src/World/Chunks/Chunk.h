@@ -7,6 +7,7 @@
 #include <atomic>
 #include <cstdint>
 #include <glm/glm.hpp>
+#include <memory>
 #include <mutex>
 
 namespace cutum
@@ -14,6 +15,21 @@ namespace cutum
 
 constexpr int CHUNK_SIZE = 16;
 constexpr int CHUNK_VOLUME = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
+
+struct RelightComputeResult;
+class UBlockWorld;
+
+enum class LightDomain
+{
+  Sky,
+  Block
+};
+enum class LightCalculationState
+{
+  Missing,
+  Transient,
+  Complete
+};
 
 class UChunk
 {
@@ -65,6 +81,9 @@ public:
   uint64_t GetContentRevision() const { return ContentRevision; }
   void BumpLightFieldRevision() { ++LightFieldRevision; }
 
+  /// Main-thread calculation provenance is owned by this resident generation.
+  void ClearLightCalculationProofs() { LightProofs = {}; }
+
   static int LocalIndex(glm::ivec3 local);
 
   /// Memo of ChunkMeshLightHaloSignature per neighbor offset (index
@@ -93,6 +112,15 @@ public:
   }
 
 private:
+  friend class UBlockWorld;
+  struct LightDomainProof
+  {
+    std::shared_ptr<const RelightComputeResult> input;
+    std::shared_ptr<const void> owner;
+    uint64_t incarnation{0};
+    uint64_t field_revision{0};
+  };
+  std::array<LightDomainProof, 2> LightProofs;
   /// Copyable wrapper: a copy starts with an empty memo.
   struct HaloSignatureMemo
   {

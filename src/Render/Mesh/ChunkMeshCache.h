@@ -1636,7 +1636,7 @@ private:
   void ClearSatisfiedScreenRayRepairPin(glm::ivec3 chunk_coord);
   void DrainMeshDependencyInvalidations(UBlockWorld &world,
                                         int max_schedule_per_frame);
-  void DrainStaleLightRemeshDebt(UBlockWorld &world,
+  void DrainStaleLightRemeshDebt(UBlockWorld &world, UBlockRegistry &registry,
                                  int max_schedule_per_frame);
   /// Draw SoT: GreedyCache GpuResident flags must match live allocator slot.
   bool ChunkHasLiveGpuDraw(glm::ivec3 chunk_coord) const;

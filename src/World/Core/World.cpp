@@ -1,3 +1,4 @@
+#include "World/Lighting/LightCalculationSettlement.h"
 #include "World/Persistence/OwnershipSnapshot.h"
 // #include <QPainter>
 // #include <QJsonDocument>
@@ -255,9 +256,11 @@ bool ChunkSliceHasCurrentLightSettlement(const UWorld &world, glm::ivec3 coord)
   const UChunk *chunk = world.GetBlockWorld().GetChunkManager().GetChunk(coord);
   const ChunkRenderDemandRecord *demand =
       world.GetRenderDemandStore().Find(coord);
-  if (!LightSettlementMatchesCurrentChunk(
+  if (!LightSettlementMatchesCurrentCalculation(
           demand, chunk,
-          world.GetMeshService().GetCache().GetCaptureStore().WorldEpoch()))
+          world.GetMeshService().GetCache().GetCaptureStore().WorldEpoch(),
+          world.GetBlockWorld(),
+          world.GetBlockRegistry().GetDefinitionsCatalogSnapshot()))
   {
     return false;
   }
@@ -3022,6 +3025,17 @@ void UWorld::NoteChunkSliceLightCalculationSettled(glm::ivec3 chunk_coord)
   const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(chunk_coord);
   if (!chunk)
   {
+    return;
+  }
+  if (RequiresLightingLitGate() &&
+      !BlockWorld.HasCompleteLightCalculation(
+          chunk_coord, BlockRegistry
+                           ? BlockRegistry->GetDefinitionsCatalogSnapshot()
+                           : nullptr))
+  {
+    GetRenderDemandStore().InvalidateLightCalculationSettlement(
+        chunk_coord, MeshService->GetCache().GetCaptureStore().WorldEpoch(),
+        chunk->GetIncarnation());
     return;
   }
   GetRenderDemandStore().NoteLightCalculationSettled(
@@ -9722,10 +9736,10 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       if (UChunk *chunk =
               BlockWorld.GetChunkManager().GetChunk(chunk_data.coord))
       {
-        // A column relight reads neighboring face light as its boundary
-        // condition, but installs only its own column. If that installed
-        // boundary changes, explicitly enqueue each resident neighbor outside
-        // this write set. A partial Y band does not own its vertical siblings.
+        // Preserve the legacy neighbor repair handoff while lifecycle work
+        // migrates to exact geometry dependencies. The solver itself no longer
+        // borrows neighboring fields, and a partial Y band owns only its
+        // output.
         const uint8_t boundary_dependency_mask = ChangedLightBoundaryMask(
             chunk->GetLightData(), chunk_data.light_packed,
             result.include_skylight, result.include_block_light);
@@ -9893,9 +9907,6 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
             }
           }
         }
-        // The async result has passed its world/catalog/read-set validation;
-        // record the computed state even when it produced no light-byte delta.
-        NoteChunkSliceLightCalculationSettled(chunk_data.coord);
         if (installed)
         {
           light_changes.Add(chunk_data.coord);
@@ -10045,6 +10056,19 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
         }
       }
     }
+    // Record provenance only after every selected channel has been installed.
+    const int certificate_sections = BlockWorld.RecordLightCalculation(
+        result, BlockRegistry->GetDefinitionsCatalogSnapshot());
+    if (audit_relight)
+      CubatariumLogInfo(
+          "RelightAudit",
+          "calculation_certificate job=" + std::to_string(result.job_id) +
+              " sections=" + std::to_string(certificate_sections) +
+              " include_sky=" + std::to_string(result.include_skylight) +
+              " include_block=" + std::to_string(result.include_block_light) +
+              " inputs_complete=" + std::to_string(result.inputs_complete));
+    for (const auto &data : result.chunks)
+      NoteChunkSliceLightCalculationSettled(data.coord);
     for (const auto &dependency : boundary_dependency_bands)
     {
       Persistence->EnqueueBoundaryDependencyRelight(

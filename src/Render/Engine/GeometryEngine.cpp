@@ -1557,8 +1557,8 @@ void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
       (demand_identity_current &&
        slice_demand->desired_light_rev <= slice_demand->published_light_rev);
   const bool settled_light_current =
-      demand_identity_current && slice_demand->has_settled_light &&
-      slice_demand->settled_light_rev == field_light_rev;
+      demand_identity_current &&
+      world.HasCurrentChunkSliceLightSettlement(coord);
   const bool provisional_preview =
       world.ShouldDrawProvisionalLightPreview(coord);
   const bool current_dark_image = CurrentDarkSliceImageMayDraw(
@@ -2739,8 +2739,7 @@ void CaptureTransparentPixelProbe(
                                       pixel_demand->published_light_rev);
             const bool pixel_settled_light_current =
                 pixel_demand_identity_current &&
-                pixel_demand->has_settled_light &&
-                pixel_demand->settled_light_rev == pixel_field_light_rev;
+                world.HasCurrentChunkSliceLightSettlement(surface_chunk);
             const bool pixel_current_dark_image = CurrentDarkSliceImageMayDraw(
                 pixel_fully_dark, pixel_settled_light_current, pixel_stale_dark,
                 pixel_demand_light_current, pixel_field_light_rev,

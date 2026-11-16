@@ -16,6 +16,8 @@ namespace cutum
 
 class UBlockDefinitionStorage;
 class UChunkBuffer;
+struct RelightComputeResult;
+struct BlockDefinitionCatalog;
 
 class UBlockWorld
 {
@@ -57,6 +59,27 @@ public:
     return LightingConfigurationIdentity;
   }
 
+  /// Record only installed channels, after every write in a validated batch.
+  /// Unknown input can support a reusable transient field, never completion.
+  int RecordLightCalculation(
+      const RelightComputeResult &result,
+      const std::shared_ptr<const BlockDefinitionCatalog> &current_catalog);
+  LightCalculationState
+  GetLightCalculationState(glm::ivec3 coord, LightDomain domain,
+                           const std::shared_ptr<const BlockDefinitionCatalog>
+                               &current_catalog) const;
+  /// Reuse is permitted for an unchanged transient field too. This is not a
+  /// completion/readiness query. Each shared dependency context is checked
+  /// once.
+  bool LightCalculationsStillCurrent(
+      const std::vector<glm::ivec3> &sections, bool sky, bool block,
+      const std::shared_ptr<const BlockDefinitionCatalog> &current_catalog)
+      const;
+  bool HasCompleteLightCalculation(
+      glm::ivec3 coord,
+      const std::shared_ptr<const BlockDefinitionCatalog> &current_catalog)
+      const;
+
   void SetFluidDefinitions(const UBlockDefinitionStorage *definitions)
   {
     FluidDefinitions = definitions;
@@ -97,6 +120,8 @@ public:
 
 private:
   UChunkManager Chunks;
+  std::shared_ptr<const void> LightCalculationOwner{
+      std::make_shared<const int>(0)};
   WorldVerticalProfile VerticalProfile{};
   uint64_t LightingConfigurationIdentity{0};
   const UBlockDefinitionStorage *FluidDefinitions{nullptr};

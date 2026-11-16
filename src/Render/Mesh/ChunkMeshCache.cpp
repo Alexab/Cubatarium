@@ -24,6 +24,7 @@
 #include "World/Core/BlockWorld.h"
 #include "World/Diagnostics/JobStageTrace.h"
 #include "World/Diagnostics/Profile.h"
+#include "World/Lighting/LightCalculationSettlement.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/Contracts/MeshApplyPolicy.h"
 #include "World/Mesh/Contracts/MeshPublishContract.h"
@@ -4124,6 +4125,7 @@ void UChunkMeshCache::DrainMeshDependencyInvalidations(
 }
 
 void UChunkMeshCache::DrainStaleLightRemeshDebt(UBlockWorld &world,
+                                                UBlockRegistry &registry,
                                                 int max_schedule_per_frame)
 {
   if (max_schedule_per_frame <= 0 || !MeshFocusValid)
@@ -4171,8 +4173,9 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(UBlockWorld &world,
     if (!chunk || chunk->GetNonAirCount() == 0 || !demand ||
         demand->world_epoch != CaptureStore.WorldEpoch() ||
         demand->incarnation != chunk->GetIncarnation() ||
-        !LightSettlementMatchesCurrentChunk(demand, chunk,
-                                            CaptureStore.WorldEpoch()) ||
+        !LightSettlementMatchesCurrentCalculation(
+            demand, chunk, CaptureStore.WorldEpoch(), world,
+            registry.GetDefinitionsCatalogSnapshot()) ||
         demand->desired_light_rev > chunk->GetLightFieldRevision())
     {
       continue;
@@ -4259,8 +4262,9 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(UBlockWorld &world,
     // is still receiving its own settled light. Retain the debt, but do not
     // build a mesh against an intermediate field revision.
     const uint64_t field_light_rev = chunk->GetLightFieldRevision();
-    if (!LightSettlementMatchesCurrentChunk(demand, chunk,
-                                            CaptureStore.WorldEpoch()) ||
+    if (!LightSettlementMatchesCurrentCalculation(
+            demand, chunk, CaptureStore.WorldEpoch(), world,
+            registry.GetDefinitionsCatalogSnapshot()) ||
         demand->desired_light_rev > field_light_rev)
     {
       continue;
@@ -5699,8 +5703,9 @@ bool UChunkMeshCache::CommitGpuMeshResult(
        boundary_overlay.missingNeighborFaces == 0) &&
       MeshCandidateMatchesSettledDemand(
           !accepted_input_stale, demand_identity_current,
-          LightSettlementMatchesCurrentChunk(slice_demand, source_chunk,
-                                             CaptureStore.WorldEpoch()),
+          LightSettlementMatchesCurrentCalculation(
+              slice_demand, source_chunk, CaptureStore.WorldEpoch(), world,
+              registry.GetDefinitionsCatalogSnapshot()),
           source_revision, MeshRevisions.Current(coord),
           slice_demand ? slice_demand->desired_geom_rev : 0,
           source_light_revision,
@@ -8053,8 +8058,9 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       MeshCandidateMatchesSettledDemand(
           stale_reason == MeshApplyStaleInputReason::Ok,
           demand_identity_current,
-          LightSettlementMatchesCurrentChunk(slice_demand, source_chunk,
-                                             CaptureStore.WorldEpoch()),
+          LightSettlementMatchesCurrentCalculation(
+              slice_demand, source_chunk, CaptureStore.WorldEpoch(), world,
+              registry.GetDefinitionsCatalogSnapshot()),
           result.sourceRevision, expected_revision,
           slice_demand ? slice_demand->desired_geom_rev : 0,
           result.InputStamps[0].light,
@@ -8752,7 +8758,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastDirtyScheduleDedupN = 0;
   ScheduledThisFrame_.clear();
   DrainMeshDependencyInvalidations(world, max_schedule_per_frame);
-  DrainStaleLightRemeshDebt(world, max_schedule_per_frame);
+  DrainStaleLightRemeshDebt(world, registry, max_schedule_per_frame);
   AgeFmDirtyGpuWatchFrames();
   // FmDirtyToGpuFinishMatchN_ cleared after emerge telemetry latch (Consume*).
   // Sky-only / enter: orphan RemeshAfterApply with no Dirty/Active/GPU owner
@@ -9985,8 +9991,9 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         // repair debt and a successor mesh clears the marker.
         const bool light_can_publish_without_preview =
             current_demand &&
-            LightSettlementMatchesCurrentChunk(demand, chunk,
-                                               CaptureStore.WorldEpoch()) &&
+            LightSettlementMatchesCurrentCalculation(
+                demand, chunk, CaptureStore.WorldEpoch(), world,
+                registry.GetDefinitionsCatalogSnapshot()) &&
             demand->desired_light_rev <= demand->published_light_rev;
         // Absence of current per-slice settlement is not evidence that the
         // first mesh is safe to publish with raw zero light.
@@ -11710,8 +11717,9 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
          sync_snap.boundaryOverlay.missingNeighborFaces == 0) &&
         MeshCandidateMatchesSettledDemand(
             true, demand_identity_current,
-            LightSettlementMatchesCurrentChunk(slice_demand, source_chunk,
-                                               CaptureStore.WorldEpoch()),
+            LightSettlementMatchesCurrentCalculation(
+                slice_demand, source_chunk, CaptureStore.WorldEpoch(), world,
+                registry.GetDefinitionsCatalogSnapshot()),
             current_geom_rev, current_geom_rev,
             slice_demand ? slice_demand->desired_geom_rev : 0,
             sync_snap.inputStamps[0].light,

@@ -639,6 +639,7 @@ set(HEADERS
     src/World/Lighting/LightUtil.h
     src/World/Lighting/ChunkLighting.h
     src/World/Lighting/ChunkRelightSnapshot.h
+    src/World/Lighting/LightCalculationSettlement.h
     src/World/Lighting/AsyncRelightBuilder.h
     src/World/Lighting/IULightingPipeline.h
     src/World/Lighting/FullLightingPipeline.h
@@ -2000,6 +2001,9 @@ cubatarium_add_test(NAME relight_result_install_test
     DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
+add_test(NAME light_calculation_certificate_test
+    COMMAND $<TARGET_FILE:relight_result_install_test> --light-proof)
+set_tests_properties(light_calculation_certificate_test PROPERTIES LABELS "unit;streaming;lighting")
 add_test(NAME section_light_geometry_test
     COMMAND $<TARGET_FILE:relight_result_install_test> --geometry-halo)
 set_tests_properties(section_light_geometry_test PROPERTIES LABELS "unit;streaming;lighting;cpu")
