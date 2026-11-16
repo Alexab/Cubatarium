@@ -1,10 +1,14 @@
 """Fixture isolation must survive failed/interrupted diagnostic runs."""
 import tempfile
 import unittest
+import json
+import struct
+import zlib
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 from engine_smoke_run import isolated_fixture, world_fingerprint
+from engine_smoke_run import valid_png, inspection_evidence
 import engine_smoke_run
 
 
@@ -88,6 +92,43 @@ class IsolatedFixtureTest(unittest.TestCase):
             kill.assert_called_once_with(123)
         self.assertEqual(self.config.read_bytes(), self.original)
         self.assertFalse((self.runtime / ".engine-smoke.lock").exists())
+
+    def png(self):
+        def chunk(kind, data):
+            return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
+        return (b"\x89PNG\r\n\x1a\n" +
+                chunk(b"IHDR", struct.pack(">IIBBBBB", 1, 1, 8, 6, 0, 0, 0)) +
+                chunk(b"IDAT", zlib.compress(b"\0\0\0\0\xff")) + chunk(b"IEND", b""))
+
+    def test_truncated_and_corrupt_png_are_not_evidence(self):
+        path = self.root / "capture.png"
+        payload = self.png()
+        path.write_bytes(payload)
+        self.assertTrue(valid_png(path))
+        path.write_bytes(payload[:-3])
+        self.assertFalse(valid_png(path))
+        corrupt = bytearray(payload)
+        corrupt[20] ^= 1
+        path.write_bytes(corrupt)
+        self.assertFalse(valid_png(path))
+
+    def test_inspection_requires_distinct_viewpoints_and_written_images(self):
+        (self.artifacts / "captures").mkdir(parents=True)
+        rows = []
+        for i in range(12):
+            rows.append(dict(capture_request=1, capture_id=i, yaw=90 * (i // 3),
+                             pitch=-45 + 45 * (i % 3)))
+            (self.artifacts / "captures" / f"inspection_{i:04}.png").write_bytes(self.png())
+        trace = self.artifacts / "diagnostic_bot.jsonl"
+        trace.write_text("\n".join(json.dumps(row) for row in rows))
+        report = dict(diagnostic_bot=dict(inspection_capture_requested_n=12))
+        self.assertEqual(inspection_evidence(self.artifacts, report)["verified"], 12)
+        (self.artifacts / "captures" / "inspection_0005.png").unlink()
+        self.assertEqual(inspection_evidence(self.artifacts, report)["verified"], 11)
+        for row in rows:
+            row["yaw"] = 0
+        trace.write_text("\n".join(json.dumps(row) for row in rows))
+        self.assertLess(inspection_evidence(self.artifacts, report)["verified"], 12)
 
 
 if __name__ == "__main__":

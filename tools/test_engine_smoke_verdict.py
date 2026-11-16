@@ -17,6 +17,8 @@ class EngineSmokeVerdictTest(unittest.TestCase):
         self.report = dict(exit_code=0, ingame_frames=100, start_focus=[0, 0],
                            end_focus=[20, 0], teleport_cruise=False,
                            diagnostic_relocations_after_start=0,
+                           initial_resident_column_count=81,
+                           outside_initial_resident_samples=100,
                            first_frame_required_ring_ready=True)
 
     def trace(self, **extra):
@@ -40,6 +42,11 @@ class EngineSmokeVerdictTest(unittest.TestCase):
     def test_stalled_bot_fails_even_with_good_pixels(self):
         self.trace()
         self.report["end_focus"] = [0, 0]
+        self.assertEqual(classify(self.report, self.perf)["components"]["route"]["status"], "FAIL")
+
+    def test_travel_inside_initial_loaded_footprint_fails(self):
+        self.trace()
+        self.report["outside_initial_resident_samples"] = 0
         self.assertEqual(classify(self.report, self.perf)["components"]["route"]["status"], "FAIL")
 
     def test_unrecorded_height_correction_is_untested(self):
@@ -84,6 +91,16 @@ class EngineSmokeVerdictTest(unittest.TestCase):
         result = classify(self.report, self.perf)
         self.assertEqual(result["status"], "FAIL")
         self.assertEqual(result["components"]["route"]["reason"], "bot_route_incomplete")
+
+    def test_queued_captures_do_not_replace_written_pose_evidence(self):
+        self.trace()
+        self.report["diagnostic_bot"] = dict(enabled=True, state="complete",
+                                            inspection_capture_requested_n=12,
+                                            inspection_capture_queued_n=12)
+        self.report["inspection_capture_files_verified_n"] = 11
+        result = classify(self.report, self.perf)
+        self.assertEqual(result["status"], "FAIL")
+        self.assertEqual(result["components"]["inspection"]["verified"], 11)
 
 
 class FlightProcessOwnershipTest(unittest.TestCase):

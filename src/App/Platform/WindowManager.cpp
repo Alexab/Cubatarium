@@ -977,15 +977,24 @@ void UWindowManager::Run()
                   std::chrono::duration<double>(capture_delay_seconds));
           capture_schedule_initialized = true;
         }
-        if (capture_now >= next_capture)
+        if (PendingDiagnosticCapture || capture_now >= next_capture)
         {
           next_capture =
               capture_now +
               std::chrono::duration_cast<std::chrono::steady_clock::duration>(
                   std::chrono::duration<double>(capture_interval_seconds));
           std::ostringstream filename;
-          filename << "frame_" << std::setw(3) << std::setfill('0')
-                   << capture_index++ << ".png";
+          if (PendingDiagnosticCapture)
+          {
+            filename << "inspection_" << std::setw(4) << std::setfill('0')
+                     << *PendingDiagnosticCapture << ".png";
+          }
+          else
+          {
+            filename << "frame_" << std::setw(3) << std::setfill('0')
+                     << capture_index << ".png";
+          }
+          ++capture_index;
           const std::filesystem::path capture_path =
               std::filesystem::path(flight_capture_dir) / filename.str();
           {
@@ -1005,6 +1014,11 @@ void UWindowManager::Run()
             }
             else
             {
+              if (PendingDiagnosticCapture)
+              {
+                ++DiagnosticCapturesQueued;
+                PendingDiagnosticCapture.reset();
+              }
               CubatariumLogInfo("FlightCapture",
                                 "queued index=" + std::to_string(frame_index) +
                                     " source=GL_BACK" +

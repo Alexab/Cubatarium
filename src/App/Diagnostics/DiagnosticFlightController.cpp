@@ -172,7 +172,11 @@ DiagnosticFlightController::Tick(const DiagnosticFlightObservation &o,
         std::abs(o.pitch - target_pitch) < 2.0f)
     {
       if (InspectPoseStarted_ < 0.0)
+      {
         InspectPoseStarted_ = o.time;
+        command.capture = true;
+        command.captureId = InspectionCaptures_++;
+      }
       if (o.time - InspectPoseStarted_ >= 0.35)
       {
         ++InspectPose_;

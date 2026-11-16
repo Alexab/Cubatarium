@@ -13,6 +13,7 @@
 #include "World/Chunks/KnownAirTerrainSlice.h"
 #include "World/Diagnostics/MeshAuditDiagnostics.h"
 #include <fstream>
+#include <unordered_set>
 #if !defined(__ANDROID__)
 #include "App/Platform/HumanMotionQa.h"
 #endif
@@ -1849,6 +1850,13 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     }
     std::shared_ptr<UCamera> relocation_audit_camera;
     uint64_t relocation_audit_baseline = 0;
+    std::unordered_set<uint64_t> initial_resident_columns;
+    uint64_t outside_initial_resident_samples = 0;
+    const auto column_key = [](glm::ivec3 coord)
+    {
+      return (static_cast<uint64_t>(static_cast<uint32_t>(coord.x)) << 32) |
+             static_cast<uint32_t>(coord.z);
+    };
     int start_focus_cx = 0;
     int start_focus_cz = 0;
     bool start_focus_captured = false;
@@ -1981,6 +1989,12 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
             ++ingame_frames_seen;
             if (!ingame_clock_started)
             {
+              world->GetBlockWorld().GetChunkManager().ForEachChunk(
+                  [&](const UChunk &chunk)
+                  {
+                    initial_resident_columns.insert(
+                        column_key(chunk.GetCoord()));
+                  });
               relocation_audit_camera = world->GetCurrentUserCamera();
               if (relocation_audit_camera)
               {
@@ -2232,6 +2246,14 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                                 excluded_before_ingame_sec));
             if (auto camera = world->GetCurrentUserCamera())
             {
+              const glm::ivec3 current_column =
+                  UChunkManager::WorldToChunk(glm::ivec3(
+                      glm::floor(camera->GetPosition() + glm::vec3(0.5f))));
+              if (initial_resident_columns.count(column_key(current_column)) ==
+                  0)
+              {
+                ++outside_initial_resident_samples;
+              }
               if (!gallery_pages.empty())
               {
                 if (!gallery.asset_gallery_initialized)
@@ -2879,10 +2901,14 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 window.SetAutopilotKey(KeyCode::Key_Shift, action.down);
                 window.SetAutopilotKey(KeyCode::Key_Ctrl,
                                        options.Sprint && action.forward);
+                if (action.capture)
+                {
+                  window.RequestDiagnosticCapture(action.captureId);
+                }
                 autopilot_armed = true;
                 autopilot_flying = action.forward || action.up || action.down;
                 const auto state = diagnostic_bot.State();
-                if (state != bot_last_trace_state ||
+                if (action.capture || state != bot_last_trace_state ||
                     ingame_sec - bot_last_trace_time >= 0.5)
                 {
                   const glm::vec3 pos = camera->GetPosition();
@@ -2895,6 +2921,10 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       << diagnostic_bot.VisitedWaypoints()
                       << ",\"forward\":" << action.forward
                       << ",\"up\":" << action.up << ",\"down\":" << action.down
+                      << ",\"yaw\":" << camera->GetYaw()
+                      << ",\"pitch\":" << camera->GetPitch()
+                      << ",\"capture_request\":" << action.capture
+                      << ",\"capture_id\":" << action.captureId
                       << ",\"plan_expansions\":"
                       << diagnostic_bot.PlanExpansions() << ",\"reason\":\""
                       << diagnostic_bot.FailureReason() << "\"}\n";
@@ -3089,6 +3119,10 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
             << ",\n"
             << "  \"diagnostic_relocations_after_start\": "
             << diagnostic_relocations << ",\n"
+            << "  \"initial_resident_column_count\": "
+            << initial_resident_columns.size() << ",\n"
+            << "  \"outside_initial_resident_samples\": "
+            << outside_initial_resident_samples << ",\n"
             << "  \"strict_no_relocation\": "
             << (options.StrictNoRelocation ? "true" : "false") << ",\n"
             << "  \"diagnostic_bot\": {\"enabled\":"
@@ -3097,7 +3131,11 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
             << "\",\"waypoints_visited\":" << diagnostic_bot.VisitedWaypoints()
             << ",\"plan_attempts\":" << diagnostic_bot.PlanAttempts()
             << ",\"plan_expansions\":" << diagnostic_bot.PlanExpansions()
-            << ",\"reason\":\"" << diagnostic_bot.FailureReason() << "\"},\n"
+            << ",\"inspection_capture_requested_n\":"
+            << diagnostic_bot.InspectionCaptureCount()
+            << ",\"inspection_capture_queued_n\":"
+            << window.GetDiagnosticCapturesQueued() << ",\"reason\":\""
+            << diagnostic_bot.FailureReason() << "\"},\n"
             << "  \"manifest\": {\n"
             << "    \"git_sha\": \"" << EscapeFlightReportJson(git_sha_str)
             << "\",\n"

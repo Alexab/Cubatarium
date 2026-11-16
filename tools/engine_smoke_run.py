@@ -15,8 +15,10 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import struct
 import sys
 import uuid
+import zlib
 
 from engine_smoke_verdict import classify
 from flight_sim_fixed_day import fixed_day_payload
@@ -42,6 +44,83 @@ def world_fingerprint(world: Path) -> str:
             h.update(path.relative_to(world).as_posix().encode("utf-8") + b"\0")
             h.update(bytes.fromhex(digest(path)))
     return h.hexdigest()
+
+
+def valid_png(path: Path) -> bool:
+    """Reject missing, truncated or corrupt asynchronous capture output."""
+    try:
+        payload = path.read_bytes()
+    except OSError:
+        return False
+    if payload[:8] != b"\x89PNG\r\n\x1a\n":
+        return False
+    offset = 8
+    header = False
+    data = False
+    while offset + 12 <= len(payload):
+        length = struct.unpack_from(">I", payload, offset)[0]
+        end = offset + 12 + length
+        if end > len(payload):
+            return False
+        kind = payload[offset + 4:offset + 8]
+        content = payload[offset + 8:offset + 8 + length]
+        crc = struct.unpack_from(">I", payload, offset + 8 + length)[0]
+        if zlib.crc32(kind + content) != crc:
+            return False
+        if not header:
+            if kind != b"IHDR" or length != 13:
+                return False
+            width, height = struct.unpack_from(">II", content)
+            header = width > 0 and height > 0
+        data |= kind == b"IDAT"
+        if kind == b"IEND":
+            return header and data and length == 0 and end == len(payload)
+        offset = end
+    return False
+
+
+def inspection_evidence(artifacts: Path, report: dict) -> dict:
+    """Join stable view requests to the corresponding PNGs, never RGB guesses."""
+    import math
+    bot = report.get("diagnostic_bot", {})
+    requested = bot.get("inspection_capture_requested_n")
+    if not isinstance(requested, int) or isinstance(requested, bool) or not 0 <= requested <= 3072:
+        return {"verified": 0, "reason": "missing_or_invalid_capture_count"}
+    trace = artifacts / "diagnostic_bot.jsonl"
+    poses: dict[int, dict] = {}
+    if trace.exists():
+        for line in trace.read_text(encoding="utf-8").splitlines():
+            try:
+                row = json.loads(line)
+                if row.get("capture_request"):
+                    capture_id = row["capture_id"]
+                    if (not isinstance(capture_id, int) or isinstance(capture_id, bool)
+                            or not 0 <= capture_id < requested):
+                        return {"verified": 0, "reason": "invalid_inspection_id"}
+                    if capture_id in poses:
+                        return {"verified": 0, "reason": "duplicate_inspection_request"}
+                    poses[capture_id] = row
+            except (ValueError, TypeError, KeyError):
+                return {"verified": 0, "reason": "invalid_inspection_trace"}
+    verified = 0
+    for capture_id in range(requested):
+        pose = poses.get(capture_id)
+        first = poses.get(capture_id - capture_id % 12)
+        if not pose or not first:
+            continue
+        try:
+            yaw, pitch = float(pose["yaw"]), float(pose["pitch"])
+            expected_yaw = float(first["yaw"]) + 90 * ((capture_id % 12) // 3)
+            expected_pitch = -45 + 45 * (capture_id % 3)
+            aligned = (math.isfinite(yaw) and math.isfinite(pitch) and
+                       abs(math.remainder(yaw - expected_yaw, 360)) <= 4 and
+                       abs(pitch - expected_pitch) <= 2)
+        except (KeyError, TypeError, ValueError):
+            aligned = False
+        if aligned and valid_png(artifacts / "captures" / f"inspection_{capture_id:04}.png"):
+            verified += 1
+    return {"verified": verified, "requested": requested,
+            "reason": "inspection_views_joined_to_png"}
 
 
 @contextmanager
@@ -155,9 +234,14 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 100,
                 raise
         report_path = artifacts / "flight_sim_report.json"
         report = json.loads(report_path.read_text(encoding="utf-8")) if report_path.exists() else {}
+        inspection = inspection_evidence(artifacts, report)
+        report["inspection_capture_files_verified_n"] = inspection["verified"]
+        (artifacts / "evidence-report.json").write_text(
+            json.dumps(report, indent=2) + "\n", encoding="utf-8")
         perf = Path(report["perf_jsonl"]) if report.get("perf_jsonl") else None
         verdict = classify(report, perf, minimum_chunks=minimum_chunks)
         verdict["runner_exit_code"] = child.returncode
+        verdict["inspection_evidence"] = inspection
         if not report_path.exists():
             verdict["status"] = "FAIL"
             verdict["components"]["runtime"] = {"status": "FAIL", "reason": "missing_native_report"}

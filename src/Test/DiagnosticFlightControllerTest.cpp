@@ -122,6 +122,8 @@ int main()
            "stationary twelve-direction inspection must finish");
     Expect(o.position == glm::vec3(0, 2, 0),
            "inspection must not move the camera");
+    Expect(bot.InspectionCaptureCount() == 12,
+           "each stable inspection direction must request its own capture");
   }
   return EXIT_SUCCESS;
 }

@@ -47,6 +47,8 @@ struct DiagnosticFlightCommand
   bool forward{false};
   bool up{false};
   bool down{false};
+  bool capture{false};
+  unsigned captureId{0};
   float yaw{0.0f};
   float pitch{0.0f};
 };
@@ -67,6 +69,7 @@ public:
   size_t VisitedWaypoints() const { return Waypoint_; }
   int PlanAttempts() const { return PlanAttempts_; }
   int PlanExpansions() const { return PlanExpansions_; }
+  unsigned InspectionCaptureCount() const { return InspectionCaptures_; }
 
 private:
   bool Plan(glm::vec3 from, glm::vec3 target, const SegmentProbe &probe,
@@ -81,6 +84,7 @@ private:
   glm::vec3 ProgressPosition_{0.0f};
   float TakeoffY_{0.0f}, InspectYaw_{0.0f};
   int InspectPose_{0}, PlanAttempts_{0}, PlanExpansions_{0};
+  unsigned InspectionCaptures_{0};
   std::string FailureReason_;
 };
 

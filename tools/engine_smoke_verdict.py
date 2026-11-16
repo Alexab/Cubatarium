@@ -48,7 +48,13 @@ def classify(report: dict[str, Any], perf: Path | None, *,
         if finite_number(relocations) and relocations > 0:
             route = component("FAIL", "diagnostic_relocation_during_route")
         elif distance >= minimum_chunks and finite_number(relocations) and relocations == 0:
-            route = component("PASS", "frontier_route_covered", displacement_chunks=distance)
+            initial = report.get("initial_resident_column_count")
+            outside = report.get("outside_initial_resident_samples")
+            route = component("UNTESTED", "missing_initial_footprint_witness")
+            if finite_number(initial) and initial > 0 and finite_number(outside):
+                route = component("PASS" if outside > 0 else "FAIL",
+                                  "frontier_route_covered" if outside > 0 else "initial_footprint_not_crossed",
+                                  displacement_chunks=distance, outside_initial_resident_samples=outside)
 
     samples = 0
     bot = report.get("diagnostic_bot")
@@ -99,6 +105,17 @@ def classify(report: dict[str, Any], perf: Path | None, *,
     if isinstance(ready, bool):
         startup = component("PASS" if ready else "FAIL", "first_frame_ring_witness")
     parts = {"runtime": runtime, "route": route, "startup": startup, "visual": visual}
+    if isinstance(bot, dict) and bot.get("enabled") is True:
+        requested = bot.get("inspection_capture_requested_n")
+        queued = bot.get("inspection_capture_queued_n")
+        verified = report.get("inspection_capture_files_verified_n")
+        inspection = component("UNTESTED", "missing_inspection_capture_witness")
+        if (finite_number(requested) and requested > 0 and
+                finite_number(queued) and finite_number(verified)):
+            ok = requested == queued == verified
+            inspection = component("PASS" if ok else "FAIL", "inspection_capture_coverage",
+                                   requested=requested, queued=queued, verified=verified)
+        parts["inspection"] = inspection
     statuses = [part["status"] for part in parts.values()]
     status = "FAIL" if "FAIL" in statuses else ("UNTESTED" if "UNTESTED" in statuses else "PASS")
     return {"schema": "engine-smoke-verdict.v1", "status": status,

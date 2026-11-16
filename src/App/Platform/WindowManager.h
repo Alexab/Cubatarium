@@ -12,6 +12,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <memory>
+#include <optional>
 #include <unordered_map>
 
 namespace cutum
@@ -39,6 +40,18 @@ public:
   /// Synthetic held keys for headless autopilot (OR'd with real keyboard).
   void SetAutopilotKey(KeyCode key, bool held);
   void ClearAutopilotKeys();
+  /// Queue a pose capture for the next rendered frame.
+  bool RequestDiagnosticCapture(unsigned id)
+  {
+    if (PendingDiagnosticCapture)
+      return false;
+    PendingDiagnosticCapture = id;
+    return true;
+  }
+  unsigned GetDiagnosticCapturesQueued() const
+  {
+    return DiagnosticCapturesQueued;
+  }
   /// Flight-sim / harness: skip budgeted autosave (avoids multi-second hitch).
   void SetAutosaveEnabled(bool enabled) { AutosaveEnabled = enabled; }
   void Shutdown();
@@ -118,6 +131,8 @@ private: // Instances of core systems
 
   std::unique_ptr<UBlockInputController> BlockInput;
   std::unique_ptr<UFlightCaptureService> FlightCapture;
+  std::optional<unsigned> PendingDiagnosticCapture;
+  unsigned DiagnosticCapturesQueued{0};
 
 private: // Window and rendering state
   GLFWwindow *Window;

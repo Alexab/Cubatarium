@@ -16,6 +16,14 @@ public:
   void SetStopPredicate(std::function<bool()> predicate);
   void SetAutopilotKey(KeyCode key, bool held);
   void ClearAutopilotKeys();
+  bool RequestDiagnosticCapture(unsigned id)
+  {
+    return WindowManager.RequestDiagnosticCapture(id);
+  }
+  unsigned GetDiagnosticCapturesQueued() const
+  {
+    return WindowManager.GetDiagnosticCapturesQueued();
+  }
   void SetAutosaveEnabled(bool enabled);
   void Run() override;
   void Shutdown() override;
