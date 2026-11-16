@@ -2010,6 +2010,10 @@ cubatarium_add_test(NAME focus_ingress_policy_test
     SOURCES
         src/Test/FocusIngressPolicyTest.cpp)
 
+cubatarium_add_test(NAME nearest_visible_slice_test
+    SOURCES src/Test/NearestVisibleSliceTest.cpp
+    LIBRARIES glm::glm)
+
 cubatarium_add_test(NAME frame_streaming_budget_test
     SOURCES
         src/Test/FrameStreamingBudgetTest.cpp
@@ -3339,6 +3343,7 @@ set(CUBATARIUM_CTEST_UNIT_TARGETS
   chunk_input_stamp_test
   inputs_still_valid_visual_test
   visible_black_attribution_test
+  nearest_visible_slice_test
   draw_oracle_gate_test
   block_catalog_queries_test
   mesh_inputs_catalog_test

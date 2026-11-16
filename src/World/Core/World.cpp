@@ -89,6 +89,7 @@
 #include "World/Streaming/MeshLightStalePolicy.h"
 #include "World/Streaming/MeshLitGate.h"
 #include "World/Streaming/MeshWorkAdmission.h"
+#include "World/Streaming/NearestVisibleSlice.h"
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 #include "World/Streaming/RelightFifoPolicy.h"
@@ -1652,14 +1653,13 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
         const glm::ivec3 ground(key.x, 0, key.y);
         bool has_mesh = false;
         bool missing_mesh = false;
-        glm::ivec3 first_visible_missing_mesh_coord(-1);
+        NearestVisibleSlice first_visible_missing_mesh;
         uint64_t first_visible_missing_mesh_incarnation = 0;
-        int first_visible_missing_mesh_content_revision = 0;
-        int best_visible_slice_distance = max_y + CHUNK_SIZE;
+        uint64_t first_visible_missing_mesh_content_revision = 0;
         bool any_sky = false;
         bool any_solid = false;
-        glm::ivec3 first_fully_dark_unsettled_coord(-1);
-        glm::ivec3 first_stale_dark_coord(-1);
+        std::optional<glm::ivec3> first_fully_dark_unsettled_coord;
+        std::optional<glm::ivec3> first_stale_dark_coord;
         UChunkMeshCache::StaleDarkWitness first_stale_dark_witness{};
         bool first_stale_dark_settled = false;
         for (int cy = cy0; cy <= cy1; ++cy)
@@ -1707,15 +1707,13 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
                         : (focus_block.y > slice_max_y
                                ? focus_block.y - slice_max_y
                                : 0);
-                if (first_visible_missing_mesh_coord.x < 0 ||
-                    vertical_distance < best_visible_slice_distance)
+                if (first_visible_missing_mesh.Consider(coord,
+                                                        vertical_distance))
                 {
-                  first_visible_missing_mesh_coord = coord;
                   first_visible_missing_mesh_incarnation =
                       chunk->GetIncarnation();
                   first_visible_missing_mesh_content_revision =
                       chunk->GetContentRevision();
-                  best_visible_slice_distance = vertical_distance;
                 }
               }
             }
@@ -1828,10 +1826,10 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
           uint8_t visible_admission_outcome = 0;
           int visible_victim_horiz = -1;
           const bool has_visible_first_mesh_candidate =
-              first_visible_missing_mesh_coord.x >= 0;
+              first_visible_missing_mesh.Coord.has_value();
           const int visible_first_mesh_band_min =
               has_visible_first_mesh_candidate
-                  ? first_visible_missing_mesh_coord.y * CHUNK_SIZE
+                  ? first_visible_missing_mesh.Coord->y * CHUNK_SIZE
                   : enqueue_min;
           const int visible_first_mesh_band_max =
               has_visible_first_mesh_candidate
@@ -1875,12 +1873,12 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
               r <= kVisualStageLitDrawableHoriz)
           {
             const ChunkRenderDemandRecord *trace_demand =
-                GetRenderDemandStore().Find(first_visible_missing_mesh_coord);
+                GetRenderDemandStore().Find(*first_visible_missing_mesh.Coord);
             const bool flow_ticket =
                 GetColumnFlowExecutor().HasRepairTicket(key);
             const std::string signature =
                 std::to_string(visible_admission_outcome) + ":" +
-                std::to_string(first_visible_missing_mesh_coord.y) + ":" +
+                std::to_string(first_visible_missing_mesh.Coord->y) + ":" +
                 std::to_string(queued_after) + ":" +
                 std::to_string(async_after) + ":" +
                 std::to_string(queue_info.deferred_visible) + ":" +
@@ -1901,9 +1899,11 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
                   "RelightAudit",
                   "first_mesh_admission column=(" + std::to_string(key.x) +
                       "," + std::to_string(key.y) + ") target=(" +
-                      std::to_string(first_visible_missing_mesh_coord.x) + "," +
-                      std::to_string(first_visible_missing_mesh_coord.y) + "," +
-                      std::to_string(first_visible_missing_mesh_coord.z) +
+                      std::to_string(first_visible_missing_mesh.Coord->x) +
+                      "," +
+                      std::to_string(first_visible_missing_mesh.Coord->y) +
+                      "," +
+                      std::to_string(first_visible_missing_mesh.Coord->z) +
                       ") horiz=" + std::to_string(r) + " target_band=" +
                       std::to_string(visible_first_mesh_band_min) + ":" +
                       std::to_string(visible_first_mesh_band_max) +
@@ -1929,7 +1929,7 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
                       std::to_string(
                           first_visible_missing_mesh_content_revision) +
                       " vertical_distance=" +
-                      std::to_string(best_visible_slice_distance) +
+                      std::to_string(first_visible_missing_mesh.Distance) +
                       " demand_light=" +
                       std::to_string(
                           trace_demand ? trace_demand->desired_light_rev : 0) +
@@ -1991,7 +1991,7 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
             {
               fully_dark = true;
               bad_mesh = true;
-              if (first_fully_dark_unsettled_coord.x < 0)
+              if (!first_fully_dark_unsettled_coord.has_value())
               {
                 first_fully_dark_unsettled_coord = coord;
               }
@@ -2002,7 +2002,7 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
             {
               stale_dark_faces = true;
               bad_mesh = true;
-              if (first_stale_dark_coord.x < 0)
+              if (!first_stale_dark_coord.has_value())
               {
                 first_stale_dark_coord = coord;
                 first_stale_dark_witness = stale_witness;
@@ -2027,35 +2027,36 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
           const bool enqueue_relight = !any_sky || fully_dark || relight_only;
           if (audit_relight)
           {
+            const auto trigger_candidate =
+                first_stale_dark_coord ? first_stale_dark_coord
+                                       : first_fully_dark_unsettled_coord;
             const glm::ivec3 trigger_coord =
-                first_stale_dark_coord.x >= 0
-                    ? first_stale_dark_coord
-                    : first_fully_dark_unsettled_coord;
+                trigger_candidate.value_or(glm::ivec3(-1));
             const UChunk *trigger_chunk =
-                trigger_coord.x >= 0
+                trigger_candidate.has_value()
                     ? BlockWorld.GetChunkManager().GetChunk(trigger_coord)
                     : nullptr;
             const ChunkRenderDemandRecord *trigger_demand =
-                trigger_coord.x >= 0
+                trigger_candidate.has_value()
                     ? GetRenderDemandStore().Find(trigger_coord)
                     : nullptr;
             const glm::ivec3 source_coord =
                 first_stale_dark_witness.source_chunk;
             const UChunk *source_chunk =
-                first_stale_dark_coord.x >= 0
+                first_stale_dark_coord.has_value()
                     ? BlockWorld.GetChunkManager().GetChunk(source_coord)
                     : nullptr;
             const ChunkRenderDemandRecord *source_demand =
-                first_stale_dark_coord.x >= 0
+                first_stale_dark_coord.has_value()
                     ? GetRenderDemandStore().Find(source_coord)
                     : nullptr;
             const uint64_t source_field_rev =
                 source_chunk ? source_chunk->GetLightFieldRevision() : 0;
             const bool source_settled =
-                first_stale_dark_coord.x >= 0 &&
+                first_stale_dark_coord.has_value() &&
                 ChunkSliceHasCurrentLightSettlement(*this, source_coord);
             const MeshPublishRevs trigger_published =
-                trigger_coord.x >= 0
+                trigger_candidate.has_value()
                     ? MeshService->GetCache().GetMeshPublishRevs(trigger_coord)
                     : MeshPublishRevs{};
             CubatariumLogInfo(
@@ -2072,12 +2073,14 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
                     " stale_dark=" + std::to_string(stale_dark_faces) +
                     " remesh_heal=" + std::to_string(remesh_heal) +
                     " relight_only=" + std::to_string(relight_only) +
+                    " trigger_present=" +
+                    std::to_string(trigger_candidate.has_value()) +
                     " trigger=(" + std::to_string(trigger_coord.x) + "," +
                     std::to_string(trigger_coord.y) + "," +
                     std::to_string(trigger_coord.z) + ") trigger_settled=" +
-                    std::to_string(first_stale_dark_coord.x >= 0
+                    std::to_string(first_stale_dark_coord.has_value()
                                        ? first_stale_dark_settled
-                                       : (trigger_coord.x >= 0 &&
+                                       : (trigger_candidate.has_value() &&
                                           ChunkSliceHasCurrentLightSettlement(
                                               *this, trigger_coord))) +
                     " trigger_light=" +
@@ -2095,7 +2098,7 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
                     " mesh=" + std::to_string(trigger_published.geom_rev) +
                     ":" + std::to_string(trigger_published.light_rev) + ":" +
                     std::to_string(
-                        trigger_coord.x >= 0
+                        trigger_candidate.has_value()
                             ? MeshService->GetCache().GetMeshedLightRevision(
                                   trigger_coord)
                             : 0) +

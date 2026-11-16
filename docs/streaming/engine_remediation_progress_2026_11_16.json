@@ -874,5 +874,17 @@
         }
       }
     }
+  },
+  "signed_visible_recovery_identity": {
+    "status": "unit_and_release_verified_native_pending",
+    "behavior": "nearest visible section selection and recovery witnesses represent absence explicitly; negative X/Y/Z including (-1,-1,-1) remain valid; stable ties preserve first target; candidate content revision stays uint64_t",
+    "negative_control": "build/desktop-msvc/engine-signed-recovery-red-test.log: production selector with old X>=0 presence condition loses nearest section at X=-17",
+    "test_log": "build/desktop-msvc/engine-signed-recovery-green-tests.log",
+    "passed_sets": 6,
+    "release_build": "build/desktop-msvc/engine-signed-recovery-final-release-build.log",
+    "limitations": [
+      "native route regression pending",
+      "native exact candidate admission coverage must be reported separately if no first_mesh_admission event occurs"
+    ]
   }
 }
