@@ -594,7 +594,7 @@
     "native_mutation_event_coverage": "UNTESTED: route did not trigger a new seal mutation; targeted native mutation fixture still required"
   },
   "absence_evidence_verification": {
-    "status": "unit_verified_native_geometry_fault_found",
+    "status": "unit_and_native_wide_cave_scoped_verified",
     "negative_controls": [
       "build/desktop-msvc/engine-absent-proof-red-test.log: old lower-resident heuristic claims sky below a resident roof",
       "build/desktop-msvc/engine-absence-fact-red-test.log: old stamps ignore proof transition without chunk load"
@@ -609,10 +609,11 @@
       "proof changes are validated on capture/apply/reconciliation; immediate event scheduling and first-frame closure remain lifecycle work",
       "not a solver proof for unknown lighting inputs"
     ],
-    "native_artifacts": "build/desktop-msvc/engine-absence-wide-cave-native"
+    "native_artifacts": "build/desktop-msvc/engine-absence-wide-cave-native",
+    "native_fixed_artifacts": "build/desktop-msvc/engine-draw-ref-wide-cave-native"
   },
   "draw_publication_generation_verification": {
-    "status": "unit_verified_native_pending",
+    "status": "unit_and_native_scoped_depth_verified",
     "native_negative_control": {
       "source_commit": "06302500e",
       "artifacts": "build/desktop-msvc/engine-absence-wide-cave-native",
@@ -638,8 +639,88 @@
     "passed_sets": 7,
     "performance_risk": "full dirty-ref rebuild can increase CPU maintenance cost; measure native before considering incremental per-section publication updates",
     "limitations": [
-      "native fixed-case rerun pending",
-      "voxel_mesh_ray_intersects=0 alone does not prove absent packed geometry: this witness uses CPU batches, which are empty for a packed-only publication"
-    ]
+      "voxel_mesh_ray_intersects=0 alone does not prove absent packed geometry: this witness uses CPU batches, which are empty for a packed-only publication",
+      "scoped opaque-depth proof only; startup/light/transparent acceptance remains UNTESTED"
+    ],
+    "native_fixed_case": {
+      "artifacts": "build/desktop-msvc/engine-draw-ref-wide-cave-native",
+      "source_commit": "5b91df9de",
+      "verdict": {
+        "schema": "engine-smoke-verdict.v1",
+        "status": "UNTESTED",
+        "components": {
+          "runtime": {
+            "status": "PASS",
+            "reason": "native_process",
+            "exit_code": 0
+          },
+          "route": {
+            "status": "PASS",
+            "reason": "frontier_route_covered",
+            "displacement_chunks": 19,
+            "outside_initial_resident_samples": 2452
+          },
+          "startup": {
+            "status": "UNTESTED",
+            "reason": "missing_first_frame_ring_witness"
+          },
+          "visual": {
+            "status": "UNTESTED",
+            "reason": "missing_visual_reference",
+            "samples": 24800,
+            "captures": 155,
+            "attributed_samples": 0,
+            "faults": 0
+          },
+          "inspection": {
+            "status": "PASS",
+            "reason": "inspection_capture_coverage",
+            "requested": 24,
+            "queued": 24,
+            "verified": 24
+          },
+          "fixture": {
+            "status": "PASS",
+            "reason": "negative_dry_cave_observed",
+            "samples": 198
+          },
+          "fixture_opaque_depth": {
+            "status": "PASS",
+            "reason": "analytic_near_cave_opaque_depth",
+            "checked": 18474,
+            "faults": 0,
+            "frame_epochs": 155,
+            "skipped_unscoped_or_occluded": 6326,
+            "examples": [],
+            "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+          }
+        },
+        "malformed_trace_rows": 0,
+        "scope": "one-way frontier route and sampled reference checks; not full-screen proof",
+        "runner_exit_code": 1,
+        "inspection_evidence": {
+          "verified": 24,
+          "requested": 24,
+          "reason": "inspection_views_joined_to_png"
+        }
+      }
+    },
+    "period_sample_performance_ms": {
+      "before": {
+        "samples": 48,
+        "flat_median": 0.207,
+        "flat_p95": 0.252,
+        "prepare_median": 1.566,
+        "prepare_p95": 2.921
+      },
+      "after": {
+        "samples": 49,
+        "flat_median": 0.209,
+        "flat_p95": 0.285,
+        "prepare_median": 1.5,
+        "prepare_p95": 2.799
+      },
+      "scope": "one sampled native route; not per-frame distribution or general performance acceptance"
+    }
   }
 }
