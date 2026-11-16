@@ -3474,11 +3474,16 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
   {
     return false;
   }
+  // Loading does not advance StreamingFrameEpoch. A rejected early sample
+  // must not outlive light/mesh publications during the entire enter warmup.
+  // The solver's authoritative input-revision memo remains available.
+  const bool memo_allowed = !IsEnterSessionActive();
   if (SliceReadyMemoEpoch != StreamingFrameEpoch)
   {
     SliceReadyMemoEpoch = StreamingFrameEpoch;
     SliceReadyMemo.clear();
   }
+  if (memo_allowed)
   {
     const auto it = SliceReadyMemo.find(chunk_coord);
     if (it != SliceReadyMemo.end())
@@ -3566,7 +3571,8 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
         final_ready = shadow_ready;
       }
     }
-    SliceReadyMemo.emplace(chunk_coord, final_ready);
+    if (memo_allowed)
+      SliceReadyMemo.emplace(chunk_coord, final_ready);
     return final_ready;
   };
   const UChunkMeshCache &mesh_cache = MeshService->GetCache();
@@ -9198,6 +9204,51 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(
                              audit_source);
   if (IsAsyncRelightColumnInFlight(col))
     return;
+  std::vector<glm::ivec3> resident;
+  bool has_transient = false;
+  const auto catalog = BlockRegistry->GetDefinitionsCatalogSnapshot();
+  for (int cy =
+           FloorDiv(std::max(min_y, ProceduralTemplate.MinHeight), CHUNK_SIZE);
+       cy <=
+       FloorDiv(std::min(max_y, ProceduralTemplate.MaxHeight), CHUNK_SIZE);
+       ++cy)
+  {
+    const glm::ivec3 coord(col.x, cy, col.y);
+    if (!BlockWorld.GetChunkManager().HasChunk(coord))
+      continue;
+    resident.push_back(coord);
+    has_transient |=
+        (include_skylight && BlockWorld.GetLightCalculationState(
+                                 coord, LightDomain::Sky, catalog) ==
+                                 LightCalculationState::Transient) ||
+        (include_block_light && BlockWorld.GetLightCalculationState(
+                                    coord, LightDomain::Block, catalog) ==
+                                    LightCalculationState::Transient);
+  }
+  if (has_transient && !resident.empty() &&
+      BlockWorld.LightCalculationsStillCurrent(resident, include_skylight,
+                                               include_block_light, catalog))
+  {
+    // The same unknown geometry will produce the same lower bound. Preserve
+    // obligations and wait for a dependency/evidence change instead of
+    // occupying a worker every time the FIFO re-admits this column.
+    std::vector<glm::ivec3> complete;
+    for (const auto &coord : resident)
+      if (BlockWorld.HasCompleteLightCalculation(coord, catalog))
+        complete.push_back(coord);
+    if (!complete.empty())
+      MarkRelitChunksForMesh(complete, true, {col}, finalize_pending_gate,
+                             false, true);
+    ClearPendingLightBeforeMesh(col);
+    ReleaseInactiveAsyncRelightColumn(col);
+    if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+      CubatariumLogInfo("RelightAudit", "pending wait_inputs column=(" +
+                                            std::to_string(col.x) + "," +
+                                            std::to_string(col.y) +
+                                            ") band=" + std::to_string(min_y) +
+                                            ":" + std::to_string(max_y));
+    return;
+  }
   EnsureAsyncRelightBuilder();
   RelightJobSpec spec;
   spec.block_positions = {glm::ivec3(world_x, min_y, world_z)};
