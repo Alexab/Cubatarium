@@ -97,6 +97,12 @@ public:
   static UChunkRelightSnapshot Capture(const UBlockWorld &world,
                                        const RelightJobSpec &spec);
 
+  /// Explicit write set for synchronous batches; geometry halo remains
+  /// read-only.
+  static UChunkRelightSnapshot
+  CaptureSections(const UBlockWorld &world, const RelightJobSpec &spec,
+                  const std::vector<glm::ivec3> &sections);
+
   RelightComputeResult Compute(const UBlockRegistry &registry);
   void SetInputCatalog(std::shared_ptr<const BlockDefinitionCatalog> catalog)
   {
@@ -142,6 +148,9 @@ public:
                      int block_level);
 
 private:
+  static UChunkRelightSnapshot
+  CaptureImpl(const UBlockWorld &world, const RelightJobSpec &spec,
+              const std::vector<glm::ivec3> *sections);
   std::unordered_map<glm::ivec3, std::array<BlockId, CHUNK_VOLUME>, IVec3Hash>
       Blocks;
   /// Geometry read-only context above the relight target band. It participates

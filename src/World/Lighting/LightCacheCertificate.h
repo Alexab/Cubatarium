@@ -18,9 +18,10 @@ namespace cutum
 
 // Increment when solver semantics change. Old bytes remain loadable terrain
 // data, but must not be treated as a completed solution for a newer solver.
-// v5 derives asynchronous fields from geometry instead of neighboring light.
+// v6 uses the geometry solver for synchronous and boundary paths as well.
+// v5 derived asynchronous fields from geometry instead of neighboring light.
 // v4 removed the successful section-seed bypass of full-height sky.
-inline constexpr uint32_t kLightSolverCacheVersion = 5;
+inline constexpr uint32_t kLightSolverCacheVersion = 6;
 
 inline std::string
 MakeLightCacheSignature(const WorldVerticalProfile &profile,

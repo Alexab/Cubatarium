@@ -166,6 +166,22 @@ void UChunkRelightSnapshot::ClearChunkLight(glm::ivec3 c)
 UChunkRelightSnapshot UChunkRelightSnapshot::Capture(const UBlockWorld &world,
                                                      const RelightJobSpec &spec)
 {
+  return CaptureImpl(world, spec, nullptr);
+}
+
+UChunkRelightSnapshot
+UChunkRelightSnapshot::CaptureSections(const UBlockWorld &world,
+                                       const RelightJobSpec &spec,
+                                       const std::vector<glm::ivec3> &sections)
+{
+  return CaptureImpl(world, spec, &sections);
+}
+
+UChunkRelightSnapshot
+UChunkRelightSnapshot::CaptureImpl(const UBlockWorld &world,
+                                   const RelightJobSpec &spec,
+                                   const std::vector<glm::ivec3> *sections)
+{
   UChunkRelightSnapshot snapshot;
   snapshot.Spec = spec;
   snapshot.InputProfile = world.GetVerticalProfile();
@@ -180,15 +196,25 @@ UChunkRelightSnapshot UChunkRelightSnapshot::Capture(const UBlockWorld &world,
   if (high_y < low_y)
     return snapshot;
   std::unordered_set<glm::ivec3, IVec3Hash> targets;
-  for (const auto source : spec.block_positions)
+  if (sections)
   {
-    const auto ground = UChunkManager::WorldToChunk(source);
-    const int radius = spec.column_center_only ? 0 : 1;
-    for (int dx = -radius; dx <= radius; ++dx)
-      for (int dz = -radius; dz <= radius; ++dz)
-        for (int cy = FloorDiv(low_y, CHUNK_SIZE);
-             cy <= FloorDiv(high_y, CHUNK_SIZE); ++cy)
-          targets.insert({ground.x + dx, cy, ground.z + dz});
+    for (const auto c : *sections)
+      if (c.y >= FloorDiv(low_y, CHUNK_SIZE) &&
+          c.y <= FloorDiv(high_y, CHUNK_SIZE))
+        targets.insert(c);
+  }
+  else
+  {
+    for (const auto source : spec.block_positions)
+    {
+      const auto ground = UChunkManager::WorldToChunk(source);
+      const int radius = spec.column_center_only ? 0 : 1;
+      for (int dx = -radius; dx <= radius; ++dx)
+        for (int dz = -radius; dz <= radius; ++dz)
+          for (int cy = FloorDiv(low_y, CHUNK_SIZE);
+               cy <= FloorDiv(high_y, CHUNK_SIZE); ++cy)
+            targets.insert({ground.x + dx, cy, ground.z + dz});
+    }
   }
   std::unordered_set<glm::ivec3, IVec3Hash> context;
   for (const auto target : targets)
@@ -206,16 +232,16 @@ UChunkRelightSnapshot UChunkRelightSnapshot::Capture(const UBlockWorld &world,
   }
   std::vector<glm::ivec3> ordered(context.begin(), context.end());
   std::sort(ordered.begin(), ordered.end(), CoordLess);
-  std::unordered_map<glm::ivec3, int, IVec3Hash> tops;
+  std::unordered_map<glm::ivec3, int, IVec3Hash> bottoms;
   for (const auto c : ordered)
   {
     snapshot.ReadSet.push_back(world.CaptureInputStamp(c, false, true));
     const UChunk *chunk = world.GetChunkManager().GetChunk(c);
     const bool known = chunk || snapshot.ReadSet.back().missingEvidence ==
                                     MissingChunkEvidence::KnownAir;
-    auto [it, inserted] = tops.emplace(glm::ivec3(c.x, 0, c.z), c.y);
+    auto [it, inserted] = bottoms.emplace(glm::ivec3(c.x, 0, c.z), c.y);
     if (!inserted)
-      it->second = std::max(it->second, c.y);
+      it->second = std::min(it->second, c.y);
     if (!known)
       continue;
     snapshot.KnownGeometry.insert(c);
@@ -235,10 +261,11 @@ UChunkRelightSnapshot UChunkRelightSnapshot::Capture(const UBlockWorld &world,
   {
     const auto started = std::chrono::steady_clock::now();
     ordered.clear();
-    for (const auto &top : tops)
-      for (int cy = top.second + 1;
+    for (const auto &bottom : bottoms)
+      for (int cy = bottom.second;
            cy <= snapshot.InputProfile.MaxChunkY(CHUNK_SIZE); ++cy)
-        ordered.emplace_back(top.first.x, cy, top.first.z);
+        if (!context.count({bottom.first.x, cy, bottom.first.z}))
+          ordered.emplace_back(bottom.first.x, cy, bottom.first.z);
     std::sort(ordered.begin(), ordered.end(), CoordLess);
     for (const auto c : ordered)
     {

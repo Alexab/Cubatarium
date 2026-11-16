@@ -58,10 +58,11 @@ int main()
   const auto encoded =
       EncodeColumnLightCache({{1, -2}, {-3, 4}, {1, -2}}, signature);
   const auto previous_signature =
-      "light-v4" + signature.substr(signature.find(':'));
+      "light-v5" + signature.substr(signature.find(':'));
   Expect(!DecodeColumnLightCache(
              EncodeColumnLightCache({{1, -2}}, previous_signature), signature),
-         "fields seeded from neighboring light require relighting");
+         "fields from older synchronous and missing-boundary paths require "
+         "relighting");
   const auto decoded = DecodeColumnLightCache(encoded, signature);
   Expect(
       decoded && decoded->size() == 2 && decoded->front() == glm::ivec2(-3, 4),

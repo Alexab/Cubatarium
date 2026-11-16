@@ -9,6 +9,7 @@
 #include "World/Lighting/GpuFullLightingPipeline.h"
 #include "World/Lighting/LightUtil.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -115,13 +116,159 @@ static void BuildEnclosedRoom(cutum::UBlockWorld &world, cutum::BlockId stone,
   }
 }
 
-int main()
+static void TestSyncContract(const std::string &mode)
 {
+  using namespace cutum;
+  auto registry = MakeRegistry();
+  UBlockWorld world;
+  world.GetChunkManager().EnsureChunk({0, -3, 0});
+  auto *target = world.GetChunkManager().GetChunk({0, -3, 0});
+  if (mode == "--unknown-boundary")
+  {
+    std::vector<glm::ivec3> changed;
+    ApplyEnterOpenSkyBoundary(world, *registry, 0, 0, -48, -33, &changed);
+    Expect(target->GetSkyLightLocal({15, 8, 8}) == 0,
+           "unknown unloaded border cannot inject maximum daytime sky");
+    return;
+  }
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  if (mode == "--sparse-sky")
+  {
+    // Read-only proven-air sections between two writable sections still carry
+    // incoming direct sky. A noncontiguous write set must not create a roof.
+    world.GetChunkManager().EnsureChunk({0, 19, 0});
+    RelightJobSpec spec;
+    spec.min_world_y = -64;
+    spec.max_world_y = 319;
+    const auto result = UChunkRelightSnapshot::CaptureSections(
+                            world, spec, {{0, -3, 0}, {0, 19, 0}})
+                            .Compute(*registry);
+    const auto it = std::find_if(result.chunks.begin(), result.chunks.end(),
+                                 [](const auto &c)
+                                 { return c.coord == glm::ivec3(0, -3, 0); });
+    Expect(it != result.chunks.end() &&
+               UnpackSky(it->light_packed[UChunk::LocalIndex({8, 8, 8})]) == 15,
+           "known empty vertical gaps carry direct sky between sparse write "
+           "sections");
+    return;
+  }
+  if (mode == "--sync-parity")
+  {
+    world.SetBlock({16, -40, 8}, 50);
+    world.SetBlock({6, -39, 8}, 8);
+    auto *neighbor = world.GetChunkManager().GetChunk({1, -3, 0});
+    neighbor->SetLightLocal({0, 8, 8}, 3, 15);
+    const auto halo = neighbor->GetLightData();
+    for (int mask : {1, 2, 3})
+    {
+      std::array<uint8_t, CHUNK_VOLUME> poison;
+      poison.fill(PackLight(2, 7));
+      target->ReplaceLightData(poison);
+      RelightJobSpec spec;
+      spec.min_world_y = -64;
+      spec.max_world_y = 319;
+      spec.include_skylight = (mask & 1) != 0;
+      spec.include_block_light = (mask & 2) != 0;
+      auto result =
+          UChunkRelightSnapshot::CaptureSections(world, spec, {{0, -3, 0}})
+              .Compute(*registry);
+      Expect(result.chunks.size() == 1 && result.inputs_complete,
+             "explicit capture writes one complete section");
+      RelightChunk(world, *registry, {0, -3, 0}, spec.include_block_light,
+                   spec.include_skylight);
+      for (int i = 0; i < CHUNK_VOLUME; ++i)
+      {
+        const auto expected = PackLight(
+            spec.include_skylight ? UnpackSky(result.chunks[0].light_packed[i])
+                                  : 2,
+            spec.include_block_light
+                ? UnpackBlock(result.chunks[0].light_packed[i])
+                : 7);
+        Expect(target->GetLightData()[i] == expected,
+               "sync and async solver agree for every cell and preserve "
+               "uncomputed channel");
+      }
+      Expect(halo == neighbor->GetLightData(),
+             "domain solve preserves neighboring live fields");
+    }
+    return;
+  }
+  if (mode == "--edit-contract")
+  {
+    world.SetBlock({15, -40, 8}, 50);
+    world.GetChunkManager().EnsureChunk({1, -3, 0});
+    RelightBlocksAroundAll(world, *registry, {{15, -40, 8}},
+                           world.GetVerticalProfile().MaxY);
+    Expect(BlockAt(world, {15, -40, 8}) == 14,
+           "full relight includes sections below zero");
+    RelightBlocksAroundEdit(world, *registry, {{15, -40, 8}});
+    Expect(BlockAt(world, {16, -40, 8}) == 13,
+           "edit lights neighboring section across negative-Y seam");
+    world.SetBlock({15, -40, 8}, BLOCK_AIR);
+    RelightBlocksAroundEdit(world, *registry, {{15, -40, 8}});
+    Expect(BlockAt(world, {16, -40, 8}) == 0,
+           "source removal clears old neighboring emission");
+    for (int x = -16; x < 32; ++x)
+      for (int z = -16; z < 32; ++z)
+        world.SetBlock({x, 304, z}, 8);
+    RelightBlocksAroundEdit(world, *registry, {{8, 304, 8}});
+    Expect(SkyAt(world, {8, -40, 8}) == 0,
+           "high roof edit darkens deep loaded section");
+    world.SetBlock({8, 304, 8}, BLOCK_AIR);
+    RelightBlocksAroundEdit(world, *registry, {{8, 304, 8}});
+    Expect(SkyAt(world, {8, -40, 8}) == 15,
+           "opening high shaft relights deep section across proven empty gaps");
+    const auto revision = target->GetLightFieldRevision();
+    RelightBlocksAroundEdit(world, *registry, {{8, 304, 8}});
+    Expect(revision == target->GetLightFieldRevision(),
+           "no-op edit calculation keeps stable light identity");
+    return;
+  }
+  if (mode == "--sync-noop")
+  {
+    world.SetBlock({8, -40, 8}, 50);
+    RelightChunk(world, *registry, {0, -3, 0});
+    const auto before = target->GetLightData();
+    const auto revision = target->GetLightFieldRevision();
+    RelightChunk(world, *registry, {0, -3, 0});
+    Expect(before == target->GetLightData(),
+           "unchanged sync inputs produce identical light bytes");
+    Expect(revision == target->GetLightFieldRevision(),
+           "no-op sync calculation preserves light field identity");
+    return;
+  }
+  world.SetBlock({16, -40, 8}, 50);
+  auto *neighbor = world.GetChunkManager().GetChunk({1, -3, 0});
+  if (mode == "--sync-neighbor")
+    neighbor->SetLightLocal({0, 8, 8}, 0, 14);
+  const auto halo_before = neighbor->GetLightData();
+  const auto halo_revision = neighbor->GetLightFieldRevision();
+  RelightChunk(world, *registry, {0, -3, 0}, true, false);
+  if (mode == "--sync-neighbor")
+    Expect(target->GetBlockLightLocal({15, 8, 8}) == 13,
+           "sync calculation derives source geometry even with already lit "
+           "neighboring field");
+  else
+    Expect(
+        halo_before == neighbor->GetLightData() &&
+            halo_revision == neighbor->GetLightFieldRevision(),
+        "single-section sync calculation never mutates read-only halo light");
+}
+
+int main(int argc, char **argv)
+{
+  if (argc == 2)
+  {
+    TestSyncContract(argv[1]);
+    std::cout << "sync_light_contract_test: OK\n";
+    return 0;
+  }
   constexpr cutum::BlockId kStone = 8;
   constexpr cutum::BlockId kTorch = 50;
   constexpr int kMaxWorldY = cutum::CHUNK_SIZE - 1;
   auto registry = MakeRegistry();
   cutum::UBlockWorld world;
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
   const glm::ivec3 chunk_coord(0, 0, 0);
 
   for (int x = 0; x < cutum::CHUNK_SIZE; ++x)
@@ -297,6 +444,7 @@ int main()
 
   {
     cutum::UBlockWorld neigh_world;
+    neigh_world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
     for (int x = 0; x < 32; ++x)
     {
       for (int z = 0; z < 16; ++z)
@@ -348,6 +496,7 @@ int main()
   {
     constexpr int kTallWorldMaxY = 319;
     cutum::UBlockWorld tall_world;
+    tall_world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
     const glm::ivec3 torch_pos(8, kTallWorldMaxY - 1, 8);
     tall_world.SetBlock(torch_pos, kTorch);
     cutum::RelightBlocksAroundAll(tall_world, *registry, {torch_pos},
@@ -359,6 +508,7 @@ int main()
   {
     constexpr int kMinWorldY = -64;
     cutum::UBlockWorld deep_world;
+    deep_world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
     deep_world.GetChunkManager().EnsureChunk(glm::ivec3(0, -4, 0));
     deep_world.GetChunkManager().EnsureChunk(glm::ivec3(0, -3, 0));
     const glm::ivec3 torch_pos(8, -49, 8);
@@ -376,6 +526,7 @@ int main()
   // air shafts; assert exact max-plus attenuation across both chunk seams.
   {
     cutum::UBlockWorld stack_world;
+    stack_world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
     for (int y = 0; y < 48; ++y)
     {
       for (int x = 0; x < 16; ++x)

@@ -52,8 +52,8 @@ void RelightColumnWithFrontier(UBlockWorld &world, UBlockRegistry &registry,
                                int world_x, int world_z, int min_y, int max_y,
                                bool include_block_light, bool include_skylight,
                                std::vector<glm::ivec3> *out_relit_chunks);
-/// Era51 enter-only: inject max skylight on faces toward missing neighbors,
-/// then horizontal sky propagate. Does not invent block-light.
+/// Recompute sky from known geometry at the entering boundary, preserving block
+/// light. Missing geometry is not evidence of an open-sky face.
 void ApplyEnterOpenSkyBoundary(UBlockWorld &world, UBlockRegistry &registry,
                                int world_x, int world_z, int min_y, int max_y,
                                std::vector<glm::ivec3> *out_changed_chunks =
@@ -61,7 +61,7 @@ void ApplyEnterOpenSkyBoundary(UBlockWorld &world, UBlockRegistry &registry,
                                const char *audit_source = nullptr);
 void RelightAllLoadedChunks(UBlockWorld &world, UBlockRegistry &registry);
 
-/// BFS blocklight from emissive voxels in chunk + face neighbors.
+/// Geometry-derived blocklight for one writable section and a read-only halo.
 void PropagateBlocklight(UBlockWorld &world, UBlockRegistry &registry,
                          glm::ivec3 chunk_coord);
 

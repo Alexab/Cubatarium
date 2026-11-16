@@ -5,7 +5,7 @@
     "isolated_automated_test_stand": "in_progress: first-frame and visual-reference witnesses still missing",
     "diagnostic_bot": "verified baseline: native takeoff, route, inspection; expand scenario matrix",
     "local_streaming_mesh_underwater_defects": "in_progress: signed bands, lossless population events, same-size mesh reconciliation and eye-local fluid intervals fixed; native surface frontier routes verified; cave matrix and remaining invalidations pending",
-    "correct_light_solver_and_persistence": "in_progress: geometry-derived async halo solver, full-height sky, immutable material catalog, separate channel identity, context validation and v5 cache compatibility verified; sync unification, per-domain certificates and durable obligations pending",
+    "correct_light_solver_and_persistence": "in_progress: synchronous and async geometry-derived solver, exact write sets, sparse sky context, independent channel installation and v6 compatibility unit verified; native integration, per-domain certificates and durable obligations pending",
     "single_section_lifecycle_and_publication": "in_progress: world-local demand ownership being validated; strong input settlement, authoritative readiness and first-frame closure still pending",
     "independent_light_resource_and_performance": "pending",
     "full_smoke_and_regression_matrix": "in_progress: surface frontier, dry negative cave and flooded negative cave routes; independent analytic near-opaque-depth checks; startup, light/transparent reference, air pocket and eviction round trip still pending"
@@ -1631,6 +1631,41 @@
         "queue_analysis": "relight-queue-analysis.txt"
       }
     },
-    "next_implementation": "Unify synchronous relight onto the same geometry-derived solver with exact requested section set and atomic domain installs; first add RED controls for no-op revisions, poisoned neighbor fields and read-only halo preservation. Then preserve pending generation/coverage obligations before replacing coarse completion."
+    "next_implementation": "Validate synchronous integration natively, then preserve generation/coverage debt before publishing per-domain known-input completion. Retire legacy frontier target expansion through the lifecycle work."
+  },
+  "synchronous_geometry_solver_unification": {
+    "status": "unit_verified_native_pending",
+    "change": [
+      "Synchronous section/column/blocklight/edit and missing-boundary paths now use immutable geometry capture and the same solver as async jobs.",
+      "Explicit write-section capture prevents read-only halo mutation. Atomic channel install preserves uncomputed domains and no-op revision identity.",
+      "Sparse writable sections capture read-only geometry through vertical gaps to the configured ceiling.",
+      "Edit influence includes neighboring columns and loaded sections below high sky edits; full-relight helper includes profile MinY instead of zero.",
+      "Removed the old in-place clear/flood/removal implementations and unconditional missing-border sky injection."
+    ],
+    "red_controls": [
+      "build/desktop-msvc/engine-sync-contract-red-tests.log: four production defects reproduced independently",
+      "build/desktop-msvc/engine-sync-sparse-sky-red-test.log: sparse vertical gap rejected clear sky"
+    ],
+    "green": {
+      "tests": "build/desktop-msvc/engine-sync-unified-final-tests.log",
+      "count": "19/19 Release passed",
+      "scope": [
+        "no-op identity",
+        "poisoned neighbor field independence",
+        "read-only halo preservation",
+        "unknown boundary not open sky",
+        "sparse vertical direct sky",
+        "all-cell sync/async agreement with independent domain preservation",
+        "negative edit emission addition/removal",
+        "high roof/shaft edit propagation through proven empty gaps",
+        "independent dense reference and other existing regression sets"
+      ]
+    },
+    "compatibility": "Global cache signature v6 rejects completion from older sync/missing-boundary algorithms. Terrain payload unchanged.",
+    "limits": [
+      "Transient unknown-input fields are still allowed; authoritative per-domain completion and generation/coverage debt remain pending.",
+      "Legacy frontier target expansion is still present around the unified solver; bounded/fair scheduling remains pending.",
+      "Native runtime/visual verification and synchronous tail cost pending."
+    ]
   }
 }
