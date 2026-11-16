@@ -1021,7 +1021,7 @@
     }
   },
   "backend_attribution_audit": {
-    "status": "followup_required",
+    "status": "sky_attribution_corrected_other_backend_witnesses_pending",
     "evidence_native": "engine-signed-recovery-surface-native",
     "caps": "AMD Radeon, GL3.3 context with compute=1, ssbo=1 and mdi=1 through extensions; GL version alone is not proof of unsupported compute",
     "period_sample_maxima": {
@@ -1120,17 +1120,107 @@
     }
   },
   "cpu_sky_backend_attribution_verification": {
-    "status": "unit_verified_committed_release_build_pending",
+    "status": "unit_and_native_scoped_verified",
     "correction": "provisional apply is explicitly CPU and needs no GL context; CPU apply counter is separate; legacy GPU sky dispatch/apply/readback counters remain zero; unavailable GPU probe returns false without modifying output; unreachable compute shader scaffolding removed",
     "negative_control": "build/desktop-msvc/engine-sky-backend-red-test.log: former CPU-as-GPU probe incorrectly succeeds, modifies output and grants GPU execution evidence",
     "test_log": "build/desktop-msvc/engine-sky-backend-final-tests.log",
     "passed_sets": 6,
     "headless_test": "gpu_skylight_seed_fluid_test links the production apply .cpp rather than a host stub and checks opaque occlusion, non-symmetric coordinates, exact counter consumption and GPU non-execution",
     "limitations": [
-      "native CPU-positive/GPU-zero counter observation pending",
       "GPU meshing and blocklight shadow dispatch have distinct code paths; sky counters do not establish their coverage",
       "portable CPU code has no GL dependency; Android runtime validation remains outside this Windows run"
-    ]
+    ],
+    "release_build": "build/desktop-msvc/engine-sky-backend-committed-release-build.log",
+    "native": {
+      "source_commit": "dcf3aff01",
+      "artifacts": "build/desktop-msvc/engine-sky-backend-wet-native",
+      "verdict": {
+        "schema": "engine-smoke-verdict.v1",
+        "status": "UNTESTED",
+        "components": {
+          "runtime": {
+            "status": "PASS",
+            "reason": "native_process",
+            "exit_code": 0
+          },
+          "route": {
+            "status": "PASS",
+            "reason": "frontier_route_covered",
+            "displacement_chunks": 19,
+            "outside_initial_resident_samples": 2428
+          },
+          "startup": {
+            "status": "UNTESTED",
+            "reason": "missing_first_frame_ring_witness"
+          },
+          "visual": {
+            "status": "UNTESTED",
+            "reason": "missing_visual_reference",
+            "samples": 22400,
+            "captures": 140,
+            "attributed_samples": 0,
+            "faults": 0
+          },
+          "inspection": {
+            "status": "PASS",
+            "reason": "inspection_capture_coverage",
+            "requested": 24,
+            "queued": 24,
+            "verified": 24
+          },
+          "fixture": {
+            "status": "PASS",
+            "reason": "negative_wet_cave_observed",
+            "samples": 213
+          },
+          "fixture_opaque_depth": {
+            "status": "PASS",
+            "reason": "analytic_near_cave_opaque_depth",
+            "checked": 21910,
+            "faults": 0,
+            "frame_epochs": 140,
+            "skipped_unscoped_or_occluded": 490,
+            "examples": [],
+            "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+          }
+        },
+        "malformed_trace_rows": 0,
+        "scope": "one-way frontier route and sampled reference checks; not full-screen proof",
+        "runner_exit_code": 1,
+        "inspection_evidence": {
+          "verified": 24,
+          "requested": 24,
+          "reason": "inspection_views_joined_to_png"
+        }
+      },
+      "backend_analysis": {
+        "schema": "engine-smoke-backend-observation.v1",
+        "native_source_commit": "dcf3aff01",
+        "analysis_commit": "f15f82a25c2ddd3236cfa0939a7054e90800d95a",
+        "observations": {
+          "maxima": {
+            "cpu_light_seed_apply": 3,
+            "gpu_light_seed_apply": 0,
+            "gpu_light_readback": 0
+          },
+          "positive_records": {
+            "cpu_light_seed_apply": 1
+          },
+          "records_by_kind": {
+            "spike": 40,
+            "period": 54,
+            "visual_holes_enter": 42,
+            "near_focus_witness_entered_fog_unready": 1,
+            "blink": 23,
+            "near_focus_witness_exited_fog_unready": 1,
+            "shutdown": 1
+          },
+          "invalid_counter_rows": 0,
+          "scope": "observed CPU/GPU sky counters; not per-job correctness or compute parity"
+        }
+      },
+      "backend_analysis_artifact": "build/desktop-msvc/engine-sky-backend-wet-native/backend-observations.json"
+    }
   },
   "pending_light_obligation_audit": {
     "status": "source_verified_requires_lifecycle_fix",
@@ -1149,5 +1239,11 @@
       "invalidate and enqueue from data/input changes regardless of whether a stale image appears dark; do not rely on RGB or stale-dark heuristic for correctness"
     ],
     "limitations": "not fixed by backend attribution patch; next S3/S4 work must integrate proof validity with durable obligation ownership"
+  },
+  "backend_counter_analysis": {
+    "status": "unit_and_existing_native_evidence_verified",
+    "test_log": "build/desktop-msvc/engine-backend-observation-tests.log",
+    "behavior": "smoke verdict observes all counter-bearing record kinds; missing key differs from observed zero; malformed counters do not grant execution; positive-record counts are not dispatch totals",
+    "analysis_commit": "f15f82a25c2ddd3236cfa0939a7054e90800d95a"
   }
 }
