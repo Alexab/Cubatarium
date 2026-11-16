@@ -8,6 +8,40 @@
 namespace cutum
 {
 
+bool UBlockWorld::IsKnownAbsentAirChunk(glm::ivec3 coord) const
+{
+  return !Chunks.GetChunk(coord) &&
+         (coord.y < VerticalProfile.MinChunkY(CHUNK_SIZE) ||
+          coord.y > VerticalProfile.MaxChunkY(CHUNK_SIZE) ||
+          HasKnownOpenSkyAbsentProof(coord));
+}
+
+ChunkInputStamp UBlockWorld::CaptureInputStamp(glm::ivec3 coord,
+                                               bool reads_light,
+                                               bool reads_content) const
+{
+  const UChunk *chunk = Chunks.GetChunk(coord);
+  auto stamp =
+      ChunkInputStamp::Capture(coord, chunk, reads_light, reads_content);
+  if (!chunk && (reads_light || reads_content))
+    stamp.missingEvidence = IsKnownAbsentAirChunk(coord)
+                                ? MissingChunkEvidence::KnownAir
+                                : MissingChunkEvidence::Unknown;
+  return stamp;
+}
+
+bool UBlockWorld::InputStampStillMatches(const ChunkInputStamp &stamp) const
+{
+  const UChunk *chunk = Chunks.GetChunk(stamp.coord);
+  if (!stamp.Matches(chunk))
+    return false;
+  if (stamp.missingEvidence == MissingChunkEvidence::Untracked)
+    return true;
+  return !chunk &&
+         IsKnownAbsentAirChunk(stamp.coord) ==
+             (stamp.missingEvidence == MissingChunkEvidence::KnownAir);
+}
+
 BlockId UBlockWorld::GetBlock(glm::ivec3 pos) const
 {
   return Chunks.GetBlock(pos);

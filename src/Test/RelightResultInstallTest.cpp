@@ -504,6 +504,49 @@ void TestVerticalBoundaryDependencyAdditionAndRemoval()
              "removing the source clears light from both vertical neighbors");
 }
 
+void TestRelightAbsenceEvidenceChangesWithoutResidency()
+{
+  using namespace cutum;
+  UBlockWorld world;
+  world.SetBlock({8, -40, 8}, 8);
+  const glm::ivec3 absent(0, -2, 0);
+  bool known_sky = false;
+  world.SetKnownOpenSkyAbsentQuery([&](glm::ivec3 coord)
+                                   { return known_sky && coord == absent; });
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  UBlockRegistry registry(nullptr, definitions);
+  RelightJobSpec spec;
+  spec.block_positions = {{8, -40, 8}};
+  spec.min_world_y = -48;
+  spec.max_world_y = -33;
+  spec.column_center_only = true;
+  auto result = UChunkRelightSnapshot::Capture(world, spec).Compute(registry);
+  size_t witnessed = 0;
+  for (const auto &stamp : result.read_set)
+    if (stamp.coord == absent)
+    {
+      ++witnessed;
+      Expect(stamp.missingEvidence == MissingChunkEvidence::Unknown,
+             "relight distinguishes unknown air from completed sky");
+      Expect(world.InputStampStillMatches(stamp),
+             "unchanged unknown dependency matches its capture identity");
+    }
+  Expect(witnessed > 0, "partial-band relight captures absent upper context");
+  known_sky = true;
+  Expect(!world.GetChunkManager().GetChunk(absent),
+         "proof transition must not rely on a chunk load");
+  for (const auto &stamp : result.read_set)
+    if (stamp.coord == absent)
+      Expect(!world.InputStampStillMatches(stamp),
+             "completion evidence invalidates an unknown-input relight");
+  result = UChunkRelightSnapshot::Capture(world, spec).Compute(registry);
+  known_sky = false;
+  for (const auto &stamp : result.read_set)
+    if (stamp.coord == absent)
+      Expect(!world.InputStampStillMatches(stamp),
+             "revoking sky proof invalidates a completed-input relight");
+}
+
 } // namespace
 
 int main()
@@ -516,5 +559,6 @@ int main()
   TestSkylightReadsGeometryAbovePartialBand();
   TestSkylightContextDoesNotExpandThreeByThreeWriteSet();
   TestVerticalBoundaryDependencyAdditionAndRemoval();
+  TestRelightAbsenceEvidenceChangesWithoutResidency();
   std::cout << "relight_result_install_test: OK\n";
 }

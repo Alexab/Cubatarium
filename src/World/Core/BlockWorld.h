@@ -41,6 +41,12 @@ public:
     return KnownOpenSkyAbsentQuery && KnownOpenSkyAbsentQuery(coord);
   }
 
+  /// Main-thread dependency identity includes the evidence for absent data.
+  bool IsKnownAbsentAirChunk(glm::ivec3 coord) const;
+  ChunkInputStamp CaptureInputStamp(glm::ivec3 coord, bool reads_light = true,
+                                    bool reads_content = true) const;
+  bool InputStampStillMatches(const ChunkInputStamp &stamp) const;
+
   void SetFluidDefinitions(const UBlockDefinitionStorage *definitions)
   {
     FluidDefinitions = definitions;

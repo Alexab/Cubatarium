@@ -9623,7 +9623,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
           BlockRegistry->GetDefinitionsCatalogSnapshot())
         reject_stale = true;
       for (const auto &stamp : result.read_set)
-        if (!stamp.Matches(BlockWorld.GetChunkManager().GetChunk(stamp.coord)))
+        if (!BlockWorld.InputStampStillMatches(stamp))
         {
           reject_stale = true;
           stale_input = &stamp;
@@ -9641,18 +9641,21 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
         std::string reason = "epoch_or_catalog";
         if (stale_input)
         {
-          const auto now = ChunkInputStamp::Capture(
-              stale_input->coord,
-              BlockWorld.GetChunkManager().GetChunk(stale_input->coord));
-          reason = "input=(" + std::to_string(stale_input->coord.x) + "," +
-                   std::to_string(stale_input->coord.y) + "," +
-                   std::to_string(stale_input->coord.z) +
-                   ") incarnation=" + std::to_string(stale_input->incarnation) +
-                   "->" + std::to_string(now.incarnation) +
-                   " content=" + std::to_string(stale_input->content) + "->" +
-                   std::to_string(now.content) +
-                   " light=" + std::to_string(stale_input->light) + "->" +
-                   std::to_string(now.light);
+          const auto now = BlockWorld.CaptureInputStamp(
+              stale_input->coord, stale_input->readsLight,
+              stale_input->readsContent);
+          reason =
+              "input=(" + std::to_string(stale_input->coord.x) + "," +
+              std::to_string(stale_input->coord.y) + "," +
+              std::to_string(stale_input->coord.z) +
+              ") incarnation=" + std::to_string(stale_input->incarnation) +
+              "->" + std::to_string(now.incarnation) +
+              " content=" + std::to_string(stale_input->content) + "->" +
+              std::to_string(now.content) +
+              " light=" + std::to_string(stale_input->light) + "->" +
+              std::to_string(now.light) + " absence=" +
+              std::to_string(static_cast<int>(stale_input->missingEvidence)) +
+              "->" + std::to_string(static_cast<int>(now.missingEvidence));
         }
         CubatariumLogInfo("RelightAudit",
                           "retry job=" + std::to_string(result.job_id) + " " +

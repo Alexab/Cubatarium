@@ -122,8 +122,9 @@ struct ChunkInputStamp
   uint64_t light{0};
   bool readsLight{true};
   bool readsContent{true};
-  // Only mesh face inputs track terrain absence evidence. Generic light
-  // read sets still validate data identity through Matches(UChunk*).
+  // World-aware mesh/light inputs track terrain absence evidence. Raw
+  // Matches(UChunk*) only checks resident data identity; world consumers also
+  // validate evidence through UBlockWorld::InputStampStillMatches.
   MissingChunkEvidence missingEvidence{MissingChunkEvidence::Untracked};
   static ChunkInputStamp Capture(glm::ivec3 coord, const UChunk *chunk,
                                  bool reads_light = true,

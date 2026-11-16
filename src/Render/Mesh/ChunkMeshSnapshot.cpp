@@ -154,9 +154,7 @@ bool MissingMeshEvidenceMatches(const ChunkInputStamp &stamp,
     return true;
   if (chunk)
     return false;
-  const bool known_air =
-      stamp.coord.y < world.GetVerticalProfile().MinChunkY(CHUNK_SIZE) ||
-      ChunkMeshSnapshot::IsAbsentOpenSkyChunk(world, stamp.coord);
+  const bool known_air = world.IsKnownAbsentAirChunk(stamp.coord);
   return known_air == (stamp.missingEvidence == MissingChunkEvidence::KnownAir);
 }
 
@@ -195,9 +193,7 @@ bool ChunkMeshSnapshot::IsKnownAirAbsentFaceNeighbor(const UBlockWorld &world,
 bool ChunkMeshSnapshot::MeshInputStampMatchesWorld(const ChunkInputStamp &stamp,
                                                    const UBlockWorld &world)
 {
-  const UChunk *chunk = world.GetChunkManager().GetChunk(stamp.coord);
-  return stamp.Matches(chunk) &&
-         MissingMeshEvidenceMatches(stamp, world, chunk);
+  return world.InputStampStillMatches(stamp);
 }
 
 bool ChunkMeshSnapshot::InputsStillValid(

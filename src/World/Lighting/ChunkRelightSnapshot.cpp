@@ -658,7 +658,7 @@ UChunkRelightSnapshot UChunkRelightSnapshot::Capture(const UBlockWorld &world,
   for (const glm::ivec3 &coord : coords)
   {
     const UChunk *chunk = world.GetChunkManager().GetChunk(coord);
-    snapshot.ReadSet.push_back(ChunkInputStamp::Capture(coord, chunk));
+    snapshot.ReadSet.push_back(world.CaptureInputStamp(coord));
     if (!chunk)
     {
       continue;
@@ -674,8 +674,8 @@ UChunkRelightSnapshot UChunkRelightSnapshot::Capture(const UBlockWorld &world,
         continue;
       }
       const UChunk *neighbor = world.GetChunkManager().GetChunk(neighbor_coord);
-      snapshot.ReadSet.push_back(ChunkInputStamp::Capture(
-          neighbor_coord, neighbor, spec.column_center_only));
+      snapshot.ReadSet.push_back(
+          world.CaptureInputStamp(neighbor_coord, spec.column_center_only));
       if (!neighbor)
       {
         continue;
@@ -762,8 +762,7 @@ UChunkRelightSnapshot UChunkRelightSnapshot::Capture(const UBlockWorld &world,
       const UChunk *chunk = world.GetChunkManager().GetChunk(coord);
       // Geometry-only stamp: lighting edits above must not invalidate the
       // result, while appearance, removal, reuse, or voxel edits must.
-      snapshot.ReadSet.push_back(
-          ChunkInputStamp::Capture(coord, chunk, false, true));
+      snapshot.ReadSet.push_back(world.CaptureInputStamp(coord, false, true));
       if (chunk && !chunk->IsAirOnly())
       {
         snapshot.SkyContextBlocks[coord] = chunk->GetData();

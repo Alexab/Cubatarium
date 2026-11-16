@@ -936,5 +936,24 @@
       "first_mesh_admission_event_count": 0,
       "exact_candidate_native_coverage": "UNTESTED: no admission event; production selector verified by RED/GREEN signed-coordinate unit regression"
     }
+  },
+  "relight_absence_input_identity": {
+    "status": "unit_verified_native_pending",
+    "behavior": "relight capture records Unknown/KnownAir evidence for absent target, face-shell and upper sky context; install validates evidence through world API; mesh validation uses the same world evidence policy",
+    "negative_control": "build/desktop-msvc/engine-relight-absence-red-test.log: data-only validation accepts unknown-to-completed-sky transition without residency change",
+    "limitations": [
+      "unknown inputs are now identities but can still participate as AIR in solver; strict completion prohibition remains pending",
+      "persistent section read-set proofs and profile/mode provenance remain pending",
+      "native regression pending"
+    ],
+    "next_settlement_integration_notes": [
+      "async apply currently stamps each section immediately after install and MarkRelit stamps again; a shared result proof must be published only after all owned writes are installed",
+      "sync relight paths and enter sky-boundary edits must have equally explicit computation provenance",
+      "read-set validation caching must observe actual data/light mutations, not merely frame timestamps"
+    ],
+    "test_log": "build/desktop-msvc/engine-relight-absence-green-tests.log",
+    "passed_sets": 6,
+    "release_build": "build/desktop-msvc/engine-relight-absence-release-build.log",
+    "diagnostics": "stale retry reason includes old/new absence evidence, including transitions without content/light/incarnation changes"
   }
 }
