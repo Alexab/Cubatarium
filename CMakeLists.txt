@@ -1834,6 +1834,7 @@ cubatarium_add_test(NAME chunk_lighting_propagation_test
         ${PHYSICS_MATERIAL_UNIT_SOURCES}
         src/World/Lighting/LightUtil.cpp
         src/World/Lighting/ChunkLighting.cpp
+        src/World/Lighting/FullLightingPipeline.cpp
         src/World/Lighting/ChunkRelightSnapshot.cpp
         src/Test/GpuBlocklightFloodHostStub.cpp
         src/Test/GpuSkylightSeedHostStub.cpp

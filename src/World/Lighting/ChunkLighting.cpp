@@ -7,7 +7,6 @@
 #include "World/Core/BlockWorld.h"
 #include "World/Diagnostics/JobStageTrace.h"
 #include "World/Lighting/GpuBlocklightFlood.h"
-#include "World/Lighting/GpuSkylightColumnSeed.h"
 #include "World/Lighting/LightUtil.h"
 #include "World/Math/GridMath.h"
 #include "App/Platform/Log.h"
@@ -681,18 +680,13 @@ void RelightChunkCoords(UBlockWorld &world, UBlockRegistry &registry,
 
   if (include_skylight)
   {
-    // GPU skylight seed apply (CPU parity); cap one per batch on sync relight.
-    int gpu_seeds_left = 1;
+    // A per-section seed has no incoming light from the upper world. Every
+    // completed relight must include the full vertical occlusion context.
     for (const glm::ivec3 &coord : coords)
     {
       UChunk *chunk = world.GetChunkManager().GetChunk(coord);
       if (!chunk)
       {
-        continue;
-      }
-      if (gpu_seeds_left > 0 && ApplyGpuSkylightSeedToChunk(*chunk, registry))
-      {
-        --gpu_seeds_left;
         continue;
       }
       for (int lx = 0; lx < CHUNK_SIZE; ++lx)
@@ -925,29 +919,6 @@ void RelightChunk(UBlockWorld &world, UBlockRegistry &registry,
   }
   RelightChunkCoords(world, registry, {chunk_coord}, include_block_light,
                      include_skylight);
-}
-
-void RelightChunkAfterGpuSkySeed(UBlockWorld &world, UBlockRegistry &registry,
-                                 glm::ivec3 chunk_coord,
-                                 bool include_block_light)
-{
-  if (!world.GetChunkManager().HasChunk(chunk_coord))
-  {
-    return;
-  }
-  // Sky columns already written by ApplyGpuSkylightSeedToChunk.
-  PropagateSkylightHorizontal(world, registry, chunk_coord);
-  if (include_block_light)
-  {
-    if (TryGpuPropagateBlocklight(world, registry, chunk_coord))
-    {
-      NoteGpuBlocklightFlood();
-    }
-    else
-    {
-      PropagateBlocklight(world, registry, chunk_coord);
-    }
-  }
 }
 
 void RelightChunkBlockLight(UBlockWorld &world, UBlockRegistry &registry,

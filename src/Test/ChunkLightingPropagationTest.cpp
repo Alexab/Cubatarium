@@ -1,11 +1,12 @@
+#include "App/Platform/Log.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
-#include "App/Platform/Log.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Diagnostics/JobStageTrace.h"
 #include "World/Lighting/ChunkLighting.h"
 #include "World/Lighting/ChunkRelightSnapshot.h"
+#include "World/Lighting/GpuFullLightingPipeline.h"
 #include "World/Lighting/LightUtil.h"
 
 #include <cstdlib>
@@ -15,6 +16,7 @@
 
 namespace cutum
 {
+void SetTestSkylightSeedAvailable(bool available);
 uint64_t UJobStageTrace::GetStreamingFrameEpoch() { return 0; }
 void CubatariumLogInfo(const char *, const std::string &) {}
 } // namespace cutum
@@ -441,6 +443,7 @@ int main()
 
   // A partial relight at negative Y must use the entire vertical sky context,
   // including attenuation in read-only water above its writable slice.
+  cutum::SetTestSkylightSeedAvailable(true);
   for (const bool roof : {true, false})
   {
     cutum::UBlockWorld deep;
@@ -459,6 +462,12 @@ int main()
     Expect(SkyAt(deep, {8, -33, 8}) == expected,
            roof ? "sync sky sees roof more than 240 blocks above negative slice"
                 : "sync sky retains attenuation across water slice boundary");
+    cutum::UGpuFullLightingPipeline desktop_pipeline;
+    desktop_pipeline.RelightChunk(deep, *registry, {0, -3, 0});
+    Expect(SkyAt(deep, {8, -33, 8}) == expected,
+           roof
+               ? "desktop pipeline retains full-height roof with seed available"
+               : "desktop pipeline retains incoming water attenuation");
     cutum::RelightJobSpec spec;
     spec.block_positions.push_back({8, -48, 8});
     spec.min_world_y = -48;
@@ -483,6 +492,7 @@ int main()
              "far roof geometry participates in async result validation");
     }
   }
+  cutum::SetTestSkylightSeedAvailable(false);
 
   std::cout << "chunk_lighting_propagation_test: OK" << std::endl;
   return 0;

@@ -13,8 +13,8 @@ namespace cutum
 
 using UCpuFullLightingPipeline = UFullLightingPipeline;
 
-/// Desktop GPU lighting: column skylight seed + blocklight flood on main thread;
-/// no sync full-volume readback on hot path. Android never binds this class.
+/// Desktop lighting adapter. Completed relights use the full-context solver;
+/// blocklight acceleration remains an implementation detail of that solver.
 class UGpuFullLightingPipeline final : public IULightingPipeline
 {
 public:
@@ -38,33 +38,8 @@ public:
                     glm::ivec3 chunk_coord, bool include_block_light = true,
                     bool include_skylight = true) override
   {
-    if (include_skylight)
-    {
-      UChunk *chunk = world.GetChunkManager().GetChunk(chunk_coord);
-      if (chunk && ApplyGpuSkylightSeedToChunk(*chunk, registry))
-      {
-        // Clear blocklight if needed, then horizontal sky + blocklight.
-        // Sky columns already applied — skip PropagateSkylightColumn.
-        if (include_block_light)
-        {
-          for (int ly = 0; ly < CHUNK_SIZE; ++ly)
-          {
-            for (int lz = 0; lz < CHUNK_SIZE; ++lz)
-            {
-              for (int lx = 0; lx < CHUNK_SIZE; ++lx)
-              {
-                const glm::ivec3 local(lx, ly, lz);
-                const int sky = chunk->GetSkyLightLocal(local);
-                chunk->SetLightLocal(local, sky, 0);
-              }
-            }
-          }
-        }
-        RelightChunkAfterGpuSkySeed(world, registry, chunk_coord,
-                                    include_block_light);
-        return;
-      }
-    }
+    // Section-local preview seeds cannot replace full-height vertical
+    // propagation: their incoming sky is independent of roofs/water above.
     Inner.RelightChunk(world, registry, chunk_coord, include_block_light,
                        include_skylight);
   }

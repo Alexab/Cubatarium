@@ -61,12 +61,6 @@ void ApplyEnterOpenSkyBoundary(UBlockWorld &world, UBlockRegistry &registry,
                                const char *audit_source = nullptr);
 void RelightAllLoadedChunks(UBlockWorld &world, UBlockRegistry &registry);
 
-/// After ApplyGpuSkylightSeedToChunk: clear was done by caller; run horizontal
-/// sky BFS + optional blocklight without re-running PropagateSkylightColumn.
-void RelightChunkAfterGpuSkySeed(UBlockWorld &world, UBlockRegistry &registry,
-                                 glm::ivec3 chunk_coord,
-                                 bool include_block_light);
-
 /// BFS blocklight from emissive voxels in chunk + face neighbors.
 void PropagateBlocklight(UBlockWorld &world, UBlockRegistry &registry,
                          glm::ivec3 chunk_coord);

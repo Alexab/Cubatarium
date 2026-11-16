@@ -1038,5 +1038,23 @@
       "separate actual CPU/GPU execution metrics and per-job backend evidence",
       "independent real compute parity acceptance; do not label machine GPU-incapable from GL3.3 alone"
     ]
+  },
+  "full_height_seed_bypass_verification": {
+    "status": "unit_and_release_verified_native_pending",
+    "mechanism": "both sync batch and desktop pipeline treat a successful per-section seed (incoming15) as completed vertical propagation, bypassing far roof and incoming liquid attenuation; default headless stub returned false and masked both branches",
+    "negative_controls": [
+      "build/desktop-msvc/engine-seed-context-red-test.log: sync path ignores roof with seed available",
+      "build/desktop-msvc/engine-desktop-seed-context-red-test.log: desktop adapter still ignores roof after sync path is corrected"
+    ],
+    "correction": "all completed relights use full-height vertical propagation; desktop adapter delegates to full solver; unused skip-vertical helper removed; primitive section seed remains provisional commit work",
+    "release_build": "build/desktop-msvc/engine-seed-context-release-build.log",
+    "unit_green": "build/desktop-msvc/engine-seed-context-green-test.log",
+    "limitations": [
+      "native regression pending",
+      "commit seed classification and startup gate still require strong calculation proof",
+      "GPU/CPU dispatch metrics remain misleading until backend attribution cleanup"
+    ],
+    "test_log": "build/desktop-msvc/engine-seed-context-final-tests.log",
+    "passed_sets": 6
   }
 }
