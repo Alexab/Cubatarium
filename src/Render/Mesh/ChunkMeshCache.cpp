@@ -4171,8 +4171,8 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(UBlockWorld &world,
     if (!chunk || chunk->GetNonAirCount() == 0 || !demand ||
         demand->world_epoch != CaptureStore.WorldEpoch() ||
         demand->incarnation != chunk->GetIncarnation() ||
-        !demand->has_settled_light ||
-        demand->settled_light_rev != chunk->GetLightFieldRevision() ||
+        !LightSettlementMatchesCurrentChunk(demand, chunk,
+                                            CaptureStore.WorldEpoch()) ||
         demand->desired_light_rev > chunk->GetLightFieldRevision())
     {
       continue;
@@ -4259,8 +4259,8 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(UBlockWorld &world,
     // is still receiving its own settled light. Retain the debt, but do not
     // build a mesh against an intermediate field revision.
     const uint64_t field_light_rev = chunk->GetLightFieldRevision();
-    if (!demand->has_settled_light ||
-        demand->settled_light_rev != field_light_rev ||
+    if (!LightSettlementMatchesCurrentChunk(demand, chunk,
+                                            CaptureStore.WorldEpoch()) ||
         demand->desired_light_rev > field_light_rev)
     {
       continue;
@@ -5699,8 +5699,9 @@ bool UChunkMeshCache::CommitGpuMeshResult(
        boundary_overlay.missingNeighborFaces == 0) &&
       MeshCandidateMatchesSettledDemand(
           !accepted_input_stale, demand_identity_current,
-          slice_demand && slice_demand->has_settled_light, source_revision,
-          MeshRevisions.Current(coord),
+          LightSettlementMatchesCurrentChunk(slice_demand, source_chunk,
+                                             CaptureStore.WorldEpoch()),
+          source_revision, MeshRevisions.Current(coord),
           slice_demand ? slice_demand->desired_geom_rev : 0,
           source_light_revision,
           source_chunk ? source_chunk->GetLightFieldRevision() : 0,
@@ -8052,7 +8053,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       MeshCandidateMatchesSettledDemand(
           stale_reason == MeshApplyStaleInputReason::Ok,
           demand_identity_current,
-          slice_demand && slice_demand->has_settled_light,
+          LightSettlementMatchesCurrentChunk(slice_demand, source_chunk,
+                                             CaptureStore.WorldEpoch()),
           result.sourceRevision, expected_revision,
           slice_demand ? slice_demand->desired_geom_rev : 0,
           result.InputStamps[0].light,
@@ -9977,15 +9979,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             chunk && demand &&
             demand->world_epoch == CaptureStore.WorldEpoch() &&
             demand->incarnation == chunk->GetIncarnation();
-        const uint64_t field_light_rev =
-            chunk ? chunk->GetLightFieldRevision() : 0;
         // Keep the ambient preview until a matching light revision has been
         // published. A first mesh may read a settled field before its demand
         // publication catches up; the committed preview then creates durable
         // repair debt and a successor mesh clears the marker.
         const bool light_can_publish_without_preview =
-            current_demand && demand->has_settled_light &&
-            demand->settled_light_rev == field_light_rev &&
+            current_demand &&
+            LightSettlementMatchesCurrentChunk(demand, chunk,
+                                               CaptureStore.WorldEpoch()) &&
             demand->desired_light_rev <= demand->published_light_rev;
         // Absence of current per-slice settlement is not evidence that the
         // first mesh is safe to publish with raw zero light.
@@ -11709,8 +11710,10 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
          sync_snap.boundaryOverlay.missingNeighborFaces == 0) &&
         MeshCandidateMatchesSettledDemand(
             true, demand_identity_current,
-            slice_demand && slice_demand->has_settled_light, current_geom_rev,
-            current_geom_rev, slice_demand ? slice_demand->desired_geom_rev : 0,
+            LightSettlementMatchesCurrentChunk(slice_demand, source_chunk,
+                                               CaptureStore.WorldEpoch()),
+            current_geom_rev, current_geom_rev,
+            slice_demand ? slice_demand->desired_geom_rev : 0,
             sync_snap.inputStamps[0].light,
             source_chunk ? source_chunk->GetLightFieldRevision() : 0,
             slice_demand ? slice_demand->settled_light_rev : 0,

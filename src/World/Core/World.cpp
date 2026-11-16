@@ -253,12 +253,9 @@ bool ChunkSliceHasCurrentLightSettlement(const UWorld &world, glm::ivec3 coord)
   const UChunk *chunk = world.GetBlockWorld().GetChunkManager().GetChunk(coord);
   const ChunkRenderDemandRecord *demand =
       world.GetRenderDemandStore().Find(coord);
-  if (!chunk || !demand ||
-      demand->world_epoch !=
-          world.GetMeshService().GetCache().GetCaptureStore().WorldEpoch() ||
-      demand->incarnation != chunk->GetIncarnation() ||
-      !demand->has_settled_light ||
-      demand->settled_light_rev != chunk->GetLightFieldRevision())
+  if (!LightSettlementMatchesCurrentChunk(
+          demand, chunk,
+          world.GetMeshService().GetCache().GetCaptureStore().WorldEpoch()))
   {
     return false;
   }
@@ -3023,7 +3020,8 @@ void UWorld::NoteChunkSliceLightCalculationSettled(glm::ivec3 chunk_coord)
   }
   GetRenderDemandStore().NoteLightCalculationSettled(
       chunk_coord, MeshService->GetCache().GetCaptureStore().WorldEpoch(),
-      chunk->GetIncarnation(), chunk->GetLightFieldRevision());
+      chunk->GetIncarnation(), chunk->GetLightFieldRevision(),
+      chunk->GetContentRevision());
 }
 
 bool UWorld::HasCurrentChunkSliceLightSettlement(glm::ivec3 chunk_coord) const
@@ -3604,9 +3602,7 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
       const uint64_t meshed_light_rev =
           cache.GetMeshedLightRevision(chunk_coord);
       const bool settled_light_current =
-          demand && chunk && demand->incarnation == chunk->GetIncarnation() &&
-          demand->has_settled_light &&
-          demand->settled_light_rev == field_light_rev;
+          ChunkSliceHasCurrentLightSettlement(*this, chunk_coord);
       const bool demand_light_current =
           !demand || (chunk && demand->incarnation == chunk->GetIncarnation() &&
                       demand->desired_light_rev <= demand->published_light_rev);
@@ -3741,10 +3737,7 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
         // If lighting changes, the stale-dark witness closes the gate until a
         // matching replacement is published.
         const bool slice_light_settled =
-            slice_demand && slice_chunk &&
-            slice_demand->incarnation == slice_chunk->GetIncarnation() &&
-            slice_demand->has_settled_light &&
-            slice_demand->settled_light_rev == field_light_rev;
+            ChunkSliceHasCurrentLightSettlement(*this, chunk_coord);
         const bool current_dark_image = CurrentDarkSliceImageMayDraw(
             fully_dark, slice_light_settled, stale, demand_light_current,
             field_light_rev, published_revs.light_rev, meshed_light_rev);
@@ -7301,8 +7294,7 @@ int UWorld::CollectDrawGateRelightTargets(
         (demand_identity_current &&
          slice_demand->desired_light_rev <= slice_demand->published_light_rev);
     const bool slice_light_settled =
-        demand_identity_current && slice_demand->has_settled_light &&
-        slice_demand->settled_light_rev == field_light_rev;
+        ChunkSliceHasCurrentLightSettlement(*this, coord);
     bool stale_source_light_settled = !stale_light;
     if (stale_light)
     {
@@ -7315,10 +7307,7 @@ int UWorld::CollectDrawGateRelightTargets(
           witness.source_incarnation == source_chunk->GetIncarnation() &&
           witness.source_light_revision ==
               source_chunk->GetLightFieldRevision() &&
-          source_demand->incarnation == source_chunk->GetIncarnation() &&
-          source_demand->has_settled_light &&
-          source_demand->settled_light_rev ==
-              source_chunk->GetLightFieldRevision();
+          ChunkSliceHasCurrentLightSettlement(*this, witness.source_chunk);
     }
     const MeshPublishRevs published = cache.GetMeshPublishRevs(coord);
     bool settled_mesh_repair = false;
@@ -7462,11 +7451,8 @@ bool UWorld::QueueSettledDrawGateMeshRepair(glm::ivec3 chunk_coord,
     return false;
   }
   const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(chunk_coord);
-  const ChunkRenderDemandRecord *demand =
-      GetRenderDemandStore().Find(chunk_coord);
-  if (!chunk || !demand || demand->incarnation != chunk->GetIncarnation() ||
-      !demand->has_settled_light || chunk->GetLightFieldRevision() == 0 ||
-      demand->settled_light_rev != chunk->GetLightFieldRevision())
+  if (!chunk || !ChunkSliceHasCurrentLightSettlement(*this, chunk_coord) ||
+      chunk->GetLightFieldRevision() == 0)
   {
     return false;
   }
@@ -7563,8 +7549,7 @@ bool UWorld::IsSettledDrawGateMeshRepairPending(glm::ivec3 chunk_coord) const
   if (!chunk || !demand ||
       retry->second.incarnation != chunk->GetIncarnation() ||
       retry->second.field_light_revision != chunk->GetLightFieldRevision() ||
-      !demand->has_settled_light ||
-      demand->settled_light_rev != chunk->GetLightFieldRevision())
+      !ChunkSliceHasCurrentLightSettlement(*this, chunk_coord))
   {
     return false;
   }

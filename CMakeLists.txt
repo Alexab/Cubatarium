@@ -1977,6 +1977,8 @@ cubatarium_add_test(NAME chunk_render_demand_test
     SOURCES
         src/Test/ChunkRenderDemandTest.cpp
         src/World/Streaming/ChunkRenderDemand.cpp
+        src/World/Chunks/Chunk.cpp
+        src/World/Math/FluidCellState.cpp
         src/World/Diagnostics/JobStageTrace.cpp
     LIBRARIES glm::glm)
 

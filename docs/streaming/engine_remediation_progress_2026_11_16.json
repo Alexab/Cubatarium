@@ -798,5 +798,19 @@
         }
       }
     }
+  },
+  "section_light_content_identity": {
+    "status": "unit_and_release_build_verified_native_pending",
+    "mechanism": "content revision changes on geometry/fluid edits before light field recomputation; old field-only settlement could suppress relight or permit legal-dark publication for obsolete input",
+    "correction": "settlement records content revision; common validation checks world epoch, section incarnation, content revision and light field revision in world readiness, exact repair classification and CPU/packed candidate publication",
+    "negative_control": "build/desktop-msvc/engine-light-content-red-test.log: real section geometry and fluid-only edits fail when content dependency is removed",
+    "unit_green": "build/desktop-msvc/engine-light-content-green-test.log",
+    "limitations": [
+      "own-section input identity only; persistent neighbor/sky read-set, unknown-input solver semantics and catalog/profile provenance remain pending",
+      "native regression pending"
+    ],
+    "test_log": "build/desktop-msvc/engine-light-content-final-tests.log",
+    "passed_sets": 6,
+    "release_build": "build/desktop-msvc/engine-light-content-release-build.log"
   }
 }

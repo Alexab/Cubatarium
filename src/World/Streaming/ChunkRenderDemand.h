@@ -92,6 +92,7 @@ struct ChunkRenderDemandRecord
   /// Last successfully computed chunk-light revision, including no-change
   /// results. This is distinct from mesh publication and column LitReady.
   uint64_t settled_light_rev{0};
+  uint64_t settled_content_rev{0};
   bool has_settled_light{false};
   uint64_t active_attempt_id{0};
   JobStage active_stage{JobStage::Created};
@@ -135,6 +136,20 @@ struct ChunkRenderDemandRecord
   uint64_t open_sky_repair_published_light_rev{0};
   uint64_t open_sky_repair_published_attempt_id{0};
 };
+
+/// A light field can keep its revision while geometry/fluid changes ahead of
+/// relighting. Such a field is no longer a calculation for the current input.
+/// This is the section's own input identity; neighbor/sky proofs are separate.
+inline bool
+LightSettlementMatchesCurrentChunk(const ChunkRenderDemandRecord *record,
+                                   const UChunk *chunk, uint64_t world_epoch)
+{
+  return record && chunk && record->has_settled_light &&
+         record->world_epoch == world_epoch &&
+         record->incarnation == chunk->GetIncarnation() &&
+         record->settled_content_rev == chunk->GetContentRevision() &&
+         record->settled_light_rev == chunk->GetLightFieldRevision();
+}
 
 /// Per-world section demand state, owned by its mesh service/cache.
 /// Main-thread access only; workers receive immutable trace values.
@@ -231,7 +246,8 @@ public:
   /// Record a validated lighting computation for this chunk incarnation.
   void NoteLightCalculationSettled(glm::ivec3 coord, uint64_t world_epoch,
                                    uint64_t incarnation,
-                                   uint64_t light_field_rev);
+                                   uint64_t light_field_rev,
+                                   uint64_t content_rev);
   /// Emit a watched, timestamped marker for a visual-work lifecycle event
   /// owned outside this store (for example stale-remesh queue/admission).
   void NoteLifecycleEvent(glm::ivec3 coord, DemandTransitionKind kind);

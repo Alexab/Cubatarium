@@ -41,6 +41,45 @@ int main()
   UChunkRenderDemandStore store;
   store.Clear();
 
+  {
+    cutum::UChunk chunk({1, -3, 4});
+    UChunkRenderDemandStore calculations;
+    const auto settle = [&]()
+    {
+      calculations.NoteLightCalculationSettled(
+          chunk.GetCoord(), 7, chunk.GetIncarnation(),
+          chunk.GetLightFieldRevision(), chunk.GetContentRevision());
+    };
+    const auto current = [&]()
+    {
+      return cutum::LightSettlementMatchesCurrentChunk(
+          calculations.Find(chunk.GetCoord()), &chunk, 7);
+    };
+    settle();
+    Expect(current(), "calculation matches its original section input");
+    const auto light_before_edit = chunk.GetLightFieldRevision();
+    chunk.SetBlockLocal({2, 3, 4}, 8);
+    Expect(chunk.GetLightFieldRevision() == light_before_edit,
+           "geometry edit precedes any light recomputation");
+    Expect(!current(), "geometry edit invalidates unchanged light field proof");
+    settle();
+    chunk.SetFluidLocal({2, 3, 4}, cutum::FluidCellState::Flowing(3));
+    Expect(chunk.GetLightFieldRevision() == light_before_edit,
+           "fluid edit also leaves light field untouched");
+    Expect(!current(), "fluid-only input edit invalidates light calculation");
+    settle();
+    chunk.SetWeatherState(0.4f, 30.0);
+    Expect(current(), "unrelated weather metadata preserves light calculation");
+    chunk.SetLightLocal({2, 3, 4}, 9, 0);
+    Expect(!current(), "light field replacement invalidates old calculation");
+    settle();
+    Expect(!cutum::LightSettlementMatchesCurrentChunk(
+               calculations.Find(chunk.GetCoord()), &chunk, 8),
+           "world generation is part of calculation identity");
+    chunk.ResetForReuse(chunk.GetCoord());
+    Expect(!current(), "recycled section cannot inherit calculation proof");
+  }
+
   const glm::ivec3 c{1, 2, 3};
   Expect(store.NoteDemand(c, 5, 7) == DemandResult::NewDemand,
          "first NewDemand");

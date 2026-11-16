@@ -381,7 +381,7 @@ static void TestWorldDemandIsolation()
   first.NoteDemand(coord, 7, 11, 0, 1.0, 1, 1);
   Expect(!second.Find(coord), "another world must not inherit section demand");
   second.NoteDemand(coord, 17, 19, 0, 1.0, 1, 1);
-  first.NoteLightCalculationSettled(coord, 1, 1, 11);
+  first.NoteLightCalculationSettled(coord, 1, 1, 11, 7);
   Expect(!second.Find(coord)->has_settled_light,
          "another world's lighting proof must remain independent");
   Expect(first.Find(coord)->desired_geom_rev == 7,

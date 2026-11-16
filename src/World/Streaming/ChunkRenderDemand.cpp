@@ -522,7 +522,7 @@ bool UChunkRenderDemandStore::HasOpenSkyRepairPublished(
 
 void UChunkRenderDemandStore::NoteLightCalculationSettled(
     glm::ivec3 coord, uint64_t world_epoch, uint64_t incarnation,
-    uint64_t light_field_rev)
+    uint64_t light_field_rev, uint64_t content_rev)
 {
   if (incarnation == 0)
   {
@@ -534,10 +534,12 @@ void UChunkRenderDemandStore::NoteLightCalculationSettled(
   {
     return;
   }
-  const bool settlement_changed =
-      !rec.has_settled_light || rec.settled_light_rev != light_field_rev;
+  const bool settlement_changed = !rec.has_settled_light ||
+                                  rec.settled_light_rev != light_field_rev ||
+                                  rec.settled_content_rev != content_rev;
   const DemandSnapshot before = SnapshotDemand(rec);
   rec.settled_light_rev = light_field_rev;
+  rec.settled_content_rev = content_rev;
   rec.has_settled_light = true;
   if (settlement_changed)
   {
@@ -574,6 +576,7 @@ void UChunkRenderDemandStore::InvalidateLightCalculationSettlement(
   }
   rec->has_settled_light = false;
   rec->settled_light_rev = 0;
+  rec->settled_content_rev = 0;
 }
 
 bool UChunkRenderDemandStore::NoteInstallResult(glm::ivec3 coord,
