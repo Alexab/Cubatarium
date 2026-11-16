@@ -35,6 +35,33 @@ class EngineSmokeVerdictTest(unittest.TestCase):
         self.perf.write_text("")
         self.assertEqual(classify(self.report, self.perf)["status"], "UNTESTED")
 
+    def test_backend_execution_in_event_is_not_lost(self):
+        rows = [dict(kind="period", cpu_light_seed_apply=0, gpu_light_seed_apply=0),
+                dict(kind="visual_holes_enter", cpu_light_seed_apply=3,
+                     gpu_light_seed_apply=0, gpu_light_readback=0)]
+        self.perf.write_text("\n".join(json.dumps(row) for row in rows), encoding="utf-8")
+        result = classify(self.report, self.perf)
+        observed = result["backend_observations"]
+        self.assertEqual(observed["maxima"]["cpu_light_seed_apply"], 3)
+        self.assertEqual(observed["maxima"]["gpu_light_seed_apply"], 0)
+        self.assertEqual(observed["positive_records"], {"cpu_light_seed_apply": 1})
+        self.assertEqual(observed["records_by_kind"], {"period": 1, "visual_holes_enter": 1})
+        self.assertEqual(result["status"], "UNTESTED")
+
+    def test_missing_backend_counter_is_not_observed_zero(self):
+        self.trace()
+        observed = classify(self.report, self.perf)["backend_observations"]
+        self.assertEqual(observed["maxima"], {})
+        self.assertEqual(observed["positive_records"], {})
+
+    def test_invalid_backend_counters_do_not_grant_execution(self):
+        self.perf.write_text("\n".join(json.dumps(dict(
+            kind="period", cpu_light_seed_apply=value))
+            for value in [-1, True, 1.5, "3"]), encoding="utf-8")
+        observed = classify(self.report, self.perf)["backend_observations"]
+        self.assertEqual(observed["maxima"], {})
+        self.assertEqual(observed["invalid_counter_rows"], 4)
+
     def test_legacy_pixels_do_not_grant_acceptance(self):
         self.perf.write_text('\n'.join(json.dumps(dict(kind="renderer_pixel_probe", frame_epoch=i)) for i in range(3)))
         self.assertEqual(classify(self.report, self.perf)["status"], "UNTESTED")

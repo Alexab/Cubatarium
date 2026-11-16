@@ -65,6 +65,11 @@ def classify(report: dict[str, Any], perf: Path | None, *,
     faults = 0
     attributed = 0
     malformed = 0
+    backend_keys = ("cpu_light_seed_apply", "gpu_light_seed_apply", "gpu_light_readback")
+    backend_maxima: dict[str, int] = {}
+    backend_positive: dict[str, int] = {}
+    backend_kinds: dict[str, int] = {}
+    backend_invalid = 0
     if perf and perf.is_file():
         with perf.open(encoding="utf-8") as stream:
             for line in stream:
@@ -78,6 +83,22 @@ def classify(report: dict[str, Any], perf: Path | None, *,
                 if not isinstance(row, dict):
                     malformed += 1
                     continue
+                # Counters are consumed by event samples too. Looking only at
+                # periodic records can miss all actual seed execution.
+                present = [key for key in backend_keys if key in row]
+                if present:
+                    valid = all(isinstance(row[key], int) and
+                                not isinstance(row[key], bool) and row[key] >= 0
+                                for key in present)
+                    if not valid:
+                        backend_invalid += 1
+                    else:
+                        kind = row.get("kind") if isinstance(row.get("kind"), str) else "unknown"
+                        backend_kinds[kind] = backend_kinds.get(kind, 0) + 1
+                        for key in present:
+                            backend_maxima[key] = max(backend_maxima.get(key, 0), row[key])
+                            if row[key] > 0:
+                                backend_positive[key] = backend_positive.get(key, 0) + 1
                 if row.get("kind") != "renderer_pixel_probe":
                     continue
                 samples += 1
@@ -120,6 +141,10 @@ def classify(report: dict[str, Any], perf: Path | None, *,
     status = "FAIL" if "FAIL" in statuses else ("UNTESTED" if "UNTESTED" in statuses else "PASS")
     return {"schema": "engine-smoke-verdict.v1", "status": status,
             "components": parts, "malformed_trace_rows": malformed,
+            "backend_observations": {
+                "maxima": backend_maxima, "positive_records": backend_positive,
+                "records_by_kind": backend_kinds, "invalid_counter_rows": backend_invalid,
+                "scope": "observed CPU/GPU sky counters; not per-job correctness or compute parity"},
             "scope": "one-way frontier route and sampled reference checks; not full-screen proof"}
 
 
