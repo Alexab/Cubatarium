@@ -250,3 +250,5 @@ tools/debug_uv_overlays/
 
 /bin/items_decode_once_qa/
 /bin/items_readback_budget_qa/
+
+/bin/item_hand_acceptance/

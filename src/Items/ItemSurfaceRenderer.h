@@ -16,6 +16,7 @@ struct ItemSurfaceDrawAudit
   std::filesystem::path Path;
   std::shared_ptr<const ItemRenderAsset> Asset;
   size_t VisiblePrimitives{0};
+  glm::mat4 Model{1.f};
 };
 /// Opt-in diagnostics scoped to a render pass; nested previews restore the
 /// caller's collector. Geometry ownership remains with the renderer.

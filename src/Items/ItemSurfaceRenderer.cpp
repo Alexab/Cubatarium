@@ -193,7 +193,7 @@ void ItemSurfaceRenderer::Draw(
                    reinterpret_cast<void *>(found->second.IndexByteOffsets[i]));
   }
   if (UItemSurfaceDrawAuditScope::Current)
-    UItemSurfaceDrawAuditScope::Current->push_back({path, asset, drawn});
+    UItemSurfaceDrawAuditScope::Current->push_back({path, asset, drawn, model});
   glBindVertexArray(0);
 #if !defined(__ANDROID__)
   if (profile.InspectionMode == 6)

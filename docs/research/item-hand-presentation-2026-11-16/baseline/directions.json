@@ -1,0 +1,1370 @@
+{
+  "scope": "Historical right-hand TP diagnosis only: unique reflected skeleton draw distinguished from positive-determinant physical drop; final gate requires actual palm matching",
+  "source": "day-1280-100-back-hand-before/native.json",
+  "passed": false,
+  "items": [
+    {
+      "id": "apple",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218960074811,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "arrow",
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "bread",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218951468906,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "bucket",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218951468912,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "charcoal",
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "coal",
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "cooked_meat",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.8012852099888503,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "copper_axe",
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": -0.24879511353661132,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.7516537209861188,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "copper_chest",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218951468912,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "copper_feet",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218942863007,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "copper_head",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218942863007,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "copper_hoe",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            0.30901699437494745,
+            -0.9510565162951535
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.3553583436625646,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.7516538288001816,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "copper_ingot",
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "copper_legs",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218958705041,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "copper_pickaxe",
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true,
+          "alignment": 0.24879507815230306,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.7516537716597329,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "copper_shovel",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true,
+          "alignment": 0.6163935327198988,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.7516537756557461,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "copper_sword",
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": -0.2487950983659388,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.7516537574325368,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "cord",
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "flint_and_steel",
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "gold_axe",
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": -0.24879507815230306,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.7516538288001816,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "gold_chest",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218951468912,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "gold_feet",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218960074811,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "gold_head",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218945602537,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "gold_hoe",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            0.30901699437494745,
+            -0.9510565162951535
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.3553581269132837,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.7516537923537658,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "gold_ingot",
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "gold_legs",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218942863007,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "gold_pickaxe",
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true,
+          "alignment": 0.24879509668495112,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.7516537574325368,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "gold_shovel",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true,
+          "alignment": 0.6163935083510995,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.751653753436524,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "gold_sword",
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": -0.24879513206925893,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.7516536845397012,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "grain",
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "iron_axe",
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": -0.24879507647131535,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.7516537756557461,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "iron_chest",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218942862984,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "iron_feet",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218960074811,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "iron_head",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218951468906,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "iron_hoe",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            0.30901699437494745,
+            -0.9510565162951535
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.355358178117139,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.7516537574325368,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "iron_ingot",
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "iron_legs",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218960074811,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "iron_pickaxe",
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true,
+          "alignment": 0.2487950950039635,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.7516537574325368,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "iron_shield",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.9781475999531979,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218956293002,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "iron_shovel",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true,
+          "alignment": 0.6163936626904344,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.7516538288001816,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "iron_sword",
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": -0.24879511353661132,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.7516537209861188,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "leather",
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "leather_chest",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218951468912,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "leather_feet",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218960074811,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "leather_head",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218974547034,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "leather_legs",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.994521896868072,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "plant_fiber",
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "raw_copper",
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "raw_gold",
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "raw_iron",
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "raw_meat",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.8012852099888503,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "seeds",
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "shears",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": -0.20677283454688883,
+          "passed": false
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "stick",
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "stone_axe",
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": -0.2487950950039635,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.7516537574325368,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "stone_hoe",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            0.30901699437494745,
+            -0.9510565162951535
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.35535815877314064,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.751653753436524,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "stone_pickaxe",
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true,
+          "alignment": 0.2487951529621183,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.7516536805436893,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "stone_shovel",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true,
+          "alignment": 0.6163935325121092,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.751653753436524,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "stone_sword",
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": -0.24879507983329072,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.7516537756557461,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "waterskin",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.8012851699025368,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "wood_axe",
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": -0.24879513206925893,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.7516536845397012,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "wood_bow",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9781475984046223,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "wood_hoe",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            0.30901699437494745,
+            -0.9510565162951535
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.3553581752658789,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.7516538105769737,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "wood_pickaxe",
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true,
+          "alignment": 0.24879509668495112,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.7516537574325368,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "wood_shield",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.9781476091328266,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218956292993,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "wood_shovel",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true,
+          "alignment": 0.6163934598212922,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.7516537209861188,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "wood_spear",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.75,
+          "absolute": false,
+          "alignment": -0.6938039601476117,
+          "passed": false
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "wood_sword",
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": -0.24879509332297572,
+          "passed": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.7516537574325368,
+          "passed": true
+        }
+      ],
+      "passed": false
+    },
+    {
+      "id": "wood_torch",
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.8012852145824312,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "wool",
+      "measurements": [],
+      "passed": true
+    }
+  ]
+}

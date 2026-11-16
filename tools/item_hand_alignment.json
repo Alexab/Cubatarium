@@ -1,0 +1,1209 @@
+{
+  "version": 1,
+  "scope": "Actual drawn held models: functional working directions, upright handling and palm contacts. Axes derive from authored working geometry, not icon cameras.",
+  "items": {
+    "apple": {
+      "family": "apple",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "arrow": {
+      "family": "arrow",
+      "checks": [],
+      "grip_required": true
+    },
+    "bread": {
+      "family": "bread",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "bucket": {
+      "family": "bucket",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "charcoal": {
+      "family": "charcoal",
+      "checks": [],
+      "grip_required": true
+    },
+    "coal": {
+      "family": "coal",
+      "checks": [],
+      "grip_required": true
+    },
+    "cooked_meat": {
+      "family": "meat",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "copper_axe": {
+      "family": "axe",
+      "checks": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "copper_chest": {
+      "family": "chest",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "copper_feet": {
+      "family": "feet",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "copper_head": {
+      "family": "head",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "copper_hoe": {
+      "family": "hoe",
+      "checks": [
+        {
+          "axis": [
+            0,
+            0.30901699437494745,
+            -0.9510565162951535
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "copper_ingot": {
+      "family": "ingot",
+      "checks": [],
+      "grip_required": true
+    },
+    "copper_legs": {
+      "family": "legs",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "copper_pickaxe": {
+      "family": "pickaxe",
+      "checks": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "copper_shovel": {
+      "family": "shovel",
+      "checks": [
+        {
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "copper_sword": {
+      "family": "sword",
+      "checks": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "cord": {
+      "family": "cord",
+      "checks": [],
+      "grip_required": true
+    },
+    "flint_and_steel": {
+      "family": "steel",
+      "checks": [],
+      "grip_required": true
+    },
+    "gold_axe": {
+      "family": "axe",
+      "checks": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "gold_chest": {
+      "family": "chest",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "gold_feet": {
+      "family": "feet",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "gold_head": {
+      "family": "head",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "gold_hoe": {
+      "family": "hoe",
+      "checks": [
+        {
+          "axis": [
+            0,
+            0.30901699437494745,
+            -0.9510565162951535
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "gold_ingot": {
+      "family": "ingot",
+      "checks": [],
+      "grip_required": true
+    },
+    "gold_legs": {
+      "family": "legs",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "gold_pickaxe": {
+      "family": "pickaxe",
+      "checks": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "gold_shovel": {
+      "family": "shovel",
+      "checks": [
+        {
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "gold_sword": {
+      "family": "sword",
+      "checks": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "grain": {
+      "family": "grain",
+      "checks": [],
+      "grip_required": true
+    },
+    "iron_axe": {
+      "family": "axe",
+      "checks": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "iron_chest": {
+      "family": "chest",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "iron_feet": {
+      "family": "feet",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "iron_head": {
+      "family": "head",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "iron_hoe": {
+      "family": "hoe",
+      "checks": [
+        {
+          "axis": [
+            0,
+            0.30901699437494745,
+            -0.9510565162951535
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "iron_ingot": {
+      "family": "ingot",
+      "checks": [],
+      "grip_required": true
+    },
+    "iron_legs": {
+      "family": "legs",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "iron_pickaxe": {
+      "family": "pickaxe",
+      "checks": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "iron_shield": {
+      "family": "shield",
+      "checks": [
+        {
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "iron_shovel": {
+      "family": "shovel",
+      "checks": [
+        {
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "iron_sword": {
+      "family": "sword",
+      "checks": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "leather": {
+      "family": "leather",
+      "checks": [],
+      "grip_required": true
+    },
+    "leather_chest": {
+      "family": "chest",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "leather_feet": {
+      "family": "feet",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "leather_head": {
+      "family": "head",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "leather_legs": {
+      "family": "legs",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "plant_fiber": {
+      "family": "fiber",
+      "checks": [],
+      "grip_required": true
+    },
+    "raw_copper": {
+      "family": "copper",
+      "checks": [],
+      "grip_required": true
+    },
+    "raw_gold": {
+      "family": "gold",
+      "checks": [],
+      "grip_required": true
+    },
+    "raw_iron": {
+      "family": "iron",
+      "checks": [],
+      "grip_required": true
+    },
+    "raw_meat": {
+      "family": "meat",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "seeds": {
+      "family": "seeds",
+      "checks": [],
+      "grip_required": true
+    },
+    "shears": {
+      "family": "shears",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "stick": {
+      "family": "stick",
+      "checks": [],
+      "grip_required": true
+    },
+    "stone_axe": {
+      "family": "axe",
+      "checks": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "stone_hoe": {
+      "family": "hoe",
+      "checks": [
+        {
+          "axis": [
+            0,
+            0.30901699437494745,
+            -0.9510565162951535
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "stone_pickaxe": {
+      "family": "pickaxe",
+      "checks": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "stone_shovel": {
+      "family": "shovel",
+      "checks": [
+        {
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "stone_sword": {
+      "family": "sword",
+      "checks": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "waterskin": {
+      "family": "waterskin",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.7,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "wood_axe": {
+      "family": "axe",
+      "checks": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "wood_bow": {
+      "family": "bow",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "wood_hoe": {
+      "family": "hoe",
+      "checks": [
+        {
+          "axis": [
+            0,
+            0.30901699437494745,
+            -0.9510565162951535
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "wood_pickaxe": {
+      "family": "pickaxe",
+      "checks": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "wood_shield": {
+      "family": "shield",
+      "checks": [
+        {
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "wood_shovel": {
+      "family": "shovel",
+      "checks": [
+        {
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "wood_spear": {
+      "family": "spear",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.75,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "wood_sword": {
+      "family": "sword",
+      "checks": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "wood_torch": {
+      "family": "torch",
+      "checks": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false
+        }
+      ],
+      "grip_required": true
+    },
+    "wool": {
+      "family": "wool",
+      "checks": [],
+      "grip_required": true
+    }
+  }
+}

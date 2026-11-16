@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "items": 70,
+  "hand_profiles_changed": 29,
+  "geometry_and_texture_bytes_unchanged": true,
+  "original_reference_archives_unchanged": true,
+  "item_definitions_unchanged": true,
+  "generation": "9e0dca5b2bd1434fb81dd8243eeefa5f",
+  "manifest_sha256": "d5a4a9d52df284f4f4b5c82b542f33b57d69f17d978e90e12f0e4e7430a5f3da"
+}

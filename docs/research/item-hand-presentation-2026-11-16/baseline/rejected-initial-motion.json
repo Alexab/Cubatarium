@@ -1,0 +1,2777 @@
+{
+  "checks": [
+    {
+      "name": "item renderer initializes",
+      "passed": true
+    },
+    {
+      "name": "static GUI quad initializes",
+      "passed": true
+    },
+    {
+      "name": "legacy GUI shader fallback initializes",
+      "passed": true
+    },
+    {
+      "name": "static GUI quad preserves RGBA 1280 scale 1.000000 unclipped",
+      "passed": true
+    },
+    {
+      "name": "legacy GUI fallback preserves RGBA 1280 scale 1.000000 unclipped",
+      "passed": true
+    },
+    {
+      "name": "static GUI quad preserves RGBA 1280 scale 1.000000 clipped",
+      "passed": true
+    },
+    {
+      "name": "legacy GUI fallback preserves RGBA 1280 scale 1.000000 clipped",
+      "passed": true
+    },
+    {
+      "name": "static GUI quad preserves RGBA 1280 scale 1.500000 unclipped",
+      "passed": true
+    },
+    {
+      "name": "legacy GUI fallback preserves RGBA 1280 scale 1.500000 unclipped",
+      "passed": true
+    },
+    {
+      "name": "static GUI quad preserves RGBA 1280 scale 1.500000 clipped",
+      "passed": true
+    },
+    {
+      "name": "legacy GUI fallback preserves RGBA 1280 scale 1.500000 clipped",
+      "passed": true
+    },
+    {
+      "name": "static GUI quad preserves RGBA 1280 scale 2.000000 unclipped",
+      "passed": true
+    },
+    {
+      "name": "legacy GUI fallback preserves RGBA 1280 scale 2.000000 unclipped",
+      "passed": true
+    },
+    {
+      "name": "static GUI quad preserves RGBA 1280 scale 2.000000 clipped",
+      "passed": true
+    },
+    {
+      "name": "legacy GUI fallback preserves RGBA 1280 scale 2.000000 clipped",
+      "passed": true
+    },
+    {
+      "name": "static GUI quad preserves RGBA 1920 scale 1.000000 unclipped",
+      "passed": true
+    },
+    {
+      "name": "legacy GUI fallback preserves RGBA 1920 scale 1.000000 unclipped",
+      "passed": true
+    },
+    {
+      "name": "static GUI quad preserves RGBA 1920 scale 1.000000 clipped",
+      "passed": true
+    },
+    {
+      "name": "legacy GUI fallback preserves RGBA 1920 scale 1.000000 clipped",
+      "passed": true
+    },
+    {
+      "name": "static GUI quad preserves RGBA 1920 scale 1.500000 unclipped",
+      "passed": true
+    },
+    {
+      "name": "legacy GUI fallback preserves RGBA 1920 scale 1.500000 unclipped",
+      "passed": true
+    },
+    {
+      "name": "static GUI quad preserves RGBA 1920 scale 1.500000 clipped",
+      "passed": true
+    },
+    {
+      "name": "legacy GUI fallback preserves RGBA 1920 scale 1.500000 clipped",
+      "passed": true
+    },
+    {
+      "name": "static GUI quad preserves RGBA 1920 scale 2.000000 unclipped",
+      "passed": true
+    },
+    {
+      "name": "legacy GUI fallback preserves RGBA 1920 scale 2.000000 unclipped",
+      "passed": true
+    },
+    {
+      "name": "static GUI quad preserves RGBA 1920 scale 2.000000 clipped",
+      "passed": true
+    },
+    {
+      "name": "legacy GUI fallback preserves RGBA 1920 scale 2.000000 clipped",
+      "passed": true
+    },
+    {
+      "name": "icon readback isolated cache initializes",
+      "passed": true
+    },
+    {
+      "name": "item disk store accepts asynchronous readback",
+      "passed": true
+    },
+    {
+      "name": "queued disk store has no premature manifest entry",
+      "passed": true
+    },
+    {
+      "name": "enqueue preserves pack and separate framebuffer state",
+      "passed": true
+    },
+    {
+      "name": "ready disk readback drains exactly once",
+      "passed": true
+    },
+    {
+      "name": "drain preserves pack and separate framebuffer state",
+      "passed": true
+    },
+    {
+      "name": "completed asynchronous icon survives manifest reload",
+      "passed": true
+    },
+    {
+      "name": "asynchronous PNG roundtrip preserves every RGBA byte",
+      "passed": true
+    },
+    {
+      "name": "readback invalidation probe queues",
+      "passed": true
+    },
+    {
+      "name": "invalidated pending icon cannot recreate stale disk entry",
+      "passed": true
+    },
+    {
+      "name": "color fixture PNG writes",
+      "passed": true
+    },
+    {
+      "name": "albedo path aliases share texture",
+      "passed": true
+    },
+    {
+      "name": "warm albedo lookup avoids repeated filesystem resolution",
+      "passed": true
+    },
+    {
+      "name": "item albedo uses sRGB storage and complete mip chain",
+      "passed": true
+    },
+    {
+      "name": "mip average is linear-light black and white",
+      "passed": true
+    },
+    {
+      "name": "bilinear sampling precedes display encoding",
+      "passed": true
+    },
+    {
+      "name": "linear material factor applies once",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 0",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 1",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 2",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 3",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 4",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 5",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 6",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 7",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 8",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 9",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 10",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 11",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 12",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 13",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 14",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 15",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 16",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 17",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 18",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 19",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 20",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 21",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 22",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 23",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 24",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 25",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 26",
+      "passed": true
+    },
+    {
+      "name": "local item material reuse preserves pixels 27",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 0",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 1",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 2",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 3",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 4",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 5",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 6",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 7",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 8",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 9",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 10",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 11",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 12",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 13",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 14",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 15",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 16",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 17",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 18",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 19",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 20",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 21",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 22",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 23",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 24",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 25",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 26",
+      "passed": true
+    },
+    {
+      "name": "contiguous item batch preserves pixels 27",
+      "passed": true
+    },
+    {
+      "name": "item uniforms reset outside batch",
+      "passed": true
+    },
+    {
+      "name": "state preview renderer initializes",
+      "passed": true
+    },
+    {
+      "name": "icon sampling restores caller viewport, scissor and active unit",
+      "passed": true
+    },
+    {
+      "name": "icon sampling rejects mismatched source dimensions",
+      "passed": true
+    },
+    {
+      "name": "icon coverage averages in linear light then encodes once",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-swing-male-0 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-swing-male-1 actual FP geometry and palm contact",
+      "passed": false
+    },
+    {
+      "name": "iron_axe-swing-male-2 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-swing-female-0 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-swing-female-1 actual FP geometry and palm contact",
+      "passed": false
+    },
+    {
+      "name": "iron_axe-swing-female-2 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "iron_axe FP male right",
+      "passed": true
+    },
+    {
+      "name": "iron_axe FP male left",
+      "passed": true
+    },
+    {
+      "name": "iron_axe FP female right",
+      "passed": true
+    },
+    {
+      "name": "iron_axe FP female left",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_axe both carried contacts agree with observed draw transform",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_axe-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-swing-male-0 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-swing-male-1 actual FP geometry and palm contact",
+      "passed": false
+    },
+    {
+      "name": "iron_hoe-swing-male-2 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-swing-female-0 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-swing-female-1 actual FP geometry and palm contact",
+      "passed": false
+    },
+    {
+      "name": "iron_hoe-swing-female-2 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe FP male right",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe FP male left",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe FP female right",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe FP female left",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe both carried contacts agree with observed draw transform",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_hoe-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-swing-male-0 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-swing-male-1 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-swing-male-2 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-swing-female-0 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-swing-female-1 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-swing-female-2 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe FP male right",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe FP male left",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe FP female right",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe FP female left",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe both carried contacts agree with observed draw transform",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_pickaxe-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-swing-male-0 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-swing-male-1 actual FP geometry and palm contact",
+      "passed": false
+    },
+    {
+      "name": "iron_shovel-swing-male-2 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-swing-female-0 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-swing-female-1 actual FP geometry and palm contact",
+      "passed": false
+    },
+    {
+      "name": "iron_shovel-swing-female-2 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel FP male right",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel FP male left",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel FP female right",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel FP female left",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel both carried contacts agree with observed draw transform",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_shovel-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-swing-male-0 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-swing-male-1 actual FP geometry and palm contact",
+      "passed": false
+    },
+    {
+      "name": "iron_sword-swing-male-2 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-swing-female-0 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-swing-female-1 actual FP geometry and palm contact",
+      "passed": false
+    },
+    {
+      "name": "iron_sword-swing-female-2 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "iron_sword FP male right",
+      "passed": true
+    },
+    {
+      "name": "iron_sword FP male left",
+      "passed": true
+    },
+    {
+      "name": "iron_sword FP female right",
+      "passed": true
+    },
+    {
+      "name": "iron_sword FP female left",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_sword both carried contacts agree with observed draw transform",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "iron_sword-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "shears-swing-male-0 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "shears-swing-male-1 actual FP geometry and palm contact",
+      "passed": false
+    },
+    {
+      "name": "shears-swing-male-2 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "shears-swing-female-0 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "shears-swing-female-1 actual FP geometry and palm contact",
+      "passed": false
+    },
+    {
+      "name": "shears-swing-female-2 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "shears FP male right",
+      "passed": true
+    },
+    {
+      "name": "shears FP male left",
+      "passed": true
+    },
+    {
+      "name": "shears FP female right",
+      "passed": true
+    },
+    {
+      "name": "shears FP female left",
+      "passed": true
+    },
+    {
+      "name": "shears-state-0 orbit",
+      "passed": true
+    },
+    {
+      "name": "shears-state-0 TP male right",
+      "passed": true
+    },
+    {
+      "name": "shears-state-0 TP male left",
+      "passed": true
+    },
+    {
+      "name": "shears-state-0 FP male",
+      "passed": true
+    },
+    {
+      "name": "shears-state-0 TP female right",
+      "passed": true
+    },
+    {
+      "name": "shears-state-0 TP female left",
+      "passed": true
+    },
+    {
+      "name": "shears-state-0 FP female",
+      "passed": true
+    },
+    {
+      "name": "shears-state-1 orbit",
+      "passed": true
+    },
+    {
+      "name": "shears-state-1 TP male right",
+      "passed": true
+    },
+    {
+      "name": "shears-state-1 TP male left",
+      "passed": true
+    },
+    {
+      "name": "shears-state-1 FP male",
+      "passed": true
+    },
+    {
+      "name": "shears-state-1 TP female right",
+      "passed": true
+    },
+    {
+      "name": "shears-state-1 TP female left",
+      "passed": true
+    },
+    {
+      "name": "shears-state-1 FP female",
+      "passed": true
+    },
+    {
+      "name": "shears-state-2 orbit",
+      "passed": true
+    },
+    {
+      "name": "shears-state-2 TP male right",
+      "passed": true
+    },
+    {
+      "name": "shears-state-2 TP male left",
+      "passed": true
+    },
+    {
+      "name": "shears-state-2 FP male",
+      "passed": true
+    },
+    {
+      "name": "shears-state-2 TP female right",
+      "passed": true
+    },
+    {
+      "name": "shears-state-2 TP female left",
+      "passed": true
+    },
+    {
+      "name": "shears-state-2 FP female",
+      "passed": true
+    },
+    {
+      "name": "shears-state-3 orbit",
+      "passed": true
+    },
+    {
+      "name": "shears-state-3 TP male right",
+      "passed": true
+    },
+    {
+      "name": "shears-state-3 TP male left",
+      "passed": true
+    },
+    {
+      "name": "shears-state-3 FP male",
+      "passed": true
+    },
+    {
+      "name": "shears-state-3 TP female right",
+      "passed": true
+    },
+    {
+      "name": "shears-state-3 TP female left",
+      "passed": true
+    },
+    {
+      "name": "shears-state-3 FP female",
+      "passed": true
+    },
+    {
+      "name": "shears active state changes rendered pixels",
+      "passed": true
+    },
+    {
+      "name": "shears cancellation restores rendered pixels",
+      "passed": true
+    },
+    {
+      "name": "shears-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "shears-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "shears-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "shears-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "shears-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "shears-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "shears-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "shears-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "shears-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "shears-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "shears-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "shears-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "shears-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "shears-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "shears-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "shears-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "shears both carried contacts agree with observed draw transform",
+      "passed": true
+    },
+    {
+      "name": "shears-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "shears-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "shears-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "shears-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "shears-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "shears-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "shears-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "shears-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "waterskin-swing-male-0 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "waterskin-swing-male-1 actual FP geometry and palm contact",
+      "passed": false
+    },
+    {
+      "name": "waterskin-swing-male-2 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "waterskin-swing-female-0 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "waterskin-swing-female-1 actual FP geometry and palm contact",
+      "passed": false
+    },
+    {
+      "name": "waterskin-swing-female-2 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "waterskin FP male right",
+      "passed": true
+    },
+    {
+      "name": "waterskin FP male left",
+      "passed": true
+    },
+    {
+      "name": "waterskin FP female right",
+      "passed": true
+    },
+    {
+      "name": "waterskin FP female left",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-0 orbit",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-0 TP male right",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-0 TP male left",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-0 FP male",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-0 TP female right",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-0 TP female left",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-0 FP female",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-1 orbit",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-1 TP male right",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-1 TP male left",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-1 FP male",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-1 TP female right",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-1 TP female left",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-1 FP female",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-2 orbit",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-2 TP male right",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-2 TP male left",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-2 FP male",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-2 TP female right",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-2 TP female left",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-2 FP female",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-3 orbit",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-3 TP male right",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-3 TP male left",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-3 FP male",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-3 TP female right",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-3 TP female left",
+      "passed": true
+    },
+    {
+      "name": "waterskin-state-3 FP female",
+      "passed": true
+    },
+    {
+      "name": "waterskin active state changes rendered pixels",
+      "passed": true
+    },
+    {
+      "name": "waterskin cancellation restores rendered pixels",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-male-0 visible",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-male-0 remains inside frame",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-male-1 visible",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-male-1 remains inside frame",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-male-2 visible",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-male-2 remains inside frame",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-male-3 visible",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-male-3 remains inside frame",
+      "passed": true
+    },
+    {
+      "name": "waterskin consume male raises item",
+      "passed": true
+    },
+    {
+      "name": "waterskin consume male moves toward mouth height",
+      "passed": false
+    },
+    {
+      "name": "waterskin consume male holds pose until release",
+      "passed": true
+    },
+    {
+      "name": "waterskin consume male cancellation restores pose",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-female-0 visible",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-female-0 remains inside frame",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-female-1 visible",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-female-1 remains inside frame",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-female-2 visible",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-female-2 remains inside frame",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-female-3 visible",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-female-3 remains inside frame",
+      "passed": true
+    },
+    {
+      "name": "waterskin consume female raises item",
+      "passed": true
+    },
+    {
+      "name": "waterskin consume female moves toward mouth height",
+      "passed": false
+    },
+    {
+      "name": "waterskin consume female holds pose until release",
+      "passed": true
+    },
+    {
+      "name": "waterskin consume female cancellation restores pose",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-0 capture 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-0 actual item framed 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-0 contact outside face 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-0 capture 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-0 actual item framed 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-0 contact outside face 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-0 capture 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-0 actual item framed 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-0 contact outside face 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-0 capture 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-0 actual item framed 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-0 contact outside face 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-0 raises item in world space",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-0 pose changes",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-0 hold contact persists",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-0 cancel restores pose",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-90 capture 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-90 actual item framed 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-90 contact outside face 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-90 capture 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-90 actual item framed 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-90 contact outside face 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-90 capture 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-90 actual item framed 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-90 contact outside face 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-90 capture 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-90 actual item framed 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-90 contact outside face 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-90 raises item in world space",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-90 pose changes",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-90 hold contact persists",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-90 cancel restores pose",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-180 capture 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-180 actual item framed 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-180 contact outside face 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-180 capture 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-180 actual item framed 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-180 contact outside face 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-180 capture 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-180 actual item framed 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-180 contact outside face 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-180 capture 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-180 actual item framed 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-180 contact outside face 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-180 raises item in world space",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-180 pose changes",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-180 hold contact persists",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-still-180 cancel restores pose",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-0 capture 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-0 actual item framed 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-0 contact outside face 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-0 capture 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-0 actual item framed 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-0 contact outside face 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-0 capture 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-0 actual item framed 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-0 contact outside face 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-0 capture 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-0 actual item framed 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-0 contact outside face 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-0 raises item in world space",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-0 pose changes",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-0 hold contact persists",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-0 cancel restores pose",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-90 capture 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-90 actual item framed 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-90 contact outside face 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-90 capture 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-90 actual item framed 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-90 contact outside face 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-90 capture 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-90 actual item framed 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-90 contact outside face 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-90 capture 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-90 actual item framed 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-90 contact outside face 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-90 raises item in world space",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-90 pose changes",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-90 hold contact persists",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-90 cancel restores pose",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-180 capture 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-180 actual item framed 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-180 contact outside face 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-180 capture 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-180 actual item framed 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-180 contact outside face 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-180 capture 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-180 actual item framed 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-180 contact outside face 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-180 capture 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-180 actual item framed 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-180 contact outside face 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-180 raises item in world space",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-180 pose changes",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-180 hold contact persists",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-male-walk-180 cancel restores pose",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-0 capture 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-0 actual item framed 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-0 contact outside face 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-0 capture 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-0 actual item framed 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-0 contact outside face 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-0 capture 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-0 actual item framed 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-0 contact outside face 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-0 capture 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-0 actual item framed 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-0 contact outside face 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-0 raises item in world space",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-0 pose changes",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-0 hold contact persists",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-0 cancel restores pose",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-90 capture 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-90 actual item framed 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-90 contact outside face 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-90 capture 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-90 actual item framed 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-90 contact outside face 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-90 capture 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-90 actual item framed 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-90 contact outside face 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-90 capture 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-90 actual item framed 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-90 contact outside face 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-90 raises item in world space",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-90 pose changes",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-90 hold contact persists",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-90 cancel restores pose",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-180 capture 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-180 actual item framed 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-180 contact outside face 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-180 capture 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-180 actual item framed 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-180 contact outside face 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-180 capture 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-180 actual item framed 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-180 contact outside face 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-180 capture 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-180 actual item framed 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-180 contact outside face 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-180 raises item in world space",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-180 pose changes",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-180 hold contact persists",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-still-180 cancel restores pose",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-0 capture 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-0 actual item framed 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-0 contact outside face 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-0 capture 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-0 actual item framed 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-0 contact outside face 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-0 capture 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-0 actual item framed 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-0 contact outside face 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-0 capture 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-0 actual item framed 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-0 contact outside face 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-0 raises item in world space",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-0 pose changes",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-0 hold contact persists",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-0 cancel restores pose",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-90 capture 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-90 actual item framed 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-90 contact outside face 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-90 capture 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-90 actual item framed 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-90 contact outside face 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-90 capture 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-90 actual item framed 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-90 contact outside face 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-90 capture 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-90 actual item framed 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-90 contact outside face 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-90 raises item in world space",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-90 pose changes",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-90 hold contact persists",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-90 cancel restores pose",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-180 capture 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-180 actual item framed 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-180 contact outside face 0",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-180 capture 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-180 actual item framed 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-180 contact outside face 1",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-180 capture 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-180 actual item framed 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-180 contact outside face 2",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-180 capture 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-180 actual item framed 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-180 contact outside face 3",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-180 raises item in world space",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-180 pose changes",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-180 hold contact persists",
+      "passed": true
+    },
+    {
+      "name": "waterskin-consume-tp-female-walk-180 cancel restores pose",
+      "passed": true
+    },
+    {
+      "name": "waterskin-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "waterskin-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "waterskin-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "waterskin-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "waterskin-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "waterskin-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "waterskin-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "waterskin-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "waterskin-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "waterskin-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "waterskin-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "waterskin-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "waterskin-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "waterskin-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "waterskin-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "waterskin-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "waterskin both carried contacts agree with observed draw transform",
+      "passed": true
+    },
+    {
+      "name": "waterskin-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "waterskin-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "waterskin-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "waterskin-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "waterskin-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "waterskin-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "waterskin-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "waterskin-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-swing-male-0 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-swing-male-1 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-swing-male-2 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-swing-female-0 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-swing-female-1 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-swing-female-2 actual FP geometry and palm contact",
+      "passed": true
+    },
+    {
+      "name": "wood_spear FP male right",
+      "passed": true
+    },
+    {
+      "name": "wood_spear FP male left",
+      "passed": true
+    },
+    {
+      "name": "wood_spear FP female right",
+      "passed": true
+    },
+    {
+      "name": "wood_spear FP female left",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-male-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-male-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-male-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-male-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-male-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-male-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-male-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-male-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-female-right-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-female-right-0 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-female-left-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-female-left-0 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-female-right-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-female-right-1 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-female-left-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-female-left-1 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_spear both carried contacts agree with observed draw transform",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-loose-0 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-loose-0 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-loose-1 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-loose-1 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-loose-2 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-loose-2 capture",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-loose-3 draws item surface",
+      "passed": true
+    },
+    {
+      "name": "wood_spear-loose-3 capture",
+      "passed": true
+    },
+    {
+      "name": "all requested item surfaces inspected",
+      "passed": true
+    }
+  ],
+  "color_pipeline": {
+    "filtered_encoded_rgb": 188,
+    "half_factor_encoded_rgb": 137,
+    "mip_encoded_rgb": 188
+  },
+  "consumption_tp": {
+    "waterskin-consume-tp-female-still-0": {
+      "item_center_y": [
+        1.1301106214523315,
+        1.4088866710662842,
+        1.4088866710662842,
+        1.1301106214523315
+      ]
+    },
+    "waterskin-consume-tp-female-still-180": {
+      "item_center_y": [
+        1.1301106214523315,
+        1.4088866710662842,
+        1.4088866710662842,
+        1.1301106214523315
+      ]
+    },
+    "waterskin-consume-tp-female-still-90": {
+      "item_center_y": [
+        1.1301106214523315,
+        1.4088866710662842,
+        1.4088866710662842,
+        1.1301106214523315
+      ]
+    },
+    "waterskin-consume-tp-female-walk-0": {
+      "item_center_y": [
+        1.0345155000686646,
+        1.3132916688919067,
+        1.3132916688919067,
+        1.0345155000686646
+      ]
+    },
+    "waterskin-consume-tp-female-walk-180": {
+      "item_center_y": [
+        1.0345155000686646,
+        1.3132916688919067,
+        1.3132916688919067,
+        1.0345155000686646
+      ]
+    },
+    "waterskin-consume-tp-female-walk-90": {
+      "item_center_y": [
+        1.0345155000686646,
+        1.3132916688919067,
+        1.3132916688919067,
+        1.0345155000686646
+      ]
+    },
+    "waterskin-consume-tp-male-still-0": {
+      "item_center_y": [
+        1.1359903812408447,
+        1.4014041423797607,
+        1.4014041423797607,
+        1.1359903812408447
+      ]
+    },
+    "waterskin-consume-tp-male-still-180": {
+      "item_center_y": [
+        1.1359903812408447,
+        1.4014041423797607,
+        1.4014041423797607,
+        1.1359903812408447
+      ]
+    },
+    "waterskin-consume-tp-male-still-90": {
+      "item_center_y": [
+        1.1359903812408447,
+        1.4014041423797607,
+        1.4014041423797607,
+        1.1359903812408447
+      ]
+    },
+    "waterskin-consume-tp-male-walk-0": {
+      "item_center_y": [
+        1.0403952598571777,
+        1.3058091402053833,
+        1.3058091402053833,
+        1.0403952598571777
+      ]
+    },
+    "waterskin-consume-tp-male-walk-180": {
+      "item_center_y": [
+        1.0403952598571777,
+        1.3058091402053833,
+        1.3058091402053833,
+        1.0403952598571777
+      ]
+    },
+    "waterskin-consume-tp-male-walk-90": {
+      "item_center_y": [
+        1.0403952598571777,
+        1.3058091402053833,
+        1.3058091402053833,
+        1.0403952598571777
+      ]
+    }
+  },
+  "icon_sampling": {
+    "encoded_checker_rgb": 188,
+    "samples_per_pixel": 16
+  },
+  "inventory_unchanged": true,
+  "passed": false,
+  "scope": "synthetic native attachments and loose item submissions",
+  "state_ids": [
+    "shears",
+    "waterskin"
+  ],
+  "surface_count": 8,
+  "surface_ids": [
+    "iron_axe",
+    "iron_hoe",
+    "iron_pickaxe",
+    "iron_shovel",
+    "iron_sword",
+    "shears",
+    "waterskin",
+    "wood_spear"
+  ]
+}

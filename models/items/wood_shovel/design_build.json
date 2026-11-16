@@ -3,7 +3,7 @@
   "version": 3,
   "triangles": 340,
   "sources": {
-    "tools/item_designs/wood_shovel/design.yaml": "7e90b8c0b0490e38543b116a1610e0e7e25feeaa0243add5b8ee975b06a152d3",
+    "tools/item_designs/wood_shovel/design.yaml": "413925034be2b280e9cf76d9027303040c1c6e1cd1b39e58aed5043734c2cdec",
     "tools/item_designs/provenance.json": "021d0a020e5b9e24c0b059ecf54f87f54c3de052b6da214d0ad0687ec9ed2b45",
     "LICENSE": "d5b2c2cdb51ab4c8b124dfab74f936267098953b3e78afdf67ad89b11d71006e"
   },
@@ -38,7 +38,7 @@
       "tools/itemgen/mesh.py": "ebd7ed9b272b6fdadc95018c278868a7a52ea9f7fdd4f610f70b35e9cea63410",
       "tools/itemgen/pilot_designs.py": "f5c4ebc522c06d058bdf005b136adb33e9be3283515b1993d6adb00525b6c25d",
       "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-      "tools/itemgen/presentation.py": "fdea0aeed83ef3ccc6dd38e55ade896d7cd5a473138e9a20922d9daa27c586a2",
+      "tools/itemgen/presentation.py": "116d46b9edf49a6fb19be715c034fd10d3947932c1a0d54f5950165f3b31a3b6",
       "tools/itemgen/preview.py": "f707ee5f6389bfc74704cdce31dff47e316c9085a980dd2668abf43bd29ace3a",
       "tools/itemgen/quality.py": "105852852307434143a244e3786da15a92c3f6faf2540716dab5278fe854c2aa",
       "tools/itemgen/raster.py": "8974c41252e04b030d39b6bf42b160ded4a927f11bb1a073e830f30e01603fa1",
@@ -57,7 +57,7 @@
     "ATTRIBUTION.json": "ad81aa6da776d3c5d48535bbea39dfae4f241b45e51f8f3987a6dbdef48e49d9",
     "LICENSE.txt": "d5b2c2cdb51ab4c8b124dfab74f936267098953b3e78afdf67ad89b11d71006e",
     "model.bin": "e56ecb0b0f887c40059fd397f56828a6e1ab3fc156c052484c0c5fed1d0f19ba",
-    "model.gltf": "4c712ec412e99c1641eddbdef61a0712b5e58da3ddf7277156de7000a6781d95",
+    "model.gltf": "4b42e7b6e8604e8892ca5ecf533b8db4429b64532372a04c30f35bca77cbe046",
     "textures/diffuse.png": "b5b80273625123e462ce54500c3767b6db72a93efe02b4d761d6b9d7591578f8",
     "uv_layout.json": "6de6fbdd1fef39640f525172f32ae8c9e00110148bb767104bcddf27be4182b0"
   },

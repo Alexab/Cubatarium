@@ -1,0 +1,15 @@
+{
+  "ids": [
+    "shears"
+  ],
+  "light": "day",
+  "width": 1280,
+  "height": 720,
+  "scale": 1.0,
+  "interaction": "utility",
+  "perspective": "first",
+  "mode": "survival",
+  "body": "male",
+  "subject": "item",
+  "hand": "right"
+}

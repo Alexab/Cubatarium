@@ -1,0 +1,884 @@
+{
+  "checks": [
+    {
+      "name": "iron_axe equipped instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "iron_axe equipped exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "iron_axe equipped expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "iron_axe windup instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "iron_axe windup exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "iron_axe windup expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "iron_axe windup hand occupancy supplied by gameplay",
+      "passed": true
+    },
+    {
+      "name": "iron_axe windup carrying uses the actual world skeleton arms",
+      "passed": true
+    },
+    {
+      "name": "iron_axe windup both TP palms are observed",
+      "passed": true
+    },
+    {
+      "name": "iron_axe windup TP palm meets actual carried model contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "iron_axe windup charge advanced through the game tick",
+      "passed": true
+    },
+    {
+      "name": "iron_axe canceled instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "iron_axe canceled exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "iron_axe canceled expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "iron_axe canceled hand occupancy supplied by gameplay",
+      "passed": true
+    },
+    {
+      "name": "iron_axe canceled carrying uses the actual world skeleton arms",
+      "passed": true
+    },
+    {
+      "name": "iron_axe canceled both TP palms are observed",
+      "passed": true
+    },
+    {
+      "name": "iron_axe canceled TP palm meets actual carried model contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "iron_axe canceled Escape canceled charge while preserving cargo",
+      "passed": true
+    },
+    {
+      "name": "iron_axe placed instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "iron_axe placed exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "iron_axe placed expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "iron_axe placed placed body remains available for grab",
+      "passed": true
+    },
+    {
+      "name": "iron_axe grabbed instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "iron_axe grabbed exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "iron_axe grabbed expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "iron_axe grabbed hand occupancy supplied by gameplay",
+      "passed": true
+    },
+    {
+      "name": "iron_axe grabbed carrying uses the actual world skeleton arms",
+      "passed": true
+    },
+    {
+      "name": "iron_axe grabbed both TP palms are observed",
+      "passed": true
+    },
+    {
+      "name": "iron_axe grabbed TP palm meets actual carried model contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "iron_axe rewound instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "iron_axe rewound exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "iron_axe rewound expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "iron_axe rewound hand occupancy supplied by gameplay",
+      "passed": true
+    },
+    {
+      "name": "iron_axe rewound carrying uses the actual world skeleton arms",
+      "passed": true
+    },
+    {
+      "name": "iron_axe rewound both TP palms are observed",
+      "passed": true
+    },
+    {
+      "name": "iron_axe rewound TP palm meets actual carried model contact without stretching",
+      "passed": true
+    },
+    {
+      "name": "iron_axe rewound charge advanced through the game tick",
+      "passed": true
+    },
+    {
+      "name": "iron_axe rewound R release supplies a real flight impulse before collision resolution",
+      "passed": true
+    },
+    {
+      "name": "iron_axe released instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "iron_axe released exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "iron_axe released expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "iron_axe released released finite body still exists",
+      "passed": true
+    },
+    {
+      "name": "iron_axe landed instance, wear and contents preserved",
+      "passed": true
+    },
+    {
+      "name": "iron_axe landed exactly one finite unit across inventory and world",
+      "passed": true
+    },
+    {
+      "name": "iron_axe landed expected ownership of hands",
+      "passed": true
+    },
+    {
+      "name": "iron_axe landed released finite body still exists",
+      "passed": true
+    },
+    {
+      "name": "iron_axe landed released body reaches support",
+      "passed": true
+    }
+  ],
+  "frames": [
+    {
+      "active_count": 1,
+      "active_item": "iron_axe",
+      "bow_charge": 0.0,
+      "camera_front": [
+        -4.275619147620091e-08,
+        -0.20791170001029968,
+        0.9781476259231567
+      ],
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "iron_axe-equipped.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 0,
+          "grip_ndc_gap": 1.9082797564351495e-07,
+          "has_ammo": false,
+          "has_water": false,
+          "id": "iron_axe",
+          "left": false,
+          "model_world": [
+            0.030998652800917625,
+            -0.3395826816558838,
+            -1.273456335067749,
+            -2.450050033075968e-06,
+            -0.13427016139030457,
+            1.266366958618164,
+            -0.3409608006477356,
+            -5.656386861119245e-07,
+            1.3110984563827515,
+            0.1377180516719818,
+            -0.004809263162314892,
+            -3.9289119513341575e-08,
+            0.4522271156311035,
+            -0.424238920211792,
+            -1.0333830118179321,
+            0.9999983906745911
+          ],
+          "use_phase": 0.0,
+          "view_forward": [
+            0.049386486411094666,
+            -0.1481594443321228,
+            -0.9877296686172485
+          ],
+          "visible_primitives": 5
+        }
+      ],
+      "has_wield_palm": false,
+      "id": "iron_axe",
+      "left_palm_ndc_gap": 0.985997200012207,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 0.7523128986358643,
+      "stage": "equipped",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.3700000047683716,
+      "wield_palm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "world_items": []
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "camera_front": [
+        -4.275619147620091e-08,
+        -0.20791170001029968,
+        0.9781476259231567
+      ],
+      "carry_hands": 1,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "iron_axe-windup.png",
+      "fp_arm_backend": "world_skeleton",
+      "fp_contacts": true,
+      "fp_items": [],
+      "has_wield_palm": true,
+      "id": "iron_axe",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 2.398404319592373e-07,
+      "stage": "windup",
+      "subject": "item",
+      "throw_charge": 0.31918179988861084,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 5.335884907253785e-07,
+          "hand": "rightItem",
+          "palm": [
+            0.07402590662240982,
+            4.293184757232666,
+            0.8428736925125122
+          ],
+          "reach_max": 0.5455366373062134,
+          "reach_min": 0.09553699195384979,
+          "shoulder": [
+            -0.2812500298023224,
+            4.536567687988281,
+            0.5274216532707214
+          ],
+          "target": [
+            0.07402592897415161,
+            4.293185234069824,
+            0.8428734540939331
+          ],
+          "target_distance": 0.5338219404220581
+        }
+      ],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "wield_palm": [
+        0.07402590662240982,
+        4.293184757232666,
+        0.8428736925125122
+      ],
+      "world_items": [
+        {
+          "first_node": "iron_axe",
+          "left_grip": [
+            -0.07402597367763519,
+            -0.1753246784210205,
+            0.0
+          ],
+          "model_world": [
+            -0.9999999403953552,
+            0.0,
+            -4.371138473402425e-08,
+            0.0,
+            -4.371138828673793e-08,
+            -4.371138828673793e-08,
+            1.0,
+            0.0,
+            -1.910685465164705e-15,
+            1.0,
+            4.371138828673793e-08,
+            0.0,
+            -4.178199120019599e-08,
+            4.293185234069824,
+            0.9558604955673218,
+            1.0
+          ],
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_axe/model.gltf",
+          "right_grip": [
+            -0.07402597367763519,
+            -0.1753246784210205,
+            0.0
+          ],
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "camera_front": [
+        -4.275619147620091e-08,
+        -0.20791170001029968,
+        0.9781476259231567
+      ],
+      "carry_hands": 1,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "iron_axe-canceled.png",
+      "fp_arm_backend": "world_skeleton",
+      "fp_contacts": true,
+      "fp_items": [],
+      "has_wield_palm": true,
+      "id": "iron_axe",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 4.7706993200336e-07,
+      "stage": "canceled",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 4.777675712830387e-07,
+          "hand": "rightItem",
+          "palm": [
+            0.074025958776474,
+            4.241505146026611,
+            0.9099745750427246
+          ],
+          "reach_max": 0.5455368161201477,
+          "reach_min": 0.09553647041320801,
+          "shoulder": [
+            -0.2812500298023224,
+            4.456250190734863,
+            0.5962584018707275
+          ],
+          "target": [
+            0.07402592897415161,
+            4.241504669189453,
+            0.9099745750427246
+          ],
+          "target_distance": 0.5203407406806946
+        }
+      ],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "wield_palm": [
+        0.074025958776474,
+        4.241505146026611,
+        0.9099745750427246
+      ],
+      "world_items": [
+        {
+          "first_node": "iron_axe",
+          "left_grip": [
+            -0.07402597367763519,
+            -0.1753246784210205,
+            0.0
+          ],
+          "model_world": [
+            -0.9999999403953552,
+            0.0,
+            -4.371138473402425e-08,
+            0.0,
+            -4.371138828673793e-08,
+            -4.371138828673793e-08,
+            1.0,
+            0.0,
+            -1.910685465164705e-15,
+            1.0,
+            4.371138828673793e-08,
+            0.0,
+            -4.4715072533563216e-08,
+            4.241504669189453,
+            1.0229616165161133,
+            1.0
+          ],
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_axe/model.gltf",
+          "right_grip": [
+            -0.07402597367763519,
+            -0.1753246784210205,
+            0.0
+          ],
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "camera_front": [
+        -4.275619147620091e-08,
+        -0.20791170001029968,
+        0.9781476259231567
+      ],
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "iron_axe-placed.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "has_wield_palm": true,
+      "id": "iron_axe",
+      "left_palm_ndc_gap": 0.9747934341430664,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.8889334201812744,
+      "stage": "placed",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "wield_palm": [
+        0.074025958776474,
+        4.241505146026611,
+        0.9099745750427246
+      ],
+      "world_items": [
+        {
+          "first_node": "iron_axe",
+          "left_grip": [
+            -0.07402597367763519,
+            -0.1753246784210205,
+            0.0
+          ],
+          "model_world": [
+            0.9928727746009827,
+            0.0,
+            -0.11917897313833237,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.11917897313833237,
+            0.0,
+            0.9928727746009827,
+            0.0,
+            -4.4715072533563216e-08,
+            3.8077950477600098,
+            1.0229616165161133,
+            1.0
+          ],
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_axe/model.gltf",
+          "right_grip": [
+            -0.07402597367763519,
+            -0.1753246784210205,
+            0.0
+          ],
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "camera_front": [
+        -2.8412095787189173e-08,
+        -0.7599402070045471,
+        0.6499930024147034
+      ],
+      "carry_hands": 1,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "iron_axe-grabbed.png",
+      "fp_arm_backend": "world_skeleton",
+      "fp_contacts": true,
+      "fp_items": [],
+      "has_wield_palm": true,
+      "id": "iron_axe",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 6.244724204407248e-08,
+      "stage": "grabbed",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 2.5122932356680394e-07,
+          "hand": "rightItem",
+          "palm": [
+            0.07402599602937698,
+            3.9250030517578125,
+            0.5683119893074036
+          ],
+          "reach_max": 0.5455365777015686,
+          "reach_min": 0.0955364853143692,
+          "shoulder": [
+            -0.2812500298023224,
+            4.32058572769165,
+            0.6650398969650269
+          ],
+          "target": [
+            0.0740259438753128,
+            3.9250028133392334,
+            0.5683119297027588
+          ],
+          "target_distance": 0.5404286980628967
+        }
+      ],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "wield_palm": [
+        0.07402599602937698,
+        3.9250030517578125,
+        0.5683119893074036
+      ],
+      "world_items": [
+        {
+          "first_node": "iron_axe",
+          "left_grip": [
+            -0.07402597367763519,
+            -0.1753246784210205,
+            0.0
+          ],
+          "model_world": [
+            -0.9999999403953552,
+            0.0,
+            -4.371138473402425e-08,
+            0.0,
+            -4.371138828673793e-08,
+            -4.371138828673793e-08,
+            1.0,
+            0.0,
+            -1.910685465164705e-15,
+            1.0,
+            4.371138828673793e-08,
+            0.0,
+            -2.9780521160205353e-08,
+            3.9250028133392334,
+            0.6812989115715027,
+            1.0
+          ],
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_axe/model.gltf",
+          "right_grip": [
+            -0.07402597367763519,
+            -0.1753246784210205,
+            0.0
+          ],
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "camera_front": [
+        -4.354505378501017e-08,
+        -0.08715573698282242,
+        0.9961947202682495
+      ],
+      "carry_hands": 1,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "iron_axe-rewound.png",
+      "fp_arm_backend": "world_skeleton",
+      "fp_contacts": true,
+      "fp_items": [],
+      "has_wield_palm": true,
+      "id": "iron_axe",
+      "left_palm_ndc_gap": 1000000000.0,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 1.862645149230957e-08,
+      "stage": "rewound",
+      "subject": "item",
+      "throw_charge": 0.5009998083114624,
+      "time": 0.3499999940395355,
+      "tp_contacts": [
+        {
+          "gap": 6.365778659755961e-08,
+          "hand": "rightItem",
+          "palm": [
+            0.074025958776474,
+            4.436470985412598,
+            0.8206990361213684
+          ],
+          "reach_max": 0.5455365180969238,
+          "reach_min": 0.09553687274456024,
+          "shoulder": [
+            -0.2812500298023224,
+            4.572747230529785,
+            0.48684313893318176
+          ],
+          "target": [
+            0.07402593642473221,
+            4.436470985412598,
+            0.8206989765167236
+          ],
+          "target_distance": 0.5062133073806763
+        }
+      ],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "wield_palm": [
+        0.074025958776474,
+        4.436470985412598,
+        0.8206990361213684
+      ],
+      "world_items": [
+        {
+          "first_node": "iron_axe",
+          "left_grip": [
+            -0.07402597367763519,
+            -0.1753246784210205,
+            0.0
+          ],
+          "model_world": [
+            -0.9999999403953552,
+            0.0,
+            -4.371138473402425e-08,
+            0.0,
+            -4.371138828673793e-08,
+            -4.371138828673793e-08,
+            1.0,
+            0.0,
+            -1.910685465164705e-15,
+            1.0,
+            4.371138828673793e-08,
+            0.0,
+            -4.0812711432636206e-08,
+            4.436470985412598,
+            0.9336859583854675,
+            1.0
+          ],
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_axe/model.gltf",
+          "right_grip": [
+            -0.07402597367763519,
+            -0.1753246784210205,
+            0.0
+          ],
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "camera_front": [
+        -4.354505378501017e-08,
+        -0.08715573698282242,
+        0.9961947202682495
+      ],
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "iron_axe-released.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "has_wield_palm": true,
+      "id": "iron_axe",
+      "left_palm_ndc_gap": 0.9843160510063171,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.8973186016082764,
+      "stage": "released",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "wield_palm": [
+        0.074025958776474,
+        4.436470985412598,
+        0.8206990361213684
+      ],
+      "world_items": [
+        {
+          "first_node": "iron_axe",
+          "left_grip": [
+            -0.07402597367763519,
+            -0.1753246784210205,
+            0.0
+          ],
+          "model_world": [
+            1.0,
+            4.017271137968237e-08,
+            6.094039406434604e-08,
+            0.0,
+            -4.017271137968237e-08,
+            -0.3941537141799927,
+            0.9190444946289063,
+            0.0,
+            6.094039406434604e-08,
+            -0.9190444946289063,
+            -0.3941537141799927,
+            0.0,
+            -1.118757211315824e-07,
+            4.016737937927246,
+            2.559417724609375,
+            1.0
+          ],
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_axe/model.gltf",
+          "right_grip": [
+            -0.07402597367763519,
+            -0.1753246784210205,
+            0.0
+          ],
+          "visible_primitives": 5
+        }
+      ]
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "camera_front": [
+        -4.354505378501017e-08,
+        -0.08715573698282242,
+        0.9961947202682495
+      ],
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "iron_axe-landed.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "has_wield_palm": true,
+      "id": "iron_axe",
+      "left_palm_ndc_gap": 0.9930983781814575,
+      "matching_body": true,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.9049661755561829,
+      "stage": "landed",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "wield_palm": [
+        0.074025958776474,
+        4.436470985412598,
+        0.8206990361213684
+      ],
+      "world_items": [
+        {
+          "first_node": "iron_axe",
+          "left_grip": [
+            -0.07402597367763519,
+            -0.1753246784210205,
+            0.0
+          ],
+          "model_world": [
+            0.8092671036720276,
+            0.0,
+            -0.5874407887458801,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.5874407887458801,
+            0.0,
+            0.8092671036720276,
+            0.0,
+            -1.2072668198470637e-07,
+            3.8077950477600098,
+            2.761903762817383,
+            1.0
+          ],
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/iron_axe/model.gltf",
+          "right_grip": [
+            -0.07402597367763519,
+            -0.1753246784210205,
+            0.0
+          ],
+          "visible_primitives": 5
+        }
+      ]
+    }
+  ],
+  "passed": true,
+  "request": {
+    "body": "male",
+    "hand": "right",
+    "height": 720,
+    "ids": [
+      "iron_axe"
+    ],
+    "interaction": "throw",
+    "light": "day",
+    "mode": "survival",
+    "perspective": "first",
+    "scale": 1.0,
+    "subject": "item",
+    "width": 1280
+  },
+  "scope": "actual world FP and physical drop rendering"
+}

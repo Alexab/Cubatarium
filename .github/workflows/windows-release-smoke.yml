@@ -132,6 +132,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python tools/test_qa_audio_config.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tools/test_item_hand_alignment.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python tools/test_cpp_audits.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python tools/validate_item_defs.py
@@ -202,6 +204,35 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python tools/audit_native_item_world_draws.py --report bin/item_world_visual/day-1280-100-front-female/native.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Native held-item directions and palm contacts
+        if: github.event_name == 'workflow_dispatch' && inputs.native_items_qa
+        shell: pwsh
+        run: |
+          python tools/audit_item_hand_alignment.py --swing-frames bin/items_acceptance/native.json.presentations.json.frames --output bin/items_acceptance/swing-alignment.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          foreach ($qaHand in @('right', 'left')) {
+            foreach ($qaView in @('first', 'back')) {
+              python tools/run_item_world_visual_qa.py --skip-build --world OwnershipCIQA --hand $qaHand --perspective $qaView --label hand-alignment
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+              $qaCase = 'day-1280-100'
+              if ($qaView -eq 'back') { $qaCase += '-back' }
+              if ($qaHand -eq 'left') { $qaCase += '-left' }
+              $qaCase += '-hand-alignment'
+              python tools/audit_item_hand_alignment.py --report "bin/item_world_visual/$qaCase/native.json" --output "bin/item_world_visual/$qaCase/alignment.json"
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            }
+          }
+
+          foreach ($qaHand in @('right', 'left')) {
+            python tools/run_item_world_visual_qa.py --skip-build --world OwnershipCIQA --hand $qaHand --perspective front --body female --label hand-alignment
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $qaCase = 'day-1280-100-front-female'
+            if ($qaHand -eq 'left') { $qaCase += '-left' }
+            $qaCase += '-hand-alignment'
+            python tools/audit_item_hand_alignment.py --report "bin/item_world_visual/$qaCase/native.json" --output "bin/item_world_visual/$qaCase/alignment.json"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
       - name: Native manual item source and packaged comparison
         if: github.event_name == 'workflow_dispatch' && inputs.native_items_qa

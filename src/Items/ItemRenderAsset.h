@@ -43,6 +43,9 @@ struct ItemGripProfile
 {
   glm::vec3 RightGrip{0.f}, LeftGrip{0.f};
   glm::vec3 FpEulerDeg{0.f}, FpHandOffset{0.f};
+  glm::vec3 TpLeftEulerDeg{0.f}, FpUseEulerDeg{0.f}, FpUseHandOffset{0.f};
+  bool HasFpUseHandOffset{false};
+  bool HasTpLeftEuler{false}, HasFpUseEuler{false};
   glm::vec3 IconEulerDeg{0.f}, TpEulerDeg{0.f};
   glm::vec3 FpArmEulerDeg{0.f}, GroundEulerDeg{0.f};
   glm::vec3 FpAimEulerDeg{0.f}, TpAimEulerDeg{0.f};
@@ -116,7 +119,8 @@ struct ItemAssetLookupStats
 };
 ItemAssetLookupStats GetItemAssetLookupStats();
 glm::mat4 ApplyItemHandProfile(const glm::mat4 &root, const glm::vec3 &socket,
-                               const ItemGripProfile &profile, bool left);
+                               const ItemGripProfile &profile, bool left,
+                               float usePhase = 0.f);
 struct ItemVisualState
 {
   std::unordered_map<std::string, glm::mat4> NodeTransforms;

@@ -1,0 +1,963 @@
+{
+  "checks": [
+    {
+      "name": "shears equipped utility use preserves its finite instance",
+      "passed": true
+    },
+    {
+      "name": "shears equipped idle/refused utility action has no stale animation pulse",
+      "passed": true
+    },
+    {
+      "name": "shears equipped actual utility draw receives the gameplay pulse",
+      "passed": true
+    },
+    {
+      "name": "shears equipped the utility remains rendered throughout its action",
+      "passed": true
+    },
+    {
+      "name": "shears success utility use preserves its finite instance",
+      "passed": true
+    },
+    {
+      "name": "shears success successful utility action produces a real pulse",
+      "passed": true
+    },
+    {
+      "name": "shears success shearing removes real foliage and preserves the harvest",
+      "passed": true
+    },
+    {
+      "name": "shears success actual utility draw receives the gameplay pulse",
+      "passed": true
+    },
+    {
+      "name": "shears success the utility remains rendered throughout its action",
+      "passed": true
+    },
+    {
+      "name": "shears settled utility use preserves its finite instance",
+      "passed": true
+    },
+    {
+      "name": "shears settled idle/refused utility action has no stale animation pulse",
+      "passed": true
+    },
+    {
+      "name": "shears settled refusal and slot changes do not add wear",
+      "passed": true
+    },
+    {
+      "name": "shears settled actual utility draw receives the gameplay pulse",
+      "passed": true
+    },
+    {
+      "name": "shears settled the utility remains rendered throughout its action",
+      "passed": true
+    },
+    {
+      "name": "shears refused utility use preserves its finite instance",
+      "passed": true
+    },
+    {
+      "name": "shears refused idle/refused utility action has no stale animation pulse",
+      "passed": true
+    },
+    {
+      "name": "shears refused refusal and slot changes do not add wear",
+      "passed": true
+    },
+    {
+      "name": "shears refused actual utility draw receives the gameplay pulse",
+      "passed": true
+    },
+    {
+      "name": "shears refused the utility remains rendered throughout its action",
+      "passed": true
+    },
+    {
+      "name": "shears empty utility use preserves its finite instance",
+      "passed": true
+    },
+    {
+      "name": "shears empty idle/refused utility action has no stale animation pulse",
+      "passed": true
+    },
+    {
+      "name": "shears empty refusal and slot changes do not add wear",
+      "passed": true
+    },
+    {
+      "name": "shears empty utility slot cancellation selects the empty slot",
+      "passed": true
+    },
+    {
+      "name": "shears restored utility use preserves its finite instance",
+      "passed": true
+    },
+    {
+      "name": "shears restored idle/refused utility action has no stale animation pulse",
+      "passed": true
+    },
+    {
+      "name": "shears restored refusal and slot changes do not add wear",
+      "passed": true
+    },
+    {
+      "name": "shears restored actual utility draw receives the gameplay pulse",
+      "passed": true
+    },
+    {
+      "name": "shears restored the utility remains rendered throughout its action",
+      "passed": true
+    },
+    {
+      "name": "shears idle utility use preserves its finite instance",
+      "passed": true
+    },
+    {
+      "name": "shears idle idle/refused utility action has no stale animation pulse",
+      "passed": true
+    },
+    {
+      "name": "shears idle refusal and slot changes do not add wear",
+      "passed": true
+    },
+    {
+      "name": "shears idle actual utility draw receives the gameplay pulse",
+      "passed": true
+    },
+    {
+      "name": "shears idle the utility remains rendered throughout its action",
+      "passed": true
+    },
+    {
+      "name": "shears finished utility use preserves its finite instance",
+      "passed": true
+    },
+    {
+      "name": "shears finished idle/refused utility action has no stale animation pulse",
+      "passed": true
+    },
+    {
+      "name": "shears finished refusal and slot changes do not add wear",
+      "passed": true
+    },
+    {
+      "name": "shears finished actual utility draw receives the gameplay pulse",
+      "passed": true
+    },
+    {
+      "name": "shears finished the utility remains rendered throughout its action",
+      "passed": true
+    }
+  ],
+  "frames": [
+    {
+      "active_count": 1,
+      "active_item": "shears",
+      "bow_charge": 0.0,
+      "camera_front": [
+        -0.6573600172996521,
+        -0.36845022439956665,
+        0.6573600172996521
+      ],
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "shears-equipped.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 0,
+          "grip_ndc_gap": 1.884864389012364e-07,
+          "has_ammo": false,
+          "has_water": false,
+          "id": "shears",
+          "left": false,
+          "model_world": [
+            1.5949989557266235,
+            0.16753901541233063,
+            -0.005850573536008596,
+            -4.7796508084729794e-08,
+            -0.06279947608709335,
+            0.5452375411987305,
+            -1.506949782371521,
+            -2.836233761627227e-06,
+            -0.15543419122695923,
+            1.4989235401153564,
+            0.5488110184669495,
+            1.1459127335911035e-06,
+            0.4138452410697937,
+            -0.5645962357521057,
+            -1.0932371616363525,
+            0.9999982714653015
+          ],
+          "use_phase": 0.0,
+          "view_forward": [
+            0.049386486411094666,
+            -0.1481594443321228,
+            -0.9877296686172485
+          ],
+          "visible_primitives": 8
+        }
+      ],
+      "has_wield_palm": false,
+      "id": "shears",
+      "left_palm_ndc_gap": 0.9877537488937378,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 0.7540762424468994,
+      "stage": "equipped",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.3700000047683716,
+      "wield_palm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "world_items": []
+    },
+    {
+      "active_count": 1,
+      "active_item": "shears",
+      "bow_charge": 0.0,
+      "camera_front": [
+        -0.6573600172996521,
+        -0.36845022439956665,
+        0.6573600172996521
+      ],
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "shears-success.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 0,
+          "grip_ndc_gap": 2.384185791015625e-07,
+          "has_ammo": false,
+          "has_water": false,
+          "id": "shears",
+          "left": false,
+          "model_world": [
+            1.5949989557266235,
+            0.16753901541233063,
+            -0.005850573536008596,
+            -4.7796508084729794e-08,
+            -0.06279947608709335,
+            0.5452375411987305,
+            -1.506949782371521,
+            -2.836233761627227e-06,
+            -0.15543419122695923,
+            1.4989235401153564,
+            0.5488110184669495,
+            1.1459127335911035e-06,
+            0.41253989934921265,
+            -0.5697174668312073,
+            -1.0932371616363525,
+            0.9999985098838806
+          ],
+          "use_phase": 0.3321567177772522,
+          "view_forward": [
+            0.049386486411094666,
+            -0.1481594443321228,
+            -0.9877296686172485
+          ],
+          "visible_primitives": 8
+        }
+      ],
+      "has_wield_palm": false,
+      "id": "shears",
+      "left_palm_ndc_gap": 0.9929099082946777,
+      "matching_body": false,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.7594386339187622,
+      "stage": "success",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.3321567177772522,
+      "wear": 0.375,
+      "wield_palm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "world_items": [
+        {
+          "first_node": "plant_fiber",
+          "left_grip": [
+            0.0042105261236429214,
+            -0.0026315790601074696,
+            -0.0063157896511256695
+          ],
+          "model_world": [
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            -1.0,
+            -8.742277657347586e-08,
+            0.0,
+            0.0,
+            8.742277657347586e-08,
+            -1.0,
+            0.0,
+            -2.0,
+            4.100099563598633,
+            2.0,
+            1.0
+          ],
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/plant_fiber/model.gltf",
+          "right_grip": [
+            0.0042105261236429214,
+            -0.0026315790601074696,
+            -0.0063157896511256695
+          ],
+          "visible_primitives": 2
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "shears",
+      "bow_charge": 0.0,
+      "camera_front": [
+        -0.6573600172996521,
+        -0.36845022439956665,
+        0.6573600172996521
+      ],
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "shears-settled.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 0,
+          "grip_ndc_gap": 1.8128045553567063e-07,
+          "has_ammo": false,
+          "has_water": false,
+          "id": "shears",
+          "left": false,
+          "model_world": [
+            1.5949989557266235,
+            0.16753901541233063,
+            -0.005850573536008596,
+            -4.7796508084729794e-08,
+            -0.06279947608709335,
+            0.5452375411987305,
+            -1.506949782371521,
+            -2.836233761627227e-06,
+            -0.15543419122695923,
+            1.4989235401153564,
+            0.5488110184669495,
+            1.1459127335911035e-06,
+            0.40402743220329285,
+            -0.561554491519928,
+            -1.0932371616363525,
+            0.9999982714653015
+          ],
+          "use_phase": 0.0,
+          "view_forward": [
+            0.049386486411094666,
+            -0.1481594443321228,
+            -0.9877296686172485
+          ],
+          "visible_primitives": 8
+        }
+      ],
+      "has_wield_palm": false,
+      "id": "shears",
+      "left_palm_ndc_gap": 0.9801304340362549,
+      "matching_body": false,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.7476807236671448,
+      "stage": "settled",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.375,
+      "wield_palm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "world_items": [
+        {
+          "first_node": "plant_fiber",
+          "left_grip": [
+            0.0042105261236429214,
+            -0.0026315790601074696,
+            -0.0063157896511256695
+          ],
+          "model_world": [
+            0.966622531414032,
+            0.0,
+            -0.2562047243118286,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.2562047243118286,
+            0.0,
+            0.966622531414032,
+            0.0,
+            -2.0,
+            3.650080442428589,
+            2.0,
+            1.0
+          ],
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/plant_fiber/model.gltf",
+          "right_grip": [
+            0.0042105261236429214,
+            -0.0026315790601074696,
+            -0.0063157896511256695
+          ],
+          "visible_primitives": 2
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "shears",
+      "bow_charge": 0.0,
+      "camera_front": [
+        -0.6573600172996521,
+        -0.36845022439956665,
+        0.6573600172996521
+      ],
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "shears-refused.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 0,
+          "grip_ndc_gap": 3.769728778024728e-07,
+          "has_ammo": false,
+          "has_water": false,
+          "id": "shears",
+          "left": false,
+          "model_world": [
+            1.5949989557266235,
+            0.16753901541233063,
+            -0.005850573536008596,
+            -4.7796508084729794e-08,
+            -0.06279947608709335,
+            0.5452375411987305,
+            -1.506949782371521,
+            -2.836233761627227e-06,
+            -0.15543419122695923,
+            1.4989235401153564,
+            0.5488110184669495,
+            1.1459127335911035e-06,
+            0.400058776140213,
+            -0.5582222938537598,
+            -1.0932371616363525,
+            0.9999985098838806
+          ],
+          "use_phase": 0.0,
+          "view_forward": [
+            0.049386486411094666,
+            -0.1481594443321228,
+            -0.9877296686172485
+          ],
+          "visible_primitives": 8
+        }
+      ],
+      "has_wield_palm": false,
+      "id": "shears",
+      "left_palm_ndc_gap": 0.9746968746185303,
+      "matching_body": false,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.7427219748497009,
+      "stage": "refused",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.375,
+      "wield_palm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "world_items": [
+        {
+          "first_node": "plant_fiber",
+          "left_grip": [
+            0.0042105261236429214,
+            -0.0026315790601074696,
+            -0.0063157896511256695
+          ],
+          "model_world": [
+            0.9427151083946228,
+            0.0,
+            -0.33359891176223755,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.33359891176223755,
+            0.0,
+            0.9427151083946228,
+            0.0,
+            -2.0,
+            3.650080442428589,
+            2.0,
+            1.0
+          ],
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/plant_fiber/model.gltf",
+          "right_grip": [
+            0.0042105261236429214,
+            -0.0026315790601074696,
+            -0.0063157896511256695
+          ],
+          "visible_primitives": 2
+        }
+      ]
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "camera_front": [
+        -0.6573600172996521,
+        -0.36845022439956665,
+        0.6573600172996521
+      ],
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "shears-empty.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "has_wield_palm": false,
+      "id": "shears",
+      "left_palm_ndc_gap": 0.9797390103340149,
+      "matching_body": false,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.8940915465354919,
+      "stage": "empty",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "wield_palm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "world_items": [
+        {
+          "first_node": "plant_fiber",
+          "left_grip": [
+            0.0042105261236429214,
+            -0.0026315790601074696,
+            -0.0063157896511256695
+          ],
+          "model_world": [
+            0.9037253856658936,
+            0.0,
+            -0.42811259627342224,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.42811259627342224,
+            0.0,
+            0.9037253856658936,
+            0.0,
+            -2.0,
+            3.650080442428589,
+            2.0,
+            1.0
+          ],
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/plant_fiber/model.gltf",
+          "right_grip": [
+            0.0042105261236429214,
+            -0.0026315790601074696,
+            -0.0063157896511256695
+          ],
+          "visible_primitives": 2
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "shears",
+      "bow_charge": 0.0,
+      "camera_front": [
+        -0.6573600172996521,
+        -0.36845022439956665,
+        0.6573600172996521
+      ],
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "shears-restored.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 0,
+          "grip_ndc_gap": 1.884864389012364e-07,
+          "has_ammo": false,
+          "has_water": false,
+          "id": "shears",
+          "left": false,
+          "model_world": [
+            1.5949989557266235,
+            0.16753901541233063,
+            -0.005850573536008596,
+            -4.7796508084729794e-08,
+            -0.06279947608709335,
+            0.5452375411987305,
+            -1.506949782371521,
+            -2.836233761627227e-06,
+            -0.15543419122695923,
+            1.4989235401153564,
+            0.5488110184669495,
+            1.1459127335911035e-06,
+            0.39934027194976807,
+            -0.5698918700218201,
+            -1.0932371616363525,
+            0.9999982714653015
+          ],
+          "use_phase": 0.0,
+          "view_forward": [
+            0.049386486411094666,
+            -0.1481594443321228,
+            -0.9877296686172485
+          ],
+          "visible_primitives": 8
+        }
+      ],
+      "has_wield_palm": false,
+      "id": "shears",
+      "left_palm_ndc_gap": 0.9874941110610962,
+      "matching_body": false,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.7557288408279419,
+      "stage": "restored",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.375,
+      "wield_palm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "world_items": [
+        {
+          "first_node": "plant_fiber",
+          "left_grip": [
+            0.0042105261236429214,
+            -0.0026315790601074696,
+            -0.0063157896511256695
+          ],
+          "model_world": [
+            0.8576651811599731,
+            0.0,
+            -0.5142086148262024,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.5142086148262024,
+            0.0,
+            0.8576651811599731,
+            0.0,
+            -2.0,
+            3.650080442428589,
+            2.0,
+            1.0
+          ],
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/plant_fiber/model.gltf",
+          "right_grip": [
+            0.0042105261236429214,
+            -0.0026315790601074696,
+            -0.0063157896511256695
+          ],
+          "visible_primitives": 2
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "shears",
+      "bow_charge": 0.0,
+      "camera_front": [
+        -0.6573600172996521,
+        -0.36845022439956665,
+        0.6573600172996521
+      ],
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "shears-idle.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 0,
+          "grip_ndc_gap": 3.039252476355614e-07,
+          "has_ammo": false,
+          "has_water": false,
+          "id": "shears",
+          "left": false,
+          "model_world": [
+            1.5949989557266235,
+            0.16753901541233063,
+            -0.005850573536008596,
+            -4.7796508084729794e-08,
+            -0.06279947608709335,
+            0.5452375411987305,
+            -1.506949782371521,
+            -2.836233761627227e-06,
+            -0.15543419122695923,
+            1.4989235401153564,
+            0.5488110184669495,
+            1.1459127335911035e-06,
+            0.40413612127304077,
+            -0.5667256116867065,
+            -1.0932371616363525,
+            0.9999985098838806
+          ],
+          "use_phase": 0.0,
+          "view_forward": [
+            0.049386486411094666,
+            -0.1481594443321228,
+            -0.9877296686172485
+          ],
+          "visible_primitives": 8
+        }
+      ],
+      "has_wield_palm": false,
+      "id": "shears",
+      "left_palm_ndc_gap": 0.9859721064567566,
+      "matching_body": false,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.7535558938980103,
+      "stage": "idle",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.375,
+      "wield_palm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "world_items": [
+        {
+          "first_node": "plant_fiber",
+          "left_grip": [
+            0.0042105261236429214,
+            -0.0026315790601074696,
+            -0.0063157896511256695
+          ],
+          "model_world": [
+            0.8004592657089233,
+            0.0,
+            -0.5993871688842773,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.5993871688842773,
+            0.0,
+            0.8004592657089233,
+            0.0,
+            -2.0,
+            3.650080442428589,
+            2.0,
+            1.0
+          ],
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/plant_fiber/model.gltf",
+          "right_grip": [
+            0.0042105261236429214,
+            -0.0026315790601074696,
+            -0.0063157896511256695
+          ],
+          "visible_primitives": 2
+        }
+      ]
+    },
+    {
+      "active_count": 1,
+      "active_item": "shears",
+      "bow_charge": 0.0,
+      "camera_front": [
+        -0.6573600172996521,
+        -0.36845022439956665,
+        0.6573600172996521
+      ],
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "shears-finished.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 0,
+          "grip_ndc_gap": 1.3328003944934608e-07,
+          "has_ammo": false,
+          "has_water": false,
+          "id": "shears",
+          "left": false,
+          "model_world": [
+            1.5949989557266235,
+            0.16753901541233063,
+            -0.005850573536008596,
+            -4.7796508084729794e-08,
+            -0.06279947608709335,
+            0.5452375411987305,
+            -1.506949782371521,
+            -2.836233761627227e-06,
+            -0.15543419122695923,
+            1.4989235401153564,
+            0.5488110184669495,
+            1.1459127335911035e-06,
+            0.4096180498600006,
+            -0.5592288374900818,
+            -1.0932371616363525,
+            0.9999982714653015
+          ],
+          "use_phase": 0.0,
+          "view_forward": [
+            0.049386486411094666,
+            -0.1481594443321228,
+            -0.9877296686172485
+          ],
+          "visible_primitives": 8
+        }
+      ],
+      "has_wield_palm": false,
+      "id": "shears",
+      "left_palm_ndc_gap": 0.9799325466156006,
+      "matching_body": false,
+      "physical_bodies": 1,
+      "right_palm_ndc_gap": 0.7467523813247681,
+      "stage": "finished",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.375,
+      "wield_palm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "world_items": [
+        {
+          "first_node": "plant_fiber",
+          "left_grip": [
+            0.0042105261236429214,
+            -0.0026315790601074696,
+            -0.0063157896511256695
+          ],
+          "model_world": [
+            0.7358582019805908,
+            0.0,
+            -0.6771356463432312,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.6771356463432312,
+            0.0,
+            0.7358582019805908,
+            0.0,
+            -2.0,
+            3.650080442428589,
+            2.0,
+            1.0
+          ],
+          "path": "E:/Work/Home/Cubatarium/bin/models/items/plant_fiber/model.gltf",
+          "right_grip": [
+            0.0042105261236429214,
+            -0.0026315790601074696,
+            -0.0063157896511256695
+          ],
+          "visible_primitives": 2
+        }
+      ]
+    }
+  ],
+  "passed": true,
+  "qa_material_override_restored": true,
+  "request": {
+    "body": "male",
+    "hand": "right",
+    "height": 720,
+    "ids": [
+      "shears"
+    ],
+    "interaction": "utility",
+    "light": "day",
+    "mode": "survival",
+    "perspective": "first",
+    "scale": 1.0,
+    "subject": "item",
+    "width": 1280
+  },
+  "scope": "actual world FP and physical drop rendering"
+}

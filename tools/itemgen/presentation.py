@@ -6,7 +6,7 @@ import math
 def prepare_presentation(value,scale,centre):
     if not isinstance(value,dict):raise ValueError('Presentation must be an object')
     result=copy.deepcopy(value)
-    allowed={'right_grip','left_grip','fp_euler_deg','fp_hand_offset','fp_scale','icon_euler_deg','fp_arm_euler_deg','tp_euler_deg','tp_scale','ground_euler_deg','support_grip_node','fp_aim_euler_deg','tp_aim_euler_deg','carry_euler_deg','carry_right_grip','carry_left_grip'}
+    allowed={'right_grip','left_grip','fp_euler_deg','fp_hand_offset','fp_scale','icon_euler_deg','fp_arm_euler_deg','tp_euler_deg','tp_left_euler_deg','fp_use_euler_deg','fp_use_hand_offset','tp_scale','ground_euler_deg','support_grip_node','fp_aim_euler_deg','tp_aim_euler_deg','carry_euler_deg','carry_right_grip','carry_left_grip'}
     if set(result)-allowed:raise ValueError('Unknown presentation field')
     for key,value in result.items():
         if key=='support_grip_node':
