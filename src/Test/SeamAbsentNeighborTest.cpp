@@ -71,6 +71,8 @@ static int BorderFaces(bool neighbor_column_resident)
   {
     // Column (1,*,0) is generated, but only up to cy=3 (y 48..63).
     world.SetBlock(glm::ivec3(16, 50, 5), kStone);
+    world.SetKnownOpenSkyAbsentQuery([](glm::ivec3 c)
+                                    { return c.x == 1 && c.z == 0 && c.y >= 4; });
   }
   const glm::ivec3 coord(0, 4, 0);
   Expect(world.GetChunkManager().GetChunk(coord) != nullptr,
@@ -105,6 +107,8 @@ static void CheckOpenSkyLightAboveAbsentSlice()
     }
   }
   const glm::ivec3 coord(0, 3, 0);
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3 c)
+                                  { return c.x == 0 && c.z == 0 && c.y >= 4; });
   Expect(world.GetChunkManager().GetChunk(glm::ivec3(0, 4, 0)) == nullptr,
          "slice above must be absent");
   const cutum::ChunkMeshSnapshot snapshot =
@@ -129,6 +133,59 @@ static void CheckOpenSkyLightAboveAbsentSlice()
 
 int main()
 {
+  {
+    cutum::UBlockWorld incomplete;
+    incomplete.SetBlock({16, -64, 5}, kStone);
+    incomplete.SetBlock({16, 304, 5}, kStone);
+    Expect(
+        !cutum::ChunkMeshSnapshot::IsAbsentOpenSkyChunk(incomplete, {1, -3, 0}),
+        "missing interior slice below an upper resident roof is not open sky");
+  }
+  {
+    cutum::UBlockWorld world;
+    world.SetBlock({15, 64, 5}, kStone);
+    cutum::UBlockRegistry registry(nullptr, MakeDefinitions());
+    bool proof = false;
+    world.SetKnownOpenSkyAbsentQuery(
+        [&proof](glm::ivec3 c) { return proof && c == glm::ivec3(1, 4, 0); });
+    const auto before = cutum::ChunkMeshSnapshot::Capture(world, {0, 4, 0}, 1);
+    Expect(before.InputsStillValid(world),
+           "unknown absence snapshot starts current");
+    proof = true;
+    Expect(
+        !before.InputsStillValid(world),
+        "new terrain absence proof invalidates a mesh without loading a chunk");
+    Expect(cutum::ChunkMeshSnapshot::ClassifyStaleInput(
+               before.inputStampsValid, true, before.inputStamps, world,
+               before.lightHaloSignatures) ==
+               cutum::MeshApplyStaleInputReason::Geom,
+           "face absence proof changes invalidate geometry input identity");
+    const auto after = cutum::ChunkMeshSnapshot::Capture(world, {0, 4, 0}, 2);
+    Expect(after.InputsStillValid(world),
+           "new proof is stable after recapture");
+    Expect(CountPlusXFacesAtBorder(cutum::UGreedyMesher::BuildChunkMesh(before, registry)) == 0 &&
+               CountPlusXFacesAtBorder(cutum::UGreedyMesher::BuildChunkMesh(after, registry)) > 0,
+           "new proof opens the actual wall after replacing the unknown-input mesh");
+    proof = false;
+    Expect(!after.InputsStillValid(world),
+           "withdrawn proof cannot keep an old open-sky mesh current");
+  }
+  {
+    cutum::UBlockWorld world;
+    world.SetBlock({15, 64, 15}, kStone);
+    bool proof = false;
+    world.SetKnownOpenSkyAbsentQuery(
+        [&proof](glm::ivec3 c) { return proof && c == glm::ivec3(1, 5, 1); });
+    const auto before = cutum::ChunkMeshSnapshot::Capture(world, {0, 4, 0}, 1);
+    proof = true;
+    Expect(!before.InputsStillValid(world),
+           "diagonal sky proof participates in radius-2 light inputs");
+    Expect(cutum::ChunkMeshSnapshot::ClassifyStaleInput(
+               before.inputStampsValid, true, before.inputStamps, world,
+               before.lightHaloSignatures) ==
+               cutum::MeshApplyStaleInputReason::Light,
+           "diagonal proof change is a light dependency, not face geometry");
+  }
   CheckOpenSkyLightAboveAbsentSlice();
   Expect(BorderFaces(true) >= 1,
          "wall toward an absent slice of a resident column must be emitted");

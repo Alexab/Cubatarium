@@ -172,12 +172,13 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 100,
         raise RuntimeError("Release executable is in use; the running session was left intact")
     with isolated_fixture(runtime, world, artifacts) as (fixture, source_hash):
         scene = None
-        if fixture_scene in ("dry-negative-cave", "wet-negative-cave"):
+        if fixture_scene in ("dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave"):
             if yaw != 180:
                 raise ValueError("negative-cave route requires yaw 180")
             from engine_smoke_fixtures import prepare_negative_cave
             scene = prepare_negative_cave(fixture, minimum_chunks,
-                                         flooded=fixture_scene == "wet-negative-cave")
+                                         flooded=fixture_scene == "wet-negative-cave",
+                                         wide=fixture_scene == "dry-wide-negative-cave")
             (artifacts / "fixture.json").write_text(json.dumps(scene, indent=2) + "\n", encoding="utf-8")
         elif fixture_scene is not None:
             raise ValueError("unknown fixture scene")
@@ -206,9 +207,10 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 100,
         import math
         distance = minimum_chunks * 16 + 48
         angle = math.radians(yaw)
+        rise = scene.get("route_rise", 6) if scene else 6
         bot_route = {"schema": "diagnostic-flight-route.v1", "relative": True,
-                     "waypoints": [{"position": [0, 6, 0], "inspect": True},
-                                   {"position": [distance * math.cos(angle), 6,
+                     "waypoints": [{"position": [0, rise, 0], "inspect": True},
+                                   {"position": [distance * math.cos(angle), rise,
                                                  distance * math.sin(angle)], "inspect": True}]}
         bot_path = artifacts / "bot-route.json"
         bot_path.write_text(json.dumps(bot_route, indent=2) + "\n", encoding="utf-8")
@@ -288,7 +290,7 @@ def main() -> int:
     parser.add_argument("--yaw", type=float, default=180)
     parser.add_argument("--pitch", type=float, default=-25)
     parser.add_argument("--minimum-chunks", type=int, default=16)
-    parser.add_argument("--fixture-scene", choices=["dry-negative-cave", "wet-negative-cave"])
+    parser.add_argument("--fixture-scene", choices=["dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave"])
     args = parser.parse_args()
     import math
     if (not all(math.isfinite(v) for v in [args.fly_seconds, args.stop_seconds,

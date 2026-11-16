@@ -13,6 +13,12 @@ inline constexpr std::size_t kChunkMeshNeighborStampCount =
     kChunkMeshInputStampCount - 1;
 inline constexpr int kChunkMeshLightHaloRadius = 2;
 
+inline uint64_t LightHaloSignatureWithSkyEvidence(uint64_t signature,
+                                                  bool absent_open_sky)
+{
+  return absent_open_sky ? signature ^ 0x9e3779b97f4a7c15ull : signature;
+}
+
 /// Hash the exact light cells a chunk at `neighbor_offset` contributes to a
 /// center chunk's radius-2 padded light input. The signature intentionally
 /// ignores unrelated light changes in the neighbor's interior.
@@ -20,13 +26,16 @@ inline uint64_t ChunkMeshLightHaloSignatureUncached(const UChunk *neighbor,
                                                     glm::ivec3 neighbor_offset);
 
 inline uint64_t ChunkMeshLightHaloSignature(const UChunk *neighbor,
-                                           glm::ivec3 neighbor_offset)
+                                            glm::ivec3 neighbor_offset,
+                                            bool absent_open_sky = false)
 {
-  const int index = (neighbor_offset.y + 1) * 9 +
-                    (neighbor_offset.z + 1) * 3 + (neighbor_offset.x + 1);
+  const int index = (neighbor_offset.y + 1) * 9 + (neighbor_offset.z + 1) * 3 +
+                    (neighbor_offset.x + 1);
   if (index < 0 || index >= 27)
   {
-    return ChunkMeshLightHaloSignatureUncached(neighbor, neighbor_offset);
+    return LightHaloSignatureWithSkyEvidence(
+        ChunkMeshLightHaloSignatureUncached(neighbor, neighbor_offset),
+        !neighbor && absent_open_sky);
   }
   if (!neighbor)
   {
@@ -37,10 +46,11 @@ inline uint64_t ChunkMeshLightHaloSignature(const UChunk *neighbor,
     std::lock_guard<std::mutex> lock(absent_mutex);
     if (!absent_valid[index])
     {
-      absent[index] = ChunkMeshLightHaloSignatureUncached(nullptr, neighbor_offset);
+      absent[index] =
+          ChunkMeshLightHaloSignatureUncached(nullptr, neighbor_offset);
       absent_valid[index] = true;
     }
-    return absent[index];
+    return LightHaloSignatureWithSkyEvidence(absent[index], absent_open_sky);
   }
   uint64_t cached = 0;
   if (neighbor->TryGetCachedHaloSignature(index, cached))
@@ -93,9 +103,17 @@ inline uint64_t ChunkMeshLightHaloSignatureUncached(const UChunk *neighbor,
 // Captured under the same ownership as voxel/light reads. Geometry readers
 // use incarnation/content identity; the mesh's neighbor-light halo is tracked
 // separately by exact sampled-cell signatures.
-// Strategy A Phase1–Q4a: MeshGeomStamp = incarnation/content/light only.
+// Mesh face stamps also carry authoritative absence evidence. This is data
+// availability, not the neighbor's current rendering/SoftDefer state.
 // Neighbor visual residency may affect shell Capture for occlusion preview but
 // MUST NOT enter stamp equality / InputsStillValid (SoftDefer 0↔1 thrash).
+enum class MissingChunkEvidence : uint8_t
+{
+  Untracked,
+  Unknown,
+  KnownAir,
+};
+
 struct ChunkInputStamp
 {
   glm::ivec3 coord{0};
@@ -104,6 +122,9 @@ struct ChunkInputStamp
   uint64_t light{0};
   bool readsLight{true};
   bool readsContent{true};
+  // Only mesh face inputs track terrain absence evidence. Generic light
+  // read sets still validate data identity through Matches(UChunk*).
+  MissingChunkEvidence missingEvidence{MissingChunkEvidence::Untracked};
   static ChunkInputStamp Capture(glm::ivec3 coord, const UChunk *chunk,
                                  bool reads_light = true,
                                  bool reads_content = true)

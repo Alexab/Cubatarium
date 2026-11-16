@@ -592,5 +592,22 @@
     },
     "native_mutation_event_count": 0,
     "native_mutation_event_coverage": "UNTESTED: route did not trigger a new seal mutation; targeted native mutation fixture still required"
+  },
+  "absence_evidence_verification": {
+    "status": "unit_verified_native_pending",
+    "negative_controls": [
+      "build/desktop-msvc/engine-absent-proof-red-test.log: old lower-resident heuristic claims sky below a resident roof",
+      "build/desktop-msvc/engine-absence-fact-red-test.log: old stamps ignore proof transition without chunk load"
+    ],
+    "test_log": "build/desktop-msvc/engine-absence-proof-final-tests.log",
+    "passed_sets": 12,
+    "release_build": "build/desktop-msvc/engine-absence-proof-release-build.log",
+    "behavior": "world supplies terrain/IO-backed sky absence; face evidence is geometry identity; diagonal sky evidence participates in exact light-halo signatures; published meshes and queued captures both validate it",
+    "data_model": "existing MaterializeRequiredTerrainColumnSlices restores internal air residents through persisted top; no new world format introduced",
+    "next_native_case": "dry-wide-negative-cave deliberately omits internal negative air files and requires 30-block ascent through restored air before frontier flight",
+    "limitations": [
+      "proof changes are validated on capture/apply/reconciliation; immediate event scheduling and first-frame closure remain lifecycle work",
+      "not a solver proof for unknown lighting inputs"
+    ]
   }
 }

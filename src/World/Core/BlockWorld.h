@@ -30,6 +30,17 @@ public:
     return VerticalProfile;
   }
 
+  /// Main-thread capture query supplied by the owning world's terrain/IO
+  /// completion evidence. A lower resident chunk alone is not proof of sky.
+  void SetKnownOpenSkyAbsentQuery(std::function<bool(glm::ivec3)> query)
+  {
+    KnownOpenSkyAbsentQuery = std::move(query);
+  }
+  bool HasKnownOpenSkyAbsentProof(glm::ivec3 coord) const
+  {
+    return KnownOpenSkyAbsentQuery && KnownOpenSkyAbsentQuery(coord);
+  }
+
   void SetFluidDefinitions(const UBlockDefinitionStorage *definitions)
   {
     FluidDefinitions = definitions;
@@ -73,6 +84,7 @@ private:
   WorldVerticalProfile VerticalProfile{};
   const UBlockDefinitionStorage *FluidDefinitions{nullptr};
   UChunkBuffer *CaptureBuffer{nullptr};
+  std::function<bool(glm::ivec3)> KnownOpenSkyAbsentQuery;
 };
 
 } // namespace cutum

@@ -3096,7 +3096,7 @@ void UChunkMeshCache::ReconcilePublishedMeshInputs(const UBlockWorld &world,
     bool current = true;
     for (const ChunkInputStamp &stamp : it->second.PublishedGeomStamps)
     {
-      if (!stamp.Matches(chunks.GetChunk(stamp.coord)))
+      if (!ChunkMeshSnapshot::MeshInputStampMatchesWorld(stamp, world))
       {
         current = false;
         break;
@@ -3142,7 +3142,7 @@ bool UChunkMeshCache::IsPublishedMeshCurrentForInputs(
   }
   for (const ChunkInputStamp &stamp : it->second.PublishedGeomStamps)
   {
-    if (!stamp.Matches(chunks.GetChunk(stamp.coord)))
+    if (!ChunkMeshSnapshot::MeshInputStampMatchesWorld(stamp, world))
     {
       return false;
     }
@@ -3737,7 +3737,8 @@ void UChunkMeshCache::QueueMeshDependencyInvalidations(
   const bool retain_open_sky_lifecycle =
       cause && std::strcmp(cause, "enter_open_sky_boundary") == 0;
   const auto published_halo_differs_from =
-      [this, &chunks](glm::ivec3 dependent_coord, glm::ivec3 changed_coord)
+      [this, &chunks, &world](glm::ivec3 dependent_coord,
+                              glm::ivec3 changed_coord)
   {
     const auto mesh = GreedyCache.find(dependent_coord);
     if (mesh == GreedyCache.end() ||
@@ -3769,7 +3770,10 @@ void UChunkMeshCache::QueueMeshDependencyInvalidations(
           {
             const UChunk *neighbor = chunks.GetChunk(changed_coord);
             return mesh->second.MeshedLightHaloSignatures[signature_index] !=
-                   ChunkMeshLightHaloSignature(neighbor, neighbor_offset);
+                   ChunkMeshLightHaloSignature(
+                       neighbor, neighbor_offset,
+                       !neighbor && ChunkMeshSnapshot::IsAbsentOpenSkyChunk(
+                                        world, changed_coord));
           }
           ++signature_index;
         }
@@ -3898,7 +3902,10 @@ PublishedLightHaloState UChunkMeshCache::GetPublishedLightHaloState(
         const glm::ivec3 offset(dx, dy, dz);
         const UChunk *neighbor = chunks.GetChunk(chunk_coord + offset);
         if (mesh->second.MeshedLightHaloSignatures[signature_index++] !=
-            ChunkMeshLightHaloSignature(neighbor, offset))
+            ChunkMeshLightHaloSignature(
+                neighbor, offset,
+                !neighbor && ChunkMeshSnapshot::IsAbsentOpenSkyChunk(
+                                 world, chunk_coord + offset)))
         {
           return PublishedLightHaloState::DiffersFromCurrent;
         }

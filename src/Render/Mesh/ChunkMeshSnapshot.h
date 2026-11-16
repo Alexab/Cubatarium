@@ -49,9 +49,9 @@ struct ChunkMeshSnapshot
   std::array<uint8_t, kLightHaloVolume> paddedLight{};
   /// Exact per-neighbor light samples used from the outer padded halo.
   std::array<uint64_t, kChunkMeshNeighborStampCount> lightHaloSignatures{};
-  /// Bit (dy+1)*9+(dz+1)*3+(dx+1): that ABSENT neighbor chunk is open sky
-  /// above a resident column (terrain streaming never materializes air-only
-  /// slices), so light samples inside it read as full sky instead of 0.
+  /// Bit (dy+1)*9+(dz+1)*3+(dx+1): that ABSENT neighbor chunk has proven open
+  /// sky from terrain/IO completion or lies above the world ceiling, so light
+  /// samples inside it read as full sky instead of 0.
   /// Without this, top faces on a chunk's upper layer (e.g. a beach at sea
   /// level y=63) sampled light 0 and rendered black.
   uint32_t openSkyAbsentMask{0};
@@ -74,15 +74,11 @@ struct ChunkMeshSnapshot
   /// True when an ABSENT face neighbor chunk is known open air, so its shared
   /// boundary faces must be emitted instead of being hidden as Unknown:
   ///  - below the configured world floor;
-  ///  - a horizontal (X/Z) neighbor slice above everything materialized in its
-  ///    column. Terrain columns only materialize slices up to their highest
-  ///    non-air slice (see TerrainColumnUtil), so at any height step across a
-  ///    chunk border the shorter column has no slice at the taller column's
-  ///    cy. Hiding those walls left see-through slits along chunk borders.
-  /// A column with no resident slice at all stays Unknown (not streamed yet).
-  /// If the neighbor slice later materializes, its ChunkInputStamp changes and
-  /// the mesh is rebuilt.
-  /// Absent chunk lying above a resident slice of its own column.
+  ///  - a slice above the world ceiling or one with authoritative open-sky
+  ///    absence evidence from the owning world. A lower resident slice alone
+  ///    does not prove this: upper slices may still be waiting on disk/IO.
+  /// Changing absence evidence invalidates the mesh even without loading a
+  /// chunk. Neighbor drawability never participates in that identity.
   static bool IsAbsentOpenSkyChunk(const UBlockWorld &world,
                                    glm::ivec3 chunk_coord);
   static bool IsKnownAirAbsentFaceNeighbor(const UBlockWorld &world,
@@ -94,6 +90,8 @@ struct ChunkMeshSnapshot
   bool InputsStillValid(const UBlockWorld &world,
                         NeighborVisualDrawableFn neighbor_drawable = nullptr,
                         void *neighbor_drawable_ctx = nullptr) const;
+  static bool MeshInputStampMatchesWorld(const ChunkInputStamp &stamp,
+                                         const UBlockWorld &world);
 
   /// Post-N01 thrash autopsy: why InputsStillValid/catalog failed.
   /// Geom wins over Light if both halo stamps mismatch.

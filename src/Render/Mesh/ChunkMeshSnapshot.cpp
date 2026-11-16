@@ -75,12 +75,13 @@ int LightHaloFlatIndex(glm::ivec3 local)
 {
   constexpr int pad = ChunkMeshSnapshot::kLightHaloRadius;
   constexpr int size = ChunkMeshSnapshot::kLightHaloSize;
-  return (local.x + pad) + size * (local.y + pad) + size * size * (local.z + pad);
+  return (local.x + pad) + size * (local.y + pad) +
+         size * size * (local.z + pad);
 }
 
 uint64_t PaddedLightHaloSignature(
     const std::array<uint8_t, ChunkMeshSnapshot::kLightHaloVolume> &padded,
-    glm::ivec3 neighbor_offset)
+    glm::ivec3 neighbor_offset, bool absent_open_sky)
 {
   constexpr uint64_t kFnvOffset = 1469598103934665603ull;
   constexpr uint64_t kFnvPrime = 1099511628211ull;
@@ -111,7 +112,7 @@ uint64_t PaddedLightHaloSignature(
       }
     }
   }
-  return hash;
+  return LightHaloSignatureWithSkyEvidence(hash, absent_open_sky);
 }
 
 bool LightHaloSignaturesMatch(
@@ -133,7 +134,10 @@ bool LightHaloSignaturesMatch(
         const UChunk *neighbor =
             world.GetChunkManager().GetChunk(center_coord + offset);
         if (signatures[signature_index++] !=
-            ChunkMeshLightHaloSignature(neighbor, offset))
+            ChunkMeshLightHaloSignature(
+                neighbor, offset,
+                !neighbor && ChunkMeshSnapshot::IsAbsentOpenSkyChunk(
+                                 world, center_coord + offset)))
         {
           return false;
         }
@@ -141,6 +145,19 @@ bool LightHaloSignaturesMatch(
     }
   }
   return true;
+}
+
+bool MissingMeshEvidenceMatches(const ChunkInputStamp &stamp,
+                                const UBlockWorld &world, const UChunk *chunk)
+{
+  if (stamp.missingEvidence == MissingChunkEvidence::Untracked)
+    return true;
+  if (chunk)
+    return false;
+  const bool known_air =
+      stamp.coord.y < world.GetVerticalProfile().MinChunkY(CHUNK_SIZE) ||
+      ChunkMeshSnapshot::IsAbsentOpenSkyChunk(world, stamp.coord);
+  return known_air == (stamp.missingEvidence == MissingChunkEvidence::KnownAir);
 }
 
 } // namespace
@@ -153,15 +170,12 @@ bool ChunkMeshSnapshot::IsAbsentOpenSkyChunk(const UBlockWorld &world,
   {
     return false;
   }
-  const int min_cy = world.GetVerticalProfile().MinChunkY(CHUNK_SIZE);
-  for (int cy = chunk_coord.y - 1; cy >= min_cy; --cy)
-  {
-    if (chunks.GetChunk(glm::ivec3(chunk_coord.x, cy, chunk_coord.z)))
-    {
-      return true;
-    }
-  }
-  return false;
+  const auto &profile = world.GetVerticalProfile();
+  if (chunk_coord.y < profile.MinChunkY(CHUNK_SIZE))
+    return false;
+  if (chunk_coord.y > profile.MaxChunkY(CHUNK_SIZE))
+    return true;
+  return world.HasKnownOpenSkyAbsentProof(chunk_coord);
 }
 
 bool ChunkMeshSnapshot::IsKnownAirAbsentFaceNeighbor(const UBlockWorld &world,
@@ -172,12 +186,18 @@ bool ChunkMeshSnapshot::IsKnownAirAbsentFaceNeighbor(const UBlockWorld &world,
   {
     return false;
   }
-  if (axis == 1)
-  {
-    return sign < 0 &&
-           neighbor_coord.y < world.GetVerticalProfile().MinChunkY(CHUNK_SIZE);
-  }
-  return IsAbsentOpenSkyChunk(world, neighbor_coord);
+  (void)axis;
+  (void)sign;
+  return neighbor_coord.y < world.GetVerticalProfile().MinChunkY(CHUNK_SIZE) ||
+         IsAbsentOpenSkyChunk(world, neighbor_coord);
+}
+
+bool ChunkMeshSnapshot::MeshInputStampMatchesWorld(const ChunkInputStamp &stamp,
+                                                   const UBlockWorld &world)
+{
+  const UChunk *chunk = world.GetChunkManager().GetChunk(stamp.coord);
+  return stamp.Matches(chunk) &&
+         MissingMeshEvidenceMatches(stamp, world, chunk);
 }
 
 bool ChunkMeshSnapshot::InputsStillValid(
@@ -193,7 +213,7 @@ bool ChunkMeshSnapshot::InputsStillValid(
   }
   for (const auto &stamp : inputStamps)
   {
-    if (!stamp.Matches(world.GetChunkManager().GetChunk(stamp.coord)))
+    if (!MeshInputStampMatchesWorld(stamp, world))
     {
       return false;
     }
@@ -221,12 +241,12 @@ MeshApplyStaleInputReason ChunkMeshSnapshot::ClassifyStaleInput(
       continue;
     }
     const UChunk *chunk = world.GetChunkManager().GetChunk(stamp.coord);
-    const ChunkInputStamp current =
-        ChunkInputStamp::Capture(stamp.coord, chunk, stamp.readsLight,
-                                 stamp.readsContent);
+    const ChunkInputStamp current = ChunkInputStamp::Capture(
+        stamp.coord, chunk, stamp.readsLight, stamp.readsContent);
     if (stamp.readsContent &&
         (stamp.incarnation != current.incarnation ||
-         stamp.content != current.content))
+         stamp.content != current.content ||
+         !MissingMeshEvidenceMatches(stamp, world, chunk)))
     {
       any_geom = true;
     }
@@ -257,9 +277,8 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
   const auto note_slow_stage = [&](const char *stage)
   {
     const auto now = std::chrono::steady_clock::now();
-    const double elapsed_ms = std::chrono::duration<double, std::milli>(
-                                  now - stage_t0)
-                                  .count();
+    const double elapsed_ms =
+        std::chrono::duration<double, std::milli>(now - stage_t0).count();
     constexpr double kSlowCaptureLogThresholdMs = 25.0;
     if (elapsed_ms >= kSlowCaptureLogThresholdMs)
     {
@@ -286,7 +305,11 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
   snapshot.fluid_packed = chunk->GetFluidData();
   snapshot.light_packed = chunk->GetLightData();
   note_slow_stage("center_chunk_copy");
-  if (const char *trace_env = []() -> const char * { static const char *const v = std::getenv("CUBA_TRACE_CHUNK"); return v; }())
+  if (const char *trace_env = []() -> const char *
+      {
+        static const char *const v = std::getenv("CUBA_TRACE_CHUNK");
+        return v;
+      }())
   {
     int tx = 0, ty = 0, tz = 0;
     if (std::sscanf(trace_env, "%d,%d,%d", &tx, &ty, &tz) == 3 &&
@@ -351,8 +374,10 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
             }
           }
         }
-        if ((dx != 0 || dy != 0 || dz != 0) && !light_chunk &&
-            IsAbsentOpenSkyChunk(world, chunkCoord + chunk_offset))
+        const bool absent_open_sky =
+            (dx != 0 || dy != 0 || dz != 0) && !light_chunk &&
+            IsAbsentOpenSkyChunk(world, chunkCoord + chunk_offset);
+        if (absent_open_sky)
         {
           snapshot.openSkyAbsentMask |=
               1u << ((dy + 1) * 9 + (dz + 1) * 3 + (dx + 1));
@@ -360,7 +385,8 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
         if (dx != 0 || dy != 0 || dz != 0)
         {
           snapshot.lightHaloSignatures[signature_index++] =
-              PaddedLightHaloSignature(snapshot.paddedLight, chunk_offset);
+              PaddedLightHaloSignature(snapshot.paddedLight, chunk_offset,
+                                       absent_open_sky);
         }
       }
     }
@@ -389,6 +415,10 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
           ChunkInputStamp::Capture(neighbor_coord, neighbor_chunk,
                                    /*reads_light=*/false,
                                    /*reads_content=*/true);
+      if (!neighbor_loaded)
+        snapshot.inputStamps[static_cast<size_t>(face + 1)].missingEvidence =
+            known_world_exterior ? MissingChunkEvidence::KnownAir
+                                 : MissingChunkEvidence::Unknown;
       bool neighbor_visually_drawable = neighbor_loaded;
       if (neighbor_loaded && neighbor_drawable)
       {

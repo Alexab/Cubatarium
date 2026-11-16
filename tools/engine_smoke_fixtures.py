@@ -6,7 +6,8 @@ import math
 from pathlib import Path
 
 
-def prepare_negative_cave(fixture: Path, minimum_chunks: int, *, flooded: bool = False) -> dict:
+def prepare_negative_cave(fixture: Path, minimum_chunks: int, *, flooded: bool = False,
+                          wide: bool = False) -> dict:
     """Saved starting position is prepared before load; no runtime relocation."""
     fixture = fixture.resolve()
     if fixture.parent.name != "worlds" or not fixture.name.startswith("EngineSmoke_"):
@@ -18,20 +19,24 @@ def prepare_negative_cave(fixture: Path, minimum_chunks: int, *, flooded: bool =
         raise ValueError("fixture chunks must be a real directory")
     metadata = json.loads((fixture / "world_data.json").read_text(encoding="utf-8"))
     profile = metadata.get("procedural", {})
-    if profile.get("min_height", 0) > -48 or profile.get("max_height", 0) < 63:
-        raise ValueError("cave fixture requires a world containing Y=-48..63")
+    required_min = -64 if wide else -48
+    if profile.get("min_height", 0) > required_min or profile.get("max_height", 0) < 63:
+        raise ValueError(f"cave fixture requires a world containing Y={required_min}..63")
     users_path = fixture / "users.json"
     users = json.loads(users_path.read_text(encoding="utf-8"))
     if "Username" not in users:
         raise ValueError("fixture requires the flight runner's Username save")
     distance = minimum_chunks * 16 + 48
-    start = [22.0, -41.88, 51.0]
+    floor_y, ceiling_y = (-61, -16) if wide else (-44, -30)
+    cave_z_low, cave_z_high = (35, 67) if wide else (45, 57)
+    start = [22.0, floor_y + 0.5 + 1.62, 51.0]
     min_cx = math.floor((start[0] - distance - 32) / 16)
     max_cx = math.floor((start[0] + 32) / 16)
     written = 0
+    omitted_air = 0
     for cx in range(min_cx, max_cx + 1):
         for cz in range(2, 5):
-            for cy in (-3, -2, 3):
+            for cy in ((-4, -3, -2, -1, 3) if wide else (-3, -2, 3)):
                 voxels = []
                 for lz in range(16):
                     z = cz * 16 + lz
@@ -40,7 +45,7 @@ def prepare_negative_cave(fixture: Path, minimum_chunks: int, *, flooded: bool =
                         for lx in range(16):
                             # Wide, level cave, with a solid floor/ceiling and
                             # an ocean separated from the eye by solid rock.
-                            inside_cave = -43 <= y <= -31 and 45 <= z <= 57
+                            inside_cave = floor_y < y < ceiling_y and cave_z_low <= z <= cave_z_high
                             if inside_cave and not flooded:
                                 continue
                             kind = "water" if inside_cave or 60 <= y <= 63 else "stone"
@@ -51,6 +56,12 @@ def prepare_negative_cave(fixture: Path, minimum_chunks: int, *, flooded: bool =
                 if binary.is_symlink() or target.is_symlink():
                     raise ValueError("fixture chunk symlinks are forbidden")
                 binary.unlink(missing_ok=True)
+                if not voxels:
+                    # The real column loader must reconstruct internal air
+                    # sections from a sparse saved column with a floor/roof.
+                    target.unlink(missing_ok=True)
+                    omitted_air += 1
+                    continue
                 target.write_text(json.dumps({"format_version": 4, "cx": cx,
                     "cy": cy, "cz": cz, "voxels": voxels}, separators=(",", ":")),
                     encoding="utf-8")
@@ -63,16 +74,20 @@ def prepare_negative_cave(fixture: Path, minimum_chunks: int, *, flooded: bool =
         creatures = json.loads(creatures_path.read_text(encoding="utf-8"))
         for creature in creatures.get("creatures", []):
             if creature.get("id") == user.get("player_creature_id"):
-                creature["body_origin"] = [start[0], -43.5, start[2]]
+                creature["body_origin"] = [start[0], floor_y + 0.5, start[2]]
         creatures_path.write_text(json.dumps(creatures, indent=2) + "\n", encoding="utf-8")
     # These summaries describe the source geometry, which was replaced above.
     for name in ("column_light.json", "ownership_snapshot.json", "ownership_snapshot.previous.json"):
         (fixture / name).unlink(missing_ok=True)
     return {"schema": "engine-smoke-fixture.v1",
-            "name": "wet-negative-cave" if flooded else "dry-negative-cave",
+            "name": ("wet-" if flooded else "dry-") + ("wide-" if wide else "") + "negative-cave",
             "starting_eye": start, "chunk_x_bounds": [min_cx, max_cx],
-            "chunks_replaced": written, "expected_eye_in_fluid": flooded,
-            "expected_max_eye_y": -30.5, "route_yaw": 180.0}
+            "chunks_replaced": written, "omitted_internal_air_slices": omitted_air,
+            "cave_bounds": {"floor": floor_y + 0.5, "ceiling": ceiling_y - 0.5,
+                            "z_low": cave_z_low - 0.5, "z_high": cave_z_high + 0.5},
+            "route_rise": 30 if wide else 6,
+            "expected_eye_in_fluid": flooded,
+            "expected_max_eye_y": ceiling_y - 0.5, "route_yaw": 180.0}
 
 
 def prepare_dry_negative_cave(fixture: Path, minimum_chunks: int) -> dict:

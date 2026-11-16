@@ -161,6 +161,13 @@ class NegativeCaveFixtureTest(unittest.TestCase):
                 self.assertTrue(wet["expected_eye_in_fluid"])
                 self.assertTrue(any(v["lx"] == 8 and v["ly"] == 8 and v["lz"] == 3
                                     and v["type"] == "water" for v in flooded["voxels"]))
+                wide = prepare_negative_cave(fixture, 1, wide=True)
+                self.assertGreater(wide["omitted_internal_air_slices"], 0)
+                self.assertFalse((fixture / "chunks" / "0_-3_3.json").exists())
+                self.assertFalse((fixture / "chunks" / "0_-2_3.json").exists())
+                self.assertTrue((fixture / "chunks" / "0_-4_3.json").exists())
+                self.assertTrue((fixture / "chunks" / "0_-1_3.json").exists())
+                self.assertEqual(wide["route_rise"], 30)
             self.assertEqual(world_fingerprint(source), before)
             with self.assertRaises(ValueError):
                 prepare_dry_negative_cave(source, 1)

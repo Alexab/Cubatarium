@@ -16,11 +16,14 @@ from pathlib import Path
 def near_cave_surface(scene: dict, origin: list[float], direction: list[float]) -> float | None:
     xmin = scene["chunk_x_bounds"][0] * 16 - 0.5
     xmax = (scene["chunk_x_bounds"][1] + 1) * 16 - 0.5
-    if not (xmin < origin[0] < xmax and -43.5 < origin[1] < -30.5 and
-            44.5 < origin[2] < 57.5):
+    bounds = scene.get("cave_bounds", {"floor": -43.5, "ceiling": -30.5,
+                                       "z_low": 44.5, "z_high": 57.5})
+    if not (xmin < origin[0] < xmax and bounds["floor"] < origin[1] < bounds["ceiling"] and
+            bounds["z_low"] < origin[2] < bounds["z_high"]):
         return None
     candidates = []
-    for axis, low, high in ((1, -43.5, -30.5), (2, 44.5, 57.5)):
+    for axis, low, high in ((1, bounds["floor"], bounds["ceiling"]),
+                            (2, bounds["z_low"], bounds["z_high"])):
         component = direction[axis]
         if abs(component) > 1e-8:
             t = ((high if component > 0 else low) - origin[axis]) / component
@@ -32,7 +35,7 @@ def near_cave_surface(scene: dict, origin: list[float], direction: list[float]) 
 
 def evaluate(scene: dict, perf: Path | None) -> dict:
     if (scene.get("schema") != "engine-smoke-fixture.v1" or
-            scene.get("name") not in ("dry-negative-cave", "wet-negative-cave")):
+            scene.get("name") not in ("dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave")):
         return {"status": "UNTESTED", "reason": "unsupported_reference_scene"}
     if perf is None or not perf.is_file():
         return {"status": "UNTESTED", "reason": "missing_framebuffer_trace"}

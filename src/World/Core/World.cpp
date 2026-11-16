@@ -34,6 +34,7 @@
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkManager.h"
+#include "World/Chunks/KnownAirTerrainSlice.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/FluidColumnSurfaceQuery.h"
 #include "World/Core/RuntimeTuning.h"
@@ -423,6 +424,9 @@ UWorld::UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
     Collision.SetBlockRegistry(BlockRegistry.get());
   }
   MeshService->GetCache().SetRepairGuardWorld(&BlockWorld);
+  BlockWorld.SetKnownOpenSkyAbsentQuery(
+      [this](glm::ivec3 coord)
+      { return IsKnownAirTerrainSlice(*this, coord); });
   SubscribeChunkPopulationInvalidation();
   IsIntersectionExists = false;
   HasIntersectionBlock = false;
