@@ -2,6 +2,7 @@
 #include "App/Platform/Log.h"
 #include "App/Settings/RenderSettings.h"
 #include "Blocks/BlockRegistry.h"
+#include "Core/Environment.h"
 #include "Core/FrameDeadline.h"
 #include "Core/FrameStageWatchdog.h"
 #include "Core/Jobs/PipelineAdmission.h"
