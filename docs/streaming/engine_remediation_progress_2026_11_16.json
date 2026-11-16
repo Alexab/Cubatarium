@@ -1131,5 +1131,23 @@
       "GPU meshing and blocklight shadow dispatch have distinct code paths; sky counters do not establish their coverage",
       "portable CPU code has no GL dependency; Android runtime validation remains outside this Windows run"
     ]
+  },
+  "pending_light_obligation_audit": {
+    "status": "source_verified_requires_lifecycle_fix",
+    "history_commit": "af851e5efe",
+    "history_date": "2026-08-25",
+    "findings": [
+      "ShouldSuppressDuplicatePendingLightWithoutMeshProgress only sees already_pending and has_mesh; NotePendingLightBeforeMesh returns before merging a newly expanded signed Y interval when no mesh exists",
+      "TryNotePendingLightBeforeMesh returns immediately for any pending/in-flight column and does not preserve a new requested band",
+      "MarkRelitInstall clears a whole column through several erase paths; fixing merge alone is insufficient without matching the version and coverage of completed light obligations",
+      "enter snapshot/IsColumnLitReady early returns can also suppress newer debt; monotonic presentation progress is not an authoritative readiness contract"
+    ],
+    "required_contract": [
+      "preserve newly requested section/domain obligations independently from admission throttling",
+      "capture requested generation at dispatch; completed older work cannot close newer requests",
+      "current calculation proof includes known input dependencies, catalog/profile/domain and own output identity",
+      "invalidate and enqueue from data/input changes regardless of whether a stale image appears dark; do not rely on RGB or stale-dark heuristic for correctness"
+    ],
+    "limitations": "not fixed by backend attribution patch; next S3/S4 work must integrate proof validity with durable obligation ownership"
   }
 }
