@@ -1472,6 +1472,8 @@ void UWorld::RelightTerrainColumn(int world_x, int world_z, int min_y,
   {
     return;
   }
+  const auto ground = UChunkManager::WorldToChunk({world_x, 0, world_z});
+  NotePendingLightBeforeMesh(ground, min_y, max_y, "sync_column");
   const auto t0 = std::chrono::high_resolution_clock::now();
   std::vector<glm::ivec3> relit_chunks;
   GetLightingPipeline().RelightColumnWithFrontier(
@@ -1820,10 +1822,9 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
           // MarkRelit starved / discarded). Clear gate + remesh вЂ” idle
           // west-strip plateau at focus edge had pending=36 forever with
           // relight_drainв‰€0.
-          if (any_sky)
+          if (any_sky && ClearPendingLightBeforeMesh(key))
           {
-            PendingLightBeforeMesh.erase(key);
-            AsyncRelightColumnsInFlight.erase(key);
+            ReleaseInactiveAsyncRelightColumn(key);
             SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
             MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
                 ground, remesh_min, remesh_max,
@@ -2512,244 +2513,64 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y,
                                         const char *audit_source)
 {
   if (!RequiresLightingLitGate())
-  {
     return;
-  }
-  if (ground.y != 0)
-  {
-    ground.y = 0;
-  }
+  min_y = std::max(min_y, ProceduralTemplate.MinHeight);
+  max_y = std::min(max_y, ProceduralTemplate.MaxHeight);
   if (max_y < min_y)
-  {
     return;
-  }
-  const bool audit_relight =
-      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
+  ground.y = 0;
   const glm::ivec2 key(ground.x, ground.z);
-  if (EnterLitGateActive && EnterLitSnapshotCaptured &&
-      URuntimeTuning::Get().EnterLitUseSnapshotDebt)
-  {
-    if (EnterLitDebtSnapshot.count(key) == 0)
-    {
-      return;
-    }
-    // Column already resolved (relit) — do not re-add to PendingLight and
-    // restart the relight cycle; mesh emerge should proceed without re-gate.
-    if (IsColumnLitReady(ground))
-    {
-      return;
-    }
-  }
-  SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
-  // A40: new light debt invalidates prior LegalDark settlement stamp.
-  ColumnRecord &pl_rec = ColumnRecords.GetOrCreate(key);
-  pl_rec.legal_dark_settled = false;
-  pl_rec.visual_obligation = VisualObligation::LightRepair;
-  // A41: keep live LightRepair SLA across dup Note* (manual 132520: wipe
-  // attempt_id every Note left Dirty stuck with no remint clock).
-  if (pl_rec.visual_attempt_id == 0)
-  {
-    pl_rec.visual_deadline_ms = 0;
-  }
-  auto [it, inserted] = PendingLightBeforeMesh.try_emplace(key);
-  bool has_mesh = false;
-  if (MeshService)
-  {
-    const int max_cy = FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
-    for (int cy = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE);
-         cy <= max_cy; ++cy)
-    {
-      if (MeshService->HasGreedyMesh(glm::ivec3(ground.x, cy, ground.z)))
-      {
-        has_mesh = true;
-        break;
-      }
-    }
-  }
-  if (!inserted &&
-      ShouldSuppressDuplicatePendingLightWithoutMeshProgress(true, has_mesh))
-  {
-    ++PhysicsTelemetryData.RelightNoteSuppressedPlateauN;
+  auto &coverage = PendingLightBeforeMesh[key];
+  const auto added = coverage.Request(min_y, max_y);
+  if (PendingLightRepairScanKeys.insert(key).second)
+    PendingLightRepairScan.push_back(key);
+  // The initial visibility snapshot and scheduling throttles never own new
+  // obligations. Even while an older job runs, expanded coverage stays here.
+  if (added.empty())
     return;
-  }
-  const int note_min_y = std::max(ProceduralTemplate.MinHeight, min_y);
-  auto log_pending_light_note =
-      [&](const char *action, int covered_min_y, int covered_max_y)
+  SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
+  auto &record = ColumnRecords.GetOrCreate(key);
+  record.legal_dark_settled = false;
+  record.visual_obligation = VisualObligation::LightRepair;
+  if (record.visual_attempt_id == 0)
+    record.visual_deadline_ms = 0;
+  for (int cy : added)
   {
-    if (!audit_relight)
+    const glm::ivec3 coord(ground.x, cy, ground.z);
+    if (MeshService && !HasCurrentChunkSliceLightSettlement(coord))
     {
-      return;
+      if (const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord))
+        GetRenderDemandStore().InvalidateLightCalculationSettlement(
+            coord, MeshService->GetCache().GetCaptureStore().WorldEpoch(),
+            chunk->GetIncarnation());
     }
+  }
+  NoteUnfinishedColumnDirty(key);
+  if (Persistence)
+    Persistence->SetColumnLightComplete(key, false, "new_light_coverage");
+  if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
     CubatariumLogInfo(
         "RelightAudit",
-        "pending note source=" +
+        "pending request source=" +
             std::string(audit_source ? audit_source : "unspecified") +
-            " action=" + action + " column=(" + std::to_string(key.x) + "," +
-            std::to_string(key.y) + ") requested=" +
-            std::to_string(note_min_y) + ":" + std::to_string(max_y) +
-            " covered=" + std::to_string(covered_min_y) + ":" +
-            std::to_string(covered_max_y));
-  };
-  const auto invalidate_slice_band =
-      [&](int band_min_y, int band_max_y, const char *reason)
-  {
-    if (!MeshService || band_max_y < band_min_y)
-    {
-      return;
-    }
-    const uint64_t world_epoch =
-        MeshService->GetCache().GetCaptureStore().WorldEpoch();
-    const int min_cy =
-        std::max(FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE),
-                 FloorDiv(std::max(ProceduralTemplate.MinHeight, band_min_y),
-                          CHUNK_SIZE));
-    const int max_cy =
-        std::min(FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE),
-                 FloorDiv(std::min(band_max_y, ProceduralTemplate.MaxHeight),
-                          CHUNK_SIZE));
-    for (int cy = min_cy; cy <= max_cy; ++cy)
-    {
-      const glm::ivec3 coord(ground.x, cy, ground.z);
-      if (const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord))
-      {
-        const ChunkRenderDemandRecord *demand =
-            GetRenderDemandStore().Find(coord);
-        const bool had_settlement = demand && demand->has_settled_light;
-        const uint64_t settled_rev = demand ? demand->settled_light_rev : 0;
-        const uint64_t field_rev = chunk->GetLightFieldRevision();
-        const uint64_t demand_epoch = demand ? demand->world_epoch : 0;
-        const uint64_t demand_incarnation = demand ? demand->incarnation : 0;
-        const uint64_t current_incarnation = chunk->GetIncarnation();
-        const bool settlement_current =
-            ChunkSliceHasCurrentLightSettlement(*this, coord);
-        const uint64_t desired_light_rev =
-            demand ? demand->desired_light_rev : 0;
-        const uint64_t published_light_rev =
-            demand ? demand->published_light_rev : 0;
-        const bool demand_light_current =
-            demand && desired_light_rev <= published_light_rev;
-        // PendingLight is column-scoped, while settlement and the renderer
-        // gate are per-slice. Do not erase a current slice proof just because
-        // a wider debt band was opened for another slice in the column. If
-        // this slice's light changes, its field revision will make the proof
-        // stale; a changed neighbor is independently caught by stale-dark
-        // validation before a dark image can draw.
-        if (settlement_current)
-        {
-          if (audit_relight)
-          {
-            CubatariumLogInfo(
-                "RelightAudit",
-                "settlement preserve source=" +
-                    std::string(audit_source ? audit_source : "unspecified") +
-                    " reason=" + reason + " coord=(" + std::to_string(coord.x) +
-                    "," + std::to_string(coord.y) + "," +
-                    std::to_string(coord.z) +
-                    ") field_rev=" + std::to_string(field_rev) +
-                    " settled_rev=" + std::to_string(settled_rev) +
-                    " proof_current=1 identity=" +
-                    std::to_string(demand_epoch) + ":" +
-                    std::to_string(demand_incarnation) + "/" +
-                    std::to_string(world_epoch) + ":" +
-                    std::to_string(current_incarnation) +
-                    " demand_light=" + std::to_string(desired_light_rev) + ":" +
-                    std::to_string(published_light_rev) +
-                    " band=" + std::to_string(band_min_y) + ":" +
-                    std::to_string(band_max_y));
-          }
-          continue;
-        }
-        GetRenderDemandStore().InvalidateLightCalculationSettlement(
-            coord, world_epoch, current_incarnation);
-        if (audit_relight && had_settlement)
-        {
-          CubatariumLogInfo(
-              "RelightAudit",
-              "settlement invalidate source=" +
-                  std::string(audit_source ? audit_source : "unspecified") +
-                  " reason=" + reason + " coord=(" + std::to_string(coord.x) +
-                  "," + std::to_string(coord.y) + "," +
-                  std::to_string(coord.z) +
-                  ") field_rev=" + std::to_string(field_rev) +
-                  " settled_rev=" + std::to_string(settled_rev) +
-                  " matched=" + std::to_string(settled_rev == field_rev) +
-                  " proof_current=" + std::to_string(settlement_current) +
-                  " identity=" + std::to_string(demand_epoch) + ":" +
-                  std::to_string(demand_incarnation) + "/" +
-                  std::to_string(world_epoch) + ":" +
-                  std::to_string(current_incarnation) +
-                  " demand_light_current=" +
-                  std::to_string(demand_light_current) +
-                  " demand_light=" + std::to_string(desired_light_rev) + ":" +
-                  std::to_string(published_light_rev) +
-                  " band=" + std::to_string(band_min_y) + ":" +
-                  std::to_string(band_max_y));
-        }
-      }
-    }
-  };
-  if (inserted)
-  {
-    invalidate_slice_band(note_min_y, max_y, "insert");
-    it->second.min_y = note_min_y;
-    it->second.max_y = max_y;
-    // Pending-light changes the column's unfinished classification even when
-    // no mesh owner was admitted. Keep the cached admission set in sync with
-    // this debt so a denied relight cannot leave solid slices classified Ready.
-    NoteUnfinishedColumnDirty(key);
-    log_pending_light_note("insert", it->second.min_y, it->second.max_y);
-    return;
-  }
-  // Repeated notes for an already-covered interval are queue coalescing,
-  // not new light work. Only invalidate slices newly added to the column's
-  // relight coverage; otherwise duplicate notes can erase a completed
-  // per-slice settlement every frame while the same FIFO item is pending.
-  const int covered_min_y = it->second.min_y;
-  const int covered_max_y = it->second.max_y;
-  if (note_min_y < covered_min_y)
-  {
-    invalidate_slice_band(note_min_y, std::min(max_y, covered_min_y - 1),
-                          "extend_low");
-  }
-  if (max_y > covered_max_y)
-  {
-    invalidate_slice_band(std::max(note_min_y, covered_max_y + 1), max_y,
-                          "extend_high");
-  }
-  it->second.min_y =
-      std::min(it->second.min_y, std::max(ProceduralTemplate.MinHeight, min_y));
-  it->second.max_y = std::max(it->second.max_y, max_y);
-  if (it->second.min_y != covered_min_y || it->second.max_y != covered_max_y)
-  {
-    log_pending_light_note("extend", it->second.min_y, it->second.max_y);
-  }
+            " column=(" + std::to_string(key.x) + "," + std::to_string(key.y) +
+            ") band=" + std::to_string(coverage.min_y) + ":" +
+            std::to_string(coverage.max_y) +
+            " added_sections=" + std::to_string(added.size()) +
+            " pending_sections=" + std::to_string(coverage.Size()));
 }
 
 bool UWorld::TryNotePendingLightBeforeMesh(glm::ivec3 ground, int min_y,
                                            int max_y, const char *audit_source)
 {
-  if (ground.y != 0)
-  {
-    ground.y = 0;
-  }
   const glm::ivec2 col(ground.x, ground.z);
-  if (IsAsyncRelightColumnInFlight(col) || IsPendingLightBeforeMesh(col))
-  {
-    ++PhysicsTelemetryData.RelightNoteSkippedDupN;
-    return false;
-  }
-  // FZ2.4-P0a: do not grow PL after nt cleared while VB/PL debt open.
-  // Enter FOV lit pass exempt — still seed during enter heal.
-  const auto &t = PhysicsTelemetryData;
-  if (!EnterFovLitPassActive &&
-      ShouldSuppressPendingLightNote(t.VisibleBlackNoTicketN,
-                                     t.PendingLightFocus, t.VisibleBlackFocusN))
-  {
-    ++PhysicsTelemetryData.RelightNoteSuppressedPlateauN;
-    return false;
-  }
+  const bool owned =
+      IsAsyncRelightColumnInFlight(col) || IsPendingLightBeforeMesh(col);
+  // Queue coalescing may suppress another admission, never the new coverage.
   NotePendingLightBeforeMesh(ground, min_y, max_y, audit_source);
-  return true;
+  if (owned)
+    ++PhysicsTelemetryData.RelightNoteSkippedDupN;
+  return !owned && IsPendingLightBeforeMesh(col);
 }
 
 void UWorld::EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz)
@@ -2893,7 +2714,60 @@ void UWorld::EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz)
                                 __FUNCTION__);
 }
 
-void UWorld::ClearPendingLightBeforeMesh(glm::ivec2 ground_xz)
+bool UWorld::HasCurrentColumnLightCoverage(glm::ivec2 column, int min_y,
+                                           int max_y) const
+{
+  if (!RequiresLightingLitGate())
+    return true;
+  min_y = std::max(min_y, ProceduralTemplate.MinHeight);
+  max_y = std::min(max_y, ProceduralTemplate.MaxHeight);
+  if (max_y < min_y || !BlockRegistry)
+    return false;
+  const auto catalog = BlockRegistry->GetDefinitionsCatalogSnapshot();
+  const bool terrain_complete =
+      IsTerrainColumnCompleteFast(glm::ivec3(column.x, 0, column.y));
+  UBlockWorld::InputStampValidationBatch absence;
+  for (int cy = FloorDiv(min_y, CHUNK_SIZE); cy <= FloorDiv(max_y, CHUNK_SIZE);
+       ++cy)
+  {
+    const glm::ivec3 coord(column.x, cy, column.y);
+    if (BlockWorld.GetChunkManager().HasChunk(coord))
+    {
+      if (!BlockWorld.HasCompleteLightCalculation(coord, catalog))
+        return false;
+    }
+    else if (!terrain_complete ||
+             !BlockWorld.IsKnownAbsentAirChunk(coord, &absence))
+      return false;
+  }
+  return true;
+}
+
+bool UWorld::ClearPendingLightBeforeMesh(glm::ivec2 column)
+{
+  auto it = PendingLightBeforeMesh.find(column);
+  if (it == PendingLightBeforeMesh.end())
+    return true;
+  const auto completed = it->second.Reconcile(
+      [&](int cy)
+      {
+        return HasCurrentColumnLightCoverage(column, cy * CHUNK_SIZE,
+                                             cy * CHUNK_SIZE + CHUNK_SIZE - 1);
+      });
+  const auto remaining = it->second.Size();
+  if (completed && IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+    CubatariumLogInfo("RelightAudit",
+                      "pending reconcile column=(" + std::to_string(column.x) +
+                          "," + std::to_string(column.y) +
+                          ") completed_sections=" + std::to_string(completed) +
+                          " pending_sections=" + std::to_string(remaining));
+  if (remaining)
+    return false;
+  RetirePendingLightBeforeMesh(column);
+  return true;
+}
+
+void UWorld::RetirePendingLightBeforeMesh(glm::ivec2 ground_xz)
 {
   bool visual_state_changed = PendingLightBeforeMesh.erase(ground_xz) > 0;
   visual_state_changed =
@@ -2976,8 +2850,8 @@ int UWorld::TrimPendingLightBeforeMesh(glm::ivec3 focus_ground_horiz,
     {
       break;
     }
-    ClearPendingLightBeforeMesh(c.key);
-    ++dropped;
+    if (ClearPendingLightBeforeMesh(c.key))
+      ++dropped;
   }
   return dropped;
 }
@@ -3022,10 +2896,7 @@ bool UWorld::IsPendingLightBeforeMeshSlice(glm::ivec3 chunk_coord) const
   {
     return false;
   }
-  const int slice_min_y = chunk_coord.y * CHUNK_SIZE;
-  const int slice_max_y = slice_min_y + CHUNK_SIZE - 1;
-  const bool overlaps_pending_band = slice_min_y <= pending->second.max_y &&
-                                     slice_max_y >= pending->second.min_y;
+  const bool overlaps_pending_band = pending->second.Contains(chunk_coord.y);
   if (!overlaps_pending_band)
   {
     return false;
@@ -3056,6 +2927,9 @@ void UWorld::NoteChunkSliceLightCalculationSettled(glm::ivec3 chunk_coord)
     GetRenderDemandStore().InvalidateLightCalculationSettlement(
         chunk_coord, MeshService->GetCache().GetCaptureStore().WorldEpoch(),
         chunk->GetIncarnation());
+    NotePendingLightBeforeMesh(
+        {chunk_coord.x, 0, chunk_coord.z}, chunk_coord.y * CHUNK_SIZE,
+        chunk_coord.y * CHUNK_SIZE + CHUNK_SIZE - 1, "unsettled_install");
     return;
   }
   GetRenderDemandStore().NoteLightCalculationSettled(
@@ -3396,8 +3270,9 @@ bool UWorld::IsColumnLitReady(glm::ivec3 ground) const
   {
     ground.y = 0;
   }
-  // LitReady/Meshing unlocks the ring even while PendingLight remains — Recover
-  // keeps the gate until MarkRelit so soft-defer can block light=0 remesh.
+  if (IsPendingLightBeforeMesh(glm::ivec2(ground.x, ground.z)))
+    return false;
+  // Coarse scheduling state never overrides outstanding section work.
   const ColumnEmergeState state = GetColumnEmergeState(ground);
   switch (state)
   {
@@ -6751,6 +6626,51 @@ int UWorld::DrainFocusVisualWork(glm::ivec3 focus_ground_horiz,
   return ClearPendingLightAfterMeshCommitted(clear_pending_budget);
 }
 
+void UWorld::RecoverPendingLightWork(int max_admissions)
+{
+  if (!RequiresLightingLitGate() || !Persistence || !BlockRegistry ||
+      LightingRelightDeferred || max_admissions <= 0)
+    return;
+  const auto catalog = BlockRegistry->GetDefinitionsCatalogSnapshot();
+  // Rotation is independent of distance and unordered-map order. Work that
+  // loses a FIFO slot retains an owner here; unknown inputs wait without
+  // repeatedly dispatching the same lower-bound calculation.
+  const auto visits = std::min<std::size_t>(32, PendingLightRepairScan.size());
+  int admitted = 0;
+  for (std::size_t n = 0; n < visits; ++n)
+  {
+    const auto column = PendingLightRepairScan.front();
+    PendingLightRepairScan.pop_front();
+    if (ClearPendingLightBeforeMesh(column))
+    {
+      PendingLightRepairScanKeys.erase(column);
+      continue;
+    }
+    PendingLightRepairScan.push_back(column);
+    if (admitted >= max_admissions || IsAsyncRelightColumnInFlight(column) ||
+        IsTerrainColumnRelightQueued(column))
+      continue;
+    const auto it = PendingLightBeforeMesh.find(column);
+    if (it == PendingLightBeforeMesh.end())
+      continue;
+    std::vector<glm::ivec3> resident;
+    for (int cy : it->second.PendingSections())
+    {
+      const glm::ivec3 coord(column.x, cy, column.y);
+      if (BlockWorld.GetChunkManager().HasChunk(coord))
+        resident.push_back(coord);
+    }
+    if (resident.empty() ||
+        BlockWorld.LightCalculationsStillCurrent(resident, true, true, catalog))
+      continue;
+    const int min_y = it->second.min_y;
+    const int max_y = it->second.max_y;
+    Persistence->EnqueueBoundaryDependencyRelight(
+        *this, column.x * CHUNK_SIZE, column.y * CHUNK_SIZE, min_y, max_y);
+    ++admitted;
+  }
+}
+
 void UWorld::DrainRelightQueuesBudget(int max_player_jobs, int max_bg_columns)
 {
   if (!Persistence || (max_player_jobs <= 0 && max_bg_columns <= 0))
@@ -6758,6 +6678,7 @@ void UWorld::DrainRelightQueuesBudget(int max_player_jobs, int max_bg_columns)
     return;
   }
   const auto t0 = std::chrono::high_resolution_clock::now();
+  RecoverPendingLightWork(std::min(2, max_bg_columns));
   Persistence->DrainRelightQueues(*this, max_player_jobs, max_bg_columns);
   const double capture_ms = std::chrono::duration<double, std::milli>(
                                 std::chrono::high_resolution_clock::now() - t0)
@@ -6918,11 +6839,11 @@ int UWorld::DrainIdleFocusPendingLight(glm::ivec3 focus_ground_horiz,
     // Only clear ghost InFlight marks. Erasing a live mark let Drain start a
     // duplicate while the first job still ran — and skipped_inflight thrash
     // left pending frozen with relight_drain≈0 (autofly stop plateau).
-    if (AsyncRelightColumnsInFlight.count(c.key) != 0)
+    if (IsAsyncRelightColumnInFlight(c.key))
     {
       if (GetAsyncRelightInFlightCount() == 0)
       {
-        AsyncRelightColumnsInFlight.erase(c.key);
+        ReleaseInactiveAsyncRelightColumn(c.key);
       }
       else
       {
@@ -7085,7 +7006,7 @@ int UWorld::DrainIdleFocusPendingLightSync(glm::ivec3 focus_ground_horiz,
     {
       break;
     }
-    AsyncRelightColumnsInFlight.erase(c.key);
+    ReleaseInactiveAsyncRelightColumn(c.key);
     // Legacy path when AsyncRelight is off — full-column sync on main.
     RelightTerrainColumn(c.key.x * CHUNK_SIZE, c.key.y * CHUNK_SIZE, c.min_y,
                          c.max_y, /*priority_mesh=*/true,
@@ -7823,7 +7744,7 @@ int UWorld::RemeshColumnSeamTicket(glm::ivec2 ground_xz)
       /*include_horizontal_neighbors=*/false,
       MeshRevisionBumpReason::SettledDrawGateRepair);
   StickyRemeshAfterLight.erase(ground_xz);
-  PendingLightBeforeMesh.erase(ground_xz);
+  ClearPendingLightBeforeMesh(ground_xz);
   SetColumnEmergeState(glm::ivec3(ground_xz.x, 0, ground_xz.y),
                        ColumnEmergeState::Meshing);
   return 1;
@@ -8804,7 +8725,7 @@ int UWorld::SyncIdleFocusGreedyRemesh(int max_columns)
                              MeshRevisionBumpReason::PostLightMeshFinalize);
     }
     StickyRemeshAfterLight.erase(key);
-    PendingLightBeforeMesh.erase(key);
+    ClearPendingLightBeforeMesh(key);
     SetColumnEmergeState(glm::ivec3(key.x, 0, key.y),
                          ColumnEmergeState::Meshing);
   }
@@ -8928,7 +8849,18 @@ int UWorld::ClearPendingLightAfterMeshCommitted(int max_columns)
         continue;
       }
     }
-    AsyncRelightColumnsInFlight.erase(key);
+    ReleaseInactiveAsyncRelightColumn(key);
+    it->second.Reconcile(
+        [&](int cy)
+        {
+          return HasCurrentColumnLightCoverage(
+              key, cy * CHUNK_SIZE, cy * CHUNK_SIZE + CHUNK_SIZE - 1);
+        });
+    if (!it->second.Empty())
+    {
+      ++it;
+      continue;
+    }
     it = PendingLightBeforeMesh.erase(it);
     StickyRemeshAfterLight.erase(key);
     // A41: ClearPending must not write RenderReady — sole Ready = LitDrawable.
@@ -9118,30 +9050,8 @@ int UWorld::PromotePendingLightRelightsNear(glm::ivec3 focus_ground_horiz,
     // Job already running — do not requeue while flying (Keys-ghost risk).
     // Idle: clear InFlight for the whole focus. Underfeet-only clear left
     // pendf~40 stuck with relight_drain≈0 while wall~22ms (manual 083042):
-    // DrainRelightQueues drops FIFO entries that still look "in flight".
-    // SoftDefer hole: clear InFlight only for the nearest missing column —
-    // clearing every missing pending column thrashed live jobs (P0_no_dark).
-    if (AsyncRelightColumnsInFlight.count(entry.first) != 0)
-    {
-      const bool idle =
-          LastMovementSpeed <= ProceduralTemplate.MovementPrefetchThreshold;
-      const int pending_focus =
-          CountPendingLightBeforeMeshNear(focus_ground_horiz, radius_chunks);
-      const bool nearest_hole_col = nearest_missing_hole &&
-                                    entry.first.x == nearest_hole.x &&
-                                    entry.first.y == nearest_hole.z;
-      // Cruise with high focus debt: stale InFlight blocked re-enqueue and left
-      // outer-ring preview black (manual 161327: z=34 strip, pend~28).
-      if (GetAsyncRelightInFlightCount() == 0 || idle || pending_focus > 8 ||
-          nearest_hole_col)
-      {
-        AsyncRelightColumnsInFlight.erase(entry.first);
-      }
-      else
-      {
-        continue;
-      }
-    }
+    if (IsAsyncRelightColumnInFlight(entry.first))
+      continue;
     Persistence->EnqueueTerrainColumnRelight(
         entry.first.x * CHUNK_SIZE, entry.first.y * CHUNK_SIZE,
         /*priority=*/true, entry.second.min_y, entry.second.max_y, __FUNCTION__,
@@ -9284,16 +9194,11 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(
   const glm::ivec3 chunk =
       UChunkManager::WorldToChunk(glm::ivec3(world_x, min_y, world_z));
   const glm::ivec2 col(chunk.x, chunk.z);
-  if (AsyncRelightColumnsInFlight.count(col) != 0)
-  {
-    if (GetAsyncRelightInFlightCount() > 0)
-    {
-      return;
-    }
-    AsyncRelightColumnsInFlight.erase(col);
-  }
+  NotePendingLightBeforeMesh(glm::ivec3(col.x, 0, col.y), min_y, max_y,
+                             audit_source);
+  if (IsAsyncRelightColumnInFlight(col))
+    return;
   EnsureAsyncRelightBuilder();
-  AsyncRelightColumnsInFlight.insert(col);
   RelightJobSpec spec;
   spec.block_positions = {glm::ivec3(world_x, min_y, world_z)};
   spec.min_world_y = min_y;
@@ -9302,6 +9207,7 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(
   spec.include_block_light = include_block_light;
   spec.frontier_iterations = kRelightFrontierIterationsColumn;
   spec.job_id = ++NextAsyncRelightJobId;
+  AsyncRelightColumnsInFlight[col] = spec.job_id;
   spec.finalize_pending_gate = finalize_pending_gate;
   spec.visible_draw_gate_repair = visible_draw_gate_repair;
   spec.column_center_only = true;
@@ -9507,7 +9413,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
                                                ProceduralTemplate.MinHeight, -1,
                                                __FUNCTION__, this);
       const glm::ivec3 chunk = UChunkManager::WorldToChunk(pos);
-      AsyncRelightColumnsInFlight.erase(glm::ivec2(chunk.x, chunk.z));
+      ReleaseInactiveAsyncRelightColumn(glm::ivec2(chunk.x, chunk.z));
     }
   }
   const double miss_reserved_ms =
@@ -9704,6 +9610,14 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       // Preserve exact Y band / light domains / finalization semantics, not a
       // generic terrain request. InFlight stays occupied by the replacement.
       result.retry_spec.job_id = ++NextAsyncRelightJobId;
+      if (result.retry_spec.column_center_only &&
+          !result.retry_spec.block_positions.empty())
+      {
+        const auto center = UChunkManager::WorldToChunk(
+            result.retry_spec.block_positions.front());
+        AsyncRelightColumnsInFlight[glm::ivec2(center.x, center.z)] =
+            result.retry_spec.job_id;
+      }
       if (audit_relight)
       {
         std::string column = "unknown";
@@ -10166,10 +10080,11 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     {
       for (const glm::ivec2 &g : primary_grounds)
       {
-        AsyncRelightColumnsInFlight.erase(g);
-        if (result.finalize_pending_gate)
+        ReleaseInactiveAsyncRelightColumn(g);
+        if (result.finalize_pending_gate && ClearPendingLightBeforeMesh(g) &&
+            HasCurrentColumnLightCoverage(g, result.retry_spec.min_world_y,
+                                          result.retry_spec.max_world_y))
         {
-          PendingLightBeforeMesh.erase(g);
           SetColumnEmergeState(glm::ivec3(g.x, 0, g.y),
                                ColumnEmergeState::LitReady);
         }
@@ -10465,7 +10380,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     // neighbors (primary already erased inside MarkRelit).
     for (const glm::ivec2 &g : primary_grounds)
     {
-      AsyncRelightColumnsInFlight.erase(g);
+      ReleaseInactiveAsyncRelightColumn(g);
     }
     if (priority_mesh && !defer_side_iter && !consume_mode)
     {
@@ -10544,7 +10459,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     for (const glm::ivec3 &pos : AsyncRelight->TakeDiscardedSourcePositions())
     {
       const glm::ivec3 chunk = UChunkManager::WorldToChunk(pos);
-      AsyncRelightColumnsInFlight.erase(glm::ivec2(chunk.x, chunk.z));
+      ReleaseInactiveAsyncRelightColumn(glm::ivec2(chunk.x, chunk.z));
       Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z, false,
                                                ProceduralTemplate.MinHeight, -1,
                                                __FUNCTION__, this);
@@ -10594,7 +10509,15 @@ void UWorld::SetRelightCompletedCapacity(size_t cap)
 
 bool UWorld::IsAsyncRelightColumnInFlight(glm::ivec2 ground_xz) const
 {
-  return AsyncRelightColumnsInFlight.count(ground_xz) != 0;
+  const auto it = AsyncRelightColumnsInFlight.find(ground_xz);
+  return it != AsyncRelightColumnsInFlight.end() && AsyncRelight &&
+         AsyncRelight->HasInFlightJob(it->second);
+}
+
+void UWorld::ReleaseInactiveAsyncRelightColumn(glm::ivec2 column)
+{
+  if (!IsAsyncRelightColumnInFlight(column))
+    AsyncRelightColumnsInFlight.erase(column);
 }
 
 bool UWorld::IsTerrainColumnRelightQueued(glm::ivec2 ground_xz) const
@@ -10636,19 +10559,13 @@ void UWorld::PopulateRendererRelightQueueTrace(
 
 void UWorld::ReconcileAsyncRelightColumnInFlight()
 {
-  if (GetAsyncRelightInFlightCount() == 0 &&
-      !AsyncRelightColumnsInFlight.empty())
+  for (auto it = AsyncRelightColumnsInFlight.begin();
+       it != AsyncRelightColumnsInFlight.end();)
   {
-    AsyncRelightColumnsInFlight.clear();
-    return;
-  }
-  // More InFlight keys than workers can explain — stale keys from completed
-  // jobs.
-  if (GetAsyncRelightInFlightCount() > 0 &&
-      AsyncRelightColumnsInFlight.size() >
-          static_cast<size_t>(GetAsyncRelightInFlightCount()) + 4u)
-  {
-    AsyncRelightColumnsInFlight.clear();
+    if (!AsyncRelight || !AsyncRelight->HasInFlightJob(it->second))
+      it = AsyncRelightColumnsInFlight.erase(it);
+    else
+      ++it;
   }
 }
 
@@ -12945,7 +12862,7 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
         MeshService->HasSoftDeferHeldInColumn(col) && has_fm_ticket;
     const bool open_sky_done = EnterVisualGateCtrl.WasOpenSkyApplied(col);
     const bool relight_owned = IsPendingLightBeforeMesh(col) ||
-                               AsyncRelightColumnsInFlight.count(col) > 0 ||
+                               IsAsyncRelightColumnInFlight(col) ||
                                GetColumnFlowExecutor().Scheduler().Contains(
                                    col, ColumnWorkKind::RelightThenMesh) ||
                                GetColumnFlowExecutor().Scheduler().Contains(
@@ -16012,6 +15929,8 @@ void UWorld::SetRenderSettings(const RenderSettings &settings)
       {
         LightingPipeline->FillAllLoadedChunks(BlockWorld);
         PendingLightBeforeMesh.clear();
+        PendingLightRepairScan.clear();
+        PendingLightRepairScanKeys.clear();
       }
       else if (BlockRegistry)
       {

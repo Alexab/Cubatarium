@@ -6,6 +6,7 @@
 #include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Lighting/GpuSkylightColumnSeed.h"
 #include "World/Lighting/LightCalculationSettlement.h"
+#include "World/Lighting/PendingLightCoverage.h"
 #include "World/Lighting/RelightInputValidation.h"
 #include "World/Streaming/MeshLitGate.h"
 
@@ -1458,10 +1459,92 @@ void TestVersionedLightInputMemoInvalidatesImmediately()
          "fallback physics");
 }
 
+void TestPendingCoverageRequiresCurrentKnownProof()
+{
+  using namespace cutum;
+  PendingLightCoverage sparse;
+  Expect(sparse.Request(-17, -17) == std::vector<int>{-2},
+         "negative non-aligned note belongs to the lower signed section");
+  sparse.Request(16, 16);
+  Expect(!sparse.Contains(-1) && !sparse.Contains(0) && sparse.Size() == 2,
+         "scheduling envelope does not invent obligations in its gaps");
+  Expect(sparse.Request(-17, -17).empty(), "duplicate coverage is idempotent");
+  Expect(sparse.Reconcile([](int) { return false; }) == 0 && sparse.Size() == 2,
+         "missing proof cannot retire any obligation");
+
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition stone;
+  stone.Physics = BlockPhysicsProfile::Solid();
+  definitions->ReplaceAll({{8, stone}}, {{"stone", 8}});
+  UBlockRegistry registry(nullptr, definitions);
+  const auto catalog = registry.GetDefinitionsCatalogSnapshot();
+  UBlockWorld world;
+  bool known = false;
+  world.SetKnownOpenSkyAbsentQuery([&](glm::ivec3) { return known; });
+  const glm::ivec3 upper(0, -3, 0), lower(0, -4, 0);
+  world.GetChunkManager().EnsureChunk(upper);
+  world.GetChunkManager().EnsureChunk(lower);
+  RelightJobSpec spec;
+  spec.min_world_y = -64;
+  spec.max_world_y = 319;
+  auto compute = [&](glm::ivec3 coord)
+  {
+    return UChunkRelightSnapshot::CaptureSections(world, spec, {coord})
+        .Compute(registry);
+  };
+  auto install = [&](const RelightComputeResult &result)
+  {
+    bool changed = false;
+    for (const auto &data : result.chunks)
+      changed |= InstallComputedLight(
+          *world.GetChunkManager().GetChunk(data.coord), data.light_packed,
+          result.include_skylight, result.include_block_light);
+    world.RecordLightCalculation(result, catalog);
+    return changed;
+  };
+  PendingLightCoverage pending;
+  pending.Request(-48, -33);
+  const auto unknown = compute(upper);
+  Expect(!install(unknown), "unknown lower-bound all-zero result is a no-op");
+  auto reconcile = [&]
+  {
+    return pending.Reconcile(
+        [&](int cy)
+        { return world.HasCompleteLightCalculation({0, cy, 0}, catalog); });
+  };
+  Expect(reconcile() == 0 && pending.Contains(-3),
+         "no-delta transient calculation preserves its obligation");
+  known = true;
+  auto older_job = compute(upper);
+  // Extend the same column while a snapshot for the previous band is owned.
+  pending.Request(-64, -33);
+  install(older_job);
+  Expect(reconcile() == 1 && pending.Size() == 1 && pending.Contains(-4),
+         "older narrow result cannot close expanded uncovered section");
+  Expect(pending.min_y == -64 && pending.max_y == -49,
+         "remaining work keeps its exact negative-height scheduling envelope");
+  install(compute(lower));
+  Expect(reconcile() == 1 && pending.Empty(),
+         "only known current calculations close both requested sections");
+  pending.Request(-48, -33);
+  world.SetBlock({16, -40, 8}, 8);
+  Expect(reconcile() == 0 && pending.Contains(-3),
+         "stale proof after a neighbor mutation cannot close reopened work");
+  install(compute(upper));
+  Expect(reconcile() == 1 && pending.Empty(),
+         "fresh geometry-derived calculation completes reopened work");
+}
+
 } // namespace
 
 int main(int argc, char **argv)
 {
+  if (argc == 2 && std::string(argv[1]) == "--pending-coverage")
+  {
+    TestPendingCoverageRequiresCurrentKnownProof();
+    std::cout << "pending_light_coverage_test: OK\n";
+    return 0;
+  }
   if (argc == 2 && std::string(argv[1]) == "--light-proof")
   {
     TestVersionedLightInputMemoInvalidatesImmediately();
@@ -1479,6 +1562,7 @@ int main(int argc, char **argv)
     std::cout << "section_light_geometry_test: OK\n";
     return 0;
   }
+  TestPendingCoverageRequiresCurrentKnownProof();
   TestVersionedLightInputMemoInvalidatesImmediately();
   TestWorldOwnedLightCertificates();
   TestBatchAbsenceEvidenceIsFreshAndExact();

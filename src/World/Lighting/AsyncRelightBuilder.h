@@ -36,6 +36,7 @@ public:
   std::vector<RelightComputeResult> DrainCompleted(int max_per_frame);
   bool HasPendingWork() const;
   int GetInFlightCount() const;
+  bool HasInFlightJob(uint64_t job_id) const;
   /// Diagnostic watchdog input: age of the oldest in-flight submission
   /// (steady ms), 0 when nothing is in flight.
   double GetOldestInFlightAgeMs() const;

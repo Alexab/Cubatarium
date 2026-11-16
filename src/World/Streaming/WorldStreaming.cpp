@@ -5968,7 +5968,7 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         {
           ChunkScheduler->Invalidate(ground);
         }
-        world.ClearPendingLightBeforeMesh(col);
+        world.RetirePendingLightBeforeMesh(col);
         world.ClearColumnEmergeState(col); // erase the obsolete column record
         const auto mesh_remove_started = std::chrono::steady_clock::now();
         world.GetMeshService().RemoveColumn(ground, min_cy, highest_cy);

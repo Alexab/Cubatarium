@@ -2003,6 +2003,9 @@ cubatarium_add_test(NAME relight_result_install_test
     DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
+add_test(NAME pending_light_coverage_test
+    COMMAND $<TARGET_FILE:relight_result_install_test> --pending-coverage)
+set_tests_properties(pending_light_coverage_test PROPERTIES LABELS "unit;streaming;lighting")
 add_test(NAME light_calculation_certificate_test
     COMMAND $<TARGET_FILE:relight_result_install_test> --light-proof)
 set_tests_properties(light_calculation_certificate_test PROPERTIES LABELS "unit;streaming;lighting")

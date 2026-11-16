@@ -524,13 +524,13 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
   }
   if (plan.erase_inflight)
   {
-    AsyncRelightColumnsInFlight.erase(column);
+    ReleaseInactiveAsyncRelightColumn(column);
   }
   if (finalize_gate && plan.erase_pending_light)
   {
-    PendingLightBeforeMesh.erase(column);
+    ClearPendingLightBeforeMesh(column);
   }
-  if (finalize_gate)
+  if (finalize_gate && !IsPendingLightBeforeMesh(column))
   {
     SetColumnEmergeState(ground, plan.fsm_after);
     if (Persistence && plan.persistence_light_complete)
@@ -614,12 +614,15 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       const auto empty_t0 = Clock::now();
       for (const glm::ivec2 &g : primary_grounds)
       {
-        AsyncRelightColumnsInFlight.erase(g);
+        ReleaseInactiveAsyncRelightColumn(g);
         if (!finalize_pending_gate)
         {
           continue;
         }
-        PendingLightBeforeMesh.erase(g);
+        if (!ClearPendingLightBeforeMesh(g) ||
+            !HasCurrentColumnLightCoverage(g, ProceduralTemplate.MinHeight,
+                                           ProceduralTemplate.MaxHeight))
+          continue;
         SetColumnEmergeState(glm::ivec3(g.x, 0, g.y), ColumnEmergeState::LitReady);
         if (MeshService && !enter_quiesce)
         {
@@ -642,10 +645,13 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     {
       for (const glm::ivec2 &g : primary_grounds)
       {
-        AsyncRelightColumnsInFlight.erase(g);
+        ReleaseInactiveAsyncRelightColumn(g);
         if (finalize_pending_gate)
         {
-          PendingLightBeforeMesh.erase(g);
+          if (!ClearPendingLightBeforeMesh(g) ||
+              !HasCurrentColumnLightCoverage(g, ProceduralTemplate.MinHeight,
+                                             ProceduralTemplate.MaxHeight))
+            continue;
           SetColumnEmergeState(glm::ivec3(g.x, 0, g.y),
                                ColumnEmergeState::LitReady);
         }
@@ -707,7 +713,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     {
       if (!finalize_pending_gate && !visible_draw_gate_repair)
       {
-        AsyncRelightColumnsInFlight.erase(key);
+        ReleaseInactiveAsyncRelightColumn(key);
         continue;
       }
 
@@ -1235,8 +1241,11 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       {
         continue;
       }
-      AsyncRelightColumnsInFlight.erase(g);
-      PendingLightBeforeMesh.erase(g);
+      ReleaseInactiveAsyncRelightColumn(g);
+      if (!ClearPendingLightBeforeMesh(g) ||
+          !HasCurrentColumnLightCoverage(g, ProceduralTemplate.MinHeight,
+                                         ProceduralTemplate.MaxHeight))
+        continue;
       const glm::ivec3 ground(g.x, 0, g.y);
       SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
       const int dirty_min =

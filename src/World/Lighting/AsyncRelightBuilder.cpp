@@ -311,6 +311,12 @@ int UAsyncRelightBuilder::GetInFlightCount() const
   return static_cast<int>(InFlight.size());
 }
 
+bool UAsyncRelightBuilder::HasInFlightJob(uint64_t job_id) const
+{
+  std::lock_guard<std::mutex> lock(InFlightMutex);
+  return InFlight.count(job_id) != 0;
+}
+
 double UAsyncRelightBuilder::GetOldestInFlightAgeMs() const
 {
   std::lock_guard<std::mutex> lock(InFlightMutex);

@@ -369,6 +369,13 @@ void UWorldPersistence::SetColumnLightComplete(glm::ivec2 ground_xz,
 {
   if (complete)
   {
+    // A partial band, transient result or mesh handoff cannot certify a
+    // persisted whole-column flag.
+    if (!WorldContext ||
+        !WorldContext->HasCurrentColumnLightCoverage(
+            ground_xz, WorldContext->ProceduralTemplate.MinHeight,
+            WorldContext->ProceduralTemplate.MaxHeight))
+      return;
     if (!EnsureLightCacheSignatureCurrent())
       return;
     if (LightCompleteColumns.insert(ground_xz).second)
@@ -3519,7 +3526,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
             glm::ivec3(ground_xz.x, 0, ground_xz.y), relight_min, relight_max,
             __FUNCTION__);
       }
-      else
+      else if (world.HasCurrentColumnLightCoverage(
+                   ground_xz, requested_relight_min, requested_relight_max))
       {
         if (audit_relight)
         {
@@ -3539,6 +3547,16 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         PendingBoundaryDependencyRelightKeys.erase(col);
         DeferredVisibleDrawGateRelightYBands.erase(col);
         return skipped_inflight < std::max(8, max_bg_columns * 4);
+      }
+      else
+      {
+        // Surface heuristics cannot discard an unproven underground band.
+        relight_min = requested_relight_min;
+        relight_max = requested_relight_max;
+        surface_band_adjusted = false;
+        world.NotePendingLightBeforeMesh({ground_xz.x, 0, ground_xz.y},
+                                         relight_min, relight_max,
+                                         "retain_unproven_underground");
       }
     }
     const int horiz_dist = std::max(std::abs(ground_xz.x - focus_horiz.x),

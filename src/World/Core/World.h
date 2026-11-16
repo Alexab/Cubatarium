@@ -27,6 +27,7 @@
 #include "World/Environment/WorldEnvironment.h"
 #include "World/IO/ChunkStorageTypes.h"
 #include "World/Interaction/BlockBreakService.h"
+#include "World/Lighting/PendingLightCoverage.h"
 #include "World/Math/CollisionVolume.h"
 #include "World/Math/GridMath.h"
 #include "World/Physics/PhysicsProfile.h"
@@ -47,6 +48,7 @@
 #include <array>
 #include <chrono>
 #include <cstdint>
+#include <deque>
 #include <functional>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -1293,6 +1295,7 @@ public:
   uint64_t GetRelightCompletedDiscardedOverflow() const;
   void SetRelightCompletedCapacity(size_t cap);
   bool IsAsyncRelightColumnInFlight(glm::ivec2 ground_xz) const;
+  void ReleaseInactiveAsyncRelightColumn(glm::ivec2 ground_xz);
   bool IsTerrainColumnRelightQueued(glm::ivec2 ground_xz) const;
   /// Add exact FIFO/ColumnFlow ownership to opt-in renderer draw-gate traces.
   void PopulateRendererRelightQueueTrace(glm::ivec2 chunk_column,
@@ -1353,13 +1356,17 @@ public:
   /// Near-focus columns waiting for first light before first mesh (plan A).
   void NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y,
                                   const char *audit_source = nullptr);
-  /// FZ2.2-O1: idempotent Note — skip inflight/already-Noted; counts dups in
-  /// telem.
+  /// Always merge coverage; false suppresses only duplicate queue admission.
   bool TryNotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y,
                                      const char *audit_source = nullptr);
   /// Era23 I-V5: NotePendingLight + priority FIFO on void enqueue (ColumnFlow).
   void EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz);
-  void ClearPendingLightBeforeMesh(glm::ivec2 ground_xz);
+  /// Reconcile only physically proven sections; true when no work remains.
+  bool ClearPendingLightBeforeMesh(glm::ivec2 ground_xz);
+  /// Explicit cancellation when the column is unloaded, never a completion.
+  void RetirePendingLightBeforeMesh(glm::ivec2 ground_xz);
+  bool HasCurrentColumnLightCoverage(glm::ivec2 ground_xz, int min_y,
+                                     int max_y) const;
   void NoteVisibleFirstMeshRelightBand(glm::ivec2 chunk_xz, int min_y,
                                        int max_y);
   bool IsPendingLightBeforeMesh(glm::ivec2 ground_xz) const;
@@ -1572,6 +1579,7 @@ public:
   /// Supplemental async relight FIFO drain (adds to RelightDrainMs). Used by
   /// MeshEmerge cold-hole same-tick promote→drain so SoftDefer can lift.
   void DrainRelightQueuesBudget(int max_player_jobs, int max_bg_columns);
+  void RecoverPendingLightWork(int max_admissions);
   /// Idle sync relight for focus pending columns that already have preview
   /// mesh.
   int DrainIdleFocusPendingLight(glm::ivec3 focus_ground_horiz,
@@ -1843,11 +1851,7 @@ private:
   bool IsEnterLitSnapshotColumnResolved(glm::ivec2 col_chunk_xz) const;
   /// True if column has any chunk in enter visibility cy-band.
   bool ColumnHasTerrainInEnterVisualBand(glm::ivec2 col_chunk_xz) const;
-  struct PendingRelightMeshColumnRange
-  {
-    int min_y{0};
-    int max_y{0};
-  };
+  using PendingRelightMeshColumnRange = PendingLightCoverage;
   struct GroundColumnHash
   {
     std::size_t operator()(const glm::ivec2 &v) const noexcept
@@ -1866,10 +1870,13 @@ private:
   std::unordered_map<glm::ivec2, PendingRelightMeshColumnRange,
                      GroundColumnHash>
       PendingLightBeforeMesh;
+  std::deque<glm::ivec2> PendingLightRepairScan;
+  std::unordered_set<glm::ivec2, GroundColumnHash> PendingLightRepairScanKeys;
   /// Lit columns awaiting remesh after MarkRelit (GreedyMesh present, stale).
   std::unordered_set<glm::ivec2, GroundColumnHash> StickyRemeshAfterLight;
   /// Columns with an async terrain-column relight job in flight (chunk xz).
-  std::unordered_set<glm::ivec2, GroundColumnHash> AsyncRelightColumnsInFlight;
+  std::unordered_map<glm::ivec2, uint64_t, GroundColumnHash>
+      AsyncRelightColumnsInFlight;
   std::unordered_map<glm::ivec2, ColumnEmergeState, GroundColumnHash>
       ColumnEmergeStates;
   /// Incremental mirror for the logger-only stage counts; avoids a periodic
