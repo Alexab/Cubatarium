@@ -13,7 +13,9 @@ namespace cutum
 void UFlatLightingPipeline::FillChunkFlat(UChunk &chunk)
 {
   const uint8_t packed = PackLight(kMaxLightLevel, 0);
-  chunk.GetLightDataMutable().fill(packed);
+  std::array<uint8_t, CHUNK_VOLUME> data;
+  data.fill(packed);
+  chunk.ReplaceLightData(data);
 }
 
 void UFlatLightingPipeline::FillChunkInitialLight(UChunk &chunk)

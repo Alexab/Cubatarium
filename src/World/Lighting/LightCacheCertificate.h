@@ -18,7 +18,8 @@ namespace cutum
 
 // Increment when solver semantics change. Old bytes remain loadable terrain
 // data, but must not be treated as a completed solution for a newer solver.
-inline constexpr uint32_t kLightSolverCacheVersion = 3;
+// v4 also removes the successful section-seed bypass of full-height sky.
+inline constexpr uint32_t kLightSolverCacheVersion = 4;
 
 inline std::string
 MakeLightCacheSignature(const WorldVerticalProfile &profile,

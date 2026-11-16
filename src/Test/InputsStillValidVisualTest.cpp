@@ -77,8 +77,7 @@ int main()
              true, true, snap2.inputStamps, world, snap2.lightHaloSignatures) ==
              cutum::MeshApplyStaleInputReason::Ok,
          "unrelated neighbor light revision classifies as Ok");
-  auto &neighbor_light = neighbor_chunk->GetLightDataMutable();
-  neighbor_light[cutum::UChunk::LocalIndex({0, 0, 0})] = cutum::PackLight(8, 0);
+  neighbor_chunk->SetLightLocal({0, 0, 0}, 8, 0);
   Expect(!snap2.InputsStillValid(world), "halo light sample invalidates stamp");
   Expect(ChunkMeshSnapshot::ClassifyStaleInput(
              true, true, snap2.inputStamps, world, snap2.lightHaloSignatures) ==

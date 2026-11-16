@@ -5,6 +5,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Lighting/LightUtil.h"
 #include "World/Math/BlockTypes.h"
+#include "World/Math/WorldVerticalProfile.h"
 #include "World/Streaming/WorkToken.h"
 #include <array>
 #include <cstdint>
@@ -75,6 +76,9 @@ struct RelightComputeResult
   std::vector<ChunkInputStamp> read_set;
   RelightJobSpec retry_spec;
   std::shared_ptr<const BlockDefinitionCatalog> input_catalog;
+  WorldVerticalProfile input_profile;
+  uint64_t input_lighting_configuration{0};
+  bool input_context_captured{false};
   std::vector<RelightChunkLightData> chunks;
   bool frontier_unfinished{false};
   bool finalize_pending_gate{true};
@@ -147,6 +151,9 @@ private:
   int CapturedSkyContextChunks{0};
   double SkyContextCaptureMs{0.0};
   int WorldMaxY{0};
+  WorldVerticalProfile InputProfile;
+  uint64_t InputLightingConfiguration{0};
+  bool InputContextCaptured{false};
 };
 
 } // namespace cutum

@@ -111,7 +111,7 @@ InstallComputedLight(UChunk &chunk,
   }
   if (changed)
   {
-    chunk.GetLightDataMutable() = merged;
+    chunk.ReplaceLightData(merged);
   }
   return changed;
 }

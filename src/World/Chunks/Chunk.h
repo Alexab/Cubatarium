@@ -55,16 +55,12 @@ public:
   {
     return LightData;
   }
-  // Legacy bulk writers invalidate conservatively on acquiring mutable access.
-  // Read-only callers must use GetLightData().
-  std::array<uint8_t, CHUNK_VOLUME> &GetLightDataMutable()
-  {
-    ++LightFieldRevision;
-    return LightData;
-  }
-
+  /// Atomic main-thread replacement. Unchanged channels retain their identity.
+  bool ReplaceLightData(const std::array<uint8_t, CHUNK_VOLUME> &data);
   /// FZ2.7-B1: bumped on any light-field mutation (Apply merge, relight seed).
   uint64_t GetLightFieldRevision() const { return LightFieldRevision; }
+  uint64_t GetSkyLightRevision() const { return SkyLightRevision; }
+  uint64_t GetBlockLightRevision() const { return BlockLightRevision; }
   uint64_t GetIncarnation() const { return Incarnation; }
   uint64_t GetContentRevision() const { return ContentRevision; }
   void BumpLightFieldRevision() { ++LightFieldRevision; }
@@ -124,6 +120,8 @@ private:
   float SurfaceWetness{0.0f};
   double WeatherLastUpdateSec{0.0};
   uint64_t LightFieldRevision{0};
+  uint64_t SkyLightRevision{0};
+  uint64_t BlockLightRevision{0};
   inline static std::atomic<uint64_t> NextIncarnation{1};
   uint64_t Incarnation{NextIncarnation.fetch_add(1, std::memory_order_relaxed)};
   uint64_t ContentRevision{0};

@@ -126,14 +126,21 @@ struct ChunkInputStamp
   // Matches(UChunk*) only checks resident data identity; world consumers also
   // validate evidence through UBlockWorld::InputStampStillMatches.
   MissingChunkEvidence missingEvidence{MissingChunkEvidence::Untracked};
+  uint64_t skyLight{0};
+  uint64_t blockLight{0};
   static ChunkInputStamp Capture(glm::ivec3 coord, const UChunk *chunk,
                                  bool reads_light = true,
                                  bool reads_content = true)
   {
-    return {coord, chunk ? chunk->GetIncarnation() : 0,
-            chunk ? chunk->GetContentRevision() : 0,
-            chunk ? chunk->GetLightFieldRevision() : 0, reads_light,
-            reads_content};
+    ChunkInputStamp stamp{coord,
+                          chunk ? chunk->GetIncarnation() : 0,
+                          chunk ? chunk->GetContentRevision() : 0,
+                          chunk ? chunk->GetLightFieldRevision() : 0,
+                          reads_light,
+                          reads_content};
+    stamp.skyLight = chunk ? chunk->GetSkyLightRevision() : 0;
+    stamp.blockLight = chunk ? chunk->GetBlockLightRevision() : 0;
+    return stamp;
   }
   bool Matches(const UChunk *chunk) const
   {

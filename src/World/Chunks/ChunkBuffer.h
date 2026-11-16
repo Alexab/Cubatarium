@@ -46,7 +46,8 @@ public:
   bool HasChunkLightData() const { return HasChunkLight; }
   bool IsEmpty() const
   {
-    return Blocks.empty() && !HasChunkLight && !HasChunkWeather;
+    return Blocks.empty() && LightPacked.empty() && !HasChunkLight &&
+           !HasChunkWeather;
   }
   bool HasYBounds() const { return HasBounds; }
   int GetMinY() const { return MinY; }

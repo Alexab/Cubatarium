@@ -1,9 +1,12 @@
 #include "World/Lighting/RelightResultInstall.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
+#include "World/Chunks/ChunkBuffer.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Lighting/GpuSkylightColumnSeed.h"
+#include "World/Lighting/RelightInputValidation.h"
+#include "World/Streaming/MeshLitGate.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -54,6 +57,72 @@ void TestDomainsAndRevision()
          "both domains install");
   Expect(chunk.GetLightData() == computed,
          "full result installs byte-for-byte");
+}
+
+void TestLightChannelIdentityAndBufferedWrites()
+{
+  using namespace cutum;
+  UChunk chunk({-1, -3, 2});
+  chunk.SetLightLocal({2, 3, 4}, 0, 7);
+  Expect(chunk.GetSkyLightRevision() == 0 && chunk.GetBlockLightRevision() == 1,
+         "block-only write preserves sky input identity");
+  chunk.SetLightLocal({2, 3, 4}, 9, 7);
+  Expect(chunk.GetSkyLightRevision() == 1 && chunk.GetBlockLightRevision() == 1,
+         "sky-only write preserves block-light identity");
+  chunk.ClearLightLocal({2, 3, 4});
+  Expect(chunk.GetSkyLightRevision() == 2 && chunk.GetBlockLightRevision() == 2,
+         "clear invalidates both changed channels");
+  auto data = chunk.GetLightData();
+  data[UChunk::LocalIndex({2, 3, 4})] = PackLight(0, 11);
+  Expect(chunk.ReplaceLightData(data), "atomic block replacement changes data");
+  Expect(chunk.GetSkyLightRevision() == 2 && chunk.GetBlockLightRevision() == 3,
+         "atomic replacement tracks only the changed channel");
+  const auto revision = chunk.GetLightFieldRevision();
+  Expect(!chunk.ReplaceLightData(data) &&
+             chunk.GetLightFieldRevision() == revision,
+         "same field does not invalidate any published identity");
+  Expect(
+      MeshCandidateMatchesSettledDemand(true, true, true, 5, 5, 5, 0, 0, 0, 0),
+      "explicitly settled zero field can support a current dark candidate");
+  Expect(!MeshCandidateMatchesSettledDemand(true, true, false, 5, 5, 5, 0, 0, 0,
+                                            0),
+         "zero field equality without a computation proof remains unready");
+  chunk.SetBlockLocal({2, 3, 4}, 8);
+  chunk.SetFluidLocal({2, 3, 4}, FluidCellState::Flowing(3));
+  Expect(chunk.GetSkyLightRevision() == 2 && chunk.GetBlockLightRevision() == 3,
+         "geometry and fluid have their own content identity");
+  const auto incarnation = chunk.GetIncarnation();
+  chunk.ResetForReuse(chunk.GetCoord());
+  Expect(chunk.GetIncarnation() != incarnation &&
+             chunk.GetSkyLightRevision() == 0 &&
+             chunk.GetBlockLightRevision() == 0,
+         "recycled channel revisions are scoped by a new incarnation");
+
+  UBlockWorld world;
+  const glm::ivec3 coord(-1, -3, 2);
+  const glm::ivec3 cell = coord * CHUNK_SIZE + glm::ivec3(2, 3, 4);
+  UChunkBuffer sparse;
+  sparse.SetLightPacked(cell, PackLight(3, 5));
+  Expect(!sparse.IsEmpty(), "a light-only buffer contains executable work");
+  sparse.ApplyToChunk(world, coord);
+  const UChunk *loaded = world.GetChunkManager().GetChunk(coord);
+  Expect(loaded && loaded->GetLightPackedLocal({2, 3, 4}) == PackLight(3, 5),
+         "sparse buffered light reaches its signed section");
+  const auto buffered_revision = loaded->GetLightFieldRevision();
+  sparse.ApplyToChunk(world, coord);
+  Expect(loaded->GetLightFieldRevision() == buffered_revision,
+         "repeated buffered apply retains light identity");
+  sparse.SetLightPacked(cell, 0);
+  sparse.ApplyToChunk(world, coord);
+  Expect(loaded->GetLightPackedLocal({2, 3, 4}) == 0,
+         "explicit zero light is a removal, not missing buffered work");
+  UChunkBuffer dense;
+  dense.SetChunkLightData(coord, loaded->GetLightData());
+  const auto zero_revision = loaded->GetLightFieldRevision();
+  dense.ApplyToChunk(world, coord);
+  dense.ApplyTo(world);
+  Expect(loaded->GetLightFieldRevision() == zero_revision,
+         "unchanged dense IO applies do not invalidate light identity");
 }
 
 void TestHorizontalLightBoundaryChangeMask()
@@ -547,11 +616,78 @@ void TestRelightAbsenceEvidenceChangesWithoutResidency()
              "revoking sky proof invalidates a completed-input relight");
 }
 
+void TestRelightInputContextAndSeparateChannels()
+{
+  using namespace cutum;
+  UBlockWorld world;
+  world.SetBlock({8, -40, 8}, 8);
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  UBlockRegistry registry(nullptr, definitions);
+  RelightJobSpec spec;
+  spec.block_positions = {{8, -40, 8}};
+  spec.min_world_y = -48;
+  spec.max_world_y = -33;
+  spec.column_center_only = true;
+  spec.include_skylight = true;
+  spec.include_block_light = false;
+  auto result = UChunkRelightSnapshot::Capture(world, spec).Compute(registry);
+  const auto validate = [&](bool known = false)
+  {
+    return ValidateRelightInputs(
+        result, world, registry.GetDefinitionsCatalogSnapshot(), known);
+  };
+  Expect(validate() == RelightInputValidation::Current,
+         "captured world and selected light domain match");
+  Expect(validate(true) == RelightInputValidation::UnknownInput,
+         "transient unknown inputs cannot certify a completed calculation");
+  auto *chunk = world.GetChunkManager().GetChunk({0, -3, 0});
+  chunk->SetLightLocal({2, 3, 4}, 0, 7);
+  Expect(validate() == RelightInputValidation::Current,
+         "block-only mutation does not reject a sky-only computation");
+  chunk->SetLightLocal({2, 3, 4}, 9, 7);
+  Expect(validate() == RelightInputValidation::ReadSet,
+         "sky mutation rejects a sky computation");
+  spec.include_skylight = false;
+  spec.include_block_light = true;
+  result = UChunkRelightSnapshot::Capture(world, spec).Compute(registry);
+  chunk->SetLightLocal({2, 3, 4}, 10, 7);
+  Expect(validate() == RelightInputValidation::Current,
+         "sky-only mutation does not reject a block-only computation");
+  chunk->SetLightLocal({2, 3, 4}, 10, 8);
+  Expect(validate() == RelightInputValidation::ReadSet,
+         "block mutation rejects a block computation");
+  result = UChunkRelightSnapshot::Capture(world, spec).Compute(registry);
+  const auto profile = world.GetVerticalProfile();
+  auto extended = profile;
+  extended.MaxY += CHUNK_SIZE;
+  world.SetVerticalProfile(extended);
+  Expect(
+      validate() == RelightInputValidation::Profile,
+      "changed ceiling rejects a result even with identical captured chunks");
+  world.SetVerticalProfile(profile);
+  world.SetLightingConfigurationIdentity(1);
+  Expect(validate() == RelightInputValidation::Configuration,
+         "changed lighting mode rejects an obsolete algorithm result");
+  world.SetLightingConfigurationIdentity(0);
+  auto other = std::make_shared<UBlockDefinitionStorage>();
+  Expect(ValidateRelightInputs(result, world, other->GetCatalogSnapshot()) ==
+             RelightInputValidation::Catalog,
+         "another material catalog cannot inherit the calculation");
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  result = UChunkRelightSnapshot::Capture(world, spec).Compute(registry);
+  Expect(validate(true) == RelightInputValidation::Current,
+         "known resident and proven-air inputs can support completion");
+  result.input_context_captured = false;
+  Expect(validate() == RelightInputValidation::MissingContext,
+         "missing provenance cannot inherit the current configuration");
+}
+
 } // namespace
 
 int main()
 {
   TestDomainsAndRevision();
+  TestLightChannelIdentityAndBufferedWrites();
   TestHorizontalLightBoundaryChangeMask();
   TestHorizontalBoundaryDependencyWaveSettles();
   TestLateralSkylightSurvivesInstall();
@@ -560,5 +696,6 @@ int main()
   TestSkylightContextDoesNotExpandThreeByThreeWriteSet();
   TestVerticalBoundaryDependencyAdditionAndRemoval();
   TestRelightAbsenceEvidenceChangesWithoutResidency();
+  TestRelightInputContextAndSeparateChannels();
   std::cout << "relight_result_install_test: OK\n";
 }

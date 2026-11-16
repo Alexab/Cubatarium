@@ -55,11 +55,11 @@ int main()
          "arbitrary sky preserved");
 
   const int li_floor = (0 * CHUNK_SIZE + 0) * CHUNK_SIZE + 0;
-  Expect(UnpackBlock(chunk.GetLightDataMutable()[static_cast<size_t>(li_floor)]) ==
+  Expect(UnpackBlock(chunk.GetLightData()[static_cast<size_t>(li_floor)]) ==
              UnpackBlock(async_packed[static_cast<size_t>(li_floor)]),
          "floor block light from async");
   const int li_air = (1 * CHUNK_SIZE + 0) * CHUNK_SIZE + 0;
-  Expect(UnpackBlock(chunk.GetLightDataMutable()[static_cast<size_t>(li_air)]) ==
+  Expect(UnpackBlock(chunk.GetLightData()[static_cast<size_t>(li_air)]) ==
              UnpackBlock(async_packed[static_cast<size_t>(li_air)]),
          "air block light from async");
 

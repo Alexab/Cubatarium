@@ -134,7 +134,20 @@
         "Версионированная подпись сохранённого света: алгоритм, свойства материалов, профиль высот и зависимости; старое состояние безопасно пересчитывается",
         "Проверка CPU, настоящего GPU пути и fallback как отдельных режимов"
       ],
-      "acceptance": "Независимые эталонные сетки: высокая крыша, глубокая вода, вертикальные/горизонтальные швы, удаление факела и крыши, смена материалов, частичный reload; после сходимости нет потерянного долга"
+      "acceptance": "Независимые эталонные сетки: высокая крыша, глубокая вода, вертикальные/горизонтальные швы, удаление факела и крыши, смена материалов, частичный reload; после сходимости нет потерянного долга",
+      "solver_contract_refinement": {
+        "status": "design_pending_implementation",
+        "evidence": "sync flood mutates neighbor fields and differs from snapshot boundary-light path; per-domain proof cannot be stable if duplicate sync solves clear/rewrite unchanged fields; unknown geometry is still AIR in current solver",
+        "direction": "derive completed section fields from known geometry/emission in a bounded halo, with direct sky context through configured ceiling; avoid circular reliance on unfinished neighbor light for a completed certificate",
+        "bound": "indirect max light15 and attenuation at least1 per 6-neighbor step bound contributing geometry to a one-section halo for an unpadded section; direct vertical sky still requires full upper context; padded resource sampling must account for its larger output region",
+        "required_checks": [
+          "section result independent of neighbor light byte contents and job/load order for identical known geometry",
+          "late-known geometry cannot certify an earlier incomplete calculation",
+          "finite reference flood, high roof, cross-section water, six-direction source addition/removal and partial-domain preservation",
+          "same authoritative CPU computation/input provenance for cooperative sync and async paths; actual GPU dispatch parity accepted separately",
+          "publish immutable per-domain input/output proofs only after all owned result writes are installed"
+        ]
+      }
     },
     {
       "id": "S4",

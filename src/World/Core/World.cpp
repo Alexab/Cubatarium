@@ -56,6 +56,7 @@
 #include "World/Lighting/IULightingPipeline.h"
 #include "World/Lighting/LightChangeSet.h"
 #include "World/Lighting/LightingPipelineFactory.h"
+#include "World/Lighting/RelightInputValidation.h"
 #include "World/Lighting/RelightResultInstall.h"
 #include "World/Math/ChunkMeshFace.h"
 #include "World/Math/FluidCellState.h"
@@ -1419,6 +1420,8 @@ IULightingPipeline &UWorld::GetLightingPipeline()
     }
     LightingPipeline = ULightingPipelineFactory::Create(mode);
   }
+  BlockWorld.SetLightingConfigurationIdentity(
+      static_cast<uint64_t>(LightingPipeline->GetMode()));
   return *LightingPipeline;
 }
 
@@ -9612,23 +9615,21 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     const auto validation_started = std::chrono::high_resolution_clock::now();
     bool reject_stale = false;
     const ChunkInputStamp *stale_input = nullptr;
+    RelightInputValidation input_validation = RelightInputValidation::Current;
     if (result.work_token.world_epoch != 0 &&
         result.work_token.world_epoch != AsyncRelight->SubmitEpoch())
     {
       reject_stale = true;
     }
-    if (!reject_stale && BlockRegistry != nullptr)
+    if (!reject_stale)
     {
-      if (result.input_catalog !=
-          BlockRegistry->GetDefinitionsCatalogSnapshot())
-        reject_stale = true;
-      for (const auto &stamp : result.read_set)
-        if (!BlockWorld.InputStampStillMatches(stamp))
-        {
-          reject_stale = true;
-          stale_input = &stamp;
-          break;
-        }
+      input_validation = ValidateRelightInputs(
+          result, BlockWorld,
+          BlockRegistry ? BlockRegistry->GetDefinitionsCatalogSnapshot()
+                        : nullptr,
+          /*require_known_inputs=*/false, &stale_input);
+      reject_stale =
+          !BlockRegistry || input_validation != RelightInputValidation::Current;
     }
     PhysicsTelemetryData.RelightApplyValidationMs +=
         std::chrono::duration<double, std::milli>(
@@ -9638,7 +9639,8 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     {
       if (audit_relight)
       {
-        std::string reason = "epoch_or_catalog";
+        std::string reason = "input_validation=" +
+                             std::to_string(static_cast<int>(input_validation));
         if (stale_input)
         {
           const auto now = BlockWorld.CaptureInputStamp(
@@ -9653,7 +9655,11 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
               " content=" + std::to_string(stale_input->content) + "->" +
               std::to_string(now.content) +
               " light=" + std::to_string(stale_input->light) + "->" +
-              std::to_string(now.light) + " absence=" +
+              std::to_string(now.light) +
+              " sky_rev=" + std::to_string(stale_input->skyLight) + "->" +
+              std::to_string(now.skyLight) +
+              " block_rev=" + std::to_string(stale_input->blockLight) + "->" +
+              std::to_string(now.blockLight) + " absence=" +
               std::to_string(static_cast<int>(stale_input->missingEvidence)) +
               "->" + std::to_string(static_cast<int>(now.missingEvidence));
         }
@@ -15933,7 +15939,13 @@ void UWorld::SetRenderSettings(const RenderSettings &settings)
   }
   const LightingMode old_mode =
       LightingPipeline ? LightingPipeline->GetMode() : LightingMode::Full;
+  if (old_mode != new_mode)
+  {
+    // Old full-light work cannot be retried as if it computed the new mode.
+    CancelAsyncRelightWork();
+  }
   Render = settings;
+  BlockWorld.SetLightingConfigurationIdentity(static_cast<uint64_t>(new_mode));
   MeshService->SetRenderSettings(settings);
   if (!LightingPipeline || old_mode != new_mode)
   {

@@ -42,6 +42,24 @@ bool UBlockWorld::InputStampStillMatches(const ChunkInputStamp &stamp) const
              (stamp.missingEvidence == MissingChunkEvidence::KnownAir);
 }
 
+bool UBlockWorld::InputStampLightDomainsStillMatch(const ChunkInputStamp &stamp,
+                                                   bool reads_sky,
+                                                   bool reads_block) const
+{
+  auto geometry = stamp;
+  geometry.readsLight = false;
+  if (!InputStampStillMatches(geometry))
+    return false;
+  if (!stamp.readsLight || (!reads_sky && !reads_block))
+    return true;
+  const UChunk *chunk = Chunks.GetChunk(stamp.coord);
+  return stamp.incarnation == (chunk ? chunk->GetIncarnation() : 0) &&
+         (!reads_sky ||
+          stamp.skyLight == (chunk ? chunk->GetSkyLightRevision() : 0)) &&
+         (!reads_block ||
+          stamp.blockLight == (chunk ? chunk->GetBlockLightRevision() : 0));
+}
+
 BlockId UBlockWorld::GetBlock(glm::ivec3 pos) const
 {
   return Chunks.GetBlock(pos);

@@ -137,9 +137,8 @@ inline bool MeshCandidateMatchesSettledDemand(
     uint64_t source_light_rev, uint64_t field_light_rev,
     uint64_t settled_light_rev, uint64_t desired_light_rev)
 {
-  return input_stamps_current && demand_identity_current &&
-         has_settled_light && source_geom_rev != 0 && source_light_rev != 0 &&
-         source_geom_rev == current_geom_rev &&
+  return input_stamps_current && demand_identity_current && has_settled_light &&
+         source_geom_rev != 0 && source_geom_rev == current_geom_rev &&
          source_geom_rev == desired_geom_rev &&
          source_light_rev == field_light_rev &&
          source_light_rev == settled_light_rev &&

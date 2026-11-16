@@ -5,7 +5,7 @@
     "isolated_automated_test_stand": "in_progress: first-frame and visual-reference witnesses still missing",
     "diagnostic_bot": "verified baseline: native takeoff, route, inspection; expand scenario matrix",
     "local_streaming_mesh_underwater_defects": "in_progress: signed bands, lossless population events, same-size mesh reconciliation and eye-local fluid intervals fixed; native surface frontier routes verified; cave matrix and remaining invalidations pending",
-    "correct_light_solver_and_persistence": "in_progress: full-height CPU sky, water attenuation, six-face partial-band dependency addition/removal and global persisted solver/material/profile signature verified; unknown inputs, per-section settlement and GPU still pending",
+    "correct_light_solver_and_persistence": "in_progress: full-height sky paths, atomic channel identity, profile/mode/catalog input validation and v4 cache compatibility verified; persistent known-input completion and solver unification pending",
     "single_section_lifecycle_and_publication": "in_progress: world-local demand ownership being validated; strong input settlement, authoritative readiness and first-frame closure still pending",
     "independent_light_resource_and_performance": "pending",
     "full_smoke_and_regression_matrix": "in_progress: surface frontier, dry negative cave and flooded negative cave routes; independent analytic near-opaque-depth checks; startup, light/transparent reference, air pocket and eviction round trip still pending"
@@ -1245,5 +1245,36 @@
     "test_log": "build/desktop-msvc/engine-backend-observation-tests.log",
     "behavior": "smoke verdict observes all counter-bearing record kinds; missing key differs from observed zero; malformed counters do not grant execution; positive-record counts are not dispatch totals",
     "analysis_commit": "f15f82a25c2ddd3236cfa0939a7054e90800d95a"
+  },
+  "light_domain_and_input_context_verification": {
+    "status": "unit_and_release_verified_native_pending",
+    "behavior": [
+      "sky and block channels have separate mutation revisions; geometry/fluid keep their content revision",
+      "production writes use SetLightLocal or atomic ReplaceLightData; mutable array escape removed; no-change IO/install preserves revision identity",
+      "sparse light-only buffers retain executable work and explicit zero removals",
+      "snapshot captures profile, lighting configuration and material catalog; async install validates selected domains and context",
+      "known-input validation is explicit and rejects unknown inputs, but durable section completion is not yet migrated to this stricter contract",
+      "zero light revision is valid only with explicit settlement and matching geometry/light demand",
+      "lighting cache compatibility version4 invalidates fields potentially computed with the old successful-seed bypass while retaining block storage format"
+    ],
+    "negative_controls": [
+      "engine-light-buffer-empty-red-test.log",
+      "engine-light-buffer-zero-red-test.log",
+      "engine-relight-shared-domain-red-test.log",
+      "engine-relight-profile-red-test.log",
+      "engine-relight-mode-red-test.log",
+      "engine-zero-field-proof-red-test.log"
+    ],
+    "artifact_root": "build/desktop-msvc",
+    "test_log": "build/desktop-msvc/engine-relight-context-final-tests.log",
+    "passed_sets": 11,
+    "release_build": "build/desktop-msvc/engine-relight-context-final-release-build.log",
+    "limitations": [
+      "persistent per-section input certificates and independent sky/block completion still pending",
+      "unknown-input completion prohibition is available in validator but not yet authoritative throughout the lifecycle",
+      "sync/async solver unification and order-independent boundary handling still pending",
+      "live mode-switch integration and native sparse-only IO triggers remain unexercised",
+      "native regression pending"
+    ]
   }
 }

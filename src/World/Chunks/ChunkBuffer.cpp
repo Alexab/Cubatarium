@@ -103,11 +103,7 @@ void UChunkBuffer::SetFluidPacked(glm::ivec3 worldPos, uint8_t packed)
 
 void UChunkBuffer::SetLightPacked(glm::ivec3 worldPos, uint8_t packed)
 {
-  if (packed == 0)
-  {
-    LightPacked.erase(worldPos);
-    return;
-  }
+  // Zero is an explicit light removal when applying over resident data.
   LightPacked[worldPos] = packed;
 }
 
@@ -231,7 +227,7 @@ void UChunkBuffer::ApplyTo(UBlockWorld &world) const
     world.GetChunkManager().EnsureChunk(ChunkLightCoord);
     if (UChunk *chunk = world.GetChunkManager().GetChunk(ChunkLightCoord))
     {
-      chunk->GetLightDataMutable() = ChunkLight;
+      chunk->ReplaceLightData(ChunkLight);
     }
   }
   if (HasChunkWeather)
@@ -252,8 +248,7 @@ void UChunkBuffer::ApplyTo(UBlockWorld &world) const
       continue;
     }
     const glm::ivec3 local = UChunkManager::WorldToLocal(entry.first);
-    chunk->GetLightDataMutable()[static_cast<size_t>(
-        UChunk::LocalIndex(local))] = entry.second;
+    chunk->SetLightLocal(local, entry.second & 0x0F, entry.second >> 4);
   }
 }
 
@@ -287,7 +282,7 @@ void UChunkBuffer::ApplyToChunk(UBlockWorld &world, glm::ivec3 chunkCoord) const
   if (HasChunkLight)
   {
     assert(ChunkLightCoord == chunkCoord);
-    chunk->GetLightDataMutable() = ChunkLight;
+    chunk->ReplaceLightData(ChunkLight);
   }
   if (HasChunkWeather)
   {
@@ -295,7 +290,6 @@ void UChunkBuffer::ApplyToChunk(UBlockWorld &world, glm::ivec3 chunkCoord) const
     chunk->SetWeatherState(ChunkWetness, ChunkWeatherLastUpdateSec);
   }
 
-  std::array<uint8_t, CHUNK_VOLUME> *light_data = nullptr;
   for (const auto &entry : LightPacked)
   {
     const glm::ivec3 entry_chunk = UChunkManager::WorldToChunk(entry.first);
@@ -307,18 +301,13 @@ void UChunkBuffer::ApplyToChunk(UBlockWorld &world, glm::ivec3 chunkCoord) const
       UChunk *fallback_chunk = chunks.GetChunk(fallback_chunk_coord);
       if (fallback_chunk)
       {
-        fallback_chunk->GetLightDataMutable()[static_cast<size_t>(
-            UChunk::LocalIndex(UChunkManager::WorldToLocal(entry.first)))] =
-            entry.second;
+        fallback_chunk->SetLightLocal(UChunkManager::WorldToLocal(entry.first),
+                                      entry.second & 0x0F, entry.second >> 4);
       }
       continue;
     }
-    if (!light_data)
-    {
-      light_data = &chunk->GetLightDataMutable();
-    }
-    (*light_data)[static_cast<size_t>(UChunk::LocalIndex(
-        UChunkManager::WorldToLocal(entry.first)))] = entry.second;
+    chunk->SetLightLocal(UChunkManager::WorldToLocal(entry.first),
+                         entry.second & 0x0F, entry.second >> 4);
   }
 }
 

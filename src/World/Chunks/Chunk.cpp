@@ -26,6 +26,8 @@ void UChunk::ResetForReuse(glm::ivec3 chunkCoord)
   SurfaceWetness = 0.0f;
   WeatherLastUpdateSec = 0.0;
   LightFieldRevision = 0;
+  SkyLightRevision = 0;
+  BlockLightRevision = 0;
   ContentRevision = 0;
   Incarnation = NextIncarnation.fetch_add(1, std::memory_order_relaxed);
   Dirty = true;
@@ -145,6 +147,24 @@ void UChunk::ClearFluidLocal(glm::ivec3 local)
   Dirty = true;
 }
 
+bool UChunk::ReplaceLightData(const std::array<uint8_t, CHUNK_VOLUME> &data)
+{
+  bool sky_changed = false;
+  bool block_changed = false;
+  for (size_t i = 0; i < data.size(); ++i)
+  {
+    sky_changed |= (data[i] & 0x0F) != (LightData[i] & 0x0F);
+    block_changed |= (data[i] & 0xF0) != (LightData[i] & 0xF0);
+  }
+  if (!sky_changed && !block_changed)
+    return false;
+  LightData = data;
+  ++LightFieldRevision;
+  SkyLightRevision += sky_changed;
+  BlockLightRevision += block_changed;
+  return true;
+}
+
 uint8_t UChunk::GetLightPackedLocal(glm::ivec3 local) const
 {
   if (local.x < 0 || local.x >= CHUNK_SIZE || local.y < 0 ||
@@ -176,6 +196,8 @@ void UChunk::SetLightLocal(glm::ivec3 local, int sky_level, int block_level)
   const auto next = PackLight(sky_level, block_level);
   if (packed != next)
   {
+    SkyLightRevision += (packed & 0x0F) != (next & 0x0F);
+    BlockLightRevision += (packed & 0xF0) != (next & 0xF0);
     packed = next;
     ++LightFieldRevision;
   }
@@ -191,6 +213,8 @@ void UChunk::ClearLightLocal(glm::ivec3 local)
   auto &packed = LightData[static_cast<size_t>(LocalIndex(local))];
   if (packed != 0)
   {
+    SkyLightRevision += (packed & 0x0F) != 0;
+    BlockLightRevision += (packed & 0xF0) != 0;
     packed = 0;
     ++LightFieldRevision;
   }

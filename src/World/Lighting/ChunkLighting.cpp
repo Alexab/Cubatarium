@@ -37,10 +37,7 @@ bool WorldPosInChunk(glm::ivec3 world_pos, glm::ivec3 chunk_coord)
   return InChunkLocal(local);
 }
 
-void ClearChunkLight(UChunk &chunk)
-{
-  chunk.GetLightDataMutable().fill(0);
-}
+void ClearChunkLight(UChunk &chunk) { chunk.ReplaceLightData({}); }
 
 void WriteSkyLight(
     UChunk &chunk, glm::ivec3 local, int sky_level,

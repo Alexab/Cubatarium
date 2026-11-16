@@ -641,6 +641,10 @@ UChunkRelightSnapshot UChunkRelightSnapshot::Capture(const UBlockWorld &world,
   UChunkRelightSnapshot snapshot;
   snapshot.Spec = spec;
   snapshot.WorldMaxY = world.GetVerticalProfile().MaxY;
+  snapshot.InputProfile = world.GetVerticalProfile();
+  snapshot.InputLightingConfiguration =
+      world.GetLightingConfigurationIdentity();
+  snapshot.InputContextCaptured = true;
   std::unordered_set<glm::ivec3, IVec3Hash> coords;
   for (const glm::ivec3 &block_pos : spec.block_positions)
   {
@@ -782,6 +786,10 @@ UChunkRelightSnapshot::Compute(const UBlockRegistry &registry)
 {
   RelightComputeResult result;
   result.read_set = ReadSet;
+  result.input_profile = InputProfile;
+  result.input_lighting_configuration = InputLightingConfiguration;
+  result.input_context_captured = InputContextCaptured;
+  result.input_catalog = registry.GetDefinitionsCatalogSnapshot();
   result.retry_spec = Spec;
   result.job_id = Spec.job_id;
   result.source_block_positions = Spec.block_positions;

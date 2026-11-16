@@ -46,6 +46,16 @@ public:
   ChunkInputStamp CaptureInputStamp(glm::ivec3 coord, bool reads_light = true,
                                     bool reads_content = true) const;
   bool InputStampStillMatches(const ChunkInputStamp &stamp) const;
+  bool InputStampLightDomainsStillMatch(const ChunkInputStamp &stamp,
+                                        bool reads_sky, bool reads_block) const;
+  void SetLightingConfigurationIdentity(uint64_t identity)
+  {
+    LightingConfigurationIdentity = identity;
+  }
+  uint64_t GetLightingConfigurationIdentity() const
+  {
+    return LightingConfigurationIdentity;
+  }
 
   void SetFluidDefinitions(const UBlockDefinitionStorage *definitions)
   {
@@ -88,6 +98,7 @@ public:
 private:
   UChunkManager Chunks;
   WorldVerticalProfile VerticalProfile{};
+  uint64_t LightingConfigurationIdentity{0};
   const UBlockDefinitionStorage *FluidDefinitions{nullptr};
   UChunkBuffer *CaptureBuffer{nullptr};
   std::function<bool(glm::ivec3)> KnownOpenSkyAbsentQuery;
