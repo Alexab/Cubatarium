@@ -44,6 +44,7 @@ function(cubatarium_add_test)
 endfunction()
 
 
+
 # MSVC desktop static CRT (/MT). Skip for GNU-style Clang on Windows (e.g. linux-ninja preset).
 set(CUBATARIUM_MSVC_DESKTOP FALSE)
 if(WIN32)
@@ -977,6 +978,12 @@ add_dependencies(${PROJECT_NAME} cubatarium_version)
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /MP)
 endif()
+
+cubatarium_add_test(NAME position_assignment_audit_test
+    SOURCES src/Test/PositionAssignmentAuditTest.cpp
+    LIBRARIES glm::glm)
+add_test(NAME position_assignment_audit_test COMMAND $<TARGET_FILE:position_assignment_audit_test>)
+set_tests_properties(position_assignment_audit_test PROPERTIES LABELS "unit;streaming")
 
 cubatarium_add_test(NAME chunk_load_priority_test
     SOURCES

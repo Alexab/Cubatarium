@@ -63,6 +63,8 @@ struct FlightSimOptions
   bool Sprint{false};
   /// Reset to a fixed ocean cruise start each run (matches World_164 manual).
   bool TeleportToCruiseStart{false};
+  /// Disable legacy altitude clamps and diagnostic water placement.
+  bool StrictNoRelocation{false};
   float CruiseStartChunkX{-47.0f};
   float CruiseStartChunkZ{5.0f};
   std::string PerfOutPath;   // optional copy of perf jsonl

@@ -200,6 +200,10 @@ int main(int argc, char *argv[])
         {
           opt.TeleportToCruiseStart = false;
         }
+        else if (std::strcmp(argv[j], "--strict-no-relocation") == 0)
+        {
+          opt.StrictNoRelocation = true;
+        }
         else if (std::strcmp(argv[j], "--cruise-cx") == 0 && j + 1 < argc)
         {
           opt.CruiseStartChunkX = static_cast<float>(std::atof(argv[++j]));

@@ -15,6 +15,7 @@
 #include "Render/Camera/IsoViewPreset.h"
 #include "Render/Camera/ProjectionMode.h"
 #include "World/View/WorldViewSettings.h"
+#include "Render/Camera/PositionAssignmentAudit.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -58,6 +59,10 @@ public:
   void ResolveRenderCamera(const UWorld &world, float dt);
   float GetCameraCollisionRadius() const;
   void SetPosition(const glm::vec3 &value);
+  uint64_t GetExternalPositionAssignmentCount() const
+  {
+    return PositionAssignmentAudit_.Count();
+  }
   float GetYaw() const;
   float GetPitch() const;
   void SetOrientation(float yaw, float pitch);
@@ -182,6 +187,7 @@ public:
   bool ConsumeSpacePressedThisFrame();
 
 private:
+  PositionAssignmentAudit PositionAssignmentAudit_;
   glm::vec3 ComputeHorizontalShift(float deltaTime);
   void UpdateMoveIntentFromKeys();
   glm::vec3 GetMoveIntentDir() const;

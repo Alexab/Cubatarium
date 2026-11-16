@@ -135,6 +135,7 @@ glm::vec3 UCamera::GetPosition() const { return Position; }
 
 void UCamera::SetPosition(const glm::vec3 &value)
 {
+  PositionAssignmentAudit_.NoteAssignment(Position, value);
   if(glm::distance(Position,value)>.5f)CameraSafe=false;
   Position = value;
   UpdatePose();

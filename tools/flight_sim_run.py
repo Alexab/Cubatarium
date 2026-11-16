@@ -1945,6 +1945,8 @@ def main() -> int:
     ap.add_argument("--seconds", type=float, default=45.0)
     ap.add_argument("--build", action="store_true")
     ap.add_argument("--no-fly", action="store_true")
+    ap.add_argument("--strict-no-relocation", action="store_true",
+                    help="disable native altitude resets and audit external position changes")
     ap.add_argument(
         "--no-hold-forward",
         action="store_true",
@@ -3288,7 +3290,7 @@ def main() -> int:
         )
 
     if not args.skip_preflight:
-        print("preflight: killing orphan Cubatarium.exe (if any)", flush=True)
+        print("preflight: checking Release executable and owned child processes", flush=True)
         preflight_cleanup()
 
     if args.build:
@@ -3302,7 +3304,6 @@ def main() -> int:
             "Release",
             "--parallel",
             "8",
-            "-j7",
             "--target",
             "Cubatarium",
         ]
@@ -3387,6 +3388,8 @@ def main() -> int:
             "--report",
             str(flight_report_path),
         ]
+        if args.strict_no_relocation:
+            sim_cmd.append("--strict-no-relocation")
         break_scenarios = ("break-stand", "visual-dig", "idle-edit-smoke")
         if args.scenario in break_scenarios:
             sim_cmd.append("--break-stand")

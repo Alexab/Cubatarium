@@ -1600,6 +1600,10 @@ static float ResolveFlightCruiseEyeY(const FlightSimOptions &options, UWorld &w,
 {
   constexpr float kCruiseEyeCeilSlack = 16.f;
 
+  if (options.StrictNoRelocation)
+  {
+    return 0.0f;
+  }
   if (options.CruiseEyeY <= 0.0f && options.MinAltitudeAboveSea <= 0.0f)
   {
     return 0.0f;
@@ -1634,6 +1638,11 @@ static float ResolveFlightCruiseEyeY(const FlightSimOptions &options, UWorld &w,
 
 int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
 {
+  if (options.StrictNoRelocation && options.TeleportToCruiseStart)
+  {
+    std::cerr << "flight-sim: strict route cannot teleport" << std::endl;
+    return 1;
+  }
   // Harness-only move-speed scale lives in locomotion as a plain hook; the
   // App layer owns reading the env var (audit M7).
   CreatureMoveSpeedScaleOverride() = FlightSimMoveSpeedScale();
@@ -1777,6 +1786,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     double last_break_request_sec = -1.0e9;
     int break_requests = 0;
     int ingame_frames_seen = 0;
+    std::shared_ptr<UCamera> relocation_audit_camera;
+    uint64_t relocation_audit_baseline = 0;
     int start_focus_cx = 0;
     int start_focus_cz = 0;
     bool start_focus_captured = false;
@@ -1909,6 +1920,12 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
             ++ingame_frames_seen;
             if (!ingame_clock_started)
             {
+              relocation_audit_camera = world->GetCurrentUserCamera();
+              if (relocation_audit_camera)
+              {
+                relocation_audit_baseline =
+                    relocation_audit_camera->GetExternalPositionAssignmentCount();
+              }
               ingame_started = now;
               excluded_before_ingame_sec = excluded_clock_gap_sec;
               ingame_clock_started = true;
@@ -2202,6 +2219,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 // open sky above) so underwater/surface-underside captures are
                 // reproducible without hand-picked coordinates.
                 const bool placed_underwater =
+                    !options.StrictNoRelocation &&
                     PlaceFlightWaterProbe(world, pos);
                 if (!options.BreakStandMode && !placed_underwater)
                 {
@@ -2851,6 +2869,15 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
         const char *build_type = "Debug";
 #endif
         const bool teleport_cruise = options.TeleportToCruiseStart;
+        const bool relocation_audit_complete =
+            relocation_audit_camera &&
+            relocation_audit_camera == world->GetCurrentUserCamera();
+        const int64_t diagnostic_relocations =
+            relocation_audit_complete
+                ? static_cast<int64_t>(
+                      relocation_audit_camera->GetExternalPositionAssignmentCount() -
+                      relocation_audit_baseline)
+                : -1;
         const auto run_finished = std::chrono::steady_clock::now();
         const double wall_elapsed_sec =
             std::chrono::duration<double>(run_finished - started).count();
@@ -2893,6 +2920,10 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                << report_resolution.y << "],\n"
                << "  \"teleport_cruise\": "
                << (teleport_cruise ? "true" : "false") << ",\n"
+               << "  \"diagnostic_relocations_after_start\": "
+               << diagnostic_relocations << ",\n"
+               << "  \"strict_no_relocation\": "
+               << (options.StrictNoRelocation ? "true" : "false") << ",\n"
                << "  \"manifest\": {\n"
                << "    \"git_sha\": \"" << EscapeFlightReportJson(git_sha_str)
                << "\",\n"
