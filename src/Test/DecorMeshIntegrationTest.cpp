@@ -304,6 +304,44 @@ TestOverflowRetryWithNoDirtyAdmission(cutum::UBlockRegistry &registry)
   Expect(!cache.HasPendingDirty(), "retry leaves no orphan demand");
 }
 
+static void TestOccludedMeshDependencyRepair(cutum::UBlockRegistry &registry)
+{
+  using namespace cutum;
+  UBlockWorld world;
+  const glm::ivec3 center(0, -3, 0);
+  // A solid section with six known, opaque face neighbors publishes a valid
+  // zero-quad result. Opening a neighbor later must make its wall visible.
+  for (int x = -1; x <= CHUNK_SIZE; ++x)
+    for (int y = -49; y <= -32; ++y)
+      for (int z = -1; z <= CHUNK_SIZE; ++z)
+        world.SetBlock({x, y, z}, kStone);
+  UChunkMeshCache cache;
+  cache.SetRenderSettings(MakeFrustumMeshSettings());
+  cache.MarkDirty(center);
+  cache.RebuildDirtyChunksWithStats(world, registry, 100, 100);
+  Expect(cache.HasGreedyMesh(center) && !cache.HasDrawableGreedyMesh(center),
+         "enclosed section publishes intentional zero-quad geometry");
+  Expect(!cache.HasActiveBoundaryOverlay(center),
+         "zero-quad regression must not rely on overlay debt");
+  const glm::ivec3 opening(16, -40, 8);
+  world.SetBlock(opening, BLOCK_AIR);
+  cache.QueueMeshDependencyInvalidations(
+      world, {UChunkManager::WorldToChunk(opening)}, "neighbor_geometry_edit");
+  Expect(cache.HasPendingMeshDependencyInvalidation(center),
+         "bulk dependency changes retain zero-quad section repair");
+  cache.RebuildDirtyChunksWithStats(world, registry, 100, 100);
+  Expect(cache.HasDrawableGreedyMesh(center),
+         "neighbor opening reveals previously occluded section wall");
+  world.SetBlock(opening, kStone);
+  cache.QueueMeshDependencyInvalidation(center);
+  cache.RebuildDirtyChunksWithStats(world, registry, 100, 100);
+  Expect(!cache.HasDrawableGreedyMesh(center),
+         "closing neighbor restores intentional zero-quad geometry");
+  cache.QueueMeshDependencyInvalidation(center);
+  Expect(cache.HasPendingMeshDependencyInvalidation(center),
+         "single dependency entry point also retains zero-quad repair");
+}
+
 } // namespace
 
 int main()
@@ -319,6 +357,7 @@ int main()
   TestCampfireStoneMesh(world, registry);
   TestGreedyAlphaCutoutIsMaterialScoped(world, registry);
   TestOverflowRetryWithNoDirtyAdmission(registry);
+  TestOccludedMeshDependencyRepair(registry);
 
   std::cout << kTestName << ": OK" << std::endl;
   return 0;

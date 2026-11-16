@@ -46,15 +46,14 @@ inline bool ShouldCoalesceNeighborBecameKnownSeam(
   return self_has_overlay_face_toward || self_has_face_debt_toward;
 }
 
-/// An intentionally occluded zero-quad mesh still owns its published overlay
-/// and coverage. Its repair must remain queueable even though there is no
-/// drawable image; otherwise the one-shot overlay attempt is consumed by a
-/// no-op and two loaded neighbors can retain opposite Missing faces forever.
+/// A published zero-quad mesh depends on its neighbors even without an overlay.
+/// Their geometry can change from opaque to air and expose previously hidden
+/// faces. Drawability cannot decide whether an input change needs repair.
 inline bool ShouldQueueMeshDependencyInvalidation(bool has_greedy_mesh,
-                                                  bool drawable,
-                                                  bool active_overlay)
+                                                  bool /*drawable*/,
+                                                  bool /*active_overlay*/)
 {
-  return has_greedy_mesh && (drawable || active_overlay);
+  return has_greedy_mesh;
 }
 
 /// FirstDrawableCoverage is an edge, not a per-publication notification.

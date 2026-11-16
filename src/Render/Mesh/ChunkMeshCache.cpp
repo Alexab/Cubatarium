@@ -3797,7 +3797,10 @@ void UChunkMeshCache::QueueMeshDependencyInvalidations(
           const glm::ivec3 dependent_coord =
               changed_coord + glm::ivec3(dx, dy, dz);
           if (!chunks.HasChunk(dependent_coord) ||
-              !HasDrawableGreedyMesh(dependent_coord))
+              !ShouldQueueMeshDependencyInvalidation(
+                  HasGreedyMesh(dependent_coord),
+                  HasDrawableGreedyMesh(dependent_coord),
+                  HasActiveBoundaryOverlay(dependent_coord)))
           {
             continue;
           }
@@ -4066,7 +4069,7 @@ void UChunkMeshCache::DrainMeshDependencyInvalidations(
                                                HasDrawableGreedyMesh(coord),
                                                HasActiveBoundaryOverlay(coord)))
     {
-      trace_dependency("drop_not_drawable", coord);
+      trace_dependency("drop_no_resident_publication", coord);
       PendingMeshDependencyInvalidations_.erase(coord);
       continue;
     }

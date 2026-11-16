@@ -43,9 +43,9 @@ int main()
   {
     return Fail("occluded published overlay retains dependency repair");
   }
-  if (cutum::ShouldQueueMeshDependencyInvalidation(true, false, false))
+  if (!cutum::ShouldQueueMeshDependencyInvalidation(true, false, false))
   {
-    return Fail("hidden mesh without overlay needs no dependency repair");
+    return Fail("zero-quad publication retains dependencies without overlay");
   }
   if (cutum::ShouldQueueMeshDependencyInvalidation(false, false, true))
   {

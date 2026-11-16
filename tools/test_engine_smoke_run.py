@@ -133,7 +133,7 @@ class IsolatedFixtureTest(unittest.TestCase):
 
 class NegativeCaveFixtureTest(unittest.TestCase):
     def test_scene_is_prepared_only_in_clone_and_matches_analytic_geometry(self):
-        from engine_smoke_fixtures import prepare_dry_negative_cave
+        from engine_smoke_fixtures import prepare_dry_negative_cave, prepare_negative_cave
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             runtime = root / "bin"
@@ -156,6 +156,11 @@ class NegativeCaveFixtureTest(unittest.TestCase):
                 self.assertEqual(scene["starting_eye"][1], -41.88)
                 ocean = json.loads((fixture / "chunks" / "0_3_3.json").read_text())
                 self.assertTrue(any(v["type"] == "water" and v["ly"] == 15 for v in ocean["voxels"]))
+                wet = prepare_negative_cave(fixture, 1, flooded=True)
+                flooded = json.loads((fixture / "chunks" / "0_-3_3.json").read_text())
+                self.assertTrue(wet["expected_eye_in_fluid"])
+                self.assertTrue(any(v["lx"] == 8 and v["ly"] == 8 and v["lz"] == 3
+                                    and v["type"] == "water" for v in flooded["voxels"]))
             self.assertEqual(world_fingerprint(source), before)
             with self.assertRaises(ValueError):
                 prepare_dry_negative_cave(source, 1)
@@ -174,6 +179,14 @@ class NegativeCaveFixtureTest(unittest.TestCase):
                 trace.write_text("\n".join(json.dumps(r) for r in rows))
                 return evaluate_fixture_trace(scene, trace)
             self.assertEqual(check()["status"], "PASS")
+            scene["expected_eye_in_fluid"] = True
+            self.assertEqual(check()["reason"], "wet_cave_classified_as_air")
+            for row in rows:
+                row["eye_in_fluid"] = True
+            self.assertEqual(check()["reason"], "negative_wet_cave_observed")
+            scene["expected_eye_in_fluid"] = False
+            for row in rows:
+                row["eye_in_fluid"] = False
             rows[1]["eye_in_fluid"] = True
             self.assertEqual(check()["reason"], "dry_cave_classified_as_fluid")
             del rows[1]["eye_in_fluid"]
