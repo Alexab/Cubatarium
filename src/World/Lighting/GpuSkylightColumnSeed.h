@@ -15,9 +15,9 @@ class UBlockRegistry;
 /// From +Y: sky=15 through air, attenuated 1 per fluid block (parity with
 /// VerticalSkylightStepCost), 0 below the first opaque cell (no horizontal
 /// flood). Occupancy encoding: 0 = light-transparent, 1 = opaque, 2 = fluid.
-/// Without fluid attenuation the seed writes 15 through any water depth and
-/// the desktop pipeline (which skips the vertical column after the seed)
-/// lights the seafloor like dry land — water audit W2.1 (D-3).
+/// The incoming level at this section's top is assumed to be 15. This is a
+/// provisional seed; completed world lighting must also read upper geometry
+/// and water through the configured world ceiling.
 inline void SeedSkylightColumnsCpu(const std::array<uint8_t, CHUNK_VOLUME> &occ,
                                    std::array<uint8_t, CHUNK_VOLUME> &sky_out)
 {
@@ -50,12 +50,14 @@ inline void SeedSkylightColumnsCpu(const std::array<uint8_t, CHUNK_VOLUME> &occ,
   }
 }
 
-/// Returns true if GPU path ran (Desktop). Out must be CHUNK_VOLUME.
+/// Returns false until a real GPU implementation is available; leaves output
+/// untouched. CPU execution is not GPU success.
 bool TryGpuSeedSkylightColumns(const std::array<uint8_t, CHUNK_VOLUME> &occ,
                                std::array<uint8_t, CHUNK_VOLUME> &sky_out);
 
-/// Pack occupancy, GPU seed, WriteSkyLight into chunk. Main thread + GL only.
-bool ApplyGpuSkylightSeedToChunk(UChunk &chunk, UBlockRegistry &registry);
+/// Main-thread provisional CPU seed from this section; no GL context required.
+/// This is not a completed full-height lighting computation.
+bool ApplyCpuSkylightSeedToChunk(UChunk &chunk, UBlockRegistry &registry);
 
 /// Keep GPU-written sky columns; copy block light from async/sync packed source.
 inline void MergeBlockLightKeepingGpuSky(
@@ -80,7 +82,8 @@ inline void MergeBlockLightKeepingGpuSky(
 
 uint64_t GpuSkylightSeedDispatchCount();
 uint64_t ConsumeGpuSkylightSeedReadbackCount();
-/// Successful apply count since last consume (FramePerf telemetry).
+/// Actual GPU apply count; zero while skylight is computed on CPU.
 uint64_t ConsumeGpuSkylightSeedApplyCount();
+uint64_t ConsumeCpuSkylightSeedApplyCount();
 
 } // namespace cutum

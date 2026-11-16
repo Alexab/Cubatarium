@@ -93,7 +93,7 @@ public:
     Inner.RelightAllLoadedChunks(world, registry);
   }
 
-  const char *BackendName() const { return "gpu_full_light"; }
+  const char *BackendName() const { return "cpu_full_light"; }
   uint64_t GetComputeDispatchCount() const
   {
     return GpuSkylightSeedDispatchCount();

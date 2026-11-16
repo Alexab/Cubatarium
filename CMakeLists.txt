@@ -1998,6 +1998,7 @@ cubatarium_add_test(NAME gpu_skylight_seed_fluid_test
         ${PHYSICS_MATERIAL_UNIT_SOURCES}
         src/Blocks/BlockDefinitionStorage.cpp
         src/World/Lighting/LightUtil.cpp
+        src/World/Lighting/GpuSkylightColumnSeed.cpp
         src/Test/GpuSkylightSeedFluidTest.cpp
     DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)

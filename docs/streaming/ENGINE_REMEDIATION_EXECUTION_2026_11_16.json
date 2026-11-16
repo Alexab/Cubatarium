@@ -62,6 +62,13 @@
       "finding": "Успешный посекционный seed пропускает вертикальный проход общего relight; отдельный такой обход desktop adapter добавлен de7f106b9d в тот же день. Seed начинает с15 внутри секции и не знает о крыше/воде выше. Headless stub всегда возвращалfalse и скрывал этот дефект от предыдущих тестов.",
       "regression": "Два независимых RED: общий relight и desktop adapter с доступным seed игнорируют крышуY304 над отрицательной секцией.",
       "correction": "Завершённый relight всегда вычисляет полный вертикальный контекст; проверки крыши и межсекционного водного ослабления включают успешный seed branch."
+    },
+    {
+      "commit": "2c2489800b",
+      "date": "2026-07-27",
+      "finding": "Skylight GPU API заменил выполнение на SeedSkylightColumnsCpu, сохранив GPU-named success/dispatch/apply. Метрики стали свидетельствовать о CPU-работе как о GPU-выполнении; GPU compute shader в этом файле фактически не вызывается.",
+      "correction": "Явная CPU-функция и отдельный CPU-счётчик; GPU-проба без реализации возвращаетfalse без CPU-подмены, GPU-счётчики остаются0. Неиспользуемые shader/GL scaffolding удалены.",
+      "regression": "Production CPU apply проверен headless; RED прежней CPU-as-GPU подмены проваливает проверки результата и счётчика."
     }
   ],
   "recurrence_analysis": {

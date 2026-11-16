@@ -1,3 +1,5 @@
+#include "Blocks/BlockDefinitionStorage.h"
+#include "Blocks/BlockRegistry.h"
 #include "World/Lighting/GpuSkylightColumnSeed.h"
 
 #include <array>
@@ -69,6 +71,41 @@ int main()
     Expect(sky[At(1, 10, 1)] == 15, "air above opaque keeps 15");
     Expect(sky[At(1, 5, 1)] == 0, "opaque cell is 0");
     Expect(sky[At(1, 4, 1)] == 0, "below opaque is 0");
+  }
+
+  // Run the production apply function headlessly. A CPU seed must be usable
+  // without a GL context and must not count as GPU dispatch/readback work.
+  {
+    auto definitions = std::make_shared<cutum::UBlockDefinitionStorage>();
+    cutum::BlockDefinition stone;
+    stone.Name = "stone";
+    stone.Physics = cutum::BlockPhysicsProfile::Solid();
+    definitions->ReplaceAll({{8, stone}}, {{"stone", 8}});
+    cutum::UBlockRegistry registry(nullptr, definitions);
+    cutum::UChunk chunk({-1, -3, -1});
+    chunk.SetBlockLocal({2, 8, 5}, 8);
+    (void)cutum::ConsumeCpuSkylightSeedApplyCount();
+    Expect(cutum::ApplyCpuSkylightSeedToChunk(chunk, registry),
+           "production CPU apply works without a GL context");
+    Expect(chunk.GetSkyLightLocal({2, 9, 5}) == 15 &&
+               chunk.GetSkyLightLocal({2, 8, 5}) == 0 &&
+               chunk.GetSkyLightLocal({2, 7, 5}) == 0 &&
+               chunk.GetSkyLightLocal({5, 7, 2}) == 15,
+           "production apply retains non-symmetric local coordinates");
+    Expect(cutum::ConsumeCpuSkylightSeedApplyCount() == 1 &&
+               cutum::ConsumeCpuSkylightSeedApplyCount() == 0,
+           "CPU work is counted exactly once");
+    std::array<uint8_t, cutum::CHUNK_VOLUME> occupancy{};
+    std::array<uint8_t, cutum::CHUNK_VOLUME> untouched;
+    untouched.fill(7);
+    Expect(
+        !cutum::TryGpuSeedSkylightColumns(occupancy, untouched) &&
+            untouched.front() == 7 && untouched.back() == 7,
+        "unavailable GPU operation returns failure without CPU substitution");
+    Expect(cutum::GpuSkylightSeedDispatchCount() == 0 &&
+               cutum::ConsumeGpuSkylightSeedApplyCount() == 0 &&
+               cutum::ConsumeGpuSkylightSeedReadbackCount() == 0,
+           "CPU seed never grants GPU execution evidence");
   }
 
   if (g_failures != 0)

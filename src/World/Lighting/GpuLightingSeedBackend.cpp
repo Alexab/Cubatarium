@@ -48,7 +48,7 @@ UGpuLightingSeedBackend::TrySeedColumnAtCommit(glm::ivec3 ground,
       continue;
     }
     ++attempted;
-    if (ApplyGpuSkylightSeedToChunk(*chunk, registry))
+    if (ApplyCpuSkylightSeedToChunk(*chunk, registry))
     {
       ++seeded;
     }

@@ -1118,5 +1118,18 @@
         }
       }
     }
+  },
+  "cpu_sky_backend_attribution_verification": {
+    "status": "unit_verified_committed_release_build_pending",
+    "correction": "provisional apply is explicitly CPU and needs no GL context; CPU apply counter is separate; legacy GPU sky dispatch/apply/readback counters remain zero; unavailable GPU probe returns false without modifying output; unreachable compute shader scaffolding removed",
+    "negative_control": "build/desktop-msvc/engine-sky-backend-red-test.log: former CPU-as-GPU probe incorrectly succeeds, modifies output and grants GPU execution evidence",
+    "test_log": "build/desktop-msvc/engine-sky-backend-final-tests.log",
+    "passed_sets": 6,
+    "headless_test": "gpu_skylight_seed_fluid_test links the production apply .cpp rather than a host stub and checks opaque occlusion, non-symmetric coordinates, exact counter consumption and GPU non-execution",
+    "limitations": [
+      "native CPU-positive/GPU-zero counter observation pending",
+      "GPU meshing and blocklight shadow dispatch have distinct code paths; sky counters do not establish their coverage",
+      "portable CPU code has no GL dependency; Android runtime validation remains outside this Windows run"
+    ]
   }
 }

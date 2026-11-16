@@ -10,8 +10,8 @@ void SetTestSkylightSeedAvailable(bool available)
   gTestSkylightSeedAvailable = available;
 }
 
-// Host/unit-test stub: no GL. RelightChunkCoords falls through to CPU
-// PropagateSkylightColumn without linking GpuSkylightColumnSeed.cpp.
+// Headless provisional-seed stub, disabled by default. The enabled CPU
+// primitive reproduces the formerly successful seed shortcut for regressions.
 
 bool TryGpuSeedSkylightColumns(const std::array<uint8_t, CHUNK_VOLUME> & /*occ*/,
                                std::array<uint8_t, CHUNK_VOLUME> & /*sky_out*/)
@@ -19,7 +19,7 @@ bool TryGpuSeedSkylightColumns(const std::array<uint8_t, CHUNK_VOLUME> & /*occ*/
   return false;
 }
 
-bool ApplyGpuSkylightSeedToChunk(UChunk &chunk, UBlockRegistry &registry)
+bool ApplyCpuSkylightSeedToChunk(UChunk &chunk, UBlockRegistry &registry)
 {
   if (!gTestSkylightSeedAvailable)
     return false;
@@ -50,5 +50,6 @@ uint64_t GpuSkylightSeedDispatchCount() { return 0; }
 uint64_t ConsumeGpuSkylightSeedReadbackCount() { return 0; }
 
 uint64_t ConsumeGpuSkylightSeedApplyCount() { return 0; }
+uint64_t ConsumeCpuSkylightSeedApplyCount() { return 0; }
 
 } // namespace cutum

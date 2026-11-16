@@ -7,6 +7,7 @@ namespace cutum
 
 class UWorld;
 
+/// Desktop commit adapter; its current seed implementation runs on CPU.
 class UGpuLightingSeedBackend : public ILightingSeedBackend
 {
 public:

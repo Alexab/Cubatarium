@@ -1224,6 +1224,7 @@ struct FrameNumbers
   double dark_face_dist{0.0};
   uint64_t gpu_mesh_vbo_dispatch{0};
   uint64_t gpu_light_seed_apply{0};
+  uint64_t cpu_light_seed_apply{0};
   uint64_t gpu_mask_readback{0};
   uint64_t gpu_transparent_sort_readback{0};
   uint64_t gpu_cull_stats_readback{0};
@@ -2371,6 +2372,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.dark_face_dist = phys.DarkFaceDist;
   n.gpu_mesh_vbo_dispatch = UGpuGreedyMesher::ConsumeMeshVboDispatchCount();
   n.gpu_light_seed_apply = ConsumeGpuSkylightSeedApplyCount();
+  n.cpu_light_seed_apply = ConsumeCpuSkylightSeedApplyCount();
   n.gpu_mask_readback = UGpuGreedyMesher::ConsumeMaskReadbackCount();
   n.gpu_transparent_sort_readback = ConsumeGpuTransparentSortReadbackCount();
   n.gpu_cull_stats_readback = ConsumeGpuCullStatsReadbackCount();
@@ -3667,6 +3669,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind, bool flush)
       << ",\"dark_face_dist\":" << n.dark_face_dist
       << ",\"gpu_mesh_vbo_dispatch\":" << n.gpu_mesh_vbo_dispatch
       << ",\"gpu_light_seed_apply\":" << n.gpu_light_seed_apply
+      << ",\"cpu_light_seed_apply\":" << n.cpu_light_seed_apply
       << ",\"gpu_mask_readback\":" << n.gpu_mask_readback
       << ",\"gpu_transparent_sort_readback\":"
       << n.gpu_transparent_sort_readback
