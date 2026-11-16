@@ -6,7 +6,7 @@
     "diagnostic_bot": "verified baseline: native takeoff, route, inspection; expand scenario matrix",
     "local_streaming_mesh_underwater_defects": "in_progress: signed bands, lossless population events, same-size mesh reconciliation and eye-local fluid intervals fixed; native surface frontier routes verified; cave matrix and remaining invalidations pending",
     "correct_light_solver_and_persistence": "in_progress: common sync/async geometry solver and v6 compatibility verified; native sky-boundary integration passed scoped geometry checks; per-domain certificates, durable generation/coverage obligations and repeated-work control pending",
-    "single_section_lifecycle_and_publication": "in_progress: world-local demand ownership and world-owned per-domain exact input provenance implemented; native performance regression under correction; durable coverage obligations, authoritative column closure and strict first-frame gate pending",
+    "single_section_lifecycle_and_publication": "in_progress: world-local ownership and exact per-domain input provenance verified; native deadline regression recovered. Durable pending generation/coverage, authoritative column closure and strict first-frame readiness still pending",
     "independent_light_resource_and_performance": "pending",
     "full_smoke_and_regression_matrix": "in_progress: surface frontier, dry negative cave and flooded negative cave routes; independent analytic near-opaque-depth checks; startup, light/transparent reference, air pocket and eviction round trip still pending"
   },
@@ -318,8 +318,12 @@
     ]
   },
   "latest_ctest_verification": {
-    "log": "build/desktop-msvc/engine-fluid-mutation-final-tests.log",
-    "passed": 13
+    "source_commit": "ddbf3be3adac6db48006d5028ce35d51c58817c8",
+    "configuration": "Release",
+    "log": "build/desktop-msvc/engine-light-revision-final-contracts-tests.log",
+    "passed": 24,
+    "failed": 0,
+    "scope": "Selected lighting/input/publication/IO/capture and automatic-smoke regression groups; not complete engine or native physical-light acceptance."
   },
   "six_face_dependency_verification": {
     "source_commit": "0777cc7fa40e792bb69c90be30f509413cf1cce2",
@@ -1631,7 +1635,7 @@
         "queue_analysis": "relight-queue-analysis.txt"
       }
     },
-    "next_implementation": "Validate authoritative revision-based dependency reuse with the unchanged Release cave route. Keep all correctness gates. Then preserve pending generation/coverage obligations and remove optimistic coarse closeout before strict startup and independent light resource work."
+    "next_implementation": "Preserve pending generation/coverage obligations and remove optimistic whole-column closeout. Compute completion must follow current known per-domain certificates and actual covered sections; unchanged transient input waits for evidence changes. Keep strict native route/depth checks, then first-frame witness, persistence proof, independent light resource and full matrix."
   },
   "synchronous_geometry_solver_unification": {
     "status": "unit_and_native_sky_boundary_integration_verified_completion_and_performance_pending",
@@ -1787,7 +1791,7 @@
     }
   },
   "world_owned_light_domain_certificates": {
-    "status": "in_memory_provenance_and_gates_unit_verified_native_performance_still_fails_smoke",
+    "status": "unit_and_native_scoped_verified_after_authoritative_revision_optimization",
     "implementation": [
       "Resident sections own independent sky/block calculation provenance; all output sections share one immutable input context without retaining light voxel arrays.",
       "World identity, incarnation, selected channel revision, full geometry/absence read set, immutable catalog, vertical profile and configuration are validated.",
@@ -2019,7 +2023,7 @@
     }
   },
   "versioned_light_input_validation": {
-    "status": "unit_verified_native_pending",
+    "status": "unit_and_native_scoped_verified_route_and_inspection_deadline_regression_recovered",
     "implementation": [
       "Each managed chunk notifies its owning manager input revision on content, fluid, light, bulk replacement and generation reuse. Residency insert/remove/clear also advance the revision.",
       "Snapshot copies do not borrow the source manager clock; assignment preserves the destination clock/coordinate and retires its incarnation/proofs. This prevents same-revision, different-geometry ABA.",
@@ -2049,9 +2053,126 @@
     },
     "compatibility": "Terrain/chunk serialization and geometry-derived light algorithm remain unchanged; these are runtime provenance/validation identities.",
     "limits": [
-      "Native runtime/performance and all inspection poses still need verification.",
+      "Native route, 24 inspection captures and near-cave opaque depth pass. Physical native light, transparent/full-screen reference and strict frame budget remain UNTESTED.",
       "Persistent per-section certificates, durable generation/coverage obligations and strict first-frame closure remain pending.",
       "Independent light resource, visual/physical light reference and full smoke matrix remain pending."
-    ]
+    ],
+    "native": {
+      "source_commit": "ddbf3be3adac6db48006d5028ce35d51c58817c8",
+      "artifacts": "build/desktop-msvc/engine-light-revision-wet-native",
+      "release_build_log": "build/desktop-msvc/engine-light-revision-release-build.log",
+      "verdict": {
+        "schema": "engine-smoke-verdict.v1",
+        "status": "UNTESTED",
+        "components": {
+          "runtime": {
+            "status": "PASS",
+            "reason": "native_process",
+            "exit_code": 0
+          },
+          "route": {
+            "status": "PASS",
+            "reason": "frontier_route_covered",
+            "displacement_chunks": 19,
+            "outside_initial_resident_samples": 2507
+          },
+          "startup": {
+            "status": "UNTESTED",
+            "reason": "missing_first_frame_ring_witness"
+          },
+          "visual": {
+            "status": "UNTESTED",
+            "reason": "missing_visual_reference",
+            "samples": 22240,
+            "captures": 139,
+            "attributed_samples": 0,
+            "faults": 0
+          },
+          "inspection": {
+            "status": "PASS",
+            "reason": "inspection_capture_coverage",
+            "requested": 24,
+            "queued": 24,
+            "verified": 24
+          },
+          "fixture": {
+            "status": "PASS",
+            "reason": "negative_wet_cave_observed",
+            "samples": 214
+          },
+          "fixture_opaque_depth": {
+            "status": "PASS",
+            "reason": "analytic_near_cave_opaque_depth",
+            "checked": 21708,
+            "faults": 0,
+            "frame_epochs": 139,
+            "skipped_unscoped_or_occluded": 532,
+            "examples": [],
+            "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+          }
+        },
+        "malformed_trace_rows": 0,
+        "backend_observations": {
+          "maxima": {
+            "cpu_light_seed_apply": 6,
+            "gpu_light_seed_apply": 0,
+            "gpu_light_readback": 0
+          },
+          "positive_records": {
+            "cpu_light_seed_apply": 1
+          },
+          "records_by_kind": {
+            "spike": 4,
+            "period": 54,
+            "blink": 23,
+            "visual_holes_enter": 70,
+            "near_focus_witness_entered_fog_unready": 1,
+            "near_focus_witness_exited_fog_unready": 1,
+            "shutdown": 1
+          },
+          "invalid_counter_rows": 0,
+          "scope": "observed CPU/GPU sky counters; not per-job correctness or compute parity"
+        },
+        "scope": "one-way frontier route and sampled reference checks; not full-screen proof",
+        "runner_exit_code": 1,
+        "inspection_evidence": {
+          "verified": 24,
+          "requested": 24,
+          "reason": "inspection_views_joined_to_png"
+        }
+      },
+      "median_period_ms": {
+        "wall_ms": 28.64445,
+        "render_total_ms": 6.9032,
+        "geometry_paint_ms": 6.678495,
+        "scene_filter_ready_ms": 0.47041750000000004,
+        "world_streaming_phase_ms": 21.0621
+      },
+      "strict_relocations": 0,
+      "ingame_frames": 3778,
+      "bot_complete_time": 99.2549,
+      "audit": {
+        "observed_cache_counters": {
+          "input_checks": 855755,
+          "input_memo_hits": 798542,
+          "input_walks": 57213,
+          "input_epoch_resets": 641
+        },
+        "memo_hit_share": 0.9331432477753563,
+        "async_certificate_records": 1378,
+        "known_input_records": 738,
+        "transient_input_records": 640,
+        "sync_computations": 729,
+        "sync_reuses": 280,
+        "scope": "Cumulative dependency-context counters at last observed certificate apply; not all readiness calls and not a per-job physical-light oracle."
+      },
+      "comparison": "Observed median period wall time 408.551 ms before absence batching, 97.3636 ms with within-call batching, 28.644 ms with authoritative revision reuse. Same fixed route/durations/source world; differing scheduling and host load prevent a controlled speedup or strict frame-budget acceptance."
+    },
+    "historical_assignment_audit": {
+      "identity_fields_commit": "893fb9bf8",
+      "date": "2026-09-11",
+      "finding": "Initial incarnation/content tracking retained implicit value assignment. Assignment could copy an old incarnation and equal numeric content revision across different geometry snapshots. Runtime test now reproduces this ABA when generation retirement is disabled.",
+      "scope": "Latent input-identity defect; exact assignment trigger in the native flight was not exercised and is not claimed as the cause of every reported visual fault."
+    }
   }
 }
