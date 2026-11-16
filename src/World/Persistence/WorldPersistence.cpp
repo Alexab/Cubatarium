@@ -1,4 +1,5 @@
 #include "World/Persistence/WorldPersistence.h"
+#include "World/Lighting/LightCacheCertificate.h"
 #include "App/Platform/Log.h"
 #include "Blocks/BlockRegistry.h"
 #include "Core/Environment.h"
@@ -218,7 +219,8 @@ bool HasChunkDataFiles(const std::string &chunks_dir)
 
 } // namespace
 
-UWorldPersistence::UWorldPersistence()
+UWorldPersistence::UWorldPersistence(UWorld *world_context)
+    : WorldContext(world_context)
 {
   ChunkStorage = std::make_unique<UChunkStorageService>();
 }
@@ -241,6 +243,7 @@ void UWorldPersistence::SetWorldFolderPath(const std::string &path)
 
   WorldFolderPath = path;
   LightCompleteColumns.clear();
+  LightCompleteSignature.clear();
   LightCompleteDirty = false;
   LightCompleteLoaded = false;
   ++LightCompleteRevision;
@@ -316,7 +319,48 @@ ChunkWriteFormat UWorldPersistence::GetChunkWriteFormat() const
 
 bool UWorldPersistence::IsColumnLightComplete(glm::ivec2 ground_xz) const
 {
-  return LightCompleteColumns.count(ground_xz) != 0;
+  const auto &signature = CurrentLightCacheSignature();
+  return !signature.empty() && signature == LightCompleteSignature &&
+         LightCompleteColumns.count(ground_xz) != 0;
+}
+
+const std::string &UWorldPersistence::CurrentLightCacheSignature() const
+{
+  static const std::string unavailable;
+  if (!WorldContext || !WorldContext->BlockRegistry)
+    return unavailable;
+  const auto catalog =
+      WorldContext->BlockRegistry->GetDefinitionsCatalogSnapshot();
+  if (!catalog)
+    return unavailable;
+  const auto &profile = WorldContext->BlockWorld.GetVerticalProfile();
+  const int mode = static_cast<int>(WorldContext->GetRenderSettings().Lighting);
+  if (catalog != LightSignatureCatalog || profile.MinY != LightSignatureMinY ||
+      profile.MaxY != LightSignatureMaxY || mode != LightSignatureMode)
+  {
+    CachedExpectedLightSignature =
+        MakeLightCacheSignature(profile, *catalog, mode);
+    LightSignatureCatalog = catalog;
+    LightSignatureMinY = profile.MinY;
+    LightSignatureMaxY = profile.MaxY;
+    LightSignatureMode = mode;
+  }
+  return CachedExpectedLightSignature;
+}
+
+bool UWorldPersistence::EnsureLightCacheSignatureCurrent()
+{
+  const auto &signature = CurrentLightCacheSignature();
+  if (signature.empty())
+    return false;
+  if (LightCompleteSignature != signature)
+  {
+    LightCompleteColumns.clear();
+    LightCompleteSignature = signature;
+    LightCompleteDirty = true;
+    ++LightCompleteRevision;
+  }
+  return true;
 }
 
 void UWorldPersistence::SetColumnLightComplete(glm::ivec2 ground_xz,
@@ -325,6 +369,8 @@ void UWorldPersistence::SetColumnLightComplete(glm::ivec2 ground_xz,
 {
   if (complete)
   {
+    if (!EnsureLightCacheSignatureCurrent())
+      return;
     if (LightCompleteColumns.insert(ground_xz).second)
     {
       LightCompleteDirty = true;
@@ -368,6 +414,7 @@ void UWorldPersistence::ClearColumnLightComplete(glm::ivec2 ground_xz,
 void UWorldPersistence::LoadColumnLightFlags()
 {
   LightCompleteColumns.clear();
+  LightCompleteSignature.clear();
   LightCompleteDirty = false;
   LightCompleteLoaded = true;
   const bool audit = IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
@@ -402,19 +449,15 @@ void UWorldPersistence::LoadColumnLightFlags()
       return;
     }
     const json data = json::parse(file);
-    if (!data.contains("complete") || !data["complete"].is_array())
+    const auto &signature = CurrentLightCacheSignature();
+    const auto columns = DecodeColumnLightCache(data, signature);
+    if (!columns)
     {
-      log_load("invalid_schema");
+      log_load("signature_or_schema_mismatch");
       return;
     }
-    for (const auto &entry : data["complete"])
-    {
-      if (!entry.is_array() || entry.size() < 2)
-      {
-        continue;
-      }
-      LightCompleteColumns.emplace(entry[0].get<int>(), entry[1].get<int>());
-    }
+    LightCompleteSignature = signature;
+    LightCompleteColumns.insert(columns->begin(), columns->end());
     log_load("loaded");
   }
   catch (const json::exception &)
@@ -427,6 +470,8 @@ void UWorldPersistence::SaveColumnLightFlagsIfDirty(
     double *snapshot_ms, double *enqueue_ms, std::size_t *complete_columns_n,
     uint64_t *saved_revision)
 {
+  if (!EnsureLightCacheSignatureCurrent())
+    return;
   if (!LightCompleteDirty || WorldFolderPath.empty() ||
       LightCompleteSaveInFlight ||
       std::chrono::steady_clock::now() < LightCompleteSaveRetryAt)
@@ -473,9 +518,9 @@ void UWorldPersistence::SaveColumnLightFlagsIfDirty(
             " revision=" + std::to_string(LightCompleteSaveRevision) +
             " complete_n=" + std::to_string(complete_columns.size()));
   }
-  AsyncChunkIo->RequestSaveColumnLightFlags(LightCompleteSaveWorldFolder,
-                                            LightCompleteSaveRevision,
-                                            std::move(complete_columns));
+  AsyncChunkIo->RequestSaveColumnLightFlags(
+      LightCompleteSaveWorldFolder, LightCompleteSaveRevision,
+      std::move(complete_columns), LightCompleteSignature);
   if (enqueue_ms)
   {
     *enqueue_ms = std::chrono::duration<double, std::milli>(

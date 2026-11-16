@@ -1,10 +1,11 @@
 #include "World/IO/AsyncChunkIO.h"
+#include "App/Platform/Log.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Core/BlockWorld.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/IO/JsonChunkSerializer.h"
-#include "App/Platform/Log.h"
+#include "World/Lighting/LightCacheCertificate.h"
 #include <cstdlib>
 #include <fstream>
 #include <mutex>
@@ -94,12 +95,13 @@ void LogColumnLightFlagsSaveResult(
 
 void UAsyncChunkIO::RequestSaveColumnLightFlags(
     std::string worldFolder, const uint64_t revision,
-    std::vector<glm::ivec2> completeColumns)
+    std::vector<glm::ivec2> completeColumns, std::string lightSignature)
 {
   const auto enqueue_started = std::chrono::steady_clock::now();
   ColumnLightFlagsPool.Enqueue(
       [this, worldFolder = std::move(worldFolder), revision,
-       completeColumns = std::move(completeColumns), enqueue_started]() mutable
+       completeColumns = std::move(completeColumns),
+       lightSignature = std::move(lightSignature), enqueue_started]() mutable
       {
         const auto worker_started = std::chrono::steady_clock::now();
         AsyncColumnLightFlagsSaveResult result;
@@ -110,19 +112,8 @@ void UAsyncChunkIO::RequestSaveColumnLightFlags(
                                           .count();
         try
         {
-          std::sort(completeColumns.begin(), completeColumns.end(),
-                    [](const glm::ivec2 &a, const glm::ivec2 &b)
-                    {
-                      return a.x < b.x || (a.x == b.x && a.y < b.y);
-                    });
-          json data;
-          data["format_version"] = 1;
-          json complete = json::array();
-          for (const glm::ivec2 &col : completeColumns)
-          {
-            complete.push_back(json::array({col.x, col.y}));
-          }
-          data["complete"] = std::move(complete);
+          const json data = EncodeColumnLightCache(std::move(completeColumns),
+                                                   lightSignature);
           const std::string encoded = data.dump();
 
           const std::filesystem::path target =

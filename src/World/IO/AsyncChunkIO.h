@@ -132,9 +132,9 @@ public:
                                   int minWorldY,
                                   UChunkStorageService &storage,
                                   const std::string &worldFolder);
-  void RequestSaveColumnLightFlags(
-      std::string worldFolder, uint64_t revision,
-      std::vector<glm::ivec2> completeColumns);
+  void RequestSaveColumnLightFlags(std::string worldFolder, uint64_t revision,
+                                   std::vector<glm::ivec2> completeColumns,
+                                   std::string lightSignature = {});
 
   std::vector<AsyncChunkLoadResult> DrainLoads();
   std::vector<AsyncChunkLoadResult> DrainLoadsUpTo(std::size_t max_count);

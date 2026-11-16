@@ -412,8 +412,8 @@ UWorld::UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
       ViewBinding(std::make_unique<UWorldViewBinding>(std::move(views))),
       MeshService(std::make_unique<UWorldMeshService>()),
       Streaming(std::make_unique<UWorldStreaming>()),
-      Persistence(std::make_unique<UWorldPersistence>()), Environment(*this),
-      Collision(BlockWorld, &Environment),
+      Persistence(std::make_unique<UWorldPersistence>(this)),
+      Environment(*this), Collision(BlockWorld, &Environment),
       LightingPipeline(ULightingPipelineFactory::Create(LightingMode::Full))
 {
   if (TextureCubeInstance)

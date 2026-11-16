@@ -30,6 +30,7 @@ struct IVec2Hash
 class UBlockRegistry;
 class UBlockWorld;
 class UWorld;
+struct BlockDefinitionCatalog;
 
 struct AsyncChunkIoTickMetrics
 {
@@ -102,7 +103,7 @@ public:
     int max_world_y{-1};
   };
 
-  UWorldPersistence();
+  explicit UWorldPersistence(UWorld *world_context = nullptr);
 
   static bool HasPersistedTerrainOnDisk(const std::string &world_folder_path);
 
@@ -350,6 +351,15 @@ private:
   std::unordered_set<glm::ivec2, IVec2Hash> LightCompleteColumns;
   bool LightCompleteDirty{false};
   bool LightCompleteLoaded{false};
+  UWorld *WorldContext{nullptr};
+  const std::string &CurrentLightCacheSignature() const;
+  bool EnsureLightCacheSignatureCurrent();
+  std::string LightCompleteSignature;
+  mutable std::shared_ptr<const BlockDefinitionCatalog> LightSignatureCatalog;
+  mutable int LightSignatureMinY{0};
+  mutable int LightSignatureMaxY{-1};
+  mutable int LightSignatureMode{-1};
+  mutable std::string CachedExpectedLightSignature;
   uint64_t LightCompleteRevision{0};
   bool LightCompleteSaveInFlight{false};
   std::string LightCompleteSaveWorldFolder;

@@ -39,7 +39,7 @@
   "next_defects": [
     "absent slice versus proven air semantics",
     "exact fluid mutation change sets",
-    "six-face light convergence/removal and persistence validation",
+    "remaining light frontier and per-section persisted dependency validation",
     "strict first-frame ring barrier",
     "authoritative per-section lifecycle and independent light resource"
   ],
@@ -318,7 +318,85 @@
     ]
   },
   "latest_ctest_verification": {
-    "log": "build/desktop-msvc/engine-local-fixes-final-tests.log",
-    "passed": 11
+    "log": "build/desktop-msvc/engine-light-cache-final-tests.log",
+    "passed": 12
+  },
+  "six_face_dependency_verification": {
+    "source_commit": "0777cc7fa40e792bb69c90be30f509413cf1cce2",
+    "negative_control": "build/desktop-msvc/engine-six-face-red-test.log: FAIL vertical partial-band dependency",
+    "unit": "relight_result_install_test: additions and removals cross negative-height vertical section boundary and converge to zero after source removal",
+    "release_build": "build/desktop-msvc/engine-six-face-release-build.log",
+    "native_artifacts": "build/desktop-msvc/engine-six-face-wet-v1",
+    "native_verdict": {
+      "schema": "engine-smoke-verdict.v1",
+      "status": "UNTESTED",
+      "components": {
+        "runtime": {
+          "status": "PASS",
+          "reason": "native_process",
+          "exit_code": 0
+        },
+        "route": {
+          "status": "PASS",
+          "reason": "frontier_route_covered",
+          "displacement_chunks": 19,
+          "outside_initial_resident_samples": 2367
+        },
+        "startup": {
+          "status": "UNTESTED",
+          "reason": "missing_first_frame_ring_witness"
+        },
+        "visual": {
+          "status": "UNTESTED",
+          "reason": "missing_visual_reference",
+          "samples": 24160,
+          "captures": 151,
+          "attributed_samples": 0,
+          "faults": 0
+        },
+        "inspection": {
+          "status": "PASS",
+          "reason": "inspection_capture_coverage",
+          "requested": 24,
+          "queued": 24,
+          "verified": 24
+        },
+        "fixture": {
+          "status": "PASS",
+          "reason": "negative_wet_cave_observed",
+          "samples": 216
+        },
+        "fixture_opaque_depth": {
+          "status": "PASS",
+          "reason": "analytic_near_cave_opaque_depth",
+          "checked": 23612,
+          "faults": 0,
+          "frame_epochs": 151,
+          "skipped_unscoped_or_occluded": 548,
+          "examples": [],
+          "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+        }
+      },
+      "malformed_trace_rows": 0,
+      "scope": "one-way frontier route and sampled reference checks; not full-screen proof",
+      "runner_exit_code": 1,
+      "inspection_evidence": {
+        "verified": 24,
+        "requested": 24,
+        "reason": "inspection_views_joined_to_png"
+      }
+    },
+    "limitations": [
+      "does not close unknown-input or persisted per-section dependency validation",
+      "native route covers stable flooded cave; dynamic torch addition/removal is covered by real snapshot/install unit grid"
+    ]
+  },
+  "light_cache_compatibility_verification": {
+    "status": "native_pending",
+    "unit": "light_cache_certificate_test: material/height/mode/version changes reject completion; signed coordinate round trip and malformed/legacy metadata controls pass",
+    "release_build": "build/desktop-msvc/engine-light-cache-release-build.log",
+    "limitations": [
+      "global compatibility signature does not prove per-section dependencies or column-wide convergence"
+    ]
   }
 }

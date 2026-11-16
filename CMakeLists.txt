@@ -998,6 +998,12 @@ cubatarium_add_test(NAME mesh_reconcile_snapshot_test
 add_test(NAME mesh_reconcile_snapshot_test COMMAND $<TARGET_FILE:mesh_reconcile_snapshot_test>)
 set_tests_properties(mesh_reconcile_snapshot_test PROPERTIES LABELS "unit;streaming")
 
+cubatarium_add_test(NAME light_cache_certificate_test
+    SOURCES src/Test/LightCacheCertificateTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+add_test(NAME light_cache_certificate_test COMMAND $<TARGET_FILE:light_cache_certificate_test>)
+set_tests_properties(light_cache_certificate_test PROPERTIES LABELS "unit;streaming")
+
 cubatarium_add_test(NAME diagnostic_flight_controller_test
     SOURCES src/Test/DiagnosticFlightControllerTest.cpp
             src/App/Diagnostics/DiagnosticFlightController.cpp
