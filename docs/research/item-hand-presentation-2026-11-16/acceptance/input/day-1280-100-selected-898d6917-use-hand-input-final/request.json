@@ -1,0 +1,15 @@
+{
+  "ids": [
+    "waterskin"
+  ],
+  "light": "day",
+  "width": 1280,
+  "height": 720,
+  "scale": 1.0,
+  "interaction": "use",
+  "perspective": "first",
+  "mode": "creative",
+  "body": "male",
+  "subject": "item",
+  "hand": "right"
+}

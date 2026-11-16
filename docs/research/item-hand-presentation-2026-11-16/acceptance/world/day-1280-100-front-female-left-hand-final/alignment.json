@@ -1,0 +1,1720 @@
+{
+  "passed": true,
+  "source": "docs\\research\\item-hand-presentation-2026-11-16\\acceptance\\world\\day-1280-100-front-female-left-hand-final\\native.json",
+  "scope": "Actual held draw, selected by matching hand and palm; physical drops cannot satisfy the gate",
+  "items": [
+    {
+      "id": "apple",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 3.862704336642905e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218951468912,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "arrow",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 2.100879864727044e-07,
+      "contact_passed": true,
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "bread",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 4.8062539517728e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218952838544,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "bucket",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 2.0873776959014425e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218960074811,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "charcoal",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 4.866791612016715e-07,
+      "contact_passed": true,
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "coal",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 2.7435791463154383e-07,
+      "contact_passed": true,
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "cooked_meat",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 2.3795717847626288e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.801285196208106,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "copper_axe",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 3.5806355254250505e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.9781476166434377,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218966962545,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "copper_chest",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 3.691686715653013e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218951468863,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "copper_feet",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 2.1475571611198527e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218974547034,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "copper_head",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 3.8015168663873643e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218951468906,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "copper_hoe",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 1.396767538194548e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            0.30901699437494745,
+            -0.9510565162951535
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.86637732653645,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218965302243,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "copper_ingot",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 4.777675730550706e-07,
+      "contact_passed": true,
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "copper_legs",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 4.47775854808904e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218960074815,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "copper_pickaxe",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 3.3963732782670255e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true,
+          "alignment": 0.9781475916080787,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218956531171,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "copper_shovel",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 1.3935113157095562e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true,
+          "alignment": 0.9781475916080802,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218965302252,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "copper_sword",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 2.8217972127301333e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.978147616643438,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218946099746,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "cord",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 5.524349570733289e-07,
+      "contact_passed": true,
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "flint_and_steel",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 3.384440748163704e-07,
+      "contact_passed": true,
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "gold_axe",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 5.452397749220668e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.9781475832629566,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218965302243,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "gold_chest",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 4.823324885255084e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218965941132,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "gold_feet",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 2.2677000442690723e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218960074811,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "gold_head",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 4.783072996608234e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218967310945,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "gold_hoe",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 2.217595171071601e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            0.30901699437494745,
+            -0.9510565162951535
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.8663774304937621,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218937328629,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "gold_ingot",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 4.777675730550706e-07,
+      "contact_passed": true,
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "gold_legs",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 2.7727868788542324e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218951468906,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "gold_pickaxe",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 5.67248502786072e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true,
+          "alignment": 0.9781475916080801,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218965302219,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "gold_shovel",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 2.1006359148925324e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true,
+          "alignment": 0.9781475916080802,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218954870851,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "gold_sword",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 3.0465393197843283e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.9781475916080793,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218956531171,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "grain",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 3.067753836828763e-07,
+      "contact_passed": true,
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "iron_axe",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 2.5193517342066613e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.9781475665727066,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218954870845,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "iron_chest",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 2.2065120666321072e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.994521896868067,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "iron_feet",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 2.1441484362327132e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218948729326,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "iron_head",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 4.770986669667527e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218951468906,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "iron_hoe",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 5.613470153103271e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            0.30901699437494745,
+            -0.9510565162951535
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.866377326649976,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218954870845,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "iron_ingot",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 4.76837158203125e-07,
+      "contact_passed": true,
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "iron_legs",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 2.216411329362651e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218960074811,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "iron_pickaxe",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 5.962274855292664e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true,
+          "alignment": 0.978147566572706,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.994521897573364,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "iron_shield",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 2.9007971069620403e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.9781475815939332,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218967767501,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "iron_shovel",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 2.1341711853181794e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true,
+          "alignment": 0.9781475916080802,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218965302243,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "iron_sword",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 3.447538134347714e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.9781475916080793,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218965302243,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "leather",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 4.777675730550706e-07,
+      "contact_passed": true,
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "leather_chest",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 5.438424358019285e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.994521896868072,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "leather_feet",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 2.267663721515879e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218951468906,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "leather_head",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 3.9621667460857326e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218951468863,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "leather_legs",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 4.5216562353841634e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218951468906,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "plant_fiber",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 2.1584535694739103e-07,
+      "contact_passed": true,
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "raw_copper",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 5.715705764311453e-07,
+      "contact_passed": true,
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "raw_gold",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 5.84317985349784e-07,
+      "contact_passed": true,
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "raw_iron",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 5.951700367548015e-07,
+      "contact_passed": true,
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "raw_meat",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 2.6583923759904085e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.8012852152763456,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "seeds",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 4.03892560765696e-07,
+      "contact_passed": true,
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "shears",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 2.9173773006956916e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.9273815803597537,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "stick",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 4.45659442983233e-07,
+      "contact_passed": true,
+      "measurements": [],
+      "passed": true
+    },
+    {
+      "id": "stone_axe",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 3.953154210213845e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.9781475916080791,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218975733648,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "stone_hoe",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 4.253382641618806e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            0.30901699437494745,
+            -0.9510565162951535
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.8663773284487087,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218965302252,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "stone_pickaxe",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 2.3018507785751276e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true,
+          "alignment": 0.9781475916080793,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218965302252,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "stone_shovel",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 5.430710885962732e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true,
+          "alignment": 0.9781475832629575,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218954870845,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "stone_sword",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 2.5454581682712834e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.9781475916080806,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.994521895487082,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "waterskin",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 3.381865547012926e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.994521896868072,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "wood_axe",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 3.661068826429229e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.9781475916080806,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218965302219,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "wood_bow",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 4.771170098717645e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218951468863,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "wood_hoe",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 4.503673220004287e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            0.30901699437494745,
+            -0.9510565162951535
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.866377328248407,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218965302252,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "wood_pickaxe",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 3.2935597852492e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true,
+          "alignment": 0.9781476082983201,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218954870851,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "wood_shield",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 2.6727840418320447e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.9781475999531974,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218956293002,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "wood_shovel",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 5.428285331897742e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": true,
+          "alignment": 0.9781475916080802,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218954870845,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "wood_spear",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 4.4259294599609506e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.75,
+          "absolute": false,
+          "alignment": 0.9273816404028422,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "wood_sword",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 6.149111854888794e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            1,
+            0,
+            0
+          ],
+          "direction": "forward",
+          "minimum": 0.7,
+          "absolute": false,
+          "alignment": 0.9781475665727061,
+          "passed": true
+        },
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218965302243,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "wood_torch",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 1.8601491168458334e-07,
+      "contact_passed": true,
+      "measurements": [
+        {
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "direction": "up",
+          "minimum": 0.65,
+          "absolute": false,
+          "alignment": 0.9945218967767531,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "wool",
+      "hand": "left",
+      "body": "female",
+      "perspective": "front",
+      "grip_gap": 5.520797646784852e-07,
+      "contact_passed": true,
+      "measurements": [],
+      "passed": true
+    }
+  ]
+}

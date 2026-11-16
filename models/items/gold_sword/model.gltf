@@ -520,9 +520,9 @@
         -1.6434222403990803e-18
       ],
       "tp_euler_deg": [
-        -25,
-        0,
-        20
+        -65,
+        90,
+        0
       ],
       "right_grip": [
         0.0,
@@ -536,8 +536,8 @@
       ],
       "fp_euler_deg": [
         -26,
-        0,
-        -20
+        90,
+        -15
       ],
       "fp_scale": 0.68,
       "fp_hand_offset": [
@@ -545,7 +545,12 @@
         0.12,
         0
       ],
-      "tp_scale": 1.65
+      "tp_scale": 1.65,
+      "tp_left_euler_deg": [
+        -65,
+        90,
+        0
+      ]
     },
     "visual_bindings": [],
     "wear_sections": []

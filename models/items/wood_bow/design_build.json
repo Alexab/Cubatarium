@@ -24,7 +24,7 @@
       "parent": "nocked_arrow",
       "source_anchor": "nock",
       "model_sha256": "5d42bde5fd787c2e766ca417a160eadd4e1133c2096a68b1022de1a8d67fa7bd",
-      "build_sha256": "23a13f4cfe50764d15ca8b9be157622b5ff7a03e2c45a1c76f78eb7cc428495c"
+      "build_sha256": "8c56ec51346efb1ea08050d0521707239be473952e60cededef8d2b661b48da4"
     }
   ],
   "definition": {
@@ -50,7 +50,7 @@
       "tools/itemgen/mesh.py": "ebd7ed9b272b6fdadc95018c278868a7a52ea9f7fdd4f610f70b35e9cea63410",
       "tools/itemgen/pilot_designs.py": "f5c4ebc522c06d058bdf005b136adb33e9be3283515b1993d6adb00525b6c25d",
       "tools/itemgen/pipeline.py": "28bcba0d5e9104ea195d820eccea86f56c2df0890ab2ab7aae2dd5d07543bcbc",
-      "tools/itemgen/presentation.py": "fdea0aeed83ef3ccc6dd38e55ade896d7cd5a473138e9a20922d9daa27c586a2",
+      "tools/itemgen/presentation.py": "116d46b9edf49a6fb19be715c034fd10d3947932c1a0d54f5950165f3b31a3b6",
       "tools/itemgen/preview.py": "f707ee5f6389bfc74704cdce31dff47e316c9085a980dd2668abf43bd29ace3a",
       "tools/itemgen/quality.py": "105852852307434143a244e3786da15a92c3f6faf2540716dab5278fe854c2aa",
       "tools/itemgen/raster.py": "8974c41252e04b030d39b6bf42b160ded4a927f11bb1a073e830f30e01603fa1",
@@ -68,7 +68,7 @@
   "outputs": {
     "ATTRIBUTION.json": "44a9a746f03309fd433b8ef370fc521ab7ab6e5ed59ea3dbab6d2b65a53d2895",
     "components/loaded_arrow/ATTRIBUTION.json": "0f82d878701c4fe705dd7cecdb6e7a86a8f49049d079fc348e2cf0807f54b872",
-    "components/loaded_arrow/design_build.json": "23a13f4cfe50764d15ca8b9be157622b5ff7a03e2c45a1c76f78eb7cc428495c",
+    "components/loaded_arrow/design_build.json": "8c56ec51346efb1ea08050d0521707239be473952e60cededef8d2b661b48da4",
     "components/loaded_arrow/LICENSE.txt": "d5b2c2cdb51ab4c8b124dfab74f936267098953b3e78afdf67ad89b11d71006e",
     "components/loaded_arrow/model.bin": "0b790fac404e96caeed57bd3e2fbc52b07485cade8dd6609f8da6201ebdf1e5c",
     "components/loaded_arrow/model.gltf": "5d42bde5fd787c2e766ca417a160eadd4e1133c2096a68b1022de1a8d67fa7bd",
@@ -76,7 +76,7 @@
     "components/loaded_arrow/uv_layout.json": "6316ef867ea9bb62884425a699b8b6b844c5eca456ce6a4e4c079c41555a84ae",
     "LICENSE.txt": "d5b2c2cdb51ab4c8b124dfab74f936267098953b3e78afdf67ad89b11d71006e",
     "model.bin": "26405d4d1f6988b184dbbc0e44c7985ef4854c26f9f20a712c316f772ff60db3",
-    "model.gltf": "231f0182d6d6d5afc6d06150b61806b4dbf96feb3851d6c5b6042b285c01ed2c",
+    "model.gltf": "5305bc5f13643beb79efad9fc74752282424c7a97eee0008b20e108deadc9506",
     "textures/diffuse.png": "86c3b99889b9eb5ccd54d6a274f23aceeada4b5ee042dbb4d79267b1a76241ca",
     "uv_layout.json": "b87994e0eb3ff5d6045f3acd13a396e1dbf32b7abbb35ad89e15a42e4dac4292"
   },

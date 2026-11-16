@@ -53,10 +53,13 @@ struct FpItemDrawAudit
   glm::vec2 NdcLow{1e9f}, NdcHigh{-1e9f};
   bool AllInFront{true};
   glm::vec4 GripClip{0.f};
+  glm::mat4 ModelWorld{1.f};
+  bool Left{false};
 };
 struct FpViewmodelDrawAudit
 {
   GLuint SkinTexture{0};
+  glm::vec3 ViewForward{0, 0, -1};
   std::vector<FpArmDrawAudit> Arms;
   std::vector<FpItemDrawAudit> Items;
   bool BowSupport{false};

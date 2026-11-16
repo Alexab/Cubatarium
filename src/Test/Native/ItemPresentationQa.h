@@ -15,6 +15,7 @@
 #include "Items/ItemGltfTextureCache.h"
 #include "Items/ItemPresentationMath.h"
 #include "Items/ItemSurfaceRenderer.h"
+#include "Items/ItemVisualDefaults.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
 #include "Render/Pipeline/GlStateScope.h"
@@ -145,7 +146,8 @@ inline bool CaptureFpItemState(UFpViewmodelRenderer &renderer,
                                UItemQaTarget &target,
                                const ItemDefinition &definition,
                                const ItemVisualInputs &inputs, const char *body,
-                               bool left, const std::filesystem::path &path)
+                               bool left, const std::filesystem::path &path,
+                               float swingSeconds = -1.f)
 {
   const auto &id = definition.Id;
   HumanAppearance human;
@@ -178,6 +180,17 @@ inline bool CaptureFpItemState(UFpViewmodelRenderer &renderer,
   params.ItemUseHeld = !left && inputs.UsePhase > 0;
   params.HasAmmo = definition.Ranged.Enabled && inputs.HasAmmo;
   renderer.ClearHeldVisual();
+  if (swingSeconds >= 0)
+  {
+    renderer.SetActiveItemHint(id);
+    renderer.NotifySwing(FpSwingKind::Melee);
+    for (float remaining = swingSeconds; remaining > 0;)
+    {
+      const float dt = std::min(remaining, 1.f / 60);
+      renderer.Update(dt, 0, 0, 0);
+      remaining -= dt;
+    }
+  }
   renderer.DrawWorldOverlay(params);
   const bool saved =
       SaveItemQaTexture(target.Texture, path, target.Width, target.Height);
@@ -208,7 +221,16 @@ inline bool CaptureFpItemState(UFpViewmodelRenderer &renderer,
       !params.BowCharge ||
       (audit.BowSupport && audit.BowPoseWeight == 1 &&
        glm::distance(audit.BowSupportTarget, audit.BowSupportPalm) < .0001f);
+  auto modelValues = nlohmann::json::array();
+  for (int c = 0; c < 4; ++c)
+    for (int r = 0; r < 4; ++r)
+      modelValues.push_back(item.ModelWorld[c][r]);
   const nlohmann::json framing = {
+      {"id", id},
+      {"left", left},
+      {"model_world", modelValues},
+      {"view_forward",
+       {audit.ViewForward.x, audit.ViewForward.y, audit.ViewForward.z}},
       {"ndc_low", {item.NdcLow.x, item.NdcLow.y}},
       {"ndc_high", {item.NdcHigh.x, item.NdcHigh.y}},
       {"all_in_front", item.AllInFront},
@@ -950,6 +972,23 @@ RunItemPresentationQa(const std::filesystem::path &path,
     if (!surface)
       continue;
     report["surface_ids"].push_back(id);
+    if (fp)
+    {
+      const auto *preset = items.VisualPresets().Get(
+          DefaultSwingPreset(*def, FpSwingKind::Melee));
+      const float duration = preset ? preset->Duration : .28f;
+      for (const char *body : HumanAppearance::Bodies)
+        for (int step = 0; step < 3; ++step)
+        {
+          const auto label = id + "-swing-" + body + "-" + std::to_string(step);
+          const float seconds = step == 0   ? 0.f
+                                : step == 1 ? duration * .5f
+                                            : duration * 1.01f;
+          check(label + " actual FP geometry and palm contact",
+                CaptureFpItemState(*fp, preview, fpTarget, *def, {}, body,
+                                   false, frames / (label + ".png"), seconds));
+        }
+    }
     RunItemStateQa(*def, *surface, orbit, preview, fp, fpTarget, model, frames,
                    report);
     RunItemConsumePoseQa(*def, preview, fp, fpTarget, frames, report);

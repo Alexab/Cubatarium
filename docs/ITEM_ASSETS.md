@@ -147,3 +147,22 @@ The desktop GUI textured-quad shader uses a static unit quad plus `rectPx`.
 Legacy/GLES shaders without that uniform retain pixel-position vertices.
 Independent native RGBA tests cover both paths at 1280x720 and 1920x1080 with
 100/150/200% scale. Colored quad streams orphan storage before reuse.
+
+### Functional hand presentation
+
+Authored hand profiles may define `tp_left_euler_deg` independently of the right
+hand. Without it, the legacy mirrored TP angles remain supported. Directed
+working edges must not be reversed just to mirror the hand. `fp_use_euler_deg`
+and `fp_use_hand_offset` are optional use-only overrides, blended from the idle
+pose during the first third of the authoritative use phase; cancellation returns
+to idle, and offhand presentation does not inherit the main-hand use phase.
+These fields describe rendering and do not store inventory state.
+
+`tools/item_hand_alignment.json` gives all catalog items explicit inspection
+contracts. `tools/audit_item_hand_alignment.py` checks actual submitted matrices,
+functional directions and actual palm contacts. TP candidates are selected by
+matching the loaded grip to the skeleton palm, so a correctly oriented loose
+copy cannot hide an incorrectly held model. FP uses its own viewmodel camera
+basis, separately from the logical world camera. Native presentation tests also
+capture rest, strike and return on both body variants. See the
+[hand-presentation audit](research/item-hand-presentation-2026-11-16/README.md).

@@ -155,13 +155,29 @@ public:
                              UChunkManager::WorldToChunk(Base).x + x,
                              UChunkManager::WorldToChunk(Base).z + z));
   }
+  static nlohmann::json MatrixJson(const glm::mat4 &matrix)
+  {
+    auto result = nlohmann::json::array();
+    for (int c = 0; c < 4; ++c)
+      for (int r = 0; r < 4; ++r)
+        result.push_back(matrix[c][r]);
+    return result;
+  }
   void RecordWorldItems(const std::vector<ItemSurfaceDrawAudit> &items)
   {
     WorldItems = nlohmann::json::array();
     for (const auto &item : items)
-      WorldItems.push_back({{"path", item.Path.generic_string()},
-                            {"first_node", item.Asset->Nodes.front().Name},
-                            {"visible_primitives", item.VisiblePrimitives}});
+      WorldItems.push_back(
+          {{"path", item.Path.generic_string()},
+           {"model_world", MatrixJson(item.Model)},
+           {"right_grip",
+            {item.Asset->Grip.RightGrip.x, item.Asset->Grip.RightGrip.y,
+             item.Asset->Grip.RightGrip.z}},
+           {"left_grip",
+            {item.Asset->Grip.LeftGrip.x, item.Asset->Grip.LeftGrip.y,
+             item.Asset->Grip.LeftGrip.z}},
+           {"first_node", item.Asset->Nodes.front().Name},
+           {"visible_primitives", item.VisiblePrimitives}});
   }
   void RecordWorldCarry(UWorld &world)
   {
@@ -194,13 +210,30 @@ public:
     FpContacts = params.HasCarryContacts;
     FpItems = nlohmann::json::array();
     for (const auto &item : audit.Items)
-      FpItems.push_back({{"id", item.Id},
-                         {"bow_charge", item.Inputs.BowCharge},
-                         {"use_phase", item.Inputs.UsePhase},
-                         {"contents_units", item.Inputs.ContentsUnits},
-                         {"has_water", item.Inputs.HasWater},
-                         {"has_ammo", item.Inputs.HasAmmo},
-                         {"visible_primitives", item.VisiblePrimitives}});
+    {
+      float gap = 1e9f;
+      for (const auto &arm : audit.Arms)
+        if (arm.Left == item.Left)
+        {
+          const auto palm = arm.RootMvp * glm::vec4(arm.PalmLocal, 1);
+          if (palm.w > 0 && item.GripClip.w > 0)
+            gap = glm::length(glm::vec3(palm) / palm.w -
+                              glm::vec3(item.GripClip) / item.GripClip.w);
+        }
+      FpItems.push_back(
+          {{"id", item.Id},
+           {"left", item.Left},
+           {"model_world", MatrixJson(item.ModelWorld)},
+           {"grip_ndc_gap", gap},
+           {"view_forward",
+            {audit.ViewForward.x, audit.ViewForward.y, audit.ViewForward.z}},
+           {"bow_charge", item.Inputs.BowCharge},
+           {"use_phase", item.Inputs.UsePhase},
+           {"contents_units", item.Inputs.ContentsUnits},
+           {"has_water", item.Inputs.HasWater},
+           {"has_ammo", item.Inputs.HasAmmo},
+           {"visible_primitives", item.VisiblePrimitives}});
+    }
     for (const auto &arm : audit.Arms)
     {
       const auto clip = arm.RootMvp * glm::vec4(arm.PalmLocal, 1);
@@ -232,7 +265,22 @@ public:
                         height, 4, pixels.data(), width * 4))
       throw std::runtime_error("Cannot write world item capture");
     auto *actor = world.GetControlledCreature();
-    const auto *active = actor->GetInventory().GetActiveEntryRef();
+    const auto *active = Request.value("hand", "right") == "left"
+                             ? &actor->GetInventory().GetEquippedOffhand()
+                             : actor->GetInventory().GetActiveEntryRef();
+    glm::mat4 handFrame(1);
+    glm::vec3 handLow, handHigh;
+    const std::string handName =
+        Request.value("hand", "right") == "left" ? "leftItem" : "rightItem";
+    auto *visual = actor->GetVisual();
+    const bool hasPalm =
+        visual && visual->GetWorldBoneTransform(handName, handFrame) &&
+        visual->GetBoneLocalBounds(handName, handLow, handHigh);
+    const auto palm =
+        hasPalm ? glm::vec3(
+                      handFrame *
+                      glm::vec4(CreaturePalmGripPosition(handLow, handHigh), 1))
+                : glm::vec3(0);
     const auto &env = world.GetEnvironmentState();
     const auto cell = WorldPosToBlock(actor->GetEyePosition());
     const auto coord = UChunkManager::WorldToChunk(cell);
@@ -270,6 +318,12 @@ public:
          {"active_count", active ? active->count : 0},
          {"wear", active ? active->wear : 0},
          {"contents_units", active ? active->contentsUnits : 0},
+         {"camera_front",
+          {world.GetCurrentUserCamera()->GetFront().x,
+           world.GetCurrentUserCamera()->GetFront().y,
+           world.GetCurrentUserCamera()->GetFront().z}},
+         {"has_wield_palm", hasPalm},
+         {"wield_palm", {palm.x, palm.y, palm.z}},
          {"fp_items", FpItems},
          {"world_items", WorldItems},
          {"fp_contacts", FpContacts},
@@ -938,6 +992,13 @@ private:
     auto &physics = UWorldItemSystem::Instance();
     physics.Clear();
     Original = *inv.GetActiveEntryRef();
+    if (Request.value("hand", "right") == "left")
+    {
+      if (!Interaction.empty() ||
+          !inv.EquipOffhand(Original, *world.GetItemDefinitionStorage()))
+        throw std::runtime_error(
+            "Offhand capture requires static item equipment");
+    }
     if (Interaction == "use" &&
         world.GetItemDefinitionStorage()->Get(entry.Id)->Ranged.Enabled)
     {

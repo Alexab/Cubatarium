@@ -31,8 +31,13 @@ def main():
     parser.add_argument('--body', choices=['male', 'female'], default='male')
     parser.add_argument('--perspective', choices=['first', 'back', 'front'], default='first')
     parser.add_argument('--interaction', choices=['throw', 'use', 'utility'], help='Route real throw or use/slot-cancel/complete input')
+    parser.add_argument('--hand', choices=['right', 'left'], default='right')
+    parser.add_argument('--label', default='', help='Separate retained audit runs')
+    parser.add_argument('--seconds', type=int, help='Route duration; complete native coverage is still required')
     parser.add_argument('--skip-build', action='store_true')
     args = parser.parse_args()
+    if args.seconds is not None and not 30 <= args.seconds <= 900:
+        parser.error('--seconds must be between 30 and 900')
     if not args.world.endswith('QA') or any(c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-' for c in args.world):
         parser.error('Use a dedicated existing QA world')
     defaults = ['apple', 'bread', 'raw_meat', 'cooked_meat', 'waterskin', 'wood_bow'] if args.interaction == 'use' else [p.stem for p in (ROOT/'content/items').glob('*.json')]
@@ -43,6 +48,10 @@ def main():
             parser.error('Use capture requires an inventory item')
         args.interaction = 'throw'
         defaults = ['rat', 'sheep'] if args.subject == 'creature' else ['stone']
+    if args.hand == 'left' and (args.interaction or args.subject != 'item'):
+        parser.error('Left-hand capture supports static inventory items')
+    if args.label and any(c not in 'abcdefghijklmnopqrstuvwxyz0123456789_-' for c in args.label):
+        parser.error('Use a simple capture label')
     ids = sorted(args.ids or defaults)
     if any(not id or any(c not in 'abcdefghijklmnopqrstuvwxyz0123456789_' for c in id) for id in ids):
         parser.error('Use simple content IDs')
@@ -67,6 +76,10 @@ def main():
         name += '-'+args.body
     if args.mode != 'creative':
         name += '-'+args.mode
+    if args.hand == 'left':
+        name += '-left'
+    if args.label:
+        name += '-'+args.label
     output = ROOT/'bin/item_world_visual'/name
     output.mkdir(parents=True, exist_ok=True)
     report = output/'native.json'
@@ -74,7 +87,7 @@ def main():
     summary_path = output/'summary.json'
     summary_path.unlink(missing_ok=True)
     request = dict(ids=ids, light=args.light, width=args.width,
-                   height=720 if args.width == 1280 else 1080, scale=args.scale, interaction=args.interaction or "", perspective=args.perspective, mode=args.mode, body=args.body, subject=args.subject)
+                   height=720 if args.width == 1280 else 1080, scale=args.scale, interaction=args.interaction or "", perspective=args.perspective, mode=args.mode, body=args.body, subject=args.subject, hand=args.hand)
     (output/'request.json').write_text(json.dumps(request, indent=2), encoding='utf-8')
     config = ROOT/'bin/config.json'
     config_before = config.read_bytes() if config.exists() else None
@@ -85,7 +98,8 @@ def main():
         ['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
         executable_sha256=hashlib.sha256((ROOT/'bin/Cubatarium.exe').read_bytes()).hexdigest(),
         sources={name: hashlib.sha256((ROOT/name).read_bytes()).hexdigest() for name in
-                 ['src/App/Application.cpp', 'src/Test/Native/ItemWorldVisualQa.h',
+                 ['content/item_visual_presets.json', 'tools/item_hand_alignment.json',
+                  'src/App/Application.cpp', 'src/Test/Native/ItemWorldVisualQa.h',
                   'tools/run_item_world_visual_qa.py',
                   'src/Creatures/Visual/WornEquipmentDrawer.cpp',
                   'src/Creatures/Visual/WornEquipmentDrawer.h',
@@ -126,7 +140,7 @@ def main():
         with runtime_designs(staged) as restored:
             with (output/'flight.log').open('w', encoding='utf-8') as log:
                 subprocess.run([sys.executable, 'tools/flight_sim_run.py', '--world', args.world,
-                                '--require-existing-world', '--seconds', str(30+len(ids)*(8 if args.interaction else 2)),
+                                '--require-existing-world', '--seconds', str(args.seconds or (30+len(ids)*(8 if args.interaction else 2))),
                                 '--process-timeout', str(180+len(ids)*(12 if args.interaction else 3)), '--no-fly',
                                 '--no-hold-forward', '--idle-sec', '0', '--artifact-root',
                                 str(output/'flight-artifacts'), '--report', str(output/'flight.json')],

@@ -76,3 +76,12 @@ docs/research/item-visual-redesign-2026-11-14/carry-input-checkpoint/selected-na
 
 # Preserve the original-to-LFS commit correspondence as recorded.
 /docs/research/item-visual-redesign-2026-11-14/history-storage-2026-11-16/** -text
+
+# Verbatim item-hand audit reports and frame hashes.
+/docs/research/item-hand-presentation-2026-11-16/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+
+# Hand-audit contracts and verification tools are byte-signed in evidence.
+/tools/item_hand_alignment.json -text
+/tools/audit_item_hand_alignment.py -text
+/tools/compose_item_hand_audit.py -text
+/tools/test_item_hand_alignment.py -text

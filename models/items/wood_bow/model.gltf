@@ -1110,7 +1110,7 @@
         "parent": "nocked_arrow",
         "source_anchor": "nock",
         "model_sha256": "5d42bde5fd787c2e766ca417a160eadd4e1133c2096a68b1022de1a8d67fa7bd",
-        "build_sha256": "23a13f4cfe50764d15ca8b9be157622b5ff7a03e2c45a1c76f78eb7cc428495c"
+        "build_sha256": "8c56ec51346efb1ea08050d0521707239be473952e60cededef8d2b661b48da4"
       }
     ]
   }

@@ -1,0 +1,776 @@
+{
+  "scope": "Ten full-catalog overview pages cover all 70 items; selected enlarged axe/spear/waterskin/shears and strike views inspected separately. Generated 9-panel item sheets are available, not all claimed as individually enlarged manual reviews.",
+  "reviewed_items": 70,
+  "items": {
+    "apple": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "8a2fc21afd350e860ed1c79e46b835ef6972c84d5951f55ae578ad8c3338549d",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "arrow": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "470d4063380bb6c6bf7891a7d3fe053a3c304b8c245b1b7c3b2511a2cf391a6b",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "bread": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "51e4cb578d21997bb066335497f284d3f1db8010f91fe8c29f829acd360b6da5",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "bucket": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "a63c5051ce835c95928be0105ae45d4e1aa7b7610d8d0e9549c6040c15646b66",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "charcoal": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "865f433e9d1a74d824debb243152600ee012ec0ff718c4b7a63c85a3598ad588",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "coal": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "e08a5c0589b52018e079dab5cf3cd346abf47cbde9370690549ebca43b0d9b7a",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "cooked_meat": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "c03b12e094c3e6659b4ae2e2c6d622a65fc7044a602a64922637a566b8b546a2",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "copper_axe": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "73e0d90036aae34b529f94b55c66d54b74def5ca0e8ac7cd12a47808bee304d7",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "copper_chest": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "09a15ba278cac4c2ec618a898367d87b4f37977d3862755f97c10df11f3a69e1",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "copper_feet": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "abad8c1a59dafbc9e34c0d39e3f4b77fe121d5fb5537c0a5a20a3d4f1c69cf9e",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "copper_head": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "f6a6e5f26fb08070964c510fcd77f9d6166d45d07e6dd47692c195b83b93b16a",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "copper_hoe": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "44205a24ddfd0d2b867a4e01da224aed559844d31412e3469b52ce7e7863e555",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "copper_ingot": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "baf2d4a311b7ac57d420f6a8613c281d7d2fe99256de27d6a2c7ae42e693d349",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "copper_legs": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "cb50aba7e51bb4604bf4684f58888012f87f030e16cea3de142b829aa99eeddb",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "copper_pickaxe": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "bddd4ee7a0655b60c9f605b8cbcc46ea00fc446c58d77e3a9c4090c638ff2c9d",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "copper_shovel": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "9a8b813d33cae2ec9e62fc2db19136ac992d5dba1107248a00d433371d4b9e27",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "copper_sword": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "87e62d10420599dac25fa3c7da392f3d765f9b02af0912a018cf0e093e446065",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "cord": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "a5479f449c1c8e58a99e93ef03865ad398cfd605f663f3071851965e12eaf4a7",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "flint_and_steel": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "cb9a912e2a51cb9bc2fd2bf927fd04f6a7611717df705bcdda837dbfdd339391",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "gold_axe": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "be8385ceea8612b911055ab412b8df15e127e2e13bf2be3eebff7db6cb61f803",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "gold_chest": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "db59f6637755c683d755af19e8fd33bf6e712a51aead534ee98e1ffd0f0321da",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "gold_feet": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "7e136bf7c172f970b1cc1af44ef38b15222981116f5880b3a50a3ac397142169",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "gold_head": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "526e1107c45eeb6ba89a31e47b3bf4eb0559310ff78c575a4dab391eb5ad0b49",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "gold_hoe": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "12596e86c8664fdcd32d63a34558d43a0adb69e429ac94cc62f8bb7b24dcb1f9",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "gold_ingot": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "fe0bdeeac4ed56e6189ea7c9c0e57b7761407e6f672a81e9748ec5036b09af51",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "gold_legs": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "365708b391562833e107b238b3c4e9850362b4957d83a623e6aa4eecdb36b961",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "gold_pickaxe": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "cffd6d8f74af090d46875b26edd20a395f7d6b9ff591d9973ff7efc8bb826a3b",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "gold_shovel": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "4399c5629a737c9def6d7905ed11258800a1e7011895a1bc2aaa3450a08ce194",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "gold_sword": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "0d2efdfcb41f52b13be9c02ad3798b19147feed6489b3c889572cc3a0ab37018",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "grain": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "ea5166bf6156dc77d0da8e253c458f7946fb32c9f4cc9d69157c21a0121cec9a",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "iron_axe": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "841d5634e4c67862935ac9d2f263a618da93666ec74b593374ce2ed7d73c12f2",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "iron_chest": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "5fea6eba335fee30f095a0d13000c7f73e56f69aeeed8def85c2f4bf52e98e06",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "iron_feet": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "7bd1ccdd63fd9eb062b6d0aae8e092ebfe825efa1c5b4953f6f0684cce5f6106",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "iron_head": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "d67d0e013146f338304721f9589514930e0ee58f124ba73861950492561c3f98",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "iron_hoe": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "999f2a93c1a2273a06a7ff30cc5983a1a69b3b7c997c0bc2577cd5ecd295c7d9",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "iron_ingot": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "ec52d023e771b742a750441bd103fdc76edc64f7b78b5ebc89fbfb4e25225c9a",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "iron_legs": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "d3e08eb0b62a2b22074e76e1186fc6bd1430cc9cdf6bdd26f8453e310d6ef46e",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "iron_pickaxe": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "4e26c464460474ffa898d24c9045013a6018ea11e67e080f755a00384eb46348",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "iron_shield": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "e3ff3fe20f0ddbc461d7a93cca69b26e8b499d7f6747a26cfb7dcc051fd72677",
+      "observations": "Outward face and inward handle correctly presented in both hands."
+    },
+    "iron_shovel": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "908834fbd825984b842f58df414cc4755747bee79c764f4698c4007f032f69ba",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "iron_sword": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "63516ff2ecbf1152b8f23b87c6a8dd578c7572dc82e03e21990a45af8d9de120",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "leather": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "d448d2921d3aa124b44f0d3ba956f0981a93ee24517e953202201241f2011b4f",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "leather_chest": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "233cd96fa51861b18620af7566addb046143b8a2151ed424bc48b0e63432857f",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "leather_feet": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "d2c70b33812203531fe692b87bfcaaf399932193e128538fde25d805db04cb1d",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "leather_head": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "a9291279a80f72a866538fd26935fe774027c4ab1fa930bd1e78f4629367a21b",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "leather_legs": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "f7672c2ba1c52188a0eaa32fab1ffb1873ef5ce5df9c0566930ba3fdfec84e05",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "plant_fiber": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "6a1ff8f16b0e19c787a375e14261b915790b7bc9271a3f2f1cb868ed91ed566c",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "raw_copper": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "344ccfe8afbccade89d40de94ab0e1bb1e329263e2943339173ead81d3f9c7db",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "raw_gold": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "01800ebd2e02cc4832066a80c42b0251b482dde7fa4345cfaddc7b8750a5547f",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "raw_iron": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "55031aa79145b86cdd07d246ea2963e015837d63318d708d0df2d09395f4feca",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "raw_meat": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "a5497786c2761a8666b0c873a2198653ca03c6d3e3ef4a6ba5edf66280b99b2b",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "seeds": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "078fa89528d9eb3d5084c6d83142bc239fde322a0572ca615cf84dfb2c0fe8d5",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "shears": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "29f0a24cff7e1192623a60ad14c8cf7dc14991b1b0cfa033c7cb3afc559e67bf",
+      "observations": "Blade tips aim forward; left grip uses the other handle. Actual Survival utility input preserves instance and use state."
+    },
+    "stick": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "e8b8c70e814ccccc15617dda1ea44d67f0e505ff3cf138c51ea47a99a31e02a4",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    },
+    "stone_axe": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "0e6521ae872f7b6e46beb3fac467136a73d2066e2c160f527384dc020c33b2da",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "stone_hoe": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "c5e0007f49ddeb4233387b110a373bcb160ca3546ba285066c996c244bf52fe5",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "stone_pickaxe": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "4a08b40c703bad7ee026c5a0e5d2ec8a6a83bc15c09debb50c79b4af5ff3ec97",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "stone_shovel": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "0dea116201964ffbcb541eab30c101fd261bea97aae84c2b3ab51527f24795fd",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "stone_sword": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "2e2ddb5816659fb3c0eb999b857725bdcdcec01c583e77f7b00bb0f44298a32e",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "waterskin": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "2ffe50880d6692293636a41d1d73e214c4c461c700f38f23a140509cdaf9e910",
+      "observations": "Upright body grip at rest; main-hand raise/tilt during drinking, isolated from offhand. Cancellation and finite contents verified by actual input."
+    },
+    "wood_axe": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "1f4294f7723e42571f29e329bb4363f149b4941d4f5bd9e8501cd16ff18963c7",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "wood_bow": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "38997f8bc7f41f7159afe714710d5d3127a3d64ba0059d91e9cf5ab4a1d38c16",
+      "observations": "Existing aim/support poses retained; main/offhand overview and native bow state checks pass."
+    },
+    "wood_hoe": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "97b0fac66b61e14a13c4c73264c197489bc2f64ba0f88f8ee2365e3a3ac1cfd6",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "wood_pickaxe": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "5554d94ac41452fbfeedda3d3452e879b0e2c7b8250c07e24c1d1e2b6f513085",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "wood_shield": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "143c4bac7bdc613cf1f528807254f99ed78df5c48ec1c4b37256360c83452248",
+      "observations": "Outward face and inward handle correctly presented in both hands."
+    },
+    "wood_shovel": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "8b8d10848e19453302b185eee4f92a9f70ff5298fc73ae19cc06704ccb339470",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "wood_spear": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "1d46e6c136c3c34a46d66e4c0461e4905237ca5b6deb33583a3c1baababd790e",
+      "observations": "Tip aims forward in both hands rather than vertically; contacts and thrust samples pass."
+    },
+    "wood_sword": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "1f05354ce8a628bcd43a4eaca9d8ec803ada9fce113d2c8ab877026e98ab9cc6",
+      "observations": "Both hand poses retain the working construction direction; the left-hand counterpart does not reverse the edge."
+    },
+    "wood_torch": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "097a7e4d4c64ebae6c1a8d03e0a4609cf26b921bef803c0f1ec52417ebf7d4ee",
+      "observations": "Flame-up presentation and upright TP hold; palm contact retained."
+    },
+    "wool": {
+      "overview_reviewed": true,
+      "hand_views": [
+        "FP right",
+        "FP left",
+        "TP front female right",
+        "TP front female left"
+      ],
+      "sheet_sha256": "5c0d5e19777d7b21d03ba062ca6b7b3e1fdb70812671930612a1910c1abd4e2c",
+      "observations": "Working direction and palm placement reviewed in the full-catalog overview; explicit functional/palm gates passed. Non-directional bundles/clothing retain their existing carry presentation."
+    }
+  }
+}

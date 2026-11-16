@@ -60,6 +60,20 @@ constexpr float kPi = 3.14159265358979323846f;
 
 const glm::vec3 kEye{0.f, 0.0f, 0.0f};
 const glm::vec3 kTarget{0.05f, -0.15f, -1.0f};
+
+glm::vec3 ResolveFpItemEuler(const ItemGripProfile &profile, glm::vec3 fallback,
+                             bool left, float usePhase)
+{
+  auto angle = profile.HasFpEuler ? profile.FpEulerDeg : fallback;
+  if (profile.HasFpUseEuler && !left)
+  {
+    const float raised = std::clamp(usePhase * 3.f, 0.f, 1.f);
+    const float weight = raised * raised * (3.f - 2.f * raised);
+    angle = glm::mix(angle, profile.FpUseEulerDeg, weight);
+  }
+  return angle;
+}
+
 // After idle Rx(+88В°): local -Y = forward (-Z view); local -Z = up (+Y
 // view). Previous +Z pushed the held item down under the wrist in frame.
 const glm::vec3 kHandSocketR{0.04f, -0.62f, -0.14f};
@@ -1166,9 +1180,14 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const InventoryEntryRef &entry,
   if (surface)
     fitExtent = std::max(1e-5f, std::max(ext.x, std::max(ext.y, ext.z)));
   const float fitScale = kFpWieldTargetExtent / fitExtent;
-  if (surface && surface->Grip.HasFpEuler)
+  if (surface)
+  {
+    const auto angle = ResolveFpItemEuler(
+        surface->Grip, {poseEuler[0], poseEuler[1], poseEuler[2]},
+        DrawingLeftArm, DrawingUsePhase);
     for (int i = 0; i < 3; ++i)
-      poseEuler[i] = surface->Grip.FpEulerDeg[i];
+      poseEuler[i] = angle[i];
+  }
   const float wieldScale = DefaultWieldScale(*def) * def->Visual.FpScale *
                            (surface ? surface->Grip.FpScale : 1.f);
   const glm::vec3 visualOff(poseOff[0], poseOff[1], poseOff[2]);
@@ -1233,6 +1252,8 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const InventoryEntryRef &entry,
     {
       FpItemDrawAudit record;
       record.Id = itemId;
+      record.ModelWorld = modelWorld;
+      record.Left = DrawingLeftArm;
       record.Inputs = inputs;
       record.GripClip = mvp * glm::vec4(gripCenter, 1);
       const auto transforms = ResolveItemNodeTransforms(*surface, visualState);
@@ -1700,6 +1721,8 @@ void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
   DrawingViewProjection = pv;
   DrawingCameraPosition = glm::vec3(glm::inverse(view)[3]);
   DrawingCameraFrame = ItemAimRotation(glm::inverse(view));
+  if (ActiveAudit)
+    ActiveAudit->ViewForward = -glm::vec3(DrawingCameraFrame[2]);
   const GLuint skinAtlas =
       ResolvePlayerSkin(params.SpeciesId, params.Appearance.get());
   if (ActiveAudit)
@@ -1731,7 +1754,8 @@ void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
                          paths->AssetRoot() / definition->ModelPath, revision);
     if (!asset)
       return root;
-    return ApplyItemHandProfile(root, socket, asset->Grip, left);
+    return ApplyItemHandProfile(root, socket, asset->Grip, left,
+                                DrawingUsePhase);
   };
   rootR = handProfile(rootR, socketR, params.Active, false);
   if (params.CarryHands > 0)

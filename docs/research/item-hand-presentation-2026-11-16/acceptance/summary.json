@@ -1,0 +1,76 @@
+{
+  "passed": true,
+  "cases": [
+    {
+      "name": "day-1280-100-hand-final",
+      "items": 70,
+      "passed": true
+    },
+    {
+      "name": "day-1280-100-left-hand-final",
+      "items": 70,
+      "passed": true
+    },
+    {
+      "name": "day-1280-100-back-hand-final",
+      "items": 70,
+      "passed": true
+    },
+    {
+      "name": "day-1280-100-back-left-hand-final",
+      "items": 70,
+      "passed": true
+    },
+    {
+      "name": "day-1280-100-front-female-hand-final",
+      "items": 70,
+      "passed": true
+    },
+    {
+      "name": "day-1280-100-front-female-left-hand-final",
+      "items": 70,
+      "passed": true
+    }
+  ],
+  "actual_world_item_hand_views": 420,
+  "deterministic_swing_samples": 420,
+  "tested_executable_sha256": "5d25456f304a0d8a7f97de03b193fc20fe9dae6c4c222c17476458a3f962387f",
+  "ctests": 26,
+  "presentation_checks": 4173,
+  "native_reports": {
+    "gameplay": true,
+    "window": true,
+    "ownership": true,
+    "ownership_ui": true,
+    "player_window": true,
+    "icons": true,
+    "item_lab": true,
+    "presentations": true
+  },
+  "actual_input_cases": [
+    {
+      "case": "day-1280-100-selected-836a6060-utility-survival-hand-input-final",
+      "passed": true,
+      "checks": 38,
+      "frames": 8
+    },
+    {
+      "case": "day-1280-100-selected-898d6917-use-hand-input-final",
+      "passed": true,
+      "checks": 52,
+      "frames": 8
+    },
+    {
+      "case": "day-1280-100-selected-898d6917-use-survival-hand-input-final",
+      "passed": true,
+      "checks": 52,
+      "frames": 8
+    },
+    {
+      "case": "day-1280-100-selected-f82ee86e-throw-survival-hand-input-final",
+      "passed": true,
+      "checks": 48,
+      "frames": 8
+    }
+  ]
+}

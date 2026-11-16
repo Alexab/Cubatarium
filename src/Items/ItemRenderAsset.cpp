@@ -337,6 +337,12 @@ DecodeItemRenderAsset(const std::filesystem::path &path, Json data,
   readVector("fp_hand_offset", asset->Grip.FpHandOffset);
   readVector("icon_euler_deg", asset->Grip.IconEulerDeg);
   readVector("tp_euler_deg", asset->Grip.TpEulerDeg);
+  asset->Grip.HasTpLeftEuler =
+      readVector("tp_left_euler_deg", asset->Grip.TpLeftEulerDeg);
+  asset->Grip.HasFpUseHandOffset =
+      readVector("fp_use_hand_offset", asset->Grip.FpUseHandOffset);
+  asset->Grip.HasFpUseEuler =
+      readVector("fp_use_euler_deg", asset->Grip.FpUseEulerDeg);
   readVector("fp_arm_euler_deg", asset->Grip.FpArmEulerDeg);
   readVector("ground_euler_deg", asset->Grip.GroundEulerDeg);
   readVector("carry_euler_deg", asset->Grip.CarryEulerDeg);
@@ -599,9 +605,16 @@ FindItemSurfaceAsset(const std::filesystem::path &path, uint64_t revision)
 }
 
 glm::mat4 ApplyItemHandProfile(const glm::mat4 &root, const glm::vec3 &socket,
-                               const ItemGripProfile &profile, bool left)
+                               const ItemGripProfile &profile, bool left,
+                               float usePhase)
 {
   auto offset = profile.FpHandOffset;
+  if (!left && profile.HasFpUseHandOffset)
+  {
+    const float raised = std::clamp(usePhase * 3.f, 0.f, 1.f);
+    const float weight = raised * raised * (3.f - 2.f * raised);
+    offset = glm::mix(offset, profile.FpUseHandOffset, weight);
+  }
   auto angles = glm::radians(profile.FpArmEulerDeg);
   if (left)
   {

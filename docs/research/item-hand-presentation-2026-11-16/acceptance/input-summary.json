@@ -1,0 +1,29 @@
+{
+  "passed": true,
+  "cases": [
+    {
+      "case": "day-1280-100-selected-836a6060-utility-survival-hand-input-final",
+      "passed": true,
+      "checks": 38,
+      "frames": 8
+    },
+    {
+      "case": "day-1280-100-selected-898d6917-use-hand-input-final",
+      "passed": true,
+      "checks": 52,
+      "frames": 8
+    },
+    {
+      "case": "day-1280-100-selected-898d6917-use-survival-hand-input-final",
+      "passed": true,
+      "checks": 52,
+      "frames": 8
+    },
+    {
+      "case": "day-1280-100-selected-f82ee86e-throw-survival-hand-input-final",
+      "passed": true,
+      "checks": 48,
+      "frames": 8
+    }
+  ]
+}

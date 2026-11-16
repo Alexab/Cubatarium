@@ -1,0 +1,745 @@
+{
+  "checks": [
+    {
+      "name": "waterskin equipped use changes finite count only on successful completion",
+      "passed": true
+    },
+    {
+      "name": "waterskin equipped use preserves the selected stack/instance identity",
+      "passed": true
+    },
+    {
+      "name": "waterskin equipped drink changes contents exactly once and respects mode policy",
+      "passed": true
+    },
+    {
+      "name": "waterskin equipped idle, completion and cancellation clear the use phase",
+      "passed": true
+    },
+    {
+      "name": "waterskin equipped actual FP draw consumes the authoritative use phase",
+      "passed": true
+    },
+    {
+      "name": "waterskin equipped actual FP draw consumes current container contents",
+      "passed": true
+    },
+    {
+      "name": "waterskin equipped active item is drawn during real use input",
+      "passed": true
+    },
+    {
+      "name": "waterskin partial use changes finite count only on successful completion",
+      "passed": true
+    },
+    {
+      "name": "waterskin partial use preserves the selected stack/instance identity",
+      "passed": true
+    },
+    {
+      "name": "waterskin partial drink changes contents exactly once and respects mode policy",
+      "passed": true
+    },
+    {
+      "name": "waterskin partial held input advances a partial visual phase",
+      "passed": true
+    },
+    {
+      "name": "waterskin partial actual FP draw consumes the authoritative use phase",
+      "passed": true
+    },
+    {
+      "name": "waterskin partial actual FP draw consumes current container contents",
+      "passed": true
+    },
+    {
+      "name": "waterskin partial active item is drawn during real use input",
+      "passed": true
+    },
+    {
+      "name": "waterskin canceled use changes finite count only on successful completion",
+      "passed": true
+    },
+    {
+      "name": "waterskin canceled use preserves the selected stack/instance identity",
+      "passed": true
+    },
+    {
+      "name": "waterskin canceled drink changes contents exactly once and respects mode policy",
+      "passed": true
+    },
+    {
+      "name": "waterskin canceled idle, completion and cancellation clear the use phase",
+      "passed": true
+    },
+    {
+      "name": "waterskin canceled routed hotbar key selects the empty cancellation slot",
+      "passed": true
+    },
+    {
+      "name": "waterskin restored use changes finite count only on successful completion",
+      "passed": true
+    },
+    {
+      "name": "waterskin restored use preserves the selected stack/instance identity",
+      "passed": true
+    },
+    {
+      "name": "waterskin restored drink changes contents exactly once and respects mode policy",
+      "passed": true
+    },
+    {
+      "name": "waterskin restored idle, completion and cancellation clear the use phase",
+      "passed": true
+    },
+    {
+      "name": "waterskin restored actual FP draw consumes the authoritative use phase",
+      "passed": true
+    },
+    {
+      "name": "waterskin restored actual FP draw consumes current container contents",
+      "passed": true
+    },
+    {
+      "name": "waterskin restored active item is drawn during real use input",
+      "passed": true
+    },
+    {
+      "name": "waterskin ready use changes finite count only on successful completion",
+      "passed": true
+    },
+    {
+      "name": "waterskin ready use preserves the selected stack/instance identity",
+      "passed": true
+    },
+    {
+      "name": "waterskin ready drink changes contents exactly once and respects mode policy",
+      "passed": true
+    },
+    {
+      "name": "waterskin ready fully held input reaches its ready phase",
+      "passed": true
+    },
+    {
+      "name": "waterskin ready actual FP draw consumes the authoritative use phase",
+      "passed": true
+    },
+    {
+      "name": "waterskin ready actual FP draw consumes current container contents",
+      "passed": true
+    },
+    {
+      "name": "waterskin ready active item is drawn during real use input",
+      "passed": true
+    },
+    {
+      "name": "waterskin completed use changes finite count only on successful completion",
+      "passed": true
+    },
+    {
+      "name": "waterskin completed use preserves the selected stack/instance identity",
+      "passed": true
+    },
+    {
+      "name": "waterskin completed drink changes contents exactly once and respects mode policy",
+      "passed": true
+    },
+    {
+      "name": "waterskin completed idle, completion and cancellation clear the use phase",
+      "passed": true
+    },
+    {
+      "name": "waterskin completed actual FP draw consumes the authoritative use phase",
+      "passed": true
+    },
+    {
+      "name": "waterskin completed actual FP draw consumes current container contents",
+      "passed": true
+    },
+    {
+      "name": "waterskin completed active item is drawn during real use input",
+      "passed": true
+    },
+    {
+      "name": "waterskin restarted use changes finite count only on successful completion",
+      "passed": true
+    },
+    {
+      "name": "waterskin restarted use preserves the selected stack/instance identity",
+      "passed": true
+    },
+    {
+      "name": "waterskin restarted drink changes contents exactly once and respects mode policy",
+      "passed": true
+    },
+    {
+      "name": "waterskin restarted held input advances a partial visual phase",
+      "passed": true
+    },
+    {
+      "name": "waterskin restarted actual FP draw consumes the authoritative use phase",
+      "passed": true
+    },
+    {
+      "name": "waterskin restarted actual FP draw consumes current container contents",
+      "passed": true
+    },
+    {
+      "name": "waterskin restarted active item is drawn during real use input",
+      "passed": true
+    },
+    {
+      "name": "waterskin canceled-again use changes finite count only on successful completion",
+      "passed": true
+    },
+    {
+      "name": "waterskin canceled-again use preserves the selected stack/instance identity",
+      "passed": true
+    },
+    {
+      "name": "waterskin canceled-again drink changes contents exactly once and respects mode policy",
+      "passed": true
+    },
+    {
+      "name": "waterskin canceled-again idle, completion and cancellation clear the use phase",
+      "passed": true
+    },
+    {
+      "name": "waterskin canceled-again routed hotbar key selects the empty cancellation slot",
+      "passed": true
+    }
+  ],
+  "frames": [
+    {
+      "active_count": 1,
+      "active_item": "waterskin",
+      "bow_charge": 0.0,
+      "camera_front": [
+        -4.275619147620091e-08,
+        -0.20791170001029968,
+        0.9781476259231567
+      ],
+      "carry_hands": 0,
+      "contents_units": 3,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "waterskin-equipped.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 3,
+          "grip_ndc_gap": 1.712013073529306e-07,
+          "has_ammo": true,
+          "has_water": true,
+          "id": "waterskin",
+          "left": false,
+          "model_world": [
+            1.2206871509552002,
+            -0.3044363856315613,
+            -0.004394914023578167,
+            -6.387517714756541e-08,
+            0.30443355441093445,
+            1.220694899559021,
+            -0.0013437531888484955,
+            6.587097800547781e-08,
+            0.004589483141899109,
+            0.00024025887250900269,
+            1.2580766677856445,
+            2.3981449430721113e-06,
+            0.4870128929615021,
+            -0.4471743106842041,
+            -0.8441616296768188,
+            0.9999987483024597
+          ],
+          "use_phase": 0.0,
+          "view_forward": [
+            0.049386486411094666,
+            -0.1481594443321228,
+            -0.9877296686172485
+          ],
+          "visible_primitives": 5
+        }
+      ],
+      "has_wield_palm": false,
+      "id": "waterskin",
+      "left_palm_ndc_gap": 0.9855948686599731,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 0.6030570268630981,
+      "stage": "equipped",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.3700000047683716,
+      "wield_palm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "world_items": []
+    },
+    {
+      "active_count": 1,
+      "active_item": "waterskin",
+      "bow_charge": 0.0,
+      "camera_front": [
+        -4.275619147620091e-08,
+        -0.20791170001029968,
+        0.9781476259231567
+      ],
+      "carry_hands": 0,
+      "contents_units": 3,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "waterskin-partial.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 3,
+          "grip_ndc_gap": 1.365714012990793e-07,
+          "has_ammo": true,
+          "has_water": true,
+          "id": "waterskin",
+          "left": false,
+          "model_world": [
+            1.1779369115829468,
+            0.08758097141981125,
+            -0.43309569358825684,
+            -4.5788857505613123e-07,
+            0.4218885004520416,
+            0.14363595843315125,
+            1.1765018701553345,
+            1.1484139577078167e-06,
+            0.13134828209877014,
+            -1.246786117553711,
+            0.10511600971221924,
+            -4.886547344540304e-08,
+            0.48801329731941223,
+            -0.25731033086776733,
+            -0.8324518203735352,
+            0.9999992847442627
+          ],
+          "use_phase": 0.22387711703777313,
+          "view_forward": [
+            0.049386486411094666,
+            -0.1481594443321228,
+            -0.9877296686172485
+          ],
+          "visible_primitives": 5
+        }
+      ],
+      "has_wield_palm": false,
+      "id": "waterskin",
+      "left_palm_ndc_gap": 0.9917733073234558,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 0.3637321889400482,
+      "stage": "partial",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.22387711703777313,
+      "wear": 0.3700000047683716,
+      "wield_palm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "world_items": []
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "camera_front": [
+        -4.275619147620091e-08,
+        -0.20791170001029968,
+        0.9781476259231567
+      ],
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "waterskin-canceled.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "has_wield_palm": false,
+      "id": "waterskin",
+      "left_palm_ndc_gap": 0.9925228953361511,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 0.904558539390564,
+      "stage": "canceled",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "wield_palm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "world_items": []
+    },
+    {
+      "active_count": 1,
+      "active_item": "waterskin",
+      "bow_charge": 0.0,
+      "camera_front": [
+        -4.275619147620091e-08,
+        -0.20791170001029968,
+        0.9781476259231567
+      ],
+      "carry_hands": 0,
+      "contents_units": 3,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "waterskin-restored.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 3,
+          "grip_ndc_gap": 1.3328003944934608e-07,
+          "has_ammo": true,
+          "has_water": true,
+          "id": "waterskin",
+          "left": false,
+          "model_world": [
+            1.2206871509552002,
+            -0.3044363856315613,
+            -0.004394914023578167,
+            -6.387517714756541e-08,
+            0.30443355441093445,
+            1.220694899559021,
+            -0.0013437531888484955,
+            6.587097800547781e-08,
+            0.004589483141899109,
+            0.00024025887250900269,
+            1.2580766677856445,
+            2.3981449430721113e-06,
+            0.4796888828277588,
+            -0.44961583614349365,
+            -0.8441616296768188,
+            0.9999987483024597
+          ],
+          "use_phase": 0.0,
+          "view_forward": [
+            0.049386486411094666,
+            -0.1481594443321228,
+            -0.9877296686172485
+          ],
+          "visible_primitives": 5
+        }
+      ],
+      "has_wield_palm": false,
+      "id": "waterskin",
+      "left_palm_ndc_gap": 0.98517245054245,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 0.6027548909187317,
+      "stage": "restored",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.3700000047683716,
+      "wield_palm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "world_items": []
+    },
+    {
+      "active_count": 1,
+      "active_item": "waterskin",
+      "bow_charge": 0.0,
+      "camera_front": [
+        -4.275619147620091e-08,
+        -0.20791170001029968,
+        0.9781476259231567
+      ],
+      "carry_hands": 0,
+      "contents_units": 3,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "waterskin-ready.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 3,
+          "grip_ndc_gap": 8.696778053263188e-08,
+          "has_ammo": true,
+          "has_water": true,
+          "id": "waterskin",
+          "left": false,
+          "model_world": [
+            1.1560200452804565,
+            0.29748186469078064,
+            -0.3973664939403534,
+            -7.819306233614043e-07,
+            0.4821048676967621,
+            -0.43306201696395874,
+            1.0783365964889526,
+            2.0387119548104238e-06,
+            0.11819655448198318,
+            -1.143127202987671,
+            -0.5119255781173706,
+            -1.1625995739450445e-06,
+            0.47206971049308777,
+            -0.17775410413742065,
+            -0.8571581840515137,
+            0.9999989867210388
+          ],
+          "use_phase": 1.0,
+          "view_forward": [
+            0.049386486411094666,
+            -0.1481594443321228,
+            -0.9877296686172485
+          ],
+          "visible_primitives": 5
+        }
+      ],
+      "has_wield_palm": false,
+      "id": "waterskin",
+      "left_palm_ndc_gap": 0.9845573306083679,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 0.34386441111564636,
+      "stage": "ready",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 1.0,
+      "wear": 0.3700000047683716,
+      "wield_palm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "world_items": []
+    },
+    {
+      "active_count": 1,
+      "active_item": "waterskin",
+      "bow_charge": 0.0,
+      "camera_front": [
+        -4.275619147620091e-08,
+        -0.20791170001029968,
+        0.9781476259231567
+      ],
+      "carry_hands": 0,
+      "contents_units": 3,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "waterskin-completed.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 3,
+          "grip_ndc_gap": 1.712013073529306e-07,
+          "has_ammo": true,
+          "has_water": true,
+          "id": "waterskin",
+          "left": false,
+          "model_world": [
+            1.2206871509552002,
+            -0.3044363856315613,
+            -0.004394914023578167,
+            -6.387517714756541e-08,
+            0.30443355441093445,
+            1.220694899559021,
+            -0.0013437531888484955,
+            6.587097800547781e-08,
+            0.004589483141899109,
+            0.00024025887250900269,
+            1.2580766677856445,
+            2.3981449430721113e-06,
+            0.476884663105011,
+            -0.4518696069717407,
+            -0.8441616892814636,
+            0.9999985098838806
+          ],
+          "use_phase": 0.0,
+          "view_forward": [
+            0.049386486411094666,
+            -0.1481594443321228,
+            -0.9877296686172485
+          ],
+          "visible_primitives": 5
+        }
+      ],
+      "has_wield_palm": false,
+      "id": "waterskin",
+      "left_palm_ndc_gap": 0.9865021705627441,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 0.604067325592041,
+      "stage": "completed",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.3700000047683716,
+      "wield_palm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "world_items": []
+    },
+    {
+      "active_count": 1,
+      "active_item": "waterskin",
+      "bow_charge": 0.0,
+      "camera_front": [
+        -4.275619147620091e-08,
+        -0.20791170001029968,
+        0.9781476259231567
+      ],
+      "carry_hands": 0,
+      "contents_units": 3,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "waterskin-restarted.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [
+        {
+          "bow_charge": 0.0,
+          "contents_units": 3,
+          "grip_ndc_gap": 1.937738574042669e-07,
+          "has_ammo": true,
+          "has_water": true,
+          "id": "waterskin",
+          "left": false,
+          "model_world": [
+            1.162940502166748,
+            0.2307794988155365,
+            -0.4208185374736786,
+            -4.1404322814742045e-07,
+            0.4630912244319916,
+            -0.24979877471923828,
+            1.1427706480026245,
+            1.0279497928422643e-06,
+            0.1260710507631302,
+            -1.2112469673156738,
+            -0.315855473279953,
+            -1.011214862955967e-06,
+            0.48499929904937744,
+            -0.19612421095371246,
+            -0.8480911254882813,
+            0.9999990463256836
+          ],
+          "use_phase": 0.27426522970199585,
+          "view_forward": [
+            0.049386486411094666,
+            -0.1481594443321228,
+            -0.9877296686172485
+          ],
+          "visible_primitives": 5
+        }
+      ],
+      "has_wield_palm": false,
+      "id": "waterskin",
+      "left_palm_ndc_gap": 0.9795110821723938,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 0.35038524866104126,
+      "stage": "restarted",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.27426522970199585,
+      "wear": 0.3700000047683716,
+      "wield_palm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "world_items": []
+    },
+    {
+      "active_count": 0,
+      "active_item": "",
+      "bow_charge": 0.0,
+      "camera_front": [
+        -4.275619147620091e-08,
+        -0.20791170001029968,
+        0.9781476259231567
+      ],
+      "carry_hands": 0,
+      "contents_units": 0,
+      "creature_id": 0,
+      "day_factor": 1.0,
+      "eye_light_packed": 15,
+      "file": "waterskin-canceled-again.png",
+      "fp_arm_backend": "viewmodel",
+      "fp_contacts": false,
+      "fp_items": [],
+      "has_wield_palm": false,
+      "id": "waterskin",
+      "left_palm_ndc_gap": 0.9858517050743103,
+      "matching_body": false,
+      "physical_bodies": 0,
+      "right_palm_ndc_gap": 0.89741051197052,
+      "stage": "canceled-again",
+      "subject": "item",
+      "throw_charge": 0.0,
+      "time": 0.3499999940395355,
+      "tp_contacts": [],
+      "use_phase": 0.0,
+      "wear": 0.0,
+      "wield_palm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "world_items": []
+    }
+  ],
+  "passed": true,
+  "request": {
+    "body": "male",
+    "hand": "right",
+    "height": 720,
+    "ids": [
+      "waterskin"
+    ],
+    "interaction": "use",
+    "light": "day",
+    "mode": "creative",
+    "perspective": "first",
+    "scale": 1.0,
+    "subject": "item",
+    "width": 1280
+  },
+  "scope": "actual world FP and physical drop rendering"
+}

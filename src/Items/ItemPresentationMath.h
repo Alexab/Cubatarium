@@ -65,7 +65,9 @@ inline glm::mat4 ItemWieldLocalMatrix(const ItemRenderAsset &asset,
                                       glm::vec3 palm, bool left, float scale)
 {
   auto angle = asset.Grip.TpEulerDeg;
-  if (left)
+  if (left && asset.Grip.HasTpLeftEuler)
+    angle = asset.Grip.TpLeftEulerDeg;
+  else if (left)
   {
     angle.y = -angle.y;
     angle.z = -angle.z;

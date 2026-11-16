@@ -21,6 +21,45 @@ void Expect(bool value, const char *reason)
   if (!value)
     throw std::runtime_error(reason);
 }
+void TestHandProfiles()
+{
+  using namespace cutum;
+  ItemRenderAsset asset;
+  asset.Grip.HasRightGrip = asset.Grip.HasLeftGrip = true;
+  asset.Grip.RightGrip = {.1f, -.2f, .3f};
+  asset.Grip.LeftGrip = {-.1f, -.2f, .3f};
+  asset.Grip.TpEulerDeg = {0, 90, 0};
+  asset.Grip.TpLeftEulerDeg = {0, 90, 0};
+  asset.Grip.HasTpLeftEuler = true;
+  const glm::vec3 palm(1, 2, 3);
+  for (bool left : {false, true})
+  {
+    const auto model = ItemWieldLocalMatrix(asset, palm, left, 1);
+    const auto grip = left ? asset.Grip.LeftGrip : asset.Grip.RightGrip;
+    Expect(glm::distance(glm::vec3(model * glm::vec4(grip, 1)), palm) < .00001f,
+           "explicit hand profile keeps grip on palm");
+    const auto edge = glm::normalize(glm::vec3(model * glm::vec4(1, 0, 0, 0)));
+    Expect(glm::dot(edge, glm::vec3(0, 0, -1)) > .999f,
+           "both authored hand rotations keep working edge forward");
+  }
+  asset.Grip.FpHandOffset = {0, 0, 0};
+  asset.Grip.FpUseHandOffset = {0, .4f, 0};
+  asset.Grip.HasFpUseHandOffset = true;
+  const auto idle =
+      ApplyItemHandProfile(glm::mat4(1), {}, asset.Grip, false, 0);
+  const auto drink =
+      ApplyItemHandProfile(glm::mat4(1), {}, asset.Grip, false, 1);
+  const auto other =
+      ApplyItemHandProfile(glm::mat4(1), {}, asset.Grip, true, 1);
+  Expect(idle[3].y == 0 && std::abs(drink[3].y - .4f) < .00001f &&
+             other[3].y == 0,
+         "use-only hand offset raises main hand and restores idle without "
+         "affecting offhand");
+  asset.Grip.HasTpLeftEuler = false;
+  const auto legacy = ItemWieldLocalMatrix(asset, palm, true, 1);
+  Expect(glm::normalize(glm::vec3(legacy[0])).z > .999f,
+         "legacy left yaw mirroring is preserved without override");
+}
 void TestInspectionIsolation()
 {
   using namespace cutum;
@@ -298,6 +337,7 @@ int main()
   {
     TestLabPaths(folder);
     TestInspectionIsolation();
+    TestHandProfiles();
     const float vertices[] = {0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1,
                               0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1};
     std::vector<unsigned char> bytes(sizeof(vertices) + 3);
@@ -592,6 +632,12 @@ int main()
     bad = g;
     bad["extras"]["visual_bindings"] =
         Json::array({{{"node", "missing"}, {"channel", "bow_charge"}}});
+    rejected(bad);
+    bad = g;
+    bad["extras"]["presentation"]["tp_left_euler_deg"] = {1, 2};
+    rejected(bad);
+    bad = g;
+    bad["extras"]["presentation"]["fp_use_euler_deg"] = {1, 2};
     rejected(bad);
     bad = g;
     bad["extras"]["presentation"]["tp_scale"] = -2;
