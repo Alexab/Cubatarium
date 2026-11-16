@@ -1363,7 +1363,7 @@
     }
   },
   "geometry_derived_light_solver": {
-    "status": "implemented_unit_verified_native_pending",
+    "status": "implemented_unit_and_native_geometry_verified_lifecycle_pending",
     "contract": "One-section geometry halo contains every indirect path affecting a requested section (maximum light 15; positive attenuation). Direct sky reads geometry to the profile ceiling. Neighbour light bytes are never inputs; requested resident sections alone are written.",
     "evidence": {
       "red": "build/desktop-msvc/engine-geometry-light-red-test.log",
@@ -1373,9 +1373,111 @@
     },
     "compatibility": "Global solver signature v5 invalidates cached completion from neighboring-field solver; terrain payload unchanged.",
     "limitations": [
-      "Sync flood paths still require unification.",
+      "Sync flood paths still require unification and bounded runtime.",
       "Unknown inputs permit transient computation only; per-domain durable completion and coverage obligations remain pending.",
-      "Native performance and visual verification pending."
-    ]
+      "Native opaque-depth reference passes; native physical light reference, startup first-frame witness and full-screen acceptance remain UNTESTED.",
+      "Worker tail cost needs topology optimization before synchronous adoption; measurements are concurrent wall times."
+    ],
+    "native": {
+      "source_commit": "d6e476f8535f24072c9c87c054c7e63b7af36f3d",
+      "artifacts": "build/desktop-msvc/engine-geometry-halo-wide-native",
+      "strict_relocations": 0,
+      "verdict": {
+        "schema": "engine-smoke-verdict.v1",
+        "status": "UNTESTED",
+        "components": {
+          "runtime": {
+            "status": "PASS",
+            "reason": "native_process",
+            "exit_code": 0
+          },
+          "route": {
+            "status": "PASS",
+            "reason": "frontier_route_covered",
+            "displacement_chunks": 19,
+            "outside_initial_resident_samples": 2563
+          },
+          "startup": {
+            "status": "UNTESTED",
+            "reason": "missing_first_frame_ring_witness"
+          },
+          "visual": {
+            "status": "UNTESTED",
+            "reason": "missing_visual_reference",
+            "samples": 28640,
+            "captures": 179,
+            "attributed_samples": 0,
+            "faults": 0
+          },
+          "inspection": {
+            "status": "PASS",
+            "reason": "inspection_capture_coverage",
+            "requested": 24,
+            "queued": 24,
+            "verified": 24
+          },
+          "fixture": {
+            "status": "PASS",
+            "reason": "negative_dry_cave_observed",
+            "samples": 193
+          },
+          "fixture_opaque_depth": {
+            "status": "PASS",
+            "reason": "analytic_near_cave_opaque_depth",
+            "checked": 21346,
+            "faults": 0,
+            "frame_epochs": 179,
+            "skipped_unscoped_or_occluded": 7294,
+            "examples": [],
+            "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+          }
+        },
+        "malformed_trace_rows": 0,
+        "backend_observations": {
+          "maxima": {
+            "cpu_light_seed_apply": 7,
+            "gpu_light_seed_apply": 0,
+            "gpu_light_readback": 0
+          },
+          "positive_records": {
+            "cpu_light_seed_apply": 6
+          },
+          "records_by_kind": {
+            "spike": 3,
+            "period": 48,
+            "blink": 22,
+            "visual_holes_enter": 77,
+            "near_focus_witness_entered_fog_unready": 1,
+            "near_focus_witness_exited_fog_unready": 1,
+            "shutdown": 1
+          },
+          "invalid_counter_rows": 0,
+          "scope": "observed CPU/GPU sky counters; not per-job correctness or compute parity"
+        },
+        "scope": "one-way frontier route and sampled reference checks; not full-screen proof",
+        "runner_exit_code": 1,
+        "inspection_evidence": {
+          "verified": 24,
+          "requested": 24,
+          "reason": "inspection_views_joined_to_png"
+        }
+      },
+      "audit": {
+        "worker_records": 1368,
+        "known_complete": 507,
+        "unknown_or_incomplete": 861,
+        "empty_outputs": 122,
+        "neighbor_light_max": 0,
+        "geometry_halo_max": 80,
+        "compute_ms": {
+          "median": 90.04419999999999,
+          "p95": 192.7917,
+          "max": 807.6298
+        },
+        "capture_ms_max": 1.6091,
+        "scope": "worker wall timings under concurrent native workload; no hardware parity or performance budget acceptance"
+      },
+      "cache_signature": "light-v5:0:-64:319:17038976160172985471"
+    }
   }
 }
