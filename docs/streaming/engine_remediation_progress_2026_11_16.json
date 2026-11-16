@@ -5,7 +5,7 @@
     "isolated_automated_test_stand": "in_progress: first-frame and visual-reference witnesses still missing",
     "diagnostic_bot": "verified baseline: native takeoff, route, inspection; expand scenario matrix",
     "local_streaming_mesh_underwater_defects": "in_progress: signed bands, lossless population events, same-size mesh reconciliation and eye-local fluid intervals fixed; native surface frontier routes verified; cave matrix and remaining invalidations pending",
-    "correct_light_solver_and_persistence": "in_progress: full-height sky paths, atomic channel identity, profile/mode/catalog input validation and v4 cache compatibility verified; persistent known-input completion and solver unification pending",
+    "correct_light_solver_and_persistence": "in_progress: geometry-derived async halo solver, full-height sky, immutable material catalog, separate channel identity, context validation and v5 cache compatibility verified; sync unification, per-domain certificates and durable obligations pending",
     "single_section_lifecycle_and_publication": "in_progress: world-local demand ownership being validated; strong input settlement, authoritative readiness and first-frame closure still pending",
     "independent_light_resource_and_performance": "pending",
     "full_smoke_and_regression_matrix": "in_progress: surface frontier, dry negative cave and flooded negative cave routes; independent analytic near-opaque-depth checks; startup, light/transparent reference, air pocket and eviction round trip still pending"
@@ -1480,11 +1480,157 @@
       "cache_signature": "light-v5:0:-64:319:17038976160172985471"
     },
     "topology_optimization": {
-      "status": "unit_verified_native_pending",
+      "status": "unit_and_native_geometry_verified",
       "change": "Compute-local tile pointers and six cached neighbors replace world-position hash lookups in flood inner loop; clipped profile bounds retained. No change to material/source semantics.",
       "test_log": "build/desktop-msvc/engine-light-topology-final-tests.log",
       "reference": "same independent dense full-field reference, unknown/pinned catalog controls and clipped lower-profile source exclusion",
-      "scope": "No performance acceptance from test timings; native comparison pending."
-    }
+      "scope": "Native geometry/no-relocation checks pass; startup and physical lighting/full-screen visual acceptance remain UNTESTED. Timing observations show lower worker costs but do not establish a controlled speedup or synchronous frame budget.",
+      "native": {
+        "source_commit": "3d89f082a42a8b69a852696d17525eb11201a102",
+        "artifacts": "build/desktop-msvc/engine-light-topology-wide-native",
+        "strict_relocations": 0,
+        "verdict": {
+          "schema": "engine-smoke-verdict.v1",
+          "status": "UNTESTED",
+          "components": {
+            "runtime": {
+              "status": "PASS",
+              "reason": "native_process",
+              "exit_code": 0
+            },
+            "route": {
+              "status": "PASS",
+              "reason": "frontier_route_covered",
+              "displacement_chunks": 19,
+              "outside_initial_resident_samples": 2861
+            },
+            "startup": {
+              "status": "UNTESTED",
+              "reason": "missing_first_frame_ring_witness"
+            },
+            "visual": {
+              "status": "UNTESTED",
+              "reason": "missing_visual_reference",
+              "samples": 19680,
+              "captures": 123,
+              "attributed_samples": 0,
+              "faults": 0
+            },
+            "inspection": {
+              "status": "PASS",
+              "reason": "inspection_capture_coverage",
+              "requested": 24,
+              "queued": 24,
+              "verified": 24
+            },
+            "fixture": {
+              "status": "PASS",
+              "reason": "negative_dry_cave_observed",
+              "samples": 197
+            },
+            "fixture_opaque_depth": {
+              "status": "PASS",
+              "reason": "analytic_near_cave_opaque_depth",
+              "checked": 14796,
+              "faults": 0,
+              "frame_epochs": 123,
+              "skipped_unscoped_or_occluded": 4884,
+              "examples": [],
+              "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+            }
+          },
+          "malformed_trace_rows": 0,
+          "backend_observations": {
+            "maxima": {
+              "cpu_light_seed_apply": 8,
+              "gpu_light_seed_apply": 0,
+              "gpu_light_readback": 0
+            },
+            "positive_records": {
+              "cpu_light_seed_apply": 4
+            },
+            "records_by_kind": {
+              "spike": 1,
+              "period": 49,
+              "blink": 20,
+              "visual_holes_enter": 47,
+              "near_focus_witness_entered_fog_unready": 1,
+              "near_focus_witness_exited_fog_unready": 1,
+              "shutdown": 1
+            },
+            "invalid_counter_rows": 0,
+            "scope": "observed CPU/GPU sky counters; not per-job correctness or compute parity"
+          },
+          "scope": "one-way frontier route and sampled reference checks; not full-screen proof",
+          "runner_exit_code": 1,
+          "inspection_evidence": {
+            "verified": 24,
+            "requested": 24,
+            "reason": "inspection_views_joined_to_png"
+          }
+        },
+        "audit": {
+          "worker_records": 2325,
+          "known_complete": 953,
+          "unknown_or_incomplete": 1372,
+          "empty_outputs": 133,
+          "neighbor_light_max": 0,
+          "geometry_halo_max": 80,
+          "compute_ms": {
+            "median": 20.4508,
+            "p95": 39.5453,
+            "max": 252.0619
+          },
+          "capture_ms_max": 2.2835,
+          "largest_groups": [
+            {
+              "output_chunks": 2,
+              "geometry_halo": 16,
+              "inputs_complete": 0,
+              "records": 594,
+              "median_ms": 22.557000000000002
+            },
+            {
+              "output_chunks": 2,
+              "geometry_halo": 25,
+              "inputs_complete": 1,
+              "records": 317,
+              "median_ms": 8.584
+            },
+            {
+              "output_chunks": 5,
+              "geometry_halo": 58,
+              "inputs_complete": 1,
+              "records": 207,
+              "median_ms": 7.3148
+            },
+            {
+              "output_chunks": 1,
+              "geometry_halo": 17,
+              "inputs_complete": 1,
+              "records": 206,
+              "median_ms": 11.97515
+            },
+            {
+              "output_chunks": 8,
+              "geometry_halo": 40,
+              "inputs_complete": 0,
+              "records": 116,
+              "median_ms": 26.13465
+            },
+            {
+              "output_chunks": 0,
+              "geometry_halo": 0,
+              "inputs_complete": 0,
+              "records": 114,
+              "median_ms": 0.13915
+            }
+          ],
+          "scope": "Concurrent native worker wall timings; differing scheduling/job mix prevents a controlled speedup or frame-budget acceptance."
+        },
+        "queue_analysis": "relight-queue-analysis.txt"
+      }
+    },
+    "next_implementation": "Unify synchronous relight onto the same geometry-derived solver with exact requested section set and atomic domain installs; first add RED controls for no-op revisions, poisoned neighbor fields and read-only halo preservation. Then preserve pending generation/coverage obligations before replacing coarse completion."
   }
 }
