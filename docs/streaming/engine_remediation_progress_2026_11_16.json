@@ -5,7 +5,7 @@
     "isolated_automated_test_stand": "in_progress: first-frame and visual-reference witnesses still missing",
     "diagnostic_bot": "verified baseline: native takeoff, route, inspection; expand scenario matrix",
     "local_streaming_mesh_underwater_defects": "in_progress: signed bands, lossless population events, same-size mesh reconciliation and eye-local fluid intervals fixed; native surface frontier routes verified; cave matrix and remaining invalidations pending",
-    "correct_light_solver_and_persistence": "in_progress: CPU full-height occlusion and vertical fluid attenuation fixed; convergence, unknown inputs, GPU paths and persistence signatures pending",
+    "correct_light_solver_and_persistence": "in_progress: full-height CPU sky, water attenuation, six-face partial-band dependency addition/removal and global persisted solver/material/profile signature verified; unknown inputs, per-section settlement and GPU still pending",
     "single_section_lifecycle_and_publication": "pending",
     "independent_light_resource_and_performance": "pending",
     "full_smoke_and_regression_matrix": "in_progress: surface frontier, dry negative cave and flooded negative cave routes; independent analytic near-opaque-depth checks; startup, light/transparent reference, air pocket and eviction round trip still pending"
@@ -392,11 +392,126 @@
     ]
   },
   "light_cache_compatibility_verification": {
-    "status": "native_pending",
+    "status": "native_verified_global_compatibility_only",
     "unit": "light_cache_certificate_test: material/height/mode/version changes reject completion; signed coordinate round trip and malformed/legacy metadata controls pass",
     "release_build": "build/desktop-msvc/engine-light-cache-release-build.log",
     "limitations": [
       "global compatibility signature does not prove per-section dependencies or column-wide convergence"
-    ]
+    ],
+    "native_cycles": [
+      {
+        "artifacts": "build/desktop-msvc/engine-light-cache-legacy-native",
+        "source_commit": "d63ae466e5ae329c4d81ece83aa6ae46676fe700",
+        "expected_load_outcome": "signature_or_schema_mismatch",
+        "load_log_lines": [
+          "I20261116 19:51:52.141330  3724 Log.cpp:601] [RelightAudit] light_flags event=load outcome=signature_or_schema_mismatch world=E:\\Work\\Home\\Cubatarium\\bin\\worlds\\EngineSmoke_6ae551410df242f5868b843ff873e5f2 complete_n=0"
+        ],
+        "native_verdict": {
+          "schema": "engine-smoke-verdict.v1",
+          "status": "UNTESTED",
+          "components": {
+            "runtime": {
+              "status": "PASS",
+              "reason": "native_process",
+              "exit_code": 0
+            },
+            "route": {
+              "status": "PASS",
+              "reason": "frontier_route_covered",
+              "displacement_chunks": 19,
+              "outside_initial_resident_samples": 2044
+            },
+            "startup": {
+              "status": "UNTESTED",
+              "reason": "missing_first_frame_ring_witness"
+            },
+            "visual": {
+              "status": "UNTESTED",
+              "reason": "missing_visual_reference",
+              "samples": 16640,
+              "captures": 104,
+              "attributed_samples": 0,
+              "faults": 0
+            },
+            "inspection": {
+              "status": "PASS",
+              "reason": "inspection_capture_coverage",
+              "requested": 24,
+              "queued": 24,
+              "verified": 24
+            }
+          },
+          "malformed_trace_rows": 0,
+          "scope": "one-way frontier route and sampled reference checks; not full-screen proof",
+          "runner_exit_code": 1,
+          "inspection_evidence": {
+            "verified": 24,
+            "requested": 24,
+            "reason": "inspection_views_joined_to_png"
+          }
+        },
+        "persisted_format_version": 2,
+        "persisted_signature": "light-v3:0:-64:319:17038976160172985471",
+        "persisted_complete_columns": 209,
+        "config_restored": true
+      },
+      {
+        "artifacts": "build/desktop-msvc/engine-light-cache-reload-native",
+        "source_commit": "d63ae466e5ae329c4d81ece83aa6ae46676fe700",
+        "expected_load_outcome": "loaded",
+        "load_log_lines": [
+          "I20261116 19:55:10.978532 34224 Log.cpp:601] [RelightAudit] light_flags event=load outcome=loaded world=E:\\Work\\Home\\Cubatarium\\bin\\worlds\\EngineSmoke_0c6adc2891894090beb62b4786539827 complete_n=209"
+        ],
+        "native_verdict": {
+          "schema": "engine-smoke-verdict.v1",
+          "status": "UNTESTED",
+          "components": {
+            "runtime": {
+              "status": "PASS",
+              "reason": "native_process",
+              "exit_code": 0
+            },
+            "route": {
+              "status": "PASS",
+              "reason": "frontier_route_covered",
+              "displacement_chunks": 19,
+              "outside_initial_resident_samples": 1670
+            },
+            "startup": {
+              "status": "UNTESTED",
+              "reason": "missing_first_frame_ring_witness"
+            },
+            "visual": {
+              "status": "UNTESTED",
+              "reason": "missing_visual_reference",
+              "samples": 14880,
+              "captures": 93,
+              "attributed_samples": 0,
+              "faults": 0
+            },
+            "inspection": {
+              "status": "PASS",
+              "reason": "inspection_capture_coverage",
+              "requested": 24,
+              "queued": 24,
+              "verified": 24
+            }
+          },
+          "malformed_trace_rows": 0,
+          "scope": "one-way frontier route and sampled reference checks; not full-screen proof",
+          "runner_exit_code": 1,
+          "inspection_evidence": {
+            "verified": 24,
+            "requested": 24,
+            "reason": "inspection_views_joined_to_png"
+          }
+        },
+        "persisted_format_version": 2,
+        "persisted_signature": "light-v3:0:-64:319:17038976160172985471",
+        "persisted_complete_columns": 197,
+        "config_restored": true
+      }
+    ],
+    "lease_released": true
   }
 }
