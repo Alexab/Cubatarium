@@ -151,12 +151,37 @@ bool UBlockWorld::HasCompleteLightCalculation(
          LightCalculationState::Complete;
 }
 
-bool UBlockWorld::IsKnownAbsentAirChunk(glm::ivec3 coord) const
+bool UBlockWorld::HasKnownOpenSkyAbsentProof(glm::ivec3 coord) const
 {
-  return !Chunks.GetChunk(coord) &&
-         (coord.y < VerticalProfile.MinChunkY(CHUNK_SIZE) ||
-          coord.y > VerticalProfile.MaxChunkY(CHUNK_SIZE) ||
-          HasKnownOpenSkyAbsentProof(coord));
+  if (KnownAirColumnFloorQuery)
+  {
+    const auto floor = KnownAirColumnFloorQuery({coord.x, 0, coord.z});
+    return floor && coord.y >= *floor;
+  }
+  return KnownOpenSkyAbsentQuery && KnownOpenSkyAbsentQuery(coord);
+}
+
+bool UBlockWorld::IsKnownAbsentAirChunk(glm::ivec3 coord,
+                                        InputStampValidationBatch *batch) const
+{
+  if (Chunks.GetChunk(coord))
+    return false;
+  if (coord.y < VerticalProfile.MinChunkY(CHUNK_SIZE) ||
+      coord.y > VerticalProfile.MaxChunkY(CHUNK_SIZE))
+    return true;
+  if (!batch || !KnownAirColumnFloorQuery)
+    return HasKnownOpenSkyAbsentProof(coord);
+  if (batch->owner != this)
+  {
+    batch->air_floors.clear();
+    batch->owner = this;
+  }
+  const glm::ivec3 column(coord.x, 0, coord.z);
+  auto it = batch->air_floors.find(column);
+  if (it == batch->air_floors.end())
+    it = batch->air_floors.emplace(column, KnownAirColumnFloorQuery(column))
+             .first;
+  return it->second && coord.y >= *it->second;
 }
 
 ChunkInputStamp UBlockWorld::CaptureInputStamp(glm::ivec3 coord,
@@ -173,7 +198,8 @@ ChunkInputStamp UBlockWorld::CaptureInputStamp(glm::ivec3 coord,
   return stamp;
 }
 
-bool UBlockWorld::InputStampStillMatches(const ChunkInputStamp &stamp) const
+bool UBlockWorld::InputStampStillMatches(const ChunkInputStamp &stamp,
+                                         InputStampValidationBatch *batch) const
 {
   const UChunk *chunk = Chunks.GetChunk(stamp.coord);
   if (!stamp.Matches(chunk))
@@ -181,17 +207,17 @@ bool UBlockWorld::InputStampStillMatches(const ChunkInputStamp &stamp) const
   if (stamp.missingEvidence == MissingChunkEvidence::Untracked)
     return true;
   return !chunk &&
-         IsKnownAbsentAirChunk(stamp.coord) ==
+         IsKnownAbsentAirChunk(stamp.coord, batch) ==
              (stamp.missingEvidence == MissingChunkEvidence::KnownAir);
 }
 
-bool UBlockWorld::InputStampLightDomainsStillMatch(const ChunkInputStamp &stamp,
-                                                   bool reads_sky,
-                                                   bool reads_block) const
+bool UBlockWorld::InputStampLightDomainsStillMatch(
+    const ChunkInputStamp &stamp, bool reads_sky, bool reads_block,
+    InputStampValidationBatch *batch) const
 {
   auto geometry = stamp;
   geometry.readsLight = false;
-  if (!InputStampStillMatches(geometry))
+  if (!InputStampStillMatches(geometry, batch))
     return false;
   if (!stamp.readsLight || (!reads_sky && !reads_block))
     return true;

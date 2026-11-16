@@ -36,20 +36,36 @@ public:
   /// completion evidence. A lower resident chunk alone is not proof of sky.
   void SetKnownOpenSkyAbsentQuery(std::function<bool(glm::ivec3)> query)
   {
+    KnownAirColumnFloorQuery = {};
     KnownOpenSkyAbsentQuery = std::move(query);
   }
-  bool HasKnownOpenSkyAbsentProof(glm::ivec3 coord) const
+  /// Production terrain evidence is a column floor: every absent slice above
+  /// that floor is proven air. No evidence is inferred for arbitrary callbacks.
+  void SetKnownAirColumnFloorQuery(
+      std::function<std::optional<int>(glm::ivec3)> query)
   {
-    return KnownOpenSkyAbsentQuery && KnownOpenSkyAbsentQuery(coord);
+    KnownOpenSkyAbsentQuery = {};
+    KnownAirColumnFloorQuery = std::move(query);
   }
+  bool HasKnownOpenSkyAbsentProof(glm::ivec3 coord) const;
+
+  /// One read-only validation call, never a cache across updates or frames.
+  struct InputStampValidationBatch
+  {
+    const UBlockWorld *owner{nullptr};
+    std::unordered_map<glm::ivec3, std::optional<int>, IVec3Hash> air_floors;
+  };
 
   /// Main-thread dependency identity includes the evidence for absent data.
-  bool IsKnownAbsentAirChunk(glm::ivec3 coord) const;
+  bool IsKnownAbsentAirChunk(glm::ivec3 coord,
+                             InputStampValidationBatch *batch = nullptr) const;
   ChunkInputStamp CaptureInputStamp(glm::ivec3 coord, bool reads_light = true,
                                     bool reads_content = true) const;
-  bool InputStampStillMatches(const ChunkInputStamp &stamp) const;
-  bool InputStampLightDomainsStillMatch(const ChunkInputStamp &stamp,
-                                        bool reads_sky, bool reads_block) const;
+  bool InputStampStillMatches(const ChunkInputStamp &stamp,
+                              InputStampValidationBatch *batch = nullptr) const;
+  bool InputStampLightDomainsStillMatch(
+      const ChunkInputStamp &stamp, bool reads_sky, bool reads_block,
+      InputStampValidationBatch *batch = nullptr) const;
   void SetLightingConfigurationIdentity(uint64_t identity)
   {
     LightingConfigurationIdentity = identity;
@@ -127,6 +143,7 @@ private:
   const UBlockDefinitionStorage *FluidDefinitions{nullptr};
   UChunkBuffer *CaptureBuffer{nullptr};
   std::function<bool(glm::ivec3)> KnownOpenSkyAbsentQuery;
+  std::function<std::optional<int>(glm::ivec3)> KnownAirColumnFloorQuery;
 };
 
 } // namespace cutum

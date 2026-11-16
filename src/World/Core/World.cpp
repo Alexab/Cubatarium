@@ -426,9 +426,9 @@ UWorld::UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
     Collision.SetBlockRegistry(BlockRegistry.get());
   }
   MeshService->GetCache().SetRepairGuardWorld(&BlockWorld);
-  BlockWorld.SetKnownOpenSkyAbsentQuery(
-      [this](glm::ivec3 coord)
-      { return IsKnownAirTerrainSlice(*this, coord); });
+  BlockWorld.SetKnownAirColumnFloorQuery(
+      [this](glm::ivec3 column)
+      { return KnownAirTerrainColumnFloor(*this, column); });
   SubscribeChunkPopulationInvalidation();
   IsIntersectionExists = false;
   HasIntersectionBlock = false;

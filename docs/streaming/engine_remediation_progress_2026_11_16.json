@@ -1787,7 +1787,7 @@
     }
   },
   "world_owned_light_domain_certificates": {
-    "status": "unit_verified_native_pending",
+    "status": "unit_verified_native_performance_regression_under_correction",
     "implementation": [
       "Resident sections own independent sky/block calculation provenance; all output sections share one immutable input context without retaining light voxel arrays.",
       "World identity, incarnation, selected channel revision, full geometry/absence read set, immutable catalog, vertical profile and configuration are validated.",
@@ -1819,6 +1819,103 @@
       "Coarse column closeout and pending generation/coverage preservation remain pending. These certificates alone do not prevent every legacy pending-work erase.",
       "Strict first-frame barrier, native physical light reference, independent GPU light resource and complete scenario matrix remain pending.",
       "Native candidate publication and certificate-validation overhead pending."
-    ]
+    ],
+    "native_first_attempt": {
+      "source_commit": "7439a1c0a",
+      "artifacts": "build/desktop-msvc/engine-light-proof-wet-native",
+      "verdict": {
+        "schema": "engine-smoke-verdict.v1",
+        "status": "FAIL",
+        "components": {
+          "runtime": {
+            "status": "FAIL",
+            "reason": "native_process",
+            "exit_code": 1
+          },
+          "route": {
+            "status": "FAIL",
+            "reason": "bot_route_incomplete",
+            "bot_state": "travel",
+            "bot_reason": ""
+          },
+          "startup": {
+            "status": "UNTESTED",
+            "reason": "missing_first_frame_ring_witness"
+          },
+          "visual": {
+            "status": "UNTESTED",
+            "reason": "missing_visual_reference",
+            "samples": 3840,
+            "captures": 24,
+            "attributed_samples": 0,
+            "faults": 0
+          },
+          "inspection": {
+            "status": "PASS",
+            "reason": "inspection_capture_coverage",
+            "requested": 12,
+            "queued": 12,
+            "verified": 12
+          },
+          "fixture": {
+            "status": "PASS",
+            "reason": "negative_wet_cave_observed",
+            "samples": 163
+          },
+          "fixture_opaque_depth": {
+            "status": "PASS",
+            "reason": "analytic_near_cave_opaque_depth",
+            "checked": 3748,
+            "faults": 0,
+            "frame_epochs": 24,
+            "skipped_unscoped_or_occluded": 92,
+            "examples": [],
+            "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+          }
+        },
+        "malformed_trace_rows": 0,
+        "backend_observations": {
+          "maxima": {
+            "cpu_light_seed_apply": 0,
+            "gpu_light_seed_apply": 0,
+            "gpu_light_readback": 0
+          },
+          "positive_records": {},
+          "records_by_kind": {
+            "spike": 285,
+            "period": 56,
+            "blink": 21,
+            "visual_holes_enter": 13,
+            "near_focus_witness_entered_fog_unready": 2,
+            "near_focus_witness_exited_fog_unready": 2,
+            "shutdown": 1
+          },
+          "invalid_counter_rows": 0,
+          "scope": "observed CPU/GPU sky counters; not per-job correctness or compute parity"
+        },
+        "scope": "one-way frontier route and sampled reference checks; not full-screen proof",
+        "runner_exit_code": 1,
+        "inspection_evidence": {
+          "verified": 12,
+          "requested": 12,
+          "reason": "inspection_views_joined_to_png"
+        }
+      },
+      "performance_median_ms": {
+        "wall_ms": 408.551,
+        "render_total_ms": 305.0655,
+        "geometry_paint_ms": 304.4465,
+        "scene_filter_ready_ms": 28.2715,
+        "world_streaming_phase_ms": 99.9615
+      },
+      "analysis": "Route failed to finish; only 295 in-game frames during requested 125 seconds. Full per-stamp absence proof calls amplified readiness/probe loops. No relaxation of correctness gates accepted."
+    },
+    "absence_batch_refinement": {
+      "status": "unit_verified_native_pending",
+      "change": "Production absence evidence exposes a monotonic column floor. One read-only validation call collects each column floor once, still checks every captured resident/content stamp and compares each absent slice with that floor. No evidence cache survives the call. Arbitrary per-slice callbacks keep exact per-slice queries.",
+      "log": "build/desktop-msvc/engine-light-proof-batch-regression-tests.log",
+      "ctest": "23/23 Release passed",
+      "controls": "162+ input stamps reduce to 9 column-evidence reads; changed evidence is observed on the next validation without resident mutation; arbitrary nonmonotonic callback still uses more than 100 independent slice reads."
+    }
   }
 }

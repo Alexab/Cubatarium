@@ -43,10 +43,11 @@ inline RelightInputValidation ValidateRelightInputs(
     return RelightInputValidation::Configuration;
   if (result.input_catalog != catalog)
     return RelightInputValidation::Catalog;
+  UBlockWorld::InputStampValidationBatch batch;
   for (const auto &stamp : result.read_set)
   {
-    if (!world.InputStampLightDomainsStillMatch(stamp, result.include_skylight,
-                                                result.include_block_light))
+    if (!world.InputStampLightDomainsStillMatch(
+            stamp, result.include_skylight, result.include_block_light, &batch))
     {
       if (stale)
         *stale = &stamp;

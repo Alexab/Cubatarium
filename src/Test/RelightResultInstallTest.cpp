@@ -1105,6 +1105,62 @@ void TestWorldOwnedLightCertificates()
          "provenance");
 }
 
+void TestBatchAbsenceEvidenceIsFreshAndExact()
+{
+  using namespace cutum;
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  UBlockRegistry registry(nullptr, definitions);
+  UBlockWorld world;
+  world.GetChunkManager().EnsureChunk({0, -3, 0});
+  std::optional<int> floor = -4;
+  int queries = 0;
+  world.SetKnownAirColumnFloorQuery(
+      [&](glm::ivec3)
+      {
+        ++queries;
+        return floor;
+      });
+  RelightJobSpec spec;
+  spec.min_world_y = -48;
+  spec.max_world_y = -33;
+  const auto captured =
+      UChunkRelightSnapshot::CaptureSections(world, spec, {{0, -3, 0}})
+          .Compute(registry);
+  queries = 0;
+  Expect(ValidateRelightInputs(captured, world,
+                               registry.GetDefinitionsCatalogSnapshot(),
+                               true) == RelightInputValidation::Current,
+         "batched known-air column evidence preserves full strict validation");
+  Expect(queries == 9 && captured.read_set.size() > 100,
+         "one validation queries absence evidence once per column rather than "
+         "once per vertical stamp");
+  queries = 0;
+  floor = 0;
+  Expect(ValidateRelightInputs(captured, world,
+                               registry.GetDefinitionsCatalogSnapshot()) ==
+                 RelightInputValidation::ReadSet &&
+             queries > 0,
+         "next validation observes changed column evidence without a resident "
+         "mutation");
+  int arbitrary_queries = 0;
+  world.SetKnownOpenSkyAbsentQuery(
+      [&](glm::ivec3 c)
+      {
+        ++arbitrary_queries;
+        return c.y % 2 == 0;
+      });
+  const auto arbitrary =
+      UChunkRelightSnapshot::CaptureSections(world, spec, {{0, -3, 0}})
+          .Compute(registry);
+  arbitrary_queries = 0;
+  Expect(ValidateRelightInputs(arbitrary, world,
+                               registry.GetDefinitionsCatalogSnapshot()) ==
+             RelightInputValidation::Current,
+         "legacy arbitrary per-slice evidence remains exact");
+  Expect(arbitrary_queries > 100, "nonmonotonic per-slice callback is never "
+                                  "replaced by column-floor inference");
+}
+
 } // namespace
 
 int main(int argc, char **argv)
@@ -1112,6 +1168,7 @@ int main(int argc, char **argv)
   if (argc == 2 && std::string(argv[1]) == "--light-proof")
   {
     TestWorldOwnedLightCertificates();
+    TestBatchAbsenceEvidenceIsFreshAndExact();
     std::cout << "light_calculation_certificate_test: OK\n";
     return 0;
   }
@@ -1125,6 +1182,7 @@ int main(int argc, char **argv)
     return 0;
   }
   TestWorldOwnedLightCertificates();
+  TestBatchAbsenceEvidenceIsFreshAndExact();
   TestDomainsAndRevision();
   TestLightChannelIdentityAndBufferedWrites();
   TestHorizontalLightBoundaryChangeMask();
