@@ -581,19 +581,12 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
   const bool enter_gate = EnterLitGateActive;
   static const bool audit_relight =
       IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
-  // FZ2.7-B1e: CountEnterFovLitDebt is O(R²)×stale-probe — only needed for
-  // enter quiesce latch. Cruise MarkRelit was paying ~17ms here every Apply.
-  int lit_remaining = 0;
+  // A newly installed field can make a previously drawable image stale.
+  // Only the complete current publication census may quiesce its successor.
   {
     const auto setup_t0 = Clock::now();
-    if (ShouldCountEnterFovLitDebtForMarkRelit(enter_gate))
-    {
-      lit_remaining = CountEnterFovLitDebt();
-    }
-    if (enter_gate && EnterLitQuiesceAllowed(enter_gate, lit_remaining))
-    {
-      EnterLitQuiesceLatched = true;
-    }
+    EnterLitQuiesceLatched = EnterPublicationQuiesceAllowed(
+        enter_gate, enter_gate && SampleRequiredPresentationCoverage().Ready());
     PhysicsTelemetryData.MarkRelitSetupMs += ElapsedMs(setup_t0, Clock::now());
   }
   const bool enter_quiesce = enter_gate && EnterLitQuiesceLatched;

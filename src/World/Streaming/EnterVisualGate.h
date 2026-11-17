@@ -43,12 +43,12 @@ struct EnterVisualGroundHash
   }
 };
 
-/// Era47/SOTA: EnterLitQuiesce when LIGHT remaining==0 (snapshot/FOV debt).
-/// Do not wait for Dirty/vis — that refeeds remesh and never settles.
-inline bool EnterLitQuiesceAllowed(bool enter_gate_active,
-                                   int worklist_remaining)
+/// Quiesce is a consequence of current required publications, never a latch
+/// derived from a historical column/light-only worklist.
+inline bool EnterPublicationQuiesceAllowed(bool enter_gate_active,
+                                           bool required_publications_ready)
 {
-  return enter_gate_active && worklist_remaining <= 0;
+  return enter_gate_active && required_publications_ready;
 }
 
 /// Era50: EnterGpuQuiesceDrain stays on for the whole enter gate.

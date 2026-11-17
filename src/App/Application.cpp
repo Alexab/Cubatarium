@@ -3328,13 +3328,14 @@ void UApplication::Update(double dt)
               Geometry->ResetWorldRenderState();
               LogWorldLoadDiag("gpu_warmup_reset", *World);
             }
-            // Prepared preserves GPU storage, but does not prove current
-            // completion queues and presentation debt have been drained.
-            if (!World->IsEnterLitGateActive() && drain_cpu)
-            {
-              UEnterLitDiagnostics::BeginSession("application_gpu_warmup");
-              World->BeginEnterLitGate();
-            }
+          }
+          // Late async results can introduce debt after the first warmup frame.
+          // Preserve prepared GPU storage, but acquire a consumer whenever the
+          // actual queues or required section publications need one.
+          if (!World->IsEnterLitGateActive() && drain_cpu)
+          {
+            UEnterLitDiagnostics::BeginSession("application_gpu_warmup");
+            World->BeginEnterLitGate();
           }
           if (drain_cpu && World->IsEnterLitGateActive())
           {

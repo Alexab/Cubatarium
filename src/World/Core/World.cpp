@@ -11822,6 +11822,12 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
         RequiredPresentationJson(coverage, cache.GetRenderDistanceChunks());
     row["phase"] = "enter_gate";
     row["elapsed_ms"] = elapsed_ms;
+    row["enter_gate_active"] = IsEnterLitGateActive();
+    row["enter_session_active"] = IsEnterSessionActive();
+    row["streaming_enabled"] = IsStreamingEnabled();
+    row["lit_quiesce"] = MeshService->IsEnterLitQuiesce();
+    row["mesh_drain_final"] = PhysicsTelemetryData.MeshDrainFinal;
+    row["mesh_schedule_final"] = PhysicsTelemetryData.MeshScheduleFinal;
     row["blockers"] = json::array();
     const auto focus =
         UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
@@ -13379,19 +13385,13 @@ void UWorld::SyncEnterVisualGateQuiesceFlags()
   {
     MeshService->SetEnterVoidTelemLitReadyFn({});
   }
-  const int lit_remaining = CountEnterFovLitDebt();
-  if (gate && EnterLitQuiesceAllowed(gate, lit_remaining))
-  {
-    EnterLitQuiesceLatched = true;
-  }
-  if (!gate)
-  {
-    EnterLitQuiesceLatched = false;
-  }
+  EnterLitQuiesceLatched = EnterPublicationQuiesceAllowed(
+      gate, gate && SampleRequiredPresentationCoverage().Ready());
   MeshService->SetEnterGpuQuiesceDrain(EnterGpuQuiesceDrainAllowed(gate));
-  // Era47 KEEP: once LIGHT snapshot hits 0, stay silent. Snapshot blips must
-  // not re-open MarkRelit (dirty 0→300 spiral).
-  MeshService->SetEnterLitQuiesce(gate && EnterLitQuiesceLatched);
+  // New real section debt reopens consumers even after a light-only worklist
+  // previously looked complete. Redundant input-equivalent repair is handled
+  // by the publication proof guard, not by suppressing all drawable remeshes.
+  MeshService->SetEnterLitQuiesce(EnterLitQuiesceLatched);
 }
 
 void UWorld::RefreshEnterVisualWorklistStates()

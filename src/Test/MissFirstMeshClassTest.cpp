@@ -1446,7 +1446,7 @@ int main()
     using cutum::ClassifyEnterVisualItemState;
     using cutum::ClassifyEnterVoidEdgeAction;
     using cutum::EnterGpuQuiesceDrainAllowed;
-    using cutum::EnterLitQuiesceAllowed;
+    using cutum::EnterPublicationQuiesceAllowed;
     using cutum::EnterVisibilityUnfinishedVoid;
     using cutum::EnterVisualItemState;
     using cutum::EnterVisualVoidEdgeAcceptsSoftDefer;
@@ -1471,12 +1471,14 @@ int main()
            "new gate capture receives a new OpenSky event id");
     Expect(EnterGpuQuiesceDrainAllowed(true),
            "Era50: GpuQuiesceDrain on for whole gate");
-    Expect(!EnterLitQuiesceAllowed(true, 5),
-           "Era50: LitQuiesce off while remaining>0");
-    Expect(EnterLitQuiesceAllowed(true, 0),
-           "Era50: LitQuiesce only when remaining==0");
-    Expect(!EnterLitQuiesceAllowed(false, 0),
-           "Era50: LitQuiesce off without gate");
+    Expect(!EnterPublicationQuiesceAllowed(true, false),
+           "a light-only Done worklist cannot quiesce an unpublished section");
+    Expect(EnterPublicationQuiesceAllowed(true, true),
+           "current required publication coverage permits quiesce");
+    Expect(!EnterPublicationQuiesceAllowed(false, true),
+           "publication quiesce is scoped to the active enter gate");
+    Expect(!EnterPublicationQuiesceAllowed(true, false),
+           "new stale section input reopens consumers after earlier readiness");
     Expect(EnterVisibilityUnfinishedVoid(985, 800) == 185,
            "Era50: unfinished void excludes SoftDefer placeholders");
     Expect(EnterVisibilityUnfinishedVoid(100, 200) == 0,
