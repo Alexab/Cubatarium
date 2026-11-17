@@ -6,6 +6,7 @@
 #include "Render/Camera/Camera.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/World.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Persistence/WorldPersistence.h"
 #include "World/Streaming/ChunkRenderDemand.h"
@@ -822,6 +823,21 @@ void UEnterLitDiagnostics::MaybeLogHeartbeat(const EnterLitSample &sample,
         UChunkManager::WorldToChunk(world->GetPreferredLoadFocusBlock());
     const auto &mesh = world->GetMeshService();
     const auto &cache = mesh.GetCache();
+    struct BumpSample
+    {
+      glm::ivec3 center;
+      std::unordered_map<glm::ivec3, DemandTransitionSpan, IVec3Hash> latest;
+    } bumps{center, {}};
+    UJobStageTrace::ForEachDemandTransitionNewest(
+        UJobStageTrace::kDemandTransitionRingCapacity,
+        [](const DemandTransitionSpan &span, void *context)
+        {
+          auto &samples = *static_cast<BumpSample *>(context);
+          if (span.kind == DemandTransitionKind::MeshRevisionBumped &&
+              span.cx == samples.center.x && span.cz == samples.center.z)
+            samples.latest.try_emplace({span.cx, span.cy, span.cz}, span);
+        },
+        &bumps);
     const auto catalog =
         world->GetBlockRegistry().GetDefinitionsCatalogSnapshot();
     const auto &blocks = world->GetBlockWorld();
@@ -861,6 +877,18 @@ void UEnterLitDiagnostics::MaybeLogHeartbeat(const EnterLitSample &sample,
         row["coverage"] = {demand->desired_coverage_gen,
                            demand->published_coverage_gen};
         row["active_attempt"] = demand->has_active_attempt;
+      }
+      if (const auto found = bumps.latest.find(coord);
+          found != bumps.latest.end())
+      {
+        const auto &span = found->second;
+        row["last_geom_request"] = {
+            {"before", span.mesh_revision_before},
+            {"after", span.mesh_revision_after},
+            {"reason", UJobStageTrace::MeshRevisionBumpReasonName(
+                           span.mesh_revision_bump_reason)},
+            {"owner_flags", span.mesh_owner_flags},
+            {"event_ms", span.event_ms}};
       }
       CubatariumLogInfo("EnterSectionWitness", row.dump());
     }
