@@ -271,6 +271,26 @@ bool ChunkSliceHasCurrentLightSettlement(const UWorld &world, glm::ivec3 coord)
   return true;
 }
 
+bool CurrentOccludedSliceReadyForWarmup(const UWorld &world, glm::ivec3 coord)
+{
+  const auto &mesh = world.GetMeshService();
+  const auto &cache = mesh.GetCache();
+  const auto *chunk = world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+  const auto *demand = world.GetRenderDemandStore().Find(coord);
+  // The cache accepts a non-drawable mesh only when it is a current published
+  // zero-quad result, with no pending geometry/coverage successor. Darkness
+  // and SoftDefer placeholders are not evidence of intentional occlusion.
+  if (!chunk || !demand || mesh.HasDrawableGreedyMesh(coord) ||
+      !mesh.HasMeshSatisfyingColumnReady(coord) ||
+      !ChunkSliceHasCurrentLightSettlement(world, coord))
+    return false;
+  const auto published = cache.GetMeshPublishRevs(coord);
+  return published.light_rev == chunk->GetLightFieldRevision() &&
+         cache.GetMeshedLightRevision(coord) ==
+             chunk->GetLightFieldRevision() &&
+         demand->desired_light_rev <= demand->published_light_rev;
+}
+
 int CountMissingSlicesInRange(const UBlockWorld &world,
                               const UWorldMeshService *mesh_service,
                               glm::ivec3 ground_chunk_coord, int min_y,
@@ -12477,6 +12497,8 @@ bool UWorld::NeedsEnterGameVisualWarmup() const
         {
           continue;
         }
+        if (CurrentOccludedSliceReadyForWarmup(*this, coord))
+          continue;
         const bool has_drawable = mesh.HasDrawableGreedyMesh(coord);
         const bool has_greedy = mesh.HasGreedyMesh(coord);
         const bool soft_held = mesh.IsSoftDeferHeld(coord);
@@ -12520,12 +12542,12 @@ bool UWorld::NeedsEnterGameVisualWarmup() const
                                 !mesh.ChunkHasLitDrawableFace(coord);
         const bool lit_drawable =
             has_drawable && mesh.ChunkHasLitDrawableFace(coord);
-        const glm::ivec2 col_xz(coord.x, coord.z);
         const bool pending_col = IsPendingLightBeforeMeshSlice(coord);
         const bool stale = fully_dark && MeshService->ChunkHasStaleDarkFaces(
                                              coord, BlockWorld);
-        const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(col_xz);
-        const bool true_dark = fully_dark && open_sky && !pending_col && !stale;
+        const bool true_dark = fully_dark && !pending_col && !stale &&
+                               HasCurrentChunkSliceLightSettlement(coord) &&
+                               IsChunkSliceRenderReady(coord);
         if (!EnterUnderfeetSliceReady(lit_drawable, pending_col, true_dark))
         {
           return true;
@@ -13611,6 +13633,8 @@ bool UWorld::IsEnterUnderfeetPresentReady() const
         continue;
       }
       saw_solid = true;
+      if (CurrentOccludedSliceReadyForWarmup(*this, coord))
+        continue;
       if (MeshService->IsSoftDeferHeld(coord) &&
           !MeshService->HasDrawableGreedyMesh(coord))
       {
@@ -13677,6 +13701,8 @@ bool UWorld::IsEnterUnderfeetPresentReady() const
       continue;
     }
     saw_solid_focus = true;
+    if (CurrentOccludedSliceReadyForWarmup(*this, coord))
+      continue;
     const bool has_drawable = mesh.HasDrawableGreedyMesh(coord);
     if (mesh.IsSoftDeferHeld(coord) && !has_drawable)
     {
@@ -13689,12 +13715,12 @@ bool UWorld::IsEnterUnderfeetPresentReady() const
     const bool fully_dark = mesh.GetCache().ChunkHasFullyDarkFace(coord) &&
                             !mesh.ChunkHasLitDrawableFace(coord);
     const bool lit_drawable = mesh.ChunkHasLitDrawableFace(coord);
-    const glm::ivec2 col_xz(coord.x, coord.z);
     const bool pending_col = IsPendingLightBeforeMeshSlice(coord);
     const bool stale =
         fully_dark && MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld);
-    const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(col_xz);
-    const bool true_dark = fully_dark && open_sky && !pending_col && !stale;
+    const bool true_dark = fully_dark && !pending_col && !stale &&
+                           HasCurrentChunkSliceLightSettlement(coord) &&
+                           IsChunkSliceRenderReady(coord);
     if (!EnterUnderfeetSliceReady(lit_drawable, pending_col, true_dark))
     {
       return false;
@@ -13964,6 +13990,8 @@ int UWorld::CountCreateNearFovWarmupDebt(bool *out_underfeet_lit_ready) const
         {
           continue;
         }
+        if (CurrentOccludedSliceReadyForWarmup(*this, coord))
+          continue;
         const bool has_drawable = mesh.HasDrawableGreedyMesh(coord);
         const bool has_greedy = mesh.HasGreedyMesh(coord);
         const bool soft_held = mesh.IsSoftDeferHeld(coord);
@@ -14019,13 +14047,12 @@ int UWorld::CountCreateNearFovWarmupDebt(bool *out_underfeet_lit_ready) const
               !mesh.ChunkHasLitDrawableFace(coord);
           const bool lit_drawable =
               has_drawable && mesh.ChunkHasLitDrawableFace(coord);
-          const glm::ivec2 col_xz(coord.x, coord.z);
           const bool pending_col = IsPendingLightBeforeMeshSlice(coord);
           const bool stale = fully_dark && MeshService->ChunkHasStaleDarkFaces(
                                                coord, BlockWorld);
-          const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(col_xz);
-          const bool true_dark =
-              fully_dark && open_sky && !pending_col && !stale;
+          const bool true_dark = fully_dark && !pending_col && !stale &&
+                                 HasCurrentChunkSliceLightSettlement(coord) &&
+                                 IsChunkSliceRenderReady(coord);
           if (!EnterUnderfeetSliceReady(lit_drawable, pending_col, true_dark))
           {
             ++debt;
