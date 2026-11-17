@@ -221,6 +221,26 @@ class NegativeCaveFixtureTest(unittest.TestCase):
                 self.assertTrue((fixture / "chunks" / "0_-4_3.json").exists())
                 self.assertTrue((fixture / "chunks" / "0_-1_3.json").exists())
                 self.assertEqual(wide["route_rise"], 30)
+                from engine_smoke_fixtures import prepare_lit_negative_cave
+                metadata_path = fixture / "world_data.json"
+                metadata = json.loads(metadata_path.read_text())
+                metadata["resource_packs"] = {"primary": ["cubatarium_worldgen_cc0"]}
+                metadata_path.write_text(json.dumps(metadata))
+                material_path = runtime / "resource_packs/cubatarium_worldgen_cc0/blocks/glowstone.json"
+                material_path.parent.mkdir(parents=True)
+                material = dict(name="glowstone", id=376, lighting=dict(emission=15))
+                material_path.write_text(json.dumps(material))
+                lit = prepare_lit_negative_cave(fixture, 1)
+                self.assertGreater(len(lit["lighting_fixture"]["emitters"]), 4)
+                floor = json.loads((fixture / "chunks/0_-3_3.json").read_text())
+                self.assertTrue(any(v["type"] == "glowstone" and v["lx"] == 0 and
+                                    v["ly"] == 4 and v["lz"] == 3 for v in floor["voxels"]))
+                prepared = world_fingerprint(fixture)
+                material["lighting"]["emission"] = 0
+                material_path.write_text(json.dumps(material))
+                with self.assertRaises(ValueError):
+                    prepare_lit_negative_cave(fixture, 1)
+                self.assertEqual(world_fingerprint(fixture), prepared)
             self.assertEqual(world_fingerprint(source), before)
             with self.assertRaises(ValueError):
                 prepare_dry_negative_cave(source, 1)

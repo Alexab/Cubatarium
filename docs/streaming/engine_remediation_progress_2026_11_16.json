@@ -3999,7 +3999,7 @@
       "scope": "Existing legacy capture fallback remains explicit. Mandatory normal-publication padding gate, all direct world readers, independent AIR outputs and GPU resource decoupling are still pending; no full visual/performance acceptance."
     },
     "required_padded_publication": {
-      "status": "3100c48d6:3focused testsPASS and desktopReleasePASS; full wet radius4 native running",
+      "status": "3100c48d6 ReleasePASS; full wet radius4 native runtime/startup/route/inspection/near-depthPASS; overallUNTESTED",
       "change": "LightCalculationSettlement and world required-light closure/settlement/startup census now require complete padded physical calculations for calculated lighting. Capture explicitly marks unproven volumes as preview, and first normal publication requires certified captured volume. Existing intentional Flat-mode semantics preserved. Direct CPU world mesher reads current canonical padded volume over full sampling footprint.",
       "test": "Actual first async publication/rejection/preview integration passes. Boundary block at local15 and poisoned adjacent field prove direct-world and immutable-snapshot face lights agree. Physical certificate/install suites pass.",
       "evidence": "build/desktop-msvc/engine-required-padded-publication-tests.log:3/3PASS",
@@ -4008,10 +4008,21 @@
       "native": {
         "artifacts": "build/desktop-msvc/engine-required-padded-publication-wet-native",
         "source": "3100c48d6",
-        "status": "running",
+        "status": "complete; native exit0, wrapper exit2UNTESTED, legacy runner exit1 retained",
         "scenario": "same wet-negative-cave frontier route; minimum19chunks,300smaximum bot phase,8sstop,2sidle,600sprocess timeout; no teleport,24inspection views expected",
-        "scope": "No native/framebuffer/physical-light/performance acceptance yet. Previous radius8 timeout and other missing plan requirements retained."
+        "scope": "No independent physical-light, transparency, full-screen or performance acceptance. Radius8 failure and full remaining scope retained.",
+        "route": "22chunks1037outside-initial-resident samples; bot complete2waypoints; zero relocation",
+        "startup": "81columns1944sections zero debts post-world-paint census",
+        "inspection": "24requested/queued/PNG-verified views",
+        "near_opaque_depth": "10464checks67frame epochs0faults;256unscoped/occluded samples excluded",
+        "fixture": "292wet negative-cave trace samplesPASS"
       }
+    },
+    "positive_light_fixture": {
+      "status": "prepared scene implementation and44Python testsPASS; runtime nonzero light reference pending",
+      "change": "dry-lit-negative-cave selects the unchanged analytic dry cave geometry and replaces floor stone voxels every8blocks with glowstone. Requires supported worldgen-only primary selection and matching runtime material name/id376/emission15/cube defaults; records material hash and emitter positions. Source save remains unchanged; incompatible material is rejected before scene mutation.",
+      "scope": "Preparation validation is not runtime catalog validation, transport correctness or framebuffer acceptance; these remain required.",
+      "tests": "build/desktop-msvc/engine-positive-light-fixture-tests.log:44PASS; verifies actual saved emitter voxels and no mutation on incompatible emission."
     }
   }
 }

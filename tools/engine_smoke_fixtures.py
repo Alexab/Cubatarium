@@ -90,6 +90,43 @@ def prepare_negative_cave(fixture: Path, minimum_chunks: int, *, flooded: bool =
             "expected_max_eye_y": ceiling_y - 0.5, "route_yaw": 180.0}
 
 
+def prepare_lit_negative_cave(fixture: Path, minimum_chunks: int) -> dict:
+    """Positive blocklight scene. Runtime catalog/draw acceptance is separate."""
+    import hashlib
+    metadata = json.loads((fixture / "world_data.json").read_text(encoding="utf-8"))
+    packs = metadata.get("resource_packs", {})
+    if packs.get("primary") != ["cubatarium_worldgen_cc0"] or packs.get("secondary", []):
+        raise ValueError("lit fixture requires the unmodified worldgen primary pack selection")
+    material_path = fixture.parent.parent / "resource_packs/cubatarium_worldgen_cc0/blocks/glowstone.json"
+    payload = material_path.read_bytes()
+    material = json.loads(payload)
+    if (material.get("name") != "glowstone" or material.get("id") != 376 or
+            material.get("lighting", {}).get("emission") != 15 or
+            material.get("render", {}).get("style", "cube") != "cube" or
+            "physics" in material):
+        raise ValueError("lit fixture glowstone definition is incompatible with the reference scene")
+    scene = prepare_negative_cave(fixture, minimum_chunks)
+    floor = round(scene["cave_bounds"]["floor"] - 0.5)
+    emitters = []
+    for cx in range(scene["chunk_x_bounds"][0], scene["chunk_x_bounds"][1] + 1):
+        path = fixture / "chunks" / f"{cx}_{floor // 16}_3.json"
+        chunk = json.loads(path.read_text(encoding="utf-8"))
+        for voxel in chunk["voxels"]:
+            if voxel["ly"] == floor % 16 and voxel["lz"] == 3 and voxel["lx"] in (0, 8):
+                if voxel["type"] != "stone":
+                    raise ValueError("lit fixture emitter must replace an opaque floor voxel")
+                voxel["type"] = "glowstone"
+                emitters.append([cx * 16 + voxel["lx"], floor, 51])
+        path.write_text(json.dumps(chunk, separators=(",", ":")), encoding="utf-8")
+    scene["lighting_fixture"] = {
+        "schema": "engine-positive-blocklight-fixture.v1", "emitters": emitters,
+        "emission": 15, "material_name": "glowstone", "material_id": 376,
+        "material_sha256": hashlib.sha256(payload).hexdigest(),
+        "source_material_path": str(material_path.resolve()),
+        "scope": "prepared opaque floor emitters; current runtime catalog, physical transport and drawn light are not yet verified"}
+    return scene
+
+
 def prepare_dry_negative_cave(fixture: Path, minimum_chunks: int) -> dict:
     return prepare_negative_cave(fixture, minimum_chunks)
 
