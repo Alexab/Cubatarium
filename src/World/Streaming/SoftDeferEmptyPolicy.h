@@ -593,12 +593,15 @@ inline bool ShouldKeepEnterHoleDirtyDespiteInflight(bool enter_hole_force,
   return enter_hole_force && !has_drawable;
 }
 
-/// SRBR-P0.2: phantom enter Dirty is terminal-held or unloaded only —
-/// never strip FirstMesh hole Dirty (!HasGreedy).
+/// Only a proved current terminal publication can make queued work redundant.
+/// A priority repair or stale predecessor remains a real section obligation.
 inline bool ShouldPruneEnterPhantomDirtyCoord(bool enter_terminal_held,
-                                             bool has_chunk)
+                                              bool has_chunk,
+                                              bool publication_current,
+                                              bool priority_repair)
 {
-  return enter_terminal_held || !has_chunk;
+  return !has_chunk ||
+         (enter_terminal_held && publication_current && !priority_repair);
 }
 
 /// Era23 P2: SoftDefer empty PreferKick only when GPU queue is stuck on the

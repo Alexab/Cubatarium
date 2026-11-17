@@ -11767,9 +11767,23 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
         const auto *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
         if (!chunk || chunk->IsAirOnly() ||
             CurrentSlicePublicationReadyForWarmup(*this, coord) ||
-            !ChunkSliceHasCurrentLightSettlement(*this, coord) ||
-            mesh.IsChunkMeshDirty(coord) ||
-            mesh.IsRemeshAfterApplyPending(coord) ||
+            !ChunkSliceHasCurrentLightSettlement(*this, coord))
+          continue;
+        if (mesh.IsChunkMeshDirty(coord))
+        {
+          // An existing ordinary remesh can otherwise be muted by terminal
+          // column/quiesce policy. Exact required publication debt owns
+          // priority.
+          if (mesh.HasDrawableGreedyMesh(coord) &&
+              !cache.PrioritizeVisibleLightRepairRemesh(coord))
+          {
+            mesh.RequeueDirtyPriority(
+                coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+            (void)cache.PrioritizeVisibleLightRepairRemesh(coord);
+          }
+          continue;
+        }
+        if (mesh.IsRemeshAfterApplyPending(coord) ||
             mesh.HasInflightMeshBuild(coord) || mesh.IsPendingGpuApply(coord) ||
             mesh.IsGpuExtractInFlight(coord) ||
             cache.HasPendingCaptureWork(coord))

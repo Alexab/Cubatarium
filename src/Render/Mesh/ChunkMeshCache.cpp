@@ -2816,8 +2816,10 @@ int UChunkMeshCache::PruneEnterPhantomDirty(const UBlockWorld &world)
     // obligation, not a phantom queue entry.
     const bool terminal_mesh_drawable =
         EnterTerminalHeld.count(c) > 0 && HasDrawableGreedyMesh(c);
-    if (ShouldPruneEnterPhantomDirtyCoord(terminal_mesh_drawable,
-                                          world.GetChunkManager().HasChunk(c)))
+    if (ShouldPruneEnterPhantomDirtyCoord(
+            terminal_mesh_drawable, world.GetChunkManager().HasChunk(c),
+            terminal_mesh_drawable && IsPublishedMeshCurrentForInputs(c, world),
+            Dirty.IsPriorityRemesh(c)))
     {
       RemeshAfterApply.erase(c);
       it = Dirty.RemoveAt(it);

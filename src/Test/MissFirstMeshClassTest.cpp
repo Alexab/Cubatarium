@@ -3184,11 +3184,18 @@ int main()
            "P0.2: cruise Inflight RemoveAt KEEP");
     // Keep-Dirty means wait on Inflight — never schedule-tick Invalidate.
     using cutum::ShouldPruneEnterPhantomDirtyCoord;
-    Expect(ShouldPruneEnterPhantomDirtyCoord(true, true),
+    Expect(!ShouldPruneEnterPhantomDirtyCoord(true, true, false, false),
+           "a terminal column with stale section inputs cannot erase real "
+           "remesh debt");
+    Expect(!ShouldPruneEnterPhantomDirtyCoord(true, true, true, true),
+           "a priority required-publication repair survives terminal "
+           "housekeeping");
+
+    Expect(ShouldPruneEnterPhantomDirtyCoord(true, true, true, false),
            "P0.2: terminal Held is phantom");
-    Expect(ShouldPruneEnterPhantomDirtyCoord(false, false),
+    Expect(ShouldPruneEnterPhantomDirtyCoord(false, false, false, false),
            "P0.2: unloaded chunk is phantom");
-    Expect(!ShouldPruneEnterPhantomDirtyCoord(false, true),
+    Expect(!ShouldPruneEnterPhantomDirtyCoord(false, true, false, false),
            "P0.2: resident FirstMesh hole Dirty KEEP");
   }
 
