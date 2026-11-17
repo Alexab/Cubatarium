@@ -160,14 +160,22 @@ def prepare_visible_items_plane(fixture: Path, minimum_chunks: int) -> dict:
     if (len(size) != 3 or any(type(v) not in (int, float) or not math.isfinite(v) or
                              not .02 <= v <= 5 for v in size)):
         raise ValueError("invalid saved visible-item physical size")
-    asset = fixture.parent.parent / "models/items/raw_meat/model.glb"
+    directory = fixture.parent.parent / "models/items/raw_meat"
+    asset = directory / "model.gltf"
+    if not asset.is_file():
+        asset = directory / "model.glb"
     if asset.is_symlink():
         raise ValueError("fixture item asset symlinks are forbidden")
     payload = asset.read_bytes()
-    if (asset.is_symlink() or len(payload) < 20 or payload[:4] != b"glTF" or
-            int.from_bytes(payload[4:8], "little") != 2 or
-            int.from_bytes(payload[8:12], "little") != len(payload)):
-        raise ValueError("visible-item fixture requires a valid raw_meat GLB asset")
+    if asset.suffix == ".gltf":
+        document = json.loads(payload)
+        valid_asset = isinstance(document, dict) and isinstance(document.get("asset"), dict) and document["asset"].get("version") == "2.0"
+    else:
+        valid_asset = (len(payload) >= 20 and payload[:4] == b"glTF" and
+            int.from_bytes(payload[4:8], "little") == 2 and
+            int.from_bytes(payload[8:12], "little") == len(payload))
+    if not valid_asset:
+        raise ValueError("visible-item fixture requires a valid raw_meat glTF2 asset")
     instances = set()
     def collect(value):
         if isinstance(value, dict):
@@ -199,7 +207,7 @@ def prepare_visible_items_plane(fixture: Path, minimum_chunks: int) -> dict:
     path.write_text(json.dumps(creatures, indent=2)+"\n", encoding="utf-8")
     scene["visible_world_items"] = dict(schema="engine-world-item-field-fixture.v1",
         item="raw_meat", positions=positions, instances=[next_instance, next_instance+1],
-        available_glb_sha256=hashlib.sha256(payload).hexdigest(),
+        available_model_asset=dict(file=asset.name, sha256=hashlib.sha256(payload).hexdigest()),
         minimum_frame_epochs=3,
         scope="normal saved loose bodies; CPU sample and actual primitive issue, no final RGB")
     return scene

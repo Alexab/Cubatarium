@@ -77,9 +77,9 @@ class VisibleItemsFixtureTest(unittest.TestCase):
                         carrier=0, creature=0, domain="creative")
             (source / "creatures.json").write_text(json.dumps(dict(world_physical_v2=[body])))
             (runtime / "config.json").write_text("{}")
-            asset = runtime / "models/items/raw_meat/model.glb"
+            asset = runtime / "models/items/raw_meat/model.gltf"
             asset.parent.mkdir(parents=True)
-            asset.write_bytes(b"glTF" + struct.pack("<II", 2, 20) + b"12345678")
+            asset.write_text(json.dumps(dict(asset=dict(version="2.0"))))
             before = world_fingerprint(source)
             scene = WorldItemReferenceTest().scene()
             scene.pop("visible_world_items")
@@ -94,7 +94,16 @@ class VisibleItemsFixtureTest(unittest.TestCase):
                 self.assertEqual([r["position"][0] for r in rows[1:]], [26, -326])
                 self.assertTrue(all(r["velocity"] == [0, 0, 0] and r["carrier"] == 0 for r in rows[1:]))
                 self.assertEqual(prepared["visible_world_items"]["instances"], [901, 902])
-                self.assertEqual(len(prepared["visible_world_items"]["available_glb_sha256"]), 64)
+                self.assertEqual(prepared["visible_world_items"]["available_model_asset"]["file"], "model.gltf")
+                self.assertEqual(len(prepared["visible_world_items"]["available_model_asset"]["sha256"]), 64)
+            self.assertEqual(world_fingerprint(source), before)
+            asset.unlink()
+            asset = asset.with_suffix(".glb")
+            asset.write_bytes(b"glTF" + struct.pack("<II", 2, 20) + b"12345678")
+            with isolated_fixture(runtime, "Saved", root / "binary-evidence") as (fixture, _):
+                with patch("engine_smoke_fixtures.prepare_open_sky_plane", return_value=scene):
+                    prepared = prepare_visible_items_plane(fixture, 19)
+                self.assertEqual(prepared["visible_world_items"]["available_model_asset"]["file"], "model.glb")
             self.assertEqual(world_fingerprint(source), before)
             with self.assertRaises(ValueError):
                 prepare_visible_items_plane(source, 19)

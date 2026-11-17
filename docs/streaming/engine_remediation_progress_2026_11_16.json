@@ -5018,16 +5018,217 @@
         "evidence": "engine-motion-light-fractional-red-test.log:newforward/backward0.01block/s boundary cases fail original nearest-integer motion rounding. No app launched from initial42701be8c Release build.",
         "implementation": "After clamping2section displacement, round away from zero toward motion because voxel cell input has lost its sub-voxel offset. Hard27section bound and static1section case preserved.",
         "tests": "engine-motion-light-fractional-green-test.log:4rebuilt suitesPASS; original batch and velocity RED controls remain retained.",
-        "release": "engine-motion-light-batch-release-build.log:initialRelease/static EXE PASS, not launched; corrected Release rebuild pending"
+        "release": "engine-motion-light-batch-release-rebuild.log:PASS/static EXE6systemDLLs; fresh native43b5894d6 executed"
+      },
+      "native": {
+        "source": "43b5894d6",
+        "artifacts": "build/desktop-msvc/engine-motion-light-batch-open-sky-native",
+        "status": "UNTESTED",
+        "application_exit": 0,
+        "route": {
+          "status": "PASS",
+          "reason": "frontier_route_covered",
+          "displacement_chunks": 22,
+          "outside_initial_resident_samples": 1040
+        },
+        "inspection": {
+          "status": "PASS",
+          "reason": "inspection_capture_coverage",
+          "requested": 26,
+          "queued": 26,
+          "verified": 26
+        },
+        "startup": {
+          "status": "PASS",
+          "reason": "first_world_paint_required_ring_census",
+          "evidence": {
+            "columns": 81,
+            "domain": "configured-render-ring.v1",
+            "expected_columns": 81,
+            "expected_sections": 1944,
+            "focus": [
+              1,
+              -4,
+              3
+            ],
+            "known_air_sections": 1372,
+            "light_unready_sections": 0,
+            "max_y": 319,
+            "min_y": -64,
+            "missing_data_columns": 0,
+            "phase": "first_world_paint",
+            "publication_unready_sections": 0,
+            "radius": 4,
+            "ready": true,
+            "render_distance_chunks": 4,
+            "render_pass_complete": true,
+            "resident_air_sections": 0,
+            "schema": "required-presentation-witness.v2",
+            "sections": 1944,
+            "surface_sections": 572,
+            "unknown_sections": 0,
+            "world_epoch": 4
+          },
+          "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+        },
+        "camera": {
+          "schema": "engine-camera-light-reference.v1",
+          "status": "PASS",
+          "reason": "camera_canonical_field_at_paint",
+          "samples": 1745,
+          "ready_samples": 1745,
+          "air_samples": 1692,
+          "frame_epochs": 1745,
+          "distinct_air_sections": 23,
+          "expected_game_frames": 1745,
+          "observed_paint_frames": 1745,
+          "unsupported_mode_samples": 0,
+          "skipped_unscoped": 0,
+          "faults": 0,
+          "examples": [],
+          "missing_coverage": [],
+          "scope": "observed canonical camera CPU field readiness/sky15/block0 at world paints; no creature/item, GPU page, shader RGB, latency or full-screen acceptance"
+        },
+        "first_person": {
+          "schema": "engine-scene-light-reference.v1",
+          "status": "PASS",
+          "reason": "first_person_item_canonical_field_at_paint",
+          "ready_frames": 1745,
+          "paint_frames": 1745,
+          "distinct_air_sections": 23,
+          "skipped_unscoped": 0,
+          "unsupported_mode_samples": 0,
+          "faults": 0,
+          "examples": [],
+          "missing_coverage": [],
+          "scope": "CPU field supplied to first-person item; no creature/world-item, shader RGB, GPU page, smoothing, latency or full-screen acceptance"
+        },
+        "air_service": {
+          "schema": "engine-air-light-service.v1",
+          "status": "PASS",
+          "reason": "joined_air_light_producer_receipts",
+          "joined_completed_jobs": 166,
+          "distinct_columns": 80,
+          "minimum_columns": 3,
+          "observed_records": 3082,
+          "unjoined_completions": 8,
+          "faults": 0,
+          "examples": [],
+          "scope": "observed requested AIR fields with complete canonical physical receipts; no all-request coverage, field-value, latency, GPU or framebuffer acceptance"
+        },
+        "depth": {
+          "status": "PASS",
+          "reason": "analytic_near_plane_opaque_depth",
+          "checked": 421,
+          "faults": 0,
+          "frame_epochs": 19,
+          "skipped_unscoped_or_occluded": 10165,
+          "examples": [],
+          "scope": "opaque floor within 32 blocks; no light, transparent or full-screen acceptance"
+        },
+        "floor_source": {
+          "status": "PASS",
+          "reason": "analytic_direct_sky_floor_draw_source_light",
+          "checked": 169,
+          "positive_expected": 169,
+          "faults": 0,
+          "source_counts": {
+            "cpu": 0,
+            "packed_gpu": 169
+          },
+          "frame_epochs": 16,
+          "observed_emitter_cells": 0,
+          "distinct_floor_cells": 123,
+          "distinct_expected_levels": 1,
+          "skipped": 10417,
+          "skip_reasons": {
+            "not_joined_floor_depth": 4969,
+            "unscoped_floor_cell": 245,
+            "not_downward_valid_ray": 5196,
+            "missing_or_provisional_source_match": 7
+          },
+          "missing_coverage": [],
+          "examples": [],
+          "scope": "unobstructed constant direct-skylight floor CPU vertex or witnessed packed GPU draw-buffer light joined to analytic framebuffer depth; no shaded RGB, transparency or full-screen acceptance"
+        },
+        "moving_actor_observation": {
+          "schema": "engine-moving-consumer-observation.v1",
+          "source": "43b5894d6",
+          "consumer_counts": {
+            "fp_item": {
+              "observed": 1745,
+              "ready": 1745
+            },
+            "creature": {
+              "observed": 1058,
+              "pending": 1,
+              "ready": 1057
+            }
+          },
+          "reproduced_target_samples": [
+            {
+              "world_epoch": "4",
+              "frame_epoch": "41",
+              "consumer": "creature",
+              "cell": "(-3,-39,39)",
+              "coord": "(-1,-3,2)",
+              "physical": "1",
+              "resident": "0",
+              "state": "0",
+              "ready": "0",
+              "sky": "0",
+              "block_light": "0",
+              "field_incarnation": "0",
+              "field_revision": "0"
+            },
+            {
+              "world_epoch": "4",
+              "frame_epoch": "42",
+              "consumer": "creature",
+              "cell": "(-3,-44,39)",
+              "coord": "(-1,-3,2)",
+              "physical": "1",
+              "resident": "0",
+              "state": "2",
+              "ready": "1",
+              "sky": "15",
+              "block_light": "0",
+              "field_incarnation": "2928",
+              "field_revision": "1"
+            },
+            {
+              "world_epoch": "4",
+              "frame_epoch": "43",
+              "consumer": "creature",
+              "cell": "(-3,-48,39)",
+              "coord": "(-1,-3,2)",
+              "physical": "1",
+              "resident": "0",
+              "state": "2",
+              "ready": "1",
+              "sky": "15",
+              "block_light": "0",
+              "field_incarnation": "2928",
+              "field_revision": "1"
+            }
+          ],
+          "scope": "Observed CPU field readiness, not latency/shaderRGB acceptance; one pending actor sample remains."
+        },
+        "limit": "Previous4pending creature samples reducedto1; actual same AIRsection(-1,-3,2) reproduced with3queries,firstMissingthen2Computedsky15/block0. No actor-ready deadline/full-render acceptance."
       }
     },
     "visible_world_item_draw_reference": {
       "status": "Implemented;59Python testsPASS;Release/native pending",
-      "fixture": "Optionalopen-sky-items starts from same isolated plane. Append2normal saved loose raw_meat bodies at floor near start and end, copy valid physical profile, allocate inventory identities above all loaded users/creatures IDs. Original bodies and source-world bytes preserved. AvailableGLB header/size validated and hashed; this is available asset provenance, not proof of loaded raster bytes. No runtime spawn, inventory injection or teleport. Route uses3normal targeted holds per object; generic variable inspection layout already supports it.",
+      "fixture": "Optionalopen-sky-items prepares2normal saved loose raw_meat bodies at floor near start/end in disposable clone, unique inventory IDs above loadedusers/creatures IDs. Existing bodies/source-world bytes preserved. AvailableglTF2JSONorGLB model format validated and model-file hash recorded, not proof of loaded raster bytes. No runtime spawn/inventory injection/teleport.3ordinary targeted holds per body.",
       "runtime_observation": "ItemSurfaceRenderer::Draw returns actual count of nonempty primitive glDrawElements calls; skips empty index ranges. WorldItemLightDraw emitted after actual call includes world/frame, asset parent, source inventory instance, canonical CPU field binding/state/value and primitive count. Instance is immutable diagnostic provenance in request, conveys no ownership authority. Stats now count actual issued item primitives.",
       "reference": "engine_world_item_reference.py requires both declared saved instances, matching near-prepared sample cells, complete physical computedfield sky15/block0 with nonzero binding, matching actual item sample and world paint, positive primitive issue, >=2frame epochs per instance and >=3overall. Includes first draw before post-paint marker. Wrong identity/pose/field/zero issue/duplicate/malformed witness FAIL; absent/unjoined/unsupported-mode evidence UNTESTED. No raster visibility, shaderuniform/RGB, transparency, smoothing or performance acceptance.",
       "tests": "engine-motion-light-visible-items-python-test.log:59PASS, including new clone-only body/uniqueIDs/source-preservation control and actual draw/reference negative controls.",
-      "remaining": "Fresh native positive object scene; typedFlat native, independent RGB/transparent/fullscreen and actual GPU light resource cutover still required."
+      "remaining": "Fresh native positive object scene; typedFlat native, independent RGB/transparent/fullscreen and actual GPU light resource cutover still required.",
+      "gltf_fixture_correction": {
+        "failed_preparation": "build/desktop-msvc/engine-motion-light-visible-items-native-runner.log:FileNotFoundError for missingmodel.glb; actualraw_meat hasmodel.gltf. Wrapperterminalexit1 before native launch; no application/render result. Failure retained.",
+        "fix": "Accept validatedglTF2JSON andGLB; record available_model_asset file/hash. Test both formats and unchanged source-world fingerprints.",
+        "tests": "engine-visible-items-gltf-python-test.log:59PASS; corrected native pending on same immutable43b5894d6EXE"
+      }
     }
   }
 }
