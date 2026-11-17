@@ -493,8 +493,31 @@ UChunkRelightSnapshot::Compute(const UBlockRegistry &registry)
   for (const auto c : targets)
   {
     const auto it = Light.find(c);
-    if (it != Light.end())
-      result.chunks.push_back({c, it->second});
+    if (it == Light.end())
+      continue;
+    auto padded = std::make_shared<SectionLightVolume>();
+    for (int z = -SectionLightVolume::Radius;
+         z < CHUNK_SIZE + SectionLightVolume::Radius; ++z)
+      for (int y = -SectionLightVolume::Radius;
+           y < CHUNK_SIZE + SectionLightVolume::Radius; ++y)
+        for (int x = -SectionLightVolume::Radius;
+             x < CHUNK_SIZE + SectionLightVolume::Radius; ++x)
+        {
+          const auto position = c * CHUNK_SIZE + glm::ivec3(x, y, z);
+          uint8_t packed = 0;
+          if (position.y > InputProfile.MaxY)
+            packed = Spec.include_skylight ? PackLight(kMaxLightLevel, 0) : 0;
+          else if (position.y >= InputProfile.MinY)
+          {
+            const auto source =
+                Light.find(UChunkManager::WorldToChunk(position));
+            if (source != Light.end())
+              packed = source->second[UChunk::LocalIndex(
+                  UChunkManager::WorldToLocal(position))];
+          }
+          padded->cells[SectionLightVolume::Index(x, y, z)] = packed;
+        }
+    result.chunks.push_back({c, it->second, std::move(padded)});
   }
   return result;
 }

@@ -4,6 +4,7 @@
 #include "World/Chunks/ChunkInputStamp.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Lighting/LightUtil.h"
+#include "World/Lighting/SectionLightVolume.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Math/WorldVerticalProfile.h"
 #include "World/Streaming/WorkToken.h"
@@ -42,6 +43,8 @@ struct RelightChunkLightData
 {
   glm::ivec3 coord{0};
   std::array<uint8_t, CHUNK_VOLUME> light_packed{};
+  /// Same calculation/read-set as the interior; null for legacy raw results.
+  std::shared_ptr<const SectionLightVolume> padded_light;
 };
 
 /// CheapRemesh C3: skip MarkRelit Dirty when Apply light equals current chunk.

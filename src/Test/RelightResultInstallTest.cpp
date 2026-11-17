@@ -771,7 +771,7 @@ void TestGeometryHaloAgainstDenseReference()
   stone.Physics = BlockPhysicsProfile::Solid();
   torch.Physics = BlockPhysicsProfile::Solid();
   torch.Render.Style = BlockRenderStyle::Cross;
-  torch.Lighting.Emission = 14;
+  torch.Lighting.Emission = 15;
   definitions->ReplaceAll({{8, stone}, {50, torch}},
                           {{"stone", 8}, {"torch", 50}});
   UBlockRegistry registry(nullptr, definitions);
@@ -795,12 +795,14 @@ void TestGeometryHaloAgainstDenseReference()
           world.SetBlock(origin + glm::ivec3(x, y, z), 8);
         }
       }
-  const std::array<glm::ivec3, 6> sources = {{{15, 23, 24},
+  const std::array<glm::ivec3, 8> sources = {{{15, 23, 24},
                                               {32, 24, 23},
                                               {24, 15, 23},
                                               {23, 32, 24},
                                               {23, 24, 15},
-                                              {24, 23, 32}}};
+                                              {24, 23, 32},
+                                              {0, 24, 24},
+                                              {47, 24, 24}}};
   RelightJobSpec spec;
   spec.block_positions = {origin + glm::ivec3(24)};
   spec.min_world_y = -32;
@@ -822,7 +824,7 @@ void TestGeometryHaloAgainstDenseReference()
       definitions->ReplaceAll({{8, stone}, {50, torch}},
                               {{"stone", 8}, {"torch", 50}});
     }
-    const int emission = scenario == 2 ? 6 : 14;
+    const int emission = scenario == 2 ? 6 : 15;
     std::vector<uint8_t> reference(cells.size(), 0), next;
     for (size_t i = 0; i < cells.size(); ++i)
       if (cells[i] == 50)
@@ -860,6 +862,17 @@ void TestGeometryHaloAgainstDenseReference()
                      {x, y, z})]) == reference[index(x + 16, y + 16, z + 16)],
                  "all 4096 target cells match independent dense reference "
                  "after source changes");
+    Expect(static_cast<bool>(result.chunks[0].padded_light),
+           "geometry calculation retains the complete mesh sampling volume");
+    for (int z = -2; z < 18; ++z)
+      for (int y = -2; y < 18; ++y)
+        for (int x = -2; x < 18; ++x)
+          Expect(UnpackBlock(result.chunks[0]
+                                 .padded_light
+                                 ->cells[SectionLightVolume::Index(x, y, z)]) ==
+                     reference[index(x + 16, y + 16, z + 16)],
+                 "all 8000 padded cells match independent Jacobi reference "
+                 "after source removal and material emission changes");
     const auto repeated = snapshot.Compute(registry);
     Expect(repeated.chunks[0].light_packed == result.chunks[0].light_packed,
            "reusing immutable snapshot recomputes the same field");
