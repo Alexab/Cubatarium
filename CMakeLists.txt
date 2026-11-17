@@ -1984,6 +1984,18 @@ cubatarium_add_test(NAME relight_install_planner_test
         src/Test/RelightInstallPlannerTest.cpp
     LIBRARIES glm::glm)
 
+cubatarium_add_test(NAME section_light_field_ownership_test
+    SOURCES
+        src/Test/SectionLightFieldOwnershipTest.cpp
+        src/World/Chunks/Chunk.cpp
+        src/World/Chunks/ChunkManager.cpp
+        src/World/Math/FluidCellState.cpp
+        src/World/Math/GridMath.cpp
+    LIBRARIES glm::glm)
+add_test(NAME section_light_field_ownership_test
+    COMMAND $<TARGET_FILE:section_light_field_ownership_test>)
+set_tests_properties(section_light_field_ownership_test PROPERTIES LABELS "unit;lighting;streaming")
+
 cubatarium_add_test(NAME chunk_render_demand_test
     SOURCES
         src/Test/ChunkRenderDemandTest.cpp

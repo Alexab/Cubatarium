@@ -41,6 +41,18 @@ public:
   const UChunk *GetChunk(glm::ivec3 chunk_coord) const;
   bool HasChunk(glm::ivec3 chunk_coord) const;
   void EnsureChunk(glm::ivec3 chunk_coord);
+  /// Light ownership may exist without allocating a geometry chunk. Allocation
+  /// alone is not evidence of known AIR or a completed physical calculation.
+  std::shared_ptr<const SectionLightField>
+  GetSectionLightField(glm::ivec3 coord) const;
+  std::shared_ptr<const SectionLightField>
+  EnsureSectionLightField(glm::ivec3 coord);
+  bool ReplaceSectionLightData(glm::ivec3 coord,
+                               const std::array<uint8_t, CHUNK_VOLUME> &data);
+  /// Explicit retirement for absent geometry; resident adapters retain
+  /// ownership.
+  bool ReleaseAbsentSectionLightField(glm::ivec3 coord);
+  size_t GetSectionLightFieldCount() const { return LightFields.size(); }
   /// Fired when a chunk transitions to non-air (its first populated block
   /// arrives via SetBlock). Subscriber handles cross-thread sync; set once
   /// before async IO starts.
@@ -48,8 +60,7 @@ public:
   void RemoveChunk(glm::ivec3 chunk_coord);
   void ForEachChunk(const std::function<void(const UChunk &)> &fn) const;
   /// Iterate each resident horizontal column once (coordinate Y is always 0).
-  void ForEachColumn(
-      const std::function<void(const glm::ivec3 &)> &fn) const;
+  void ForEachColumn(const std::function<void(const glm::ivec3 &)> &fn) const;
   /// O(1) resident chunk count (loaded map size, not free-list).
   size_t GetResidentChunkCount() const { return Chunks.size(); }
   /// Changes for every resident data/light mutation and residency transition.
@@ -88,11 +99,15 @@ public:
 private:
   UChunk &GetOrCreateChunk(glm::ivec3 chunk_coord);
 
-  void NoteInputMutation()
+  void NoteLightInputMutation()
   {
     if (!InputRevision)
       InputRevision = std::make_shared<uint64_t>(0);
     ++*InputRevision;
+  }
+  void NoteInputMutation()
+  {
+    NoteLightInputMutation();
     if (!GeometryInputRevision)
       GeometryInputRevision = std::make_shared<uint64_t>(0);
     ++*GeometryInputRevision;
@@ -101,6 +116,8 @@ private:
   std::shared_ptr<uint64_t> GeometryInputRevision{
       std::make_shared<uint64_t>(0)};
   std::unordered_map<glm::ivec3, std::unique_ptr<UChunk>, IVec3Hash> Chunks;
+  std::unordered_map<glm::ivec3, std::shared_ptr<SectionLightField>, IVec3Hash>
+      LightFields;
   std::unordered_map<glm::ivec3, size_t, IVec3Hash> ResidentColumnChunkCounts;
   std::vector<std::unique_ptr<UChunk>> FreeList;
   size_t MaxFreeListChunks{256};

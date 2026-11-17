@@ -81,6 +81,7 @@ void UChunkManager::Clear()
 {
   NoteInputMutation();
   Chunks.clear();
+  LightFields.clear();
   ResidentColumnChunkCounts.clear();
   FreeList.clear();
 }
@@ -139,6 +140,42 @@ bool UChunkManager::HasChunk(glm::ivec3 chunkCoord) const
   return Chunks.find(chunkCoord) != Chunks.end();
 }
 
+std::shared_ptr<const SectionLightField>
+UChunkManager::GetSectionLightField(glm::ivec3 coord) const
+{
+  const auto found = LightFields.find(coord);
+  return found == LightFields.end() ? nullptr : found->second;
+}
+
+std::shared_ptr<const SectionLightField>
+UChunkManager::EnsureSectionLightField(glm::ivec3 coord)
+{
+  const auto found = LightFields.find(coord);
+  if (found != LightFields.end()) return found->second;
+  auto field = std::make_shared<SectionLightField>();
+  LightFields.emplace(coord, field);
+  NoteLightInputMutation();
+  return field;
+}
+
+bool UChunkManager::ReplaceSectionLightData(
+    glm::ivec3 coord, const std::array<uint8_t, CHUNK_VOLUME> &data)
+{
+  EnsureSectionLightField(coord);
+  if (!LightFields.at(coord)->Replace(data))
+    return false;
+  NoteLightInputMutation();
+  return true;
+}
+
+bool UChunkManager::ReleaseAbsentSectionLightField(glm::ivec3 coord)
+{
+  if (HasChunk(coord) || !LightFields.erase(coord))
+    return false;
+  NoteLightInputMutation();
+  return true;
+}
+
 void UChunkManager::ForEachChunk(
     const std::function<void(const UChunk &)> &fn) const
 {
@@ -168,6 +205,7 @@ void UChunkManager::RemoveChunk(glm::ivec3 chunkCoord)
   std::unique_ptr<UChunk> chunk = std::move(it->second);
   chunk->ClearLightCalculationProofs();
   Chunks.erase(it);
+  LightFields.erase(chunkCoord);
   const glm::ivec3 groundCoord(chunkCoord.x, 0, chunkCoord.z);
   auto columnIt = ResidentColumnChunkCounts.find(groundCoord);
   if (columnIt != ResidentColumnChunkCounts.end())
@@ -204,6 +242,7 @@ UChunk &UChunkManager::GetOrCreateChunk(glm::ivec3 chunkCoord)
   {
     chunk = std::move(FreeList.back());
     FreeList.pop_back();
+    chunk->Light.field = std::make_shared<SectionLightField>();
     chunk->ResetForReuse(chunkCoord);
   }
   else
@@ -211,6 +250,10 @@ UChunk &UChunkManager::GetOrCreateChunk(glm::ivec3 chunkCoord)
     chunk = std::make_unique<UChunk>(chunkCoord);
   }
   NoteInputMutation();
+  auto [field_it, field_inserted] =
+      LightFields.emplace(chunkCoord, chunk->Light.field);
+  if (!field_inserted)
+    chunk->Light.field = field_it->second;
   chunk->InputRevision.clock = InputRevision;
   chunk->InputRevision.geometry_clock = GeometryInputRevision;
   const auto inserted = Chunks.emplace(chunkCoord, std::move(chunk));

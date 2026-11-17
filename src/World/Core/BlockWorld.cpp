@@ -69,7 +69,7 @@ int UBlockWorld::RecordLightCalculation(
         }
       if (!installed)
         continue; // publication was omitted or overwritten
-      auto &proof = chunk->LightProofs[domain];
+      auto &proof = chunk->Light.field->LightProofs[domain];
       proof.input = context;
       proof.owner = LightCalculationOwner;
       proof.incarnation = chunk->GetIncarnation();
@@ -176,7 +176,8 @@ LightCalculationState UBlockWorld::GetLightCalculationState(
   const auto *chunk = Chunks.GetChunk(coord);
   if (!chunk)
     return LightCalculationState::Missing;
-  const auto &proof = chunk->LightProofs[domain == LightDomain::Sky ? 0 : 1];
+  const auto &proof =
+      chunk->Light.field->LightProofs[domain == LightDomain::Sky ? 0 : 1];
   if (!proof.input || proof.owner != LightCalculationOwner ||
       proof.incarnation != chunk->GetIncarnation() ||
       proof.field_revision != (domain == LightDomain::Sky
@@ -208,7 +209,7 @@ bool UBlockWorld::LightCalculationsStillCurrent(
     {
       if (!(domain == 0 ? sky : block))
         continue;
-      const auto &proof = chunk->LightProofs[domain];
+      const auto &proof = chunk->Light.field->LightProofs[domain];
       if (!proof.input || proof.owner != LightCalculationOwner ||
           proof.incarnation != chunk->GetIncarnation() ||
           proof.field_revision != (domain == 0
@@ -234,8 +235,8 @@ bool UBlockWorld::HasCompleteLightCalculation(
       LightCalculationState::Complete)
     return false;
   const auto *chunk = Chunks.GetChunk(coord);
-  const auto &sky = chunk->LightProofs[0];
-  const auto &block = chunk->LightProofs[1];
+  const auto &sky = chunk->Light.field->LightProofs[0];
+  const auto &block = chunk->Light.field->LightProofs[1];
   if (block.input == sky.input && block.owner == LightCalculationOwner &&
       block.incarnation == chunk->GetIncarnation() &&
       block.field_revision == chunk->GetBlockLightRevision())
