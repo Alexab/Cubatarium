@@ -287,6 +287,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                    "--pitch", str(pitch), "--stop-after-blocked-sec", "8",
                    "--metrics", "--artifact-root", str(artifacts.resolve()),
                    "--report", str((artifacts / "legacy-gates.json").resolve())]
+        if startup_only:
+            command.append("--no-hold-forward")
         if sprint:
             command.append("--sprint")
         if process_timeout is not None:

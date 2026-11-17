@@ -123,6 +123,7 @@ class IsolatedFixtureTest(unittest.TestCase):
         self.assertTrue(manifest["startup_only"])
         self.assertTrue(manifest["sprint"])
         self.assertIn("--sprint", manifest["command"])
+        self.assertIn("--no-hold-forward", manifest["command"])
         self.assertEqual(self.config.read_bytes(), self.original)
 
     def test_startup_observation_checks_native_inputs_and_three_dimensional_drift(self):
