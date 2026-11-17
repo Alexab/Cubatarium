@@ -65,11 +65,17 @@ class EngineSmokeVerdictTest(unittest.TestCase):
                    elapsed_ms=4000, light_complete=True, drawable=False,
                    mesh_satisfies=False, dirty=True, geom=[5, 3])
         old = dict(row, elapsed_ms=2000, geom=[3, 3])
+        column = dict(schema="enter-column-witness.v1", column=[-3, 7], elapsed_ms=4000,
+                      resident_sections=8, complete_sections=0, incomplete_sections=list(range(8)),
+                      absent_unknown_sections=12, terrain_complete=True)
         log.write_text("[EnterSectionWitness] " + json.dumps(row) + "\n" +
                        "[EnterSectionWitness] " + json.dumps(old) + "\n" +
-                       "[EnterSectionWitness] {broken\n", encoding="utf-8")
+                       "[EnterSectionWitness] {broken\n" +
+                       "[EnterColumnWitness] " + json.dumps(column) + "\n",
+                       encoding="utf-8")
         evidence = read_startup_warmup_evidence([log])
         self.assertEqual(evidence["section_witnesses"], [row])
+        self.assertEqual(evidence["column_witnesses"], [column])
         self.report.pop("first_frame_required_ring_ready")
         self.report["startup_warmup_evidence"] = evidence
         self.trace()

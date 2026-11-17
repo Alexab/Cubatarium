@@ -864,6 +864,47 @@ void UEnterLitDiagnostics::MaybeLogHeartbeat(const EnterLitSample &sample,
       }
       CubatariumLogInfo("EnterSectionWitness", row.dump());
     }
+    // Diagnostic sampling, not the required-ring acceptance witness. Include
+    // unresolved neighboring columns so a ready focus cannot hide missing
+    // halo data or a stalled owner elsewhere in the initial visible ring.
+    for (int dz = -4; dz <= 4; ++dz)
+      for (int dx = -4; dx <= 4; ++dx)
+      {
+        const glm::ivec2 col(center.x + dx, center.z + dz);
+        const glm::ivec3 ground(col.x, 0, col.y);
+        if (world->IsColumnLitReady(ground) && world->IsColumnRenderReady(ground))
+          continue;
+        int resident = 0, complete = 0, absent_unknown = 0;
+        nlohmann::json incomplete = nlohmann::json::array();
+        for (int cy = FloorDiv(world->GetProceduralSettings().MinHeight, CHUNK_SIZE);
+             cy <= FloorDiv(world->GetProceduralSettings().MaxHeight, CHUNK_SIZE); ++cy)
+        {
+          const glm::ivec3 coord(col.x, cy, col.y);
+          if (blocks.GetChunkManager().HasChunk(coord))
+          {
+            ++resident;
+            if (blocks.HasCompleteLightCalculation(coord, catalog))
+              ++complete;
+            else
+              incomplete.push_back(cy);
+          }
+          else if (!blocks.IsKnownAbsentAirChunk(coord))
+            ++absent_unknown;
+        }
+        nlohmann::json row = {
+            {"schema", "enter-column-witness.v1"}, {"elapsed_ms", sample.elapsed_ms},
+            {"column", {col.x, col.y}}, {"sample_radius", 4},
+            {"terrain_complete", world->IsTerrainColumnCompleteFast(ground)},
+            {"pending_light", world->IsPendingLightBeforeMesh(col)},
+            {"light_ready", world->IsColumnLitReady(ground)},
+            {"render_ready", world->IsColumnRenderReady(ground)},
+            {"relight_queued", world->IsTerrainColumnRelightQueued(col)},
+            {"relight_inflight", world->IsAsyncRelightColumnInFlight(col)},
+            {"resident_sections", resident}, {"complete_sections", complete},
+            {"incomplete_sections", incomplete}, {"absent_unknown_sections", absent_unknown}};
+        CubatariumLogInfo("EnterColumnWitness", row.dump());
+      }
+
   }
   CubatariumFlushLogs();
   std::lock_guard<std::mutex> lock(g_session_mutex);

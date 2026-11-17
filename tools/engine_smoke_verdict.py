@@ -18,6 +18,7 @@ def read_startup_warmup_evidence(log_paths) -> dict[str, Any]:
     """Recognize positive failure evidence; ordinary logs never prove readiness."""
     observed = []
     sections = {}
+    columns = {}
     for path in log_paths:
         with Path(path).open(encoding="utf-8", errors="replace") as stream:
             for line in stream:
@@ -38,6 +39,23 @@ def read_startup_warmup_evidence(log_paths) -> dict[str, Any]:
                                 sections[key] = row
                     except (ValueError, KeyError, TypeError):
                         pass
+                marker = "[EnterColumnWitness] "
+                if marker in line:
+                    try:
+                        row = json.loads(line.split(marker, 1)[1])
+                        column = row["column"]
+                        elapsed = row["elapsed_ms"]
+                        if (row.get("schema") == "enter-column-witness.v1" and
+                                isinstance(column, list) and len(column) == 2 and
+                                all(isinstance(v, int) and not isinstance(v, bool) for v in column) and
+                                isinstance(elapsed, (int, float)) and not isinstance(elapsed, bool) and
+                                math.isfinite(elapsed) and elapsed >= 0):
+                            key = tuple(column)
+                            old = columns.get(key)
+                            if old is None or elapsed >= old["elapsed_ms"]:
+                                columns[key] = row
+                    except (ValueError, KeyError, TypeError):
+                        pass
                 if "[EnterWarmup]" not in line:
                     continue
                 fields = dict(re.findall(r"\b(settle_reason|elapsed_ms|visibility_debt|underfeet)=([^\s]+)", line))
@@ -56,7 +74,8 @@ def read_startup_warmup_evidence(log_paths) -> dict[str, Any]:
                                      forced_with_debt=forced and (debt > 0 or underfeet == 0)))
     return dict(schema="startup-warmup-evidence.v1", records=observed,
                 forced_with_debt=any(row["forced_with_debt"] for row in observed),
-                section_witnesses=[sections[key] for key in sorted(sections)][:64])
+                section_witnesses=[sections[key] for key in sorted(sections)][:64],
+                column_witnesses=[columns[key] for key in sorted(columns)][:81])
 
 
 def component(status: str, reason: str, **evidence: Any) -> dict[str, Any]:
