@@ -1534,6 +1534,8 @@ void UWindowManager::TickBudgetedAutosave()
 
 void UWindowManager::Render()
 {
+  if (PendingDiagnosticCapture && Geometries)
+    Geometries->RequestDiagnosticPixelProbe();
   if (World)
   {
     World->SetLastRenderWindowSetupMs(0.0);

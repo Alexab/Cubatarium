@@ -42,6 +42,11 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
         return {"status": "UNTESTED", "reason": "missing_floor_draw_source_trace"}
     checked = faults = skipped = positive = 0
     source_counts = {"cpu": 0, "packed_gpu": 0}
+    skip_reasons = {}
+    def skip(reason):
+        nonlocal skipped
+        skipped += 1
+        skip_reasons[reason] = skip_reasons.get(reason, 0) + 1
     epochs = set()
     observed_emitters = set()
     observed_floor_cells = set()
@@ -59,12 +64,12 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
                 distance = row.get(prefix + "hit_distance")
                 if (not all(finite(v) for v in origin + direction + [distance]) or
                         abs(sum(v*v for v in direction) - 1) > 0.01 or direction[1] >= -1e-6):
-                    skipped += 1; continue
+                    skip("not_downward_valid_ray"); continue
                 expected_depth = near_cave_surface(scene, origin, direction)
                 floor_depth = (scene["cave_bounds"]["floor"] - origin[1]) / direction[1]
                 if (expected_depth is None or abs(floor_depth - expected_depth) > 0.001 or
                         abs(distance - expected_depth) > 0.05 + expected_depth * 0.001):
-                    skipped += 1; continue
+                    skip("not_joined_floor_depth"); continue
                 px = origin[0] + direction[0] * expected_depth
                 pz = origin[2] + direction[2] * expected_depth
                 x, z = math.floor(px + 0.5), math.floor(pz + 0.5)
@@ -72,7 +77,7 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
                 lo, hi = scene["chunk_x_bounds"]
                 if (abs(px-x) > 0.45 or abs(pz-z) > 0.45 or
                         x < lo*16+16 or x >= (hi+1)*16-16):
-                    skipped += 1; continue
+                    skip("unscoped_floor_cell"); continue
                 if (row.get(prefix + "surface_valid") != 1 or
                         row.get(prefix + "vertex_light_valid") != 1 or
                         row.get(prefix + "vertex_light_face_index") != 4 or
@@ -81,7 +86,7 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
                         row[prefix + "vertex_light_distance"] > 0.03 or
                         row.get(prefix + "vertex_light_preview") != 0 or
                         row.get(prefix + "preview_shader_override") != 0):
-                    skipped += 1; continue
+                    skip("missing_or_provisional_source_match"); continue
                 source_kind = row.get(prefix + "light_source_kind", 1)
                 cpu_source = (source_kind == 1 and finite(row.get(prefix + "source_index_count")) and
                               row[prefix + "source_index_count"] > 0)
@@ -89,13 +94,13 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
                               finite(row.get(prefix + "packed_light_quad_count")) and
                               row[prefix + "packed_light_quad_count"] > 0)
                 if not cpu_source and not gpu_source:
-                    skipped += 1; continue
+                    skip("missing_readable_draw_source"); continue
                 actual = row.get(prefix + "vertex_block_light")
                 sky = row.get(prefix + "vertex_sky_light")
                 epoch = row.get("frame_epoch")
                 if (not finite(actual) or not finite(sky) or not isinstance(epoch, int) or
                         isinstance(epoch, bool)):
-                    skipped += 1; continue
+                    skip("missing_finite_light_or_epoch"); continue
                 expected = expected_floor_light(scene, x, z)
                 is_emitter = (x, floor_y, z) in emitter_cells
                 expected_id = fixture["material_id"] if is_emitter else 560
@@ -113,6 +118,9 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
                                      "source_sky_light": sky, "source_material_id": row.get(prefix + "vertex_light_block_id")})
     except (ValueError, TypeError, KeyError, AttributeError):
         return {"status": "FAIL", "reason": "malformed_floor_reference_trace"}
+    coverage = {"samples": checked >= 25, "positive_samples": positive >= 25,
+                "frame_epochs": len(epochs) >= 3, "floor_cells": len(observed_floor_cells) >= 8,
+                "light_levels": len(expected_levels) >= 3, "emitter_surface": bool(observed_emitters)}
     status = "FAIL" if faults else ("PASS" if checked >= 25 and positive >= 25 and
              len(epochs) >= 3 and len(observed_floor_cells) >= 8 and
              len(expected_levels) >= 3 and observed_emitters else "UNTESTED")
@@ -122,5 +130,6 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
             "frame_epochs": len(epochs), "observed_emitter_cells": len(observed_emitters),
             "distinct_floor_cells": len(observed_floor_cells),
             "distinct_expected_levels": len(expected_levels),
-            "skipped": skipped, "examples": examples,
+            "skipped": skipped, "skip_reasons": skip_reasons,
+            "missing_coverage": [k for k,v in coverage.items() if not v], "examples": examples,
             "scope": "prepared dry-cave opaque floor CPU vertex or witnessed packed GPU draw-buffer light joined to analytic framebuffer depth; no shaded RGB, transparency or full-screen acceptance"}

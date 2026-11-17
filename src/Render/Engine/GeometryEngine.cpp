@@ -132,14 +132,22 @@ bool PixelProbeCenterEveryFrameEnabled()
   return enabled;
 }
 
+// One targeted witness on the render thread; reset on each opaque pass.
+thread_local bool g_diagnostic_center_pixel_probe = false;
+
+bool PixelProbeCenterSampleEnabled()
+{
+  return g_diagnostic_center_pixel_probe || PixelProbeCenterEveryFrameEnabled();
+}
+
 int PixelProbeColumns()
 {
-  return PixelProbeCenterEveryFrameEnabled() ? 1 : kPixelProbeGridColumns;
+  return PixelProbeCenterSampleEnabled() ? 1 : kPixelProbeGridColumns;
 }
 
 int PixelProbeSampleX(int column, int width)
 {
-  if (PixelProbeCenterEveryFrameEnabled())
+  if (PixelProbeCenterSampleEnabled())
   {
     return std::clamp(width / 2, 0, width - 1);
   }
@@ -167,7 +175,7 @@ float ReadPixelProbeEnvFloat(const char *name, float fallback)
 
 int PixelProbeRows()
 {
-  if (PixelProbeCenterEveryFrameEnabled())
+  if (PixelProbeCenterSampleEnabled())
   {
     return 1;
   }
@@ -1809,10 +1817,9 @@ void CaptureTransparentPixelProbe(
       uint32_t tile_pixel_count = 0;
       const size_t scanline_offset =
           static_cast<size_t>(row) * static_cast<size_t>(width) * 4u;
-      const int x0 = PixelProbeCenterEveryFrameEnabled()
-                         ? local_x
-                         : column * width / columns;
-      const int x1 = PixelProbeCenterEveryFrameEnabled()
+      const int x0 =
+          PixelProbeCenterSampleEnabled() ? local_x : column * width / columns;
+      const int x1 = PixelProbeCenterSampleEnabled()
                          ? local_x + 1
                          : (column + 1) * width / columns;
       for (int px = x0; px < x1; ++px)
@@ -4727,6 +4734,8 @@ static void ResetOpaqueDrawWitness()
 void UGeometryEngine::DrawCubeGeometry()
 {
   CUBA_ZONE("DrawCubeGeometry");
+  g_diagnostic_center_pixel_probe = DiagnosticPixelProbePending_;
+  DiagnosticPixelProbePending_ = false;
   ResetOpaqueDrawWitness();
   auto t_begin = std::chrono::high_resolution_clock::now();
   double filter_ms = 0.0;
@@ -4961,18 +4970,20 @@ void UGeometryEngine::DrawCubeGeometry()
           stalled_census_pixel_probe;
       if (periodic_pixel_probe || focus_change_pixel_probe ||
           screen_ray_pixel_probe || camera_band_peak_pixel_probe ||
-          stalled_census_pixel_probe || visual_hole_edge_pixel_probe)
+          stalled_census_pixel_probe || visual_hole_edge_pixel_probe ||
+          g_diagnostic_center_pixel_probe)
       {
         pixel_probe_capture.probe_id = render_probe_count;
         pixel_probe_capture.visual_hole_event_frame_epoch =
             visual_hole_edge_pixel_probe ? latest_visual_hole_event_epoch : 0;
-        pixel_probe_capture.trigger_flags =
-            static_cast<uint8_t>((periodic_pixel_probe ? 1u << 0 : 0u) |
-                                 (focus_change_pixel_probe ? 1u << 1 : 0u) |
-                                 (screen_ray_aligned_capture ? 1u << 2 : 0u) |
-                                 (camera_band_peak_pixel_probe ? 1u << 3 : 0u) |
-                                 (stalled_census_pixel_probe ? 1u << 4 : 0u) |
-                                 (visual_hole_edge_pixel_probe ? 1u << 5 : 0u));
+        pixel_probe_capture.trigger_flags = static_cast<uint8_t>(
+            (periodic_pixel_probe ? 1u << 0 : 0u) |
+            (focus_change_pixel_probe ? 1u << 1 : 0u) |
+            (screen_ray_aligned_capture ? 1u << 2 : 0u) |
+            (camera_band_peak_pixel_probe ? 1u << 3 : 0u) |
+            (stalled_census_pixel_probe ? 1u << 4 : 0u) |
+            (visual_hole_edge_pixel_probe ? 1u << 5 : 0u) |
+            (g_diagnostic_center_pixel_probe ? 1u << 6 : 0u));
         const bool ray_grid_row_layout =
             screen_ray_aligned_capture || visual_hole_edge_pixel_probe;
         pixel_probe_capture.rows =
@@ -4981,6 +4992,8 @@ void UGeometryEngine::DrawCubeGeometry()
                 : (visual_hole_edge_pixel_probe
                        ? std::max(kScreenRayAlignedPixelRows, PixelProbeRows())
                        : PixelProbeRows());
+        if (g_diagnostic_center_pixel_probe)
+          pixel_probe_capture.rows = 1;
         pixel_probe_capture.screen_ray_aligned_rows = ray_grid_row_layout;
         if (camera_band_peak_pixel_probe)
         {

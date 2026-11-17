@@ -4091,18 +4091,46 @@
       "scope": "Known-AIR generation is explicit opt-in; automatic demand/retention and legacy light-read stamps for absent fields require further work. No rendering/GPU/persistence completion claim."
     },
     "packed_draw_light_instrumentation": {
-      "status": "actual packed draw-range/buffer capture and bounded payload join implemented;45Python reference testsPASS; desktopRelease build running",
+      "status": "desktop Release PASS; real-input native completed; GPU floor transport values match but reference UNTESTED because emitter surface was not observed",
       "source_evidence": "Packed vertex-pulling shader reads allocator QuadSsbo at slot.OffsetQuads+draw-range.quadOffset. Current opaque light join enumerates CPU batch vertices only, explaining missing970GPU floor sources. Existing PackedOpaqueDrawTrace counts actual draws but lacks individual range/buffer/generation witnesses.",
       "decoder": "PackedQuadGeometry.h reconstructs shader corners, validates faces/cells/width/height and section extents. PackedQuadParityTest compares every face against independent CPU emitter geometry at signed origins and rejects malformed payloads.",
       "tests": "build/desktop-msvc/engine-packed-light-diagnostic-geometry-green-test.log:PASS",
       "test_correction": "Initial decoder parity fixture incorrectly translated CPU GreedyQuad.slice as GPU boundary-slice. CPU slice is already the cell index; corrected fixture mapping, shader unchanged. Initial failure is not evidence of a runtime geometry bug.",
-      "next_integration": "Capture actual per-range SSBO binding, slot generation, first/count and material at packed draw. Bounded desktop readback cache per probe capture, validated byte ranges and slot lifetime, decode actual payload and join to framebuffer depth. Expose explicit CPU/GPU source kind and readback validity; keep missing/GLES unsupported samplesUNTESTED. No voxel/live-field substitute for GPU draw bytes.",
+      "next_integration": "Append bounded explicitly aimed bot inspection targets and request a same-frame center-pixel draw witness, then rerun the unchanged independent acceptance thresholds.",
       "scope": "No GPU light acceptance yet; decoder test alone does not prove bound draw data or framebuffer color.",
       "implementation": "Opt-in packed draw trace records actual SSBO base binding, first/count, material and slot generation per issued range. Per probe capture reads at most16unique chunks, each capped to2048slot quads; validates range, generation and buffer bytes, restores copy-read binding. Actual packed words decode to geometry and light, matched to framebuffer opaque surface. Source kind0/1/2 and GPU payload checked/count fields prevent CPU/absent/GPU ambiguity. GLES readback remains unobserved.",
       "reference": "Floor oracle accepts either joined CPU source vertices or explicitly readable packed GPU payload; zero/missing GPU readback remainsUNTESTED and wrong nonzero reference valuesFAIL. Generic visual/RGB acceptance remainsUNTESTED. New verdict component fixture_floor_draw_source_light supersedes the earlier CPU-only component name for new runs.",
       "python_tests": "build/desktop-msvc/engine-packed-light-reference-tests.log:45PASS",
-      "release_build": "build/desktop-msvc/engine-packed-light-payload-release-build.log (running; no success claim)",
-      "remaining": "Verify desktop compilation and fresh native GPU source-kind2/buffer payload evidence, floor-reference coverage and values. No GPU/RGB/full-screen acceptance until verified."
+      "release_build": "build/desktop-msvc/engine-packed-light-payload-release-build.log: PASS",
+      "remaining": "Observe source material surface and complete positive floor reference; then broaden to removals, seams, AIR, fluid, shaded RGB and other backends. Transport matches do not grant framebuffer color/full-screen acceptance.",
+      "native": {
+        "source": "7e123727e",
+        "artifacts": "build/desktop-msvc/engine-packed-light-payload-lit-native",
+        "application_exit": 0,
+        "wrapper_exit": 2,
+        "startup": "PASS: 81 columns, 1944 sections, zero data/light/publication debt after world paint",
+        "route": "PASS: 22 chunks, 898 samples outside initial ring, zero relocation; 24/24 inspection captures",
+        "near_opaque_depth": "9836 checks / 63 epochs / zero faults; 244 unscoped excluded",
+        "floor_draw_source_light": {
+          "status": "UNTESTED",
+          "checked": 931,
+          "packed_gpu": 931,
+          "distinct_floor_cells": 765,
+          "expected_levels": 10,
+          "epochs": 59,
+          "faults": 0,
+          "missing_coverage": [
+            "emitter_surface"
+          ]
+        }
+      },
+      "coverage_diagnostics": "Skip reasons and missing-coverage list expose exact UNTESTED causes; 45 Python tests PASS (engine-floor-light-skip-reasons-tests.log). Thresholds unchanged."
+    },
+    "targeted_bot_inspection": {
+      "status": "implemented; native validation pending",
+      "implementation": "Up to eight finite inspection_targets per waypoint in route coordinates, translated once for relative routes. Twelve panorama poses remain; targeted poses smoothly turn via normal orientation intent without movement. Each queued capture requests one same-frame center-pixel readback with trigger bit6 when visual diagnostics are enabled; periodic grid resumes on other frames.",
+      "tests": "engine-targeted-inspection-unit-test.log: PASS; engine-targeted-inspection-python-tests.log: 45 PASS",
+      "release_build": "build/desktop-msvc/engine-targeted-inspection-release-build.log: running"
     }
   }
 }

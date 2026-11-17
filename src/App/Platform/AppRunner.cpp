@@ -1687,6 +1687,27 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
             throw std::runtime_error("waypoint coordinates must be finite");
         }
         waypoint.inspect = point.value("inspect", true);
+        if (point.contains("inspection_targets"))
+        {
+          const auto &targets = point.at("inspection_targets");
+          if (!targets.is_array() || targets.size() > 8)
+            throw std::runtime_error(
+                "at most eight inspection targets allowed");
+          for (const auto &target : targets)
+          {
+            if (!target.is_array() || target.size() != 3)
+              throw std::runtime_error(
+                  "inspection target must have three coordinates");
+            glm::vec3 value;
+            for (int axis = 0; axis < 3; ++axis)
+            {
+              value[axis] = target.at(axis).get<float>();
+              if (!std::isfinite(value[axis]))
+                throw std::runtime_error("inspection target must be finite");
+            }
+            waypoint.inspectionTargets.push_back(value);
+          }
+        }
         waypoints.push_back(waypoint);
       }
       diagnostic_bot.SetRoute(std::move(waypoints),

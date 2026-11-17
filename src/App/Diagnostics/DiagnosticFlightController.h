@@ -30,6 +30,8 @@ struct DiagnosticFlightWaypoint
 {
   glm::vec3 position{0.0f};
   bool inspect{true};
+  // Additional world-space look targets after the twelve panoramic poses.
+  std::vector<glm::vec3> inspectionTargets;
 };
 
 struct DiagnosticFlightObservation

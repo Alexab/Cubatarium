@@ -121,6 +121,8 @@ public:
   }
 
   void Paint(int width_size, int height_size, double view_duration);
+  /// Opt-in diagnostic capture, consumed by the next opaque render.
+  void RequestDiagnosticPixelProbe() { DiagnosticPixelProbePending_ = true; }
 
   // Methods for sky color management
   void SetSkyColor(float r, float g, float b, float a = 1.0f);
@@ -190,6 +192,7 @@ public:
                                float shellAlpha) override;
 
 private:
+  bool DiagnosticPixelProbePending_{false};
   // Static cube geometry (one VAO/VBO/EBO reused for all cubes)
   bool InitCubeBuffers();
   void DestroyCubeBuffers();

@@ -277,6 +277,16 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                      "waypoints": [{"position": [0, rise, 0], "inspect": True},
                                    {"position": [distance * math.cos(angle), rise,
                                                  distance * math.sin(angle)], "inspect": True}]}
+        if scene and scene.get("lighting_fixture"):
+            start = scene["starting_eye"]
+            emitters = scene["lighting_fixture"]["emitters"]
+            for point in bot_route["waypoints"]:
+                eye = [a + b for a, b in zip(start, point["position"])]
+                emitter = min(emitters, key=lambda p: math.dist(eye, p))
+                # Target the top face in the same relative coordinate frame
+                # as the waypoint, without changing any runtime world cell.
+                point["inspection_targets"] = [[emitter[0] - start[0],
+                    emitter[1] + 0.5 - start[1], emitter[2] - start[2]]]
         if startup_only:
             bot_route["purpose"] = "startup_observation"
             bot_route["waypoints"] = []

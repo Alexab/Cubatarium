@@ -116,7 +116,11 @@ DiagnosticFlightController::Tick(const DiagnosticFlightObservation &o,
   {
     if (Relative_)
       for (auto &point : Route_)
+      {
         point.position += o.position;
+        for (auto &target : point.inspectionTargets)
+          target += o.position;
+      }
     LastTick_ = StageStarted_ = LastProgress_ = o.time;
     ProgressPosition_ = o.position;
     TakeoffY_ = o.position.y;
@@ -162,10 +166,22 @@ DiagnosticFlightController::Tick(const DiagnosticFlightObservation &o,
   }
   if (State_ == DiagnosticFlightState::Inspect)
   {
-    const float target_yaw =
+    float target_yaw =
         InspectYaw_ + 90.0f * static_cast<float>(InspectPose_ / 3);
-    const float target_pitch =
-        -45.0f + 45.0f * static_cast<float>(InspectPose_ % 3);
+    float target_pitch = -45.0f + 45.0f * static_cast<float>(InspectPose_ % 3);
+    if (InspectPose_ >= 12)
+    {
+      const glm::vec3 delta =
+          Route_[Waypoint_]
+              .inspectionTargets[static_cast<size_t>(InspectPose_ - 12)] -
+          o.position;
+      const float horizontal = glm::length(glm::vec2(delta.x, delta.z));
+      target_yaw = horizontal > 0.001f
+                       ? glm::degrees(std::atan2(delta.z, delta.x))
+                       : o.yaw;
+      target_pitch = std::clamp(glm::degrees(std::atan2(delta.y, horizontal)),
+                                -89.0f, 89.0f);
+    }
     command.yaw = TurnToward(o.yaw, target_yaw, dt * 180.0f);
     command.pitch = TurnToward(o.pitch, target_pitch, dt * 90.0f);
     if (std::abs(std::remainder(o.yaw - target_yaw, 360.0f)) < 2.0f &&
@@ -181,7 +197,8 @@ DiagnosticFlightController::Tick(const DiagnosticFlightObservation &o,
       {
         ++InspectPose_;
         InspectPoseStarted_ = -1.0;
-        if (InspectPose_ == 12)
+        if (static_cast<size_t>(InspectPose_) ==
+            12 + Route_[Waypoint_].inspectionTargets.size())
         {
           ++Waypoint_;
           State_ = DiagnosticFlightState::Travel;

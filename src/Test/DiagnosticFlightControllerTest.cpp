@@ -136,5 +136,38 @@ int main()
     Expect(bot.InspectionCaptureCount() == 12,
            "each stable inspection direction must request its own capture");
   }
+  {
+    DiagnosticFlightController bot;
+    bot.SetRoute({{{0, 0, 0}, true, {{2, -7.5f, 0}}}}, true);
+    DiagnosticFlightObservation o{{22, -36, 51}, 180, 0, 0, false};
+    bool targeted_capture = false;
+    for (int i = 0; i < 1200 && bot.State() != DiagnosticFlightState::Complete;
+         ++i)
+    {
+      o.time += 0.05;
+      const auto action = bot.Tick(o, Clear);
+      Expect(!action.forward && !action.up && !action.down,
+             "targeted inspection must remain stationary");
+      if (action.capture && action.captureId == 12)
+      {
+        const glm::vec3 direction(std::cos(glm::radians(action.pitch)) *
+                                      std::cos(glm::radians(action.yaw)),
+                                  std::sin(glm::radians(action.pitch)),
+                                  std::cos(glm::radians(action.pitch)) *
+                                      std::sin(glm::radians(action.yaw)));
+        Expect(glm::dot(direction, glm::normalize(glm::vec3(2, -7.5f, 0))) >
+                   0.999f,
+               "relative inspection target must translate once and aim at its "
+               "world point");
+        targeted_capture = true;
+      }
+      o.yaw = action.yaw;
+      o.pitch = action.pitch;
+    }
+    Expect(targeted_capture && bot.State() == DiagnosticFlightState::Complete &&
+               bot.InspectionCaptureCount() == 13,
+           "panorama plus target must produce thirteen stable captures and "
+           "complete");
+  }
   return EXIT_SUCCESS;
 }
