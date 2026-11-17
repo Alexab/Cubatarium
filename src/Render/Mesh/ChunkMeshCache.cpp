@@ -3194,6 +3194,18 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord,
       adopt->second.PublishRevs.geom_rev =
           std::max(adopt->second.PublishRevs.geom_rev,
                    MeshRevisions.Current(chunkCoord));
+      const auto *chunk =
+          RepairGuardWorld->GetChunkManager().GetChunk(chunkCoord);
+      const auto *record = GetRenderDemandStore().Find(chunkCoord);
+      if (chunk && record && record->world_epoch == CaptureStore.WorldEpoch() &&
+          record->incarnation == chunk->GetIncarnation())
+      {
+        // Cache and demand must observe the same proven equivalent publication.
+        // Advancing only the cache leaves an ownerless desired/published gap.
+        GetRenderDemandStore().NotePublishedRevs(
+            chunkCoord, adopt->second.PublishRevs.geom_rev,
+            adopt->second.PublishRevs.light_rev);
+      }
     }
     ++RedundantRepairSkipN;
     return;
@@ -3394,6 +3406,18 @@ void UChunkMeshCache::MarkDirtyPriorityImpl(glm::ivec3 chunkCoord,
       adopt->second.PublishRevs.geom_rev =
           std::max(adopt->second.PublishRevs.geom_rev,
                    MeshRevisions.Current(chunkCoord));
+      const auto *chunk =
+          RepairGuardWorld->GetChunkManager().GetChunk(chunkCoord);
+      const auto *record = GetRenderDemandStore().Find(chunkCoord);
+      if (chunk && record && record->world_epoch == CaptureStore.WorldEpoch() &&
+          record->incarnation == chunk->GetIncarnation())
+      {
+        // Cache and demand must observe the same proven equivalent publication.
+        // Advancing only the cache leaves an ownerless desired/published gap.
+        GetRenderDemandStore().NotePublishedRevs(
+            chunkCoord, adopt->second.PublishRevs.geom_rev,
+            adopt->second.PublishRevs.light_rev);
+      }
     }
     ++RedundantRepairSkipN;
     return;

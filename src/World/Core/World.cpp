@@ -11684,6 +11684,55 @@ RequiredPresentationCoverage UWorld::SampleRequiredPresentationCoverage() const
 
 bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
 {
+  // A column ticket is not an executable owner of every vertical section.
+  // Recover exact ownerless publication debt, including zero-quad previews.
+  const auto center = UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const int radius = EnterVisualWorkRadiusChunks();
+  auto &mesh = GetMeshService();
+  auto &cache = mesh.GetCache();
+  const auto world_epoch = cache.GetCaptureStore().WorldEpoch();
+  int admitted = 0;
+  for (int z = center.z - radius; z <= center.z + radius; ++z)
+    for (int x = center.x - radius; x <= center.x + radius; ++x)
+      for (int cy = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE);
+           cy <= FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE); ++cy)
+      {
+        const glm::ivec3 coord(x, cy, z);
+        const auto *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+        if (!chunk || chunk->IsAirOnly() ||
+            CurrentSlicePublicationReadyForWarmup(*this, coord) ||
+            !ChunkSliceHasCurrentLightSettlement(*this, coord) ||
+            mesh.IsChunkMeshDirty(coord) ||
+            mesh.IsRemeshAfterApplyPending(coord) ||
+            mesh.HasInflightMeshBuild(coord) || mesh.IsPendingGpuApply(coord) ||
+            mesh.IsGpuExtractInFlight(coord) ||
+            cache.HasPendingCaptureWork(coord))
+          continue;
+        const auto published = cache.GetMeshPublishRevs(coord);
+        const auto *record = GetRenderDemandStore().Find(coord);
+        // Refresh a lagging shadow only from a current actual publication.
+        // Never lower a desired revision or declare a queue admission complete.
+        if (record && record->world_epoch == world_epoch &&
+            record->incarnation == chunk->GetIncarnation() &&
+            !cache.HasProvisionalLightPreview(coord) &&
+            cache.IsPublishedMeshCurrentForInputs(coord, BlockWorld) &&
+            published.light_rev == chunk->GetLightFieldRevision() &&
+            cache.GetMeshedLightRevision(coord) == published.light_rev &&
+            mesh.GetChunkMeshRevision(coord) <= published.geom_rev)
+        {
+          GetRenderDemandStore().NotePublishedRevs(coord, published.geom_rev,
+                                                   published.light_rev);
+          if (CurrentSlicePublicationReadyForWarmup(*this, coord))
+            continue;
+        }
+        if (admitted < 4 && !HasStablePublishedFaceDebt(coord))
+        {
+          EnsureVisualRepairDirtyPriority(coord);
+          if (mesh.IsChunkMeshDirty(coord) ||
+              mesh.IsRemeshAfterApplyPending(coord))
+            ++admitted;
+        }
+      }
   const auto coverage = SampleRequiredPresentationCoverage();
   if (elapsed_ms < LastRequiredRingDiagnosticMs ||
       elapsed_ms - LastRequiredRingDiagnosticMs >= 2000.0 || coverage.Ready())
