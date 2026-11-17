@@ -455,7 +455,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                 verdict["status"] = "UNTESTED"
         if scene is not None and scene.get("name") == "open-sky-plane" and not startup_only:
             from engine_camera_light_reference import evaluate as evaluate_camera_light
-            camera_light = evaluate_camera_light(scene, sorted((artifacts / "logs").glob("*.log.INFO.*")))
+            camera_light = evaluate_camera_light(scene, sorted((artifacts / "logs").glob("*.log.INFO.*")),
+                                                 expected_frames=report.get("ingame_frames"))
             verdict["components"]["fixture_camera_field_light"] = camera_light
             (artifacts / "fixture-camera-light-reference.json").write_text(
                 json.dumps(camera_light, indent=2) + "\n", encoding="utf-8")

@@ -12,7 +12,7 @@ import re
 from pathlib import Path
 
 
-def evaluate(scene: dict, logs: list[Path]) -> dict:
+def evaluate(scene: dict, logs: list[Path], *, expected_frames: int | None = None) -> dict:
     if scene.get("name") != "open-sky-plane":
         return dict(status="UNTESTED", reason="unsupported_camera_light_scene")
     try:
@@ -120,12 +120,16 @@ def evaluate(scene: dict, logs: list[Path]) -> dict:
     coverage = dict(first_paint=marker_epoch is not None, first_camera_sample=first_sample,
                     samples=ready_samples >= 25,
                     frame_epochs=len(epochs) >= 3, absent_geometry_sections=len(air_sections) >= 8,
-                    physical_mode=unsupported == 0)
+                    physical_mode=unsupported == 0,
+                    paint_frame_coverage=(isinstance(expected_frames, int) and
+                        not isinstance(expected_frames, bool) and expected_frames > 0 and
+                        len(seen) == len(epochs) == expected_frames and skipped == 0))
     status = "FAIL" if faults else "PASS" if all(coverage.values()) else "UNTESTED"
     return dict(schema="engine-camera-light-reference.v1", status=status,
                 reason="camera_canonical_field_at_paint", samples=samples,
                 ready_samples=ready_samples, air_samples=air_samples,
                 frame_epochs=len(epochs), distinct_air_sections=len(air_sections),
+                expected_game_frames=expected_frames, observed_paint_frames=len(seen),
                 unsupported_mode_samples=unsupported, skipped_unscoped=skipped,
                 faults=faults, examples=examples,
                 missing_coverage=[k for k, valid in coverage.items() if not valid],

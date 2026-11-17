@@ -4272,16 +4272,34 @@
         },
         "camera": "104static canonical observations/104reported in-game frames ready,0faults;0geometry-absent camera sections, so camera-field criterionUNTESTED. New stricter first-sample reanalysis alsoUNTESTED solely for absent-section coverage. No moving-camera acceptance.",
         "scope": "AIR producer now observed across multiple prefetched columns, but no claim about route readiness until bot takeoff completes."
+      },
+      "frame_coverage_hardening": {
+        "tests": "engine-camera-light-frame-coverage-python-test.log:53PASS; missing middle sample, missing frame count and mismatched frame count cannot PASS",
+        "native_reanalysis": "camera-full-frame-coverage-reanalysis.json:1619unique epochs match independent ingame_frames1619,skipped0,PASS. Original verdict retained.",
+        "verifier_sha256": "cff308a8bf470eac9cfa2ca2f6faa56c2ecf38fbb262115767586246b53b2223"
       }
     },
     "walking_ready_bot_handshake": {
-      "status": "Implemented; delayed-motor RED/GREEN controller testsPASS; Release/static EXE PASS; fresh native pending",
+      "status": "Implemented; delayed-motor RED/GREEN PASS; Release/static EXE PASS; continuous native route and all scoped light/depth components PASS",
       "source_evidence": "UpdateLocomotion requires FeetAnchored for a rising jump edge and records SpaceWasPressed even if standing has not settled. Flight mode clears anchored/OnGround state. Bot formerly switched to walking and heldUP immediately based on geometric support only. Failed native shows noYmovement, heldUP throughout, and collision-ready wait3262.99ms. Missing initial standing feedback is a source-backed explanation to verify in native, not yet an observed old walking_ready signal.",
       "implementation": "Observation includes actual camera.IsOnGround motor feedback separately from geometric support. Enter walking withUPreleased, allow at least0.1s release and require motor standing-ready before pressingjump. Existing4s bounded takeoff retained; missing motor readiness reports walking_pose_not_ready. Still only normal mode/key/orientation intent, never position/world writes. Trace includes grounded/walking_ready.",
       "tests": "engine-walking-ready-bot-final-unit-test.log:rebuilt controllerPASS, including delayed standing and previously-held/released jump states, bounded missing motor readiness, ceiling, obstacle route and inspections. engine-walking-ready-bot-red-test.log:removing motor feedback gate compiles and fails exact pending-standing assertion; correct source restored in finally; final unitGREEN. App never builtRED.",
       "python": "engine-camera-light-first-sample-python-test.log:53PASS. Camera reference now explicitly requires an observed valid preceding same-frame camera sample as well as post-paint witness; a missing first observation cannot be hidden by later good frames.",
       "release_build": "build/desktop-msvc/engine-walking-ready-bot-release-build.log:PASS/static EXE PASS",
-      "remaining": "Fresh continuous open-sky route must prove takeoff and all camera resource observations. Other consumers, Flat resource, GPU pages/atomic publication, persisted content certificates, visual/performance matrix remain required."
+      "remaining": "Other object consumers, Flat resource, GPU pages/atomic publication, persisted content certificates and visual/performance matrix remain required.",
+      "native": {
+        "source": "fa572c6a3",
+        "artifacts": "build/desktop-msvc/engine-walking-ready-open-sky-native",
+        "status": "UNTESTED overall: shadedRGB/fullscreen reference absent; all scoped components PASS",
+        "application_exit": 0,
+        "route": "22chunks1024outside initial resident samples,zero relocation",
+        "inspection": "26/26",
+        "camera": "1619/1619 paint frames ready;1575AIR observations;23distinct AIR camera sections;zero faults/skips",
+        "air_service": "180joined complete jobs75columns;3126observed records;0unjoined/0faults",
+        "direct_sky_gpu_floor": "200checks14epochs125cells0faults",
+        "near_opaque_depth": "487checks16epochs0faults",
+        "takeoff": "UP released and actual standing-ready at2.42273s, airborne travel at2.78637s; normal input"
+      }
     }
   }
 }
