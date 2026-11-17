@@ -94,6 +94,7 @@
 #include "World/Core/World.h"
 #include "World/Core/WorldLoadDiagnostics.h"
 #include "World/Lighting/LightUtil.h"
+#include "World/Mesh/WorldMeshService.h"
 #include "World/Objects/ObjectLibrary.h"
 #include "World/View/WorldViewSettings.h"
 #include "WorldGen/Core/WorldGenPack.h"
@@ -3311,9 +3312,14 @@ void UApplication::Update(double dt)
               coop_prepared,
               World->HasPendingAsyncRelightWork() ||
                   World->GetPendingTerrainRelightFifoCount() > 0 ||
-                  World->NeedsEnterGameMeshWarmup(),
+                  World->NeedsEnterGameMeshWarmup() ||
+                  World->GetMeshService().GetAsyncInFlightCount() > 0 ||
+                  World->GetMeshService().GetMeshCompletedSize() > 0 ||
+                  World->GetMeshService().GetPendingCaptureCount() > 0 ||
+                  World->GetMeshService().GetPendingGpuAppliesCount() > 0,
               World->IsEnterVisibilityReady(),
-              World->IsEnterUnderfeetPresentReady());
+              World->IsEnterUnderfeetPresentReady(),
+              World->SampleRequiredPresentationCoverage().Ready());
           if (frame == 0)
           {
             // Era51: coop PrepareView already warmed spawn — avoid GPU wipe.
