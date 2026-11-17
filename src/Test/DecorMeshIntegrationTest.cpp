@@ -6,6 +6,7 @@
 #include "Render/Pipeline/GreedyDrawCategory.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Lighting/ChunkRelightSnapshot.h"
 
 #include <cstdlib>
 #include <glm/gtc/matrix_transform.hpp>
@@ -370,6 +371,112 @@ static void TestPublicationRefreshesDrawRefs(cutum::UBlockRegistry &registry)
          "replacement publication immediately refreshes material draw refs");
 }
 
+static void TestFirstComputedLightPublication(cutum::UBlockRegistry &registry)
+{
+  using namespace cutum;
+  enum class ProofCase
+  {
+    Current,
+    InvalidatedInFlight,
+    Uncertified
+  };
+  for (const auto proof_case :
+       {ProofCase::Current, ProofCase::InvalidatedInFlight,
+        ProofCase::Uncertified})
+  {
+    UBlockWorld world;
+    world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+    const glm::ivec3 root(0);
+    world.SetBlock({4, 4, 4}, kStone);
+    auto *chunk = world.GetChunkManager().GetChunk(root);
+    RelightJobSpec spec;
+    spec.min_world_y = world.GetVerticalProfile().MinY;
+    spec.max_world_y = world.GetVerticalProfile().MaxY;
+    const auto result =
+        UChunkRelightSnapshot::CaptureSections(world, spec, {root})
+            .Compute(registry);
+    Expect(result.chunks.size() == 1 && result.inputs_complete,
+           "first publication fixture has known physical inputs");
+    chunk->ReplaceLightData(result.chunks[0].light_packed);
+    Expect(chunk->GetLightFieldRevision() > 0,
+           "nonzero field revision exercises unpublished first-light debt");
+    const auto catalog = registry.GetDefinitionsCatalogSnapshot();
+    if (proof_case != ProofCase::Uncertified)
+      Expect(world.RecordLightCalculation(result, catalog) == 1,
+             "first publication fixture installs physical calculation proof");
+
+    UChunkMeshCache cache;
+    auto settings = MakeFrustumMeshSettings();
+    settings.AsyncMeshing = true;
+    settings.FrustumCulling = false;
+    cache.SetRenderSettings(settings);
+    cache.SetMeshRebuildFocus(root, 4, 1);
+    cache.MarkDirtyPriority(root);
+    Expect(cache.GetLiveDirtyFirstMeshCount() == 1,
+           "fixture owns an explicit first-mesh ticket");
+    const auto geom = cache.GetChunkMeshRevision(root);
+    const auto epoch = cache.GetCaptureStore().WorldEpoch();
+    auto &demand = cache.GetRenderDemandStore();
+    demand.NoteDemand(root, geom, chunk->GetLightFieldRevision(), 0, 1.0, epoch,
+                      chunk->GetIncarnation());
+    if (proof_case != ProofCase::Uncertified)
+      demand.NoteLightCalculationSettled(root, epoch, chunk->GetIncarnation(),
+                                         chunk->GetLightFieldRevision(),
+                                         chunk->GetContentRevision());
+    Expect(demand.Find(root)->published_light_rev == 0,
+           "fixture has no predecessor publication");
+    Expect(
+        cache.GetCaptureStore().CaptureAndStore(world, root, geom).has_value(),
+        "fixture captures exact current first-mesh inputs");
+    const auto scheduled =
+        cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
+    if (scheduled.Scheduled != 1)
+      std::cerr << "first-light fixture scheduled=" << scheduled.Scheduled
+                << " dirty=" << cache.GetDirtyCount()
+                << " first_cap=" << cache.GetLastFirstMeshScheduleEffectiveCap()
+                << " skips=" << cache.GetLastMeshDirtyScheduleSkipN()
+                << " snapshot_skips="
+                << cache.GetLastMeshDirtyScheduleSkipSnapshotN()
+                << " other_skips=" << cache.GetLastMeshDirtyScheduleSkipOtherN()
+                << " capture=" << cache.HasPendingCaptureWork(root) << '\n';
+    Expect(scheduled.Scheduled == 1 &&
+               cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+           "one actual asynchronous first-mesh job completes");
+    if (proof_case == ProofCase::InvalidatedInFlight)
+      world.SetLightingConfigurationIdentity(
+          2); // Full mode, different proof input.
+    cache.RebuildDirtyChunksWithStats(world, registry, 8, 0, false, 0);
+    if (proof_case == ProofCase::InvalidatedInFlight)
+    {
+      Expect(!cache.HasDrawableGreedyMesh(root) && cache.HasPendingDirty(),
+             "proof lost after capture cannot publish a normal first image or "
+             "lose its retry obligation");
+      continue;
+    }
+    Expect(cache.HasDrawableGreedyMesh(root),
+           "first publication produces actual geometry");
+    if (proof_case == ProofCase::Uncertified)
+    {
+      Expect(cache.HasProvisionalLightPreview(root),
+             "computed-looking bytes without a proof remain explicit preview");
+      continue;
+    }
+    Expect(!cache.HasProvisionalLightPreview(root) && !cache.HasPendingDirty(),
+           "current computed field publishes once without preview/remesh "
+           "bootstrap");
+    Expect(cache.GetMeshedLightRevision(root) == chunk->GetLightFieldRevision(),
+           "first publication carries the computed field revision");
+    cache.UpdateVisibleInstances(Frustum{}, glm::mat4(1.0f), {4, 4, 8});
+    const auto *batch = FindGreedyBatchForBlock(
+        cache, cache.GetGreedyOpaqueCutoutRefs(), kStone);
+    Expect(batch && !batch->vertices.empty(),
+           "first publication has an inspectable draw payload");
+    for (const auto &vertex : batch->vertices)
+      Expect(vertex.lightPreview == 0.0f,
+             "normal first publication does not retain encoded preview bits");
+  }
+}
+
 static void TestWorldDemandIsolation()
 {
   using namespace cutum;
@@ -408,6 +515,7 @@ int main()
   TestOverflowRetryWithNoDirtyAdmission(registry);
   TestOccludedMeshDependencyRepair(registry);
   TestPublicationRefreshesDrawRefs(registry);
+  TestFirstComputedLightPublication(registry);
   TestWorldDemandIsolation();
 
   std::cout << kTestName << ": OK" << std::endl;

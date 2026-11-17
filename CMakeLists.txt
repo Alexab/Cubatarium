@@ -2353,6 +2353,8 @@ cubatarium_add_test(NAME fluid_placement_liquid_decor_test
 cubatarium_add_test(NAME decor_mesh_integration_test
     SOURCES
         ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/World/Lighting/LightUtil.cpp
+        src/World/Lighting/ChunkRelightSnapshot.cpp
         src/Core/Jobs/JobThreadPool.cpp
         src/App/Platform/WorkerJobKind.cpp
         src/Core/Jobs/JobThreadBudget.cpp

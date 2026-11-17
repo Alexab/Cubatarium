@@ -5725,11 +5725,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   // SoftDefer is column-wide; an exact slice can be settled while another Y
   // slice still owns PendingLight. Permit this dark candidate only when all
   // publication revisions and the explicit per-slice settlement agree.
-  const bool settled_current_dark_candidate =
-      gpu_result.hasFullyDarkFace && !gpu_result.hasLitDrawableFace &&
+  const bool current_computed_candidate =
       has_source_light_revision &&
-      (!boundary_overlay.active ||
-       boundary_overlay.missingNeighborFaces == 0) &&
       MeshCandidateMatchesSettledDemand(
           !accepted_input_stale, demand_identity_current,
           LightSettlementMatchesCurrentCalculation(
@@ -5741,6 +5738,29 @@ bool UChunkMeshCache::CommitGpuMeshResult(
           source_chunk ? source_chunk->GetLightFieldRevision() : 0,
           slice_demand ? slice_demand->settled_light_rev : 0,
           slice_demand ? slice_demand->desired_light_rev : 0);
+  const bool settled_current_dark_candidate =
+      gpu_result.hasFullyDarkFace && !gpu_result.hasLitDrawableFace &&
+      (!boundary_overlay.active ||
+       boundary_overlay.missingNeighborFaces == 0) &&
+      current_computed_candidate;
+  if (!had_mesh && !gpu_result.provisionalLightPreview &&
+      !current_computed_candidate)
+  {
+    // A normal first publication has no certified predecessor to retain.
+    // Never let stale-accept policy promote a formerly current capture after
+    // its inputs changed in flight. Keep the exact work obligation instead.
+    if (GpuPipeline && gpu_result.slotIndex >= 0)
+      GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
+    if (kChunkDemandShadow())
+      GetRenderDemandStore().NoteInstallResult(
+          coord, InstallResult::RejectedRetryable, 0, 0,
+          DemandActiveAttemptId(GetRenderDemandStore(), coord));
+    RequeueDirtyPriority(coord,
+                         MeshRevisionBumpReason::PriorityWorldCoreRepair);
+    note_terminal(JobTerminalReason::PublicationRejected,
+                  static_cast<uint8_t>(InstallResult::RejectedRetryable));
+    return false;
+  }
   // Sysreset v6: geom-stale Accept must not Retain dark over prior lit.
   if (ShouldRejectDarkOnGeomStaleAccept(
           gpu_result.hasFullyDarkFace && !gpu_result.hasLitDrawableFace,
@@ -8080,10 +8100,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       slice_demand->world_epoch == CaptureStore.WorldEpoch() &&
       slice_demand->incarnation == current_incarnation;
   apply_profile.Enter(UMeshApplyProfileRecorder::Phase::CandidateValidation);
-  const bool settled_current_dark_candidate =
-      new_dark && result.InputStampsValid && !refresh_after_accept_stale &&
-      (!result.BoundaryOverlay.active ||
-       result.BoundaryOverlay.missingNeighborFaces == 0) &&
+  const bool current_computed_candidate =
+      result.InputStampsValid && !refresh_after_accept_stale &&
       MeshCandidateMatchesSettledDemand(
           stale_reason == MeshApplyStaleInputReason::Ok,
           demand_identity_current,
@@ -8096,6 +8114,23 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
           source_chunk ? source_chunk->GetLightFieldRevision() : 0,
           slice_demand ? slice_demand->settled_light_rev : 0,
           slice_demand ? slice_demand->desired_light_rev : 0);
+  const bool settled_current_dark_candidate =
+      new_dark &&
+      (!result.BoundaryOverlay.active ||
+       result.BoundaryOverlay.missingNeighborFaces == 0) &&
+      current_computed_candidate;
+  if (!had_mesh && !result.ProvisionalLightPreview &&
+      !current_computed_candidate)
+  {
+    if (kChunkDemandShadow())
+      GetRenderDemandStore().NoteInstallResult(
+          result.coord, InstallResult::RejectedRetryable, 0, 0,
+          DemandActiveAttemptId(GetRenderDemandStore(), result.coord));
+    RequeueDirtyPriority(result.coord,
+                         MeshRevisionBumpReason::PriorityWorldCoreRepair);
+    note_terminal(JobTerminalReason::PublicationRejected);
+    return;
+  }
   if (ShouldRejectDarkMeshCommit(new_dark, defer_until_lit && had_mesh,
                                  had_lit_mesh, had_live_lit_gpu,
                                  prior_lit_age) &&
@@ -10052,16 +10087,40 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             chunk && demand &&
             demand->world_epoch == CaptureStore.WorldEpoch() &&
             demand->incarnation == chunk->GetIncarnation();
-        // Keep the ambient preview until a matching light revision has been
-        // published. A first mesh may read a settled field before its demand
-        // publication catches up; the committed preview then creates durable
-        // repair debt and a successor mesh clears the marker.
+        const auto catalog = registry.GetDefinitionsCatalogSnapshot();
+        // Computation and publication are separate stages. A certified current
+        // snapshot can be the first publication of its field; requiring an
+        // earlier light publication creates preview -> remesh bootstrap debt.
         const bool light_can_publish_without_preview =
-            current_demand &&
-            LightSettlementMatchesCurrentCalculation(
-                demand, chunk, CaptureStore.WorldEpoch(), world,
-                registry.GetDefinitionsCatalogSnapshot()) &&
-            demand->desired_light_rev <= demand->published_light_rev;
+            snapshot.inputStampsValid &&
+            MeshCandidateMatchesSettledDemand(
+                snapshot.InputsStillValid(world, CacheNeighborVisuallyDrawable,
+                                          this),
+                current_demand,
+                LightSettlementMatchesCurrentCalculation(
+                    demand, chunk, CaptureStore.WorldEpoch(), world, catalog),
+                snapshot.sourceRevision, MeshRevisions.Current(*it),
+                demand ? demand->desired_geom_rev : 0,
+                snapshot.inputStamps[0].light,
+                chunk ? chunk->GetLightFieldRevision() : 0,
+                demand ? demand->settled_light_rev : 0,
+                demand ? demand->desired_light_rev : 0);
+        if (light_can_publish_without_preview &&
+            demand->desired_light_rev > demand->published_light_rev &&
+            IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+        {
+          CubatariumLogInfo(
+              "FirstMeshComputedLight",
+              "certified_first_publication coord=(" + std::to_string(it->x) +
+                  "," + std::to_string(it->y) + "," + std::to_string(it->z) +
+                  ") source_geom=" + std::to_string(snapshot.sourceRevision) +
+                  " source_light=" +
+                  std::to_string(snapshot.inputStamps[0].light) +
+                  " desired_light=" +
+                  std::to_string(demand->desired_light_rev) +
+                  " prior_published_light=" +
+                  std::to_string(demand->published_light_rev));
+        }
         // Absence of current per-slice settlement is not evidence that the
         // first mesh is safe to publish with raw zero light.
         snapshot.provisionalLightPreview = !light_can_publish_without_preview;
