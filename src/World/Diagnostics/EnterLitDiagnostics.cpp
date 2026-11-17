@@ -841,12 +841,14 @@ void UEnterLitDiagnostics::MaybeLogHeartbeat(const EnterLitSample &sample,
     const auto catalog =
         world->GetBlockRegistry().GetDefinitionsCatalogSnapshot();
     const auto &blocks = world->GetBlockWorld();
+    const bool underfeet_ready = world->IsEnterUnderfeetPresentReady();
+    const bool focus_terrain_ready = world->IsEnterFocusTerrainReady();
     for (int cy = FloorDiv(world->GetProceduralSettings().MinHeight, CHUNK_SIZE);
          cy <= FloorDiv(world->GetProceduralSettings().MaxHeight, CHUNK_SIZE); ++cy)
     {
       const glm::ivec3 coord(center.x, cy, center.z);
       const auto *chunk = blocks.GetChunkManager().GetChunk(coord);
-      if (!chunk || chunk->IsAirOnly())
+      if (!chunk)
         continue;
       const auto pub = cache.GetMeshPublishRevs(coord);
       const auto *demand = world->GetRenderDemandStore().Find(coord);
@@ -855,6 +857,17 @@ void UEnterLitDiagnostics::MaybeLogHeartbeat(const EnterLitSample &sample,
           {"elapsed_ms", sample.elapsed_ms},
           {"coord", {coord.x, coord.y, coord.z}},
           {"nonair", chunk->GetNonAirCount()},
+          {"underfeet_ready", underfeet_ready},
+          {"focus_terrain_ready", focus_terrain_ready},
+          {"air_only", chunk->IsAirOnly()},
+          {"fully_dark", cache.ChunkHasFullyDarkFace(coord)},
+          {"lit_drawable", mesh.ChunkHasLitDrawableFace(coord)},
+          {"stale_dark", mesh.ChunkHasStaleDarkFaces(coord, blocks)},
+          {"light_halo_state",
+           static_cast<int>(cache.GetPublishedLightHaloState(coord, blocks))},
+          {"current_occluded",
+           world->HasCurrentOccludedSlicePublication(coord)},
+          {"provisional_preview", cache.HasProvisionalLightPreview(coord)},
           {"drawable", mesh.HasDrawableGreedyMesh(coord)},
           {"mesh_satisfies", mesh.HasMeshSatisfyingColumnReady(coord)},
           {"render_ready", world->IsChunkSliceRenderReady(coord)},
@@ -900,8 +913,6 @@ void UEnterLitDiagnostics::MaybeLogHeartbeat(const EnterLitSample &sample,
       {
         const glm::ivec2 col(center.x + dx, center.z + dz);
         const glm::ivec3 ground(col.x, 0, col.y);
-        if (world->IsColumnLitReady(ground) && world->IsColumnRenderReady(ground))
-          continue;
         int resident = 0, complete = 0, absent_unknown = 0;
         nlohmann::json incomplete = nlohmann::json::array();
         for (int cy = FloorDiv(world->GetProceduralSettings().MinHeight, CHUNK_SIZE);
@@ -930,6 +941,13 @@ void UEnterLitDiagnostics::MaybeLogHeartbeat(const EnterLitSample &sample,
             {"relight_inflight", world->IsAsyncRelightColumnInFlight(col)},
             {"resident_sections", resident}, {"complete_sections", complete},
             {"incomplete_sections", incomplete}, {"absent_unknown_sections", absent_unknown}};
+        if (const auto *record = world->GetColumnRecords().Find(col))
+        {
+          row["column_visual"] = static_cast<int>(record->visual);
+          row["visual_obligation"] =
+              static_cast<int>(record->visual_obligation);
+          row["legal_dark_settled"] = record->legal_dark_settled;
+        }
         CubatariumLogInfo("EnterColumnWitness", row.dump());
       }
 
