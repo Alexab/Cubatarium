@@ -163,7 +163,12 @@ def isolated_fixture(runtime: Path, world_name: str, artifacts: Path):
 def run(world: str, artifacts: Path, *, fly_seconds: float = 100,
         stop_seconds: float = 20, idle_seconds: float = 5,
         yaw: float = 180, pitch: float = -25,
-        minimum_chunks: int = 16, fixture_scene: str | None = None) -> dict:
+        minimum_chunks: int = 16, fixture_scene: str | None = None,
+        process_timeout: float | None = None) -> dict:
+    if process_timeout is not None:
+        import math
+        if not math.isfinite(process_timeout) or process_timeout <= 0:
+            raise ValueError("explicit process timeout must be finite and positive")
     runtime = ROOT / "bin"
     # On Windows opening an active executable for writing fails. This is a
     # read-only preflight via the existing runner; it never kills another app.
@@ -224,6 +229,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 100,
                    "--pitch", str(pitch), "--stop-after-blocked-sec", "8",
                    "--metrics", "--artifact-root", str(artifacts.resolve()),
                    "--report", str((artifacts / "legacy-gates.json").resolve())]
+        if process_timeout is not None:
+            command.extend(["--process-timeout", str(process_timeout)])
         route = {"schema": "engine-smoke-route.v1", "world_source": world,
                  "fixture_world": fixture.name, "source_world_sha256": source_hash,
                  "exe_sha256": digest(exe), "config_sha256": digest(runtime / "config.json"),
@@ -293,18 +300,22 @@ def main() -> int:
     parser.add_argument("--yaw", type=float, default=180)
     parser.add_argument("--pitch", type=float, default=-25)
     parser.add_argument("--minimum-chunks", type=int, default=16)
+    parser.add_argument("--process-timeout", type=float,
+                        help="explicit wall deadline for bounded diagnostics; timeout is a failure")
     parser.add_argument("--fixture-scene", choices=["dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave"])
     args = parser.parse_args()
     import math
     if (not all(math.isfinite(v) for v in [args.fly_seconds, args.stop_seconds,
                                          args.idle_seconds, args.yaw, args.pitch]) or
             min(args.fly_seconds, args.stop_seconds, args.idle_seconds) < 0 or
-            args.minimum_chunks < 1):
+            args.minimum_chunks < 1 or
+            (args.process_timeout is not None and
+             (not math.isfinite(args.process_timeout) or args.process_timeout <= 0))):
         parser.error("finite nonnegative durations and positive coverage are required")
     verdict = run(args.world, args.artifacts.resolve(), fly_seconds=args.fly_seconds,
                   stop_seconds=args.stop_seconds, idle_seconds=args.idle_seconds,
                   yaw=args.yaw, pitch=args.pitch, minimum_chunks=args.minimum_chunks,
-                  fixture_scene=args.fixture_scene)
+                  fixture_scene=args.fixture_scene, process_timeout=args.process_timeout)
     print(json.dumps(verdict, ensure_ascii=False))
     return {"PASS": 0, "FAIL": 1, "UNTESTED": 2}[verdict["status"]]
 

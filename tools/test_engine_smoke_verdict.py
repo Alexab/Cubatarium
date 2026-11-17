@@ -1,6 +1,7 @@
 """Negative controls for native engine smoke acceptance."""
 import json
 import tempfile
+import sys
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -182,6 +183,19 @@ class EngineSmokeVerdictTest(unittest.TestCase):
 
 
 class FlightProcessOwnershipTest(unittest.TestCase):
+    def test_explicit_diagnostic_deadline_terminates_its_owned_process(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            timeout = flight_sim_run.resolve_process_timeout(0.2, 100, True, "ocean-cruise")
+            code, resources = flight_sim_run.run_with_timeout(
+                [sys.executable, "-c", "import pathlib,time\ntime.sleep(2)\npathlib.Path('finished').write_text('late')"],
+                root, timeout, sample_resources=False)
+            self.assertEqual(code, 124)
+            self.assertTrue(resources["timed_out"])
+            self.assertFalse((root / "finished").exists())
+        self.assertEqual(flight_sim_run.resolve_process_timeout(0, 100, True, None), 420)
+        self.assertEqual(flight_sim_run.resolve_process_timeout(0, 100, False, None), 220)
+
     def test_cleanup_targets_only_live_owned_child(self):
         live, exited = Mock(), Mock()
         live.poll.return_value = None

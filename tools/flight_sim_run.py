@@ -1939,6 +1939,23 @@ def annotate_report_hang_legacy(report: Path, hang_killed: bool, process_rc: int
     report.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 
+def resolve_process_timeout(requested: float, seconds: float, fly_stop: bool,
+                            scenario: str | None) -> float:
+    """Honor an explicit wall deadline; retain legacy grace for default runs."""
+    if not math.isfinite(requested):
+        raise ValueError("process timeout must be finite")
+    if requested > 0:
+        return requested
+    timeout = seconds + 120.0
+    if fly_stop and scenario != "fz-manual-plateau":
+        timeout = max(timeout, 420.0)
+    if scenario in ("break-stand", "visual-dig", "visual-blue", "idle-edit-smoke",
+                    "ocean-cruise", "ocean-cruise-enter", "ocean-cruise-stress",
+                    "ocean-cruise-short"):
+        timeout = max(timeout, seconds + 180.0)
+    return timeout
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--world", default="World_164")
@@ -3466,22 +3483,8 @@ def main() -> int:
         if args.min_alt_above_sea is not None:
             sim_cmd.extend(["--min-alt-above-sea", str(args.min_alt_above_sea)])
 
-        process_timeout = args.process_timeout
-        if process_timeout <= 0.0:
-            process_timeout = args.seconds + 120.0
-        if args.fly_stop and args.scenario not in ("fz-manual-plateau",):
-            process_timeout = max(process_timeout, 420.0)
-        if args.scenario in (
-            "break-stand",
-            "visual-dig",
-            "visual-blue",
-            "idle-edit-smoke",
-            "ocean-cruise",
-            "ocean-cruise-enter",
-            "ocean-cruise-stress",
-            "ocean-cruise-short",
-        ):
-            process_timeout = max(process_timeout, args.seconds + 180.0)
+        process_timeout = resolve_process_timeout(
+            args.process_timeout, args.seconds, args.fly_stop, args.scenario)
 
         print("running:", " ".join(sim_cmd), flush=True)
         with muted_test_audio(BIN / "config.json"):
