@@ -2963,6 +2963,12 @@ bool UWorld::HasCurrentChunkSliceLightSettlement(glm::ivec3 chunk_coord) const
   return MeshService && ChunkSliceHasCurrentLightSettlement(*this, chunk_coord);
 }
 
+bool UWorld::HasCurrentOccludedSlicePublication(glm::ivec3 coord) const
+{
+  return MeshService && BlockRegistry &&
+         CurrentOccludedSliceReadyForWarmup(*this, coord);
+}
+
 void UWorld::SetColumnEmergeState(glm::ivec3 ground, ColumnEmergeState state)
 {
   if (ground.y != 0)
@@ -5086,7 +5092,8 @@ bool UWorld::HasStablePublishedFaceDebt(glm::ivec3 coord) const
 
 void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
 {
-  if (!MeshService || HasStablePublishedFaceDebt(coord))
+  if (!MeshService || HasCurrentOccludedSlicePublication(coord) ||
+      HasStablePublishedFaceDebt(coord))
   {
     // RepairFaceDebt owns both target-local overlay debt and peer-face debt. A
     // current published mesh (drawable or not) with coverage lag caused only by
@@ -10085,7 +10092,21 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
               std::to_string(
                   BlockWorld.GetLightInputValidationStats().epoch_resets));
     for (const auto &data : result.chunks)
+    {
       NoteChunkSliceLightCalculationSettled(data.coord);
+      if (MeshService &&
+          MeshService->GetCache().HasProvisionalLightPreview(data.coord) &&
+          BlockWorld.HasCompleteLightCalculation(
+              data.coord, BlockRegistry->GetDefinitionsCatalogSnapshot()) &&
+          !MeshService->IsChunkMeshDirty(data.coord) &&
+          !MeshService->HasInflightMeshBuild(data.coord) &&
+          !MeshService->IsPendingGpuApply(data.coord) &&
+          !MeshService->IsGpuExtractInFlight(data.coord) &&
+          !MeshService->GetCache().HasPendingCaptureWork(data.coord) &&
+          std::find(stale_mesh_coords.begin(), stale_mesh_coords.end(),
+                    data.coord) == stale_mesh_coords.end())
+        stale_mesh_coords.push_back(data.coord);
+    }
     for (const auto &dependency : boundary_dependency_bands)
     {
       Persistence->EnqueueBoundaryDependencyRelight(
@@ -10111,42 +10132,14 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
             PhysicsTelemetryData.RelightApplyNPrev) &&
         !ShouldSkipDeferHeavyApplyUnderPl(pl_focus_n) && !consume_mode;
     const bool primary_only_apply = consume_mode || defer_side_iter;
-    bool force_unchanged_relit = ShouldForceMarkRelitOnUnchangedLight(
-        consume_mode, vb_focus_n, false, false, -1);
-    if (!light_changes.any_changed() && !force_unchanged_relit &&
-        stale_mesh_coords.empty() && ownerless_first_mesh_coords.empty())
-    {
-      for (const glm::ivec2 &g : primary_grounds)
-      {
-        const int horiz = std::max(std::abs(g.x - pl_focus_chunk.x),
-                                   std::abs(g.y - pl_focus_chunk.z));
-        const bool ticket = GetColumnFlowExecutor().HasRepairTicket(g) ||
-                            IsColumnStickyRemesh(g) ||
-                            ColumnHasRepairProgress(g);
-        bool fully_dark = false;
-        if (MeshService)
-        {
-          for (const RelightChunkLightData &cd : result.chunks)
-          {
-            if (cd.coord.x == g.x && cd.coord.z == g.y &&
-                MeshService->GetCache().ChunkHasFullyDarkFace(cd.coord))
-            {
-              fully_dark = true;
-              break;
-            }
-          }
-        }
-        if (ShouldForceMarkRelitOnUnchangedLight(false, 0, ticket, fully_dark,
-                                                 horiz))
-        {
-          force_unchanged_relit = true;
-          break;
-        }
-      }
-    }
+    // No-delta light does not advance geometry merely because a column is
+    // dark or owns a coarse repair ticket. Only concrete stale publications
+    // and missing executable first-mesh work require this handoff.
+    const bool force_unchanged_relit =
+        !stale_mesh_coords.empty() || !ownerless_first_mesh_coords.empty();
     std::vector<glm::ivec3> relit_coords;
-    // CheapRemesh C3: noop light → clear InFlight/Pending without
-    // Dirty/Prefetch unless P1 repair debt (VB / ticket / FullyDark ring).
+    // Reconcile proven coverage on a no-op; hand off geometry only for
+    // specific stale publications or genuinely missing executable work.
     if (!light_changes.any_changed() && !force_unchanged_relit)
     {
       for (const glm::ivec2 &g : primary_grounds)

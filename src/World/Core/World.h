@@ -1378,6 +1378,8 @@ public:
   /// True only for a current, validated calculation stamp; revision zero is
   /// valid when the calculation completed without changing the light field.
   bool HasCurrentChunkSliceLightSettlement(glm::ivec3 chunk_coord) const;
+  /// Current published zero-quad geometry with matching calculated light.
+  bool HasCurrentOccludedSlicePublication(glm::ivec3 chunk_coord) const;
   bool HasPendingLightBeforeMeshNear(glm::ivec3 focus_ground_horiz,
                                      int radius_chunks) const;
   size_t GetPendingLightBeforeMeshCount() const

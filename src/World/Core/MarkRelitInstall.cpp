@@ -135,7 +135,14 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
     const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
     const glm::ivec3 focus_g = UChunkManager::WorldToChunk(focus_block);
     int dirty_admitted_n = 0;
-    auto admit_dirty = [&](const glm::ivec3 &coord, bool priority) {
+    auto admit_dirty = [&](const glm::ivec3 &coord, bool priority)
+    {
+      // A validated no-delta calculation is not new geometry. Re-admitting a
+      // current zero-quad publication as a missing image perpetually advances
+      // its mesh revision and prevents enter warmup from ever settling.
+      if (HasCurrentOccludedSlicePublication(coord))
+        return;
+
       bool recent_draw_gate_reject = false;
       bool visible_remesh_priority = false;
       const int horiz = std::max(std::abs(coord.x - focus_g.x),
