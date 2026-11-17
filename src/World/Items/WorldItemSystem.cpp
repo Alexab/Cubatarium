@@ -1279,9 +1279,11 @@ void UWorldItemSystem::ForEachRenderItemPosition(
 }
 
 void UWorldItemSystem::Draw(UWorld &world, CreatureDrawQueue &queue,
-                            const glm::mat4 &vp, bool frustum_culling)
+                            const glm::mat4 &vp, bool frustum_culling,
+                            glm::vec3 camera, float max_distance)
 {
   size_t submitted_requests = 0, culled_requests = 0, culled_items = 0;
+  size_t distance_culled_items = 0;
   auto submit = [&](const WorldItem &i)
   {
     if (!i.creatureId)
@@ -1327,11 +1329,15 @@ void UWorldItemSystem::Draw(UWorld &world, CreatureDrawQueue &queue,
     submitted_requests += submitted;
     // Test the actual transformed item geometry, including carried parts.
     // Remove only this item's requests before flush can sample light or draw.
-    if (frustum_culling && !queue.RangeIntersectsClip(first))
+    const bool outside_distance =
+        !queue.ItemRangeIntersectsDistance(first, camera, max_distance);
+    if (outside_distance ||
+        (frustum_culling && !queue.RangeIntersectsClip(first)))
     {
       queue.DiscardSince(first);
       culled_requests += submitted;
       ++culled_items;
+      distance_culled_items += outside_distance ? 1 : 0;
     }
   };
   for (const auto &i : Items)
@@ -1346,6 +1352,8 @@ void UWorldItemSystem::Draw(UWorld &world, CreatureDrawQueue &queue,
             " items=" + std::to_string(Items.size() + Dormant.size()) +
             " submitted_requests=" + std::to_string(submitted_requests) +
             " culled_items=" + std::to_string(culled_items) +
+            " distance_culled_items=" + std::to_string(distance_culled_items) +
+            " max_distance=" + std::to_string(max_distance) +
             " culled_requests=" + std::to_string(culled_requests) +
             " retained_requests=" +
             std::to_string(submitted_requests - culled_requests));

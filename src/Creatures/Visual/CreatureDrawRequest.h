@@ -3,6 +3,7 @@
 
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
+#include "Render/Camera/DrawDistance.h"
 #include <glm/glm.hpp>
 #include <memory>
 #include <vector>
@@ -28,6 +29,9 @@ struct CreatureDrawRequest
 {
   CreatureDrawKind Kind{CreatureDrawKind::TexturedPart};
   glm::mat4 Mvp{1.f};
+  /// Exact static loose-item envelope, computed before projection. Animated
+  /// creatures keep their separate conservative pose/hierarchy admission.
+  std::optional<DrawWorldBounds> WorldBounds;
   GLuint Texture{0};
   CreaturePartMesh PartMesh{CreaturePartMesh::Box};
   const BoneSkeletonCubeMeshCpu *SkeletalMesh{nullptr};

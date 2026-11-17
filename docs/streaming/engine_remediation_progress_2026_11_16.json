@@ -4703,6 +4703,69 @@
           "scope": "Actual cull hookup/request accounting and consumer observations; no independent item visibility/RGB/distance-domain or creature readiness acceptance."
         }
       }
+    },
+    "world_item_distance_domain": {
+      "status": "Implemented; fresh formatted2unit suitesPASS; Release/native pending",
+      "evidence": {
+        "schema": "engine-scene-sample-distance-audit.v1",
+        "source": "d938b3c8f",
+        "camera_coordinate_precision": "logged integer voxel cells; distances approximate within voxel rounding",
+        "configured_maximum_draw_distance": 64,
+        "pending_items": {
+          "count": 41,
+          "cell": [
+            8,
+            68,
+            61
+          ],
+          "camera_cell": [
+            -330,
+            -39,
+            51
+          ],
+          "first_frame": 1337,
+          "last_frame": 1428,
+          "horizontal_distance": 338.15,
+          "distance": 354.67,
+          "diagnosis": "Actual item query is far beyond configured render domain even though it intersects the camera frustum during inspection."
+        },
+        "pending_creatures": {
+          "count": 3,
+          "cells": [
+            [
+              -3,
+              -37,
+              39
+            ],
+            [
+              -3,
+              -42,
+              39
+            ],
+            [
+              -3,
+              -47,
+              39
+            ]
+          ],
+          "frames": [
+            36,
+            37,
+            38
+          ],
+          "distances": [
+            32.53,
+            30.22,
+            28.37
+          ],
+          "diagnosis": "Near-camera moving actor; cannot be explained or resolved by distance rejection. Producer/prefetch timing remains required."
+        }
+      },
+      "implementation": "Cache the same configured/fog-capped3D distance used by creature admission for the frame. Cull each worlditem request range by nearest point of its actual transformed geometry bounds beforeQueue.Flush; distance remains active when frustum rejection disabled. Surface assets use posedItemDrawRequest bounds/model. Legacy glTF and block drops stamp exact static world envelopes using same model and mesh vertices as draw, before projection. No inverseVP reconstruction or center-only rejection. Unknown/animated/nonfinite envelopes remain explicit and fail open. Double corner transforms and outward float rounding preserve far-world/edge geometry. Storage, physics and source-world edits unaffected.",
+      "tests": "engine-world-item-distance-formatted-unit-test.log:2/2PASS (actual geometry clip/distance and queueordering). Long boundary crossing, distant rejection, vertical3D bound, negative coordinates, rotation/nonuniformscale, captured remote native case, preexisting actor/range independence, visible carried part, static legacy metadata, non-affine/nonfinite fallback and10million-coordinate tangent covered.",
+      "negative_control": "engine-world-item-distance-red.log: replacing surface distance check by origin-only compiles and fails long-item horizon assertion; restored in finally; subsequent helper extraction/static-world-envelope extension freshly rebuiltGREEN. App never builtRED.",
+      "telemetry": "WorldItemDrawCull adds distance_culled_items and max_distance alongside exact submitted/culled/retained request counts.",
+      "remaining": "Fresh Release continuous route; positive visible item/light reference, near moving/new creature producer timing, no-light-remesh GPU resources/publication, persisted content certificates, complete visual/performance/backend/RD8 matrix remain required."
     }
   }
 }

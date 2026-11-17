@@ -396,7 +396,8 @@ std::vector<BoneSkeletonCubeMeshCpu> LoadPartsMeshes(const std::string &itemId)
 void DrawMeshImmediateOrQueue(CreatureDrawQueue *queue, UShaderProgram *shader,
                               const glm::mat4 &mvp, GLuint tex,
                               const BoneSkeletonCubeMeshCpu &mesh,
-                              bool immediate)
+                              bool immediate,
+                              const glm::mat4 *world_model = nullptr)
 {
   if (mesh.interleavedPosUv.empty() || mesh.indices.empty())
   {
@@ -444,6 +445,12 @@ void DrawMeshImmediateOrQueue(CreatureDrawQueue *queue, UShaderProgram *shader,
     req.Mvp = mvp;
     req.Texture = tex;
     req.SkeletalMesh = &mesh;
+    if (world_model)
+    {
+      glm::vec3 low, high;
+      if (CreatureMeshLocalClipBounds(mesh, low, high))
+        req.WorldBounds = TransformDrawWorldBounds(low, high, *world_model);
+    }
     queue->Push(std::move(req));
   }
 }
@@ -1101,11 +1108,10 @@ void WornEquipmentDrawer::SubmitLoose(CreatureDrawQueue &queue,
       auto tex = ItemGltfTextureCache::Instance().Get(path, prim.textureStem);
       if (!tex)
         tex = SolidColorTex(id);
-      DrawMeshImmediateOrQueue(
-          &queue, nullptr,
-          vp * model *
-              FitGltfToBone(*asset, std::max({size.x, size.y, size.z})),
-          tex, prim.mesh, false);
+      const auto world_model =
+          model * FitGltfToBone(*asset, std::max({size.x, size.y, size.z}));
+      DrawMeshImmediateOrQueue(&queue, nullptr, vp * world_model, tex,
+                               prim.mesh, false, &world_model);
     }
   }
   else
@@ -1123,9 +1129,10 @@ void WornEquipmentDrawer::SubmitLoose(CreatureDrawQueue &queue,
       }
       return mesh;
     }();
-    DrawMeshImmediateOrQueue(
-        &queue, nullptr, vp * model * glm::scale(glm::mat4(1), size),
-        blockTexture ? blockTexture : SolidColorTex(id), cube, false);
+    const auto world_model = model * glm::scale(glm::mat4(1), size);
+    DrawMeshImmediateOrQueue(&queue, nullptr, vp * world_model,
+                             blockTexture ? blockTexture : SolidColorTex(id),
+                             cube, false, &world_model);
   }
 }
 void WornEquipmentDrawer::SubmitCarried(

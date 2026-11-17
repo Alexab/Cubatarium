@@ -129,5 +129,81 @@ int main()
   itemOutside.Add(surface);
   Expect(!itemOutside.Intersects(),
          "item geometry entirely outside the clip planes is rejected");
+  item->Low = glm::vec3(-4, -.5f, -.5f);
+  item->High = glm::vec3(4, .5f, .5f);
+  item->Model = glm::translate(identity, glm::vec3(12, 0, 0));
+  Expect(
+      ItemIntersectsDrawDistance(*item, glm::vec3(0), 10),
+      "long item crossing distance horizon survives even with exterior origin");
+  item->Model = glm::translate(identity, glm::vec3(15, 0, 0));
+  Expect(!ItemIntersectsDrawDistance(*item, glm::vec3(0), 10),
+         "entire actual item envelope beyond horizon is rejected");
+  item->Model = glm::translate(identity, glm::vec3(0, 15, 0));
+  Expect(!ItemIntersectsDrawDistance(*item, glm::vec3(0), 10),
+         "vertical separation uses same three-dimensional domain as creatures");
+  item->Model = glm::translate(identity, glm::vec3(-112, -100, -100));
+  Expect(ItemIntersectsDrawDistance(*item, glm::vec3(-100), 10),
+         "negative world coordinates retain horizon-crossing item");
+  item->Model = glm::translate(identity, glm::vec3(0, 12, 0)) *
+                glm::rotate(identity, glm::radians(90.f), glm::vec3(0, 0, 1));
+  Expect(ItemIntersectsDrawDistance(*item, glm::vec3(0), 10),
+         "rotated long item uses transformed corners");
+  item->Model = glm::translate(identity, glm::vec3(0, 15, 0)) *
+                glm::scale(identity, glm::vec3(1, 12, 1));
+  Expect(ItemIntersectsDrawDistance(*item, glm::vec3(0), 10),
+         "nonuniform scale reaches into the visible domain");
+  item->Model = glm::translate(identity, glm::vec3(338, 107, 10));
+  Expect(!ItemIntersectsDrawDistance(*item, glm::vec3(0), 64),
+         "native remote loose-item case cannot request out-of-domain light");
+  CreatureDrawQueue distanceQueue;
+  distanceQueue.Push(Box(identity));
+  const auto firstItem = distanceQueue.Size();
+  distanceQueue.Push(surface);
+  Expect(
+      !distanceQueue.ItemRangeIntersectsDistance(firstItem, glm::vec3(0), 64),
+      "preexisting visible actor cannot retain a remote loose-item range");
+  auto nearItem = std::make_shared<ItemDrawRequest>(*item);
+  nearItem->Model = identity;
+  auto nearSurface = surface;
+  nearSurface.ItemSurface = nearItem;
+  distanceQueue.Push(nearSurface);
+  Expect(distanceQueue.ItemRangeIntersectsDistance(firstItem, glm::vec3(0), 64),
+         "one visible carried part preserves the whole item submission");
+  Expect(ItemIntersectsDrawDistance(*item, glm::vec3(0), 0),
+         "explicit disabled distance bound keeps requests");
+  item->Model[0][0] = std::numeric_limits<float>::quiet_NaN();
+  Expect(ItemIntersectsDrawDistance(*item, glm::vec3(0), 64),
+         "unknown nonfinite world envelope fails open");
+  CreatureDrawQueue legacyDistance;
+  legacyDistance.Push(Box(identity));
+  Expect(legacyDistance.ItemRangeIntersectsDistance(0, glm::vec3(0), 64),
+         "unsupported legacy geometry is not replaced by an invented bound");
+  auto legacy = Box(identity);
+  legacy.Kind = CreatureDrawKind::SkeletalMesh;
+  legacy.WorldBounds = TransformDrawWorldBounds(
+      glm::vec3(-.5f), glm::vec3(.5f),
+      glm::translate(identity, glm::vec3(338, 107, 10)));
+  CreatureDrawQueue legacyFar;
+  legacyFar.Push(legacy);
+  Expect(!legacyFar.ItemRangeIntersectsDistance(0, glm::vec3(0), 64),
+         "legacy glTF and block drop with real world bounds obey distance");
+  legacy.WorldBounds = TransformDrawWorldBounds(
+      glm::vec3(-4, -.5f, -.5f), glm::vec3(4, .5f, .5f),
+      glm::translate(identity, glm::vec3(12, 0, 0)));
+  CreatureDrawQueue legacyWide;
+  legacyWide.Push(legacy);
+  Expect(legacyWide.ItemRangeIntersectsDistance(0, glm::vec3(0), 10),
+         "wide legacy primitive cannot be culled by its origin");
+  const auto farWorld = TransformDrawWorldBounds(
+      glm::vec3(-4, -.5f, -.5f), glm::vec3(4, .5f, .5f),
+      glm::translate(identity, glm::vec3(10000000, 0, 0)));
+  Expect(farWorld && BoundsIntersectDrawDistance(*farWorld,
+                                                 glm::vec3(9999986, 0, 0), 10),
+         "outward world-bound rounding preserves a distant tangent item");
+  auto projectiveModel = identity;
+  projectiveModel[3][3] = 2;
+  Expect(
+      !TransformDrawWorldBounds(glm::vec3(-1), glm::vec3(1), projectiveModel),
+      "non-affine model cannot invent a finite world envelope");
   std::cout << "creature_draw_clip_bounds_test: passed\n";
 }

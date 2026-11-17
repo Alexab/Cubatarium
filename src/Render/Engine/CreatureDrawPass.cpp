@@ -645,6 +645,7 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
   const bool localLight =
       envLocal ? std::atoi(envLocal) != 0 : render.CreatureLocalLight;
   ItemFrameProfile.CameraPosition = cameraPos;
+  ItemDrawDistance = maxDistBlocks;
   ItemFrameProfile.FogColor = engine.GetUnderwaterFogPass().GetFogColor();
   ItemLocalLight = localLight;
   ItemFogEnabled = creatureFogEnabled;
@@ -916,9 +917,10 @@ void UCreatureDrawPass::FlushDrawQueue(UWorld &world, UGeometryEngine &engine,
     UWorld &World;
   } sink(*this, engine, world);
   TimingProbe.BeginGpuDraw();
-  UWorldItemSystem::Instance().Draw(world, engine.GetCreatureDrawQueue(),
-                                    viewProj,
-                                    engine.GetRenderSettings().FrustumCulling);
+  UWorldItemSystem::Instance().Draw(
+      world, engine.GetCreatureDrawQueue(), viewProj,
+      engine.GetRenderSettings().FrustumCulling,
+      ItemFrameProfile.CameraPosition, ItemDrawDistance);
   if (ItemRenderer)
   {
     UItemSurfaceBatchScope batch(*ItemRenderer);

@@ -123,6 +123,7 @@ private:
   uint64_t ItemRevision{0};
   ItemPresentationProfile ItemFrameProfile;
   float ItemFogStart{0.f}, ItemFogEnd{1.f}, ItemFogDensity{1.f};
+  float ItemDrawDistance{0.f};
   bool ItemFogEnabled{false}, ItemFogHorizontal{false}, ItemLocalLight{true};
   float ActiveHitFlash01{0.f};
   glm::vec2 ActiveLight{1.0f, 0.0f};

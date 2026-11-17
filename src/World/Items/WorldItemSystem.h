@@ -58,7 +58,7 @@ public:
   bool CanActivate() const { return Items.size() < 512; }
   void Tick(UWorld &world, float dt);
   void Draw(UWorld &world, CreatureDrawQueue &queue, const glm::mat4 &viewProj,
-            bool frustum_culling);
+            bool frustum_culling, glm::vec3 camera, float max_distance);
   void Clear();
   const std::string &GetFeedback() const { return Feedback; }
   size_t Count() const

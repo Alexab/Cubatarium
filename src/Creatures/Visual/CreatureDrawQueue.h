@@ -1,9 +1,10 @@
 #ifndef CREATUREDRAWQUEUE_H
 #define CREATUREDRAWQUEUE_H
 
+#include "Creatures/Visual/CreatureDrawClipBounds.h"
 #include "Creatures/Visual/CreatureDrawRequest.h"
 #include "Creatures/Visual/CreatureDrawSink.h"
-#include "Creatures/Visual/CreatureDrawClipBounds.h"
+#include "Items/ItemDrawVisibility.h"
 #include <algorithm>
 #include <vector>
 
@@ -72,6 +73,29 @@ public:
   void DiscardSince(size_t first)
   {
     if(first<Requests.size())Requests.resize(first);
+  }
+
+  /// Known item surfaces use actual world bounds. Unknown request kinds stay
+  /// admitted until they supply a world envelope; never substitute a unit box.
+  bool ItemRangeIntersectsDistance(size_t first, glm::vec3 camera,
+                                   float distance) const
+  {
+    if (first >= Requests.size())
+      return true;
+    for (size_t i = first; i < Requests.size(); ++i)
+    {
+      const auto &request = Requests[i];
+      if (request.Kind == CreatureDrawKind::ItemSurface && request.ItemSurface)
+      {
+        if (ItemIntersectsDrawDistance(*request.ItemSurface, camera, distance))
+          return true;
+      }
+      else if (!request.WorldBounds ||
+               BoundsIntersectDrawDistance(*request.WorldBounds, camera,
+                                           distance))
+        return true;
+    }
+    return false;
   }
 
 private:
