@@ -29,6 +29,19 @@ class EngineSmokeVerdictTest(unittest.TestCase):
                        publication_unready_sections=0, world_epoch=1, focus=[1, -3, 3], ready=True)
         self.report["startup_warmup_evidence"] = dict(first_frame_witnesses=[witness])
 
+    def test_startup_scope_does_not_grant_route_or_visual_acceptance(self):
+        from engine_smoke_verdict import startup_only_verdict
+        self.report["diagnostic_bot"] = dict(enabled=True, state="complete",
+                                             startup_observation=True, waypoints_visited=0)
+        verdict = startup_only_verdict(self.report, classify(self.report, None))
+        self.assertEqual(verdict["status"], "PASS")
+        for key in ("route", "visual", "inspection", "fixture_opaque_depth"):
+            self.assertEqual(verdict["components"][key]["status"], "UNTESTED")
+        self.report["startup_warmup_evidence"] = {}
+        self.assertEqual(startup_only_verdict(self.report, classify(self.report, None))["status"], "UNTESTED")
+        self.report["diagnostic_relocations_after_start"] = 1
+        self.assertEqual(startup_only_verdict(self.report, classify(self.report, None))["status"], "FAIL")
+
     def test_latest_required_ring_diagnostic_cannot_grant_first_frame_pass(self):
         row = dict(schema="required-presentation-witness.v1", phase="enter_gate",
                    elapsed_ms=4000, publication_unready_sections=9,

@@ -325,6 +325,29 @@ def classify(report: dict[str, Any], perf: Path | None, *,
             "scope": "one-way frontier route and sampled reference checks; not full-screen proof"}
 
 
+def startup_only_verdict(report: dict[str, Any], full: dict[str, Any]) -> dict[str, Any]:
+    """A scoped startup result can never grant frontier or visual acceptance."""
+    parts = {key: dict(full["components"][key]) for key in ("runtime", "startup")}
+    bot = report.get("diagnostic_bot")
+    if (not isinstance(bot, dict) or bot.get("enabled") is not True or
+            bot.get("state") != "complete" or
+            bot.get("startup_observation") is not True or
+            not finite_number(bot.get("waypoints_visited")) or
+            bot.get("waypoints_visited") != 0 or
+            report.get("teleport_cruise") is not False or
+            not finite_number(report.get("diagnostic_relocations_after_start")) or
+            report.get("diagnostic_relocations_after_start") != 0):
+        parts["observation"] = component("FAIL", "missing_stationary_no_relocation_completion")
+    else:
+        parts["observation"] = component("PASS", "stationary_bot_complete_no_relocation")
+    statuses = [part["status"] for part in parts.values()]
+    status = "FAIL" if "FAIL" in statuses else ("UNTESTED" if "UNTESTED" in statuses else "PASS")
+    for key in ("route", "inspection", "visual", "fixture_opaque_depth"):
+        parts[key] = component("UNTESTED", "not_requested_in_startup_only_scope")
+    return {"schema": "engine-startup-smoke-verdict.v1", "status": status,
+            "components": parts, "scope": "startup publication/input readiness only; no frontier, pixel or physical-light acceptance"}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("report", type=Path)

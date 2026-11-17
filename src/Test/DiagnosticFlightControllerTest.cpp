@@ -46,6 +46,17 @@ int main()
 {
   {
     DiagnosticFlightController bot;
+    bot.SetRoute({}, true);
+    DiagnosticFlightObservation o{{0, -48, 0}, 0, 0, 0, true};
+    const auto action = bot.Tick(o, Clear);
+    Expect(
+        bot.State() == DiagnosticFlightState::Complete && !action.forward &&
+            !action.up && !action.down && !action.capture &&
+            bot.VisitedWaypoints() == 0,
+        "empty startup observation must complete without movement or capture");
+  }
+  {
+    DiagnosticFlightController bot;
     bot.SetRoute({{{0, 5, 0}, false}}, true);
     DiagnosticFlightObservation o{{0, -48, 0}, 0, 0, 0, true};
     const auto jump = bot.Tick(o, Clear);

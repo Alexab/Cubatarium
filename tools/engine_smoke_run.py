@@ -168,12 +168,13 @@ def render_distance_payload(payload: bytes, radius: int) -> bytes:
     return (json.dumps(config, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
 
 
-def run(world: str, artifacts: Path, *, fly_seconds: float = 100,
+def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         stop_seconds: float = 20, idle_seconds: float = 5,
         yaw: float = 180, pitch: float = -25,
         minimum_chunks: int = 16, fixture_scene: str | None = None,
         process_timeout: float | None = None,
-        render_distance: int | None = None) -> dict:
+        render_distance: int | None = None, sprint: bool = False,
+        startup_only: bool = False) -> dict:
     if process_timeout is not None:
         import math
         if not math.isfinite(process_timeout) or process_timeout <= 0:
@@ -230,6 +231,9 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 100,
                      "waypoints": [{"position": [0, rise, 0], "inspect": True},
                                    {"position": [distance * math.cos(angle), rise,
                                                  distance * math.sin(angle)], "inspect": True}]}
+        if startup_only:
+            bot_route["purpose"] = "startup_observation"
+            bot_route["waypoints"] = []
         bot_path = artifacts / "bot-route.json"
         bot_path.write_text(json.dumps(bot_route, indent=2) + "\n", encoding="utf-8")
         command = [sys.executable, str(ROOT / "tools/flight_sim_run.py"),
@@ -241,6 +245,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 100,
                    "--pitch", str(pitch), "--stop-after-blocked-sec", "8",
                    "--metrics", "--artifact-root", str(artifacts.resolve()),
                    "--report", str((artifacts / "legacy-gates.json").resolve())]
+        if sprint:
+            command.append("--sprint")
         if process_timeout is not None:
             command.extend(["--process-timeout", str(process_timeout)])
         route = {"schema": "engine-smoke-route.v1", "world_source": world,
@@ -251,6 +257,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 100,
                  "prepared_world_sha256": world_fingerprint(fixture),
                  "bot_route_sha256": digest(bot_path),
                  "render_distance_override": render_distance,
+                 "sprint": sprint, "startup_only": startup_only,
+                 "duration_semantics": "maximum in-game budget; exits early after bot completion plus stop phase",
                  "fly_seconds": fly_seconds, "stop_seconds": stop_seconds,
                  "idle_seconds": idle_seconds, "yaw": yaw, "pitch": pitch,
                  "minimum_chunks": minimum_chunks, "command": command,
@@ -277,7 +285,10 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 100,
             json.dumps(report, indent=2) + "\n", encoding="utf-8")
         perf = Path(report["perf_jsonl"]) if report.get("perf_jsonl") else None
         verdict = classify(report, perf, minimum_chunks=minimum_chunks)
-        if scene is not None:
+        if startup_only:
+            from engine_smoke_verdict import startup_only_verdict
+            verdict = startup_only_verdict(report, verdict)
+        if scene is not None and not startup_only:
             from engine_smoke_fixtures import evaluate_fixture_trace
             scene_verdict = evaluate_fixture_trace(scene, artifacts / "diagnostic_bot.jsonl")
             verdict["components"]["fixture"] = scene_verdict
@@ -307,7 +318,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--world", required=True)
     parser.add_argument("--artifacts", required=True, type=Path)
-    parser.add_argument("--fly-seconds", type=float, default=100)
+    parser.add_argument("--fly-seconds", type=float, default=300,
+                        help="maximum in-game route budget; completion ends the run early")
+    parser.add_argument("--sprint", action="store_true", help="use native Ctrl input while moving forward")
+    parser.add_argument("--startup-only", action="store_true",
+                        help="observe first-world-paint readiness without route or visual acceptance")
     parser.add_argument("--stop-seconds", type=float, default=20)
     parser.add_argument("--idle-seconds", type=float, default=5)
     parser.add_argument("--yaw", type=float, default=180)
@@ -331,7 +346,8 @@ def main() -> int:
                   stop_seconds=args.stop_seconds, idle_seconds=args.idle_seconds,
                   yaw=args.yaw, pitch=args.pitch, minimum_chunks=args.minimum_chunks,
                   fixture_scene=args.fixture_scene, process_timeout=args.process_timeout,
-                  render_distance=args.render_distance)
+                  render_distance=args.render_distance, sprint=args.sprint,
+                  startup_only=args.startup_only)
     print(json.dumps(verdict, ensure_ascii=False))
     return {"PASS": 0, "FAIL": 1, "UNTESTED": 2}[verdict["status"]]
 

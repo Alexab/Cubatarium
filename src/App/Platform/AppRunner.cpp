@@ -1647,6 +1647,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     return 1;
   }
   DiagnosticFlightController diagnostic_bot;
+  bool startup_observation = false;
   if (!options.DiagnosticRoutePath.empty())
   {
     if (!options.StrictNoRelocation || !options.Fly || options.BreakStandMode ||
@@ -1662,10 +1663,15 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
       std::ifstream input(options.DiagnosticRoutePath);
       const auto route = nlohmann::json::parse(input);
       if (route.value("schema", "") != "diagnostic-flight-route.v1" ||
-          !route.at("waypoints").is_array() || route.at("waypoints").empty() ||
+          !route.at("waypoints").is_array() ||
+          (route.at("waypoints").empty() &&
+           route.value("purpose", "") != "startup_observation") ||
           route.at("waypoints").size() > 256)
         throw std::runtime_error(
             "invalid diagnostic route schema or waypoint count");
+      startup_observation = route.value("purpose", "") == "startup_observation";
+      if (startup_observation && !route.at("waypoints").empty())
+        throw std::runtime_error("startup observation must have no waypoints");
       std::vector<DiagnosticFlightWaypoint> waypoints;
       for (const auto &point : route.at("waypoints"))
       {
@@ -3132,7 +3138,9 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
             << (options.StrictNoRelocation ? "true" : "false") << ",\n"
             << "  \"diagnostic_bot\": {\"enabled\":"
             << (options.DiagnosticRoutePath.empty() ? "false" : "true")
-            << ",\"state\":\"" << diagnostic_bot.StateName()
+            << ",\"startup_observation\":"
+            << (startup_observation ? "true" : "false") << ",\"state\":\""
+            << diagnostic_bot.StateName()
             << "\",\"waypoints_visited\":" << diagnostic_bot.VisitedWaypoints()
             << ",\"plan_attempts\":" << diagnostic_bot.PlanAttempts()
             << ",\"plan_expansions\":" << diagnostic_bot.PlanExpansions()

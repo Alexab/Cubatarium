@@ -105,6 +105,26 @@ class IsolatedFixtureTest(unittest.TestCase):
         self.assertEqual(self.config.read_bytes(), self.original)
         self.assertFalse((self.runtime / ".engine-smoke.lock").exists())
 
+    def test_startup_runner_records_scope_and_native_sprint_but_requires_report(self):
+        (self.runtime / "Cubatarium.exe").write_bytes(b"test executable identity")
+        child = Mock(pid=123, returncode=0)
+        with patch.object(engine_smoke_run, "ROOT", self.root), \
+             patch("flight_sim_run.exe_writable", return_value=True), \
+             patch.object(engine_smoke_run.subprocess, "check_output", return_value="test-sha"), \
+             patch.object(engine_smoke_run.subprocess, "Popen", return_value=child):
+            verdict = engine_smoke_run.run("Saved", self.artifacts, startup_only=True, sprint=True)
+        self.assertEqual(verdict["schema"], "engine-startup-smoke-verdict.v1")
+        self.assertEqual(verdict["status"], "FAIL")
+        self.assertEqual(verdict["components"]["runtime"]["reason"], "missing_native_report")
+        route = json.loads((self.artifacts / "bot-route.json").read_text(encoding="utf-8"))
+        self.assertEqual(route["waypoints"], [])
+        self.assertEqual(route["purpose"], "startup_observation")
+        manifest = json.loads((self.artifacts / "route.json").read_text(encoding="utf-8"))
+        self.assertTrue(manifest["startup_only"])
+        self.assertTrue(manifest["sprint"])
+        self.assertIn("--sprint", manifest["command"])
+        self.assertEqual(self.config.read_bytes(), self.original)
+
     def png(self):
         def chunk(kind, data):
             return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
