@@ -1224,6 +1224,48 @@ void TestKnownAirLightResourceCalculation()
           !column.GetChunkManager().GetSectionLightField({1, -10, 0}),
       "batched AIR receipts keep nonzero values without writing intermediate "
       "resident or out-of-profile sections");
+  column.GetChunkManager().EnsureChunk({1, 2, 0});
+  auto *untouched = column.GetChunkManager().GetChunk({1, 2, 0});
+  untouched->SetLightLocal({1, 2, 3}, 3, 4);
+  const auto untouched_revision = untouched->GetLightFieldRevision();
+  spec.light_sample_output_sections = {{1, -2, 0}, {1, -10, 0}};
+  auto with_resident_sample =
+      UChunkRelightSnapshot::Capture(column, spec).Compute(registry);
+  Expect(with_resident_sample.inputs_complete &&
+             with_resident_sample.chunks.size() == 4 &&
+             std::any_of(with_resident_sample.chunks.begin(),
+                         with_resident_sample.chunks.end(), [](const auto &data)
+                         { return data.coord == glm::ivec3(1, -2, 0); }),
+         "explicit resident sample outside terrain band joins same light job");
+  const auto count_before_sample_install =
+      column.GetChunkManager().GetResidentChunkCount();
+  const auto geometry_before_sample_install =
+      column.GetChunkManager().GetGeometryInputRevision();
+  const auto sample_content_revision =
+      column.GetChunkManager().GetChunk({1, -2, 0})->GetContentRevision();
+  for (const auto &data : with_resident_sample.chunks)
+    InstallComputedLight(column, data, true, true);
+  Expect(
+      column.RecordLightCalculation(with_resident_sample, catalog) == 4 &&
+          column.SampleSceneLight({16, -30, 8}).IsReady() &&
+          UnpackBlock(*column.SampleSceneLight({16, -30, 8}).packed) == 4 &&
+          untouched->GetLightPackedLocal({1, 2, 3}) == PackLight(3, 4) &&
+          untouched->GetLightFieldRevision() == untouched_revision &&
+          !column.HasCompleteLightSamplingCalculation({1, 2, 0}, catalog) &&
+          column.GetChunkManager().GetResidentChunkCount() ==
+              count_before_sample_install &&
+          column.GetChunkManager().GetGeometryInputRevision() ==
+              geometry_before_sample_install &&
+          column.GetChunkManager().GetChunk({1, -2, 0})->GetContentRevision() ==
+              sample_content_revision,
+      "resident sample obtains current nonzero proof without modifying "
+      "unrequested resident light or fabricating geometry");
+  UBlockWorld unknown_samples;
+  const auto unknown_targets =
+      UChunkRelightSnapshot::Capture(unknown_samples, spec).Compute(registry);
+  Expect(!unknown_targets.inputs_complete && unknown_targets.chunks.empty() &&
+             unknown_samples.GetChunkManager().GetSectionLightFieldCount() == 0,
+         "explicit sample target cannot convert unknown absence into a field");
 }
 
 void TestWorldOwnedLightCertificates()

@@ -9338,30 +9338,45 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(
                              audit_source);
   if (IsAsyncRelightColumnInFlight(col))
     return;
-  std::vector<glm::ivec3> resident;
+  std::vector<glm::ivec3> output_sections;
   std::vector<glm::ivec3> air_outputs;
+  std::vector<glm::ivec3> sample_outputs;
+  size_t resident_sample_outputs = 0;
   bool has_transient = false;
   const auto catalog = BlockRegistry->GetDefinitionsCatalogSnapshot();
   for (int cy = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE);
        cy <= FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE); ++cy)
   {
     const glm::ivec3 coord(col.x, cy, col.y);
-    if (BlockWorld.GetChunkManager().HasChunk(coord))
+    const bool in_band =
+        cy >= FloorDiv(min_y, CHUNK_SIZE) && cy <= FloorDiv(max_y, CHUNK_SIZE);
+    const bool leased =
+        MeshService &&
+        GetRenderDemandStore().HasLightSampleDemand(
+            coord, MeshService->GetCache().GetCaptureStore().WorldEpoch(),
+            StreamingFrameEpoch);
+    const bool needs_sample =
+        leased &&
+        !BlockWorld.HasCompleteLightSamplingCalculation(coord, catalog);
+    const bool has_geometry = BlockWorld.GetChunkManager().HasChunk(coord);
+    if (has_geometry)
     {
-      if (cy < FloorDiv(min_y, CHUNK_SIZE) || cy > FloorDiv(max_y, CHUNK_SIZE))
+      if (!in_band && !needs_sample)
         continue;
     }
     else
     {
-      if (!MeshService ||
-          !GetRenderDemandStore().HasLightSampleDemand(
-              coord, MeshService->GetCache().GetCaptureStore().WorldEpoch(),
-              StreamingFrameEpoch) ||
+      if (!leased || (!in_band && !needs_sample) ||
           !BlockWorld.IsKnownAbsentAirChunk(coord))
         continue;
       air_outputs.push_back(coord);
     }
-    resident.push_back(coord);
+    if (needs_sample)
+    {
+      sample_outputs.push_back(coord);
+      resident_sample_outputs += has_geometry ? 1 : 0;
+    }
+    output_sections.push_back(coord);
     has_transient |=
         (include_skylight && BlockWorld.GetLightCalculationState(
                                  coord, LightDomain::Sky, catalog) ==
@@ -9370,15 +9385,16 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(
                                     coord, LightDomain::Block, catalog) ==
                                     LightCalculationState::Transient);
   }
-  if (has_transient && !resident.empty() &&
-      BlockWorld.LightCalculationsStillCurrent(resident, include_skylight,
-                                               include_block_light, catalog))
+  if (has_transient && !output_sections.empty() &&
+      BlockWorld.LightCalculationsStillCurrent(
+          output_sections, include_skylight, include_block_light, catalog,
+          true))
   {
     // The same unknown geometry will produce the same lower bound. Preserve
     // obligations and wait for a dependency/evidence change instead of
     // occupying a worker every time the FIFO re-admits this column.
     std::vector<glm::ivec3> complete;
-    for (const auto &coord : resident)
+    for (const auto &coord : output_sections)
       if (BlockWorld.HasCompleteLightSamplingCalculation(coord, catalog))
         complete.push_back(coord);
     if (!complete.empty())
@@ -9408,6 +9424,7 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(
   spec.visible_draw_gate_repair = visible_draw_gate_repair;
   spec.column_center_only = true;
   spec.known_air_output_sections = std::move(air_outputs);
+  spec.light_sample_output_sections = std::move(sample_outputs);
   if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
   {
     CubatariumLogInfo(
@@ -9420,7 +9437,11 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(
             " block=" + std::to_string(include_block_light) +
             " finalize=" + std::to_string(finalize_pending_gate) + " visible=" +
             std::to_string(visible_draw_gate_repair) + " air_requested=" +
-            std::to_string(spec.known_air_output_sections.size()));
+            std::to_string(spec.known_air_output_sections.size()) +
+            " samples_requested=" +
+            std::to_string(spec.light_sample_output_sections.size()) +
+            " resident_samples_requested=" +
+            std::to_string(resident_sample_outputs));
   }
   AccumulateRelightEnqueueTimings(
       PhysicsTelemetryData,
@@ -11868,12 +11889,12 @@ void UWorld::MaintainRequiredWorldInputs(int data_budget,
           NotePendingLightBeforeMesh(
               {coord.x, 0, coord.z}, coord.y * CHUNK_SIZE,
               coord.y * CHUNK_SIZE + CHUNK_SIZE - 1, "required_light_sample");
-          // Mesh-oriented FIFO admission can defer an AIR-only consumer for
+          // Mesh-oriented FIFO admission can defer a sample consumer for
           // seconds despite ready data. One bounded foreground capture shares
           // the existing worker, validation, apply and accounting paths.
           if (sample_captures == 0 &&
-              !BlockWorld.GetChunkManager().HasChunk(coord) &&
-              BlockWorld.IsKnownAbsentAirChunk(coord) &&
+              (BlockWorld.GetChunkManager().HasChunk(coord) ||
+               BlockWorld.IsKnownAbsentAirChunk(coord)) &&
               !IsAsyncRelightColumnInFlight({coord.x, coord.z}) &&
               (!AsyncRelight ||
                AsyncRelight->GetQueuedJobCount() +

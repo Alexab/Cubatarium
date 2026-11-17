@@ -43,6 +43,10 @@ struct RelightJobSpec
   /// terrain Y-band. Other empty sections remain read-only; no intermediate
   /// resident section outside that band becomes an output.
   std::vector<glm::ivec3> known_air_output_sections;
+  /// Geometry-independent sample targets, resident or proven AIR. Explicit
+  /// targets can lie outside the terrain band; intermediate slices stay
+  /// read-only.
+  std::vector<glm::ivec3> light_sample_output_sections;
 };
 
 struct RelightChunkLightData

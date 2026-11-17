@@ -218,17 +218,25 @@ UChunkRelightSnapshot::CaptureImpl(const UBlockWorld &world,
   }
   std::unordered_set<glm::ivec3, IVec3Hash> context;
   if (!sections)
+  {
     for (const auto coord : spec.known_air_output_sections)
       if (snapshot.InputProfile.SliceBounds(coord.y, CHUNK_SIZE) &&
           !world.GetChunkManager().HasChunk(coord))
         targets.insert(coord);
+    for (const auto coord : spec.light_sample_output_sections)
+      if (snapshot.InputProfile.SliceBounds(coord.y, CHUNK_SIZE))
+        targets.insert(coord);
+  }
   for (const auto target : targets)
   {
     if (world.GetChunkManager().HasChunk(target) ||
         (((sections && spec.include_known_air_outputs) ||
           std::find(spec.known_air_output_sections.begin(),
                     spec.known_air_output_sections.end(),
-                    target) != spec.known_air_output_sections.end()) &&
+                    target) != spec.known_air_output_sections.end() ||
+          std::find(spec.light_sample_output_sections.begin(),
+                    spec.light_sample_output_sections.end(),
+                    target) != spec.light_sample_output_sections.end()) &&
          world.CaptureInputStamp(target, false, true).missingEvidence ==
              MissingChunkEvidence::KnownAir))
       snapshot.WriteChunks.insert(target);
