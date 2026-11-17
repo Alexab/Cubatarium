@@ -284,6 +284,29 @@ UBlockWorld::GetCurrentLightSamplingVolume(glm::ivec3 coord) const
   return Chunks.GetSectionLightField(coord)->GetPaddedData();
 }
 
+SceneLightSample UBlockWorld::SampleSceneLight(glm::ivec3 cell,
+                                               SceneLightPolicy policy) const
+{
+  if (policy == SceneLightPolicy::Flat)
+    return {SceneLightState::FlatConstant, PackLight(15, 0)};
+  if (VerticalProfile.IsValid() && !VerticalProfile.ContainsY(cell.y))
+    return {SceneLightState::BoundaryConstant,
+            PackLight(cell.y > VerticalProfile.MaxY ? 15 : 0, 0)};
+
+  const auto coord = UChunkManager::WorldToChunk(cell);
+  const auto field = Chunks.GetSectionLightField(coord);
+  if (!field)
+    return {};
+  const auto volume = GetCurrentLightSamplingVolume(coord);
+  if (!volume)
+    return {SceneLightState::Transient, std::nullopt, field->GetIncarnation(),
+            field->GetRevision()};
+  const auto local = cell - coord * CHUNK_SIZE;
+  return {SceneLightState::Computed,
+          volume->cells[SectionLightVolume::Index(local.x, local.y, local.z)],
+          field->GetIncarnation(), field->GetRevision()};
+}
+
 bool UBlockWorld::HasKnownOpenSkyAbsentProof(glm::ivec3 coord) const
 {
   if (KnownAirColumnFloorQuery)

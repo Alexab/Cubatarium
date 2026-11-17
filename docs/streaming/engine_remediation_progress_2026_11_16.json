@@ -4300,6 +4300,16 @@
         "near_opaque_depth": "487checks16epochs0faults",
         "takeoff": "UP released and actual standing-ready at2.42273s, airborne travel at2.78637s; normal input"
       }
+    },
+    "canonical_scene_light_consumers": {
+      "status": "Implemented;4rebuilt C++ suitesPASS;55Python testsPASS; Release build running; native pending",
+      "api": "UBlockWorld::SampleSceneLight returns typed Missing/Transient/Computed/FlatConstant/BoundaryConstant. Only complete/current full padded canonical fields yield Computed bytes, including geometry-absent fields and computed zero. Exact field incarnation/revision returned. Flat selection is explicit, never inferred from opaque configuration identity. Upper/lower profile constants use exact cell bounds; no geometry/field allocation or physical receipt for constants.",
+      "consumers": "FpItemLight, drawn world/creature items and SampleCreatureLight use UWorld::RequestSceneLightSample. Renew physical demand each drawn frame, bounded to current required data domain with one-column solve padding; no remote data allocation. Creature sampler no longer waits0.25s; world input certification memoized. Seeded presentation can retain its previous target while pending; before first valid sample use ambient-only, keep unseeded. No provisional fallback certifies readiness.",
+      "observability": "Opt-in SceneLightSample records consumer kind, exact world/frame/cell/section, state, ready flag, field identity/revision and sampled bytes at actual consumer call.",
+      "cpp_tests": "engine-scene-light-consumers-final-unit-test.log:4/4PASS; nonzero absentAIR, geometry transition invalidation, source removal, unknown/default configuration, explicit Flat with no physical allocation, partial profile limits, legacy interior-only receipt rejection, fully computed zero byte, initially unseeded ambient fallback.",
+      "red": "engine-scene-light-query-red.log: restoring geometry-only sampler condition compiles and fails exact nonzeroAIR sampler assertion. Source restored in finally; fresh final unit buildGREEN. App never builtRED.",
+      "smoke": "engine_scene_light_reference.py requires every first-person item sample joined to actual world paint; independently expects sky15/block0 in open plane, computed state and nonzero identity. Requires all paint frames plus8AIR camera/sample sections. Missing/mismatched frame evidence UNTESTED; unready/transient/incorrect constant/wrong bytes/identity/revision/duplicate/orphan FAIL. 55Python testsPASS. Previous1619camera-frame native correctlyUNTESTED with0item observations; separate control artifact preserves original verdict.",
+      "remaining": "Fresh Release continuous route required; actual creature/world-item native coverage and Flat native scenario remain unaccepted. No shadedRGB/GPUpage/object-smoothing or performance acceptance. Common mesh legacy sampler, independent GPU light cutover, persistence and full matrix still required."
     }
   }
 }

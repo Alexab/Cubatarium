@@ -27,6 +27,8 @@ int main()
 
   // First sample is taken as is: no ease-in from full daylight.
   UCreatureLightCache::State &a = cache.Acquire(1, 7, 1);
+  Expect(!a.Seeded && Near(UCreatureLightCache::Ease(a, 1.0f), glm::vec2(0)),
+         "pending first sample has ambient-only fallback and stays unseeded");
   UCreatureLightCache::SetTarget(a, cave);
   Expect(Near(UCreatureLightCache::Ease(a, 1.0f / 60.0f), cave),
          "new creature starts at its sampled light");

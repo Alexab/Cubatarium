@@ -1080,7 +1080,14 @@ void TestKnownAirLightResourceCalculation()
              manager.GetGeometryInputRevision() == geometry_clock,
          "known-AIR field and physical receipt do not fabricate geometry or "
          "mutate geometry clock");
+  const auto sample = world.SampleSceneLight({16, -40, 8});
+  Expect(sample.state == SceneLightState::Computed && sample.IsReady() &&
+             UnpackBlock(*sample.packed) == 14 && sample.field_incarnation != 0,
+         "point sampler reads certified nonzero AIR field without geometry");
   const auto field = manager.GetSectionLightField(target);
+  Expect(sample.field_incarnation == field->GetIncarnation() &&
+             sample.field_revision == field->GetRevision(),
+         "point sample identifies exact canonical resource and revision");
   const auto field_identity = field->GetIncarnation();
   manager.EnsureChunk(target);
   Expect(manager.GetSectionLightField(target)->GetIncarnation() ==
@@ -1088,6 +1095,10 @@ void TestKnownAirLightResourceCalculation()
              !world.HasCompleteLightSamplingCalculation(target, catalog),
          "geometry admission shares field bytes but invalidates old absence "
          "receipt");
+  const auto admitted = world.SampleSceneLight({16, -40, 8});
+  Expect(admitted.state == SceneLightState::Transient && !admitted.IsReady() &&
+             !admitted.packed && admitted.field_incarnation == field_identity,
+         "geometry transition cannot expose stale AIR bytes as a ready sample");
   result = solve();
   manager.ReplaceComputedSectionLightVolume(
       target, *result.chunks[0].padded_light, true, true);
@@ -1105,7 +1116,38 @@ void TestKnownAirLightResourceCalculation()
   Expect(world.RecordLightCalculation(result, catalog) == 1 &&
              UnpackBlock(field->GetData()[UChunk::LocalIndex({0, 8, 8})]) == 0,
          "source removal clears previously nonzero independent section light");
+  const auto dark = world.SampleSceneLight({16, -40, 8});
+  Expect(dark.state == SceneLightState::Computed && dark.IsReady() &&
+             UnpackBlock(*dark.packed) == 0,
+         "computed zero channel remains ready after source removal");
   UBlockWorld unknown;
+  const auto missing_sample = unknown.SampleSceneLight({16, -40, 8});
+  Expect(missing_sample.state == SceneLightState::Missing &&
+             !missing_sample.IsReady() && !missing_sample.packed &&
+             missing_sample.field_incarnation == 0,
+         "unknown geometry does not imply daylight or a zero-valued field");
+  unknown.SetLightingConfigurationIdentity(0);
+  const auto still_missing = unknown.SampleSceneLight({16, -40, 8});
+  Expect(!still_missing.IsReady(),
+         "opaque configuration identity zero must not imply Flat");
+  const auto flat =
+      unknown.SampleSceneLight({16, -40, 8}, SceneLightPolicy::Flat);
+  Expect(flat.state == SceneLightState::FlatConstant && flat.IsReady() &&
+             *flat.packed == PackLight(15, 0) && flat.field_incarnation == 0 &&
+             !unknown.GetCurrentLightSamplingVolume(target) &&
+             unknown.GetChunkManager().GetSectionLightFieldCount() == 0,
+         "explicit Flat constant allocates no field or physical receipt");
+  unknown.SetVerticalProfile({-61, 317});
+  const auto above = unknown.SampleSceneLight({-17, 318, 31});
+  const auto below = unknown.SampleSceneLight({-17, -62, 31});
+  Expect(
+      above.state == SceneLightState::BoundaryConstant &&
+          above.packed == PackLight(15, 0) &&
+          below.state == SceneLightState::BoundaryConstant &&
+          below.packed == PackLight(0, 0) &&
+          !unknown.SampleSceneLight({-17, 317, 31}).IsReady() &&
+          !unknown.SampleSceneLight({-17, -61, 31}).IsReady(),
+      "boundary constants use exact profile cells, including partial slices");
   Expect(!InstallComputedLight(unknown, result.chunks[0], true, true) &&
              unknown.GetChunkManager().GetSectionLightFieldCount() == 0,
          "world installer cannot allocate a field from unknown absence");
@@ -1342,6 +1384,18 @@ void TestWorldOwnedLightCertificates()
              dark.HasCompleteLightCalculation(coord, catalog),
          "known completely dark zero-revision field has explicit complete "
          "provenance");
+  dark.SetFluidDefinitions(definitions.get());
+  Expect(!dark.SampleSceneLight(coord * CHUNK_SIZE + glm::ivec3(8)).IsReady(),
+         "interior-only legacy receipt cannot authorize point sampling");
+  InstallComputedLight(*dark.GetChunkManager().GetChunk(coord), zero.chunks[0],
+                       true, true);
+  dark.RecordLightCalculation(zero, catalog);
+  const auto dark_sample =
+      dark.SampleSceneLight(coord * CHUNK_SIZE + glm::ivec3(8));
+  Expect(dark_sample.state == SceneLightState::Computed &&
+             dark_sample.IsReady() && dark_sample.packed == 0 &&
+             dark_sample.field_incarnation != 0,
+         "fully certified zero byte is ready and distinct from missing light");
 }
 
 void TestBatchAbsenceEvidenceIsFreshAndExact()

@@ -464,6 +464,16 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                 verdict["status"] = "FAIL"
             elif camera_light["status"] == "UNTESTED" and verdict["status"] == "PASS":
                 verdict["status"] = "UNTESTED"
+            from engine_scene_light_reference import evaluate as evaluate_scene_light
+            scene_light = evaluate_scene_light(scene, sorted((artifacts / "logs").glob("*.log.INFO.*")),
+                                               expected_frames=report.get("ingame_frames"))
+            verdict["components"]["fixture_first_person_field_light"] = scene_light
+            (artifacts / "fixture-scene-light-reference.json").write_text(
+                json.dumps(scene_light, indent=2) + "\n", encoding="utf-8")
+            if scene_light["status"] == "FAIL":
+                verdict["status"] = "FAIL"
+            elif scene_light["status"] == "UNTESTED" and verdict["status"] == "PASS":
+                verdict["status"] = "UNTESTED"
         verdict["runner_exit_code"] = child.returncode
         verdict["inspection_evidence"] = inspection
         if not report_path.exists():

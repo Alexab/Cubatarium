@@ -440,11 +440,12 @@ void UCreatureDrawPass::DrawItemSurface(const ItemDrawRequest &request,
           return world.GetBlockRegistry().BlocksMovement(
               world.GetBlockWorld().GetBlock(c));
         });
-    const auto coord = UChunkManager::WorldToChunk(cell);
-    if (const auto *chunk =
-            world.GetBlockWorld().GetChunkManager().GetChunk(coord))
+    const auto sample =
+        world.RequestSceneLightSample(cell, SceneLightConsumer::Item);
+    // A previous creature/body light is a presentation fallback only.
+    if (sample.IsReady())
     {
-      const auto packed = chunk->GetLightPackedLocal(cell - coord * CHUNK_SIZE);
+      const auto packed = *sample.packed;
       light = glm::vec2(UnpackSky(packed), UnpackBlock(packed)) /
               float(kMaxLightLevel);
     }
@@ -987,24 +988,21 @@ glm::vec2 UCreatureDrawPass::SampleCreatureLight(UWorld &world,
   const glm::ivec3 cell = CreatureLightSampleCell(
       center, [&](const glm::ivec3 &c)
       { return registry.BlocksMovement(blocks.GetBlock(c)); });
-  state.SecondsToResample -= dt;
-  if (cell != state.Cell || state.SecondsToResample <= 0.0f)
+  // Renew every drawn frame, including while a physical field is pending.
+  // Certification is memoized against exact world inputs by UBlockWorld.
+  const auto sample =
+      world.RequestSceneLightSample(cell, SceneLightConsumer::Creature);
+  state.Cell = cell;
+  if (sample.IsReady())
   {
-    state.Cell = cell;
-    state.SecondsToResample = 0.25f;
-    const glm::ivec3 chunkCoord = UChunkManager::WorldToChunk(cell);
-    if (const UChunk *chunk =
-            world.GetBlockWorld().GetChunkManager().GetChunk(chunkCoord))
-    {
-      const glm::ivec3 local = cell - chunkCoord * CHUNK_SIZE;
-      const uint8_t packed = chunk->GetLightPackedLocal(local);
-      UCreatureLightCache::SetTarget(
-          state,
-          glm::vec2(static_cast<float>(UnpackSky(packed)) / kMaxLightLevel,
-                    static_cast<float>(UnpackBlock(packed)) / kMaxLightLevel));
-    }
-    // Not loaded or not lit yet: keep the previous target.
+    const uint8_t packed = *sample.packed;
+    UCreatureLightCache::SetTarget(
+        state,
+        glm::vec2(static_cast<float>(UnpackSky(packed)) / kMaxLightLevel,
+                  static_cast<float>(UnpackBlock(packed)) / kMaxLightLevel));
   }
+  // Pending samples retain the previous presentation target without seeding
+  // physical readiness. Before the first sample the fallback is ambient-only.
   const glm::vec2 light = UCreatureLightCache::Ease(state, dt);
 
   // Drop state of creatures not drawn for a while (cheap, amortized).

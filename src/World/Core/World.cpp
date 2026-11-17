@@ -97,6 +97,7 @@
 #include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Streaming/RelightInstallPlanner.h"
 #include "World/Streaming/RequiredDataCoverage.h"
+#include "World/Streaming/RequiredWorldDomain.h"
 #include "World/Streaming/RingReadinessBudget.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/VisibleBlackAttribution.h"
@@ -1490,6 +1491,62 @@ IULightingPipeline &UWorld::GetLightingPipeline()
 const IULightingPipeline &UWorld::GetLightingPipeline() const
 {
   return const_cast<UWorld *>(this)->GetLightingPipeline();
+}
+
+SceneLightSample UWorld::RequestSceneLightSample(glm::ivec3 cell,
+                                                 SceneLightConsumer consumer)
+{
+  const auto policy = GetLightingPipeline().GetMode() == LightingMode::Flat
+                          ? SceneLightPolicy::Flat
+                          : SceneLightPolicy::Physical;
+  if (policy == SceneLightPolicy::Physical && MeshService &&
+      BlockWorld.GetVerticalProfile().ContainsY(cell.y))
+  {
+    const auto coord = UChunkManager::WorldToChunk(cell);
+    const auto focus =
+        UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+    const auto domain = RequiredWorldDomain::ForRenderDistance(
+        GetRequiredPresentationRadius(), true);
+    // Visible creatures are bounded by render/fog distance. Keep their solve's
+    // neighboring data inputs inside the same required data lease; a stray
+    // off-screen request must not allocate a remote world column.
+    if (std::max(std::abs(coord.x - focus.x), std::abs(coord.z - focus.z)) <
+        domain.data)
+      GetRenderDemandStore().RequestLightSample(
+          coord, MeshService->GetCache().GetCaptureStore().WorldEpoch(),
+          StreamingFrameEpoch, 8);
+  }
+  const auto sample = BlockWorld.SampleSceneLight(cell, policy);
+  if (UJobStageTrace::VisualBlackTraceEnabled() && MeshService)
+  {
+    const auto coord = UChunkManager::WorldToChunk(cell);
+    const auto packed = sample.packed.value_or(0);
+    CubatariumLogInfo(
+        "SceneLightSample",
+        "world_epoch=" +
+            std::to_string(
+                MeshService->GetCache().GetCaptureStore().WorldEpoch()) +
+            " frame_epoch=" + std::to_string(StreamingFrameEpoch) +
+            " consumer=" +
+            (consumer == SceneLightConsumer::FirstPersonItem ? "fp_item"
+             : consumer == SceneLightConsumer::Creature      ? "creature"
+                                                             : "item") +
+            " cell=(" + std::to_string(cell.x) + "," + std::to_string(cell.y) +
+            "," + std::to_string(cell.z) + ") coord=(" +
+            std::to_string(coord.x) + "," + std::to_string(coord.y) + "," +
+            std::to_string(coord.z) + ") physical=" +
+            std::to_string(policy == SceneLightPolicy::Physical ? 1 : 0) +
+            " resident=" +
+            std::to_string(BlockWorld.GetChunkManager().HasChunk(coord) ? 1
+                                                                        : 0) +
+            " state=" + std::to_string(static_cast<int>(sample.state)) +
+            " ready=" + std::to_string(sample.IsReady() ? 1 : 0) +
+            " sky=" + std::to_string(UnpackSky(packed)) +
+            " block_light=" + std::to_string(UnpackBlock(packed)) +
+            " field_incarnation=" + std::to_string(sample.field_incarnation) +
+            " field_revision=" + std::to_string(sample.field_revision));
+  }
+  return sample;
 }
 
 bool UWorld::RequiresLightingLitGate() const

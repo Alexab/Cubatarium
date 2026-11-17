@@ -1174,6 +1174,10 @@ public:
   {
     return LightingSettingsData;
   }
+  /// Main-thread draw consumer: renews bounded in-domain physical demand even
+  /// when the caller still has a previous presentation sample to display.
+  SceneLightSample RequestSceneLightSample(glm::ivec3 cell,
+                                           SceneLightConsumer consumer);
   void SetTimeOfDayNormalized(float value);
   void AddTimeOfDayNormalized(float delta);
   void SetTimeFrozen(bool frozen) { EnvironmentStateData.TimeFrozen = frozen; }

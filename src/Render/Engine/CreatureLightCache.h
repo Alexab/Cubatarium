@@ -42,10 +42,9 @@ class UCreatureLightCache
 public:
   struct State
   {
-    glm::vec2 Current{1.0f, 0.0f};
-    glm::vec2 Target{1.0f, 0.0f};
+    glm::vec2 Current{0.0f, 0.0f};
+    glm::vec2 Target{0.0f, 0.0f};
     glm::ivec3 Cell{0x7fffffff};
-    float SecondsToResample{0.0f};
     uint64_t LastSeenFrame{0};
     /// False until the first light sample: that sample is taken as is (a
     /// mob spawned in a cave used to ease in from full daylight).

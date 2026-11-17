@@ -1918,13 +1918,13 @@ bool UApplication::ResolveSlotAt(int x, int y, SlotAddress &out)
 
 static float FpItemLight(UWorld &world, const UCreature &actor)
 {
-  auto light = glm::vec2(1, 0);
+  auto light = glm::vec2(0);
   const auto cell = WorldPosToBlock(actor.GetEyePosition());
-  const auto coord = UChunkManager::WorldToChunk(cell);
-  if (const auto *chunk =
-          world.GetBlockWorld().GetChunkManager().GetChunk(coord))
+  const auto sample =
+      world.RequestSceneLightSample(cell, SceneLightConsumer::FirstPersonItem);
+  if (sample.IsReady())
   {
-    const auto packed = chunk->GetLightPackedLocal(cell - coord * CHUNK_SIZE);
+    const auto packed = *sample.packed;
     light = glm::vec2(UnpackSky(packed), UnpackBlock(packed)) /
             float(kMaxLightLevel);
   }
