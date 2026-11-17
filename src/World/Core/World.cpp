@@ -11678,6 +11678,16 @@ void UWorld::MaintainRequiredWorldInputs(int data_budget,
   const auto domain = RequiredWorldDomain::ForRenderDistance(
       GetRequiredPresentationRadius(), RequiresLightingLitGate());
   streamer.SetRequiredDataDomain(focus, domain.data);
+  BlockWorld.GetChunkManager().RetireAbsentSectionLightFields(
+      256,
+      [&](glm::ivec3 coord)
+      {
+        return std::max(std::abs(coord.x - focus.x),
+                        std::abs(coord.z - focus.z)) <= domain.data &&
+               BlockWorld.GetVerticalProfile()
+                   .SliceBounds(coord.y, CHUNK_SIZE)
+                   .has_value();
+      });
   const int requested = streamer.EnsureDataColumns(
       RequiredDataColumns(focus, domain.data), std::max(0, data_budget));
   int noted = 0;

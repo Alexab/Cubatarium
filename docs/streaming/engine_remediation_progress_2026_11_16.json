@@ -4091,7 +4091,7 @@
       "scope": "Known-AIR generation is explicit opt-in; automatic demand/retention and legacy light-read stamps for absent fields require further work. No rendering/GPU/persistence completion claim."
     },
     "packed_draw_light_instrumentation": {
-      "status": "desktop Release PASS; real-input native completed; GPU floor transport values match but reference UNTESTED because emitter surface was not observed",
+      "status": "Desktop Release and targeted native GPU floor reference PASS; other visual acceptance remains UNTESTED",
       "source_evidence": "Packed vertex-pulling shader reads allocator QuadSsbo at slot.OffsetQuads+draw-range.quadOffset. Current opaque light join enumerates CPU batch vertices only, explaining missing970GPU floor sources. Existing PackedOpaqueDrawTrace counts actual draws but lacks individual range/buffer/generation witnesses.",
       "decoder": "PackedQuadGeometry.h reconstructs shader corners, validates faces/cells/width/height and section extents. PackedQuadParityTest compares every face against independent CPU emitter geometry at signed origins and rejects malformed payloads.",
       "tests": "build/desktop-msvc/engine-packed-light-diagnostic-geometry-green-test.log:PASS",
@@ -4102,7 +4102,7 @@
       "reference": "Floor oracle accepts either joined CPU source vertices or explicitly readable packed GPU payload; zero/missing GPU readback remainsUNTESTED and wrong nonzero reference valuesFAIL. Generic visual/RGB acceptance remainsUNTESTED. New verdict component fixture_floor_draw_source_light supersedes the earlier CPU-only component name for new runs.",
       "python_tests": "build/desktop-msvc/engine-packed-light-reference-tests.log:45PASS",
       "release_build": "build/desktop-msvc/engine-packed-light-payload-release-build.log: PASS",
-      "remaining": "Observe source material surface and complete positive floor reference; then broaden to removals, seams, AIR, fluid, shaded RGB and other backends. Transport matches do not grant framebuffer color/full-screen acceptance.",
+      "remaining": "Separate GPU light pages are not implemented; this oracle currently checks baked packed light. Removals/seams/AIR/fluid cases, shadedRGB/transparency/fullscreen and GLES/native backend equality remain required.",
       "native": {
         "source": "7e123727e",
         "artifacts": "build/desktop-msvc/engine-packed-light-payload-lit-native",
@@ -4124,10 +4124,11 @@
           ]
         }
       },
-      "coverage_diagnostics": "Skip reasons and missing-coverage list expose exact UNTESTED causes; 45 Python tests PASS (engine-floor-light-skip-reasons-tests.log). Thresholds unchanged."
+      "coverage_diagnostics": "Skip reasons and missing-coverage list expose exact UNTESTED causes; 45 Python tests PASS (engine-floor-light-skip-reasons-tests.log). Thresholds unchanged.",
+      "latest_verified_reference": "engine-targeted-inspection-layout-lit-native:1088actualGPUdraw-buffer checks77epochs958cells11levels2emitter surfaceszero faults, floor source-light PASS. This supersedes missing-emitter coverage in the earlier7e123727e run; earlier UNTESTED evidence retained."
     },
     "targeted_bot_inspection": {
-      "status": "Release/native targeted poses and independent GPU floor reference verified; original overall FAIL exposed fixed12 verifier assumption; corrected analyzer needs fresh native validation",
+      "status": "Fresh native PASS for runtime/route/startup/inspection/fixture/near opaque depth and GPU floor light; generic visual reference remains UNTESTED",
       "implementation": "Up to eight finite inspection_targets per waypoint in route coordinates, translated once for relative routes. Twelve panorama poses remain; targeted poses smoothly turn via normal orientation intent without movement. Each queued capture requests one same-frame center-pixel readback with trigger bit6 when visual diagnostics are enabled; periodic grid resumes on other frames.",
       "tests": "engine-targeted-inspection-unit-test.log: PASS; engine-targeted-inspection-python-tests.log: 45 PASS",
       "release_build": "build/desktop-msvc/engine-targeted-inspection-release-build.log: PASS; static EXE verification PASS",
@@ -4144,7 +4145,32 @@
       },
       "verifier_correction": "Derive capture groups from saved route (inspect flag, twelve panorama views plus up to8target views); translate relative targets from initial observed position, verify target orientation, waypoint index, stationary pose/input, PNG and total declared count. Legacy route-less artifacts retain12pose analysis. Reject malformed/nonfinite targets and count mismatch.",
       "verifier_tests": "engine-targeted-inspection-layout-tests.log:46PythonPASS; native failure retained as negative evidence; inspection-layout-reanalysis.json verifies26/26 original captures without changing original verdict.",
-      "next": "Fresh native on immutable56cdcf95a EXE with corrected Python analyzer, then automatic demanded AIR field lifecycle."
+      "next": "Automatic demanded AIR field lifecycle and consumer stamp migration, then independent GPU light page cutover and broader native matrix.",
+      "fresh_native": {
+        "artifacts": "build/desktop-msvc/engine-targeted-inspection-layout-lit-native",
+        "harness_source": "509a9dd1e",
+        "immutable_exe_source": "56cdcf95a",
+        "exe_sha256": "e8375d7887a5106a7e940363e049c277a13cbdbbbf3911353e0ea710dc9be26b",
+        "application_exit": 0,
+        "shell_session_exit": 1,
+        "classifier_status": "UNTESTED",
+        "note": "Python main maps UNTESTED to2; enclosing PowerShell session reported1. Do not infer native failure from shell code; raw per-component verdict and application exit retained. Later C++ retention source edits were not built during this run.",
+        "startup": "81columns1944sectionszero debts; knownAIR is geometry evidence and not yet automatic AIR field acceptance",
+        "route": "22chunks1003outside initial samples0relocations2waypoints complete",
+        "inspection": "26requested26queued26verified",
+        "near_opaque_depth": "11112checks93epochs0faults274unscopedexcluded",
+        "floor_light": "1088packedGPUchecks77epochs958cells11levels2observed emitter surfaces0faults",
+        "remaining": "ShadedRGB/transparency/full-screen reference absent; overall UNTESTED remains correct."
+      }
+    },
+    "bounded_absent_field_retirement": {
+      "status": "Implemented; both independent RED controls detected; final rebuilt ownership test GREEN; desktop Release/static EXE PASS. Native automatic AIR lifecycle remains pending.",
+      "implementation": "Manager-owned fair scan of absent field coordinates/incarnations; at most visit_budget records per call, resident adapters retained, keeper controls required lease, stale records ignored, old shared snapshots untouched; Clear discards scan. World input maintenance keeps configured data lease/profile and visits at most256records per call. Light retirement advances full/light input clock only, never geometry clock. Automatic AIR creation still disabled pending demand/install/readiness integration.",
+      "red": "engine-air-field-retention-red-test.log: disabling retirement compiles and fails exact budget/lifetime assertion; source restored in finally",
+      "green": "engine-air-field-retention-final-green-test.log: fresh rebuild PASS including exact queued-incarnation ordering and lifetime assertions",
+      "release_build": "build/desktop-msvc/engine-air-field-retention-release-build.log: PASS; static EXE verification PASS. App built only correct source; negative controls built unit target only and restored source bytes in finally.",
+      "remaining": "Define explicit AIR field demand leases for real camera/object/draw consumers, connect async/sync outputs/installation/provenance and readiness for those leases, migrate absent light reader identities, add bounded memory/service telemetry and native verification. Do not equate every known empty section in a whole-height geometry census with an active field consumer.",
+      "aba_red": "engine-air-field-retention-aba-red-test.log: removing incarnation comparison compiles and fails exact old-entry/new-resource assertion"
     }
   }
 }

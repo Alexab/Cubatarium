@@ -111,5 +111,76 @@ int main()
   Expect(sampled_field.GetPaddedDomains() == 2,
          "legacy sky write invalidates sky padding while preserving block "
          "padding");
+  {
+    UChunkManager retained;
+    std::array<uint8_t, CHUNK_VOLUME> lit{};
+    lit.fill(0x90);
+    for (int x = 0; x < 6; ++x)
+      retained.ReplaceSectionLightData({x, -3, 0}, lit);
+    const auto old_snapshot = retained.GetSectionLightField({0, -3, 0});
+    const auto geometry_clock = retained.GetGeometryInputRevision();
+    size_t calls = 0;
+    Expect(retained.RetireAbsentSectionLightFields(2,
+                                                   [&](glm::ivec3)
+                                                   {
+                                                     ++calls;
+                                                     return false;
+                                                   }) == 2 &&
+               calls == 2 && retained.GetSectionLightFieldCount() == 4 &&
+               retained.GetGeometryInputRevision() == geometry_clock &&
+               retained.GetResidentChunkCount() == 0 &&
+               old_snapshot->GetData()[0] == 0x90,
+           "retirement obeys its visit budget without geometry mutation or "
+           "changing retained snapshots");
+    retained.EnsureChunk({3, -3, 0});
+    const auto old_identity =
+        retained.GetSectionLightField({4, -3, 0})->GetIncarnation();
+    retained.ReleaseAbsentSectionLightField({4, -3, 0});
+    auto replacement = retained.EnsureSectionLightField({4, -3, 0});
+    Expect(replacement->GetIncarnation() != old_identity,
+           "reallocated absent resource needs a fresh sweep identity");
+    Expect(
+        retained.RetireAbsentSectionLightFields(2, [](glm::ivec3 coord)
+                                                { return coord.x == 5; }) == 1,
+        "scan first retires the older unneeded field and drops resident work");
+    calls = 0;
+    Expect(retained.RetireAbsentSectionLightFields(1,
+                                                   [&](glm::ivec3)
+                                                   {
+                                                     ++calls;
+                                                     return false;
+                                                   }) == 0 &&
+               calls == 0 &&
+               retained.GetSectionLightField({4, -3, 0}) == replacement,
+           "an old queued incarnation must not retire its same-coordinate "
+           "replacement");
+    for (int i = 0; i < 10; ++i)
+    {
+      calls = 0;
+      retained.RetireAbsentSectionLightFields(2,
+                                              [&](glm::ivec3 coord)
+                                              {
+                                                ++calls;
+                                                return coord.x == 5;
+                                              });
+      Expect(calls <= 2,
+             "stale sweep entries must not exceed the visit budget");
+    }
+    Expect(retained.GetSectionLightFieldCount() == 2 &&
+               retained.GetSectionLightField({3, -3, 0}) &&
+               retained.GetSectionLightField({5, -3, 0}) &&
+               !retained.GetSectionLightField({4, -3, 0}),
+           "fair sweep retains demand and resident adapters while retiring "
+           "stale incarnations");
+    retained.Clear();
+    Expect(retained.RetireAbsentSectionLightFields(
+               100,
+               [&](glm::ivec3)
+               {
+                 Expect(false, "clear must discard sweep records");
+                 return false;
+               }) == 0,
+           "clear also retires pending sweep work");
+  }
   return 0;
 }

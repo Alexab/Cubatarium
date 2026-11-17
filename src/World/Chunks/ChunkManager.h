@@ -1,9 +1,10 @@
 #ifndef CHUNKMANAGER_H
 #define CHUNKMANAGER_H
 
-#include "World/Chunks/Chunk.h"
 #include "World/Chunks/BlockQuery.h"
+#include "World/Chunks/Chunk.h"
 #include "World/Math/BlockTypes.h"
+#include <deque>
 #include <functional>
 #include <glm/glm.hpp>
 #include <memory>
@@ -55,6 +56,11 @@ public:
                                          const SectionLightVolume &volume,
                                          bool sky, bool block);
   bool ReleaseAbsentSectionLightField(glm::ivec3 coord);
+  /// Fair bounded retirement scan. Resident adapters are always retained;
+  /// external shared snapshots remain immutable after ownership is released.
+  size_t
+  RetireAbsentSectionLightFields(size_t visit_budget,
+                                 const std::function<bool(glm::ivec3)> &keep);
   size_t GetSectionLightFieldCount() const { return LightFields.size(); }
   /// Fired when a chunk transitions to non-air (its first populated block
   /// arrives via SetBlock). Subscriber handles cross-thread sync; set once
@@ -122,6 +128,7 @@ private:
   std::unordered_map<glm::ivec3, std::unique_ptr<UChunk>, IVec3Hash> Chunks;
   std::unordered_map<glm::ivec3, std::shared_ptr<SectionLightField>, IVec3Hash>
       LightFields;
+  std::deque<std::pair<glm::ivec3, uint64_t>> AbsentLightFieldScan;
   std::unordered_map<glm::ivec3, size_t, IVec3Hash> ResidentColumnChunkCounts;
   std::vector<std::unique_ptr<UChunk>> FreeList;
   size_t MaxFreeListChunks{256};

@@ -1,5 +1,6 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/GridMath.h"
+#include <algorithm>
 #include <vector>
 
 namespace cutum
@@ -82,6 +83,7 @@ void UChunkManager::Clear()
   NoteInputMutation();
   Chunks.clear();
   LightFields.clear();
+  AbsentLightFieldScan.clear();
   ResidentColumnChunkCounts.clear();
   FreeList.clear();
 }
@@ -154,6 +156,8 @@ UChunkManager::EnsureSectionLightField(glm::ivec3 coord)
   if (found != LightFields.end()) return found->second;
   auto field = std::make_shared<SectionLightField>();
   LightFields.emplace(coord, field);
+  if (!HasChunk(coord))
+    AbsentLightFieldScan.emplace_back(coord, field->GetIncarnation());
   NoteLightInputMutation();
   return field;
 }
@@ -186,6 +190,33 @@ bool UChunkManager::ReleaseAbsentSectionLightField(glm::ivec3 coord)
     return false;
   NoteLightInputMutation();
   return true;
+}
+
+size_t UChunkManager::RetireAbsentSectionLightFields(
+    size_t visit_budget, const std::function<bool(glm::ivec3)> &keep)
+{
+  const size_t visits = std::min(visit_budget, AbsentLightFieldScan.size());
+  size_t retired = 0;
+  for (size_t i = 0; i < visits; ++i)
+  {
+    const auto entry = AbsentLightFieldScan.front();
+    AbsentLightFieldScan.pop_front();
+    const auto field = LightFields.find(entry.first);
+    if (field == LightFields.end() ||
+        field->second->GetIncarnation() != entry.second ||
+        HasChunk(entry.first))
+      continue;
+    if (keep(entry.first))
+      AbsentLightFieldScan.push_back(entry);
+    else
+    {
+      LightFields.erase(field);
+      ++retired;
+    }
+  }
+  if (retired)
+    NoteLightInputMutation();
+  return retired;
 }
 
 void UChunkManager::ForEachChunk(
