@@ -168,6 +168,48 @@ def render_distance_payload(payload: bytes, radius: int) -> bytes:
     return (json.dumps(config, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
 
 
+def startup_observation_evidence(trace: Path) -> dict:
+    """Verify the native driver actually stayed still and issued no movement."""
+    import math
+    if not trace.is_file():
+        return {"status": "UNTESTED", "reason": "missing_startup_observation_trace"}
+    start = None
+    samples = 0
+    maximum_drift = 0.0
+    previous_time = -1.0
+    try:
+        with trace.open(encoding="utf-8") as stream:
+            for line in stream:
+                row = json.loads(line)
+                position = row.get("position")
+                timestamp = row.get("time")
+                if (not isinstance(timestamp, (int, float)) or isinstance(timestamp, bool) or
+                        not math.isfinite(timestamp) or timestamp <= previous_time):
+                    raise ValueError("missing or nonincreasing observation time")
+                previous_time = timestamp
+                if (row.get("schema") != "diagnostic-bot-trace.v1" or
+                        not isinstance(position, list) or len(position) != 3 or
+                        any(not isinstance(v, (int, float)) or isinstance(v, bool) or
+                            not math.isfinite(v) for v in position) or
+                        any(row.get(k) not in (0, 1) or isinstance(row.get(k), bool)
+                            for k in ("forward", "up", "down"))):
+                    raise ValueError("malformed observation")
+                if any(row[k] for k in ("forward", "up", "down")):
+                    return {"status": "FAIL", "reason": "startup_observation_movement_input"}
+                if start is None:
+                    start = position
+                maximum_drift = max(maximum_drift, math.dist(start, position))
+                samples += 1
+    except (ValueError, TypeError, AttributeError):
+        return {"status": "FAIL", "reason": "malformed_startup_observation_trace"}
+    if maximum_drift > 0.05:
+        return {"status": "FAIL", "reason": "startup_observation_position_changed",
+                "maximum_drift_blocks": maximum_drift}
+    return {"status": "PASS" if samples >= 2 else "UNTESTED",
+            "reason": "stationary_native_observation" if samples >= 2 else "insufficient_startup_observations",
+            "samples": samples, "maximum_drift_blocks": maximum_drift}
+
+
 def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         stop_seconds: float = 20, idle_seconds: float = 5,
         yaw: float = 180, pitch: float = -25,
@@ -287,7 +329,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         verdict = classify(report, perf, minimum_chunks=minimum_chunks)
         if startup_only:
             from engine_smoke_verdict import startup_only_verdict
-            verdict = startup_only_verdict(report, verdict)
+            verdict = startup_only_verdict(
+                report, verdict, startup_observation_evidence(artifacts / "diagnostic_bot.jsonl"))
         if scene is not None and not startup_only:
             from engine_smoke_fixtures import evaluate_fixture_trace
             scene_verdict = evaluate_fixture_trace(scene, artifacts / "diagnostic_bot.jsonl")

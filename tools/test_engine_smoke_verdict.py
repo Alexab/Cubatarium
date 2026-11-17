@@ -33,7 +33,8 @@ class EngineSmokeVerdictTest(unittest.TestCase):
         from engine_smoke_verdict import startup_only_verdict
         self.report["diagnostic_bot"] = dict(enabled=True, state="complete",
                                              startup_observation=True, waypoints_visited=0)
-        verdict = startup_only_verdict(self.report, classify(self.report, None))
+        verdict = startup_only_verdict(self.report, classify(self.report, None),
+                                       dict(status="PASS", reason="stationary_native_observation"))
         self.assertEqual(verdict["status"], "PASS")
         for key in ("route", "visual", "inspection", "fixture_opaque_depth"):
             self.assertEqual(verdict["components"][key]["status"], "UNTESTED")
@@ -285,9 +286,23 @@ class FlightProcessOwnershipTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             timeout = flight_sim_run.resolve_process_timeout(0.2, 100, True, "ocean-cruise")
-            code, resources = flight_sim_run.run_with_timeout(
-                [sys.executable, "-c", "import pathlib,time\ntime.sleep(2)\npathlib.Path('finished').write_text('late')"],
-                root, timeout, sample_resources=False)
+            # The parent may be descheduled during a desktop build. A two-
+            # second natural exit races Windows taskkill startup under load.
+            # Keep the child alive and assert actual forced termination.
+            owned = []
+            launch = flight_sim_run.subprocess.Popen
+            def capture_child(*args, **kwargs):
+                child = launch(*args, **kwargs)
+                if args[0][0] == sys.executable:
+                    owned.append(child)
+                return child
+            with patch.object(flight_sim_run.subprocess, "Popen", side_effect=capture_child):
+                code, resources = flight_sim_run.run_with_timeout(
+                    [sys.executable, "-c", "import pathlib,time\ntime.sleep(60)\npathlib.Path('finished').write_text('late')"],
+                    root, timeout, sample_resources=False)
+            self.assertEqual(len(owned), 1)
+            self.assertIsNotNone(owned[0].returncode)
+            self.assertNotEqual(owned[0].returncode, 0)
             self.assertEqual(code, 124)
             self.assertTrue(resources["timed_out"])
             self.assertFalse((root / "finished").exists())

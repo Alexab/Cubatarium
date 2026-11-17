@@ -125,6 +125,26 @@ class IsolatedFixtureTest(unittest.TestCase):
         self.assertIn("--sprint", manifest["command"])
         self.assertEqual(self.config.read_bytes(), self.original)
 
+    def test_startup_observation_checks_native_inputs_and_three_dimensional_drift(self):
+        trace = self.root / "startup.jsonl"
+        observe = engine_smoke_run.startup_observation_evidence
+        self.assertEqual(observe(trace)["status"], "UNTESTED")
+        row = dict(schema="diagnostic-bot-trace.v1", position=[1, -40, 3], forward=0, up=0, down=0, time=0)
+        def write(rows):
+            trace.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+        write([row])
+        self.assertEqual(observe(trace)["status"], "UNTESTED")
+        write([row, dict(row, time=1)])
+        self.assertEqual(observe(trace)["status"], "PASS")
+        write([row, row])
+        self.assertEqual(observe(trace)["status"], "FAIL")
+        write([row, dict(row, up=1, time=1)])
+        self.assertEqual(observe(trace)["reason"], "startup_observation_movement_input")
+        write([row, dict(row, position=[1, -39, 3], time=1)])
+        self.assertEqual(observe(trace)["reason"], "startup_observation_position_changed")
+        write([row, dict(row, position=[1, float("nan"), 3], time=1)])
+        self.assertEqual(observe(trace)["status"], "FAIL")
+
     def png(self):
         def chunk(kind, data):
             return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))

@@ -325,7 +325,8 @@ def classify(report: dict[str, Any], perf: Path | None, *,
             "scope": "one-way frontier route and sampled reference checks; not full-screen proof"}
 
 
-def startup_only_verdict(report: dict[str, Any], full: dict[str, Any]) -> dict[str, Any]:
+def startup_only_verdict(report: dict[str, Any], full: dict[str, Any],
+                         observation: dict[str, Any] | None = None) -> dict[str, Any]:
     """A scoped startup result can never grant frontier or visual acceptance."""
     parts = {key: dict(full["components"][key]) for key in ("runtime", "startup")}
     bot = report.get("diagnostic_bot")
@@ -339,7 +340,7 @@ def startup_only_verdict(report: dict[str, Any], full: dict[str, Any]) -> dict[s
             report.get("diagnostic_relocations_after_start") != 0):
         parts["observation"] = component("FAIL", "missing_stationary_no_relocation_completion")
     else:
-        parts["observation"] = component("PASS", "stationary_bot_complete_no_relocation")
+        parts["observation"] = observation or component("UNTESTED", "missing_stationary_native_trace")
     statuses = [part["status"] for part in parts.values()]
     status = "FAIL" if "FAIL" in statuses else ("UNTESTED" if "UNTESTED" in statuses else "PASS")
     for key in ("route", "inspection", "visual", "fixture_opaque_depth"):
