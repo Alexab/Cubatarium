@@ -4173,7 +4173,7 @@
       "aba_red": "engine-air-field-retention-aba-red-test.log: removing incarnation comparison compiles and fails exact old-entry/new-resource assertion"
     },
     "independent_field_input_stamps": {
-      "status": "Implemented; old-world negative control RED; restored8fresh rebuilt contractsPASS; desktop Release/static EXE PASS; fresh native running",
+      "status": "Implemented; RED/GREEN8contracts; Release/static EXE PASS; fresh native runtime/route/startup/inspection/near depth/GPU floor source light PASS; generic visual UNTESTED",
       "root_cause": "CaptureInputStamp/validation used only UChunk light revisions; an absent AIR field could be created/changed/retired/reallocated while a light read remained falsely current. Per-domain validation substituted0 whenever geometry was absent.",
       "implementation": "ChunkInputStamp carries explicit lightIncarnation independent of geometry incarnation and full/sky/block revisions. Raw capture/match may receive an absent field; world-aware capture/validation resolves canonical absent field. Per-domain validation compares field identity plus only selected channel revisions while keeping geometry/absence evidence checks. Missing versus allocated revision0 and equal-byte/equal-revision reallocation are distinct. Geometry-only consumers ignore field writes/identity.",
       "tests": "engine-absent-light-stamp-contract-test.log:8/8fresh rebuilt PASS (pending coverage, physical certificates, dense geometry reference, mesh validity/publication, capture worker, GPU skylight merge). New cases cover missing->allocated0, nonzero AIR bytes, separate sky/block writes, same-revision ABA, knownAIR evidence invalidation, geometry admission sharing; no phantom geometry/clock changes.",
@@ -4196,12 +4196,27 @@
         ]
       },
       "native": {
-        "status": "running; no success claim",
+        "status": "UNTESTED overall because shadedRGB/fullscreen reference absent; all scoped componentsPASS",
         "source": "e8740066f",
         "artifacts": "build/desktop-msvc/engine-absent-light-stamp-lit-native",
-        "scenario": "dry-lit-negative-cave, RD4,19minimumchunks,fly300stop8idle2,process600",
-        "policy": "Release EXE immutable; no builds or tests during native measurements"
+        "application_exit": 0,
+        "route": "22chunks932outside initial samples,zero relocation",
+        "inspection": "26/26",
+        "floor_light": "1146packedGPUchecks91epochs1044cells11levels2emitter surfaces0faults",
+        "near_opaque_depth": "13606checks109epochs0faults340unscoped excluded",
+        "scope": "New AIR sample-demand code was edited during the run but never built into its immutable EXE. Native terminal verified from complete raw artifacts and absence of owned processes after exec runtime replacement; no scenario restart."
       }
+    },
+    "air_sample_demand_service": {
+      "status": "Implemented camera/focus consumer and runtime producer/installation hooks;5rebuilt unit suitesPASS, two RED controls detected, Release/static EXE PASS; native wide-cave verification pending",
+      "authority": "LightSampleLease lives in the existing per-world ChunkRenderDemandRecord. Epoch/frame0 valid, explicit consumer generation, max-coalesced TTL, fair bounded queue. Geometry bind/remove preserve same-world consumers; world change retires old lease; expired AIR-only rows and stale queue entries retire. Lease itself never certifies physical readiness.",
+      "runtime": "Preferred load focus requests an in-profile physical-light sample each maintenance call. Consumer drain visits at most8records and records exact pending section bands only after9data columns complete. Existing bounded RecoverPendingLightWork admits AIR obligations through existing relight FIFO; no new synchronous snapshot path. Column jobs select only explicitly leased knownAIR outputs. Read-set/catalog validation precedes interior/padding-consistent installation and physical receipt. Required column/presentation census includes active AIR-light debt. Absent-field retirement uses data/profile and current consumer lease, at most256records per maintenance call.",
+      "tests": "engine-light-sample-demand-final-unit-test.log:5/5rebuiltPASS, including epoch0, TTL/coalescing, geometry admission/eviction, world isolation, queue ABA, fair visitation, mutation during callbacks, exact nonzero AIR column selection, unknown/malformed output rejection and no implicit whole-height field creation.",
+      "negative_controls": "engine-light-sample-demand-red-test.log: disabling geometry-removal lease preservation and exact AIR column selection both compile and fail their specific assertions; sources restored in finally; final unit rebuildGREEN. App never builtRED.",
+      "release_build": "build/desktop-msvc/engine-light-sample-demand-release-build.log:PASS; static EXE verificationPASS",
+      "telemetry": "RelightAudit job_submit includes air_requested; calculation_certificate includes air_outputs/air_complete (current full padded proof for absent geometry); stale-read diagnostics include field incarnation.",
+      "smoke": "engine_air_light_service.py joins requested outputs and complete physical receipts by job/column; wide cave scenes require at least3distinct joined columns. Missing/unjoined/partial evidence UNTESTED, inconsistent counts/unknown completion FAIL. Scoped service observation only, not all-request coverage, field values, latency, GPU light or framebuffer acceptance. 49Python testsPASS (engine-light-sample-demand-python-test.log).",
+      "remaining": "Verify runtime in wide AIR cave and first-paint demand closure; migrate common world/creature/item samplers to canonical computed/transient/missing results with Flat contract, register real object consumers, extend demand/latency/memory telemetry and route oracles, then independent GPU light pages/binding lifetime and persisted certificates."
     }
   }
 }

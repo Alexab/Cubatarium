@@ -2786,9 +2786,18 @@ bool UWorld::HasCurrentColumnLightCoverage(glm::ivec2 column, int min_y,
       if (!BlockWorld.HasCompleteLightSamplingCalculation(coord, catalog))
         return false;
     }
-    else if (!terrain_complete ||
-             !BlockWorld.IsKnownAbsentAirChunk(coord, &absence))
-      return false;
+    else
+    {
+      if (!terrain_complete ||
+          !BlockWorld.IsKnownAbsentAirChunk(coord, &absence))
+        return false;
+      if (MeshService &&
+          GetRenderDemandStore().HasLightSampleDemand(
+              coord, MeshService->GetCache().GetCaptureStore().WorldEpoch(),
+              StreamingFrameEpoch) &&
+          !BlockWorld.HasCompleteLightSamplingCalculation(coord, catalog))
+        return false;
+    }
   }
   return true;
 }
@@ -6723,11 +6732,16 @@ void UWorld::RecoverPendingLightWork(int max_admissions)
     for (int cy : it->second.PendingSections())
     {
       const glm::ivec3 coord(column.x, cy, column.y);
-      if (BlockWorld.GetChunkManager().HasChunk(coord))
+      if (BlockWorld.GetChunkManager().HasChunk(coord) ||
+          (MeshService &&
+           GetRenderDemandStore().HasLightSampleDemand(
+               coord, MeshService->GetCache().GetCaptureStore().WorldEpoch(),
+               StreamingFrameEpoch) &&
+           BlockWorld.IsKnownAbsentAirChunk(coord)))
         resident.push_back(coord);
     }
-    if (resident.empty() ||
-        BlockWorld.LightCalculationsStillCurrent(resident, true, true, catalog))
+    if (resident.empty() || BlockWorld.LightCalculationsStillCurrent(
+                                resident, true, true, catalog, true))
       continue;
     const int min_y = it->second.min_y;
     const int max_y = it->second.max_y;
@@ -9265,6 +9279,7 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(
   if (IsAsyncRelightColumnInFlight(col))
     return;
   std::vector<glm::ivec3> resident;
+  std::vector<glm::ivec3> air_outputs;
   bool has_transient = false;
   const auto catalog = BlockRegistry->GetDefinitionsCatalogSnapshot();
   for (int cy =
@@ -9275,7 +9290,15 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(
   {
     const glm::ivec3 coord(col.x, cy, col.y);
     if (!BlockWorld.GetChunkManager().HasChunk(coord))
-      continue;
+    {
+      if (!MeshService ||
+          !GetRenderDemandStore().HasLightSampleDemand(
+              coord, MeshService->GetCache().GetCaptureStore().WorldEpoch(),
+              StreamingFrameEpoch) ||
+          !BlockWorld.IsKnownAbsentAirChunk(coord))
+        continue;
+      air_outputs.push_back(coord);
+    }
     resident.push_back(coord);
     has_transient |=
         (include_skylight && BlockWorld.GetLightCalculationState(
@@ -9322,6 +9345,7 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(
   spec.finalize_pending_gate = finalize_pending_gate;
   spec.visible_draw_gate_repair = visible_draw_gate_repair;
   spec.column_center_only = true;
+  spec.known_air_output_sections = std::move(air_outputs);
   if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
   {
     CubatariumLogInfo(
@@ -9332,8 +9356,9 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(
             std::string(audit_source ? audit_source : "unspecified") +
             " sky=" + std::to_string(include_skylight) +
             " block=" + std::to_string(include_block_light) +
-            " finalize=" + std::to_string(finalize_pending_gate) +
-            " visible=" + std::to_string(visible_draw_gate_repair));
+            " finalize=" + std::to_string(finalize_pending_gate) + " visible=" +
+            std::to_string(visible_draw_gate_repair) + " air_requested=" +
+            std::to_string(spec.known_air_output_sections.size()));
   }
   AccumulateRelightEnqueueTimings(
       PhysicsTelemetryData,
@@ -9706,7 +9731,9 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
               " content=" + std::to_string(stale_input->content) + "->" +
               std::to_string(now.content) +
               " light=" + std::to_string(stale_input->light) + "->" +
-              std::to_string(now.light) +
+              std::to_string(now.light) + " field_incarnation=" +
+              std::to_string(stale_input->lightIncarnation) + "->" +
+              std::to_string(now.lightIncarnation) +
               " sky_rev=" + std::to_string(stale_input->skyLight) + "->" +
               std::to_string(now.skyLight) +
               " block_rev=" + std::to_string(stale_input->blockLight) + "->" +
@@ -10101,14 +10128,32 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
         }
       }
     }
+    // AIR consumers own light without a geometry chunk or a mesh handoff.
+    int air_outputs = 0;
+    for (const auto &data : result.chunks)
+      if (!BlockWorld.GetChunkManager().HasChunk(data.coord))
+      {
+        ++air_outputs;
+        InstallComputedLight(BlockWorld, data, result.include_skylight,
+                             result.include_block_light);
+      }
     // Record provenance only after every selected channel has been installed.
     const int certificate_sections = BlockWorld.RecordLightCalculation(
         result, BlockRegistry->GetDefinitionsCatalogSnapshot());
+    int air_complete = 0;
+    if (audit_relight && air_outputs)
+      for (const auto &data : result.chunks)
+        if (!BlockWorld.GetChunkManager().HasChunk(data.coord) &&
+            BlockWorld.HasCompleteLightSamplingCalculation(
+                data.coord, BlockRegistry->GetDefinitionsCatalogSnapshot()))
+          ++air_complete;
     if (audit_relight)
       CubatariumLogInfo(
           "RelightAudit",
           "calculation_certificate job=" + std::to_string(result.job_id) +
               " sections=" + std::to_string(certificate_sections) +
+              " air_outputs=" + std::to_string(air_outputs) +
+              " air_complete=" + std::to_string(air_complete) +
               " include_sky=" + std::to_string(result.include_skylight) +
               " include_block=" + std::to_string(result.include_block_light) +
               " inputs_complete=" + std::to_string(result.inputs_complete) +
@@ -11678,6 +11723,12 @@ void UWorld::MaintainRequiredWorldInputs(int data_budget,
   const auto domain = RequiredWorldDomain::ForRenderDistance(
       GetRequiredPresentationRadius(), RequiresLightingLitGate());
   streamer.SetRequiredDataDomain(focus, domain.data);
+  const uint64_t sample_epoch =
+      MeshService ? MeshService->GetCache().GetCaptureStore().WorldEpoch() : 0;
+  if (MeshService && RequiresLightingLitGate() &&
+      BlockWorld.GetVerticalProfile().SliceBounds(focus.y, CHUNK_SIZE))
+    GetRenderDemandStore().RequestLightSample(focus, sample_epoch,
+                                              StreamingFrameEpoch);
   BlockWorld.GetChunkManager().RetireAbsentSectionLightFields(
       256,
       [&](glm::ivec3 coord)
@@ -11686,10 +11737,30 @@ void UWorld::MaintainRequiredWorldInputs(int data_budget,
                         std::abs(coord.z - focus.z)) <= domain.data &&
                BlockWorld.GetVerticalProfile()
                    .SliceBounds(coord.y, CHUNK_SIZE)
-                   .has_value();
+                   .has_value() &&
+               MeshService &&
+               GetRenderDemandStore().HasLightSampleDemand(coord, sample_epoch,
+                                                           StreamingFrameEpoch);
       });
   const int requested = streamer.EnsureDataColumns(
       RequiredDataColumns(focus, domain.data), std::max(0, data_budget));
+  if (MeshService)
+    GetRenderDemandStore().DrainLightSampleDemands(
+        sample_epoch, StreamingFrameEpoch, 8,
+        [&](glm::ivec3 coord)
+        {
+          if (!RequiresLightingLitGate() ||
+              BlockWorld.HasCompleteLightSamplingCalculation(
+                  coord, BlockRegistry->GetDefinitionsCatalogSnapshot()))
+            return;
+          for (int dz = -1; dz <= 1; ++dz)
+            for (int dx = -1; dx <= 1; ++dx)
+              if (!IsTerrainColumnCompleteFast({coord.x + dx, 0, coord.z + dz}))
+                return;
+          NotePendingLightBeforeMesh(
+              {coord.x, 0, coord.z}, coord.y * CHUNK_SIZE,
+              coord.y * CHUNK_SIZE + CHUNK_SIZE - 1, "required_light_sample");
+        });
   int noted = 0;
   if (RequiresLightingLitGate())
     Streaming->GetRequiredLightScan().Drain(
@@ -11759,7 +11830,15 @@ RequiredPresentationCoverage UWorld::SampleRequiredPresentationCoverage(
               data_complete &&
               BlockWorld.IsKnownAbsentAirChunk(coord, &absence);
           out.ObserveAbsent(known_air);
-          if (stop_on_debt && !known_air)
+          const bool sample_light =
+              !RequiresLightingLitGate() || !MeshService ||
+              !GetRenderDemandStore().HasLightSampleDemand(
+                  coord, MeshService->GetCache().GetCaptureStore().WorldEpoch(),
+                  StreamingFrameEpoch) ||
+              BlockWorld.HasCompleteLightSamplingCalculation(coord, catalog);
+          if (known_air && !sample_light)
+            ++out.light_unready_sections;
+          if (stop_on_debt && (!known_air || !sample_light))
             return out;
           continue;
         }

@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <deque>
 #include <functional>
 #include <glm/glm.hpp>
 #include <unordered_map>
@@ -77,9 +78,16 @@ enum class InstallResult : uint8_t
 
 struct ChunkRenderDemandRecord
 {
+  struct LightSampleLease
+  {
+    uint64_t id{0};
+    uint64_t through_frame{0};
+  };
   glm::ivec3 coord{};
   uint64_t world_epoch{0};
   uint64_t incarnation{0};
+  // Consumer demand only. Physical readiness belongs to SectionLightField.
+  LightSampleLease light_sample_lease;
   /// Geometry values are UChunkMeshRevisionRegistry source revisions.
   /// Light values are UChunk light-field revisions; never compare across domains.
   uint64_t desired_geom_rev{0};
@@ -167,6 +175,23 @@ public:
                     uint64_t incarnation);
   /// Forget demand state when the corresponding chunk slice is unloaded.
   void Remove(glm::ivec3 coord);
+  /// Retire the geometry domain while preserving an independent consumer.
+  void RemoveGeometry(glm::ivec3 coord);
+  /// World/frame zero are valid. A lease never certifies computed light.
+  void RequestLightSample(glm::ivec3 coord, uint64_t world_epoch,
+                          uint64_t frame, uint64_t retain_frames = 2);
+  bool HasLightSampleDemand(glm::ivec3 coord, uint64_t world_epoch,
+                            uint64_t frame) const;
+  struct LightSampleDrainStats
+  {
+    size_t visited{0}, active{0}, expired{0}, stale{0};
+  };
+  /// Fair bounded producer visitation; callbacks may update this store.
+  LightSampleDrainStats
+  DrainLightSampleDemands(uint64_t world_epoch, uint64_t frame,
+                          size_t visit_budget,
+                          const std::function<void(glm::ivec3)> &visit);
+  size_t GetLightSampleQueueSize() const { return LightSampleQueue_.size(); }
 
   /// Raise or coalesce desire. AlreadySatisfied when published meets desired.
   DemandResult NoteDemand(glm::ivec3 coord, uint64_t desired_geom_rev,
@@ -398,6 +423,13 @@ private:
   static bool PublishedMeetsDesired(const ChunkRenderDemandRecord &rec);
 
   std::unordered_map<glm::ivec3, ChunkRenderDemandRecord, IVec3Hash> Records_;
+  struct LightSampleQueueEntry
+  {
+    glm::ivec3 coord;
+    uint64_t lease_id;
+  };
+  std::deque<LightSampleQueueEntry> LightSampleQueue_;
+  uint64_t NextLightSampleLeaseId_{1};
   uint64_t NextAttemptId_{1};
   glm::ivec3 ReconcileCursorCoord_{0};
   bool ReconcileCursorValid_{false};

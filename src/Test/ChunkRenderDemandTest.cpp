@@ -732,6 +732,84 @@ int main()
            "visibility reset clears attempt and relight attribution");
   }
 
+  {
+    UChunkRenderDemandStore samples;
+    const glm::ivec3 air(2, -3, 1);
+    samples.RequestLightSample(air, 0, 0, 0);
+    Expect(samples.HasLightSampleDemand(air, 0, 0) &&
+               !samples.HasLightSampleDemand(air, 0, 1) &&
+               samples.Find(air)->incarnation == 0 &&
+               !samples.Find(air)->has_settled_light,
+           "AIR sample lease supports epoch/frame zero without geometry or "
+           "physical readiness");
+    samples.RequestLightSample(air, 0, 1, 4);
+    const auto lease_id = samples.Find(air)->light_sample_lease.id;
+    samples.BindIdentity(air, 0, 7);
+    samples.NoteDemand(air, 3, 2, 0, 0, 0, 7);
+    samples.RemoveGeometry(air);
+    Expect(samples.Find(air) && samples.Find(air)->incarnation == 0 &&
+               samples.Find(air)->desired_geom_rev == 0 &&
+               samples.Find(air)->light_sample_lease.id == lease_id &&
+               samples.HasLightSampleDemand(air, 0, 5),
+           "geometry admission and eviction preserve a live independent sample "
+           "lease");
+    samples.BindIdentity(air, 0, 8);
+    Expect(samples.Find(air)->light_sample_lease.id == lease_id,
+           "geometry re-admission preserves the same consumer generation");
+    samples.RemoveGeometry(air);
+    samples.RequestLightSample(air, 0, 2, 1);
+    Expect(samples.GetLightSampleQueueSize() == 1 &&
+               samples.HasLightSampleDemand(air, 0, 5),
+           "coalescing does not duplicate work or shorten another consumer's "
+           "lease");
+    size_t calls = 0;
+    auto scan = samples.DrainLightSampleDemands(0, 3, 10,
+                                                [&](glm::ivec3 c)
+                                                {
+                                                  ++calls;
+                                                  samples.RequestLightSample(
+                                                      c, 0, 3, 2);
+                                                });
+    Expect(calls == 1 && scan.active == 1 && scan.visited == 1 &&
+               samples.GetLightSampleQueueSize() == 1,
+           "callbacks may renew demand without repeated visitation in one "
+           "bounded drain");
+    scan =
+        samples.DrainLightSampleDemands(0, 6, 1, [&](glm::ivec3) { ++calls; });
+    Expect(scan.expired == 1 && calls == 1 && !samples.Find(air) &&
+               samples.GetLightSampleQueueSize() == 0,
+           "expired AIR-only rows and producer work are retired together");
+    samples.RequestLightSample(air, 1, 10, 10);
+    const auto old_id = samples.Find(air)->light_sample_lease.id;
+    samples.Remove(air);
+    samples.RequestLightSample(air, 1, 10, 10);
+    Expect(
+        samples.Find(air)->light_sample_lease.id != old_id,
+        "same-coordinate consumer reallocation needs a fresh queue identity");
+    scan =
+        samples.DrainLightSampleDemands(1, 10, 1, [&](glm::ivec3) { ++calls; });
+    Expect(scan.stale == 1 && scan.active == 0 && calls == 1 &&
+               samples.HasLightSampleDemand(air, 1, 10),
+           "stale queued consumer cannot service or remove a replacement");
+    samples.BindIdentity(air, 2, 9);
+    Expect(!samples.HasLightSampleDemand(air, 1, 10) &&
+               !samples.HasLightSampleDemand(air, 2, 10),
+           "new world identity cannot inherit an older world's light consumer");
+    samples.Clear();
+    for (int x = 0; x < 5; ++x)
+      samples.RequestLightSample({x, -3, 0}, 3, 0, 10);
+    std::vector<int> visited;
+    for (int i = 0; i < 5; ++i)
+      samples.DrainLightSampleDemands(3, 0, 1, [&](glm::ivec3 c)
+                                      { visited.push_back(c.x); });
+    Expect(visited == std::vector<int>({0, 1, 2, 3, 4}),
+           "bounded sample-demand producer visitation must be fair");
+    scan = samples.DrainLightSampleDemands(3, 0, 3, [&](glm::ivec3)
+                                           { samples.Clear(); });
+    Expect(scan.visited == 1 && samples.GetLightSampleQueueSize() == 0,
+           "a callback clearing the store must not invalidate drain traversal");
+  }
+
   if (gFails != 0)
   {
     std::fprintf(stderr, "chunk_render_demand_test failures=%d\n", gFails);

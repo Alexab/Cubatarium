@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <chrono>
 #include <iterator>
+#include <limits>
 
 namespace cutum
 {
@@ -202,7 +203,11 @@ void UChunkRenderDemandStore::BindIdentity(glm::ivec3 coord,
       rec.incarnation != incarnation)
   {
     const DemandSnapshot before = SnapshotDemand(rec);
+    const auto sample_lease = rec.world_epoch == world_epoch
+                                  ? rec.light_sample_lease
+                                  : ChunkRenderDemandRecord::LightSampleLease{};
     rec = ChunkRenderDemandRecord{};
+    rec.light_sample_lease = sample_lease;
     rec.coord = coord;
     rec.world_epoch = world_epoch;
     rec.incarnation = incarnation;
@@ -225,6 +230,101 @@ void UChunkRenderDemandStore::Remove(glm::ivec3 coord)
       ReconcileCursorValid_ = false;
     }
   }
+}
+
+void UChunkRenderDemandStore::RemoveGeometry(glm::ivec3 coord)
+{
+  auto *record = Find(coord);
+  if (!record || record->light_sample_lease.id == 0)
+  {
+    Remove(coord);
+    return;
+  }
+  const auto before = SnapshotDemand(*record);
+  const auto lease = record->light_sample_lease;
+  const auto epoch = record->world_epoch;
+  *record = ChunkRenderDemandRecord{};
+  record->coord = coord;
+  record->world_epoch = epoch;
+  record->light_sample_lease = lease;
+  TraceDemandTransition(coord, before, *record,
+                        DemandTransitionKind::IdentityReset);
+}
+
+void UChunkRenderDemandStore::RequestLightSample(glm::ivec3 coord,
+                                                 uint64_t world_epoch,
+                                                 uint64_t frame,
+                                                 uint64_t retain_frames)
+{
+  auto &record = GetOrCreate(coord);
+  if (record.world_epoch != world_epoch)
+  {
+    const auto before = SnapshotDemand(record);
+    record = ChunkRenderDemandRecord{};
+    record.coord = coord;
+    record.world_epoch = world_epoch;
+    TraceDemandTransition(coord, before, record,
+                          DemandTransitionKind::IdentityReset);
+  }
+  auto &lease = record.light_sample_lease;
+  if (lease.id == 0)
+  {
+    lease.id = NextLightSampleLeaseId_++;
+    LightSampleQueue_.push_back({coord, lease.id});
+  }
+  const auto maximum = std::numeric_limits<uint64_t>::max();
+  const uint64_t through =
+      retain_frames > maximum - frame ? maximum : frame + retain_frames;
+  lease.through_frame = std::max(lease.through_frame, through);
+}
+
+bool UChunkRenderDemandStore::HasLightSampleDemand(glm::ivec3 coord,
+                                                   uint64_t world_epoch,
+                                                   uint64_t frame) const
+{
+  const auto *record = Find(coord);
+  return record && record->world_epoch == world_epoch &&
+         record->light_sample_lease.id != 0 &&
+         frame <= record->light_sample_lease.through_frame;
+}
+
+UChunkRenderDemandStore::LightSampleDrainStats
+UChunkRenderDemandStore::DrainLightSampleDemands(
+    uint64_t world_epoch, uint64_t frame, size_t visit_budget,
+    const std::function<void(glm::ivec3)> &visit)
+{
+  LightSampleDrainStats stats;
+  const size_t count = std::min(visit_budget, LightSampleQueue_.size());
+  for (size_t i = 0; i < count && !LightSampleQueue_.empty(); ++i)
+  {
+    const auto entry = LightSampleQueue_.front();
+    LightSampleQueue_.pop_front();
+    ++stats.visited;
+    auto *record = Find(entry.coord);
+    if (!record || record->light_sample_lease.id != entry.lease_id)
+    {
+      ++stats.stale;
+      continue;
+    }
+    if (!HasLightSampleDemand(entry.coord, world_epoch, frame))
+    {
+      record->light_sample_lease = {};
+      ++stats.expired;
+      if (record->incarnation == 0 && record->desired_geom_rev == 0 &&
+          record->desired_light_rev == 0 && record->desired_coverage_gen == 0 &&
+          record->face_debt_mask == 0 && !record->has_active_attempt &&
+          !record->retained_awaiting_successor &&
+          !record->open_sky_repair_pending)
+        Remove(entry.coord);
+      continue;
+    }
+    // Requeue before invoking external code: callbacks may rehash/reset/clear
+    // the store or throw. Never retain a record pointer across that call.
+    LightSampleQueue_.push_back(entry);
+    ++stats.active;
+    visit(entry.coord);
+  }
+  return stats;
 }
 
 bool UChunkRenderDemandStore::CoverageSatisfied(
@@ -1298,6 +1398,7 @@ void UChunkRenderDemandStore::CountStopBlockers(
 void UChunkRenderDemandStore::Clear()
 {
   Records_.clear();
+  LightSampleQueue_.clear();
   CachedUnsatisfiedBreakdown_ = {};
   ReconcileCursorValid_ = false;
 }

@@ -1070,8 +1070,8 @@ void TestKnownAirLightResourceCalculation()
               14,
       "emission crosses into an entirely absent known-AIR section at negative "
       "Y");
-  manager.ReplaceComputedSectionLightVolume(
-      target, *result.chunks[0].padded_light, true, true);
+  Expect(InstallComputedLight(world, result.chunks[0], true, true),
+         "world installer accepts a validated padded known-AIR output");
   Expect(world.RecordLightCalculation(result, catalog) == 1 &&
              world.HasCompleteLightSamplingCalculation(target, catalog) &&
              world.GetCurrentLightSamplingVolume(target) &&
@@ -1106,12 +1106,48 @@ void TestKnownAirLightResourceCalculation()
              UnpackBlock(field->GetData()[UChunk::LocalIndex({0, 8, 8})]) == 0,
          "source removal clears previously nonzero independent section light");
   UBlockWorld unknown;
+  Expect(!InstallComputedLight(unknown, result.chunks[0], true, true) &&
+             unknown.GetChunkManager().GetSectionLightFieldCount() == 0,
+         "world installer cannot allocate a field from unknown absence");
   const auto missing =
       UChunkRelightSnapshot::CaptureSections(unknown, spec, {target})
           .Compute(registry);
   Expect(missing.chunks.empty() &&
              unknown.GetChunkManager().GetSectionLightFieldCount() == 0,
          "unknown absence cannot become an AIR calculation target or field");
+  UBlockWorld column;
+  column.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  column.SetFluidDefinitions(definitions.get());
+  column.SetBlock({15, -40, 8}, 50);
+  spec.block_positions = {target * CHUNK_SIZE};
+  spec.column_center_only = true;
+  spec.include_known_air_outputs = false;
+  spec.known_air_output_sections = {target};
+  auto selected =
+      UChunkRelightSnapshot::Capture(column, spec).Compute(registry);
+  Expect(
+      selected.chunks.size() == 1 && selected.chunks[0].coord == target &&
+          UnpackBlock(
+              selected.chunks[0].light_packed[UChunk::LocalIndex({0, 8, 8})]) ==
+              14 &&
+          InstallComputedLight(column, selected.chunks[0], true, true) &&
+          column.RecordLightCalculation(selected, catalog) == 1 &&
+          column.HasCompleteLightSamplingCalculation(target, catalog),
+      "column job writes only explicitly demanded AIR and installs physical "
+      "provenance");
+  const glm::ivec3 other(1, -2, 0);
+  auto malformed = selected.chunks[0];
+  malformed.coord = other;
+  malformed.light_packed[0] ^= 0x10;
+  Expect(
+      !InstallComputedLight(column, malformed, true, true) &&
+          !column.GetChunkManager().GetSectionLightField(other),
+      "inconsistent padded AIR output cannot allocate an independent resource");
+  spec.known_air_output_sections.clear();
+  Expect(UChunkRelightSnapshot::Capture(column, spec)
+             .Compute(registry)
+             .chunks.empty(),
+         "knownAIR alone does not request whole-height column light fields");
 }
 
 void TestWorldOwnedLightCertificates()

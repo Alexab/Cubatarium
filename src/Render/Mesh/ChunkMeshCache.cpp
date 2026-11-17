@@ -4425,7 +4425,7 @@ const UGpuMeshPipeline *UChunkMeshCache::GetGpuMeshPipeline() const
 
 void UChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
 {
-  GetRenderDemandStore().Remove(chunkCoord);
+  GetRenderDemandStore().RemoveGeometry(chunkCoord);
   PendingStaleLightRemeshes_.erase(chunkCoord);
   PendingMeshDependencyInvalidations_.erase(chunkCoord);
   if (GpuPipeline)
@@ -4484,7 +4484,7 @@ void UChunkMeshCache::RemoveColumn(glm::ivec3 ground_coord, int min_cy,
   for (int cy = min_cy; cy <= max_cy; ++cy)
   {
     const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);
-    GetRenderDemandStore().Remove(slice);
+    GetRenderDemandStore().RemoveGeometry(slice);
     PendingStaleLightRemeshes_.erase(slice);
     PendingMeshDependencyInvalidations_.erase(slice);
     if (GpuPipeline)

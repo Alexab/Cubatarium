@@ -220,7 +220,10 @@ UChunkRelightSnapshot::CaptureImpl(const UBlockWorld &world,
   for (const auto target : targets)
   {
     if (world.GetChunkManager().HasChunk(target) ||
-        (sections && spec.include_known_air_outputs &&
+        (((sections && spec.include_known_air_outputs) ||
+          std::find(spec.known_air_output_sections.begin(),
+                    spec.known_air_output_sections.end(),
+                    target) != spec.known_air_output_sections.end()) &&
          world.CaptureInputStamp(target, false, true).missingEvidence ==
              MissingChunkEvidence::KnownAir))
       snapshot.WriteChunks.insert(target);

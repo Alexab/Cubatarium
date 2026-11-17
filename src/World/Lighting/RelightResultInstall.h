@@ -1,6 +1,7 @@
 #pragma once
 
 #include "World/Chunks/Chunk.h"
+#include "World/Core/BlockWorld.h"
 #include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Lighting/LightUtil.h"
 
@@ -119,11 +120,11 @@ InstallComputedLight(UChunk &chunk,
 
 /// Install one calculated sampling resource before recording settlement.
 /// The interior must agree with the padded output in every selected channel.
-inline bool InstallComputedLight(UChunk &chunk, const RelightChunkLightData &computed,
-                                 bool sky, bool block)
+inline bool ComputedLightInteriorMatches(const RelightChunkLightData &computed,
+                                         bool sky, bool block)
 {
   if (!computed.padded_light)
-    return InstallComputedLight(chunk, computed.light_packed, sky, block);
+    return false;
   const uint8_t mask = (sky ? 0x0f : 0) | (block ? 0xf0 : 0);
   for (int z = 0; z < CHUNK_SIZE; ++z)
     for (int y = 0; y < CHUNK_SIZE; ++y)
@@ -131,7 +132,32 @@ inline bool InstallComputedLight(UChunk &chunk, const RelightChunkLightData &com
         if (((computed.light_packed[UChunk::LocalIndex({x,y,z})] ^
               computed.padded_light->cells[SectionLightVolume::Index(x,y,z)]) & mask) != 0)
           return false;
-  return chunk.ReplaceComputedLightVolume(*computed.padded_light, sky, block);
+  return true;
+}
+
+inline bool InstallComputedLight(UChunk &chunk,
+                                 const RelightChunkLightData &computed,
+                                 bool sky, bool block)
+{
+  if (!computed.padded_light)
+    return InstallComputedLight(chunk, computed.light_packed, sky, block);
+  return ComputedLightInteriorMatches(computed, sky, block) &&
+         chunk.ReplaceComputedLightVolume(*computed.padded_light, sky, block);
+}
+
+/// Caller validates the result's full input context before this installation.
+/// Unknown absence and legacy unpadded bytes cannot allocate an AIR field.
+inline bool InstallComputedLight(UBlockWorld &world,
+                                 const RelightChunkLightData &computed,
+                                 bool sky, bool block)
+{
+  auto &manager = world.GetChunkManager();
+  if (auto *chunk = manager.GetChunk(computed.coord))
+    return InstallComputedLight(*chunk, computed, sky, block);
+  return world.IsKnownAbsentAirChunk(computed.coord) &&
+         ComputedLightInteriorMatches(computed, sky, block) &&
+         manager.ReplaceComputedSectionLightVolume(
+             computed.coord, *computed.padded_light, sky, block);
 }
 
 } // namespace cutum

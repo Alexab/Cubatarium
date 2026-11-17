@@ -434,6 +434,16 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                 verdict["status"] = "FAIL"
             elif floor_light["status"] == "UNTESTED" and verdict["status"] == "PASS":
                 verdict["status"] = "UNTESTED"
+        if scene is not None and scene.get("omitted_internal_air_slices", 0) > 0 and not startup_only:
+            from engine_air_light_service import evaluate as evaluate_air_service
+            air_service = evaluate_air_service(sorted((artifacts / "logs").glob("*.log.INFO.*")))
+            verdict["components"]["fixture_air_light_service"] = air_service
+            (artifacts / "fixture-air-light-service.json").write_text(
+                json.dumps(air_service, indent=2) + "\n", encoding="utf-8")
+            if air_service["status"] == "FAIL":
+                verdict["status"] = "FAIL"
+            elif air_service["status"] == "UNTESTED" and verdict["status"] == "PASS":
+                verdict["status"] = "UNTESTED"
         verdict["runner_exit_code"] = child.returncode
         verdict["inspection_evidence"] = inspection
         if not report_path.exists():
