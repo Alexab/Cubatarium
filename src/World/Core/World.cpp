@@ -272,8 +272,8 @@ bool ChunkSliceHasCurrentLightSettlement(const UWorld &world, glm::ivec3 coord)
   return true;
 }
 
-bool CurrentSlicePublicationReadyForWarmup(const UWorld &world,
-                                           glm::ivec3 coord)
+bool CurrentSlicePublicationInputsReadyForWarmup(const UWorld &world,
+                                                 glm::ivec3 coord)
 {
   const auto &mesh = world.GetMeshService();
   const auto &cache = mesh.GetCache();
@@ -282,7 +282,7 @@ bool CurrentSlicePublicationReadyForWarmup(const UWorld &world,
   if (!chunk || !demand || !mesh.HasMeshSatisfyingColumnReady(coord) ||
       cache.HasProvisionalLightPreview(coord) ||
       !ChunkSliceHasCurrentLightSettlement(world, coord) ||
-      mesh.IsChunkMeshDirty(coord) || mesh.IsRemeshAfterApplyPending(coord) ||
+      mesh.IsRemeshAfterApplyPending(coord) ||
       mesh.HasInflightMeshBuild(coord) || mesh.IsPendingGpuApply(coord) ||
       mesh.IsGpuExtractInFlight(coord) || cache.HasPendingCaptureWork(coord))
     return false;
@@ -295,6 +295,13 @@ bool CurrentSlicePublicationReadyForWarmup(const UWorld &world,
          demand->desired_coverage_gen <= demand->published_coverage_gen &&
          mesh.GetChunkMeshRevision(coord) <= published.geom_rev &&
          cache.IsPublishedMeshCurrentForInputs(coord, world.GetBlockWorld());
+}
+
+bool CurrentSlicePublicationReadyForWarmup(const UWorld &world,
+                                           glm::ivec3 coord)
+{
+  return !world.GetMeshService().IsChunkMeshDirty(coord) &&
+         CurrentSlicePublicationInputsReadyForWarmup(world, coord);
 }
 
 bool CurrentOccludedSliceReadyForWarmup(const UWorld &world, glm::ivec3 coord)
@@ -11771,6 +11778,20 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
           continue;
         if (mesh.IsChunkMeshDirty(coord))
         {
+          // A priority ticket can outlive the work it requested. Retire only
+          // after the actual publication, all version floors and current
+          // physical inputs prove it fulfilled, with no active successor owner.
+          // Priority or terminal-column flags alone cannot authorize this.
+          if (CurrentSlicePublicationInputsReadyForWarmup(*this, coord))
+          {
+            cache.ClearDirtyAndRemeshAfterApply(coord);
+            CubatariumLogInfo("RequiredPublicationRepair",
+                              "retire_input_equivalent_dirty coord=(" +
+                                  std::to_string(coord.x) + "," +
+                                  std::to_string(coord.y) + "," +
+                                  std::to_string(coord.z) + ")");
+            continue;
+          }
           // An existing ordinary remesh can otherwise be muted by terminal
           // column/quiesce policy. Exact required publication debt owns
           // priority.
@@ -11828,6 +11849,26 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
     row["lit_quiesce"] = MeshService->IsEnterLitQuiesce();
     row["mesh_drain_final"] = PhysicsTelemetryData.MeshDrainFinal;
     row["mesh_schedule_final"] = PhysicsTelemetryData.MeshScheduleFinal;
+    row["mesh_schedule_observation"] = {
+        {"scheduled", cache.GetLastMeshDirtyScheduleOkN()},
+        {"first_mesh_scheduled", cache.GetLastMeshDirtyScheduleOkFmN()},
+        {"remesh_scheduled", cache.GetLastMeshDirtyScheduleOkRemeshN()},
+        {"first_mesh_cap", cache.GetLastFirstMeshScheduleEffectiveCap()},
+        {"first_mesh_lane", cache.GetLastScheduleLaneFmN()},
+        {"remesh_lane", cache.GetLastScheduleLaneRemeshN()},
+        {"lane_starve_reason", cache.GetLastScheduleLaneStarveReason()},
+        {"skip_pipeline", cache.GetLastMeshDirtyScheduleSkipPipelineN()},
+        {"skip_snapshot", cache.GetLastMeshDirtyScheduleSkipSnapshotN()},
+        {"skip_soft_defer", cache.GetLastMeshDirtyScheduleSkipSoftDeferN()},
+        {"skip_locked", cache.GetLastMeshDirtyScheduleSkipLockedN()},
+        {"skip_orphan", cache.GetLastMeshDirtyScheduleSkipOrphanN()},
+        {"skip_remesh_starve",
+         cache.GetLastMeshDirtyScheduleSkipRemeshStarveN()},
+        {"skip_outside_focus",
+         cache.GetLastMeshDirtyScheduleSkipOutsideFocusFmN()},
+        {"skip_other", cache.GetLastMeshDirtyScheduleSkipOtherN()},
+        {"snapshot_budget_ms", cache.GetMeshSnapshotBudgetMs()},
+        {"emerge_budget_ms", cache.GetMeshEmergeTotalBudgetMs()}};
     row["blockers"] = json::array();
     const auto focus =
         UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
@@ -11847,8 +11888,15 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
             continue;
           const auto *demand = GetRenderDemandStore().Find(coord);
           const auto published = cache.GetMeshPublishRevs(coord);
+          int32_t queue_index = -1, queue_size = 0;
+          const auto queue_kind =
+              cache.GetDirtyQueueTrace(coord, queue_index, queue_size);
           json blocker = {
               {"coord", {x, cy, z}},
+              {"dirty_queue_kind", queue_kind},
+              {"dirty_queue_index", queue_index},
+              {"dirty_queue_size", queue_size},
+              {"dirty_queue_age_frames", cache.GetDirtyQueueAgeFrames(coord)},
               {"drawable", mesh.HasDrawableGreedyMesh(coord)},
               {"satisfies", mesh.HasMeshSatisfyingColumnReady(coord)},
               {"settled", ChunkSliceHasCurrentLightSettlement(*this, coord)},
