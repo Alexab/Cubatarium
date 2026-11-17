@@ -2979,7 +2979,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
               }
             }
             return ingame_sec >= in_game_seconds ||
-                   (bot_terminal_time >= 0.0 &&
+                   (bot_terminal_time >= 0.0 && ingame_frames_seen >= 30 &&
                     ingame_sec >= bot_terminal_time + options.StopPhaseSec);
           }
           return false;
@@ -3025,7 +3025,10 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
         start_focus_captured
             ? static_cast<int>(std::max(std::abs(focus_dx), std::abs(focus_dz)))
             : 0;
-    if (options.HoldForward && !options.BreakStandMode && chunks_traveled < 3)
+    // Startup observation is an explicitly empty route. Its movement audit
+    // requires a stationary camera; frontier routes retain the travel gate.
+    if (options.HoldForward && !options.BreakStandMode &&
+        !startup_observation && chunks_traveled < 3)
     {
       std::cerr << "flight-sim: FAIL insufficient travel chunks="
                 << chunks_traveled << " start=(" << start_focus_cx << ","
