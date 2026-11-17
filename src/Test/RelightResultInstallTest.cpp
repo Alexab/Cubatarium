@@ -1180,6 +1180,47 @@ void TestBatchAbsenceEvidenceIsFreshAndExact()
                                   "replaced by column-floor inference");
 }
 
+void TestLightInputMemoRetainsResidentWorkingSet()
+{
+  using namespace cutum;
+  UBlockRegistry registry(nullptr, std::make_shared<UBlockDefinitionStorage>());
+  const auto catalog = registry.GetDefinitionsCatalogSnapshot();
+  UBlockWorld world;
+  world.SetKnownAirColumnFloorQuery(
+      [](glm::ivec3) { return std::optional<int>(-4); },
+      []() { return UBlockWorld::KnownAirEvidenceVersion{}; });
+  auto &manager = world.GetChunkManager();
+  constexpr int count = 1100;
+  for (int x = 0; x < count; ++x)
+    manager.EnsureChunk({x, 0, 0});
+  // Exercise provenance memo ownership, not the physical solver. Each record
+  // has an independent immutable context for its already installed zero field.
+  for (int x = 0; x < count; ++x)
+  {
+    const glm::ivec3 coord(x, 0, 0);
+    RelightComputeResult result;
+    result.input_catalog = catalog;
+    result.input_profile = world.GetVerticalProfile();
+    result.input_context_captured = true;
+    result.inputs_complete = true;
+    result.read_set.push_back(world.CaptureInputStamp(coord, false, true));
+    result.chunks.push_back({coord, manager.GetChunk(coord)->GetLightData()});
+    Expect(world.RecordLightCalculation(result, catalog) == 1,
+           "independent resident context is recorded for both domains");
+  }
+  for (int x = 0; x < count; ++x)
+    Expect(world.HasCompleteLightCalculation({x, 0, 0}, catalog),
+           "large resident census primes current contexts");
+  const auto walks =
+      world.GetLightInputValidationStats().dependency_validations;
+  for (int x = 0; x < count; ++x)
+    Expect(world.HasCompleteLightCalculation({x, 0, 0}, catalog),
+           "second stable census retains complete proofs");
+  Expect(world.GetLightInputValidationStats().dependency_validations == walks,
+         "stable resident working set above 1024 cannot evict itself on every "
+         "census");
+}
+
 void TestVersionedLightInputMemoInvalidatesImmediately()
 {
   using namespace cutum;
@@ -1593,6 +1634,7 @@ int main(int argc, char **argv)
   }
   if (argc == 2 && std::string(argv[1]) == "--light-proof")
   {
+    TestLightInputMemoRetainsResidentWorkingSet();
     TestVersionedLightInputMemoInvalidatesImmediately();
     TestWorldOwnedLightCertificates();
     TestBatchAbsenceEvidenceIsFreshAndExact();
@@ -1609,6 +1651,7 @@ int main(int argc, char **argv)
     return 0;
   }
   TestPendingCoverageRequiresCurrentKnownProof();
+  TestLightInputMemoRetainsResidentWorkingSet();
   TestVersionedLightInputMemoInvalidatesImmediately();
   TestWorldOwnedLightCertificates();
   TestBatchAbsenceEvidenceIsFreshAndExact();

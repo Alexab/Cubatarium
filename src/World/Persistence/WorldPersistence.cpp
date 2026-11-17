@@ -1,5 +1,4 @@
 #include "World/Persistence/WorldPersistence.h"
-#include "World/Lighting/LightCacheCertificate.h"
 #include "App/Platform/Log.h"
 #include "Blocks/BlockRegistry.h"
 #include "Core/Environment.h"
@@ -28,6 +27,7 @@
 #include "World/Core/World.h"
 #include "World/Diagnostics/JobStageTrace.h"
 #include "World/Lighting/ChunkLighting.h"
+#include "World/Lighting/LightCacheCertificate.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
@@ -37,6 +37,7 @@
 #include "World/Streaming/ColumnFlowScheduler.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/NearFovWorkPriority.h"
+#include "World/Streaming/RelightCaptureQueue.h"
 #include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/WorldColumnRequestId.h"
@@ -3291,6 +3292,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     telem.CaptureBgCapN = bg_cap;
     telem.CaptureBandCy = band_cy;
   }
+  if (async_bg)
+    world.ReconcileAsyncRelightColumnInFlight();
   const auto drain_loop_t0 = std::chrono::high_resolution_clock::now();
   auto drain_one = [&]()
   {
@@ -3364,29 +3367,25 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     }
     PrioritizeNearestTerrainColumnRelight(
         world, focus_chunk, RelightMissPinMaxHoriz(), /*scan_cap=*/64);
-    glm::ivec2 col;
     bool dequeued_priority = false;
-    int queue_size_after_dequeue = 0;
-    if (!PendingTerrainColumnRelightsPriority.empty())
-    {
-      col = PendingTerrainColumnRelightsPriority.front();
-      PendingTerrainColumnRelightsPriority.pop_front();
-      dequeued_priority = true;
-      queue_size_after_dequeue =
-          static_cast<int>(PendingTerrainColumnRelightsPriority.size());
-    }
-    else if (!PendingTerrainColumnRelights.empty())
-    {
-      col = PendingTerrainColumnRelights.front();
-      PendingTerrainColumnRelights.pop_front();
-      queue_size_after_dequeue =
-          static_cast<int>(PendingTerrainColumnRelights.size());
-    }
-    else
+    const auto next_column = cutum::PopReadyRelightColumn(
+        PendingTerrainColumnRelightsPriority, PendingTerrainColumnRelights,
+        [&](glm::ivec2 key)
+        {
+          return !async_bg || !world.IsAsyncRelightColumnInFlight(
+                                  {FloorDiv(key.x, CHUNK_SIZE),
+                                   FloorDiv(key.y, CHUNK_SIZE)});
+        },
+        dequeued_priority);
+    if (!next_column)
     {
       capture_telem.RelightCaptureStopReason = 8;
       return false;
     }
+    const glm::ivec2 col = *next_column;
+    const int queue_size_after_dequeue = static_cast<int>(
+        dequeued_priority ? PendingTerrainColumnRelightsPriority.size()
+                          : PendingTerrainColumnRelights.size());
     if (audit_relight)
     {
       CubatariumLogInfo(

@@ -1,4 +1,5 @@
 #include "World/Streaming/RequiredDataCoverage.h"
+#include "World/Streaming/RelightCaptureQueue.h"
 #include "World/Streaming/RequiredPresentationCoverage.h"
 #include "World/Streaming/RequiredWorldDomain.h"
 #include <cstdlib>
@@ -16,6 +17,46 @@ static void Expect(bool value, const char *message)
 
 int main()
 {
+  {
+    std::deque<int> priority{-7, 5}, ordinary{-12, 9};
+    std::set<int> running{-7, 5, -12};
+    bool from_priority = true;
+    int probes = 0;
+    const auto ready = [&](int key)
+    {
+      ++probes;
+      return running.count(key) == 0;
+    };
+    Expect(cutum::PopReadyRelightColumn(priority, ordinary, ready,
+                                        from_priority) == 9 &&
+               !from_priority && probes == 4,
+           "busy priority owners cannot starve executable ordinary work");
+    Expect(priority == std::deque<int>({-7, 5}) &&
+               ordinary == std::deque<int>({-12}),
+           "skipped owners retain exact queue obligations and order");
+    probes = 0;
+    Expect(!cutum::PopReadyRelightColumn(priority, ordinary, ready,
+                                         from_priority) &&
+               probes == 3,
+           "all-busy lanes are probed once, not repeatedly recaptured");
+    running.erase(-7);
+    Expect(cutum::PopReadyRelightColumn(priority, ordinary, ready,
+                                        from_priority) == -7 &&
+               from_priority,
+           "completed priority owner becomes executable on next drain");
+    priority = {-7, 5, 8};
+    running.insert(-7);
+    ordinary = {9};
+    probes = 0;
+    Expect(cutum::PopReadyRelightColumn(priority, ordinary, ready,
+                                        from_priority, 2) == 9 &&
+               probes == 3,
+           "scan cap bounds each lane without starving ordinary work");
+    Expect(cutum::PopReadyRelightColumn(priority, ordinary, ready,
+                                        from_priority, 2) == 8 &&
+               from_priority,
+           "rotation makes an unprobed priority tail executable next time");
+  }
   std::vector<glm::ivec3> columns = {{-1, 0, 0}, {-2, 0, 0}, {-3, 1, 0},
                                      {-3, 0, 0}, {-3, 0, 0}, {-4, 0, 0},
                                      {-5, 0, 0}};

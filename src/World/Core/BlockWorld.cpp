@@ -141,12 +141,24 @@ bool UBlockWorld::StoredLightInputsStillMatch(
     memo.entries.clear();
     return current;
   }
-  // This is an optional validation memo, not work ownership. Retiring old weak
-  // entries is safe even when a stationary world produces many no-op receipts.
-  if (memo.entries.size() >= 1024)
-    memo.entries.clear();
-  memo.entries[context.get()] = {context, Chunks.GetInputRevisionIdentity(),
-                                 current};
+  // Each resident section can own two independent domain contexts. A fixed
+  // 1024-entry clear made larger stable censuses evict their own working set
+  // and walk every dependency again. Bound history beyond the resident set,
+  // retiring expired receipts without discarding all still-live validation.
+  const auto capacity = Chunks.GetResidentChunkCount() * 2 + 1024;
+  if (memo.entries.size() >= capacity)
+  {
+    for (auto it = memo.entries.begin(); it != memo.entries.end();)
+      if (it->second.input.expired())
+        it = memo.entries.erase(it);
+      else
+        ++it;
+  }
+  // Unexpected externally retained contexts cannot grow this optional cache.
+  // The uncached result remains truthful and all revision checks still apply.
+  if (memo.entries.size() < capacity)
+    memo.entries[context.get()] = {context, Chunks.GetInputRevisionIdentity(),
+                                   current};
   return current;
 }
 
