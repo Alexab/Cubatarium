@@ -1,5 +1,6 @@
 #include "World/Streaming/RequiredDataCoverage.h"
 #include "World/Streaming/RequiredPresentationCoverage.h"
+#include "World/Streaming/RequiredWorldDomain.h"
 #include <cstdlib>
 #include <iostream>
 #include <set>
@@ -95,6 +96,117 @@ int main()
   Expect(closure() && required.size() == 169,
          "bounded requests eventually supply every transitive light/mesh input "
          "at the new center");
+  const auto domain = cutum::RequiredWorldDomain::ForRenderDistance(4, true);
+  const auto larger = cutum::RequiredWorldDomain::ForRenderDistance(8, true);
+  const auto flat = cutum::RequiredWorldDomain::ForRenderDistance(1, false);
+  Expect(domain.presentation == 4 && domain.approach == 5 &&
+             domain.light == 6 && domain.data == 7 && larger.data == 11 &&
+             flat.data == 3,
+         "consumer closure follows the actual render radius and light mode");
+  cutum::RequiredDataLease lease{{-7, 0, -9}, domain.data};
+  Expect(lease.Contains({-14, -99, -9}) && !lease.Contains({1, 0, -9}),
+         "required full-column data survives an unrelated vertical keep band");
+  Expect(lease.RetentionRadiusAround({-6, 0, -9}, 1) == 8 &&
+             lease.RetentionRadiusAround({-6, 0, -9}, 12) == 12,
+         "request cancellation includes an offset consumer lease without "
+         "shrinking ordinary retention");
+  lease.center.x -= 20;
+  Expect(!lease.Contains({-7, 0, -9}) && lease.Contains({-27, 3, -9}),
+         "moving demand releases the old lease instead of pinning the initial "
+         "ring");
+  cutum::RequiredLightScan fair_scan;
+  std::set<std::pair<int, int>> relative_visits;
+  for (int frame = 0; frame < 6; ++frame)
+  {
+    const glm::ivec3 moving_center(-frame, -3, frame);
+    Expect(fair_scan.Drain(
+               moving_center, domain.light, 32,
+               [&](glm::ivec3 c)
+               {
+                 Expect(
+                     c.y == 0,
+                     "negative camera Y cannot leak into ground-column work");
+                 relative_visits.emplace(c.x - moving_center.x,
+                                         c.z - moving_center.z);
+               }) == 32,
+           "light discovery is bounded independently of camera changes");
+  }
+  Expect(relative_visits.size() == 169,
+         "changing focus every frame cannot starve the outer light dependency "
+         "ring");
+
+  // A data-only halo must move, survive unload/cancel decisions and eventually
+  // close beyond the original preload, even when ordinary keep radius is zero.
+  std::set<std::pair<int, int>> rolling_data;
+  for (const auto &c : cutum::RequiredDataColumns({0, 0, -2}, domain.data))
+    rolling_data.emplace(c.x, c.z);
+  cutum::RequiredLightScan rolling_scan;
+  std::set<std::pair<int, int>> calculated_light;
+  for (const auto &c : cutum::RequiredDataColumns({0, 0, -2}, domain.light))
+    calculated_light.emplace(c.x, c.z);
+  struct PendingData
+  {
+    glm::ivec3 coord;
+    int ready_frame;
+  };
+  std::vector<PendingData> pending_data;
+  int frame = 0;
+  for (int step = 1; step <= 22; ++step)
+  {
+    const glm::ivec3 center(-step, -4, -2);
+    lease = {center, domain.data};
+    for (int local_frame = 0; local_frame < 8; ++local_frame, ++frame)
+    {
+      for (auto it = pending_data.begin(); it != pending_data.end();)
+        if (it->ready_frame <= frame)
+        {
+          rolling_data.emplace(it->coord.x, it->coord.z);
+          it = pending_data.erase(it);
+        }
+        else
+          ++it;
+      int retired = 0;
+      for (auto it = rolling_data.begin();
+           it != rolling_data.end() && retired < 2;)
+        if (!lease.Contains({it->first, 0, it->second}))
+        {
+          it = rolling_data.erase(it);
+          ++retired;
+        }
+        else
+          ++it;
+      const auto wanted = cutum::RequiredDataColumns(center, domain.data);
+      cutum::AdmitRequiredDataColumns(
+          wanted, 4,
+          [&](glm::ivec3 c) { return rolling_data.count({c.x, c.z}) != 0; },
+          [&](glm::ivec3 c)
+          {
+            return std::any_of(pending_data.begin(), pending_data.end(),
+                               [&](const PendingData &p)
+                               { return p.coord == c; });
+          },
+          [&](glm::ivec3 c) { pending_data.push_back({c, frame + 2}); });
+      rolling_scan.Drain(center, domain.light, 32,
+                         [&](glm::ivec3 c)
+                         {
+                           bool known = true;
+                           for (int dz = -1; dz <= 1; ++dz)
+                             for (int dx = -1; dx <= 1; ++dx)
+                               known &= rolling_data.count(
+                                            {c.x + dx, c.z + dz}) != 0;
+                           if (known)
+                             calculated_light.emplace(c.x, c.z);
+                         });
+      Expect(rolling_data.size() <= 260 && pending_data.size() <= 8,
+             "consumer leases move with bounded residency and pending data");
+    }
+    for (const auto &c :
+         cutum::RequiredDataColumns(center, domain.presentation + 1))
+      Expect(calculated_light.count({c.x, c.z}) != 0,
+             "every presentation light neighbor converges beyond the initial "
+             "ring without teleport");
+  }
+
   cutum::RequiredPresentationCoverage proof;
   Expect(!proof.Ready(), "an empty census cannot authorize the first frame");
   proof.expected_columns = proof.columns = 1;

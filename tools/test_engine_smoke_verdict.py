@@ -44,6 +44,42 @@ class EngineSmokeVerdictTest(unittest.TestCase):
         self.trace()
         self.assertEqual(classify(self.report, self.perf)["components"]["startup"]["status"], "UNTESTED")
 
+    def test_current_census_tracks_actual_render_distance_including_small_rings(self):
+        old = self.report["startup_warmup_evidence"]["first_frame_witnesses"][0]
+        for radius in (1, 3, 8):
+            columns = (2 * radius + 1) ** 2
+            sections = columns * 24
+            row = dict(old, schema="required-presentation-witness.v2",
+                       domain="configured-render-ring.v1", render_distance_chunks=radius,
+                       radius=radius, columns=columns, expected_columns=columns,
+                       sections=sections, expected_sections=sections,
+                       known_air_sections=0, resident_air_sections=0, surface_sections=sections)
+            self.report["startup_warmup_evidence"] = dict(first_frame_witnesses=[row])
+            self.trace()
+            self.assertEqual(classify(self.report, self.perf)["components"]["startup"]["status"], "PASS")
+            row["render_distance_chunks"] = radius + 1
+            self.assertEqual(classify(self.report, self.perf)["components"]["startup"]["status"], "UNTESTED")
+        row["render_distance_chunks"] = True
+        self.assertEqual(classify(self.report, self.perf)["components"]["startup"]["status"], "UNTESTED")
+
+    def test_continuous_input_requests_preserve_signed_motion_without_granting_readiness(self):
+        log = Path(self.temp.name) / "runtime.log"
+        log.write_text("[RequiredWorldInputs] focus=(1,3) presentation=4 light=6 data=7 requested=4 light_noted=8 epoch=0\n"
+                       "[RequiredWorldInputs] focus=(-9,3) presentation=4 light=6 data=7 requested=2 light_noted=3 epoch=500\n"
+                       "[RequiredWorldInputs] focus=(-20,3) presentation=4 light=6 data=7 requested=1 light_noted=1 epoch=1500\n"
+                       "[RequiredWorldInputs] focus=(-21,3) presentation=4 light=6 data=99 requested=4 light_noted=9 epoch=1600\n",
+                       encoding="utf-8")
+        evidence = read_startup_warmup_evidence([log])
+        requests = evidence["required_world_input_requests"]
+        self.assertEqual(requests["records"], 3)
+        self.assertEqual(requests["runtime_records"], 2)
+        self.assertEqual(requests["requested_columns"], 7)
+        self.assertEqual(requests["max_focus_displacement"], 21)
+        self.assertEqual(requests["beyond_first_data_domain_records"], 2)
+        self.report["startup_warmup_evidence"] = evidence
+        self.trace()
+        self.assertEqual(classify(self.report, self.perf)["components"]["startup"]["status"], "UNTESTED")
+
     def test_first_frame_census_is_read_from_renderer_log(self):
         row = self.report["startup_warmup_evidence"]["first_frame_witnesses"][0]
         log = Path(self.temp.name) / "runtime.log"

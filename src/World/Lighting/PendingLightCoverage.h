@@ -18,6 +18,12 @@ public:
 
   std::vector<int> Request(int first_y, int last_y)
   {
+    return RequestIf(first_y, last_y, [](int) { return true; });
+  }
+
+  template <typename NeedsWork>
+  std::vector<int> RequestIf(int first_y, int last_y, NeedsWork needs_work)
+  {
     std::vector<int> added;
     if (last_y < first_y)
       return added;
@@ -25,7 +31,7 @@ public:
     const int last = SectionY(last_y);
     for (int cy = first;; ++cy)
     {
-      if (Sections.insert(cy).second)
+      if (needs_work(cy) && Sections.insert(cy).second)
         added.push_back(cy);
       if (cy == last)
         break;

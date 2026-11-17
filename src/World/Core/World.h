@@ -509,6 +509,8 @@ public:
   void ResetPhysicsRuntimeState();
   void WarmupSpawnAreaForEnterGame();
   void PrepareEnterGameSession();
+  int GetRequiredPresentationRadius() const;
+  void MaintainRequiredWorldInputs(int data_budget, int light_visit_budget);
   RequiredPresentationCoverage SampleRequiredPresentationCoverage() const;
   bool ValidateRequiredEnterPresentation(double elapsed_ms);
   void RecordFirstRenderedRequiredRing();

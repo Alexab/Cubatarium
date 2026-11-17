@@ -160,11 +160,20 @@ def isolated_fixture(runtime: Path, world_name: str, artifacts: Path):
         lease.unlink()
 
 
+def render_distance_payload(payload: bytes, radius: int) -> bytes:
+    if not isinstance(radius, int) or isinstance(radius, bool) or not 1 <= radius <= 32:
+        raise ValueError("render distance must be an integer from 1 to 32")
+    config = json.loads(payload)
+    config["render_distance_chunks"] = radius
+    return (json.dumps(config, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+
+
 def run(world: str, artifacts: Path, *, fly_seconds: float = 100,
         stop_seconds: float = 20, idle_seconds: float = 5,
         yaw: float = 180, pitch: float = -25,
         minimum_chunks: int = 16, fixture_scene: str | None = None,
-        process_timeout: float | None = None) -> dict:
+        process_timeout: float | None = None,
+        render_distance: int | None = None) -> dict:
     if process_timeout is not None:
         import math
         if not math.isfinite(process_timeout) or process_timeout <= 0:
@@ -176,6 +185,9 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 100,
     if not flight_sim_run.exe_writable(0.5):
         raise RuntimeError("Release executable is in use; the running session was left intact")
     with isolated_fixture(runtime, world, artifacts) as (fixture, source_hash):
+        if render_distance is not None:
+            config_path = runtime / "config.json"
+            config_path.write_bytes(render_distance_payload(config_path.read_bytes(), render_distance))
         scene = None
         if fixture_scene in ("dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave"):
             if yaw != 180:
@@ -238,6 +250,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 100,
                  "fixture_scene": scene,
                  "prepared_world_sha256": world_fingerprint(fixture),
                  "bot_route_sha256": digest(bot_path),
+                 "render_distance_override": render_distance,
                  "fly_seconds": fly_seconds, "stop_seconds": stop_seconds,
                  "idle_seconds": idle_seconds, "yaw": yaw, "pitch": pitch,
                  "minimum_chunks": minimum_chunks, "command": command,
@@ -300,6 +313,8 @@ def main() -> int:
     parser.add_argument("--yaw", type=float, default=180)
     parser.add_argument("--pitch", type=float, default=-25)
     parser.add_argument("--minimum-chunks", type=int, default=16)
+    parser.add_argument("--render-distance", type=int, choices=range(1, 33),
+                        help="isolated config override, restored byte-for-byte after the run")
     parser.add_argument("--process-timeout", type=float,
                         help="explicit wall deadline for bounded diagnostics; timeout is a failure")
     parser.add_argument("--fixture-scene", choices=["dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave"])
@@ -315,7 +330,8 @@ def main() -> int:
     verdict = run(args.world, args.artifacts.resolve(), fly_seconds=args.fly_seconds,
                   stop_seconds=args.stop_seconds, idle_seconds=args.idle_seconds,
                   yaw=args.yaw, pitch=args.pitch, minimum_chunks=args.minimum_chunks,
-                  fixture_scene=args.fixture_scene, process_timeout=args.process_timeout)
+                  fixture_scene=args.fixture_scene, process_timeout=args.process_timeout,
+                  render_distance=args.render_distance)
     print(json.dumps(verdict, ensure_ascii=False))
     return {"PASS": 0, "FAIL": 1, "UNTESTED": 2}[verdict["status"]]
 

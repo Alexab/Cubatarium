@@ -1484,6 +1484,17 @@ void TestPendingCoverageRequiresCurrentKnownProof()
   Expect(!sparse.IsOwnedByBand(true, true, -32, 31),
          "expanded underground debt invalidates old queue ownership");
 
+  PendingLightCoverage incremental;
+  auto add_unknown = [&](int min_y, int max_y)
+  {
+    return incremental.RequestIf(min_y, max_y, [](int cy) { return cy != -2; });
+  };
+  Expect(add_unknown(-32, -17).empty() && incremental.Empty(),
+         "a repeated demand does not reopen an already proved section");
+  Expect(add_unknown(-64, -1) == std::vector<int>({-4, -3, -1}) &&
+             !incremental.Contains(-2),
+         "new unknown debt stays exact around a proved interior section");
+
   auto definitions = std::make_shared<UBlockDefinitionStorage>();
   BlockDefinition stone;
   stone.Physics = BlockPhysicsProfile::Solid();

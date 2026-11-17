@@ -2553,7 +2553,18 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y,
   ground.y = 0;
   const glm::ivec2 key(ground.x, ground.z);
   auto &coverage = PendingLightBeforeMesh[key];
-  const auto added = coverage.Request(min_y, max_y);
+  const auto added = coverage.RequestIf(min_y, max_y,
+                                        [&](int cy)
+                                        {
+                                          return !HasCurrentColumnLightCoverage(
+                                              key, cy * CHUNK_SIZE,
+                                              cy * CHUNK_SIZE + CHUNK_SIZE - 1);
+                                        });
+  if (coverage.Empty())
+  {
+    PendingLightBeforeMesh.erase(key);
+    return;
+  }
   if (PendingLightRepairScanKeys.insert(key).second)
     PendingLightRepairScan.push_back(key);
   // The initial visibility snapshot and scheduling throttles never own new
@@ -11619,9 +11630,12 @@ void UWorld::WarmupSpawnAreaForEnterGame()
 
 namespace
 {
-json RequiredPresentationJson(const RequiredPresentationCoverage &s)
+json RequiredPresentationJson(const RequiredPresentationCoverage &s,
+                              int renderer_radius)
 {
-  return {{"schema", "required-presentation-witness.v1"},
+  return {{"schema", "required-presentation-witness.v2"},
+          {"domain", "configured-render-ring.v1"},
+          {"render_distance_chunks", renderer_radius},
           {"radius", s.radius},
           {"min_y", s.min_y},
           {"max_y", s.max_y},
@@ -11640,10 +11654,62 @@ json RequiredPresentationJson(const RequiredPresentationCoverage &s)
 }
 } // namespace
 
+int UWorld::GetRequiredPresentationRadius() const
+{
+  return MeshService
+             ? std::max(1, MeshService->GetCache().GetRenderDistanceChunks())
+             : std::max(1, EffectiveRenderDistance);
+}
+
+void UWorld::MaintainRequiredWorldInputs(int data_budget,
+                                         int light_visit_budget)
+{
+  if (!Streaming || !Streaming->GetStreamer() || !BlockRegistry)
+    return;
+  auto &streamer = *Streaming->GetStreamer();
+  const auto focus = UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const auto domain = RequiredWorldDomain::ForRenderDistance(
+      GetRequiredPresentationRadius(), RequiresLightingLitGate());
+  streamer.SetRequiredDataDomain(focus, domain.data);
+  const int requested = streamer.EnsureDataColumns(
+      RequiredDataColumns(focus, domain.data), std::max(0, data_budget));
+  int noted = 0;
+  if (RequiresLightingLitGate())
+    Streaming->GetRequiredLightScan().Drain(
+        focus, domain.light, light_visit_budget,
+        [&](glm::ivec3 column)
+        {
+          for (int hz = -1; hz <= 1; ++hz)
+            for (int hx = -1; hx <= 1; ++hx)
+              if (!IsTerrainColumnCompleteFast(column + glm::ivec3(hx, 0, hz)))
+                return;
+          const glm::ivec2 key(column.x, column.z);
+          if (!HasCurrentColumnLightCoverage(key, ProceduralTemplate.MinHeight,
+                                             ProceduralTemplate.MaxHeight))
+          {
+            NotePendingLightBeforeMesh(column, ProceduralTemplate.MinHeight,
+                                       ProceduralTemplate.MaxHeight,
+                                       "required_world_input_closure");
+            ++noted;
+          }
+        });
+  if ((requested || noted) &&
+      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+    CubatariumLogInfo(
+        "RequiredWorldInputs",
+        "focus=(" + std::to_string(focus.x) + "," + std::to_string(focus.z) +
+            ") presentation=" + std::to_string(domain.presentation) +
+            " light=" + std::to_string(domain.light) +
+            " data=" + std::to_string(domain.data) +
+            " requested=" + std::to_string(requested) +
+            " light_noted=" + std::to_string(noted) +
+            " epoch=" + std::to_string(StreamingFrameEpoch));
+}
+
 RequiredPresentationCoverage UWorld::SampleRequiredPresentationCoverage() const
 {
   RequiredPresentationCoverage out;
-  out.radius = EnterVisualWorkRadiusChunks();
+  out.radius = GetRequiredPresentationRadius();
   out.min_y = ProceduralTemplate.MinHeight;
   out.max_y = ProceduralTemplate.MaxHeight;
   const int cy0 = FloorDiv(out.min_y, CHUNK_SIZE);
@@ -11687,7 +11753,7 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
   // A column ticket is not an executable owner of every vertical section.
   // Recover exact ownerless publication debt, including zero-quad previews.
   const auto center = UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
-  const int radius = EnterVisualWorkRadiusChunks();
+  const int radius = GetRequiredPresentationRadius();
   auto &mesh = GetMeshService();
   auto &cache = mesh.GetCache();
   const auto world_epoch = cache.GetCaptureStore().WorldEpoch();
@@ -11738,7 +11804,8 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
       elapsed_ms - LastRequiredRingDiagnosticMs >= 2000.0 || coverage.Ready())
   {
     LastRequiredRingDiagnosticMs = elapsed_ms;
-    auto row = RequiredPresentationJson(coverage);
+    auto row =
+        RequiredPresentationJson(coverage, cache.GetRenderDistanceChunks());
     row["phase"] = "enter_gate";
     row["elapsed_ms"] = elapsed_ms;
     row["blockers"] = json::array();
@@ -11805,7 +11872,9 @@ void UWorld::RecordFirstRenderedRequiredRing()
   if (FirstRenderedRequiredRingRecorded)
     return;
   FirstRenderedRequiredRingRecorded = true;
-  auto row = RequiredPresentationJson(SampleRequiredPresentationCoverage());
+  auto row = RequiredPresentationJson(
+      SampleRequiredPresentationCoverage(),
+      MeshService->GetCache().GetRenderDistanceChunks());
   const auto focus = UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
   row["phase"] = "first_world_paint";
   row["focus"] = {focus.x, focus.y, focus.z};
@@ -14290,49 +14359,8 @@ void UWorld::TickEnterWarmupDrainFrame(int mesh_budget, int gate_iterations,
   // Era50: EnterVisualGate owns enter drain — quiesce split + worklist FSM.
   // DrainEnterGameMeshWarmup owns explicit DrainPendingGpuMeshes; gate drain
   // runs TickMeshEmerge (ConsumeGpuApplyBacklog) for iterations.
-  if (IsEnterLitGateActive() && Streaming && Streaming->GetStreamer())
-  {
-    const auto focus =
-        UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
-    // Visible geometry consumes a light halo; that halo's geometry-derived
-    // calculations consume one further data halo. The initial load may have
-    // been centered before the final camera/player pose was restored.
-    const int light_radius =
-        std::max(EnterVisualWorkRadiusChunks(), GetStreamingFocusRadius()) + 1;
-    const int data_radius = light_radius + 1;
-    const auto required_data = RequiredDataColumns(focus, data_radius);
-    const int requested =
-        Streaming->GetStreamer()->EnsureDataColumns(required_data, 4);
-    for (int ring = 0; ring <= light_radius; ++ring)
-      for (int dz = -ring; dz <= ring; ++dz)
-        for (int dx = -ring; dx <= ring; ++dx)
-        {
-          if (std::max(std::abs(dx), std::abs(dz)) != ring)
-            continue;
-          const glm::ivec3 column(focus.x + dx, 0, focus.z + dz);
-          if (!IsTerrainColumnCompleteFast(column))
-            continue;
-          bool halo_ready = true;
-          for (int hz = -1; hz <= 1 && halo_ready; ++hz)
-            for (int hx = -1; hx <= 1 && halo_ready; ++hx)
-              halo_ready =
-                  IsTerrainColumnCompleteFast(column + glm::ivec3(hx, 0, hz));
-          const glm::ivec2 key(column.x, column.z);
-          if (halo_ready &&
-              !HasCurrentColumnLightCoverage(key, ProceduralTemplate.MinHeight,
-                                             ProceduralTemplate.MaxHeight))
-            NotePendingLightBeforeMesh(column, ProceduralTemplate.MinHeight,
-                                       ProceduralTemplate.MaxHeight,
-                                       "enter_required_light_halo");
-        }
-    if (requested && IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
-      CubatariumLogInfo("RelightAudit",
-                        "enter_data_halo center=(" + std::to_string(focus.x) +
-                            "," + std::to_string(focus.z) +
-                            ") data_radius=" + std::to_string(data_radius) +
-                            " light_radius=" + std::to_string(light_radius) +
-                            " requested=" + std::to_string(requested));
-  }
+  if (IsEnterLitGateActive())
+    MaintainRequiredWorldInputs(4, 32);
   SyncEnterVisualGateQuiesceFlags();
   if (IsEnterLitGateActive())
   {

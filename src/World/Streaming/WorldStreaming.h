@@ -8,6 +8,7 @@
 #include "World/Chunks/StreamingAltitudePolicy.h"
 #include "World/Math/GridMath.h"
 #include "World/Streaming/MemoryBudgetController.h"
+#include "World/Streaming/RequiredWorldDomain.h"
 #include "World/Streaming/StreamIngressPolicy.h"
 #include "World/Streaming/StreamingPressure.h"
 #include "World/View/FogRangeSmoother.h"
@@ -40,6 +41,7 @@ public:
                       class UBlockRegistry &registry, uint32_t seed,
                       const ProceduralSettings &settings);
   bool HasStreamer() const { return Streamer != nullptr; }
+  RequiredLightScan &GetRequiredLightScan() { return RequiredLightInputs; }
   UChunkStreamer *GetStreamer() { return Streamer.get(); }
   const UChunkStreamer *GetStreamer() const { return Streamer.get(); }
   UChunkGenerationRegistry &GetChunkGenTokens() { return ChunkGenTokens; }
@@ -112,6 +114,7 @@ public:
   }
 
 private:
+  RequiredLightScan RequiredLightInputs;
   void RecordGpuAllocationTelemetry(UWorld &world);
   bool PrepareChunkScheduler(UWorld &world);
   void InitChunkScheduler(UWorld &world);

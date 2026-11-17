@@ -28,6 +28,18 @@ class IsolatedFixtureTest(unittest.TestCase):
         self.config.write_bytes(self.original)
         self.artifacts = self.root / "artifacts"
 
+    def test_render_distance_scenario_restores_configuration_on_failure(self):
+        with self.assertRaisesRegex(RuntimeError, "after override"):
+            with isolated_fixture(self.runtime, "Saved", self.artifacts):
+                self.config.write_bytes(engine_smoke_run.render_distance_payload(self.config.read_bytes(), 8))
+                config = json.loads(self.config.read_bytes())
+                self.assertEqual(config, {"original": True, "render_distance_chunks": 8})
+                raise RuntimeError("after override")
+        self.assertEqual(self.config.read_bytes(), self.original)
+        for invalid in (0, 33, True, 4.5, "8"):
+            with self.assertRaises(ValueError):
+                engine_smoke_run.render_distance_payload(self.original, invalid)
+
     def test_failure_restores_config_and_preserves_original_world(self):
         fingerprint = world_fingerprint(self.world)
         fixture = None

@@ -605,6 +605,8 @@ bool UChunkStreamer::ShouldKeepChunkLoaded(glm::ivec3 chunkCoord,
                                            const glm::vec3 &eyePos,
                                            const PlayerCapsule &cap) const
 {
+  if (RequiredData.Contains(chunkCoord))
+    return true;
   const glm::ivec3 feetChunk = UChunkManager::WorldToChunk(feetBlockPos);
 
   for (int dx = -1; dx <= 1; ++dx)
@@ -787,7 +789,7 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
     }
     const int dx = std::abs(ground.x - feetChunk.x);
     const int dz = std::abs(ground.z - feetChunk.z);
-    if (std::max(dx, dz) <= limit)
+    if (std::max(dx, dz) <= limit || RequiredData.Contains(ground))
     {
       return true; // scanned ok, not a candidate
     }
@@ -981,7 +983,8 @@ void UChunkStreamer::DrainDeferredUnloadSaves(glm::ivec3 feetBlockPos,
     DeferredUnloadSaveSet.erase(ground);
     ++LastFrameStats.unloadCandidatesThisFrame;
 
-    if (std::max(std::abs(ground.x - feetChunk.x),
+    if (RequiredData.Contains(ground) ||
+        std::max(std::abs(ground.x - feetChunk.x),
                  std::abs(ground.z - feetChunk.z)) <= limit)
     {
       ++ops;

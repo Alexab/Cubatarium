@@ -5,6 +5,7 @@
 #include "World/Chunks/ChunkLoadPriority.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
+#include "World/Streaming/RequiredWorldDomain.h"
 #include <algorithm>
 #include <atomic>
 #include <cstdint>
@@ -155,9 +156,15 @@ public:
   }
   int GetVisualRenderDistance() const { return VisualRenderDistance; }
   int GetKeepRenderDistance() const { return KeepRenderDistance; }
-  int GetAsyncRequestRetentionRadius() const
+  void SetRequiredDataDomain(glm::ivec3 center, int radius)
   {
-    return std::max(VisualRenderDistance, KeepRenderDistance + UnloadMargin);
+    RequiredData = {glm::ivec3(center.x, 0, center.z), radius};
+  }
+  int GetAsyncRequestRetentionRadius(glm::ivec3 origin) const
+  {
+    return RequiredData.RetentionRadiusAround(
+        origin,
+        std::max(VisualRenderDistance, KeepRenderDistance + UnloadMargin));
   }
   void SetMaxTerrainHeight(int height) { MaxHeight = height; }
   void SetMinTerrainHeight(int height) { MinHeight = height; }
@@ -270,6 +277,7 @@ private:
   int BaseY;
   int MinHeight;
   int MaxHeight;
+  RequiredDataLease RequiredData;
   int VisualRenderDistance{4};
   int KeepRenderDistance{6};
   int KeepPrefetchMargin{2};

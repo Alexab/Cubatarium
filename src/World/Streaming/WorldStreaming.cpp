@@ -6315,6 +6315,12 @@ void UWorldStreaming::UpdateStreaming(
         lastMovementSpeed >= procedural.MovementPrefetchThreshold;
     const double frame_ms = world.GetLastMovementFrameMs();
     const int unload_mode = URuntimeTuning::Get().UnloadAmortizeMode;
+    // Move the consumer lease before either cursor or deferred unload can run.
+    const auto required_focus =
+        UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+    const auto prior_domain = RequiredWorldDomain::ForRenderDistance(
+        world.GetRequiredPresentationRadius(), world.RequiresLightingLitGate());
+    Streamer->SetRequiredDataDomain(required_focus, prior_domain.data);
     bool unload_pass_early = false;
     if (unload_mode >= kUnloadAmortizeUD && moving_for_unload)
     {
@@ -7127,6 +7133,9 @@ void UWorldStreaming::UpdateStreaming(
           std::chrono::duration<double, std::milli>(update_t0 -
                                                     update_pre_core_t0)
               .count();
+      // Data/light dependencies remain consumer requirements after startup.
+      // Admit them through the ordinary bounded IO/generation path.
+      world.MaintainRequiredWorldInputs(4, 32);
       Streamer->Update(WorldPosToBlock(eye), eye, cap);
       if (ChunkScheduler)
       {
@@ -7134,12 +7143,13 @@ void UWorldStreaming::UpdateStreaming(
         // in the generation queue after leaving the keep ring, eventually
         // generating terrain far behind the camera and adding first-mesh work.
         ChunkScheduler->CancelPendingOutsideRadius(
-            focus_horiz, Streamer->GetAsyncRequestRetentionRadius());
+            focus_horiz, Streamer->GetAsyncRequestRetentionRadius(focus_horiz));
       }
       if (world.Persistence)
       {
         world.Persistence->CancelAsyncTerrainColumnLoadsOutsideRadius(
-            world, focus_horiz, Streamer->GetAsyncRequestRetentionRadius());
+            world, focus_horiz,
+            Streamer->GetAsyncRequestRetentionRadius(focus_horiz));
       }
       update_post_core_t0 = std::chrono::high_resolution_clock::now();
       world.PhysicsTelemetryData.StreamerUpdateMs +=

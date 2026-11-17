@@ -16,7 +16,14 @@ from typing import Any
 
 def validate_first_frame_witness(row):
     """Check complete census shape before using a renderer-emitted decision."""
-    if not isinstance(row, dict) or row.get("schema") != "required-presentation-witness.v1":
+    if not isinstance(row, dict) or row.get("schema") not in (
+            "required-presentation-witness.v1", "required-presentation-witness.v2"):
+        return None
+    current_domain = row["schema"] == "required-presentation-witness.v2"
+    if current_domain and (row.get("domain") != "configured-render-ring.v1" or
+            not isinstance(row.get("render_distance_chunks"), int) or
+            isinstance(row["render_distance_chunks"], bool) or
+            row["render_distance_chunks"] != row.get("radius")):
         return None
     if row.get("phase") != "first_world_paint" or row.get("render_pass_complete") is not True:
         return None
@@ -34,7 +41,7 @@ def validate_first_frame_witness(row):
         return None
     columns = (2 * row["radius"] + 1) ** 2
     sections = columns * (hi // 16 - lo // 16 + 1)
-    if (row["radius"] < 4 or row["world_epoch"] == 0 or
+    if (row["radius"] < (1 if current_domain else 4) or row["world_epoch"] == 0 or
             row["expected_columns"] != columns or row["expected_sections"] != sections or
             row["columns"] != columns or row["sections"] != sections or
             sum(row[k] for k in ("unknown_sections", "known_air_sections",
@@ -55,15 +62,39 @@ def read_startup_warmup_evidence(log_paths) -> dict[str, Any]:
     columns = {}
     first_frames = []
     required_ring = None
+    input_requests = dict(schema="required-world-input-requests.v1", records=0,
+                          runtime_records=0, requested_columns=0, light_note_attempts=0,
+                          max_epoch=0, max_focus_displacement=0, beyond_first_data_domain_records=0)
+    first_input_focus = None
+    first_input_radius = None
+    input_foci = set()
     for path in log_paths:
         with Path(path).open(encoding="utf-8", errors="replace") as stream:
             for line in stream:
+                if "[RequiredWorldInputs] " in line:
+                    match = re.search(r"focus=\((-?\d+),(-?\d+)\) presentation=(\d+) light=(\d+) data=(\d+) requested=(\d+) light_noted=(\d+) epoch=(\d+)", line)
+                    if match:
+                        x, z, presentation, light, data, requested, noted, epoch = map(int, match.groups())
+                        if presentation > 0 and light in (presentation + 1, presentation + 2) and data == light + 1:
+                            if first_input_focus is None:
+                                first_input_focus = (x, z)
+                                first_input_radius = data
+                            displacement = max(abs(x - first_input_focus[0]), abs(z - first_input_focus[1]))
+                            input_requests["records"] += 1
+                            input_requests["runtime_records"] += int(epoch > 0)
+                            input_requests["requested_columns"] += requested
+                            input_requests["light_note_attempts"] += noted
+                            input_requests["max_epoch"] = max(input_requests["max_epoch"], epoch)
+                            input_requests["max_focus_displacement"] = max(input_requests["max_focus_displacement"], displacement)
+                            input_requests["beyond_first_data_domain_records"] += int(displacement > first_input_radius)
+                            if len(input_foci) < 1024:
+                                input_foci.add((x, z))
                 marker = "[RequiredPresentationWitness] "
                 if marker in line:
                     try:
                         row = json.loads(line.split(marker, 1)[1])
                         elapsed = row["elapsed_ms"]
-                        if (row.get("schema") == "required-presentation-witness.v1" and
+                        if (row.get("schema") in ("required-presentation-witness.v1", "required-presentation-witness.v2") and
                                 row.get("phase") == "enter_gate" and
                                 isinstance(elapsed, (int, float)) and not isinstance(elapsed, bool) and
                                 math.isfinite(elapsed) and elapsed >= 0 and
@@ -133,6 +164,10 @@ def read_startup_warmup_evidence(log_paths) -> dict[str, Any]:
                 forced_with_debt=any(row["forced_with_debt"] for row in observed),
                 first_frame_witnesses=first_frames,
                 required_ring_witness=required_ring,
+                required_world_input_requests=dict(input_requests,
+                    first_focus=list(first_input_focus) if first_input_focus is not None else None,
+                    first_data_radius=first_input_radius, distinct_recorded_foci=len(input_foci),
+                    scope="observed consumer requests only; no proof of calculation/publication or visual correctness"),
                 section_witnesses=[sections[key] for key in sorted(sections)][:64],
                 column_witnesses=[columns[key] for key in sorted(columns)][:81])
 
@@ -258,7 +293,9 @@ def classify(report: dict[str, Any], perf: Path | None, *,
                 startup = component("PASS" if checked else "FAIL",
                                     "first_world_paint_required_ring_census",
                                     evidence=witnesses[0],
-                                    scope="configured radius-four ring publication/input readiness; no pixel or physical-light oracle")
+                                    scope=("configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+                                           if witnesses[0]["schema"] == "required-presentation-witness.v2" else
+                                           "legacy configured radius-four-or-larger ring publication/input readiness; no pixel or physical-light oracle"))
     if ready is False:
         startup = component("FAIL", "first_frame_ring_witness")
     if (isinstance(warmup, dict) and warmup.get("schema") == "startup-warmup-evidence.v1"
