@@ -110,6 +110,34 @@ int main()
              full_height_world.GetChunkManager().HasChunk(glm::ivec3(0, 20, 0)),
          "full-height clear respects the exact signed vertical bounds");
 
+  // A column key at y=0 does not imply resident geometry at cy=0.
+  // The prefetch committed callback must use full-column completeness, so a
+  // finished negative-height floor cannot continuously reload from disk.
+  cutum::UBlockWorld low_world;
+  const glm::ivec3 low_ground(-22, 0, 4);
+  for (int z = 0; z < cutum::CHUNK_SIZE; ++z)
+    for (int x = 0; x < cutum::CHUNK_SIZE; ++x)
+      low_world.SetBlock({low_ground.x * cutum::CHUNK_SIZE + x, -64,
+                          low_ground.z * cutum::CHUNK_SIZE + z},
+                         kStone);
+  const auto low_count = low_world.GetChunkManager().GetResidentChunkCount();
+  Expect(!low_world.GetChunkManager().HasChunk(low_ground) &&
+             cutum::IsTerrainChunkComplete(low_world, low_ground, 319,
+                                           cutum::kNoTerrainChunkSlice, -64),
+         "complete low terrain needs no y=0 section or sky materialization");
+  Expect(low_world.GetChunkManager().GetResidentChunkCount() == low_count,
+         "column completeness is read-only");
+  low_world.SetBlock(
+      {low_ground.x * cutum::CHUNK_SIZE, -64, low_ground.z * cutum::CHUNK_SIZE},
+      cutum::BLOCK_AIR);
+  Expect(!cutum::IsTerrainChunkComplete(low_world, low_ground, 319,
+                                        cutum::kNoTerrainChunkSlice, -64),
+         "one unfinished floor column is still incomplete");
+  low_world.GetChunkManager().Clear();
+  Expect(!cutum::IsTerrainChunkComplete(low_world, low_ground, 319,
+                                        cutum::kNoTerrainChunkSlice, -64),
+         "evicted low terrain must be reloaded");
+
   const size_t before_remove = chunks.GetResidentChunkCount();
   chunks.RemoveChunk(glm::ivec3(0, 0, -1));
   Expect(chunks.GetResidentChunkCount() == before_remove - 1,

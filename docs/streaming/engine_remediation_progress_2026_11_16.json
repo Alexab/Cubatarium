@@ -5345,13 +5345,52 @@
       }
     },
     "resident_and_air_light_sample_service": {
-      "status": "Implemented;4freshunit suitesPASS;REDdetected;Release/native pending",
+      "status": "Implemented;4freshunit suitesPASS;REDdetected;ReleasePASS;nativeFAIL9 retained",
       "runtime": "Foreground sample service now admits known resident sections as well as geometry-absent knownAIR, still after9data columns complete with8record fair visit/1snapshot cap and existing worker backpressure. All explicitly leased unready sample targets in a column coalesce, resident orAIR; already-complete out-of-band resident fields do not join. Ordinary terrain-band resident outputs unchanged. Existing padding/current-input proof remains mandatory, including transient-result reuse.",
       "contract": "RelightJobSpec.light_sample_output_sections names exact geometry-independent sample targets. Snapshot includes them outside original terrain band and accepts absent output only withKnownAIR evidence. Existing AIR-only selector remains AIR-only. Intermediate/unrequested resident fields are not outputs. Same installer and exact installed-output readset/catalog/domain/padding proof; light writes preserve geometry input clock/content/resident count. Legacy baked terrain may still remesh until actual GPU-field cutover.",
       "tests": "engine-resident-light-sample-final-green-test.log:4/4fresh rebuiltPASS. Explicit resident outside-band field obtains nonzero block4 proof, unknown targets allocate no field, unrequested rawlight and field revision stay untouched, geometry content/clock/count unchanged. Initial test build incorrectly treated voidEnsureChunk as reference; fixed by explicitGetChunk; initial failed log retained, app not launched from failed build.",
       "red": "engine-resident-light-sample-red.log: dropping explicit sample targets compiles and fails exact resident-target assertion. Correct source restored byte-for-byte in finally; final rebuildGREEN. App never builtRED.",
       "telemetry": "RelightAudit job_submit adds samples_requested and resident_samples_requested; AIR-request/certificate counters remain separate.",
-      "acceptance_next": "Repeat identical visible-items scenario. Keep existing9fault negative case and close it with current physical fields rather than loosening reference or certifying fallback. Near moving actor delay, independent GPU atlas/bindings/atomic publication, persisted content provenance and full visual/backend/RD8/edit/eviction/performance matrix remain required."
+      "acceptance_next": "Repeat identical visible-items scenario. Keep existing9fault negative case and close it with current physical fields rather than loosening reference or certifying fallback. Near moving actor delay, independent GPU atlas/bindings/atomic publication, persisted content provenance and full visual/backend/RD8/edit/eviction/performance matrix remain required.",
+      "native": {
+        "artifacts": "build/desktop-msvc/engine-resident-light-sample-visible-items-native",
+        "source": "fa610a799",
+        "world_item_reference": {
+          "schema": "engine-world-item-reference.v1",
+          "status": "FAIL",
+          "reason": "saved_world_item_field_and_primitive_issue",
+          "checked_draws": 252,
+          "frame_epochs": 252,
+          "issued_primitives": 756,
+          "instance_frame_counts": {
+            "117625122491269153": 82,
+            "117625122491269154": 170
+          },
+          "skipped_other_instance_or_world": 0,
+          "unjoined_draws": 0,
+          "unsupported_mode_draws": 0,
+          "faults": 9,
+          "examples": [
+            "fixture_item_without_current_computed_field",
+            "fixture_item_without_current_computed_field",
+            "fixture_item_without_current_computed_field",
+            "fixture_item_without_current_computed_field",
+            "fixture_item_without_current_computed_field",
+            "fixture_item_without_current_computed_field",
+            "fixture_item_without_current_computed_field",
+            "fixture_item_without_current_computed_field"
+          ],
+          "missing_coverage": [],
+          "scope": "declared saved loose-item identity, canonical CPU field and actual nonempty primitive draw issue; no raster visibility, shader RGB/uniform readback, transparency, smoothing or performance acceptance"
+        },
+        "finding": "Unready endpoint frames1219..1227. Job1585 starts after first bad draw; unknown24 inputs and geometry_halo7; retry1590 after neighbor disk apply completes inputs, installs field15260 revision1. Disk neighbor(-22,4) queued01:28:06.322506, completed01:28:21.404814: worker queue0.0227ms, read0.6852ms, main-thread result_wait15073.2336ms. Same column redundantly queued at01:28:24.914483 and reloaded repeatedly thereafter. Resident admission alone does not close9faults."
+      }
+    },
+    "negative_height_committed_column_prefetch": {
+      "status": "Implemented;terrain_column_util_testPASS;Release/native pending",
+      "cause": "WorldStreaming OnIsChunkCommitted rejected a complete column unless its y=0 section was resident. Negative-height-only saved terrain has a complete floor below0 and no y=0 geometry. Prefetch repeats disk requests, repeatedly changes inputs, floods result application and delays required halo/light. Source trace proves same column repeatedly reloaded while resident.",
+      "change": "Use world.IsTerrainColumnCompleteFast for normalized ground column after existing scheduler-owner guard. No sky geometry materialization, no light requirement for data completion. Existing cache invalidation and exact full-column readiness are retained.",
+      "tests": "terrain_column_util_test adds complete256-cell negative floor without cy0, read-only count, missing floor cell rejects completeness, eviction rejects completeness. Fresh Release build/testPASS. Native unchanged visible-item oracle pending."
     }
   }
 }

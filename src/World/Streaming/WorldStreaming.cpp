@@ -6113,13 +6113,10 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         {
           return false;
         }
-        if (!world.BlockWorld.GetChunkManager().HasChunk(coord))
-        {
-          return false;
-        }
-        return IsTerrainChunkComplete(
-            world.BlockWorld, coord, world.GetProceduralSettings().MaxHeight,
-            kNoTerrainChunkSlice, world.GetProceduralSettings().MinHeight);
+        // Column identity uses y=0, but complete low terrain need not own
+        // that section. Requiring it repeatedly reloads already committed
+        // negative-height columns and invalidates their light/mesh inputs.
+        return world.IsTerrainColumnCompleteFast({coord.x, 0, coord.z});
       });
   Streamer->SetColumnPendingCallback(
       [this, &world](glm::ivec3 coord)
