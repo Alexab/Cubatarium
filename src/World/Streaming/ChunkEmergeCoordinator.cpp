@@ -1,4 +1,6 @@
 #include "World/Streaming/ChunkEmergeCoordinator.h"
+#include "App/Platform/Log.h"
+#include "Core/Environment.h"
 #include "Blocks/BlockRegistry.h"
 #include "Core/FrameDeadline.h"
 #include "Core/FrameStageWatchdog.h"
@@ -551,7 +553,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // IsCreateSpawnWarmupSettled can O(FOV) scan until latched (was ~33–55ms
   // mislabeled as softdefer_setup).
   const auto warmup_t0 = std::chrono::high_resolution_clock::now();
-  const bool enter_warmup_active = !world.IsCreateSpawnWarmupSettled();
+  // A latched create/preload result cannot switch an active enter session to
+  // cruise abort budgets: ready CPU results still need their consumers.
+  const bool enter_warmup_active = world.IsEnterSessionActive() ||
+                                   world.IsEnterLitGateActive() ||
+                                   !world.IsCreateSpawnWarmupSettled();
   prep_warmup_ms = MeshPrepElapsedMs(warmup_t0);
   prep_t = std::chrono::high_resolution_clock::now();
   // Phase5 S3: coalesce DrainIdle / DropRemesh to one call per frame.
@@ -5649,6 +5655,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_service.GetCache().ResetGpuConsumeTelemForFrame();
     const MeshWorkAdmission &early_adm = mesh_service.GetMeshWorkAdmission();
     const int consume_drain = FinalizeDrain(mesh_drain, early_adm);
+    if ((world.IsEnterLitGateActive() || world.IsEnterSessionActive()) &&
+        mesh_service.GetMeshCompletedSize() > 0 && consume_drain <= 0 &&
+        IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+      CubatariumLogInfo(
+          "EnterMeshConsumerWitness",
+          "completed_queue_without_drain count=" +
+              std::to_string(mesh_service.GetMeshCompletedSize()) +
+              " warmup=" + std::to_string(enter_warmup_active) +
+              " phase_abort=" + std::to_string(phase_abort_heavy));
     const int relight_fifo_n = world.GetPhysicsTelemetry().RelightFifoN;
     const int consume_gpu_base =
         std::max(early_adm.gpu_apply_max,
