@@ -60,6 +60,8 @@ public:
   }
   /// Atomic main-thread replacement. Unchanged channels retain their identity.
   bool ReplaceLightData(const std::array<uint8_t, CHUNK_VOLUME> &data);
+  bool ReplaceComputedLightVolume(const SectionLightVolume &volume, bool sky,
+                                  bool block);
   /// FZ2.7-B1: bumped on any light-field mutation (Apply merge, relight seed).
   const SectionLightField &GetSectionLightField() const { return *Light.field; }
   uint64_t GetLightFieldRevision() const

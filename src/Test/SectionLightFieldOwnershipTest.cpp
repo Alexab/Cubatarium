@@ -80,5 +80,36 @@ int main()
   manager.Clear();
   Expect(manager.GetSectionLightFieldCount() == 0,
          "world clear retires all geometry and independent light resources");
+  UChunk sampled({0, -3, 0});
+  SectionLightVolume volume;
+  volume.cells.fill(0x72);
+  Expect(sampled.ReplaceComputedLightVolume(volume, true, true),
+         "install padded domains");
+  const auto &sampled_field = sampled.GetSectionLightField();
+  auto sky_revision = sampled_field.GetSkyRevision();
+  auto block_revision = sampled_field.GetBlockRevision();
+  auto full_revision = sampled_field.GetRevision();
+  Expect(!sampled.ReplaceComputedLightVolume(volume, true, true) &&
+             sampled_field.GetRevision() == full_revision,
+         "padded no-op retains revisions");
+  volume.cells[SectionLightVolume::Index(17, 1, 1)] = 0x79;
+  Expect(
+      sampled.ReplaceComputedLightVolume(volume, true, false) &&
+          sampled_field.GetSkyRevision() == sky_revision + 1 &&
+          sampled_field.GetBlockRevision() == block_revision &&
+          sampled.GetLightData()[0] == 0x72,
+      "halo-only sky change advances correct channel without interior changes");
+  volume.cells.fill(0xa0);
+  sampled.ReplaceComputedLightVolume(volume, false, true);
+  Expect(
+      sampled.GetLightData()[0] == 0xa2 &&
+          sampled_field.GetPaddedData()
+                  ->cells[SectionLightVolume::Index(17, 1, 1)] == 0xa9 &&
+          sampled_field.GetPaddedDomains() == 3,
+      "partial padded install preserves the other channel including its halo");
+  sampled.SetLightLocal({0, 0, 0}, 4, 10);
+  Expect(sampled_field.GetPaddedDomains() == 2,
+         "legacy sky write invalidates sky padding while preserving block "
+         "padding");
   return 0;
 }

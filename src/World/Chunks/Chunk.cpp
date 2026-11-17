@@ -177,6 +177,15 @@ bool UChunk::ReplaceLightData(const std::array<uint8_t, CHUNK_VOLUME> &data)
   return true;
 }
 
+bool UChunk::ReplaceComputedLightVolume(const SectionLightVolume &volume,
+                                        bool sky, bool block)
+{
+  if (!Light.field->ReplaceComputedVolume(volume, sky, block))
+    return false;
+  InputRevision.NoteMutation();
+  return true;
+}
+
 uint8_t UChunk::GetLightPackedLocal(glm::ivec3 local) const
 {
   if (local.x < 0 || local.x >= CHUNK_SIZE || local.y < 0 ||
@@ -208,6 +217,8 @@ void UChunk::SetLightLocal(glm::ivec3 local, int sky_level, int block_level)
   const auto next = PackLight(sky_level, block_level);
   if (packed != next)
   {
+    Light.field->InvalidatePaddedDomains((packed & 0x0f) != (next & 0x0f),
+                                         (packed & 0xf0) != (next & 0xf0));
     Light.field->SkyLightRevision += (packed & 0x0F) != (next & 0x0F);
     Light.field->BlockLightRevision += (packed & 0xF0) != (next & 0xF0);
     packed = next;
@@ -226,6 +237,8 @@ void UChunk::ClearLightLocal(glm::ivec3 local)
   auto &packed = Light.field->LightData[static_cast<size_t>(LocalIndex(local))];
   if (packed != 0)
   {
+    Light.field->InvalidatePaddedDomains((packed & 0x0f) != 0,
+                                         (packed & 0xf0) != 0);
     Light.field->SkyLightRevision += (packed & 0x0F) != 0;
     Light.field->BlockLightRevision += (packed & 0xF0) != 0;
     packed = 0;

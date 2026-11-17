@@ -3971,7 +3971,15 @@
       "change": "Geometry-derived solver retains immutable target-owned20cubed packed output from the same full geometry-halo calculation and input context as the16cubed interior. Null volume remains explicit for legacy raw results. Above-profile sky and below-profile zero cells are explicit; incomplete inputs remain incomplete and no consumer is authorized by raw padded bytes alone.",
       "test": "TestGeometryHaloAgainstDenseReference compares all8000cells with independent dense Jacobi relaxation after source removals and emission material changes. Emission15 and sources at both outer X boundaries exercise distance14 contribution to padded edges; signed world origin.",
       "evidence": "build/desktop-msvc/engine-padded-output-limit-tests.log:3/3PASS (geometry reference, calculation certificate, install suite)",
-      "pending": "Install padded output into canonical field with per-domain revisions and physical receipts; switch snapshot/direct/GPU world consumers; independent AIR/profile edge cases and native light references. No render/GPU decoupling completion claim."
+      "pending": "Install padded output into canonical field with per-domain revisions and physical receipts; switch snapshot/direct/GPU world consumers; independent AIR/profile edge cases and native light references. No render/GPU decoupling completion claim.",
+      "desktop_release": "build/desktop-msvc/engine-padded-output-release-build.log:PASS for19475e534 before subsequent field-install API changes"
+    },
+    "padded_field_install": {
+      "status": "CPU API implemented; focused ownership testPASS; production installation/receipt/consumer integration pending",
+      "change": "Canonical field merges selected padded sky/block domains and derives the16cubed interior from those same bytes. Full and channel revisions include halo-only changes and newly available padded domains; no-op preserves revisions. Immutable padded snapshots survive subsequent writes; copied resources retain bytes but no calculation authority. Legacy local/bulk writes invalidate padded availability for changed channels.",
+      "test": "SectionLightFieldOwnershipTest includes halo-only sky change, unchanged interior, partial block install preserving sky halo, no-op revisions and legacy sky mutation preserving block padding.",
+      "build": "build/desktop-msvc/engine-padded-field-install-tests-build.log",
+      "pending": "Call this API from validated synchronous/asynchronous result installation before settlement; certify padded bytes against physical result context; mesh capture and all world backends must require valid padded receipts. No runtime sampler cutover or GPU decoupling claim."
     }
   }
 }

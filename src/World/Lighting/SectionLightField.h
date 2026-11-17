@@ -1,6 +1,7 @@
 #pragma once
 
 #include "World/Chunks/ChunkDimensions.h"
+#include "World/Lighting/SectionLightVolume.h"
 #include <array>
 #include <atomic>
 #include <cstdint>
@@ -39,6 +40,8 @@ public:
     if (this == &other)
       return *this;
     LightData = other.LightData;
+    PaddedLight = other.PaddedLight;
+    PaddedDomains = other.PaddedDomains;
     LightFieldRevision = other.LightFieldRevision;
     SkyLightRevision = other.SkyLightRevision;
     BlockLightRevision = other.BlockLightRevision;
@@ -53,10 +56,60 @@ public:
   uint64_t GetSkyRevision() const { return SkyLightRevision; }
   uint64_t GetBlockRevision() const { return BlockLightRevision; }
 
+  std::shared_ptr<const SectionLightVolume> GetPaddedData() const
+  {
+    return PaddedLight;
+  }
+  uint8_t GetPaddedDomains() const { return PaddedDomains; }
+
 private:
   friend class UBlockWorld;
   friend class UChunk;
   friend class UChunkManager;
+  bool ReplaceComputedVolume(const SectionLightVolume &volume, bool sky,
+                             bool block)
+  {
+    const uint8_t mask = (sky ? 0x0f : 0) | (block ? 0xf0 : 0);
+    if (!mask)
+      return false;
+    auto merged = std::make_shared<SectionLightVolume>();
+    if (PaddedLight)
+      *merged = *PaddedLight;
+    bool sky_changed = sky && !(PaddedDomains & 1);
+    bool block_changed = block && !(PaddedDomains & 2);
+    for (size_t i = 0; i < volume.cells.size(); ++i)
+    {
+      const auto previous = merged->cells[i];
+      const uint8_t next = (previous & ~mask) | (volume.cells[i] & mask);
+      sky_changed |= ((previous ^ next) & 0x0f) != 0;
+      block_changed |= ((previous ^ next) & 0xf0) != 0;
+      merged->cells[i] = next;
+    }
+    for (int z = 0; z < CHUNK_SIZE; ++z)
+      for (int y = 0; y < CHUNK_SIZE; ++y)
+        for (int x = 0; x < CHUNK_SIZE; ++x)
+        {
+          const auto i = x + CHUNK_SIZE * (y + CHUNK_SIZE * z);
+          const uint8_t next =
+              (LightData[i] & ~mask) |
+              (volume.cells[SectionLightVolume::Index(x, y, z)] & mask);
+          sky_changed |= ((LightData[i] ^ next) & 0x0f) != 0;
+          block_changed |= ((LightData[i] ^ next) & 0xf0) != 0;
+          LightData[i] = next;
+        }
+    if (!sky_changed && !block_changed)
+      return false;
+    PaddedLight = std::move(merged);
+    PaddedDomains |= (sky ? 1 : 0) | (block ? 2 : 0);
+    ++LightFieldRevision;
+    SkyLightRevision += sky_changed;
+    BlockLightRevision += block_changed;
+    return true;
+  }
+  void InvalidatePaddedDomains(bool sky, bool block)
+  {
+    PaddedDomains &= ~((sky ? 1 : 0) | (block ? 2 : 0));
+  }
   bool Replace(const std::array<uint8_t, CHUNK_VOLUME> &data)
   {
     bool sky_changed = false, block_changed = false;
@@ -67,6 +120,7 @@ private:
     }
     if (!sky_changed && !block_changed)
       return false;
+    InvalidatePaddedDomains(sky_changed, block_changed);
     LightData = data;
     ++LightFieldRevision;
     SkyLightRevision += sky_changed;
@@ -99,6 +153,8 @@ private:
   };
   mutable HaloSignatureMemo HaloSigCache;
   std::array<uint8_t, CHUNK_VOLUME> LightData{};
+  std::shared_ptr<const SectionLightVolume> PaddedLight;
+  uint8_t PaddedDomains{0};
   uint64_t LightFieldRevision{0};
   uint64_t SkyLightRevision{0};
   uint64_t BlockLightRevision{0};
