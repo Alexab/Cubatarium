@@ -11713,8 +11713,10 @@ void UWorld::MaintainRequiredWorldInputs(int data_budget,
             " epoch=" + std::to_string(StreamingFrameEpoch));
 }
 
-RequiredPresentationCoverage UWorld::SampleRequiredPresentationCoverage() const
+RequiredPresentationCoverage UWorld::SampleRequiredPresentationCoverage(
+    RequiredPresentationProbeMode mode) const
 {
+  const bool stop_on_debt = mode == RequiredPresentationProbeMode::StopOnDebt;
   RequiredPresentationCoverage out;
   out.radius = GetRequiredPresentationRadius();
   out.min_y = ProceduralTemplate.MinHeight;
@@ -11732,24 +11734,34 @@ RequiredPresentationCoverage UWorld::SampleRequiredPresentationCoverage() const
       ++out.columns;
       const bool data_complete = IsTerrainColumnCompleteFast({x, 0, z});
       if (!data_complete)
+      {
         ++out.missing_data_columns;
+        if (stop_on_debt)
+          return out;
+      }
       for (int cy = cy0; cy <= cy1; ++cy)
       {
         const glm::ivec3 coord(x, cy, z);
         const auto *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
         if (!chunk)
         {
-          out.ObserveAbsent(data_complete &&
-                            BlockWorld.IsKnownAbsentAirChunk(coord, &absence));
+          const bool known_air =
+              data_complete &&
+              BlockWorld.IsKnownAbsentAirChunk(coord, &absence);
+          out.ObserveAbsent(known_air);
+          if (stop_on_debt && !known_air)
+            return out;
           continue;
         }
         const bool light =
             !RequiresLightingLitGate() ||
             BlockWorld.HasCompleteLightCalculation(coord, catalog);
-        out.ObserveResident(
-            chunk->IsAirOnly(), light,
+        const bool publication =
             chunk->IsAirOnly() ||
-                CurrentSlicePublicationReadyForWarmup(*this, coord));
+            CurrentSlicePublicationReadyForWarmup(*this, coord);
+        out.ObserveResident(chunk->IsAirOnly(), light, publication);
+        if (stop_on_debt && (!light || !publication))
+          return out;
       }
     }
   return out;
@@ -11765,17 +11777,16 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
   auto &cache = mesh.GetCache();
   const auto world_epoch = cache.GetCaptureStore().WorldEpoch();
   int admitted = 0;
-  for (int z = center.z - radius; z <= center.z + radius; ++z)
-    for (int x = center.x - radius; x <= center.x + radius; ++x)
-      for (int cy = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE);
-           cy <= FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE); ++cy)
+  RequiredPublicationRepairScan.Drain(
+      center, radius, FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE),
+      FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE), 256,
+      [&](glm::ivec3 coord)
       {
-        const glm::ivec3 coord(x, cy, z);
         const auto *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
         if (!chunk || chunk->IsAirOnly() ||
             CurrentSlicePublicationReadyForWarmup(*this, coord) ||
             !ChunkSliceHasCurrentLightSettlement(*this, coord))
-          continue;
+          return;
         if (mesh.IsChunkMeshDirty(coord))
         {
           // A priority ticket can outlive the work it requested. Retire only
@@ -11790,7 +11801,7 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
                                   std::to_string(coord.x) + "," +
                                   std::to_string(coord.y) + "," +
                                   std::to_string(coord.z) + ")");
-            continue;
+            return;
           }
           // An existing ordinary remesh can otherwise be muted by terminal
           // column/quiesce policy. Exact required publication debt owns
@@ -11802,13 +11813,13 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
                 coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
             (void)cache.PrioritizeVisibleLightRepairRemesh(coord);
           }
-          continue;
+          return;
         }
         if (mesh.IsRemeshAfterApplyPending(coord) ||
             mesh.HasInflightMeshBuild(coord) || mesh.IsPendingGpuApply(coord) ||
             mesh.IsGpuExtractInFlight(coord) ||
             cache.HasPendingCaptureWork(coord))
-          continue;
+          return;
         const auto published = cache.GetMeshPublishRevs(coord);
         const auto *record = GetRenderDemandStore().Find(coord);
         // Refresh a lagging shadow only from a current actual publication.
@@ -11824,7 +11835,7 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
           GetRenderDemandStore().NotePublishedRevs(coord, published.geom_rev,
                                                    published.light_rev);
           if (CurrentSlicePublicationReadyForWarmup(*this, coord))
-            continue;
+            return;
         }
         if (admitted < 4 && !HasStablePublishedFaceDebt(coord))
         {
@@ -11833,11 +11844,15 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
               mesh.IsRemeshAfterApplyPending(coord))
             ++admitted;
         }
-      }
-  const auto coverage = SampleRequiredPresentationCoverage();
+      });
+  bool ready = SampleRequiredPresentationCoverage(
+                   RequiredPresentationProbeMode::StopOnDebt)
+                   .Ready();
   if (elapsed_ms < LastRequiredRingDiagnosticMs ||
-      elapsed_ms - LastRequiredRingDiagnosticMs >= 2000.0 || coverage.Ready())
+      elapsed_ms - LastRequiredRingDiagnosticMs >= 2000.0 || ready)
   {
+    const auto coverage = SampleRequiredPresentationCoverage();
+    ready = coverage.Ready();
     LastRequiredRingDiagnosticMs = elapsed_ms;
     auto row =
         RequiredPresentationJson(coverage, cache.GetRenderDistanceChunks());
@@ -11874,17 +11889,19 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
         UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
     const auto &mesh = GetMeshService();
     const auto &cache = mesh.GetCache();
-    for (int z = focus.z - coverage.radius; z <= focus.z + coverage.radius; ++z)
-      for (int x = focus.x - coverage.radius; x <= focus.x + coverage.radius;
-           ++x)
+    for (int z = focus.z - coverage.radius;
+         z <= focus.z + coverage.radius && row["blockers"].size() < 32; ++z)
+      for (int x = focus.x - coverage.radius;
+           x <= focus.x + coverage.radius && row["blockers"].size() < 32; ++x)
         for (int cy = FloorDiv(coverage.min_y, CHUNK_SIZE);
-             cy <= FloorDiv(coverage.max_y, CHUNK_SIZE); ++cy)
+             cy <= FloorDiv(coverage.max_y, CHUNK_SIZE) &&
+             row["blockers"].size() < 32;
+             ++cy)
         {
           const glm::ivec3 coord(x, cy, z);
           const auto *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
           if (!chunk || chunk->IsAirOnly() ||
-              CurrentSlicePublicationReadyForWarmup(*this, coord) ||
-              row["blockers"].size() >= 32)
+              CurrentSlicePublicationReadyForWarmup(*this, coord))
             continue;
           const auto *demand = GetRenderDemandStore().Find(coord);
           const auto published = cache.GetMeshPublishRevs(coord);
@@ -11961,7 +11978,7 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
         }
     CubatariumLogInfo("RequiredPresentationWitness", row.dump());
   }
-  return coverage.Ready();
+  return ready;
 }
 
 void UWorld::RecordFirstRenderedRequiredRing()
@@ -11985,6 +12002,7 @@ void UWorld::PrepareEnterGameSession()
 {
   FirstRenderedRequiredRingRecorded = false;
   LastRequiredRingDiagnosticMs = -2000.0;
+  RequiredPublicationRepairScan.Reset();
   Streaming->PrepareEnterGameSession(*this);
 }
 
@@ -13463,7 +13481,9 @@ void UWorld::SyncEnterVisualGateQuiesceFlags()
     MeshService->SetEnterVoidTelemLitReadyFn({});
   }
   EnterLitQuiesceLatched = EnterPublicationQuiesceAllowed(
-      gate, gate && SampleRequiredPresentationCoverage().Ready());
+      gate, gate && SampleRequiredPresentationCoverage(
+                        RequiredPresentationProbeMode::StopOnDebt)
+                        .Ready());
   MeshService->SetEnterGpuQuiesceDrain(EnterGpuQuiesceDrainAllowed(gate));
   // New real section debt reopens consumers even after a light-only worklist
   // previously looked complete. Redundant input-equivalent repair is handled

@@ -38,6 +38,7 @@
 #include "World/Streaming/EnterVisualGate.h"
 #include "World/Streaming/RelightInstallPlanner.h"
 #include "World/Streaming/RequiredPresentationCoverage.h"
+#include "World/Streaming/RequiredSectionScan.h"
 #include "World/Streaming/VisibleBlackAttribution.h"
 #include "World/Streaming/WorldBorderPolicy.h"
 #include "World/View/WorldViewSettings.h"
@@ -511,7 +512,11 @@ public:
   void PrepareEnterGameSession();
   int GetRequiredPresentationRadius() const;
   void MaintainRequiredWorldInputs(int data_budget, int light_visit_budget);
-  RequiredPresentationCoverage SampleRequiredPresentationCoverage() const;
+  /// StopOnDebt may return a partial, necessarily unready census. Only the
+  /// default complete traversal supplies a diagnostic/first-paint witness.
+  RequiredPresentationCoverage SampleRequiredPresentationCoverage(
+      RequiredPresentationProbeMode mode =
+          RequiredPresentationProbeMode::FullCensus) const;
   bool ValidateRequiredEnterPresentation(double elapsed_ms);
   void RecordFirstRenderedRequiredRing();
 
@@ -1835,9 +1840,10 @@ private:
   EnterSessionPhase EnterSessionPhaseValue{EnterSessionPhase::None};
   bool FirstRenderedRequiredRingRecorded{false};
   double LastRequiredRingDiagnosticMs{-2000.0};
+  RequiredSectionScan RequiredPublicationRepairScan;
 
   bool EnterLitSnapshotCaptured{false};
-  /// Era47: once snapshot debt=0 under gate, stay quiesced despite fifo blips.
+  /// Derived from current required publications; new debt reopens consumers.
   bool EnterLitQuiesceLatched{false};
   /// Latch IsCreateSpawnWarmupSettled after first true — avoid O(FOV) debt
   /// recount every cruise frame (prep_softdefer_setup was ~33–55ms).

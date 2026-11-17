@@ -1,10 +1,12 @@
 #include "World/Streaming/RequiredDataCoverage.h"
 #include "World/Streaming/RelightCaptureQueue.h"
 #include "World/Streaming/RequiredPresentationCoverage.h"
+#include "World/Streaming/RequiredSectionScan.h"
 #include "World/Streaming/RequiredWorldDomain.h"
 #include <cstdlib>
 #include <iostream>
 #include <set>
+#include <tuple>
 
 static void Expect(bool value, const char *message)
 {
@@ -17,6 +19,44 @@ static void Expect(bool value, const char *message)
 
 int main()
 {
+  {
+    cutum::RequiredSectionScan scan;
+    std::set<std::tuple<int, int, int>> visited;
+    int calls = 0;
+    for (int tick = 0; tick < 28; ++tick)
+    {
+      const glm::ivec3 focus(-tick, 100 + tick, tick - 20);
+      int this_tick = 0;
+      Expect(scan.Drain(focus, 8, -4, 19, 256,
+                        [&](glm::ivec3 c)
+                        {
+                          ++calls;
+                          ++this_tick;
+                          Expect(c.y >= -4 && c.y <= 19,
+                                 "section scan keeps signed absolute height");
+                          visited.emplace(c.x - focus.x, c.y, c.z - focus.z);
+                        }) == 256 &&
+                 this_tick == 256,
+             "maintenance visits are bounded despite changing focus");
+    }
+    Expect(
+        visited.size() == 17 * 17 * 24 && calls == 28 * 256,
+        "every section in a radius-eight full profile receives fair service");
+    Expect(scan.Drain({0, 0, 0}, 8, -4, 19, 0, [&](glm::ivec3) { ++calls; }) ==
+                   0 &&
+               calls == 28 * 256,
+           "zero budget performs no repair work");
+    std::vector<glm::ivec3> first;
+    scan.Drain({-20, -100, 30}, 1, -7, -5, 1,
+               [&](glm::ivec3 c) { first.push_back(c); });
+    Expect(first.size() == 1 && first[0] == glm::ivec3(-21, -7, 29),
+           "domain/profile change starts the new section range");
+    scan.Reset();
+    scan.Drain({-20, 200, 30}, 1, -7, -5, 100,
+               [&](glm::ivec3 c) { first.push_back(c); });
+    Expect(first.size() == 28 && first[1] == first[0],
+           "new session resets cursor and oversized budget visits one cycle");
+  }
   {
     std::deque<int> priority{-7, 5}, ordinary{-12, 9};
     std::set<int> running{-7, 5, -12};

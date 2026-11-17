@@ -3,6 +3,12 @@
 
 namespace cutum
 {
+enum class RequiredPresentationProbeMode
+{
+  FullCensus,
+  StopOnDebt,
+};
+
 // Census of the complete configured ring and vertical profile, not only the
 // resident/drawable list. AIR receipts prove geometry absence, not light bytes.
 struct RequiredPresentationCoverage

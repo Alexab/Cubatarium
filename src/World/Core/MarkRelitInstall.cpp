@@ -586,7 +586,9 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
   {
     const auto setup_t0 = Clock::now();
     EnterLitQuiesceLatched = EnterPublicationQuiesceAllowed(
-        enter_gate, enter_gate && SampleRequiredPresentationCoverage().Ready());
+        enter_gate, enter_gate && SampleRequiredPresentationCoverage(
+                                      RequiredPresentationProbeMode::StopOnDebt)
+                                      .Ready());
     PhysicsTelemetryData.MarkRelitSetupMs += ElapsedMs(setup_t0, Clock::now());
   }
   const bool enter_quiesce = enter_gate && EnterLitQuiesceLatched;
