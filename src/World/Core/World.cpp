@@ -6687,11 +6687,19 @@ void UWorld::RecoverPendingLightWork(int max_admissions)
       continue;
     }
     PendingLightRepairScan.push_back(column);
-    if (admitted >= max_admissions || IsAsyncRelightColumnInFlight(column) ||
-        IsTerrainColumnRelightQueued(column))
+    if (admitted >= max_admissions || IsAsyncRelightColumnInFlight(column))
       continue;
     const auto it = PendingLightBeforeMesh.find(column);
     if (it == PendingLightBeforeMesh.end())
+      continue;
+    const auto queued =
+        Persistence->GetTerrainColumnRelightQueueInfo(column * CHUNK_SIZE);
+    // A surface job is not an owner of an outstanding underground section.
+    // Upgrade/merge that admission before allowing it to suppress recovery.
+    if ((queued.in_deque || queued.deferred_visible || queued.deferred_far) &&
+        it->second.IsOwnedByBand(queued.boundary_dependency,
+                                 queued.y_band_defined, queued.min_world_y,
+                                 queued.max_world_y))
       continue;
     std::vector<glm::ivec3> resident;
     for (int cy : it->second.PendingSections())

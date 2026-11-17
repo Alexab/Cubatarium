@@ -1461,7 +1461,8 @@ bool UWorldPersistence::TryEnqueueTerrainColumnRelight(UWorld &world,
 {
   const glm::ivec2 ground_xz(FloorDiv(world_x, CHUNK_SIZE),
                              FloorDiv(world_z, CHUNK_SIZE));
-  const int max_y_eff = max_y >= 0 ? max_y : world.ProceduralTemplate.MaxHeight;
+  const int max_y_eff =
+      max_y != -1 ? max_y : world.ProceduralTemplate.MaxHeight;
   const int band_min = std::clamp(min_y, world.ProceduralTemplate.MinHeight,
                                   world.ProceduralTemplate.MaxHeight);
   const int band_max = std::clamp(std::max(band_min, max_y_eff), band_min,
@@ -3496,13 +3497,14 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         }
       }
     }
-    // Era36/37 B1: clamp Capture Y-band to visible surface — drop underground.
+    // Surface scheduling is optional; durable requested work cannot be clipped.
     const int requested_relight_min = relight_min;
     const int requested_relight_max = relight_max;
     bool surface_band_adjusted = false;
     const int col_top_y = ColumnTopBlockY(world, ground_xz, max_y);
     if (!exact_draw_gate_band && !exact_first_mesh_band &&
-        !exact_boundary_dependency_band)
+        !exact_boundary_dependency_band &&
+        !world.IsPendingLightBeforeMesh(ground_xz))
     {
       const auto col_band = RelightSurfaceBandForColumn(
           focus_block.y, col_top_y, CHUNK_SIZE, max_y, relight_min, relight_max,
@@ -3782,21 +3784,14 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         PendingBoundaryDependencyRelightKeys.erase(col);
       }
     }
+    // A sliced job owns only its captured band. Retain every unproved
+    // remainder, including negative sections below the surface heuristic.
+    if (has_remainder && world.HasCurrentColumnLightCoverage(
+                             ground_xz, remainder_min, remainder_max))
+      has_remainder = false;
     if (has_remainder)
     {
-      // Era36 B1: underground remainder is invisible — do not requeue.
-      if (remainder_max < surface_band_min)
-      {
-        remainder_min = -1;
-        has_remainder = false;
-      }
-      else
-      {
-        remainder_min = std::max(remainder_min, surface_band_min);
-      }
-    }
-    if (has_remainder)
-    {
+      PendingBoundaryDependencyRelightKeys.insert(col);
       // SoftDefer: remainder band must stay hot within focus, otherwise
       // finalize_pending_gate=true can be starved and PendingLight keeps
       // rising while mesh_async stays at 0.

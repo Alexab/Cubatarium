@@ -1472,6 +1472,18 @@ void TestPendingCoverageRequiresCurrentKnownProof()
   Expect(sparse.Reconcile([](int) { return false; }) == 0 && sparse.Size() == 2,
          "missing proof cannot retire any obligation");
 
+  Expect(!sparse.IsOwnedByBand(true, true, 79, 143),
+         "a queued surface band cannot own negative section debt");
+  Expect(!sparse.IsOwnedByBand(false, true, -64, 319),
+         "a clippable queue admission is not durable coverage");
+  Expect(!sparse.IsOwnedByBand(true, false, -64, 319),
+         "an unspecified queue band cannot claim exact ownership");
+  Expect(sparse.IsOwnedByBand(true, true, -32, 31),
+         "an exact signed envelope owns all sparse obligations");
+  sparse.Request(-64, -49);
+  Expect(!sparse.IsOwnedByBand(true, true, -32, 31),
+         "expanded underground debt invalidates old queue ownership");
+
   auto definitions = std::make_shared<UBlockDefinitionStorage>();
   BlockDefinition stone;
   stone.Physics = BlockPhysicsProfile::Solid();

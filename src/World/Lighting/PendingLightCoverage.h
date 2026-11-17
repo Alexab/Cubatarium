@@ -51,6 +51,12 @@ public:
     return completed;
   }
 
+  // Only exact, non-clippable queue work can own the entire remaining debt.
+  bool IsOwnedByBand(bool exact, bool defined, int first_y, int last_y) const
+  {
+    return !Empty() && exact && defined && first_y <= min_y && last_y >= max_y;
+  }
+
   bool Contains(int cy) const { return Sections.count(cy) != 0; }
   bool Empty() const { return Sections.empty(); }
   std::size_t Size() const { return Sections.size(); }
