@@ -1504,7 +1504,7 @@ bool UChunkMeshCache::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
   // loop republished identical meshes (traced: same chunk, same light/content
   // revisions, dozens of consecutive commits) which also flipped the
   // provisional-light preview flag and made light levels blink while moving.
-  if (mesh.MeshedLightHaloSignaturesValid && mesh.MeshedLightRevision != 0)
+  if (mesh.MeshedLightHaloSignaturesValid && !mesh.ProvisionalLightPreview)
   {
     const UChunk *center = world.GetChunkManager().GetChunk(chunk_coord);
     if (center && center->GetLightFieldRevision() == mesh.MeshedLightRevision &&
@@ -3124,10 +3124,13 @@ bool UChunkMeshCache::IsPublishedMeshCurrentForInputs(
   const auto it = GreedyCache.find(chunk_coord);
   if (it == GreedyCache.end() || !it->second.PublishedGeomStampsValid ||
       !it->second.MeshedLightHaloSignaturesValid ||
-      it->second.MeshedLightRevision == 0)
+      it->second.ProvisionalLightPreview)
   {
     return false;
   }
+  // Revision zero is a valid computed dark field. Explicit capture/halo
+  // validity above proves initialization; treating zero as missing bypassed
+  // the repair guard for occluded cave sections and remeshed them forever.
   if (!ShouldSkipRedundantRepairForPublishedMesh(
           HasMeshSatisfyingColumnReady(chunk_coord)))
   {

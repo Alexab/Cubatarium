@@ -5980,11 +5980,9 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           has_dark_surface &&
           MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld);
       const bool mesh_behind_light =
-          probe.has_drawable && probe.meshed_light_rev != 0 &&
-          desired_light != 0 && probe.meshed_light_rev < desired_light;
+          probe.has_drawable && probe.meshed_light_rev < desired_light;
       const bool still_stale =
-          probe.has_drawable && probe.meshed_light_rev != 0 &&
-          desired_light != 0 && probe.meshed_light_rev < desired_light;
+          probe.has_drawable && probe.meshed_light_rev < desired_light;
       const bool light_surface_stale = still_stale || stale_dark_faces;
       const glm::ivec2 column_xz(cx, cz);
       const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(column_xz);
@@ -6046,8 +6044,6 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
               ",behind_light=" + std::to_string(mesh_behind_light) +
               ",rev_mismatch=" +
               std::to_string(probe.has_drawable &&
-                             probe.meshed_light_rev != 0 &&
-                             desired_light != 0 &&
                              probe.meshed_light_rev != desired_light) +
               ",settled=" + std::to_string(slice_light_settled) +
               ",open_sky=" + std::to_string(open_sky) +
@@ -6129,8 +6125,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       const bool relight_only =
           (fully_dark && !legal_dark_current) || stale_dark_faces ||
           mesh_behind_light ||
-          (probe.has_drawable && probe.meshed_light_rev != 0 &&
-           desired_light != 0 && probe.meshed_light_rev != desired_light);
+          (probe.has_drawable && probe.meshed_light_rev != desired_light);
       DemandResult dr = demand.NoteDemand(
           coord, desired_geom, desired_light, desired_coverage, demand_now_ms,
           MeshService->GetCache().GetCaptureStore().WorldEpoch(),
