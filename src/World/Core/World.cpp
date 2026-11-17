@@ -11880,6 +11880,35 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
                                    demand->published_coverage_gen};
             blocker["face_debt_mask"] = demand->face_debt_mask;
           }
+          struct RecentJobs
+          {
+            glm::ivec3 coord;
+            json rows = json::array();
+          } jobs{coord};
+          UJobStageTrace::WatchVisualChunk(coord.x, coord.y, coord.z);
+          UJobStageTrace::ForEachNewest(
+              1024,
+              [](const JobStageSpan &span, void *opaque)
+              {
+                auto &recent = *static_cast<RecentJobs *>(opaque);
+                if (span.cx != recent.coord.x || span.cy != recent.coord.y ||
+                    span.cz != recent.coord.z || recent.rows.size() >= 8)
+                  return;
+                recent.rows.push_back(
+                    {{"job_id", span.job_id},
+                     {"stage", UJobStageTrace::StageName(span.stage)},
+                     {"reason",
+                      UJobStageTrace::TerminalReasonName(span.terminal_reason)},
+                     {"source_geom", span.source_geom_rev},
+                     {"source_light", span.source_light_rev},
+                     {"desired_geom", span.desired_geom_rev},
+                     {"desired_light", span.desired_light_rev},
+                     {"published_geom", span.published_geom_rev},
+                     {"published_light", span.published_light_rev},
+                     {"elapsed_ms", span.elapsed_ms}});
+              },
+              &jobs);
+          blocker["recent_jobs"] = std::move(jobs.rows);
           row["blockers"].push_back(std::move(blocker));
         }
     CubatariumLogInfo("RequiredPresentationWitness", row.dump());
