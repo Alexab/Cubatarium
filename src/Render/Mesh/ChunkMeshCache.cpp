@@ -6637,13 +6637,15 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         ChunkMeshSnapshot::ClassifyStaleInput(
             pending.snapshot.inputStampsValid, catalog_ok,
             pending.snapshot.inputStamps, world,
-            pending.snapshot.lightHaloSignatures);
+            pending.snapshot.lightHaloSignatures,
+            pending.snapshot.certifiedPaddedLight);
     // P1-b2/P2: light-only always commit; geom+drawable commit (avoid remesh
     // unfinished blink mid-cruise). Holes (!drawable) still fail+Priority.
     const bool accept_input_stale =
-        stale_reason == MeshApplyStaleInputReason::Light ||
-        (stale_reason == MeshApplyStaleInputReason::Geom &&
-         HasDrawableGreedyMesh(pending.coord));
+        !pending.snapshot.certifiedPaddedLight &&
+        (stale_reason == MeshApplyStaleInputReason::Light ||
+         (stale_reason == MeshApplyStaleInputReason::Geom &&
+          HasDrawableGreedyMesh(pending.coord)));
     if (stale_reason != MeshApplyStaleInputReason::Ok && !accept_input_stale)
     {
       JobTerminalReason terminal_reason = JobTerminalReason::StaleInputStamp;
@@ -7684,13 +7686,14 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   const bool catalog_ok =
       result.InputCatalog == registry.GetDefinitionsCatalogSnapshot();
   const MeshApplyStaleInputReason stale_reason =
-      ChunkMeshSnapshot::ClassifyStaleInput(result.InputStampsValid, catalog_ok,
-                                            result.InputStamps, world,
-                                            result.InputLightHaloSignatures);
+      ChunkMeshSnapshot::ClassifyStaleInput(
+          result.InputStampsValid, catalog_ok, result.InputStamps, world,
+          result.InputLightHaloSignatures, result.CertifiedPaddedLight);
   const bool accept_input_stale =
-      stale_reason == MeshApplyStaleInputReason::Light ||
-      (stale_reason == MeshApplyStaleInputReason::Geom &&
-       HasDrawableGreedyMesh(result.coord));
+      !result.CertifiedPaddedLight &&
+      (stale_reason == MeshApplyStaleInputReason::Light ||
+       (stale_reason == MeshApplyStaleInputReason::Geom &&
+        HasDrawableGreedyMesh(result.coord)));
   apply_profile.Enter(UMeshApplyProfileRecorder::Phase::StaleOwnerPolicy);
   if (stale_reason != MeshApplyStaleInputReason::Ok && !accept_input_stale)
   {

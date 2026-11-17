@@ -50,6 +50,7 @@ struct MeshBuildResult
   std::array<uint64_t, kChunkMeshNeighborStampCount>
       InputLightHaloSignatures{};
   bool InputStampsValid{false};
+  bool CertifiedPaddedLight{false};
   std::shared_ptr<const BlockDefinitionCatalog> InputCatalog;
   /// W1: sticky overlay from capture — ApplyMeshResult must stamp CPU path too
   /// (CommitGpu already got it via pending.snapshot).

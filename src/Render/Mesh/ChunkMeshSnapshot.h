@@ -59,6 +59,7 @@ struct ChunkMeshSnapshot
   uint64_t sourceRevision{0};
   std::array<ChunkInputStamp, kChunkMeshInputStampCount> inputStamps{};
   bool inputStampsValid{false};
+  bool certifiedPaddedLight{false};
   /// S4: versioned neighbor-missing overlay (not part of stamp equality).
   BoundaryOverlayState boundaryOverlay{};
   /// Temporary visibility for a first mesh captured while this slice's light
@@ -100,7 +101,8 @@ struct ChunkMeshSnapshot
       const std::array<ChunkInputStamp, kChunkMeshInputStampCount> &stamps,
       const UBlockWorld &world,
       const std::array<uint64_t, kChunkMeshNeighborStampCount>
-          &light_signatures);
+          &light_signatures,
+      bool certified_padded = false);
 
   static ChunkMeshSnapshot
   Capture(const UBlockWorld &world, glm::ivec3 chunkCoord,

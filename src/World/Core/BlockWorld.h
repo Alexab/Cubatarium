@@ -125,6 +125,10 @@ public:
       glm::ivec3 coord,
       const std::shared_ptr<const BlockDefinitionCatalog> &catalog) const;
 
+  /// Capture only against this world's currently installed material catalog.
+  std::shared_ptr<const SectionLightVolume>
+  GetCurrentLightSamplingVolume(glm::ivec3 coord) const;
+
   void SetFluidDefinitions(const UBlockDefinitionStorage *definitions)
   {
     FluidDefinitions = definitions;

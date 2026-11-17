@@ -214,6 +214,8 @@ bool ChunkMeshSnapshot::InputsStillValid(
       return false;
     }
   }
+  if (certifiedPaddedLight)
+    return static_cast<bool>(world.GetCurrentLightSamplingVolume(coord));
   return LightHaloSignaturesMatch(lightHaloSignatures, world, coord);
 }
 
@@ -221,7 +223,8 @@ MeshApplyStaleInputReason ChunkMeshSnapshot::ClassifyStaleInput(
     bool input_stamps_valid, bool catalog_match,
     const std::array<ChunkInputStamp, kChunkMeshInputStampCount> &stamps,
     const UBlockWorld &world,
-    const std::array<uint64_t, kChunkMeshNeighborStampCount> &light_signatures)
+    const std::array<uint64_t, kChunkMeshNeighborStampCount> &light_signatures,
+    bool certified_padded)
 {
   if (!input_stamps_valid)
     return MeshApplyStaleInputReason::StampInvalid;
@@ -253,7 +256,9 @@ MeshApplyStaleInputReason ChunkMeshSnapshot::ClassifyStaleInput(
       any_light = true;
     }
   }
-  if (!LightHaloSignaturesMatch(light_signatures, world, stamps[0].coord))
+  if (certified_padded
+          ? !world.GetCurrentLightSamplingVolume(stamps[0].coord)
+          : !LightHaloSignaturesMatch(light_signatures, world, stamps[0].coord))
   {
     any_light = true;
   }
@@ -386,6 +391,17 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
         }
       }
     }
+  }
+  if (const auto volume = world.GetCurrentLightSamplingVolume(chunkCoord))
+  {
+    static_assert(SectionLightVolume::Width == kLightHaloSize);
+    for (int z = -kLightHaloRadius; z < CHUNK_SIZE + kLightHaloRadius; ++z)
+      for (int y = -kLightHaloRadius; y < CHUNK_SIZE + kLightHaloRadius; ++y)
+        for (int x = -kLightHaloRadius; x < CHUNK_SIZE + kLightHaloRadius; ++x)
+          snapshot.paddedLight[LightHaloFlatIndex({x, y, z})] =
+              volume->cells[SectionLightVolume::Index(x, y, z)];
+    snapshot.openSkyAbsentMask = 0;
+    snapshot.certifiedPaddedLight = true;
   }
   note_slow_stage("light_halo_capture");
 

@@ -3989,6 +3989,14 @@
       "build": "build/desktop-msvc/engine-padded-reuse-tests-build.log",
       "results": "build/desktop-msvc/engine-padded-reuse-tests.log:11/11PASS",
       "remaining": "Switch normal mesh-capture/draw acceptance and padded sampling to this authority; direct/GPU/GLES and other world consumers, known-AIR independent outputs, persisted certificates, native references and zero-remesh resource publication remain required."
+    },
+    "certified_padded_mesh_capture": {
+      "status": "implemented; actual async integrationPASS; full desktop/native verification pending",
+      "change": "World exposes a padded volume only against its installed current material catalog and complete/current padded physical receipts. ChunkMeshSnapshot selects this volume when available, clears old open-sky fallback mask and records certified provenance. Certified validity checks own light revision plus current physical dependency context, not raw neighboring light hashes. CPU async results and GPU pending snapshots retain the provenance flag. Certified candidates cannot use legacy stale-light/geometry publication exception.",
+      "test": "DecorMeshIntegrationTest first-publication fixture now installs padded calculation output and current definitions. Poisoned neighboring block/sky bytes cannot affect recapture or invalidate captured proof. Actual one-job first publication, invalidation-in-flight rejection and unproven preview cases remain passing.",
+      "build": "build/desktop-msvc/engine-certified-padded-capture-final-tests-build.log",
+      "results": "build/desktop-msvc/engine-certified-padded-capture-tests.log:PASS",
+      "scope": "Existing legacy capture fallback remains explicit. Mandatory normal-publication padding gate, all direct world readers, independent AIR outputs and GPU resource decoupling are still pending; no full visual/performance acceptance."
     }
   }
 }

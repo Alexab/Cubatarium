@@ -371,7 +371,9 @@ static void TestPublicationRefreshesDrawRefs(cutum::UBlockRegistry &registry)
          "replacement publication immediately refreshes material draw refs");
 }
 
-static void TestFirstComputedLightPublication(cutum::UBlockRegistry &registry)
+static void TestFirstComputedLightPublication(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
 {
   using namespace cutum;
   enum class ProofCase
@@ -385,6 +387,8 @@ static void TestFirstComputedLightPublication(cutum::UBlockRegistry &registry)
         ProofCase::Uncertified})
   {
     UBlockWorld world;
+    world.SetFluidDefinitions(definitions);
+    world.GetChunkManager().EnsureChunk({1, 0, 0});
     world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
     const glm::ivec3 root(0);
     world.SetBlock({4, 4, 4}, kStone);
@@ -397,13 +401,34 @@ static void TestFirstComputedLightPublication(cutum::UBlockRegistry &registry)
             .Compute(registry);
     Expect(result.chunks.size() == 1 && result.inputs_complete,
            "first publication fixture has known physical inputs");
-    chunk->ReplaceLightData(result.chunks[0].light_packed);
+    chunk->ReplaceComputedLightVolume(*result.chunks[0].padded_light, true,
+                                      true);
     Expect(chunk->GetLightFieldRevision() > 0,
            "nonzero field revision exercises unpublished first-light debt");
     const auto catalog = registry.GetDefinitionsCatalogSnapshot();
     if (proof_case != ProofCase::Uncertified)
       Expect(world.RecordLightCalculation(result, catalog) == 1,
              "first publication fixture installs physical calculation proof");
+
+    if (proof_case != ProofCase::Uncertified)
+    {
+      const auto captured = ChunkMeshSnapshot::Capture(world, root, 1);
+      Expect(captured.certifiedPaddedLight,
+             "normal capture selects current padded physical output");
+      auto *neighbor = world.GetChunkManager().GetChunk({1, 0, 0});
+      neighbor->SetLightLocal({0, 8, 8}, 0, 15);
+      const auto recaptured = ChunkMeshSnapshot::Capture(world, root, 1);
+      Expect(captured.InputsStillValid(world) &&
+                 recaptured.certifiedPaddedLight &&
+                 recaptured.GetLightPacked({16, 8, 8}) ==
+                     result.chunks[0]
+                         .padded_light
+                         ->cells[SectionLightVolume::Index(16, 8, 8)] &&
+                 recaptured.GetLightPacked({16, 8, 8}) !=
+                     neighbor->GetLightPackedLocal({0, 8, 8}),
+             "poisoned neighbor light cannot alter certified capture or "
+             "invalidate it");
+    }
 
     UChunkMeshCache cache;
     auto settings = MakeFrustumMeshSettings();
@@ -515,7 +540,7 @@ int main()
   TestOverflowRetryWithNoDirtyAdmission(registry);
   TestOccludedMeshDependencyRepair(registry);
   TestPublicationRefreshesDrawRefs(registry);
-  TestFirstComputedLightPublication(registry);
+  TestFirstComputedLightPublication(registry, definitions.get());
   TestWorldDemandIsolation();
 
   std::cout << kTestName << ": OK" << std::endl;

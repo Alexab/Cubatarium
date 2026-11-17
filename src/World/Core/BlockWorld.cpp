@@ -277,6 +277,15 @@ bool UBlockWorld::HasCompleteLightSamplingCalculation(
   return HasCompleteLightCalculation(coord, catalog);
 }
 
+std::shared_ptr<const SectionLightVolume>
+UBlockWorld::GetCurrentLightSamplingVolume(glm::ivec3 coord) const
+{
+  if (!FluidDefinitions || !HasCompleteLightSamplingCalculation(
+                               coord, FluidDefinitions->GetCatalogSnapshot()))
+    return nullptr;
+  return Chunks.GetChunk(coord)->GetSectionLightField().GetPaddedData();
+}
+
 bool UBlockWorld::HasKnownOpenSkyAbsentProof(glm::ivec3 coord) const
 {
   if (KnownAirColumnFloorQuery)
