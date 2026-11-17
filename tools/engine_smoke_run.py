@@ -84,14 +84,17 @@ def inspection_evidence(artifacts: Path, report: dict) -> dict:
     import math
     bot = report.get("diagnostic_bot", {})
     requested = bot.get("inspection_capture_requested_n")
-    if not isinstance(requested, int) or isinstance(requested, bool) or not 0 <= requested <= 3072:
+    if not isinstance(requested, int) or isinstance(requested, bool) or not 0 <= requested <= 5120:
         return {"verified": 0, "reason": "missing_or_invalid_capture_count"}
     trace = artifacts / "diagnostic_bot.jsonl"
     poses: dict[int, dict] = {}
+    first_observation = None
     if trace.exists():
         for line in trace.read_text(encoding="utf-8").splitlines():
             try:
                 row = json.loads(line)
+                if first_observation is None:
+                    first_observation = row
                 if row.get("capture_request"):
                     capture_id = row["capture_id"]
                     if (not isinstance(capture_id, int) or isinstance(capture_id, bool)
@@ -102,17 +105,74 @@ def inspection_evidence(artifacts: Path, report: dict) -> dict:
                     poses[capture_id] = row
             except (ValueError, TypeError, KeyError):
                 return {"verified": 0, "reason": "invalid_inspection_trace"}
+    def vector(value):
+        if (not isinstance(value, list) or len(value) != 3 or
+                any(isinstance(v, bool) or not isinstance(v, (int, float)) or
+                    not math.isfinite(v) for v in value)):
+            raise ValueError("invalid inspection coordinate")
+        return value
+
+    # New routes declare their capture layout. Legacy artifacts without a
+    # route retain the original twelve-pose layout for historical analysis.
+    layout = None
+    route_path = artifacts / "bot-route.json"
+    if route_path.exists():
+        try:
+            route = json.loads(route_path.read_text(encoding="utf-8"))
+            points = route["waypoints"]
+            if (route.get("schema") != "diagnostic-flight-route.v1" or
+                    not isinstance(points, list) or len(points) > 256 or
+                    not isinstance(route.get("relative", False), bool)):
+                raise ValueError("invalid route")
+            layout = []
+            for waypoint, point in enumerate(points):
+                vector(point["position"])
+                targets = point.get("inspection_targets", [])
+                if (not isinstance(targets, list) or len(targets) > 8 or
+                        not isinstance(point.get("inspect", True), bool)):
+                    raise ValueError("invalid inspection layout")
+                for target in targets:
+                    vector(target)
+                if not point.get("inspect", True):
+                    continue
+                first_id = len(layout)
+                layout.extend((waypoint, first_id, local, None) for local in range(12))
+                anchor = (vector(first_observation["position"])
+                          if targets and route.get("relative", False) else [0, 0, 0])
+                layout.extend((waypoint, first_id, 12 + i,
+                               [a + b for a, b in zip(target, anchor)])
+                              for i, target in enumerate(targets))
+            if len(layout) != requested:
+                return {"verified": 0, "requested": requested,
+                        "reason": "inspection_route_capture_count_mismatch"}
+        except (OSError, ValueError, TypeError, KeyError):
+            return {"verified": 0, "reason": "invalid_inspection_route_evidence"}
     verified = 0
     for capture_id in range(requested):
         pose = poses.get(capture_id)
-        first = poses.get(capture_id - capture_id % 12)
+        waypoint, first_id, local, target = (layout[capture_id] if layout is not None
+            else (None, capture_id - capture_id % 12, capture_id % 12, None))
+        first = poses.get(first_id)
         if not pose or not first:
             continue
         try:
             yaw, pitch = float(pose["yaw"]), float(pose["pitch"])
-            expected_yaw = float(first["yaw"]) + 90 * ((capture_id % 12) // 3)
-            expected_pitch = -45 + 45 * (capture_id % 3)
+            expected_yaw = float(first["yaw"]) + 90 * (local // 3)
+            expected_pitch = -45 + 45 * (local % 3)
+            stationary = True
+            if layout is not None:
+                position = vector(pose["position"])
+                stationary = (pose.get("state") == "inspect" and
+                    pose.get("waypoints_visited") == waypoint and
+                    all(pose.get(key) == 0 for key in ("forward", "up", "down")) and
+                    math.dist(position, vector(first["position"])) <= 0.01)
+                if target is not None:
+                    delta = [a - b for a, b in zip(target, position)]
+                    horizontal = math.hypot(delta[0], delta[2])
+                    expected_yaw = math.degrees(math.atan2(delta[2], delta[0])) if horizontal > .001 else yaw
+                    expected_pitch = max(-89, min(89, math.degrees(math.atan2(delta[1], horizontal))))
             aligned = (math.isfinite(yaw) and math.isfinite(pitch) and
+                       stationary and
                        abs(math.remainder(yaw - expected_yaw, 360)) <= 4 and
                        abs(pitch - expected_pitch) <= 2)
         except (KeyError, TypeError, ValueError):

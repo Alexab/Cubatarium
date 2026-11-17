@@ -154,8 +154,8 @@
       ],
       "acceptance": "Независимые эталонные сетки: высокая крыша, глубокая вода, вертикальные/горизонтальные швы, удаление факела и крыши, смена материалов, частичный reload; после сходимости нет потерянного долга",
       "solver_contract_refinement": {
-        "status": "common geometry-derived CPU solver and runtime per-domain proofs implemented; persisted content certificates and independent AIR light ownership pending",
-        "evidence": "Historical defect: sync flood and snapshot paths disagreed and consumed unfinished neighbor light. Current common bounded geometry solver no longer uses neighbor light bytes as physical inputs; immutable calculation contexts validate read sets before own-field settlement. Independent AIR-only volume outputs and reload-safe content provenance still require implementation.",
+        "status": "Common geometry-derived CPU solver, runtime domain proofs, canonical CPU fields and explicit known-AIR padded output/receipt implemented; automatic AIR lifecycle and persisted content certificates pending",
+        "evidence": "Common bounded geometry solver uses known geometry/emission and full upper sky context rather than unfinished neighbor light bytes. Immutable read sets validate installed own-field and padded results. Explicit known-AIR output/proofs are tested without geometry allocation; automatic AIR demand/retention and reload-safe content provenance remain required.",
         "direction": "derive completed section fields from known geometry/emission in a bounded halo, with direct sky context through configured ceiling; avoid circular reliance on unfinished neighbor light for a completed certificate",
         "bound": "indirect max light15 and attenuation at least1 per 6-neighbor step bound contributing geometry to a one-section halo for an unpadded section; direct vertical sky still requires full upper context; padded resource sampling must account for its larger output region",
         "required_checks": [
@@ -239,7 +239,7 @@
           "Run independent nonzero sky/block transport, removals, AIR-boundary emitters, light-only zero-remesh, page ABA/memory limits, backend equality and native framebuffer references before completing the stage."
         ],
         "publication_design": {
-          "status": "CPU ownership foundation implemented and focused-tested; known-AIR physical installation and GPU resource cutover still pending",
+          "status": "Canonical CPU field, certified target-owned padded output, known-AIR explicit calculation/installation/proofs implemented; automatic AIR demand retention and GPU field cutover pending",
           "cpu_authority": "Canonical world-owned section light fields, including required known-AIR sections. Existing resident UChunk getters adapt to the same field resource. Copying an unmanaged chunk must not alias managed field storage or its mutation clock. Geometry identity and field identity are separate.",
           "proof_ownership": "A field owns its sky/block revisions and immutable calculation provenance. Known empty geometry never supplies a computed field implicitly. Own geometry receipt, world/field incarnation and current geometry/material/profile/config inputs must validate before completion.",
           "mesh_sampling": "A drawable section binds an independent radius-two padded20x20x20 field snapshot assembled only from computed current contributing fields. Packed sky/block bytes can share identical immutable constant pages; readiness and proof belong to each binding, including page/revision zero.",
@@ -250,11 +250,11 @@
           "cpu_ownership_foundation": {
             "implementation": "SectionLightField owns CPU bytes/revisions/proofs/memo; ChunkManager coordinate ownership independent of geometry, UChunk shares canonical resource through compatibility adapter.",
             "verified": "Focused nonzero per-channel writes, no phantom geometry, clock domains, admission sharing, copy isolation, managed assignment identity, eviction/reuse ABA and explicit absent release. Shared-copy negative control RED, restored GREEN.",
-            "pending": "Native verification, known-AIR solver/receipt/consumer cutover, lifecycle demand retention and persisted certificates remain required.32rebuilt contracts PASS. This foundation does not authorize removing existing geometry lighting."
+            "pending": "Automatic demanded AIR lifecycle/retention, legacy absent-light consumer stamps, GPU cutover and persisted content certificates remain required. Explicit known-AIR nonzero output/receipt tests pass; Release/native evidence is tracked in progress JSON. Existing geometry lighting remains active."
           },
           "padded_cpu_calculation_design": {
-            "status": "source-backed design refinement; implementation and independent reference tests pending",
-            "source_gap": "ChunkRelightSnapshot computes full geometry-halo Light tiles but returns only WriteChunks interiors. ChunkMeshSnapshot then fills radius-two padding from separately installed neighboring UChunk fields. Exact own-field calculation provenance does not certify those separately sampled fields.",
+            "status": "Implemented and focused-tested: target-owned padded20cubed output, independent dense reference for all8000cells, channel merge/halo-only revisions, known-AIR receipt; required publication/direct and snapshot mesher consume current certified output. Release/native transport evidence tracked separately.",
+            "source_gap": "Historical gap corrected: previous own16cubed proof could not certify separately sampled neighbor bytes. Current solver retains target-owned20cubed output from the same solve; mesh capture/publication require its current physical proof. Legacy uncertified data remains explicitly provisional.",
             "implementation": "Retain a target-owned20x20x20 packed output from the same geometry-derived solve alongside the16cubed interior. Bind its sky/block calculation context, field incarnation, per-domain revisions and complete/current status. Mesh capture and GPU publication consume this single certified padded output, or equivalently certified contributing fields; raw neighbor bytes cannot authorize normal publication.",
             "influence_bound": "Current flood clamps maximum level15 and attenuates every propagated edge by at least1. Nonzero transported contribution is at distance<=14. Padded local[-2,17] plus14 fits captured3x3section geometry local[-16,31]. Direct sky seeding still requires the existing full upper-column context. This reasoning is an inference to be verified against independent references, including corner and profile-boundary cases.",
             "tests_required": [

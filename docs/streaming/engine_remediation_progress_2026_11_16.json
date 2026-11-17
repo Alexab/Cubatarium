@@ -4127,10 +4127,24 @@
       "coverage_diagnostics": "Skip reasons and missing-coverage list expose exact UNTESTED causes; 45 Python tests PASS (engine-floor-light-skip-reasons-tests.log). Thresholds unchanged."
     },
     "targeted_bot_inspection": {
-      "status": "implemented; native validation pending",
+      "status": "Release/native targeted poses and independent GPU floor reference verified; original overall FAIL exposed fixed12 verifier assumption; corrected analyzer needs fresh native validation",
       "implementation": "Up to eight finite inspection_targets per waypoint in route coordinates, translated once for relative routes. Twelve panorama poses remain; targeted poses smoothly turn via normal orientation intent without movement. Each queued capture requests one same-frame center-pixel readback with trigger bit6 when visual diagnostics are enabled; periodic grid resumes on other frames.",
       "tests": "engine-targeted-inspection-unit-test.log: PASS; engine-targeted-inspection-python-tests.log: 45 PASS",
-      "release_build": "build/desktop-msvc/engine-targeted-inspection-release-build.log: running"
+      "release_build": "build/desktop-msvc/engine-targeted-inspection-release-build.log: PASS; static EXE verification PASS",
+      "native": {
+        "source": "56cdcf95a",
+        "artifacts": "build/desktop-msvc/engine-targeted-inspection-lit-native",
+        "application_exit": 0,
+        "wrapper_exit": 1,
+        "original_overall": "FAIL (inspection analyzer verified12/26 because it still grouped capture IDs modulo12)",
+        "route": "PASS:22chunks,919outside initial samples,zero relocation,two completed waypoints",
+        "startup": "PASS:81columns1944sectionszero debts",
+        "near_opaque_depth": "11882checks98epochs0faults",
+        "floor_reference": "PASS:1039packedGPUchecks79epochs949floorcells11levels2emitter surfaces0faults; no RGB/transparency/fullscreen acceptance"
+      },
+      "verifier_correction": "Derive capture groups from saved route (inspect flag, twelve panorama views plus up to8target views); translate relative targets from initial observed position, verify target orientation, waypoint index, stationary pose/input, PNG and total declared count. Legacy route-less artifacts retain12pose analysis. Reject malformed/nonfinite targets and count mismatch.",
+      "verifier_tests": "engine-targeted-inspection-layout-tests.log:46PythonPASS; native failure retained as negative evidence; inspection-layout-reanalysis.json verifies26/26 original captures without changing original verdict.",
+      "next": "Fresh native on immutable56cdcf95a EXE with corrected Python analyzer, then automatic demanded AIR field lifecycle."
     }
   }
 }

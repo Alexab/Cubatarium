@@ -184,6 +184,45 @@ class IsolatedFixtureTest(unittest.TestCase):
         self.assertLess(inspection_evidence(self.artifacts, report)["verified"], 12)
 
 
+    def test_inspection_joins_variable_route_layout_and_relative_targets(self):
+        import math
+        (self.artifacts / "captures").mkdir(parents=True)
+        route = dict(schema="diagnostic-flight-route.v1", relative=True, waypoints=[
+            dict(position=[0, 0, 0], inspection_targets=[[2, -7.5, 0]]),
+            dict(position=[-16, 0, 0], inspection_targets=[[-14, -7.5, 0]])])
+        route_path = self.artifacts / "bot-route.json"
+        route_path.write_text(json.dumps(route))
+        rows = []
+        for waypoint in range(2):
+            for local in range(13):
+                capture_id = len(rows)
+                rows.append(dict(capture_request=1, capture_id=capture_id,
+                    position=[22 - 16 * waypoint, -36, 51], state="inspect",
+                    waypoints_visited=waypoint, forward=0, up=0, down=0,
+                    yaw=90 * (local // 3) if local < 12 else 0,
+                    pitch=-45 + 45 * (local % 3) if local < 12 else math.degrees(math.atan2(-7.5, 2))))
+                (self.artifacts / "captures" / f"inspection_{capture_id:04}.png").write_bytes(self.png())
+        trace = self.artifacts / "diagnostic_bot.jsonl"
+        def write():
+            trace.write_text("\n".join(json.dumps(row) for row in rows))
+        write()
+        report = dict(diagnostic_bot=dict(inspection_capture_requested_n=26))
+        self.assertEqual(inspection_evidence(self.artifacts, report)["verified"], 26)
+        rows[12]["pitch"] = 0
+        write()
+        self.assertEqual(inspection_evidence(self.artifacts, report)["verified"], 25)
+        rows[25]["forward"] = 1
+        write()
+        self.assertEqual(inspection_evidence(self.artifacts, report)["verified"], 24)
+        report["diagnostic_bot"]["inspection_capture_requested_n"] = 25
+        self.assertEqual(inspection_evidence(self.artifacts, report)["reason"], "invalid_inspection_id")
+        report["diagnostic_bot"]["inspection_capture_requested_n"] = 27
+        self.assertEqual(inspection_evidence(self.artifacts, report)["reason"], "inspection_route_capture_count_mismatch")
+        route["waypoints"][0]["inspection_targets"][0][1] = float("nan")
+        route_path.write_text(json.dumps(route))
+        self.assertEqual(inspection_evidence(self.artifacts, report)["reason"], "invalid_inspection_route_evidence")
+
+
 class NegativeCaveFixtureTest(unittest.TestCase):
     def test_scene_is_prepared_only_in_clone_and_matches_analytic_geometry(self):
         from engine_smoke_fixtures import prepare_dry_negative_cave, prepare_negative_cave
