@@ -11692,6 +11692,57 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
     auto row = RequiredPresentationJson(coverage);
     row["phase"] = "enter_gate";
     row["elapsed_ms"] = elapsed_ms;
+    row["blockers"] = json::array();
+    const auto focus =
+        UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+    const auto &mesh = GetMeshService();
+    const auto &cache = mesh.GetCache();
+    for (int z = focus.z - coverage.radius; z <= focus.z + coverage.radius; ++z)
+      for (int x = focus.x - coverage.radius; x <= focus.x + coverage.radius;
+           ++x)
+        for (int cy = FloorDiv(coverage.min_y, CHUNK_SIZE);
+             cy <= FloorDiv(coverage.max_y, CHUNK_SIZE); ++cy)
+        {
+          const glm::ivec3 coord(x, cy, z);
+          const auto *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+          if (!chunk || chunk->IsAirOnly() ||
+              CurrentSlicePublicationReadyForWarmup(*this, coord) ||
+              row["blockers"].size() >= 32)
+            continue;
+          const auto *demand = GetRenderDemandStore().Find(coord);
+          const auto published = cache.GetMeshPublishRevs(coord);
+          json blocker = {
+              {"coord", {x, cy, z}},
+              {"drawable", mesh.HasDrawableGreedyMesh(coord)},
+              {"satisfies", mesh.HasMeshSatisfyingColumnReady(coord)},
+              {"settled", ChunkSliceHasCurrentLightSettlement(*this, coord)},
+              {"inputs_current",
+               cache.IsPublishedMeshCurrentForInputs(coord, BlockWorld)},
+              {"dirty", mesh.IsChunkMeshDirty(coord)},
+              {"remesh_after_apply", mesh.IsRemeshAfterApplyPending(coord)},
+              {"mesh_inflight", mesh.HasInflightMeshBuild(coord)},
+              {"gpu_pending", mesh.IsPendingGpuApply(coord)},
+              {"extract_inflight", mesh.IsGpuExtractInFlight(coord)},
+              {"capture_pending", cache.HasPendingCaptureWork(coord)},
+              {"provisional", cache.HasProvisionalLightPreview(coord)},
+              {"stable_face_debt", HasStablePublishedFaceDebt(coord)},
+              {"field_light", chunk->GetLightFieldRevision()},
+              {"meshed_light", cache.GetMeshedLightRevision(coord)},
+              {"published_light", published.light_rev},
+              {"source_geom", mesh.GetChunkMeshRevision(coord)},
+              {"published_geom", published.geom_rev}};
+          if (demand)
+          {
+            blocker["geom"] = {demand->desired_geom_rev,
+                               demand->published_geom_rev};
+            blocker["light"] = {demand->desired_light_rev,
+                                demand->published_light_rev};
+            blocker["coverage"] = {demand->desired_coverage_gen,
+                                   demand->published_coverage_gen};
+            blocker["face_debt_mask"] = demand->face_debt_mask;
+          }
+          row["blockers"].push_back(std::move(blocker));
+        }
     CubatariumLogInfo("RequiredPresentationWitness", row.dump());
   }
   return coverage.Ready();

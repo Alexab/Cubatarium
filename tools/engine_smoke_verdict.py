@@ -54,9 +54,23 @@ def read_startup_warmup_evidence(log_paths) -> dict[str, Any]:
     sections = {}
     columns = {}
     first_frames = []
+    required_ring = None
     for path in log_paths:
         with Path(path).open(encoding="utf-8", errors="replace") as stream:
             for line in stream:
+                marker = "[RequiredPresentationWitness] "
+                if marker in line:
+                    try:
+                        row = json.loads(line.split(marker, 1)[1])
+                        elapsed = row["elapsed_ms"]
+                        if (row.get("schema") == "required-presentation-witness.v1" and
+                                row.get("phase") == "enter_gate" and
+                                isinstance(elapsed, (int, float)) and not isinstance(elapsed, bool) and
+                                math.isfinite(elapsed) and elapsed >= 0 and
+                                (required_ring is None or elapsed >= required_ring["elapsed_ms"])):
+                            required_ring = row
+                    except (ValueError, KeyError, TypeError):
+                        pass
                 marker = "[FirstWorldFrameWitness] "
                 if marker in line:
                     try:
@@ -118,6 +132,7 @@ def read_startup_warmup_evidence(log_paths) -> dict[str, Any]:
     return dict(schema="startup-warmup-evidence.v1", records=observed,
                 forced_with_debt=any(row["forced_with_debt"] for row in observed),
                 first_frame_witnesses=first_frames,
+                required_ring_witness=required_ring,
                 section_witnesses=[sections[key] for key in sorted(sections)][:64],
                 column_witnesses=[columns[key] for key in sorted(columns)][:81])
 

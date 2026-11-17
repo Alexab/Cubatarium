@@ -29,6 +29,21 @@ class EngineSmokeVerdictTest(unittest.TestCase):
                        publication_unready_sections=0, world_epoch=1, focus=[1, -3, 3], ready=True)
         self.report["startup_warmup_evidence"] = dict(first_frame_witnesses=[witness])
 
+    def test_latest_required_ring_diagnostic_cannot_grant_first_frame_pass(self):
+        row = dict(schema="required-presentation-witness.v1", phase="enter_gate",
+                   elapsed_ms=4000, publication_unready_sections=9,
+                   blockers=[dict(coord=[-3, -4, 7], dirty=False)])
+        old = dict(row, elapsed_ms=2000, publication_unready_sections=41)
+        log = Path(self.temp.name) / "runtime.log"
+        log.write_text("[RequiredPresentationWitness] " + json.dumps(row) + "\n" +
+                       "[RequiredPresentationWitness] " + json.dumps(old) + "\n" +
+                       "[RequiredPresentationWitness] {broken\n", encoding="utf-8")
+        evidence = read_startup_warmup_evidence([log])
+        self.assertEqual(evidence["required_ring_witness"], row)
+        self.report["startup_warmup_evidence"] = evidence
+        self.trace()
+        self.assertEqual(classify(self.report, self.perf)["components"]["startup"]["status"], "UNTESTED")
+
     def test_first_frame_census_is_read_from_renderer_log(self):
         row = self.report["startup_warmup_evidence"]["first_frame_witnesses"][0]
         log = Path(self.temp.name) / "runtime.log"
