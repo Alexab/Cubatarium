@@ -6,6 +6,7 @@
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Influence/InfluenceApplier.h"
 #include "Creatures/Influence/StatusEffectSystem.h"
+#include "Creatures/Visual/CreatureDrawQueue.h"
 #include "Creatures/Visual/WornEquipmentDrawer.h"
 #include "Game/Inventory/InventoryIdentity.h"
 #include "Game/Inventory/InventoryOperations.h"
