@@ -4056,7 +4056,9 @@
         "observed_earlier": "436723ms: normal drawable predecessors with current light/settlement, stale geometry source3/pub2 andsource5/pub4; ordinary dirty queue age868/747, no active CPU/capture/GPU owner; scheduler0admissions,35snapshot skips,1remesh lane and2ms snapshot budget.",
         "floor_reference": "UNTESTED missing_floor_draw_source_trace. Original native FAIL retained, no claimed positive-light acceptance."
       },
-      "next_action": "Audit capture preparation/admission for exact required ordinary-remesh debt, including PrioritizeVisibleLightRepairRemesh and snapshot skips; reproduce without raising deadline or weakening first-frame readiness."
+      "next_action": "Audit capture preparation/admission for exact required ordinary-remesh debt, including PrioritizeVisibleLightRepairRemesh and snapshot skips; reproduce without raising deadline or weakening first-frame readiness.",
+      "coverage_refinement": "PASS additionally requires>=8distinct floor cells and>=3distinct expected light levels across>=3frame epochs,>=25positive checks and a correctly observed emitter surface. Repeated copies of one correct cell remainUNTESTED.",
+      "spatial_tests": "build/desktop-msvc/engine-floor-light-spatial-reference-tests.log:45PASS, including repeated-single-cell negative coverage control"
     },
     "priority_geometry_capture_admission": {
       "status": "actual capture regressionRED thenGREEN; desktop/native verification pending",

@@ -332,7 +332,16 @@ class PositiveFloorLightReferenceTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             trace = Path(temp)/"reference.jsonl"
             def check(change=None, count=30):
-                trace.write_text("".join(json.dumps(dict(row,frame_epoch=i//10,**(change or {})))+"\n" for i in range(count)))
+                rows = []
+                for i in range(count):
+                    x = i % 10
+                    sample = dict(row, frame_epoch=i//10)
+                    sample.update({"renderer_pixel_ray_origin_x": x,
+                                   p+"vertex_block_light": (14-x)/15,
+                                   p+"vertex_light_block_id": 376 if x == 0 else 560})
+                    sample.update(change or {})
+                    rows.append(json.dumps(sample)+"\n")
+                trace.write_text("".join(rows))
                 return evaluate(scene,trace)
             self.assertEqual(check()["status"],"PASS")
             self.assertEqual(check({p+"vertex_block_light":0})["status"],"FAIL")
@@ -340,6 +349,8 @@ class PositiveFloorLightReferenceTest(unittest.TestCase):
             self.assertEqual(check({p+"vertex_light_valid":0})["status"],"UNTESTED")
             self.assertEqual(check({p+"vertex_light_preview":1})["status"],"UNTESTED")
             self.assertEqual(check(count=1)["status"],"UNTESTED")
+            self.assertEqual(check({"renderer_pixel_ray_origin_x": 0,
+                p+"vertex_block_light":14/15,p+"vertex_light_block_id":376})["status"],"UNTESTED")
 
 if __name__ == "__main__":
     unittest.main()

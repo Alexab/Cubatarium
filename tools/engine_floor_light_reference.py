@@ -43,6 +43,8 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
     checked = faults = skipped = positive = 0
     epochs = set()
     observed_emitters = set()
+    observed_floor_cells = set()
+    expected_levels = set()
     examples = []
     prefix = "renderer_pixel_opaque_"
     try:
@@ -94,6 +96,8 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
                          row.get(prefix + "vertex_light_block_id") != expected_id)
                 checked += 1; faults += fault; positive += expected > 0
                 epochs.add(epoch)
+                observed_floor_cells.add((x, z))
+                expected_levels.add(expected)
                 if is_emitter and not fault: observed_emitters.add((x, floor_y, z))
                 if fault and len(examples) < 8:
                     examples.append({"frame_epoch": epoch, "floor_cell": [x,floor_y,z],
@@ -102,9 +106,12 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
     except (ValueError, TypeError, KeyError, AttributeError):
         return {"status": "FAIL", "reason": "malformed_floor_reference_trace"}
     status = "FAIL" if faults else ("PASS" if checked >= 25 and positive >= 25 and
-             len(epochs) >= 3 and observed_emitters else "UNTESTED")
+             len(epochs) >= 3 and len(observed_floor_cells) >= 8 and
+             len(expected_levels) >= 3 and observed_emitters else "UNTESTED")
     return {"status": status, "reason": "analytic_floor_cpu_draw_source_light",
             "checked": checked, "positive_expected": positive, "faults": faults,
             "frame_epochs": len(epochs), "observed_emitter_cells": len(observed_emitters),
+            "distinct_floor_cells": len(observed_floor_cells),
+            "distinct_expected_levels": len(expected_levels),
             "skipped": skipped, "examples": examples,
             "scope": "prepared dry-cave opaque floor CPU draw-source light joined to analytic framebuffer depth; no GPU-bound-light, RGB, transparency or full-screen acceptance"}
