@@ -90,6 +90,54 @@ def prepare_negative_cave(fixture: Path, minimum_chunks: int, *, flooded: bool =
             "expected_max_eye_y": ceiling_y - 0.5, "route_yaw": 180.0}
 
 
+def prepare_open_sky_plane(fixture: Path, minimum_chunks: int) -> dict:
+    """Keep only a low floor: AIR lies above the highest saved geometry."""
+    import hashlib
+    import re
+    scene = prepare_negative_cave(fixture, minimum_chunks, wide=True)
+    metadata = json.loads((fixture / "world_data.json").read_text(encoding="utf-8"))
+    packs = metadata.get("resource_packs", {})
+    material_path = fixture.parent.parent / "resource_packs/cubatarium_worldgen_cc0/blocks/stone.json"
+    payload = material_path.read_bytes()
+    material = json.loads(payload)
+    if (packs.get("primary") != ["cubatarium_worldgen_cc0"] or packs.get("secondary", []) or
+            material.get("name") != "stone" or material.get("id") != 560 or
+            material.get("lighting", {}).get("emission", 0) != 0 or
+            material.get("render", {}).get("style", "cube") != "cube" or
+            material.get("render", {}).get("transparent", False) or "physics" in material):
+        raise ValueError("open-sky reference requires the unmodified opaque stone catalog")
+    floor_y = -61
+    floor_cy = floor_y // 16
+    lo, hi = scene["chunk_x_bounds"]
+    removed = 0
+    for path in (fixture / "chunks").iterdir():
+        match = re.fullmatch(r"(-?\d+)_(-?\d+)_(-?\d+)\.(json|cchunk)", path.name)
+        if match:
+            cx, cy, cz = map(int, match.groups()[:3])
+            if lo <= cx <= hi and 2 <= cz <= 4 and cy > floor_cy:
+                if path.is_symlink():
+                    raise ValueError("fixture chunk symlinks are forbidden")
+                path.unlink()
+                removed += 1
+    for cx in range(lo, hi + 1):
+        for cz in range(2, 5):
+            path = fixture / "chunks" / f"{cx}_{floor_cy}_{cz}.json"
+            if path.is_symlink():
+                raise ValueError("fixture chunk symlinks are forbidden")
+            voxels = [dict(lx=x, ly=y, lz=z, type="stone")
+                      for x in range(16) for y in range(floor_y % 16 + 1) for z in range(16)]
+            path.write_text(json.dumps(dict(format_version=4, cx=cx, cy=floor_cy,
+                cz=cz, voxels=voxels), separators=(",", ":")), encoding="utf-8")
+    scene.update(name="open-sky-plane", plane_bounds=dict(floor=floor_y + .5,
+        z_low=31.5, z_high=79.5), route_rise=20, expected_max_eye_y=floor_y + 80,
+        chunks_replaced=(hi-lo+1)*3, chunks_removed=removed,
+        omitted_internal_air_slices=0, required_air_light_service=True,
+        lighting_fixture=dict(schema="engine-direct-skylight-fixture.v1", sky_level=15,
+            material_id=560, material_name="stone", material_sha256=hashlib.sha256(payload).hexdigest()))
+    scene.pop("cave_bounds")
+    return scene
+
+
 def prepare_lit_negative_cave(fixture: Path, minimum_chunks: int) -> dict:
     """Positive blocklight scene. Runtime catalog/draw acceptance is separate."""
     import hashlib
@@ -149,6 +197,8 @@ def evaluate_fixture_trace(scene: dict, trace: Path) -> dict:
                 return {"status": "FAIL", "reason": "fixture_start_position_changed"}
             if pos[1] > scene["expected_max_eye_y"]:
                 return {"status": "FAIL", "reason": "camera_left_negative_cave"}
+            if scene.get("name") == "open-sky-plane" and pos[1] <= scene["plane_bounds"]["floor"]:
+                return {"status": "FAIL", "reason": "camera_below_open_sky_floor"}
             inside = row.get("eye_in_fluid")
             if not isinstance(inside, bool):
                 missing += 1
@@ -162,6 +212,8 @@ def evaluate_fixture_trace(scene: dict, trace: Path) -> dict:
     if samples < 2 or missing:
         return {"status": "UNTESTED", "reason": "missing_fixture_observations",
                 "samples": samples, "missing_fluid_samples": missing}
+    if scene.get("name") == "open-sky-plane":
+        return {"status": "PASS", "reason": "open_sky_plane_observed", "samples": samples}
     return {"status": "PASS", "reason":
             "negative_wet_cave_observed" if scene["expected_eye_in_fluid"]
             else "negative_dry_cave_observed", "samples": samples}

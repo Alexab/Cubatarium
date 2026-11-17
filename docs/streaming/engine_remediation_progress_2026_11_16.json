@@ -4216,7 +4216,25 @@
       "release_build": "build/desktop-msvc/engine-light-sample-demand-release-build.log:PASS; static EXE verificationPASS",
       "telemetry": "RelightAudit job_submit includes air_requested; calculation_certificate includes air_outputs/air_complete (current full padded proof for absent geometry); stale-read diagnostics include field incarnation.",
       "smoke": "engine_air_light_service.py joins requested outputs and complete physical receipts by job/column; wide cave scenes require at least3distinct joined columns. Missing/unjoined/partial evidence UNTESTED, inconsistent counts/unknown completion FAIL. Scoped service observation only, not all-request coverage, field values, latency, GPU light or framebuffer acceptance. 49Python testsPASS (engine-light-sample-demand-python-test.log).",
-      "remaining": "Verify runtime in wide AIR cave and first-paint demand closure; migrate common world/creature/item samplers to canonical computed/transient/missing results with Flat contract, register real object consumers, extend demand/latency/memory telemetry and route oracles, then independent GPU light pages/binding lifetime and persisted certificates."
+      "remaining": "Verify runtime in wide AIR cave and first-paint demand closure; migrate common world/creature/item samplers to canonical computed/transient/missing results with Flat contract, register real object consumers, extend demand/latency/memory telemetry and route oracles, then independent GPU light pages/binding lifetime and persisted certificates.",
+      "wide_native": {
+        "source": "6e959d975",
+        "artifacts": "build/desktop-msvc/engine-light-sample-demand-wide-native",
+        "status": "UNTESTED overall; runtime/route/startup/inspection/fixture/near-depthPASS; AIR serviceUNTESTED",
+        "application_exit": 0,
+        "route": "22chunks831outside initial samples0relocations",
+        "inspection": "24/24",
+        "near_depth": "5624checks64epochs0faults2080unscopedexcluded",
+        "air_service": "3539observed records,0joined AIR completions,0faults",
+        "fixture_gap": "First-world-paint witness contains14residentAIR sections; no positive air_requested/air_outputs records. Sparse internal cave holes are materialized as AIR UChunk entries during column load, so this run did not exercise geometry-absent field production. Do not count it as AIR service acceptance."
+      }
+    },
+    "open_sky_air_fixture": {
+      "status": "Python implementation and51testsPASS; native pending on same6e959d975 EXE",
+      "fixture": "Open-sky plane atY=-61, only floor section saved across route columns and3Zcolumns. Remove all higher saved JSON/binary sections, including above old cave overwrite range. Catalog/stone ID560/opaque/nonemissive properties validated and hashed. Saved spawn/body origin prepared in clone; rise20 through normal input reaches AIR above highest saved geometry. No runtime relocation.",
+      "references": "Independent floor-only ray geometry within32blocks; no ceiling/wall assumed. Direct-skylight floor mode expects sky15/block0 in actual CPU or witnessed packed GPU draw source joined to framebuffer depth. Retains25positive samples/3epochs/8cells requirements. Constant direct-sky case has one expected level; original block-emitter gradient/multiple-level/emitter-surface requirements unchanged. Unreadable/provisional data UNTESTED; zero sky, nonzero blocklight, wrong material and missing floor negative controls fail. No RGB/transparency/fullscreen acceptance.",
+      "tests": "build/desktop-msvc/engine-open-sky-plane-python-test.log:51PASS, including fixture cleanup of high saved chunks, original-save isolation, direct-sky/missing-floor/preview/unreadable/single-cell controls.",
+      "next": "Fresh native open-sky-plane frontier route with existing mandatory AIR-service join; do not accept AIR service until actual positive requested/installed/current geometry-absent fields are observed."
     }
   }
 }

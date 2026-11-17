@@ -1,7 +1,7 @@
-"""Independent prepared-cave floor blocklight reference.
+"""Independent floor blocklight and unobstructed direct-skylight references.
 
 Joins analytic floor/depth to published CPU vertices or actual packed GPU draw-buffer lighting.
-Does not prove GPU bound light, shading/RGB, transparency or full-screen output.
+Does not prove shaded RGB, transparency or full-screen output.
 """
 from __future__ import annotations
 import json
@@ -24,13 +24,19 @@ def expected_floor_light(scene, x, z):
 
 def evaluate(scene: dict, perf: Path | None) -> dict:
     fixture = scene.get("lighting_fixture", {})
-    if (scene.get("name") != "dry-negative-cave" or
+    direct_sky = (scene.get("name") == "open-sky-plane" and
+                  fixture.get("schema") == "engine-direct-skylight-fixture.v1")
+    if not direct_sky and (scene.get("name") != "dry-negative-cave" or
             fixture.get("schema") != "engine-positive-blocklight-fixture.v1"):
         return {"status": "UNTESTED", "reason": "missing_positive_floor_fixture"}
     try:
-        floor_y = round(scene["cave_bounds"]["floor"] - 0.5)
-        emitters = fixture["emitters"]
-        if (fixture["emission"] != 15 or fixture["material_id"] != 376 or
+        bounds = scene["plane_bounds"] if direct_sky else scene["cave_bounds"]
+        floor_y = round(bounds["floor"] - 0.5)
+        emitters = [] if direct_sky else fixture["emitters"]
+        if direct_sky:
+            if fixture.get("sky_level") != 15 or fixture.get("material_id") != 560:
+                raise ValueError("unsupported direct-sky reference")
+        elif (fixture["emission"] != 15 or fixture["material_id"] != 376 or
                 not emitters or any(len(e) != 3 or
                     any(not isinstance(v, int) or isinstance(v, bool) for v in e) or
                     e[1] != floor_y for e in emitters)):
@@ -66,7 +72,7 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
                         abs(sum(v*v for v in direction) - 1) > 0.01 or direction[1] >= -1e-6):
                     skip("not_downward_valid_ray"); continue
                 expected_depth = near_cave_surface(scene, origin, direction)
-                floor_depth = (scene["cave_bounds"]["floor"] - origin[1]) / direction[1]
+                floor_depth = (bounds["floor"] - origin[1]) / direction[1]
                 if (expected_depth is None or abs(floor_depth - expected_depth) > 0.001 or
                         abs(distance - expected_depth) > 0.05 + expected_depth * 0.001):
                     skip("not_joined_floor_depth"); continue
@@ -76,7 +82,8 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
                 # Exclude voxel borders and unmodeled influence beyond scene ends.
                 lo, hi = scene["chunk_x_bounds"]
                 if (abs(px-x) > 0.45 or abs(pz-z) > 0.45 or
-                        x < lo*16+16 or x >= (hi+1)*16-16):
+                        x < lo*16+16 or x >= (hi+1)*16-16 or
+                        (direct_sky and not bounds["z_low"] + 16 <= z < bounds["z_high"] - 16)):
                     skip("unscoped_floor_cell"); continue
                 if (row.get(prefix + "surface_valid") != 1 or
                         row.get(prefix + "vertex_light_valid") != 1 or
@@ -101,30 +108,31 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
                 if (not finite(actual) or not finite(sky) or not isinstance(epoch, int) or
                         isinstance(epoch, bool)):
                     skip("missing_finite_light_or_epoch"); continue
-                expected = expected_floor_light(scene, x, z)
+                expected = 0 if direct_sky else expected_floor_light(scene, x, z)
+                expected_sky = 15 if direct_sky else 0
                 is_emitter = (x, floor_y, z) in emitter_cells
                 expected_id = fixture["material_id"] if is_emitter else 560
-                fault = (abs(actual - expected/15) > 0.001 or abs(sky) > 0.001 or
+                fault = (abs(actual - expected/15) > 0.001 or abs(sky - expected_sky/15) > 0.001 or
                          row.get(prefix + "vertex_light_block_id") != expected_id)
-                checked += 1; faults += fault; positive += expected > 0
+                checked += 1; faults += fault; positive += max(expected, expected_sky) > 0
                 source_counts["cpu" if cpu_source else "packed_gpu"] += 1
                 epochs.add(epoch)
                 observed_floor_cells.add((x, z))
-                expected_levels.add(expected)
+                expected_levels.add(expected_sky if direct_sky else expected)
                 if is_emitter and not fault: observed_emitters.add((x, floor_y, z))
                 if fault and len(examples) < 8:
                     examples.append({"frame_epoch": epoch, "floor_cell": [x,floor_y,z],
                                      "expected_block_level": expected, "source_block_light": actual,
+                                     "expected_sky_level": expected_sky,
                                      "source_sky_light": sky, "source_material_id": row.get(prefix + "vertex_light_block_id")})
     except (ValueError, TypeError, KeyError, AttributeError):
         return {"status": "FAIL", "reason": "malformed_floor_reference_trace"}
     coverage = {"samples": checked >= 25, "positive_samples": positive >= 25,
                 "frame_epochs": len(epochs) >= 3, "floor_cells": len(observed_floor_cells) >= 8,
-                "light_levels": len(expected_levels) >= 3, "emitter_surface": bool(observed_emitters)}
-    status = "FAIL" if faults else ("PASS" if checked >= 25 and positive >= 25 and
-             len(epochs) >= 3 and len(observed_floor_cells) >= 8 and
-             len(expected_levels) >= 3 and observed_emitters else "UNTESTED")
-    return {"status": status, "reason": "analytic_floor_draw_source_light",
+                **({} if direct_sky else {"light_levels": len(expected_levels) >= 3,
+                                         "emitter_surface": bool(observed_emitters)})}
+    status = "FAIL" if faults else "PASS" if all(coverage.values()) else "UNTESTED"
+    return {"status": status, "reason": "analytic_direct_sky_floor_draw_source_light" if direct_sky else "analytic_floor_draw_source_light",
             "checked": checked, "positive_expected": positive, "faults": faults,
             "source_counts": source_counts,
             "frame_epochs": len(epochs), "observed_emitter_cells": len(observed_emitters),
@@ -132,4 +140,5 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
             "distinct_expected_levels": len(expected_levels),
             "skipped": skipped, "skip_reasons": skip_reasons,
             "missing_coverage": [k for k,v in coverage.items() if not v], "examples": examples,
-            "scope": "prepared dry-cave opaque floor CPU vertex or witnessed packed GPU draw-buffer light joined to analytic framebuffer depth; no shaded RGB, transparency or full-screen acceptance"}
+            "scope": ("unobstructed constant direct-skylight floor" if direct_sky else "prepared dry-cave opaque floor") +
+                     " CPU vertex or witnessed packed GPU draw-buffer light joined to analytic framebuffer depth; no shaded RGB, transparency or full-screen acceptance"}

@@ -280,6 +280,20 @@ class NegativeCaveFixtureTest(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     prepare_lit_negative_cave(fixture, 1)
                 self.assertEqual(world_fingerprint(fixture), prepared)
+                from engine_smoke_fixtures import prepare_open_sky_plane
+                (material_path.parent / "stone.json").write_text(json.dumps(dict(name="stone", id=560)))
+                (fixture / "chunks/0_18_3.cchunk").write_bytes(b"high saved geometry")
+                plane = prepare_open_sky_plane(fixture, 1)
+                self.assertEqual(plane["name"], "open-sky-plane")
+                self.assertTrue(plane["required_air_light_service"])
+                self.assertEqual(plane["route_rise"], 20)
+                self.assertFalse((fixture / "chunks/0_18_3.cchunk").exists())
+                self.assertFalse((fixture / "chunks/0_-1_3.json").exists())
+                self.assertFalse((fixture / "chunks/0_-3_3.json").exists())
+                floor = json.loads((fixture / "chunks/0_-4_3.json").read_text())
+                self.assertEqual({v["ly"] for v in floor["voxels"]}, {0, 1, 2, 3})
+                self.assertEqual({v["type"] for v in floor["voxels"]}, {"stone"})
+                self.assertEqual(plane["lighting_fixture"]["sky_level"], 15)
             self.assertEqual(world_fingerprint(source), before)
             with self.assertRaises(ValueError):
                 prepare_dry_negative_cave(source, 1)

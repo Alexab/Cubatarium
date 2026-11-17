@@ -16,6 +16,14 @@ from pathlib import Path
 def near_cave_surface(scene: dict, origin: list[float], direction: list[float]) -> float | None:
     xmin = scene["chunk_x_bounds"][0] * 16 - 0.5
     xmax = (scene["chunk_x_bounds"][1] + 1) * 16 - 0.5
+    if scene.get("name") == "open-sky-plane":
+        bounds = scene["plane_bounds"]
+        if direction[1] >= -1e-8 or origin[1] <= bounds["floor"]:
+            return None
+        t = (bounds["floor"] - origin[1]) / direction[1]
+        x, z = origin[0] + direction[0]*t, origin[2] + direction[2]*t
+        return t if (0.05 <= t <= 32 and xmin < x < xmax and
+                     bounds["z_low"] < z < bounds["z_high"]) else None
     bounds = scene.get("cave_bounds", {"floor": -43.5, "ceiling": -30.5,
                                        "z_low": 44.5, "z_high": 57.5})
     if not (xmin < origin[0] < xmax and bounds["floor"] < origin[1] < bounds["ceiling"] and
@@ -35,7 +43,7 @@ def near_cave_surface(scene: dict, origin: list[float], direction: list[float]) 
 
 def evaluate(scene: dict, perf: Path | None) -> dict:
     if (scene.get("schema") != "engine-smoke-fixture.v1" or
-            scene.get("name") not in ("dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave")):
+            scene.get("name") not in ("dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "open-sky-plane")):
         return {"status": "UNTESTED", "reason": "unsupported_reference_scene"}
     if perf is None or not perf.is_file():
         return {"status": "UNTESTED", "reason": "missing_framebuffer_trace"}
@@ -88,10 +96,11 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
     except (ValueError, TypeError, KeyError):
         return {"status": "FAIL", "reason": "malformed_reference_trace"}
     status = "FAIL" if faults else ("PASS" if checked >= 100 and len(epochs) >= 3 else "UNTESTED")
-    return {"status": status, "reason": "analytic_near_cave_opaque_depth",
+    return {"status": status, "reason": "analytic_near_plane_opaque_depth" if scene.get("name") == "open-sky-plane" else "analytic_near_cave_opaque_depth",
             "checked": checked, "faults": faults, "frame_epochs": len(epochs),
             "skipped_unscoped_or_occluded": skipped, "examples": examples,
-            "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"}
+            "scope": ("opaque floor" if scene.get("name") == "open-sky-plane" else "opaque cave surfaces") +
+                     " within 32 blocks; no light, transparent or full-screen acceptance"}
 
 
 def main() -> int:
