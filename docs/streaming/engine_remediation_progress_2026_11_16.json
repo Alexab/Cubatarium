@@ -4089,6 +4089,15 @@
       "test": "Emission15 reaches an entirely absent negative-Y AIR target with blocklevel14. Installed full field and physical receipt leave geometry count/clock unchanged. Geometry admission shares field identity/bytes but invalidates absence receipt; recalculation restores authority. Source removal invalidates then clears nonzero blocklight. Unknown absence creates neither output nor field.",
       "tests": "build/desktop-msvc/engine-known-air-field-tests.log:3/3PASS",
       "scope": "Known-AIR generation is explicit opt-in; automatic demand/retention and legacy light-read stamps for absent fields require further work. No rendering/GPU/persistence completion claim."
+    },
+    "packed_draw_light_instrumentation": {
+      "status": "packed geometry decoder implemented/tested; actual draw-buffer telemetry integration pending",
+      "source_evidence": "Packed vertex-pulling shader reads allocator QuadSsbo at slot.OffsetQuads+draw-range.quadOffset. Current opaque light join enumerates CPU batch vertices only, explaining missing970GPU floor sources. Existing PackedOpaqueDrawTrace counts actual draws but lacks individual range/buffer/generation witnesses.",
+      "decoder": "PackedQuadGeometry.h reconstructs shader corners, validates faces/cells/width/height and section extents. PackedQuadParityTest compares every face against independent CPU emitter geometry at signed origins and rejects malformed payloads.",
+      "tests": "build/desktop-msvc/engine-packed-light-diagnostic-geometry-green-test.log:PASS",
+      "test_correction": "Initial decoder parity fixture incorrectly translated CPU GreedyQuad.slice as GPU boundary-slice. CPU slice is already the cell index; corrected fixture mapping, shader unchanged. Initial failure is not evidence of a runtime geometry bug.",
+      "next_integration": "Capture actual per-range SSBO binding, slot generation, first/count and material at packed draw. Bounded desktop readback cache per probe capture, validated byte ranges and slot lifetime, decode actual payload and join to framebuffer depth. Expose explicit CPU/GPU source kind and readback validity; keep missing/GLES unsupported samplesUNTESTED. No voxel/live-field substitute for GPU draw bytes.",
+      "scope": "No GPU light acceptance yet; decoder test alone does not prove bound draw data or framebuffer color."
     }
   }
 }

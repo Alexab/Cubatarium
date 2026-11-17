@@ -2,6 +2,7 @@
 // emitter. A wrong corner table leaves a triangular hole in every GPU-meshed
 // quad (shader had triangles (0,1,2),(1,2,3) instead of (0,1,2),(0,2,3)).
 #include "Render/Mesh/GreedyMeshEmitter.h"
+#include "Render/Mesh/PackedQuadGeometry.h"
 
 #include <algorithm>
 #include <array>
@@ -92,6 +93,36 @@ int main()
       std::vector<uint32_t> idx;
       cutum::AppendGreedyQuad(q, glm::ivec3(0), verts, idx);
       Expect(verts.size() == 4 && idx.size() == 6, "emitter quad shape");
+      glm::ivec3 cell(0);
+      cell[axis] = q.slice;
+      cell[(axis + 1) % 3] = q.u;
+      cell[(axis + 2) % 3] = q.v;
+      const int face =
+          axis == 0 ? (sign > 0 ? 1 : 3)
+                    : (axis == 1 ? (sign > 0 ? 4 : 5) : (sign > 0 ? 0 : 2));
+      const auto packed = cutum::PackedQuad::Encode(
+          cell.x, cell.y, cell.z, q.width, q.height, face, 1, 15, 7);
+      std::array<glm::vec3, 4> corners;
+      Expect(cutum::DecodePackedQuadCorners(packed, {0, 0, 0}, corners),
+             "valid packed quad decodes all six directions");
+      for (const auto &corner : corners)
+        Expect(
+            std::any_of(verts.begin(), verts.end(),
+                        [&](const auto &v)
+                        {
+                          return glm::length(corner -
+                                             glm::vec3(v.px, v.py, v.pz)) <
+                                 0.00001f;
+                        }),
+            "decoded packed corners match independent CPU emitter positions");
+      std::array<glm::vec3, 4> shifted;
+      Expect(cutum::DecodePackedQuadCorners(packed, {-32, -48, 16}, shifted),
+             "signed chunk origin decodes");
+      for (size_t n = 0; n < corners.size(); ++n)
+        Expect(glm::length(shifted[n] - corners[n] - glm::vec3(-32, -48, 16)) <
+                   0.00001f,
+               "packed diagnostic preserves signed world coordinates");
+
       std::vector<Tri> cpu_tris = {{idx[0], idx[1], idx[2]},
                                    {idx[3], idx[4], idx[5]}};
       Expect(Canonical(cpu_tris) == Canonical(shader_tris),
@@ -103,6 +134,17 @@ int main()
   std::set<int> used(table.begin(), table.end());
   Expect(used.size() == 4, "shader triangles must cover all 4 quad corners");
 
+  std::array<glm::vec3, 4> invalid;
+  Expect(!cutum::DecodePackedQuadCorners(
+             cutum::PackedQuad::Encode(0, 0, 0, 1, 1, 7, 1, 0, 0), {}, invalid),
+         "invalid packed face does not become diagnostic geometry");
+  Expect(
+      !cutum::DecodePackedQuadCorners(
+          cutum::PackedQuad::Encode(15, 0, 0, 2, 1, 0, 1, 0, 0), {}, invalid),
+      "out-of-section packed extent is rejected");
+  Expect(!cutum::DecodePackedQuadCorners(
+             cutum::PackedQuad::Encode(0, 0, 0, 0, 1, 0, 1, 0, 0), {}, invalid),
+         "zero extent cannot create a false surface match");
   std::cout << "packed_quad_parity_test OK" << std::endl;
   return 0;
 }
