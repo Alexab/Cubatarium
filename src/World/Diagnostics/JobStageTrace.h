@@ -816,8 +816,12 @@ struct VisualBlackTraceRecord
   uint64_t renderer_pixel_opaque_published_light_rev{0};
   uint64_t renderer_pixel_opaque_field_light_rev{0};
   uint32_t renderer_pixel_opaque_source_index_count{0};
-  /// Barycentrically interpolated source light at the closest CPU mesh
-  /// triangle to the opaque depth hit; only valid within the match radius.
+  /// Closest CPU mesh triangle or actual packed draw-SSBO quad light at the
+  /// opaque depth hit; source kind and payload validity disambiguate paths.
+  /// 0=unobserved,1=CPU published vertices,2=actual packed draw SSBO words.
+  uint8_t renderer_pixel_opaque_light_source_kind{0};
+  uint8_t renderer_pixel_opaque_packed_light_payload_valid{0};
+  uint32_t renderer_pixel_opaque_packed_light_quad_count{0};
   uint8_t renderer_pixel_opaque_vertex_light_valid{0};
   int32_t renderer_pixel_opaque_vertex_light_block_id{-1};
   int32_t renderer_pixel_opaque_vertex_light_face_index{-1};

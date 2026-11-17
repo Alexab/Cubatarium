@@ -349,6 +349,12 @@ class PositiveFloorLightReferenceTest(unittest.TestCase):
             self.assertEqual(check({p+"vertex_light_valid":0})["status"],"UNTESTED")
             self.assertEqual(check({p+"vertex_light_preview":1})["status"],"UNTESTED")
             self.assertEqual(check(count=1)["status"],"UNTESTED")
+            gpu = {p+"light_source_kind":2,p+"source_index_count":0,
+                   p+"packed_light_payload_valid":1,p+"packed_light_quad_count":8}
+            self.assertEqual(check(gpu)["source_counts"]["packed_gpu"],30)
+            self.assertEqual(check(gpu)["status"],"PASS")
+            self.assertEqual(check(dict(gpu,**{p+"packed_light_payload_valid":0}))["status"],"UNTESTED")
+            self.assertEqual(check(dict(gpu,**{p+"vertex_block_light":0}))["status"],"FAIL")
             self.assertEqual(check({"renderer_pixel_ray_origin_x": 0,
                 p+"vertex_block_light":14/15,p+"vertex_light_block_id":376})["status"],"UNTESTED")
 

@@ -1,6 +1,6 @@
 """Independent prepared-cave floor blocklight reference.
 
-Joins analytic floor/depth to CPU published draw-source vertex lighting.
+Joins analytic floor/depth to published CPU vertices or actual packed GPU draw-buffer lighting.
 Does not prove GPU bound light, shading/RGB, transparency or full-screen output.
 """
 from __future__ import annotations
@@ -41,6 +41,7 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
     if perf is None or not perf.is_file():
         return {"status": "UNTESTED", "reason": "missing_floor_draw_source_trace"}
     checked = faults = skipped = positive = 0
+    source_counts = {"cpu": 0, "packed_gpu": 0}
     epochs = set()
     observed_emitters = set()
     observed_floor_cells = set()
@@ -76,12 +77,18 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
                         row.get(prefix + "vertex_light_valid") != 1 or
                         row.get(prefix + "vertex_light_face_index") != 4 or
                         row.get(prefix + "drawable") != 1 or row.get(prefix + "draw_ready") != 1 or
-                        not finite(row.get(prefix + "source_index_count")) or
-                        row[prefix + "source_index_count"] <= 0 or
                         not finite(row.get(prefix + "vertex_light_distance")) or
                         row[prefix + "vertex_light_distance"] > 0.03 or
                         row.get(prefix + "vertex_light_preview") != 0 or
                         row.get(prefix + "preview_shader_override") != 0):
+                    skipped += 1; continue
+                source_kind = row.get(prefix + "light_source_kind", 1)
+                cpu_source = (source_kind == 1 and finite(row.get(prefix + "source_index_count")) and
+                              row[prefix + "source_index_count"] > 0)
+                gpu_source = (source_kind == 2 and row.get(prefix + "packed_light_payload_valid") == 1 and
+                              finite(row.get(prefix + "packed_light_quad_count")) and
+                              row[prefix + "packed_light_quad_count"] > 0)
+                if not cpu_source and not gpu_source:
                     skipped += 1; continue
                 actual = row.get(prefix + "vertex_block_light")
                 sky = row.get(prefix + "vertex_sky_light")
@@ -95,6 +102,7 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
                 fault = (abs(actual - expected/15) > 0.001 or abs(sky) > 0.001 or
                          row.get(prefix + "vertex_light_block_id") != expected_id)
                 checked += 1; faults += fault; positive += expected > 0
+                source_counts["cpu" if cpu_source else "packed_gpu"] += 1
                 epochs.add(epoch)
                 observed_floor_cells.add((x, z))
                 expected_levels.add(expected)
@@ -108,10 +116,11 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
     status = "FAIL" if faults else ("PASS" if checked >= 25 and positive >= 25 and
              len(epochs) >= 3 and len(observed_floor_cells) >= 8 and
              len(expected_levels) >= 3 and observed_emitters else "UNTESTED")
-    return {"status": status, "reason": "analytic_floor_cpu_draw_source_light",
+    return {"status": status, "reason": "analytic_floor_draw_source_light",
             "checked": checked, "positive_expected": positive, "faults": faults,
+            "source_counts": source_counts,
             "frame_epochs": len(epochs), "observed_emitter_cells": len(observed_emitters),
             "distinct_floor_cells": len(observed_floor_cells),
             "distinct_expected_levels": len(expected_levels),
             "skipped": skipped, "examples": examples,
-            "scope": "prepared dry-cave opaque floor CPU draw-source light joined to analytic framebuffer depth; no GPU-bound-light, RGB, transparency or full-screen acceptance"}
+            "scope": "prepared dry-cave opaque floor CPU vertex or witnessed packed GPU draw-buffer light joined to analytic framebuffer depth; no shaded RGB, transparency or full-screen acceptance"}

@@ -4091,13 +4091,18 @@
       "scope": "Known-AIR generation is explicit opt-in; automatic demand/retention and legacy light-read stamps for absent fields require further work. No rendering/GPU/persistence completion claim."
     },
     "packed_draw_light_instrumentation": {
-      "status": "packed geometry decoder implemented/tested; actual draw-buffer telemetry integration pending",
+      "status": "actual packed draw-range/buffer capture and bounded payload join implemented;45Python reference testsPASS; desktopRelease build running",
       "source_evidence": "Packed vertex-pulling shader reads allocator QuadSsbo at slot.OffsetQuads+draw-range.quadOffset. Current opaque light join enumerates CPU batch vertices only, explaining missing970GPU floor sources. Existing PackedOpaqueDrawTrace counts actual draws but lacks individual range/buffer/generation witnesses.",
       "decoder": "PackedQuadGeometry.h reconstructs shader corners, validates faces/cells/width/height and section extents. PackedQuadParityTest compares every face against independent CPU emitter geometry at signed origins and rejects malformed payloads.",
       "tests": "build/desktop-msvc/engine-packed-light-diagnostic-geometry-green-test.log:PASS",
       "test_correction": "Initial decoder parity fixture incorrectly translated CPU GreedyQuad.slice as GPU boundary-slice. CPU slice is already the cell index; corrected fixture mapping, shader unchanged. Initial failure is not evidence of a runtime geometry bug.",
       "next_integration": "Capture actual per-range SSBO binding, slot generation, first/count and material at packed draw. Bounded desktop readback cache per probe capture, validated byte ranges and slot lifetime, decode actual payload and join to framebuffer depth. Expose explicit CPU/GPU source kind and readback validity; keep missing/GLES unsupported samplesUNTESTED. No voxel/live-field substitute for GPU draw bytes.",
-      "scope": "No GPU light acceptance yet; decoder test alone does not prove bound draw data or framebuffer color."
+      "scope": "No GPU light acceptance yet; decoder test alone does not prove bound draw data or framebuffer color.",
+      "implementation": "Opt-in packed draw trace records actual SSBO base binding, first/count, material and slot generation per issued range. Per probe capture reads at most16unique chunks, each capped to2048slot quads; validates range, generation and buffer bytes, restores copy-read binding. Actual packed words decode to geometry and light, matched to framebuffer opaque surface. Source kind0/1/2 and GPU payload checked/count fields prevent CPU/absent/GPU ambiguity. GLES readback remains unobserved.",
+      "reference": "Floor oracle accepts either joined CPU source vertices or explicitly readable packed GPU payload; zero/missing GPU readback remainsUNTESTED and wrong nonzero reference valuesFAIL. Generic visual/RGB acceptance remainsUNTESTED. New verdict component fixture_floor_draw_source_light supersedes the earlier CPU-only component name for new runs.",
+      "python_tests": "build/desktop-msvc/engine-packed-light-reference-tests.log:45PASS",
+      "release_build": "build/desktop-msvc/engine-packed-light-payload-release-build.log (running; no success claim)",
+      "remaining": "Verify desktop compilation and fresh native GPU source-kind2/buffer payload evidence, floor-reference coverage and values. No GPU/RGB/full-screen acceptance until verified."
     }
   }
 }

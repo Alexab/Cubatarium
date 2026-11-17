@@ -5949,6 +5949,13 @@ void UFramePerfMonitor::Shutdown()
               << r.renderer_pixel_opaque_field_light_rev
               << ",\"renderer_pixel_opaque_source_index_count\":"
               << r.renderer_pixel_opaque_source_index_count
+              << ",\"renderer_pixel_opaque_light_source_kind\":"
+              << static_cast<int>(r.renderer_pixel_opaque_light_source_kind)
+              << ",\"renderer_pixel_opaque_packed_light_payload_valid\":"
+              << static_cast<int>(
+                     r.renderer_pixel_opaque_packed_light_payload_valid)
+              << ",\"renderer_pixel_opaque_packed_light_quad_count\":"
+              << r.renderer_pixel_opaque_packed_light_quad_count
               << ",\"renderer_pixel_opaque_vertex_light_valid\":"
               << static_cast<int>(r.renderer_pixel_opaque_vertex_light_valid)
               << ",\"renderer_pixel_opaque_vertex_light_block_id\":"
@@ -6541,6 +6548,13 @@ void UFramePerfMonitor::Shutdown()
             << r.renderer_pixel_opaque_field_light_rev
             << ",\"renderer_pixel_opaque_source_index_count\":"
             << r.renderer_pixel_opaque_source_index_count
+            << ",\"renderer_pixel_opaque_light_source_kind\":"
+            << static_cast<int>(r.renderer_pixel_opaque_light_source_kind)
+            << ",\"renderer_pixel_opaque_packed_light_payload_valid\":"
+            << static_cast<int>(
+                   r.renderer_pixel_opaque_packed_light_payload_valid)
+            << ",\"renderer_pixel_opaque_packed_light_quad_count\":"
+            << r.renderer_pixel_opaque_packed_light_quad_count
             << ",\"renderer_pixel_opaque_vertex_light_valid\":"
             << static_cast<int>(r.renderer_pixel_opaque_vertex_light_valid)
             << ",\"renderer_pixel_opaque_vertex_light_block_id\":"

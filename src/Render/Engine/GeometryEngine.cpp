@@ -41,6 +41,7 @@
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "Render/Mesh/IUChunkCull.h"
 #include "Render/Mesh/IUChunkMesher.h"
+#include "Render/Mesh/PackedQuadGeometry.h"
 #include "Render/Pipeline/GlStateMask.h"
 #include "Render/Pipeline/GlStateScope.h"
 #include "Render/Pipeline/GreedyDrawCategory.h"
@@ -1685,6 +1686,79 @@ void CaptureTransparentPixelProbe(
     packed_transparent_chunks.insert(ref.chunkCoord);
   }
 
+  struct PackedLightPayload
+  {
+    std::vector<std::pair<PackedQuad, BlockId>> quads;
+    bool readable{false};
+  };
+  std::unordered_map<glm::ivec3, PackedLightPayload, IVec3Hash>
+      packed_light_payloads;
+  constexpr size_t kMaxPackedLightReadbackChunks = 16;
+  const auto packed_light_payload =
+      [&](glm::ivec3 coord) -> const PackedLightPayload *
+  {
+    if (const auto found = packed_light_payloads.find(coord);
+        found != packed_light_payloads.end())
+      return &found->second;
+    if (packed_light_payloads.size() >= kMaxPackedLightReadbackChunks)
+      return nullptr;
+    auto &out = packed_light_payloads[coord];
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+    const auto *pipeline = cache.GetGpuMeshPipeline();
+    const auto *slot =
+        pipeline ? pipeline->GetAllocator().GetSlot(coord) : nullptr;
+    const auto trace =
+        std::find_if(packed_draw_trace.begin(), packed_draw_trace.end(),
+                     [&](const auto &t) { return t.coord == coord; });
+    if (!slot || trace == packed_draw_trace.end() || !trace->slice_ready ||
+        trace->drawn_ranges.empty() ||
+        slot->QuadCount > UGpuMeshSlotAllocator::kMaxQuadsPerSlot)
+      return &out;
+    GLint previous = 0;
+    glGetIntegerv(GL_COPY_READ_BUFFER_BINDING, &previous);
+    bool valid = true;
+    size_t total = 0;
+    for (const auto &range : trace->drawn_ranges)
+    {
+      const uint64_t slot_end =
+          static_cast<uint64_t>(slot->OffsetQuads) + slot->QuadCount;
+      if (!range.quad_buffer || range.slot_generation != slot->generation ||
+          range.first_quad < slot->OffsetQuads || range.first_quad > slot_end ||
+          range.quad_count > slot_end - range.first_quad ||
+          total + range.quad_count > UGpuMeshSlotAllocator::kMaxQuadsPerSlot)
+      {
+        valid = false;
+        break;
+      }
+      glBindBuffer(GL_COPY_READ_BUFFER, range.quad_buffer);
+      GLint64 bytes = 0;
+      glGetBufferParameteri64v(GL_COPY_READ_BUFFER, GL_BUFFER_SIZE, &bytes);
+      const uint64_t offset = range.first_quad * sizeof(PackedQuad);
+      const uint64_t count =
+          static_cast<uint64_t>(range.quad_count) * sizeof(PackedQuad);
+      if (bytes < 0 || offset > static_cast<uint64_t>(bytes) ||
+          count > static_cast<uint64_t>(bytes) - offset)
+      {
+        valid = false;
+        break;
+      }
+      std::vector<PackedQuad> data(range.quad_count);
+      glGetBufferSubData(GL_COPY_READ_BUFFER, static_cast<GLintptr>(offset),
+                         static_cast<GLsizeiptr>(count), data.data());
+      for (const auto &q : data)
+        out.quads.emplace_back(q, static_cast<BlockId>(range.material_id));
+      total += range.quad_count;
+    }
+    glBindBuffer(GL_COPY_READ_BUFFER, static_cast<GLuint>(previous));
+    out.readable = valid && total > 0;
+    if (!out.readable)
+      out.quads.clear();
+#else
+    (void)coord;
+#endif
+    return &out;
+  };
+
   for (int row = 0; row < rows; ++row)
   {
     const int local_y =
@@ -1941,6 +2015,51 @@ void CaptureTransparentPixelProbe(
           };
           collect_opaque_source(opaque_refs);
           collect_opaque_source(transparent_refs);
+          if (opaque_vertex_light.valid)
+            record.renderer_pixel_opaque_light_source_kind = 1;
+          if (packed_opaque_chunks.count(opaque_chunk))
+          {
+            opaque_vertex_light = {};
+            record.renderer_pixel_opaque_light_source_kind = 0;
+            if (const auto *payload = packed_light_payload(opaque_chunk);
+                payload && payload->readable)
+            {
+              record.renderer_pixel_opaque_packed_light_payload_valid = 1;
+              record.renderer_pixel_opaque_packed_light_quad_count =
+                  static_cast<uint32_t>(payload->quads.size());
+              for (const auto &[q, material] : payload->quads)
+              {
+                std::array<glm::vec3, 4> corners;
+                if (!DecodePackedQuadCorners(q, opaque_chunk * CHUNK_SIZE,
+                                             corners))
+                  continue;
+                for (const auto tri :
+                     {std::array<int, 3>{0, 1, 2}, std::array<int, 3>{0, 2, 3}})
+                {
+                  const auto point =
+                      ClosestPointOnTriangle(opaque_surface, corners[tri[0]],
+                                             corners[tri[1]], corners[tri[2]]);
+                  const float distance =
+                      glm::length(opaque_surface - point.point);
+                  if (!std::isfinite(distance) ||
+                      distance >= opaque_vertex_light.distance)
+                    continue;
+                  opaque_vertex_light.distance = distance;
+                  opaque_vertex_light.surface = point.point;
+                  opaque_vertex_light.sky = q.SkyLight() / 15.0f;
+                  opaque_vertex_light.block = q.BlockLight() / 15.0f;
+                  opaque_vertex_light.preview =
+                      (q.word1 & kPackedQuadFlagLightPreview) ? 1.0f : 0.0f;
+                  opaque_vertex_light.face_index = q.Face();
+                  opaque_vertex_light.block_id = material;
+                  opaque_vertex_light.valid =
+                      distance <= kOpaqueVertexLightMatchDistance;
+                }
+              }
+              if (opaque_vertex_light.valid)
+                record.renderer_pixel_opaque_light_source_kind = 2;
+            }
+          }
           if (std::isfinite(opaque_vertex_light.distance))
           {
             record.renderer_pixel_opaque_vertex_light_distance =
@@ -7322,7 +7441,17 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
           ShouldUseGreedyAlphaCutout(transparent_pass, false, range.AlphaCutout)
               ? 1
               : 0);
+      GLint drawn_quad_buffer = 0;
+      if (trace)
+        glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 0,
+                        &drawn_quad_buffer);
       glDrawArrays(GL_TRIANGLES, first, count);
+      if (trace && drawn_quad_buffer > 0)
+        trace->drawn_ranges.push_back(
+            {static_cast<uint32_t>(drawn_quad_buffer),
+             static_cast<uint64_t>(slot->OffsetQuads) + range.quadOffset,
+             range.quadCount, static_cast<int32_t>(range.blockId),
+             slot->generation});
       if (fluid_trace && fluid_range)
       {
         ++fluid_draw_calls;

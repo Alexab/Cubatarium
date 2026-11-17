@@ -70,8 +70,18 @@ struct RenderBatch
 /// Per-chunk evidence for the last opaque packed fallback submission. The
 /// pixel probe uses this to distinguish packed residency from actual draw
 /// calls for a ray-mapped chunk.
+struct PackedDrawRangeWitness
+{
+  uint32_t quad_buffer{0};
+  uint64_t first_quad{0};
+  uint32_t quad_count{0};
+  int32_t material_id{-1};
+  uint64_t slot_generation{0};
+};
+
 struct PackedOpaqueDrawTrace
 {
+  std::vector<PackedDrawRangeWitness> drawn_ranges;
   glm::ivec3 coord{0};
   uint8_t selected{0};
   uint8_t draw_path_ready{0};
