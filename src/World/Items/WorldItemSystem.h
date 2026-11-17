@@ -3,6 +3,7 @@
 #include "Game/Inventory/InventoryDomain.h"
 #include "Game/Inventory/InventoryTypes.h"
 #include "Game/Physics/ThrowMath.h"
+#include <functional>
 #include <glm/mat4x4.hpp>
 #include <nlohmann/json.hpp>
 #include <optional>
@@ -64,6 +65,10 @@ public:
     return Items.size() + Pending.size() + Dormant.size();
   }
   const std::vector<WorldItem> &GetActiveItems() const { return Items; }
+  /// Potential loose-item draw consumers, including sleeping saved bodies.
+  /// Read-only: callers must not mutate item storage from this callback.
+  void
+  ForEachRenderItemPosition(const std::function<void(glm::vec3)> &visit) const;
   std::vector<WorldItem> GetItems() const
   {
     auto rows = Items;

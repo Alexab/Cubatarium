@@ -329,6 +329,10 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             "CUBA_FLIGHT_CAPTURE_DIR": str((artifacts / "captures").resolve()),
             "CUBA_FLIGHT_CAPTURE_INTERVAL_SEC": "10",
         })
+        if scene and scene.get("name") == "open-sky-plane" and not startup_only:
+            # Exercise the normal FP viewmodel consumer. The default flight
+            # benchmark hides it; no item/skin/save QA injection is needed.
+            env["CUBA_FLIGHT_BENCH_OVERLAY"] = "0"
         git_sha = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
         env["CUBATARIUM_GIT_SHA"] = git_sha

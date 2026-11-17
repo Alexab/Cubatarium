@@ -4309,7 +4309,29 @@
       "cpp_tests": "engine-scene-light-consumers-final-unit-test.log:4/4PASS; nonzero absentAIR, geometry transition invalidation, source removal, unknown/default configuration, explicit Flat with no physical allocation, partial profile limits, legacy interior-only receipt rejection, fully computed zero byte, initially unseeded ambient fallback.",
       "red": "engine-scene-light-query-red.log: restoring geometry-only sampler condition compiles and fails exact nonzeroAIR sampler assertion. Source restored in finally; fresh final unit buildGREEN. App never builtRED.",
       "smoke": "engine_scene_light_reference.py requires every first-person item sample joined to actual world paint; independently expects sky15/block0 in open plane, computed state and nonzero identity. Requires all paint frames plus8AIR camera/sample sections. Missing/mismatched frame evidence UNTESTED; unready/transient/incorrect constant/wrong bytes/identity/revision/duplicate/orphan FAIL. 55Python testsPASS. Previous1619camera-frame native correctlyUNTESTED with0item observations; separate control artifact preserves original verdict.",
-      "remaining": "Fresh Release continuous route required; actual creature/world-item native coverage and Flat native scenario remain unaccepted. No shadedRGB/GPUpage/object-smoothing or performance acceptance. Common mesh legacy sampler, independent GPU light cutover, persistence and full matrix still required."
+      "remaining": "Fresh Release continuous route required; actual creature/world-item native coverage and Flat native scenario remain unaccepted. No shadedRGB/GPUpage/object-smoothing or performance acceptance. Common mesh legacy sampler, independent GPU light cutover, persistence and full matrix still required.",
+      "release_build": "engine-scene-light-consumers-release-build.log:PASS; static EXE verificationPASS,6systemDLLs",
+      "native": {
+        "source": "5a5f0b890",
+        "artifacts": "build/desktop-msvc/engine-canonical-scene-light-open-sky-native",
+        "status": "FAIL retained: startup gained1unready AIR object field at first paint",
+        "application_exit": 0,
+        "route": "22chunks957outside initial samples;zero relocation",
+        "inspection": "26/26",
+        "camera": "1610/1610frames ready;1557AIR observations;23AIR sections;0faults/skips",
+        "direct_sky_gpu_floor": "231checks16epochs150cells0faults",
+        "near_depth": "661checks19epochs0faults",
+        "air_service": "173joined jobs74columns;6unjoined receipts excluded;0faults",
+        "first_person": "UNTESTED:benchmark minimal overlay suppresses normal FP draw;0consumer rows",
+        "new_failure": "Loose-item sample atcell(8,68,61), absentgeometry section(0,4,3), Missing frames1..4 andComputed frame5. Request originated in actual draw after startup closure. First paint ring census correctlyreportslight_unready_sections1.",
+        "scope": "New item/creature consumers exercised, but no startup/object-field or first-person acceptance. Original verdict retained."
+      },
+      "prewarm_followup": {
+        "status": "Implemented;Release build and Python tests running;fresh native pending",
+        "implementation": "Before presentation/enter readiness, register potential creature body-center, controlled eye and actual loose-item sample cells within configured approach ring and vertical profile. Same sample rounding/solid-cell upward selection. Include active and dormant item positions through read-only visitor without copying item arrays. Leases use existing fair producer/validation and bounded retirement. No readiness exception or fabricated field.",
+        "harness": "Open-plane continuous correctness scenario explicitly sets existingCUBA_FLIGHT_BENCH_OVERLAY=0 to exercise normal FPconsumer; no FPitem/skin/user-save QA injection. Manifest recordsactualenvironment.",
+        "remaining": "Full drawdomain/culling and performance matrix remain required: UWorldItemSystem::Draw currently submits active+dormant items unconditionally. Prewarm does not claim to fix that distinct issue or all object latency."
+      }
     }
   }
 }

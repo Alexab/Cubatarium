@@ -126,6 +126,24 @@ class IsolatedFixtureTest(unittest.TestCase):
         self.assertIn("--no-hold-forward", manifest["command"])
         self.assertEqual(self.config.read_bytes(), self.original)
 
+    def test_open_plane_enables_normal_viewmodel_without_qa_injection(self):
+        (self.runtime / "Cubatarium.exe").write_bytes(b"test executable identity")
+        child = Mock(pid=123, returncode=0)
+        scene = dict(name="open-sky-plane", starting_eye=[22, -58.88, 51],
+                     plane_bounds=dict(floor=-60.5), route_rise=20)
+        with patch.object(engine_smoke_run, "ROOT", self.root), \
+             patch("flight_sim_run.exe_writable", return_value=True), \
+             patch.object(engine_smoke_run.subprocess, "check_output", return_value="test-sha"), \
+             patch.object(engine_smoke_run.subprocess, "Popen", return_value=child), \
+             patch("engine_smoke_fixtures.prepare_open_sky_plane", return_value=scene):
+            engine_smoke_run.run("Saved", self.artifacts, fixture_scene="open-sky-plane")
+        manifest = json.loads((self.artifacts / "route.json").read_text(encoding="utf-8"))
+        env = manifest["diagnostic_environment"]
+        self.assertEqual(env["CUBA_FLIGHT_BENCH_OVERLAY"], "0")
+        self.assertNotIn("CUBA_FLIGHT_QA_FP_ITEM", env)
+        self.assertNotIn("CUBA_FLIGHT_QA_WORLD_USER", env)
+        self.assertEqual(self.config.read_bytes(), self.original)
+
     def test_startup_observation_checks_native_inputs_and_three_dimensional_drift(self):
         trace = self.root / "startup.jsonl"
         observe = engine_smoke_run.startup_observation_evidence

@@ -51,6 +51,7 @@
 #include "World/IO/ChunkStorageService.h"
 #include "World/Interaction/BlockBreakService.h"
 #include "World/Interaction/BlockPlacementService.h"
+#include "World/Items/WorldItemSystem.h"
 #include "World/Lighting/AsyncRelightBuilder.h"
 #include "World/Lighting/ChunkLighting.h"
 #include "World/Lighting/ChunkRelightSnapshot.h"
@@ -11800,6 +11801,31 @@ void UWorld::MaintainRequiredWorldInputs(int data_budget,
             GetRenderDemandStore().RequestLightSample(coord, sample_epoch,
                                                       StreamingFrameEpoch, 8);
         }
+    // Register potential object samples before the enter/presentation gate.
+    // A first draw must not be the first time an AIR field becomes required.
+    // The approach ring also covers objects entering view on camera turns.
+    const auto request_object = [&](glm::vec3 position)
+    {
+      auto cell = WorldPosToBlock(position);
+      if (BlockRegistry->BlocksMovement(BlockWorld.GetBlock(cell)))
+        ++cell.y;
+      const auto coord = UChunkManager::WorldToChunk(cell);
+      if (BlockWorld.GetVerticalProfile().ContainsY(cell.y) &&
+          std::max(std::abs(coord.x - focus.x), std::abs(coord.z - focus.z)) <=
+              domain.approach)
+        GetRenderDemandStore().RequestLightSample(coord, sample_epoch,
+                                                  StreamingFrameEpoch, 8);
+    };
+    ForEachCreature(
+        [&](const UCreature &creature)
+        {
+          const auto size = creature.GetBounds().currentSizeBlocks;
+          request_object(creature.GetBodyOrigin() +
+                         glm::vec3(0, size.y * .5f, 0));
+          if (creature.GetId() == GetControlledCreatureId())
+            request_object(creature.GetEyePosition());
+        });
+    UWorldItemSystem::Instance().ForEachRenderItemPosition(request_object);
   }
   BlockWorld.GetChunkManager().RetireAbsentSectionLightFields(
       256,

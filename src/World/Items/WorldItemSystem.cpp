@@ -1266,6 +1266,15 @@ void UWorldItemSystem::CoalesceDormant(UWorld &world)
   }
   Dormant = std::move(compact);
 }
+void UWorldItemSystem::ForEachRenderItemPosition(
+    const std::function<void(glm::vec3)> &visit) const
+{
+  for (const auto *list : {&Items, &Dormant})
+    for (const auto &item : *list)
+      if (!item.creatureId)
+        visit(item.position);
+}
+
 void UWorldItemSystem::Draw(UWorld &world, CreatureDrawQueue &queue,
                             const glm::mat4 &vp)
 {
