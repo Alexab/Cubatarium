@@ -2,11 +2,11 @@
   "schema": "engine-remediation-progress.v1",
   "goal_status": "active",
   "stages": {
-    "isolated_automated_test_stand": "in_progress: first-frame and visual-reference witnesses still missing",
+    "isolated_automated_test_stand": "in_progress: isolated native stand and configured-ring first-paint witness verified; physical-light/transparent/full-screen references and full matrix remain.",
     "diagnostic_bot": "verified baseline: native takeoff, route, inspection; expand scenario matrix",
     "local_streaming_mesh_underwater_defects": "in_progress: signed bands, lossless population events, same-size mesh reconciliation and eye-local fluid intervals fixed; native surface frontier routes verified; cave matrix and remaining invalidations pending",
-    "correct_light_solver_and_persistence": "in_progress: common sync/async geometry solver and v6 compatibility verified; native sky-boundary integration passed scoped geometry checks; per-domain certificates, durable generation/coverage obligations and repeated-work control pending",
-    "single_section_lifecycle_and_publication": "in_progress: world-local ownership and exact per-domain input provenance verified; native deadline regression recovered. Durable pending generation/coverage, authoritative column closure and strict first-frame readiness still pending",
+    "correct_light_solver_and_persistence": "in_progress: common geometry solver, domain certificates and durable section coverage integrated; persisted section certificates and native physical-light reference pending",
+    "single_section_lifecycle_and_publication": "in_progress: full frontier native and separate startup repeat pass strict radius-four full-profile pre-entry/post-paint census. Actual renderer-domain continuous movement closure, complete authoritative lifecycle and performance still pending.",
     "independent_light_resource_and_performance": "pending",
     "full_smoke_and_regression_matrix": "in_progress: surface frontier, dry negative cave and flooded negative cave routes; independent analytic near-opaque-depth checks; startup, light/transparent reference, air pocket and eviction round trip still pending"
   },
@@ -1227,7 +1227,7 @@
     }
   },
   "pending_light_obligation_audit": {
-    "status": "source_verified_requires_lifecycle_fix",
+    "status": "integrated_current_proof_section_coverage_native_startup_regression_under_repair",
     "history_commit": "af851e5efe",
     "history_date": "2026-08-25",
     "findings": [
@@ -1242,7 +1242,7 @@
       "current calculation proof includes known input dependencies, catalog/profile/domain and own output identity",
       "invalidate and enqueue from data/input changes regardless of whether a stale image appears dark; do not rely on RGB or stale-dark heuristic for correctness"
     ],
-    "limitations": "not fixed by backend attribution patch; next S3/S4 work must integrate proof validity with durable obligation ownership"
+    "limitations": "Closure now freshly validates current domain/input proofs for each requested section instead of trusting a completed job generation. Explicit section/domain work tickets, authoritative lifecycle cutover and strict startup acceptance remain unfinished."
   },
   "backend_counter_analysis": {
     "status": "unit_and_existing_native_evidence_verified",
@@ -2173,6 +2173,1069 @@
       "date": "2026-09-11",
       "finding": "Initial incarnation/content tracking retained implicit value assignment. Assignment could copy an old incarnation and equal numeric content revision across different geometry snapshots. Runtime test now reproduces this ABA when generation retirement is disabled.",
       "scope": "Latent input-identity defect; exact assignment trigger in the native flight was not exercised and is not claimed as the cause of every reported visual fault."
+    }
+  },
+  "durable_light_work_coverage": {
+    "source_commits": [
+      "b8a9b8ea2",
+      "a90a9d599",
+      "bebc5a966",
+      "b2ae36923",
+      "3c5c2dfbe",
+      "1600f0db2",
+      "91f0a2299"
+    ],
+    "changes": [
+      "Signed sparse section coverage survives duplicate notes, frozen enter snapshots, active older jobs and admission throttling.",
+      "No-delta, empty, mesh-commit and repair closeouts reconcile only known current sky+block proofs. Missing unknown data cannot settle. Unload is explicit retirement.",
+      "Whole-column persisted flags require full current coverage; unproven underground requests survive surface heuristics.",
+      "32-column rotating recovery with at most 2 admissions per drain retains work after FIFO loss; exact job IDs replace global-count ghost ownership.",
+      "Unchanged transient calculations wait for dependency/evidence changes; completed known slices can still hand off to the mesher.",
+      "Underfeet checks use exact pending slice coverage; render-readiness memo is bypassed during active enter because the streaming epoch is frozen."
+    ],
+    "unit_contracts": {
+      "log": "build/desktop-msvc/engine-enter-consumer-phase-contracts-tests.log",
+      "passed": 28,
+      "scope": "Selected Release regression contracts. Native startup/route and physical-light/full-visual acceptance are separate."
+    },
+    "negative_controls": {
+      "suppressed_expansion": "build/desktop-msvc/engine-pending-coverage-red-expand-test.log",
+      "optimistic_closeout": "build/desktop-msvc/engine-pending-coverage-red-proof-test.log",
+      "restored_green": "build/desktop-msvc/engine-pending-coverage-green-test.log"
+    },
+    "startup_smoke_detection": {
+      "tests": "build/desktop-msvc/engine-startup-failure-smoke-contracts-tests.log",
+      "behavior": "Explicit forced warmup handoff with visibility debt or absent underfeet fails startup even when the first-frame witness is missing or claims readiness. Ordinary/malformed logs cannot grant startup PASS."
+    },
+    "failed_native_runs": [
+      {
+        "source": "b8a9b8ea2",
+        "artifacts": "build/desktop-msvc/engine-pending-coverage-wet-native",
+        "verdict_with_positive_failure": "smoke-verdict-with-startup-evidence.json",
+        "startup_ms": 150052,
+        "startup_visibility_debt": 10,
+        "route_chunks": 22,
+        "inspection": "24/24",
+        "depth_checks": 27198,
+        "depth_faults": 0,
+        "note": "Original older classifier returned UNTESTED; positive forced-start evidence now yields FAIL. Route/depth success does not erase startup regression."
+      },
+      {
+        "source": "a90a9d599",
+        "artifacts": "build/desktop-msvc/engine-pending-slice-readiness-wet-native",
+        "status": "FAIL",
+        "startup_ms": 150182,
+        "startup_visibility_debt": 10,
+        "route_chunks": 22,
+        "inspection": "24/24",
+        "depth_checks": 27339,
+        "depth_faults": 0,
+        "audit": {
+          "transient_worker_jobs": 16834,
+          "known_worker_jobs": 2052,
+          "streaming_fifo_submissions": 18201,
+          "partial_reconciles": 3430
+        },
+        "note": "Per-slice underfeet scoping alone did not resolve startup. Led to frozen readiness memo and repeated unchanged-transient dispatch fixes."
+      },
+      {
+        "source": "bebc5a966",
+        "artifacts": "build/desktop-msvc/engine-light-wait-enter-memo-wet-native",
+        "status": "FAIL",
+        "startup_ms": 150213,
+        "startup_visibility_debt": 10,
+        "route_chunks": 22,
+        "inspection": "24/24",
+        "depth_checks": 20148,
+        "depth_faults": 0,
+        "audit": {
+          "transient_worker_jobs": 665,
+          "known_worker_jobs": 1258,
+          "wait_records": 18780
+        },
+        "note": "Unchanged-input waiting greatly reduced observed transient dispatch relative to the preceding run, but startup remained forced. Memo/input waiting did not resolve the full startup blocker; no controlled performance claim."
+      },
+      {
+        "source": "b2ae36923",
+        "artifacts": "build/desktop-msvc/engine-enter-occluded-dark-wet-native",
+        "status": "FAIL",
+        "startup_evidence": {
+          "status": "FAIL",
+          "reason": "forced_startup_with_unresolved_coverage",
+          "evidence": {
+            "schema": "startup-warmup-evidence.v1",
+            "records": [
+              {
+                "reason": "force_ingame_no_uf",
+                "elapsed_ms": 150087.0,
+                "visibility_debt": 10,
+                "underfeet_ready": false,
+                "forced_with_debt": true
+              }
+            ],
+            "forced_with_debt": true
+          }
+        },
+        "route": {
+          "status": "PASS",
+          "reason": "frontier_route_covered",
+          "displacement_chunks": 22,
+          "outside_initial_resident_samples": 3243
+        },
+        "inspection": {
+          "status": "PASS",
+          "reason": "inspection_capture_coverage",
+          "requested": 24,
+          "queued": 24,
+          "verified": 24
+        },
+        "depth_reference": {
+          "status": "PASS",
+          "reason": "analytic_near_cave_opaque_depth",
+          "checked": 28284,
+          "faults": 0,
+          "frame_epochs": 181,
+          "skipped_unscoped_or_occluded": 676,
+          "examples": [],
+          "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+        },
+        "note": "Correct dark/occluded predicates did not resolve remaining startup failure. Add section-level startup publication/queue witnesses before choosing the next functional repair."
+      },
+      {
+        "source": "3c5c2dfbe",
+        "artifacts": "build/desktop-msvc/engine-enter-section-witness-native",
+        "scope": "Short startup diagnostic, deliberately insufficient for route/inspection acceptance.",
+        "status": "FAIL",
+        "startup_records": [
+          {
+            "reason": "force_ingame_no_uf",
+            "elapsed_ms": 150088.0,
+            "visibility_debt": 10,
+            "underfeet_ready": false,
+            "forced_with_debt": true
+          }
+        ],
+        "diagnosis": {
+          "focus_resident_solid_sections": 9,
+          "all_light_complete": true,
+          "blocking_empty_sections": [
+            {
+              "coord": [
+                1,
+                -1,
+                3
+              ],
+              "light_complete": true,
+              "dirty": true,
+              "mesh_inflight": false,
+              "gpu_pending": false,
+              "geom": [
+                162,
+                161
+              ],
+              "light": [
+                0,
+                0
+              ],
+              "field_light_rev": 0,
+              "published_light_rev": 0
+            },
+            {
+              "coord": [
+                1,
+                0,
+                3
+              ],
+              "light_complete": true,
+              "dirty": true,
+              "mesh_inflight": false,
+              "gpu_pending": false,
+              "geom": [
+                170,
+                169
+              ],
+              "light": [
+                0,
+                0
+              ],
+              "field_light_rev": 0,
+              "published_light_rev": 0
+            },
+            {
+              "coord": [
+                1,
+                1,
+                3
+              ],
+              "light_complete": true,
+              "dirty": false,
+              "mesh_inflight": false,
+              "gpu_pending": false,
+              "geom": [
+                183,
+                183
+              ],
+              "light": [
+                0,
+                0
+              ],
+              "field_light_rev": 0,
+              "published_light_rev": 0
+            },
+            {
+              "coord": [
+                1,
+                2,
+                3
+              ],
+              "light_complete": true,
+              "dirty": false,
+              "mesh_inflight": false,
+              "gpu_pending": false,
+              "geom": [
+                185,
+                185
+              ],
+              "light": [
+                0,
+                0
+              ],
+              "field_light_rev": 0,
+              "published_light_rev": 0
+            }
+          ]
+        },
+        "finding": "Light was complete in the focus column; zero-quad sections advanced geometric publication targets repeatedly despite unchanged light. Led to retiring column/RGB-based forced no-op remesh and protecting current empty publications from generic visual repair."
+      },
+      {
+        "source": "91f0a2299",
+        "artifacts": "build/desktop-msvc/engine-noop-empty-repair-wet-native",
+        "status": "FAIL",
+        "startup_records": [
+          {
+            "reason": "force_ingame_no_uf",
+            "elapsed_ms": 150003.0,
+            "visibility_debt": 10,
+            "underfeet_ready": false,
+            "forced_with_debt": true
+          }
+        ],
+        "route": {
+          "status": "PASS",
+          "reason": "frontier_route_covered",
+          "displacement_chunks": 22,
+          "outside_initial_resident_samples": 3453
+        },
+        "inspection": {
+          "status": "PASS",
+          "reason": "inspection_capture_coverage",
+          "requested": 24,
+          "queued": 24,
+          "verified": 24
+        },
+        "depth_reference": {
+          "status": "PASS",
+          "reason": "analytic_near_cave_opaque_depth",
+          "checked": 26091,
+          "faults": 0,
+          "frame_epochs": 167,
+          "skipped_unscoped_or_occluded": 629,
+          "examples": [],
+          "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+        },
+        "finding": "No-op/World repair guards were insufficient: captured demand-transition traces identify priority_chunk_emerge_repair and priority_enter_first_mesh, whose cache repair guard rejected MeshedLightRevision == 0."
+      },
+      {
+        "source": "0eb8517e1",
+        "artifacts": "build/desktop-msvc/engine-zero-revision-repair-guard-wet-native",
+        "status": "FAIL",
+        "note": "Full native route/inspection passed, but forced startup still had debt 10. Zero-quad geometry revisions stabilized.",
+        "smoke_verdict": "FAIL",
+        "components": {
+          "runtime": {
+            "status": "PASS",
+            "reason": "native_process",
+            "exit_code": 0
+          },
+          "route": {
+            "status": "PASS",
+            "reason": "frontier_route_covered",
+            "displacement_chunks": 22,
+            "outside_initial_resident_samples": 3696
+          },
+          "startup": {
+            "status": "FAIL",
+            "reason": "forced_startup_with_unresolved_coverage"
+          },
+          "visual": {
+            "status": "UNTESTED",
+            "reason": "missing_visual_reference",
+            "samples": 20160,
+            "captures": 126,
+            "attributed_samples": 0,
+            "faults": 0
+          },
+          "inspection": {
+            "status": "PASS",
+            "reason": "inspection_capture_coverage",
+            "requested": 24,
+            "queued": 24,
+            "verified": 24
+          },
+          "fixture": {
+            "status": "PASS",
+            "reason": "negative_wet_cave_observed",
+            "samples": 236
+          },
+          "fixture_opaque_depth": {
+            "status": "PASS",
+            "reason": "analytic_near_cave_opaque_depth",
+            "checked": 19704,
+            "faults": 0,
+            "frame_epochs": 126,
+            "skipped_unscoped_or_occluded": 456
+          }
+        }
+      },
+      {
+        "source": "0273acafd",
+        "artifacts": "build/desktop-msvc/engine-startup-predicate-witness-native",
+        "status": "FAIL",
+        "note": "Explicit 30-second diagnostic deadline. Bottom-only opaque section had current publication and light proofs but neither RGB-derived lit nor dark classification. Ten outer columns lacked light-input halo data.",
+        "smoke_verdict": "FAIL",
+        "components": {
+          "runtime": {
+            "status": "FAIL",
+            "reason": "missing_native_report"
+          },
+          "route": {
+            "status": "UNTESTED",
+            "reason": "missing_route_evidence"
+          },
+          "startup": {
+            "status": "UNTESTED",
+            "reason": "missing_first_frame_ring_witness"
+          },
+          "visual": {
+            "status": "UNTESTED",
+            "reason": "missing_visual_reference",
+            "samples": 0,
+            "captures": 0,
+            "attributed_samples": 0,
+            "faults": 0
+          },
+          "fixture": {
+            "status": "UNTESTED",
+            "reason": "missing_fixture_observations",
+            "samples": 0,
+            "missing_fluid_samples": 0
+          },
+          "fixture_opaque_depth": {
+            "status": "UNTESTED",
+            "reason": "missing_framebuffer_trace"
+          }
+        }
+      },
+      {
+        "source": "87dbf5e66",
+        "artifacts": "build/desktop-msvc/engine-startup-required-inputs-wet-native",
+        "status": "FAIL",
+        "note": "Native stack-overflow crash before gameplay. Saved own process dump and CDB stack; source cycle: underfeet -> empty publication -> soft-defer callback -> underfeet. No source-symbolized stack claim.",
+        "smoke_verdict": "FAIL",
+        "components": {
+          "runtime": {
+            "status": "FAIL",
+            "reason": "missing_native_report"
+          },
+          "route": {
+            "status": "UNTESTED",
+            "reason": "missing_route_evidence"
+          },
+          "startup": {
+            "status": "UNTESTED",
+            "reason": "missing_first_frame_ring_witness"
+          },
+          "visual": {
+            "status": "UNTESTED",
+            "reason": "missing_visual_reference",
+            "samples": 0,
+            "captures": 0,
+            "attributed_samples": 0,
+            "faults": 0
+          },
+          "fixture": {
+            "status": "UNTESTED",
+            "reason": "missing_fixture_observations",
+            "samples": 0,
+            "missing_fluid_samples": 0
+          },
+          "fixture_opaque_depth": {
+            "status": "UNTESTED",
+            "reason": "missing_framebuffer_trace"
+          }
+        }
+      },
+      {
+        "source": "e37632ab9",
+        "artifacts": "build/desktop-msvc/engine-acyclic-startup-readiness-native",
+        "status": "FAIL",
+        "note": "Bounded 40-second diagnostic: no crash, underfeet true, 79/81 columns complete. Two remaining columns (3,7),(5,3) lacked CY=-4 proof; queued jobs repeatedly captured Y=79..143 instead.",
+        "smoke_verdict": "FAIL",
+        "components": {
+          "runtime": {
+            "status": "FAIL",
+            "reason": "missing_native_report"
+          },
+          "route": {
+            "status": "UNTESTED",
+            "reason": "missing_route_evidence"
+          },
+          "startup": {
+            "status": "UNTESTED",
+            "reason": "missing_first_frame_ring_witness"
+          },
+          "visual": {
+            "status": "UNTESTED",
+            "reason": "missing_visual_reference",
+            "samples": 0,
+            "captures": 0,
+            "attributed_samples": 0,
+            "faults": 0
+          },
+          "fixture": {
+            "status": "UNTESTED",
+            "reason": "missing_fixture_observations",
+            "samples": 0,
+            "missing_fluid_samples": 0
+          },
+          "fixture_opaque_depth": {
+            "status": "UNTESTED",
+            "reason": "missing_framebuffer_trace"
+          }
+        }
+      }
+    ],
+    "cache_history": {
+      "introduced": "38a5da841 (2026-09-04)",
+      "render_frame_scope_fix": "777a4e2e1 (2026-09-26)",
+      "adjacent_loading_epoch_fix": "e8258f450 (2026-09-05)",
+      "finding": "An analogous frozen-epoch defect was already removed from NeedsEnterGameMeshWarmup; slice readiness still reused streaming-epoch results during Loading."
+    },
+    "latest_native": {
+      "source": "4bfc799f9",
+      "artifacts": "build/desktop-msvc/engine-enter-consumer-phase-wet-native",
+      "status": "UNTESTED",
+      "startup_records": [
+        {
+          "reason": "live_blockers",
+          "elapsed_ms": 28857.5,
+          "visibility_debt": 0,
+          "underfeet_ready": true,
+          "forced_with_debt": false
+        }
+      ],
+      "components": {
+        "runtime": {
+          "status": "PASS",
+          "reason": "native_process",
+          "exit_code": 0
+        },
+        "route": {
+          "status": "PASS",
+          "reason": "frontier_route_covered",
+          "displacement_chunks": 22,
+          "outside_initial_resident_samples": 3341
+        },
+        "startup": {
+          "status": "PASS",
+          "reason": "first_world_paint_required_ring_census"
+        },
+        "visual": {
+          "status": "UNTESTED",
+          "reason": "missing_visual_reference",
+          "samples": 17760,
+          "captures": 111,
+          "attributed_samples": 0,
+          "faults": 0
+        },
+        "inspection": {
+          "status": "PASS",
+          "reason": "inspection_capture_coverage",
+          "requested": 24,
+          "queued": 24,
+          "verified": 24
+        },
+        "fixture": {
+          "status": "PASS",
+          "reason": "negative_wet_cave_observed",
+          "samples": 236
+        },
+        "fixture_opaque_depth": {
+          "status": "PASS",
+          "reason": "analytic_near_cave_opaque_depth",
+          "checked": 17355,
+          "faults": 0,
+          "frame_epochs": 111,
+          "skipped_unscoped_or_occluded": 405
+        }
+      },
+      "first_world_paint_witness": {
+        "columns": 81,
+        "expected_columns": 81,
+        "expected_sections": 1944,
+        "focus": [
+          1,
+          -3,
+          3
+        ],
+        "known_air_sections": 1203,
+        "light_unready_sections": 0,
+        "max_y": 319,
+        "min_y": -64,
+        "missing_data_columns": 0,
+        "phase": "first_world_paint",
+        "publication_unready_sections": 0,
+        "radius": 4,
+        "ready": true,
+        "render_pass_complete": true,
+        "resident_air_sections": 0,
+        "schema": "required-presentation-witness.v1",
+        "sections": 1944,
+        "surface_sections": 741,
+        "unknown_sections": 0,
+        "world_epoch": 4
+      },
+      "scope": "Configured radius-four full-profile publication readiness and near opaque geometry; no independent physical-light, transparent or full-screen reference."
+    },
+    "remaining": [
+      "Finish exact signed-range recovery and verify native startup without forced debt.",
+      "Strict actual first-visible-ring barrier/witness, authoritative section lifecycle, content-based persisted certificates.",
+      "AIR geometry absence is not a calculated light field: required AIR/halo light volumes need independent ownership, including emitter crossing section boundary.",
+      "Independent GPU light resource and geometry-only topology, complete CPU/packed/GLES acceptance.",
+      "Full eviction/reload, air pockets, mutations/seeds/backends and independent physical-light/transparent/fullscreen references."
+    ],
+    "startup_section_diagnostics": {
+      "schema": "enter-section-witness.v1",
+      "fields": [
+        "current light proof and settlement",
+        "published/meshed/field light revisions",
+        "desired/published geometry, light and coverage",
+        "drawability, intentional-empty readiness, pending slice and concrete mesh/GPU queue owners"
+      ],
+      "parser_tests": "build/desktop-msvc/engine-enter-section-witness-parser-tests.log",
+      "scope": "Latest focus-column sections and all 81 radius-four columns; sampled diagnostics cannot grant first-frame PASS."
+    },
+    "current_repair": [
+      "Exact queue range and non-clippable boundary semantics must cover pending section envelope before suppressing recovery.",
+      "Preserve valid signed max Y, skip surface clipping for durable debt, retain and retag unproved underground remainder.",
+      "Current-proof publication readiness replaces lit/dark labels for underfeet; soft-defer callback consumes scheduling snapshot to avoid recursion.",
+      "Startup loads bounded transitive consumer data halos via normal data-only streamer admission; pending loads do not consume new admission slots."
+    ],
+    "zero_revision_cache_repair": {
+      "status": "verified_native_zero_quad_churn_stopped; startup_remaining",
+      "files": [
+        "src/Render/Mesh/ChunkMeshCache.cpp",
+        "src/World/Core/World.cpp"
+      ],
+      "finding": "Explicit capture and halo validity flags already prove initialization. A computed dark field may remain at numeric light revision zero; the cache repair guard and stale-dark fast path must accept it. Provisional previews stay excluded so final publication can replace their ambient fallback.",
+      "evidence": "build/desktop-msvc/engine-enter-section-witness-native/logs/*perf*.jsonl demand_transition_trace/open_sky_demand_transition_trace",
+      "remaining": "Strict startup acceptance remains incomplete; bottom-only drawability and missing consumer halo data subsequently identified."
+    },
+    "bounded_diagnostic_deadline": {
+      "source": "fa3981a56",
+      "tests": "build/desktop-msvc/engine-bounded-diagnostic-deadline-tests.log",
+      "behavior": "Explicit positive process timeout honored; real child timeout test confirms own-process termination. Legacy default grace retained."
+    },
+    "exact_signed_queue_ownership": {
+      "source": "9308589c1",
+      "tests": "build/desktop-msvc/engine-exact-light-range-contracts-tests.log",
+      "passed": 28,
+      "fixes": [
+        "Queue range and exact boundary kind must cover outstanding signed section envelope.",
+        "Underground remainder survives surface scheduling; requeue preserves exact semantic tag.",
+        "Valid negative max Y is preserved, legacy -1 default retained."
+      ],
+      "bounded_native_startup_ms": 9925.25,
+      "native_forced_exit": false
+    },
+    "strict_presentation_barrier": {
+      "source": "869597a09",
+      "diagnostic_source": "63bbac40c",
+      "build": "build/desktop-msvc/engine-required-publication-witness-release-build.log",
+      "unit_tests": "build/desktop-msvc/engine-required-presentation-contracts-tests.log",
+      "unit_passed": 28,
+      "python_tests": "build/desktop-msvc/engine-required-publication-witness-python-tests.log",
+      "python_passed": 38,
+      "negative_controls": [
+        "build/desktop-msvc/engine-required-presentation-red-queue_band-test.log",
+        "build/desktop-msvc/engine-required-presentation-red-publication-test.log"
+      ],
+      "restored_green": [
+        "build/desktop-msvc/engine-required-presentation-green-queue_band-test.log",
+        "build/desktop-msvc/engine-required-presentation-green-publication-test.log"
+      ],
+      "behavior": "The runner cannot authorize InGame from soft/time/abort exits. Every section in the configured enter ring must have known geometry receipt or current resident data/light/publication. Post-world-paint census shape is separately validated; ordinary samples and bare true booleans cannot grant PASS.",
+      "scope_limit": "Existing configured enter ring radius 4; actual presentation/approach range still requires expansion. Post-paint witness is not a pixel or physical-light reference.",
+      "native_extended": {
+        "artifacts": "build/desktop-msvc/engine-required-presentation-wet-native",
+        "status": "FAIL: 240-second bounded native timeout without InGame",
+        "last_gate_ms": 230436.4828,
+        "columns": 81,
+        "sections": 1944,
+        "surface_sections": 741,
+        "known_air_sections": 1203,
+        "missing_data_columns": 0,
+        "unknown_sections": 0,
+        "light_unready_sections": 0,
+        "publication_unready_sections": 9,
+        "interpretation": "Correctly blocked entry, but nine section publication obligations do not settle. Functional startup acceptance incomplete."
+      },
+      "next": "Continue actual renderer-domain/continuous-movement data-light-mesh closure, authoritative section lifecycle and startup performance. S3 serialized content certificates, S5 independent light resource, and S6 physical-light/transparent/full-screen oracle and full matrix remain required.",
+      "exact_owner_recovery": {
+        "source": "a3214269b",
+        "build": "build/desktop-msvc/engine-required-section-publication-sync-release-build.log",
+        "tests": "build/desktop-msvc/engine-required-section-recovery-contracts-tests.log",
+        "passed": 28,
+        "diagnostic_native": "build/desktop-msvc/engine-required-publication-witness-native",
+        "finding": "At 64.7s all 18 sampled blockers had no exact mesh/capture/GPU owner and current settled light; seven were zero-quad previews, others had stale inputs or desired/cache/demand publication revision gaps. No face debt was active.",
+        "repair": [
+          "No-op repair adoption updates both cache and demand published revisions, guarded by actual current inputs and world/section identity.",
+          "Enter recovery scans required solid sections, repairs at most four ownerless exact publications per drain, preserves active jobs and never lowers desired revisions.",
+          "Current actual cache publication can repair a lagging demand shadow after identity/input/field validation; uncommitted geometry and preview work retain explicit obligations."
+        ]
+      },
+      "bounded_native_after_recovery": {
+        "artifacts": "build/desktop-msvc/engine-required-section-recovery-native",
+        "startup": {
+          "status": "PASS",
+          "reason": "first_world_paint_required_ring_census",
+          "evidence": {
+            "columns": 81,
+            "expected_columns": 81,
+            "expected_sections": 1944,
+            "focus": [
+              1,
+              -3,
+              3
+            ],
+            "known_air_sections": 1203,
+            "light_unready_sections": 0,
+            "max_y": 319,
+            "min_y": -64,
+            "missing_data_columns": 0,
+            "phase": "first_world_paint",
+            "publication_unready_sections": 0,
+            "radius": 4,
+            "ready": true,
+            "render_pass_complete": true,
+            "resident_air_sections": 0,
+            "schema": "required-presentation-witness.v1",
+            "sections": 1944,
+            "surface_sections": 741,
+            "unknown_sections": 0,
+            "world_epoch": 4
+          },
+          "scope": "configured radius-four ring publication/input readiness; no pixel or physical-light oracle"
+        },
+        "startup_records": [
+          {
+            "reason": "live_blockers",
+            "elapsed_ms": 49616.5,
+            "visibility_debt": 0,
+            "underfeet_ready": true,
+            "forced_with_debt": false
+          }
+        ],
+        "scope": "Short startup diagnostic; overall FAIL due deliberately insufficient route/inspection duration. Startup itself has complete matching pre-entry and post-world-paint censuses.",
+        "performance_limit": "Observed strict startup 49.6 seconds. No startup latency/performance acceptance; reduce redundant capture/publication work without weakening proof coverage."
+      },
+      "repeated_full_native_after_recovery": {
+        "artifacts": "build/desktop-msvc/engine-required-section-recovery-wet-native",
+        "source": "a3214269b",
+        "status": "FAIL: bounded 240-second timeout, no first world paint",
+        "last_required_ring_witness": {
+          "blockers": [
+            {
+              "capture_pending": false,
+              "coord": [
+                2,
+                2,
+                2
+              ],
+              "coverage": [
+                0,
+                0
+              ],
+              "dirty": false,
+              "drawable": true,
+              "extract_inflight": false,
+              "face_debt_mask": 0,
+              "field_light": 2,
+              "geom": [
+                0,
+                1
+              ],
+              "gpu_pending": false,
+              "inputs_current": false,
+              "light": [
+                0,
+                1
+              ],
+              "mesh_inflight": true,
+              "meshed_light": 1,
+              "provisional": false,
+              "published_geom": 1,
+              "published_light": 1,
+              "remesh_after_apply": false,
+              "satisfies": true,
+              "settled": true,
+              "source_geom": 2,
+              "stable_face_debt": false
+            }
+          ],
+          "columns": 81,
+          "elapsed_ms": 230256.7689000002,
+          "expected_columns": 81,
+          "expected_sections": 1944,
+          "known_air_sections": 1203,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "enter_gate",
+          "publication_unready_sections": 1,
+          "radius": 4,
+          "ready": false,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v1",
+          "sections": 1944,
+          "surface_sections": 741,
+          "unknown_sections": 0
+        },
+        "interpretation": "One remaining section (2,2,2) has current field 2 but mesh field 1 and an ActiveMeshSourceRevision marker. Do not treat the preceding short success as stable startup acceptance."
+      },
+      "executable_owner_reconciliation": {
+        "source": "57644b30b",
+        "build": "build/desktop-msvc/engine-orphan-mesh-owner-diagnostics-release-build.log",
+        "contracts": "build/desktop-msvc/engine-orphan-mesh-owner-contracts-tests.log",
+        "passed": 4,
+        "behavior": "Before the CPU completed queue is drained, reconcile source metadata against actual builder ownership (including queued results), pending capture and GPU owners. Retry absent-owner work at the same desired revision, never from elapsed age.",
+        "short_native": {
+          "artifacts": "build/desktop-msvc/engine-orphan-mesh-owner-native",
+          "startup": {
+            "status": "PASS",
+            "reason": "first_world_paint_required_ring_census",
+            "evidence": {
+              "columns": 81,
+              "expected_columns": 81,
+              "expected_sections": 1944,
+              "focus": [
+                1,
+                -3,
+                3
+              ],
+              "known_air_sections": 1203,
+              "light_unready_sections": 0,
+              "max_y": 319,
+              "min_y": -64,
+              "missing_data_columns": 0,
+              "phase": "first_world_paint",
+              "publication_unready_sections": 0,
+              "radius": 4,
+              "ready": true,
+              "render_pass_complete": true,
+              "resident_air_sections": 0,
+              "schema": "required-presentation-witness.v1",
+              "sections": 1944,
+              "surface_sections": 741,
+              "unknown_sections": 0,
+              "world_epoch": 4
+            },
+            "scope": "configured radius-four ring publication/input readiness; no pixel or physical-light oracle"
+          },
+          "startup_records": [
+            {
+              "reason": "live_blockers",
+              "elapsed_ms": 44673.4,
+              "visibility_debt": 0,
+              "underfeet_ready": true,
+              "forced_with_debt": false
+            }
+          ],
+          "orphan_retire_events": 0,
+          "evidence_limit": "This run passed startup but did not exercise source-orphan reconciliation. Extended repeat is required."
+        },
+        "full_native_status": "FAIL: 240-second timeout; completed CPU result was not consumed",
+        "full_native_artifacts": "build/desktop-msvc/engine-orphan-mesh-owner-wet-native",
+        "last_required_ring_witness": {
+          "blockers": [
+            {
+              "all_cpu_builder_owned": 1,
+              "all_mesh_completed": 1,
+              "capture_pending": false,
+              "coord": [
+                2,
+                2,
+                2
+              ],
+              "coverage": [
+                0,
+                0
+              ],
+              "dirty": true,
+              "drawable": true,
+              "extract_inflight": false,
+              "face_debt_mask": 0,
+              "field_light": 2,
+              "geom": [
+                0,
+                1
+              ],
+              "gpu_pending": false,
+              "inputs_current": false,
+              "light": [
+                0,
+                1
+              ],
+              "mesh_inflight": false,
+              "meshed_light": 1,
+              "provisional": false,
+              "published_geom": 1,
+              "published_light": 1,
+              "remesh_after_apply": false,
+              "satisfies": true,
+              "settled": true,
+              "source_geom": 2,
+              "stable_face_debt": false,
+              "tracked_source_geom": 0
+            }
+          ],
+          "columns": 81,
+          "elapsed_ms": 229597.8331999997,
+          "expected_columns": 81,
+          "expected_sections": 1944,
+          "known_air_sections": 1203,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "enter_gate",
+          "publication_unready_sections": 1,
+          "radius": 4,
+          "ready": false,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v1",
+          "sections": 1944,
+          "surface_sections": 741,
+          "unknown_sections": 0
+        },
+        "full_native_orphan_retire_events": 0,
+        "evidence_limit": "No source-orphan retirement was observed. This reconciliation did not resolve the repeat failure; actual CPU builder/completed queues each retained one entry while application scheduling used coarse readiness."
+      },
+      "application_drain_followup": {
+        "source": "914176ce1",
+        "build": "build/desktop-msvc/engine-required-presentation-drain-release-build.log",
+        "tests": "build/desktop-msvc/engine-required-presentation-drain-contracts-tests.log",
+        "passed": 28,
+        "negative_control": "build/desktop-msvc/engine-required-presentation-drain-red-test.log",
+        "restored_green": "build/desktop-msvc/engine-required-presentation-drain-green-test.log",
+        "behavior": "Prepared-load live-work input includes CPU mesh inflight/completed, capture and GPU queues. Required presentation readiness is a mandatory fifth readiness-policy input; an incomplete exact section keeps all consumers running even if old visibility/underfeet flags are ready.",
+        "native_artifacts": "build/desktop-msvc/engine-required-presentation-drain-wet-native",
+        "native_status": "FAIL: application drain cutover alone insufficient",
+        "last_required_ring_witness": {
+          "blockers": [
+            {
+              "all_cpu_builder_owned": 2,
+              "all_mesh_completed": 2,
+              "capture_pending": false,
+              "coord": [
+                2,
+                2,
+                2
+              ],
+              "coverage": [
+                0,
+                0
+              ],
+              "dirty": false,
+              "drawable": true,
+              "extract_inflight": false,
+              "face_debt_mask": 0,
+              "field_light": 2,
+              "geom": [
+                0,
+                1
+              ],
+              "gpu_pending": false,
+              "inputs_current": false,
+              "light": [
+                0,
+                1
+              ],
+              "mesh_inflight": true,
+              "meshed_light": 1,
+              "provisional": false,
+              "published_geom": 1,
+              "published_light": 1,
+              "remesh_after_apply": false,
+              "satisfies": true,
+              "settled": true,
+              "source_geom": 2,
+              "stable_face_debt": false,
+              "tracked_source_geom": 2
+            }
+          ],
+          "columns": 81,
+          "elapsed_ms": 232350.3666000003,
+          "expected_columns": 81,
+          "expected_sections": 1944,
+          "known_air_sections": 1203,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "enter_gate",
+          "publication_unready_sections": 1,
+          "radius": 4,
+          "ready": false,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v1",
+          "sections": 1944,
+          "surface_sections": 741,
+          "unknown_sections": 0
+        },
+        "consumer_phase_followup": {
+          "source": "4bfc799f9",
+          "build": "build/desktop-msvc/engine-enter-consumer-phase-release-build.log",
+          "tests": "build/desktop-msvc/engine-enter-consumer-phase-contracts-tests.log",
+          "passed": 28,
+          "native_artifacts": "build/desktop-msvc/engine-enter-consumer-phase-wet-native",
+          "native_status": "full native route completed; scoped components PASS, overall UNTESTED",
+          "fix": "Coordinator enter_warmup_active must honor active enter session/gate before historical create/preload latch. This prevents cruise phase-abort zero-drain budgets from starving a prepared enter session.",
+          "diagnostic": "EnterMeshConsumerWitness records completed queues denied a nonzero drain during enter when audit enabled.",
+          "native_components": {
+            "runtime": {
+              "status": "PASS",
+              "reason": "native_process",
+              "exit_code": 0
+            },
+            "route": {
+              "status": "PASS",
+              "reason": "frontier_route_covered",
+              "displacement_chunks": 22,
+              "outside_initial_resident_samples": 3341
+            },
+            "startup": {
+              "status": "PASS",
+              "reason": "first_world_paint_required_ring_census"
+            },
+            "visual": {
+              "status": "UNTESTED",
+              "reason": "missing_visual_reference",
+              "samples": 17760,
+              "captures": 111,
+              "attributed_samples": 0,
+              "faults": 0
+            },
+            "inspection": {
+              "status": "PASS",
+              "reason": "inspection_capture_coverage",
+              "requested": 24,
+              "queued": 24,
+              "verified": 24
+            },
+            "fixture": {
+              "status": "PASS",
+              "reason": "negative_wet_cave_observed",
+              "samples": 236
+            },
+            "fixture_opaque_depth": {
+              "status": "PASS",
+              "reason": "analytic_near_cave_opaque_depth",
+              "checked": 17355,
+              "faults": 0,
+              "frame_epochs": 111,
+              "skipped_unscoped_or_occluded": 405
+            }
+          },
+          "startup_records": [
+            {
+              "reason": "live_blockers",
+              "elapsed_ms": 28857.5,
+              "visibility_debt": 0,
+              "underfeet_ready": true,
+              "forced_with_debt": false
+            }
+          ],
+          "first_world_paint_witness": {
+            "columns": 81,
+            "expected_columns": 81,
+            "expected_sections": 1944,
+            "focus": [
+              1,
+              -3,
+              3
+            ],
+            "known_air_sections": 1203,
+            "light_unready_sections": 0,
+            "max_y": 319,
+            "min_y": -64,
+            "missing_data_columns": 0,
+            "phase": "first_world_paint",
+            "publication_unready_sections": 0,
+            "radius": 4,
+            "ready": true,
+            "render_pass_complete": true,
+            "resident_air_sections": 0,
+            "schema": "required-presentation-witness.v1",
+            "sections": 1944,
+            "surface_sections": 741,
+            "unknown_sections": 0,
+            "world_epoch": 4
+          },
+          "completed_queue_zero_drain_events": 0,
+          "orphan_retire_events": 0,
+          "strict_relocation_assignments": 0,
+          "repeat_artifacts": "build/desktop-msvc/engine-enter-consumer-phase-startup-repeat",
+          "repeat_status": "startup PASS; deliberately short diagnostic is not a route acceptance run",
+          "evidence_limit": "This run supports the active-consumer phase repair; no orphan source reservations were retired. Physical-light, transparent and full-screen references remain absent. Observed startup time is not a performance SLA.",
+          "repeat_startup_records": [
+            {
+              "reason": "live_blockers",
+              "elapsed_ms": 26042.6,
+              "visibility_debt": 0,
+              "underfeet_ready": true,
+              "forced_with_debt": false
+            }
+          ],
+          "repeat_first_world_paint_witness": {
+            "columns": 81,
+            "expected_columns": 81,
+            "expected_sections": 1944,
+            "focus": [
+              1,
+              -3,
+              3
+            ],
+            "known_air_sections": 1203,
+            "light_unready_sections": 0,
+            "max_y": 319,
+            "min_y": -64,
+            "missing_data_columns": 0,
+            "phase": "first_world_paint",
+            "publication_unready_sections": 0,
+            "radius": 4,
+            "ready": true,
+            "render_pass_complete": true,
+            "resident_air_sections": 0,
+            "schema": "required-presentation-witness.v1",
+            "sections": 1944,
+            "surface_sections": 741,
+            "unknown_sections": 0,
+            "world_epoch": 4
+          }
+        }
+      }
     }
   }
 }

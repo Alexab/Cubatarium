@@ -69,6 +69,24 @@
       "finding": "Skylight GPU API заменил выполнение на SeedSkylightColumnsCpu, сохранив GPU-named success/dispatch/apply. Метрики стали свидетельствовать о CPU-работе как о GPU-выполнении; GPU compute shader в этом файле фактически не вызывается.",
       "correction": "Явная CPU-функция и отдельный CPU-счётчик; GPU-проба без реализации возвращаетfalse без CPU-подмены, GPU-счётчики остаются0. Неиспользуемые shader/GL scaffolding удалены.",
       "regression": "Production CPU apply проверен headless; RED прежней CPU-as-GPU подмены проваливает проверки результата и счётчика."
+    },
+    {
+      "commit": "e10b5761f",
+      "date": "2026-08-11",
+      "subject": "Era36: relight surface band, dynamic capture cap, land moving drain",
+      "finding": "Surface-only optimization discarded underground remainder unconditionally. This ceased to be safe for negative cave presentation; 9308589c1 retains the remainder until actual current proof."
+    },
+    {
+      "commit": "d1a749991",
+      "date": "2026-08-20",
+      "subject": "fix(stream): correct relight starve gate and skip no-op enqueue",
+      "finding": "Legacy max_y >= 0 default handling treated valid negative upper bounds as unspecified. 9308589c1 preserves negative bounds other than the retained legacy -1 default."
+    },
+    {
+      "commit": "902026104",
+      "date": "2026-08-11",
+      "subject": "Era37: manual/autofly parity — unlit hole preview, false-clear fix, resume harness",
+      "finding": "Mesh coordinator derived active warmup only from the create/preload settled latch. A later active enter session could therefore receive cruise phase-abort budgets, including zero completed-result drain. 4bfc799f9 gives active enter session/gate precedence; native repeat under verification."
     }
   ],
   "recurrence_analysis": {
@@ -164,7 +182,17 @@
         "Строгий стартовый барьер требуемого видимого кольца; убрать soft/stall-выходы как критерий готовности",
         "Телеметрия показывает конкретную секцию, недостающий вход, владельца работы и причину ожидания"
       ],
-      "acceptance": "Инварианты и native сбои/отмены: ни одна требуемая версия не теряется и не становится готовой по соседней секции; первый игровой кадр имеет полный проверенный witness кольца"
+      "acceptance": "Инварианты и native сбои/отмены: ни одна требуемая версия не теряется и не становится готовой по соседней секции; первый игровой кадр имеет полный проверенный witness кольца",
+      "coverage_refinement": {
+        "implementation": "durable_light_work_coverage in engine_remediation_progress_2026_11_16.json",
+        "acceptance": "Fresh current per-domain proofs may reconcile requested sections; neither old job completion, nonzero bytes, meshes nor monotonic column states prove coverage.",
+        "startup_regression": "a3214269b bounded native startup: complete 81-column/1944-section pre-entry and post-world-paint censuses, no forced exit, observed 49.6s. Scope is existing radius-four enter ring. Full route and actual renderer-domain coverage remain separate acceptance.",
+        "remaining_cutover": "Derive the required set from actual presentation/fog range (including potentially visible approach sections), drive exact missing section owners fairly, and remove other coarse column readiness authority.",
+        "publication_recurrence": "No-op repair adoption advanced cache revision alone; demand shadow remained older and lost section targets had no concrete owners. Synchronize proven actual publication at adoption and recover exact ownerless sections with bounded admission. Avoid returning to column-level mesh-exists readiness.",
+        "consumer_phase_recurrence": "Three extended repeats retained one required stale-light mesh while CPU completed queues held one/two results. Prepared-load app readiness and coordinator create-settled warmup classification were separate obsolete authorities. 914176ce1 wires strict readiness/live queues into app drain; 4bfc799f9 preserves active enter consumer phase. Do not infer stable acceptance from short successes.",
+        "streaming_domain_followup": "Unify actual draw/fog/admission domain with required data -> physical-light -> mesh/publication closure for both startup and continuous movement. The current transitive halo pump is enter-only and conservative. Required work must not depend on historical preload-ring membership or a column drawable sibling.",
+        "latest_verified_scope": "4bfc799f9 full wet-negative-cave native and independent short startup repeat pass strict 81-column/1944-section pre-entry and post-first-world-paint census. Full native runtime/22-chunk non-teleport route/24 inspections and 17355 near opaque-depth checks passed. Overall UNTESTED: physical-light/transparent/full-screen references absent; broader renderer-domain/movement lifecycle pending."
+      }
     },
     {
       "id": "S5",
@@ -178,7 +206,25 @@
         "Убрать свет из ключа объединения граней; изменение только света обновляет ресурс без перестройки геометрии",
         "Версионирование и атомарная публикация пары geometry/light, безопасное переиспользование GPU слотов после eviction"
       ],
-      "acceptance": "Изменение источника света не создаёт mesh job; изображения и интерполяция совпадают с эталоном на швах/углах и после повторной загрузки"
+      "acceptance": "Изменение источника света не создаёт mesh job; изображения и интерполяция совпадают с эталоном на швах/углах и после повторной загрузки",
+      "resource_contract_refinement": {
+        "source_evidence": [
+          "src/Render/Mesh/GreedyMesher.cpp: FaceLightPacked, light_mask merge comparisons",
+          "src/World/Chunks/ChunkInputStamp.h: kChunkMeshLightHaloRadius=2",
+          "shaders/vshader_packed_greedy.glsl: packed per-quad sky/block nibbles",
+          "shaders/fshader_greedy.glsl: shared world/cross/preview consumers"
+        ],
+        "requirements": [
+          "Independent packed sky/block field resource with required AIR volumes and radius-two (20-cubed cells for section-local halo) sampling, exact content/domain proof, explicit valid binding even at revision/page zero.",
+          "Do not infer zero blocklight from known empty geometry; test an emitter crossing from solid-containing section into entirely AIR section.",
+          "Query actual GL/GLES limits and choose bounded atlas/page representation plus explicit supported fallback; do not assume one array layer per section fits all resident draws.",
+          "Remove lighting from cube/fluid/decor geometry merge decisions and geometry-only validity stamps only after every world rendering backend can sample independent light.",
+          "Publish current geometry and compatible light binding atomically; retain predecessor until successor resources are ready; retire pages with world/section incarnation and GPU lifetime protection.",
+          "Prove light-only field changes and emission-only catalog changes do not advance geometry target, upload vertices or rebuild topology.",
+          "CPU, packed/pool, transparent/cross/decor and GLES paths need explicit field sampling; UI/static item paths retain their intentional lighting contract."
+        ],
+        "acceptance": "Independent physical sky/block references, AIR-boundary emitters, liquid attenuation, removals/no-op, backend equality, memory caps, page lifetime/ABA and native light-only zero-remesh telemetry."
+      }
     },
     {
       "id": "S6",
