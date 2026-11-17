@@ -57,7 +57,8 @@ public:
                      const InventoryEntryRef &entry, std::string &reason);
   bool CanActivate() const { return Items.size() < 512; }
   void Tick(UWorld &world, float dt);
-  void Draw(UWorld &world, CreatureDrawQueue &queue, const glm::mat4 &viewProj);
+  void Draw(UWorld &world, CreatureDrawQueue &queue, const glm::mat4 &viewProj,
+            bool frustum_culling);
   void Clear();
   const std::string &GetFeedback() const { return Feedback; }
   size_t Count() const

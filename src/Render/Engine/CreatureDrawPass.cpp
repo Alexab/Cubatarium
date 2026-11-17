@@ -917,7 +917,7 @@ void UCreatureDrawPass::FlushDrawQueue(UWorld &world, UGeometryEngine &engine,
   } sink(*this, engine, world);
   TimingProbe.BeginGpuDraw();
   UWorldItemSystem::Instance().Draw(world, engine.GetCreatureDrawQueue(),
-                                    viewProj);
+                                    viewProj, render.FrustumCulling);
   if (ItemRenderer)
   {
     UItemSurfaceBatchScope batch(*ItemRenderer);

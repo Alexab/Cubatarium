@@ -1,4 +1,5 @@
 #include "World/Items/WorldItemSystem.h"
+#include "App/Platform/Log.h"
 #include "Audio/AudioApi.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Core/Creature.h"
@@ -14,6 +15,7 @@
 #include "Items/ItemPresentationMath.h"
 #include "Items/ToolCapabilities.h"
 #include "World/Core/World.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "World/Math/GridMath.h"
 #include "World/Physics/CollisionReadiness.h"
 #include <climits>
@@ -1276,9 +1278,10 @@ void UWorldItemSystem::ForEachRenderItemPosition(
 }
 
 void UWorldItemSystem::Draw(UWorld &world, CreatureDrawQueue &queue,
-                            const glm::mat4 &vp)
+                            const glm::mat4 &vp, bool frustum_culling)
 {
-  auto draw = [&](const WorldItem &i)
+  size_t submitted_requests = 0, culled_requests = 0, culled_items = 0;
+  auto submit = [&](const WorldItem &i)
   {
     if (!i.creatureId)
     {
@@ -1315,10 +1318,36 @@ void UWorldItemSystem::Draw(UWorld &world, CreatureDrawQueue &queue,
           !i.flying && !i.carrierId, MakeItemVisualInputs(&i.stack));
     }
   };
+  const auto draw = [&](const WorldItem &item)
+  {
+    const auto first = queue.Size();
+    submit(item);
+    const auto submitted = queue.Size() - first;
+    submitted_requests += submitted;
+    // Test the actual transformed item geometry, including carried parts.
+    // Remove only this item's requests before flush can sample light or draw.
+    if (frustum_culling && !queue.RangeIntersectsClip(first))
+    {
+      queue.DiscardSince(first);
+      culled_requests += submitted;
+      ++culled_items;
+    }
+  };
   for (const auto &i : Items)
     draw(i);
   for (const auto &i : Dormant)
     draw(i);
+  if (UJobStageTrace::VisualBlackTraceEnabled())
+    CubatariumLogInfo(
+        "WorldItemDrawCull",
+        "frame_epoch=" + std::to_string(world.GetStreamingFrameEpoch()) +
+            " culling=" + std::to_string(frustum_culling ? 1 : 0) +
+            " items=" + std::to_string(Items.size() + Dormant.size()) +
+            " submitted_requests=" + std::to_string(submitted_requests) +
+            " culled_items=" + std::to_string(culled_items) +
+            " culled_requests=" + std::to_string(culled_requests) +
+            " retained_requests=" +
+            std::to_string(submitted_requests - culled_requests));
 }
 void UWorldItemSystem::Clear()
 {

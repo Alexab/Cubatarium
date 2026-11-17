@@ -4534,6 +4534,13 @@
           "limits": "No actual creature/world-item shadedRGB, full-frame color/transparency, GPU light page or performance acceptance. Off-screen item submission issue retained for next draw-domain work."
         }
       }
+    },
+    "world_item_clip_submission": {
+      "status": "Implemented; existing actual-geometry clip unit suite rebuiltPASS;Release/native pending",
+      "evidence": "Previous a33b5f3de native:1577actual item consumer calls atstatic(8,68,61),934pendingafterdata eviction, although body is outsideview. WorldItemSystem::Draw submits all active and dormant items; Queue.Flush samples their light without clip rejection. Distinct from solved startup prewarm.3pendingcreature observations also remain unaccepted for moving/new actor readiness.",
+      "implementation": "After each loose/carried item generates actual transformed draw requests, apply existing homogeneous clip-space envelope over that exact request range. Discard only that range beforeQueue.Flush, so culled item cannot sample light or issueGPUdraw. Preserve wide asset bounds, carried parts and preexisting actor requests; honor render.FrustumCulling. Physical/storage state unchanged. Diagnostic WorldItemDrawCull counters expose submitted/culled/retained requests and items per frame.",
+      "tests": "engine-world-item-clip-unit-test.log:rebuilt existing creature_draw_clip_bounds_test PASS; includes all6planes, partially visible/wideitem envelope, negativeW/near crossing, nonfinitefailopen and preservation of preexisting requestranges. Does not by itself prove worlditem hookup or fullvisibility.",
+      "remaining": "Fresh Release same-source frontier native verifies actual cull hookup/counters and existing point/depth checks. Complete world-item positive visible reference, distance/fog drawdomain, moving/new creature readiness, performance and independent GPU light cutover remain required."
     }
   }
 }
