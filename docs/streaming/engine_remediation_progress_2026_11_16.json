@@ -5013,7 +5013,13 @@
       "tests": "engine-motion-light-batch-final-green-test.log:4/4PASS. Includes hard27 bound, stationary case, negative coordinates, fast falling prediction, nonfinite velocity, profile clipping and signed coordinate limits; outside-band AIR batching retains nonzero emission and physical receipts without intermediate resident writes or geometry creation.",
       "red": "engine-motion-light-batch-batch-red.log: removing additional AIR targets compiles and fails exact batching assertion. engine-motion-light-motion-red.log: disabling velocity prediction compiles and fails fast-fall assertion. Both restored byte-for-byte in finally; subsequent final unit rebuildGREEN. App never builtRED.",
       "test_build_corrections": "Initial unit link lacked GridMath.cpp for sharedFloorDiv; added source to chunk_render_demand_test. Follow-up test CHUNK_SIZE references qualified withcutum namespace. Original failed build logs retained. Boundary test also exposed existing negativeFloorDiv numerator overflow atINT_MIN; use int64 intermediate without changing normal positive-width grid semantics.",
-      "remaining": "Fresh same-source open-plane route must show moving actor at previously missing section with current physical fields; no producer-latency/fairness/performance acceptance until native evidence. Independent GPU pages/table, atomic publication, persisted content certificates and full visual/backend/RD8/edit/eviction matrix remain required."
+      "remaining": "Fresh same-source open-plane route must show moving actor at previously missing section with current physical fields; no producer-latency/fairness/performance acceptance until native evidence. Independent GPU pages/table, atomic publication, persisted content certificates and full visual/backend/RD8/edit/eviction matrix remain required.",
+      "fractional_boundary_correction": {
+        "evidence": "engine-motion-light-fractional-red-test.log:newforward/backward0.01block/s boundary cases fail original nearest-integer motion rounding. No app launched from initial42701be8c Release build.",
+        "implementation": "After clamping2section displacement, round away from zero toward motion because voxel cell input has lost its sub-voxel offset. Hard27section bound and static1section case preserved.",
+        "tests": "engine-motion-light-fractional-green-test.log:4rebuilt suitesPASS; original batch and velocity RED controls remain retained.",
+        "release": "engine-motion-light-batch-release-build.log:initialRelease/static EXE PASS, not launched; corrected Release rebuild pending"
+      }
     },
     "visible_world_item_draw_reference": {
       "status": "Implemented;59Python testsPASS;Release/native pending",

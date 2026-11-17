@@ -832,6 +832,12 @@ int main()
     Expect(collect({-3, -37, 39}, glm::vec3(0)) == 1 &&
                approach[0] == glm::ivec3(-1, -3, 2),
            "stationary negative-world consumer requests only its own section");
+    Expect(collect({15, 1, 1}, {.01f, 0, 0}) == 2,
+           "fractional forward movement near a voxel boundary primes next "
+           "section");
+    Expect(
+        collect({16, 1, 1}, {-.01f, 0, 0}) == 2,
+        "fractional backward movement primes previous section conservatively");
     Expect(collect({-3, -1, 39}, {0, -100, 0}) == 3 &&
                approach[0] == glm::ivec3(-1, -1, 2) &&
                std::find(approach.begin(), approach.end(),

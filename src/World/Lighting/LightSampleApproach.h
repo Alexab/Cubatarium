@@ -26,8 +26,12 @@ int VisitLightSampleApproach(glm::ivec3 cell, glm::vec3 velocity,
                              ? std::clamp(static_cast<double>(velocity[axis]),
                                           -2.0 * CHUNK_SIZE, 2.0 * CHUNK_SIZE)
                              : 0;
+    // The input cell has lost the sub-voxel position. Round toward motion so
+    // a slow consumer next to its cell boundary is still primed before entry.
+    const auto offset =
+        static_cast<int64_t>(delta > 0 ? std::ceil(delta) : std::floor(delta));
     const auto future = std::clamp<int64_t>(
-        static_cast<int64_t>(cell[axis]) + std::llround(delta),
+        static_cast<int64_t>(cell[axis]) + offset,
         std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
     end[axis] = FloorDiv(static_cast<int>(future), CHUNK_SIZE);
   }
