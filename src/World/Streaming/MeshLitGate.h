@@ -130,6 +130,9 @@ inline bool ShouldRejectDarkMeshCommit(bool new_surface_is_fully_dark,
 /// satisfies current geometry and light demand, and that light revision has
 /// been explicitly settled for the same chunk incarnation. Column-level
 /// SoftDefer can remain active for another Y slice in the same column.
+/// Desired revisions are minimum obligations. A newer exact-current candidate
+/// satisfies an older/coalesced or zero legacy demand; equality is required for
+/// actual source/current/settled versions, not for that minimum request.
 inline bool MeshCandidateMatchesSettledDemand(
     bool input_stamps_current, bool demand_identity_current,
     bool has_settled_light, uint64_t source_geom_rev,
@@ -139,10 +142,10 @@ inline bool MeshCandidateMatchesSettledDemand(
 {
   return input_stamps_current && demand_identity_current && has_settled_light &&
          source_geom_rev != 0 && source_geom_rev == current_geom_rev &&
-         source_geom_rev == desired_geom_rev &&
+         source_geom_rev >= desired_geom_rev &&
          source_light_rev == field_light_rev &&
          source_light_rev == settled_light_rev &&
-         source_light_rev == desired_light_rev;
+         source_light_rev >= desired_light_rev;
 }
 
 /// Sysreset v6: geom-stale Accept Retain must not keep a dark bake over prior

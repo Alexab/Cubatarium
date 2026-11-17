@@ -89,6 +89,29 @@ void TestLightChannelIdentityAndBufferedWrites()
   Expect(!MeshCandidateMatchesSettledDemand(true, true, false, 5, 5, 5, 0, 0, 0,
                                             0),
          "zero field equality without a computation proof remains unready");
+  Expect(
+      MeshCandidateMatchesSettledDemand(true, true, true, 2, 2, 0, 2, 2, 2, 0),
+      "native dark replacement: fresh source 2 satisfies a zero legacy demand "
+      "floor");
+  Expect(
+      MeshCandidateMatchesSettledDemand(true, true, true, 5, 5, 3, 4, 4, 4, 2),
+      "coalesced older demand is satisfied by the exact current proved "
+      "candidate");
+  Expect(
+      !MeshCandidateMatchesSettledDemand(true, true, true, 5, 5, 6, 4, 4, 4, 2),
+      "a newer geometry request remains unsatisfied");
+  Expect(
+      !MeshCandidateMatchesSettledDemand(true, true, true, 5, 5, 3, 4, 4, 4, 5),
+      "a newer light request remains unsatisfied");
+  Expect(!MeshCandidateMatchesSettledDemand(true, true, true, 4, 5, 3, 4, 4, 4,
+                                            2) &&
+             !MeshCandidateMatchesSettledDemand(true, true, true, 5, 5, 3, 3, 4,
+                                                4, 2) &&
+             !MeshCandidateMatchesSettledDemand(true, false, true, 5, 5, 3, 4,
+                                                4, 4, 2),
+         "older demand floors never authorize stale geometry, light or "
+         "incarnation");
+
   chunk.SetBlockLocal({2, 3, 4}, 8);
   chunk.SetFluidLocal({2, 3, 4}, FluidCellState::Flowing(3));
   Expect(chunk.GetSkyLightRevision() == 2 && chunk.GetBlockLightRevision() == 3,
