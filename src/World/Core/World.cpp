@@ -11779,6 +11779,9 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
               {"meshed_light", cache.GetMeshedLightRevision(coord)},
               {"published_light", published.light_rev},
               {"source_geom", mesh.GetChunkMeshRevision(coord)},
+              {"tracked_source_geom", cache.GetInflightSourceRevision(coord)},
+              {"all_cpu_builder_owned", cache.GetAsyncBuilderInFlightCount()},
+              {"all_mesh_completed", cache.GetMeshCompletedSize()},
               {"published_geom", published.geom_rev}};
           if (demand)
           {

@@ -8784,6 +8784,44 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastDirtyRevisitSameN = 0;
   LastDirtyScheduleDedupN = 0;
   ScheduledThisFrame_.clear();
+  // A source-revision reservation is metadata, not an executable owner. Do
+  // this before draining completed CPU results: the builder still owns those
+  // results until DrainCompleted, and ApplyMeshResult then runs synchronously.
+  // This ordering never retires an accepted result waiting in the local drain.
+  for (auto it = ActiveMeshSourceRevision.begin();
+       it != ActiveMeshSourceRevision.end();)
+  {
+    const glm::ivec3 coord = it->first;
+    if ((AsyncBuilder && AsyncBuilder->IsInFlight(coord)) ||
+        IsPendingGpuApply(coord) || GpuExtractInFlight.count(coord) != 0 ||
+        HasPendingCaptureWork(coord))
+    {
+      ++it;
+      continue;
+    }
+    const uint64_t retired_source = it->second;
+    it = ActiveMeshSourceRevision.erase(it);
+    if (!world.GetChunkManager().HasChunk(coord))
+      continue;
+    auto &demand = GetRenderDemandStore();
+    const auto *record = demand.Find(coord);
+    if (record && record->world_epoch == CaptureStore.WorldEpoch() &&
+        record->incarnation == ChunkIncarnationAt(world, coord))
+      demand.NoteInstallResult(coord, InstallResult::RejectedRetryable, 0, 0,
+                               DemandActiveAttemptId(demand, coord));
+    // Preserve the existing source revision and outstanding demand. No TTL,
+    // darkness heuristic, or synthetic success participates in reconciliation.
+    if (HasDrawableGreedyMesh(coord))
+      Dirty.MarkDirty(coord);
+    else
+      Dirty.MarkDirtyPriority(coord);
+    if (std::getenv("CUBATARIUM_RELIGHT_AUDIT"))
+      CubatariumLogInfo(
+          "MeshOwnerAudit",
+          "orphan source retired coord=(" + std::to_string(coord.x) + "," +
+              std::to_string(coord.y) + "," + std::to_string(coord.z) +
+              ") source=" + std::to_string(retired_source));
+  }
   DrainMeshDependencyInvalidations(world, max_schedule_per_frame);
   DrainStaleLightRemeshDebt(world, registry, max_schedule_per_frame);
   AgeFmDirtyGpuWatchFrames();
