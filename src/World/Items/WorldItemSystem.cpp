@@ -1269,13 +1269,13 @@ void UWorldItemSystem::CoalesceDormant(UWorld &world)
   }
   Dormant = std::move(compact);
 }
-void UWorldItemSystem::ForEachRenderItemPosition(
-    const std::function<void(glm::vec3)> &visit) const
+void UWorldItemSystem::ForEachRenderItemMotion(
+    const std::function<void(glm::vec3, glm::vec3)> &visit) const
 {
   for (const auto *list : {&Items, &Dormant})
     for (const auto &item : *list)
       if (!item.creatureId)
-        visit(item.position);
+        visit(item.position, item.velocity);
 }
 
 void UWorldItemSystem::Draw(UWorld &world, CreatureDrawQueue &queue,
@@ -1311,14 +1311,15 @@ void UWorldItemSystem::Draw(UWorld &world, CreatureDrawQueue &queue,
             ItemCarrierRight(carrier->GetYaw()),
             world.GetBlockRegistry().GetBlockAtlasTexture(
                 world.GetBlockRegistry().GetIdByTypeName(i.stack.Id)),
-            MakeItemVisualInputs(&i.stack));
+            MakeItemVisualInputs(&i.stack), i.stack.instanceId);
         return;
       }
       WornEquipmentDrawer::SubmitLoose(
           queue, i.stack.Id, vp, model, Profile(world, i.stack).size,
           world.GetBlockRegistry().GetBlockAtlasTexture(
               world.GetBlockRegistry().GetIdByTypeName(i.stack.Id)),
-          !i.flying && !i.carrierId, MakeItemVisualInputs(&i.stack));
+          !i.flying && !i.carrierId, MakeItemVisualInputs(&i.stack),
+          i.stack.instanceId);
     }
   };
   const auto draw = [&](const WorldItem &item)

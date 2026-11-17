@@ -3,6 +3,7 @@
 
 #include "Items/ItemVisualInputs.h"
 #include <array>
+#include <cstdint>
 #include <functional>
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
@@ -40,7 +41,8 @@ public:
                           const glm::mat4 &viewProj, const glm::mat4 &model,
                           glm::vec3 size, unsigned int blockTexture = 0,
                           bool onSupport = true,
-                          const ItemVisualInputs &inputs = {});
+                          const ItemVisualInputs &inputs = {},
+                          uint64_t light_sample_instance = 0);
   /// Authored right-hand contact in the same centred local frame used by
   /// a held loose model; caller applies its world transform and ground scale.
   static bool LooseRightGrip(const std::string &id, glm::vec3 size,
@@ -49,7 +51,8 @@ public:
                             const glm::mat4 &viewProj, const glm::mat4 &model,
                             glm::vec3 size, glm::vec3 carrierRight,
                             unsigned int blockTexture = 0,
-                            const ItemVisualInputs &inputs = {});
+                            const ItemVisualInputs &inputs = {},
+                            uint64_t light_sample_instance = 0);
   static bool CarriedContacts(const std::string &id, glm::vec3 carrierRight,
                               float scale, int hands, glm::vec3 &right,
                               glm::vec3 &left);

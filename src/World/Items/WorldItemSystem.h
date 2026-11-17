@@ -68,8 +68,8 @@ public:
   const std::vector<WorldItem> &GetActiveItems() const { return Items; }
   /// Potential loose-item draw consumers, including sleeping saved bodies.
   /// Read-only: callers must not mutate item storage from this callback.
-  void
-  ForEachRenderItemPosition(const std::function<void(glm::vec3)> &visit) const;
+  void ForEachRenderItemMotion(
+      const std::function<void(glm::vec3, glm::vec3)> &visit) const;
   std::vector<WorldItem> GetItems() const
   {
     auto rows = Items;

@@ -39,8 +39,9 @@ struct RelightJobSpec
   bool column_center_only{false};
   /// Explicit demand for AIR fields; does not allocate geometry.
   bool include_known_air_outputs{false};
-  /// Exact AIR consumers for column jobs; other empty sections remain
-  /// read-only.
+  /// Exact additional AIR consumers for column jobs, including outside the
+  /// terrain Y-band. Other empty sections remain read-only; no intermediate
+  /// resident section outside that band becomes an output.
   std::vector<glm::ivec3> known_air_output_sections;
 };
 

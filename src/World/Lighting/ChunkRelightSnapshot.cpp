@@ -217,6 +217,11 @@ UChunkRelightSnapshot::CaptureImpl(const UBlockWorld &world,
     }
   }
   std::unordered_set<glm::ivec3, IVec3Hash> context;
+  if (!sections)
+    for (const auto coord : spec.known_air_output_sections)
+      if (snapshot.InputProfile.SliceBounds(coord.y, CHUNK_SIZE) &&
+          !world.GetChunkManager().HasChunk(coord))
+        targets.insert(coord);
   for (const auto target : targets)
   {
     if (world.GetChunkManager().HasChunk(target) ||

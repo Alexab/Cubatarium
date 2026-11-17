@@ -2,6 +2,7 @@
 #define ITEM_DRAW_REQUEST_H
 
 #include "Items/ItemRenderAsset.h"
+#include <cstdint>
 #include <optional>
 
 namespace cutum
@@ -18,6 +19,8 @@ struct ItemDrawRequest
   /// Loose bodies sample their own cell; equipment inherits its carrier's
   /// light.
   std::optional<glm::vec3> LightSamplePosition;
+  /// Render-only diagnostic provenance; conveys no inventory authority.
+  uint64_t LightSampleInstance{0};
 };
 } // namespace cutum
 #endif

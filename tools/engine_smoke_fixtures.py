@@ -138,6 +138,73 @@ def prepare_open_sky_plane(fixture: Path, minimum_chunks: int) -> dict:
     return scene
 
 
+def prepare_visible_items_plane(fixture: Path, minimum_chunks: int) -> dict:
+    """Two ordinary saved loose bodies, prepared only in the disposable clone."""
+    import copy
+    import hashlib
+    scene = prepare_open_sky_plane(fixture, minimum_chunks)
+    path = fixture / "creatures.json"
+    if path.is_symlink():
+        raise ValueError("fixture creature symlinks are forbidden")
+    creatures = json.loads(path.read_text(encoding="utf-8"))
+    users = json.loads((fixture / "users.json").read_text(encoding="utf-8"))
+    rows = creatures.get("world_physical_v2", [])
+    if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+        raise ValueError("invalid saved physical bodies")
+    template = next((row for row in rows if row.get("item") == "raw_meat" and
+                     row.get("kind") == 4 and not row.get("carrier") and
+                     not row.get("creature")), None)
+    if template is None:
+        raise ValueError("visible-item fixture requires a saved loose raw_meat body")
+    size = template.get("size", [])
+    if (len(size) != 3 or any(type(v) not in (int, float) or not math.isfinite(v) or
+                             not .02 <= v <= 5 for v in size)):
+        raise ValueError("invalid saved visible-item physical size")
+    asset = fixture.parent.parent / "models/items/raw_meat/model.glb"
+    if asset.is_symlink():
+        raise ValueError("fixture item asset symlinks are forbidden")
+    payload = asset.read_bytes()
+    if (asset.is_symlink() or len(payload) < 20 or payload[:4] != b"glTF" or
+            int.from_bytes(payload[4:8], "little") != 2 or
+            int.from_bytes(payload[8:12], "little") != len(payload)):
+        raise ValueError("visible-item fixture requires a valid raw_meat GLB asset")
+    instances = set()
+    def collect(value):
+        if isinstance(value, dict):
+            for key, child in value.items():
+                if key in ("instance", "instance_id") and type(child) is int and child > 0:
+                    instances.add(child)
+                collect(child)
+        elif isinstance(value, list):
+            for child in value:
+                collect(child)
+    collect(creatures)
+    collect(users)
+    next_instance = max(instances, default=0) + 1
+    if next_instance + 1 > 2**64-1:
+        raise ValueError("visible-item fixture cannot allocate unique inventory identities")
+    next_id = max((row.get("id", 0) for row in rows), default=0) + 1
+    start = scene["starting_eye"]
+    distance = minimum_chunks * 16 + 48
+    positions = [[start[0]+4-offset, scene["plane_bounds"]["floor"]+size[1]/2+.01,
+                  start[2]] for offset in (0, distance)]
+    for index, position in enumerate(positions):
+        row = copy.deepcopy(template)
+        row.update(id=next_id+index, instance=next_instance+index, count=1,
+                   position=position, velocity=[0, 0, 0], age=0, flying=False,
+                   arrow=False, carrier=0, creature=0, thrower=0, last_contact=0,
+                   contact_cooldown=0, held_time=0, charge=0, damage=0,
+                   pickup_separated=True, motion="resting")
+        rows.append(row)
+    path.write_text(json.dumps(creatures, indent=2)+"\n", encoding="utf-8")
+    scene["visible_world_items"] = dict(schema="engine-world-item-field-fixture.v1",
+        item="raw_meat", positions=positions, instances=[next_instance, next_instance+1],
+        available_glb_sha256=hashlib.sha256(payload).hexdigest(),
+        minimum_frame_epochs=3,
+        scope="normal saved loose bodies; CPU sample and actual primitive issue, no final RGB")
+    return scene
+
+
 def prepare_lit_negative_cave(fixture: Path, minimum_chunks: int) -> dict:
     """Positive blocklight scene. Runtime catalog/draw acceptance is separate."""
     import hashlib

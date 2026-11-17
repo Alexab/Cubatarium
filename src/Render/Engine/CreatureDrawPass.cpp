@@ -1,4 +1,5 @@
 #include "Render/Engine/CreatureDrawPass.h"
+#include "App/Platform/Log.h"
 #include "Blocks/BlockRegistry.h"
 #include "Core/StallTimer.h"
 #include "Creatures/Core/Creature.h"
@@ -26,12 +27,15 @@
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/TextRenderer.h"
 #include "Render/GlIncludes.h"
+#include "Render/Mesh/ChunkMeshCache.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/World.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "World/Items/WorldItemSystem.h"
 #include "World/Lighting/LightUtil.h"
+#include "World/Mesh/WorldMeshService.h"
 #include "World/Raycast/BlockRaycast.h"
 #include "World/View/DistanceFog.h"
 #include <algorithm>
@@ -431,6 +435,8 @@ void UCreatureDrawPass::DrawItemSurface(const ItemDrawRequest &request,
     ItemRevision = UItemDefinitionStorage::ContentRevision();
   }
   auto light = ActiveLight;
+  std::optional<SceneLightSample> own_sample;
+  glm::ivec3 sample_cell(0);
   if (request.LightSamplePosition && ItemLocalLight)
   {
     const auto cell = CreatureLightSampleCell(
@@ -440,8 +446,9 @@ void UCreatureDrawPass::DrawItemSurface(const ItemDrawRequest &request,
           return world.GetBlockRegistry().BlocksMovement(
               world.GetBlockWorld().GetBlock(c));
         });
-    const auto sample =
-        world.RequestSceneLightSample(cell, SceneLightConsumer::Item);
+    sample_cell = cell;
+    own_sample = world.RequestSceneLightSample(cell, SceneLightConsumer::Item);
+    const auto &sample = *own_sample;
     // A previous creature/body light is a presentation fallback only.
     if (sample.IsReady())
     {
@@ -474,9 +481,37 @@ void UCreatureDrawPass::DrawItemSurface(const ItemDrawRequest &request,
   }
   glEnable(GL_DEPTH_TEST);
   glDisable(GL_CULL_FACE);
-  ItemRenderer->Draw(request.Asset, request.Path, request.ViewProjection,
-                     request.Model, request.State, profile);
-  Stats.CreatureDrawCalls += request.Asset->Primitives.size();
+  const auto drawn =
+      ItemRenderer->Draw(request.Asset, request.Path, request.ViewProjection,
+                         request.Model, request.State, profile);
+  if (own_sample && UJobStageTrace::VisualBlackTraceEnabled())
+  {
+    const auto packed = own_sample->packed.value_or(0);
+    CubatariumLogInfo(
+        "WorldItemLightDraw",
+        "world_epoch=" +
+            std::to_string(world.GetMeshService()
+                               .GetCache()
+                               .GetCaptureStore()
+                               .WorldEpoch()) +
+            " frame_epoch=" + std::to_string(world.GetStreamingFrameEpoch()) +
+            " item=" + request.Path.parent_path().filename().string() +
+            " instance=" + std::to_string(request.LightSampleInstance) +
+            " physical=" +
+            std::to_string(
+                own_sample->state == SceneLightState::FlatConstant ? 0 : 1) +
+            " cell=(" + std::to_string(sample_cell.x) + "," +
+            std::to_string(sample_cell.y) + "," +
+            std::to_string(sample_cell.z) + ")" +
+            " ready=" + std::to_string(own_sample->IsReady() ? 1 : 0) +
+            " state=" + std::to_string(static_cast<int>(own_sample->state)) +
+            " sky=" + std::to_string(UnpackSky(packed)) + " block_light=" +
+            std::to_string(UnpackBlock(packed)) + " field_incarnation=" +
+            std::to_string(own_sample->field_incarnation) +
+            " field_revision=" + std::to_string(own_sample->field_revision) +
+            " drawn_primitives=" + std::to_string(drawn));
+  }
+  Stats.CreatureDrawCalls += drawn;
 }
 
 void UCreatureDrawPass::DrawSkinnedMesh(

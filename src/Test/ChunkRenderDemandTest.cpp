@@ -1,9 +1,12 @@
 #include "World/Streaming/ChunkRenderDemand.h"
+#include "World/Lighting/LightSampleApproach.h"
 #include "World/Mesh/Contracts/SeamCoverageManifest.h"
 #include "World/Streaming/RelightInstallPlanner.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <limits>
 
 namespace
 {
@@ -810,6 +813,51 @@ int main()
            "a callback clearing the store must not invalidate drain traversal");
   }
 
+  {
+    std::vector<glm::ivec3> approach;
+    const auto collect = [&](glm::ivec3 cell, glm::vec3 velocity,
+                             cutum::WorldVerticalProfile profile = {})
+    {
+      approach.clear();
+      const int count = cutum::VisitLightSampleApproach(
+          cell, velocity, profile,
+          [&](glm::ivec3 coord) { approach.push_back(coord); });
+      Expect(count == static_cast<int>(approach.size()) && count <= 27,
+             "motion footprint has an exact hard27section visit bound");
+      for (auto coord : approach)
+        Expect(std::count(approach.begin(), approach.end(), coord) == 1,
+               "motion footprint visits each section only once");
+      return count;
+    };
+    Expect(collect({-3, -37, 39}, glm::vec3(0)) == 1 &&
+               approach[0] == glm::ivec3(-1, -3, 2),
+           "stationary negative-world consumer requests only its own section");
+    Expect(collect({-3, -1, 39}, {0, -100, 0}) == 3 &&
+               approach[0] == glm::ivec3(-1, -1, 2) &&
+               std::find(approach.begin(), approach.end(),
+                         glm::ivec3(-1, -3, 2)) != approach.end(),
+           "fast fall primes the native missing AIR section before entry");
+    Expect(collect(glm::ivec3(-1),
+                   glm::vec3(std::numeric_limits<float>::max())) == 27,
+           "unbounded diagonal velocity cannot enlarge the footprint");
+    Expect(collect({1, 1, 1}, {std::numeric_limits<float>::quiet_NaN(),
+                               std::numeric_limits<float>::infinity(),
+                               -std::numeric_limits<float>::infinity()}) == 1,
+           "nonfinite motion does not create invented future sections");
+    Expect(collect({1, -65, 1}, {0, 100, 0}, {-61, 317}) == 2,
+           "approach clips section visits to the actual vertical profile");
+    Expect(collect({1, 1, 1}, glm::vec3(0), {1, 0}) == 0,
+           "invalid world profile cannot produce motion demand");
+    collect(
+        {std::numeric_limits<int>::max(), 1, std::numeric_limits<int>::min()},
+        {1000, 0, -1000});
+    Expect(approach.size() == 1 &&
+               approach[0].x ==
+                   std::numeric_limits<int>::max() / cutum::CHUNK_SIZE &&
+               approach[0].z ==
+                   std::numeric_limits<int>::min() / cutum::CHUNK_SIZE,
+           "integer world limits clamp prediction without wrapping");
+  }
   if (gFails != 0)
   {
     std::fprintf(stderr, "chunk_render_demand_test failures=%d\n", gFails);

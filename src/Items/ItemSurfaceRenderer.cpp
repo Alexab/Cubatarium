@@ -47,14 +47,15 @@ UItemSurfaceBatchScope::~UItemSurfaceBatchScope()
   Renderer.BatchMaterial.reset();
 }
 
-void ItemSurfaceRenderer::Draw(
-    const std::shared_ptr<const ItemRenderAsset> &asset,
-    const std::filesystem::path &path, const glm::mat4 &viewProjection,
-    const glm::mat4 &model, const ItemVisualState &state,
-    const ItemPresentationProfile &profile)
+size_t
+ItemSurfaceRenderer::Draw(const std::shared_ptr<const ItemRenderAsset> &asset,
+                          const std::filesystem::path &path,
+                          const glm::mat4 &viewProjection,
+                          const glm::mat4 &model, const ItemVisualState &state,
+                          const ItemPresentationProfile &profile)
 {
   if (!asset || !Shader || !Shader->IsValid())
-    return;
+    return 0;
   auto found = Geometry.find(asset.get());
   if (found == Geometry.end())
   {
@@ -152,6 +153,8 @@ void ItemSurfaceRenderer::Draw(
   {
     const size_t i = selection ? selection->Primitives[entry] : entry;
     const auto &primitive = asset->Primitives[i];
+    if (primitive.Indices.empty())
+      continue;
     if (!selection && !ItemNodeVisible(*asset, state, primitive.Node))
       continue;
     const glm::mat4 matrix =
@@ -200,5 +203,6 @@ void ItemSurfaceRenderer::Draw(
     glPolygonMode(GL_FRONT_AND_BACK, polygonMode[0]);
 #endif
   Shader->Unuse();
+  return drawn;
 }
 } // namespace cutum

@@ -292,11 +292,14 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             config_path = runtime / "config.json"
             config_path.write_bytes(render_distance_payload(config_path.read_bytes(), render_distance))
         scene = None
-        if fixture_scene in ("dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "open-sky-plane"):
+        if fixture_scene in ("dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "open-sky-plane", "open-sky-items"):
             if yaw != 180:
                 raise ValueError("negative-cave route requires yaw 180")
             from engine_smoke_fixtures import prepare_negative_cave
-            if fixture_scene == "open-sky-plane":
+            if fixture_scene == "open-sky-items":
+                from engine_smoke_fixtures import prepare_visible_items_plane
+                scene = prepare_visible_items_plane(fixture, minimum_chunks)
+            elif fixture_scene == "open-sky-plane":
                 from engine_smoke_fixtures import prepare_open_sky_plane
                 scene = prepare_open_sky_plane(fixture, minimum_chunks)
             elif fixture_scene == "dry-lit-negative-cave":
@@ -362,6 +365,13 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         if startup_only:
             bot_route["purpose"] = "startup_observation"
             bot_route["waypoints"] = []
+        elif scene and scene.get("visible_world_items"):
+            start = scene["starting_eye"]
+            for point, position in zip(bot_route["waypoints"], scene["visible_world_items"]["positions"]):
+                target = [a-b for a, b in zip(position, start)]
+                # Three ordinary inspection holds provide multiple paints of
+                # each same saved body, including at low diagnostic FPS.
+                point["inspection_targets"] = [target.copy() for _ in range(3)]
         bot_path = artifacts / "bot-route.json"
         bot_path.write_text(json.dumps(bot_route, indent=2) + "\n", encoding="utf-8")
         command = [sys.executable, str(ROOT / "tools/flight_sim_run.py"),
@@ -478,6 +488,16 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                 verdict["status"] = "FAIL"
             elif scene_light["status"] == "UNTESTED" and verdict["status"] == "PASS":
                 verdict["status"] = "UNTESTED"
+        if scene is not None and scene.get("visible_world_items") and not startup_only:
+            from engine_world_item_reference import evaluate as evaluate_world_items
+            world_items = evaluate_world_items(scene, sorted((artifacts / "logs").glob("*.log.INFO.*")))
+            verdict["components"]["fixture_world_item_draw_light"] = world_items
+            (artifacts / "fixture-world-item-reference.json").write_text(
+                json.dumps(world_items, indent=2)+"\n", encoding="utf-8")
+            if world_items["status"] == "FAIL":
+                verdict["status"] = "FAIL"
+            elif world_items["status"] == "UNTESTED" and verdict["status"] == "PASS":
+                verdict["status"] = "UNTESTED"
         verdict["runner_exit_code"] = child.returncode
         verdict["inspection_evidence"] = inspection
         if not report_path.exists():
@@ -505,7 +525,7 @@ def main() -> int:
                         help="isolated config override, restored byte-for-byte after the run")
     parser.add_argument("--process-timeout", type=float,
                         help="explicit wall deadline for bounded diagnostics; timeout is a failure")
-    parser.add_argument("--fixture-scene", choices=["dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "open-sky-plane"])
+    parser.add_argument("--fixture-scene", choices=["dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "open-sky-plane", "open-sky-items"])
     args = parser.parse_args()
     import math
     if (not all(math.isfinite(v) for v in [args.fly_seconds, args.stop_seconds,

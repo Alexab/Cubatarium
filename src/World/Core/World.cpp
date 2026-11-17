@@ -18,6 +18,7 @@
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureInventory.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
+#include "Creatures/Locomotion/CreatureLocomotionFacts.h"
 #include "Creatures/Player/Player.h"
 #include "Creatures/Player/PlayerCapsule.h"
 #include "Creatures/Player/User.h"
@@ -57,6 +58,7 @@
 #include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Lighting/IULightingPipeline.h"
 #include "World/Lighting/LightChangeSet.h"
+#include "World/Lighting/LightSampleApproach.h"
 #include "World/Lighting/LightingPipelineFactory.h"
 #include "World/Lighting/RelightInputValidation.h"
 #include "World/Lighting/RelightResultInstall.h"
@@ -9340,14 +9342,16 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(
   std::vector<glm::ivec3> air_outputs;
   bool has_transient = false;
   const auto catalog = BlockRegistry->GetDefinitionsCatalogSnapshot();
-  for (int cy =
-           FloorDiv(std::max(min_y, ProceduralTemplate.MinHeight), CHUNK_SIZE);
-       cy <=
-       FloorDiv(std::min(max_y, ProceduralTemplate.MaxHeight), CHUNK_SIZE);
-       ++cy)
+  for (int cy = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE);
+       cy <= FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE); ++cy)
   {
     const glm::ivec3 coord(col.x, cy, col.y);
-    if (!BlockWorld.GetChunkManager().HasChunk(coord))
+    if (BlockWorld.GetChunkManager().HasChunk(coord))
+    {
+      if (cy < FloorDiv(min_y, CHUNK_SIZE) || cy > FloorDiv(max_y, CHUNK_SIZE))
+        continue;
+    }
+    else
     {
       if (!MeshService ||
           !GetRenderDemandStore().HasLightSampleDemand(
@@ -11804,28 +11808,33 @@ void UWorld::MaintainRequiredWorldInputs(int data_budget,
     // Register potential object samples before the enter/presentation gate.
     // A first draw must not be the first time an AIR field becomes required.
     // The approach ring also covers objects entering view on camera turns.
-    const auto request_object = [&](glm::vec3 position)
+    const auto request_object = [&](glm::vec3 position, glm::vec3 velocity)
     {
       auto cell = WorldPosToBlock(position);
       if (BlockRegistry->BlocksMovement(BlockWorld.GetBlock(cell)))
         ++cell.y;
-      const auto coord = UChunkManager::WorldToChunk(cell);
-      if (BlockWorld.GetVerticalProfile().ContainsY(cell.y) &&
-          std::max(std::abs(coord.x - focus.x), std::abs(coord.z - focus.z)) <=
-              domain.approach)
-        GetRenderDemandStore().RequestLightSample(coord, sample_epoch,
-                                                  StreamingFrameEpoch, 8);
+      VisitLightSampleApproach(
+          cell, velocity, BlockWorld.GetVerticalProfile(),
+          [&](glm::ivec3 coord)
+          {
+            if (std::max(std::abs(coord.x - focus.x),
+                         std::abs(coord.z - focus.z)) <= domain.approach)
+              GetRenderDemandStore().RequestLightSample(coord, sample_epoch,
+                                                        StreamingFrameEpoch, 8);
+          });
     };
     ForEachCreature(
         [&](const UCreature &creature)
         {
           const auto size = creature.GetBounds().currentSizeBlocks;
+          const auto velocity = creature.GetLocomotionFacts().actualVelocity;
           request_object(creature.GetBodyOrigin() +
-                         glm::vec3(0, size.y * .5f, 0));
+                             glm::vec3(0, size.y * .5f, 0),
+                         velocity);
           if (creature.GetId() == GetControlledCreatureId())
-            request_object(creature.GetEyePosition());
+            request_object(creature.GetEyePosition(), velocity);
         });
-    UWorldItemSystem::Instance().ForEachRenderItemPosition(request_object);
+    UWorldItemSystem::Instance().ForEachRenderItemMotion(request_object);
   }
   BlockWorld.GetChunkManager().RetireAbsentSectionLightFields(
       256,

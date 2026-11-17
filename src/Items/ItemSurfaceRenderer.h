@@ -57,10 +57,12 @@ public:
   ~ItemSurfaceRenderer();
   bool Initialize(UShaderManager &manager);
   void Clear();
-  void Draw(const std::shared_ptr<const ItemRenderAsset> &asset,
-            const std::filesystem::path &path, const glm::mat4 &viewProjection,
-            const glm::mat4 &model, const ItemVisualState &state = {},
-            const ItemPresentationProfile &profile = {});
+  /// Number of nonempty primitive draw calls actually issued.
+  size_t Draw(const std::shared_ptr<const ItemRenderAsset> &asset,
+              const std::filesystem::path &path,
+              const glm::mat4 &viewProjection, const glm::mat4 &model,
+              const ItemVisualState &state = {},
+              const ItemPresentationProfile &profile = {});
 
 private:
   friend class UItemSurfaceBatchScope;

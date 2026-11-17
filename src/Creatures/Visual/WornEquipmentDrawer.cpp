@@ -581,13 +581,15 @@ void QueueItemSurface(CreatureDrawQueue *queue,
                       const std::filesystem::path &path, const glm::mat4 &vp,
                       const glm::mat4 &model, bool loose = false,
                       const ItemVisualInputs &inputs = {},
-                      const std::string &visibleRoot = {})
+                      const std::string &visibleRoot = {},
+                      uint64_t light_sample_instance = 0)
 {
   if (!queue)
     throw std::logic_error("Item surfaces require the shared draw queue");
   auto item = std::make_shared<ItemDrawRequest>();
   item->Asset = asset;
   item->Path = path;
+  item->LightSampleInstance = light_sample_instance;
   item->ViewProjection = vp;
   item->Model = model;
   item->State = EvaluateItemVisualState(*asset, inputs);
@@ -1090,14 +1092,15 @@ void WornEquipmentDrawer::SubmitLoose(CreatureDrawQueue &queue,
                                       const glm::mat4 &vp,
                                       const glm::mat4 &model, glm::vec3 size,
                                       unsigned int blockTexture, bool onSupport,
-                                      const ItemVisualInputs &inputs)
+                                      const ItemVisualInputs &inputs,
+                                      uint64_t light_sample_instance)
 {
   const auto surfacePath = ResolveGltfAbs(id);
   if (const auto surface = FindSurface(surfacePath))
   {
     QueueItemSurface(&queue, surface, surfacePath, vp,
                      model * ItemLooseLocalMatrix(*surface, size, onSupport),
-                     true, inputs);
+                     true, inputs, {}, light_sample_instance);
     return;
   }
   if (auto asset = LoadItemGltf(id))
@@ -1138,17 +1141,19 @@ void WornEquipmentDrawer::SubmitLoose(CreatureDrawQueue &queue,
 void WornEquipmentDrawer::SubmitCarried(
     CreatureDrawQueue &queue, const std::string &id, const glm::mat4 &vp,
     const glm::mat4 &model, glm::vec3 size, glm::vec3 carrierRight,
-    unsigned int blockTexture, const ItemVisualInputs &inputs)
+    unsigned int blockTexture, const ItemVisualInputs &inputs,
+    uint64_t light_sample_instance)
 {
   const auto path = ResolveGltfAbs(id);
   if (const auto asset = FindSurface(path))
   {
     QueueItemSurface(&queue, asset, path, vp,
                      model * ItemCarryLocalMatrix(*asset, carrierRight), true,
-                     inputs);
+                     inputs, {}, light_sample_instance);
     return;
   }
-  SubmitLoose(queue, id, vp, model, size, blockTexture, false, inputs);
+  SubmitLoose(queue, id, vp, model, size, blockTexture, false, inputs,
+              light_sample_instance);
 }
 bool WornEquipmentDrawer::CarriedContacts(const std::string &id,
                                           glm::vec3 carrierRight, float scale,

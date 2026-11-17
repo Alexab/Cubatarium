@@ -1190,6 +1190,40 @@ void TestKnownAirLightResourceCalculation()
              .Compute(registry)
              .chunks.empty(),
          "knownAIR alone does not request whole-height column light fields");
+  // An ordinary terrain band must not split all the explicit motion consumers
+  // of the same column into separate worker jobs.
+  column.GetChunkManager().EnsureChunk({1, 0, 0});
+  column.GetChunkManager().EnsureChunk({1, -2, 0});
+  spec.min_world_y = 0;
+  spec.max_world_y = 15;
+  spec.block_positions = {{16, 0, 0}};
+  const glm::ivec3 predicted(1, -1, 0);
+  spec.known_air_output_sections = {target, predicted, {1, -2, 0}, {1, -10, 0}};
+  auto batched = UChunkRelightSnapshot::Capture(column, spec).Compute(registry);
+  Expect(batched.inputs_complete && batched.chunks.size() == 3 &&
+             std::any_of(batched.chunks.begin(), batched.chunks.end(),
+                         [&](const auto &data)
+                         { return data.coord == target; }) &&
+             std::any_of(batched.chunks.begin(), batched.chunks.end(),
+                         [&](const auto &data)
+                         { return data.coord == predicted; }) &&
+             std::any_of(batched.chunks.begin(), batched.chunks.end(),
+                         [&](const auto &data)
+                         { return data.coord == glm::ivec3(1, 0, 0); }),
+         "one column job coalesces exact AIR consumers beyond terrain band");
+  const auto geometry_count = column.GetChunkManager().GetResidentChunkCount();
+  for (const auto &data : batched.chunks)
+    InstallComputedLight(column, data, true, true);
+  Expect(
+      column.RecordLightCalculation(batched, catalog) == 3 &&
+          column.SampleSceneLight({16, -40, 8}).IsReady() &&
+          UnpackBlock(*column.SampleSceneLight({16, -40, 8}).packed) == 14 &&
+          column.HasCompleteLightSamplingCalculation(predicted, catalog) &&
+          column.GetChunkManager().GetResidentChunkCount() == geometry_count &&
+          !column.HasCompleteLightSamplingCalculation({1, -2, 0}, catalog) &&
+          !column.GetChunkManager().GetSectionLightField({1, -10, 0}),
+      "batched AIR receipts keep nonzero values without writing intermediate "
+      "resident or out-of-profile sections");
 }
 
 void TestWorldOwnedLightCertificates()

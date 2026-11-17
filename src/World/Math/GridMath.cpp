@@ -1,5 +1,6 @@
 #include "World/Math/GridMath.h"
 #include <cmath>
+#include <cstdint>
 
 namespace cutum
 {
@@ -19,7 +20,9 @@ int FloorDiv(int a, int b)
   {
     return a / b;
   }
-  return (a - b + 1) / b;
+  // Predictive consumers can reach the signed coordinate limit. Widen before
+  // subtracting the section width so negative floor division cannot wrap.
+  return static_cast<int>((static_cast<int64_t>(a) - b + 1) / b);
 }
 
 int PositiveMod(int a, int b)
