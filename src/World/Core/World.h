@@ -37,6 +37,7 @@
 #include "World/Streaming/EnterSessionPhase.h"
 #include "World/Streaming/EnterVisualGate.h"
 #include "World/Streaming/RelightInstallPlanner.h"
+#include "World/Streaming/RequiredPresentationCoverage.h"
 #include "World/Streaming/VisibleBlackAttribution.h"
 #include "World/Streaming/WorldBorderPolicy.h"
 #include "World/View/WorldViewSettings.h"
@@ -508,6 +509,10 @@ public:
   void ResetPhysicsRuntimeState();
   void WarmupSpawnAreaForEnterGame();
   void PrepareEnterGameSession();
+  RequiredPresentationCoverage SampleRequiredPresentationCoverage() const;
+  bool ValidateRequiredEnterPresentation(double elapsed_ms);
+  void RecordFirstRenderedRequiredRing();
+
   bool IsEnterStreamingWarmupSettled() const;
   void TickEnterStreamingWarmup(int iteration_budget);
   /// Era43: mesh emerge drain while ingress frozen (no UpdateStreaming).
@@ -1826,6 +1831,9 @@ private:
   std::string LastEnterSettleReason;
   double LastEnterGateElapsedMs{0.0};
   EnterSessionPhase EnterSessionPhaseValue{EnterSessionPhase::None};
+  bool FirstRenderedRequiredRingRecorded{false};
+  double LastRequiredRingDiagnosticMs{-2000.0};
+
   bool EnterLitSnapshotCaptured{false};
   /// Era47: once snapshot debt=0 under gate, stay quiesced despite fifo blips.
   bool EnterLitQuiesceLatched{false};

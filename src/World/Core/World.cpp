@@ -11617,8 +11617,105 @@ void UWorld::WarmupSpawnAreaForEnterGame()
   Streaming->WarmupSpawnAreaForEnterGame(*this);
 }
 
+namespace
+{
+json RequiredPresentationJson(const RequiredPresentationCoverage &s)
+{
+  return {{"schema", "required-presentation-witness.v1"},
+          {"radius", s.radius},
+          {"min_y", s.min_y},
+          {"max_y", s.max_y},
+          {"columns", s.columns},
+          {"expected_columns", s.expected_columns},
+          {"sections", s.sections},
+          {"expected_sections", s.expected_sections},
+          {"missing_data_columns", s.missing_data_columns},
+          {"unknown_sections", s.unknown_sections},
+          {"known_air_sections", s.known_air_sections},
+          {"resident_air_sections", s.resident_air_sections},
+          {"surface_sections", s.surface_sections},
+          {"light_unready_sections", s.light_unready_sections},
+          {"publication_unready_sections", s.publication_unready_sections},
+          {"ready", s.Ready()}};
+}
+} // namespace
+
+RequiredPresentationCoverage UWorld::SampleRequiredPresentationCoverage() const
+{
+  RequiredPresentationCoverage out;
+  out.radius = EnterVisualWorkRadiusChunks();
+  out.min_y = ProceduralTemplate.MinHeight;
+  out.max_y = ProceduralTemplate.MaxHeight;
+  const int cy0 = FloorDiv(out.min_y, CHUNK_SIZE);
+  const int cy1 = FloorDiv(out.max_y, CHUNK_SIZE);
+  out.expected_columns = (2 * out.radius + 1) * (2 * out.radius + 1);
+  out.expected_sections = out.expected_columns * (cy1 - cy0 + 1);
+  const auto focus = UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const auto catalog = BlockRegistry->GetDefinitionsCatalogSnapshot();
+  UBlockWorld::InputStampValidationBatch absence;
+  for (int z = focus.z - out.radius; z <= focus.z + out.radius; ++z)
+    for (int x = focus.x - out.radius; x <= focus.x + out.radius; ++x)
+    {
+      ++out.columns;
+      const bool data_complete = IsTerrainColumnCompleteFast({x, 0, z});
+      if (!data_complete)
+        ++out.missing_data_columns;
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        const glm::ivec3 coord(x, cy, z);
+        const auto *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+        if (!chunk)
+        {
+          out.ObserveAbsent(data_complete &&
+                            BlockWorld.IsKnownAbsentAirChunk(coord, &absence));
+          continue;
+        }
+        const bool light =
+            !RequiresLightingLitGate() ||
+            BlockWorld.HasCompleteLightCalculation(coord, catalog);
+        out.ObserveResident(
+            chunk->IsAirOnly(), light,
+            chunk->IsAirOnly() ||
+                CurrentSlicePublicationReadyForWarmup(*this, coord));
+      }
+    }
+  return out;
+}
+
+bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
+{
+  const auto coverage = SampleRequiredPresentationCoverage();
+  if (elapsed_ms < LastRequiredRingDiagnosticMs ||
+      elapsed_ms - LastRequiredRingDiagnosticMs >= 2000.0 || coverage.Ready())
+  {
+    LastRequiredRingDiagnosticMs = elapsed_ms;
+    auto row = RequiredPresentationJson(coverage);
+    row["phase"] = "enter_gate";
+    row["elapsed_ms"] = elapsed_ms;
+    CubatariumLogInfo("RequiredPresentationWitness", row.dump());
+  }
+  return coverage.Ready();
+}
+
+void UWorld::RecordFirstRenderedRequiredRing()
+{
+  if (FirstRenderedRequiredRingRecorded)
+    return;
+  FirstRenderedRequiredRingRecorded = true;
+  auto row = RequiredPresentationJson(SampleRequiredPresentationCoverage());
+  const auto focus = UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  row["phase"] = "first_world_paint";
+  row["focus"] = {focus.x, focus.y, focus.z};
+  row["world_epoch"] = MeshService->GetCache().GetCaptureStore().WorldEpoch();
+  row["render_pass_complete"] = true;
+  CubatariumLogInfo("FirstWorldFrameWitness", row.dump());
+  CubatariumFlushLogs();
+}
+
 void UWorld::PrepareEnterGameSession()
 {
+  FirstRenderedRequiredRingRecorded = false;
+  LastRequiredRingDiagnosticMs = -2000.0;
   Streaming->PrepareEnterGameSession(*this);
 }
 

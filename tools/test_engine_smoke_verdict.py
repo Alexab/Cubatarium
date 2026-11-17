@@ -21,6 +21,40 @@ class EngineSmokeVerdictTest(unittest.TestCase):
                            initial_resident_column_count=81,
                            outside_initial_resident_samples=100,
                            first_frame_required_ring_ready=True)
+        witness = dict(schema="required-presentation-witness.v1", phase="first_world_paint",
+                       render_pass_complete=True, radius=4, min_y=-64, max_y=319,
+                       columns=81, expected_columns=81, sections=1944, expected_sections=1944,
+                       missing_data_columns=0, unknown_sections=0, known_air_sections=1000,
+                       resident_air_sections=500, surface_sections=444, light_unready_sections=0,
+                       publication_unready_sections=0, world_epoch=1, focus=[1, -3, 3], ready=True)
+        self.report["startup_warmup_evidence"] = dict(first_frame_witnesses=[witness])
+
+    def test_first_frame_census_is_read_from_renderer_log(self):
+        row = self.report["startup_warmup_evidence"]["first_frame_witnesses"][0]
+        log = Path(self.temp.name) / "runtime.log"
+        log.write_text("[FirstWorldFrameWitness] " + json.dumps(row) + "\n", encoding="utf-8")
+        self.report["startup_warmup_evidence"] = read_startup_warmup_evidence([log])
+        self.trace()
+        self.assertEqual(classify(self.report, self.perf)["components"]["startup"]["status"], "PASS")
+
+    def test_first_frame_requires_complete_census_and_post_draw_phase(self):
+        row = self.report["startup_warmup_evidence"]["first_frame_witnesses"][0]
+        for field, value in [("sections", 1943), ("expected_sections", 1943),
+                             ("radius", 3), ("phase", "enter_gate"),
+                             ("render_pass_complete", False), ("world_epoch", 0),
+                             ("unknown_sections", 1), ("min_y", True)]:
+            self.report["startup_warmup_evidence"] = dict(first_frame_witnesses=[dict(row, **{field: value})])
+            self.trace()
+            self.assertEqual(classify(self.report, self.perf)["components"]["startup"]["status"], "UNTESTED")
+        self.report["startup_warmup_evidence"] = {}
+        self.assertEqual(classify(self.report, self.perf)["components"]["startup"]["status"], "UNTESTED")
+
+    def test_first_frame_with_real_light_or_publication_debt_fails(self):
+        row = self.report["startup_warmup_evidence"]["first_frame_witnesses"][0]
+        for field in ["light_unready_sections", "publication_unready_sections", "missing_data_columns"]:
+            self.report["startup_warmup_evidence"] = dict(first_frame_witnesses=[dict(row, ready=False, **{field: 1})])
+            self.trace()
+            self.assertEqual(classify(self.report, self.perf)["components"]["startup"]["status"], "FAIL")
 
     def trace(self, **extra):
         self.perf.write_text("\n".join(json.dumps(dict(

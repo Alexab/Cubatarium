@@ -1,4 +1,5 @@
 #include "World/Streaming/RequiredDataCoverage.h"
+#include "World/Streaming/RequiredPresentationCoverage.h"
 #include <cstdlib>
 #include <iostream>
 #include <set>
@@ -94,5 +95,31 @@ int main()
   Expect(closure() && required.size() == 169,
          "bounded requests eventually supply every transitive light/mesh input "
          "at the new center");
+  cutum::RequiredPresentationCoverage proof;
+  Expect(!proof.Ready(), "an empty census cannot authorize the first frame");
+  proof.expected_columns = proof.columns = 1;
+  proof.expected_sections = 3;
+  proof.ObserveAbsent(true);
+  proof.ObserveResident(true, true, false);
+  Expect(!proof.Ready(),
+         "omitting a required section cannot shrink the census");
+  proof.ObserveResident(false, true, true);
+  Expect(proof.Ready(),
+         "known AIR needs no mesh; resident fields and surfaces do");
+  ++proof.publication_unready_sections;
+  Expect(!proof.Ready(),
+         "a stale or uncommitted publication blocks first frame");
+  --proof.publication_unready_sections;
+  ++proof.light_unready_sections;
+  Expect(!proof.Ready(),
+         "an unsettled field blocks even a dark or AIR section");
+  --proof.light_unready_sections;
+  ++proof.missing_data_columns;
+  Expect(!proof.Ready(), "a queued data load is not a complete column");
+  --proof.missing_data_columns;
+  --proof.known_air_sections;
+  ++proof.unknown_sections;
+  Expect(!proof.Ready(),
+         "unknown absence cannot stand in for a known AIR receipt");
   std::cout << "required_data_coverage_test: OK\n";
 }

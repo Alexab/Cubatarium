@@ -384,11 +384,6 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   }
 
   const bool underfeet_present_cap = World.IsEnterUnderfeetPresentReady();
-  const glm::ivec3 underfeet_center_cap =
-      UChunkManager::WorldToChunk(World.GetPreferredLoadFocusBlock());
-  const int underfeet_gpu_pending_cap =
-      World.GetMeshService().CountPendingGpuAppliesInHorizontalRadius(
-          underfeet_center_cap, 1);
   // Phase 5.7R4: UF Dirty carve before soft_force wall (existing budgets).
   if (ShouldCarveUnderfeetBeforeSoftForce(underfeet_present_cap,
                                           EnterGameGpuWarmupElapsedMs,
@@ -396,126 +391,12 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   {
     World.MarkSpawnRingUnfinishedDirty(8);
   }
-  const bool abort_underfeet_cap =
-      focus_terrain_ready &&
-      ShouldReleaseEnterAfterAbortUnderfeetCap(
-          EnterGameAbortDrainMode, EnterGameGpuWarmupElapsedMs,
-          tune.EnterForceInGameMs, underfeet_present_cap,
-          underfeet_gpu_pending_cap);
-  bool enter_ready =
-      focus_terrain_ready &&
-      IsEnterGpuWarmupReady(ring_ready_for_exit, fov_ready ? 0 : fov_debt,
-                            mesh_blockers_for_exit, min_frames_done,
-                            visibility_ready_for_exit);
-  if (!enter_ready && abort_underfeet_cap)
-  {
-    enter_ready = min_frames_done && fov_ready && underfeet_present_cap &&
-                  underfeet_gpu_pending_cap <= 0;
-    if (enter_ready && !EnterGameForceInGameLogged)
-    {
-      EnterGameForceInGameLogged = true;
-      LOG(WARNING) << "[EnterWarmup] abort_underfeet_cap elapsed_ms="
-                   << EnterGameGpuWarmupElapsedMs
-                   << " ring_ready=" << (ring_ready ? 1 : 0)
-                   << " visibility_debt=" << visibility_debt
-                   << " residual_fov=" << fov_debt
-                   << " (underfeet present; residual vis may remain)";
-      CubatariumFlushLogs();
-    }
-  }
+  // Timeouts may change scheduling or diagnostics, but cannot authorize
+  // presentation of a section whose data/light/publication proof is missing.
   const int combined_debt = EnterWarmupCombinedDebt(lit_sample, fov_debt);
-  const bool soft_clean_cap =
-      focus_terrain_ready &&
-      ShouldForceEnterLoadSoftCleanDebt(EnterGameGpuWarmupElapsedMs,
-                                        combined_debt, underfeet_present_cap);
-  if (soft_clean_cap && !enter_ready && min_frames_done)
-  {
-    enter_ready = true;
-    if (!EnterGameForceInGameLogged)
-    {
-      EnterGameForceInGameLogged = true;
-      World.SetLastEnterSettleReason("soft_clean");
-      LOG(INFO) << "[EnterWarmup] settle_reason=soft_clean elapsed_ms="
-                << EnterGameGpuWarmupElapsedMs
-                << " combined_debt=" << combined_debt
-                << " needs_mesh=" << (mesh_blockers_clear ? 0 : 1)
-                << " underfeet=" << (underfeet_present_cap ? 1 : 0)
-                << " ring_ready=" << (ring_ready ? 1 : 0)
-                << " visibility_debt=" << visibility_debt;
-      CubatariumFlushLogs();
-    }
-  }
-  const bool soft_exit_cap =
-      focus_terrain_ready &&
-      ShouldForceEnterLoadSoftExit(EnterGameAbortDrainMode,
-                                   EnterGameGpuWarmupElapsedMs,
-                                   tune.EnterForceInGameMs, fov_debt);
-  if (soft_exit_cap && !enter_ready && min_frames_done)
-  {
-    enter_ready = true;
-    if (!EnterGameForceInGameLogged)
-    {
-      EnterGameForceInGameLogged = true;
-      if (ShouldAllowEnterSoftForceSettle(underfeet_present_cap))
-      {
-        World.SetLastEnterSettleReason("soft_force");
-        LOG(WARNING) << "[EnterWarmup] settle_reason=soft_force soft_exit_cap "
-                        "elapsed_ms="
-                     << EnterGameGpuWarmupElapsedMs
-                     << " ring_ready=" << (ring_ready ? 1 : 0)
-                     << " mesh_dirty=" << (lit_sample.mesh_dirty ? 1 : 0)
-                     << " gpu_pending=" << lit_sample.mesh_gpu_pending_near
-                     << " ring=" << lit_sample.ring_not_ready
-                     << " fifo=" << lit_sample.fifo_n
-                     << " visibility_debt=" << visibility_debt
-                     << " underfeet=" << (underfeet_present_cap ? 1 : 0);
-        if (visibility_debt > 0)
-        {
-          World.GetPhysicsTelemetryMutable().EnterSettleSoftForceWithDebt = 1;
-          World.BeginEnterGameMeshBurst(24);
-          World.MarkSpawnRingUnfinishedDirty(8);
-        }
-      }
-      else
-      {
-        // Phase 5.7R5: wall exit without soft_force+UF=0 product event.
-        World.SetLastEnterSettleReason("force_ingame_no_uf");
-        LOG(WARNING)
-            << "[EnterWarmup] settle_reason=force_ingame_no_uf elapsed_ms="
-            << EnterGameGpuWarmupElapsedMs
-            << " ring_ready=" << (ring_ready ? 1 : 0)
-            << " visibility_debt=" << visibility_debt
-            << " underfeet=0 (no soft_force settle)";
-        World.BeginEnterGameMeshBurst(24);
-        World.MarkSpawnRingUnfinishedDirty(16);
-      }
-      CubatariumFlushLogs();
-    }
-  }
-  else if (focus_terrain_ready && EnterGameAbortDrainMode &&
-           ShouldForceEnterInGameAfterAbortDrain(EnterGameGpuWarmupElapsedMs,
-                                                 tune.EnterForceInGameMs) &&
-           !enter_ready && !EnterGameForceInGameLogged)
-  {
-    EnterGameForceInGameLogged = true;
-    LOG(WARNING) << "[EnterWarmup] force_ingame wall elapsed_ms="
-                 << EnterGameGpuWarmupElapsedMs
-                 << " ring_ready=" << (ring_ready ? 1 : 0)
-                 << " mesh_dirty=" << (lit_sample.mesh_dirty ? 1 : 0)
-                 << " gpu_pending=" << lit_sample.mesh_gpu_pending_near
-                 << " ring=" << lit_sample.ring_not_ready
-                 << " fifo=" << lit_sample.fifo_n
-                 << " visibility_debt=" << visibility_debt
-                 << " underfeet=" << (underfeet_present ? 1 : 0)
-                 << " (waiting for soft_exit / underfeet cap)";
-    CubatariumFlushLogs();
-  }
-
-  // Era48/49: InGame when visibility ready, abort underfeet, or soft-exit cap.
-  if (!enter_ready)
-  {
+  if (!focus_terrain_ready || !min_frames_done ||
+      !World.ValidateRequiredEnterPresentation(EnterGameGpuWarmupElapsedMs))
     return false;
-  }
   if (!EnterGameForceInGameLogged)
   {
     EnterGameForceInGameLogged = true;

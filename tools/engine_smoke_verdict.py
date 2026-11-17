@@ -14,14 +14,57 @@ from pathlib import Path
 from typing import Any
 
 
+def validate_first_frame_witness(row):
+    """Check complete census shape before using a renderer-emitted decision."""
+    if not isinstance(row, dict) or row.get("schema") != "required-presentation-witness.v1":
+        return None
+    if row.get("phase") != "first_world_paint" or row.get("render_pass_complete") is not True:
+        return None
+    names = ("radius", "columns", "expected_columns", "sections", "expected_sections",
+             "missing_data_columns", "unknown_sections", "known_air_sections",
+             "resident_air_sections", "surface_sections", "light_unready_sections",
+             "publication_unready_sections", "world_epoch")
+    if any(not isinstance(row.get(k), int) or isinstance(row[k], bool) or row[k] < 0 for k in names):
+        return None
+    lo, hi = row.get("min_y"), row.get("max_y")
+    focus = row.get("focus")
+    if (any(not isinstance(v, int) or isinstance(v, bool) for v in (lo, hi)) or hi < lo or
+            not isinstance(focus, list) or len(focus) != 3 or
+            any(not isinstance(v, int) or isinstance(v, bool) for v in focus)):
+        return None
+    columns = (2 * row["radius"] + 1) ** 2
+    sections = columns * (hi // 16 - lo // 16 + 1)
+    if (row["radius"] < 4 or row["world_epoch"] == 0 or
+            row["expected_columns"] != columns or row["expected_sections"] != sections or
+            row["columns"] != columns or row["sections"] != sections or
+            sum(row[k] for k in ("unknown_sections", "known_air_sections",
+                "resident_air_sections", "surface_sections")) != sections or
+            row["light_unready_sections"] > row["resident_air_sections"] + row["surface_sections"] or
+            row["publication_unready_sections"] > row["surface_sections"] or
+            row["missing_data_columns"] > columns):
+        return None
+    ready = all(row[k] == 0 for k in ("missing_data_columns", "unknown_sections",
+                                      "light_unready_sections", "publication_unready_sections"))
+    return ready if isinstance(row.get("ready"), bool) and row["ready"] == ready else None
+
+
 def read_startup_warmup_evidence(log_paths) -> dict[str, Any]:
     """Recognize positive failure evidence; ordinary logs never prove readiness."""
     observed = []
     sections = {}
     columns = {}
+    first_frames = []
     for path in log_paths:
         with Path(path).open(encoding="utf-8", errors="replace") as stream:
             for line in stream:
+                marker = "[FirstWorldFrameWitness] "
+                if marker in line:
+                    try:
+                        row = json.loads(line.split(marker, 1)[1])
+                        if validate_first_frame_witness(row) is not None:
+                            first_frames.append(row)
+                    except (ValueError, TypeError):
+                        pass
                 marker = "[EnterSectionWitness] "
                 if marker in line:
                     try:
@@ -74,6 +117,7 @@ def read_startup_warmup_evidence(log_paths) -> dict[str, Any]:
                                      forced_with_debt=forced and (debt > 0 or underfeet == 0)))
     return dict(schema="startup-warmup-evidence.v1", records=observed,
                 forced_with_debt=any(row["forced_with_debt"] for row in observed),
+                first_frame_witnesses=first_frames,
                 section_witnesses=[sections[key] for key in sorted(sections)][:64],
                 column_witnesses=[columns[key] for key in sorted(columns)][:81])
 
@@ -188,9 +232,20 @@ def classify(report: dict[str, Any], perf: Path | None, *,
 
     ready = report.get("first_frame_required_ring_ready")
     startup = component("UNTESTED", "missing_first_frame_ring_witness")
-    if isinstance(ready, bool):
-        startup = component("PASS" if ready else "FAIL", "first_frame_ring_witness")
+    if ready is False:
+        startup = component("FAIL", "first_frame_ring_witness")
     warmup = report.get("startup_warmup_evidence")
+    if isinstance(warmup, dict):
+        witnesses = warmup.get("first_frame_witnesses")
+        if isinstance(witnesses, list) and len(witnesses) == 1:
+            checked = validate_first_frame_witness(witnesses[0])
+            if checked is not None:
+                startup = component("PASS" if checked else "FAIL",
+                                    "first_world_paint_required_ring_census",
+                                    evidence=witnesses[0],
+                                    scope="configured radius-four ring publication/input readiness; no pixel or physical-light oracle")
+    if ready is False:
+        startup = component("FAIL", "first_frame_ring_witness")
     if (isinstance(warmup, dict) and warmup.get("schema") == "startup-warmup-evidence.v1"
             and warmup.get("forced_with_debt") is True):
         startup = component("FAIL", "forced_startup_with_unresolved_coverage",

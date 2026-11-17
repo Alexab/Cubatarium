@@ -3785,6 +3785,7 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
                                                            : nullptr);
         Geometry->Paint(width, height, viewDuration);
       }
+      World->RecordFirstRenderedRequiredRing();
       if (ItemWorldVisualQa)
         ItemWorldVisualQa->RecordWorldItems(worldItems);
       World->SetLastGeometryPaintMs(
