@@ -4252,7 +4252,36 @@
       "oracle": "Open-plane camera canonical CPU-resource reference requires sky15/block0, a nonzero binding identity and complete resource at every observed scoped paint; first post-paint witness includes preceding same-frame camera observation. Requires25ready observations,3frame epochs and8distinct geometry-absent camera sections. Missing trace/coverage/unsupported constant mode UNTESTED; unready first/moving sample, malformed coordinates, wrong bytes or binding FAIL. No creature/item/GPU-page/shadedRGB/fullscreen acceptance.",
       "tests": "engine-camera-light-reference-python-test.log:53PASS, including unready first frame, wrong binding, scalar sky/block controls, static-only/geometry-present-only/constant-mode/missing-witness exclusions.",
       "build_correction": "engine-light-sample-foreground-release-build.log: failed because the new renderer logger omitted explicit App/Platform/Log.h include; added include. engine-light-sample-foreground-release-rebuild.log:PASS/static EXE PASS. Original failed log retained; app never launched from failed build.",
-      "remaining": "Verify same continuous open-plane route with new point oracle before accepting foreground/preload fix. Then explicit common world samplers, real creature/item demand, Flat constant resource, actual GPU pages/table/atomic publication, persisted provenance and full visual/performance matrix remain required."
+      "remaining": "Verify same continuous open-plane route with new point oracle before accepting foreground/preload fix. Then explicit common world samplers, real creature/item demand, Flat constant resource, actual GPU pages/table/atomic publication, persisted provenance and full visual/performance matrix remain required.",
+      "native": {
+        "source": "712787236",
+        "artifacts": "build/desktop-msvc/engine-light-sample-foreground-open-sky-native",
+        "status": "FAIL retained:takeoff_blocked; no route/inspection acceptance",
+        "air_service": {
+          "schema": "engine-air-light-service.v1",
+          "status": "PASS",
+          "reason": "joined_air_light_producer_receipts",
+          "joined_completed_jobs": 18,
+          "distinct_columns": 9,
+          "minimum_columns": 3,
+          "observed_records": 1947,
+          "unjoined_completions": 0,
+          "faults": 0,
+          "examples": [],
+          "scope": "observed requested AIR fields with complete canonical physical receipts; no all-request coverage, field-value, latency, GPU or framebuffer acceptance"
+        },
+        "camera": "104static canonical observations/104reported in-game frames ready,0faults;0geometry-absent camera sections, so camera-field criterionUNTESTED. New stricter first-sample reanalysis alsoUNTESTED solely for absent-section coverage. No moving-camera acceptance.",
+        "scope": "AIR producer now observed across multiple prefetched columns, but no claim about route readiness until bot takeoff completes."
+      }
+    },
+    "walking_ready_bot_handshake": {
+      "status": "Implemented; delayed-motor RED/GREEN controller testsPASS; Release/static EXE PASS; fresh native pending",
+      "source_evidence": "UpdateLocomotion requires FeetAnchored for a rising jump edge and records SpaceWasPressed even if standing has not settled. Flight mode clears anchored/OnGround state. Bot formerly switched to walking and heldUP immediately based on geometric support only. Failed native shows noYmovement, heldUP throughout, and collision-ready wait3262.99ms. Missing initial standing feedback is a source-backed explanation to verify in native, not yet an observed old walking_ready signal.",
+      "implementation": "Observation includes actual camera.IsOnGround motor feedback separately from geometric support. Enter walking withUPreleased, allow at least0.1s release and require motor standing-ready before pressingjump. Existing4s bounded takeoff retained; missing motor readiness reports walking_pose_not_ready. Still only normal mode/key/orientation intent, never position/world writes. Trace includes grounded/walking_ready.",
+      "tests": "engine-walking-ready-bot-final-unit-test.log:rebuilt controllerPASS, including delayed standing and previously-held/released jump states, bounded missing motor readiness, ceiling, obstacle route and inspections. engine-walking-ready-bot-red-test.log:removing motor feedback gate compiles and fails exact pending-standing assertion; correct source restored in finally; final unitGREEN. App never builtRED.",
+      "python": "engine-camera-light-first-sample-python-test.log:53PASS. Camera reference now explicitly requires an observed valid preceding same-frame camera sample as well as post-paint witness; a missing first observation cannot be hidden by later good frames.",
+      "release_build": "build/desktop-msvc/engine-walking-ready-bot-release-build.log:PASS/static EXE PASS",
+      "remaining": "Fresh continuous open-sky route must prove takeoff and all camera resource observations. Other consumers, Flat resource, GPU pages/atomic publication, persisted content certificates, visual/performance matrix remain required."
     }
   }
 }

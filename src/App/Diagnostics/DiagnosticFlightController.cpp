@@ -149,7 +149,10 @@ DiagnosticFlightController::Tick(const DiagnosticFlightObservation &o,
     // Jump with the walking motor first. The flight motor intentionally
     // lands before processing UP while the capsule still touches ground.
     command.flying = false;
-    command.up = true;
+    // Walking anchors the feet before accepting an edge-triggered jump. Drop
+    // a stale held UP and wait for actual motor feedback, rather than consume
+    // the only jump edge while collision/pose initialization is still pending.
+    command.up = o.walkingReady && o.time - StageStarted_ >= 0.1;
     if (!o.grounded && o.position.y >= TakeoffY_ + 0.5f)
     {
       State_ = DiagnosticFlightState::Travel;
@@ -159,7 +162,7 @@ DiagnosticFlightController::Tick(const DiagnosticFlightObservation &o,
     }
     else if (o.time - StageStarted_ > 4.0)
     {
-      fail("takeoff_blocked");
+      fail(o.walkingReady ? "takeoff_blocked" : "walking_pose_not_ready");
       command.up = false;
     }
     return command;

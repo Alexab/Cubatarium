@@ -26,6 +26,7 @@ def evaluate(scene: dict, logs: list[Path]) -> dict:
     except (KeyError, TypeError, ValueError):
         return dict(status="FAIL", reason="invalid_camera_light_fixture")
     marker_epoch = None
+    first_sample = False
     pending = None
     samples = ready_samples = air_samples = unsupported = skipped = faults = 0
     epochs = set()
@@ -89,6 +90,7 @@ def evaluate(scene: dict, logs: list[Path]) -> dict:
             if not resident:
                 air_samples += 1
                 air_sections.add(coord)
+            return True
 
     for path in sorted(logs):
         with path.open(encoding="utf-8", errors="replace") as stream:
@@ -112,10 +114,11 @@ def evaluate(scene: dict, logs: list[Path]) -> dict:
                         # The camera observation precedes this frame's post-paint
                         # witness. Keep that first actual world frame in scope.
                         if pending:
-                            observe(pending)
+                            first_sample = bool(observe(pending))
                     except (ValueError, KeyError, TypeError):
                         fault("malformed_first_world_paint")
-    coverage = dict(first_paint=marker_epoch is not None, samples=ready_samples >= 25,
+    coverage = dict(first_paint=marker_epoch is not None, first_camera_sample=first_sample,
+                    samples=ready_samples >= 25,
                     frame_epochs=len(epochs) >= 3, absent_geometry_sections=len(air_sections) >= 8,
                     physical_mode=unsupported == 0)
     status = "FAIL" if faults else "PASS" if all(coverage.values()) else "UNTESTED"

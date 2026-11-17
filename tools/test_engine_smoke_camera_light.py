@@ -20,20 +20,22 @@ class CameraLightReferenceTest(unittest.TestCase):
                 "physical=1 resident=0 ready=1 sky=15 block_light=0 field_incarnation=12 " + change + "\n")
         return result
 
-    def check(self, rows, marker=True):
+    def check(self, rows, marker=True, preceding=True):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "runtime.log"
             payload = ""
             if marker:
-                payload = rows[0] + "[FirstWorldFrameWitness] " + json.dumps(
+                payload = (rows[0] if preceding else "") + "[FirstWorldFrameWitness] " + json.dumps(
                     dict(phase="first_world_paint", world_epoch=4)) + "\n"
-                rows = rows[1:]
+                if preceding:
+                    rows = rows[1:]
             path.write_text(payload + "".join(rows), encoding="utf-8")
             return evaluate(self.scene(), [path])
 
     def test_requires_physical_and_absent_geometry_coverage(self):
         self.assertEqual(self.check(self.rows())["status"], "PASS")
         self.assertEqual(self.check(self.rows(), False)["status"], "UNTESTED")
+        self.assertEqual(self.check(self.rows(), preceding=False)["status"], "UNTESTED")
         self.assertEqual(self.check(self.rows(fixed=True))["status"], "UNTESTED")
         self.assertEqual(self.check(self.rows("resident=1"))["status"], "UNTESTED")
         self.assertEqual(self.check(self.rows("physical=0 ready=0 sky=0"))["status"], "UNTESTED")

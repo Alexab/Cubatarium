@@ -41,6 +41,9 @@ struct DiagnosticFlightObservation
   float pitch{0.0f};
   double time{0.0};
   bool grounded{false};
+  // Motor feedback is distinct from geometric support during startup/mode
+  // changes.
+  bool walkingReady{false};
 };
 
 struct DiagnosticFlightCommand

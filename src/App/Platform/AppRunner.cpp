@@ -2910,9 +2910,12 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                   return DiagnosticSegmentState::Clear;
                 };
                 const DiagnosticFlightObservation observation{
-                    camera->GetPosition(), camera->GetYaw(), camera->GetPitch(),
+                    camera->GetPosition(),
+                    camera->GetYaw(),
+                    camera->GetPitch(),
                     ingame_sec,
-                    world->HasGroundSupport(camera->GetPosition(), capsule)};
+                    world->HasGroundSupport(camera->GetPosition(), capsule),
+                    camera->IsOnGround()};
                 const auto action = diagnostic_bot.Tick(observation, probe);
                 // SetMode(Walking) resets vertical velocity. Repeating it on
                 // every takeoff tick would cancel the normal jump impulse.
@@ -2949,6 +2952,10 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       << diagnostic_bot.VisitedWaypoints()
                       << ",\"forward\":" << action.forward
                       << ",\"up\":" << action.up << ",\"down\":" << action.down
+                      << ",\"grounded\":"
+                      << (observation.grounded ? "true" : "false")
+                      << ",\"walking_ready\":"
+                      << (observation.walkingReady ? "true" : "false")
                       << ",\"yaw\":" << camera->GetYaw()
                       << ",\"pitch\":" << camera->GetPitch()
                       << ",\"eye_in_fluid\":"

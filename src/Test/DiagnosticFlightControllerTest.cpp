@@ -60,17 +60,23 @@ int main()
     bot.SetRoute({{{0, 5, 0}, false}}, true);
     DiagnosticFlightObservation o{{0, -48, 0}, 0, 0, 0, true};
     const auto jump = bot.Tick(o, Clear);
-    Expect(!jump.flying && jump.up && !jump.forward,
-           "ground takeoff must first jump with the walking motor");
+    Expect(
+        !jump.flying && !jump.up && !jump.forward,
+        "takeoff enters walking with jump released until the motor is ready");
+    o.walkingReady = true;
+    o.time = 0.11;
+    Expect(bot.Tick(o, Clear).up,
+           "a ready walking motor may receive a fresh jump press");
     o.position.y += 0.6f;
     o.grounded = false;
-    o.time = 0.1;
+    o.time = 0.2;
     Expect(bot.Tick(o, Clear).flying, "airborne jump may enter flight");
   }
   {
     DiagnosticFlightController bot;
     bot.SetRoute({{{0, 5, 0}, false}}, true);
     DiagnosticFlightObservation o{{0, 2, 0}, 0, 0, 0, true};
+    o.walkingReady = true;
     for (int i = 0; i < 120; ++i)
     {
       o.time += 0.05;
@@ -168,6 +174,49 @@ int main()
                bot.InspectionCaptureCount() == 13,
            "panorama plus target must produce thirteen stable captures and "
            "complete");
+  }
+  {
+    for (const bool previously_held : {false, true})
+    {
+      DiagnosticFlightController bot;
+      bot.SetRoute({{{0, 5, 0}, false}}, true);
+      DiagnosticFlightObservation o{{0, -58.88f, 0}, 0, 0, 0, true};
+      bool held = previously_held;
+      bool jumped = false;
+      for (int i = 0; i < 60; ++i)
+      {
+        o.time += 0.05;
+        // Physical standing becomes ready after geometric support is known.
+        o.walkingReady = !jumped && i >= 20;
+        const auto action = bot.Tick(o, Clear);
+        if (!o.walkingReady && o.grounded)
+          Expect(!action.up,
+                 "pending standing pose must not consume a jump edge");
+        if (!action.flying && action.up && !held && o.walkingReady)
+        {
+          o.position.y += 0.6f;
+          o.grounded = false;
+          jumped = true;
+        }
+        held = action.up;
+        if (jumped && action.flying)
+          break;
+      }
+      Expect(jumped && bot.State() == DiagnosticFlightState::Travel,
+             "fresh jump after delayed motor readiness must enter flight "
+             "without relocation");
+    }
+    DiagnosticFlightController bot;
+    bot.SetRoute({{{0, 5, 0}, false}}, true);
+    DiagnosticFlightObservation o{{0, -58.88f, 0}, 0, 0, 0, true};
+    for (int i = 0; i < 100; ++i)
+    {
+      o.time += 0.05;
+      bot.Tick(o, Clear);
+    }
+    Expect(bot.State() == DiagnosticFlightState::Blocked &&
+               bot.FailureReason() == "walking_pose_not_ready",
+           "missing motor readiness must have its own bounded failure");
   }
   return EXIT_SUCCESS;
 }
