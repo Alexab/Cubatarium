@@ -70,6 +70,20 @@ int UBlockWorld::RecordLightCalculation(
       if (!installed)
         continue; // publication was omitted or overwritten
       auto &proof = chunk->Light.field->LightProofs[domain];
+      proof.padded_installed = false;
+      const auto &field = chunk->GetSectionLightField();
+      const auto padded = field.GetPaddedData();
+      if (data.padded_light && padded &&
+          (field.GetPaddedDomains() & (sky ? 1 : 2)))
+      {
+        proof.padded_installed = true;
+        for (size_t i = 0; i < padded->cells.size(); ++i)
+          if (((padded->cells[i] ^ data.padded_light->cells[i]) & mask) != 0)
+          {
+            proof.padded_installed = false;
+            break;
+          }
+      }
       proof.input = context;
       proof.owner = LightCalculationOwner;
       proof.incarnation = chunk->GetIncarnation();
@@ -193,7 +207,8 @@ LightCalculationState UBlockWorld::GetLightCalculationState(
 
 bool UBlockWorld::LightCalculationsStillCurrent(
     const std::vector<glm::ivec3> &sections, bool sky, bool block,
-    const std::shared_ptr<const BlockDefinitionCatalog> &current_catalog) const
+    const std::shared_ptr<const BlockDefinitionCatalog> &current_catalog,
+    bool require_padded) const
 {
   std::unordered_map<const RelightComputeResult *,
                      std::shared_ptr<const RelightComputeResult>>
@@ -215,6 +230,10 @@ bool UBlockWorld::LightCalculationsStillCurrent(
           proof.field_revision != (domain == 0
                                        ? chunk->GetSkyLightRevision()
                                        : chunk->GetBlockLightRevision()))
+        return false;
+      if (require_padded &&
+          (!proof.padded_installed ||
+           !(chunk->Light.field->PaddedDomains & (domain == 0 ? 1 : 2))))
         return false;
       contexts.emplace(proof.input.get(), proof.input);
     }
@@ -243,6 +262,19 @@ bool UBlockWorld::HasCompleteLightCalculation(
     return true;
   return GetLightCalculationState(coord, LightDomain::Block, current_catalog) ==
          LightCalculationState::Complete;
+}
+
+bool UBlockWorld::HasCompleteLightSamplingCalculation(
+    glm::ivec3 coord,
+    const std::shared_ptr<const BlockDefinitionCatalog> &catalog) const
+{
+  const auto *chunk = Chunks.GetChunk(coord);
+  if (!chunk || !chunk->Light.field->PaddedLight ||
+      chunk->Light.field->PaddedDomains != 3 ||
+      !chunk->Light.field->LightProofs[0].padded_installed ||
+      !chunk->Light.field->LightProofs[1].padded_installed)
+    return false;
+  return HasCompleteLightCalculation(coord, catalog);
 }
 
 bool UBlockWorld::HasKnownOpenSkyAbsentProof(glm::ivec3 coord) const

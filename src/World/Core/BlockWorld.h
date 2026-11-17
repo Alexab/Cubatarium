@@ -113,12 +113,17 @@ public:
   /// once.
   bool LightCalculationsStillCurrent(
       const std::vector<glm::ivec3> &sections, bool sky, bool block,
-      const std::shared_ptr<const BlockDefinitionCatalog> &current_catalog)
-      const;
+      const std::shared_ptr<const BlockDefinitionCatalog> &current_catalog,
+      bool require_padded = false) const;
   bool HasCompleteLightCalculation(
       glm::ivec3 coord,
       const std::shared_ptr<const BlockDefinitionCatalog> &current_catalog)
       const;
+
+  /// Both channels, full padded bytes and complete/current physical inputs.
+  bool HasCompleteLightSamplingCalculation(
+      glm::ivec3 coord,
+      const std::shared_ptr<const BlockDefinitionCatalog> &catalog) const;
 
   void SetFluidDefinitions(const UBlockDefinitionStorage *definitions)
   {

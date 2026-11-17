@@ -992,9 +992,8 @@ void TestWorldOwnedLightCertificates()
   auto publish = [&](const RelightComputeResult &result)
   {
     for (const auto &data : result.chunks)
-      InstallComputedLight(*world.GetChunkManager().GetChunk(data.coord),
-                           data.light_packed, result.include_skylight,
-                           result.include_block_light);
+      InstallComputedLight(*world.GetChunkManager().GetChunk(data.coord), data,
+                           result.include_skylight, result.include_block_light);
     return world.RecordLightCalculation(result, catalog);
   };
   auto result = compute();
@@ -1016,6 +1015,27 @@ void TestWorldOwnedLightCertificates()
   Expect(publish(result) == 1 &&
              world.HasCompleteLightCalculation(coord, catalog),
          "installed known sky and block channels certify the section");
+  Expect(world.HasCompleteLightSamplingCalculation(coord, catalog),
+         "full installed padded output carries current physical authority");
+  auto legacy_output = result;
+  legacy_output.chunks[0].padded_light.reset();
+  world.RecordLightCalculation(legacy_output, catalog);
+  Expect(world.HasCompleteLightCalculation(coord, catalog) &&
+             !world.HasCompleteLightSamplingCalculation(coord, catalog),
+         "interior-only receipt cannot certify the mesh sampling footprint");
+  Expect(!world.LightCalculationsStillCurrent({coord}, true, true, catalog, true),
+         "sampling calculation reuse cannot skip an interior-only receipt");
+  auto mismatched = result;
+  auto wrong =
+      std::make_shared<SectionLightVolume>(*result.chunks[0].padded_light);
+  wrong->cells[SectionLightVolume::Index(17, 1, 1)] ^= 1;
+  mismatched.chunks[0].padded_light = wrong;
+  world.RecordLightCalculation(mismatched, catalog);
+  Expect(!world.HasCompleteLightSamplingCalculation(coord, catalog),
+         "matching interior does not hide an uninstalled padded sky value");
+  world.RecordLightCalculation(result, catalog);
+  Expect(world.HasCompleteLightSamplingCalculation(coord, catalog),
+         "only matching padded bytes restore sampling authority");
   world.SetBlock({1024, -40, 1024}, 8);
   Expect(world.HasCompleteLightCalculation(coord, catalog),
          "unrelated remote mutation preserves exact dependency certificate");

@@ -133,6 +133,7 @@ private:
     std::shared_ptr<const void> owner;
     uint64_t incarnation{0};
     uint64_t field_revision{0};
+    bool padded_installed{false};
   };
   std::array<LightDomainProof, 2> LightProofs;
   struct HaloSignatureMemo

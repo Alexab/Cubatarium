@@ -1,6 +1,7 @@
 #pragma once
 
 #include "World/Chunks/Chunk.h"
+#include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Lighting/LightUtil.h"
 
 namespace cutum
@@ -114,6 +115,23 @@ InstallComputedLight(UChunk &chunk,
     chunk.ReplaceLightData(merged);
   }
   return changed;
+}
+
+/// Install one calculated sampling resource before recording settlement.
+/// The interior must agree with the padded output in every selected channel.
+inline bool InstallComputedLight(UChunk &chunk, const RelightChunkLightData &computed,
+                                 bool sky, bool block)
+{
+  if (!computed.padded_light)
+    return InstallComputedLight(chunk, computed.light_packed, sky, block);
+  const uint8_t mask = (sky ? 0x0f : 0) | (block ? 0xf0 : 0);
+  for (int z = 0; z < CHUNK_SIZE; ++z)
+    for (int y = 0; y < CHUNK_SIZE; ++y)
+      for (int x = 0; x < CHUNK_SIZE; ++x)
+        if (((computed.light_packed[UChunk::LocalIndex({x,y,z})] ^
+              computed.padded_light->cells[SectionLightVolume::Index(x,y,z)]) & mask) != 0)
+          return false;
+  return chunk.ReplaceComputedLightVolume(*computed.padded_light, sky, block);
 }
 
 } // namespace cutum

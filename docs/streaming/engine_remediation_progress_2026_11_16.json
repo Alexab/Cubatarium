@@ -3980,6 +3980,15 @@
       "test": "SectionLightFieldOwnershipTest includes halo-only sky change, unchanged interior, partial block install preserving sky halo, no-op revisions and legacy sky mutation preserving block padding.",
       "build": "build/desktop-msvc/engine-padded-field-install-tests-build.log",
       "pending": "Call this API from validated synchronous/asynchronous result installation before settlement; certify padded bytes against physical result context; mesh capture and all world backends must require valid padded receipts. No runtime sampler cutover or GPU decoupling claim."
+    },
+    "padded_physical_installation": {
+      "status": "synchronous/asynchronous production installation connected;11focused testsPASS; renderer cutover and desktop/native verification pending",
+      "change": "Calculated result overload checks selected-channel interior/padding consistency and installs canonical full volume before settlement. ChunkLighting and World async apply use this overload. RecordLightCalculation records per-domain padded receipt only when installed availability and every selected padded nibble match the result. HasCompleteLightSamplingCalculation requires both complete/current physical domains and both padded receipts.",
+      "reuse": "Common synchronous solver explicitly requires matching padded receipts during reuse; legacy interior-only calculation APIs retain their narrower documented meaning.",
+      "tests": "Interior-only record cannot certify sampling or bypass sampling reuse. A mismatched halo byte prevents padded authority despite matching interior; matching original output restores authority. Existing independent dense reference, source removal/catalog changes, sync/no-op/halo/parity and propagation suites PASS.",
+      "build": "build/desktop-msvc/engine-padded-reuse-tests-build.log",
+      "results": "build/desktop-msvc/engine-padded-reuse-tests.log:11/11PASS",
+      "remaining": "Switch normal mesh-capture/draw acceptance and padded sampling to this authority; direct/GPU/GLES and other world consumers, known-AIR independent outputs, persisted certificates, native references and zero-remesh resource publication remain required."
     }
   }
 }

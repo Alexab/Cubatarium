@@ -9908,9 +9908,9 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
                     (boundary_samples.empty() ? "none" : boundary_samples));
           }
         }
-        const bool installed = InstallComputedLight(
-            *chunk, chunk_data.light_packed, result.include_skylight,
-            result.include_block_light);
+        const bool installed =
+            InstallComputedLight(*chunk, chunk_data, result.include_skylight,
+                                 result.include_block_light);
         if (installed && Persistence)
         {
           const std::array<glm::ivec3, 6> boundary_offsets = {

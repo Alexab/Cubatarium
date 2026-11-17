@@ -35,7 +35,7 @@ RelightChunkCoords(UBlockWorld &world, UBlockRegistry &registry,
   const bool audit = IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
   if (world.LightCalculationsStillCurrent(
           coords, include_skylight, include_block_light,
-          registry.GetDefinitionsCatalogSnapshot()))
+          registry.GetDefinitionsCatalogSnapshot(), true))
   {
     if (audit)
       CubatariumLogInfo(
@@ -66,7 +66,7 @@ RelightChunkCoords(UBlockWorld &world, UBlockRegistry &registry,
   std::vector<glm::ivec3> changed;
   for (const auto &data : result.chunks)
     if (auto *chunk = world.GetChunkManager().GetChunk(data.coord))
-      if (InstallComputedLight(*chunk, data.light_packed, include_skylight,
+      if (InstallComputedLight(*chunk, data, include_skylight,
                                include_block_light))
         changed.push_back(data.coord);
   world.RecordLightCalculation(result,
