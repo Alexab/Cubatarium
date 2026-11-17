@@ -4171,6 +4171,15 @@
       "release_build": "build/desktop-msvc/engine-air-field-retention-release-build.log: PASS; static EXE verification PASS. App built only correct source; negative controls built unit target only and restored source bytes in finally.",
       "remaining": "Define explicit AIR field demand leases for real camera/object/draw consumers, connect async/sync outputs/installation/provenance and readiness for those leases, migrate absent light reader identities, add bounded memory/service telemetry and native verification. Do not equate every known empty section in a whole-height geometry census with an active field consumer.",
       "aba_red": "engine-air-field-retention-aba-red-test.log: removing incarnation comparison compiles and fails exact old-entry/new-resource assertion"
+    },
+    "independent_field_input_stamps": {
+      "status": "Implemented; old-world negative control RED, restored8 rebuilt contracts PASS; desktop Release build running",
+      "root_cause": "CaptureInputStamp/validation used only UChunk light revisions; an absent AIR field could be created/changed/retired/reallocated while a light read remained falsely current. Per-domain validation substituted0 whenever geometry was absent.",
+      "implementation": "ChunkInputStamp carries explicit lightIncarnation independent of geometry incarnation and full/sky/block revisions. Raw capture/match may receive an absent field; world-aware capture/validation resolves canonical absent field. Per-domain validation compares field identity plus only selected channel revisions while keeping geometry/absence evidence checks. Missing versus allocated revision0 and equal-byte/equal-revision reallocation are distinct. Geometry-only consumers ignore field writes/identity.",
+      "tests": "engine-absent-light-stamp-contract-test.log:8/8fresh rebuilt PASS (pending coverage, physical certificates, dense geometry reference, mesh validity/publication, capture worker, GPU skylight merge). New cases cover missing->allocated0, nonzero AIR bytes, separate sky/block writes, same-revision ABA, knownAIR evidence invalidation, geometry admission sharing; no phantom geometry/clock changes.",
+      "negative_control": "engine-absent-light-stamp-red-test.log: restoring previous BlockWorld capture/validation compiles and fails exact missing-light-read allocation assertion. Correct source restored in finally, then rebuild/contractsPASS. App never built RED.",
+      "release_build": "build/desktop-msvc/engine-absent-light-stamp-release-build.log:running",
+      "remaining": "Known-AIR actual sample-demand leases and producer/service/retention integration, canonical field consumption in creature/item and legacy mesh fallback/halo signatures, separate GPU pages and persisted content certificates still pending. Stamp migration alone neither creates demand nor grants physical readiness."
     }
   }
 }

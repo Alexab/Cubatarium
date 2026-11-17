@@ -322,8 +322,10 @@ ChunkInputStamp UBlockWorld::CaptureInputStamp(glm::ivec3 coord,
                                                bool reads_content) const
 {
   const UChunk *chunk = Chunks.GetChunk(coord);
-  auto stamp =
-      ChunkInputStamp::Capture(coord, chunk, reads_light, reads_content);
+  const auto field =
+      reads_light && !chunk ? Chunks.GetSectionLightField(coord) : nullptr;
+  auto stamp = ChunkInputStamp::Capture(coord, chunk, reads_light,
+                                        reads_content, field.get());
   if (!chunk && (reads_light || reads_content))
     stamp.missingEvidence = IsKnownAbsentAirChunk(coord)
                                 ? MissingChunkEvidence::KnownAir
@@ -335,7 +337,10 @@ bool UBlockWorld::InputStampStillMatches(const ChunkInputStamp &stamp,
                                          InputStampValidationBatch *batch) const
 {
   const UChunk *chunk = Chunks.GetChunk(stamp.coord);
-  if (!stamp.Matches(chunk))
+  const auto field = stamp.readsLight && !chunk
+                         ? Chunks.GetSectionLightField(stamp.coord)
+                         : nullptr;
+  if (!stamp.Matches(chunk, field.get()))
     return false;
   if (stamp.missingEvidence == MissingChunkEvidence::Untracked)
     return true;
@@ -355,11 +360,13 @@ bool UBlockWorld::InputStampLightDomainsStillMatch(
   if (!stamp.readsLight || (!reads_sky && !reads_block))
     return true;
   const UChunk *chunk = Chunks.GetChunk(stamp.coord);
+  const auto field = Chunks.GetSectionLightField(stamp.coord);
   return stamp.incarnation == (chunk ? chunk->GetIncarnation() : 0) &&
+         stamp.lightIncarnation == (field ? field->GetIncarnation() : 0) &&
          (!reads_sky ||
-          stamp.skyLight == (chunk ? chunk->GetSkyLightRevision() : 0)) &&
+          stamp.skyLight == (field ? field->GetSkyRevision() : 0)) &&
          (!reads_block ||
-          stamp.blockLight == (chunk ? chunk->GetBlockLightRevision() : 0));
+          stamp.blockLight == (field ? field->GetBlockRevision() : 0));
 }
 
 BlockId UBlockWorld::GetBlock(glm::ivec3 pos) const

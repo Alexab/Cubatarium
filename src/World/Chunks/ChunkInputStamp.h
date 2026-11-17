@@ -128,31 +128,39 @@ struct ChunkInputStamp
   MissingChunkEvidence missingEvidence{MissingChunkEvidence::Untracked};
   uint64_t skyLight{0};
   uint64_t blockLight{0};
-  static ChunkInputStamp Capture(glm::ivec3 coord, const UChunk *chunk,
-                                 bool reads_light = true,
-                                 bool reads_content = true)
+  // Independent field lifetime, including computed AIR without a UChunk.
+  uint64_t lightIncarnation{0};
+  static ChunkInputStamp
+  Capture(glm::ivec3 coord, const UChunk *chunk, bool reads_light = true,
+          bool reads_content = true,
+          const SectionLightField *absent_field = nullptr)
   {
+    const auto *field = chunk ? &chunk->GetSectionLightField() : absent_field;
     ChunkInputStamp stamp{coord,
                           chunk ? chunk->GetIncarnation() : 0,
                           chunk ? chunk->GetContentRevision() : 0,
-                          chunk ? chunk->GetLightFieldRevision() : 0,
+                          field ? field->GetRevision() : 0,
                           reads_light,
                           reads_content};
-    stamp.skyLight = chunk ? chunk->GetSkyLightRevision() : 0;
-    stamp.blockLight = chunk ? chunk->GetBlockLightRevision() : 0;
+    stamp.skyLight = field ? field->GetSkyRevision() : 0;
+    stamp.blockLight = field ? field->GetBlockRevision() : 0;
+    stamp.lightIncarnation = field ? field->GetIncarnation() : 0;
     return stamp;
   }
-  bool Matches(const UChunk *chunk) const
+  bool Matches(const UChunk *chunk,
+               const SectionLightField *absent_field = nullptr) const
   {
     if (!readsContent && !readsLight)
     {
       return true;
     }
-    const auto current = Capture(coord, chunk, readsLight, readsContent);
+    const auto current =
+        Capture(coord, chunk, readsLight, readsContent, absent_field);
     return (!(readsContent || readsLight) ||
             incarnation == current.incarnation) &&
            (!readsContent || content == current.content) &&
-           (!readsLight || light == current.light);
+           (!readsLight || (light == current.light &&
+                            lightIncarnation == current.lightIncarnation));
   }
 };
 } // namespace cutum

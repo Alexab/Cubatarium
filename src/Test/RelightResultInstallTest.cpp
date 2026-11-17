@@ -963,6 +963,78 @@ void TestClippedProfileDoesNotSeedOutOfWorldSource()
          "face");
 }
 
+void TestAbsentFieldInputStampIdentity()
+{
+  using namespace cutum;
+  UBlockWorld world;
+  bool known_air = true;
+  world.SetKnownOpenSkyAbsentQuery([&](glm::ivec3) { return known_air; });
+  const glm::ivec3 coord(2, -3, 1);
+  auto &manager = world.GetChunkManager();
+  const auto geometry_clock = manager.GetGeometryInputRevision();
+  const auto geometry = world.CaptureInputStamp(coord, false, true);
+  const auto missing = world.CaptureInputStamp(coord, true, true);
+  auto field = manager.EnsureSectionLightField(coord);
+  Expect(!world.InputStampStillMatches(missing) &&
+             !world.InputStampLightDomainsStillMatch(missing, true, true) &&
+             world.InputStampStillMatches(geometry),
+         "absent field allocation must invalidate a missing light read, not "
+         "geometry");
+  const auto zero = world.CaptureInputStamp(coord, true, true);
+  Expect(zero.lightIncarnation == field->GetIncarnation() && zero.light == 0 &&
+             world.InputStampStillMatches(zero),
+         "allocated zero-revision field has an explicit valid identity");
+  SectionLightVolume volume;
+  volume.cells.fill(0x21);
+  manager.ReplaceComputedSectionLightVolume(coord, volume, true, true);
+  Expect(!world.InputStampStillMatches(zero),
+         "nonzero AIR field installation invalidates the zero light read");
+  auto stamp = world.CaptureInputStamp(coord, true, true);
+  volume.cells.fill(0x22);
+  manager.ReplaceComputedSectionLightVolume(coord, volume, true, false);
+  Expect(!world.InputStampStillMatches(stamp) &&
+             world.InputStampLightDomainsStillMatch(stamp, false, true) &&
+             !world.InputStampLightDomainsStillMatch(stamp, true, false),
+         "AIR sky mutation invalidates only the selected sky domain");
+  stamp = world.CaptureInputStamp(coord, true, true);
+  volume.cells.fill(0x32);
+  manager.ReplaceComputedSectionLightVolume(coord, volume, false, true);
+  Expect(
+      world.InputStampLightDomainsStillMatch(stamp, true, false) &&
+          !world.InputStampLightDomainsStillMatch(stamp, false, true) &&
+          world.InputStampStillMatches(geometry) &&
+          manager.GetGeometryInputRevision() == geometry_clock &&
+          manager.GetResidentChunkCount() == 0,
+      "AIR block mutation invalidates block reads without creating geometry");
+  manager.ReleaseAbsentSectionLightField(coord);
+  manager.ReplaceComputedSectionLightVolume(coord, volume, true, true);
+  stamp = world.CaptureInputStamp(coord, true, true);
+  manager.ReleaseAbsentSectionLightField(coord);
+  manager.ReplaceComputedSectionLightVolume(coord, volume, true, true);
+  const auto replacement = world.CaptureInputStamp(coord, true, true);
+  Expect(stamp.light == replacement.light &&
+             stamp.skyLight == replacement.skyLight &&
+             stamp.blockLight == replacement.blockLight &&
+             stamp.lightIncarnation != replacement.lightIncarnation &&
+             !world.InputStampStillMatches(stamp) &&
+             !world.InputStampLightDomainsStillMatch(stamp, true, false) &&
+             !world.InputStampLightDomainsStillMatch(stamp, false, true),
+         "same-byte same-revision AIR reallocation invalidates old resource "
+         "reads");
+  known_air = false;
+  Expect(!world.InputStampStillMatches(replacement) &&
+             !world.InputStampLightDomainsStillMatch(replacement, true, true),
+         "a field identity cannot substitute for current known-AIR geometry "
+         "evidence");
+  known_air = true;
+  manager.EnsureChunk(coord);
+  Expect(!world.InputStampStillMatches(replacement) &&
+             manager.GetSectionLightField(coord)->GetIncarnation() ==
+                 replacement.lightIncarnation,
+         "geometry admission preserves the field and invalidates the old "
+         "absence read");
+}
+
 void TestKnownAirLightResourceCalculation()
 {
   using namespace cutum;
@@ -1799,6 +1871,7 @@ int main(int argc, char **argv)
     TestLightInputMemoRetainsResidentWorkingSet();
     TestVersionedLightInputMemoInvalidatesImmediately();
     TestKnownAirLightResourceCalculation();
+    TestAbsentFieldInputStampIdentity();
     TestWorldOwnedLightCertificates();
     TestBatchAbsenceEvidenceIsFreshAndExact();
     std::cout << "light_calculation_certificate_test: OK\n";
@@ -1818,6 +1891,7 @@ int main(int argc, char **argv)
   TestLightInputMemoRetainsResidentWorkingSet();
   TestVersionedLightInputMemoInvalidatesImmediately();
   TestKnownAirLightResourceCalculation();
+  TestAbsentFieldInputStampIdentity();
   TestWorldOwnedLightCertificates();
   TestBatchAbsenceEvidenceIsFreshAndExact();
   TestDomainsAndRevision();
