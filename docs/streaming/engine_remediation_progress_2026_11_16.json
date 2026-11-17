@@ -4061,14 +4061,21 @@
       "spatial_tests": "build/desktop-msvc/engine-floor-light-spatial-reference-tests.log:45PASS, including repeated-single-cell negative coverage control"
     },
     "priority_geometry_capture_admission": {
-      "status": "actual capture regressionRED thenGREEN; desktop/native verification pending",
+      "status": "7f96ae3f4:actual captureRED/GREEN and desktopReleasePASS; positive-lit native rerun running",
       "finding": "Required publication repair marks a bright stale-geometry remesh as explicit PriorityRemesh. Capture reservation and several SoftDefer/miss passes recognized only external LightRepair/FullyDark/StaleDark predicates. With generic refresh credits unavailable, reserved repair capacity could not serve this required geometry repair.",
       "change": "Recognize explicit live priority-remesh ownership consistently in reserved capture eligibility and existing SoftDefer/miss filters. Count/time/pipeline/focus constraints and normal physical publication proof remain mandatory; queue priority never grants completion.",
       "test": "Actual private capture admission against a real already-published normal mesh, via narrowly scoped test access: generic credits0, first-mesh credits0, one repair credit, no external LightRepair callback. Ordinary bright remesh defers; explicitly prioritized bright remesh captures; a second fresh capture cannot reuse consumed credit.",
       "red": "build/desktop-msvc/engine-priority-geometry-capture-red-test.log:expectedFAIL priority bright geometry repair can spend one reserved capture credit",
       "green": "build/desktop-msvc/engine-priority-geometry-capture-green-test.log:PASS complete async integration suite",
       "evidence_correction": "Fresh test compilation found missing explicit GreedyMesher.h include in previously added direct-vs-snapshot comparison. Earlier passing binaries did not prove that new source comparison. Include fixed; fresh RED compilation reaches the new reservation assertion after direct comparison, and GREEN passes the whole suite. Historical build/test logs retained; do not rely on stale test objects.",
-      "scope": "Native two-section starvation must be rechecked; no startup latency, full rendering or performance acceptance yet."
+      "scope": "Native two-section starvation must be rechecked; no startup latency, full rendering or performance acceptance yet.",
+      "release_build": "build/desktop-msvc/engine-priority-geometry-capture-release-build.log",
+      "native": {
+        "artifacts": "build/desktop-msvc/engine-priority-geometry-capture-lit-native",
+        "source": "7f96ae3f4 executable;5c6131dfb wrapper/reference",
+        "status": "running; same dry-lit-negative-cave RD4 minimum19chunks/max300s bot phase/8sstop/2sidle/process600s",
+        "scope": "Previous two-section startup failure retained. Native startup/route/nonzero light reference/performance not yet accepted."
+      }
     }
   }
 }
