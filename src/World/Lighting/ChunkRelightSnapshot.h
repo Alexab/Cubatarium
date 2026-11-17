@@ -80,6 +80,9 @@ struct RelightComputeResult
   uint64_t input_lighting_configuration{0};
   bool input_context_captured{false};
   bool inputs_complete{false};
+  /// Set from the immutable read set when retaining a calculation context.
+  /// Raw result flags never replace validation of the actual input stamps.
+  bool retained_inputs_geometry_only{false};
   int unknown_input_chunks{0};
   std::vector<RelightChunkLightData> chunks;
   bool frontier_unfinished{false};

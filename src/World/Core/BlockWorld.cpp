@@ -5,6 +5,7 @@
 #include "World/Math/FluidCellState.h"
 #include "World/Physics/FluidKindPresetUtil.h"
 #include "World/Physics/FluidPermeabilityUtil.h"
+#include <algorithm>
 #include <unordered_set>
 
 namespace cutum
@@ -23,6 +24,9 @@ int UBlockWorld::RecordLightCalculation(
   // payload. All section/domain records share this immutable input context.
   auto context = std::make_shared<RelightComputeResult>();
   context->read_set = result.read_set;
+  context->retained_inputs_geometry_only = std::none_of(
+      context->read_set.begin(), context->read_set.end(),
+      [](const ChunkInputStamp &stamp) { return stamp.readsLight; });
   context->input_catalog = result.input_catalog;
   context->input_profile = result.input_profile;
   context->input_lighting_configuration = result.input_lighting_configuration;
@@ -87,19 +91,22 @@ bool UBlockWorld::StoredLightInputsStillMatch(
     return false;
   // An arbitrary callback may change without touching voxel residency. It is
   // deliberately never cached unless its owner supplies a revision contract.
-  if (!KnownAirEvidenceVersionQuery)
+  // Legacy contexts that explicitly read light take the full validation path;
+  // output field writes are irrelevant only to geometry-derived contexts.
+  if (!KnownAirEvidenceVersionQuery || !context->retained_inputs_geometry_only)
   {
     ++LightInputStats.dependency_validations;
     return ValidateRelightInputs(*context, *this, catalog) ==
            RelightInputValidation::Current;
   }
   const auto evidence = KnownAirEvidenceVersionQuery();
-  const auto revision = Chunks.GetInputRevision();
+  const auto revision = Chunks.GetGeometryInputRevision();
   const auto &p = VerticalProfile;
   const auto matches = [&](const KnownAirEvidenceVersion &e)
   {
     const auto &m = LightInputMemo;
-    return m.initialized && m.input_revision == Chunks.GetInputRevision() &&
+    return m.initialized &&
+           m.input_revision == Chunks.GetGeometryInputRevision() &&
            m.evidence_producers == e.producers && m.min_y == e.min_y &&
            m.max_y == e.max_y && m.folder == e.folder && m.catalog == catalog &&
            m.lighting_configuration == LightingConfigurationIdentity &&
@@ -125,7 +132,7 @@ bool UBlockWorld::StoredLightInputsStillMatch(
   }
   const auto found = memo.entries.find(context.get());
   if (found != memo.entries.end() && found->second.input.lock() == context &&
-      found->second.input_identity == Chunks.GetInputRevisionIdentity())
+      found->second.input_identity == Chunks.GetGeometryInputRevisionIdentity())
   {
     ++LightInputStats.memo_hits;
     return found->second.current;
@@ -157,8 +164,8 @@ bool UBlockWorld::StoredLightInputsStillMatch(
   // Unexpected externally retained contexts cannot grow this optional cache.
   // The uncached result remains truthful and all revision checks still apply.
   if (memo.entries.size() < capacity)
-    memo.entries[context.get()] = {context, Chunks.GetInputRevisionIdentity(),
-                                   current};
+    memo.entries[context.get()] = {
+        context, Chunks.GetGeometryInputRevisionIdentity(), current};
   return current;
 }
 

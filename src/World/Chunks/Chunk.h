@@ -127,17 +127,24 @@ private:
   struct InputRevisionBinding
   {
     std::shared_ptr<uint64_t> clock;
+    std::shared_ptr<uint64_t> geometry_clock;
     InputRevisionBinding() = default;
     InputRevisionBinding(const InputRevisionBinding &) {}
     InputRevisionBinding &operator=(const InputRevisionBinding &)
     {
-      NoteMutation();
+      NoteGeometryMutation();
       return *this;
     }
     void NoteMutation() const
     {
       if (clock)
         ++*clock;
+    }
+    void NoteGeometryMutation() const
+    {
+      NoteMutation();
+      if (geometry_clock)
+        ++*geometry_clock;
     }
   };
   InputRevisionBinding InputRevision;

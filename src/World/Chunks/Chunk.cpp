@@ -22,7 +22,7 @@ UChunk &UChunk::operator=(const UChunk &other)
   if (this == &other)
     return *this;
   const bool managed = static_cast<bool>(InputRevision.clock);
-  InputRevision.NoteMutation();
+  InputRevision.NoteGeometryMutation();
   if (!managed)
     Coord = other.Coord;
   Data = other.Data;
@@ -46,7 +46,7 @@ UChunk &UChunk::operator=(const UChunk &other)
 
 void UChunk::ResetForReuse(glm::ivec3 chunkCoord)
 {
-  InputRevision.NoteMutation();
+  InputRevision.NoteGeometryMutation();
   ClearLightCalculationProofs();
   Coord = chunkCoord;
   Data.fill(BLOCK_AIR);
@@ -110,7 +110,7 @@ void UChunk::SetBlockLocal(glm::ivec3 local, BlockId Id)
   }
   Data[idx] = Id;
   ++ContentRevision;
-  InputRevision.NoteMutation();
+  InputRevision.NoteGeometryMutation();
   if (prev == BLOCK_AIR && Id != BLOCK_AIR)
   {
     ++NonAirCount;
@@ -157,7 +157,7 @@ void UChunk::SetFluidLocal(glm::ivec3 local, FluidCellState state)
   {
     packed = next;
     ++ContentRevision;
-    InputRevision.NoteMutation();
+    InputRevision.NoteGeometryMutation();
   }
   Dirty = true;
 }
@@ -174,7 +174,7 @@ void UChunk::ClearFluidLocal(glm::ivec3 local)
   {
     packed = 0;
     ++ContentRevision;
-    InputRevision.NoteMutation();
+    InputRevision.NoteGeometryMutation();
   }
   Dirty = true;
 }

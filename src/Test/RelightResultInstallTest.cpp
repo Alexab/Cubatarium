@@ -1180,6 +1180,53 @@ void TestBatchAbsenceEvidenceIsFreshAndExact()
                                   "replaced by column-floor inference");
 }
 
+void TestGeometryInputMemoDoesNotReadUnrelatedLightFields()
+{
+  using namespace cutum;
+  UBlockRegistry registry(nullptr, std::make_shared<UBlockDefinitionStorage>());
+  const auto catalog = registry.GetDefinitionsCatalogSnapshot();
+  UBlockWorld world;
+  world.SetKnownAirColumnFloorQuery(
+      [](glm::ivec3) { return std::optional<int>(-4); },
+      []() { return UBlockWorld::KnownAirEvidenceVersion{}; });
+  const glm::ivec3 root(0), far(8, 0, 0);
+  auto &manager = world.GetChunkManager();
+  manager.EnsureChunk(root);
+  manager.EnsureChunk(far);
+  RelightJobSpec spec;
+  spec.min_world_y = world.GetVerticalProfile().MinY;
+  spec.max_world_y = world.GetVerticalProfile().MaxY;
+  auto result = UChunkRelightSnapshot::CaptureSections(world, spec, {root})
+                    .Compute(registry);
+  InstallComputedLight(*manager.GetChunk(root), result.chunks[0].light_packed,
+                       true, true);
+  Expect(world.RecordLightCalculation(result, catalog) == 1 &&
+             world.HasCompleteLightCalculation(root, catalog),
+         "geometry-derived root proof primes validation memo");
+  const auto walks =
+      world.GetLightInputValidationStats().dependency_validations;
+  const auto input_revision = manager.GetInputRevision();
+  const auto geometry_revision = manager.GetGeometryInputRevision();
+  manager.GetChunk(far)->SetLightLocal({0, 0, 0}, 3, 7);
+  Expect(manager.GetInputRevision() > input_revision &&
+             manager.GetGeometryInputRevision() == geometry_revision &&
+             world.HasCompleteLightCalculation(root, catalog),
+         "unrelated field write remains visible to light consumers without "
+         "invalidating physical geometry input");
+  Expect(world.GetLightInputValidationStats().dependency_validations == walks,
+         "geometry-only context does not rewalk dependencies after light-only "
+         "output writes");
+  // Compatibility contexts may explicitly read light. They cannot use the
+  // geometry-only memo, even though the geometry clock has not advanced.
+  result.read_set.push_back(world.CaptureInputStamp(far, true, false));
+  Expect(world.RecordLightCalculation(result, catalog) == 1 &&
+             world.HasCompleteLightCalculation(root, catalog),
+         "explicit light-read context is valid before source mutation");
+  manager.GetChunk(far)->SetLightLocal({0, 0, 0}, 4, 7);
+  Expect(!world.HasCompleteLightCalculation(root, catalog),
+         "explicit light input mutation invalidates proof immediately");
+}
+
 void TestLightInputMemoRetainsResidentWorkingSet()
 {
   using namespace cutum;
@@ -1463,13 +1510,15 @@ void TestVersionedLightInputMemoInvalidatesImmediately()
          "clearing fluid alone invalidates current certificate");
   refresh();
   const auto before_light = manager.GetInputRevision();
+  const auto before_light_geometry = manager.GetGeometryInputRevision();
   halo->SetLightLocal({0, 0, 0}, 5, 7);
   evidence_queries = 0;
   Expect(manager.GetInputRevision() > before_light &&
+             manager.GetGeometryInputRevision() == before_light_geometry &&
              world.HasCompleteLightCalculation(root, catalog) &&
-             evidence_queries == 9,
-         "light writes notify input readers while geometry-only solver remains "
-         "correct after revalidation");
+             evidence_queries == 0,
+         "light writes notify input readers while geometry-only provenance "
+         "retains its current validation");
   auto replacement = halo->GetLightData();
   replacement[0] = PackLight(9, 9);
   const auto before_bulk = manager.GetInputRevision();
@@ -1634,6 +1683,7 @@ int main(int argc, char **argv)
   }
   if (argc == 2 && std::string(argv[1]) == "--light-proof")
   {
+    TestGeometryInputMemoDoesNotReadUnrelatedLightFields();
     TestLightInputMemoRetainsResidentWorkingSet();
     TestVersionedLightInputMemoInvalidatesImmediately();
     TestWorldOwnedLightCertificates();
@@ -1651,6 +1701,7 @@ int main(int argc, char **argv)
     return 0;
   }
   TestPendingCoverageRequiresCurrentKnownProof();
+  TestGeometryInputMemoDoesNotReadUnrelatedLightFields();
   TestLightInputMemoRetainsResidentWorkingSet();
   TestVersionedLightInputMemoInvalidatesImmediately();
   TestWorldOwnedLightCertificates();

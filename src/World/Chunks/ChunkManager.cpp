@@ -212,6 +212,7 @@ UChunk &UChunkManager::GetOrCreateChunk(glm::ivec3 chunkCoord)
   }
   NoteInputMutation();
   chunk->InputRevision.clock = InputRevision;
+  chunk->InputRevision.geometry_clock = GeometryInputRevision;
   const auto inserted = Chunks.emplace(chunkCoord, std::move(chunk));
   const glm::ivec3 groundCoord(chunkCoord.x, 0, chunkCoord.z);
   if (inserted.second)

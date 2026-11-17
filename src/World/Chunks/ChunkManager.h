@@ -62,6 +62,17 @@ public:
   {
     return InputRevision ? *InputRevision : 0;
   }
+  /// Physical calculations read voxel/fluid geometry, not their light output.
+  /// Residency/replacement changes both clocks; light-only writes change only
+  /// GetInputRevision(). Identity protects manager replacement as well as ABA.
+  std::shared_ptr<const uint64_t> GetGeometryInputRevisionIdentity() const
+  {
+    return GeometryInputRevision;
+  }
+  uint64_t GetGeometryInputRevision() const
+  {
+    return GeometryInputRevision ? *GeometryInputRevision : 0;
+  }
   /// O(1) count of unique horizontal columns with one or more resident slices.
   size_t GetResidentColumnCount() const
   {
@@ -82,8 +93,13 @@ private:
     if (!InputRevision)
       InputRevision = std::make_shared<uint64_t>(0);
     ++*InputRevision;
+    if (!GeometryInputRevision)
+      GeometryInputRevision = std::make_shared<uint64_t>(0);
+    ++*GeometryInputRevision;
   }
   std::shared_ptr<uint64_t> InputRevision{std::make_shared<uint64_t>(0)};
+  std::shared_ptr<uint64_t> GeometryInputRevision{
+      std::make_shared<uint64_t>(0)};
   std::unordered_map<glm::ivec3, std::unique_ptr<UChunk>, IVec3Hash> Chunks;
   std::unordered_map<glm::ivec3, size_t, IVec3Hash> ResidentColumnChunkCounts;
   std::vector<std::unique_ptr<UChunk>> FreeList;
