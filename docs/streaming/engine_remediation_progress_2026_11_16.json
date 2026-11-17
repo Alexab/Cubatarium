@@ -6,7 +6,7 @@
     "diagnostic_bot": "verified baseline: native takeoff, route, inspection; expand scenario matrix",
     "local_streaming_mesh_underwater_defects": "in_progress: signed bands, lossless population events, same-size mesh reconciliation and eye-local fluid intervals fixed; native surface frontier routes verified; cave matrix and remaining invalidations pending",
     "correct_light_solver_and_persistence": "in_progress: common geometry solver, domain certificates and durable section coverage integrated; persisted section certificates and native physical-light reference pending",
-    "single_section_lifecycle_and_publication": "in_progress: full frontier native and separate startup repeat pass strict radius-four full-profile pre-entry/post-paint census. Actual renderer-domain continuous movement closure, complete authoritative lifecycle and performance still pending.",
+    "single_section_lifecycle_and_publication": "in_progress:441a8471e full radius4 frontier/24views/startup pass after exact fulfilled-work retirement; radius1 first-paint historical pass; configured radius8 startup/performance fails. Geometry-only validation clock under verification; canonical section lifecycle, actual draw domain and independent AIR light pending.",
     "independent_light_resource_and_performance": "pending",
     "full_smoke_and_regression_matrix": "in_progress: surface frontier, dry negative cave and flooded negative cave routes; independent analytic near-opaque-depth checks; startup, light/transparent reference, air pocket and eviction round trip still pending"
   },
@@ -3236,6 +3236,530 @@
           }
         }
       }
+    }
+  },
+  "continuous_world_input_closure": {
+    "status": "in_progress:441a8471e scoped full radius4 acceptance restored; radius8 startup and independent field/lifecycle/resource work pending",
+    "source": "81891ac87",
+    "current_diagnostics_source": "441a8471e",
+    "build": "build/desktop-msvc/engine-required-job-lifecycle-witness-release-build.log",
+    "contracts": "build/desktop-msvc/engine-current-publication-quiesce-contracts-tests.log",
+    "passed": 28,
+    "python_tests": "build/desktop-msvc/engine-continuous-inputs-python-tests.log",
+    "python_passed": 41,
+    "implementation": [
+      "RequiredWorldDomain derives presentation/approach/light/data radii from actual mesh-cache render distance and physical-light mode.",
+      "Same bounded data/light maintenance runs during enter and normal UpdateStreaming; relative light cursor does not reset with camera movement.",
+      "Explicit data lease protects ordinary/deferred unload and async cancellation, including offset load/consumer centers; it moves rather than pinning the initial footprint.",
+      "Current proved sections are not reopened as new pending light work; signed sparse unknown coverage remains explicit.",
+      "Schema v2 first-paint census records actual renderer distance independently of required radius; parser checks agreement and accepts valid small render rings.",
+      "Native stand supports isolated --render-distance override with byte-for-byte configuration restoration. Request observations remain diagnostic and never grant readiness."
+    ],
+    "negative_controls": [
+      "engine-continuous-inputs-red-lease-test.log",
+      "engine-continuous-inputs-red-scan-test.log",
+      "engine-continuous-inputs-red-retention-test.log",
+      "engine-continuous-inputs-red-proved-test.log",
+      "engine-required-publication-prune-red-test.log",
+      "engine-current-publication-quiesce-red-test.log"
+    ],
+    "restored_green": "Matching green logs in build/desktop-msvc; app executable was always built from restored GREEN source before controls.",
+    "modelled_movement": "22 one-column steps with bounded requests, delayed completion, low keep budget and rotating light discovery; unit coverage only, not a native movement verdict.",
+    "native_failures": [
+      {
+        "source": "81891ac87",
+        "artifacts": "build/desktop-msvc/engine-continuous-inputs-wet-native",
+        "status": "FAIL: bounded startup timeout; no first world paint",
+        "last_required_ring": {
+          "blockers": [
+            {
+              "all_cpu_builder_owned": 0,
+              "all_mesh_completed": 0,
+              "capture_pending": false,
+              "coord": [
+                2,
+                2,
+                2
+              ],
+              "coverage": [
+                0,
+                0
+              ],
+              "dirty": true,
+              "drawable": true,
+              "extract_inflight": false,
+              "face_debt_mask": 0,
+              "field_light": 2,
+              "geom": [
+                0,
+                1
+              ],
+              "gpu_pending": false,
+              "inputs_current": false,
+              "light": [
+                0,
+                1
+              ],
+              "mesh_inflight": false,
+              "meshed_light": 1,
+              "provisional": false,
+              "published_geom": 1,
+              "published_light": 1,
+              "remesh_after_apply": false,
+              "satisfies": true,
+              "settled": true,
+              "source_geom": 2,
+              "stable_face_debt": false,
+              "tracked_source_geom": 0
+            }
+          ],
+          "columns": 81,
+          "domain": "configured-render-ring.v1",
+          "elapsed_ms": 232059.3880999999,
+          "expected_columns": 81,
+          "expected_sections": 1944,
+          "known_air_sections": 1203,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "enter_gate",
+          "publication_unready_sections": 1,
+          "radius": 4,
+          "ready": false,
+          "render_distance_chunks": 4,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1944,
+          "surface_sections": 741,
+          "unknown_sections": 0
+        },
+        "input_requests": {
+          "schema": "required-world-input-requests.v1",
+          "records": 305,
+          "runtime_records": 0,
+          "requested_columns": 116,
+          "light_note_attempts": 1138,
+          "max_epoch": 0,
+          "max_focus_displacement": 0,
+          "beyond_first_data_domain_records": 0,
+          "first_focus": [
+            1,
+            3
+          ],
+          "first_data_radius": 7,
+          "distinct_recorded_foci": 1,
+          "scope": "observed consumer requests only; no proof of calculation/publication or visual correctness"
+        }
+      },
+      {
+        "source": "9297a773a",
+        "artifacts": "build/desktop-msvc/engine-required-publication-prune-wet-native",
+        "status": "FAIL: bounded startup timeout; no first world paint",
+        "last_required_ring": {
+          "blockers": [
+            {
+              "all_cpu_builder_owned": 1,
+              "all_mesh_completed": 1,
+              "capture_pending": false,
+              "coord": [
+                2,
+                2,
+                2
+              ],
+              "coverage": [
+                0,
+                0
+              ],
+              "dirty": false,
+              "drawable": true,
+              "extract_inflight": false,
+              "face_debt_mask": 0,
+              "field_light": 2,
+              "geom": [
+                0,
+                1
+              ],
+              "gpu_pending": false,
+              "inputs_current": false,
+              "light": [
+                0,
+                1
+              ],
+              "mesh_inflight": true,
+              "meshed_light": 1,
+              "provisional": false,
+              "published_geom": 1,
+              "published_light": 1,
+              "remesh_after_apply": false,
+              "satisfies": true,
+              "settled": true,
+              "source_geom": 2,
+              "stable_face_debt": false,
+              "tracked_source_geom": 2
+            }
+          ],
+          "columns": 81,
+          "domain": "configured-render-ring.v1",
+          "elapsed_ms": 232499.69079999987,
+          "expected_columns": 81,
+          "expected_sections": 1944,
+          "known_air_sections": 1203,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "enter_gate",
+          "publication_unready_sections": 1,
+          "radius": 4,
+          "ready": false,
+          "render_distance_chunks": 4,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1944,
+          "surface_sections": 741,
+          "unknown_sections": 0
+        },
+        "input_requests": {
+          "schema": "required-world-input-requests.v1",
+          "records": 415,
+          "runtime_records": 0,
+          "requested_columns": 116,
+          "light_note_attempts": 1613,
+          "max_epoch": 0,
+          "max_focus_displacement": 0,
+          "beyond_first_data_domain_records": 0,
+          "first_focus": [
+            1,
+            3
+          ],
+          "first_data_radius": 7,
+          "distinct_recorded_foci": 1,
+          "scope": "observed consumer requests only; no proof of calculation/publication or visual correctness"
+        }
+      },
+      {
+        "source": "a6d7d279d",
+        "artifacts": "build/desktop-msvc/engine-current-publication-quiesce-native",
+        "status": "FAIL: bounded startup timeout; no first world paint",
+        "last_required_ring": {
+          "blockers": [
+            {
+              "all_cpu_builder_owned": 3,
+              "all_mesh_completed": 3,
+              "capture_pending": false,
+              "coord": [
+                2,
+                2,
+                2
+              ],
+              "coverage": [
+                0,
+                0
+              ],
+              "dirty": false,
+              "drawable": true,
+              "extract_inflight": false,
+              "face_debt_mask": 0,
+              "field_light": 2,
+              "geom": [
+                0,
+                1
+              ],
+              "gpu_pending": false,
+              "inputs_current": false,
+              "light": [
+                0,
+                1
+              ],
+              "mesh_inflight": true,
+              "meshed_light": 1,
+              "provisional": false,
+              "published_geom": 1,
+              "published_light": 1,
+              "remesh_after_apply": false,
+              "satisfies": true,
+              "settled": true,
+              "source_geom": 2,
+              "stable_face_debt": false,
+              "tracked_source_geom": 2
+            }
+          ],
+          "columns": 81,
+          "domain": "configured-render-ring.v1",
+          "elapsed_ms": 82262.55590000008,
+          "enter_gate_active": true,
+          "enter_session_active": true,
+          "expected_columns": 81,
+          "expected_sections": 1944,
+          "known_air_sections": 1203,
+          "light_unready_sections": 0,
+          "lit_quiesce": false,
+          "max_y": 319,
+          "mesh_drain_final": 24,
+          "mesh_schedule_final": 6,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "enter_gate",
+          "publication_unready_sections": 1,
+          "radius": 4,
+          "ready": false,
+          "render_distance_chunks": 4,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1944,
+          "streaming_enabled": true,
+          "surface_sections": 741,
+          "unknown_sections": 0
+        },
+        "input_requests": {
+          "schema": "required-world-input-requests.v1",
+          "records": 220,
+          "runtime_records": 0,
+          "requested_columns": 116,
+          "light_note_attempts": 1820,
+          "max_epoch": 0,
+          "max_focus_displacement": 0,
+          "beyond_first_data_domain_records": 0,
+          "first_focus": [
+            1,
+            3
+          ],
+          "first_data_radius": 7,
+          "distinct_recorded_foci": 1,
+          "scope": "observed consumer requests only; no proof of calculation/publication or visual correctness"
+        }
+      }
+    ],
+    "publication_repairs": [
+      {
+        "source": "9297a773a",
+        "behavior": "Terminal drawable alone cannot prune stale or priority publication debt. Existing required Dirty remesh is promoted rather than treated as a sufficient owner."
+      },
+      {
+        "source": "a6d7d279d",
+        "behavior": "Quiesce derives from current required publications, may reopen on new debt, and late warmup debt can acquire an enter consumer after the first frame."
+      },
+      {
+        "source": "eae195547",
+        "behavior": "Exact current geometry/field/settlement revisions remain mandatory; desired demand revisions are minimum floors, so current certified dark candidates can satisfy older/coalesced desired=0 instead of being repeatedly rejected."
+      }
+    ],
+    "latest_native": {
+      "source": "441a8471e",
+      "artifacts": "build/desktop-msvc/engine-required-publication-fulfilled-repair-long-wet-native",
+      "startup": "PASS:81columns/1944sections, zero unknown/data/light/publication debt at first world paint",
+      "runtime": "PASS native exit0",
+      "route": "PASS22chunks,1099 outside-initial-resident samples, zero external relocation",
+      "inspection": "PASS24/24 verified",
+      "fixture_opaque_depth": "PASS7502checks/48frame epochs/0faults",
+      "overall": "UNTESTED: full physical-light/transparent/full-screen references missing",
+      "duration": "fly160+stop8+idle2 in-game seconds, process timeout330; same route/inspection targets as prior125s negative run"
+    },
+    "evidence_limit": "Configured ring publication/input readiness and near opaque cave depth are verified only in stated runs. Radius-8 progression disproves a completely frozen queue but does not establish acceptable startup latency or eventual convergence. AIR geometry knowledge is not an independently computed physical-light field.",
+    "remaining": [
+      "Complete Release/contracts/native verification of68ec95461 geometry-input clocks; configured radius8 startup convergence/performance remains failing.",
+      "Native configured radius 1 and larger-than-four tests; continuous consumer request/physical dependency convergence beyond initial residency.",
+      "Unify renderer actual admission/frustum domain and section lifecycle; eliminate remaining RGB/coarse authority and fair bounded maintenance cost.",
+      "Known empty geometry is not computed light: CPU/GPU light volumes must own required AIR/halo fields, especially emitter propagation across an AIR-only section.",
+      "Persisted content certificates, independent light resource, physical-light/transparent/full-screen oracle, full eviction/reload/seed/backend matrix."
+    ],
+    "root_cause_evidence": {
+      "source": "74dac2e06",
+      "artifacts": "build/desktop-msvc/engine-required-job-lifecycle-witness-native",
+      "observed": "Section (2,2,2): jobs 2699/2696/2692 repeatedly Started/Built/Retired dark_mesh_rejected, source/current geometry=2, source/field/settled light=2, desired geometry/light=0. CPU completions were being consumed; queue counts alone had not established a stalled consumer."
+    },
+    "demand_floor_validation": {
+      "red": "build/desktop-msvc/engine-dark-demand-floor-red-test.log",
+      "green": "build/desktop-msvc/engine-dark-demand-floor-green-test.log",
+      "contracts": "build/desktop-msvc/engine-dark-demand-floor-contracts-tests.log",
+      "release_build": "build/desktop-msvc/engine-dark-demand-floor-release-build.log",
+      "contracts_passed": 30,
+      "negative_cases": [
+        "future geometry demand",
+        "future light demand",
+        "stale source geometry",
+        "stale source light",
+        "wrong incarnation"
+      ]
+    },
+    "configured_radius_matrix": [
+      {
+        "radius": 1,
+        "artifacts": "build/desktop-msvc/engine-required-render-one-native",
+        "startup": "PASS: 9 columns, 216 sections, radius agrees independently with renderer",
+        "overall": "FAIL: intentionally short diagnostic route incomplete; no full-route acceptance claim"
+      },
+      {
+        "radius": 8,
+        "artifacts": "build/desktop-msvc/engine-required-render-eight-native",
+        "startup": "FAIL timeout 180s; no first world paint",
+        "last_census": {
+          "elapsed_ms": 166971.571,
+          "columns": 289,
+          "sections": 6936,
+          "unknown_sections": 0,
+          "missing_data_columns": 0,
+          "light_unready_sections": 1,
+          "publication_unready_sections": 165
+        },
+        "followup": {
+          "artifacts": "build/desktop-msvc/engine-required-render-eight-extended-native",
+          "process_timeout_seconds": 420,
+          "runtime": "FAIL: timeout, no native report or first world paint",
+          "last_census": {
+            "elapsed_ms": 372200.3266,
+            "unknown_sections": 0,
+            "missing_data_columns": 0,
+            "light_unready_sections": 86,
+            "publication_unready_sections": 1181
+          },
+          "scope": "separate nondeterministic repeat; do not infer improvement relative to shorter run"
+        }
+      }
+    ],
+    "maintenance_refinement": {
+      "status": "e883511f6 focused contracts PASS; native failures retained;441a8471e exact fulfilled-work retirement restores full radius4 frontier acceptance. Radius8 startup remains failing.",
+      "capture_queue": "Bounded ready-column scan per lane; active owners retain their queued bands and keys, ordinary executable work can proceed behind busy priority lane. Reconcile owner state once before scanning.",
+      "memo": "Resident contexts can number more than1024. Keep at most2*resident_sections+1024 optional validation entries, prune expired weak receipts instead of clearing every live validation; all exact input revision/catalog/world/profile checks preserved.",
+      "red_controls": [
+        "build/desktop-msvc/engine-capture-owner-scan-red-test.log",
+        "build/desktop-msvc/engine-resident-light-memo-red-test.log"
+      ],
+      "green_controls": [
+        "build/desktop-msvc/engine-capture-owner-scan-green-test.log",
+        "build/desktop-msvc/engine-resident-light-memo-green-test.log"
+      ],
+      "native_claim": "No claim that these maintenance changes resolve radius-8 startup until native verification.",
+      "source": "e883511f6",
+      "release_build": "build/desktop-msvc/engine-required-input-maintenance-release-build.log",
+      "contract_build": "build/desktop-msvc/engine-required-input-maintenance-all-contract-build.log",
+      "contracts": "build/desktop-msvc/engine-required-input-maintenance-contracts-tests.log",
+      "native": "build/desktop-msvc/engine-required-input-maintenance-eight-native",
+      "native_result": {
+        "radius": 8,
+        "artifacts": "build/desktop-msvc/engine-required-input-maintenance-eight-native",
+        "runtime": "FAIL timeout240s; no first world paint",
+        "last_census": {
+          "elapsed_ms": 205788.9625,
+          "missing_data_columns": 0,
+          "unknown_sections": 0,
+          "light_unready_sections": 223,
+          "publication_unready_sections": 1369
+        },
+        "sampled_blocker": "(-7,-4,-5): settled=true, field=0, dirty=true, no active mesh owner, no published geometry/job trace"
+      },
+      "radius4_repeat": {
+        "artifacts": "build/desktop-msvc/engine-required-input-maintenance-wet-native",
+        "runtime": "FAIL timeout240s; no first world paint",
+        "blockers": [
+          [
+            -1,
+            4,
+            2
+          ],
+          [
+            3,
+            4,
+            2
+          ],
+          [
+            3,
+            4,
+            3
+          ]
+        ],
+        "observed": "Each sampled publication has inputs_current=true, settled=true, actual source/published geometry2, field/meshed/published light1, satisfied demand floors, dirty=true, no active successor. Queue existence alone held strict barrier. This run is not acceptance of e883511f6."
+      },
+      "followup": "Retire only proven already-fulfilled queued work, preserving exact version/input/identity checks and excluding active owners; add actual scheduler admission counters and queue position/age to blocked-section witness."
+    },
+    "fulfilled_repair_retirement": {
+      "source": "441a8471e",
+      "release_build": "build/desktop-msvc/engine-required-publication-fulfilled-repair-release-build.log",
+      "red_native": "build/desktop-msvc/engine-required-input-maintenance-wet-native",
+      "native": "build/desktop-msvc/engine-required-publication-fulfilled-repair-wet-native",
+      "startup": "PASS: post-world-paint witness 81columns/1944sections and zero missing data/unknown/light/publication debt",
+      "route": "PASS in expanded-time repeat; earlier125s incomplete-route FAIL retained",
+      "retirement_events_observed": 9,
+      "contract": "Clear queued Dirty only when the current actual publication satisfies all desired geometry/light/coverage floors, own geometry revision and installed/meshed/field light match, exact input stamps/current physical calculation/identity match, and no RAA/capture/CPU/GPU successor owner exists. Current proof guard remains mandatory; readiness still rejects any remaining Dirty.",
+      "diagnostics": "Blocked-section witness now includes actual scheduler caps/success/skip counters and per-section dirty queue kind/index/size/age.",
+      "native_result": {
+        "startup": "PASS",
+        "runtime": "FAIL exit1: incomplete bot route",
+        "route_chunks": 22,
+        "outside_initial_samples": 815,
+        "relocations": 0,
+        "verified_inspections": 12,
+        "opaque_depth_checks": 7492,
+        "opaque_depth_faults": 0,
+        "opaque_depth_frame_epochs": 48,
+        "overall": "FAIL"
+      },
+      "diagnostic_radius8": {
+        "artifacts": "build/desktop-msvc/engine-required-publication-scheduler-eight-native",
+        "runtime": "FAIL timeout180s before first world paint",
+        "last_census": {
+          "elapsed_ms": 151134.7518,
+          "missing_data_columns": 22,
+          "unknown_sections": 520,
+          "light_unready_sections": 682,
+          "publication_unready_sections": 1221
+        },
+        "schedule_observation": {
+          "scheduled": 8,
+          "first_mesh_scheduled": 6,
+          "remesh_scheduled": 2,
+          "first_mesh_cap": 14,
+          "first_mesh_lane": 14,
+          "remesh_lane": 2,
+          "skip_pipeline": 1,
+          "emerge_budget_ms": 18,
+          "snapshot_budget_ms": 18
+        },
+        "sampled_queue": "(-7,-4,-5):FirstMesh index755 of1233, age39 scheduler frames; no job yet. Progressing queue, not evidence of a hard radius veto."
+      },
+      "expanded_time_repeat": {
+        "source": "441a8471e",
+        "artifacts": "build/desktop-msvc/engine-required-publication-fulfilled-repair-long-wet-native",
+        "startup": "PASS:81columns/1944sections, zero unknown/data/light/publication debt at first world paint",
+        "runtime": "PASS native exit0",
+        "route": "PASS22chunks,1099 outside-initial-resident samples, zero external relocation",
+        "inspection": "PASS24/24 verified",
+        "fixture_opaque_depth": "PASS7502checks/48frame epochs/0faults",
+        "overall": "UNTESTED: full physical-light/transparent/full-screen references missing",
+        "duration": "fly160+stop8+idle2 in-game seconds, process timeout330; same route/inspection targets as prior125s negative run"
+      }
+    },
+    "previous_verified_native": {
+      "source": "eae195547",
+      "artifacts": "build/desktop-msvc/engine-dark-demand-floor-wet-native",
+      "startup": "PASS: configured radius 4, 81 columns, 1944 full-profile sections, zero unknown/light/publication debt at first world paint",
+      "runtime": "PASS",
+      "route": "PASS: 22 chunks, 2504 outside-initial-resident samples",
+      "inspection": "PASS: 24/24 verified captures",
+      "fixture_opaque_depth": "PASS: 10624 independent near opaque depth checks, 68 frame epochs, zero faults",
+      "overall": "UNTESTED: independent physical light, transparency and full-screen reference missing",
+      "input_requests": "1902 diagnostic records, 1808 runtime; 23 distinct foci; 1077 records beyond first data domain; requests do not prove physical field convergence"
+    },
+    "geometry_input_revision_refinement": {
+      "status": "focused Release RED/GREEN and full relight_result_install_test PASS; application and18 affected contract executables building; native on new source pending",
+      "finding": "Physical solver read stamps are geometry-only, but every unrelated output-light write advanced the same global input revision used by proof validation memo, invalidating all cached dependency checks. Keep full input revision for light consumers; distinct geometry/fluid/residency identity for geometry-derived proof memo. Explicit light-read contexts bypass this geometry-only memo.",
+      "guards": [
+        "voxel/fluid writes",
+        "residency/replacement/clear",
+        "manager identity/ABA",
+        "catalog/profile/config/absence producer revisions",
+        "own channel revision",
+        "explicit light-read compatibility context"
+      ],
+      "source": "68ec95461",
+      "red": "build/desktop-msvc/engine-geometry-input-clock-red-test.log",
+      "green": "build/desktop-msvc/engine-geometry-input-clock-green-test.log",
+      "full_result_tests": "build/desktop-msvc/engine-geometry-input-clock-all-result-tests.log",
+      "release_build": "build/desktop-msvc/engine-geometry-input-clock-release-build.log",
+      "contract_build": "build/desktop-msvc/engine-geometry-input-clock-contracts-build.log",
+      "raw_context_contract": "RecordLightCalculation derives geometry-only classification once from retained immutable stamps; arbitrary result flags do not authorize cached validation. Legacy explicit light-read contexts validate full read set each time.",
+      "native_claim": "No native correctness/startup/performance claim for68ec95461 until application build and unchanged-fixture verification complete. Most recent verified full route is441a8471e."
     }
   }
 }

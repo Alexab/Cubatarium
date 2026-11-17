@@ -154,8 +154,8 @@
       ],
       "acceptance": "Независимые эталонные сетки: высокая крыша, глубокая вода, вертикальные/горизонтальные швы, удаление факела и крыши, смена материалов, частичный reload; после сходимости нет потерянного долга",
       "solver_contract_refinement": {
-        "status": "design_pending_implementation",
-        "evidence": "sync flood mutates neighbor fields and differs from snapshot boundary-light path; per-domain proof cannot be stable if duplicate sync solves clear/rewrite unchanged fields; unknown geometry is still AIR in current solver",
+        "status": "common geometry-derived CPU solver and runtime per-domain proofs implemented; persisted content certificates and independent AIR light ownership pending",
+        "evidence": "Historical defect: sync flood and snapshot paths disagreed and consumed unfinished neighbor light. Current common bounded geometry solver no longer uses neighbor light bytes as physical inputs; immutable calculation contexts validate read sets before own-field settlement. Independent AIR-only volume outputs and reload-safe content provenance still require implementation.",
         "direction": "derive completed section fields from known geometry/emission in a bounded halo, with direct sky context through configured ceiling; avoid circular reliance on unfinished neighbor light for a completed certificate",
         "bound": "indirect max light15 and attenuation at least1 per 6-neighbor step bound contributing geometry to a one-section halo for an unpadded section; direct vertical sky still requires full upper context; padded resource sampling must account for its larger output region",
         "required_checks": [
@@ -164,7 +164,8 @@
           "finite reference flood, high roof, cross-section water, six-direction source addition/removal and partial-domain preservation",
           "same authoritative CPU computation/input provenance for cooperative sync and async paths; actual GPU dispatch parity accepted separately",
           "publish immutable per-domain input/output proofs only after all owned result writes are installed"
-        ]
+        ],
+        "version_domains_refinement": "68ec95461 separates voxel/fluid/residency revision identity from all-input/light-output revision. Geometry-only retained calculation contexts use the geometry clock; own domain revisions, exact catalog/profile/configuration/absence evidence and manager identity remain checked. Explicit light-read contexts use direct full validation. Focused RED/GREEN passed; full Release/native verification pending."
       }
     },
     {
@@ -190,8 +191,11 @@
         "remaining_cutover": "Derive the required set from actual presentation/fog range (including potentially visible approach sections), drive exact missing section owners fairly, and remove other coarse column readiness authority.",
         "publication_recurrence": "No-op repair adoption advanced cache revision alone; demand shadow remained older and lost section targets had no concrete owners. Synchronize proven actual publication at adoption and recover exact ownerless sections with bounded admission. Avoid returning to column-level mesh-exists readiness.",
         "consumer_phase_recurrence": "Three extended repeats retained one required stale-light mesh while CPU completed queues held one/two results. Prepared-load app readiness and coordinator create-settled warmup classification were separate obsolete authorities. 914176ce1 wires strict readiness/live queues into app drain; 4bfc799f9 preserves active enter consumer phase. Do not infer stable acceptance from short successes.",
-        "streaming_domain_followup": "Unify actual draw/fog/admission domain with required data -> physical-light -> mesh/publication closure for both startup and continuous movement. The current transitive halo pump is enter-only and conservative. Required work must not depend on historical preload-ring membership or a column drawable sibling.",
-        "latest_verified_scope": "4bfc799f9 full wet-negative-cave native and independent short startup repeat pass strict 81-column/1944-section pre-entry and post-first-world-paint census. Full native runtime/22-chunk non-teleport route/24 inspections and 17355 near opaque-depth checks passed. Overall UNTESTED: physical-light/transparent/full-screen references absent; broader renderer-domain/movement lifecycle pending."
+        "streaming_domain_followup": "81891ac87 maintains the same render-derived data/light dependency closure during enter and movement: protected moving data lease, bounded data admission and fair relative-offset light scan. v2 first-paint witness checks actual configured renderer radius independently. Actual frustum/draw/fog admission, independent AIR/halo light and unified section lifecycle remain pending.",
+        "latest_verified_scope": "441a8471e extended-time unchanged full radius4 route: first paint81columns/1944sections, native runtime,22chunk motor-only frontier, zero relocation,24 inspections and7502 near opaque-depth checks pass. Earlier125s incomplete route and all radius8 startup failures retained. Overall full-scope UNTESTED.",
+        "dark_candidate_recurrence": "74dac2e06 lifecycle traces establish repeated dark_mesh_rejected rather than an unconsumed CPU result: actual source/current geometry and field/settlement=2, desired floor=0. eae195547 accepts exact current certified candidates at or above older demand floors; future demand/stale source/wrong identity still reject; regression RED before fix and GREEN after.",
+        "fulfilled_work_refinement": "441a8471e distinguishes unfulfilled queue debt from a proven already-fulfilled repair. Exact current publication/physical input proof, all demand floors and absence of active successor owners authorize retirement of redundant Dirty; queue priority or terminal column labels do not. Captured radius4 timeout on three fully current queued publications is the native negative control; first-world-paint acceptance after repair observed, full route pending.",
+        "large_radius_gate": "Configured radius8 has not passed native startup: separate 180s,420s and maintenance240s runs time out. Data closure converges; exact mesh admission/light work remains. Scheduler budget/success/skip and dirty queue ownership diagnostics were added before selecting another functional repair."
       }
     },
     {
@@ -223,7 +227,16 @@
           "Prove light-only field changes and emission-only catalog changes do not advance geometry target, upload vertices or rebuild topology.",
           "CPU, packed/pool, transparent/cross/decor and GLES paths need explicit field sampling; UI/static item paths retain their intentional lighting contract."
         ],
-        "acceptance": "Independent physical sky/block references, AIR-boundary emitters, liquid attenuation, removals/no-op, backend equality, memory caps, page lifetime/ABA and native light-only zero-remesh telemetry."
+        "acceptance": "Independent physical sky/block references, AIR-boundary emitters, liquid attenuation, removals/no-op, backend equality, memory caps, page lifetime/ABA and native light-only zero-remesh telemetry.",
+        "implementation_sequence": [
+          "Establish canonical CPU section-light ownership independent of UChunk geometry; resident legacy getters become adapters to that same authority, never a second copy. Required known-AIR targets must produce installed fields and physical provenance, including emitter propagation into entirely empty sections.",
+          "Move geometry/light/input-domain revision identities and read stamps onto the correct resources. Distinguish Unknown geometry, KnownAIR geometry, absent/uncomputed field, transient field and computed field. Preserve runtime world/incarnation ABA validation.",
+          "Define GL3.3/GLES-compatible bounded page representation after querying device limits. Explicit valid bindings and constant-field pages must not treat page/revision zero as missing; include the full radius-two sample footprint.",
+          "Implement shared world-field sampling for CPU/packed/MDI opaque/cutout/transparent/cross/decor paths; retain explicit UI/static semantics. Publish geometry and compatible field binding atomically and protect page reuse by GPU lifetime.",
+          "Only after all world consumers use field resources, remove light values from geometry merge keys/capture validity and emission-only invalidation from geometry demand. Prove source changes create no mesh job or vertex upload.",
+          "Persist content-based algorithm/profile/material/input provenance and AIR field receipts with compatibility adapters for legacy world files. Runtime identities cannot serve as persisted content certificates.",
+          "Run independent nonzero sky/block transport, removals, AIR-boundary emitters, light-only zero-remesh, page ABA/memory limits, backend equality and native framebuffer references before completing the stage."
+        ]
       }
     },
     {
