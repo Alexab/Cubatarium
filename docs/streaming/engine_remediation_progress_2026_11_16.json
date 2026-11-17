@@ -4302,7 +4302,7 @@
       }
     },
     "canonical_scene_light_consumers": {
-      "status": "Implemented;4rebuilt C++ suitesPASS;55Python testsPASS; Release build running; native pending",
+      "status": "Implemented;4C++suitesPASS;56Python testsPASS;Release/static EXE PASS; fresh native first-paint/camera/first-person/AIR/depth/floor-source criteriaPASS, full visualUNTESTED",
       "api": "UBlockWorld::SampleSceneLight returns typed Missing/Transient/Computed/FlatConstant/BoundaryConstant. Only complete/current full padded canonical fields yield Computed bytes, including geometry-absent fields and computed zero. Exact field incarnation/revision returned. Flat selection is explicit, never inferred from opaque configuration identity. Upper/lower profile constants use exact cell bounds; no geometry/field allocation or physical receipt for constants.",
       "consumers": "FpItemLight, drawn world/creature items and SampleCreatureLight use UWorld::RequestSceneLightSample. Renew physical demand each drawn frame, bounded to current required data domain with one-column solve padding; no remote data allocation. Creature sampler no longer waits0.25s; world input certification memoized. Seeded presentation can retain its previous target while pending; before first valid sample use ambient-only, keep unseeded. No provisional fallback certifies readiness.",
       "observability": "Opt-in SceneLightSample records consumer kind, exact world/frame/cell/section, state, ready flag, field identity/revision and sampled bytes at actual consumer call.",
@@ -4327,10 +4327,212 @@
         "scope": "New item/creature consumers exercised, but no startup/object-field or first-person acceptance. Original verdict retained."
       },
       "prewarm_followup": {
-        "status": "Implemented;Release build and Python tests running;fresh native pending",
+        "status": "Implemented;56Python testsPASS;Release/static EXE PASS;fresh continuous native closes observed first-paint debt and first-person frame coverage",
         "implementation": "Before presentation/enter readiness, register potential creature body-center, controlled eye and actual loose-item sample cells within configured approach ring and vertical profile. Same sample rounding/solid-cell upward selection. Include active and dormant item positions through read-only visitor without copying item arrays. Leases use existing fair producer/validation and bounded retirement. No readiness exception or fabricated field.",
         "harness": "Open-plane continuous correctness scenario explicitly sets existingCUBA_FLIGHT_BENCH_OVERLAY=0 to exercise normal FPconsumer; no FPitem/skin/user-save QA injection. Manifest recordsactualenvironment.",
-        "remaining": "Full drawdomain/culling and performance matrix remain required: UWorldItemSystem::Draw currently submits active+dormant items unconditionally. Prewarm does not claim to fix that distinct issue or all object latency."
+        "remaining": "Full drawdomain/culling and performance matrix remain required: UWorldItemSystem::Draw currently submits active+dormant items unconditionally. Prewarm does not claim to fix that distinct issue or all object latency.",
+        "release_build": "engine-scene-light-prewarm-release-build.log:PASS/static EXE6systemDLLs",
+        "native": {
+          "source": "a33b5f3de",
+          "artifacts": "build/desktop-msvc/engine-scene-light-prewarm-open-sky-native",
+          "status": "UNTESTED",
+          "application_exit": 0,
+          "route": {
+            "status": "PASS",
+            "reason": "frontier_route_covered",
+            "displacement_chunks": 22,
+            "outside_initial_resident_samples": 982
+          },
+          "inspection": {
+            "status": "PASS",
+            "reason": "inspection_capture_coverage",
+            "requested": 26,
+            "queued": 26,
+            "verified": 26
+          },
+          "startup": {
+            "status": "PASS",
+            "reason": "first_world_paint_required_ring_census",
+            "evidence": {
+              "columns": 81,
+              "domain": "configured-render-ring.v1",
+              "expected_columns": 81,
+              "expected_sections": 1944,
+              "focus": [
+                1,
+                -4,
+                3
+              ],
+              "known_air_sections": 1372,
+              "light_unready_sections": 0,
+              "max_y": 319,
+              "min_y": -64,
+              "missing_data_columns": 0,
+              "phase": "first_world_paint",
+              "publication_unready_sections": 0,
+              "radius": 4,
+              "ready": true,
+              "render_distance_chunks": 4,
+              "render_pass_complete": true,
+              "resident_air_sections": 0,
+              "schema": "required-presentation-witness.v2",
+              "sections": 1944,
+              "surface_sections": 572,
+              "unknown_sections": 0,
+              "world_epoch": 4
+            },
+            "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+          },
+          "camera": {
+            "schema": "engine-camera-light-reference.v1",
+            "status": "PASS",
+            "reason": "camera_canonical_field_at_paint",
+            "samples": 1577,
+            "ready_samples": 1577,
+            "air_samples": 1524,
+            "frame_epochs": 1577,
+            "distinct_air_sections": 23,
+            "expected_game_frames": 1577,
+            "observed_paint_frames": 1577,
+            "unsupported_mode_samples": 0,
+            "skipped_unscoped": 0,
+            "faults": 0,
+            "examples": [],
+            "missing_coverage": [],
+            "scope": "observed canonical camera CPU field readiness/sky15/block0 at world paints; no creature/item, GPU page, shader RGB, latency or full-screen acceptance"
+          },
+          "first_person": {
+            "schema": "engine-scene-light-reference.v1",
+            "status": "PASS",
+            "reason": "first_person_item_canonical_field_at_paint",
+            "ready_frames": 1577,
+            "paint_frames": 1577,
+            "distinct_air_sections": 23,
+            "skipped_unscoped": 0,
+            "unsupported_mode_samples": 0,
+            "faults": 0,
+            "examples": [],
+            "missing_coverage": [],
+            "scope": "CPU field supplied to first-person item; no creature/world-item, shader RGB, GPU page, smoothing, latency or full-screen acceptance"
+          },
+          "air_service": {
+            "schema": "engine-air-light-service.v1",
+            "status": "PASS",
+            "reason": "joined_air_light_producer_receipts",
+            "joined_completed_jobs": 213,
+            "distinct_columns": 81,
+            "minimum_columns": 3,
+            "observed_records": 2996,
+            "unjoined_completions": 0,
+            "faults": 0,
+            "examples": [],
+            "scope": "observed requested AIR fields with complete canonical physical receipts; no all-request coverage, field-value, latency, GPU or framebuffer acceptance"
+          },
+          "near_depth": {
+            "status": "PASS",
+            "reason": "analytic_near_plane_opaque_depth",
+            "checked": 583,
+            "faults": 0,
+            "frame_epochs": 18,
+            "skipped_unscoped_or_occluded": 14803,
+            "examples": [],
+            "scope": "opaque floor within 32 blocks; no light, transparent or full-screen acceptance"
+          },
+          "floor_source": {
+            "status": "PASS",
+            "reason": "analytic_direct_sky_floor_draw_source_light",
+            "checked": 226,
+            "positive_expected": 226,
+            "faults": 0,
+            "source_counts": {
+              "cpu": 0,
+              "packed_gpu": 226
+            },
+            "frame_epochs": 16,
+            "observed_emitter_cells": 0,
+            "distinct_floor_cells": 122,
+            "distinct_expected_levels": 1,
+            "skipped": 15160,
+            "skip_reasons": {
+              "not_joined_floor_depth": 7227,
+              "unscoped_floor_cell": 346,
+              "not_downward_valid_ray": 7576,
+              "missing_or_provisional_source_match": 11
+            },
+            "missing_coverage": [],
+            "examples": [],
+            "scope": "unobstructed constant direct-skylight floor CPU vertex or witnessed packed GPU draw-buffer light joined to analytic framebuffer depth; no shaded RGB, transparency or full-screen acceptance"
+          },
+          "object_observations": {
+            "schema": "engine-scene-consumer-observation-audit.v1",
+            "counts": {
+              "item": {
+                "observed": 1577,
+                "ready": 643,
+                "pending": 934
+              },
+              "fp_item": {
+                "observed": 1577,
+                "ready": 1577
+              },
+              "creature": {
+                "observed": 1034,
+                "pending": 3,
+                "ready": 1031
+              }
+            },
+            "first": {
+              "item": {
+                "world_epoch": "4",
+                "frame_epoch": "1",
+                "consumer": "item",
+                "cell": "(8,68,61)",
+                "coord": "(0,4,3)",
+                "physical": "1",
+                "resident": "0",
+                "state": "2",
+                "ready": "1",
+                "sky": "15",
+                "block_light": "0",
+                "field_incarnation": "1061",
+                "field_revision": "1"
+              },
+              "fp_item": {
+                "world_epoch": "4",
+                "frame_epoch": "1",
+                "consumer": "fp_item",
+                "cell": "(22,-59,51)",
+                "coord": "(1,-4,3)",
+                "physical": "1",
+                "resident": "1",
+                "state": "2",
+                "ready": "1",
+                "sky": "15",
+                "block_light": "0",
+                "field_incarnation": "1",
+                "field_revision": "2"
+              },
+              "creature": {
+                "world_epoch": "4",
+                "frame_epoch": "40",
+                "consumer": "creature",
+                "cell": "(-3,-38,39)",
+                "coord": "(-1,-3,2)",
+                "physical": "1",
+                "resident": "0",
+                "state": "0",
+                "ready": "0",
+                "sky": "0",
+                "block_light": "0",
+                "field_incarnation": "0",
+                "field_revision": "0"
+              }
+            },
+            "scope": "Actual logged CPU consumer calls; includes off-screen submissions. No final-pixel or all-request acceptance."
+          },
+          "provenance": "Built source content frozen before Release compiler started. Version footer still15693a9 from generated version metadata; committed source content and runtime EXE SHA256 recorded separately. No build/test during native.",
+          "limits": "No actual creature/world-item shadedRGB, full-frame color/transparency, GPU light page or performance acceptance. Off-screen item submission issue retained for next draw-domain work."
+        }
       }
     }
   }
