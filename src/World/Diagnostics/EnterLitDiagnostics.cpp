@@ -872,7 +872,7 @@ void UEnterLitDiagnostics::MaybeLogHeartbeat(const EnterLitSample &sample,
           {"mesh_satisfies", mesh.HasMeshSatisfyingColumnReady(coord)},
           {"render_ready", world->IsChunkSliceRenderReady(coord)},
           {"light_complete",
-           blocks.HasCompleteLightCalculation(coord, catalog)},
+           blocks.HasCompleteLightSamplingCalculation(coord, catalog)},
           {"light_settled", world->HasCurrentChunkSliceLightSettlement(coord)},
           {"pending_slice", world->IsPendingLightBeforeMeshSlice(coord)},
           {"dirty", mesh.IsChunkMeshDirty(coord)},
@@ -922,7 +922,7 @@ void UEnterLitDiagnostics::MaybeLogHeartbeat(const EnterLitSample &sample,
           if (blocks.GetChunkManager().HasChunk(coord))
           {
             ++resident;
-            if (blocks.HasCompleteLightCalculation(coord, catalog))
+            if (blocks.HasCompleteLightSamplingCalculation(coord, catalog))
               ++complete;
             else
               incomplete.push_back(cy);

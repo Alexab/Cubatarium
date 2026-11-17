@@ -10096,6 +10096,9 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         // earlier light publication creates preview -> remesh bootstrap debt.
         const bool light_can_publish_without_preview =
             snapshot.inputStampsValid &&
+            (snapshot.certifiedPaddedLight ||
+             world.GetLightingConfigurationIdentity() ==
+                 static_cast<uint64_t>(LightingMode::Flat)) &&
             MeshCandidateMatchesSettledDemand(
                 snapshot.InputsStillValid(world, CacheNeighborVisuallyDrawable,
                                           this),

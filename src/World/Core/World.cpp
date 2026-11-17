@@ -2783,7 +2783,7 @@ bool UWorld::HasCurrentColumnLightCoverage(glm::ivec2 column, int min_y,
     const glm::ivec3 coord(column.x, cy, column.y);
     if (BlockWorld.GetChunkManager().HasChunk(coord))
     {
-      if (!BlockWorld.HasCompleteLightCalculation(coord, catalog))
+      if (!BlockWorld.HasCompleteLightSamplingCalculation(coord, catalog))
         return false;
     }
     else if (!terrain_complete ||
@@ -2969,7 +2969,7 @@ void UWorld::NoteChunkSliceLightCalculationSettled(glm::ivec3 chunk_coord)
     return;
   }
   if (RequiresLightingLitGate() &&
-      !BlockWorld.HasCompleteLightCalculation(
+      !BlockWorld.HasCompleteLightSamplingCalculation(
           chunk_coord, BlockRegistry
                            ? BlockRegistry->GetDefinitionsCatalogSnapshot()
                            : nullptr))
@@ -9294,7 +9294,7 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(
     // occupying a worker every time the FIFO re-admits this column.
     std::vector<glm::ivec3> complete;
     for (const auto &coord : resident)
-      if (BlockWorld.HasCompleteLightCalculation(coord, catalog))
+      if (BlockWorld.HasCompleteLightSamplingCalculation(coord, catalog))
         complete.push_back(coord);
     if (!complete.empty())
       MarkRelitChunksForMesh(complete, true, {col}, finalize_pending_gate,
@@ -10129,7 +10129,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       NoteChunkSliceLightCalculationSettled(data.coord);
       if (MeshService &&
           MeshService->GetCache().HasProvisionalLightPreview(data.coord) &&
-          BlockWorld.HasCompleteLightCalculation(
+          BlockWorld.HasCompleteLightSamplingCalculation(
               data.coord, BlockRegistry->GetDefinitionsCatalogSnapshot()) &&
           !MeshService->IsChunkMeshDirty(data.coord) &&
           !MeshService->HasInflightMeshBuild(data.coord) &&
@@ -11755,7 +11755,7 @@ RequiredPresentationCoverage UWorld::SampleRequiredPresentationCoverage(
         }
         const bool light =
             !RequiresLightingLitGate() ||
-            BlockWorld.HasCompleteLightCalculation(coord, catalog);
+            BlockWorld.HasCompleteLightSamplingCalculation(coord, catalog);
         const bool publication =
             chunk->IsAirOnly() ||
             CurrentSlicePublicationReadyForWarmup(*this, coord);

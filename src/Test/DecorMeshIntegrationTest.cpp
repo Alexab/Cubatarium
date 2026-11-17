@@ -392,6 +392,7 @@ static void TestFirstComputedLightPublication(
     world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
     const glm::ivec3 root(0);
     world.SetBlock({4, 4, 4}, kStone);
+    world.SetBlock({15, 8, 8}, kStone);
     auto *chunk = world.GetChunkManager().GetChunk(root);
     RelightJobSpec spec;
     spec.min_world_y = world.GetVerticalProfile().MinY;
@@ -428,6 +429,16 @@ static void TestFirstComputedLightPublication(
                      neighbor->GetLightPackedLocal({0, 8, 8}),
              "poisoned neighbor light cannot alter certified capture or "
              "invalidate it");
+      const auto direct = UGreedyMesher::BuildChunkMesh(world, root, registry);
+      const auto immutable =
+          UGreedyMesher::BuildChunkMesh(recaptured, registry);
+      Expect(
+          direct.size() == immutable.size(),
+          "direct and immutable geometry agree with poisoned adjacent field");
+      for (size_t i = 0; i < direct.size(); ++i)
+        Expect(
+            direct[i].LightPacked == immutable[i].LightPacked,
+            "direct world face lighting uses same certified volume as capture");
     }
 
     UChunkMeshCache cache;

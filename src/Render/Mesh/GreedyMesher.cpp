@@ -41,7 +41,8 @@ public:
 
                          const UChunk *chunk)
 
-      : World(world), ChunkCoordValue(chunk_coord), Chunk(chunk)
+      : World(world), ChunkCoordValue(chunk_coord), Chunk(chunk),
+        SamplingVolume(world.GetCurrentLightSamplingVolume(chunk_coord))
 
   {
   }
@@ -64,11 +65,19 @@ public:
 
   uint8_t GetLightPackedLocal(glm::ivec3 local) const override
   {
+    if (SamplingVolume)
+      return SamplingVolume
+          ->cells[SectionLightVolume::Index(local.x, local.y, local.z)];
     return Chunk ? Chunk->GetLightPackedLocal(local) : 0;
   }
 
   uint8_t GetLightPacked(glm::ivec3 world_pos) const override
   {
+    const auto local = world_pos - ChunkCoordValue * CHUNK_SIZE;
+    if (SamplingVolume && local.x >= -2 && local.y >= -2 && local.z >= -2 &&
+        local.x < 18 && local.y < 18 && local.z < 18)
+      return SamplingVolume
+          ->cells[SectionLightVolume::Index(local.x, local.y, local.z)];
     const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(world_pos);
     const UChunk *chunk = World.GetChunkManager().GetChunk(chunk_coord);
     if (!chunk)
@@ -124,6 +133,7 @@ private:
   glm::ivec3 ChunkCoordValue;
 
   const UChunk *Chunk;
+  std::shared_ptr<const SectionLightVolume> SamplingVolume;
 };
 
 class USnapshotChunkReader : public IUChunkMeshReader

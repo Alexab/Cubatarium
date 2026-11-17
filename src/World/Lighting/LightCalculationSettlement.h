@@ -16,6 +16,7 @@ inline bool LightSettlementMatchesCurrentCalculation(
   return LightSettlementMatchesCurrentChunk(record, chunk, world_epoch) &&
          (world.GetLightingConfigurationIdentity() ==
               static_cast<uint64_t>(LightingMode::Flat) ||
-          world.HasCompleteLightCalculation(chunk->GetCoord(), catalog));
+          world.HasCompleteLightSamplingCalculation(chunk->GetCoord(),
+                                                    catalog));
 }
 } // namespace cutum

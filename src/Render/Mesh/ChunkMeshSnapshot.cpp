@@ -1,7 +1,8 @@
 #include "Render/Mesh/ChunkMeshSnapshot.h"
+#include "App/Platform/Log.h"
+#include "App/Settings/RenderSettings.h"
 #include "Render/Mesh/BoundaryOverlay.h"
 #include "Render/Mesh/MeshCaptureToken.h"
-#include "App/Platform/Log.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Lighting/LightUtil.h"
@@ -403,6 +404,10 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
     snapshot.openSkyAbsentMask = 0;
     snapshot.certifiedPaddedLight = true;
   }
+  snapshot.provisionalLightPreview =
+      !snapshot.certifiedPaddedLight &&
+      world.GetLightingConfigurationIdentity() !=
+          static_cast<uint64_t>(LightingMode::Flat);
   note_slow_stage("light_halo_capture");
 
   // Keep center + six face stamps at stable indices for existing consumers.
