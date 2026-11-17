@@ -2888,7 +2888,7 @@ void UWorldCooperativeSession::HandlePrepareViewLoad(UWorld &world,
     UEnterLitDiagnostics::Sample(world, elapsed_ms, lit_sample);
     UEnterLitDiagnostics::MaybeLog(lit_sample,
                                    StreamingWarmup.StreamingWarmupTicks);
-    UEnterLitDiagnostics::MaybeLogHeartbeat(lit_sample, 2000.0);
+    UEnterLitDiagnostics::MaybeLogHeartbeat(lit_sample, 2000.0, &world);
     const auto &phys_after = world.GetPhysicsTelemetry();
     step_sample.relight_drain_ms = phys_after.RelightDrainMs;
     step_sample.mesh_emerge_ms = phys_after.MeshEmergeMs;

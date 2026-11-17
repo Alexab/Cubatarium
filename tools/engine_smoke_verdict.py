@@ -17,9 +17,27 @@ from typing import Any
 def read_startup_warmup_evidence(log_paths) -> dict[str, Any]:
     """Recognize positive failure evidence; ordinary logs never prove readiness."""
     observed = []
+    sections = {}
     for path in log_paths:
         with Path(path).open(encoding="utf-8", errors="replace") as stream:
             for line in stream:
+                marker = "[EnterSectionWitness] "
+                if marker in line:
+                    try:
+                        row = json.loads(line.split(marker, 1)[1])
+                        coord = row["coord"]
+                        elapsed = row["elapsed_ms"]
+                        if (row.get("schema") == "enter-section-witness.v1" and
+                                isinstance(coord, list) and len(coord) == 3 and
+                                all(isinstance(v, int) and not isinstance(v, bool) for v in coord) and
+                                isinstance(elapsed, (int, float)) and not isinstance(elapsed, bool) and
+                                math.isfinite(elapsed) and elapsed >= 0):
+                            key = tuple(coord)
+                            old = sections.get(key)
+                            if old is None or elapsed >= old["elapsed_ms"]:
+                                sections[key] = row
+                    except (ValueError, KeyError, TypeError):
+                        pass
                 if "[EnterWarmup]" not in line:
                     continue
                 fields = dict(re.findall(r"\b(settle_reason|elapsed_ms|visibility_debt|underfeet)=([^\s]+)", line))
@@ -37,7 +55,8 @@ def read_startup_warmup_evidence(log_paths) -> dict[str, Any]:
                                      visibility_debt=debt, underfeet_ready=bool(underfeet),
                                      forced_with_debt=forced and (debt > 0 or underfeet == 0)))
     return dict(schema="startup-warmup-evidence.v1", records=observed,
-                forced_with_debt=any(row["forced_with_debt"] for row in observed))
+                forced_with_debt=any(row["forced_with_debt"] for row in observed),
+                section_witnesses=[sections[key] for key in sorted(sections)][:64])
 
 
 def component(status: str, reason: str, **evidence: Any) -> dict[str, Any]:

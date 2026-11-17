@@ -200,7 +200,8 @@ public:
                        int every_n_frames = 30);
   /// Heartbeat by elapsed_ms (default every 2s) for long gpu_warmup stalls.
   static void MaybeLogHeartbeat(const EnterLitSample &sample,
-                                double heartbeat_ms = 2000.0);
+                                double heartbeat_ms = 2000.0,
+                                UWorld *world = nullptr);
   /// Era44: accumulate per-step timings for profile summary.
   static void RecordFrameSteps(const EnterWarmupStepSample &steps);
   /// Era44: emit [EnterWarmup] profile when ring becomes ready.

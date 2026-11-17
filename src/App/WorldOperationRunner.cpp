@@ -371,7 +371,7 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   const int frame_index =
       kEnterGameGpuWarmupMaxFrames - EnterGameGpuWarmupFramesLeft;
   UEnterLitDiagnostics::MaybeLog(lit_sample, frame_index);
-  UEnterLitDiagnostics::MaybeLogHeartbeat(lit_sample, 2000.0);
+  UEnterLitDiagnostics::MaybeLogHeartbeat(lit_sample, 2000.0, &World);
   const bool min_frames_done = frame_index >= kEnterGameGpuWarmupMinFrames;
   if (!mesh_blockers_for_exit || !ring_ready_for_exit)
   {

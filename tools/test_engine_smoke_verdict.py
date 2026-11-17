@@ -59,6 +59,23 @@ class EngineSmokeVerdictTest(unittest.TestCase):
             result = classify(self.report, self.perf)
             self.assertEqual(result["components"]["startup"]["status"], "UNTESTED")
 
+    def test_section_snapshots_preserve_latest_state_without_granting_first_frame(self):
+        log = Path(self.temp.name) / "runtime.log"
+        row = dict(schema="enter-section-witness.v1", coord=[1, -3, 3],
+                   elapsed_ms=4000, light_complete=True, drawable=False,
+                   mesh_satisfies=False, dirty=True, geom=[5, 3])
+        old = dict(row, elapsed_ms=2000, geom=[3, 3])
+        log.write_text("[EnterSectionWitness] " + json.dumps(row) + "\n" +
+                       "[EnterSectionWitness] " + json.dumps(old) + "\n" +
+                       "[EnterSectionWitness] {broken\n", encoding="utf-8")
+        evidence = read_startup_warmup_evidence([log])
+        self.assertEqual(evidence["section_witnesses"], [row])
+        self.report.pop("first_frame_required_ring_ready")
+        self.report["startup_warmup_evidence"] = evidence
+        self.trace()
+        self.assertEqual(classify(self.report, self.perf)["components"]["startup"]["status"],
+                         "UNTESTED")
+
     def test_empty_trace_is_untested(self):
         self.perf.write_text("")
         self.assertEqual(classify(self.report, self.perf)["status"], "UNTESTED")

@@ -2,15 +2,17 @@
 
 #include "App/Core.h"
 #include "App/Platform/Log.h"
+#include "Core/Environment.h"
 #include "Render/Camera/Camera.h"
-#include "World/Core/World.h"
 #include "World/Chunks/ChunkManager.h"
+#include "World/Core/World.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Persistence/WorldPersistence.h"
 #include "World/Streaming/ChunkRenderDemand.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/VisualObligationPolicy.h"
 #include "glog/logging.h"
+#include <nlohmann/json.hpp>
 
 #include <algorithm>
 #include <chrono>
@@ -771,7 +773,7 @@ void UEnterLitDiagnostics::MaybeLog(const EnterLitSample &sample,
 }
 
 void UEnterLitDiagnostics::MaybeLogHeartbeat(const EnterLitSample &sample,
-                                             double heartbeat_ms)
+                                             double heartbeat_ms, UWorld *world)
 {
   if (heartbeat_ms <= 0.0)
   {
@@ -814,6 +816,55 @@ void UEnterLitDiagnostics::MaybeLogHeartbeat(const EnterLitSample &sample,
             << sample.top_dirty_cz << ")"
             << " stuck_dirty=(" << sample.stuck_dirty_cx << ","
             << sample.stuck_dirty_cy << "," << sample.stuck_dirty_cz << ")";
+  if (world && IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+  {
+    const auto center =
+        UChunkManager::WorldToChunk(world->GetPreferredLoadFocusBlock());
+    const auto &mesh = world->GetMeshService();
+    const auto &cache = mesh.GetCache();
+    const auto catalog =
+        world->GetBlockRegistry().GetDefinitionsCatalogSnapshot();
+    const auto &blocks = world->GetBlockWorld();
+    for (int cy = FloorDiv(world->GetProceduralSettings().MinHeight, CHUNK_SIZE);
+         cy <= FloorDiv(world->GetProceduralSettings().MaxHeight, CHUNK_SIZE); ++cy)
+    {
+      const glm::ivec3 coord(center.x, cy, center.z);
+      const auto *chunk = blocks.GetChunkManager().GetChunk(coord);
+      if (!chunk || chunk->IsAirOnly())
+        continue;
+      const auto pub = cache.GetMeshPublishRevs(coord);
+      const auto *demand = world->GetRenderDemandStore().Find(coord);
+      nlohmann::json row = {
+          {"schema", "enter-section-witness.v1"},
+          {"elapsed_ms", sample.elapsed_ms},
+          {"coord", {coord.x, coord.y, coord.z}},
+          {"nonair", chunk->GetNonAirCount()},
+          {"drawable", mesh.HasDrawableGreedyMesh(coord)},
+          {"mesh_satisfies", mesh.HasMeshSatisfyingColumnReady(coord)},
+          {"render_ready", world->IsChunkSliceRenderReady(coord)},
+          {"light_complete",
+           blocks.HasCompleteLightCalculation(coord, catalog)},
+          {"light_settled", world->HasCurrentChunkSliceLightSettlement(coord)},
+          {"pending_slice", world->IsPendingLightBeforeMeshSlice(coord)},
+          {"dirty", mesh.IsChunkMeshDirty(coord)},
+          {"soft_held", mesh.IsSoftDeferHeld(coord)},
+          {"mesh_inflight", mesh.HasInflightMeshBuild(coord)},
+          {"gpu_pending",
+           mesh.IsPendingGpuApply(coord) || mesh.IsGpuExtractInFlight(coord)},
+          {"field_light_rev", chunk->GetLightFieldRevision()},
+          {"published_light_rev", pub.light_rev},
+          {"meshed_light_rev", cache.GetMeshedLightRevision(coord)}};
+      if (demand)
+      {
+        row["geom"] = {demand->desired_geom_rev, demand->published_geom_rev};
+        row["light"] = {demand->desired_light_rev, demand->published_light_rev};
+        row["coverage"] = {demand->desired_coverage_gen,
+                           demand->published_coverage_gen};
+        row["active_attempt"] = demand->has_active_attempt;
+      }
+      CubatariumLogInfo("EnterSectionWitness", row.dump());
+    }
+  }
   CubatariumFlushLogs();
   std::lock_guard<std::mutex> lock(g_session_mutex);
   if (g_session_open)
