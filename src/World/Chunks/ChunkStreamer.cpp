@@ -9,6 +9,7 @@
 #include "World/Core/RuntimeTuning.h"
 #include "World/Math/GridMath.h"
 #include "World/Physics/CollisionReadiness.h"
+#include "World/Streaming/RequiredDataCoverage.h"
 #include "World/Streaming/StreamerAmortizePolicy.h"
 #include "World/Streaming/WorldColumnRequestId.h"
 #include <algorithm>
@@ -634,6 +635,22 @@ bool UChunkStreamer::ShouldKeepChunkLoaded(glm::ivec3 chunkCoord,
   }
 
   return false;
+}
+
+int UChunkStreamer::EnsureDataColumns(const std::vector<glm::ivec3> &columns,
+                                      int budget)
+{
+  return AdmitRequiredDataColumns(
+      columns, budget, [this](glm::ivec3 coord)
+      { return IsTerrainChunkCompleteCached(coord); }, [this](glm::ivec3 coord)
+      { return OnIsColumnPending && OnIsColumnPending(coord); },
+      [this](glm::ivec3 coord)
+      {
+        bool queued = false;
+        const bool complete = EnsureChunkLoaded(coord, false, &queued);
+        LastFrameStats.asyncQueuedThisFrame += queued ? 1 : 0;
+        LastFrameStats.loadsThisFrame += complete ? 1 : 0;
+      });
 }
 
 bool UChunkStreamer::IsPositionInActiveRing(const glm::vec3 &worldPos,

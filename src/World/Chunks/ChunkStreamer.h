@@ -200,6 +200,9 @@ public:
 
   /// Load chunks around feet for collision — no save/unload.
   void EnsureCollisionChunks(glm::ivec3 feetBlockPos);
+  /// Bounded data-only requests for light/mesh consumer halos during loading.
+  /// Reuses normal asynchronous load/generation ownership; never unloads.
+  int EnsureDataColumns(const std::vector<glm::ivec3> &columns, int budget);
   bool IsCollisionReady(glm::ivec3 feetBlockPos, int radiusChunks) const;
 
   /// Full streaming pass after Movement: load (unload is separate pass).

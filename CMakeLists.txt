@@ -2023,6 +2023,10 @@ cubatarium_add_test(NAME gpu_skylight_seed_fluid_test
     DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
+cubatarium_add_test(NAME required_data_coverage_test
+    SOURCES src/Test/RequiredDataCoverageTest.cpp
+    LIBRARIES glm::glm)
+
 cubatarium_add_test(NAME mark_relit_integration_test
     SOURCES
         src/Test/MarkRelitIntegrationTest.cpp
@@ -3387,6 +3391,7 @@ set(CUBATARIUM_CTEST_UNIT_TARGETS
   cruise_sot_phase_test
   decor_mesh_integration_test
   relight_result_install_test
+  required_data_coverage_test
   mesh_neighbor_policy_test
   mesh_light_stale_policy_test
   column_emerge_bump_test

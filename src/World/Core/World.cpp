@@ -96,6 +96,7 @@
 #include "World/Streaming/OceanFrontierPolicy.h"
 #include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Streaming/RelightInstallPlanner.h"
+#include "World/Streaming/RequiredDataCoverage.h"
 #include "World/Streaming/RingReadinessBudget.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/VisibleBlackAttribution.h"
@@ -271,24 +272,35 @@ bool ChunkSliceHasCurrentLightSettlement(const UWorld &world, glm::ivec3 coord)
   return true;
 }
 
-bool CurrentOccludedSliceReadyForWarmup(const UWorld &world, glm::ivec3 coord)
+bool CurrentSlicePublicationReadyForWarmup(const UWorld &world,
+                                           glm::ivec3 coord)
 {
   const auto &mesh = world.GetMeshService();
   const auto &cache = mesh.GetCache();
   const auto *chunk = world.GetBlockWorld().GetChunkManager().GetChunk(coord);
   const auto *demand = world.GetRenderDemandStore().Find(coord);
-  // The cache accepts a non-drawable mesh only when it is a current published
-  // zero-quad result, with no pending geometry/coverage successor. Darkness
-  // and SoftDefer placeholders are not evidence of intentional occlusion.
-  if (!chunk || !demand || mesh.HasDrawableGreedyMesh(coord) ||
-      !mesh.HasMeshSatisfyingColumnReady(coord) ||
-      !ChunkSliceHasCurrentLightSettlement(world, coord))
+  if (!chunk || !demand || !mesh.HasMeshSatisfyingColumnReady(coord) ||
+      cache.HasProvisionalLightPreview(coord) ||
+      !ChunkSliceHasCurrentLightSettlement(world, coord) ||
+      mesh.IsChunkMeshDirty(coord) || mesh.IsRemeshAfterApplyPending(coord) ||
+      mesh.HasInflightMeshBuild(coord) || mesh.IsPendingGpuApply(coord) ||
+      mesh.IsGpuExtractInFlight(coord) || cache.HasPendingCaptureWork(coord))
     return false;
   const auto published = cache.GetMeshPublishRevs(coord);
   return published.light_rev == chunk->GetLightFieldRevision() &&
          cache.GetMeshedLightRevision(coord) ==
              chunk->GetLightFieldRevision() &&
-         demand->desired_light_rev <= demand->published_light_rev;
+         demand->desired_light_rev <= demand->published_light_rev &&
+         demand->desired_geom_rev <= demand->published_geom_rev &&
+         demand->desired_coverage_gen <= demand->published_coverage_gen &&
+         mesh.GetChunkMeshRevision(coord) <= published.geom_rev &&
+         cache.IsPublishedMeshCurrentForInputs(coord, world.GetBlockWorld());
+}
+
+bool CurrentOccludedSliceReadyForWarmup(const UWorld &world, glm::ivec3 coord)
+{
+  return !world.GetMeshService().HasDrawableGreedyMesh(coord) &&
+         CurrentSlicePublicationReadyForWarmup(world, coord);
 }
 
 int CountMissingSlicesInRange(const UBlockWorld &world,
@@ -13569,79 +13581,9 @@ bool UWorld::IsEnterUnderfeetPresentReady() const
   {
     return false;
   }
-  // Enter worklist settled: focus drawable is the opaque-present SoT.
-  // (GPU commit clears CPU lit-face bits; SoftDefer neighbors must not hole
-  // exit.)
-  if (EnterLitGateActive && EnterVisualGateCtrl.IsCaptured() &&
-      EnterVisualGateCtrl.Remaining() <= 0)
-  {
-    const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
-    const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
-    const int max_cy = FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
-    const int focus_cy = FloorDiv(
-        std::max(ProceduralTemplate.MinHeight, focus_block.y), CHUNK_SIZE);
-    const int sea_cy = FloorDiv(ProceduralTemplate.SeaLevel, CHUNK_SIZE);
-    int cy0 = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE);
-    int cy1 = std::min(max_cy, std::max(focus_cy + 2, sea_cy + 1));
-    if (ProceduralTemplate.FillWater)
-    {
-      cy0 = std::min(
-          cy0, std::max(FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE),
-                        sea_cy - 1));
-    }
-    cy0 = std::min(cy0,
-                   std::max(FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE),
-                            focus_cy - 1));
-    bool saw_solid = false;
-    bool opaque = false;
-    for (int cy = cy0; cy <= cy1; ++cy)
-    {
-      const glm::ivec3 coord(center.x, cy, center.z);
-      const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
-      if (!chunk)
-      {
-        continue;
-      }
-      bool any_solid = false;
-      for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
-      {
-        for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
-        {
-          for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
-          {
-            if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
-            {
-              any_solid = true;
-            }
-          }
-        }
-      }
-      if (!any_solid)
-      {
-        continue;
-      }
-      saw_solid = true;
-      if (CurrentOccludedSliceReadyForWarmup(*this, coord))
-        continue;
-      if (MeshService->IsSoftDeferHeld(coord) &&
-          !MeshService->HasDrawableGreedyMesh(coord))
-      {
-        return false;
-      }
-      if (MeshService->HasDrawableGreedyMesh(coord) &&
-          IsChunkSliceRenderReady(coord))
-      {
-        opaque = true;
-      }
-    }
-    if (!saw_solid)
-    {
-      return true;
-    }
-    return EnterUnderfeetPresentReady(true, opaque);
-  }
-
-  // Pre-settle: require lit/true-dark focus slice.
+  // Presentation is a publication/input proof, not a lit-face/dark-face
+  // census. A bottom-only opaque section has neither observational label,
+  // yet its calculated zero-light publication is fully valid.
   const UWorldMeshService &mesh = *MeshService;
   const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
   const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
@@ -13670,53 +13612,13 @@ bool UWorld::IsEnterUnderfeetPresentReady() const
     {
       continue;
     }
-    bool any_solid = false;
-    for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 2)
-    {
-      for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 2)
-      {
-        for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 2)
-        {
-          if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
-          {
-            any_solid = true;
-          }
-        }
-      }
-    }
-    if (!any_solid)
-    {
+    if (chunk->IsAirOnly())
       continue;
-    }
     saw_solid_focus = true;
-    if (CurrentOccludedSliceReadyForWarmup(*this, coord))
+    if (!CurrentSlicePublicationReadyForWarmup(*this, coord))
+      return false;
+    if (!mesh.HasDrawableGreedyMesh(coord))
       continue;
-    const bool has_drawable = mesh.HasDrawableGreedyMesh(coord);
-    if (mesh.IsSoftDeferHeld(coord) && !has_drawable)
-    {
-      return false;
-    }
-    if (!has_drawable)
-    {
-      return false;
-    }
-    const bool fully_dark = mesh.GetCache().ChunkHasFullyDarkFace(coord) &&
-                            !mesh.ChunkHasLitDrawableFace(coord);
-    const bool lit_drawable = mesh.ChunkHasLitDrawableFace(coord);
-    const bool pending_col = IsPendingLightBeforeMeshSlice(coord);
-    const bool stale =
-        fully_dark && MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld);
-    const bool true_dark = fully_dark && !pending_col && !stale &&
-                           HasCurrentChunkSliceLightSettlement(coord) &&
-                           IsChunkSliceRenderReady(coord);
-    if (!EnterUnderfeetSliceReady(lit_drawable, pending_col, true_dark))
-    {
-      return false;
-    }
-    if (!IsChunkSliceRenderReady(coord))
-    {
-      return false;
-    }
     opaque_present = true;
   }
   if (!saw_solid_focus)
@@ -14180,6 +14082,49 @@ void UWorld::TickEnterWarmupDrainFrame(int mesh_budget, int gate_iterations,
   // Era50: EnterVisualGate owns enter drain — quiesce split + worklist FSM.
   // DrainEnterGameMeshWarmup owns explicit DrainPendingGpuMeshes; gate drain
   // runs TickMeshEmerge (ConsumeGpuApplyBacklog) for iterations.
+  if (IsEnterLitGateActive() && Streaming && Streaming->GetStreamer())
+  {
+    const auto focus =
+        UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+    // Visible geometry consumes a light halo; that halo's geometry-derived
+    // calculations consume one further data halo. The initial load may have
+    // been centered before the final camera/player pose was restored.
+    const int light_radius =
+        std::max(EnterVisualWorkRadiusChunks(), GetStreamingFocusRadius()) + 1;
+    const int data_radius = light_radius + 1;
+    const auto required_data = RequiredDataColumns(focus, data_radius);
+    const int requested =
+        Streaming->GetStreamer()->EnsureDataColumns(required_data, 4);
+    for (int ring = 0; ring <= light_radius; ++ring)
+      for (int dz = -ring; dz <= ring; ++dz)
+        for (int dx = -ring; dx <= ring; ++dx)
+        {
+          if (std::max(std::abs(dx), std::abs(dz)) != ring)
+            continue;
+          const glm::ivec3 column(focus.x + dx, 0, focus.z + dz);
+          if (!IsTerrainColumnCompleteFast(column))
+            continue;
+          bool halo_ready = true;
+          for (int hz = -1; hz <= 1 && halo_ready; ++hz)
+            for (int hx = -1; hx <= 1 && halo_ready; ++hx)
+              halo_ready =
+                  IsTerrainColumnCompleteFast(column + glm::ivec3(hx, 0, hz));
+          const glm::ivec2 key(column.x, column.z);
+          if (halo_ready &&
+              !HasCurrentColumnLightCoverage(key, ProceduralTemplate.MinHeight,
+                                             ProceduralTemplate.MaxHeight))
+            NotePendingLightBeforeMesh(column, ProceduralTemplate.MinHeight,
+                                       ProceduralTemplate.MaxHeight,
+                                       "enter_required_light_halo");
+        }
+    if (requested && IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+      CubatariumLogInfo("RelightAudit",
+                        "enter_data_halo center=(" + std::to_string(focus.x) +
+                            "," + std::to_string(focus.z) +
+                            ") data_radius=" + std::to_string(data_radius) +
+                            " light_radius=" + std::to_string(light_radius) +
+                            " requested=" + std::to_string(requested));
+  }
   SyncEnterVisualGateQuiesceFlags();
   if (IsEnterLitGateActive())
   {
