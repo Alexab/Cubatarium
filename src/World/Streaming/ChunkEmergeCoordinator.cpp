@@ -6057,8 +6057,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   mesh_service.SetEnterFovLitPressure(world.IsEnterFovLitPassActive());
   mesh_service.SetColumnLoadedNoMeshPressure(
       world.GetPhysicsTelemetry().ColumnLoadedNoMeshN);
-  mesh_service.SetEnterUnderfeetExitBlocked(
-      world.IsEnterLitGateActive() && !world.IsEnterUnderfeetPresentReady());
+  SoftDeferPolicy.underfeet_exit_blocked =
+      world.IsEnterLitGateActive() && !world.IsEnterUnderfeetPresentReady();
+  mesh_service.SetEnterUnderfeetExitBlocked(SoftDeferPolicy.underfeet_exit_blocked);
   {
     const int dirty_fm_pre_rebuild = mesh_service.GetLastDirtyFmN();
     int fm_reserve =
@@ -6729,8 +6730,7 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
         if (EnterLitQuiesceMayLiftSpawnSoftDefer(
                 world_ref.IsEnterLitQuiesceLatched(), horiz, pending,
                 /*spawn_radius=*/2,
-                world_ref.IsEnterLitGateActive() &&
-                    !world_ref.IsEnterUnderfeetPresentReady()))
+                pol.underfeet_exit_blocked))
         {
           return false;
         }

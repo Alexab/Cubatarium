@@ -18,6 +18,9 @@ struct SoftDeferFramePolicy
   bool have_nearest_missing{false};
   glm::ivec3 nearest_missing_hole{0};
   bool missing_visible_mesh{false};
+  /// Scheduling hint sampled outside callbacks. Aggregate readiness itself
+  /// queries soft-defer, so querying it from the callback would recurse.
+  bool underfeet_exit_blocked{false};
   int pending_focus_count{0};
   int unlit_near_count{0};
 };
