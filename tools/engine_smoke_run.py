@@ -453,6 +453,16 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                 verdict["status"] = "FAIL"
             elif air_service["status"] == "UNTESTED" and verdict["status"] == "PASS":
                 verdict["status"] = "UNTESTED"
+        if scene is not None and scene.get("name") == "open-sky-plane" and not startup_only:
+            from engine_camera_light_reference import evaluate as evaluate_camera_light
+            camera_light = evaluate_camera_light(scene, sorted((artifacts / "logs").glob("*.log.INFO.*")))
+            verdict["components"]["fixture_camera_field_light"] = camera_light
+            (artifacts / "fixture-camera-light-reference.json").write_text(
+                json.dumps(camera_light, indent=2) + "\n", encoding="utf-8")
+            if camera_light["status"] == "FAIL":
+                verdict["status"] = "FAIL"
+            elif camera_light["status"] == "UNTESTED" and verdict["status"] == "PASS":
+                verdict["status"] = "UNTESTED"
         verdict["runner_exit_code"] = child.returncode
         verdict["inspection_evidence"] = inspection
         if not report_path.exists():

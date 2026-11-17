@@ -1,0 +1,130 @@
+"""Validate canonical camera-field observations at actual world paints.
+
+The open plane has unobstructed sky and no emitter within the scoped footprint.
+Missing/transient fields after first paint fail even when their raw bytes look
+bright. This is a CPU-resource readiness/value oracle, not a shader/RGB oracle.
+"""
+from __future__ import annotations
+
+import json
+import math
+import re
+from pathlib import Path
+
+
+def evaluate(scene: dict, logs: list[Path]) -> dict:
+    if scene.get("name") != "open-sky-plane":
+        return dict(status="UNTESTED", reason="unsupported_camera_light_scene")
+    try:
+        bounds = scene["plane_bounds"]
+        lo, hi = scene["chunk_x_bounds"]
+        if (any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v)
+                for v in (bounds["floor"], bounds["z_low"], bounds["z_high"])) or
+                not all(isinstance(v, int) and not isinstance(v, bool) for v in (lo, hi)) or
+                lo >= hi or bounds["z_high"] - bounds["z_low"] <= 32):
+            raise ValueError("invalid reference domain")
+    except (KeyError, TypeError, ValueError):
+        return dict(status="FAIL", reason="invalid_camera_light_fixture")
+    marker_epoch = None
+    pending = None
+    samples = ready_samples = air_samples = unsupported = skipped = faults = 0
+    epochs = set()
+    air_sections = set()
+    seen = set()
+    examples = []
+
+    def fault(reason):
+        nonlocal faults
+        faults += 1
+        if len(examples) < 8:
+            examples.append(reason)
+
+    def observe(line):
+        nonlocal samples, ready_samples, air_samples, unsupported, skipped
+        values = dict(re.findall(r"\b(\w+)=([^\s]+)", line))
+        try:
+            epoch, frame = int(values["world_epoch"]), int(values["frame_epoch"])
+            def triple(key):
+                value = re.fullmatch(r"\((-?\d+),(-?\d+),(-?\d+)\)", values[key])
+                if value is None:
+                    raise ValueError("invalid coordinate")
+                return tuple(map(int, value.groups()))
+            cell, coord = triple("cell"), triple("coord")
+            physical, resident, ready = (int(values[k]) for k in ("physical", "resident", "ready"))
+            sky, block, identity = (int(values[k]) for k in ("sky", "block_light", "field_incarnation"))
+            if (epoch < 0 or frame < 0 or any(v not in (0, 1) for v in (physical, resident, ready)) or
+                    not 0 <= sky <= 15 or not 0 <= block <= 15 or identity < 0 or
+                    coord != tuple(v // 16 for v in cell)):
+                raise ValueError("invalid field observation")
+        except (KeyError, TypeError, ValueError):
+            fault("malformed_camera_light_observation")
+            return
+        if epoch != marker_epoch:
+            skipped += 1
+            return
+        bounds = scene["plane_bounds"]
+        lo, hi = scene["chunk_x_bounds"]
+        if not (lo*16+16 <= cell[0] < (hi+1)*16-16 and
+                bounds["z_low"]+16 <= cell[2] < bounds["z_high"]-16 and
+                cell[1] > round(bounds["floor"]-.5)):
+            skipped += 1
+            return
+        key = epoch, frame, cell
+        if key in seen:
+            return
+        seen.add(key)
+        if not physical:
+            unsupported += 1
+            return
+        samples += 1
+        epochs.add(frame)
+        if not ready:
+            fault(f"unready_camera_field:{coord}:{frame}")
+        elif identity == 0:
+            fault(f"invalid_ready_field_binding:{coord}:{frame}")
+        elif sky != 15 or block != 0:
+            fault(f"camera_light_mismatch:{coord}:{frame}:sky{sky}:block{block}")
+        else:
+            ready_samples += 1
+            if not resident:
+                air_samples += 1
+                air_sections.add(coord)
+
+    for path in sorted(logs):
+        with path.open(encoding="utf-8", errors="replace") as stream:
+            for line in stream:
+                if "[CameraLightSample]" in line:
+                    if marker_epoch is None:
+                        pending = line
+                    else:
+                        observe(line)
+                elif "[FirstWorldFrameWitness]" in line and marker_epoch is None:
+                    try:
+                        marker = json.loads(line[line.index("{"):])
+                        if not isinstance(marker, dict):
+                            raise ValueError("invalid first-paint witness")
+                        if marker.get("phase") != "first_world_paint":
+                            continue
+                        epoch = marker["world_epoch"]
+                        if not isinstance(epoch, int) or isinstance(epoch, bool) or epoch < 0:
+                            raise ValueError("invalid first-paint epoch")
+                        marker_epoch = epoch
+                        # The camera observation precedes this frame's post-paint
+                        # witness. Keep that first actual world frame in scope.
+                        if pending:
+                            observe(pending)
+                    except (ValueError, KeyError, TypeError):
+                        fault("malformed_first_world_paint")
+    coverage = dict(first_paint=marker_epoch is not None, samples=ready_samples >= 25,
+                    frame_epochs=len(epochs) >= 3, absent_geometry_sections=len(air_sections) >= 8,
+                    physical_mode=unsupported == 0)
+    status = "FAIL" if faults else "PASS" if all(coverage.values()) else "UNTESTED"
+    return dict(schema="engine-camera-light-reference.v1", status=status,
+                reason="camera_canonical_field_at_paint", samples=samples,
+                ready_samples=ready_samples, air_samples=air_samples,
+                frame_epochs=len(epochs), distinct_air_sections=len(air_sections),
+                unsupported_mode_samples=unsupported, skipped_unscoped=skipped,
+                faults=faults, examples=examples,
+                missing_coverage=[k for k, valid in coverage.items() if not valid],
+                scope="observed canonical camera CPU field readiness/sky15/block0 at world paints; "
+                      "no creature/item, GPU page, shader RGB, latency or full-screen acceptance")

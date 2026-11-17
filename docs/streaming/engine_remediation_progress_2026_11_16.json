@@ -4234,7 +4234,25 @@
       "fixture": "Open-sky plane atY=-61, only floor section saved across route columns and3Zcolumns. Remove all higher saved JSON/binary sections, including above old cave overwrite range. Catalog/stone ID560/opaque/nonemissive properties validated and hashed. Saved spawn/body origin prepared in clone; rise20 through normal input reaches AIR above highest saved geometry. No runtime relocation.",
       "references": "Independent floor-only ray geometry within32blocks; no ceiling/wall assumed. Direct-skylight floor mode expects sky15/block0 in actual CPU or witnessed packed GPU draw source joined to framebuffer depth. Retains25positive samples/3epochs/8cells requirements. Constant direct-sky case has one expected level; original block-emitter gradient/multiple-level/emitter-surface requirements unchanged. Unreadable/provisional data UNTESTED; zero sky, nonzero blocklight, wrong material and missing floor negative controls fail. No RGB/transparency/fullscreen acceptance.",
       "tests": "build/desktop-msvc/engine-open-sky-plane-python-test.log:51PASS, including fixture cleanup of high saved chunks, original-save isolation, direct-sky/missing-floor/preview/unreadable/single-cell controls.",
-      "next": "Fresh native open-sky-plane frontier route with existing mandatory AIR-service join; do not accept AIR service until actual positive requested/installed/current geometry-absent fields are observed."
+      "next": "Fresh native open-sky-plane frontier route with existing mandatory AIR-service join; do not accept AIR service until actual positive requested/installed/current geometry-absent fields are observed.",
+      "native": {
+        "artifacts": "build/desktop-msvc/engine-light-sample-demand-open-sky-native",
+        "harness_source": "cfac83e67",
+        "exe_source": "6e959d975",
+        "status": "UNTESTED overall; route/startup/inspection/near depth/direct-sky GPU floorPASS; AIR serviceUNTESTED",
+        "direct_sky": "101actual packedGPU floor checks12epochs86cells sky15/block0 zero faults",
+        "air_service": "2joined completed jobs/2columns versus required3;0counter faults. Threshold retained.",
+        "admission_audit": "air-light-admission-audit.json:23consumer columns,2positiveAIR submissions; initial request waited1.627415s then receipt0.052061s; final request waited23.789841s then receipt0.099556s. Intermediate per-paint camera state was not instrumented, so absence of receipts is not substituted for a measured frame-readiness verdict."
+      }
+    },
+    "foreground_sample_admission_and_paint_oracle": {
+      "status": "Implemented;53Python testsPASS; corrected desktop Release/static EXE PASS; fresh same-plane native pending",
+      "implementation": "Request current focus first and bounded3x3x3 approach fields within vertical profile, TTL8frames. Fair scan visits8records; at most1foreground geometry-absent sample capture per maintenance invocation, after9data columns complete and with worker queue/completed backpressure at4slots per worker. Uses existing async builder, exact validation, apply and timing accounting; durable pending/FIFO remains for fallback and resident fields. No new geometry is allocated for an AIR output. Approach fields prime before crossing a section.",
+      "observability": "Opt-in CameraLightSample emitted from actual world geometry paint: world/frame epoch, cell/section, physical mode, geometry presence, full current padded-volume availability, sky/block bytes and field incarnation. Existing first-world-paint witness scopes the first sample and later frames.",
+      "oracle": "Open-plane camera canonical CPU-resource reference requires sky15/block0, a nonzero binding identity and complete resource at every observed scoped paint; first post-paint witness includes preceding same-frame camera observation. Requires25ready observations,3frame epochs and8distinct geometry-absent camera sections. Missing trace/coverage/unsupported constant mode UNTESTED; unready first/moving sample, malformed coordinates, wrong bytes or binding FAIL. No creature/item/GPU-page/shadedRGB/fullscreen acceptance.",
+      "tests": "engine-camera-light-reference-python-test.log:53PASS, including unready first frame, wrong binding, scalar sky/block controls, static-only/geometry-present-only/constant-mode/missing-witness exclusions.",
+      "build_correction": "engine-light-sample-foreground-release-build.log: failed because the new renderer logger omitted explicit App/Platform/Log.h include; added include. engine-light-sample-foreground-release-rebuild.log:PASS/static EXE PASS. Original failed log retained; app never launched from failed build.",
+      "remaining": "Verify same continuous open-plane route with new point oracle before accepting foreground/preload fix. Then explicit common world samplers, real creature/item demand, Flat constant resource, actual GPU pages/table/atomic publication, persisted provenance and full visual/performance matrix remain required."
     }
   }
 }

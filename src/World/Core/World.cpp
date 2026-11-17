@@ -11727,8 +11727,23 @@ void UWorld::MaintainRequiredWorldInputs(int data_budget,
       MeshService ? MeshService->GetCache().GetCaptureStore().WorldEpoch() : 0;
   if (MeshService && RequiresLightingLitGate() &&
       BlockWorld.GetVerticalProfile().SliceBounds(focus.y, CHUNK_SIZE))
+  {
+    // Prime the bounded approach footprint before the eye crosses a section.
+    // Register the actual focus first; the fair queue services it first on
+    // entry.
     GetRenderDemandStore().RequestLightSample(focus, sample_epoch,
-                                              StreamingFrameEpoch);
+                                              StreamingFrameEpoch, 8);
+    for (int dy = -1; dy <= 1; ++dy)
+      for (int dz = -1; dz <= 1; ++dz)
+        for (int dx = -1; dx <= 1; ++dx)
+        {
+          const auto coord = focus + glm::ivec3(dx, dy, dz);
+          if (coord != focus &&
+              BlockWorld.GetVerticalProfile().SliceBounds(coord.y, CHUNK_SIZE))
+            GetRenderDemandStore().RequestLightSample(coord, sample_epoch,
+                                                      StreamingFrameEpoch, 8);
+        }
+  }
   BlockWorld.GetChunkManager().RetireAbsentSectionLightFields(
       256,
       [&](glm::ivec3 coord)
@@ -11744,6 +11759,7 @@ void UWorld::MaintainRequiredWorldInputs(int data_budget,
       });
   const int requested = streamer.EnsureDataColumns(
       RequiredDataColumns(focus, domain.data), std::max(0, data_budget));
+  int sample_captures = 0;
   if (MeshService)
     GetRenderDemandStore().DrainLightSampleDemands(
         sample_epoch, StreamingFrameEpoch, 8,
@@ -11760,6 +11776,25 @@ void UWorld::MaintainRequiredWorldInputs(int data_budget,
           NotePendingLightBeforeMesh(
               {coord.x, 0, coord.z}, coord.y * CHUNK_SIZE,
               coord.y * CHUNK_SIZE + CHUNK_SIZE - 1, "required_light_sample");
+          // Mesh-oriented FIFO admission can defer an AIR-only consumer for
+          // seconds despite ready data. One bounded foreground capture shares
+          // the existing worker, validation, apply and accounting paths.
+          if (sample_captures == 0 &&
+              !BlockWorld.GetChunkManager().HasChunk(coord) &&
+              BlockWorld.IsKnownAbsentAirChunk(coord) &&
+              !IsAsyncRelightColumnInFlight({coord.x, coord.z}) &&
+              (!AsyncRelight ||
+               AsyncRelight->GetQueuedJobCount() +
+                       AsyncRelight->GetCompletedSize() <
+                   static_cast<size_t>(
+                       std::max(1, AsyncRelight->GetWorkerCount()) * 4)))
+          {
+            ++sample_captures;
+            EnqueueAsyncTerrainColumnRelight(
+                coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE,
+                coord.y * CHUNK_SIZE, coord.y * CHUNK_SIZE + CHUNK_SIZE - 1,
+                true, true, true, true, "light_sample_consumer");
+          }
         });
   int noted = 0;
   if (RequiresLightingLitGate())

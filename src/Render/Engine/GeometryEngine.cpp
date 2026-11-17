@@ -1,4 +1,5 @@
 #include "Render/Engine/GeometryEngine.h"
+#include "App/Platform/Log.h"
 #include "App/Settings/GraphicsQualityProfile.h"
 #include "Blocks/BlockCatalogQueries.h"
 #include "Blocks/BlockRegistry.h"
@@ -4780,6 +4781,38 @@ void UGeometryEngine::DrawCubeGeometry()
   if (!mesh_service)
   {
     return;
+  }
+  if (WorldInstance && UJobStageTrace::VisualBlackTraceEnabled())
+  {
+    const auto cell = WorldPosToBlock(camera->GetRenderPosition());
+    const auto coord = UChunkManager::WorldToChunk(cell);
+    const auto local = UChunkManager::WorldToLocal(cell);
+    auto &world = WorldInstance->GetBlockWorld();
+    const auto volume = world.GetCurrentLightSamplingVolume(coord);
+    const auto field = world.GetChunkManager().GetSectionLightField(coord);
+    const uint8_t packed =
+        volume
+            ? volume
+                  ->cells[SectionLightVolume::Index(local.x, local.y, local.z)]
+            : 0;
+    CubatariumLogInfo(
+        "CameraLightSample",
+        "world_epoch=" +
+            std::to_string(
+                mesh_service->GetCache().GetCaptureStore().WorldEpoch()) +
+            " frame_epoch=" +
+            std::to_string(WorldInstance->GetStreamingFrameEpoch()) +
+            " cell=(" + std::to_string(cell.x) + "," + std::to_string(cell.y) +
+            "," + std::to_string(cell.z) + ")" + " coord=(" +
+            std::to_string(coord.x) + "," + std::to_string(coord.y) + "," +
+            std::to_string(coord.z) + ")" + " physical=" +
+            std::to_string(WorldInstance->RequiresLightingLitGate() ? 1 : 0) +
+            " resident=" +
+            std::to_string(world.GetChunkManager().HasChunk(coord) ? 1 : 0) +
+            " ready=" + std::to_string(volume ? 1 : 0) +
+            " sky=" + std::to_string(UnpackSky(packed)) + " block_light=" +
+            std::to_string(UnpackBlock(packed)) + " field_incarnation=" +
+            std::to_string(field ? field->GetIncarnation() : 0));
   }
   static bool logged_first_paint_diag = false;
   if (!logged_first_paint_diag && WorldInstance)
