@@ -4023,6 +4023,39 @@
       "change": "dry-lit-negative-cave selects the unchanged analytic dry cave geometry and replaces floor stone voxels every8blocks with glowstone. Requires supported worldgen-only primary selection and matching runtime material name/id376/emission15/cube defaults; records material hash and emitter positions. Source save remains unchanged; incompatible material is rejected before scene mutation.",
       "scope": "Preparation validation is not runtime catalog validation, transport correctness or framebuffer acceptance; these remain required.",
       "tests": "build/desktop-msvc/engine-positive-light-fixture-tests.log:44PASS; verifies actual saved emitter voxels and no mutation on incompatible emission."
+    },
+    "positive_floor_cpu_light_reference": {
+      "status": "implemented with45Python testsPASS; native reference remainsUNTESTED due failed startup",
+      "implementation": "Independent unoccluded floor shortest-path light from prepared opaque emitters. Analytic ray/floor intersection and framebuffer depth select samples; compare normalized CPU published-source vertex sky/block light and expected material IDs. Requires positive checks across3frame epochs and an observed emitter surface. Preview/unjoined/missing/insufficient samples cannot grantPASS.",
+      "scope": "CPU draw-source light only, not GPU-bound resource, shaded RGB, transparency or full-screen acceptance; generic visual component staysUNTESTED.",
+      "negative_controls": "All-zero blocklight and wrong material fail; missing source geometry, provisional lighting and insufficient temporal/sample coverage remainUNTESTED.",
+      "tests": "build/desktop-msvc/engine-floor-light-reference-tests.log:45PASS",
+      "native": {
+        "artifacts": "build/desktop-msvc/engine-certified-padded-lit-native",
+        "source": "3100c48d6 executable; cb60529b7 fixture/wrapper",
+        "runtime": "FAIL timeout600s before first game frame; no final native report, no bot views or framebuffer trace",
+        "final_census": "build/desktop-msvc/engine-certified-padded-lit-native/final-required-census.json",
+        "elapsed_ms": 579310.4864999999,
+        "missing_data_columns": 0,
+        "unknown_sections": 0,
+        "light_unready_sections": 0,
+        "publication_unready_sections": 2,
+        "stalled_sections": [
+          [
+            0,
+            5,
+            7
+          ],
+          [
+            3,
+            5,
+            7
+          ]
+        ],
+        "observed_earlier": "436723ms: normal drawable predecessors with current light/settlement, stale geometry source3/pub2 andsource5/pub4; ordinary dirty queue age868/747, no active CPU/capture/GPU owner; scheduler0admissions,35snapshot skips,1remesh lane and2ms snapshot budget.",
+        "floor_reference": "UNTESTED missing_floor_draw_source_trace. Original native FAIL retained, no claimed positive-light acceptance."
+      },
+      "next_action": "Audit capture preparation/admission for exact required ordinary-remesh debt, including PrioritizeVisibleLightRepairRemesh and snapshot skips; reproduce without raising deadline or weakening first-frame readiness."
     }
   }
 }

@@ -311,5 +311,35 @@ class AnalyticCaveDepthReferenceTest(unittest.TestCase):
             self.assertEqual(evaluate(scene, perf)["status"], "FAIL")
 
 
+
+
+class PositiveFloorLightReferenceTest(unittest.TestCase):
+    def test_nonzero_light_zero_control_material_and_coverage(self):
+        from engine_floor_light_reference import evaluate
+        scene = dict(name="dry-negative-cave", chunk_x_bounds=[-5,3],
+            cave_bounds=dict(floor=-43.5, ceiling=-30.5,z_low=44.5,z_high=57.5),
+            lighting_fixture=dict(schema="engine-positive-blocklight-fixture.v1",
+                emission=15,material_id=376,emitters=[[0,-44,51]]))
+        row = dict(kind="renderer_pixel_probe",renderer_pixel_ray_origin_x=0,
+            renderer_pixel_ray_origin_y=-36,renderer_pixel_ray_origin_z=51,
+            renderer_pixel_ray_direction_x=0,renderer_pixel_ray_direction_y=-1,
+            renderer_pixel_ray_direction_z=0)
+        p = "renderer_pixel_opaque_"
+        row.update({p+"hit_distance":7.5,p+"surface_valid":1,p+"vertex_light_valid":1,
+            p+"vertex_light_face_index":4,p+"drawable":1,p+"draw_ready":1,p+"source_index_count":6,
+            p+"vertex_light_distance":0,p+"vertex_light_preview":0,p+"preview_shader_override":0,
+            p+"vertex_block_light":14/15,p+"vertex_sky_light":0,p+"vertex_light_block_id":376})
+        with tempfile.TemporaryDirectory() as temp:
+            trace = Path(temp)/"reference.jsonl"
+            def check(change=None, count=30):
+                trace.write_text("".join(json.dumps(dict(row,frame_epoch=i//10,**(change or {})))+"\n" for i in range(count)))
+                return evaluate(scene,trace)
+            self.assertEqual(check()["status"],"PASS")
+            self.assertEqual(check({p+"vertex_block_light":0})["status"],"FAIL")
+            self.assertEqual(check({p+"vertex_light_block_id":560})["status"],"FAIL")
+            self.assertEqual(check({p+"vertex_light_valid":0})["status"],"UNTESTED")
+            self.assertEqual(check({p+"vertex_light_preview":1})["status"],"UNTESTED")
+            self.assertEqual(check(count=1)["status"],"UNTESTED")
+
 if __name__ == "__main__":
     unittest.main()

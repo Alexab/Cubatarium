@@ -354,6 +354,16 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                 verdict["status"] = "FAIL"
             elif depth_verdict["status"] == "UNTESTED" and verdict["status"] == "PASS":
                 verdict["status"] = "UNTESTED"
+        if scene is not None and scene.get("lighting_fixture") and not startup_only:
+            from engine_floor_light_reference import evaluate as evaluate_floor_light
+            floor_light = evaluate_floor_light(scene, perf)
+            verdict["components"]["fixture_floor_cpu_light"] = floor_light
+            (artifacts / "fixture-floor-light-reference.json").write_text(
+                json.dumps(floor_light, indent=2) + "\n", encoding="utf-8")
+            if floor_light["status"] == "FAIL":
+                verdict["status"] = "FAIL"
+            elif floor_light["status"] == "UNTESTED" and verdict["status"] == "PASS":
+                verdict["status"] = "UNTESTED"
         verdict["runner_exit_code"] = child.returncode
         verdict["inspection_evidence"] = inspection
         if not report_path.exists():
