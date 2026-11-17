@@ -4173,13 +4173,35 @@
       "aba_red": "engine-air-field-retention-aba-red-test.log: removing incarnation comparison compiles and fails exact old-entry/new-resource assertion"
     },
     "independent_field_input_stamps": {
-      "status": "Implemented; old-world negative control RED, restored8 rebuilt contracts PASS; desktop Release build running",
+      "status": "Implemented; old-world negative control RED; restored8fresh rebuilt contractsPASS; desktop Release/static EXE PASS; fresh native running",
       "root_cause": "CaptureInputStamp/validation used only UChunk light revisions; an absent AIR field could be created/changed/retired/reallocated while a light read remained falsely current. Per-domain validation substituted0 whenever geometry was absent.",
       "implementation": "ChunkInputStamp carries explicit lightIncarnation independent of geometry incarnation and full/sky/block revisions. Raw capture/match may receive an absent field; world-aware capture/validation resolves canonical absent field. Per-domain validation compares field identity plus only selected channel revisions while keeping geometry/absence evidence checks. Missing versus allocated revision0 and equal-byte/equal-revision reallocation are distinct. Geometry-only consumers ignore field writes/identity.",
       "tests": "engine-absent-light-stamp-contract-test.log:8/8fresh rebuilt PASS (pending coverage, physical certificates, dense geometry reference, mesh validity/publication, capture worker, GPU skylight merge). New cases cover missing->allocated0, nonzero AIR bytes, separate sky/block writes, same-revision ABA, knownAIR evidence invalidation, geometry admission sharing; no phantom geometry/clock changes.",
       "negative_control": "engine-absent-light-stamp-red-test.log: restoring previous BlockWorld capture/validation compiles and fails exact missing-light-read allocation assertion. Correct source restored in finally, then rebuild/contractsPASS. App never built RED.",
-      "release_build": "build/desktop-msvc/engine-absent-light-stamp-release-build.log:running",
-      "remaining": "Known-AIR actual sample-demand leases and producer/service/retention integration, canonical field consumption in creature/item and legacy mesh fallback/halo signatures, separate GPU pages and persisted content certificates still pending. Stamp migration alone neither creates demand nor grants physical readiness."
+      "release_build": "build/desktop-msvc/engine-absent-light-stamp-release-build.log:PASS; static EXE verification PASS",
+      "remaining": "Known-AIR actual sample-demand leases and producer/service/retention integration, canonical field consumption in creature/item and legacy mesh fallback/halo signatures, separate GPU pages and persisted content certificates still pending. Stamp migration alone neither creates demand nor grants physical readiness.",
+      "next_domain_integration": {
+        "source_evidence": [
+          "ChunkRenderDemand.cpp:BindIdentity ignores incarnation0 and resets full row on geometry incarnation changes; Remove erases the row",
+          "World.cpp:NoteChunkSliceLightCalculationSettled returns immediately without UChunk",
+          "World.cpp:HasCurrentColumnLightCoverage and SampleRequiredPresentationCoverage accept known absence as geometry evidence without proving an AIR field",
+          "Application.cpp:FpItemLight and CreatureDrawPass.cpp item/creature samples query UChunk; missing samples may retain default daylight",
+          "MeshLightSampling.h:world overload returns0 when UChunk is absent"
+        ],
+        "sequence": [
+          "Represent real camera/object/draw sampling leases in the existing per-world section authority with independent geometry and field identities; preserve light obligations across geometry transitions and retire only expired/no-consumer leases. KnownAIR itself does not request every whole-height field.",
+          "Make validated known-AIR requests produce bounded async/sync field outputs and install them without geometry; reconcile exact field proof/domain revisions and report pending reasons. Keep unknown geometry explicit, including zero-valued computed fields.",
+          "Migrate common world samplers and creature/item paths to explicit computed/transient/missing results, with a defined Flat constant-field contract. Presentation policy cannot certify provisional fallback as physical readiness.",
+          "Use existing bounded field retirement with consumer/data leases; add service/memory counters and independent nonzero AIR/removal/reallocation tests plus Release native views. GPU page/binding cutover follows this lifecycle contract."
+        ]
+      },
+      "native": {
+        "status": "running; no success claim",
+        "source": "e8740066f",
+        "artifacts": "build/desktop-msvc/engine-absent-light-stamp-lit-native",
+        "scenario": "dry-lit-negative-cave, RD4,19minimumchunks,fly300stop8idle2,process600",
+        "policy": "Release EXE immutable; no builds or tests during native measurements"
+      }
     }
   }
 }
