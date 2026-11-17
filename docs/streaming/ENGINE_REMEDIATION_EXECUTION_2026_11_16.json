@@ -195,7 +195,8 @@
         "latest_verified_scope": "441a8471e extended-time unchanged full radius4 route: first paint81columns/1944sections, native runtime,22chunk motor-only frontier, zero relocation,24 inspections and7502 near opaque-depth checks pass. Earlier125s incomplete route and all radius8 startup failures retained. Overall full-scope UNTESTED.",
         "dark_candidate_recurrence": "74dac2e06 lifecycle traces establish repeated dark_mesh_rejected rather than an unconsumed CPU result: actual source/current geometry and field/settlement=2, desired floor=0. eae195547 accepts exact current certified candidates at or above older demand floors; future demand/stale source/wrong identity still reject; regression RED before fix and GREEN after.",
         "fulfilled_work_refinement": "441a8471e distinguishes unfulfilled queue debt from a proven already-fulfilled repair. Exact current publication/physical input proof, all demand floors and absence of active successor owners authorize retirement of redundant Dirty; queue priority or terminal column labels do not. Captured radius4 timeout on three fully current queued publications is the native negative control; first-world-paint acceptance after repair observed, full route pending.",
-        "large_radius_gate": "Configured radius8 has not passed native startup: separate 180s,420s and maintenance240s runs time out. Data closure converges; exact mesh admission/light work remains. Scheduler budget/success/skip and dirty queue ownership diagnostics were added before selecting another functional repair."
+        "large_radius_gate": "Configured radius8 has not passed native startup: separate 180s,420s and maintenance240s runs time out. Data closure converges; exact mesh admission/light work remains. Scheduler budget/success/skip and dirty queue ownership diagnostics were added before selecting another functional repair.",
+        "bounded_readiness_followup": "2357266e3 implements same-traversal StopOnDebt boolean probes and fair256-section repair scan; complete diagnostic/first-paint census and full confirmation of positive enter readiness remain mandatory. Focused bounded/fairness tests and two RED controls passed; Release/contracts/native under verification."
       }
     },
     {
@@ -236,7 +237,36 @@
           "Only after all world consumers use field resources, remove light values from geometry merge keys/capture validity and emission-only invalidation from geometry demand. Prove source changes create no mesh job or vertex upload.",
           "Persist content-based algorithm/profile/material/input provenance and AIR field receipts with compatibility adapters for legacy world files. Runtime identities cannot serve as persisted content certificates.",
           "Run independent nonzero sky/block transport, removals, AIR-boundary emitters, light-only zero-remesh, page ABA/memory limits, backend equality and native framebuffer references before completing the stage."
-        ]
+        ],
+        "publication_design": {
+          "status": "CPU ownership foundation implemented and focused-tested; known-AIR physical installation and GPU resource cutover still pending",
+          "cpu_authority": "Canonical world-owned section light fields, including required known-AIR sections. Existing resident UChunk getters adapt to the same field resource. Copying an unmanaged chunk must not alias managed field storage or its mutation clock. Geometry identity and field identity are separate.",
+          "proof_ownership": "A field owns its sky/block revisions and immutable calculation provenance. Known empty geometry never supplies a computed field implicitly. Own geometry receipt, world/field incarnation and current geometry/material/profile/config inputs must validate before completion.",
+          "mesh_sampling": "A drawable section binds an independent radius-two padded20x20x20 field snapshot assembled only from computed current contributing fields. Packed sky/block bytes can share identical immutable constant pages; readiness and proof belong to each binding, including page/revision zero.",
+          "draw_owner": "A stable per-draw or per-vertex owner handle indexes a small mutable binding table. Handle lifetime follows geometry publication. Light-only changes update field pages/table entries without touching geometry vertices or merge topology. CPU/MDI/packed/GLES need explicit implementations and tested fallback, with no dependence on gl_DrawID on GL3.3.",
+          "compatibility": "Swap a new binding only when the retained geometry input stamps remain compatible with the calculated field; swap geometry and its matching binding together when geometry changes. A single unchecked global latest-world light table cannot guarantee compatibility with retained predecessor geometry.",
+          "device_and_lifetime": "Query limits; tile padded volumes into bounded R8UI atlas pages rather than assuming one texture-array layer per section. Publish page bytes before binding-table changes. Fence old pages/owner handles through their last GPU consumer before reuse.",
+          "cutover": "Move physical AIR outputs/installation/proofs and sample provenance first; cut over every world consumer before removing vertex-light merge keys. Preserve world-format loading/saving adapters and add content certificates rather than persisting runtime incarnations.",
+          "cpu_ownership_foundation": {
+            "implementation": "SectionLightField owns CPU bytes/revisions/proofs/memo; ChunkManager coordinate ownership independent of geometry, UChunk shares canonical resource through compatibility adapter.",
+            "verified": "Focused nonzero per-channel writes, no phantom geometry, clock domains, admission sharing, copy isolation, managed assignment identity, eviction/reuse ABA and explicit absent release. Shared-copy negative control RED, restored GREEN.",
+            "pending": "Native verification, known-AIR solver/receipt/consumer cutover, lifecycle demand retention and persisted certificates remain required.32rebuilt contracts PASS. This foundation does not authorize removing existing geometry lighting."
+          },
+          "padded_cpu_calculation_design": {
+            "status": "source-backed design refinement; implementation and independent reference tests pending",
+            "source_gap": "ChunkRelightSnapshot computes full geometry-halo Light tiles but returns only WriteChunks interiors. ChunkMeshSnapshot then fills radius-two padding from separately installed neighboring UChunk fields. Exact own-field calculation provenance does not certify those separately sampled fields.",
+            "implementation": "Retain a target-owned20x20x20 packed output from the same geometry-derived solve alongside the16cubed interior. Bind its sky/block calculation context, field incarnation, per-domain revisions and complete/current status. Mesh capture and GPU publication consume this single certified padded output, or equivalently certified contributing fields; raw neighbor bytes cannot authorize normal publication.",
+            "influence_bound": "Current flood clamps maximum level15 and attenuates every propagated edge by at least1. Nonzero transported contribution is at distance<=14. Padded local[-2,17] plus14 fits captured3x3section geometry local[-16,31]. Direct sky seeding still requires the existing full upper-column context. This reasoning is an inference to be verified against independent references, including corner and profile-boundary cases.",
+            "tests_required": [
+              "Emitter at local31 contributes to padded17; source32 does not contribute nonzero there. Repeat negative side, signed Y and corners with independently computed finite-grid reference.",
+              "Known-AIR target installs nonzero interior/padding and receipts without allocating geometry. Unknown absence cannot become a computed zero/sky field.",
+              "Sky roof above former cutoff, water attenuation, source removal, no-op and per-channel merges preserve exact padded values and correct proof invalidation.",
+              "Changing halo bytes with unchanged own16cubed field advances padded-resource revision and updates the normal image; legacy source bytes or own-field readiness cannot bypass padded proof.",
+              "Profile-exterior padded cells have explicit above/below-world semantics tied to the captured profile identity."
+            ],
+            "cutover_gate": "Do not remove light from geometry merge/capture paths until all world consumers use certified padded resources. No independent light/framebuffer acceptance is granted by this design."
+          }
+        }
       }
     },
     {
@@ -257,7 +287,20 @@
         "Smoke-матрица: холодный старт, выход за начальное кольцо, возврат после eviction/reload, отрицательные сухие/мокрые пещеры и воздушный карман",
         "Длинные прогоны нескольких seed и сохранений, сравнение задержек кадра и памяти с неизменной нагрузкой диагностики"
       ],
-      "acceptance": "Матрица полностью покрыта native Release; негативные контроли действительно падают; отсутствующие доказательства не повышают результат до PASS; бюджеты кадра сравниваются на одном оборудовании и профиле"
+      "acceptance": "Матрица полностью покрыта native Release; негативные контроли действительно падают; отсутствующие доказательства не повышают результат до PASS; бюджеты кадра сравниваются на одном оборудовании и профиле",
+      "independent_light_scene_required": {
+        "status": "pending implementation; dark zero-emission cave/depth checks do not cover nonzero blocklight",
+        "fixture_contract": "Use declared opaque/nonemitting stone, attenuating water and a validated named emission source; record/validate resolved material properties against fixture expectations. Keep originals isolated and use input/motor movement.",
+        "reference": "Independent finite-grid sky/block reference with explicit boundaries/unknown domain, including nonzero source transport, water, source removal and an entirely AIR target section across a section border.",
+        "observations": "Compare exact scoped physical samples and actual bound/drawn light values in the same pose/frame/owner generation. Vertex/cache agreement alone is not independent truth.",
+        "negative_controls": [
+          "zeroed blocklight despite source",
+          "stale field retained after source removal",
+          "known AIR geometry without computed field",
+          "unready inputs mislabeled complete"
+        ],
+        "scope": "Separate physical field correctness, draw/geometry coverage, shader/light binding, transparent composition and full-screen verdicts; no PASS from dark RGB or readiness flags alone."
+      }
     }
   ],
   "completion_rule": "Цель завершается только после реализации и проверки всех этапов; отдельный успешный пролёт или зелёные узкие тесты не закрывают рефакторинг"
