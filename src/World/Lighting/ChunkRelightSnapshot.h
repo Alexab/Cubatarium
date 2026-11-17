@@ -37,6 +37,8 @@ struct RelightJobSpec
   bool visible_draw_gate_repair{false};
   /// Write only the center column; neighboring geometry remains read-only.
   bool column_center_only{false};
+  /// Explicit demand for AIR fields; does not allocate geometry.
+  bool include_known_air_outputs{false};
 };
 
 struct RelightChunkLightData

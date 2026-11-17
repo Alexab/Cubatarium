@@ -168,6 +168,18 @@ bool UChunkManager::ReplaceSectionLightData(
   return true;
 }
 
+bool UChunkManager::ReplaceComputedSectionLightVolume(
+    glm::ivec3 coord, const SectionLightVolume &volume, bool sky, bool block)
+{
+  if (!sky && !block)
+    return false;
+  EnsureSectionLightField(coord);
+  if (!LightFields.at(coord)->ReplaceComputedVolume(volume, sky, block))
+    return false;
+  NoteLightInputMutation();
+  return true;
+}
+
 bool UChunkManager::ReleaseAbsentSectionLightField(glm::ivec3 coord)
 {
   if (HasChunk(coord) || !LightFields.erase(coord))

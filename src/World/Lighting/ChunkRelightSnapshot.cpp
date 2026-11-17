@@ -219,7 +219,10 @@ UChunkRelightSnapshot::CaptureImpl(const UBlockWorld &world,
   std::unordered_set<glm::ivec3, IVec3Hash> context;
   for (const auto target : targets)
   {
-    if (world.GetChunkManager().HasChunk(target))
+    if (world.GetChunkManager().HasChunk(target) ||
+        (sections && spec.include_known_air_outputs &&
+         world.CaptureInputStamp(target, false, true).missingEvidence ==
+             MissingChunkEvidence::KnownAir))
       snapshot.WriteChunks.insert(target);
     for (int dx = -1; dx <= 1; ++dx)
       for (int dy = -1; dy <= 1; ++dy)

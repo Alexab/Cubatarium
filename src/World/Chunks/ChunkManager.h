@@ -51,6 +51,9 @@ public:
                                const std::array<uint8_t, CHUNK_VOLUME> &data);
   /// Explicit retirement for absent geometry; resident adapters retain
   /// ownership.
+  bool ReplaceComputedSectionLightVolume(glm::ivec3 coord,
+                                         const SectionLightVolume &volume,
+                                         bool sky, bool block);
   bool ReleaseAbsentSectionLightField(glm::ivec3 coord);
   size_t GetSectionLightFieldCount() const { return LightFields.size(); }
   /// Fired when a chunk transitions to non-air (its first populated block
@@ -97,6 +100,7 @@ public:
   static glm::ivec3 WorldToLocal(glm::ivec3 world_pos);
 
 private:
+  friend class UBlockWorld;
   UChunk &GetOrCreateChunk(glm::ivec3 chunk_coord);
 
   void NoteLightInputMutation()

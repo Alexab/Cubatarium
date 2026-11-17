@@ -963,6 +963,85 @@ void TestClippedProfileDoesNotSeedOutOfWorldSource()
          "face");
 }
 
+void TestKnownAirLightResourceCalculation()
+{
+  using namespace cutum;
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition emitter;
+  emitter.Physics = BlockPhysicsProfile::Solid();
+  emitter.Lighting.Emission = 15;
+  definitions->ReplaceAll({{50, emitter}}, {{"emitter", 50}});
+  UBlockRegistry registry(nullptr, definitions);
+  const auto catalog = registry.GetDefinitionsCatalogSnapshot();
+  UBlockWorld world;
+  world.SetFluidDefinitions(definitions.get());
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  world.SetBlock({15, -40, 8}, 50);
+  const glm::ivec3 target(1, -3, 0);
+  auto &manager = world.GetChunkManager();
+  const auto resident = manager.GetResidentChunkCount();
+  const auto geometry_clock = manager.GetGeometryInputRevision();
+  RelightJobSpec spec;
+  spec.min_world_y = -64;
+  spec.max_world_y = 319;
+  spec.include_known_air_outputs = true;
+  auto solve = [&]()
+  {
+    return UChunkRelightSnapshot::CaptureSections(world, spec, {target})
+        .Compute(registry);
+  };
+  auto result = solve();
+  Expect(
+      result.inputs_complete && result.chunks.size() == 1 &&
+          UnpackBlock(
+              result.chunks[0].light_packed[UChunk::LocalIndex({0, 8, 8})]) ==
+              14,
+      "emission crosses into an entirely absent known-AIR section at negative "
+      "Y");
+  manager.ReplaceComputedSectionLightVolume(
+      target, *result.chunks[0].padded_light, true, true);
+  Expect(world.RecordLightCalculation(result, catalog) == 1 &&
+             world.HasCompleteLightSamplingCalculation(target, catalog) &&
+             world.GetCurrentLightSamplingVolume(target) &&
+             !manager.HasChunk(target) &&
+             manager.GetResidentChunkCount() == resident &&
+             manager.GetGeometryInputRevision() == geometry_clock,
+         "known-AIR field and physical receipt do not fabricate geometry or "
+         "mutate geometry clock");
+  const auto field = manager.GetSectionLightField(target);
+  const auto field_identity = field->GetIncarnation();
+  manager.EnsureChunk(target);
+  Expect(manager.GetSectionLightField(target)->GetIncarnation() ==
+                 field_identity &&
+             !world.HasCompleteLightSamplingCalculation(target, catalog),
+         "geometry admission shares field bytes but invalidates old absence "
+         "receipt");
+  result = solve();
+  manager.ReplaceComputedSectionLightVolume(
+      target, *result.chunks[0].padded_light, true, true);
+  Expect(world.RecordLightCalculation(result, catalog) == 1 &&
+             world.HasCompleteLightSamplingCalculation(target, catalog),
+         "new resident geometry receipt restores authority without a duplicate "
+         "field");
+  world.SetBlock({15, -40, 8}, BLOCK_AIR);
+  Expect(
+      !world.HasCompleteLightSamplingCalculation(target, catalog),
+      "source removal invalidates the independent field before recalculation");
+  result = solve();
+  manager.ReplaceComputedSectionLightVolume(
+      target, *result.chunks[0].padded_light, true, true);
+  Expect(world.RecordLightCalculation(result, catalog) == 1 &&
+             UnpackBlock(field->GetData()[UChunk::LocalIndex({0, 8, 8})]) == 0,
+         "source removal clears previously nonzero independent section light");
+  UBlockWorld unknown;
+  const auto missing =
+      UChunkRelightSnapshot::CaptureSections(unknown, spec, {target})
+          .Compute(registry);
+  Expect(missing.chunks.empty() &&
+             unknown.GetChunkManager().GetSectionLightFieldCount() == 0,
+         "unknown absence cannot become an AIR calculation target or field");
+}
+
 void TestWorldOwnedLightCertificates()
 {
   using namespace cutum;
@@ -1719,6 +1798,7 @@ int main(int argc, char **argv)
     TestGeometryInputMemoDoesNotReadUnrelatedLightFields();
     TestLightInputMemoRetainsResidentWorkingSet();
     TestVersionedLightInputMemoInvalidatesImmediately();
+    TestKnownAirLightResourceCalculation();
     TestWorldOwnedLightCertificates();
     TestBatchAbsenceEvidenceIsFreshAndExact();
     std::cout << "light_calculation_certificate_test: OK\n";
@@ -1737,6 +1817,7 @@ int main(int argc, char **argv)
   TestGeometryInputMemoDoesNotReadUnrelatedLightFields();
   TestLightInputMemoRetainsResidentWorkingSet();
   TestVersionedLightInputMemoInvalidatesImmediately();
+  TestKnownAirLightResourceCalculation();
   TestWorldOwnedLightCertificates();
   TestBatchAbsenceEvidenceIsFreshAndExact();
   TestDomainsAndRevision();

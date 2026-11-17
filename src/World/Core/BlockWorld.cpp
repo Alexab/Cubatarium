@@ -41,12 +41,15 @@ int UBlockWorld::RecordLightCalculation(
   for (const auto &data : result.chunks)
   {
     auto *chunk = Chunks.GetChunk(data.coord);
-    if (!chunk)
+    const auto field_it = Chunks.LightFields.find(data.coord);
+    if (field_it == Chunks.LightFields.end())
       continue;
+    auto *field = field_it->second.get();
     bool owns_geometry = false;
     for (const auto &stamp : result.read_set)
       if (stamp.coord == data.coord && stamp.readsContent &&
-          stamp.incarnation == chunk->GetIncarnation())
+          ((chunk && stamp.incarnation == chunk->GetIncarnation()) ||
+           (!chunk && stamp.missingEvidence == MissingChunkEvidence::KnownAir)))
       {
         owns_geometry = true;
         break;
@@ -62,19 +65,18 @@ int UBlockWorld::RecordLightCalculation(
       const uint8_t mask = sky ? 0x0f : 0xf0;
       bool installed = true;
       for (int i = 0; i < CHUNK_VOLUME; ++i)
-        if ((chunk->GetLightData()[i] & mask) != (data.light_packed[i] & mask))
+        if ((field->GetData()[i] & mask) != (data.light_packed[i] & mask))
         {
           installed = false;
           break;
         }
       if (!installed)
         continue; // publication was omitted or overwritten
-      auto &proof = chunk->Light.field->LightProofs[domain];
+      auto &proof = field->LightProofs[domain];
       proof.padded_installed = false;
-      const auto &field = chunk->GetSectionLightField();
-      const auto padded = field.GetPaddedData();
+      const auto padded = field->GetPaddedData();
       if (data.padded_light && padded &&
-          (field.GetPaddedDomains() & (sky ? 1 : 2)))
+          (field->GetPaddedDomains() & (sky ? 1 : 2)))
       {
         proof.padded_installed = true;
         for (size_t i = 0; i < padded->cells.size(); ++i)
@@ -86,9 +88,9 @@ int UBlockWorld::RecordLightCalculation(
       }
       proof.input = context;
       proof.owner = LightCalculationOwner;
-      proof.incarnation = chunk->GetIncarnation();
+      proof.incarnation = field->GetIncarnation();
       proof.field_revision =
-          sky ? chunk->GetSkyLightRevision() : chunk->GetBlockLightRevision();
+          sky ? field->GetSkyRevision() : field->GetBlockRevision();
       any = true;
     }
     recorded += any;
@@ -166,7 +168,7 @@ bool UBlockWorld::StoredLightInputsStillMatch(
   // 1024-entry clear made larger stable censuses evict their own working set
   // and walk every dependency again. Bound history beyond the resident set,
   // retiring expired receipts without discarding all still-live validation.
-  const auto capacity = Chunks.GetResidentChunkCount() * 2 + 1024;
+  const auto capacity = Chunks.GetSectionLightFieldCount() * 2 + 1024;
   if (memo.entries.size() >= capacity)
   {
     for (auto it = memo.entries.begin(); it != memo.entries.end();)
@@ -187,16 +189,15 @@ LightCalculationState UBlockWorld::GetLightCalculationState(
     glm::ivec3 coord, LightDomain domain,
     const std::shared_ptr<const BlockDefinitionCatalog> &current_catalog) const
 {
-  const auto *chunk = Chunks.GetChunk(coord);
-  if (!chunk)
+  const auto field = Chunks.GetSectionLightField(coord);
+  if (!field)
     return LightCalculationState::Missing;
-  const auto &proof =
-      chunk->Light.field->LightProofs[domain == LightDomain::Sky ? 0 : 1];
+  const auto &proof = field->LightProofs[domain == LightDomain::Sky ? 0 : 1];
   if (!proof.input || proof.owner != LightCalculationOwner ||
-      proof.incarnation != chunk->GetIncarnation() ||
+      proof.incarnation != field->GetIncarnation() ||
       proof.field_revision != (domain == LightDomain::Sky
-                                   ? chunk->GetSkyLightRevision()
-                                   : chunk->GetBlockLightRevision()) ||
+                                   ? field->GetSkyRevision()
+                                   : field->GetBlockRevision()) ||
       !StoredLightInputsStillMatch(proof.input, current_catalog))
     return LightCalculationState::Missing;
   // Every input was known at record time and the full read set still matches.
@@ -216,24 +217,22 @@ bool UBlockWorld::LightCalculationsStillCurrent(
   bool any = false;
   for (const auto coord : sections)
   {
-    const auto *chunk = Chunks.GetChunk(coord);
-    if (!chunk)
-      continue;
+    const auto field = Chunks.GetSectionLightField(coord);
+    if (!field)
+      return false;
     any = true;
     for (int domain = 0; domain < 2; ++domain)
     {
       if (!(domain == 0 ? sky : block))
         continue;
-      const auto &proof = chunk->Light.field->LightProofs[domain];
+      const auto &proof = field->LightProofs[domain];
       if (!proof.input || proof.owner != LightCalculationOwner ||
-          proof.incarnation != chunk->GetIncarnation() ||
-          proof.field_revision != (domain == 0
-                                       ? chunk->GetSkyLightRevision()
-                                       : chunk->GetBlockLightRevision()))
+          proof.incarnation != field->GetIncarnation() ||
+          proof.field_revision != (domain == 0 ? field->GetSkyRevision()
+                                               : field->GetBlockRevision()))
         return false;
-      if (require_padded &&
-          (!proof.padded_installed ||
-           !(chunk->Light.field->PaddedDomains & (domain == 0 ? 1 : 2))))
+      if (require_padded && (!proof.padded_installed ||
+                             !(field->PaddedDomains & (domain == 0 ? 1 : 2))))
         return false;
       contexts.emplace(proof.input.get(), proof.input);
     }
@@ -253,12 +252,12 @@ bool UBlockWorld::HasCompleteLightCalculation(
   if (GetLightCalculationState(coord, LightDomain::Sky, current_catalog) !=
       LightCalculationState::Complete)
     return false;
-  const auto *chunk = Chunks.GetChunk(coord);
-  const auto &sky = chunk->Light.field->LightProofs[0];
-  const auto &block = chunk->Light.field->LightProofs[1];
+  const auto field = Chunks.GetSectionLightField(coord);
+  const auto &sky = field->LightProofs[0];
+  const auto &block = field->LightProofs[1];
   if (block.input == sky.input && block.owner == LightCalculationOwner &&
-      block.incarnation == chunk->GetIncarnation() &&
-      block.field_revision == chunk->GetBlockLightRevision())
+      block.incarnation == field->GetIncarnation() &&
+      block.field_revision == field->GetBlockRevision())
     return true;
   return GetLightCalculationState(coord, LightDomain::Block, current_catalog) ==
          LightCalculationState::Complete;
@@ -268,11 +267,10 @@ bool UBlockWorld::HasCompleteLightSamplingCalculation(
     glm::ivec3 coord,
     const std::shared_ptr<const BlockDefinitionCatalog> &catalog) const
 {
-  const auto *chunk = Chunks.GetChunk(coord);
-  if (!chunk || !chunk->Light.field->PaddedLight ||
-      chunk->Light.field->PaddedDomains != 3 ||
-      !chunk->Light.field->LightProofs[0].padded_installed ||
-      !chunk->Light.field->LightProofs[1].padded_installed)
+  const auto field = Chunks.GetSectionLightField(coord);
+  if (!field || !field->PaddedLight || field->PaddedDomains != 3 ||
+      !field->LightProofs[0].padded_installed ||
+      !field->LightProofs[1].padded_installed)
     return false;
   return HasCompleteLightCalculation(coord, catalog);
 }
@@ -283,7 +281,7 @@ UBlockWorld::GetCurrentLightSamplingVolume(glm::ivec3 coord) const
   if (!FluidDefinitions || !HasCompleteLightSamplingCalculation(
                                coord, FluidDefinitions->GetCatalogSnapshot()))
     return nullptr;
-  return Chunks.GetChunk(coord)->GetSectionLightField().GetPaddedData();
+  return Chunks.GetSectionLightField(coord)->GetPaddedData();
 }
 
 bool UBlockWorld::HasKnownOpenSkyAbsentProof(glm::ivec3 coord) const
