@@ -1263,6 +1263,7 @@ public:
   float MaxCullDistance() const;
 
 private:
+  friend struct ChunkMeshCaptureAdmissionTestAccess;
   // Shared only with enqueue-side diagnostics; another world/cache gets its
   // own state, and worker execution never reads the mutable store.
   std::shared_ptr<UChunkRenderDemandStore> RenderDemandStore =

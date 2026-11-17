@@ -5368,7 +5368,8 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
   // SoftDeferAllowsLightRepairRemesh: drawable + LightRepair / FD / StaleVL.
   const bool light_repair_remesh = SoftDeferAllowsLightRepairRemesh(
       /*soft_defer_active=*/true, HasDrawableGreedyMesh(coord),
-      (IsLightRepairRemesh && IsLightRepairRemesh(coord))
+      (Dirty.IsPriorityRemesh(coord) ||
+       (IsLightRepairRemesh && IsLightRepairRemesh(coord)))
           ? VisualObligation::LightRepair
           : VisualObligation::None,
       ChunkHasFullyDarkFace(coord), ChunkHasStaleDarkFaces(coord, world));
@@ -9047,7 +9048,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         // A42: LightRepair drawable remesh must stay Dirty under SoftDefer.
         if (SoftDeferAllowsLightRepairRemesh(
                 /*soft_defer_active=*/true, has_drawable,
-                (IsLightRepairRemesh && IsLightRepairRemesh(*it))
+                (Dirty.IsPriorityRemesh(*it) ||
+                 (IsLightRepairRemesh && IsLightRepairRemesh(*it)))
                     ? VisualObligation::LightRepair
                     : VisualObligation::None,
                 ChunkHasFullyDarkFace(*it), ChunkHasStaleDarkFaces(*it, world)))
@@ -9118,7 +9120,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                   RelightFifoTrimProtectHoriz()) ||
               SoftDeferAllowsLightRepairRemesh(
                   /*soft_defer_active=*/true, has_drawable,
-                  (IsLightRepairRemesh && IsLightRepairRemesh(*it))
+                  (Dirty.IsPriorityRemesh(*it) ||
+                   (IsLightRepairRemesh && IsLightRepairRemesh(*it)))
                       ? VisualObligation::LightRepair
                       : VisualObligation::None,
                   ChunkHasFullyDarkFace(*it),
@@ -9970,7 +9973,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                 RelightFifoTrimProtectHoriz()) ||
             SoftDeferAllowsLightRepairRemesh(
                 /*soft_defer_active=*/true, has_drawable,
-                (IsLightRepairRemesh && IsLightRepairRemesh(*it))
+                (Dirty.IsPriorityRemesh(*it) ||
+                 (IsLightRepairRemesh && IsLightRepairRemesh(*it)))
                     ? VisualObligation::LightRepair
                     : VisualObligation::None,
                 ChunkHasFullyDarkFace(*it), ChunkHasStaleDarkFaces(*it, world)))
@@ -10549,7 +10553,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         // A42c: miss floor is LightRepair / FullyDark Published remesh only —
         // do not reopen A29 U1 hinterland (stale-lit hinterland remesh).
         if (light_repair_only_under_miss &&
-            !((IsLightRepairRemesh && IsLightRepairRemesh(*it)) ||
+            !((Dirty.IsPriorityRemesh(*it) ||
+               (IsLightRepairRemesh && IsLightRepairRemesh(*it))) ||
               ChunkHasFullyDarkFace(*it) || ChunkHasStaleDarkFaces(*it, world)))
         {
           ++it;
@@ -10893,7 +10898,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       // A42c: miss floor is LightRepair / FullyDark Published remesh only.
       if (is_remesh && light_repair_only_under_miss &&
           !Dirty.IsPriorityRemesh(*it) &&
-          !((IsLightRepairRemesh && IsLightRepairRemesh(*it)) ||
+          !((Dirty.IsPriorityRemesh(*it) ||
+             (IsLightRepairRemesh && IsLightRepairRemesh(*it))) ||
             ChunkHasFullyDarkFace(*it) || ChunkHasStaleDarkFaces(*it, world)))
       {
         if (!skip_defer_lit_ring(*it))
@@ -11029,7 +11035,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                 RelightFifoTrimProtectHoriz()) ||
             SoftDeferAllowsLightRepairRemesh(
                 /*soft_defer_active=*/true, has_drawable,
-                (IsLightRepairRemesh && IsLightRepairRemesh(*it))
+                (Dirty.IsPriorityRemesh(*it) ||
+                 (IsLightRepairRemesh && IsLightRepairRemesh(*it)))
                     ? VisualObligation::LightRepair
                     : VisualObligation::None,
                 ChunkHasFullyDarkFace(*it), ChunkHasStaleDarkFaces(*it, world)))

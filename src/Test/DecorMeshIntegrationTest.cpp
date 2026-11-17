@@ -3,6 +3,7 @@
 #include "Core/Jobs/PipelineAdmission.h"
 #include "Render/Camera/Frustum.h"
 #include "Render/Mesh/ChunkMeshCache.h"
+#include "Render/Mesh/GreedyMesher.h"
 #include "Render/Pipeline/GreedyDrawCategory.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
@@ -13,6 +14,27 @@
 #include <iostream>
 #include <memory>
 #include <unordered_map>
+
+namespace cutum
+{
+struct ChunkMeshCaptureAdmissionTestAccess
+{
+  static void ReserveOneRepair(UChunkMeshCache &cache)
+  {
+    cache.CaptureRefreshBudgetLeft = 0;
+    cache.FirstMeshCaptureReserveLeft = 0;
+    cache.LightRepairCaptureReserveLeft = 1;
+  }
+  static bool Acquire(UChunkMeshCache &cache, const UBlockWorld &world,
+                      UBlockRegistry &registry, glm::ivec3 coord)
+  {
+    const auto result = cache.TryAcquireSnapshotForSchedule(
+        world, registry, coord, cache.GetChunkMeshRevision(coord));
+    return result.kind == UChunkMeshCache::SnapshotAcquireKind::Ready &&
+           result.snapshot.has_value();
+  }
+};
+} // namespace cutum
 
 namespace
 {
@@ -510,6 +532,24 @@ static void TestFirstComputedLightPublication(
     for (const auto &vertex : batch->vertices)
       Expect(vertex.lightPreview == 0.0f,
              "normal first publication does not retain encoded preview bits");
+    cache.MarkDirty(root);
+    cache.GetCaptureStore().Invalidate(root);
+    cache.SetIsLightRepairRemeshFn([](glm::ivec3) { return false; });
+    ChunkMeshCaptureAdmissionTestAccess::ReserveOneRepair(cache);
+    Expect(!ChunkMeshCaptureAdmissionTestAccess::Acquire(cache, world, registry,
+                                                         root),
+           "ordinary bright remesh cannot consume the repair reservation");
+    Expect(cache.PrioritizeVisibleLightRepairRemesh(root),
+           "required geometry debt owns explicit priority repair");
+    Expect(ChunkMeshCaptureAdmissionTestAccess::Acquire(cache, world, registry,
+                                                        root),
+           "priority bright geometry repair can spend one reserved capture "
+           "credit");
+    cache.GetCaptureStore().Invalidate(root);
+    Expect(
+        !ChunkMeshCaptureAdmissionTestAccess::Acquire(cache, world, registry,
+                                                      root),
+        "priority repair cannot spend the same bounded capture credit twice");
   }
 }
 

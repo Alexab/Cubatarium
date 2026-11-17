@@ -4016,7 +4016,8 @@
         "inspection": "24requested/queued/PNG-verified views",
         "near_opaque_depth": "10464checks67frame epochs0faults;256unscoped/occluded samples excluded",
         "fixture": "292wet negative-cave trace samplesPASS"
-      }
+      },
+      "fresh_direct_comparison": "Revalidated with explicit GreedyMesher.h include in fresh RED/GREEN capture-admission build; see priority_geometry_capture_admission evidence correction."
     },
     "positive_light_fixture": {
       "status": "prepared scene implementation and44Python testsPASS; runtime nonzero light reference pending",
@@ -4056,6 +4057,16 @@
         "floor_reference": "UNTESTED missing_floor_draw_source_trace. Original native FAIL retained, no claimed positive-light acceptance."
       },
       "next_action": "Audit capture preparation/admission for exact required ordinary-remesh debt, including PrioritizeVisibleLightRepairRemesh and snapshot skips; reproduce without raising deadline or weakening first-frame readiness."
+    },
+    "priority_geometry_capture_admission": {
+      "status": "actual capture regressionRED thenGREEN; desktop/native verification pending",
+      "finding": "Required publication repair marks a bright stale-geometry remesh as explicit PriorityRemesh. Capture reservation and several SoftDefer/miss passes recognized only external LightRepair/FullyDark/StaleDark predicates. With generic refresh credits unavailable, reserved repair capacity could not serve this required geometry repair.",
+      "change": "Recognize explicit live priority-remesh ownership consistently in reserved capture eligibility and existing SoftDefer/miss filters. Count/time/pipeline/focus constraints and normal physical publication proof remain mandatory; queue priority never grants completion.",
+      "test": "Actual private capture admission against a real already-published normal mesh, via narrowly scoped test access: generic credits0, first-mesh credits0, one repair credit, no external LightRepair callback. Ordinary bright remesh defers; explicitly prioritized bright remesh captures; a second fresh capture cannot reuse consumed credit.",
+      "red": "build/desktop-msvc/engine-priority-geometry-capture-red-test.log:expectedFAIL priority bright geometry repair can spend one reserved capture credit",
+      "green": "build/desktop-msvc/engine-priority-geometry-capture-green-test.log:PASS complete async integration suite",
+      "evidence_correction": "Fresh test compilation found missing explicit GreedyMesher.h include in previously added direct-vs-snapshot comparison. Earlier passing binaries did not prove that new source comparison. Include fixed; fresh RED compilation reaches the new reservation assertion after direct comparison, and GREEN passes the whole suite. Historical build/test logs retained; do not rely on stale test objects.",
+      "scope": "Native two-section starvation must be rechecked; no startup latency, full rendering or performance acceptance yet."
     }
   }
 }
