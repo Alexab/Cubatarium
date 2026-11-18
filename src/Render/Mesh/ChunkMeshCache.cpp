@@ -67,6 +67,38 @@ namespace
 // blockers, witness acceptance10: no_attempt=45 with a thrashing ring).
 constexpr int kRemeshDeferredRingMax = 256;
 
+const std::optional<glm::ivec3> &PublicationTraceChunk()
+{
+  static const auto target = []() -> std::optional<glm::ivec3>
+  {
+    const char *value = std::getenv("CUBA_TRACE_CHUNK");
+    int x = 0, y = 0, z = 0;
+    if (value && std::sscanf(value, "%d,%d,%d", &x, &y, &z) == 3)
+      return glm::ivec3(x, y, z);
+    return {};
+  }();
+  return target;
+}
+
+bool IsPublicationTraceChunk(glm::ivec3 coord)
+{
+  const auto &target = PublicationTraceChunk();
+  return target && *target == coord;
+}
+
+uint32_t UnknownGeometryInputMask(const ChunkInputStamp *stamps)
+{
+  if (!stamps)
+    return 127;
+  uint32_t mask = 0;
+  for (unsigned n = 0; n < 7; ++n)
+    if (!stamps[n].readsContent ||
+        (!stamps[n].incarnation &&
+         stamps[n].missingEvidence != MissingChunkEvidence::KnownAir))
+      mask |= 1u << n;
+  return mask;
+}
+
 void LogSlowMeshCaptureStage(const char *stage, glm::ivec3 coord,
                              std::chrono::steady_clock::time_point started_at)
 {
@@ -3031,24 +3063,56 @@ bool UChunkMeshCache::TryPrepareRenderLight(
     const SectionNoSurfaceProof *no_surface)
 {
   prepared.reset();
+  const auto trace = [&](const char *decision)
+  {
+    const glm::ivec3 coord = stamps ? (*stamps)[0].coord : geometry.coord;
+    if (!IsPublicationTraceChunk(coord))
+      return;
+    std::ostringstream message;
+    message << "resource coord=(" << coord.x << "," << coord.y << "," << coord.z
+            << ") frame_epoch=" << MeshFocusFrameEpoch
+            << " decision=" << decision
+            << " source_epoch=" << source_world_epoch
+            << " current_epoch=" << CaptureStore.WorldEpoch()
+            << " geometry_valid=" << geometry.valid << " unknown_mask="
+            << UnknownGeometryInputMask(stamps ? stamps->data() : nullptr)
+            << " physical_snapshot=" << bool(light)
+            << " provisional=" << provisional << " field_geometry_match="
+            << (light && light->MatchesGeometry(geometry)) << " catalog_match="
+            << (light && light->GeometryInputs().catalog == geometry.catalog);
+    CubatariumLogInfo("ChunkPublication", message.str());
+  };
+  const auto reject = [&](const char *reason)
+  {
+    trace(reason);
+    return false;
+  };
   if (source_world_epoch == 0 ||
       source_world_epoch != CaptureStore.WorldEpoch())
-    return false;
+    return reject("source_epoch");
   if (!PrepareRenderLight)
     return true;
   if (!GeometryMatchesSourceStamps(stamps, geometry))
-    return false;
+    return reject("source_geometry");
   // This private geometry proof is independent of output light. An empty
   // result alone cannot bypass resource admission or certify physical light.
   if (no_surface && no_surface->Matches(geometry))
     return true;
-  if (provisional || !light || !light->MatchesGeometry(geometry))
-    return false;
+  if (provisional)
+    return reject("provisional_light");
+  if (!light)
+    return reject("missing_physical_snapshot");
+  if (!light->MatchesGeometry(geometry))
+    return reject("field_geometry");
   auto candidate = PrepareRenderLight(source_world_epoch, geometry, *light);
-  if (source_world_epoch != CaptureStore.WorldEpoch() || !candidate ||
-      !candidate->Matches(source_world_epoch, geometry, *light))
-    return false;
+  if (source_world_epoch != CaptureStore.WorldEpoch())
+    return reject("epoch_after_prepare");
+  if (!candidate)
+    return reject("resource_owner");
+  if (!candidate->Matches(source_world_epoch, geometry, *light))
+    return reject("binding_mismatch");
   prepared = std::move(candidate);
+  trace("prepared");
   return true;
 }
 
@@ -8511,7 +8575,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
                 << " stampIncarnation=" << result.InputStamps[0].incarnation
                 << " nowContent=" << (tc ? tc->GetContentRevision() : 0)
                 << " nowIncarnation=" << (tc ? tc->GetIncarnation() : 0)
-                << " batches=" << result.batches.size();
+                << " batches=" << chunkMesh.batches.size();
         CubatariumLogInfo("ChunkTrace", message.str());
       }
     }
@@ -8793,6 +8857,48 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     double max_sync_ms, bool skip_gpu_consume)
 {
   Dirty.AdvanceScheduleFrame();
+  if (const auto &target = PublicationTraceChunk();
+      target && (Dirty.Contains(*target) || HasInflightMeshBuild(*target)))
+  {
+    // Extra proof queries may warm lazy storage/validation caches. Keep them
+    // opt-in so the ordinary target trace only observes scheduling metadata.
+    static const bool query_proofs =
+        IsEnvironmentFlagEnabled("CUBA_TRACE_CHUNK_LIGHT_PROOF");
+    uint32_t unknown_mask = 255; // Not measured, distinct from seven unknowns.
+    int sampling_current = -1, render_light = -1, catalog_match = -1;
+    if (query_proofs)
+    {
+      static constexpr glm::ivec3 offsets[] = {
+          {0, 0, 0}, {-1, 0, 0}, {1, 0, 0}, {0, -1, 0},
+          {0, 1, 0}, {0, 0, -1}, {0, 0, 1}};
+      std::array<ChunkInputStamp, 7> inputs;
+      for (size_t n = 0; n < inputs.size(); ++n)
+        inputs[n] = world.CaptureInputStamp(*target + offsets[n], false, true);
+      unknown_mask = UnknownGeometryInputMask(inputs.data());
+      const auto light = world.CaptureRenderLightSnapshot(*target);
+      sampling_current = bool(world.GetCurrentLightSamplingVolume(*target));
+      render_light = bool(light);
+      catalog_match = light && light->GeometryInputs().catalog ==
+                                   registry.GetDefinitionsCatalogSnapshot();
+    }
+    int32_t index = -1, size = 0;
+    const auto queue = GetDirtyQueueTrace(*target, index, size);
+    std::ostringstream message;
+    message << "watch coord=(" << target->x << "," << target->y << ","
+            << target->z << ") frame_epoch=" << MeshFocusFrameEpoch
+            << " revision=" << MeshRevisions.Current(*target)
+            << " queue_kind=" << unsigned(queue) << " queue_index=" << index
+            << " queue_size=" << size
+            << " queue_age=" << GetDirtyQueueAgeFrames(*target)
+            << " unknown_mask=" << unknown_mask
+            << " sampling_current=" << sampling_current
+            << " render_light=" << render_light
+            << " render_catalog_match=" << catalog_match
+            << " inflight=" << HasInflightMeshBuild(*target)
+            << " capture_pending=" << PendingCaptureSet_.count(*target)
+            << " async_completed=" << GetMeshCompletedSize();
+    CubatariumLogInfo("ChunkPublication", message.str());
+  }
   {
     static const bool reconcile_off =
         std::getenv("CUBA_NO_RECONCILE") != nullptr;
@@ -9760,6 +9866,22 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       const auto trace_visible_schedule = [&](uint8_t outcome, uint8_t detail,
                                               uint8_t enqueue_reject_reason = 0)
       {
+        // Preserve the selected section's history in the log even when the
+        // bounded whole-world trace rings overwrite this early event later.
+        if (IsPublicationTraceChunk(schedule_coord))
+        {
+          std::ostringstream message;
+          message << "schedule coord=(" << schedule_coord.x << ","
+                  << schedule_coord.y << "," << schedule_coord.z
+                  << ") frame_epoch=" << MeshFocusFrameEpoch
+                  << " outcome=" << unsigned(outcome)
+                  << " detail=" << unsigned(detail)
+                  << " enqueue_reject=" << unsigned(enqueue_reject_reason)
+                  << " revision=" << MeshRevisions.Current(schedule_coord)
+                  << " first_mesh=" << Dirty.IsFirstMesh(schedule_coord)
+                  << " queue_age=" << GetDirtyQueueAgeFrames(schedule_coord);
+          CubatariumLogInfo("ChunkPublication", message.str());
+        }
         if ((!trace_camera_band_peak && !trace_visible_repair &&
              !trace_normal_focus_remesh && !trace_first_mesh &&
              !trace_watched_visual) ||
@@ -10262,6 +10384,21 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       const uint64_t submitted_revision = snapshot.sourceRevision;
       const bool force_cpu = CpuMeshRecovery.count(snapshot.coord) != 0;
+      if (IsPublicationTraceChunk(snapshot.coord))
+      {
+        std::ostringstream message;
+        message << "enqueue coord=(" << snapshot.coord.x << ","
+                << snapshot.coord.y << "," << snapshot.coord.z
+                << ") frame_epoch=" << MeshFocusFrameEpoch
+                << " source_revision=" << snapshot.sourceRevision
+                << " source_epoch=" << snapshot.sourceWorldEpoch
+                << " certified_padded=" << snapshot.certifiedPaddedLight
+                << " physical_snapshot=" << bool(snapshot.renderLight)
+                << " provisional=" << snapshot.provisionalLightPreview
+                << " unknown_mask="
+                << UnknownGeometryInputMask(snapshot.inputStamps.data());
+        CubatariumLogInfo("ChunkPublication", message.str());
+      }
       const MeshEnqueueResult enqueue_result = AsyncBuilder->EnqueueDetailed(
           std::move(snapshot), registry, force_cpu);
       if (enqueue_result != MeshEnqueueResult::Accepted)

@@ -41,6 +41,63 @@ def near_cave_surface(scene: dict, origin: list[float], direction: list[float]) 
     return min(candidates) if candidates else None
 
 
+def expected_surface_section(scene: dict, origin: list[float],
+                             direction: list[float], distance: float) -> tuple[int, int, int]:
+    """Attribute a failed analytic hit to its solid-side voxel, not to the ray origin."""
+    hit = [a + b * distance for a, b in zip(origin, direction)]
+    cell = [math.floor(value + .5) for value in hit]
+    if scene.get("name") == "open-sky-plane":
+        planes = [(1, scene["plane_bounds"]["floor"], -1)]
+    else:
+        bounds = scene.get("cave_bounds", dict(floor=-43.5, ceiling=-30.5,
+                                               z_low=44.5, z_high=57.5))
+        planes = [(1, bounds["floor"], -1), (1, bounds["ceiling"], 1),
+                  (2, bounds["z_low"], -1), (2, bounds["z_high"], 1)]
+    for axis, boundary, sign in planes:
+        if abs(hit[axis] - boundary) < .0001:
+            cell[axis] = math.floor(hit[axis] + .5 + sign * .0001)
+    return tuple(value // 16 for value in cell)
+
+
+def note_fault_section(sections: dict, coord: tuple[int, int, int], row: dict,
+                       expected: float, tolerance: float) -> None:
+    """Diagnostic metadata never participates in the independent depth verdict."""
+    section = sections.setdefault(coord, dict(coord=list(coord), faults=0,
+        frame_epochs=set(), voxel_matches_reference=0, no_published_geometry=0,
+        queued_without_published_geometry=0, reported_settled_revision=0,
+        maximum_dirty_age=0, work_owner_flag_counts={}))
+    section["faults"] += 1
+    epoch = row.get("frame_epoch")
+    if isinstance(epoch, int) and not isinstance(epoch, bool):
+        section["frame_epochs"].add(epoch)
+    prefix = "renderer_pixel_voxel_chunk_"
+    voxel_coord = tuple(row.get(prefix + c) for c in "xyz")
+    voxel_distance = row.get("renderer_pixel_voxel_hit_distance")
+    if (not all(isinstance(v, int) and not isinstance(v, bool) for v in voxel_coord) or
+            voxel_coord != coord or
+            not isinstance(voxel_distance, (int, float)) or isinstance(voxel_distance, bool) or
+            not math.isfinite(voxel_distance) or abs(voxel_distance - expected) > tolerance):
+        return
+    section["voxel_matches_reference"] += 1
+    def integer(name):
+        value = row.get(prefix + name)
+        return value if isinstance(value, int) and not isinstance(value, bool) else None
+    missing = integer("published_geom_rev") == 0
+    section["no_published_geometry"] += missing
+    section["queued_without_published_geometry"] += (
+        missing and integer("dirty_queue_kind") in (1, 2, 3))
+    settled, field = integer("settled_light_rev"), integer("field_light_rev")
+    section["reported_settled_revision"] += (
+        integer("has_settled_light") == 1 and settled is not None and settled == field)
+    age = integer("dirty_queue_age_frames")
+    if age is not None:
+        section["maximum_dirty_age"] = max(section["maximum_dirty_age"], age)
+    owner = integer("work_owner_flags")
+    if owner is not None:
+        key = str(owner)
+        section["work_owner_flag_counts"][key] = section["work_owner_flag_counts"].get(key, 0) + 1
+
+
 def evaluate(scene: dict, perf: Path | None) -> dict:
     if (scene.get("schema") != "engine-smoke-fixture.v1" or
             scene.get("name") not in ("dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "open-sky-plane")):
@@ -52,6 +109,7 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
     skipped = 0
     epochs = set()
     examples = []
+    fault_sections = {}
     try:
         with perf.open(encoding="utf-8") as stream:
             for line in stream:
@@ -89,6 +147,10 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
                     epochs.add(epoch)
                 fault = distance < 0 or distance > expected + tolerance
                 faults += fault
+                if fault:
+                    note_fault_section(fault_sections,
+                        expected_surface_section(scene, origin, direction, expected),
+                        row, expected, tolerance)
                 if fault and len(examples) < 8:
                     examples.append({"frame_epoch": epoch, "origin": origin,
                                      "direction": direction, "expected": expected,
@@ -96,9 +158,18 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
     except (ValueError, TypeError, KeyError):
         return {"status": "FAIL", "reason": "malformed_reference_trace"}
     status = "FAIL" if faults else ("PASS" if checked >= 100 and len(epochs) >= 3 else "UNTESTED")
+    sections = []
+    for section in sorted(fault_sections.values(), key=lambda s: (-s["faults"], s["coord"])):
+        frames = section.pop("frame_epochs")
+        section.update(frame_epochs=len(frames), first_frame_epoch=min(frames) if frames else None,
+                       last_frame_epoch=max(frames) if frames else None)
+        sections.append(section)
     return {"status": status, "reason": "analytic_near_plane_opaque_depth" if scene.get("name") == "open-sky-plane" else "analytic_near_cave_opaque_depth",
             "checked": checked, "faults": faults, "frame_epochs": len(epochs),
             "skipped_unscoped_or_occluded": skipped, "examples": examples,
+            "fault_attribution": {"schema": "engine-depth-fault-attribution.v1",
+                "section_count": len(sections), "sections": sections[:32],
+                "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"},
             "scope": ("opaque floor" if scene.get("name") == "open-sky-plane" else "opaque cave surfaces") +
                      " within 32 blocks; no light, transparent or full-screen acceptance"}
 

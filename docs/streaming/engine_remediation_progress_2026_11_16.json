@@ -7325,6 +7325,14 @@
         },
         "interpretation": "Observed timing-dependent geometric coverage counterexample. No shader-versus-streaming regression attribution or repair inferred from a passing repeat. Preserve originalFAIL. All-camera-ready does not certify surface geometry. GenericRGB/transparency remainUNTESTED."
       }
+    },
+    "wet_publication_failure_diagnostics": {
+      "status": "Implemented diagnostics, not a repair.6Release testsPASS and71Python harness testsPASS. Required Release app build and targeted native pending. Original287fault wet counterexample remains open.",
+      "evidence": "fixture-depth-reference-attributed.json re-evaluates original d655 wet perf with unchanged independent status/check/fault/frame/skip counters:FAIL287/11912 in7sections. Every287fault has engine voxel hit matching analytic expected surface, published geometry0 and queued work;285report matching settled light revisions. Owner flags1 in everyfault; maximum recorded dirty age139scheduler ticks. Not a texture, lack-of-voxel-data or framebuffer-only command mismatch in these samples. Reported light settlement is not a fresh full render-resource proof.",
+      "implementation": "CUBA_TRACE_CHUNK now persists selected section schedule outcomes, capture enqueue metadata and resource-admission rejection reasons to INFO logs before bounded diagnostic rings overwrite early-flight history. Resource gates keep their original decisions. Watch reports queue/owner metadata by default; optional CUBA_TRACE_CHUNK_LIGHT_PROOF enables extra world proof queries explicitly, because they may warm lazy caches. Unknown mask255/-1 fields mean not measured in ordinary watch. CPU commit diagnostic now reports moved-to chunkMesh.batches instead of already moved-from result.batches.",
+      "tooling": "engine_fixture_reference adds diagnostic fault_attribution grouped by analytic solid-side sections, including matching voxel metadata, unpublished queued geometry, reported settlement and maximum dirty age. Engine flags never determine the depth verdict. Source/file hashes and original unmodified reference report retained for retrospective analysis.",
+      "validation": "engine-publication-target-diagnostics-tests.log:6PASS. engine-publication-attribution-harness-tests.log:71PASS including4new tests: engine ready/unpublished flags cannot mask or invent depth failure; signed floor/ceiling attribution; unavailable/malformed/mismatched optional metadata does not change reference. No new unit test merely mirrors logging.",
+      "next": "Run same wet sprint with target(-5,-3,3), proof rereads explicitly disabled. Separate scheduler starvation/capture deferral from provisional/missing/mismatched physical snapshot or GPU owner rejection. Fix causal transition and add focused regression before claiming native repair."
     }
   },
   "execution_status_review_2026_11_18": {
