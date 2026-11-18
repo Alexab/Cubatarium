@@ -6802,13 +6802,61 @@
       "performance_limit": "Observed one foreground attempt12.4366ms exceeds soft4mslimit. Budget correctly cannot preempt a solve; this bounds subsequent work only. Full cost distribution, hard latency control and lower-end/GLES performance remain open. Do not describe fallback as a guaranteed4ms operation."
     },
     "cross_artifact_light_transport": {
-      "status": "Implemented and verified in CPU integration, realGL3.3and GLES3.2driver tests;5Release testsPASS with two negative controls. Required app build/native compatibility pending. Default Cross shader still consumes legacy baked light.",
+      "status": "Implemented and verified:CPU integration, realGL3.3and ES3.2driver tests5PASS, two RED controls with byte-exact restore, required Release application build/static6DLLcheck PASS. Wet negative cave native runtime/route/startup/inspection/depth PASS; genericRGB/transparency UNTESTED. Default Cross shader still consumes legacy baked light.",
       "implementation": "Cross instance carries4uint stable handle words at integer attribute6(divisor1),36byte stride. Actual cache flatten copies its source artifact binding and forms retained instance ranges; shared filter preserves exact words and compacts range ownership with instances. GPU pass retains ranges and releases them on destruction. No coordinate-to-latest-field lookup. Cross readiness cache now uses full ivec3keys instead of signed packed shifts/truncated aliases.",
       "validation": "engine-cross-light-field-refresh-tests.log and engine-cross-light-restored-tests.log:5/5PASS. Two actual sections each publish2plants with real canonical field proof. Cache flatten and production filter retain3instances from both source artifacts; exact source-pointer/handle pairing checked. Real instanced point draw through production Cross VAO returns all4uint words on desktopGL3.3and ES3.2. GPU pass alone retains physical leases after CPU cache/ranges destruction; releasing GPU pass expires both. Real diagonal emitter successor changes physical volume while actual instance VBO bytes/name and geometry/cull publication revisions stay unchanged.",
       "negative_controls": "engine-cross-light-negative-controls.json: point integer attribute at center bytes fails actual instanced framebuffer comparison; drop only GPU range ownership while keeping uploaded words/range counts fails post-CPU-destruction lease lifetime check. Sources restored byte-exact, rebuilt and5testsGREEN. No RED application build/launch.",
       "fixture_correction": "Initial new filter fixture incorrectly assumed half-integer plant centers; repository BlockCenter uses integer centers. Corrected removal predicate to threshold5and retained exact source ownership/pixel checks. Production filter unchanged by that correction.",
       "memory_cost": "Instance stride20to36bytes adds16bytes per plant. Async result byte accounting already uses sizeof(CrossInstanceGpu); range ownership adds per-source-range CPU storage. Full memory/performance acceptance remains pending.",
-      "remaining": "Default Cross field shader cutover and ordered fallback range submission are still required. Existing Cross UploadBuffer lacks failure-atomic publication; field-consuming cutover must handle upload failures before enabling it. Whole renderer owner integration, CPU/MDI/packed paths, lifecycle and originalS0..S6matrix remain open."
+      "remaining": "Default Cross field shader cutover and ordered fallback range submission are still required. Existing Cross UploadBuffer lacks failure-atomic publication; field-consuming cutover must handle upload failures before enabling it. Whole renderer owner integration, CPU/MDI/packed paths, lifecycle and originalS0..S6matrix remain open.",
+      "release_build": "engine-cross-light-transport-release-build.log: exact required Cubatarium Release command exits0, static dependency verification PASS with6system DLLs.",
+      "native_regression": {
+        "artifacts": "build/desktop-msvc/engine-cross-light-wet-native",
+        "observation": "cross-light-wet-observation.json",
+        "source_commit": "1a87d0ff7b9b2103af87444296c312aa86615bb5",
+        "app_exit": 0,
+        "observed_shell_exit": 1,
+        "overall": "UNTESTED",
+        "component_statuses": {
+          "runtime": "PASS",
+          "route": "PASS",
+          "startup": "PASS",
+          "visual": "UNTESTED",
+          "inspection": "PASS",
+          "fixture": "PASS",
+          "fixture_opaque_depth": "PASS"
+        },
+        "runtime": {
+          "ingame_frames": 3502,
+          "wall_elapsed_sec": 151.127,
+          "chunks_traveled_cheb": 19,
+          "outside_initial_resident_samples": 2221,
+          "diagnostic_relocations_after_start": 0
+        },
+        "inspection_pngs": "24/24",
+        "opaque_depth_checks": 12231,
+        "opaque_depth_faults": 0,
+        "opaque_depth_paint_epochs": 98,
+        "camera_observations": {
+          "observations": 3502,
+          "ready": 3502,
+          "ready_zero_light": 3502,
+          "unready": 0
+        },
+        "first_person_observations": {
+          "observations": 0,
+          "ready": 0,
+          "ready_zero_light": 0,
+          "unready": 0
+        },
+        "camera_input_failure_rows": 0,
+        "refresh_receipts": [
+          "I20261118 19:34:06.459633 23752 Log.cpp:601] [SceneLightRefresh] frame_epoch=1461 coord=(-7,-3,3) status=4 changed=0 attempts=1 elapsed_ms=5.242900",
+          "I20261118 19:34:17.458059 23752 Log.cpp:601] [SceneLightRefresh] frame_epoch=1800 coord=(-10,-3,3) status=4 changed=0 attempts=1 elapsed_ms=4.229000"
+        ],
+        "provenance": "EXE/source World_261/config restoration independently checked alltrue. Native is compatibility of existing rendering in wet cave; actual new Cross transport and no-VBO field replacement are demonstrated in GL/GLES driver tests, not claimed to enable normal Cross field shader. No first-person observations in this fixture, so no first-person cave acceptance inferred."
+      },
+      "wet_cave_limits": "All3502camera observations report ready canonical zero sky/block, and opaque depth checks prove sampled cave surfaces. These light counts are observational, not a dedicated independently tested cave-light oracle. A dark image alone neither proves missing geometry nor full rendering correctness. Generic RGB and transparency remain UNTESTED; add formal wet/dry canonical-dark reference coverage to the matrix."
     }
   },
   "execution_status_review_2026_11_18": {
