@@ -2395,6 +2395,8 @@ cubatarium_add_test(NAME fluid_placement_liquid_decor_test
 
 cubatarium_add_test(NAME decor_mesh_integration_test
     SOURCES
+        src/Render/Engine/ShaderManager.cpp
+        src/App/Platform/IUPlatformPaths.cpp
         src/Render/Engine/CrossGpuBackend.cpp
         src/Render/Lighting/SectionLightAtlas.cpp
         src/Render/Lighting/SectionLightBindingTable.cpp

@@ -10,6 +10,46 @@
 
 namespace cutum
 {
+namespace
+{
+// GLSL ES does not allow uniform initializers. Keep the file assets' render
+// defaults explicit and identical on both backends, before publication.
+bool InitializeFileUniformDefaults(GLuint program, const std::string &path)
+{
+  const auto slash = path.find_last_of("/\\");
+  const auto filename = path.substr(slash == std::string::npos ? 0 : slash + 1);
+  const bool greedy = filename == "fshader_greedy.glsl";
+  const bool creature = filename == "fshader_creature.glsl" ||
+                        filename == "fshader_creature_skinned.glsl";
+  if (!greedy && !creature)
+    return true;
+  if (glGetError() != GL_NO_ERROR)
+    return false;
+  GLint previous = 0;
+  glGetIntegerv(GL_CURRENT_PROGRAM, &previous);
+  glUseProgram(program);
+  const auto scalar = [&](const char *name, float value)
+  { glUniform1f(glGetUniformLocation(program, name), value); };
+  if (greedy)
+    scalar("uFluidAlpha", 1.f);
+  else
+  {
+    glUniform4f(glGetUniformLocation(program, "uTint"), 1, 1, 1, 1);
+    glUniform2f(glGetUniformLocation(program, "uCreatureLight"), 1, 0);
+    scalar("uCreatureLitEnabled", 0);
+    scalar("uEnvMinAmbient", .12f);
+    scalar("uEnvDayFactor", 1);
+    scalar("uEnvNightFactor", 0);
+    scalar("uEnvSkyLightScale", 1);
+    scalar("uCreatureFogFactor", 0);
+    glUniform3f(glGetUniformLocation(program, "uFogColor"), .7f, .8f, 1);
+    scalar("uFogEnabled", 0);
+  }
+  const bool initialized = glGetError() == GL_NO_ERROR;
+  glUseProgram(static_cast<GLuint>(previous));
+  return initialized && glGetError() == GL_NO_ERROR;
+}
+} // namespace
 
 UShaderProgram::UShaderProgram() : programID(0) {}
 
@@ -33,44 +73,68 @@ bool UShaderProgram::CreateFromFiles(const std::string &vertexPath,
     return false;
   }
 
-  return CreateFromStrings(vertexSource, fragmentSource);
+  return CreateProgramCandidate(vertexSource, fragmentSource, fragmentPath);
 }
 
 bool UShaderProgram::CreateFromStrings(const std::string &vertexSource,
                                        const std::string &fragmentSource)
 {
-  GLuint vertexShader, fragmentShader;
+  return CreateProgramCandidate(vertexSource, fragmentSource, {});
+}
+
+bool UShaderProgram::CreateProgramCandidate(const std::string &vertexSource,
+                                            const std::string &fragmentSource,
+                                            const std::string &fragmentPath)
+{
+  struct Candidate
+  {
+    GLuint vertex{0}, fragment{0}, program{0};
+    ~Candidate()
+    {
+      if (program)
+        glDeleteProgram(program);
+      if (vertex)
+        glDeleteShader(vertex);
+      if (fragment)
+        glDeleteShader(fragment);
+    }
+  } candidate;
 
   // Vertex shader compilation
-  if (!CompileShader(vertexShader, GL_VERTEX_SHADER, vertexSource))
+  if (!CompileShader(candidate.vertex, GL_VERTEX_SHADER, vertexSource))
   {
     return false;
   }
 
   // Fragment shader compilation
-  if (!CompileShader(fragmentShader, GL_FRAGMENT_SHADER, fragmentSource))
+  if (!CompileShader(candidate.fragment, GL_FRAGMENT_SHADER, fragmentSource))
   {
-    glDeleteShader(vertexShader);
     return false;
   }
 
   // Program creation
-  programID = glCreateProgram();
-  glAttachShader(programID, vertexShader);
-  glAttachShader(programID, fragmentShader);
+  candidate.program = glCreateProgram();
+  if (!candidate.program)
+    return false;
+  glAttachShader(candidate.program, candidate.vertex);
+  glAttachShader(candidate.program, candidate.fragment);
 
   // Program linking
-  if (!LinkProgram())
+  if (!LinkProgram(candidate.program))
   {
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
     return false;
   }
+  if (!InitializeFileUniformDefaults(candidate.program, fragmentPath))
+    return false;
 
-  // Delete shaders after linking
-  glDeleteShader(vertexShader);
-  glDeleteShader(fragmentShader);
-
+  // Publish only a complete linked program. Failed replacements keep the
+  // predecessor and its cached uniform locations, including queued draws.
+  const GLuint previous = programID;
+  programID = candidate.program;
+  candidate.program = 0;
+  uniformLocations.clear();
+  if (previous)
+    glDeleteProgram(previous);
   return true;
 }
 
@@ -176,23 +240,28 @@ GLint UShaderProgram::GetUniformLocation(const std::string &Name)
 bool UShaderProgram::CompileShader(GLuint &shaderID, GLenum shaderType,
                                    const std::string &source)
 {
-  shaderID = glCreateShader(shaderType);
   const auto expanded = SectionLightBindingTable::ExpandShaderInterface(source);
+  shaderID = glCreateShader(shaderType);
+  if (!shaderID)
+    return false;
   const char *sourcePtr = expanded.c_str();
   glShaderSource(shaderID, 1, &sourcePtr, nullptr);
   glCompileShader(shaderID);
 
-  CheckCompileErrors(shaderID,
-                     shaderType == GL_VERTEX_SHADER ? "VERTEX" : "FRAGMENT");
-
-  return shaderID != 0;
+  if (!CheckCompileErrors(
+          shaderID, shaderType == GL_VERTEX_SHADER ? "VERTEX" : "FRAGMENT"))
+  {
+    glDeleteShader(shaderID);
+    shaderID = 0;
+    return false;
+  }
+  return true;
 }
 
-bool UShaderProgram::LinkProgram()
+bool UShaderProgram::LinkProgram(GLuint candidate)
 {
-  glLinkProgram(programID);
-  CheckCompileErrors(programID, "PROGRAM");
-  return programID != 0;
+  glLinkProgram(candidate);
+  return CheckCompileErrors(candidate, "PROGRAM");
 }
 
 namespace
@@ -209,10 +278,10 @@ void LogShaderDiagnostic(const char *type, const char *infoLog)
 
 } // namespace
 
-void UShaderProgram::CheckCompileErrors(GLuint shader, const std::string &type)
+bool UShaderProgram::CheckCompileErrors(GLuint shader, const std::string &type)
 {
-  GLint success;
-  GLchar infoLog[1024];
+  GLint success = GL_FALSE;
+  GLchar infoLog[1024]{};
 
   if (type != "PROGRAM")
   {
@@ -232,6 +301,7 @@ void UShaderProgram::CheckCompileErrors(GLuint shader, const std::string &type)
       LogShaderDiagnostic("Shader program link error", infoLog);
     }
   }
+  return success == GL_TRUE;
 }
 
 namespace

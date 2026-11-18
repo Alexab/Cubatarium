@@ -22,7 +22,9 @@ public:
   UShaderProgram();
   ~UShaderProgram();
 
-  // Create and compile shaders
+  // Failed creation preserves the preceding linked program and uniform cache.
+  // Known file assets also initialize their portable render defaults before
+  // publication; string programs retain the ordinary GLSL default semantics.
   bool CreateFromFiles(const std::string &vertexPath,
                        const std::string &fragmentPath);
   bool CreateFromStrings(const std::string &vertexSource,
@@ -55,10 +57,13 @@ private:
   std::unordered_map<std::string, GLint> uniformLocations;
 
   // Helper methods
+  bool CreateProgramCandidate(const std::string &vertexSource,
+                              const std::string &fragmentSource,
+                              const std::string &fragmentPath);
   bool CompileShader(GLuint &shaderID, GLenum shaderType,
                      const std::string &source);
-  bool LinkProgram();
-  void CheckCompileErrors(GLuint shader, const std::string &type);
+  bool LinkProgram(GLuint candidate);
+  bool CheckCompileErrors(GLuint shader, const std::string &type);
   std::string ReadFile(const std::string &filepath);
 };
 

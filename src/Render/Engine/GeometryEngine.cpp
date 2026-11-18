@@ -4626,14 +4626,24 @@ float insetMix(float a, float b, float t, float inset) {
     return false;
   }
 
-  packedGreedyShader = shaderManager->CreateShader(
-      "packed_greedy", "shaders/vshader_packed_greedy.glsl",
-      "shaders/fshader_greedy.glsl");
-  if (!packedGreedyShader || !packedGreedyShader->IsValid())
+  // Packed vertex pulling is the desktop compute/SSBO path. CPU GL3.3 and
+  // GLES must not require its desktop430 shader (nor a missing GLES asset).
+  packedGreedyShader.reset();
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  const auto packed_caps = GetActiveRenderBackendCaps();
+  if (packed_caps.HasCompute && packed_caps.HasSsbo &&
+      !packed_caps.ForceCpuBackends)
   {
-    std::cerr << "Failed to create packed greedy mesh shader" << std::endl;
-    return false;
+    packedGreedyShader = shaderManager->CreateShader(
+        "packed_greedy", "shaders/vshader_packed_greedy.glsl",
+        "shaders/fshader_greedy.glsl");
+    if (!packedGreedyShader || !packedGreedyShader->IsValid())
+    {
+      std::cerr << "Failed to create packed greedy mesh shader" << std::endl;
+      return false;
+    }
   }
+#endif
 
   crossInstancedShader = shaderManager->CreateShader(
       "cross_instanced", "shaders/vshader_cross_instanced.glsl",

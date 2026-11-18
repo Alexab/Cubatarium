@@ -5,6 +5,7 @@
 #include "Render/Lighting/SectionRenderLightBindings.h"
 #if defined(SECTION_LIGHT_BINDING_DRIVER)
 #include "Render/Engine/CrossGpuBackend.h"
+#include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
 #include "Render/Lighting/SectionLightBindingTable.h"
 #include <GLFW/glfw3.h>
@@ -211,6 +212,202 @@ static void Expect(bool cond, const char *message)
     std::exit(1);
   }
 }
+
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+static void ProbeWorkingProgram(cutum::UShaderProgram &program,
+                                const std::string &uniform)
+{
+  GLuint vao = 0, texture = 0, fbo = 0;
+  glGenVertexArrays(1, &vao);
+  glBindVertexArray(vao);
+  glGenTextures(1, &texture);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+               nullptr);
+  glGenFramebuffers(1, &fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         texture, 0);
+  Expect(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE,
+         "shader replacement probe framebuffer is complete");
+  glViewport(0, 0, 1, 1);
+  glDisable(GL_DEPTH_TEST);
+  glDisable(GL_BLEND);
+  glDisable(GL_SCISSOR_TEST);
+  glDisable(GL_CULL_FACE);
+  program.Use();
+  program.SetFloat(uniform, .75f);
+  glDrawArrays(GL_TRIANGLES, 0, 3);
+  std::array<uint8_t, 4> pixel{};
+  glReadPixels(0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel.data());
+  Expect(pixel[0] >= 190 && pixel[0] <= 193 && pixel[1] == 0 && pixel[2] == 0 &&
+             pixel[3] == 255,
+         "working shader predecessor still draws its expected uniform color");
+  program.Unuse();
+  glBindVertexArray(0);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glDeleteFramebuffers(1, &fbo);
+  glDeleteTextures(1, &texture);
+  glDeleteVertexArrays(1, &vao);
+  Expect(glGetError() == GL_NO_ERROR,
+         "shader replacement probe has no GL errors");
+}
+
+static void TestShaderProgramFailureAtomicity(bool gles)
+{
+  using namespace cutum;
+  const std::string version =
+      gles ? "#version 300 es\nprecision highp float;precision highp int;\n"
+           : "#version 330 core\n";
+  const auto vertex =
+      version +
+      "out vec3 linkedValue;void main(){"
+      "linkedValue=vec3(1,0,0);vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);"
+      "gl_Position=vec4(p*2.-1.,0,1);}";
+  const auto fragment =
+      version + "in vec3 linkedValue;uniform float uValue;"
+                "out vec4 color;void main(){color=vec4(linkedValue*uValue,1);}";
+  const auto bad_vertex = version + "void main(){ invalid_shader_tokens; }";
+  const auto bad_fragment = version + "void main(){ invalid_fragment_tokens; }";
+  const auto bad_link = version + "in vec4 linkedValue;out vec4 color;"
+                                  "void main(){color=linkedValue;}";
+  UShaderProgram program;
+  Expect(!program.CreateFromStrings(bad_vertex, fragment) &&
+             !program.IsValid() && program.GetProgramID() == 0,
+         "failed first shader compilation exposes no program");
+  Expect(!program.CreateFromStrings(vertex, bad_link) && !program.IsValid(),
+         "failed first shader link exposes no program");
+  Expect(program.CreateFromStrings(vertex, fragment) && program.IsValid(),
+         "shader program recovers after failed initial candidates");
+  const auto previous = program.GetProgramID();
+  const auto location = program.GetUniformLocation("uValue");
+  Expect(location >= 0, "working program caches its active uniform");
+  ProbeWorkingProgram(program, "uValue");
+  const auto preserved = [&]()
+  {
+    GLint linked = 0;
+    glGetProgramiv(previous, GL_LINK_STATUS, &linked);
+    Expect(program.GetProgramID() == previous && program.IsValid() && linked &&
+               program.GetUniformLocation("uValue") == location,
+           "failed shader replacement retains linked predecessor and uniform "
+           "cache");
+    ProbeWorkingProgram(program, "uValue");
+  };
+  Expect(!program.CreateFromStrings(bad_vertex, fragment),
+         "malformed vertex candidate is rejected");
+  preserved();
+  Expect(!program.CreateFromStrings(vertex, bad_fragment),
+         "malformed fragment candidate is rejected");
+  preserved();
+  Expect(!program.CreateFromStrings(vertex, bad_link),
+         "unlinked shader candidate is rejected");
+  preserved();
+  Expect(!program.CreateFromFiles("__missing_shader_vertex__",
+                                  "__missing_shader_fragment__"),
+         "missing shader sources cannot replace a working program");
+  preserved();
+  std::string replacement = fragment;
+  replacement.replace(replacement.find("uValue"), 6, "uReplacement");
+  replacement.replace(replacement.find("uValue"), 6, "uReplacement");
+  Expect(program.CreateFromStrings(vertex, replacement) &&
+             program.GetProgramID() != previous && !glIsProgram(previous) &&
+             program.GetUniformLocation("uValue") == -1 &&
+             program.GetUniformLocation("uReplacement") >= 0,
+         "successful shader replacement retires predecessor and clears uniform "
+         "cache");
+  ProbeWorkingProgram(program, "uReplacement");
+  UShaderManager manager;
+  const auto cached = manager.CreateShaderFromStrings("kept", vertex, fragment);
+  Expect(cached && !manager.CreateShaderFromStrings("kept", vertex, bad_link) &&
+             manager.GetShader("kept") == cached && cached->IsValid(),
+         "manager keeps prior named program after rejected replacement");
+  ProbeWorkingProgram(*cached, "uValue");
+  Expect(glGetError() == GL_NO_ERROR,
+         "shader failure cases leave no GL errors");
+}
+
+static void TestProductionGreedyPrograms(bool gles, bool packed)
+{
+  const std::string root = std::string(CUBATARIUM_SOURCE_DIR) + "/shaders/";
+  const std::string directory = root + (gles ? "gles/" : "");
+  for (const std::string file :
+       {"vshader_greedy.glsl", "vshader_cross_instanced.glsl"})
+  {
+    cutum::UShaderProgram program;
+    Expect(program.CreateFromFiles(directory + file,
+                                   directory + "fshader_greedy.glsl"),
+           "production greedy/Cross vertex and fragment shader pair links");
+    GLint linked = 0;
+    glGetProgramiv(program.GetProgramID(), GL_LINK_STATUS, &linked);
+    Expect(linked == GL_TRUE,
+           "production program reports actual GL link success");
+    float alpha = 0;
+    glGetUniformfv(program.GetProgramID(),
+                   program.GetUniformLocation("uFluidAlpha"), &alpha);
+    Expect(alpha == 1.f,
+           "production greedy/Cross default alpha is explicitly opaque");
+    const auto previous = program.GetProgramID();
+    program.Use();
+    Expect(
+        program.CreateFromFiles(directory + file,
+                                directory + "fshader_greedy.glsl"),
+        "file shader defaults initialize before replacing an active program");
+    GLint active = 0;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &active);
+    Expect(static_cast<GLuint>(active) == previous,
+           "candidate file defaults restore prior active GL program");
+    program.Use();
+    Expect(!glIsProgram(previous),
+           "using file successor releases deleted active predecessor");
+    program.Unuse();
+  }
+  if (packed)
+  {
+    cutum::UShaderProgram program;
+    Expect(program.CreateFromFiles(root + "vshader_packed_greedy.glsl",
+                                   root + "fshader_greedy.glsl"),
+           "production desktop packed shader pair links");
+  }
+  for (const bool skinned : {false, true})
+  {
+    cutum::UShaderProgram program;
+    Expect(program.CreateFromFiles(
+               directory +
+                   (skinned ? "vshader_creature_skinned.glsl" : "vshader.glsl"),
+               directory + (skinned ? "fshader_creature_skinned.glsl"
+                                    : "fshader_creature.glsl")),
+           "production rigid/skinned creature shader pair links");
+    std::array<float, 4> tint{};
+    glGetUniformfv(program.GetProgramID(), program.GetUniformLocation("uTint"),
+                   tint.data());
+    Expect(tint == std::array<float, 4>({1, 1, 1, 1}),
+           "production creature default tint is white on desktop and GLES");
+    const std::pair<const char *, float> defaults[] = {
+        {"uCreatureLitEnabled", 0}, {"uEnvMinAmbient", .12f},
+        {"uEnvDayFactor", 1},       {"uEnvNightFactor", 0},
+        {"uEnvSkyLightScale", 1},   {"uCreatureFogFactor", 0},
+        {"uFogEnabled", 0}};
+    for (const auto &entry : defaults)
+    {
+      float value = -1;
+      const auto location = program.GetUniformLocation(entry.first);
+      Expect(location >= 0, "creature default uniform remains active");
+      glGetUniformfv(program.GetProgramID(), location, &value);
+      Expect(
+          std::abs(value - entry.second) < .001f,
+          "production creature file defaults preserve lighting and fog policy");
+    }
+    std::array<float, 2> light{};
+    glGetUniformfv(program.GetProgramID(),
+                   program.GetUniformLocation("uCreatureLight"), light.data());
+    Expect(light == std::array<float, 2>({1, 0}),
+           "creature default light is direct sky only");
+  }
+  Expect(glGetError() == GL_NO_ERROR,
+         "production shader loading has no GL errors");
+}
+#endif
 
 #if defined(SECTION_LIGHT_BINDING_DRIVER)
 static void ProbeCertifiedBinding(
@@ -3034,6 +3231,9 @@ int main(int argc, char **argv)
     }
     std::cout << "GPU: " << glGetString(GL_RENDERER)
               << " GL: " << glGetString(GL_VERSION) << '\n';
+    TestShaderProgramFailureAtomicity(gles_context);
+    TestProductionGreedyPrograms(gles_context,
+                                 visibility_driver && !gles_visibility_driver);
     if (visibility_driver)
       TestMaterialVisibilityParity(registry, definitions.get(), true,
                                    gles_visibility_driver);

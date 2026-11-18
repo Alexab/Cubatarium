@@ -4,25 +4,26 @@ in vec2 uv;
 out vec4 FragColor;
 
 uniform sampler2D texture0;
-uniform vec4 uTint = vec4(1.0);
+// ShaderManager initializes these file defaults before publishing the program.
+uniform vec4 uTint;
 
 // Same sky/block light curve as the block shaders (fshader_greedy.glsl).
 // uCreatureLitEnabled stays 0 for previews and effects: those draw unlit.
-uniform float uCreatureLitEnabled = 0.0;
-uniform vec2 uCreatureLight = vec2(1.0, 0.0); // x = sky 0..1, y = block 0..1
-uniform float uEnvMinAmbient = 0.12;
-uniform float uEnvDayFactor = 1.0;
-uniform float uEnvNightFactor = 0.0;
-uniform float uEnvSkyLightScale = 1.0;
+uniform float uCreatureLitEnabled;
+uniform vec2 uCreatureLight; // x = sky 0..1, y = block 0..1
+uniform float uEnvMinAmbient;
+uniform float uEnvDayFactor;
+uniform float uEnvNightFactor;
+uniform float uEnvSkyLightScale;
 
 // Distance fog matching the terrain block shaders (fshader_greedy.glsl):
 // the fog factor is precomputed per creature on the CPU from the same fog
 // range the world renders with, so mobs fade into the horizon instead of
 // popping crisp beyond the fog wall. uFogEnabled stays 0 for previews and
 // when distance fog is disabled in settings.
-uniform float uCreatureFogFactor = 0.0;
-uniform vec3 uFogColor = vec3(0.7, 0.8, 1.0);
-uniform float uFogEnabled = 0.0;
+uniform float uCreatureFogFactor;
+uniform vec3 uFogColor;
+uniform float uFogEnabled;
 
 vec3 applyCreatureFog(vec3 color)
 {
