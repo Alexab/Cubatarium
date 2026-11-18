@@ -379,11 +379,14 @@ bool sectionLightSurfaceFetch(highp uvec4 handle, highp vec3 worldPos,
                               highp int face, out highp uint packedLight)
 {
     packedLight = 0u;
-    if (face < 0 || face > 5 || any(isnan(worldPos)) ||
+    if ((face != 127 && (face < 0 || face > 5)) || any(isnan(worldPos)) ||
         any(isinf(worldPos)) ||
         any(lessThan(worldPos, vec3(-2147483000.0))) ||
         any(greaterThan(worldPos, vec3(2147483000.0)))) return false;
     highp ivec3 cell = ivec3(floor(worldPos + vec3(0.5)));
+    // Explicit-UV CPU decor has no voxel face normal. Its fragments sample
+    // their actual occupied cells; instanced decor retains its center policy.
+    if (face == 127) return sectionLightFetch(handle, cell, packedLight);
     highp int axis = (face == 0 || face == 2) ? 2 :
                       ((face == 1 || face == 3) ? 0 : 1);
     highp int boundary = int(floor(worldPos[axis] + 1.0));

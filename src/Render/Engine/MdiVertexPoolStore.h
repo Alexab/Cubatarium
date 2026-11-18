@@ -109,6 +109,7 @@ public:
   }
 
 private:
+  friend struct MdiVertexPoolStoreDriverTestAccess;
   bool EnsureCullProgram();
   void RebuildIndirectCmdTable(GreedyGpuPassCache &cache);
 

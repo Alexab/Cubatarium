@@ -14,6 +14,7 @@ uniform bool uOverrideSectionLightHandle;
 uniform highp uvec4 uSectionLightHandle;
 flat out float vSectionLightValid;
 
+flat out highp uvec4 vSurfaceRenderLightHandle;
 out highp vec3 vWorldPos;
 flat out vec3 vInstanceCell;
 out vec2 vUV;
@@ -42,6 +43,7 @@ float decorRandom(uint value)
 
 void main()
 {
+    vSurfaceRenderLightHandle = uvec4(0u);
     vec3 localPos = aPos;
     // Organic cross meshes share a GPU template. Vary each instance from its
     // integer world cell so neighboring plants do not repeat an identical

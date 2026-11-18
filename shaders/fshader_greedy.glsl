@@ -13,6 +13,8 @@ out vec4 FragColor;
 
 /* CUBATARIUM_SECTION_LIGHT_INTERFACE */
 uniform bool uUseSurfaceSectionLight;
+uniform bool uUseSurfaceSectionLightDrawTable;
+flat in highp uvec4 vSurfaceRenderLightHandle;
 uniform highp uvec4 uSurfaceSectionLightHandle;
 
 uniform sampler2D texture0;
@@ -536,7 +538,8 @@ void main()
     float block01 = clamp(vBlockLight, 0.0, 1.0);
     if (uUseSurfaceSectionLight) {
         highp uint physicalLight;
-        if (!sectionLightSurfaceFetch(uSurfaceSectionLightHandle, vWorldPos,
+        if (!sectionLightSurfaceFetch(
+                uUseSurfaceSectionLightDrawTable ? vSurfaceRenderLightHandle : uSurfaceSectionLightHandle, vWorldPos,
                                       vFaceIndex, physicalLight)) discard;
         sky01 = float(physicalLight & 15u) / 15.0;
         block01 = float((physicalLight >> 4u) & 15u) / 15.0;

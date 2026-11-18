@@ -386,6 +386,7 @@ set(SOURCES
     src/Render/Lighting/SectionLightAtlas.cpp
     src/Render/Lighting/SectionLightBindingTable.cpp
     src/Render/Lighting/SectionRenderLightBindings.cpp
+    src/Render/Lighting/SectionLightDrawTable.cpp
     src/Render/Engine/CrossGpuBackend.cpp
     src/Render/Backend/RenderBackendFactory.cpp
     src/Render/Backend/RenderBackendSelect.cpp
@@ -2402,6 +2403,13 @@ cubatarium_add_test(NAME decor_mesh_integration_test
         src/Render/Engine/ShaderManager.cpp
         src/App/Platform/IUPlatformPaths.cpp
         src/Render/Engine/CrossGpuBackend.cpp
+        src/Render/Engine/GreedyGpuBackend.cpp
+        src/Render/Engine/GreedyGpuPublication.cpp
+        src/Render/Engine/GreedyVertexPool.cpp
+        src/Render/Engine/MdiVertexPoolStore.cpp
+        src/Render/Backend/GpuHotPathFallback.cpp
+        src/World/Core/RuntimeTuning.cpp
+        src/Render/Lighting/SectionLightDrawTable.cpp
         src/Render/Lighting/SectionLightAtlas.cpp
         src/Render/Lighting/SectionLightBindingTable.cpp
         src/Render/Lighting/SectionRenderLightBindings.cpp
@@ -3397,6 +3405,7 @@ if(NOT ANDROID AND NOT CUBATARIUM_GLES)
     target_compile_definitions(section_light_atlas_driver_test PRIVATE GLEW_STATIC)
   endif()
   add_executable(greedy_vertex_pool_production_test
+    src/Render/Lighting/SectionLightDrawTable.cpp
     src/Test/GreedyVertexPoolProductionTest.cpp
     src/Test/GreedyVertexPoolDriverTest.cpp
     src/Render/Engine/GreedyVertexPool.cpp
@@ -3417,6 +3426,7 @@ if(NOT ANDROID AND NOT CUBATARIUM_GLES)
   # Audit 2026-09-16 publication ownership counterexamples (R01–R04).
   # WILL_FAIL until S1 (R01) + S2 (empty/reorder) land; still executes as stop-criterion.
   add_executable(publication_audit
+    src/Render/Lighting/SectionLightDrawTable.cpp
     docs/streaming/audit_2026_09_16/PublicationRepro.cpp
     src/Render/Engine/GreedyVertexPool.cpp
     src/Render/Engine/GreedyGpuPublication.cpp

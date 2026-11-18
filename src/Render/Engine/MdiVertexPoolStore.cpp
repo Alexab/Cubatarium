@@ -496,7 +496,7 @@ size_t UMdiVertexPoolStore::BuildIndirectCommandsRange(
         static_cast<uint32_t>(gpu.eboByteOffset / sizeof(uint32_t));
     cmd.baseVertex =
         static_cast<int32_t>(gpu.vboByteOffset / sizeof(GreedyMeshVertex));
-    cmd.baseInstance = 0;
+    cmd.baseInstance = static_cast<uint32_t>(i);
     out.push_back(cmd);
   }
   return out.size();
@@ -716,7 +716,7 @@ void UMdiVertexPoolStore::RebuildIndirectCmdTable(GreedyGpuPassCache &cache)
           static_cast<uint32_t>(b.eboByteOffset / sizeof(uint32_t));
       cmd.baseVertex =
           static_cast<int32_t>(b.vboByteOffset / sizeof(GreedyMeshVertex));
-      cmd.baseInstance = 0;
+      cmd.baseInstance = static_cast<uint32_t>(i);
     }
     spheres[i * 4 + 0] = b.cullSphere[0];
     spheres[i * 4 + 1] = b.cullSphere[1];

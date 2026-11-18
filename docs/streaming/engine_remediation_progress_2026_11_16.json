@@ -7392,7 +7392,8 @@
         "references": "opaque_depth736checks/0faults;floor_draw_source296checks/0faults (all witnessed packed GPU, baked SSBO source reference, not shader RGB);camera1688ready15/0;firstperson,creature388samples,AIRservicePASS;37PNGs and26/26inspection",
         "limits": "No full RGB/fog/transparency acceptance or inference that originalwet287fault counterexample repaired.",
         "performance": "FAIL: fly frame median113.8175ms, overall89.0198ms, scene22.15705ms, streamphase66.0311ms; pressure proxy0.1111 and readiness debt0.6032. Afterstop readiness debt0/meshmissing0 but visible_black_stalled_max1. Missing legacy metrics also make some gates false. No controlledA/B, no causal attribution to sampler. See surface-native-performance-observation.json."
-      }
+      },
+      "runtime_followup": "CPU/direct/MDI implemented in cpu_mdi_physical_field_consumption; driver validationPASS, native pending. Earlier packed native receipts remain original-scope evidence."
     },
     "embedded_version_build_order": {
       "status": "Fixed and committed95674d643. Required Release buildPASS/static6systemDLL; binary string and generated-header/current committed source agree; generated project references prove all four version consumers ordered after version target.",
@@ -7407,6 +7408,14 @@
         "scope": "Build-only dependency fix; no new native flight attributed to rebuilt binary."
       },
       "historical_provenance_limit": "Earlier native route git_sha is an injected requested checkout label; it is not independent evidence of embedded source identity. Preserve results tied to their measured EXE hashes and actual runtime receipts, without pretending stale HUD proves old entire binary or requested gitsha proves all embedded source. Old original287fault geometry counterexample remains valid as observed behavior. Future harness should record/validate embedded build identity in addition to requested checkout."
+    },
+    "cpu_mdi_physical_field_consumption": {
+      "status": "Implemented CPU/direct/MDI runtime consumption.9Release testsPASS after4negative controls and exact source restoration. Required Release app build/native pending; no fullS5acceptance.",
+      "implementation": "GreedyGpuBatch retains exact artifact-specific light lease. MDI CPU and GPU-resident command producers now set baseInstance to original pass row, preserving indices after skipped commands. Production vertex location7 carries unsigned4word light handle to fragment sampler. Per-pass SectionLightDrawTable has two fence-protected bounded stores, max65536rows/store, zero-timeout polls, no CPUwait and no geometry-buffer changes. Full row equality avoids redundant uploads; reorder checks full row membership. Failed/busy metadata update uses exact artifact ordered uniform draw; deferred atlas pages also use ordered per-artifact fallback. Direct draw clears table mode. Flat remains explicit baked policy.",
+      "runtime": "Refresh each unique retained field only when authoritative incarnation/revision changes; compatible completed successor replaces field, otherwise predecessor retains own compatible field. Resident rows batch across sections normally. Geometry-buffer and light-table attributes stay distinct. Queue witnesses updated to expected actual source row. Explicit-UV CPU decor samples occupied physical cells without cube normal; instanced Cross keeps center policy.",
+      "driver_validation": "Production MdiVertexPoolStore producers submit actual multi-draw and GPU-resident command table into integer FBO, with distinct unsigned high-bit metadata for3artifacts, reorder and hidden command. Real failed buffer transfer retains old storage. Production surface VS+FS read actual canonical atlas through row1 while uniform handle deliberately invalid; CPU indirect, GPU-resident indirect and direct uniform fallback checked independently. Existing six-face signed~32k/sky/emitter/zero/invalid/Flat/minimal-capacity checks extended to CPU explicit-UV decor.",
+      "controls": "mdi_always_row_zero,mdi_reuse_wrong_row_membership,mdi_accept_failed_transfer,mdi_ignore_shader_row each produce exact regressionFAIL. engine-surface-mdi-negative-controls.json confirms exact source restore. engine-surface-mdi-restored-tests.log9/9PASS including GL3.3/GL4.3/GLES, production pool driver/unit and publication audit.",
+      "limits": "Light remains in legacy geometry merge keys and invalidation dependencies. Geometry/light lifecycle split, field-only work convergence, full backend/native/performance matrix, formal wet-cave RGB/light reference and original287fault coverage counterexample remain open."
     }
   },
   "execution_status_review_2026_11_18": {
@@ -7428,7 +7437,7 @@
       "S2": "many demonstrated defects fixed; full cross-scenario acceptance incomplete",
       "S3": "CPU correctness/provenance largely verified; persistence and GPU parity incomplete",
       "S4": "partial lifecycle and publication ownership",
-      "S5": "Resource infrastructure, Cross runtime and packed per-fragment physical surface sampling verified in scoped driver/native checks. CPU/direct/MDI physical-field integration and geometry/light invalidation separation pending; no fullS5acceptance.",
+      "S5": "Cross, packed and CPU/direct/MDI physical-field consumers implemented with scoped real GPU validation. CPU/MDI native pending; light merge keys, dependency/lifecycle split and complete acceptance remain required.",
       "S6": "scoped references verified, full visual/performance matrix incomplete"
     },
     "latest_native_counterexample": "Original d65538f35wet sprint287/11912depth faults remains open. Latest d8f9c9cfbfix repairs deterministic proof-only cache staleness and passes10510sampled opaque-depth checks in wet sprint; no causal closure of original intermittent failure.1781camera-ready0/0 observations are not formal RGB/lighting acceptance."

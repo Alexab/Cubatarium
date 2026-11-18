@@ -5,9 +5,11 @@
 #include "Render/Lighting/SectionRenderLightBindings.h"
 #if defined(SECTION_LIGHT_BINDING_DRIVER)
 #include "Render/Engine/CrossGpuBackend.h"
+#include "Render/Engine/MdiVertexPoolStore.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
 #include "Render/Lighting/SectionLightBindingTable.h"
+#include "Render/Lighting/SectionLightDrawTable.h"
 #include <GLFW/glfw3.h>
 #endif
 #include "Render/Mesh/ChunkMeshCache.h"
@@ -36,6 +38,21 @@
 namespace cutum
 {
 #if defined(SECTION_LIGHT_BINDING_DRIVER)
+struct MdiVertexPoolStoreDriverTestAccess
+{
+  static void Rebuild(UMdiVertexPoolStore &store, GreedyGpuPassCache &cache)
+  {
+    store.RebuildIndirectCmdTable(cache);
+  }
+};
+struct SectionLightDrawTableTestAccess
+{
+  static void FailTransfer(SectionLightDrawTable &table, bool enabled)
+  {
+    table.BeforeTransfer =
+        enabled ? +[](void *) { glBindBuffer(GL_ARRAY_BUFFER, 0); } : nullptr;
+  }
+};
 struct CrossGpuBackendDriverTestAccess
 {
   struct Fault
@@ -3059,10 +3076,163 @@ static void TestCrossLightArtifactTransport(
 }
 
 #if defined(SECTION_LIGHT_BINDING_DRIVER)
+static void TestMdiLightDrawTable()
+{
+  using namespace cutum;
+  SectionLightDrawTable table;
+  std::vector<SectionLightDrawTable::Words> rows{{0x10000001u, 17, 99, 201},
+                                                 {0x80000002u, 29, 109, 211},
+                                                 {0xf0000003u, 31, 119, 221}};
+  const auto original = rows;
+  UShaderProgram program;
+  std::ifstream file(std::string(CUBATARIUM_SOURCE_DIR) +
+                     "/shaders/vshader_greedy.glsl");
+  std::ostringstream vertex;
+  vertex << file.rdbuf();
+  Expect(program.CreateFromStrings(
+             vertex.str(),
+             "#version 330 core\nflat in uvec4 vSurfaceRenderLightHandle;"
+             "layout(location=0) out uvec4 value;"
+             "void main(){value=vSurfaceRenderLightHandle;}"),
+         "production greedy vertex transports integer MDI light handles");
+  GLuint vao = 0, vbo = 0, ebo = 0, color = 0, fbo = 0;
+  glGenVertexArrays(1, &vao);
+  glBindVertexArray(vao);
+  glGenBuffers(1, &vbo);
+  glGenBuffers(1, &ebo);
+  std::vector<GreedyMeshVertex> vertices(18);
+  std::vector<uint32_t> indices(18);
+  const int corners[] = {0, 1, 2, 0, 2, 3};
+  GreedyGpuPassCache cache;
+  cache.usesVertexPool = true;
+  cache.poolVbo = vbo;
+  cache.poolEbo = ebo;
+  cache.batches.resize(3);
+  for (int n = 0; n < 3; ++n)
+  {
+    for (int k = 0; k < 6; ++k)
+    {
+      auto &v = vertices[n * 6 + k];
+      v.px =
+          -1.f + (n + ((corners[k] == 1 || corners[k] == 2) ? 1 : 0)) * 2.f / 3;
+      v.py = corners[k] >= 2 ? 1.f : -1.f;
+      indices[n * 6 + k] = k;
+    }
+    auto &gpu = cache.batches[n];
+    gpu.pooled = true;
+    gpu.vertexCount = gpu.indexCount = gpu.indexCountGl = 6;
+    gpu.vboByteOffset = n * 6 * sizeof(GreedyMeshVertex);
+    gpu.eboByteOffset = n * 6 * sizeof(uint32_t);
+  }
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(GreedyMeshVertex),
+               vertices.data(), GL_STATIC_DRAW);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GreedyMeshVertex),
+                        nullptr);
+  glEnableVertexAttribArray(0);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t),
+               indices.data(), GL_STATIC_DRAW);
+  glGenTextures(1, &color);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, color);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32UI, 3, 1, 0, GL_RGBA_INTEGER,
+               GL_UNSIGNED_INT, nullptr);
+  glGenFramebuffers(1, &fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         color, 0);
+  Expect(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE,
+         "MDI light metadata integer target is complete");
+  glViewport(0, 0, 3, 1);
+  glDisable(GL_DEPTH_TEST);
+  glDisable(GL_BLEND);
+  glDisable(GL_CULL_FACE);
+  glDisable(GL_SCISSOR_TEST);
+  program.Use();
+  program.SetMat4("mvp_matrix", glm::mat4(1));
+  UMdiVertexPoolStore store;
+  const auto draw = [&](bool gpu_commands, bool hidden_middle = false)
+  {
+    Expect(table.BindAttribute(), "MDI exact metadata attribute binds");
+    const uint32_t clear[] = {0, 0, 0, 0};
+    glClearBufferuiv(GL_COLOR, 0, clear);
+    if (gpu_commands)
+    {
+      MdiVertexPoolStoreDriverTestAccess::Rebuild(store, cache);
+      Expect(store.SubmitIndirectCommandsGpuRange(cache, 0, 3),
+             "actual GPU-resident command table submits light-indexed MDI");
+    }
+    else
+    {
+      std::vector<DrawElementsIndirectCommand> commands;
+      const auto count =
+          store.BuildIndirectCommandsRange(cache, 0, 3, commands);
+      Expect(count == (hidden_middle ? 2u : 3u),
+             "actual CPU indirect builder retains visible command count");
+      Expect(store.SubmitIndirectCommands(commands),
+             "actual CPU-built indirect commands submit light-indexed MDI");
+    }
+    table.SignalDrawComplete();
+    std::array<SectionLightDrawTable::Words, 3> actual{};
+    glReadPixels(0, 0, 3, 1, GL_RGBA_INTEGER, GL_UNSIGNED_INT, actual.data());
+    for (int n = 0; n < 3; ++n)
+      Expect(
+          actual[n] == (hidden_middle && n == 1 ? SectionLightDrawTable::Words{}
+                                                : original[n]),
+          "MDI light words match exact artifact after filtering and reorder");
+    Expect(glGetError() == GL_NO_ERROR,
+           "MDI light metadata draw has no GL errors");
+  };
+  Expect(table.Prepare(rows), "MDI initial metadata uploads");
+  const auto uploads = table.UploadCount();
+  Expect(table.Prepare(rows) && table.UploadCount() == uploads,
+         "unchanged MDI light handles do not upload any buffer");
+  draw(false);
+  draw(true);
+  std::swap(rows[0], rows[2]);
+  std::swap(cache.batches[0], cache.batches[2]);
+  Expect(table.Prepare(rows), "MDI row reorder publishes matching metadata");
+  draw(false);
+  draw(true);
+  cache.batches[1].drawInstanceCount = 0;
+  draw(false, true);
+  cache.batches[1].drawInstanceCount = 1;
+  const auto buffer = table.Buffer();
+  const auto before_failure = table.UploadCount();
+  auto wrong_rows = rows;
+  wrong_rows[0][0] ^= 1u;
+  SectionLightDrawTableTestAccess::FailTransfer(table, true);
+  Expect(!table.Prepare(wrong_rows),
+         "actual failed metadata transfer is rejected");
+  SectionLightDrawTableTestAccess::FailTransfer(table, false);
+  Expect(table.Buffer() == buffer && table.UploadCount() == before_failure,
+         "failed MDI update keeps predecessor storage and publication");
+  draw(false);
+  Expect(table.Prepare(rows),
+         "matching predecessor remains reusable after failure");
+  // Destruction is context-owned, with the same buffers and shaders still live.
+  table.Reset();
+  Expect(table.Buffer() == 0, "MDI light table resets all context resources");
+  UGreedyGpuBackend backend;
+  backend.DestroyPass(cache);
+  glBindVertexArray(vao);
+  SectionLightDrawTable::DisableAttribute();
+  program.Unuse();
+  glBindVertexArray(0);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glDeleteFramebuffers(1, &fbo);
+  glDeleteTextures(1, &color);
+  glDeleteBuffers(1, &vbo);
+  glDeleteBuffers(1, &ebo);
+  glDeleteVertexArrays(1, &vao);
+}
+
 static void
 TestSurfacePhysicalField(cutum::UBlockRegistry &registry,
                          const cutum::UBlockDefinitionStorage *definitions,
-                         bool gles, bool packed, bool distant = false)
+                         bool gles, bool packed, bool distant = false,
+                         bool mdi = false)
 {
   using namespace cutum;
   UBlockWorld world;
@@ -3105,10 +3275,28 @@ TestSurfacePhysicalField(cutum::UBlockRegistry &registry,
                                                   : "vshader_greedy.glsl"),
                               directory + "fshader_greedy.glsl"),
       "production surface vertex/fragment pair links");
-  GLuint vao = 0, vbo = 0, texture = 0, color = 0, fbo = 0, quads = 0;
+  GLuint vao = 0, vbo = 0, texture = 0, color = 0, fbo = 0, quads = 0, ebo = 0;
   glGenVertexArrays(1, &vao);
   glBindVertexArray(vao);
   glGenBuffers(1, &vbo);
+  GreedyGpuPassCache mdi_cache;
+  UMdiVertexPoolStore mdi_store;
+  SectionLightDrawTable draw_table;
+  if (mdi)
+  {
+    glGenBuffers(1, &ebo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    const uint32_t indices[] = {0, 1, 2, 3, 4, 5};
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
+                 GL_STATIC_DRAW);
+    mdi_cache.usesVertexPool = true;
+    mdi_cache.poolVbo = vbo;
+    mdi_cache.poolEbo = ebo;
+    mdi_cache.batches.resize(2);
+    auto &batch = mdi_cache.batches[1];
+    batch.pooled = true;
+    batch.vertexCount = batch.indexCount = batch.indexCountGl = 6;
+  }
   glGenTextures(1, &texture);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, texture);
@@ -3223,42 +3411,77 @@ TestSurfacePhysicalField(cutum::UBlockRegistry &registry,
     glUniform2uiv(program.GetUniformLocation("uSectionLightTableIncarnation"),
                   1, incarnation.data());
     program.SetBool("uUseSurfaceSectionLight", physical);
+    if (mdi)
+    {
+      Expect(draw_table.Prepare({{}, *handle}) && draw_table.BindAttribute(),
+             "physical surface MDI table prepares nonzero source row");
+    }
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
-    const float clear[] = {0, 0, 0, 0};
-    glClearBufferfv(GL_COLOR, 0, clear);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-    std::array<uint8_t, 64> actual{};
-    glReadPixels(0, 0, 16, 1, GL_RGBA, GL_UNSIGNED_BYTE, actual.data());
-    for (int x = 0; x < 16; ++x)
+    for (unsigned submit = 0; submit < (mdi ? 3u : 1u); ++submit)
     {
-      glm::ivec3 cell(center);
-      cell[u] = origin[u] + x;
-      const int distance = std::abs(cell.x - emitter.x) +
-                           std::abs(cell.y - emitter.y) +
-                           std::abs(cell.z - emitter.z);
-      const int sky = phase == 2 ? 0 : 15;
-      // The test catalog's fire emits14; AIR attenuates by1 per axial step.
-      const int block = phase == 1 ? std::max(0, 14 - distance) : 0;
-      const std::array<uint8_t, 4> expected =
-          physical && invalid ? std::array<uint8_t, 4>{0, 0, 0, 0}
-          : physical ? std::array<uint8_t, 4>{uint8_t(sky * 17),
-                                              uint8_t(block * 17), 0, 255}
-                     : std::array<uint8_t, 4>{255, 255, 0, 255};
-      const std::array<uint8_t, 4> value{actual[x * 4], actual[x * 4 + 1],
-                                         actual[x * 4 + 2], actual[x * 4 + 3]};
-      if (value != expected)
-        std::cerr << "surface packed=" << packed << " phase=" << phase
-                  << " face=" << face << " cell=" << cell.x << ',' << cell.y
-                  << ',' << cell.z << " actual=" << int(value[0]) << ','
-                  << int(value[1]) << ',' << int(value[3])
-                  << " expected=" << int(expected[0]) << ',' << int(expected[1])
-                  << ',' << int(expected[3]) << '\n';
-      Expect(value == expected,
-             "production surface fragment matches independent per-cell light");
+      program.SetBool("uUseSurfaceSectionLightDrawTable", mdi && submit != 2);
+      const auto uniform_handle = mdi && submit != 2
+                                      ? SectionLightDrawTable::Words{}
+                                      : *handle;
+      glUniform4uiv(program.GetUniformLocation("uSurfaceSectionLightHandle"), 1,
+                    uniform_handle.data());
+      const float clear[] = {0, 0, 0, 0};
+      glClearBufferfv(GL_COLOR, 0, clear);
+      if (!mdi)
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+      else if (submit == 0)
+      {
+        std::vector<DrawElementsIndirectCommand> commands;
+        Expect(mdi_store.BuildIndirectCommandsRange(mdi_cache, 1, 2,
+                                                    commands) == 1 &&
+                   mdi_store.SubmitIndirectCommands(commands),
+               "physical surface uses production CPU indirect command at row1");
+      }
+      else if (submit == 1)
+      {
+        MdiVertexPoolStoreDriverTestAccess::Rebuild(mdi_store, mdi_cache);
+        Expect(mdi_store.SubmitIndirectCommandsGpuRange(mdi_cache, 1, 2),
+               "physical surface uses production GPU-resident command at row1");
+      }
+      else
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+      std::array<uint8_t, 64> actual{};
+      glReadPixels(0, 0, 16, 1, GL_RGBA, GL_UNSIGNED_BYTE, actual.data());
+      for (int x = 0; x < 16; ++x)
+      {
+        glm::ivec3 cell(center);
+        cell[u] = origin[u] + x;
+        const int distance = std::abs(cell.x - emitter.x) +
+                             std::abs(cell.y - emitter.y) +
+                             std::abs(cell.z - emitter.z);
+        const int sky = phase == 2 ? 0 : 15;
+        // The test catalog's fire emits14; AIR attenuates by1 per axial step.
+        const int block = phase == 1 ? std::max(0, 14 - distance) : 0;
+        const std::array<uint8_t, 4> expected =
+            physical && invalid ? std::array<uint8_t, 4>{0, 0, 0, 0}
+            : physical ? std::array<uint8_t, 4>{uint8_t(sky * 17),
+                                                uint8_t(block * 17), 0, 255}
+                       : std::array<uint8_t, 4>{255, 255, 0, 255};
+        const std::array<uint8_t, 4> value{actual[x * 4], actual[x * 4 + 1],
+                                           actual[x * 4 + 2],
+                                           actual[x * 4 + 3]};
+        if (value != expected)
+          std::cerr << "surface packed=" << packed << " phase=" << phase
+                    << " face=" << face << " cell=" << cell.x << ',' << cell.y
+                    << ',' << cell.z << " actual=" << int(value[0]) << ','
+                    << int(value[1]) << ',' << int(value[3])
+                    << " expected=" << int(expected[0]) << ','
+                    << int(expected[1]) << ',' << int(expected[3]) << '\n';
+        Expect(
+            value == expected,
+            "production surface fragment matches independent per-cell light");
+      }
+      Expect(glGetError() == GL_NO_ERROR,
+             "surface physical draw has no GL errors");
     }
-    Expect(glGetError() == GL_NO_ERROR,
-           "surface physical draw has no GL errors");
+    if (mdi)
+      draw_table.SignalDrawComplete();
   };
   for (int phase = 0; phase < 3; ++phase)
   {
@@ -3286,6 +3509,8 @@ TestSurfacePhysicalField(cutum::UBlockRegistry &registry,
     }
     for (int face = 0; face < 6; ++face)
       draw(face, phase, true, false);
+    if (!packed)
+      draw(127, phase, true, false);
   }
   draw(4, 2, true, true);
   draw(4, 2, false,
@@ -3301,6 +3526,13 @@ TestSurfacePhysicalField(cutum::UBlockRegistry &registry,
   for (int face = 0; face < 6; ++face)
     draw(face, 2, true, false);
   program.Unuse();
+  if (mdi)
+  {
+    draw_table.Reset();
+    UGreedyGpuBackend backend;
+    backend.DestroyPass(mdi_cache);
+    glDeleteBuffers(1, &ebo);
+  }
   glBindVertexArray(0);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   if (quads)
@@ -3566,7 +3798,12 @@ int main(int argc, char **argv)
     TestSurfacePhysicalField(registry, definitions.get(), gles_context, false,
                              true);
     if (visibility_driver && !gles_visibility_driver)
+    {
+      TestMdiLightDrawTable();
+      TestSurfacePhysicalField(registry, definitions.get(), false, false, false,
+                               true);
       TestSurfacePhysicalField(registry, definitions.get(), false, true);
+    }
     if (visibility_driver)
       TestMaterialVisibilityParity(registry, definitions.get(), true,
                                    gles_visibility_driver);

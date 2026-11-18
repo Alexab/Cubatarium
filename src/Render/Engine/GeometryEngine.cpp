@@ -1040,7 +1040,7 @@ void CaptureGpuRangeWitness(const GreedyGpuPassCache &pass,
           gpu_command.baseVertex ==
               static_cast<int32_t>(gpu_batch->vboByteOffset /
                                    sizeof(GreedyMeshVertex)) &&
-          gpu_command.baseInstance == 0;
+          gpu_command.baseInstance == command_slot;
       record.renderer_pixel_voxel_mesh_ray_gpu_command_match =
           command_matches ? 1u : 0u;
     }
@@ -3380,7 +3380,7 @@ void CaptureTransparentPixelProbe(
                           static_cast<uint32_t>(gpu_batch->indexCountGl) &&
                       command.firstIndex == expected_first_index &&
                       command.baseVertex == expected_base_vertex &&
-                      command.baseInstance == 0)
+                      command.baseInstance == gpu_batch_index)
                   {
                     record.renderer_mdi_command_flags |= 1u << 1;
                   }
@@ -4084,7 +4084,7 @@ void NoteFrustumCoverageGaps(
                   static_cast<uint32_t>(payload_batch->indexCountGl) &&
               command.firstIndex == expected_first_index &&
               command.baseVertex == expected_base_vertex &&
-              command.baseInstance == 0)
+              command.baseInstance == payload_index)
           {
             record.renderer_mdi_command_flags |= 1u << 1;
           }
@@ -5938,6 +5938,99 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   const bool use_mdi = store.SupportsMultiDrawIndirect() &&
                        cache.usesVertexPool && cache.poolVbo != 0 &&
                        cache.poolEbo != 0;
+  const bool physical_light =
+      WorldInstance &&
+      WorldInstance->GetLightingPipeline().GetMode() == LightingMode::Full;
+  greedyShader->SetBool("uUseSurfaceSectionLight", physical_light);
+  greedyShader->SetBool("uUseSurfaceSectionLightDrawTable", false);
+  SectionLightDrawTable::DisableAttribute();
+  if (physical_light)
+  {
+    if (!SectionLightOwner || !SectionLightOwner->Bind(7, 8))
+    {
+      glBindVertexArray(0);
+      glActiveTexture(GL_TEXTURE0);
+      greedyShader->Unuse();
+      return;
+    }
+    SectionLightOwner->CollectRetired();
+    const auto incarnation = SectionLightOwner->ShaderIncarnation();
+    glUniform2uiv(
+        greedyShader->GetUniformLocation("uSectionLightTableIncarnation"), 1,
+        incarnation.data());
+    glActiveTexture(GL_TEXTURE0);
+  }
+  std::unordered_set<const SectionRenderLightBinding *> refreshed_light;
+  const auto refresh_surface_light =
+      [&](const std::shared_ptr<SectionRenderLightBinding> &binding)
+  {
+    if (!binding || !binding->IsLive())
+      return false;
+    if (refreshed_light.insert(binding.get()).second)
+    {
+      const auto field =
+          WorldInstance->GetBlockWorld().GetChunkManager().GetSectionLightField(
+              binding->GeometryInputs().coord);
+      const auto &previous = binding->LightSnapshot();
+      if (field && (field->GetIncarnation() != previous.FieldIncarnation() ||
+                    field->GetRevision() != previous.FieldRevision()))
+      {
+        const auto current =
+            WorldInstance->GetBlockWorld().CaptureRenderLightSnapshot(
+                binding->GeometryInputs().coord);
+        if (current && current->MatchesGeometry(binding->GeometryInputs()))
+          (void)SectionLightOwner->Refresh(binding, binding->WorldEpoch(),
+                                           *current);
+      }
+    }
+    return true;
+  };
+  const auto prepare_direct_surface_light = [&](const GreedyGpuBatch &batch)
+  {
+    greedyShader->SetBool("uUseSurfaceSectionLightDrawTable", false);
+    if (!physical_light)
+      return true;
+    if (!refresh_surface_light(batch.renderLightBinding))
+      return false;
+    const auto words = SectionLightOwner->PrepareDraw(batch.renderLightBinding);
+    if (!words)
+      return false;
+    glUniform4uiv(
+        greedyShader->GetUniformLocation("uSurfaceSectionLightHandle"), 1,
+        words->data());
+    glActiveTexture(GL_TEXTURE0);
+    return true;
+  };
+  std::vector<SectionLightDrawTable::Words> light_rows;
+  std::vector<uint8_t> resident_light_rows;
+  if (physical_light && use_mdi &&
+      cache.batches.size() <= SectionLightDrawTable::MaxRows)
+  {
+    light_rows.resize(cache.batches.size());
+    resident_light_rows.resize(cache.batches.size());
+    for (size_t n = 0; n < cache.batches.size(); ++n)
+    {
+      const auto &binding = cache.batches[n].renderLightBinding;
+      if (refresh_surface_light(binding) &&
+          SectionLightOwner->IsResident(binding))
+      {
+        light_rows[n] = binding->ShaderWords();
+        resident_light_rows[n] = 1;
+      }
+    }
+  }
+  bool light_draw_table_bound = false;
+  const auto note_surface_submit =
+      [&](unsigned path, const GreedyGpuBatch &batch)
+  {
+    if (physical_light && ++SurfacePhysicalDrawCounts_[path] == 1)
+      CubatariumLogInfo(
+          "SectionLightSurface",
+          "first_physical_cpu_submit path=" + std::to_string(path) +
+              " coord=(" + std::to_string(batch.chunkCoord.x) + "," +
+              std::to_string(batch.chunkCoord.y) + "," +
+              std::to_string(batch.chunkCoord.z) + ")");
+  };
   const bool regional_weather =
       WorldInstance && WorldInstance->HasRegionalWeather();
   const auto is_fluid_block = [&](BlockId block_id)
@@ -6090,6 +6183,12 @@ void UGeometryEngine::DrawGreedyGpuBatches(
         reinterpret_cast<void *>(offsetof(GreedyMeshVertex, lightPreview)));
     glEnableVertexAttribArray(6);
 
+    if (!light_rows.empty() && cache.LightDrawTable.Prepare(light_rows))
+      light_draw_table_bound = cache.LightDrawTable.BindAttribute();
+    if (!light_draw_table_bound)
+      SectionLightDrawTable::DisableAttribute();
+    glBindBuffer(GL_ARRAY_BUFFER, cache.poolVbo);
+
     std::vector<DrawElementsIndirectCommand> cmds;
     size_t i = 0;
     while (i < cache.batches.size())
@@ -6110,7 +6209,11 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       const LightPreviewUniforms light_preview =
           ComputeLightPreviewUniforms(WorldInstance.get(), head.chunkCoord);
       size_t j = i + 1;
-      while (j < cache.batches.size() && cache.batches[j].pooled &&
+      const bool table_light =
+          physical_light && light_draw_table_bound && resident_light_rows[i];
+      while ((!physical_light || table_light) && j < cache.batches.size() &&
+             cache.batches[j].pooled &&
+             (!physical_light || resident_light_rows[j]) &&
              cache.batches[j].indexCountGl > 0 &&
              cache.batches[j].blockId == head.blockId &&
              cache.batches[j].AlphaCutout == head.AlphaCutout &&
@@ -6127,6 +6230,13 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       {
         ++j;
       }
+
+      if (physical_light && !table_light && !prepare_direct_surface_light(head))
+      {
+        i = j;
+        continue;
+      }
+      greedyShader->SetBool("uUseSurfaceSectionLightDrawTable", table_light);
 
       if (regional_weather)
       {
@@ -6183,6 +6293,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       }
       if (gpu_range_submitted)
       {
+        note_surface_submit(table_light ? 0u : 1u, head);
         if (capture_generic_draw_state)
         {
           AppendGpuOpaqueDrawStateRangeWitness(
@@ -6216,6 +6327,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
         }
         if (cpu_command_count > 0 && cpu_range_submitted)
         {
+          note_surface_submit(table_light ? 0u : 1u, head);
           if (capture_generic_draw_state)
           {
             AppendGpuOpaqueDrawStateRangeWitness(
@@ -6236,6 +6348,8 @@ void UGeometryEngine::DrawGreedyGpuBatches(
             {
               continue;
             }
+            if (!prepare_direct_surface_light(gpu))
+              continue;
             set_alpha_cutout_for_batch(gpu.AlphaCutout);
             const GLint base_vertex = static_cast<GLint>(
                 gpu.vboByteOffset / sizeof(GreedyMeshVertex));
@@ -6258,6 +6372,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
             glDrawElementsBaseVertex(
                 GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
                 reinterpret_cast<void *>(gpu.eboByteOffset), base_vertex);
+            note_surface_submit(2, gpu);
             if (capture_generic_draw_state)
             {
               AppendGpuOpaqueDrawStateRangeWitness(
@@ -6346,7 +6461,10 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       {
         CaptureGpuOpaqueDrawState(cache, gpu_index, 4, vp);
       }
+      if (!prepare_direct_surface_light(gpu))
+        continue;
       glDrawElements(GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT, nullptr);
+      note_surface_submit(2, gpu);
       note_fluid_single_submit(gpu, 4u);
       if (witness_target)
       {
@@ -6438,9 +6556,12 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       {
         CaptureGpuOpaqueDrawState(cache, gpu_index, 4, vp);
       }
+      if (!prepare_direct_surface_light(gpu))
+        continue;
       glDrawElements(
           GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
           reinterpret_cast<void *>(gpu.pooled ? gpu.eboByteOffset : 0));
+      note_surface_submit(2, gpu);
       note_fluid_single_submit(gpu, 5u);
       if (witness_target)
       {
@@ -6456,6 +6577,9 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   {
     cache.VertexPool.SignalDrawComplete();
   }
+  if (light_draw_table_bound)
+    cache.LightDrawTable.SignalDrawComplete();
+  SectionLightDrawTable::DisableAttribute();
 
   if (WorldInstance)
   {

@@ -233,6 +233,7 @@ void UGreedyGpuBackend::RefreshPassRefs(
 
 void UGreedyGpuBackend::DestroyPass(GreedyGpuPassCache &cache)
 {
+  cache.LightDrawTable.Reset();
   for (GreedyGpuBatch &batch : cache.batches)
   {
     DestroyBatchBuffers(batch);

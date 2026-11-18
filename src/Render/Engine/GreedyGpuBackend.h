@@ -2,15 +2,16 @@
 #define GREEDYGPUBACKEND_H
 
 #include "Render/Engine/GreedyVertexPool.h"
+#include "Render/Lighting/SectionLightDrawTable.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
+#include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
 #include <cstddef>
 #include <cstdint>
 #include <glm/glm.hpp>
-#include <vector>
 #include <unordered_set>
-#include "World/Chunks/ChunkManager.h"
+#include <vector>
 
 typedef unsigned int GLuint;
 typedef int GLsizei;
@@ -116,6 +117,7 @@ struct PublicationDelta
 
 struct GreedyGpuPassCache
 {
+  SectionLightDrawTable LightDrawTable;
   std::vector<GreedyGpuBatch> batches;
   std::unordered_set<glm::ivec3, IVec3Hash> PendingGeometryDirty;
   /// Artifact epoch: geometry/material/light payload. Not bumped on order-only.
