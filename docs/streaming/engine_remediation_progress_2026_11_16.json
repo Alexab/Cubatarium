@@ -6808,7 +6808,7 @@
       "negative_controls": "engine-cross-light-negative-controls.json: point integer attribute at center bytes fails actual instanced framebuffer comparison; drop only GPU range ownership while keeping uploaded words/range counts fails post-CPU-destruction lease lifetime check. Sources restored byte-exact, rebuilt and5testsGREEN. No RED application build/launch.",
       "fixture_correction": "Initial new filter fixture incorrectly assumed half-integer plant centers; repository BlockCenter uses integer centers. Corrected removal predicate to threshold5and retained exact source ownership/pixel checks. Production filter unchanged by that correction.",
       "memory_cost": "Instance stride20to36bytes adds16bytes per plant. Async result byte accounting already uses sizeof(CrossInstanceGpu); range ownership adds per-source-range CPU storage. Full memory/performance acceptance remains pending.",
-      "remaining": "Default Cross field shader cutover and ordered fallback range submission are still required. Existing Cross UploadBuffer lacks failure-atomic publication; field-consuming cutover must handle upload failures before enabling it. Whole renderer owner integration, CPU/MDI/packed paths, lifecycle and originalS0..S6matrix remain open.",
+      "remaining": "Atomic upload/publication now addressed by cross_atomic_gpu_publication. Default Cross field shader cutover, ordered fallback range submission and independently updated ready-selection identity remain required, together with whole renderer owner integration and CPU/MDI/packed paths. Full originalS0..S6matrix remains open.",
       "release_build": "engine-cross-light-transport-release-build.log: exact required Cubatarium Release command exits0, static dependency verification PASS with6system DLLs.",
       "native_regression": {
         "artifacts": "build/desktop-msvc/engine-cross-light-wet-native",
@@ -6859,13 +6859,57 @@
       "wet_cave_limits": "All3502camera observations report ready canonical zero sky/block, and opaque depth checks prove sampled cave surfaces. These light counts are observational, not a dedicated independently tested cave-light oracle. A dark image alone neither proves missing geometry nor full rendering correctness. Generic RGB and transparency remain UNTESTED; add formal wet/dry canonical-dark reference coverage to the matrix."
     },
     "cross_atomic_gpu_publication": {
-      "status": "Implemented;5Release testsPASS including actual GL3.3and GLES3.2late-transfer failure, first-publication failure, recovery, ownership and buffer/fence lifetime. Two controls RED with exact restore. Required application build/native compatibility pending.",
+      "status": "Implemented and verified:5Release testsPASS with actual GL3.3and GLES3.2transfer-failure/first-publication/recovery/lease/storage/fence cases, two RED controls and byte-exact restore. Required Release app/static6DLLcheck PASS. Native sprint all named scoped references PASS; genericRGBUNTESTED. Full original goal active.",
       "implementation": "Cross RefreshPass stages a whole candidate in reusable scratch, validates live desired revisions before same-revision shortcut, and swaps buffers/field ownership/revisions only after every transfer and VAO succeeds. Driver errors or bad later shapes retain the complete predecessor. Failed candidates promptly release field leases. Template creation publishes only a complete template. Empty/cull-empty scene input drops inactive GPU pass ownership; used templates are created lazily.",
       "bounded_storage": "Two logical pass buffer sets reused. Retired scratch has one GL fence; zero-timeout poll defers publication while readers remain. No unbounded orphaning and no wait/glFinish in runtime path. Fence failure discards scratch safely rather than reusing unprotected storage. Shutdown deletes active/scratch buffers and fence. Driver-internal memory/time behavior and full peak-memory acceptance remain open.",
       "validation": "engine-cross-atomic-tests.log and engine-cross-atomic-restored-tests.log:5/5PASS. Actual GL transfer error injected after second candidate allocation, after first candidate transfer succeeds. Prior buffer/VAO identities, both field leases, revisions and real instanced framebuffer words retained. Prior caller GL error and bad second shape rejected. Failed first publish exposes no valid prefix; same desired revision retries successfully. Several successors reuse only4instance buffer names for2batches. Scratch drops obsolete leases, retains/deletes its fence, all buffer names invalid after shutdown. Both GL3.3and realES3.2run these cases.",
       "negative_controls": "engine-cross-atomic-negative-controls.json: accepting failed transfer fails actual second-transfer rejection; destroying predecessor on rollback fails complete prior-buffer/lease/revision retention. Production source byte-exact restored, rebuilt and5testsGREEN. Initial orchestrator second-control text did not match CRLF; normalized mutation text, preserved byte-exact restore, then both controls completed. No RED application build/launch.",
       "fixture_corrections": "Initial fence deletion test saw opaque sync address reused by atlas retirement fences. Temporarily retain page owners during glIsSync deletion check, then release and verify all leases expire. Initial format command could overlap first compile; that build discarded as validation, all affected timestamps refreshed after formatter terminal, forced serial rebuild and final tests completed.",
-      "remaining": "Normal field shader cutover, ordered range fallback and source-ready selection identity still need implementation. Existing mesh/cull revision fast path does not independently fingerprint changes in filtered readiness; address in field-consuming draw integration. All originalS0..S6requirements remain active."
+      "remaining": "Normal field shader cutover, ordered range fallback and source-ready selection identity still need implementation. Existing mesh/cull revision fast path does not independently fingerprint changes in filtered readiness; address in field-consuming draw integration. All originalS0..S6requirements remain active.",
+      "release_build": "engine-cross-atomic-release-build.log: exact required Cubatarium Release command exits0; static dependency verification PASS with6system DLLs.",
+      "native_regression": {
+        "artifacts": "build/desktop-msvc/engine-cross-atomic-sprint-native",
+        "observation": "cross-atomic-native-observation.json",
+        "source_commit": "a6f8af12278636da11865f5ff1dc7bb3349d0e5c",
+        "app_exit": 0,
+        "observed_shell_exit": 1,
+        "overall": "UNTESTED",
+        "all_named_scoped_references": "PASS",
+        "runtime": {
+          "ingame_frames": 1741,
+          "wall_elapsed_sec": 215.852,
+          "chunks_traveled_cheb": 19,
+          "outside_initial_resident_samples": 1257,
+          "diagnostic_relocations_after_start": 0
+        },
+        "inspection_pngs": "30/30",
+        "camera_ready": "1741/1741",
+        "first_person_ready": "1741/1741",
+        "creature_ready": "517/517",
+        "falling_actor": {
+          "schema": "engine-falling-creature-reference.v1",
+          "status": "PASS",
+          "reason": "identity_joined_falling_creature_fields",
+          "identity": 4,
+          "samples": 4,
+          "frames": 4,
+          "sections": 2,
+          "vertical_span": 14,
+          "independent_frames": 4,
+          "missing_identity_rows": 0,
+          "skipped": 70,
+          "faults": 0,
+          "examples": [],
+          "missing_coverage": [],
+          "scope": "declared saved actor identity, measured downward speed, multiple sections and canonical sky15 field at actual draw samples; no GPU issue, RGB or universal delivery guarantee"
+        },
+        "saved_item_draws": 526,
+        "saved_item_primitives": 1578,
+        "opaque_depth_checks": 968,
+        "packed_floor_light_checks": 333,
+        "refresh_receipts": [],
+        "provenance": "EXE/source World_261/config restoration independently checked alltrue. No performance A/B or universal visual acceptance inferred from a single flight. Native code does not inject test transfer errors; real error handling proved by dedicated GL/GLES driver tests."
+      }
     }
   },
   "execution_status_review_2026_11_18": {
