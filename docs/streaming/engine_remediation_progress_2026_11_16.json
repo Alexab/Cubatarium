@@ -6651,6 +6651,44 @@
         "provenance": "EXE digest/source World_261 fingerprint/config byte-exact restoration independently checked alltrue. Target timeline preserved in camera-field-failure-target-receipts.txt. No test weakening, no retry reclassification of FAIL; opt-in GPU fallback is not invoked by normal renderer."
       },
       "release_build": "engine-ordered-light-release-build.log: required Cubatarium Release target/parallel8 exits0; static executable verification PASS with6system DLLs."
+    },
+    "physical_light_input_invalidation_diagnostics": {
+      "status": "Diagnostic code62c35c69dverified: Release physical input test PASS, required application build/static6DLLcheck PASS. Two isolated native routes complete. Exact recurrence captured with normal sprint; no corrective production change or closure claimed.",
+      "implementation": "Read-only retained input context inspection explicitly does not grant readiness. Traced camera failures report per-domain validation reason and first stale/unknown coordinate plus captured/current incarnation:content:absence. Worker reports at most8unknown dependency coordinates per audited job. Fluid seal reports exact changed coordinates/frame. Only diagnostic trace flags enable extra logging.",
+      "unit_validation": "engine-light-input-diagnostics-test.log PASS relight_result_install_test. Actual installed physical proof inspection identifies mutated neighbor(1,-3,0), missing context stays absent, production gate still rejects stale data.",
+      "normal_native": {
+        "artifacts": "build/desktop-msvc/engine-light-input-diagnostics-native",
+        "observation": "light-input-diagnostic-observation.json",
+        "overall": "UNTESTED",
+        "all_named_scoped_references": "PASS",
+        "camera_ready": "3522/3522",
+        "source_world_config_exe_checks": true,
+        "notes": "Fluid roof mutations occur later; successful repeat does not erase prior20frameFAIL. Generic RGB remains UNTESTED."
+      },
+      "sprint_native": {
+        "artifacts": "build/desktop-msvc/engine-light-input-sprint-native",
+        "observation": "light-input-sprint-observation.json",
+        "overall": "FAIL",
+        "app_exit": 0,
+        "camera_unready_frames": 232,
+        "first_person_unready_frames": 232,
+        "runtime": {
+          "ingame_frames": 2803,
+          "wall_elapsed_sec": 148.121,
+          "chunks_traveled_cheb": 19,
+          "outside_initial_resident_samples": 1600,
+          "diagnostic_relocations_after_start": 0
+        },
+        "source_world_config_exe_checks": true,
+        "receipt": "light-input-failure-receipts.txt"
+      },
+      "confirmed_defect": "At frame1233same-frame fluid roof mutations(-8..-6,2..3,2) raise highest occupied column slice. Retained input(-7,-3,2)still absent with incarnation/content0changes KnownAir2toUnknown1; camera field(-6,-3,3) becomes unready. KnownAirTerrainColumnFloor only proves absence above max resident/disk slice; it cannot retain known internal gaps after unrelated upper occupancy. Worker captures then contain unknown internal dependencies and cannot settle canonical sampling.",
+      "next_work": [
+        "Provide exact per-section absence evidence from authoritative completed terrain plus complete disk membership, retaining conservative behavior for unloaded saved slices, incomplete columns and pending writes. A highest-only index or blind absence-as-AIR is insufficient.",
+        "Add deterministic signed-height regression: upper slice addition must not invent content in an independently proven empty internal slice; persisted unloaded data and pending saves must still invalidate.",
+        "Actual changed upper geometry still invalidates its own physical inputs. Establish current-focus light refresh before paint, or a consistent publication mechanism, rather than presenting stale light or relaxing readiness. Re-run the exact sprint scenario and retain all earlier failures."
+      ],
+      "limits": "Default separate GPU field shaders, Cross/MDI handle transport, full underwater/RGB/backend/performance matrix, persistence content certificates and originalS0..S6completion remain open."
     }
   },
   "execution_status_review_2026_11_18": {
